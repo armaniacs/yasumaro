@@ -1,28 +1,18 @@
 /**
- * settingsExportImport.ts
+ * settingsExportImport.js
  * Settings export and import functionality
  */
 
 import { getSettings, saveSettings } from './storage.js';
-import type { Settings } from '../types.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
 
 /**
- * Settings export data structure
- */
-export interface SettingsExportData {
-  version: string;
-  exportedAt: string;
-  settings: Settings;
-}
-
-/**
  * Generate filename for export with timestamp
- * @returns filename for settings export
+ * @returns {string} filename for settings export
  */
-function getExportFilename(): string {
+function getExportFilename() {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -35,12 +25,11 @@ function getExportFilename(): string {
 
 /**
  * Export all settings to a JSON file
- * @throws Error if export fails
  */
-export async function exportSettings(): Promise<void> {
+export async function exportSettings() {
   const settings = await getSettings();
 
-  const exportData: SettingsExportData = {
+  const exportData = {
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     settings,
@@ -62,31 +51,29 @@ export async function exportSettings(): Promise<void> {
 
 /**
  * Validate export data structure
- * @param data - data to validate
- * @returns true if data is valid SettingsExportData
+ * @param {unknown} data - data to validate
+ * @returns {boolean} true if data is valid
  */
-export function validateExportData(data: unknown): data is SettingsExportData {
+export function validateExportData(data) {
   if (typeof data !== 'object' || data === null) {
     return false;
   }
 
-  const obj = data as Record<string, unknown>;
-
   // Check required fields
-  if (typeof obj.version !== 'string') {
+  if (typeof data.version !== 'string') {
     return false;
   }
 
-  if (typeof obj.exportedAt !== 'string') {
+  if (typeof data.exportedAt !== 'string') {
     return false;
   }
 
-  if (typeof obj.settings !== 'object' || obj.settings === null) {
+  if (typeof data.settings !== 'object' || data.settings === null) {
     return false;
   }
 
   // Check if settings has the required keys
-  const settings = obj.settings as Record<string, unknown>;
+  const settings = data.settings;
   const requiredKeys = [
     'obsidian_api_key', 'obsidian_protocol', 'obsidian_port',
     'gemini_api_key', 'min_visit_duration', 'min_scroll_depth',
@@ -110,10 +97,10 @@ export function validateExportData(data: unknown): data is SettingsExportData {
 
 /**
  * Import settings from JSON string
- * @param jsonData - JSON string containing export data
- * @returns imported Settings or null if validation fails
+ * @param {string} jsonData - JSON string containing export data
+ * @returns {Promise<object|null>} imported Settings or null if validation fails
  */
-export async function importSettings(jsonData: string): Promise<Settings | null> {
+export async function importSettings(jsonData) {
   try {
     const parsed = JSON.parse(jsonData);
 

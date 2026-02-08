@@ -200,8 +200,8 @@ const cancelImportBtn = document.getElementById('cancelImportBtn');
 const confirmImportBtn = document.getElementById('confirmImportBtn');
 const importPreview = document.getElementById('importPreview');
 
-let pendingImportData: Settings | null = null;
-let pendingImportJson: string | null = null;
+let pendingImportData = null;
+let pendingImportJson = null;
 
 // Toggle settings menu
 if (settingsMenuBtn && settingsMenu) {
@@ -334,11 +334,11 @@ importConfirmModal?.addEventListener('click', (e) => {
 });
 
 // Show import preview (HTML-safe)
-function showImportPreview(data: SettingsExportData): void {
+function showImportPreview(data) {
     if (!importPreview) return;
 
     // Create a summary view (hide sensitive data)
-    const summary: Record<string, string> = {
+    const summary = {
         version: data.version,
         exportedAt: new Date(data.exportedAt).toLocaleString(),
     };

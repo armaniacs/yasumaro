@@ -7,10 +7,11 @@ module.exports = {
   // テスト環境: jsdom（ブラウザAPIを必要とするテスト用）
   testEnvironment: 'jsdom',
 
-  // ES Modulesを有効化
+  // JavaScriptの変換設定
   transform: {
     '^.+\\.js$': ['babel-jest', { configFile: './babel.config.cjs' }]
   },
+
   transformIgnorePatterns: [
     '/node_modules/(?!(jest|@jest)/)'
   ],
@@ -25,18 +26,9 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.js',
     '!src/**/*.test.js',
-    '!src/**/*.spec.js'
+    '!src/**/*.spec.js',
+    '!src/**/__tests__/**'
   ],
-
-  // カバレッジしきい値（将来的に設定）
-  // coverageThreshold: {
-  //   global: {
-  //     branches: 80,
-  //     functions: 80,
-  //     lines: 80,
-  //     statements: 80
-  //   }
-  // },
 
   // モジュール解決
   moduleNameMapper: {
@@ -46,6 +38,9 @@ module.exports = {
 
   // セットアップファイル
   setupFilesAfterEnv: ['./jest.setup.js'],
+
+  // 拡張子の認識
+  moduleFileExtensions: ['js', 'json'],
 
   // 冗長モード
   verbose: true

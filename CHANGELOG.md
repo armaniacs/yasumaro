@@ -2,9 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2.5.0] - 2026-02-09
 
-Note: Future changes will be documented in bilingual format (Japanese/English) following the project's i18n standards.
+### Fixed
+- **設定画面遷移の修正**: ギアアイコン（⚙）を押しても設定画面に遷移しない不具合を修正
+  - `popup.js` 内に残存していたTypeScript型構文（`: Settings | null`, `: string | null`, `: SettingsExportData`, `Record<string, string>`）を除去
+  - `settingsExportImport.js` が未作成だったため、モジュール読み込みが失敗し `initNavigation()` が実行されていなかった問題を修正
+  - Fixed gear icon not navigating to settings screen due to TypeScript syntax in .js file and missing settingsExportImport.js module
+
+### Changed
+- **TypeScript完全除去**: プロジェクトからTypeScriptを完全に除去し、プレーンJavaScriptのみのChrome拡張に移行
+  - `.ts` ファイル27個を削除（対応する `.js` ファイルは全て存在済み）
+  - TypeScript設定ファイルを削除（`tsconfig.json`, `tsconfig.build.json`, `.tsbuildinfo`）
+  - `package.json` からTS関連のscripts（`type-check`, `build:ts` 等）とdevDependencies（`typescript`, `ts-jest`, `@types/*`）を除去
+  - `jest.config.cjs` から `ts-jest` transform設定と `.ts` テストパターンを除去
+  - 不要な `dist/` ディレクトリを削除
+  - Removed all TypeScript files, configs, and dependencies; project now uses plain JavaScript only
 
 ---
 
