@@ -37,10 +37,18 @@
   </div>
 
   <!-- Settings Screen -->
-  <div id="settingsScreen">
+  <div id="settingsScreen" class="settings-screen">
     <div class="header">
       <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain">←</button>
       <h2 data-i18n="settings">Settings</h2>
+      <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true">⋮</button>
+    </div>
+
+    <!-- Settings Dropdown Menu -->
+    <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
+      <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
+      <button id="importSettingsBtn" role="menuitem" data-i18n="importSettings">Import</button>
+      <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
     </div>
 
     <!-- Tab Navigation -->
@@ -347,6 +355,30 @@
       <div class="modal-footer">
         <button id="cancelPreviewBtn" class="btn-cancel" data-i18n="cancelPreviewBtn">Cancel</button>
         <button id="confirmPreviewBtn" class="btn-confirm" data-i18n="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Confirmation Modal -->
+  <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="importConfirmTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>
+        <button id="closeImportModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" data-i18n="confirmImportDesc">
+          Current settings will be overwritten. Continue?
+        </p>
+        <p class="mt-0 text-xs text-danger" data-i18n="confirmImportNote">
+          Note: Please review the settings below before importing.
+        </p>
+        <div id="importPreview" class="import-preview" aria-live="polite"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelImportBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="confirmImportBtn" class="btn-confirm" data-i18n="confirm">Import</button>
       </div>
     </div>
   </div>

@@ -2,9 +2,12 @@ import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { ObsidianClient } from '../background/obsidianClient.js';
 import { init as initNavigation } from './navigation.js';
 import { init as initDomainFilter } from './domainFilter.js';
-import { init as initPrivacySettings } from './privacySettings.js';
-import { loadSettingsToInputs, extractSettingsFromInputs } from './settingsUiHelper.js';
+import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
+import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
+import { exportSettings, importSettings, validateExportData, type SettingsExportData } from '../utils/settingsExportImport.js';
+import type { Settings } from '../types.js';
+import { loadDomainSettings } from './domainFilter.js';
 
 // Elements
 const apiKeyInput = document.getElementById('apiKey');
@@ -177,6 +180,187 @@ try {
     console.log('[Popup] load complete');
 } catch (error) {
     console.error('[Popup] Error in load:', error);
+}
+
+// Settings Export/Import functionality
+
+// Settings menu elements
+const settingsMenuBtn = document.getElementById('settingsMenuBtn');
+const settingsMenu = document.getElementById('settingsMenu');
+const exportSettingsBtn = document.getElementById('exportSettingsBtn');
+const importSettingsBtn = document.getElementById('importSettingsBtn');
+const importFileInput = document.getElementById('importFileInput');
+
+// Import confirmation modal elements
+const importConfirmModal = document.getElementById('importConfirmModal');
+const closeImportModalBtn = document.getElementById('closeImportModalBtn');
+const cancelImportBtn = document.getElementById('cancelImportBtn');
+const confirmImportBtn = document.getElementById('confirmImportBtn');
+const importPreview = document.getElementById('importPreview');
+
+let pendingImportData: Settings | null = null;
+let pendingImportJson: string | null = null;
+
+// Toggle settings menu
+if (settingsMenuBtn && settingsMenu) {
+    settingsMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsMenu.classList.toggle('hidden');
+        settingsMenuBtn.setAttribute('aria-expanded',
+            !settingsMenu.classList.contains('hidden').toString());
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (settingsMenuBtn && !settingsMenuBtn.contains(e.target as Node) &&
+            settingsMenu && !settingsMenu.contains(e.target as Node)) {
+            settingsMenu.classList.add('hidden');
+            settingsMenuBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+
+// Export settings
+exportSettingsBtn?.addEventListener('click', async () => {
+    settingsMenu?.classList.add('hidden');
+    settingsMenuBtn?.setAttribute('aria-expanded', 'false');
+
+    try {
+        await exportSettings();
+        showStatus('status', getMessage('settingsExported'), 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        showStatus('status', `${getMessage('exportError')}: ${message}`, 'error');
+    }
+});
+
+// Import button click - open file selector
+importSettingsBtn?.addEventListener('click', () => {
+    settingsMenu?.classList.add('hidden');
+    settingsMenuBtn?.setAttribute('aria-expanded', 'false');
+    importFileInput?.click();
+});
+
+// File selected for import
+importFileInput?.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+
+        if (!validateExportData(parsed)) {
+            showStatus('status', getMessage('invalidSettingsFile'), 'error');
+            return;
+        }
+
+        pendingImportData = parsed.settings;
+        pendingImportJson = text;
+
+        // Show import preview and confirmation modal
+        showImportPreview(parsed);
+        importConfirmModal?.classList.remove('hidden');
+
+    } catch (error) {
+        console.error('Import error:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
+    }
+
+    // Reset to allow selecting the same file again
+    if (importFileInput) {
+        importFileInput.value = '';
+    }
+});
+
+// Close import modal
+async function closeImportModal() {
+    importConfirmModal?.classList.add('hidden');
+    pendingImportData = null;
+    pendingImportJson = null;
+    if (importPreview) {
+        importPreview.textContent = '';
+    }
+}
+
+closeImportModalBtn?.addEventListener('click', closeImportModal);
+cancelImportBtn?.addEventListener('click', closeImportModal);
+
+// Confirm import
+confirmImportBtn?.addEventListener('click', async () => {
+    if (!pendingImportJson) {
+        closeImportModal();
+        return;
+    }
+
+    try {
+        const imported = await importSettings(pendingImportJson);
+        if (imported) {
+            showStatus('status', getMessage('settingsImported'), 'success');
+            // Reload all settings
+            await load();
+            // Reload domain specific settings
+            await loadDomainSettings();
+            // Reload privacy settings
+            await loadPrivacySettings();
+        } else {
+            showStatus('status', `${getMessage('importError')}: Failed to apply settings`, 'error');
+        }
+    } catch (error) {
+        console.error('Import error:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
+    }
+
+    closeImportModal();
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !importConfirmModal?.classList.contains('hidden')) {
+        closeImportModal();
+    }
+});
+
+// Close modal when clicking outside
+importConfirmModal?.addEventListener('click', (e) => {
+    if (e.target === importConfirmModal) {
+        closeImportModal();
+    }
+});
+
+// Show import preview (HTML-safe)
+function showImportPreview(data: SettingsExportData): void {
+    if (!importPreview) return;
+
+    // Create a summary view (hide sensitive data)
+    const summary: Record<string, string> = {
+        version: data.version,
+        exportedAt: new Date(data.exportedAt).toLocaleString(),
+    };
+
+    // Summarize key settings without revealing sensitive data
+    const s = data.settings;
+    summary.obsidian_protocol = s.obsidian_protocol;
+    summary.obsidian_port = s.obsidian_port;
+    summary.obsidian_daily_path = s.obsidian_daily_path;
+    summary.ai_provider = s.ai_provider;
+    summary.gemini_model = s.gemini_model;
+    summary.openai_model = s.openai_model;
+    summary.openai_2_model = s.openai_2_model;
+    summary.min_visit_duration = String(s.min_visit_duration);
+    summary.min_scroll_depth = String(s.min_scroll_depth);
+    summary.domain_filter_mode = s.domain_filter_mode;
+    summary.privacy_mode = s.privacy_mode;
+    summary.domain_count = String(
+        (s.domain_whitelist?.length || 0) + (s.domain_blacklist?.length || 0)
+    );
+    summary.ublock_sources_count = String(s.ublock_sources?.length || 0);
+
+    importPreview.textContent = `Summary:\n${JSON.stringify(summary, null, 2)}\n\n` +
+        `Note: Full settings will be applied. API keys and lists are included in the file.`;
 }
 
 console.log('[Popup] Initialization sequence complete');

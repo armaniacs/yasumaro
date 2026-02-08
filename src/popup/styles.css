@@ -722,3 +722,82 @@ label.inline-label {
 #loadingSpinner {
   display: none;
 }
+
+/* Settings screen needs position relative for dropdown menu positioning */
+.settings-screen .header {
+  position: relative;
+}
+
+/* =============================================================================
+   Settings Dropdown Menu
+   ============================================================================= */
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.dropdown-menu.hidden {
+  display: none;
+}
+
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-menu button:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: -2px;
+}
+
+/* =============================================================================
+   Import Preview
+   ============================================================================= */
+
+.import-preview {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.import-preview:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: -2px;
+}
+
+/* Security fix for settings import preview - sanitize output */
+.import-preview code {
+  display: block;
+  margin: 0;
+}
+
+.hidden {
+  display: none;
+}

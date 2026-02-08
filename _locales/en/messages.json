@@ -499,5 +499,35 @@
     },
     "closeModal": {
         "message": "Close Modal"
+    },
+    "settingsMenu": {
+        "message": "Settings menu"
+    },
+    "exportSettings": {
+        "message": "Export"
+    },
+    "importSettings": {
+        "message": "Import"
+    },
+    "settingsExported": {
+        "message": "Settings exported successfully"
+    },
+    "settingsImported": {
+        "message": "Settings imported successfully"
+    },
+    "confirmImport": {
+        "message": "Import Settings"
+    },
+    "confirmImportDesc": {
+        "message": "Current settings will be overwritten. Continue?"
+    },
+    "confirmImportNote": {
+        "message": "Note: Please review the settings below before importing."
+    },
+    "importError": {
+        "message": "Import error"
+    },
+    "invalidSettingsFile": {
+        "message": "Invalid settings file"
     }
 }

@@ -499,5 +499,35 @@
     },
     "closeModal": {
         "message": "閉じる"
+    },
+    "settingsMenu": {
+        "message": "設定メニュー"
+    },
+    "exportSettings": {
+        "message": "エクスポート"
+    },
+    "importSettings": {
+        "message": "インポート"
+    },
+    "settingsExported": {
+        "message": "設定をエクスポートしました"
+    },
+    "settingsImported": {
+        "message": "設定をインポートしました"
+    },
+    "confirmImport": {
+        "message": "設定のインポート"
+    },
+    "confirmImportDesc": {
+        "message": "現在の設定は上書きされます。よろしいですか？"
+    },
+    "confirmImportNote": {
+        "message": "※ インポート前に以下の設定を確認してください。"
+    },
+    "importError": {
+        "message": "インポートエラー"
+    },
+    "invalidSettingsFile": {
+        "message": "無効な設定ファイルです"
     }
 }

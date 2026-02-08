@@ -22,7 +22,7 @@ export function init() {
     loadPrivacySettings();
 }
 
-async function loadPrivacySettings() {
+export async function loadPrivacySettings() {
     const settings = await getSettings();
 
     // Mode
