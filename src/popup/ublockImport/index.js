@@ -418,6 +418,7 @@ export {
   hidePreview,
   clearInput,
   loadAndDisplaySources,
+  deleteSource,
   reloadSource,
   saveUblockSettings,
   handleSaveUblockSettings

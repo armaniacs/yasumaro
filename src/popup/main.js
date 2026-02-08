@@ -15,8 +15,11 @@ export async function loadCurrentTab() {
   const tab = await getCurrentTab();
   if (!tab) return;
 
-  // Favicon設定
-  document.getElementById('favicon').src = tab.favIconUrl || '';
+  // Favicon設定 (Chrome Favicon API使用 - MV3)
+  const faviconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
+  faviconUrl.searchParams.set('pageUrl', tab.url);
+  faviconUrl.searchParams.set('size', '32');
+  document.getElementById('favicon').src = faviconUrl.toString();
 
   // タイトル・URL表示
   document.getElementById('pageTitle').textContent = tab.title || getMessage('noTitle');
@@ -82,8 +85,16 @@ export async function recordCurrentPage(force = false) {
         }
       });
 
+      if (!previewResponse) {
+        const errorMsg = 'No response from background worker';
+        console.error('PREVIEW_RECORD failed: No response');
+        throw new Error(errorMsg);
+      }
+
       if (!previewResponse.success) {
-        throw new Error(previewResponse.error || 'Processing failed');
+        const errorMsg = previewResponse.error || 'Processing failed';
+        console.error('PREVIEW_RECORD failed:', previewResponse);
+        throw new Error(errorMsg);
       }
 
       // マスクが行われた場合のみ確認画面を表示する
@@ -132,7 +143,7 @@ export async function recordCurrentPage(force = false) {
       });
     }
 
-    if (result.success) {
+    if (result && result.success) {
       hideSpinner();
       showSuccess(statusDiv);
 

@@ -46,8 +46,8 @@ export async function fetchFromUrl(url) {
 
     return text;
   } catch (error) {
-    if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-      throw new Error('ネットワークエラーが発生しました。インターネット接続を確認してください。');
+    if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch') || error.message.includes('TypeError')) {
+      throw new Error(`ネットワークエラーまたはアクセス拒否が発生しました (${error.message})。URLが正しいか、またはインターネット接続を確認してください。CSP制限の可能性もあります。`);
     }
     throw new Error(`URL読み込みエラー: ${error.message}`);
   }

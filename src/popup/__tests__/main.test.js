@@ -126,18 +126,18 @@ describe('main', () => {
         title: 'Example Page',
         url: 'https://example.com'
       };
-      
+
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      
+
       await loadCurrentTab();
-      
+
       // Check if DOM elements are updated
       const favicon = document.getElementById('favicon');
       const pageTitle = document.getElementById('pageTitle');
       const pageUrl = document.getElementById('pageUrl');
       const recordBtn = document.getElementById('recordBtn');
-      
+
       expect(favicon.src).toBe('https://example.com/favicon.ico');
       expect(pageTitle.textContent).toBe('Example Page');
       expect(pageUrl.textContent).toBe('https://example.com');
@@ -167,9 +167,9 @@ describe('main', () => {
     it('should handle null tab', async () => {
       // Mock null tab
       getCurrentTab.mockImplementation(() => Promise.resolve(null));
-      
+
       await loadCurrentTab();
-      
+
       // Should not throw error and should not update DOM
       const pageTitle = document.getElementById('pageTitle');
       expect(pageTitle.textContent).toBe('Loading...');
@@ -201,17 +201,17 @@ describe('main', () => {
         title: 'Example Page',
         url: 'https://example.com'
       };
-      
+
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
       getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
-      
+
       // Mock chrome API to throw error
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
-      
+
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');
-      
+
       await recordCurrentPage();
 
       // Check if error message is displayed
@@ -226,11 +226,11 @@ describe('main', () => {
         title: 'Blocked Page',
         url: 'https://blocked.com'
       };
-      
+
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
       getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
-      
+
       // Mock chrome API to return domain blocked error code
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({
@@ -258,30 +258,30 @@ describe('main', () => {
         title: 'Example Page',
         url: 'https://example.com'
       };
-      
+
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
-      
+
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage
-        .mockResolvedValueOnce({ 
-          success: true, 
+        .mockResolvedValueOnce({
+          success: true,
           mode: 'masked_cloud',
           maskedCount: 1,
-          processedContent: '[MASKED:email]@example.com' 
+          processedContent: '[MASKED:email]@example.com'
         })
         .mockResolvedValueOnce({ success: true });
-      
+
       // Mock showPreview to confirm
       showPreview.mockResolvedValue({ confirmed: true, content: '[MASKED:email]@example.com' });
-      
+
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');
-      
+
       await recordCurrentPage();
-      
+
       // Check if success message is displayed
       expect(statusDiv.className).toBe('success');
       expect(statusDiv.textContent).toBe('✓ Saved to Obsidian');
@@ -295,20 +295,20 @@ describe('main', () => {
         title: 'Example Page',
         url: 'https://example.com'
       };
-      
+
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: false }));
-      
+
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
-      
+
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');
-      
+
       await recordCurrentPage();
-      
+
       // Check if success message is displayed
       expect(statusDiv.className).toBe('success');
       expect(statusDiv.textContent).toBe('✓ Saved to Obsidian');
@@ -322,30 +322,59 @@ describe('main', () => {
         title: 'Example Page',
         url: 'https://example.com'
       };
-      
+
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
-      
+
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      mockChrome.runtime.sendMessage.mockResolvedValue({ 
-        success: true, 
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        success: true,
         mode: 'masked_cloud',
         maskedCount: 1,
-        processedContent: '[MASKED:email]@example.com' 
+        processedContent: '[MASKED:email]@example.com'
       });
-      
+
       // Mock showPreview to cancel
       showPreview.mockResolvedValue({ confirmed: false, content: null });
-      
+
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');
-      
+
       await recordCurrentPage();
 
       // Check if cancellation message is displayed
       expect(statusDiv.textContent).toBe('Cancelled');
+    });
+
+    it('should show specific error message when PREVIEW_RECORD fails', async () => {
+      // Mock tab data
+      const mockTab = {
+        id: 1,
+        title: 'Example Page',
+        url: 'https://example.com'
+      };
+
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+
+      // Mock chrome API responses
+      mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
+      // Simulate a specific error from service worker
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        success: false,
+        error: 'AI_PROVIDER_ERROR: Rate limit exceeded'
+      });
+
+      const statusDiv = document.getElementById('mainStatus');
+
+      await recordCurrentPage();
+
+      // Check if specific error message is displayed instead of "Processing failed"
+      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.textContent).toBe('✗ Error: AI_PROVIDER_ERROR: Rate limit exceeded');
     });
   });
 });

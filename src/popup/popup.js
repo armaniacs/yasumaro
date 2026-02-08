@@ -117,11 +117,11 @@ saveBtn.addEventListener('click', async () => {
     const client = new ObsidianClient();
     const result = await client.testConnection();
 
-    if (result.success) {
+    if (result && result.success) {
         statusDiv.textContent = getMessage('successConnected');
         statusDiv.className = 'success';
     } else {
-        statusDiv.textContent = getMessage('connectionFailed', { message: result.message });
+        statusDiv.textContent = getMessage('connectionFailed', { message: result?.message || 'Unknown error' });
         statusDiv.className = 'error';
 
         if (result.message.includes('Failed to fetch') && protocolInput.value === 'https') {

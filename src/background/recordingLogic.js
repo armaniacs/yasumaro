@@ -167,14 +167,36 @@ export class RecordingLogic {
 
       // 3. Privacy Pipeline Processing
       const pipeline = new PrivacyPipeline(settings, this.aiClient, { sanitizeRegex });
-      const pipelineResult = await pipeline.process(content, {
-        previewOnly,
-        alreadyProcessed
-      });
+      let pipelineResult;
+
+      try {
+        pipelineResult = await pipeline.process(content, {
+          previewOnly,
+          alreadyProcessed
+        });
+      } catch (pipelineError) {
+        addLog(LogType.ERROR, 'Privacy pipeline failed', {
+          error: pipelineError.message,
+          url,
+          previewOnly,
+          mode: this.mode
+        });
+
+        if (previewOnly) {
+          return {
+            success: false,
+            error: pipelineError.message,
+            title,
+            url
+          };
+        }
+        throw pipelineError;
+      }
 
       if (previewOnly) {
         return {
           ...pipelineResult,
+          success: pipelineResult.success !== undefined ? pipelineResult.success : true,
           title,
           url
         };

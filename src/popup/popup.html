@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data:; object-src 'none';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; object-src 'none';">
   <title>Obsidian Smart History Settings</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -44,9 +45,12 @@
 
     <!-- Tab Navigation -->
     <div id="tabList" class="tab-nav" role="tablist">
-      <button id="generalTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="generalPanel" data-i18n="mainTab">General</button>
-      <button id="domainTab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="domainPanel" data-i18n="domainTab">Domain Filter</button>
-      <button id="privacyTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="privacyPanel" data-i18n="privacyTab">Privacy</button>
+      <button id="generalTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="generalPanel"
+        data-i18n="mainTab">General</button>
+      <button id="domainTab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="domainPanel"
+        data-i18n="domainTab">Domain Filter</button>
+      <button id="privacyTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="privacyPanel"
+        data-i18n="privacyTab">Privacy</button>
     </div>
 
     <!-- General Settings Panel -->
@@ -238,9 +242,12 @@
         <!-- Preview Section -->
         <div id="uBlockPreview" class="preview-section">
           <h4 data-i18n="loadPreview">Load Preview</h4>
-          <p><span data-i18n="ruleCount" data-i18n-args='{"count": "0"}'>Rules: 0</span> <span id="uBlockRuleCount"></span></p>
-          <p><span data-i18n="exceptionCount" data-i18n-args='{"count": "0"}'>Exceptions: 0</span> <span id="uBlockExceptionCount"></span></p>
-          <p><span data-i18n="errorCount" data-i18n-args='{"count": "0"}'>Errors: 0</span> <span id="uBlockErrorCount" class="error"></span></p>
+          <p><span data-i18n="ruleCount" data-i18n-args='{"count": "0"}'>Rules: 0</span> <span
+              id="uBlockRuleCount"></span></p>
+          <p><span data-i18n="exceptionCount" data-i18n-args='{"count": "0"}'>Exceptions: 0</span> <span
+              id="uBlockExceptionCount"></span></p>
+          <p><span data-i18n="errorCount" data-i18n-args='{"count": "0"}'>Errors: 0</span> <span id="uBlockErrorCount"
+              class="error"></span></p>
           <p id="uBlockErrorDetails" class="error-text text-sm"></p>
         </div>
 
