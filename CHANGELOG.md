@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.4] - 2026-02-08
+
+### Fixed
+- **通知アイコンの表示エラー修正**: 通知アイコン（data URL）が Content Security Policy (CSP) 違反でブロックされる問題を修正
+  - `manifest.json` の `connect-src` に `data:` を追加し、インライン画像データの読み込みを許可
+
 ## [2.4.3] - 2026-02-08
 
 ### Fixed
