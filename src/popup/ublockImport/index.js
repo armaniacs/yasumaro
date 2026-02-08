@@ -249,6 +249,10 @@ async function handleReloadSource(index) {
     btn.textContent = '...';
   }
 
+  // Fetch storage before try block to avoid double fetch
+  const settings = await chrome.storage.sync.get([StorageKeys.UBLOCK_SOURCES]);
+  const currentSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
+
   try {
     const { sources, ruleCount } = await reloadSource(index, fetchFromUrl);
 
@@ -263,11 +267,9 @@ async function handleReloadSource(index) {
     addLog(LogType.ERROR, getMessage('reloadError'), { error: error.message });
     showStatus('domainStatus', `${getMessage('reloadError')}: ${error.message}`, 'error');
 
-    // ボタン状態リセットのために再描画
-    const settings = await chrome.storage.sync.get();
-    const sources = settings[StorageKeys.UBLOCK_SOURCES] || [];
+    // Use preserved currentSources for button state reset
     renderSourceList(
-      sources,
+      currentSources,
       handleDeleteSource,
       handleReloadSource
     );

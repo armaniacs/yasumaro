@@ -74,7 +74,7 @@ function createSourceItem(source, index) {
   }
 
   const date = new Date(source.importedAt);
-  const dateStr = date.toLocaleString();
+  const dateStr = date.toLocaleString(navigator.language || 'en-US');
 
   const metaDiv = document.createElement('div');
   metaDiv.className = 'source-meta';

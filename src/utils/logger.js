@@ -80,7 +80,7 @@ function pruneLogs(logs) {
 globalThis.reviewLogs = async () => {
     const logs = await getLogs();
     console.table(logs.map(l => ({
-        time: new Date(l.timestamp).toLocaleString(),
+        time: new Date(l.timestamp).toLocaleString(navigator.language || 'en-US'),
         type: l.type,
         message: l.message,
         details: JSON.stringify(l.details)

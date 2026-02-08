@@ -13,7 +13,7 @@
   <div id="mainScreen">
     <div class="header">
       <h2 data-i18n="appTitle">Smart History</h2>
-      <button id="menuBtn" class="icon-btn" aria-label="設定" data-i18n-aria-label="openSettings">⚙</button>
+      <button id="menuBtn" class="icon-btn" data-i18n-aria-label="openSettings">⚙</button>
     </div>
 
     <div id="currentPage">
@@ -38,7 +38,7 @@
   <!-- Settings Screen -->
   <div id="settingsScreen">
     <div class="header">
-      <button id="backBtn" class="icon-btn" aria-label="戻る" data-i18n-aria-label="backToMain">←</button>
+      <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain">←</button>
       <h2 data-i18n="settings">Settings</h2>
     </div>
 
@@ -58,17 +58,17 @@
       </div>
 
       <div class="form-group">
-        <label data-i18n="protocol">Protocol (http/https)</label>
+        <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
         <input type="text" id="protocol" value="https">
       </div>
 
       <div class="form-group">
-        <label data-i18n="port">Port</label>
+        <label for="port" data-i18n="port">Port</label>
         <input type="text" id="port" value="27123">
       </div>
 
       <div class="form-group">
-        <label data-i18n="dailyNotePath">Daily Note Path</label>
+        <label for="dailyPath" data-i18n="dailyNotePath">Daily Note Path</label>
         <input type="text" id="dailyPath" data-i18n-input-placeholder="dailyNotePathPlaceholder">
       </div>
 
@@ -325,7 +325,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 data-i18n="confirmContent">Review Content</h3>
-        <button id="closeModalBtn" class="icon-btn modal-close" aria-label="閉じる" data-i18n-aria-label="closeModal">×</button>
+        <button id="closeModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
       </div>
       <div class="modal-body">
         <p class="mt-0 text-xs text-gray" data-i18n="confirmContentDesc">

@@ -209,7 +209,7 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):focus {
 }
 
 .error-text {
-  color: #d9534f;
+  color: #b71c1c;
   max-height: 100px;
   overflow-y: auto;
 }
@@ -314,8 +314,8 @@ select:focus {
 }
 
 .tab-btn.active {
-  border-bottom-color: #7b3cad;
-  color: #7b3cad;
+  border-bottom-color: #5a2a7a;
+  color: #5a2a7a;
 }
 
 .tab-btn:hover {
@@ -323,8 +323,8 @@ select:focus {
 }
 
 .tab-btn:focus {
-  outline: 2px solid #7b3cad;
-  outline-offset: -2px;
+  outline: 2px solid #5a2a7a;
+  outline-offset: 2px;
   background: #f5f5f5;
 }
 
@@ -434,8 +434,8 @@ select:focus {
 }
 
 .masked-highlight {
-  background-color: #fff3cd;
-  color: #856404;
+  background-color: #fef3c7;
+  color: #78350f;
   padding: 0 2px;
   border-radius: 2px;
 }
