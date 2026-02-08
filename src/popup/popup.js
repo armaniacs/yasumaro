@@ -5,9 +5,11 @@ import { init as initDomainFilter } from './domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
 import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
-import { exportSettings, importSettings, validateExportData, type SettingsExportData } from '../utils/settingsExportImport.js';
-import type { Settings } from '../types.js';
+import { exportSettings, importSettings, validateExportData } from '../utils/settingsExportImport.js';
 import { loadDomainSettings } from './domainFilter.js';
+
+/** @typedef {import('../types.js').Settings} Settings */
+/** @typedef {import('../utils/settingsExportImport.js').SettingsExportData} SettingsExportData */
 
 // Elements
 const apiKeyInput = document.getElementById('apiKey');
@@ -212,8 +214,8 @@ if (settingsMenuBtn && settingsMenu) {
 
     // Close menu when clicking outside
     document.addEventListener('click', (e) => {
-        if (settingsMenuBtn && !settingsMenuBtn.contains(e.target as Node) &&
-            settingsMenu && !settingsMenu.contains(e.target as Node)) {
+        if (settingsMenuBtn && !settingsMenuBtn.contains(e.target) &&
+            settingsMenu && !settingsMenu.contains(e.target)) {
             settingsMenu.classList.add('hidden');
             settingsMenuBtn.setAttribute('aria-expanded', 'false');
         }
@@ -244,7 +246,7 @@ importSettingsBtn?.addEventListener('click', () => {
 
 // File selected for import
 importFileInput?.addEventListener('change', async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
+    const file = e.target?.files?.[0];
     if (!file) return;
 
     try {
