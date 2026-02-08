@@ -2,11 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+Note: Future changes will be documented in bilingual format (Japanese/English) following the project's i18n standards.
+
+---
+
 ## [2.4.4] - 2026-02-08
 
 ### Fixed
 - **通知アイコンの表示エラー修正**: 通知アイコン（data URL）が Content Security Policy (CSP) 違反でブロックされる問題を修正
   - `manifest.json` の `connect-src` に `data:` を追加し、インライン画像データの読み込みを許可
+
+### Docs
+- **uBlockフィルターガイドの日英併記化**: `USER-GUIDE-UBLOCK-IMPORT.md` を日本語・英語併記形式にリファクタリング
+  - README.mdと同一構造を適用（言語ナビゲーション、セクション区分）
+  - 全セクションに対応する英語版を追加
+- **ドキュメント統合**: `docs/USER-GUIDE-UBLOCK-IMPORT.md`（簡易版）の内容を詳細版にマージ
+  - 注意事項に「ローカルファイルやdataプロトコルのURLはインポート不可」を追加
+  - ストレージ形式に「ドメイン名のみの配列」説明を追加
+  - マイグレーション参照リンクを追加（UBLOCK_MIGRATION.md）
+- **簡易版廃止**: `docs/USER-GUIDE-UBLOCK-IMPORT.md` を削除し、単一の権威あるドキュメントに統合
+- **ドキュメントの日英併記化**: `PII_FEATURE_GUIDE.md` と `docs/UBLOCK_MIGRATION.md` を日本語・英語併記形式にリファクタリング
+  - README.mdと同一構造を適用（ヘッダーナビゲーション、セクション区分）
 
 ## [2.4.3] - 2026-02-08
 

@@ -2,7 +2,7 @@
 
 This file provides specialized guidance for different agent types when working on the Obsidian Smart History Chrome extension project.
 
-## For Feature Development Agents
+## For Feature Development Agents (IMPORTANT: Read [DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md) first)
 
 ### Architecture Context
 This is a Manifest V3 Chrome extension with a modular architecture:
@@ -105,13 +105,65 @@ This is a Manifest V3 Chrome extension with a modular architecture:
 - Chrome API usage changes
 - Breaking changes in configuration
 - Security updates or considerations
-- Architecture decisions and rationale
+- Architecture decisions and rationale (See [DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md))
+- i18n: New user-facing documentation requirements
 
 ### Localization Notes
 - Primary UI language: Japanese
 - Documentation: Bilingual Japanese/English
 - Code comments: English for consistency
 - Error messages: User-friendly, consider localization
+
+### Internationalization (i18n) Guidelines
+
+#### User-Facing Documentation: Bilingual Format (Japanese/English)
+
+All user-facing documentation MUST follow the bilingual structure:
+
+1. **Header Format**:
+   - `# {JP Title} / {English Title}`
+   - Example: `# PII 機能ガイド / PII Feature Guide`
+
+2. **Navigation Bar** (Required):
+   ```markdown
+   [日本語](#日本語) | [English](#english)
+
+   ---
+   ```
+
+3. **Section Structure**:
+   - `## 日本語` と `## English` を並列で配置
+   - 各言語内で同じセクションレベル（###, #### 等）を使用
+   - コードブロック、JSON例は翻訳せずそのまま保持
+
+4. **Translation Quality Standards**:
+   - Technical terms consistency with README.md (e.g., "Privacy mode", "PII masking")
+   - Natural and technically accurate English translations
+   - Japanese phrases remain in Japanese in specific contexts
+
+#### Documentation Scope
+
+**Requires Bilingual Format** (for User-Facing Docs):
+- README.md ✅
+- SETUP_GUIDE.md ✅
+- PRIVACY.md ✅
+- USER-GUIDE-UBLOCK-IMPORT.md ✅
+- PII_FEATURE_GUIDE.md ✅
+- docs/UBLOCK_MIGRATION.md ✅
+
+**English-Only** (for Developer/Internal Docs):
+- AGENTS.md (English only)
+- docs/DESIGN_SPECIFICATIONS.md (English only)
+
+**Special Handling**:
+- CHANGELOG.md: Historical entries remain as-is; future entries follow bilingual format
+
+#### Best Practices
+
+1. **Reference Implementation**: Use README.md as template
+2. **Navigation Links**: Ensure `[日本語](#日本語)` and `[English](#english)` work correctly
+3. **Parallel Structure**: Match section hierarchies between Japanese and English
+4. **Code Preservation**: Keep code blocks, JSON examples, and technical content untranslated
 
 ## For Performance Optimization Agents
 
