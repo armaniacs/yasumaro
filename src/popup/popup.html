@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; object-src 'none';">
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; connect-src https: http:; object-src 'none';">
   <title>Obsidian Smart History Settings</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -28,7 +28,7 @@
     <button id="recordBtn" class="primary-btn" data-i18n-label="recordNow">📝 Record Now</button>
     <div id="loadingSpinner" class="spinner-container">
       <svg class="spinner" viewBox="0 0 50 50">
-        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke="#4CAF50" stroke-width="4"
+        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke="#2E7D32" stroke-width="4"
           stroke-linecap="round" />
       </svg>
       <span class="spinner-text" data-i18n="processing">Processing...</span>
@@ -42,13 +42,12 @@
       <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain">←</button>
       <h2 data-i18n="settings">Settings</h2>
       <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true">⋮</button>
-    </div>
-
-    <!-- Settings Dropdown Menu -->
-    <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
-      <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
-      <button id="importSettingsBtn" role="menuitem" data-i18n="importSettings">Import</button>
-      <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
+      <!-- Settings Dropdown Menu -->
+      <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
+        <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
+        <button id="importSettingsBtn" role="menuitem" data-i18n="importSettings">Import</button>
+        <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
+      </div>
     </div>
 
     <!-- Tab Navigation -->
@@ -71,12 +70,14 @@
 
       <div class="form-group">
         <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
-        <input type="text" id="protocol" value="https">
+        <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError">
+        <div id="protocolError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
         <label for="port" data-i18n="port">Port</label>
-        <input type="text" id="port" value="27123">
+        <input type="text" id="port" value="27123" aria-invalid="false" aria-describedby="portError">
+        <div id="portError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
@@ -145,13 +146,15 @@
       </div>
 
       <div class="form-group">
-        <label data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
-        <input type="number" id="minVisitDuration" min="1" value="5">
+        <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
+        <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false" aria-describedby="minVisitDurationError">
+        <div id="minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
-        <input type="number" id="minScrollDepth" min="0" max="100" value="50">
+        <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
+        <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false" aria-describedby="minScrollDepthError">
+        <div id="minScrollDepthError" class="field-error" role="alert"></div>
       </div>
 
       <button id="save" data-i18n="saveAndTest">Save & Test Connection</button>

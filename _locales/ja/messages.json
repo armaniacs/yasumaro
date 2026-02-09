@@ -410,6 +410,18 @@
     "successConnected": {
         "message": "成功！Obsidianに接続しました。設定を保存しました。"
     },
+    "successAllConnected": {
+        "message": "成功！Obsidian・AI両方に接続しました。設定を保存しました。"
+    },
+    "obsidianOkAiFailed": {
+        "message": "Obsidian: OK / AI接続失敗: {message}"
+    },
+    "obsidianFailedAiOk": {
+        "message": "Obsidian接続失敗: {message} / AI: OK"
+    },
+    "bothConnectionFailed": {
+        "message": "Obsidian接続失敗: {obsidianMessage} / AI接続失敗: {aiMessage}"
+    },
     "connectionFailed": {
         "message": "接続失敗: {message}"
     },

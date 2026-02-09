@@ -2,6 +2,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
+import { getAllowedUrls } from '../utils/storage.js';
 
 // Initialize clients
 const obsidian = new ObsidianClient();
@@ -14,7 +15,7 @@ const tabCache = new Map();
 let isTabCacheInitialized = false;
 
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -94,9 +95,13 @@ async function handleMessage(message, sender) {
       // SSRF対策: 内部ネットワークブロック
       validateUrlForFilterImport(message.payload.url);
 
+      // 許可されたURLのリストを取得
+      const allowedUrls = await getAllowedUrls();
+
       const response = await fetchWithTimeout(message.payload.url, {
         method: 'GET',
-        cache: 'no-cache'
+        cache: 'no-cache',
+        allowedUrls // 動的URL検証用オプション
       });
 
       if (!response.ok) {
@@ -111,6 +116,13 @@ async function handleMessage(message, sender) {
       console.error('Fetch URL Error:', error);
       return { success: false, error: `${error.name}: ${error.message}` };
     }
+  }
+
+  // Connection Test (Obsidian + AI)
+  if (message.type === 'TEST_CONNECTIONS') {
+    const obsidianResult = await obsidian.testConnection();
+    const aiResult = await aiClient.testConnection();
+    return { success: true, obsidian: obsidianResult, ai: aiResult };
   }
 
   // Manual Record Processing & Preview

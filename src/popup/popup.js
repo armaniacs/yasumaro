@@ -1,5 +1,4 @@
-import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
-import { ObsidianClient } from '../background/obsidianClient.js';
+import { StorageKeys, saveSettingsWithAllowedUrls, getSettings } from '../utils/storage.js';
 import { init as initNavigation } from './navigation.js';
 import { init as initDomainFilter } from './domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
@@ -81,62 +80,157 @@ async function load() {
     updateVisibility();
 }
 
+// Field validation helpers
+function setFieldError(input, errorId, message) {
+    const errorEl = document.getElementById(errorId);
+    input.setAttribute('aria-invalid', 'true');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.add('visible');
+    }
+}
+
+function clearFieldError(input, errorId) {
+    const errorEl = document.getElementById(errorId);
+    input.setAttribute('aria-invalid', 'false');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.remove('visible');
+    }
+}
+
+function clearAllFieldErrors() {
+    const pairs = [
+        [protocolInput, 'protocolError'],
+        [portInput, 'portError'],
+        [minVisitDurationInput, 'minVisitDurationError'],
+        [minScrollDepthInput, 'minScrollDepthError'],
+    ];
+    for (const [input, errorId] of pairs) {
+        clearFieldError(input, errorId);
+    }
+}
+
+// Real-time validation on blur
+protocolInput.addEventListener('blur', () => {
+    const v = protocolInput.value.trim().toLowerCase();
+    if (v !== 'http' && v !== 'https') {
+        setFieldError(protocolInput, 'protocolError', getMessage('errorProtocol'));
+    } else {
+        clearFieldError(protocolInput, 'protocolError');
+    }
+});
+
+portInput.addEventListener('blur', () => {
+    const v = parseInt(portInput.value.trim(), 10);
+    if (isNaN(v) || v < 1 || v > 65535) {
+        setFieldError(portInput, 'portError', getMessage('errorPort'));
+    } else {
+        clearFieldError(portInput, 'portError');
+    }
+});
+
+minVisitDurationInput.addEventListener('blur', () => {
+    const v = parseInt(minVisitDurationInput.value, 10);
+    if (isNaN(v) || v < 0) {
+        setFieldError(minVisitDurationInput, 'minVisitDurationError', getMessage('errorDuration'));
+    } else {
+        clearFieldError(minVisitDurationInput, 'minVisitDurationError');
+    }
+});
+
+minScrollDepthInput.addEventListener('blur', () => {
+    const v = parseInt(minScrollDepthInput.value, 10);
+    if (isNaN(v) || v < 0 || v > 100) {
+        setFieldError(minScrollDepthInput, 'minScrollDepthError', getMessage('errorScrollDepth'));
+    } else {
+        clearFieldError(minScrollDepthInput, 'minScrollDepthError');
+    }
+});
+
 // Save and Test
 saveBtn.addEventListener('click', async () => {
     statusDiv.textContent = getMessage('testingConnection');
     statusDiv.className = '';
+    clearAllFieldErrors();
 
     // Input validation
+    let hasError = false;
+
     const protocol = protocolInput.value.trim().toLowerCase();
     if (protocol !== 'http' && protocol !== 'https') {
-        statusDiv.textContent = getMessage('errorProtocol');
-        statusDiv.className = 'error';
-        return;
+        setFieldError(protocolInput, 'protocolError', getMessage('errorProtocol'));
+        hasError = true;
     }
 
     const port = parseInt(portInput.value.trim(), 10);
     if (isNaN(port) || port < 1 || port > 65535) {
-        statusDiv.textContent = getMessage('errorPort');
-        statusDiv.className = 'error';
-        return;
+        setFieldError(portInput, 'portError', getMessage('errorPort'));
+        hasError = true;
     }
 
     const minVisitDuration = parseInt(minVisitDurationInput.value, 10);
     if (isNaN(minVisitDuration) || minVisitDuration < 0) {
-        statusDiv.textContent = getMessage('errorDuration');
-        statusDiv.className = 'error';
-        return;
+        setFieldError(minVisitDurationInput, 'minVisitDurationError', getMessage('errorDuration'));
+        hasError = true;
     }
 
     const minScrollDepth = parseInt(minScrollDepthInput.value, 10);
     if (isNaN(minScrollDepth) || minScrollDepth < 0 || minScrollDepth > 100) {
-        statusDiv.textContent = getMessage('errorScrollDepth');
-        statusDiv.className = 'error';
+        setFieldError(minScrollDepthInput, 'minScrollDepthError', getMessage('errorScrollDepth'));
+        hasError = true;
+    }
+
+    if (hasError) {
+        statusDiv.textContent = '';
+        statusDiv.className = '';
         return;
     }
 
     const newSettings = extractSettingsFromInputs(settingsMapping);
-    await saveSettings(newSettings);
+    await saveSettingsWithAllowedUrls(newSettings);
 
-    // Test connection
-    const client = new ObsidianClient();
-    const result = await client.testConnection();
+    // Test connections via service worker
+    const testResult = await chrome.runtime.sendMessage({
+        type: 'TEST_CONNECTIONS',
+        payload: {}
+    });
 
-    if (result && result.success) {
-        statusDiv.textContent = getMessage('successConnected');
+    const obsidianResult = testResult?.obsidian || { success: false, message: 'No response' };
+    const aiResult = testResult?.ai || { success: false, message: 'No response' };
+
+    if (obsidianResult.success && aiResult.success) {
+        statusDiv.textContent = getMessage('successAllConnected');
         statusDiv.className = 'success';
-    } else {
-        statusDiv.textContent = getMessage('connectionFailed', { message: result?.message || 'Unknown error' });
+    } else if (obsidianResult.success && !aiResult.success) {
+        statusDiv.textContent = getMessage('obsidianOkAiFailed', { message: aiResult.message });
+        statusDiv.className = 'error';
+    } else if (!obsidianResult.success && aiResult.success) {
+        statusDiv.textContent = getMessage('obsidianFailedAiOk', { message: obsidianResult.message });
         statusDiv.className = 'error';
 
-        if (result.message.includes('Failed to fetch') && protocolInput.value === 'https') {
-            // SECURITY FIX (SECURITY-001): Use the validated 'port' variable, NOT portInput.value
-            // This prevents XSS when portInput.value contains malicious content like:
-            //   - 1234"><script>alert('XSS')</script>
-            //   - 1234"><img src=x onerror=alert('XSS')>
+        if (obsidianResult.message.includes('Failed to fetch') && protocolInput.value === 'https') {
             const url = `https://127.0.0.1:${port}/`;
 
-            // Use createElement instead of innerHTML to prevent XSS
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.textContent = getMessage('acceptCertificate');
+            link.rel = 'noopener noreferrer';
+
+            statusDiv.appendChild(document.createElement('br'));
+            statusDiv.appendChild(link);
+        }
+    } else {
+        statusDiv.textContent = getMessage('bothConnectionFailed', {
+            obsidianMessage: obsidianResult.message,
+            aiMessage: aiResult.message
+        });
+        statusDiv.className = 'error';
+
+        if (obsidianResult.message.includes('Failed to fetch') && protocolInput.value === 'https') {
+            const url = `https://127.0.0.1:${port}/`;
+
             const link = document.createElement('a');
             link.href = url;
             link.target = '_blank';
@@ -261,9 +355,14 @@ importFileInput?.addEventListener('change', async (e) => {
         pendingImportData = parsed.settings;
         pendingImportJson = text;
 
-        // Show import preview and confirmation modal
+        // Show import preview and confirmation modal (with transition)
         showImportPreview(parsed);
-        importConfirmModal?.classList.remove('hidden');
+        if (importConfirmModal) {
+            importConfirmModal.classList.remove('hidden');
+            importConfirmModal.style.display = 'flex';
+            void importConfirmModal.offsetHeight;
+            importConfirmModal.classList.add('show');
+        }
 
     } catch (error) {
         console.error('Import error:', error);
@@ -279,7 +378,11 @@ importFileInput?.addEventListener('change', async (e) => {
 
 // Close import modal
 async function closeImportModal() {
-    importConfirmModal?.classList.add('hidden');
+    if (importConfirmModal) {
+        importConfirmModal.classList.remove('show');
+        importConfirmModal.style.display = 'none';
+        importConfirmModal.classList.add('hidden');
+    }
     pendingImportData = null;
     pendingImportJson = null;
     if (importPreview) {

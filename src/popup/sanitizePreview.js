@@ -217,8 +217,11 @@ export function showPreview(content, maskedItems = null, maskedCount = 0) {
   // モーダル表示前にフォーカス要素を記憶
   previousActiveElement = document.activeElement;
 
-  // モーダル表示
+  // モーダル表示（トランジション付き）
   modal.style.display = 'flex';
+  // Force reflow for CSS transition
+  void modal.offsetHeight;
+  modal.classList.add('show');
 
   // フォーカストラップ設定
   trapFocus(modal);
@@ -268,6 +271,7 @@ function handleAction(confirmed) {
   // フォーカストラップ解放
   releaseFocusTrap(modal);
 
+  modal.classList.remove('show');
   modal.style.display = 'none';
   resetBodyWidth();
   const content = previewContent.value;

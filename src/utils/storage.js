@@ -6,6 +6,7 @@
 // Temporarily disabled to resolve circular dependency
 // import { addLog, LogType } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
+import { generateSalt, deriveKey, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
 
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
@@ -35,8 +36,70 @@ export const StorageKeys = {
     UBLOCK_RULES: 'ublock_rules',           // uBlock形式ルールセット（マージ済み）
     UBLOCK_SOURCES: 'ublock_sources',       // uBlockソースリスト（複数対応）
     UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled', // uBlock形式有効化フラグ
-    SIMPLE_FORMAT_ENABLED: 'simple_format_enabled' // シンプル形式有効化フラグ
+    SIMPLE_FORMAT_ENABLED: 'simple_format_enabled', // シンプル形式有効化フラグ
+    // Dynamic URL validation settings (CSP tightening)
+    ALLOWED_URLS: 'allowed_urls',           // 許可されたURLのリスト（配列）
+    ALLOWED_URLS_HASH: 'allowed_urls_hash', // URLリストのハッシュ（変更検出用）
+    // Encryption settings
+    ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
+    ENCRYPTION_SECRET: 'encryption_secret'  // 自動生成されたランダムシークレット（Base64）
 };
+
+// 暗号化対象のAPIキーフィールド
+const API_KEY_FIELDS = [
+    StorageKeys.OBSIDIAN_API_KEY,
+    StorageKeys.GEMINI_API_KEY,
+    StorageKeys.OPENAI_API_KEY,
+    StorageKeys.OPENAI_2_API_KEY
+];
+
+// メモリキャッシュ（セッション中の再導出を避ける）
+let cachedEncryptionKey = null;
+
+/**
+ * 暗号化キーを取得または作成する
+ * ソルト/シークレットが無ければ自動生成してストレージに保存
+ * @returns {Promise<CryptoKey>} 導出された暗号化キー
+ */
+export async function getOrCreateEncryptionKey() {
+    if (cachedEncryptionKey) {
+        return cachedEncryptionKey;
+    }
+
+    const result = await chrome.storage.local.get([
+        StorageKeys.ENCRYPTION_SALT,
+        StorageKeys.ENCRYPTION_SECRET
+    ]);
+
+    let saltBase64 = result[StorageKeys.ENCRYPTION_SALT];
+    let secret = result[StorageKeys.ENCRYPTION_SECRET];
+
+    if (!saltBase64 || !secret) {
+        // 初回: ソルトとシークレットを生成
+        const salt = generateSalt();
+        saltBase64 = btoa(String.fromCharCode(...salt));
+        // 32バイトのランダムシークレットを生成
+        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+        secret = btoa(String.fromCharCode(...secretBytes));
+
+        await chrome.storage.local.set({
+            [StorageKeys.ENCRYPTION_SALT]: saltBase64,
+            [StorageKeys.ENCRYPTION_SECRET]: secret
+        });
+    }
+
+    // Base64からUint8Arrayに変換
+    const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0));
+    cachedEncryptionKey = await deriveKey(secret, salt);
+    return cachedEncryptionKey;
+}
+
+/**
+ * 暗号化キーのキャッシュをクリアする（テスト用）
+ */
+export function clearEncryptionKeyCache() {
+    cachedEncryptionKey = null;
+}
 
 const DEFAULT_SETTINGS = {
     [StorageKeys.OBSIDIAN_API_KEY]: '', // APIキー（ユーザーが設定）
@@ -85,7 +148,10 @@ const DEFAULT_SETTINGS = {
     },
     [StorageKeys.UBLOCK_SOURCES]: [], // 複数ソースのリスト
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: false,
-    [StorageKeys.SIMPLE_FORMAT_ENABLED]: true
+    [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
+    // Dynamic URL validation defaults
+    [StorageKeys.ALLOWED_URLS]: [], // 許可されたURLのリスト（設定から動的に構築）
+    [StorageKeys.ALLOWED_URLS_HASH]: '' // URLリストのハッシュ（変更検出用）
 };
 
 export async function getSettings() {
@@ -99,11 +165,45 @@ export async function getSettings() {
         settings = { ...settings, ...afterMigration }; // マイグレーション後の値をマージ
         // addLog(LogType.DEBUG, 'Settings migration completed', { migrated, keysUpdated: Object.keys(afterMigration) });
     }
-    return { ...DEFAULT_SETTINGS, ...settings };
+    const merged = { ...DEFAULT_SETTINGS, ...settings };
+
+    // 暗号化されたAPIキーを復号
+    try {
+        const key = await getOrCreateEncryptionKey();
+        for (const field of API_KEY_FIELDS) {
+            const value = merged[field];
+            if (isEncrypted(value)) {
+                try {
+                    merged[field] = await decryptApiKey(value, key);
+                } catch (e) {
+                    console.error(`Failed to decrypt ${field}:`, e);
+                    merged[field] = '';
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to get encryption key for decryption:', e);
+    }
+
+    return merged;
 }
 
 export async function saveSettings(settings) {
-    await chrome.storage.local.set(settings);
+    const toSave = { ...settings };
+
+    // APIキーフィールドを暗号化
+    try {
+        const key = await getOrCreateEncryptionKey();
+        for (const field of API_KEY_FIELDS) {
+            if (field in toSave && typeof toSave[field] === 'string' && toSave[field] !== '') {
+                toSave[field] = await encryptApiKey(toSave[field], key);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to encrypt API keys:', e);
+    }
+
+    await chrome.storage.local.set(toSave);
 }
 
 /**
@@ -126,4 +226,94 @@ export async function setSavedUrls(urlSet) {
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
+
+/**
+ * URLの正規化
+ * @param {string} url - 正規化するURL
+ * @returns {string} 正規化されたURL
+ */
+export function normalizeUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        // 末尾のスラッシュを削除
+        let normalized = parsedUrl.href.replace(/\/$/, '');
+        // プロトコルを小文字に正規化
+        normalized = normalized.replace(/^https:/i, 'https:');
+        normalized = normalized.replace(/^http:/i, 'http:');
+        return normalized;
+    } catch (e) {
+        // URLが無効な場合はそのまま返す
+        return url;
+    }
+}
+
+/**
+ * 設定から許可されたURLのリストを構築
+ * @param {object} settings - 設定オブジェクト
+ * @returns {Set<string>} 許可されたURLのセット
+ */
+export function buildAllowedUrls(settings) {
+    const allowedUrls = new Set();
+
+    // Obsidian API
+    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
+    const port = settings[StorageKeys.OBSIDIAN_PORT] || '27123';
+    allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
+    allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
+
+    // Gemini API
+    allowedUrls.add('https://generativelanguage.googleapis.com');
+
+    // OpenAI互換API
+    const openaiBaseUrl = settings[StorageKeys.OPENAI_BASE_URL];
+    if (openaiBaseUrl) {
+        const normalized = normalizeUrl(openaiBaseUrl);
+        allowedUrls.add(normalized);
+    }
+
+    const openai2BaseUrl = settings[StorageKeys.OPENAI_2_BASE_URL];
+    if (openai2BaseUrl) {
+        const normalized = normalizeUrl(openai2BaseUrl);
+        allowedUrls.add(normalized);
+    }
+
+    return allowedUrls;
+}
+
+/**
+ * URLリストのハッシュを計算
+ * @param {Set<string>} urls - URLのセット
+ * @returns {string} ハッシュ値
+ */
+export function computeUrlsHash(urls) {
+    const sortedUrls = Array.from(urls).sort();
+    return sortedUrls.join('|');
+}
+
+/**
+ * 設定を保存し、許可されたURLのリストを再構築
+ * @param {object} settings - 設定オブジェクト
+ */
+export async function saveSettingsWithAllowedUrls(settings) {
+    // 許可されたURLのリストを再構築
+    const allowedUrls = buildAllowedUrls(settings);
+    const allowedUrlsHash = computeUrlsHash(allowedUrls);
+
+    // 設定を保存
+    await chrome.storage.local.set({
+        ...settings,
+        [StorageKeys.ALLOWED_URLS]: Array.from(allowedUrls),
+        [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
+    });
+}
+
+/**
+ * 許可されたURLのリストを取得
+ * @returns {Promise<Set<string>>} 許可されたURLのセット
+ */
+export async function getAllowedUrls() {
+    const result = await chrome.storage.local.get(StorageKeys.ALLOWED_URLS);
+    const urls = result[StorageKeys.ALLOWED_URLS] || [];
+    return new Set(urls);
+}
 

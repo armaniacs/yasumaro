@@ -20,6 +20,16 @@ if (typeof global.TextDecoder === 'undefined') {
   };
 }
 
+// Web Crypto API polyfill for Jest testing environment
+// jsdom環境ではcrypto.subtleが利用できないため、常にpolyfillを適用
+const { Crypto } = require('@peculiar/webcrypto');
+const webcrypto = new Crypto();
+Object.defineProperty(global, 'crypto', {
+  value: webcrypto,
+  writable: true,
+  configurable: true
+});
+
 // jestをグローバル変数として定義
 global.jest = global.jest || {};
 

@@ -63,13 +63,13 @@ describe('UI/UX Improvements Test Suite', () => {
     });
 
     it('エラーメッセージが視覚的に目立つ色設定になっていること', () => {
-      // エラーは赤系の色であるべき
-      expect(stylesCSS).toMatch(/\.error\s*{[\s\S]*?(?:#d9534f|#dc3545|#f44336|rgb\(\s*2[0-9]{2}|rgb\(\s*220)/i);
+      // エラーは赤系の色またはCSS変数参照であるべき
+      expect(stylesCSS).toMatch(/\.error\s*{[\s\S]*?(?:#d9534f|#dc3545|#f44336|var\(--color-danger|rgb\(\s*2[0-9]{2}|rgb\(\s*220)/i);
     });
 
     it('成功メッセージが視覚的に目立つ色設定になっていること', () => {
-      // 成功は緑系の色であるべき
-      expect(stylesCSS).toMatch(/\.success\s*{[\s\S]*?(?:#4CAF50|#28a745|#5cb85c|rgb\(\s*[0-9]{2},\s*[0-9]{2},\s*0)/i);
+      // 成功は緑系の色またはCSS変数参照であるべき
+      expect(stylesCSS).toMatch(/\.success\s*{[\s\S]*?(?:#4CAF50|#28a745|#5cb85c|var\(--color-success|rgb\(\s*[0-9]{2},\s*[0-9]{2},\s*0)/i);
     });
   });
 

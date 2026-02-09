@@ -99,6 +99,14 @@
 **初期設定**:
 - デフォルトはブラックリストモードで、一般的なサイト（Amazon、Google、Facebookなど）があらかじめ設定されています
 
+#### 4. 設定のエクスポート・インポート
+設定画面の右上にある「⋮」（三点メニュー）ボタンをクリックすると、ドロップダウンメニューが表示されます。
+
+- **エクスポート**: 現在の全設定をJSONファイルとしてダウンロードします。ファイル名には日時が含まれます（例: `obsidian-smart-history-settings-20240101-120000.json`）。
+- **インポート**: エクスポートしたJSONファイルを選択すると、設定内容のプレビューが表示されます。確認後「インポート」をクリックすると、現在の設定が上書きされます。
+
+端末の移行やバックアップにご活用ください。
+
 ---
 
 ## English
@@ -182,3 +190,11 @@ In the "Domain Filter" tab, you can control which domains to record.
 
 **Initial Settings**:
 - Default is blacklist mode with common sites (Amazon, Google, Facebook, etc.) pre-configured
+
+#### 4. Export / Import Settings
+Click the "⋮" (three-dot menu) button in the top right corner of the settings screen to reveal a dropdown menu.
+
+- **Export**: Downloads all current settings as a JSON file. The filename includes a timestamp (e.g., `obsidian-smart-history-settings-20240101-120000.json`).
+- **Import**: Select a previously exported JSON file. A preview of the settings is shown before applying. Click "Import" to overwrite the current settings.
+
+Useful for migrating settings to another device or creating backups.

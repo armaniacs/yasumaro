@@ -1,4 +1,4 @@
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings, StorageKeys, getAllowedUrls } from '../utils/storage.js';
 import { LocalAIClient } from './localAiClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
@@ -116,13 +116,17 @@ export class AIClient {
         };
 
         try {
+            // 許可されたURLのリストを取得
+            const allowedUrls = await getAllowedUrls();
+
             const response = await fetchWithTimeout(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-goog-api-key': apiKey
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                allowedUrls // 動的URL検証用オプション
             }, API_TIMEOUT_MS);
 
             if (!response.ok) {
@@ -205,10 +209,14 @@ export class AIClient {
         }
 
         try {
+            // 許可されたURLのリストを取得
+            const allowedUrls = await getAllowedUrls();
+
             const response = await fetchWithTimeout(url, {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                allowedUrls // 動的URL検証用オプション
             }, API_TIMEOUT_MS);
 
             if (!response.ok) {
@@ -245,10 +253,14 @@ export class AIClient {
      */
     async listGeminiModels(apiKey) {
         try {
+            // 許可されたURLのリストを取得
+            const allowedUrls = await getAllowedUrls();
+
             const response = await fetchWithTimeout(
                 `https://generativelanguage.googleapis.com/v1beta/models`,
                 {
-                    headers: { 'x-goog-api-key': apiKey }
+                    headers: { 'x-goog-api-key': apiKey },
+                    allowedUrls // 動的URL検証用オプション
                 },
                 API_TIMEOUT_MS
             );
@@ -259,6 +271,77 @@ export class AIClient {
             return `List models failed: ${e.message}`;
         }
     }
+    /**
+     * AI接続テスト
+     * 選択されたAIプロバイダーに軽量なリクエストを送って接続を確認する
+     * @returns {Promise<{success: boolean, message: string}>}
+     */
+    async testConnection() {
+        const settings = await getSettings();
+        const provider = settings[StorageKeys.AI_PROVIDER] || 'gemini';
+        const providerConfig = this.getProviderConfig(provider, settings);
+
+        if (!providerConfig) {
+            return { success: false, message: 'AI provider configuration is missing.' };
+        }
+
+        try {
+            const allowedUrls = await getAllowedUrls();
+
+            if (provider === 'gemini') {
+                return await this._testGeminiConnection(providerConfig, allowedUrls);
+            } else {
+                return await this._testOpenAIConnection(providerConfig, allowedUrls);
+            }
+        } catch (e) {
+            addLog(LogType.ERROR, `AI connection test failed: ${e.message}`);
+            return { success: false, message: e.message };
+        }
+    }
+
+    async _testGeminiConnection(config, allowedUrls) {
+        if (!config.apiKey) {
+            return { success: false, message: 'Gemini API Key is not set.' };
+        }
+
+        const url = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const response = await fetchWithTimeout(url, {
+            method: 'GET',
+            headers: { 'x-goog-api-key': config.apiKey },
+            allowedUrls
+        }, API_TIMEOUT_MS);
+
+        if (response.ok) {
+            return { success: true, message: 'Connected to Gemini API.' };
+        }
+        const errorText = await response.text();
+        addLog(LogType.ERROR, `Gemini connection test failed: ${response.status} ${errorText}`);
+        return { success: false, message: `Gemini API Error: ${response.status}` };
+    }
+
+    async _testOpenAIConnection(config, allowedUrls) {
+        const baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+        const url = `${baseUrl}/models`;
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (config.apiKey) {
+            headers['Authorization'] = `Bearer ${config.apiKey}`;
+        }
+
+        const response = await fetchWithTimeout(url, {
+            method: 'GET',
+            headers,
+            allowedUrls
+        }, API_TIMEOUT_MS);
+
+        if (response.ok) {
+            return { success: true, message: 'Connected to AI API.' };
+        }
+        const errorText = await response.text();
+        addLog(LogType.ERROR, `OpenAI connection test failed: ${response.status} ${errorText}`);
+        return { success: false, message: `AI API Error: ${response.status}` };
+    }
+
     /**
      * ローカルAIで要約を生成する
      * @param {string} content

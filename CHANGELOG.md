@@ -2,7 +2,83 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.5.0] - 2026-02-09
+## [2.5.0] - to be release
+
+### Security
+- **APIキーの自動暗号化**: `chrome.storage.local` に保存されるAPIキーをAES-GCMで自動暗号化
+  - `src/utils/storage.js` に暗号化キー管理（`getOrCreateEncryptionKey()`）を追加
+  - `saveSettings()` でAPIキーフィールドを自動暗号化して保存
+  - `getSettings()` で暗号化されたAPIキーを自動復号して返却
+  - 暗号化対象: `OBSIDIAN_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENAI_2_API_KEY`
+  - Extension固有のランダムシークレット（32バイト）とソルト（16バイト）を自動生成
+  - PBKDF2キー導出（100,000イテレーション）、AES-GCM認証付き暗号化
+  - 後方互換性: 既存の平文APIキーはそのまま読み取り可能（自動マイグレーション）
+  - 呼び出し元（popup.js, aiClient.js, obsidianClient.js）の変更不要（透過的に動作）
+  - エクスポート/インポート: `getSettings()` は復号済み値を返すため、エクスポートファイルには平文が含まれる
+- **動的URL検証の実装**: ユーザーが設定したURLのみにアクセスを制限する機能を追加
+  - `src/utils/storage.js` に `normalizeUrl()`, `buildAllowedUrls()`, `computeUrlsHash()`, `saveSettingsWithAllowedUrls()`, `getAllowedUrls()` 関数を追加
+  - `src/utils/fetch.js` に `normalizeUrl()`, `isUrlAllowed()` 関数を追加
+  - `fetchWithTimeout()` に `allowedUrls` オプションを追加し、動的URL検証を実装
+  - `src/background/aiClient.js` の `generateGeminiSummary()`, `generateOpenAISummary()`, `listGeminiModels()` で `allowedUrls` オプションを使用
+  - `src/background/service-worker.js` の `FETCH_URL` ハンドラで `allowedUrls` オプションを使用
+  - 後方互換性: 許可されたURLのリストがない場合は検証をスキップ
+  - **注**: CSPは静的設定であり、ユーザー設定のbaseUrlを動的に追加できないため、CSPは元の設定を維持
+  - 動的URL検証により、ユーザーが設定したURLのみにアクセスを制限し、セキュリティを向上
+
+### Fixed
+- **接続テストの改善**: 「保存 & 接続テスト」ボタンがObsidianとAI両方の接続をテストするように修正
+  - `src/background/aiClient.js` に `testConnection()`, `_testGeminiConnection()`, `_testOpenAIConnection()` メソッドを追加
+  - `src/background/service-worker.js` に `TEST_CONNECTIONS` メッセージハンドラを追加し、service worker経由で接続テストを実行
+  - `src/popup/popup.js` を `chrome.runtime.sendMessage` 経由に変更（popup CSP制限を回避）
+  - `saveSettings()` を `saveSettingsWithAllowedUrls()` に変更し、AI APIのURLが許可リストに自動登録されるように修正
+  - テスト結果を4パターンで個別表示: 両方OK / Obsidian OK・AI失敗 / Obsidian失敗・AI OK / 両方失敗
+- **popup.html CSPの修正**: `connect-src https: http:` を追加し、popupからの外部接続を許可
+
+### i18n
+- **接続テスト結果メッセージの追加**: 日英両方に4つのメッセージキーを追加
+  - `successAllConnected`: 両方接続成功
+  - `obsidianOkAiFailed`: Obsidian OK / AI失敗
+  - `obsidianFailedAiOk`: Obsidian失敗 / AI OK
+  - `bothConnectionFailed`: 両方失敗
+
+### Tests
+- **APIキー暗号化テストの追加**: `src/utils/__tests__/storage.test.js` に11件のテストを追加
+  - `getOrCreateEncryptionKey()` のテスト（3件）: 生成・再利用・メモリキャッシュ
+  - `saveSettings()` 暗号化テスト（3件）: 暗号化保存・空文字スキップ・非APIキーフィールド
+  - `getSettings()` 復号テスト（3件）: 復号・平文後方互換性・エラーフォールバック
+  - ラウンドトリップテスト（2件）: 全4キー・混在設定
+- **URL検証テストの追加**: `src/utils/__tests__/fetch.test.js` に13件のテストを追加
+  - `normalizeUrl()` のテスト（3件）
+  - `isUrlAllowed()` のテスト（5件）
+- **設定管理テストの追加**: `src/utils/__tests__/storage.test.js` に既存11件のテストを維持
+  - `normalizeUrl()` のテスト（3件）
+  - `buildAllowedUrls()` のテスト（3件）
+  - `computeUrlsHash()` のテスト（3件）
+- **テスト結果**: 全35テスト成功（storage.test.js: 22件, storage-keys.test.js: 3件, fetch.test.js: 10件）
+
+### UI/UX
+- **コントラスト比の改善**: WCAG AA準拠のためにテキスト・ボタンの色を濃くする
+  - ラベルテキスト: `#555` → `#333`
+  - プライマリーボタン・confirmボタン: `#4CAF50` → `#2E7D32`
+  - ヘルプテキスト: `#666` → `#444`
+  - フォーカスアウトライン・スピナー等の関連色も統一
+- **インラインバリデーションとアクセシビリティ強化**: 入力フィールドにリアルタイムエラー表示を追加
+  - Protocol, Port, Min Visit Duration, Min Scroll Depth に `aria-invalid` と `aria-describedby` 属性を追加
+  - 各フィールドに `.field-error` エラーメッセージ表示エリア（`role="alert"`）を追加
+  - `blur` イベントでリアルタイムバリデーション、保存時に一括エラー表示
+- **CSSカラーパレットの一貫性化**: ハードコード色をCSS変数に統一
+  - `:root` に50以上のCSS変数を定義（Primary, Accent, Secondary, Danger, Success, Info, Text, Borders）
+  - `styles.css` 全体でハードコード色を `var()` に置換し、テーマ変更を容易に
+- **モーダル・ドロップダウンのトランジション追加**: 表示切替にアニメーションを実装
+  - モーダル: `opacity` + `translateY` の0.2sトランジション（`.show`クラス制御）
+  - ドロップダウンメニュー: `opacity` + `translateY` の0.15sトランジション
+  - `sanitizePreview.js`, `popup.js` のモーダル開閉処理を更新
+- **ダークモード対応**: OS設定に連動する自動ダークテーマを追加
+  - `@media (prefers-color-scheme: dark)` でCSS変数を上書き
+  - 入力欄・セレクト・ボタン・モーダル等の背景・文字色をダークテーマに対応
+  - `color-scheme: dark` でブラウザネイティブ要素も暗色化
+
+## [2.4.6] - 2026-02-09
 
 ### Fixed
 - **設定画面遷移の修正**: ギアアイコン（⚙）を押しても設定画面に遷移しない不具合を修正

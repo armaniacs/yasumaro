@@ -87,8 +87,20 @@ function validateTimeout(timeoutMs) {
  */
 export async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
   // URL検証（オプション - デフォルトではlocalhostを許可）
-  const { requireValidProtocol = true, blockLocalhost = false, ...fetchOptions } = options;
+  const { 
+    requireValidProtocol = true, 
+    blockLocalhost = false, 
+    allowedUrls = null, // 動的URL検証用オプション
+    ...fetchOptions 
+  } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
+
+  // 動的URL検証（オプション）
+  if (allowedUrls) {
+    if (!isUrlAllowed(url, allowedUrls)) {
+      throw new Error(`URL is not allowed: ${url}`);
+    }
+  }
 
   // タイムアウト検証
   validateTimeout(timeoutMs);
@@ -174,4 +186,54 @@ export function validateUrlForFilterImport(url) {
   if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname.endsWith('.localhost')) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
   }
+}
+
+/**
+ * URLの正規化
+ * @param {string} url - 正規化するURL
+ * @returns {string} 正規化されたURL
+ */
+export function normalizeUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    // 末尾のスラッシュを削除
+    let normalized = parsedUrl.href.replace(/\/$/, '');
+    // プロトコルを小文字に正規化
+    normalized = normalized.replace(/^https:/i, 'https:');
+    normalized = normalized.replace(/^http:/i, 'http:');
+    return normalized;
+  } catch (e) {
+    // URLが無効な場合はそのまま返す
+    return url;
+  }
+}
+
+/**
+ * 動的URL検証
+ * @param {string} url - 検証するURL
+ * @param {Set<string>} allowedUrls - 許可されたURLのセット
+ * @returns {boolean} 許可されたURLの場合true
+ */
+export function isUrlAllowed(url, allowedUrls) {
+  if (!allowedUrls || allowedUrls.size === 0) {
+    // 許可されたURLのリストがない場合は検証をスキップ（後方互換性）
+    return true;
+  }
+
+  // URLの正規化
+  const normalizedUrl = normalizeUrl(url);
+
+  // 完全一致チェック
+  if (allowedUrls.has(normalizedUrl)) {
+    return true;
+  }
+
+  // プレフィックスチェック（サブパスを許可）
+  for (const allowedUrl of allowedUrls) {
+    if (normalizedUrl.startsWith(allowedUrl + '/')) {
+      return true;
+    }
+  }
+
+  return false;
 }

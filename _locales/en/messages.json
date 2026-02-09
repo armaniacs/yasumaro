@@ -410,6 +410,18 @@
     "successConnected": {
         "message": "Success! Connected to Obsidian. Settings Saved."
     },
+    "successAllConnected": {
+        "message": "Success! Connected to both Obsidian and AI. Settings Saved."
+    },
+    "obsidianOkAiFailed": {
+        "message": "Obsidian: OK / AI Connection Failed: {message}"
+    },
+    "obsidianFailedAiOk": {
+        "message": "Obsidian Connection Failed: {message} / AI: OK"
+    },
+    "bothConnectionFailed": {
+        "message": "Obsidian Failed: {obsidianMessage} / AI Failed: {aiMessage}"
+    },
     "connectionFailed": {
         "message": "Connection Failed: {message}"
     },

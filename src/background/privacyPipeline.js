@@ -42,7 +42,7 @@ export class PrivacyPipeline {
     // L2: PII Masking
     let maskedItems = [];
     if (sanitizedSettings.useMasking) {
-      const sanitizeResult = this.sanitizers.sanitizeRegex(processingText);
+      const sanitizeResult = await this.sanitizers.sanitizeRegex(processingText);
       processingText = sanitizeResult.text;
       maskedItems = sanitizeResult.maskedItems;
       maskedCount = maskedItems.length;
