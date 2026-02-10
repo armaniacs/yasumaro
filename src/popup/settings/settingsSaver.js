@@ -3,9 +3,10 @@
  * 設定の保存と保存後の接続テストを行う
  */
 
-import { saveSettingsWithAllowedUrls, extractSettingsFromInputs } from '../../utils/storage.js';
+import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
+import { extractSettingsFromInputs } from '../settingsUiHelper.js';
 import { getMessage } from '../i18n.js';
-import { clearAllFieldErrors } from './fieldValidation.js';
+import { clearAllFieldErrors, validateAllFields } from './fieldValidation.js';
 
 /**
  * 接続テスト結果
@@ -163,7 +164,6 @@ export function setupSaveButtonListener(
             settingsMapping,
             (p1, p2, p3, p4) => {
                 // デフォルトバリデーション
-                const { validateAllFields } = await import('./fieldValidation.js');
                 return validateAllFields(p1, p2, p3, p4);
             }
         );

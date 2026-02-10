@@ -18,6 +18,14 @@ All notable changes to this project will be documented in this file.
 - **動的URL検証の実装**: ユーザーが設定したURLのみにアクセスを制限する機能を追加
   - `src/utils/storage.js` に `normalizeUrl()`, `buildAllowedUrls()`, `computeUrlsHash()`, `saveSettingsWithAllowedUrls()`, `getAllowedUrls()` 関数を追加
   - `src/utils/fetch.js` に `normalizeUrl()`, `isUrlAllowed()` 関数を追加
+- **再読み込み時のルール増減表示**: uBlockフィルターソースの再読み込み時に、ルール総数と前回からの増減数（+X/-X）を表示する機能を追加
+
+### Fixed
+- **設定画面遷移の修正**: ギアアイコン（⚙）をクリックしても設定画面が表示されない不具合を修正
+  - `settingsSaver.js` の文法エラー（`async` 欠如）とインポートパスの誤りを修正
+
+### Internal
+- **ストレージアクセスの統一**: `handleReloadSource` で誤って使用されていた `chrome.storage.sync` を `getSettings()` (local) に修正
   - `fetchWithTimeout()` に `allowedUrls` オプションを追加し、動的URL検証を実装
   - `src/background/aiClient.js` の `generateGeminiSummary()`, `generateOpenAISummary()`, `listGeminiModels()` で `allowedUrls` オプションを使用
   - `src/background/service-worker.js` の `FETCH_URL` ハンドラで `allowedUrls` オプションを使用

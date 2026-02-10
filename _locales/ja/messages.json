@@ -401,6 +401,9 @@
     "sourceUpdated": {
         "message": "ソースを更新しました（{ruleCount}ルール）"
     },
+    "sourceUpdatedWithDiff": {
+        "message": "ソースを更新しました（合計: {ruleCount} {diff}）"
+    },
     "autoCloseError": {
         "message": "自動クローズに失敗しました"
     },

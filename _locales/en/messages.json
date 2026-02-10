@@ -401,6 +401,9 @@
     "sourceUpdated": {
         "message": "Source updated ({ruleCount} rules)"
     },
+    "sourceUpdatedWithDiff": {
+        "message": "Source updated (Total: {ruleCount} {diff})"
+    },
     "autoCloseError": {
         "message": "Auto-close failed"
     },

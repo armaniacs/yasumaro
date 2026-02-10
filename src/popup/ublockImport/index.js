@@ -249,12 +249,13 @@ async function handleReloadSource(index) {
     btn.textContent = '...';
   }
 
-  // Fetch storage before try block to avoid double fetch
-  const settings = await chrome.storage.sync.get([StorageKeys.UBLOCK_SOURCES]);
+  // Fetch current settings to get the old rule count
+  const settings = await getSettings();
   const currentSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
+  const oldRuleCount = currentSources[index]?.ruleCount || 0;
 
   try {
-    const { sources, ruleCount } = await reloadSource(index, fetchFromUrl);
+    const { sources, ruleCount: newRuleCount } = await reloadSource(index, fetchFromUrl);
 
     renderSourceList(
       sources,
@@ -262,7 +263,11 @@ async function handleReloadSource(index) {
       handleReloadSource
     );
 
-    showStatus('domainStatus', getMessage('sourceUpdated', { ruleCount }), 'success');
+    // Calculate difference
+    const diff = newRuleCount - oldRuleCount;
+    const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
+
+    showStatus('domainStatus', getMessage('sourceUpdatedWithDiff', { ruleCount: newRuleCount, diff: diffStr }), 'success');
   } catch (error) {
     addLog(LogType.ERROR, getMessage('reloadError'), { error: error.message });
     showStatus('domainStatus', `${getMessage('reloadError')}: ${error.message}`, 'error');
