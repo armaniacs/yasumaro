@@ -92,6 +92,15 @@ All notable changes to this project will be documented in this file.
   - 入力欄・セレクト・ボタン・モーダル等の背景・文字色をダークテーマに対応
   - `color-scheme: dark` でブラウザネイティブ要素も暗色化
 
+## [2.4.7] - 2026-02-10
+
+### Fixed
+- **ポップアップのフリーズ修正**: `storage.js` での関数の重複エクスポート（構文エラー）により、ポップアップが「Loading...」のまま停止する問題を修正
+- **Favicon表示の修正**: `manifest.json` の CSP 設定に `chrome-extension:` が不足していたため、faviconが表示されない問題を修正
+- **バックグラウンドスクリプトのエラー修正**: `service-worker.js` 内で存在しない `handleMessage` 関数を呼び出そうとして `ReferenceError` が発生していた問題を修正
+- **フィルター再読込時の権限エラー修正**: フィルターソースの再読込時に「URL is not allowed」エラーが発生する権限デッドロック問題を修正。通信時に動的に許可リストを構築するように改善。
+- **URL構成のバグ修正**: `storage.js` の `buildAllowedUrls` でURLの構成に誤りがあった問題を修正（`parsed.origin` を使用するように変更）
+
 ## [2.4.6] - 2026-02-09
 
 ### Fixed

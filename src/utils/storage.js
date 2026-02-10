@@ -188,8 +188,13 @@ export async function getSettings() {
     return merged;
 }
 
-export async function saveSettings(settings) {
-    const toSave = { ...settings };
+/**
+ * Save settings to chrome.storage.local with optional allowed URL list update.
+ * @param {Object} settings - Settings to save
+ * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
+ */
+export async function saveSettings(settings, updateAllowedUrlsFlag = false) {
+    let toSave = { ...settings };
 
     // APIキーフィールドを暗号化
     try {
@@ -203,25 +208,25 @@ export async function saveSettings(settings) {
         console.error('Failed to encrypt API keys:', e);
     }
 
+    if (updateAllowedUrlsFlag) {
+        // 現在の設定を取得してマージ
+        const currentSettings = await getSettings();
+        const mergedSettings = { ...currentSettings, ...toSave };
+
+        // 許可されたURLのリストを再構築
+        const allowedUrls = buildAllowedUrls(mergedSettings);
+        const allowedUrlsHash = computeUrlsHash(allowedUrls);
+
+        toSave = {
+            ...toSave,
+            [StorageKeys.ALLOWED_URLS]: Array.from(allowedUrls),
+            [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
+        };
+    }
+
     await chrome.storage.local.set(toSave);
 }
 
-/**
- * Get the list of saved URLs
- * @returns {Promise<Set<string>>} Set of saved URLs
- */
-export async function getSavedUrls() {
-    const result = await chrome.storage.local.get('savedUrls');
-    return new Set(result.savedUrls || []);
-}
-
-/**
- * Save the list of URLs
- * @param {Set<string>} urlSet - Set of URLs to save
- */
-export async function setSavedUrls(urlSet) {
-    await chrome.storage.local.set({ savedUrls: Array.from(urlSet) });
-}
 
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
@@ -391,6 +396,20 @@ export function buildAllowedUrls(settings) {
         allowedUrls.add(normalized);
     }
 
+    // uBlock Filter Sources (SSRF対策済みであることを前提に、ホストを許可)
+    const ublockSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
+    for (const source of ublockSources) {
+        if (source.url && source.url !== 'manual') {
+            try {
+                const parsed = new URL(source.url);
+                // オリジン単位で許可（プロトコル + ホスト + ポート）
+                allowedUrls.add(normalizeUrl(parsed.origin));
+            } catch (e) {
+                // 無効なURLは無視
+            }
+        }
+    }
+
     return allowedUrls;
 }
 
@@ -409,16 +428,8 @@ export function computeUrlsHash(urls) {
  * @param {object} settings - 設定オブジェクト
  */
 export async function saveSettingsWithAllowedUrls(settings) {
-    // 許可されたURLのリストを再構築
-    const allowedUrls = buildAllowedUrls(settings);
-    const allowedUrlsHash = computeUrlsHash(allowedUrls);
-
-    // 設定を保存
-    await chrome.storage.local.set({
-        ...settings,
-        [StorageKeys.ALLOWED_URLS]: Array.from(allowedUrls),
-        [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
-    });
+    // 改訂: saveSettings を使用して常に暗号化とURLリスト更新を行う
+    await saveSettings(settings, true);
 }
 
 /**

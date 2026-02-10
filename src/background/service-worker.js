@@ -2,7 +2,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { getAllowedUrls } from '../utils/storage.js';
+import { getAllowedUrls, getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls } from '../utils/storage.js';
 
 // Initialize clients
 const obsidian = new ObsidianClient();
@@ -165,13 +165,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // SSRF対策: 内部ネットワークブロック
           validateUrlForFilterImport(message.payload.url);
 
-          // 許可されたURLのリストを取得
-          const allowedUrls = await getAllowedUrls();
+          // 許可されたURLのリストを動的に構築（Deadlock回避）
+          const settings = await getSettings();
+          const allowedUrls = buildAllowedUrls(settings);
 
           const response = await fetchWithTimeout(message.payload.url, {
             method: 'GET',
             cache: 'no-cache',
-            allowedUrls // 動的URL検証用オプション
+            allowedUrls // 最新の動的URL検証リストを使用
           });
 
           if (!response.ok) {
@@ -237,24 +238,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep port open for async response
 });
 
-// Listen for messages from Content Script and Popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const process = async () => {
-    try {
-      await initializeTabCache();
-      const response = await handleMessage(message, sender);
-      sendResponse(response);
-    } catch (error) {
-      console.error('Service Worker Error:', error);
-      sendResponse({ success: false, error: error.message });
-    }
-  };
-
-  process();
-  return true; // Keep port open for async response
-});
-
 // Handle Tab Closure - Cleanup only
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabCache.delete(tabId);
 });
+
+// Extension Startup / Installation initialization
+const initializeExtension = async () => {
+  try {
+    const settings = await getSettings();
+    await saveSettingsWithAllowedUrls(settings);
+    console.log('Extension initialized: Allowed URLs list rebuilt.');
+  } catch (error) {
+    console.error('Failed to initialize extension:', error);
+  }
+};
+
+chrome.runtime.onInstalled.addListener(initializeExtension);
+chrome.runtime.onStartup.addListener(initializeExtension);
