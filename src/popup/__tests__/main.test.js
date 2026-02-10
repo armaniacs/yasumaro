@@ -32,8 +32,20 @@ jest.mock('src/utils/storage.js', () => ({
   }
 }));
 
+jest.mock('src/utils/retryHelper.js', () => ({
+  sendMessageWithRetry: jest.fn((message) => Promise.resolve({ success: true })),
+  ChromeMessageSender: class {
+    constructor() {}
+    sendMessageWithRetry() { return Promise.resolve({ success: true }); }
+  },
+  createSender: jest.fn(() => ({
+    sendMessageWithRetry: jest.fn(() => Promise.resolve({ success: true }))
+  }))
+}));
+
 // Import mocked functions after jest.mock declarations
 import { showPreview } from 'src/popup/sanitizePreview.js';
+import { sendMessageWithRetry } from 'src/utils/retryHelper.js';
 import { startAutoCloseTimer } from 'src/popup/autoClose.js';
 import { getCurrentTab, isRecordable } from 'src/popup/tabUtils.js';
 import { getSettings, StorageKeys } from 'src/utils/storage.js';
@@ -235,7 +247,7 @@ describe('main', () => {
 
       // Mock chrome API to return domain blocked error code
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      mockChrome.runtime.sendMessage.mockResolvedValue({
+      sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'DOMAIN_BLOCKED'
       });
@@ -267,7 +279,7 @@ describe('main', () => {
 
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      mockChrome.runtime.sendMessage
+      sendMessageWithRetry
         .mockResolvedValueOnce({
           success: true,
           mode: 'masked_cloud',
@@ -304,7 +316,7 @@ describe('main', () => {
 
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      sendMessageWithRetry.mockResolvedValue({ success: true });
 
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');
@@ -331,7 +343,7 @@ describe('main', () => {
 
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      mockChrome.runtime.sendMessage.mockResolvedValue({
+      sendMessageWithRetry.mockResolvedValue({
         success: true,
         mode: 'masked_cloud',
         maskedCount: 1,
@@ -365,7 +377,7 @@ describe('main', () => {
       // Mock chrome API responses
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       // Simulate a specific error from service worker
-      mockChrome.runtime.sendMessage.mockResolvedValue({
+      sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'AI_PROVIDER_ERROR: Rate limit exceeded'
       });

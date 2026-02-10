@@ -6,6 +6,7 @@ import { startAutoCloseTimer } from './autoClose.js';
 import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, showSuccess, ErrorMessages, isDomainBlockedError, isConnectionError } from './errorUtils.js';
 import { getMessage } from './i18n.js';
+import { sendMessageWithRetry } from '../utils/retryHelper.js';
 
 // Export functions for testing
 export { getCurrentTab };
@@ -75,7 +76,7 @@ export async function recordCurrentPage(force = false) {
     if (usePreview) {
       showSpinner(getMessage('localAiProcessing'));
       // 1. プレビュー用データ取得 (L1/L2 processing)
-      const previewResponse = await chrome.runtime.sendMessage({
+      const previewResponse = await sendMessageWithRetry({
         type: 'PREVIEW_RECORD',
         payload: {
           title: tab.title,
@@ -120,7 +121,7 @@ export async function recordCurrentPage(force = false) {
 
       // 3. 確定データ送信 (L3 processing & Save)
       showSpinner(getMessage('saving'));
-      result = await chrome.runtime.sendMessage({
+      result = await sendMessageWithRetry({
         type: 'SAVE_RECORD',
         payload: {
           title: tab.title,
@@ -132,7 +133,7 @@ export async function recordCurrentPage(force = false) {
 
     } else {
       // 確認なしの既存フロー
-      result = await chrome.runtime.sendMessage({
+      result = await sendMessageWithRetry({
         type: 'MANUAL_RECORD',
         payload: {
           title: tab.title,

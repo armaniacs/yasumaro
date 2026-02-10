@@ -25,6 +25,19 @@ All notable changes to this project will be documented in this file.
   - `settingsSaver.js` の文法エラー（`async` 欠如）とインポートパスの誤りを修正
 
 ### Internal
+- **Service Worker通信のリトライ機能**: `src/utils/retryHelper.js` に自動リトライ機構を追加
+  - ChromeMessageSenderクラスによる指数バックオフ再生（initialDelay: 100ms, backoffMultiplier: 2）
+  - リトライ可能エラーの自動判定（Could not establish connection, Extension context invalidated 等）
+  - ファクトリー関数：sendMessageWithRetry(), createSender()
+- **楽観的ロックの実装**: `src/utils/optimisticLock.js` にバージョン ベースの競合検出を追加
+  - withOptimisticLock()でRead-Modify-Writeパターンの競合防止
+  - ConflictErrorカスタムエラークラス
+  - 競合統計機能（getConflictStats, resetConflictStats）
+  - バージョンフィールド初期化（ensureVersionInitialized）
+- **ストレージ操作の改善**: `src/utils/storage.js` に楽観的ロック統合
+  - setSavedUrls()でwithOptimisticLock()を使用
+  - SAVED_URLS_VERSIONキーの追加（バージョン番号管理）
+  - 変更ファイル：src/popup/main.js, src/content/extractor.js
 - **ストレージアクセスの統一**: `handleReloadSource` で誤って使用されていた `chrome.storage.sync` を `getSettings()` (local) に修正
   - `fetchWithTimeout()` に `allowedUrls` オプションを追加し、動的URL検証を実装
   - `src/background/aiClient.js` の `generateGeminiSummary()`, `generateOpenAISummary()`, `listGeminiModels()` で `allowedUrls` オプションを使用
@@ -64,6 +77,19 @@ All notable changes to this project will be documented in this file.
   - 全タブの初期化を回避し、必要なタブIDのみを直接操作
 
 ### Tests
+- **リトライヘルパーテストの追加**: `src/utils/__tests__/retryHelper.test.js` に22件のテストを追加
+  - ChromeMessageSenderクラスのテスト（constructor, sendMessageWithRetry, isRetryableError）
+  - 指数バックオフ動作確認テスト
+  - ファクトリー関数テスト（sendMessageWithRetry, createSender）
+  - chrome.runtime.lastErrorパターン対応テスト
+- **楽観的ロックテストの追加**: `src/utils/__tests__/optimisticLock.test.js` に20件のテストを追加
+  - 基本機能テスト（値更新、未定義値、初期化、連続更新）
+  - 競合検出とリトライテスト（最大リトライ超過、ConflictError詳細情報）
+  - 並行アクセステスト、エラーハンドリングテスト
+  - カスタムオプションテスト、ConflictErrorクラステスト
+  - 統計情報テスト（getConflictStats, resetConflictStats）
+  - バージョン初期化テスト（ensureVersionInitialized）
+  - URLセット用ユースケーステスト（追加、削除、LRU排除）
 - **APIキー暗号化テストの追加**: `src/utils/__tests__/storage.test.js` に11件のテストを追加
   - `getOrCreateEncryptionKey()` のテスト（3件）: 生成・再利用・メモリキャッシュ
   - `saveSettings()` 暗号化テスト（3件）: 暗号化保存・空文字スキップ・非APIキーフィールド
@@ -76,7 +102,7 @@ All notable changes to this project will be documented in this file.
   - `normalizeUrl()` のテスト（3件）
   - `buildAllowedUrls()` のテスト（3件）
   - `computeUrlsHash()` のテスト（3件）
-- **テスト結果**: 全35テスト成功（storage.test.js: 22件, storage-keys.test.js: 3件, fetch.test.js: 10件）
+- **テスト結果**: 全57テスト成功（storage.test.js: 22件, storage-keys.test.js: 3件, fetch.test.js: 10件, retryHelper.test.js: 22件, optimisticLock.test.js: 20件）
 
 ### UI/UX
 - **コントラスト比の改善**: WCAG AA準拠のためにテキスト・ボタンの色を濃くする

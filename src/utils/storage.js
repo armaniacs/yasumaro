@@ -7,6 +7,7 @@
 // import { addLog, LogType } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
 import { generateSalt, deriveKey, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
+import { withOptimisticLock, ensureVersionInitialized, ConflictError } from './optimisticLock.js';
 
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
@@ -42,7 +43,9 @@ export const StorageKeys = {
     ALLOWED_URLS_HASH: 'allowed_urls_hash', // URLリストのハッシュ（変更検出用）
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
-    ENCRYPTION_SECRET: 'encryption_secret'  // 自動生成されたランダムシークレット（Base64）
+    ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）
+    // Version tracking for optimistic locking
+    SAVED_URLS_VERSION: 'savedUrls_version' // savedUrlsのバージョン番号
 };
 
 // 暗号化対象のAPIキーフィールド
@@ -269,7 +272,9 @@ export async function getSavedUrlsWithTimestamps() {
  */
 export async function setSavedUrls(urlSet, urlToAdd = null) {
     const urlArray = Array.from(urlSet);
-    await chrome.storage.local.set({ savedUrls: urlArray });
+
+    // 楽観的ロックで安全に保存
+    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
 
     // LRUタイムスタンプを管理
     if (urlToAdd) {
@@ -316,15 +321,18 @@ export async function addSavedUrl(url) {
  * @param {string} url - URL to remove
  */
 export async function removeSavedUrl(url) {
-    const currentUrls = await getSavedUrls();
-    currentUrls.delete(url);
-    await chrome.storage.local.set({ savedUrls: Array.from(currentUrls) });
+    // 楽観的ロックで安全に削除
+    await withOptimisticLock('savedUrls', (currentUrls) => {
+        const urlSet = new Set(currentUrls || []);
+        urlSet.delete(url);
+        return Array.from(urlSet);
+    }, { maxRetries: 5 });
 
     // タムスタンプ管理からも削除
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    let entries = result.savedUrlsWithTimestamps || [];
-    entries = entries.filter(entry => entry.url !== url);
-    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        const entries = currentEntries || [];
+        return entries.filter(entry => entry.url !== url);
+    }, { maxRetries: 5 });
 }
 
 /**
@@ -440,5 +448,18 @@ export async function getAllowedUrls() {
     const result = await chrome.storage.local.get(StorageKeys.ALLOWED_URLS);
     const urls = result[StorageKeys.ALLOWED_URLS] || [];
     return new Set(urls);
+}
+
+/**
+ * 楽観的ロック用のバージョンフィールドを初期化（移行用）
+ *
+ * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
+ * この関数はアプリ起動時に呼び出されることを想定しています。
+ *
+ * @returns {Promise<void>}
+ */
+export async function ensureUrlVersionInitialized() {
+    await ensureVersionInitialized('savedUrls');
+    await ensureVersionInitialized('savedUrlsWithTimestamps');
 }
 

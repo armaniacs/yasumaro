@@ -106,14 +106,22 @@ global.chrome = {
   },
   runtime: {
     lastError: null,
-    sendMessage: jest.fn(),
+    sendMessage: jest.fn((_message, callback) => {
+      if (callback && typeof callback === 'function') {
+        callback();
+      }
+    }),
     onMessage: {
       addListener: jest.fn()
     }
   },
   tabs: {
     query: jest.fn(),
-    sendMessage: jest.fn(),
+    sendMessage: jest.fn((_tabId, _message, callback) => {
+      if (callback && typeof callback === 'function') {
+        callback();
+      }
+    }),
     onUpdated: {
       addListener: jest.fn()
     }
