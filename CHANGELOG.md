@@ -41,6 +41,20 @@ All notable changes to this project will be documented in this file.
   - `obsidianFailedAiOk`: Obsidian失敗 / AI OK
   - `bothConnectionFailed`: 両方失敗
 
+### Performance
+- **PIIサニタイザのパフォーマンス改善**: O(n²)からO(n)へアルゴリズム最適化
+  - `src/utils/piiSanitizer.js` でSetを使用した重複チェック実装（O(1)探索）
+  - パターンオーバーラップ修正 - より具体的なパターン（クレジットカード）を優先
+  - マッチ位置を長さ降順でソートし、オーバーラップ防止ロジック追加
+- **URLセットLRU排除機能の実装**: 古いURLの自動クリーンアップ
+  - `src/utils/storage.js` に `getSavedUrlsWithTimestamps()`, `updateUrlTimestamp()` 関数追加
+  - タイムスタンプベースのLRU管理（MAX_URL_SET_SIZE: 10,000）
+  - しきい値超過時に最古のURLを自動削除
+- **Service Worker初期化の遅延化**: 不要なタブクエリをスキップ
+  - `src/background/service-worker.js` に `setNeedsTabCacheInitialization()`, `addTabToCache()`, `getTabFromCache()` 関数追加
+  - TabCacheが必要になるまで初期化を遅延
+  - 全タブの初期化を回避し、必要なタブIDのみを直接操作
+
 ### Tests
 - **APIキー暗号化テストの追加**: `src/utils/__tests__/storage.test.js` に11件のテストを追加
   - `getOrCreateEncryptionKey()` のテスト（3件）: 生成・再利用・メモリキャッシュ
