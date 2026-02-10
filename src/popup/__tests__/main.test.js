@@ -61,6 +61,7 @@ const mockChrome = {
   runtime: {
     lastError: null,
     sendMessage: jest.fn(),
+    getURL: jest.fn((path) => `chrome-extension://test-extension-id${path}`),
     onMessage: {
       addListener: jest.fn()
     }
@@ -138,7 +139,8 @@ describe('main', () => {
       const pageUrl = document.getElementById('pageUrl');
       const recordBtn = document.getElementById('recordBtn');
 
-      expect(favicon.src).toBe('https://example.com/favicon.ico');
+      // favicon.src は chrome.runtime.getURL を使用して構築される URL になる
+      expect(favicon.src).toBe('chrome-extension://test-extension-id/_favicon/?pageUrl=https%3A%2F%2Fexample.com&size=32');
       expect(pageTitle.textContent).toBe('Example Page');
       expect(pageUrl.textContent).toBe('https://example.com');
       expect(recordBtn.disabled).toBe(false);

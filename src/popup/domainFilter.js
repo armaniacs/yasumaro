@@ -272,9 +272,7 @@ export async function handleSaveDomainSettings() {
         await saveSimpleFormatSettings();
 
         // uBlock形式の保存
-        if (typeof handleSaveUblockSettings === 'function') {
-            await handleSaveUblockSettings();
-        }
+        await handleSaveUblockSettings();
 
     } catch (error) {
         addLog(LogType.ERROR, 'Error saving domain settings', { error: error.message, stack: error.stack });

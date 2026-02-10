@@ -423,6 +423,3 @@ export {
   saveUblockSettings,
   handleSaveUblockSettings
 };
-
-// DOM保存用ハンドラーをグローバルに公開
-window.handleSaveUblockSettings = handleSaveUblockSettings;
