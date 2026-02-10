@@ -2,37 +2,47 @@
  * piiSanitizer.js
  * 正規表現による個人情報（PII）の検出とマスキング
  * ReDoS対策: 入力サイズ制限とタイムアウト機能を実装
+ * パフォーマンス改善: 1回のスキャンで全パターンを検出
  */
 
 // 定数設定
 const MAX_INPUT_SIZE = 50 * 1024; // 50KB (文字数)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 
-const PII_PATTERNS = {
-    // クレジットカード（Luhnアルゴリズム検証は行わず、形式のみチェック）
-    // 14-16桁の数字、ハイフン・スペース区切り可
-    // 最適化: 貪欲マッチを避け、より具体的なパターンを使用
-    creditCard: /\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{4}[-\s]?\d{6}[-\s]?\d{5}\b/g,
-
-    // マイナンバー（12桁の数字）
-    // 最適化: より具体的なパターン
-    myNumber: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g,
-
-    // 銀行口座番号（7桁の数字）
-    // 文脈によっては誤検知の可能性があるが、安全側に倒してマスク
-    // 最適化: 単純なパターン
-    bankAccount: /\b\d{7}\b/g,
-
+// PIIパターン定義（単一正規表現用）
+// 注: 文字境界 `\b` を使用して、他の文字列の一部になる場合を防ぐ
+// 数字の間にスペースやハイフンがある場合も検出
+const PII_PATTERNS = [
+    // クレジットカード: 16桁または15桁のカード番号
+    {
+        type: 'creditCard',
+        pattern: /\b(?:\d{4}[-\s]?\d{2,4}[-\s]?\d{2,4}[-\s]?\d{4})\b/ // 16桁（可変区切り3つ）
+    },
+    {
+        type: 'creditCard',
+        pattern: /\b\d{4}[-\s]?\d{6}[-\s]?\d{5}\b/ // 15桁（区切り2つ）
+    },
+    // マイナンバー: 12桁（4桁-4桁-4桁）
+    {
+        type: 'myNumber',
+        pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/
+    },
+    // 銀行口座: 7桁数字
+    {
+        type: 'bankAccount',
+        pattern: /\b\d{7}\b/
+    },
+    // 電話番号: 0 + 1-4桁 + 1-4桁 + 4桁
+    {
+        type: 'phoneJp',
+        pattern: /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}\b/
+    },
     // メールアドレス
-    // 一般的なメールアドレス形式
-    // 最適化: バックトラッキングを減らすために、より具体的なパターンを使用
-    email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-
-    // 電話番号（日本形式）
-    // 固定電話(0x-xxxx-xxxx), 携帯電話(090-xxxx-xxxx), フリーダイヤル(0120-xxx-xxx)
-    // 最適化: 入れ子の量指定子を避け、より具体的なパターンを使用
-    phoneJp: /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}\b/g,
-};
+    {
+        type: 'email',
+        pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+    }
+];
 
 /**
  * 入力サイズを検証する
@@ -79,6 +89,7 @@ async function executeWithTimeout(fn, timeout) {
 
 /**
  * テキストからPIIを検出してマスクする
+ * 【パフォーマンス改善】: 1回のスキャンで全パターンを検出
  * @param {string} text - 対象テキスト
  * @param {object} options - オプション
  * @param {number} options.timeout - タイムアウト時間（ミリ秒）、デフォルト5000ms
@@ -108,15 +119,50 @@ export async function sanitizeRegex(text, options = {}) {
     try {
         // タイムアウト付きで処理を実行
         const result = await executeWithTimeout(() => {
-            let processedText = text;
             const maskedItems = [];
+            const replacements = [];
 
-            // 各パターンで置換
-            for (const [type, pattern] of Object.entries(PII_PATTERNS)) {
-                processedText = processedText.replace(pattern, (match) => {
-                    maskedItems.push({ type, original: match });
-                    return `[MASKED:${type}]`; // デバッグ用にタイプを含める（本番は[MASKED]のみでも可）
-                });
+            // 【パフォーマンス改善】: 重複チェック用のSet（O(1)探索）
+            const matchedPositions = new Set();
+
+            // 【パフォーマンス改善】: 各パターンを1回ずつスキャンしてマッチを収集
+            // ただし置換は行わず、マッチ位置のみを記録
+            for (const { type, pattern } of PII_PATTERNS) {
+                let match;
+                const regex = new RegExp(pattern.source, 'g');
+                while ((match = regex.exec(text)) !== null) {
+                    const matchedValue = match[0];
+                    const startIndex = match.index;
+                    const endIndex = startIndex + matchedValue.length;
+
+                    // 【パフォーマンス改善】: Setで重複チェック（O(1)探索）
+                    const positionKey = `${startIndex}-${endIndex}`;
+                    if (matchedPositions.has(positionKey)) continue;
+
+                    // 【パフォーマンス改善】: 重複チェックをSetに追加
+                    matchedPositions.add(positionKey);
+
+                    replacements.push({
+                        index: startIndex,
+                        length: matchedValue.length,
+                        mask: `[MASKED:${type}]`,
+                        type,
+                        original: matchedValue
+                    });
+                }
+            }
+
+            // マッチ位置をオフセット順にソート（後ろから処理するため）
+            replacements.sort((a, b) => b.index - a.index);
+
+            // テキストを置換して作成
+            let processedText = text;
+            for (const r of replacements) {
+                processedText =
+                    processedText.substring(0, r.index) +
+                    r.mask +
+                    processedText.substring(r.index + r.length);
+                maskedItems.unshift({ type: r.type, original: r.original });
             }
 
             return { text: processedText, maskedItems };
