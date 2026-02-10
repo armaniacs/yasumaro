@@ -20,6 +20,12 @@ let maxScrollPercentage = 0;
 let isValidVisitReported = false;
 let checkIntervalId = null; // 【パフォーマンス向上】: 定期実行のIDを管理し、条件満了後に停止
 
+// 【リトライヘルパー】: Service Worker通信のリトライ機能
+import { createSender } from '../utils/retryHelper.js';
+
+// モジュールレベルでリトライ付き送信者を作成
+const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
+
 /**
  * コンテンツを抽出する共通関数
  * 【機能概要】: ページの本文テキストを抽出し、空白文字を正規化する
@@ -113,35 +119,30 @@ function updateMaxScroll() {
  * 【機能概要】: 条件を満たした訪問をバックグラウンドスクリプトに報告し、記録処理を実行
  * 【送信内容】: コンテンツテキスト（max 10,000文字）
  * 【エラーハンドリング】:
- *   - Service Worker未対応: "Receiving end does not exist" エラーの場合は無視
+ *   - Service Worker未対応: リトライヘルパーにより自動リトライ
  *   - その他エラー: コンソールにエラーログを出力
  * 🟢
  */
-function reportValidVisit() {
+async function reportValidVisit() {
     isValidVisitReported = true;
 
     const content = extractPageContent();
 
     try {
-        chrome.runtime.sendMessage({
+        const response = await messageSender.sendMessageWithRetry({
             type: 'VALID_VISIT',
             payload: {
                 content: content
             }
-        }, (response) => {
-            if (chrome.runtime.lastError) {
-                // 【Service Worker未対応エラー処理】: 無視して次回処理を試行
-                // Service Workerがまだ準備できていない場合に発生
-                if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
-                    // Service worker not ready yet, skipping this visit.
-                }
-            } else if (response && !response.success) {
-                // 【バックグラウンドエラー処理】: エラーログのみ出力（ポップアップは表示しない）
-                console.error("Background Worker Error:", response.error);
-            }
         });
-    } catch (e) {
-        // Exception sending message
+
+        // レスポンスの成功フラグをチェック
+        if (response && !response.success) {
+            console.error("Background Worker Error:", response.error);
+        }
+    } catch (error) {
+        // 全てのリトライが失敗した場合
+        console.warn("Failed to report valid visit:", error.message);
     }
 }
 
