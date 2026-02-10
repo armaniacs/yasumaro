@@ -2,7 +2,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { getAllowedUrls } from '../utils/storage.js';
+import { getAllowedUrls, getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls } from '../utils/storage.js';
 
 // Initialize clients
 const obsidian = new ObsidianClient();
@@ -19,9 +19,32 @@ const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
-// Lazy initialization: Execute query only on first message received
+// 【パフォーマンス改善】: Service Worker初期化遅延
+// TabCacheが必要になるまで初期化を遅延させる
+// 全タブのクエリを避け、必要なタブIDのみを扱う
 let initializationPromise = null;
-function initializeTabCache() {
+let needsTabCacheInitialization = false;
+
+/**
+ * TabCache初期化が必要かどうかを設定
+ * 【改善】: 不要な初期化をスキップするためにフラグを設定
+ * @param {boolean} Needs - 初期化が必要かどうか
+ */
+function setNeedsTabCacheInitialization(needs) {
+  needsTabCacheInitialization = needs;
+}
+
+/**
+ * TabCacheを初期化する（必要な場合のみ）
+ * 【改善】: needsTabCacheInitializationフラグをチェックし、不要ならスキップ
+ * @returns {Promise<void>}
+ */
+async function initializeTabCache() {
+  if (!needsTabCacheInitialization) {
+    // TabCacheが不要なら初期化をスキップ
+    return;
+  }
+
   if (initializationPromise) return initializationPromise;
 
   initializationPromise = new Promise((resolve) => {
@@ -46,119 +69,165 @@ function initializeTabCache() {
 }
 
 /**
- * Message handler logic
+ * 特定タブ情報をキャッシュに追加（初期化なしで直接追加）
+ * 【改善】: 全タブ初期化を回避し、必要なタブのみを追加
+ * @param {Object} tab - タブ情報
  */
-async function handleMessage(message, sender) {
-  // Message payload structure validation
-  if (!message || typeof message !== 'object') {
-    return INVALID_MESSAGE_ERROR;
-  }
-  if (!VALID_MESSAGE_TYPES.includes(message.type)) {
-    return INVALID_MESSAGE_ERROR;
-  }
-  if (message.payload === undefined || typeof message.payload !== 'object') {
-    return INVALID_MESSAGE_ERROR;
-  }
-
-  // Sender validation: Content Script only message types
-  const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT'];
-  if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type)) {
-    if (!sender.tab || !sender.tab.id || !sender.tab.url) {
-      return INVALID_SENDER_ERROR;
-    }
-  }
-
-  // Automatic Visit Processing (Content Script only)
-  if (message.type === 'VALID_VISIT' && sender.tab) {
-    const result = await recordingLogic.record({
-      title: sender.tab.title,
-      url: sender.tab.url,
-      content: message.payload?.content || '',
-      skipDuplicateCheck: false
-    });
-
-    // Update cache
-    tabCache.set(sender.tab.id, {
-      ...tabCache.get(sender.tab.id),
-      title: sender.tab.title,
-      url: sender.tab.url,
-      content: message.payload?.content || '',
-      isValidVisit: true
-    });
-
-    return result;
-  }
-
-  // Fetch URL Content (CORS Bypass for Popup)
-  if (message.type === 'FETCH_URL') {
-    try {
-      // SSRF対策: 内部ネットワークブロック
-      validateUrlForFilterImport(message.payload.url);
-
-      // 許可されたURLのリストを取得
-      const allowedUrls = await getAllowedUrls();
-
-      const response = await fetchWithTimeout(message.payload.url, {
-        method: 'GET',
-        cache: 'no-cache',
-        allowedUrls // 動的URL検証用オプション
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      const text = await response.text();
-
-      return { success: true, data: text, contentType };
-    } catch (error) {
-      console.error('Fetch URL Error:', error);
-      return { success: false, error: `${error.name}: ${error.message}` };
-    }
-  }
-
-  // Connection Test (Obsidian + AI)
-  if (message.type === 'TEST_CONNECTIONS') {
-    const obsidianResult = await obsidian.testConnection();
-    const aiResult = await aiClient.testConnection();
-    return { success: true, obsidian: obsidianResult, ai: aiResult };
-  }
-
-  // Manual Record Processing & Preview
-  if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
-    return await recordingLogic.record({
-      title: message.payload.title,
-      url: message.payload.url,
-      content: message.payload.content,
-      force: message.payload.force,
-      skipDuplicateCheck: true,
-      previewOnly: message.type === 'PREVIEW_RECORD'
+function addTabToCache(tab) {
+  if (tab.id && tab.url && tab.url.startsWith('http')) {
+    tabCache.set(tab.id, {
+      title: tab.title,
+      url: tab.url,
+      favIconUrl: tab.favIconUrl,
+      lastUpdated: Date.now(),
+      isValidVisit: false,
+      content: null
     });
   }
+}
 
-  // Save Confirmed Record (Post-Preview)
-  if (message.type === 'SAVE_RECORD') {
-    return await recordingLogic.record({
-      title: message.payload.title,
-      url: message.payload.url,
-      content: message.payload.content,
-      skipDuplicateCheck: true,
-      alreadyProcessed: true,
-      force: message.payload.force
-    });
-  }
-
-  return null;
+/**
+ * 特定タブ情報をキャッシュから取得（初期化不要）
+ * 【改善】: 全タブ初期化を回避し、必要なタブのみを取得
+ * @param {number} tabId - タブID
+ * @returns {Object|null} タブ情報またはnull
+ */
+function getTabFromCache(tabId) {
+  return tabCache.get(tabId) || null;
 }
 
 // Listen for messages from Content Script and Popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const process = async () => {
     try {
-      await initializeTabCache();
-      const response = await handleMessage(message, sender);
-      sendResponse(response);
+      // 【パフォーマンス改善】: メッセージハンドラ関数をインライン化
+      // TabCache初期化を必要な場合のみ実行
+
+      // Message payload structure validation
+      if (!message || typeof message !== 'object') {
+        sendResponse(INVALID_MESSAGE_ERROR);
+        return;
+      }
+      if (!VALID_MESSAGE_TYPES.includes(message.type)) {
+        sendResponse(INVALID_MESSAGE_ERROR);
+        return;
+      }
+      if (message.payload === undefined || typeof message.payload !== 'object') {
+        sendResponse(INVALID_MESSAGE_ERROR);
+        return;
+      }
+
+      // Sender validation: Content Script only message types
+      const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT'];
+      if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type)) {
+        if (!sender.tab || !sender.tab.id || !sender.tab.url) {
+          sendResponse(INVALID_SENDER_ERROR);
+          return;
+        }
+        // 【パフォーマンス改善】: TabCache初期化フラグを設定
+        setNeedsTabCacheInitialization(true);
+      }
+
+      // 【パフォーマンス改善】: 必要な場合のみTabCache初期化
+      // messages that don't need tab cache: TEST_CONNECTIONS
+      if (message.type !== 'TEST_CONNECTIONS') {
+        await initializeTabCache();
+      }
+
+      // Automatic Visit Processing (Content Script only)
+      if (message.type === 'VALID_VISIT' && sender.tab) {
+        // 【パフォーマンス改善】: 直接キャッシュにタブを追加
+        addTabToCache(sender.tab);
+
+        const result = await recordingLogic.record({
+          title: sender.tab.title,
+          url: sender.tab.url,
+          content: message.payload?.content || '',
+          skipDuplicateCheck: false
+        });
+
+        // 【パフォーマンス改善】: 直接キャッシュを更新
+        tabCache.set(sender.tab.id, {
+          ...getTabFromCache(sender.tab.id),
+          title: sender.tab.title,
+          url: sender.tab.url,
+          content: message.payload?.content || '',
+          isValidVisit: true
+        });
+
+        sendResponse(result);
+        return;
+      }
+
+      // Fetch URL Content (CORS Bypass for Popup)
+      if (message.type === 'FETCH_URL') {
+        try {
+          // SSRF対策: 内部ネットワークブロック
+          validateUrlForFilterImport(message.payload.url);
+
+          // 許可されたURLのリストを動的に構築（Deadlock回避）
+          const settings = await getSettings();
+          const allowedUrls = buildAllowedUrls(settings);
+
+          const response = await fetchWithTimeout(message.payload.url, {
+            method: 'GET',
+            cache: 'no-cache',
+            allowedUrls // 最新の動的URL検証リストを使用
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const contentType = response.headers.get('content-type');
+          const text = await response.text();
+
+          sendResponse({ success: true, data: text, contentType });
+        } catch (error) {
+          console.error('Fetch URL Error:', error);
+          sendResponse({ success: false, error: `${error.name}: ${error.message}` });
+        }
+        return;
+      }
+
+      // Connection Test (Obsidian + AI)
+      if (message.type === 'TEST_CONNECTIONS') {
+        // 【パフォーマンス改善】: 接続テストはTabCacheを必要としない
+        const obsidianResult = await obsidian.testConnection();
+        const aiResult = await aiClient.testConnection();
+        sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
+        return;
+      }
+
+      // Manual Record Processing & Preview
+      if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
+        const result = await recordingLogic.record({
+          title: message.payload.title,
+          url: message.payload.url,
+          content: message.payload.content,
+          force: message.payload.force,
+          skipDuplicateCheck: true,
+          previewOnly: message.type === 'PREVIEW_RECORD'
+        });
+        sendResponse(result);
+        return;
+      }
+
+      // Save Confirmed Record (Post-Preview)
+      if (message.type === 'SAVE_RECORD') {
+        const result = await recordingLogic.record({
+          title: message.payload.title,
+          url: message.payload.url,
+          content: message.payload.content,
+          skipDuplicateCheck: true,
+          alreadyProcessed: true,
+          force: message.payload.force
+        });
+        sendResponse(result);
+        return;
+      }
+
+      sendResponse(null);
     } catch (error) {
       console.error('Service Worker Error:', error);
       sendResponse({ success: false, error: error.message });
@@ -173,3 +242,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabCache.delete(tabId);
 });
+
+// Extension Startup / Installation initialization
+const initializeExtension = async () => {
+  try {
+    const settings = await getSettings();
+    await saveSettingsWithAllowedUrls(settings);
+    console.log('Extension initialized: Allowed URLs list rebuilt.');
+  } catch (error) {
+    console.error('Failed to initialize extension:', error);
+  }
+};
+
+chrome.runtime.onInstalled.addListener(initializeExtension);
+chrome.runtime.onStartup.addListener(initializeExtension);

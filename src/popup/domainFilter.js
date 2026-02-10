@@ -3,7 +3,7 @@
  * Domain filter settings functionality for the popup UI.
  */
 
-import { StorageKeys, getSettings } from '../utils/storage.js';
+import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
 import { extractDomain, parseDomainList, validateDomainList } from '../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport.js';
 import { addLog, LogType } from '../utils/logger.js';
@@ -93,7 +93,7 @@ export function init() {
         function handleTabKeydown(e) {
             const currentIndex = Array.from(tabs).indexOf(document.activeElement);
 
-            switch(e.key) {
+            switch (e.key) {
                 case 'ArrowRight':
                     e.preventDefault();
                     tabs[(currentIndex + 1) % tabs.length].focus();
@@ -320,7 +320,7 @@ async function saveSimpleFormatSettings() {
 
     // Save settings
     try {
-        await chrome.storage.local.set(newSettings);
+        await saveSettings(newSettings, true);
         showStatus('domainStatus', getMessage('domainFilterSaved'), 'success');
     } catch (error) {
         addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: error.message });

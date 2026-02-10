@@ -39,7 +39,7 @@ export async function deleteSource(index, renderCallback) {
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: mergedRules,
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: sources.length > 0
-  });
+  }, true);
 
   if (renderCallback) {
     renderCallback(sources);
@@ -99,7 +99,7 @@ export async function reloadSource(index, fetchFromUrlCallback) {
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: mergedRules
-  });
+  }, true);
 
   return {
     sources,
@@ -162,7 +162,7 @@ export async function saveUblockSettings(text, url = null) {
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: mergedRules,
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: true
-  });
+  }, true);
 
   const action = existingIndex >= 0 ? '更新' : '追加';
   showStatus('domainStatus', `フィルターソースを${action}しました（${ruleCount}ルール）`, 'success');

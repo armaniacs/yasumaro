@@ -41,6 +41,20 @@ All notable changes to this project will be documented in this file.
   - `obsidianFailedAiOk`: Obsidian失敗 / AI OK
   - `bothConnectionFailed`: 両方失敗
 
+### Performance
+- **PIIサニタイザのパフォーマンス改善**: O(n²)からO(n)へアルゴリズム最適化
+  - `src/utils/piiSanitizer.js` でSetを使用した重複チェック実装（O(1)探索）
+  - パターンオーバーラップ修正 - より具体的なパターン（クレジットカード）を優先
+  - マッチ位置を長さ降順でソートし、オーバーラップ防止ロジック追加
+- **URLセットLRU排除機能の実装**: 古いURLの自動クリーンアップ
+  - `src/utils/storage.js` に `getSavedUrlsWithTimestamps()`, `updateUrlTimestamp()` 関数追加
+  - タイムスタンプベースのLRU管理（MAX_URL_SET_SIZE: 10,000）
+  - しきい値超過時に最古のURLを自動削除
+- **Service Worker初期化の遅延化**: 不要なタブクエリをスキップ
+  - `src/background/service-worker.js` に `setNeedsTabCacheInitialization()`, `addTabToCache()`, `getTabFromCache()` 関数追加
+  - TabCacheが必要になるまで初期化を遅延
+  - 全タブの初期化を回避し、必要なタブIDのみを直接操作
+
 ### Tests
 - **APIキー暗号化テストの追加**: `src/utils/__tests__/storage.test.js` に11件のテストを追加
   - `getOrCreateEncryptionKey()` のテスト（3件）: 生成・再利用・メモリキャッシュ
@@ -77,6 +91,15 @@ All notable changes to this project will be documented in this file.
   - `@media (prefers-color-scheme: dark)` でCSS変数を上書き
   - 入力欄・セレクト・ボタン・モーダル等の背景・文字色をダークテーマに対応
   - `color-scheme: dark` でブラウザネイティブ要素も暗色化
+
+## [2.4.7] - 2026-02-10
+
+### Fixed
+- **ポップアップのフリーズ修正**: `storage.js` での関数の重複エクスポート（構文エラー）により、ポップアップが「Loading...」のまま停止する問題を修正
+- **Favicon表示の修正**: `manifest.json` の CSP 設定に `chrome-extension:` が不足していたため、faviconが表示されない問題を修正
+- **バックグラウンドスクリプトのエラー修正**: `service-worker.js` 内で存在しない `handleMessage` 関数を呼び出そうとして `ReferenceError` が発生していた問題を修正
+- **フィルター再読込時の権限エラー修正**: フィルターソースの再読込時に「URL is not allowed」エラーが発生する権限デッドロック問題を修正。通信時に動的に許可リストを構築するように改善。
+- **URL構成のバグ修正**: `storage.js` の `buildAllowedUrls` でURLの構成に誤りがあった問題を修正（`parsed.origin` を使用するように変更）
 
 ## [2.4.6] - 2026-02-09
 

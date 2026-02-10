@@ -188,8 +188,13 @@ export async function getSettings() {
     return merged;
 }
 
-export async function saveSettings(settings) {
-    const toSave = { ...settings };
+/**
+ * Save settings to chrome.storage.local with optional allowed URL list update.
+ * @param {Object} settings - Settings to save
+ * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
+ */
+export async function saveSettings(settings, updateAllowedUrlsFlag = false) {
+    let toSave = { ...settings };
 
     // APIキーフィールドを暗号化
     try {
@@ -203,11 +208,39 @@ export async function saveSettings(settings) {
         console.error('Failed to encrypt API keys:', e);
     }
 
+    if (updateAllowedUrlsFlag) {
+        // 現在の設定を取得してマージ
+        const currentSettings = await getSettings();
+        const mergedSettings = { ...currentSettings, ...toSave };
+
+        // 許可されたURLのリストを再構築
+        const allowedUrls = buildAllowedUrls(mergedSettings);
+        const allowedUrlsHash = computeUrlsHash(allowedUrls);
+
+        toSave = {
+            ...toSave,
+            [StorageKeys.ALLOWED_URLS]: Array.from(allowedUrls),
+            [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
+        };
+    }
+
     await chrome.storage.local.set(toSave);
 }
 
+
+// URL set size limit constants
+export const MAX_URL_SET_SIZE = 10000;
+export const URL_WARNING_THRESHOLD = 8000;
+
 /**
- * Get the list of saved URLs
+ * LRU URLを管理するためのストレージキー
+ * @typedef {Object} SavedUrlEntry
+ * @property {string} url - URL文字列
+ * @property {number} timestamp - タイムスタンプ（UNIXタイム）
+ */
+
+/**
+ * Get the list of saved URLs with LRU eviction
  * @returns {Promise<Set<string>>} Set of saved URLs
  */
 export async function getSavedUrls() {
@@ -216,16 +249,102 @@ export async function getSavedUrls() {
 }
 
 /**
- * Save the list of URLs
- * @param {Set<string>} urlSet - Set of URLs to save
+ * Get the detailed URL entries with timestamps
+ * @returns {Promise<Map<string, number>>} Map of URLs to timestamps
  */
-export async function setSavedUrls(urlSet) {
-    await chrome.storage.local.set({ savedUrls: Array.from(urlSet) });
+export async function getSavedUrlsWithTimestamps() {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = result.savedUrlsWithTimestamps || [];
+    const urlMap = new Map();
+    for (const entry of entries) {
+        urlMap.set(entry.url, entry.timestamp);
+    }
+    return urlMap;
 }
 
-// URL set size limit constants
-export const MAX_URL_SET_SIZE = 10000;
-export const URL_WARNING_THRESHOLD = 8000;
+/**
+ * Save the list of URLs with LRU eviction
+ * @param {Set<string>} urlSet - Set of URLs to save
+ * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
+ */
+export async function setSavedUrls(urlSet, urlToAdd = null) {
+    const urlArray = Array.from(urlSet);
+    await chrome.storage.local.set({ savedUrls: urlArray });
+
+    // LRUタイムスタンプを管理
+    if (urlToAdd) {
+        await updateUrlTimestamp(urlToAdd);
+    }
+}
+
+/**
+ * Update URL timestamp for LRU tracking
+ * @param {string} url - URL to update
+ */
+async function updateUrlTimestamp(url) {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    let entries = result.savedUrlsWithTimestamps || [];
+
+    // 既存のURLがある場合は削除
+    entries = entries.filter(entry => entry.url !== url);
+
+    // 新しいエントリを追加
+    entries.push({ url, timestamp: Date.now() });
+
+    // MAX_URL_SET_SIZEを超えたら古いURLを削除
+    if (entries.length > MAX_URL_SET_SIZE) {
+        // タイムスタンプでソートして古いものを削除
+        entries.sort((a, b) => a.timestamp - b.timestamp);
+        entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+    }
+
+    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+}
+
+/**
+ * Add a URL to the saved list with LRU tracking
+ * @param {string} url - URL to add
+ */
+export async function addSavedUrl(url) {
+    const currentUrls = await getSavedUrls();
+    currentUrls.add(url);
+    await setSavedUrls(currentUrls, url);
+}
+
+/**
+ * Remove a URL from the saved list
+ * @param {string} url - URL to remove
+ */
+export async function removeSavedUrl(url) {
+    const currentUrls = await getSavedUrls();
+    currentUrls.delete(url);
+    await chrome.storage.local.set({ savedUrls: Array.from(currentUrls) });
+
+    // タムスタンプ管理からも削除
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    let entries = result.savedUrlsWithTimestamps || [];
+    entries = entries.filter(entry => entry.url !== url);
+    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+}
+
+/**
+ * Check if URL is in the saved list
+ * @param {string} url - URL to check
+ * @returns {Promise<boolean>} True if URL is saved
+ */
+export async function isUrlSaved(url) {
+    const currentUrls = await getSavedUrls();
+    return currentUrls.has(url);
+}
+
+/**
+ * Get the count of saved URLs
+ * @returns {Promise<number>} Number of saved URLs
+ */
+export async function getSavedUrlCount() {
+    const currentUrls = await getSavedUrls();
+    return currentUrls.size;
+}
 
 /**
  * URLの正規化
@@ -277,6 +396,20 @@ export function buildAllowedUrls(settings) {
         allowedUrls.add(normalized);
     }
 
+    // uBlock Filter Sources (SSRF対策済みであることを前提に、ホストを許可)
+    const ublockSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
+    for (const source of ublockSources) {
+        if (source.url && source.url !== 'manual') {
+            try {
+                const parsed = new URL(source.url);
+                // オリジン単位で許可（プロトコル + ホスト + ポート）
+                allowedUrls.add(normalizeUrl(parsed.origin));
+            } catch (e) {
+                // 無効なURLは無視
+            }
+        }
+    }
+
     return allowedUrls;
 }
 
@@ -295,16 +428,8 @@ export function computeUrlsHash(urls) {
  * @param {object} settings - 設定オブジェクト
  */
 export async function saveSettingsWithAllowedUrls(settings) {
-    // 許可されたURLのリストを再構築
-    const allowedUrls = buildAllowedUrls(settings);
-    const allowedUrlsHash = computeUrlsHash(allowedUrls);
-
-    // 設定を保存
-    await chrome.storage.local.set({
-        ...settings,
-        [StorageKeys.ALLOWED_URLS]: Array.from(allowedUrls),
-        [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
-    });
+    // 改訂: saveSettings を使用して常に暗号化とURLリスト更新を行う
+    await saveSettings(settings, true);
 }
 
 /**
