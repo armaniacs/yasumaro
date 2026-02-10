@@ -5,6 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrls, setSavedUrls, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
+import { getUserLocale } from '../utils/localeUtils.js';
 
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
@@ -205,7 +206,7 @@ export class RecordingLogic {
       const summary = pipelineResult.summary || 'Summary not available.';
 
       // 4. Format Markdown
-      const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
       const markdown = `- ${timestamp} [${title}](${url})\n    - AI要約: ${summary}`;
 
       // 5. Save to Obsidian

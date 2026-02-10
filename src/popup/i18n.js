@@ -23,6 +23,10 @@ export function getMessage(key, substitutions = null) {
   return message;
 }
 
+// getUserLocaleをlocaleUtilsから再エクスポート
+import { getUserLocale } from '../utils/localeUtils.js';
+export { getUserLocale };
+
 /**
  * オプション要素の翻訳（selectタグ内のoption）
  */
