@@ -152,17 +152,41 @@ export async function sanitizeRegex(text, options = {}) {
                 }
             }
 
-            // マッチ位置をオフセット順にソート（後ろから処理するため）
-            replacements.sort((a, b) => b.index - a.index);
+            // 【改善】マッチ位置を長さ降順→インデックス降順でソート
+            // 長いマッチ（より具体的なパターン）を優先して処理
+            replacements.sort((a, b) => {
+                if (a.length !== b.length) return b.length - a.length; // 長いもの優先
+                return b.index - a.index; // 同じ長さなら後ろから
+            });
 
             // テキストを置換して作成
             let processedText = text;
+            // 既に置換済みの位置を追跡（オーバーラップ防止）
+            const processedRanges = new Set();
             for (const r of replacements) {
+                // オーバーラップチェック: この範囲が既に処理されているか確認
+                let overlaps = false;
+                for (const existing of processedRanges) {
+                    const [existingStart, existingEnd] = existing.split('-').map(Number);
+                    const [rStart, rEnd] = [r.index, r.index + r.length];
+                    // 既存の範囲と重複している場合
+                    if (!(rEnd <= existingStart || rStart >= existingEnd)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+                if (overlaps) continue; // 重複がある場合はスキップ
+
+                // 現在のテキストで元の値がまだ存在するか確認
+                const currentSegment = processedText.substring(r.index, r.index + r.length);
+                if (currentSegment !== r.original) continue; // 元の値が変わっている場合はスキップ
+
                 processedText =
                     processedText.substring(0, r.index) +
                     r.mask +
                     processedText.substring(r.index + r.length);
-                maskedItems.unshift({ type: r.type, original: r.original });
+                processedRanges.add(`${r.index}-${r.index + r.length}`);
+                maskedItems.push({ type: r.type, original: r.original });
             }
 
             return { text: processedText, maskedItems };

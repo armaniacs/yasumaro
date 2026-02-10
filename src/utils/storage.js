@@ -228,6 +228,120 @@ export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
 
 /**
+ * LRU URLを管理するためのストレージキー
+ * @typedef {Object} SavedUrlEntry
+ * @property {string} url - URL文字列
+ * @property {number} timestamp - タイムスタンプ（UNIXタイム）
+ */
+
+/**
+ * Get the list of saved URLs with LRU eviction
+ * @returns {Promise<Set<string>>} Set of saved URLs
+ */
+export async function getSavedUrls() {
+    const result = await chrome.storage.local.get('savedUrls');
+    return new Set(result.savedUrls || []);
+}
+
+/**
+ * Get the detailed URL entries with timestamps
+ * @returns {Promise<Map<string, number>>} Map of URLs to timestamps
+ */
+export async function getSavedUrlsWithTimestamps() {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = result.savedUrlsWithTimestamps || [];
+    const urlMap = new Map();
+    for (const entry of entries) {
+        urlMap.set(entry.url, entry.timestamp);
+    }
+    return urlMap;
+}
+
+/**
+ * Save the list of URLs with LRU eviction
+ * @param {Set<string>} urlSet - Set of URLs to save
+ * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
+ */
+export async function setSavedUrls(urlSet, urlToAdd = null) {
+    const urlArray = Array.from(urlSet);
+    await chrome.storage.local.set({ savedUrls: urlArray });
+
+    // LRUタイムスタンプを管理
+    if (urlToAdd) {
+        await updateUrlTimestamp(urlToAdd);
+    }
+}
+
+/**
+ * Update URL timestamp for LRU tracking
+ * @param {string} url - URL to update
+ */
+async function updateUrlTimestamp(url) {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    let entries = result.savedUrlsWithTimestamps || [];
+
+    // 既存のURLがある場合は削除
+    entries = entries.filter(entry => entry.url !== url);
+
+    // 新しいエントリを追加
+    entries.push({ url, timestamp: Date.now() });
+
+    // MAX_URL_SET_SIZEを超えたら古いURLを削除
+    if (entries.length > MAX_URL_SET_SIZE) {
+        // タイムスタンプでソートして古いものを削除
+        entries.sort((a, b) => a.timestamp - b.timestamp);
+        entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+    }
+
+    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+}
+
+/**
+ * Add a URL to the saved list with LRU tracking
+ * @param {string} url - URL to add
+ */
+export async function addSavedUrl(url) {
+    const currentUrls = await getSavedUrls();
+    currentUrls.add(url);
+    await setSavedUrls(currentUrls, url);
+}
+
+/**
+ * Remove a URL from the saved list
+ * @param {string} url - URL to remove
+ */
+export async function removeSavedUrl(url) {
+    const currentUrls = await getSavedUrls();
+    currentUrls.delete(url);
+    await chrome.storage.local.set({ savedUrls: Array.from(currentUrls) });
+
+    // タムスタンプ管理からも削除
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    let entries = result.savedUrlsWithTimestamps || [];
+    entries = entries.filter(entry => entry.url !== url);
+    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+}
+
+/**
+ * Check if URL is in the saved list
+ * @param {string} url - URL to check
+ * @returns {Promise<boolean>} True if URL is saved
+ */
+export async function isUrlSaved(url) {
+    const currentUrls = await getSavedUrls();
+    return currentUrls.has(url);
+}
+
+/**
+ * Get the count of saved URLs
+ * @returns {Promise<number>} Number of saved URLs
+ */
+export async function getSavedUrlCount() {
+    const currentUrls = await getSavedUrls();
+    return currentUrls.size;
+}
+
+/**
  * URLの正規化
  * @param {string} url - 正規化するURL
  * @returns {string} 正規化されたURL
