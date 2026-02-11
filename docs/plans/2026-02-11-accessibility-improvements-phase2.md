@@ -1,4 +1,8 @@
-# Additional Accessibility Improvements Plan
+# Additional Accessibility Improvements Plan (Phase 2)
+
+> **Status:** ✅ **IMPLEMENTED** (2026-02-12)
+>
+> All 5 tasks completed. Merged to main branch.
 
 ## Context
 
@@ -25,7 +29,7 @@ This plan follows the initial accessibility improvements (documented in `2026-02
 
 ## Implementation Plan
 
-### Task 1: Harden i18n - Drop Zone aria-label
+### Task 1: Harden i18n - Drop Zone aria-label ✅ IMPLEMENTED
 
 **Files:**
 - Modify: `src/popup/popup.html` (line 235)
@@ -88,7 +92,7 @@ The drop zone currently has a hardcoded `aria-label="uBlock filter file drop zon
 
 ---
 
-### Task 2: Extract Common Focus Trap Module
+### Task 2: Extract Common Focus Trap Module ✅ IMPLEMENTED
 
 **Files:**
 - Create: `src/popup/utils/focusTrap.js` (new)
@@ -336,7 +340,7 @@ function closeConfirmModal() {
 
 ---
 
-### Task 3: Improve Dark Mode Accent Color Contrast
+### Task 3: Improve Dark Mode Accent Color Contrast ✅ IMPLEMENTED
 
 **Files:**
 - Modify: `src/popup/styles.css` (dark mode color definitions)
@@ -391,7 +395,7 @@ Update `src/popup/styles.css` dark mode section:
 
 ---
 
-### Task 4: Fix Domain Filter Radio Group ARIA
+### Task 4: Fix Domain Filter Radio Group ARIA ✅ IMPLEMENTED
 
 **Files:**
 - Modify: `src/popup/popup.html` (lines 168-181)
@@ -512,7 +516,7 @@ Update the Domain Filter radio button section:
 
 ---
 
-### Task 5: Add Focus Management for Tab Navigation
+### Task 5: Add Focus Management for Tab Navigation ✅ IMPLEMENTED
 
 **Files:**
 - Modify: `src/popup/navigation.js`
