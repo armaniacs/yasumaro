@@ -232,7 +232,7 @@
         </div>
 
         <!-- Drag & Drop Area -->
-        <div id="uBlockDropZone" class="drop-zone">
+        <div id="uBlockDropZone" class="drop-zone" role="region" aria-label="uBlock filter file drop zone">
           <p data-i18n="dropFileHere">Drop file here</p>
         </div>
 
@@ -277,43 +277,43 @@
     <div id="privacyPanel" class="tab-panel" role="tabpanel" aria-labelledby="privacyTab" aria-hidden="true">
 
       <div class="form-group">
-        <label data-i18n="privacyMode">Privacy Mode</label>
-        <div class="radio-group" id="privacyModeGroup">
+        <label id="privacyModeLabel" data-i18n="privacyMode">Privacy Mode</label>
+        <div class="radio-group" id="privacyModeGroup" role="radiogroup" aria-labelledby="privacyModeLabel">
 
           <div>
-            <input type="radio" id="modeA" name="privacyMode" value="local_only">
+            <input type="radio" id="modeA" name="privacyMode" value="local_only" aria-describedby="modeADesc">
             <label for="modeA"><strong data-i18n="modeA">Mode A: Local Only</strong> <span
                 data-i18n="modeADetail">(Under development)</span></label>
-            <div class="help-text ml-24" data-i18n="modeADesc">
+            <div class="help-text ml-24" id="modeADesc" data-i18n="modeADesc">
               Summarize page content using only local AI, without sending data externally.<br>
               Currently not supported on most browsers.
             </div>
           </div>
 
           <div class="mt-10">
-            <input type="radio" id="modeB" name="privacyMode" value="full_pipeline">
+            <input type="radio" id="modeB" name="privacyMode" value="full_pipeline" aria-describedby="modeBDesc">
             <label for="modeB"><strong data-i18n="modeB">Mode B: Full Pipeline</strong> <span
                 data-i18n="modeBCurrently">(Under development)</span></label>
-            <div class="help-text ml-24" data-i18n="modeBDesc">
+            <div class="help-text ml-24" id="modeBDesc" data-i18n="modeBDesc">
               Local AI summary → PII masking → Cloud AI refinement.<br>
               Currently not supported on most browsers.
             </div>
           </div>
 
           <div class="mt-10">
-            <input type="radio" id="modeC" name="privacyMode" value="masked_cloud">
+            <input type="radio" id="modeC" name="privacyMode" value="masked_cloud" aria-describedby="modeCDesc">
             <label for="modeC"><strong data-i18n="modeC">Mode C: Masked Cloud</strong> <span
                 data-i18n="modeCRecommended">(Recommended)</span></label>
-            <div class="help-text ml-24" data-i18n="modeCDesc">
+            <div class="help-text ml-24" id="modeCDesc" data-i18n="modeCDesc">
               Send only masked data to cloud AI.<br>
               For environments where local AI is not available.
             </div>
           </div>
 
           <div class="mt-10">
-            <input type="radio" id="modeD" name="privacyMode" value="cloud_only">
+            <input type="radio" id="modeD" name="privacyMode" value="cloud_only" aria-describedby="modeDDesc">
             <label for="modeD"><strong data-i18n="modeD">Mode D: Cloud Only</strong></label>
-            <div class="help-text ml-24" data-i18n="modeDDesc">
+            <div class="help-text ml-24" id="modeDDesc" data-i18n="modeDDesc">
               Send raw text directly to cloud AI.<br>
               Prioritize speed.
             </div>

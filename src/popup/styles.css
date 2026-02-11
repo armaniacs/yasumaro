@@ -912,10 +912,10 @@ label.inline-label {
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Primary (Green) */
-    --color-primary: #66BB6A;
-    --color-primary-hover: #81C784;
-    --color-primary-light: rgba(102, 187, 106, 0.15);
+    /* Primary (Green) - Darkened for better contrast */
+    --color-primary: #43A047;
+    --color-primary-hover: #388E3C;
+    --color-primary-light: rgba(67, 160, 71, 0.15);
     --color-primary-bg: #1b3a1d;
 
     /* Accent (Purple) */

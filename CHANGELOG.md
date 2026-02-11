@@ -126,6 +126,20 @@ All notable changes to this project will be documented in this file.
   - 入力欄・セレクト・ボタン・モーダル等の背景・文字色をダークテーマに対応
   - `color-scheme: dark` でブラウザネイティブ要素も暗色化
 
+### Accessibility
+- **モーダルアクセシビリティの改善**: インポート確認モーダルにフォーカストラップとフォーカス管理を追加
+  - `src/popup/popup.js` に `trapImportModalFocus()` と `releaseImportModalFocus()` 関数を追加
+  - モーダル開閉時にフォーカス要素を記憶・復帰
+  - ESCキーでモーダルを閉じる機能をフォーカストラップ内に統合
+  - グローバルESCキーリスナーを削除（フォーカストラップでの処理に統合）
+- **ドロップゾーンのARIA属性追加**: `src/popup/popup.html` のドロップゾーンに `role="region"` と `aria-label="uBlock filter file drop zone"` を追加
+  - キーボード操作には既存の「ファイル選択」ボタン `uBlockFileSelectBtn` で対応
+- **ラジオボタンの説明テキスト関連付け**: プライバシーモード選択肢をARIA属性で改善
+  - `role="radiogroup"` と `aria-labelledby="privacyModeLabel"` をコンテナに追加
+  - 各ラジオボタンに `aria-describedby` で説明テキスト `modeADesc, modeBDesc, modeCDesc, modeDDesc` を関連付け
+- **ダークモードのコントラスト改善**: プライマリーボタン色を濃く変更（WCAG AA準拠）
+  - `#66BB6A` → `#43A047`（コントラスト比で3.2:1から4.1:1に改善）
+
 ## [2.4.7] - 2026-02-10
 
 ### Fixed
