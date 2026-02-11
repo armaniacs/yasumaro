@@ -10,7 +10,6 @@ import {
   translatePageTitle,
   getUserLocale
 } from '../i18n.js';
-import { getUserLocale as getUserLocaleFromUtils } from '../../utils/localeUtils.js';
 
 describe('i18n', () => {
   beforeEach(() => {
@@ -43,7 +42,7 @@ describe('i18n', () => {
     });
 
     it('getUserLocaleがlocaleUtilsから取り込まれていること', () => {
-      mockGetUILanguage.mockReturnValue('ja-JP');
+      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
       const result = getUserLocale();
       expect(result).toBe('ja-JP');
     });

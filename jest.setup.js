@@ -309,8 +309,10 @@ global.chrome = {
 // グローバル変数のリセット（各テスト前に実行）
 beforeEach(() => {
   jest.clearAllMocks();
-  // Chrome APIの状態をリセット
-  global.chrome.runtime.lastError = null;
+  // Chrome APIの状態をリセット（防御的に処理）
+  if (global.chrome && global.chrome.runtime) {
+    global.chrome.runtime.lastError = null;
+  }
   // ストレージのクリア
   Object.keys(localStorage).forEach(key => delete localStorage[key]);
   Object.keys(syncStorage).forEach(key => delete syncStorage[key]);

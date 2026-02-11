@@ -25,7 +25,8 @@ describe('localeUtils', () => {
       },
       runtime: {
         lastError: null
-      }
+      },
+      storage: {}
     };
   });
 
