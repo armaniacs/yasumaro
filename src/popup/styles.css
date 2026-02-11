@@ -918,15 +918,17 @@ label.inline-label {
     --color-primary-light: rgba(67, 160, 71, 0.15);
     --color-primary-bg: #1b3a1d;
 
-    /* Accent (Purple) */
-    --color-accent: #CE93D8;
-    --color-accent-hover: #BA68C8;
-    --color-accent-btn: #AB47BC;
-    --color-accent-btn-hover: #9C27B0;
+    /* Accent (Orange) - Lighter for better contrast */
+    --color-accent: #FFB74D;
+    --color-accent-light: rgba(255, 183, 77, 0.15);
+    --color-accent-hover: #FFA726;
+    --color-accent-btn: #FFB74D;
+    --color-accent-btn-hover: #FFA726;
 
-    /* Secondary (Gray) */
-    --color-secondary: #90A4AE;
-    --color-secondary-hover: #78909C;
+    /* Secondary (Gray) - Lighter for better contrast */
+    --color-secondary: #9E9E9E;
+    --color-secondary-light: rgba(158, 158, 158, 0.15);
+    --color-secondary-hover: #BDBDBD;
 
     /* Danger / Alert */
     --color-danger: #EF5350;

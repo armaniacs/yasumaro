@@ -140,6 +140,18 @@
     "filterBlacklist": {
         "message": "Blacklist (exclude specified domains)"
     },
+    "filterDisabledDesc": {
+        "message": "Record all visited websites regardless of domain.",
+        "description": "Description for the Disabled domain filter mode"
+    },
+    "filterWhitelistDesc": {
+        "message": "Only record websites from domains in your whitelist.",
+        "description": "Description for the Whitelist domain filter mode"
+    },
+    "filterBlacklistDesc": {
+        "message": "Record all websites except those in your blacklist.",
+        "description": "Description for the Blacklist domain filter mode"
+    },
     "filterFormat": {
         "message": "Filter Format (can be combined)"
     },
@@ -544,5 +556,9 @@
     },
     "invalidSettingsFile": {
         "message": "Invalid settings file"
+    },
+    "dropZoneLabel": {
+        "message": "uBlock filter file drop zone",
+        "description": "ARIA label for the drop zone area where users can drag and drop uBlock filter files"
     }
 }

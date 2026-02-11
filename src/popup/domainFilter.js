@@ -156,6 +156,20 @@ function showTab(tabName) {
         privacyPanel.style.display = isActivePrivacy ? 'block' : 'none';
         privacyPanel.setAttribute('aria-hidden', !isActivePrivacy);
     }
+
+    // Move focus to first focusable element in newly activated panel
+    const activePanel = tabName === 'general' ? generalPanel :
+                        tabName === 'domain' ? domainPanel :
+                        privacyPanel;
+
+    if (activePanel) {
+        const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        const firstFocusable = activePanel.querySelector(focusableSelector);
+
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
+    }
 }
 
 function updateDomainListVisibility() {

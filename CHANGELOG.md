@@ -140,6 +140,25 @@ All notable changes to this project will be documented in this file.
 - **ダークモードのコントラスト改善**: プライマリーボタン色を濃く変更（WCAG AA準拠）
   - `#66BB6A` → `#43A047`（コントラスト比で3.2:1から4.1:1に改善）
 
+### Accessibility (Phase 2 Additional Improvements)
+- **i18n対応（Critical）**: ドロップゾーンの `aria-label` を `data-i18n-aria-label` に置換
+  - `popup.html` をハードコードから i18n 属性に変更
+  - 日英両方のメッセージファイルに `dropZoneLabel` キー追加
+- **フォーカストラップ共通化（High）**: 重複実装をモジュール抽出
+  - 新規 `src/popup/utils/focusTrap.js` に FocusTrapManager クラス作成
+  - `popup.js` と `sanitizePreview.js` を共通モジュールに置換
+  - コード重複を削減（約90行→約40行の共有コード）
+- **ダークモードアクセント色コントラスト改善（Medium）**
+  - オレンジ系: `#CE93D8` → `#FFB74D`（コントラスト比 ~4.5:1）
+  - セカンダリ色: `#90A4AE` → `#9E9E9E`（コントラスト比 ~6.3:1）
+- **Domain FilterラジオボタンARIA追加（Medium）**
+  - コンテナに `role="radiogroup"` と `aria-labelledby` 追加
+  - 各ラジオボタンに `aria-describedby` で説明テキストを関連付け
+  - 説明テキスト（filterDisabledDesc等）を英語・日本語で追加
+- **タブ切り替え時のフォーカス管理追加（Medium）**
+  - `domainFilter.js` の `showTab()` 関数にフォーカス移動ロジック追加
+  - タブ切り替え時に新しいパネルの最初のフォーカス可能要素へ自動フォーカス
+
 ## [2.4.7] - 2026-02-10
 
 ### Fixed

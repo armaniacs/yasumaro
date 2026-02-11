@@ -164,19 +164,22 @@
     <!-- Domain Filter Panel -->
     <div id="domainPanel" class="tab-panel active" role="tabpanel" aria-labelledby="domainTab" aria-hidden="false">
       <div class="form-group">
-        <label data-i18n="domainFilterMode">Domain Filter Mode</label>
-        <div class="radio-group">
+        <label id="domainFilterModeLabel" data-i18n="domainFilterMode">Domain Filter Mode</label>
+        <div class="radio-group" role="radiogroup" aria-labelledby="domainFilterModeLabel">
           <div>
-            <input type="radio" id="filterDisabled" name="domainFilter" value="disabled">
+            <input type="radio" id="filterDisabled" name="domainFilter" value="disabled" aria-describedby="filterDisabledDesc">
             <label for="filterDisabled" data-i18n="filterDisabled">Disabled (record all)</label>
+            <div class="help-text" id="filterDisabledDesc" data-i18n="filterDisabledDesc">Record all visited websites regardless of domain.</div>
           </div>
-          <div>
-            <input type="radio" id="filterWhitelist" name="domainFilter" value="whitelist">
+          <div class="mt-5">
+            <input type="radio" id="filterWhitelist" name="domainFilter" value="whitelist" aria-describedby="filterWhitelistDesc">
             <label for="filterWhitelist" data-i18n="filterWhitelist">Whitelist (record only specified domains)</label>
+            <div class="help-text" id="filterWhitelistDesc" data-i18n="filterWhitelistDesc">Only record websites from domains in your whitelist.</div>
           </div>
-          <div>
-            <input type="radio" id="filterBlacklist" name="domainFilter" value="blacklist">
+          <div class="mt-5">
+            <input type="radio" id="filterBlacklist" name="domainFilter" value="blacklist" aria-describedby="filterBlacklistDesc">
             <label for="filterBlacklist" data-i18n="filterBlacklist">Blacklist (exclude specified domains)</label>
+            <div class="help-text" id="filterBlacklistDesc" data-i18n="filterBlacklistDesc">Record all websites except those in your blacklist.</div>
           </div>
         </div>
       </div>
@@ -232,7 +235,7 @@
         </div>
 
         <!-- Drag & Drop Area -->
-        <div id="uBlockDropZone" class="drop-zone" role="region" aria-label="uBlock filter file drop zone">
+        <div id="uBlockDropZone" class="drop-zone" role="region" data-i18n-aria-label="dropZoneLabel">
           <p data-i18n="dropFileHere">Drop file here</p>
         </div>
 

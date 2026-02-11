@@ -24,6 +24,7 @@ import {
     clearFieldError
 } from './settings/fieldValidation.js';
 import { setupSaveButtonListener } from './settings/settingsSaver.js';
+import { focusTrapManager } from './utils/focusTrap.js';
 
 /** @typedef {import('../types.js').Settings} Settings */
 /** @typedef {import('../utils/settingsExportImport.js').SettingsExportData} SettingsExportData */
@@ -128,56 +129,7 @@ const confirmImportBtn = document.getElementById('confirmImportBtn');
 const importPreview = document.getElementById('importPreview');
 
 // Import modal focus management
-let importModalPreviousFocus = null;
-
-/**
- * Focus trap implementation for import confirmation modal
- * @param {HTMLElement} modal - Modal element
- */
-function trapImportModalFocus(modal) {
-  const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-  const focusableElements = modal.querySelectorAll(focusableSelector);
-  const firstFocusable = focusableElements[0];
-  const lastFocusable = focusableElements[focusableElements.length - 1];
-
-  if (!firstFocusable || !lastFocusable) return;
-
-  const keydownHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeImportModal();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-
-    if (e.shiftKey) {
-      if (document.activeElement === firstFocusable) {
-        e.preventDefault();
-        lastFocusable.focus();
-      }
-    } else {
-      if (document.activeElement === lastFocusable) {
-        e.preventDefault();
-        firstFocusable.focus();
-      }
-    }
-  };
-
-  if (!modal.trapFocusHandler) {
-    modal.trapFocusHandler = keydownHandler;
-    modal.addEventListener('keydown', keydownHandler);
-  }
-}
-
-/**
- * Release focus trap for import confirmation modal
- * @param {HTMLElement} modal - Modal element
- */
-function releaseImportModalFocus(modal) {
-  if (modal && modal.trapFocusHandler) {
-    modal.removeEventListener('keydown', modal.trapFocusHandler);
-    modal.trapFocusHandler = null;
-  }
-}
+let importTrapId = null;
 
 let pendingImportData = null;
 let pendingImportJson = null;
@@ -242,22 +194,14 @@ importFileInput?.addEventListener('change', async (e) => {
         showImportPreview(parsed);
 
         if (importConfirmModal) {
-            // Store previous focus element
-            importModalPreviousFocus = document.activeElement;
-
+            // Show modal
             importConfirmModal.classList.remove('hidden');
             importConfirmModal.style.display = 'flex';
             void importConfirmModal.offsetHeight;
             importConfirmModal.classList.add('show');
 
-            // Set up focus trap
-            trapImportModalFocus(importConfirmModal);
-
-            // Move focus to first focusable element (cancel button)
-            const firstFocusable = importConfirmModal.querySelector('button, [tabindex]:not([tabindex="-1"])');
-            if (firstFocusable) {
-                firstFocusable.focus();
-            }
+            // Set up focus trap with the new manager
+            importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
         }
 
     } catch (error) {
@@ -275,17 +219,14 @@ importFileInput?.addEventListener('change', async (e) => {
 function closeImportModal() {
     if (importConfirmModal) {
         // Release focus trap
-        releaseImportModalFocus(importConfirmModal);
+        if (importTrapId) {
+            focusTrapManager.release(importTrapId);
+            importTrapId = null;
+        }
 
         importConfirmModal.classList.remove('show');
         importConfirmModal.style.display = 'none';
         importConfirmModal.classList.add('hidden');
-
-        // Restore previous focus
-        if (importModalPreviousFocus && document.body.contains(importModalPreviousFocus)) {
-            importModalPreviousFocus.focus();
-        }
-        importModalPreviousFocus = null;
     }
 
     pendingImportData = null;

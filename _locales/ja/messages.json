@@ -140,6 +140,18 @@
     "filterBlacklist": {
         "message": "ブラックリスト（指定ドメインを除外）"
     },
+    "filterDisabledDesc": {
+        "message": "ドメインに関係なく、訪問したすべてのWebサイトを記録します。",
+        "description": "ドメインフィルタ無効モードの説明"
+    },
+    "filterWhitelistDesc": {
+        "message": "ホワイトリストに含まれるドメインのWebサイトのみを記録します。",
+        "description": "ホワイトリストモードの説明"
+    },
+    "filterBlacklistDesc": {
+        "message": "ブラックリストに含まれるドメイン以外のWebサイトを記録します。",
+        "description": "ブラックリストモードの説明"
+    },
     "filterFormat": {
         "message": "フィルター形式（併用可能）"
     },
@@ -544,5 +556,9 @@
     },
     "invalidSettingsFile": {
         "message": "無効な設定ファイルです"
+    },
+    "dropZoneLabel": {
+        "message": "uBlockフィルタードロップゾーン",
+        "description": "uBlockフィルターファイルをドラッグ＆ドロップするドロップゾーンのARIAラベル"
     }
 }
