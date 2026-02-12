@@ -26,6 +26,8 @@ export class RecordingLogic {
     this.obsidian = obsidianClient;
     this.aiClient = aiClient;
     // Problem #3: 2重キャッシュ構造を1段階に簡素化 - インスタンスキャッシュを削除
+    // Code Review #1: this.modeの初期化（初期値はnull、record()で設定取得後に更新）
+    this.mode = null;
   }
 
   /**
@@ -139,6 +141,8 @@ export class RecordingLogic {
       // 2. Check for duplicates
       // 設定キャッシュを使用
       const settings = await this.getSettingsWithCache();
+      // Code Review #1: 設定からモードを更新
+      this.mode = settings.PRIVACY_MODE || 'full_pipeline';
       // Problem #7: キャッシュ付きURL取得を使用
       const urlSet = await this.getSavedUrlsWithCache();
 

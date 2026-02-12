@@ -53,10 +53,10 @@ export function extractDomain(url) {
 export function matchesPattern(domain, pattern) {
     // Convert wildcard pattern to regex
     if (pattern.includes('*')) {
-        const regexPattern = pattern
-            .replace(/\./g, '\\.')  // Escape dots
-            .replace(/\*/g, '.*');  // Convert wildcards to .*
-
+        // 【Code Review #3】: 全ての正規表現特殊文字をエスケープしてからワイルドカードを処理
+        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // ワイルドカード（\*）を .* に変換
+        const regexPattern = escaped.replace(/\\\*/g, '.*');
         const regex = new RegExp(`^${regexPattern}$`, 'i');
         return regex.test(domain);
     }

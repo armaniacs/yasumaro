@@ -6,7 +6,6 @@
 import {
     MAX_URL_SET_SIZE,
     URL_WARNING_THRESHOLD,
-    normalizeUrl,
     buildAllowedUrls,
     computeUrlsHash,
     StorageKeys,
@@ -15,6 +14,7 @@ import {
     getOrCreateEncryptionKey,
     clearEncryptionKeyCache
 } from '../storage.js';
+import { normalizeUrl } from '../urlUtils.js';
 import { isEncrypted } from '../crypto.js';
 
 jest.mock('../migration.js', () => ({

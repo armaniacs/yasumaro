@@ -8,6 +8,7 @@
 import { migrateUblockSettings } from './migration.js';
 import { generateSalt, deriveKey, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
 import { withOptimisticLock, ensureVersionInitialized, ConflictError } from './optimisticLock.js';
+import { normalizeUrl } from './urlUtils.js';
 
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
@@ -57,6 +58,19 @@ const API_KEY_FIELDS = [
 ];
 
 // メモリキャッシュ（セッション中の再導出を避ける）
+/**
+ * 暗号化キーのメモリキャッシュ
+ * 
+ * 注意: Service Workerはアイドル時に終了されるため、再起動後は
+ * キャッシュが失われ、暗号化キーの再導出が必要になります。
+ * 
+ * これは意図的な動作です:
+ * - セキュリティ上、キーを永続化（ストレージに保存）しないことが望ましい
+ * - PBKDF2による鍵導出は高速化されており、パフォーマンス影響は軽微
+ * - メモリ内キャッシュにより、同一セッション内での再導出を回避
+ * 
+ * 【Code Review #5】: ドキュメントコメント追加
+ */
 let cachedEncryptionKey = null;
 
 /**
@@ -352,26 +366,6 @@ export async function isUrlSaved(url) {
 export async function getSavedUrlCount() {
     const currentUrls = await getSavedUrls();
     return currentUrls.size;
-}
-
-/**
- * URLの正規化
- * @param {string} url - 正規化するURL
- * @returns {string} 正規化されたURL
- */
-export function normalizeUrl(url) {
-    try {
-        const parsedUrl = new URL(url);
-        // 末尾のスラッシュを削除
-        let normalized = parsedUrl.href.replace(/\/$/, '');
-        // プロトコルを小文字に正規化
-        normalized = normalized.replace(/^https:/i, 'https:');
-        normalized = normalized.replace(/^http:/i, 'http:');
-        return normalized;
-    } catch (e) {
-        // URLが無効な場合はそのまま返す
-        return url;
-    }
 }
 
 /**

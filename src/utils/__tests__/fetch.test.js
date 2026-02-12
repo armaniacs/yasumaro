@@ -1,4 +1,5 @@
-import { fetchWithTimeout, normalizeUrl, isUrlAllowed } from '../fetch.js';
+import { fetchWithTimeout, isUrlAllowed } from '../fetch.js';
+import { normalizeUrl } from '../urlUtils.js';
 
 describe('fetchWithTimeout', () => {
   test('正常レスポンスを返す', async () => {

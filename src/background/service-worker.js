@@ -23,28 +23,15 @@ const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 // TabCacheが必要になるまで初期化を遅延させる
 // 全タブのクエリを避け、必要なタブIDのみを扱う
 let initializationPromise = null;
-let needsTabCacheInitialization = false;
 
 /**
- * TabCache初期化が必要かどうかを設定
- * 【改善】: 不要な初期化をスキップするためにフラグを設定
- * @param {boolean} Needs - 初期化が必要かどうか
- */
-function setNeedsTabCacheInitialization(needs) {
-  needsTabCacheInitialization = needs;
-}
-
-/**
- * TabCacheを初期化する（必要な場合のみ）
- * 【改善】: needsTabCacheInitializationフラグをチェックし、不要ならスキップ
+ * TabCacheを初期化する
+ * 【Code Review #2】: フラグベースのアプローチを簡素化
+ * initializationPromiseによる重複防止のみを使用
  * @returns {Promise<void>}
  */
 async function initializeTabCache() {
-  if (!needsTabCacheInitialization) {
-    // TabCacheが不要なら初期化をスキップ
-    return;
-  }
-
+  // 既に初期化済みまたは初期化中ならスキップ
   if (initializationPromise) return initializationPromise;
 
   initializationPromise = new Promise((resolve) => {
@@ -124,8 +111,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse(INVALID_SENDER_ERROR);
           return;
         }
-        // 【パフォーマンス改善】: TabCache初期化フラグを設定
-        setNeedsTabCacheInitialization(true);
+        // 【Code Review #2】: フラグ設定を削除（簡素化）
       }
 
       // 【パフォーマンス改善】: 必要な場合のみTabCache初期化

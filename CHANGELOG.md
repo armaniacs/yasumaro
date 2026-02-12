@@ -29,7 +29,7 @@ All notable changes to this project will be documented in this file.
   - ChromeMessageSenderクラスによる指数バックオフ再生（initialDelay: 100ms, backoffMultiplier: 2）
   - リトライ可能エラーの自動判定（Could not establish connection, Extension context invalidated 等）
   - ファクトリー関数：sendMessageWithRetry(), createSender()
-- **楽観的ロックの実装**: `src/utils/optimisticLock.js` にバージョン ベースの競合検出を追加
+- **楽観的ロックの実装**: `src/utils/optimisticLock.js` にバージョンベースの競合検出を追加
   - withOptimisticLock()でRead-Modify-Writeパターンの競合防止
   - ConflictErrorカスタムエラークラス
   - 競合統計機能（getConflictStats, resetConflictStats）
@@ -45,6 +45,10 @@ All notable changes to this project will be documented in this file.
   - 後方互換性: 許可されたURLのリストがない場合は検証をスキップ
   - **注**: CSPは静的設定であり、ユーザー設定のbaseUrlを動的に追加できないため、CSPは元の設定を維持
   - 動的URL検証により、ユーザーが設定したURLのみにアクセスを制限し、セキュリティを向上
+- **ドキュメント構造の簡素化**: ICONS.mdを作成しない判断
+  - アイコンの情報はソースコードや他のドキュメントから十分に追跡可能
+  - 独立したドキュメントによるメンテナンス負荷を回避
+  - ドキュメントの簡素化と単一方向性を維持
 
 ### Fixed
 - **接続テストの改善**: 「保存 & 接続テスト」ボタンがObsidianとAI両方の接続をテストするように修正

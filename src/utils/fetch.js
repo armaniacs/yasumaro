@@ -7,6 +7,8 @@
  * - Support for optional URL validation
  */
 
+import { normalizeUrl } from './urlUtils.js';
+
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
 const BLOCKED_PATTERNS = [
@@ -185,26 +187,6 @@ export function validateUrlForFilterImport(url) {
   // ドメイン名形式のlocalhostチェック（フィルターインポートのみ）
   if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname.endsWith('.localhost')) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
-  }
-}
-
-/**
- * URLの正規化
- * @param {string} url - 正規化するURL
- * @returns {string} 正規化されたURL
- */
-export function normalizeUrl(url) {
-  try {
-    const parsedUrl = new URL(url);
-    // 末尾のスラッシュを削除
-    let normalized = parsedUrl.href.replace(/\/$/, '');
-    // プロトコルを小文字に正規化
-    normalized = normalized.replace(/^https:/i, 'https:');
-    normalized = normalized.replace(/^http:/i, 'http:');
-    return normalized;
-  } catch (e) {
-    // URLが無効な場合はそのまま返す
-    return url;
   }
 }
 
