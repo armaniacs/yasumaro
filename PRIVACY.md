@@ -44,6 +44,22 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 2. **ユーザー指定のAIプロバイダー (OpenAI互換API)**: ユーザーが設定した場合、要約生成のために使用されます（Groq, OpenAI, Ollama等）。データの処理は各プロバイダーのポリシー、またはローカル環境の仕様に従います。
 2. **ユーザーのローカル Obsidian**: デイリーノートに履歴を保存するため。これはユーザー自身のローカルサーバーです。
 
+### 拡張機能の権限について
+本拡張機能は以下の権限を必要とします：
+
+1. **全Webサイトへのアクセス権限 (`host_permissions`)**:
+   - 訪問したページのコンテンツを抽出するために必要です
+   - ページのタイトル、URL、本文テキストを取得します
+   - このデータはAI要約生成とObsidianへの保存にのみ使用されます
+
+2. **ネットワーク接続権限 (`connect-src`)**:
+   - Obsidian Local REST API（ローカルサーバー）への接続
+   - Google Gemini APIへの接続
+   - ユーザーが設定したOpenAI互換APIへの接続
+   - ユーザーが指定するカスタムAPIエンドポイントへの接続
+
+**重要**: すべてのデータ処理はユーザーの明示的な設定に基づいて行われます。開発者はいかなるデータも収集しません。
+
 ---
 
 ## English
@@ -65,6 +81,22 @@ The Extension collects the following data **locally on your device**:
 1. **Google Gemini API**: Used to generate summaries. Data is sent according to Google's privacy policy.
 2. **User-Specified AI Provider (OpenAI Compatible API)**: If configured (e.g., Groq, OpenAI, Ollama), content is sent to generate summaries. Data handling is subject to the respective provider's policy or your local environment.
 2. **Your Local Obsidian Instance**: Used to save history. This is your own local server.
+
+### Extension Permissions
+This extension requires the following permissions:
+
+1. **Access to All Websites (`host_permissions`)**:
+   - Required to extract content from visited pages
+   - Collects page titles, URLs, and body text
+   - Data is used solely for AI summarization and saving to Obsidian
+
+2. **Network Connection Permissions (`connect-src`)**:
+   - Connection to Obsidian Local REST API (local server)
+   - Connection to Google Gemini API
+   - Connection to user-configured OpenAI-compatible APIs
+   - Connection to user-specified custom API endpoints
+
+**Important**: All data processing is based on your explicit configuration. The developer does not collect any data.
 
 ---
 

@@ -42,6 +42,13 @@ export async function loadCurrentTab() {
 // 手動記録処理
 export async function recordCurrentPage(force = false) {
   const statusDiv = document.getElementById('mainStatus');
+  const recordBtn = document.getElementById('recordBtn');
+  
+  // P2: 二重クリック防止 - 処理中はボタンを無効化
+  if (recordBtn) {
+    recordBtn.disabled = true;
+  }
+  
   hideSpinner(); // 前回のスピナー状態をクリア
   statusDiv.textContent = '';
   statusDiv.className = '';
@@ -158,6 +165,12 @@ export async function recordCurrentPage(force = false) {
   } catch (error) {
     hideSpinner();
     showError(statusDiv, error, () => recordCurrentPage(true));
+  } finally {
+    // P2: 二重クリック防止 - 処理完了後にボタンを再有効化
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn && isRecordable(await getCurrentTab())) {
+      recordBtn.disabled = false;
+    }
   }
 }
 

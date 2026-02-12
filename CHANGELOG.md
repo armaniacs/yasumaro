@@ -25,6 +25,14 @@ All notable changes to this project will be documented in this file.
   - `settingsSaver.js` の文法エラー（`async` 欠如）とインポートパスの誤りを修正
 
 ### Internal
+- **URLユーティリティの集約**: `normalizeUrl`関数を新規`src/utils/urlUtils.js`モジュールに集約
+  - `fetch.js`と`storage.js`から重複実装を削除し、単一の共通モジュールに統合
+  - `src/utils/__tests__/urlUtils.test.js` にテストを追加
+- **コードレビュー対応**: コード品質と保守性の向上
+  - `RecordingLogic`コンストラクタで`this.mode`を初期化（未定義変数の防止）
+  - `TabCache`初期化をフラグベースから直接初期化に簡素化
+  - `matchesPattern`の正規表現エスケープですべての特殊文字をエスケープ
+  - `cachedEncryptionKey`にドキュメントコメントを追加
 - **Service Worker通信のリトライ機能**: `src/utils/retryHelper.js` に自動リトライ機構を追加
   - ChromeMessageSenderクラスによる指数バックオフ再生（initialDelay: 100ms, backoffMultiplier: 2）
   - リトライ可能エラーの自動判定（Could not establish connection, Extension context invalidated 等）
@@ -106,6 +114,8 @@ All notable changes to this project will be documented in this file.
   - `normalizeUrl()` のテスト（3件）
   - `buildAllowedUrls()` のテスト（3件）
   - `computeUrlsHash()` のテスト（3件）
+- **URLユーティリティテストの追加**: `src/utils/__tests__/urlUtils.test.js` にテストを追加
+  - `normalizeUrl()` のテスト（プロトコル正規化、パス正規化、クエリ・フラグメント削除）
 - **テスト結果**: 全57テスト成功（storage.test.js: 22件, storage-keys.test.js: 3件, fetch.test.js: 10件, retryHelper.test.js: 22件, optimisticLock.test.js: 20件）
 
 ### UI/UX

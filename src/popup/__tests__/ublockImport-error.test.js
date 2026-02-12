@@ -149,7 +149,7 @@ describe('fetchFromUrl - Error Handling', () => {
     });
 
     await expect(fetchFromUrl('https://example.com/filters.txt')).rejects.toThrow(
-      'ネットワークエラーが発生しました。インターネット接続を確認してください。'
+      'ネットワークエラーまたはアクセス拒否が発生しました'
     );
   });
 

@@ -6,6 +6,7 @@ import { isDomainAllowed } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrls, setSavedUrls, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
+import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
@@ -210,8 +211,10 @@ export class RecordingLogic {
       const summary = pipelineResult.summary || 'Summary not available.';
 
       // 4. Format Markdown
+      // P1: XSS対策 - summaryをサニタイズ（Markdownリンクのエスケープ）
+      const sanitizedSummary = sanitizeForObsidian(summary);
       const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
-      const markdown = `- ${timestamp} [${title}](${url})\n    - AI要約: ${summary}`;
+      const markdown = `- ${timestamp} [${title}](${url})\n    - AI要約: ${sanitizedSummary}`;
 
       // 5. Save to Obsidian
       await this.obsidian.appendToDailyNote(markdown);

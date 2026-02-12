@@ -3,6 +3,7 @@ import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { getAllowedUrls, getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls } from '../utils/storage.js';
+import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
 
 // Initialize clients
 const obsidian = new ObsidianClient();
@@ -171,7 +172,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: true, data: text, contentType });
         } catch (error) {
           console.error('Fetch URL Error:', error);
-          sendResponse({ success: false, error: `${error.name}: ${error.message}` });
+          // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
+          sendResponse(createErrorResponse(error, { url: message.payload?.url }));
         }
         return;
       }
@@ -216,7 +218,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(null);
     } catch (error) {
       console.error('Service Worker Error:', error);
-      sendResponse({ success: false, error: error.message });
+      // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
+      sendResponse(createErrorResponse(error));
     }
   };
 
