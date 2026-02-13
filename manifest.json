@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Obsidian Smart History",
-  "version": "2.4.8",
+  "version": "3.0.0",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://127.0.0.1:27123 http://127.0.0.1:27124 https://localhost:27123 http://localhost:27124 https://generativelanguage.googleapis.com https://api.groq.com https://api.openai.com https: http: data:; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; default-src 'none';"

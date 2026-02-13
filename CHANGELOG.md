@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.5.0] - to be release
+## [3.0.0] - 2026-02-13
 
 ### Security
 - **APIキーの自動暗号化**: `chrome.storage.local` に保存されるAPIキーをAES-GCMで自動暗号化
