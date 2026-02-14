@@ -1,6 +1,7 @@
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
+import { Mutex } from './Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
 
 /**
@@ -31,141 +32,13 @@ const MAX_QUEUE_SIZE = 50;
 const MUTEX_TIMEOUT_MS = 30000; // 30秒
 
 /**
- * Mutexクラス - 排他制御用
- * Obsidian APIへの競合回避を実装
- * Problem #6: キューサイズ制限とタイムアウトを追加
- * Task 5: キューをMapに変更してO(1)操作を実現
- */
-export class Mutex {
-  constructor() {
-    this.locked = false;
-    this.queue = new Map(); // 配列からMapに変更して効率化
-    this.lockedAt = null;
-    this.nextTaskId = 0; // タスクIDカウンタ（Mapキーとして使用）
-  }
-
-  /**
-   * ロックを取得する
-   * ロックが解放されるまで待機
-   * @throws {Error} キューがMAX_QUEUE_SIZEを超える場合
-   */
-  async acquire() {
-    const now = Date.now();
-
-    // Problem #6: キューサイズ制限
-    if (this.queue.size >= MAX_QUEUE_SIZE) {
-      addLog(LogType.ERROR, 'Mutex: Queue is full, rejecting request', {
-        queueLength: this.queue.size,
-        maxSize: MAX_QUEUE_SIZE
-      });
-      throw new Error(`Mutex queue is full (max ${MAX_QUEUE_SIZE}). Too many concurrent requests.`);
-    }
-
-    if (this.locked) {
-      addLog(LogType.DEBUG, 'Mutex: Waiting for lock', {
-        lockedAt: (now - this.lockedAt) + 'ms ago',
-        queueLength: this.queue.size
-      });
-
-      // Problem #6: タイムアウト付きのPromise作成
-      return new Promise((resolve, reject) => {
-        const taskId = this.nextTaskId++;
-        const timeoutId = setTimeout(() => {
-          // Mapからエントリを削除してreject（O(1)操作）
-          this.queue.delete(taskId);
-          reject(new Error(`Mutex acquisition timeout after ${MUTEX_TIMEOUT_MS}ms`));
-        }, MUTEX_TIMEOUT_MS);
-
-        // キュータスクの登録（Mapを使用）
-        this.queue.set(taskId, {
-          resolve: () => {
-            clearTimeout(timeoutId);
-            resolve();
-          },
-          reject,
-          timestamp: now,
-          timeoutId
-        });
-      });
-    }
-
-    this.locked = true;
-    this.lockedAt = Date.now();
-    addLog(LogType.DEBUG, 'Mutex: Lock acquired');
-  }
-
-  /**
-   * ロックを解放する
-   * 待機中のキューがある場合は次のタスクを実行
-   *
-   * 注意: このメソッドは例外をスローしないよう設計されています。
-   * release()内で例外が発生した場合、デッドロックを防ぐために
-   * 必ずロック状態をリセットしてからエラーをログに記録します。
-   */
-  release() {
-    if (!this.locked) {
-      addLog(LogType.WARN, 'Mutex: Attempting to release unlocked mutex');
-      return;
-    }
-
-    try {
-      if (this.queue.size > 0) {
-        // Mapの最初のエントリを取得（O(1)操作）
-        const [taskId, task] = this.queue.entries().next().value;
-
-        // Mapからエントリを削除（O(1)操作）- 例外発生前に実行
-        this.queue.delete(taskId);
-
-        // タイムアウトをキャンセルしてresolveを呼ぶ
-        if (task && task.timeoutId) {
-          clearTimeout(task.timeoutId);
-        }
-
-        // 次のタスクのためにロック状態を維持（ロックの転送）
-        this.lockedAt = Date.now();
-
-        if (task && task.resolve) {
-          task.resolve();
-        }
-
-        addLog(LogType.DEBUG, 'Mutex: Lock transferred to waiting task', { remainingQueue: this.queue.size });
-      } else {
-        this.locked = false;
-        this.lockedAt = null;
-        addLog(LogType.DEBUG, 'Mutex: Lock released');
-      }
-    } catch (error) {
-      // CRITICAL: 例外が発生した場合でもロックを解放する
-      addLog(LogType.ERROR, 'Mutex: Error during release, forcing unlock', { error: error.message });
-      this.locked = false;
-      this.lockedAt = null;
-      // 再スローしない - 呼び出し元のcatchブロックがロックを解放できるようにする
-    }
-  }
-
-  /**
-   * ロック状態を取得
-   */
-  isLocked() {
-    return this.locked;
-  }
-
-  /**
-   * ロック期間を取得
-   */
-  getLockDuration() {
-    if (!this.locked || !this.lockedAt) {
-      return 0;
-    }
-    return Date.now() - this.lockedAt;
-  }
-}
-
-/**
  * Mutexのインスタンス（クロージャ経由で共有）
  * 日次ノートごとではなく、全体的な書き込み操作をシリアライズ
  */
-const globalWriteMutex = new Mutex();
+const globalWriteMutex = new Mutex({
+  maxQueueSize: MAX_QUEUE_SIZE,
+  timeoutMs: MUTEX_TIMEOUT_MS
+});
 
 /**
  * Problem #1: タイムアウト付きfetchのラッパー関数
@@ -195,6 +68,14 @@ async function _fetchWithTimeout(url, options = {}) {
 }
 
 export class ObsidianClient {
+  /**
+   * コンストラクタ
+   * @param {Object} options - オプション設定
+   * @param {Mutex} options.mutex - カスタムMutexインスタンス（テスト用途）
+   */
+  constructor(options = {}) {
+    this.mutex = options.mutex || globalWriteMutex;
+  }
     /**
      * 設定オブジェクトを取得する
      * Problem #2: BASE_HEADERS定数を使用してオブジェクト作成を最適化

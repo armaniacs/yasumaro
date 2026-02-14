@@ -1,6 +1,7 @@
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
+import { TabCache } from './tabCache.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { getAllowedUrls, getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls } from '../utils/storage.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
@@ -10,79 +11,13 @@ const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient);
 
-// Cache to store tab data including content and validation status
-// Key: TabID, Value: { title, url, content, isValidVisit, timestamp }
-const tabCache = new Map();
-let isTabCacheInitialized = false;
+// TabCache for storing tab data
+const tabCache = new TabCache();
 
 // Message type whitelist for security validation
 const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
-
-// 【パフォーマンス改善】: Service Worker初期化遅延
-// TabCacheが必要になるまで初期化を遅延させる
-// 全タブのクエリを避け、必要なタブIDのみを扱う
-let initializationPromise = null;
-
-/**
- * TabCacheを初期化する
- * 【Code Review #2】: フラグベースのアプローチを簡素化
- * initializationPromiseによる重複防止のみを使用
- * @returns {Promise<void>}
- */
-async function initializeTabCache() {
-  // 既に初期化済みまたは初期化中ならスキップ
-  if (initializationPromise) return initializationPromise;
-
-  initializationPromise = new Promise((resolve) => {
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach(tab => {
-        if (tab.url && tab.url.startsWith('http')) {
-          tabCache.set(tab.id, {
-            title: tab.title,
-            url: tab.url,
-            favIconUrl: tab.favIconUrl,
-            lastUpdated: Date.now(),
-            isValidVisit: false,
-            content: null
-          });
-        }
-      });
-      isTabCacheInitialized = true;
-      resolve();
-    });
-  });
-  return initializationPromise;
-}
-
-/**
- * 特定タブ情報をキャッシュに追加（初期化なしで直接追加）
- * 【改善】: 全タブ初期化を回避し、必要なタブのみを追加
- * @param {Object} tab - タブ情報
- */
-function addTabToCache(tab) {
-  if (tab.id && tab.url && tab.url.startsWith('http')) {
-    tabCache.set(tab.id, {
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl,
-      lastUpdated: Date.now(),
-      isValidVisit: false,
-      content: null
-    });
-  }
-}
-
-/**
- * 特定タブ情報をキャッシュから取得（初期化不要）
- * 【改善】: 全タブ初期化を回避し、必要なタブのみを取得
- * @param {number} tabId - タブID
- * @returns {Object|null} タブ情報またはnull
- */
-function getTabFromCache(tabId) {
-  return tabCache.get(tabId) || null;
-}
 
 // Listen for messages from Content Script and Popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -118,13 +53,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // 【パフォーマンス改善】: 必要な場合のみTabCache初期化
       // messages that don't need tab cache: TEST_CONNECTIONS
       if (message.type !== 'TEST_CONNECTIONS') {
-        await initializeTabCache();
+        await tabCache.initialize();
       }
 
       // Automatic Visit Processing (Content Script only)
       if (message.type === 'VALID_VISIT' && sender.tab) {
         // 【パフォーマンス改善】: 直接キャッシュにタブを追加
-        addTabToCache(sender.tab);
+        tabCache.add(sender.tab);
 
         const result = await recordingLogic.record({
           title: sender.tab.title,
@@ -134,8 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
 
         // 【パフォーマンス改善】: 直接キャッシュを更新
-        tabCache.set(sender.tab.id, {
-          ...getTabFromCache(sender.tab.id),
+        tabCache.update(sender.tab.id, {
           title: sender.tab.title,
           url: sender.tab.url,
           content: message.payload?.content || '',
@@ -229,7 +163,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Handle Tab Closure - Cleanup only
 chrome.tabs.onRemoved.addListener((tabId) => {
-  tabCache.delete(tabId);
+  tabCache.remove(tabId);
 });
 
 // Extension Startup / Installation initialization
