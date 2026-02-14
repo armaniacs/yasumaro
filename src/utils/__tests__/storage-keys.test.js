@@ -15,7 +15,12 @@ describe('getSettings key refinement', () => {
     expect(settings).not.toHaveProperty('extra_key');
     expect(settings).not.toHaveProperty('another_junk');
     // 暗号化用と楽観的ロック用の内部キーはgetSettings()の返却値に含まれない
-    const internalKeys = [StorageKeys.ENCRYPTION_SALT, StorageKeys.ENCRYPTION_SECRET, StorageKeys.SAVED_URLS_VERSION];
+    const internalKeys = [
+      StorageKeys.ENCRYPTION_SALT,
+      StorageKeys.ENCRYPTION_SECRET,
+      StorageKeys.SAVED_URLS_VERSION,
+      StorageKeys.HMAC_SECRET
+    ];
     Object.values(StorageKeys).forEach(key => {
       if (!internalKeys.includes(key)) {
         expect(settings).toHaveProperty(key);

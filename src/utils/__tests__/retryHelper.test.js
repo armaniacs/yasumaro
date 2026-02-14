@@ -98,10 +98,10 @@ describe('ChromeMessageSender', () => {
                 }
             });
 
-            const result = await sender.sendMessageWithRetry({
-                type: 'TEST',
-                payload: {}
-            });
+            const result = await sender.sendMessageWithRetry(
+                { type: 'TEST', payload: {} },
+                { initialDelay: 0 }
+            );
 
             expect(result.success).toBe(true);
             expect(callCount).toBe(2); // 1回目失敗 + 1回目リトライ成功
@@ -114,7 +114,10 @@ describe('ChromeMessageSender', () => {
             });
 
             await expect(
-                sender.sendMessageWithRetry({ type: 'TEST', payload: {} })
+                sender.sendMessageWithRetry(
+                    { type: 'TEST', payload: {} },
+                    { initialDelay: 0 }
+                )
             ).rejects.toThrow('Could not establish connection');
 
             // 1回目 + 3回リトライ = 4回
@@ -147,7 +150,10 @@ describe('ChromeMessageSender', () => {
 
             // No response receivedはリトライ可能なエラーとして扱うよう修正
             await expect(
-                sender.sendMessageWithRetry({ type: 'TEST', payload: {} })
+                sender.sendMessageWithRetry(
+                    { type: 'TEST', payload: {} },
+                    { initialDelay: 0 }
+                )
             ).resolves.toEqual({ success: true });
 
             expect(callCount).toBe(2);
@@ -159,7 +165,10 @@ describe('ChromeMessageSender', () => {
             });
 
             await expect(
-                sender.sendMessageWithRetry({ type: 'TEST', payload: {} })
+                sender.sendMessageWithRetry(
+                    { type: 'TEST', payload: {} },
+                    { initialDelay: 0 }
+                )
             ).rejects.toThrow('No response received');
 
             // 初期 + 3回リトライ = 4回
@@ -173,12 +182,14 @@ describe('ChromeMessageSender', () => {
             });
 
             // maxRetries: 1 で total callCount が 2 になる（初期 + 1回リトライ）
-            await expect(
-                sender.sendMessageWithRetry(
-                    { type: 'TEST', payload: {} },
-                    { maxRetries: 1 }
-                )
-            ).rejects.toThrow();
+            const promise = sender.sendMessageWithRetry(
+                { type: 'TEST', payload: {} },
+                { maxRetries: 1 }
+            );
+
+            await jest.runAllTimersAsync();
+
+            await expect(promise).rejects.toThrow();
 
             expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
         });
@@ -259,7 +270,10 @@ describe('ChromeMessageSender', () => {
             });
 
             await expect(
-                senderWithBackoff.sendMessageWithRetry({ type: 'TEST', payload: {} })
+                senderWithBackoff.sendMessageWithRetry(
+                    { type: 'TEST', payload: {} },
+                    { initialDelay: 0 }
+                )
             ).resolves.toEqual({ success: true });
 
             // 初回 + 3回リトライ = 4回
@@ -314,7 +328,7 @@ describe('sendMessageWithRetry (factory)', () => {
 
         const result = await sendMessageWithRetry(
             { type: 'TEST', payload: {} },
-            { maxRetries: 5, initialDelay: 1 }
+            { maxRetries: 5, initialDelay: 0 }
         );
 
         expect(result).toEqual(mockResponse);
@@ -368,7 +382,10 @@ describe('chrome.runtime.lastError patterns', () => {
             callback(mockResponse);
         });
 
-        const result = await sendMessageWithRetry({ type: 'TEST', payload: {} });
+        const result = await sendMessageWithRetry(
+            { type: 'TEST', payload: {} },
+            { initialDelay: 0 }
+        );
 
         expect(result).toEqual(mockResponse);
         expect(callCount).toBe(2);
@@ -387,7 +404,10 @@ describe('chrome.runtime.lastError patterns', () => {
             callback(mockResponse);
         });
 
-        const result = await sendMessageWithRetry({ type: 'TEST', payload: {} });
+        const result = await sendMessageWithRetry(
+            { type: 'TEST', payload: {} },
+            { initialDelay: 0 }
+        );
 
         expect(result.success).toBe(true);
         expect(callCount).toBe(3);

@@ -80,6 +80,28 @@
 *   **Base URL**: 例 `http://127.0.0.1:11434/v1` (Ollama)
 *   **Model Name**: 例 `llama3`
 
+---
+
+#### 💡 サポートされているAIプロバイダー
+セキュリティ上の理由から、以下のドメインのみが公式にサポートされています。これら以外のドメインを「Base URL」に設定すると、通信がブロックされます。
+
+| プロバイダー | 許可ドメイン |
+| :--- | :--- |
+| **Google Gemini** | `generativelanguage.googleapis.com` |
+| **OpenAI (公式)** | `api.openai.com` |
+| **Anthropic (Claude)** | `api.anthropic.com` |
+| **Groq** | `api.groq.com` |
+| **Mistral AI** | `mistral.ai` |
+| **OpenRouter** | `openrouter.ai`, `api.openrouter.ai` |
+| **Hugging Face** | `api-inference.huggingface.co` |
+| **DeepSeek** | `deepseek.com` |
+| **Perplexity AI** | `perplexity.ai` |
+| **Sakuraクラウド (AI API)** | `api.ai.sakura.ad.jp` |
+| **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai` 等 |
+| **ローカル環境** | `localhost`, `127.0.0.1` |
+
+---
+
 設定を入力したら、**「Save & Test Connection」**をクリックして接続を確認してください。
 
 #### 3. ドメインフィルター設定
@@ -171,6 +193,27 @@ Select your preferred provider from the dropdown.
     *   **API Key**: Your provider's key.
     *   **Model Name**: e.g., `openai/gpt-oss-20b`.
 *   **OpenAI Compatible 2**: Use this for a secondary provider like a local LLM (`http://localhost:11434/v1`).
+
+---
+
+#### 💡 Supported AI Providers
+For security reasons, only the following domains are officially supported. Connections to other domains will be blocked.
+
+| Provider | Allowed Domain |
+| :--- | :--- |
+| **Google Gemini** | `generativelanguage.googleapis.com` |
+| **OpenAI (Official)** | `api.openai.com` |
+| **Anthropic (Claude)** | `api.anthropic.com` |
+| **Groq** | `api.groq.com` |
+| **Mistral AI** | `mistral.ai` |
+| **OpenRouter** | `openrouter.ai`, `api.openrouter.ai` |
+| **Hugging Face** | `api-inference.huggingface.co` |
+| **DeepSeek** | `deepseek.com` |
+| **Perplexity AI** | `perplexity.ai` |
+| **Sakura Cloud (AI API)** | `api.ai.sakura.ad.jp` |
+| **Local Environments** | `localhost`, `127.0.0.1` |
+
+---
 
 Click **"Save & Test Connection"** to verify.
 

@@ -6,7 +6,7 @@
 // Temporarily disabled to resolve circular dependency
 // import { addLog, LogType } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
-import { generateSalt, deriveKey, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
+import { generateSalt, deriveKey, deriveKeyWithExtensionId, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
 import { withOptimisticLock, ensureVersionInitialized, ConflictError } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 
@@ -45,6 +45,7 @@ export const StorageKeys = {
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
     ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）
+    HMAC_SECRET: 'hmac_secret',             // 設定エクスポート用HMACシークレット（Base64）
     // Version tracking for optimistic locking
     SAVED_URLS_VERSION: 'savedUrls_version' // savedUrlsのバージョン番号
 };
@@ -57,31 +58,140 @@ const API_KEY_FIELDS = [
     StorageKeys.OPENAI_2_API_KEY
 ];
 
+// 許可するAIプロバイダードメインのホワイトリスト
+// 参照: LiteLLM providers.json https://github.com/BerriAI/litellm/blob/main/litellm/llms/openai_like/providers.json
+export const ALLOWED_AI_PROVIDER_DOMAINS = [
+    // メジャーAIプロバイダー
+    'generativelanguage.googleapis.com',   // Google Gemini
+    'api.groq.com',                          // Groq
+    'api.openai.com',                        // OpenAI公式
+    'api.anthropic.com',                     // Anthropic Claude
+    'api-inference.huggingface.co',          // Hugging Face
+    'openrouter.ai',                         // OpenRouter
+    'api.openrouter.ai',                     // OpenRouter API
+    'mistral.ai',                            // Mistral AI
+    'deepinfra.com',                         // DeepInfra
+    'cerebras.ai',                           // Cerebras
+
+    // APIゲートウェイ
+    'ai-gateway.helicone.ai',                // Helicone
+
+    // LiteLLMサポートプロバイダー
+    'api.publicai.co',                       // PublicAI
+    'api.venice.ai',                         // Venice AI
+    'api.scaleway.ai',                       // Scaleway
+    'api.synthetic.new',                     // Synthetic
+    'api.stima.tech',                        // Apertis (Stima API)
+    'nano-gpt.com',                          // Nano-GPT
+    'api.poe.com',                           // Poe
+    'llm.chutes.ai',                         // Chutes
+    'api.abliteration.ai',                   // Abliteration
+    'api.llamagate.dev',                     // LlamaGate
+    'api.gmi-serving.com',                   // GMI Cloud
+    'api.sarvam.ai',                         // Sarvam AI
+    'deepseek.com',                          // DeepSeek
+    'xiaomimimo.com',                        // Xiaomi MiMo
+
+    // クラウドネイティブAI
+    'nebius.com',                            // Nebius AI
+    'sambanova.ai',                          // SambaNova
+    'nscale.com',                            // Nscale
+    'featherless.ai',                        // Featherless AI
+    'galadriel.com',                         // Galadriel
+    'perplexity.ai',                         // Perplexity AI
+    'recraft.ai',                            // Recraft
+
+    // 埋込みAI
+    'jina.ai',                               // Jina AI
+    'voyageai.com',                          // Voyage AI
+
+    // その他
+    'volcengine.com',                        // Volcano Engine (bytedance)
+    'z.ai',                                  // ZHIPU AI
+    'wandb.ai',                              // Weights & Biases
+
+    // Sakuraクラウドドメイン
+    'api.ai.sakura.ad.jp',                          // Sakuraクラウド（AI API）
+
+    // ローカル環境（開発用）
+    'localhost',
+    '127.0.0.1',
+];
+
+/**
+ * ドメインがホワイトリストに含まれるかチェックする
+ * @param {string} url - チェック対象のURL
+ * @returns {boolean} 許可される場合true
+ */
+export function isDomainInWhitelist(url) {
+    try {
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname;
+
+        // 完全一致チェック
+        if (ALLOWED_AI_PROVIDER_DOMAINS.includes(hostname)) {
+            return true;
+        }
+
+        // ワイルドカードチェック（*.sakuraha.jp 等）
+        for (const allowedDomain of ALLOWED_AI_PROVIDER_DOMAINS) {
+            if (allowedDomain.startsWith('*.')) {
+                const domainSuffix = allowedDomain.substring(2);
+                if (hostname === domainSuffix || hostname.endsWith('.' + domainSuffix)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
+
 // メモリキャッシュ（セッション中の再導出を避ける）
 /**
  * 暗号化キーのメモリキャッシュ
- * 
+ *
  * 注意: Service Workerはアイドル時に終了されるため、再起動後は
  * キャッシュが失われ、暗号化キーの再導出が必要になります。
- * 
+ *
  * これは意図的な動作です:
  * - セキュリティ上、キーを永続化（ストレージに保存）しないことが望ましい
  * - PBKDF2による鍵導出は高速化されており、パフォーマンス影響は軽微
  * - メモリ内キャッシュにより、同一セッション内での再導出を回避
- * 
+ *
  * 【Code Review #5】: ドキュメントコメント追加
+ * 【Code Review #6】: Extension IDをキー導出に組み込む（ディープフィックス）
  */
 let cachedEncryptionKey = null;
+let cachedExtensionId = null;
 
 /**
  * 暗号化キーを取得または作成する
  * ソルト/シークレットが無ければ自動生成してストレージに保存
+ * chrome.runtime.idをキー導出に組み込むことで、異なる環境間のデータ分離を実現
+ *
+ * セキュリティ上の考慮:
+ * - シークレットはchrome.storage.localに保存される（extensionのアーキテクチャ上の限界）
+ * - chrome.runtime.idを組み込むことで、異なる環境間のデータ分離を実現
+ * - 攻撃者がシークレットを抽出しても、同じextension IDを持つ環境でのみ復号可能
+ *
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
  */
 export async function getOrCreateEncryptionKey() {
-    if (cachedEncryptionKey) {
+    if (cachedEncryptionKey && cachedExtensionId) {
         return cachedEncryptionKey;
     }
+
+    // 現在のextension IDを取得
+    const extensionId = chrome.runtime.id;
+
+    // Extension ID変更時にキャッシュをクリア（通常は発生しないが安全策）
+    if (cachedExtensionId && cachedExtensionId !== extensionId) {
+        cachedEncryptionKey = null;
+    }
+    cachedExtensionId = extensionId;
 
     const result = await chrome.storage.local.get([
         StorageKeys.ENCRYPTION_SALT,
@@ -107,7 +217,8 @@ export async function getOrCreateEncryptionKey() {
 
     // Base64からUint8Arrayに変換
     const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0));
-    cachedEncryptionKey = await deriveKey(secret, salt);
+    // Extension IDを使用してキーを導出
+    cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
     return cachedEncryptionKey;
 }
 
@@ -116,6 +227,35 @@ export async function getOrCreateEncryptionKey() {
  */
 export function clearEncryptionKeyCache() {
     cachedEncryptionKey = null;
+}
+
+// HMAC Secret用キャッシュ
+let cachedHmacSecret = null;
+
+/**
+ * HMAC Secretを取得または作成する
+ * @returns {Promise<string>} HMACシークレット
+ */
+export async function getOrCreateHmacSecret() {
+    if (cachedHmacSecret) {
+        return cachedHmacSecret;
+    }
+
+    const result = await chrome.storage.local.get(StorageKeys.HMAC_SECRET);
+    let secret = result[StorageKeys.HMAC_SECRET];
+
+    if (!secret) {
+        // 32バイトのランダムシークレットを生成
+        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+        secret = btoa(String.fromCharCode(...secretBytes));
+
+        await chrome.storage.local.set({
+            [StorageKeys.HMAC_SECRET]: secret
+        });
+    }
+
+    cachedHmacSecret = secret;
+    return secret;
 }
 
 const DEFAULT_SETTINGS = {
@@ -321,13 +461,31 @@ async function updateUrlTimestamp(url) {
 }
 
 /**
- * Add a URL to the saved list with LRU tracking
+ * Save the URL Map with timestamps (日付ベース重複チェック用)
+ * @param {Map<string, number>} urlMap - Map of URLs to timestamps
+ * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
+ */
+export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
+    // Map to entries array
+    const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
+
+    // 楽観的ロックで安全に保存
+    await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
+
+    // 同時に savedUrls Setも更新（互換性維持）
+    const urlSet = new Set(urlMap.keys());
+    const urlArray = Array.from(urlSet);
+    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+}
+
+/**
+ * Add a URL to the saved list with LRU tracking (日付ベース対応)
  * @param {string} url - URL to add
  */
 export async function addSavedUrl(url) {
-    const currentUrls = await getSavedUrls();
-    currentUrls.add(url);
-    await setSavedUrls(currentUrls, url);
+    const urlMap = await getSavedUrlsWithTimestamps();
+    urlMap.set(url, Date.now());
+    await setSavedUrlsWithTimestamps(urlMap, url);
 }
 
 /**
@@ -385,26 +543,33 @@ export function buildAllowedUrls(settings) {
     // Gemini API
     allowedUrls.add('https://generativelanguage.googleapis.com');
 
-    // OpenAI互換API
+    // OpenAI互換API - ホワイトリストチェック
     const openaiBaseUrl = settings[StorageKeys.OPENAI_BASE_URL];
     if (openaiBaseUrl) {
-        const normalized = normalizeUrl(openaiBaseUrl);
-        allowedUrls.add(normalized);
+        if (isDomainInWhitelist(openaiBaseUrl)) {
+            const normalized = normalizeUrl(openaiBaseUrl);
+            allowedUrls.add(normalized);
+        } else {
+            console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
+        }
     }
 
     const openai2BaseUrl = settings[StorageKeys.OPENAI_2_BASE_URL];
     if (openai2BaseUrl) {
-        const normalized = normalizeUrl(openai2BaseUrl);
-        allowedUrls.add(normalized);
+        if (isDomainInWhitelist(openai2BaseUrl)) {
+            const normalized = normalizeUrl(openai2BaseUrl);
+            allowedUrls.add(normalized);
+        } else {
+            console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
+        }
     }
 
-    // uBlock Filter Sources (SSRF対策済みであることを前提に、ホストを許可)
+    // uBlock Filter Sources
     const ublockSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
     for (const source of ublockSources) {
         if (source.url && source.url !== 'manual') {
             try {
                 const parsed = new URL(source.url);
-                // オリジン単位で許可（プロトコル + ホスト + ポート）
                 allowedUrls.add(normalizeUrl(parsed.origin));
             } catch (e) {
                 // 無効なURLは無視

@@ -64,7 +64,7 @@ export function classifyError(error) {
     }
 
     // バリデーションエラー
-    if (message.includes('invalid') || message.includes('validation')) {
+    if (message.includes('invalid') || message.includes('validation') || message.includes('not allowed')) {
         return ErrorType.VALIDATION;
     }
 
@@ -156,6 +156,7 @@ export function convertKnownErrorMessage(errorMessage) {
 
     // 既知のエラーパターンをマッピング
     const knownPatterns = [
+        { pattern: /url.*not allowed/i, message: 'このURLのアクセスは許可されていません。設定画面でベースURLが登録されているか確認してください。' },
         { pattern: /domain.*block/i, message: 'このドメインはブロックされています。' },
         { pattern: /url.*invalid/i, message: '無効なURLです。' },
         { pattern: /obsidian.*connection/i, message: 'Obsidianへの接続に失敗しました。Obsidianが起動していることを確認してください。' },

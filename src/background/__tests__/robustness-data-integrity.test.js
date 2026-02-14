@@ -5,7 +5,7 @@
  */
 
 import { RecordingLogic } from '../recordingLogic.js';
-import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.js';
+import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, StorageKeys } from '../../utils/storage.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -53,8 +53,8 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       PRIVACY_MODE: 'masked_cloud'
     });
 
-    getSavedUrls.mockResolvedValue(new Set());
-    setSavedUrls.mockResolvedValue();
+    getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    setSavedUrlsWithTimestamps.mockResolvedValue();
     StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
 
     // PrivacyPipelineモック
@@ -72,11 +72,6 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
   describe('現在の実装の確認', () => {
     it('Obsidian書き込み失敗時にURLが保存される不整合がある可能性がある', async () => {
-      // 注: recordingLogic.jsの現在の実装を確認
-      // 行162-165: if (!urlSet.has(url)) { urlSet.add(url); await setSavedUrls(urlSet); }
-      // このコードはObsidian書き込み成功後にのみ実行されているため、
-      // 現在の実装ではURLが保存されるのは書き込み成功後のみ
-
       const mockObsidianClient = {
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
@@ -89,7 +84,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
 
     it('Obsidian書き込み成功時にのみURLが保存されていることを確認', async () => {
@@ -97,7 +92,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      getSavedUrls.mockResolvedValue(new Set());
+      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -106,7 +101,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(setSavedUrls).toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).toHaveBeenCalled();
     });
   });
 
@@ -116,7 +111,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      getSavedUrls.mockResolvedValue(new Set());
+      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -126,7 +121,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Network error');
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
 
     it('APIエラー時にURLが保存されないこと', async () => {
@@ -134,7 +129,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('API Error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      getSavedUrls.mockResolvedValue(new Set());
+      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -144,7 +139,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('API Error');
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
 
     it('タイムアウト時にURLが保存されないこと', async () => {
@@ -152,7 +147,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Request timeout'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      getSavedUrls.mockResolvedValue(new Set());
+      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -162,7 +157,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Request timeout');
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
   });
 
@@ -173,9 +168,9 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
 
-      const savedUrls = new Set(['https://example.com']);
-      getSavedUrls.mockResolvedValue(savedUrls);
-      setSavedUrls.mockResolvedValue();
+      const urlMap = new Map([['https://example.com', Date.now()]]);
+      getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+      setSavedUrlsWithTimestamps.mockResolvedValue();
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -185,18 +180,18 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
       expect(result.success).toBe(true);
       expect(result.skipped).toBe(true);
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
 
-    it('新しいURLの場合にのみsetSavedUrlsが呼ばれること', async () => {
+    it('新しいURLの場合にのみsetSavedUrlsWithTimestampsが呼ばれること', async () => {
       const mockObsidianClient = {
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
 
-      const savedUrls = new Set(['https://existing.com']);
-      getSavedUrls.mockResolvedValue(savedUrls);
-      setSavedUrls.mockResolvedValue();
+      const urlMap = new Map([['https://existing.com', Date.now()]]);
+      getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+      setSavedUrlsWithTimestamps.mockResolvedValue();
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -206,11 +201,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
       expect(result.success).toBe(true);
       expect(result.skipped).toBeUndefined();
-      expect(setSavedUrls).toHaveBeenCalled();
-      // URLが追加されていることを確認
-      const newUrlSet = new Set(savedUrls);
-      newUrlSet.add('https://new.com');
-      expect(setSavedUrls).toHaveBeenCalledWith(newUrlSet);
+      expect(setSavedUrlsWithTimestamps).toHaveBeenCalled();
+
+      // urlMapに新しいURLが追加されて保存されることを確認
+      expect(setSavedUrlsWithTimestamps).toHaveBeenCalledWith(
+        expect.any(Map),
+        'https://new.com'
+      );
     });
   });
 
@@ -220,7 +217,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      getSavedUrls.mockResolvedValue(new Set());
+      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -230,7 +227,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(setSavedUrls).not.toHaveBeenCalled();
+      expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
   });
 
@@ -242,16 +239,14 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
       let savedUrlsCalledTimes = 0;
 
-      // 並列呼び出し時はsetSavedUrlsが不要に呼ばれる可能性があるため、
-      // シリアルにテストする
       for (let i = 0; i < 5; i++) {
-        const urlSet = new Set();
+        const urlMap = new Map();
         for (let j = 0; j < i; j++) {
-          urlSet.add(`https://example.com/${j}`);
+          urlMap.set(`https://example.com/${j}`, Date.now());
         }
-        getSavedUrls.mockResolvedValue(new Set(urlSet));
-        setSavedUrls.mockClear();
-        setSavedUrls.mockResolvedValue();
+        getSavedUrlsWithTimestamps.mockResolvedValue(new Map(urlMap));
+        setSavedUrlsWithTimestamps.mockClear();
+        setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
           title: `Test Page ${i}`,
@@ -260,7 +255,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         });
 
         expect(result.success).toBe(true);
-        expect(setSavedUrls).toHaveBeenCalledTimes(1);
+        expect(setSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
         savedUrlsCalledTimes++;
       }
 
@@ -268,7 +263,6 @@ describe('RecordingLogic: データ整合性（P0）', () => {
     });
 
     it('並列呼び出し時に一部のリクエストが失敗した場合の整合性を確認', async () => {
-      // シリアルにテストして整合性を確認
       const mockObsidianClient = {
         appendToDailyNote: jest.fn()
           .mockResolvedValueOnce()    // 0: 成功
@@ -277,17 +271,15 @@ describe('RecordingLogic: データ整合性（P0）', () => {
           .mockRejectedValueOnce(new Error('Alternating error'))  // 3: 失敗
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      const savedUrlsCalledTimes = 0;
-      const savedUrlsList = [];
 
       for (let i = 0; i < 4; i++) {
-        const urlSet = new Set();
+        const urlMap = new Map();
         for (let j = 0; j < i; j++) {
-          urlSet.add(`https://example.com/${j}`);
+          urlMap.set(`https://example.com/${j}`, Date.now());
         }
-        getSavedUrls.mockResolvedValue(new Set(urlSet));
-        setSavedUrls.mockClear();
-        setSavedUrls.mockResolvedValue();
+        getSavedUrlsWithTimestamps.mockResolvedValue(new Map(urlMap));
+        setSavedUrlsWithTimestamps.mockClear();
+        setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
           title: `Test Page ${i}`,
@@ -295,13 +287,12 @@ describe('RecordingLogic: データ整合性（P0）', () => {
           content: `Content ${i}`
         });
 
-        // 奇数番目のリクエスト（1, 3）が失敗、偶数番目（0, 2）が成功
         if (i % 2 === 0) {
           expect(result.success).toBe(true);
-          expect(setSavedUrls).toHaveBeenCalledTimes(1);
+          expect(setSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
         } else {
           expect(result.success).toBe(false);
-          expect(setSavedUrls).not.toHaveBeenCalled();
+          expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
         }
       }
     });

@@ -104,7 +104,7 @@ describe('withOptimisticLock', () => {
             await expect(
                 withOptimisticLock('testKey', (current) => {
                     return [...current, 'item'];
-                }, { maxRetries: 2 })
+                }, { maxRetries: 2, retryDelay: 0 })
             ).rejects.toThrow(ConflictError);
 
             // 元のモックを復元
@@ -122,7 +122,7 @@ describe('withOptimisticLock', () => {
             chrome.storage.local.set = jest.fn(() => Promise.resolve());
 
             try {
-                await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 1 });
+                await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 1, retryDelay: 0 });
                 fail('Should have thrown ConflictError');
             } catch (error) {
                 expect(error).toBeInstanceOf(ConflictError);
@@ -148,11 +148,11 @@ describe('withOptimisticLock', () => {
             // 並行実行
             const promise1 = withOptimisticLock('testKey', (current) => {
                 return [...current, 'item1'];
-            }, { maxRetries: 10 });
+            }, { maxRetries: 10, retryDelay: 0 });
 
             const promise2 = withOptimisticLock('testKey', (current) => {
                 return [...current, 'item2'];
-            }, { maxRetries: 10 });
+            }, { maxRetries: 10, retryDelay: 0 });
 
             // 同期モック環境では、両方の操作が競合を検知しない可能性がある
             // 重要なのは：いずれかの操作が成功し、データが破損しないこと

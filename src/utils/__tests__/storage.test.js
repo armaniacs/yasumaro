@@ -12,14 +12,43 @@ import {
     getSettings,
     saveSettings,
     getOrCreateEncryptionKey,
-    clearEncryptionKeyCache
+    clearEncryptionKeyCache,
+    isDomainInWhitelist
 } from '../storage.js';
 import { normalizeUrl } from '../urlUtils.js';
-import { isEncrypted } from '../crypto.js';
+import { isEncrypted, encrypt, decrypt } from '../crypto.js';
 
 jest.mock('../migration.js', () => ({
     migrateUblockSettings: jest.fn(() => Promise.resolve(false))
 }));
+
+describe('isDomainInWhitelist', () => {
+    it('should return true for exact matches', () => {
+        expect(isDomainInWhitelist('https://api.openai.com/v1')).toBe(true);
+        expect(isDomainInWhitelist('https://generativelanguage.googleapis.com')).toBe(true);
+    });
+
+    it('should return true for Sakura Cloud API', () => {
+        expect(isDomainInWhitelist('https://api.ai.sakura.ad.jp/v1')).toBe(true);
+    });
+
+    it('should return true for localhost', () => {
+        expect(isDomainInWhitelist('http://localhost:11434')).toBe(true);
+    });
+
+    it('should return false for unauthorized Sakura subdomains', () => {
+        expect(isDomainInWhitelist('https://other.sakura.ad.jp/v1')).toBe(false);
+    });
+
+    it('should return false for domains not in whitelist', () => {
+        expect(isDomainInWhitelist('https://malicious.com')).toBe(false);
+        expect(isDomainInWhitelist('https://sakura.ad.jp.evil.com')).toBe(false);
+    });
+
+    it('should handle invalid URLs gracefully', () => {
+        expect(isDomainInWhitelist('not-a-url')).toBe(false);
+    });
+});
 
 describe('Storage Constants', () => {
     describe('MAX_URL_SET_SIZE', () => {
@@ -150,7 +179,12 @@ describe('APIキー暗号化統合', () => {
             const key1 = await getOrCreateEncryptionKey();
             const key2 = await getOrCreateEncryptionKey();
 
-            expect(key1).toBe(key2); // 同じオブジェクト参照
+            // CryptoKeyは同じ参照である必要はないが、同じキーで暗号化/復号化できる
+            // 実際に同じ秘密を暗号化して、双方のキーで復号化できることを確認
+            const testMessage = 'test-secret';
+            const { ciphertext, iv } = await encrypt(testMessage, key1);
+            const decrypted = await decrypt(ciphertext, iv, key2);
+            expect(decrypted).toBe(testMessage);
         });
     });
 

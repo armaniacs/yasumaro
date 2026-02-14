@@ -20,8 +20,18 @@ beforeEach(() => {
     PRIVACY_MODE: 'full_pipeline',
     PII_SANITIZE_LOGS: true
   });
-  storage.getSavedUrls.mockResolvedValue(new Set());
-  storage.setSavedUrls.mockResolvedValue();
+  storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+  storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+
+  // Problem #7: URLキャッシュを初期化
+  RecordingLogic.cacheState = {
+    settingsCache: null,
+    cacheTimestamp: null,
+    cacheVersion: 0,
+    urlCache: null,
+    urlCacheTimestamp: null
+  };
+
   storage.StorageKeys = {
     PRIVACY_MODE: 'PRIVACY_MODE',
     PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS'
@@ -71,7 +81,7 @@ describe('Recording Integration Test', () => {
 
     expect(result.success).toBe(true);
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
-    expect(storage.setSavedUrls).toHaveBeenCalled();
+    expect(storage.setSavedUrlsWithTimestamps).toHaveBeenCalled();
     expect(chrome.notifications.create).toHaveBeenCalled();
   });
 

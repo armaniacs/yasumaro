@@ -6,17 +6,19 @@
  */
 
 // 定数設定
-const MAX_INPUT_SIZE = 50 * 1024; // 50KB (文字数)
+const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 
-// PIIパターン定義（単一正規表現用）
-// 注: 文字境界 `\b` を使用して、他の文字列の一部になる場合を防ぐ
-// 数字の間にスペースやハイフンがある場合も検出
 const PII_PATTERNS = [
-    // クレジットカード: 16桁または15桁のカード番号
+    // メールアドレス（最も具体的）
+    {
+        type: 'email',
+        pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+    },
+    // クレジットカード: 16桁または15桁のカード番号（マイナンバーより前）
     {
         type: 'creditCard',
-        pattern: /\b(?:\d{4}[-\s]?\d{2,4}[-\s]?\d{2,4}[-\s]?\d{4})\b/ // 16桁（可変区切り3つ）
+        pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/ // 16桁（4-4-4-4）
     },
     {
         type: 'creditCard',
@@ -27,20 +29,15 @@ const PII_PATTERNS = [
         type: 'myNumber',
         pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/
     },
-    // 銀行口座: 7桁数字
-    {
-        type: 'bankAccount',
-        pattern: /\b\d{7}\b/
-    },
     // 電話番号: 0 + 1-4桁 + 1-4桁 + 4桁
     {
         type: 'phoneJp',
         pattern: /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}\b/
     },
-    // メールアドレス
+    // 銀行口座: 7桁数字
     {
-        type: 'email',
-        pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+        type: 'bankAccount',
+        pattern: /\b\d{7}\b/
     }
 ];
 
@@ -116,83 +113,92 @@ export async function sanitizeRegex(text, options = {}) {
         }
     }
 
+    const startTime = Date.now();
     try {
-        // タイムアウト付きで処理を実行
-        const result = await executeWithTimeout(() => {
-            const maskedItems = [];
-            const replacements = [];
+        const maskedItems = [];
+        const replacements = [];
 
-            // 【パフォーマンス改善】: 重複チェック用のSet（O(1)探索）
-            const matchedPositions = new Set();
+        // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン
+        // 同じタイプのパターンを統合して名前付きグループの重複を避ける
+        const typeGroups = [];
+        const seenTypes = new Set();
+        for (const { type } of PII_PATTERNS) {
+            if (seenTypes.has(type)) continue;
+            seenTypes.add(type);
+            const patternsForType = PII_PATTERNS
+                .filter(p => p.type === type)
+                .map(p => `(?:${p.pattern.source})`);
+            typeGroups.push(`(?<${type}>${patternsForType.join('|')})`);
+        }
+        const combinedRegex = new RegExp(typeGroups.join('|'), 'g');
 
-            // 【パフォーマンス改善】: 各パターンを1回ずつスキャンしてマッチを収集
-            // ただし置換は行わず、マッチ位置のみを記録
-            for (const { type, pattern } of PII_PATTERNS) {
-                let match;
-                const regex = new RegExp(pattern.source, 'g');
-                while ((match = regex.exec(text)) !== null) {
-                    const matchedValue = match[0];
-                    const startIndex = match.index;
-                    const endIndex = startIndex + matchedValue.length;
-
-                    // 【パフォーマンス改善】: Setで重複チェック（O(1)探索）
-                    const positionKey = `${startIndex}-${endIndex}`;
-                    if (matchedPositions.has(positionKey)) continue;
-
-                    // 【パフォーマンス改善】: 重複チェックをSetに追加
-                    matchedPositions.add(positionKey);
-
-                    replacements.push({
-                        index: startIndex,
-                        length: matchedValue.length,
-                        mask: `[MASKED:${type}]`,
-                        type,
-                        original: matchedValue
-                    });
-                }
+        let match;
+        let matchCount = 0;
+        while ((match = combinedRegex.exec(text)) !== null) {
+            matchCount++;
+            // タイムアウトチェック (10マッチごとに1回チェックしてオーバーヘッド削減)
+            if (matchCount % 10 === 0 && Date.now() - startTime > timeout) {
+                throw new Error(`Operation timed out after ${timeout}ms`);
             }
 
-            // 【改善】マッチ位置を長さ降順→インデックス降順でソート
-            // 長いマッチ（より具体的なパターン）を優先して処理
-            replacements.sort((a, b) => {
-                if (a.length !== b.length) return b.length - a.length; // 長いもの優先
-                return b.index - a.index; // 同じ長さなら後ろから
-            });
+            const matchedValue = match[0];
+            const startIndex = match.index;
 
-            // テキストを置換して作成
-            let processedText = text;
-            // 既に置換済みの位置を追跡（オーバーラップ防止）
-            const processedRanges = new Set();
-            for (const r of replacements) {
-                // オーバーラップチェック: この範囲が既に処理されているか確認
-                let overlaps = false;
-                for (const existing of processedRanges) {
-                    const [existingStart, existingEnd] = existing.split('-').map(Number);
-                    const [rStart, rEnd] = [r.index, r.index + r.length];
-                    // 既存の範囲と重複している場合
-                    if (!(rEnd <= existingStart || rStart >= existingEnd)) {
-                        overlaps = true;
+            // どのグループがマッチしたか特定
+            let matchedType = 'unknown';
+            if (match.groups) {
+                for (const type of Object.keys(match.groups)) {
+                    if (match.groups[type]) {
+                        matchedType = type;
                         break;
                     }
                 }
-                if (overlaps) continue; // 重複がある場合はスキップ
-
-                // 現在のテキストで元の値がまだ存在するか確認
-                const currentSegment = processedText.substring(r.index, r.index + r.length);
-                if (currentSegment !== r.original) continue; // 元の値が変わっている場合はスキップ
-
-                processedText =
-                    processedText.substring(0, r.index) +
-                    r.mask +
-                    processedText.substring(r.index + r.length);
-                processedRanges.add(`${r.index}-${r.index + r.length}`);
-                maskedItems.push({ type: r.type, original: r.original });
             }
 
-            return { text: processedText, maskedItems };
-        }, timeout);
+            replacements.push({
+                index: startIndex,
+                length: matchedValue.length,
+                mask: `[MASKED:${matchedType}]`,
+                type: matchedType,
+                original: matchedValue
+            });
+        }
 
-        return result;
+        // 念のため重複やオーバーラップを排除（1パスなら基本発生しないが、複雑なパターンの場合への備え）
+        replacements.sort((a, b) => b.length - a.length);
+        const resolvedReplacements = [];
+        const usedRanges = [];
+
+        for (const r of replacements) {
+            const rStart = r.index;
+            const rEnd = r.index + r.length;
+            const overlaps = usedRanges.some(range => !(rEnd <= range.start || rStart >= range.end));
+
+            if (!overlaps) {
+                resolvedReplacements.push(r);
+                usedRanges.push({ start: rStart, end: rEnd });
+            }
+        }
+
+        // 2. インデックスの降順でソート（後ろから置換することでインデックスのずれを防止）
+        resolvedReplacements.sort((a, b) => b.index - a.index);
+
+        let processedText = text;
+        const finalMaskedItems = [];
+
+        for (const r of resolvedReplacements) {
+            processedText =
+                processedText.substring(0, r.index) +
+                r.mask +
+                processedText.substring(r.index + r.length);
+            finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
+        }
+
+        // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
+        finalMaskedItems.sort((a, b) => a.index - b.index);
+        const resultItems = finalMaskedItems.map(item => ({ type: item.type, original: item.original }));
+
+        return { text: processedText, maskedItems: resultItems };
     } catch (error) {
         // タイムアウトまたはその他のエラー
         return {

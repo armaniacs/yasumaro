@@ -4,8 +4,10 @@
  */
 
 import { AIProviderStrategy } from './ProviderStrategy.js';
-import { fetchWithTimeout } from '../../../utils/fetch.js';
+import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
+import { getAllowedUrls } from '../../../utils/storage.js';
+import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 
 export class GeminiProvider extends AIProviderStrategy {
     constructor(settings) {
@@ -29,6 +31,16 @@ export class GeminiProvider extends AIProviderStrategy {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModelName}:generateContent`;
         const truncatedContent = content.substring(0, 30000);
 
+        // プロンプトインジェクション対策 - コンテンツのサニタイズ
+        const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
+        if (warnings.length > 0) {
+            addLog(LogType.WARNING, `[${this.getName()}] Prompt injection detected: ${warnings.join('; ')}`);
+        }
+        if (dangerLevel === 'high') {
+            addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked`);
+            return "Error: Content blocked due to potential security risk.";
+        }
+
         const payload = {
             contents: [{
                 parts: [{
@@ -36,7 +48,7 @@ export class GeminiProvider extends AIProviderStrategy {
                            1文または2文で、重要なポイントをまとめてください。改行しないこと。
 
                            Content:
-                           ${truncatedContent}`
+                           ${sanitizedContent}`
                 }]
             }]
         };
@@ -73,11 +85,21 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, message: 'Gemini API Key is not set.' };
         }
 
+        const testUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+        // BaseUrl SSRF対策 - テストURLの検証
+        try {
+            validateUrlForAIRequests(testUrl);
+        } catch (error) {
+            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${error.message}`);
+            return { success: false, message: `Invalid test URL: ${error.message}` };
+        }
+
         try {
             const allowedUrls = await this._getAllowedUrls();
 
             const response = await fetchWithTimeout(
-                'https://generativelanguage.googleapis.com/v1beta/models',
+                testUrl,
                 {
                     method: 'GET',
                     headers: { 'x-goog-api-key': this.apiKey },
@@ -96,7 +118,6 @@ export class GeminiProvider extends AIProviderStrategy {
     }
 
     async _getAllowedUrls() {
-        const { getAllowedUrls } = await import('../../../utils/storage.js');
         return getAllowedUrls();
     }
 

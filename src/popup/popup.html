@@ -11,10 +11,11 @@
 
 <body>
   <!-- Main Screen -->
-  <div id="mainScreen">
+  <header id="mainScreen">
     <div class="header">
-      <h2 data-i18n="appTitle">Smart History</h2>
-      <button id="menuBtn" class="icon-btn" data-i18n-aria-label="openSettings">⚙</button>
+      <h1 class="sr-only" data-i18n="appTitle">Smart History</h1>
+      <h2 data-i18n="appTitle" aria-hidden="true">Smart History</h2>
+      <button id="menuBtn" class="icon-btn" data-i18n-aria-label="openSettings" aria-label="Settings">⚙</button>
     </div>
 
     <div id="currentPage">
@@ -34,13 +35,14 @@
       <span class="spinner-text" data-i18n="processing">Processing...</span>
     </div>
     <div id="mainStatus" aria-live="polite"></div>
-  </div>
+  </header>
 
   <!-- Settings Screen -->
-  <div id="settingsScreen" class="settings-screen">
-    <div class="header">
-      <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain">←</button>
-      <h2 data-i18n="settings">Settings</h2>
+  <main id="settingsScreen" class="settings-screen">
+    <header class="header">
+      <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain" aria-label="Back">←</button>
+      <h1 class="sr-only" data-i18n="settings">Settings</h1>
+      <h2 data-i18n="settings" aria-hidden="true">Settings</h2>
       <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true">⋮</button>
       <!-- Settings Dropdown Menu -->
       <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
@@ -48,7 +50,7 @@
         <button id="importSettingsBtn" role="menuitem" data-i18n="importSettings">Import</button>
         <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
       </div>
-    </div>
+    </header>
 
     <!-- Tab Navigation -->
     <div id="tabList" class="tab-nav" role="tablist">
@@ -147,13 +149,15 @@
 
       <div class="form-group">
         <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
-        <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false" aria-describedby="minVisitDurationError">
+        <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false"
+          aria-describedby="minVisitDurationError">
         <div id="minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
         <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
-        <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false" aria-describedby="minScrollDepthError">
+        <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false"
+          aria-describedby="minScrollDepthError">
         <div id="minScrollDepthError" class="field-error" role="alert"></div>
       </div>
 
@@ -167,19 +171,25 @@
         <label id="domainFilterModeLabel" data-i18n="domainFilterMode">Domain Filter Mode</label>
         <div class="radio-group" role="radiogroup" aria-labelledby="domainFilterModeLabel">
           <div>
-            <input type="radio" id="filterDisabled" name="domainFilter" value="disabled" aria-describedby="filterDisabledDesc">
+            <input type="radio" id="filterDisabled" name="domainFilter" value="disabled"
+              aria-describedby="filterDisabledDesc">
             <label for="filterDisabled" data-i18n="filterDisabled">Disabled (record all)</label>
-            <div class="help-text" id="filterDisabledDesc" data-i18n="filterDisabledDesc">Record all visited websites regardless of domain.</div>
+            <div class="help-text" id="filterDisabledDesc" data-i18n="filterDisabledDesc">Record all visited websites
+              regardless of domain.</div>
           </div>
           <div class="mt-5">
-            <input type="radio" id="filterWhitelist" name="domainFilter" value="whitelist" aria-describedby="filterWhitelistDesc">
+            <input type="radio" id="filterWhitelist" name="domainFilter" value="whitelist"
+              aria-describedby="filterWhitelistDesc">
             <label for="filterWhitelist" data-i18n="filterWhitelist">Whitelist (record only specified domains)</label>
-            <div class="help-text" id="filterWhitelistDesc" data-i18n="filterWhitelistDesc">Only record websites from domains in your whitelist.</div>
+            <div class="help-text" id="filterWhitelistDesc" data-i18n="filterWhitelistDesc">Only record websites from
+              domains in your whitelist.</div>
           </div>
           <div class="mt-5">
-            <input type="radio" id="filterBlacklist" name="domainFilter" value="blacklist" aria-describedby="filterBlacklistDesc">
+            <input type="radio" id="filterBlacklist" name="domainFilter" value="blacklist"
+              aria-describedby="filterBlacklistDesc">
             <label for="filterBlacklist" data-i18n="filterBlacklist">Blacklist (exclude specified domains)</label>
-            <div class="help-text" id="filterBlacklistDesc" data-i18n="filterBlacklistDesc">Record all websites except those in your blacklist.</div>
+            <div class="help-text" id="filterBlacklistDesc" data-i18n="filterBlacklistDesc">Record all websites except
+              those in your blacklist.</div>
           </div>
         </div>
       </div>
@@ -286,7 +296,8 @@
           <div>
             <input type="radio" id="modeA" name="privacyMode" value="local_only" aria-describedby="modeADesc">
             <label for="modeA"><strong data-i18n="modeA">Mode A: Local Only</strong> <span
-                data-i18n="modeADetail">(Under development)</span></label>
+                data-i18n="modeADetail">(Under
+                development)</span></label>
             <div class="help-text ml-24" id="modeADesc" data-i18n="modeADesc">
               Summarize page content using only local AI, without sending data externally.<br>
               Currently not supported on most browsers.
@@ -335,11 +346,8 @@
         </div>
       </div>
 
-      <button id="savePrivacySettings" data-i18n="savePrivacySettings">Save</button>
-      <div id="privacyStatus" aria-live="polite"></div>
-
     </div>
-  </div>
+  </main>
 
   <!-- Confirmation Modal -->
   <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmContent">
@@ -367,7 +375,7 @@
 
   <!-- Import Confirmation Modal -->
   <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
-    aria-labelledby="importConfirmTitle">
+    aria-labelledby="importConfirmTitle" aria-hidden="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>

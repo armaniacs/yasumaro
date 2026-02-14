@@ -105,6 +105,49 @@ export function validateMinScrollDepth(input) {
 }
 
 /**
+ * BaseUrlフィールドのバリデーション
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {Promise<boolean>} 有効な場合はtrue
+ */
+export async function validateBaseUrl(input) {
+    const v = input.value.trim();
+    if (!v) {
+        // 空文字は許容（デフォルト値が使用される）
+        clearFieldError(input, 'baseUrlError');
+        return true;
+    }
+
+    try {
+        new URL(v);
+
+        // ホワイトリストチェック
+        const { isDomainInWhitelist, ALLOWED_AI_PROVIDER_DOMAINS } = await import('../../utils/storage.js');
+        if (!isDomainInWhitelist(v)) {
+            // メジャープロバイダーとワイルドカードドメインを重点表示
+            const majorProviders = [
+                'api.openai.com', 'api.anthropic.com', 'api.groq.com',
+                'openrouter.ai', 'mistral.ai', 'deepinfra.com'
+            ];
+            const sakuraDomains = ['api.ai.sakura.ad.jp'];
+
+            const message = `このドメインは許可リストにありません。\n\n` +
+                `主要プロバイダー: ${majorProviders.join(', ')}\n` +
+                `Sakuraクラウド: ${sakuraDomains.join(', ')}\n` +
+                `その他: LiteLLM対応プロバイダー（全${ALLOWED_AI_PROVIDER_DOMAINS.length}ドメイン）`;
+
+            setFieldError(input, 'baseUrlError', message);
+            return false;
+        }
+
+        clearFieldError(input, 'baseUrlError');
+        return true;
+    } catch (e) {
+        setFieldError(input, 'baseUrlError', getMessage('errorInvalidUrl') || 'Invalid URL format');
+        return false;
+    }
+}
+
+/**
  * プロトコルフィールドのバリデーションイベントリスナーを設定
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数

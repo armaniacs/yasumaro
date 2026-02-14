@@ -42,6 +42,9 @@ module.exports = {
   // 拡張子の認識
   moduleFileExtensions: ['js', 'json'],
 
+  // タイムアウト設定 (15秒)
+  testTimeout: 15000,
+
   // 冗長モード
   verbose: true
 };

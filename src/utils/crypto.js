@@ -107,6 +107,21 @@ export async function deriveKey(password, salt) {
 }
 
 /**
+ * 暗号化キーを導出する（Extension IDを使用）
+ * chrome.runtime.idをキー導出に組み込むことで、異なる環境間のデータ分離を実現
+ * @param {string} secret - 共有シークレット
+ * @param {Uint8Array} salt - ソルト
+ * @param {string} extensionId - 拡張機能ID
+ * @returns {Promise<CryptoKey>} 導出された暗号化キー
+ */
+export async function deriveKeyWithExtensionId(secret, salt, extensionId) {
+    const webcrypto = getWebCrypto();
+    // secret + extensionId を組み合わせてキー導出用のパスワードを作成
+    const combinedPassword = `${secret}:${extensionId}`;
+    return deriveKey(combinedPassword, salt);
+}
+
+/**
  * 平文を暗号化する
  * @param {string} plaintext - 平文
  * @param {CryptoKey} key - 暗号化キー
@@ -186,9 +201,15 @@ export async function decryptData(encryptedData, key) {
  * @returns {boolean} 暗号化されているかどうか
  */
 export function isEncrypted(data) {
-    return data !== null && data !== undefined && typeof data === 'object' && 
-           data.ciphertext && typeof data.ciphertext === 'string' &&
-           data.iv && typeof data.iv === 'string';
+    return Boolean(
+        data !== null &&
+        data !== undefined &&
+        typeof data === 'object' &&
+        data.ciphertext &&
+        typeof data.ciphertext === 'string' &&
+        data.iv &&
+        typeof data.iv === 'string'
+    );
 }
 
 /**
@@ -222,4 +243,32 @@ export async function decryptApiKey(encryptedApiKey, key) {
     }
 
     throw new Error('Invalid API key format');
+}
+
+/**
+ * HMAC-SHA256を使用してハッシュを計算する
+ * @param {string} secret - 共有シークレット
+ * @param {string} message - メッセージ
+ * @returns {Promise<string>} Base64エンコードされたHMACハッシュ
+ */
+export async function computeHMAC(secret, message) {
+    const webcrypto = getWebCrypto();
+    const encoder = new TextEncoder();
+
+    const secretKey = await webcrypto.subtle.importKey(
+        'raw',
+        encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+
+    const signature = await webcrypto.subtle.sign(
+        'HMAC',
+        secretKey,
+        encoder.encode(message)
+    );
+
+    const signatureArray = Array.from(new Uint8Array(signature));
+    return btoa(String.fromCharCode(...signatureArray));
 }

@@ -30,22 +30,19 @@ describe('LocalAIClient timeout', () => {
   });
 
   test('summarize：オフスクリーン通信にタイムアウト', async () => {
+    jest.useFakeTimers();
     // msgOffscreenが永遠に応答しないようにモック（Promise解決なし）
     const cli = new LocalAIClient();
-    cli.msgOffscreen = jest.fn().mockImplementation(() => new Promise(() => {})); // 永遠に解決しない
+    cli.msgOffscreen = jest.fn().mockImplementation(() => new Promise(() => { })); // 永遠に解決しない
 
-    // setTimeoutをモックして直ちにタイムアウトさせる
-    let timeoutCallback = null;
-    global.setTimeout = jest.fn((callback, ms) => {
-      timeoutCallback = callback;
-      originalSetTimeout(() => callback(), 0);
-      return 999;
-    });
+    const resultPromise = cli.summarize('test');
 
-    cli.summarize('test').catch(() => { /* タイムアウトを待って確認 */ });
+    // タイムアウト分だけ時間を進める
+    jest.advanceTimersByTime(30000);
 
-    // setTimeoutコールバックを実行
-    await new Promise(resolve => originalSetTimeout(resolve, 50));
+    const result = await resultPromise;
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('timed out');
 
     // ログが書かれることを確認
     expect(logger.addLog).toHaveBeenCalledWith(
@@ -53,6 +50,8 @@ describe('LocalAIClient timeout', () => {
       expect.stringContaining('timed'),
       expect.any(Object)
     );
+
+    jest.useRealTimers();
   });
 
   test('summarize：成功応答', async () => {

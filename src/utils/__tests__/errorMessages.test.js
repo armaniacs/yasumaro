@@ -63,7 +63,7 @@ describe('errorMessages', () => {
         });
 
         it('should return user-friendly message for auth errors', () => {
-            const message = getUserError({ message: 'Invalid API key' });
+            const message = getUserMessage({ message: 'Invalid API key' });
             expect(message).toContain('認証');
         });
 

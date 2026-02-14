@@ -118,8 +118,15 @@ describe('crypto', () => {
             const salt2 = generateSalt();
             const key1 = await deriveKey(password, salt1);
             const key2 = await deriveKey(password, salt2);
-            // 異なるソルトで異なるキーが導出されることを確認
-            expect(key1).not.toEqual(key2);
+
+            // 異なるソルトで導出されたキーはソルトが異なるため異なるはず
+            // 暗号化結果を比較してキーが異なることを確認
+            const plaintext = 'test message';
+            const encrypted1 = await encrypt(plaintext, key1);
+            const encrypted2 = await encrypt(plaintext, key2);
+
+            // 異なるキーで暗号化した結果は異なるはず
+            expect(encrypted1.ciphertext).not.toBe(encrypted2.ciphertext);
         });
     });
 

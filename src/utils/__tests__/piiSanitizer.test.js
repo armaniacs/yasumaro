@@ -256,10 +256,10 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 入力サイズ制限', () => {
-    test('50KB以下の入力は正常に処理される', async () => {
+    test('64KB以下の入力は正常に処理される', async () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
-      // 【テスト内容】: 50KB未満の入力が正常に処理されることを確認
-      const text = 'a'.repeat(50 * 1024 - 1); // 50KB - 1文字
+      // 【テスト内容】: 64KB未満の入力が正常に処理されることを確認
+      const text = 'a'.repeat(64 * 1024 - 1); // 64KB - 1文字
       const result = await sanitizeRegex(text);
 
       expect(result.text).toBe(text);
@@ -267,10 +267,10 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('50KBの入力は正常に処理される', async () => {
+    test('64KBの入力は正常に処理される', async () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
-      // 【テスト内容】: ちょうど50KBの入力が正常に処理されることを確認
-      const text = 'a'.repeat(50 * 1024); // 50KB
+      // 【テスト内容】: ちょうど64KBの入力が正常に処理されることを確認
+      const text = 'a'.repeat(64 * 1024); // 64KB
       const result = await sanitizeRegex(text);
 
       expect(result.text).toBe(text);
@@ -278,10 +278,10 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('50KBを超える入力はエラーを返す', async () => {
+    test('64KBを超える入力はエラーを返す', async () => {
       // 【テスト目的】: 入力サイズ制限の確認
-      // 【テスト内容】: 50KBを超える入力がエラーを返すことを確認
-      const text = 'a'.repeat(50 * 1024 + 1); // 50KB + 1文字
+      // 【テスト内容】: 64KBを超える入力がエラーを返すことを確認
+      const text = 'a'.repeat(64 * 1024 + 1); // 64KB + 1文字
       const result = await sanitizeRegex(text);
 
       expect(result.text).toBe(text); // 元のテキストが返される
@@ -293,7 +293,7 @@ describe('piiSanitizer', () => {
     test('skipSizeLimitオプションでサイズ制限を回避できる', async () => {
       // 【テスト目的】: skipSizeLimitオプションの確認
       // 【テスト内容】: skipSizeLimitオプションを使用するとサイズ制限を回避できることを確認
-      const text = 'a'.repeat(50 * 1024 + 1); // 50KB + 1文字
+      const text = 'a'.repeat(64 * 1024 + 1); // 64KB + 1文字
       const result = await sanitizeRegex(text, { skipSizeLimit: true });
 
       expect(result.text).toBe(text);
@@ -332,7 +332,8 @@ describe('piiSanitizer', () => {
       // 【テスト内容】: 処理がタイムアウトした場合にエラーを返すことを確認
       // 注: このテストは実際にタイムアウトを発生させるため、実行時間がかかる
       // 非常に長いテキストを使用してタイムアウトを強制的に発生させる
-      const text = 'a'.repeat(1000000); // 1MB（サイズ制限を回避）
+      // マッチが多数ある状況を作るとループ回数が増えてタイムアウトしやすくなる
+      const text = 'test@example.com '.repeat(5000); // 約100KB (十分重い)
       const result = await sanitizeRegex(text, { timeout: 1, skipSizeLimit: true }); // 1msでタイムアウト
 
       // タイムアウトエラーが返されることを確認

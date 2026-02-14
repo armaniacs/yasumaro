@@ -5,7 +5,7 @@
  */
 
 import { RecordingLogic } from '../recordingLogic.js';
-import { getSettings, getSavedUrls, setSavedUrls, StorageKeys, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../utils/storage.js';
+import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, StorageKeys, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../utils/storage.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -36,7 +36,16 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
     recordingLogic = new RecordingLogic({}, {});
     jest.clearAllMocks();
 
-    // デフォルトモック
+    // Problem #7: URLキャッシュを初期化
+    RecordingLogic.cacheState = {
+      settingsCache: null,
+      cacheTimestamp: null,
+      cacheVersion: 0,
+      urlCache: null,
+      urlCacheTimestamp: null
+    };
+
+    // storageのデフォルトモック
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
@@ -44,8 +53,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       PRIVACY_MODE: 'masked_cloud'
     });
 
-    getSavedUrls.mockResolvedValue(new Set());
-    setSavedUrls.mockResolvedValue();
+    getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    setSavedUrlsWithTimestamps.mockResolvedValue();
     StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
 
     // MAX_URL_SET_SIZE定数をエクスポートしていない場合は定義
@@ -75,15 +84,15 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      let savedUrls = new Set();
+      let urlMap = new Map();
       let callCount = 0;
 
       // シリアルにテスト（Mutexキューリミットを回避）
       for (let i = 0; i < 100; i++) {
-        savedUrls = new Set(savedUrls); // 新しいSetを作成
-        getSavedUrls.mockResolvedValue(savedUrls);
-        setSavedUrls.mockClear();
-        setSavedUrls.mockResolvedValue();
+        urlMap = new Map(urlMap); // 新しいMapを作成
+        getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+        setSavedUrlsWithTimestamps.mockClear();
+        setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
           title: `Test Page ${i}`,
@@ -106,15 +115,15 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
-      let savedUrls = new Set();
+      let urlMap = new Map();
       let callCount = 0;
 
       // シリアルにテスト（Mutexキューリミットを回避）
       for (let i = 0; i < 100; i++) {
-        savedUrls = new Set(savedUrls); // 新しいSetを作成
-        getSavedUrls.mockResolvedValue(savedUrls);
-        setSavedUrls.mockClear();
-        setSavedUrls.mockResolvedValue();
+        urlMap = new Map(urlMap); // 新しいMapを作成
+        getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+        setSavedUrlsWithTimestamps.mockClear();
+        setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
           title: `Test Page ${i}`,
@@ -141,11 +150,11 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
 
       // URLセットを上限（10000）に設定
-      const urlSet = new Set();
+      const urlMap = new Map();
       for (let i = 0; i < MAX_URL_SET_SIZE; i++) {
-        urlSet.add(`https://example.com/${i}`);
+        urlMap.set(`https://example.com/${i}`, Date.now());
       }
-      getSavedUrls.mockResolvedValue(urlSet);
+      getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
       // 上限を超えるURLを記録しようとする
       const result = await recordingLogic.record({
@@ -210,7 +219,7 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
   describe('パフォーマンス', () => {
     it('大きなURLセットでも重複チェックが効率的に行われるべき', async () => {
       // TODO: 実装後にこのテストを有効化
-      // SetのhasメソッドはO(1)のため効率的ですが、
+      // SetのhasメソッドはO(1)のため効率적ですが、
       // 更大きなセットでのパフォーマンスを確認すべき
       expect(true).toBe(true);
     });

@@ -4,9 +4,33 @@
  */
 
 import { getSettings, saveSettings } from './storage.js';
+import { computeHMAC } from './crypto.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
+
+// APIキーフィールドのリスト
+const API_KEY_FIELDS = [
+    'obsidian_api_key',
+    'gemini_api_key',
+    'openai_api_key',
+    'openai_2_api_key',
+];
+
+/**
+ * APIキーフィールドを除外した設定を取得する
+ * @param {object} settings - 元の設定
+ * @returns {object} APIキーが除外された設定
+ */
+function sanitizeSettingsForExport(settings) {
+    const sanitized = { ...settings };
+
+    for (const field of API_KEY_FIELDS) {
+        delete sanitized[field];
+    }
+
+    return sanitized;
+}
 
 /**
  * Generate filename for export with timestamp
@@ -29,14 +53,32 @@ function getExportFilename() {
 export async function exportSettings() {
   const settings = await getSettings();
 
+  // APIキーを除外した設定でエクスポート
+  const sanitizedSettings = sanitizeSettingsForExport(settings);
+
   const exportData = {
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
-    settings,
+    settings: sanitizedSettings,
+    // APIキー除外フラグを追加
+    apiKeyExcluded: true,
   };
 
   const json = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+
+  // HMAC署名を計算
+  const { getOrCreateHmacSecret } = await import('./storage.js');
+  const hmacSecret = await getOrCreateHmacSecret();
+  const signature = await computeHMAC(hmacSecret, json);
+
+  // 署名付きエクスポートデータ
+  const signedExportData = {
+    ...exportData,
+    signature,
+  };
+
+  const signedJson = JSON.stringify(signedExportData, null, 2);
+  const blob = new Blob([signedJson], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement('a');
@@ -72,14 +114,17 @@ export function validateExportData(data) {
     return false;
   }
 
-  // Check if settings has the required keys
   const settings = data.settings;
+
+  // APIキーが除外されている場合、APIキーフィールドのチェックをスキップ
+  const apiKeyExcluded = data.apiKeyExcluded === true;
+
   const requiredKeys = [
-    'obsidian_api_key', 'obsidian_protocol', 'obsidian_port',
-    'gemini_api_key', 'min_visit_duration', 'min_scroll_depth',
+    'obsidian_protocol', 'obsidian_port',
+    'min_visit_duration', 'min_scroll_depth',
     'gemini_model', 'obsidian_daily_path', 'ai_provider',
-    'openai_base_url', 'openai_api_key', 'openai_model',
-    'openai_2_base_url', 'openai_2_api_key', 'openai_2_model',
+    'openai_base_url', 'openai_model',
+    'openai_2_base_url', 'openai_2_model',
     'domain_whitelist', 'domain_blacklist', 'domain_filter_mode',
     'privacy_mode', 'pii_confirmation_ui', 'pii_sanitize_logs',
     'ublock_rules', 'ublock_sources', 'ublock_format_enabled',
@@ -89,6 +134,20 @@ export function validateExportData(data) {
   for (const key of requiredKeys) {
     if (!(key in settings)) {
       return false;
+    }
+  }
+
+  // APIキーフィールドのチェック（ apiKeyExcluded がある場合はスキップ）
+  if (!apiKeyExcluded) {
+    const apiKeyKeys = [
+      'obsidian_api_key', 'gemini_api_key',
+      'openai_api_key', 'openai_2_api_key',
+    ];
+
+    for (const key of apiKeyKeys) {
+      if (!(key in settings)) {
+        return false;
+      }
     }
   }
 
@@ -104,14 +163,48 @@ export async function importSettings(jsonData) {
   try {
     const parsed = JSON.parse(jsonData);
 
+    // 署名があるかチェック
+    if (!parsed.signature) {
+      console.warn('Imported settings has no signature. Proceeding without verification.');
+      // 旧形式のエクスポートファイルとの互換性のため、署名検証なしで続行
+    } else {
+      // 署名検証
+      const { getOrCreateHmacSecret } = await import('./storage.js');
+      const hmacSecret = await getOrCreateHmacSecret();
+
+      // 署名を除いてハッシュ計算
+      const { signature, ...dataForVerification } = parsed;
+      const dataJson = JSON.stringify(dataForVerification, null, 2);
+
+      const computedSignature = await computeHMAC(hmacSecret, dataJson);
+
+      if (signature !== computedSignature) {
+        console.error('Signature verification failed. Settings may have been tampered with.');
+        alert('設定ファイルの署名検証に失敗しました。ファイルが改ざんされている可能性があります。');
+        return null;
+      }
+    }
+
+    // 構造検証（既存のvalidateExportDataを使用）
     if (!validateExportData(parsed)) {
       return null;
     }
 
-    // Version compatibility check (for future use)
-    if (parsed.version !== EXPORT_VERSION) {
-      console.warn(`Settings version mismatch. Expected ${EXPORT_VERSION}, got ${parsed.version}.
-      Proceeding with import anyway.`);
+    // APIキーが除外されている場合、インポートしない
+    if (parsed.apiKeyExcluded) {
+      console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
+      // 既存の設定を取得し、APIキーのみ維持
+      const existingSettings = await getSettings();
+      const { obsidian_api_key, gemini_api_key, openai_api_key, openai_2_api_key, ...imported } = parsed.settings;
+      const merged = {
+        ...imported,
+        obsidian_api_key: existingSettings.obsidian_api_key,
+        gemini_api_key: existingSettings.gemini_api_key,
+        openai_api_key: existingSettings.openai_api_key,
+        openai_2_api_key: existingSettings.openai_2_api_key,
+      };
+      await saveSettings(merged);
+      return merged;
     }
 
     await saveSettings(parsed.settings);

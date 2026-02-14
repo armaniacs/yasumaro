@@ -128,6 +128,17 @@ WCAG 2.1 Level AA準拠を目指してください：
 <div>Drop file here</div>
 ```
 
+### セキュリティとAIプロバイダーの追加
+
+この拡張機能は、ユーザー設定のURLへのアクセスを制限する動的URL検証機能を備えています。新しいAIプロバイダーを追加する場合は、以下の手順が必要です：
+
+1. **ドメインのホワイトリスト追加**:
+   - `src/utils/storage.js` の `ALLOWED_AI_PROVIDER_DOMAINS` 配列に許可するドメインを追加します。
+2. **CSPの更新**:
+   - `manifest.json` の `content_security_policy.extension_pages` 内の `connect-src` にドメインを追加します。
+3. **テストの追加**:
+   - `src/utils/__tests__/storage.test.js` に新しいドメインが正しく検証されることを確認するテストケースを追加します。
+
 ### プロジェクト構造
 
 ```
@@ -343,6 +354,17 @@ Aim for WCAG 2.1 Level AA compliance:
 <!-- Bad -->
 <div>Drop file here</div>
 ```
+
+### Security and Adding AI Providers
+
+This extension features dynamic URL validation to restrict access to user-configured URLs. To add a new AI provider, follow these steps:
+
+1. **Add to Domain Whitelist**:
+   - Add the domain to the `ALLOWED_AI_PROVIDER_DOMAINS` array in `src/utils/storage.js`.
+2. **Update CSP**:
+   - Add the domain to `connect-src` in the `content_security_policy.extension_pages` section of `manifest.json`.
+3. **Add Tests**:
+   - Add a test case in `src/utils/__tests__/storage.test.js` to ensure the new domain is correctly validated.
 
 ### Project Structure
 

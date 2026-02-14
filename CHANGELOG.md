@@ -2,7 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.0.2] - to be released. Date is not fixed yet.
+## [3.0.3] - to be released. Date is not fixed yet.
+
+### Fixed
+- **設定画面の表示不具合の修正**: HTMLタグのミスマッチにより設定画面が空白になる問題を修正
+  - `popup.html`: `<header>`, `<div>`, `<main>` タグの構造を適正化
+- **AI接続テストの権限エラー修正**: Sakuraクラウド（`api.ai.sakura.ad.jp`）等のカスタムAIエンドポイントへの接続時に「URL is not allowed」エラーが発生する問題を解消
+- **手動記録時のエラー（TypeError）の修正**: メイン画面での記録時に `mainStatus` エレメントが見つからず保存に失敗する問題を修正
+  - `popup.html`: 欠落していた `mainStatus` エレメントを復元
+- **PIIサニタイザーの不具合修正**:
+  - 置換時のインデックスずれによるマッチ漏れを修正（後ろから置換する方式に変更）
+  - 「マイナンバー」が「クレジットカード」として誤検知される優先順位のバグを修正
+  - 正規表現スキャン中のタイムアウトが同期処理により機能していなかった問題を修正（ループ内での時間チェックを追加）
+  - パフォーマンス改善のため、各パターンを1回ずつスキャンするように最適化
+
+### Security
+- **Sakuraクラウド接続**: `api.ai.sakura.ad.jp` のみを明示的に許可するようにホワイトリストを制限
+
+### Docs
+- **セットアップガイドの更新**: [SETUP_GUIDE.md](file:///Users/yaar/Playground/obsidian-smart-history/SETUP_GUIDE.md) に公式にサポートされているAIプロバイダーのドメイン一覧を追加
+- **コントリビューションガイドの更新**: [CONTRIBUTING.md](file:///Users/yaar/Playground/obsidian-smart-history/CONTRIBUTING.md) に新しいAIプロバイダーを追加するための開発者向け手順を追加
+
+### Internal
+- **テストスイートの高速化**: Jestの `fakeTimers` を導入し、テスト中の `sleep` / `setTimeout` 待機を排除
+  - `localAiClient-timeout`, `retryHelper`, `optimisticLock` 等のテスト実行時間を大幅に短縮（全件実行で数分 → 約5秒）
+- **ストレージAPI変更に伴うテストの修正**: 最新の `RecordingLogic` と `storage.js` (`getSavedUrlsWithTimestamps` 等) に合わせて複数のテストスイートを更新
+  - 修正対象: `robustness-data-integrity`, `recordingLogic`, `integration-recording`, `robustness-url-set-limit`
+- **内部キー定数のテスト修正**: `storage-keys.test.js` で `HMAC_SECRET` が内部キーとして正しく扱われるように修正
+- **ドメイン検証テストの強化**: `storage.test.js` に `isDomainInWhitelist` の包括的なテストケースを追加
+
+## [3.0.2] - 2026-02-15
+
+### Fixed
+- **Service Worker動的import禁止エラーの修正**: Service Workerのグローバルスコープでの動的import使用によるエラーを解消
+  - `src/background/ai/providers/GeminiProvider.js`: `getAllowedUrls`を静的importに変更
+  - `src/background/ai/providers/OpenAIProvider.js`: `getAllowedUrls`を静的importに変更
+  - `_getAllowedUrls()`メソッド内の動的import（`await import()`）を削除
+  - HTMLの仕様により、Service WorkerのグローバルスコープではES Modules動的importが許可されていないため、すべてのimportを静的に統一
+- **Google Fonts CSPエラーの修正**: Manifest V3のContent Security Policy制限により外部フォントが読み込めない問題を解消
+  - `src/popup/styles.css`からGoogle Fonts（Inter）の`@import`を削除
+  - システムフォントスタック（-apple-system, BlinkMacSystemFont, Segoe UI等）に変更
+  - `manifest.json`のCSP設定を簡素化（外部フォント関連のディレクティブを削除）
+  - Chrome拡張機能のセキュリティポリシーに完全準拠
+- **拡張機能リロード時のエラーハンドリング改善**: Extension context invalidatedエラーの適切な処理
+  - `src/content/extractor.js`: 拡張機能リロード検出時に定期チェックを停止
+  - ページリフレッシュを推奨する情報レベルのメッセージに変更
+  - 不要なリトライ試行を防止してリソースを節約
 
 ### Internal
 - **SOLID原則に基づく全体リファクタリング**: 5フェーズでコードベースの設計品質を向上
@@ -487,9 +532,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **UI Label Fix**: Corrected "Obsidian API Key" label to "OpenAI API Key" in AI settings.
 - **UI Refactoring**: Updated `popup.html`, `popup.js`, and `main.js` to use localized strings instead of hardcoded text.
-
-### Fixed
-- **Test Updates**: Updated tests to support i18n and fix failing tests involved in the refactor.
+- [FIX] Fixed "Network Error" during filter source reload by relaxing CSP and improving error classification.
+- [FIX] Implemented 64KB size limit for recordings to prevent performance degradation on large pages.
+- [FIX] Optimized PII Sanitizer with single-pass regex scanning and more efficient timeout checks.
+- [FIX] Reduced full test suite execution time from ~50 minutes to ~25 seconds by optimizing heavy test cases.
+- [IMPROVE] Set global Jest test timeout to 15 seconds for more reliable CI/CD and developer feedback.
 - **isDomainBlockedError ロケール不一致修正**: エラー判定をi18nメッセージ文字列比較からエラーコード (`DOMAIN_BLOCKED`) ベースに変更。
 
 ## [2.3.2] - 2026-02-07

@@ -4,7 +4,7 @@ import { NotificationHelper } from './notificationHelper.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
-import { getSettings, StorageKeys, getSavedUrls, setSavedUrls, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
+import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 
@@ -89,8 +89,8 @@ export class RecordingLogic {
   }
 
   /**
-   * URLキャッシュから保存済みURLを取得する
-   * Problem #7: getSavedUrls() キャッシュ追加
+   * URLキャッシュから保存済みURLを取得する（日付ベース重複チェック用）
+   * Map<string, number> (URL -> timestamp) を返す
    */
   async getSavedUrlsWithCache() {
     const now = Date.now();
@@ -100,18 +100,18 @@ export class RecordingLogic {
       const age = now - RecordingLogic.cacheState.urlCacheTimestamp;
       if (age < URL_CACHE_TTL) {
         addLog(LogType.DEBUG, 'URL cache hit', { count: RecordingLogic.cacheState.urlCache.size, age: age + 'ms' });
-        return new Set(RecordingLogic.cacheState.urlCache); // 新しいSetを返して変更の影響を防ぐ
+        return new Map(RecordingLogic.cacheState.urlCache); // 新しいMapを返して変更の影響を防ぐ
       }
     }
 
-    // キャッシュが無効な場合、storageから取得
-    const urlSet = await getSavedUrls();
-    RecordingLogic.cacheState.urlCache = new Set(urlSet);
+    // キャッシュが無効な場合、storageから取得（タイムスタンプ付き）
+    const urlMap = await getSavedUrlsWithTimestamps();
+    RecordingLogic.cacheState.urlCache = new Map(urlMap);
     RecordingLogic.cacheState.urlCacheTimestamp = now;
 
-    addLog(LogType.DEBUG, 'URL cache updated', { count: urlSet.size });
+    addLog(LogType.DEBUG, 'URL cache updated', { count: urlMap.size });
 
-    return urlSet;
+    return urlMap;
   }
 
   /**
@@ -125,9 +125,20 @@ export class RecordingLogic {
   }
 
   async record(data) {
-    const { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false } = data;
+    const MAX_RECORD_SIZE = 64 * 1024;
 
     try {
+      // 0. Content Truncation (Problem: Large pages can hang the pipeline)
+      if (content && content.length > MAX_RECORD_SIZE) {
+        addLog(LogType.WARN, 'Content truncated for recording', {
+          originalLength: content.length,
+          truncatedLength: MAX_RECORD_SIZE,
+          url
+        });
+        content = content.substring(0, MAX_RECORD_SIZE);
+      }
+
       // 1. Check domain filter
       const isAllowed = await isDomainAllowed(url);
 
@@ -139,22 +150,35 @@ export class RecordingLogic {
         addLog(LogType.WARN, 'Force recording blocked domain', { url });
       }
 
-      // 2. Check for duplicates
+      // 2. Check for duplicates (日付ベース: 同一ページは1日1回のみ)
       // 設定キャッシュを使用
       const settings = await this.getSettingsWithCache();
       // Code Review #1: 設定からモードを更新
       this.mode = settings.PRIVACY_MODE || 'full_pipeline';
-      // Problem #7: キャッシュ付きURL取得を使用
-      const urlSet = await this.getSavedUrlsWithCache();
+      // 日付ベース重複チェック: Map<URL, timestamp> を取得
+      const urlMap = await this.getSavedUrlsWithCache();
 
-      if (!skipDuplicateCheck && urlSet.has(url)) {
-        return { success: true, skipped: true };
+      // 同じURLが保存済みで、かつ同日の場合はスキップ
+      if (!skipDuplicateCheck) {
+        const savedTimestamp = urlMap.get(url);
+        if (savedTimestamp) {
+          const savedDate = new Date(savedTimestamp);
+          const today = new Date();
+          // 同年同月同日なら同日と判断
+          if (savedDate.getFullYear() === today.getFullYear() &&
+            savedDate.getMonth() === today.getMonth() &&
+            savedDate.getDate() === today.getDate()) {
+            addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', { url, savedDate: savedDate.toDateString() });
+            return { success: true, skipped: true, reason: 'same_day' };
+          }
+          // 別日なら古いエントリを上書き（以降の処理で追加される）
+        }
       }
 
       // Problem #4: URLセットサイズ制限チェック
-      if (urlSet.size >= MAX_URL_SET_SIZE) {
+      if (urlMap.size >= MAX_URL_SET_SIZE) {
         addLog(LogType.ERROR, 'URL set size limit exceeded', {
-          current: urlSet.size,
+          current: urlMap.size,
           max: MAX_URL_SET_SIZE,
           url
         });
@@ -163,11 +187,11 @@ export class RecordingLogic {
       }
 
       // Problem #4: 警告閾値チェック
-      if (urlSet.size >= URL_WARNING_THRESHOLD) {
+      if (urlMap.size >= URL_WARNING_THRESHOLD) {
         addLog(LogType.WARN, 'URL set size approaching limit', {
-          current: urlSet.size,
+          current: urlMap.size,
           threshold: URL_WARNING_THRESHOLD,
-          remaining: MAX_URL_SET_SIZE - urlSet.size
+          remaining: MAX_URL_SET_SIZE - urlMap.size
         });
       }
 
@@ -220,13 +244,11 @@ export class RecordingLogic {
       await this.obsidian.appendToDailyNote(markdown);
       addLog(LogType.INFO, 'Saved to Obsidian', { title, url });
 
-      // 6. Update saved list
-      if (!urlSet.has(url)) {
-        urlSet.add(url);
-        await setSavedUrls(urlSet);
-        // Problem #7: URLキャッシュを無効化
-        RecordingLogic.invalidateUrlCache();
-      }
+      // 6. Update saved list (日付ベース: Map<URL, timestamp>で管理)
+      urlMap.set(url, Date.now());
+      await setSavedUrlsWithTimestamps(urlMap, url);
+      // Problem #7: URLキャッシュを無効化
+      RecordingLogic.invalidateUrlCache();
 
       // 7. Notification
       NotificationHelper.notifySuccess('Saved to Obsidian', `Saved: ${title}`);

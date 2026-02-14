@@ -4,8 +4,10 @@
  */
 
 import { AIProviderStrategy } from './ProviderStrategy.js';
-import { fetchWithTimeout } from '../../../utils/fetch.js';
+import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
+import { getAllowedUrls } from '../../../utils/storage.js';
+import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 
 export class OpenAIProvider extends AIProviderStrategy {
     constructor(settings, providerName = 'openai') {
@@ -17,6 +19,16 @@ export class OpenAIProvider extends AIProviderStrategy {
         this.apiKey = settings[`${normalizedName}_api_key`];
         this.model = settings[`${normalizedName}_model`] || 'gpt-3.5-turbo';
         this.timeoutMs = 30000;
+
+        // BaseUrl SSRF対策
+        if (this.baseUrl) {
+            try {
+                validateUrlForAIRequests(this.baseUrl);
+            } catch (error) {
+                addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${error.message}`);
+                throw new Error(`Invalid baseUrl: ${error.message}`);
+            }
+        }
     }
 
     getName() {
@@ -32,6 +44,16 @@ export class OpenAIProvider extends AIProviderStrategy {
         const url = `${trimmedBaseUrl}/chat/completions`;
         const truncatedContent = content.substring(0, 30000);
 
+        // プロンプトインジェクション対策 - コンテンツのサニタイズ
+        const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
+        if (warnings.length > 0) {
+            addLog(LogType.WARNING, `[${this.providerName}] Prompt injection detected: ${warnings.join('; ')}`);
+        }
+        if (dangerLevel === 'high') {
+            addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked`);
+            return "Error: Content blocked due to potential security risk.";
+        }
+
         const payload = {
             model: this.model,
             messages: [
@@ -45,7 +67,7 @@ export class OpenAIProvider extends AIProviderStrategy {
                            1文または2文で、重要なポイントをまとめてください。改行しないこと。
 
                            Content:
-                           ${truncatedContent}`
+                           ${sanitizedContent}`
                 }
             ]
         };
@@ -111,7 +133,6 @@ export class OpenAIProvider extends AIProviderStrategy {
     }
 
     async _getAllowedUrls() {
-        const { getAllowedUrls } = await import('../../../utils/storage.js');
         return getAllowedUrls();
     }
 

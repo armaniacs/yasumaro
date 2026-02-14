@@ -142,7 +142,16 @@ async function reportValidVisit() {
         }
     } catch (error) {
         // 全てのリトライが失敗した場合
-        console.warn("Failed to report valid visit:", error.message);
+        if (error.message && error.message.includes('Extension context invalidated')) {
+            // 拡張機能がリロードされた場合は、定期チェックを停止してページリフレッシュを推奨
+            if (checkIntervalId) {
+                clearInterval(checkIntervalId);
+                checkIntervalId = null;
+            }
+            console.info("Extension was reloaded. Please refresh this page to resume history recording.");
+        } else {
+            console.warn("Failed to report valid visit:", error.message);
+        }
     }
 }
 

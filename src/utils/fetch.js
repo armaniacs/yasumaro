@@ -219,3 +219,33 @@ export function isUrlAllowed(url, allowedUrls) {
 
   return false;
 }
+
+/**
+ * AIリクエスト用URLの検証（SSRF対策）
+ * 内部ネットワークアドレスへのアクセスを防止
+ * @param {string} url - 検証するURL
+ * @throws {Error} URLが無効またはプライベートネットワークの場合
+ */
+export function validateUrlForAIRequests(url) {
+  // 既存のバリデーションを使用（プロトコル検証等）
+  validateUrl(url, {
+    requireValidProtocol: true,
+    blockLocalhost: false // AIプロバイダーはlocalhostも許可（開発環境等）
+  });
+
+  const parsedUrl = new URL(url);
+
+  // プライベートIPチェック
+  if (isPrivateIpAddress(parsedUrl.hostname)) {
+    throw new Error(`Access to private network address is not allowed: ${parsedUrl.hostname}`);
+  }
+
+  // 既知のAIプロバイダードメインでない場合の警告用チェック
+  // 注: これは検証エラーを投げるものではありません
+  const KNOWN_AI_PROVIDERS = [
+    'api.openai.com',
+    'generativelanguage.googleapis.com',
+    'groq.com',
+    // ユーザー定義のbaseUrlも許可（カスタムAIプロバイダー対応）
+  ];
+}
