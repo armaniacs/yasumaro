@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [3.0.2] - to be released. Date is not fixed yet.
 
+### Internal
+- **SOLID原則に基づく全体リファクタリング**: 5フェーズでコードベースの設計品質を向上
+  - Phase 1-2 (SRP): TabCacheとMutexの責任分離
+    - `src/background/mutex/Mutex.js` を新規作成し、排他制御ロジックを独立
+    - `src/background/tabCache/tabCache.js` を新規作成し、タブキャッシュ機能をモジュール化
+    - `RecordingLogic`からTabCache初期化ロジックを分離
+  - Phase 3 (OCP): AIプロバイダーに戦略パターンを導入
+    - `src/background/ai/providers/ProviderStrategy.js`（基底戦略クラス）を新規作成
+    - `src/background/ai/providers/GeminiProvider.js`（Gemini戦略）を新規作成
+    - `src/background/ai/providers/OpenAIProvider.js`（OpenAI戦略）を新規作成
+    - `src/background/ai/providers/LocalAIClient.js`（ローカル戦略）をリファクタリング
+    - 新規プロバイダー追加時に既存コードを修正不要（拡張のみで対応）
+  - Phase 4 (ISP): インターフェース定義の追加
+    - `src/background/interfaces/index.js` を新規作成
+    - `ITabCache`, `IMutex`, `IObsidianClient`, `IAIClient`, `IRecordingLogic`, `IPrivacyPipeline`, `ITabCacheStore` を定義
+    - クライアントが必要とするメソッドのみを定義（巨大なインターフェースの回避）
+  - Phase 5 (DIP): 依存性注入の導入
+    - `src/background/ai/aiClient.js` をリファクタリングし、ProviderStrategyを注入
+    - 具体的な実装（GeminiProvider等）ではなく抽象（ProviderStrategy）に依存
+  - テスト追加: Strategyベースの依存性注入テスト2件を追加
+
 ## [3.0.1] - 2026-02-14
 
 ### Changed
