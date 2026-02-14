@@ -1,5 +1,6 @@
 // src/background/__tests__/obsidianClient-mutex-map.test.js
-import { ObsidianClient, Mutex } from '../obsidianClient.js';
+import { ObsidianClient } from '../obsidianClient.js';
+import { Mutex } from '../Mutex.js';
 
 describe('Mutex Map improvement', () => {
   let client;

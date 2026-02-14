@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.2] - to be released. Date is not fixed yet.
+
 ## [3.0.1] - 2026-02-14
 
 ### Changed

@@ -8,7 +8,21 @@ import { AIClient } from '../aiClient.js';
 import * as storage from '../../utils/storage.js';
 import { LocalAIClient } from '../localAiClient.js';
 
-jest.mock('../../utils/storage.js');
+jest.mock('../../utils/storage.js', () => ({
+  getSettings: jest.fn(),
+  getAllowedUrls: jest.fn(() => Promise.resolve([])),
+  StorageKeys: {
+    AI_PROVIDER: 'ai_provider',
+    GEMINI_API_KEY: 'gemini_api_key',
+    GEMINI_MODEL: 'gemini_model',
+    OPENAI_BASE_URL: 'openai_base_url',
+    OPENAI_API_KEY: 'openai_api_key',
+    OPENAI_MODEL: 'openai_model',
+    OPENAI_2_BASE_URL: 'openai_2_base_url',
+    OPENAI_2_API_KEY: 'openai_2_api_key',
+    OPENAI_2_MODEL: 'openai_2_model'
+  }
+}));
 jest.mock('../localAiClient.js');
 
 describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報漏洩', () => {
@@ -20,22 +34,12 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
     // storageのデフォルトモック
     storage.getSettings.mockResolvedValue({});
-    storage.StorageKeys = {
-      AI_PROVIDER: 'AI_PROVIDER',
-      GEMINI_API_KEY: 'GEMINI_API_KEY',
-      GEMINI_MODEL: 'GEMINI_MODEL',
-      OPENAI_BASE_URL: 'OPENAI_BASE_URL',
-      OPENAI_API_KEY: 'OPENAI_API_KEY',
-      OPENAI_MODEL: 'OPENAI_MODEL',
-      OPENAI_2_BASE_URL: 'OPENAI_2_BASE_URL',
-      OPENAI_2_API_KEY: 'OPENAI_2_API_KEY',
-      OPENAI_2_MODEL: 'OPENAI_2_MODEL'
-    };
+    storage.getAllowedUrls.mockResolvedValue([]);
   });
 
   describe('未知のプロバイダーが指定された場合のエラーハンドリング', () => {
     it('未知のプロバイダー名がエラーメッセージに含まれないこと（修正後）', async () => {
-      storage.getSettings.mockResolvedValue({ AI_PROVIDER: 'unknown_provider' });
+      storage.getSettings.mockResolvedValue({ ai_provider: 'unknown_provider' });
 
       const result = await aiClient.generateSummary('Test content');
 
@@ -46,7 +50,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
-      storage.getSettings.mockResolvedValue({ AI_PROVIDER: 'unknown_provider' });
+      storage.getSettings.mockResolvedValue({ ai_provider: 'unknown_provider' });
 
       const result = await aiClient.generateSummary('Test content');
 
@@ -58,7 +62,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
     it('Geminiプロバイダーの場合、プロバイダー名がエラーメッセージに含まれないこと（修正後）', async () => {
-      storage.getSettings.mockResolvedValue({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: '' });
+      storage.getSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: '' });
 
       const result = await aiClient.generateSummary('Test content');
 
@@ -69,7 +73,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
-      storage.getSettings.mockResolvedValue({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: '' });
+      storage.getSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: '' });
 
       const result = await aiClient.generateSummary('Test content');
 
@@ -91,40 +95,32 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
     it('Gemini API 404エラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
       storage.getSettings.mockResolvedValue({
-        AI_PROVIDER: 'gemini',
-        GEMINI_API_KEY: 'test_key',
-        GEMINI_MODEL: 'gemini-1.5-flash'
+        ai_provider: 'gemini',
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-1.5-flash'
       });
 
-      // 404エラーのモック
-      global.fetch.mockImplementation((url) => {
-        if (url.includes('generateContent')) {
-          return Promise.resolve({
-            ok: false,
-            status: 404,
-            text: () => Promise.resolve('Not found')
-          });
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ models: [] })
-        });
+      // 404エラーのモック - fetchWithTimeoutが正しく動作するようにモック
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('Not found'),
+        json: () => Promise.resolve({})
       });
 
       const result = await aiClient.generateSummary('Test content');
 
-      // 修正: エラーレスポンスの詳細がエラーメッセージに含まれないことを確認
+      // Strategyパターン導入後のエラーメッセージ: Modelチェックが行われる
       expect(result).toContain('Error:');
-      expect(result).toContain('Failed to generate summary'); // 一般的なエラーメッセージ
       expect(result).not.toContain('404'); // HTTPステータスコードが含まれない
       expect(result).not.toContain('Not found'); // APIからのエラー詳細が含まれない
     });
 
     it('Gemini API 一般エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
       storage.getSettings.mockResolvedValue({
-        AI_PROVIDER: 'gemini',
-        GEMINI_API_KEY: 'test_key',
-        GEMINI_MODEL: 'gemini-1.5-flash'
+        ai_provider: 'gemini',
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-1.5-flash'
       });
 
       // エラーレスポンスのモック
@@ -137,19 +133,19 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       const result = await aiClient.generateSummary('Test content');
 
-      // 修正: エラーレスポンスの生データがエラーメッセージに含まれないことを確認
+      // Strategyパターン導入後のエラーメッセージ: 汎用エラーメッセージ
       expect(result).toContain('Error:');
-      expect(result).toContain('Failed to generate summary'); // 一般的なエラーメッセージ
       expect(result).not.toContain('400'); // HTTPステータスコードが含まれない
       expect(result).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
+      expect(result).not.toContain('Invalid request'); // API エラーメッセージが含まれない
     });
 
     it('OpenAI API エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
       storage.getSettings.mockResolvedValue({
-        AI_PROVIDER: 'openai',
-        OPENAI_BASE_URL: 'https://api.openai.com/v1',
-        OPENAI_API_KEY: 'test_key',
-        OPENAI_MODEL: 'gpt-3.5-turbo'
+        ai_provider: 'openai',
+        openai_base_url: 'https://api.openai.com/v1',
+        openai_api_key: 'test_key',
+        openai_model: 'gpt-3.5-turbo'
       });
 
       // エラーレスポンスのモック
@@ -162,11 +158,11 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       const result = await aiClient.generateSummary('Test content');
 
-      // 修正: エラーレスポンスの生データがエラーメッセージに含まれないことを確認
+      // Strategyパターン導入後のエラーメッセージ: 汎用エラーメッセージ
       expect(result).toContain('Error:');
-      expect(result).toContain('Failed to generate summary'); // 一般的なエラーメッセージ
       expect(result).not.toContain('401'); // HTTPステータスコードが含まれない
       expect(result).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
+      expect(result).not.toContain('OpenAI'); // プロバイダー名が含まれない
     });
   });
 
@@ -181,9 +177,9 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
       storage.getSettings.mockResolvedValue({
-        AI_PROVIDER: 'gemini',
-        GEMINI_API_KEY: 'test_key',
-        GEMINI_MODEL: 'gemini-1.5-flash'
+        ai_provider: 'gemini',
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-1.5-flash'
       });
 
       // ネットワークエラーのモック
@@ -192,11 +188,12 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       const result = await aiClient.generateSummary('Test content');
 
-      // 修正: ネットワークエラーの詳細がエラーメッセージに含まれないことを確認
+      // Strategyパターン導入後のエラーメッセージ: リトライの提案
       expect(result).toContain('Error:');
-      expect(result).toContain('Failed to generate summary'); // 一般的なエラーメッセージ
+      expect(result).toContain('try again'); // 一般的なエラーメッセージ
       expect(result).not.toContain('Failed to fetch'); // 内部エラー詳細が含まれない
       expect(result).not.toContain('Network request'); // 内部エラー詳細が含まれない
+      expect(result).not.toContain('@'); // ソースコードの詳細が含まれない
     });
   });
 
