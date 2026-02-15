@@ -32,8 +32,8 @@
     "http://localhost:27124/*",
     "https://localhost:27124/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://*/*",
-    "http://*/*"
+    "https://api.openai.com/*",
+    "https://*.openai.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",
@@ -45,12 +45,12 @@
   "content_scripts": [
     {
       "matches": [
-        "http://*/*",
-        "https://*/*"
+        "<all_urls>"
       ],
       "js": [
         "content/loader.js"
-      ]
+      ],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [

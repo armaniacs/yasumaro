@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.1] - 2026-02-16
+
+### Security
+
+- **host_permissionsのコラーシング**: 広すぎるURL権限を削除し、必要なAPIのみに制限
+  - [`manifest.json`](manifest.json): `http://*/*`, `https://*/*` を削除
+  - AIプロバイダー向け許可を追加: `https://api.openai.com/*`, `https://*.openai.com/*`
+  - Obsidian Local REST APIおよびGemini APIの許可は維持
+
+### Tests
+
+- **Jestモジュール解決問題の修正**: TypeScriptファイルへの`.js`インポート問題を解決
+  - [`jest.resolver.cjs`](jest.resolver.cjs): カスタムリゾルバー新規作成
+  - `.js`拡張子のインポートを`.ts`ファイルに解決
+  - テスト結果: 45失敗 → 6失敗（モジュール解決問題は解決）
+
 ## [3.9.0] - 2026-02-16
 
 ### Major
@@ -473,6 +489,21 @@ All notable changes to this project will be documented in this file.
   - ボタンクリックから保存完了までの全体時間を表示
   - AI処理時間を別途表示（例: "✓ Obsidianに保存しました (1.2秒 / AI: 850ms)"）
   - 1秒未満はミリ秒、1秒以上は秒（小数第1位）で自動切り替え
+
+### Security
+- **プロンプトインジェクション対策の改善**: 危険なパターンを検出时的完全ブロックから、サニタイズ后的再評価に変更
+  - `src/background/ai/providers/GeminiProvider.ts`: サニタイズ後のコンテンツで危険度を再評価
+  - `src/background/ai/providers/OpenAIProvider.ts`: 同様の再評価機能を実装
+  - 危険な部分のみ[FILTERED]に置き換え、残りの安全なコンテンツをAIに送信
+  - 完全ブロック原因是警告メッセージErrorに記録（例: "原因: Detected possible prompt injection pattern: SYSTEM"）
+
+### Tests
+- **プロンプトインジェクションサニタイザーテスト追加**: `src/utils/__tests__/promptSanitizer.test.ts`に19件のテストを追加
+  - 正常系テスト（通常コンテンツ、HTMLエスケープ）
+  - プロンプトインジェクション検出テスト（ignore、SYSTEM、PASSWORD、execute、eval、previous conversation等）
+  - 異常系テスト（null、undefined、空文字列）
+  - 境界値テスト（長いテキスト、200文字超えの最初の行）
+  - 再評価機能テスト（サニタイズ後でdangerLevelが低下することを確認）
 
 ## [2.4.0-rc2] - 2026-02-08
 
