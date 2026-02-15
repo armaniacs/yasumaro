@@ -468,6 +468,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **処理時間表示**: 保存成功メッセージに処理時間を表示する機能を追加
+  - ボタンクリックから保存完了までの全体時間を表示
+  - AI処理時間を別途表示（例: "✓ Obsidianに保存しました (1.2秒 / AI: 850ms)"）
+  - 1秒未満はミリ秒、1秒以上は秒（小数第1位）で自動切り替え
+
 ## [2.4.0-rc2] - 2026-02-08
 
 ### Security
