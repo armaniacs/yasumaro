@@ -14,7 +14,8 @@ import {
   showError,
   showSuccess,
   handleError,
-  escapeHtml
+  escapeHtml,
+  formatDuration
 } from '../errorUtils.ts';
 
 // テスト用のi18nモック文字列
@@ -371,5 +372,54 @@ describe('escapeHtml - XSS対策テスト（問題点3）', () => {
       const result = escapeHtml(undefined);
       expect(result).toBe('');
     });
+  });
+});
+
+describe('formatDuration', () => {
+  it('should format milliseconds when less than 1 second', () => {
+    expect(formatDuration(500)).toBe('500ms');
+    expect(formatDuration(0)).toBe('0ms');
+    expect(formatDuration(999)).toBe('999ms');
+  });
+
+  it('should format seconds when 1 second or more', () => {
+    expect(formatDuration(1000)).toBe('1.0秒');
+    expect(formatDuration(1234)).toBe('1.2秒');
+    expect(formatDuration(5678)).toBe('5.7秒');
+  });
+
+  it('should round milliseconds to nearest integer', () => {
+    expect(formatDuration(123.4)).toBe('123ms');
+    expect(formatDuration(123.6)).toBe('124ms');
+  });
+
+  it('should round seconds to 1 decimal place', () => {
+    expect(formatDuration(1234)).toBe('1.2秒');
+    expect(formatDuration(1289)).toBe('1.3秒');
+  });
+});
+
+describe('formatDuration edge cases', () => {
+  it('should handle negative numbers by returning 0ms', () => {
+    expect(formatDuration(-500)).toBe('0ms');
+    expect(formatDuration(-1)).toBe('0ms');
+  });
+
+  it('should handle NaN by returning 0ms', () => {
+    expect(formatDuration(NaN)).toBe('0ms');
+  });
+
+  it('should handle Infinity by returning 0ms', () => {
+    expect(formatDuration(Infinity)).toBe('0ms');
+    expect(formatDuration(-Infinity)).toBe('0ms');
+  });
+
+  it('should handle very large durations', () => {
+    expect(formatDuration(3600000)).toBe('3600.0秒'); // 1 hour
+  });
+
+  it('should handle boundary precision at 1000ms threshold', () => {
+    expect(formatDuration(999.9)).toBe('1000ms'); // rounds to 1000ms
+    expect(formatDuration(1000.1)).toBe('1.0秒');
   });
 });

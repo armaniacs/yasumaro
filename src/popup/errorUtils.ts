@@ -316,3 +316,24 @@ export function handleError(error: any, handlers: ErrorHandlers): void {
       }
   }
 }
+
+/**
+ * 処理時間をフォーマット
+ * @param ms - ミリ秒単位の時間
+ * @returns フォーマットされた文字列 (例: "850ms" or "1.2秒")
+ * @example
+ * formatDuration(500)   // => "500ms"
+ * formatDuration(1234)  // => "1.2秒"
+ * formatDuration(-100)  // => "0ms"
+ */
+export function formatDuration(ms: number): string {
+  // Validate input: handle NaN, Infinity, and negative numbers
+  if (!Number.isFinite(ms) || ms < 0) {
+    return '0ms';
+  }
+
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  return `${(ms / 1000).toFixed(1)}秒`;
+}
