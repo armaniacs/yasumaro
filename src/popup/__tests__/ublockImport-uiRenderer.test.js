@@ -11,7 +11,7 @@ import {
   clearInput,
   exportSimpleFormat,
   buildUblockFormat
-} from '../ublockImport/uiRenderer.js';
+} from '../ublockImport/uiRenderer.ts';
 
 describe('ublockImport - UIRenderer Module', () => {
   // ============================================================================

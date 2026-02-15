@@ -5,10 +5,10 @@
  */
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { fetchFromUrl, isValidUrl } from '../ublockImport.js';
+import { fetchFromUrl, isValidUrl } from '../ublockImport.ts';
 
 // Mock the logger module
-jest.mock('../../utils/logger.js', () => ({
+jest.mock('../../utils/logger.ts', () => ({
   addLog: jest.fn(),
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
 }));

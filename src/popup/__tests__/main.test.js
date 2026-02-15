@@ -6,33 +6,33 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 
 // Mock all dependencies (must be defined before imports)
-jest.mock('src/popup/sanitizePreview.js', () => ({
+jest.mock('src/popup/sanitizePreview.ts', () => ({
   showPreview: jest.fn(),
   initializeModalEvents: jest.fn()
 }));
 
-jest.mock('src/popup/spinner.js', () => ({
+jest.mock('src/popup/spinner.ts', () => ({
   showSpinner: jest.fn(),
   hideSpinner: jest.fn()
 }));
 
-jest.mock('src/popup/autoClose.js', () => ({
+jest.mock('src/popup/autoClose.ts', () => ({
   startAutoCloseTimer: jest.fn()
 }));
 
-jest.mock('src/popup/tabUtils.js', () => ({
+jest.mock('src/popup/tabUtils.ts', () => ({
   getCurrentTab: jest.fn(() => Promise.resolve(null)),
   isRecordable: jest.fn(() => true)
 }));
 
-jest.mock('src/utils/storage.js', () => ({
+jest.mock('src/utils/storage.ts', () => ({
   getSettings: jest.fn(() => Promise.resolve({})),
   StorageKeys: {
     PII_CONFIRMATION_UI: 'pii_confirmation_ui'
   }
 }));
 
-jest.mock('src/utils/retryHelper.js', () => ({
+jest.mock('src/utils/retryHelper.ts', () => ({
   sendMessageWithRetry: jest.fn((message) => Promise.resolve({ success: true })),
   ChromeMessageSender: class {
     constructor() {}

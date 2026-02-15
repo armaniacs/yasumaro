@@ -6,7 +6,16 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
+    "lint": "tsc --noEmit",
+    "validate": "npm run type-check && npm test",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "build": "tsc && cp -r manifest.json _locales icons dist/ && cp src/popup/popup.html dist/popup/ && cp src/popup/styles.css dist/popup/ && node -e \"const fs=require('fs'); const file='dist/content/loader.js'; let content=fs.readFileSync(file,'utf8'); content=content.replace(/export \\{\\};?\\s*$/m,''); fs.writeFileSync(file,content);\"",
+    "build:watch": "tsc --watch",
+    "pretest": "npm run type-check"
   },
   "keywords": [
     "obsidian",
@@ -19,10 +28,15 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
+    "@babel/preset-typescript": "^7.28.5",
     "@jest/globals": "^29.7.0",
     "@peculiar/webcrypto": "^1.5.0",
+    "@types/chrome": "^0.1.36",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.2.3",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
+    "jest-environment-jsdom": "^29.7.0",
+    "typescript": "^5.9.3"
   }
 }

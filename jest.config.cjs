@@ -7,40 +7,40 @@ module.exports = {
   // テスト環境: jsdom（ブラウザAPIを必要とするテスト用）
   testEnvironment: 'jsdom',
 
-  // JavaScriptの変換設定
+  // JavaScript/TypeScript transformation
   transform: {
-    '^.+\\.js$': ['babel-jest', { configFile: './babel.config.cjs' }]
+    '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }]
   },
 
   transformIgnorePatterns: [
     '/node_modules/(?!(jest|@jest)/)'
   ],
 
-  // テストファイルのパターン
+  // Test file patterns
   testMatch: [
-    '**/__tests__/**/*.test.js',
-    '**/?(*.)+(spec|test).js'
+    '**/__tests__/**/*.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
 
-  // カバレッジ収集対象
+  // Coverage collection
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js',
-    '!src/**/*.spec.js',
+    'src/**/*.{js,ts,jsx,tsx}',
+    '!src/**/*.test.{js,ts,jsx,tsx}',
+    '!src/**/*.spec.{js,ts,jsx,tsx}',
     '!src/**/__tests__/**'
   ],
 
-  // モジュール解決
+  // Module name mapping
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1'
   },
 
-  // セットアップファイル
+  // Setup files
   setupFilesAfterEnv: ['./jest.setup.js'],
 
-  // 拡張子の認識
-  moduleFileExtensions: ['js', 'json'],
+  // File extensions
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 
   // タイムアウト設定 (15秒)
   testTimeout: 15000,

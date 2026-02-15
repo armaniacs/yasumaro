@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.0] - 2026-02-16
+
+### Major
+
+- **TypeScript完全移行**: 全JavaScriptファイル(.js)をTypeScript(.ts)に移行
+  - 厳格な型チェックとES Modules対応
+  - 型定義ファイル(.d.ts)とソースマップの生成
+  - ビルドプロセスへの型チェック統合
+
+### Fixed
+
+- **Service Worker起動時のストレージマイグレーション未実行**: 設定移行処理がService Worker起動時に実行されず、APIキーが空文字列として扱われる問題を修正
+  - `src/background/service-worker.ts`: 起動時に`migrateToSingleSettingsObject()`を実行
+  - 暗号化されたAPIキーが正しく復号化されるように修正
+  - マイグレーションフラグ`settings_migrated`が`false`のまま残る問題を解消
+
+- **Content Scriptの構文エラー**: `export {}`がブラウザで実行時エラーになる問題を修正
+  - `package.json`: ビルドスクリプトに`export {}`削除処理を追加
+  - `src/content/loader.ts`: パスを`content/extractor.js`に修正
+
+- **Manifest V3のpopup.htmlパス問題**: `dist/popup/popup.html`が存在せず拡張機能が読み込めない問題を修正
+  - `package.json`: ビルドスクリプトでHTMLとCSSをdistにコピー
+
+- **uBlock Originフィルターインポート時のURL制限エラー**: 許可ドメインからのインポートが「URL is not allowed」エラーで失敗する問題を修正
+  - `src/utils/storage.ts`: `buildAllowedUrls()`に固定フィルターソースドメインを追加
+  - GitHub、GitLab、EasyList等のドメインを許可リストに追加
+
+- **フィルター保存時のエラー検証が厳しすぎる**: localhost等の特殊ドメインのエラーがあると保存できない問題を修正
+  - `src/popup/ublockImport/sourceManager.ts`: 有効なルールが存在すればエラーがあっても保存可能に変更
+
+### Improved
+
+- **接続テスト結果の分離表示**: ObsidianとAI接続の結果を個別に表示
+  - `src/popup/settings/settingsSaver.ts`: 接続結果を📦 Obsidianと🤖 AIで分けて表示
+  - HTTPステータスコードを含む詳細なエラーメッセージ
+
+- **エラーメッセージの改善**: AI接続エラーで具体的なHTTPステータスコードを表示
+  - `src/background/ai/providers/GeminiProvider.ts`: 401/403/429等の詳細エラー
+  - `src/background/ai/providers/OpenAIProvider.ts`: 404エラーでBase URLの確認を促す
+
+### Docs
+
+- **uBlockインポートガイドの更新**: セキュリティ制限に関する説明を追加
+  - [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md): 許可ドメインリストと回避方法を記載
+
+### Developer Experience
+
+- **TypeScript開発環境の整備**:
+  - `tsconfig.json`: 厳格な型チェックとNodeNext module resolution
+  - Chrome API、Jest、Node.jsの型定義を追加
+  - `babel.config.cjs`: TypeScript対応のトランスパイル設定
+  - `jest.config.cjs`: TypeScriptテストファイルのサポート
+
+- **ビルドシステムの改善**:
+  - TypeScriptコンパイル → 静的アセットコピー → export削除の自動化
+  - 型チェックをビルド前に実行(`pretest`スクリプト)
+
 ## [3.0.3] - 2026-02-15
 
 ### Fixed

@@ -15,7 +15,7 @@ import {
   isValidRulePattern,
   parseOptions,
   generateRuleId
-} from '../ublockParser.js';
+} from '../ublockParser.ts';
 
 describe('ublockParser', () => {
   // 【テスト前準備】: 各テスト実行前にテスト環境を初期化し、一貫したテスト条件を保証

@@ -13,18 +13,18 @@ import {
   isDomainAllowed,
   parseDomainList,
   validateDomainList
-} from '../domainUtils.js';
-import { isUrlBlocked } from '../ublockMatcher.js';
-import { getSettings } from '../storage.js';
+} from '../domainUtils.ts';
+import { isUrlBlocked } from '../ublockMatcher.ts';
+import { getSettings } from '../storage.ts';
 
 // Mock ublockMatcher.js
-jest.mock('../ublockMatcher.js', () => ({
+jest.mock('../ublockMatcher.ts', () => ({
   __esModule: true,
   isUrlBlocked: jest.fn()
 }));
 
 // Mock storage.js
-jest.mock('../storage.js', () => ({
+jest.mock('../storage.ts', () => ({
   __esModule: true,
   StorageKeys: {
     DOMAIN_FILTER_MODE: 'domain_filter_mode',

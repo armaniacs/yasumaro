@@ -15,7 +15,7 @@ import {
   showSuccess,
   handleError,
   escapeHtml
-} from '../errorUtils.js';
+} from '../errorUtils.ts';
 
 // テスト用のi18nモック文字列
 const MOCK_CONNECTION_ERROR = 'Please refresh the page and try again';

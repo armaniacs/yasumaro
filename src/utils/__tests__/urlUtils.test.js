@@ -3,7 +3,7 @@
  * Tests for urlUtils.js
  */
 
-import { normalizeUrl } from '../urlUtils.js';
+import { normalizeUrl } from '../urlUtils.ts';
 
 describe('normalizeUrl', () => {
     test('末尾のスラッシュを削除する', () => {

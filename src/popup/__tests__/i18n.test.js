@@ -9,7 +9,7 @@ import {
   applyI18n,
   translatePageTitle,
   getUserLocale
-} from '../i18n.js';
+} from '../i18n.ts';
 
 describe('i18n', () => {
   beforeEach(() => {

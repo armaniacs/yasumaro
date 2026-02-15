@@ -4,7 +4,7 @@
  * 問題点2: URLパスサニタイズ不足の修正検証
  */
 
-import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer.js';
+import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer.ts';
 
 describe('sanitizePathSegment - セキュリティサニタイズ関数（問題点2の修正）', () => {
   describe('パストラバーサル攻撃のブロック', () => {

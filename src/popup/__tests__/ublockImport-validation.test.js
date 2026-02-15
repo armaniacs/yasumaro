@@ -5,7 +5,7 @@
 
 import {
   isValidUrl
-} from '../ublockImport.js';
+} from '../ublockImport.ts';
 
 describe('ublockImport - Validation Module', () => {
   // ============================================================================

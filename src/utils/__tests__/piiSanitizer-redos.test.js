@@ -4,7 +4,7 @@
  * 問題点4: piiSanitizer.jsの正規表現でReDoSの可能性
  */
 
-import { sanitizeRegex } from '../piiSanitizer.js';
+import { sanitizeRegex } from '../piiSanitizer.ts';
 
 describe('ReDoSリスクの検証（問題点4）', () => {
   describe('処理時間の計測', () => {

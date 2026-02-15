@@ -6,7 +6,7 @@
 import {
   rebuildRulesFromSources,
   previewUblockFilter
-} from '../ublockImport.js';
+} from '../ublockImport.ts';
 
 describe('ublockImport - RulesBuilder Module', () => {
   // ============================================================================

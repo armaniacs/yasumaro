@@ -9,5 +9,6 @@ module.exports = {
         modules: 'commonjs', // CommonJS形式に変換
       },
     ],
+    '@babel/preset-typescript',
   ],
 };

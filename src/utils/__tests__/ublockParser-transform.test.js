@@ -8,9 +8,9 @@ import {
   buildRuleObject,
   createEmptyRuleset,
   parseDomainList as transformParseDomainList
-} from '../ublockParser.js';
+} from '../ublockParser.ts';
 
-import { parseRuleOptions } from '../ublockParser.js';
+import { parseRuleOptions } from '../ublockParser.ts';
 
 describe('ublockParser - Transform Module', () => {
   // ============================================================================

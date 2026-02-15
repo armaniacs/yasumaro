@@ -7,7 +7,7 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.js', () => {
+jest.mock('../../utils/storage.ts', () => {
   const mockGetSettings = jest.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
@@ -53,7 +53,7 @@ jest.mock('../../utils/storage.js', () => {
   };
 });
 
-jest.mock('../settingsUiHelper.js', () => ({
+jest.mock('../settingsUiHelper.ts', () => ({
   showStatus: jest.fn(),
 }));
 

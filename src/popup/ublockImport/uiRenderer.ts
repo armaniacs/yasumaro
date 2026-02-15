@@ -1,0 +1,264 @@
+/**
+ * uiRenderer.ts
+ * uBlockインポートモジュール - UI操作機能
+ */
+
+import { isValidUrl } from './validation.js';
+import { previewUblockFilter } from './rulesBuilder.js';
+import { getMessage } from '../i18n.js';
+
+interface Source {
+  url: string;
+  importedAt: number;
+  ruleCount: number;
+  blockDomains?: string[];
+  exceptionDomains?: string[];
+}
+
+interface PreviewResult {
+  blockCount: number;
+  exceptionCount: number;
+  errorCount: number;
+  errorDetails: string[] | { lineNumber: number; message: string; line?: string }[];
+}
+
+/**
+ * ソースリストをUIに描画
+ * @param {Array} sources - ソースリスト
+ * @param {Function} deleteCallback - 削除コールバック
+ * @param {Function} reloadCallback - 再読み込みコールバック
+ */
+export function renderSourceList(sources: Source[], deleteCallback?: (index: number) => void, reloadCallback?: (index: number) => void): void {
+  const container = document.getElementById('uBlockSourceItems');
+  const noSourcesMsg = document.getElementById('uBlockNoSources');
+
+  if (!container || !noSourcesMsg) return;
+
+  container.innerHTML = '';
+
+  if (sources.length === 0) {
+    noSourcesMsg.style.display = 'block';
+    return;
+  }
+
+  noSourcesMsg.style.display = 'none';
+
+  sources.forEach((source, index) => {
+    const item = createSourceItem(source, index);
+    container.appendChild(item);
+  });
+
+  // イベントリスナーを設定
+  container.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', (event: Event) => {
+      const target = event.target as HTMLElement;
+      const index = parseInt(target.dataset.index || '0', 10);
+      if (deleteCallback) deleteCallback(index);
+    });
+  });
+
+  container.querySelectorAll('.reload-btn').forEach(btn => {
+    btn.addEventListener('click', (event: Event) => {
+      const target = event.target as HTMLElement;
+      const index = parseInt(target.dataset.index || '0', 10);
+      if (reloadCallback) reloadCallback(index);
+    });
+  });
+}
+
+/**
+ * ソースアイテム要素を作成
+ * @param {Object} source - ソースデータ
+ * @param {number} index - ソースインデックス
+ * @returns {HTMLElement} ソースアイテム要素
+ */
+function createSourceItem(source: Source, index: number): HTMLElement {
+  const item = document.createElement('div');
+  item.className = 'source-item';
+  item.dataset.index = String(index);
+
+  const urlText = source.url === 'manual' ? getMessage('manualInput') : source.url;
+  const isUrl = source.url !== 'manual';
+
+  // XSS対策: textContentを使用
+  const urlElement = document.createElement(isUrl ? 'a' : 'span') as HTMLAnchorElement | HTMLSpanElement;
+  urlElement.className = 'source-url';
+  urlElement.textContent = urlText;
+  if (isUrl && isValidUrl(source.url)) {
+    (urlElement as HTMLAnchorElement).href = source.url;
+    (urlElement as HTMLAnchorElement).target = '_blank';
+    (urlElement as HTMLAnchorElement).rel = 'noopener noreferrer';
+  }
+
+  const date = new Date(source.importedAt);
+  const dateStr = date.toLocaleString(navigator.language || 'en-US');
+
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'source-meta';
+
+  const metaSpan = document.createElement('span');
+  metaSpan.textContent = `${dateStr} | ${getMessage('rulesLabel')}: ${source.ruleCount}`;
+
+  const actionDiv = document.createElement('div');
+
+  if (isUrl) {
+    const reloadBtn = createActionButton('reload-btn', getMessage('reload'), getMessage('reload'), index);
+    actionDiv.appendChild(reloadBtn);
+  }
+
+  const deleteBtn = createActionButton('delete-btn', getMessage('delete'), getMessage('delete'), index);
+  actionDiv.appendChild(deleteBtn);
+
+  metaDiv.appendChild(metaSpan);
+  metaDiv.appendChild(actionDiv);
+
+  item.appendChild(urlElement);
+  item.appendChild(metaDiv);
+
+  return item;
+}
+
+/**
+ * アクションボタン要素を作成
+ * @param {string} className - CSSクラス名
+ * @param {string} text - ボタンテキスト
+ * @param {string} title - ツールチップ
+ * @param {number} index - インデックス
+ * @returns {HTMLElement} ボタン要素
+ */
+function createActionButton(className: string, text: string, title: string, index: number): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.className = className;
+  btn.dataset.index = String(index);
+  btn.textContent = text;
+  btn.title = title;
+  return btn;
+}
+
+/**
+ * プレビューUI更新
+ * @param {Object|string} result - プレビュー結果またはエラーメッセージ
+ */
+export function updatePreviewUI(result: PreviewResult | string): void {
+  const previewElement = document.getElementById('uBlockPreview');
+  const ruleCountEl = document.getElementById('uBlockRuleCount');
+  const exceptionCountEl = document.getElementById('uBlockExceptionCount');
+  const errorCountEl = document.getElementById('uBlockErrorCount');
+  const errorDetailsElement = document.getElementById('uBlockErrorDetails');
+
+  if (!previewElement || !ruleCountEl || !exceptionCountEl || !errorCountEl || !errorDetailsElement) return;
+
+  if (typeof result === 'string') {
+    // エラーメッセージの場合
+    ruleCountEl.textContent = '0';
+    exceptionCountEl.textContent = '0';
+    errorCountEl.textContent = '1';
+    errorDetailsElement.textContent = result;
+  } else {
+    // プレビュー結果の場合
+    ruleCountEl.textContent = String(result.blockCount);
+    exceptionCountEl.textContent = String(result.exceptionCount);
+    errorCountEl.textContent = String(result.errorCount);
+
+    // i18nラベルspanのdata属性を更新して翻訳を再適用
+    const labelPairs: [HTMLElement, string, number][] = [
+      [ruleCountEl, 'ruleCount', result.blockCount],
+      [exceptionCountEl, 'exceptionCount', result.exceptionCount],
+      [errorCountEl, 'errorCount', result.errorCount],
+    ];
+    labelPairs.forEach(([el, key, count]) => {
+      const labelSpan = el.parentElement?.querySelector(`[data-i18n="${key}"]`);
+      if (labelSpan) {
+        labelSpan.setAttribute('data-i18n-args', JSON.stringify({ count }));
+        labelSpan.textContent = getMessage(key, { count });
+      }
+    });
+
+    if (Array.isArray(result.errorDetails)) {
+      const errorTexts = result.errorDetails.map(e => {
+        if (typeof e === 'string') return e;
+        // エラーオブジェクトの場合、行番号、メッセージ、実際の行内容を表示
+        const lineInfo = `${e.lineNumber}: ${e.message}`;
+        const lineContent = e.line ? `\n  → ${e.line}` : '';
+        return lineInfo + lineContent;
+      });
+      errorDetailsElement.textContent = errorTexts.join('\n');
+    } else {
+      errorDetailsElement.textContent = String(result.errorDetails);
+    }
+  }
+
+  previewElement.style.display = 'block';
+}
+
+/**
+ * プレビューを非表示にする
+ */
+export function hidePreview(): void {
+  const preview = document.getElementById('uBlockPreview');
+  if (preview) {
+    preview.style.display = 'none';
+  }
+}
+
+/**
+ * 入力エリアのテキストをクリア
+ */
+export function clearInput(): void {
+  const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
+  if (textarea) {
+    textarea.value = '';
+  }
+}
+
+/**
+ * ドメインリストをシンプル形式でエクスポート
+ * @param {Array} sources - ソースリスト
+ */
+export function exportSimpleFormat(sources: Source[]): string {
+  const domains: string[] = [];
+  sources.forEach(source => {
+    if (source.blockDomains && Array.isArray(source.blockDomains)) {
+      source.blockDomains.forEach(domain => {
+        if (!domains.includes(domain)) {
+          domains.push(domain);
+        }
+      });
+    }
+  });
+  return domains.join('\n');
+}
+
+/**
+ * uBlock形式のテキストをクリップボードにコピー
+ */
+export function copyToClipboard(text: string): Promise<boolean> {
+  return navigator.clipboard.writeText(text).then(() => {
+    return true;
+  }).catch(err => {
+    throw new Error(getMessage('clipboardCopyFailed'));
+  });
+}
+
+/**
+ * ドメインリストをuBlock形式で構築
+ * @param {Array} sources - ソースリスト
+ */
+export function buildUblockFormat(sources: Source[]): string {
+  const lines: string[] = [];
+  lines.push(getMessage('generatedBy'));
+  lines.push('');
+  sources.forEach(source => {
+    if (source.blockDomains && Array.isArray(source.blockDomains)) {
+      source.blockDomains.forEach(domain => {
+        lines.push(`||${domain}^`);
+      });
+    }
+    if (source.exceptionDomains && Array.isArray(source.exceptionDomains)) {
+      source.exceptionDomains.forEach(domain => {
+        lines.push(`@@||${domain}^`);
+      });
+    }
+  });
+  return lines.join('\n');
+}

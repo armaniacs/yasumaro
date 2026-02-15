@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { sanitizeRegex } from '../piiSanitizer.js';
+import { sanitizeRegex } from '../piiSanitizer.ts';
 
 describe('piiSanitizer', () => {
   describe('sanitizeRegex - 正常系', () => {

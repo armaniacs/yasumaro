@@ -10,3 +10,4 @@ docs/blog-*
 
 
 .worktrees/
+.DS_Store

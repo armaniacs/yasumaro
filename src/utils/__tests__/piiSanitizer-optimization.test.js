@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { sanitizeRegex, MAX_INPUT_SIZE } from '../piiSanitizer.js';
+import { sanitizeRegex, MAX_INPUT_SIZE } from '../piiSanitizer.ts';
 
 describe('PII置換の効率化（アレイjoin方式）', () => {
     describe('機能テスト - 置換結果の正確性', () => {

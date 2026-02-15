@@ -1,8 +1,8 @@
 // ublockMatcher.test.js
 // Tests for the uBlock matcher integration (UF-103)
 
-import { isUrlBlocked } from '../ublockMatcher.js';
-import { parseUblockFilterList } from '../ublockParser.js';
+import { isUrlBlocked } from '../ublockMatcher.ts';
+import { parseUblockFilterList } from '../ublockParser.ts';
 
 /** Helper to create a simple rule set */
 function rulesFromText(text) {

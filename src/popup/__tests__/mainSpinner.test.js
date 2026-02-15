@@ -9,7 +9,7 @@ import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { jest } from '@jest/globals';
 
 // Mock i18n before importing spinner.js
-jest.mock('../i18n.js', () => ({
+jest.mock('../i18n.ts', () => ({
   getMessage: jest.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
@@ -18,7 +18,7 @@ jest.mock('../i18n.js', () => ({
   })
 }));
 
-import { showSpinner, hideSpinner } from '../spinner.js';
+import { showSpinner, hideSpinner } from '../spinner.ts';
 
 describe('ローディングスピナー制御', () => {
   // 【テストグループの目的】: showSpinner、hideSpinner関数の動作を検証

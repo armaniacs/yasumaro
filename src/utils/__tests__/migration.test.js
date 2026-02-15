@@ -5,7 +5,7 @@
  */
 
 import { test, expect, jest, beforeEach } from '@jest/globals';
-import { migrateToLightweightFormat, migrateUblockSettings } from '../migration.js';
+import { migrateToLightweightFormat, migrateUblockSettings } from '../migration.ts';
 
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア

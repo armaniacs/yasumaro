@@ -7,7 +7,7 @@ import {
     ChromeMessageSender,
     sendMessageWithRetry as sendMessageWithRetry,
     createSender
-} from '../retryHelper.js';
+} from '../retryHelper.ts';
 
 // Mock chrome.runtime.sendMessage
 global.chrome = {

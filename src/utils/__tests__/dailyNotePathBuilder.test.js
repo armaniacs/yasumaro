@@ -1,5 +1,5 @@
 // src/utils/__tests__/dailyNotePathBuilder.test.js
-import { buildDailyNotePath } from '../dailyNotePathBuilder.js';
+import { buildDailyNotePath } from '../dailyNotePathBuilder.ts';
 
 describe('buildDailyNotePath', () => {
   beforeEach(() => {

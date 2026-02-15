@@ -10,7 +10,7 @@ import {
   formatDate,
   formatDateTime,
   getDateSeparator
-} from '../localeUtils.js';
+} from '../localeUtils.ts';
 
 // Chrome APIのモック
 const mockGetUILanguage = jest.fn();

@@ -10,7 +10,7 @@ import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { jest } from '@jest/globals';
 
 // Mock i18n before importing autoClose.js
-jest.mock('../i18n.js', () => ({
+jest.mock('../i18n.ts', () => ({
   getMessage: jest.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
@@ -23,13 +23,13 @@ import {
   getScreenState,
   setScreenState,
   clearScreenState
-} from '../screenState.js';
+} from '../screenState.ts';
 
 import {
   startAutoCloseTimer,
   clearAutoCloseTimer,
   showCountdown
-} from '../autoClose.js';
+} from '../autoClose.ts';
 
 describe('画面状態追跡 (screenState.js)', () => {
   // 【テストグループの目的】: 画面がメイン画面か設定画面かを判定できる機能を検証

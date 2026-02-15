@@ -18,7 +18,7 @@ import {
     isEncrypted,
     encryptApiKey,
     decryptApiKey
-} from '../crypto.js';
+} from '../crypto.ts';
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {

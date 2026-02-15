@@ -2,9 +2,9 @@
  * 統合テスト: ソースリロードワークフロー
  */
 
-import { parseUblockFilterListWithErrors } from '../../utils/ublockParser.js';
-import { rebuildRulesFromSources } from '../ublockImport.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { parseUblockFilterListWithErrors } from '../../utils/ublockParser.ts';
+import { rebuildRulesFromSources } from '../ublockImport.ts';
+import { StorageKeys } from '../../utils/storage.ts';
 
 // モックの設定
 global.fetch = jest.fn();

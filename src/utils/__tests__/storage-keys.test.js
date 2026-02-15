@@ -1,7 +1,7 @@
-import { getSettings, StorageKeys, saveSettings } from '../storage.js';
-import * as migration from '../migration.js';
+import { getSettings, StorageKeys, saveSettings } from '../storage.ts';
+import * as migration from '../migration.ts';
 
-jest.mock('../migration.js', () => ({
+jest.mock('../migration.ts', () => ({
   migrateUblockSettings: jest.fn(() => Promise.resolve(false))
 }));
 

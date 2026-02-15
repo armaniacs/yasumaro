@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import * as sanitizePreview from '../sanitizePreview.js';
+import * as sanitizePreview from '../sanitizePreview.ts';
 
 describe('Masked Information Visualization - プレビュー画面のマスク表示', () => {
   // 【修正】: beforeEach/afterEach を追加して jsdom 環境で DOM 要素を作成する

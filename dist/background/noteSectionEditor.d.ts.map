@@ -1,0 +1,1 @@
+{"version":3,"file":"noteSectionEditor.d.ts","sourceRoot":"","sources":["../../src/background/noteSectionEditor.ts"],"names":[],"mappings":"AACA,qBAAa,iBAAiB;IAC5B,MAAM,CAAC,sBAAsB,SAAmB;IAEhD,MAAM,CAAC,iBAAiB,CAAC,eAAe,EAAE,MAAM,EAAE,aAAa,EAAE,MAAM,EAAE,UAAU,EAAE,MAAM,GAAG,MAAM;IAQpG,OAAO,CAAC,MAAM,CAAC,2BAA2B;IAoB1C,OAAO,CAAC,MAAM,CAAC,iBAAiB;CAOjC"}

@@ -9,7 +9,7 @@ import {
   isCommentLine,
   isEmptyLine,
   isValidRulePattern
-} from '../ublockParser.js';
+} from '../ublockParser.ts';
 
 describe('ublockParser - Validation Module', () => {
   // ============================================================================

@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { showMainScreen, showSettingsScreen, init } from 'src/popup/navigation.js';
 
 // Mock screenState module (must be defined before import sync import)
-jest.mock('src/popup/screenState.js', () => ({
+jest.mock('src/popup/screenState.ts', () => ({
   getScreenState: jest.fn(),
   setScreenState: jest.fn(),
   clearScreenState: jest.fn(),
@@ -19,7 +19,7 @@ jest.mock('src/popup/screenState.js', () => ({
 }));
 
 // Mock autoClose module
-jest.mock('src/popup/autoClose.js', () => ({
+jest.mock('src/popup/autoClose.ts', () => ({
   clearAutoCloseTimer: jest.fn()
 }));
 

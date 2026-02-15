@@ -11,7 +11,7 @@ import {
     getUserMessage,
     createErrorResponse,
     convertKnownErrorMessage
-} from '../errorMessages.js';
+} from '../errorMessages.ts';
 
 describe('errorMessages', () => {
     describe('classifyError', () => {

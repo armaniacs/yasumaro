@@ -9,7 +9,7 @@ import {
     getConflictStats,
     resetConflictStats,
     ensureVersionInitialized
-} from '../optimisticLock.js';
+} from '../optimisticLock.ts';
 
 describe('withOptimisticLock', () => {
     describe('基本機能', () => {

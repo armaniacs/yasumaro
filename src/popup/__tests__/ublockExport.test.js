@@ -3,7 +3,7 @@
  * uBlockエクスポートUIロジックのテスト
  */
 
-import { exportToText, downloadAsFile, copyToClipboard } from '../ublockExport.js';
+import { exportToText, downloadAsFile, copyToClipboard } from '../ublockExport.ts';
 import { jest } from '@jest/globals';
 
 // DOMのモック

@@ -14,11 +14,11 @@ import {
     getOrCreateEncryptionKey,
     clearEncryptionKeyCache,
     isDomainInWhitelist
-} from '../storage.js';
-import { normalizeUrl } from '../urlUtils.js';
-import { isEncrypted, encrypt, decrypt } from '../crypto.js';
+} from '../storage.ts';
+import { normalizeUrl } from '../urlUtils.ts';
+import { isEncrypted, encrypt, decrypt } from '../crypto.ts';
 
-jest.mock('../migration.js', () => ({
+jest.mock('../migration.ts', () => ({
     migrateUblockSettings: jest.fn(() => Promise.resolve(false))
 }));
 

@@ -143,6 +143,22 @@ hosts形式のフィルターは自動的にuBlock Origin形式に変換され�
 - ローカルファイルやdataプロトコルのURLはインポートできません。
 - v2.2.4以前を使用していたユーザーは、データが自動的に軽量形式へ変換されます。詳細は [UBLOCK_MIGRATION.md](docs/UBLOCK_MIGRATION.md) を参照してください。
 
+#### セキュリティ制限
+
+セキュリティ上の理由から、URLからのインポートは**許可されたドメインのみ**に制限されています。現在、以下のドメインからのインポートが可能です:
+
+**フィルターリスト提供サイト:**
+- `raw.githubusercontent.com` - GitHub Raw Content（Steven Black's hostsなど）
+- `gitlab.com` - GitLab
+- `easylist.to` - EasyList公式サイト
+- `pgl.yoyo.org` - Peter Lowe's Ad and tracking server list
+- `nsfw.oisd.nl` - OISD NSFW domain list
+
+許可されていないドメインからインポートしようとすると、「URL is not allowed」というエラーが表示されます。この場合は、以下の方法を使用してください:
+
+1. **ファイルをダウンロードしてローカルから読み込む**: URLからフィルターリストをダウンロードし、「ファイルを選択」またはドラッグ&ドロップで読み込みます。
+2. **テキストをコピー&ペースト**: フィルターリストの内容をブラウザで開いてコピーし、テキストエリアに直接貼り付けます。
+
 ### 技術仕様
 
 #### ストレージ形式（軽量化版）
@@ -323,6 +339,22 @@ You can directly import the following public filter lists from URLs:
 - To save storage capacity, only domain information is stored (optional information is not retained).
 - Local files and data protocol URLs cannot be imported.
 - For users who used v2.2.4 or earlier, data is automatically converted to the lightweight format. For details, see [UBLOCK_MIGRATION.md](docs/UBLOCK_MIGRATION.md).
+
+#### Security Restrictions
+
+For security reasons, URL imports are restricted to **allowed domains only**. Currently, the following domains are available for import:
+
+**Filter List Provider Sites:**
+- `raw.githubusercontent.com` - GitHub Raw Content (Steven Black's hosts, etc.)
+- `gitlab.com` - GitLab
+- `easylist.to` - EasyList official site
+- `pgl.yoyo.org` - Peter Lowe's Ad and tracking server list
+- `nsfw.oisd.nl` - OISD NSFW domain list
+
+If you attempt to import from a non-allowed domain, you will see a "URL is not allowed" error. In this case, use one of the following methods:
+
+1. **Download the file and load it locally**: Download the filter list from the URL and load it using "Select File" or drag & drop.
+2. **Copy & Paste the text**: Open the filter list in your browser, copy its contents, and paste it directly into the text area.
 
 ### Technical Specifications
 

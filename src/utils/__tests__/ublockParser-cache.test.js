@@ -11,7 +11,7 @@ import {
   getFromCache,
   saveToCache,
   hasCacheKey
-} from '../ublockParser.js';
+} from '../ublockParser.ts';
 
 describe('ublockParser - Cache Module', () => {
   // 全テストの前にキャッシュをクリアして状態をリセット
