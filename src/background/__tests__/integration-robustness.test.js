@@ -15,7 +15,15 @@ describe('Integration: Robustness improvements', () => {
 
   test('settings.getがStorageKeysのみを取得', async () => {
     // ゴミデータをセット
-    await chrome.storage.local.set({ junk1: 1, junk2: 'garbage' });
+    await chrome.storage.local.set({
+      junk1: 1,
+      junk2: 'garbage',
+      settings_migrated: true, // マイグレーション済みフラグ
+      settings_version: 0,
+      settings: {
+        junkInSettings: 'also garbage' // settingsオブジェクト内のゴミデータ
+      }
+    });
 
     // 有効な設定
     await saveSettings({
@@ -26,6 +34,7 @@ describe('Integration: Robustness improvements', () => {
     const settings = await getSettings();
     expect(settings.junk1).toBeUndefined();
     expect(settings.junk2).toBeUndefined();
+    expect(settings.junkInSettings).toBeUndefined();
     expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('test-key');
     expect(settings[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
   });

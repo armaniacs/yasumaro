@@ -311,8 +311,123 @@ const DEFAULT_SETTINGS = {
     [StorageKeys.ALLOWED_URLS_HASH]: '' // URLリストのハッシュ（変更検出用）
 };
 
+/**
+ * データ移行フラグ - 古い個別キーから単一settingsオブジェクトへの移行完了済み
+ */
+const SETTINGS_MIGRATED_KEY = 'settings_migrated';
+
+/**
+ * 暗号化キーがストレージキーかどうかを判定する
+ * @param {string} key - チェック対象のキー
+ * @returns {boolean} 暗号化キーの場合true
+ */
+function isEncryptionKey(key) {
+    return key === StorageKeys.ENCRYPTION_SALT ||
+           key === StorageKeys.ENCRYPTION_SECRET ||
+           key === StorageKeys.HMAC_SECRET;
+}
+
+/**
+ * 古い個別キー方式から単一settingsオブジェクト方式へのマイグレーション
+ *
+ * 既存の個別キーを単一の`settings`オブジェクトに統合し、古いキーを削除します。
+ * この関数はアプリ起動時に呼び出され、移行が完了した場合のみ実行されます。
+ *
+ * @returns {Promise<boolean>} マイグレーションが実行された場合はtrue
+ */
+export async function migrateToSingleSettingsObject() {
+    // 既に移行済みの場合はスキップ
+    const result = await chrome.storage.local.get(SETTINGS_MIGRATED_KEY);
+    if (result[SETTINGS_MIGRATED_KEY]) {
+        return false;
+    }
+
+    // 現在のストレージデータを取得
+    const existingKeys = await chrome.storage.local.get(null);
+    const settings = {};
+
+    // StorageKeysに含まれる個別キーをsettingsオブジェクトに集約
+    for (const [key, value] of Object.entries(existingKeys)) {
+        if (key in StorageKeys &&
+            !key.includes('_version') &&
+            !isEncryptionKey(key) &&
+            key !== SETTINGS_MIGRATED_KEY) {
+            // 定数名を設定キー名に変換
+            const settingKey = Object.keys(StorageKeys).find(k => StorageKeys[k] === key);
+            if (settingKey) {
+                // 既存のキー名（レガシー）をそのまま使用
+                settings[key] = value;
+            }
+        }
+    }
+
+    // settingsオブジェクトが空であれば、デフォルト設定で初期化
+    if (Object.keys(settings).length === 0) {
+        for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+            settings[key] = value;
+        }
+    }
+
+    // 楽観的ロックで安全に保存
+    await withOptimisticLock('settings', (currentSettings) => {
+        return { ...currentSettings, ...settings };
+    });
+
+    // マイグレーション完了フラグを設定
+    await chrome.storage.local.set({ [SETTINGS_MIGRATED_KEY]: true });
+
+    // 古い個別キーを削除
+    const keysToRemove = Object.keys(existingKeys).filter(key =>
+        Object.values(StorageKeys).includes(key) &&
+        !key.includes('_version') &&
+        !isEncryptionKey(key) &&
+        key !== SETTINGS_MIGRATED_KEY
+    );
+
+    if (keysToRemove.length > 0) {
+        await chrome.storage.local.remove(keysToRemove);
+    }
+
+    return true;
+}
+
 export async function getSettings() {
-    // StorageKeysで定義されているキーのみを取得
+    // 単一settingsオブジェクトが存在する場合はそれを使用
+    const result = await chrome.storage.local.get(['settings', SETTINGS_MIGRATED_KEY]);
+    if (result.settings && result[SETTINGS_MIGRATED_KEY]) {
+        let settings = result.settings;
+        // StorageKeysに含まれないキー（ゴミデータ）を排除
+        const validStorageKeys = Object.values(StorageKeys);
+        const filteredSettings = {};
+        for (const [key, value] of Object.entries(settings)) {
+            if (validStorageKeys.includes(key)) {
+                filteredSettings[key] = value;
+            }
+        }
+        const merged = { ...DEFAULT_SETTINGS, ...filteredSettings };
+
+        // 暗号化されたAPIキーを復号
+        try {
+            const key = await getOrCreateEncryptionKey();
+            for (const field of API_KEY_FIELDS) {
+                const value = merged[field];
+                if (isEncrypted(value)) {
+                    try {
+                        merged[field] = await decryptApiKey(value, key);
+                    } catch (e) {
+                        console.error(`Failed to decrypt ${field}:`, e);
+                        merged[field] = '';
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to get encryption key for decryption:', e);
+        }
+
+        return merged;
+    }
+
+    // 旧方式: StorageKeysで定義されているキーのみを取得
     const keysToGet = Object.values(StorageKeys);
     let settings = await chrome.storage.local.get(keysToGet);
     const migrated = await migrateUblockSettings();
@@ -347,6 +462,10 @@ export async function getSettings() {
 
 /**
  * Save settings to chrome.storage.local with optional allowed URL list update.
+ *
+ * 【改善】: 楽観的ロックを使用して同時実行時の競合を防止し、データ整合性を向上。
+ * 全設定を単一のsettingsオブジェクトで管理し、マイグレーションに対応。
+ *
  * @param {Object} settings - Settings to save
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
@@ -381,7 +500,10 @@ export async function saveSettings(settings, updateAllowedUrlsFlag = false) {
         };
     }
 
-    await chrome.storage.local.set(toSave);
+    // 【改善】: 楽観的ロックを使用して同時実行時の競合を防止
+    await withOptimisticLock('settings', (currentSettings) => {
+        return { ...currentSettings, ...toSave };
+    });
 }
 
 

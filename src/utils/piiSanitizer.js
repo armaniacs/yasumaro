@@ -6,7 +6,7 @@
  */
 
 // 定数設定
-const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
+export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 
 const PII_PATTERNS = [
@@ -186,13 +186,20 @@ export async function sanitizeRegex(text, options = {}) {
         let processedText = text;
         const finalMaskedItems = [];
 
+        // 【パフォーマンス改善】: 配列ベースの置換方式で文字列連結のオーバーヘッドを削減
+        // テキストを配列に分割して置換し、最後にjoinすることで中間文字列を削減
+        const textParts = processedText.split('');
         for (const r of resolvedReplacements) {
-            processedText =
-                processedText.substring(0, r.index) +
-                r.mask +
-                processedText.substring(r.index + r.length);
+            for (let i = 0; i < r.length; i++) {
+                if (i === 0) {
+                    textParts[r.index] = r.mask;
+                } else {
+                    textParts[r.index + i] = '';
+                }
+            }
             finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
         }
+        processedText = textParts.join('');
 
         // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
         finalMaskedItems.sort((a, b) => a.index - b.index);

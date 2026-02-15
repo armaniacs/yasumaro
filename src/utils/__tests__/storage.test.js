@@ -145,8 +145,13 @@ describe('computeUrlsHash', () => {
 });
 
 describe('APIキー暗号化統合', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         clearEncryptionKeyCache();
+        // 単一settingsオブジェクト方式を初期化
+        await chrome.storage.local.set({
+            settings_migrated: true,
+            settings_version: 0
+        });
     });
 
     describe('getOrCreateEncryptionKey', () => {
@@ -195,15 +200,12 @@ describe('APIキー暗号化統合', () => {
                 [StorageKeys.GEMINI_API_KEY]: 'test-gemini-key'
             });
 
-            // ストレージの生データを直接取得
-            const raw = await chrome.storage.local.get([
-                StorageKeys.OBSIDIAN_API_KEY,
-                StorageKeys.GEMINI_API_KEY
-            ]);
+            // ストレージの生データを直接取得（settingsオブジェクトから）
+            const raw = await chrome.storage.local.get('settings');
 
             // 暗号化された形式（オブジェクト）で保存されている
-            expect(isEncrypted(raw[StorageKeys.OBSIDIAN_API_KEY])).toBe(true);
-            expect(isEncrypted(raw[StorageKeys.GEMINI_API_KEY])).toBe(true);
+            expect(isEncrypted(raw.settings[StorageKeys.OBSIDIAN_API_KEY])).toBe(true);
+            expect(isEncrypted(raw.settings[StorageKeys.GEMINI_API_KEY])).toBe(true);
         });
 
         it('空のAPIキーは暗号化しない', async () => {
@@ -212,13 +214,10 @@ describe('APIキー暗号化統合', () => {
                 [StorageKeys.GEMINI_API_KEY]: ''
             });
 
-            const raw = await chrome.storage.local.get([
-                StorageKeys.OBSIDIAN_API_KEY,
-                StorageKeys.GEMINI_API_KEY
-            ]);
+            const raw = await chrome.storage.local.get('settings');
 
-            expect(raw[StorageKeys.OBSIDIAN_API_KEY]).toBe('');
-            expect(raw[StorageKeys.GEMINI_API_KEY]).toBe('');
+            expect(raw.settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('');
+            expect(raw.settings[StorageKeys.GEMINI_API_KEY]).toBe('');
         });
 
         it('APIキー以外のフィールドはそのまま保存する', async () => {
@@ -227,13 +226,10 @@ describe('APIキー暗号化統合', () => {
                 [StorageKeys.AI_PROVIDER]: 'gemini'
             });
 
-            const raw = await chrome.storage.local.get([
-                StorageKeys.OBSIDIAN_PORT,
-                StorageKeys.AI_PROVIDER
-            ]);
+            const raw = await chrome.storage.local.get('settings');
 
-            expect(raw[StorageKeys.OBSIDIAN_PORT]).toBe('8080');
-            expect(raw[StorageKeys.AI_PROVIDER]).toBe('gemini');
+            expect(raw.settings[StorageKeys.OBSIDIAN_PORT]).toBe('8080');
+            expect(raw.settings[StorageKeys.AI_PROVIDER]).toBe('gemini');
         });
     });
 
@@ -252,8 +248,13 @@ describe('APIキー暗号化統合', () => {
 
         it('平文APIキーをそのまま返す（後方互換性）', async () => {
             // 暗号化なしでストレージに直接保存（旧バージョンの状態をシミュレート）
+            // 単一settingsオブジェクト方式
             await chrome.storage.local.set({
-                [StorageKeys.OBSIDIAN_API_KEY]: 'plaintext-key'
+                settings: {
+                    [StorageKeys.OBSIDIAN_API_KEY]: 'plaintext-key'
+                },
+                settings_migrated: true,
+                settings_version: 0
             });
 
             const settings = await getSettings();
@@ -263,11 +264,16 @@ describe('APIキー暗号化統合', () => {
 
         it('復号失敗時は空文字にフォールバックする', async () => {
             // 不正な暗号化データをストレージに直接設定
+            // 単一settingsオブジェクト方式
             await chrome.storage.local.set({
-                [StorageKeys.OBSIDIAN_API_KEY]: {
-                    ciphertext: 'invalid-base64-data',
-                    iv: 'invalid-iv'
-                }
+                settings: {
+                    [StorageKeys.OBSIDIAN_API_KEY]: {
+                        ciphertext: 'invalid-base64-data',
+                        iv: 'invalid-iv'
+                    }
+                },
+                settings_migrated: true,
+                settings_version: 0
             });
 
             const settings = await getSettings();

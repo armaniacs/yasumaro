@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.0.3] - to be released. Date is not fixed yet.
+## [3.0.3] - 2026-02-15
 
 ### Fixed
 - **設定画面の表示不具合の修正**: HTMLタグのミスマッチにより設定画面が空白になる問題を修正
@@ -15,6 +15,29 @@ All notable changes to this project will be documented in this file.
   - 「マイナンバー」が「クレジットカード」として誤検知される優先順位のバグを修正
   - 正規表現スキャン中のタイムアウトが同期処理により機能していなかった問題を修正（ループ内での時間チェックを追加）
   - パフォーマンス改善のため、各パターンを1回ずつスキャンするように最適化
+
+### Performance
+- **PII置換の効率化（Array Join方式）**: `src/utils/piiSanitizer.js` で文字列連結によるメモリ効率の問題を改善
+  - ループ内の `substring() + mask + substring()` を配列join方式に変更
+  - 中間文字列の作成を削減し、メモリ消費を抑制
+  - 100個のPII置換が約数ミリ秒で完了（以前より大幅に高速化）
+- **設定保存のデータ整合性向上**: `src/utils/storage.js` で楽観的ロックを導入
+  - `saveSettings()` を `withOptimisticLock` でラップし、同時実行時の競合を防止
+  - 全設定を単一の `settings` キーで管理
+  - マイグレーション関数 `migrateToSingleSettingsObject()` を追加
+  - 古い個別キー方式から単一オブジェクト方式への移行をサポート
+
+### Tests
+- **設定保存テストの追加**: `src/utils/__tests__/storage-locking.test.js` に楽観的ロックのテストを追加
+  - 単一設定保存、同時実行時の競合検出、複数回同時保存のテスト
+  - 許可URLリスト更新、null/undefined値の扱い、バージョン番号のテスト
+  - マイグレーション機能のテスト、競合統計のテスト
+- **PII置換効率化テストの追加**: `src/utils/__tests__/piiSanitizer-optimization.test.js` に効率化のテストを追加
+  - 機能テスト（置換結果の正確性、メールアドレス、クレジットカード等の検出）
+  - パフォーマンステスト（大量PIIテキストの処理、通常使用ケースの高速化）
+  - サイズ上限テスト、タイムアウトテスト、エッジケースのテスト
+  - 配列join方式の動作検証、正規表現パターンの検証
+- **テスト結果**: 全66テストスイート通過、1091テスト成功
 
 ### Security
 - **Sakuraクラウド接続**: `api.ai.sakura.ad.jp` のみを明示的に許可するようにホワイトリストを制限
