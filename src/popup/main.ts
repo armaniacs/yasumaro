@@ -4,7 +4,7 @@ import { showPreview, initializeModalEvents } from './sanitizePreview.js';
 import { showSpinner, hideSpinner } from './spinner.js';
 import { startAutoCloseTimer } from './autoClose.js';
 import { getCurrentTab, isRecordable } from './tabUtils.js';
-import { showError, showSuccess, ErrorMessages, isDomainBlockedError, isConnectionError } from './errorUtils.js';
+import { showError, showSuccess, ErrorMessages, isDomainBlockedError, isConnectionError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
 
@@ -65,6 +65,7 @@ export async function loadCurrentTab(): Promise<void> {
 
 // 手動記録処理
 export async function recordCurrentPage(force: boolean = false): Promise<void> {
+  const startTime = performance.now(); // 🆕 開始時刻を記録
   const statusDiv = document.getElementById('mainStatus');
   const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
 
@@ -180,7 +181,15 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
     if (result && result.success) {
       hideSpinner();
-      showSuccess(statusDiv);
+
+      // 🆕 処理時間を計算してメッセージ表示
+      const totalDuration = performance.now() - startTime;
+      const message = formatSuccessMessage(totalDuration, result.aiDuration);
+
+      if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = 'success';
+      }
 
       // 【自動クローズ起動】: 記録成功後に自動クローズタイマーを起動 🟢
       // 【処理方針】: 画面状態が'main'なら2秒後にポップアップを閉じる
