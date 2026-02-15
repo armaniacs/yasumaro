@@ -337,3 +337,24 @@ export function formatDuration(ms: number): string {
   }
   return `${(ms / 1000).toFixed(1)}秒`;
 }
+
+/**
+ * 処理時間付き成功メッセージを生成
+ * @param totalDuration - 全体処理時間 (ms)
+ * @param aiDuration - AI処理時間 (ms, optional)
+ * @returns フォーマットされたメッセージ
+ */
+export function formatSuccessMessage(
+  totalDuration: number,
+  aiDuration?: number
+): string {
+  const baseMessage = getMsgWithCache('success'); // "✓ Saved to Obsidian"
+  const totalTime = formatDuration(totalDuration);
+
+  if (aiDuration !== undefined && aiDuration > 0) {
+    const aiTime = formatDuration(aiDuration);
+    return `${baseMessage} (${totalTime} / AI: ${aiTime})`;
+  }
+
+  return `${baseMessage} (${totalTime})`;
+}

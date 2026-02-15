@@ -15,7 +15,8 @@ import {
   showSuccess,
   handleError,
   escapeHtml,
-  formatDuration
+  formatDuration,
+  formatSuccessMessage
 } from '../errorUtils.ts';
 
 // テスト用のi18nモック文字列
@@ -421,5 +422,37 @@ describe('formatDuration edge cases', () => {
   it('should handle boundary precision at 1000ms threshold', () => {
     expect(formatDuration(999.9)).toBe('1000ms'); // rounds to 1000ms
     expect(formatDuration(1000.1)).toBe('1.0秒');
+  });
+});
+
+describe('formatSuccessMessage', () => {
+  it('should format message with total time only', () => {
+    const message = formatSuccessMessage(1234);
+    expect(message).toBe('✓ Saved to Obsidian (1.2秒)');
+  });
+
+  it('should format message with total and AI time', () => {
+    const message = formatSuccessMessage(2000, 850);
+    expect(message).toBe('✓ Saved to Obsidian (2.0秒 / AI: 850ms)');
+  });
+
+  it('should not show AI time when undefined', () => {
+    const message = formatSuccessMessage(1500, undefined);
+    expect(message).toBe('✓ Saved to Obsidian (1.5秒)');
+  });
+
+  it('should not show AI time when zero', () => {
+    const message = formatSuccessMessage(1500, 0);
+    expect(message).toBe('✓ Saved to Obsidian (1.5秒)');
+  });
+
+  it('should handle both times in milliseconds', () => {
+    const message = formatSuccessMessage(800, 300);
+    expect(message).toBe('✓ Saved to Obsidian (800ms / AI: 300ms)');
+  });
+
+  it('should handle both times in seconds', () => {
+    const message = formatSuccessMessage(3456, 1234);
+    expect(message).toBe('✓ Saved to Obsidian (3.5秒 / AI: 1.2秒)');
   });
 });
