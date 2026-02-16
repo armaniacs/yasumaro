@@ -740,3 +740,14 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - Initial Release
 Original idea and codebase was introduced in this article: https://note.com/izuru_tcnkc/n/nd0a758483901
+## [Unreleased]
+
+### Changed
+- すべてのテストファイル（45個）をTypeScriptに移行
+- ESMインポートパスを`.js`拡張子で統一（nodeNextモジュール解決対応）
+- テストコードに型安全性を部分的に適用
+
+### Added
+- `tsconfig.test.json` でテスト専用のTypeScript設定を確立
+- `npm run type-check:test` でテストコード型チェック可能に
+
