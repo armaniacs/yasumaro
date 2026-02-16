@@ -1,5 +1,5 @@
 /**
- * ublockParser-cache.test.js
+ * ublockParser-cache.test.ts
  * uBlock Parser - Cacheモジュールのユニットテスト
  */
 
@@ -11,7 +11,12 @@ import {
   getFromCache,
   saveToCache,
   hasCacheKey
-} from '../ublockParser.ts';
+} from '../ublockParser.js';
+
+interface CacheValue {
+  blockRules: any[];
+  exceptionRules?: any[];
+}
 
 describe('ublockParser - Cache Module', () => {
   // 全テストの前にキャッシュをクリアして状態をリセット
@@ -83,7 +88,7 @@ describe('ublockParser - Cache Module', () => {
 
     // PERF-019テスト: 大量の異なるテキストで一意なキーが生成されることを確認
     test('PERF-019: 多数の異なるテキストから一意なキーが生成される', () => {
-      const keys = new Set();
+      const keys = new Set<string>();
       const count = 100;
 
       for (let i = 0; i < count; i++) {
@@ -104,10 +109,10 @@ describe('ublockParser - Cache Module', () => {
   describe('saveToCache and getFromCache', () => {
     test('値を保存して取得できる', () => {
       const key = 'test_key_1';
-      const value = { blockRules: ['example.com'], exceptionRules: [] };
+      const value: CacheValue = { blockRules: ['example.com'], exceptionRules: [] };
 
       saveToCache(key, value);
-      const retrieved = getFromCache(key);
+      const retrieved = getFromCache(key) as CacheValue;
 
       expect(retrieved).not.toBeNull();
       expect(retrieved).toEqual(value);
@@ -121,8 +126,8 @@ describe('ublockParser - Cache Module', () => {
     test('異なるキーで異なる値を保存できる', () => {
       const key1 = 'test_key_2';
       const key2 = 'test_key_3';
-      const value1 = { blockRules: ['example.com'] };
-      const value2 = { blockRules: ['test.com'] };
+      const value1: CacheValue = { blockRules: ['example.com'] };
+      const value2: CacheValue = { blockRules: ['test.com'] };
 
       saveToCache(key1, value1);
       saveToCache(key2, value2);
@@ -228,9 +233,6 @@ describe('ublockParser - Cache Module', () => {
       const key1 = 'test_cleanup_1';
       const key2 = 'test_cleanup_2';
 
-      // 一時的にCLEANUP_INTERVALを短くしてテストする
-      const { cleanupCache } = require('../ublockParser/cache.js');
-
       saveToCache(key1, { blockRules: ['domain1.com'] });
       saveToCache(key2, { blockRules: ['domain2.com'] });
 
@@ -250,7 +252,7 @@ describe('ublockParser - Cache Module', () => {
   describe('Integration Tests', () => {
     test('キャッシュ化ループの一連の操作', () => {
       const key = 'integration_key_1';
-      const value = {
+      const value: CacheValue = {
         blockRules: ['example.com', 'test.com'],
         exceptionRules: ['trusted.com']
       };
@@ -262,11 +264,11 @@ describe('ublockParser - Cache Module', () => {
       expect(hasCacheKey(key)).toBe(true);
 
       // 取得
-      const retrieved = getFromCache(key);
+      const retrieved = getFromCache(key) as CacheValue;
       expect(retrieved).toEqual(value);
 
       // 再取得でコピーであることを確認（別オブジェクト）
-      const retrieved2 = getFromCache(key);
+      const retrieved2 = getFromCache(key) as CacheValue;
       expect(retrieved).not.toBe(retrieved2);
       expect(retrieved2).toEqual(value);
 
