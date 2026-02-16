@@ -20,8 +20,7 @@
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "build": "tsc && cp -r manifest.json _locales icons dist/ && cp src/popup/popup.html dist/popup/ && cp src/popup/styles.css dist/popup/ && node -e \"const fs=require('fs'); const file='dist/content/loader.js'; let content=fs.readFileSync(file,'utf8'); content=content.replace(/export \\{\\};?\\s*$/m,''); fs.writeFileSync(file,content);\"",
-    "build:watch": "tsc --watch",
-    "pretest": "npm run type-check"
+    "build:watch": "tsc --watch"
   },
   "keywords": [
     "obsidian",

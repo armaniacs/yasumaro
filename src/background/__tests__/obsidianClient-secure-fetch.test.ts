@@ -4,10 +4,10 @@
  * タスク1: HTTPS通信の強制と権限の最小化
  */
 
-import { ObsidianClient } from '../obsidianClient.ts';
-import * as storage from '../../utils/storage.ts';
+import { ObsidianClient } from '../obsidianClient.js';
+import * as storage from '../../utils/storage.js';
 
-jest.mock('../../utils/storage.ts');
+jest.mock('../../utils/storage.js');
 
 describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
   let obsidianClient;

@@ -4,12 +4,12 @@
  * ブルーチーム報告 P0: fetchにタイムアウトを追加
  */
 
-import { ObsidianClient } from '../obsidianClient.ts';
-import * as storage from '../../utils/storage.ts';
-import { addLog, LogType } from '../../utils/logger.ts';
+import { ObsidianClient } from '../obsidianClient.js';
+import * as storage from '../../utils/storage.js';
+import { addLog, LogType } from '../../utils/logger.js';
 
-jest.mock('../../utils/storage.ts');
-jest.mock('../../utils/logger.ts', () => ({
+jest.mock('../../utils/storage.js');
+jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: {
     DEBUG: 'DEBUG',

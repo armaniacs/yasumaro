@@ -3,7 +3,7 @@
  * TabCacheクラスの単体テスト
  */
 
-import { TabCache } from '../tabCache.ts';
+import { TabCache } from '../tabCache.js';
 
 describe('TabCache', () => {
     let tabCache;

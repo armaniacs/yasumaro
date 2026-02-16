@@ -4,7 +4,7 @@
  * 問題点4: piiSanitizer.jsの正規表現でReDoSの可能性
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals.js';
 import { sanitizeRegex } from '../piiSanitizer.js';
 
 interface SanitizeResult {

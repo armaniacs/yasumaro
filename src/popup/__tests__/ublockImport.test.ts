@@ -4,10 +4,10 @@
  * Test target: src/popup/ublockImport.js and related modules
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals.js';
 
 // Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.ts', () => {
+jest.mock('../../utils/storage.js', () => {
   const mockGetSettings = jest.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
@@ -53,7 +53,7 @@ jest.mock('../../utils/storage.ts', () => {
   };
 });
 
-jest.mock('../settingsUiHelper.ts', () => ({
+jest.mock('../settingsUiHelper.js', () => ({
   showStatus: jest.fn(),
 }));
 

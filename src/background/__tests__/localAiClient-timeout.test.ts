@@ -1,7 +1,7 @@
-import { LocalAIClient } from '../localAiClient.ts';
-import * as logger from '../../utils/logger.ts';
+import { LocalAIClient } from '../localAiClient.js';
+import * as logger from '../../utils/logger.js';
 
-jest.mock('../../utils/logger.ts');
+jest.mock('../../utils/logger.js');
 
 describe('LocalAIClient timeout', () => {
   let originalSetTimeout;

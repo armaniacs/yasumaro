@@ -6,11 +6,11 @@
  * Refactorフェーズ: screenState.js分割による循環参照解消を反映
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { jest } from '@jest/globals.js';
 
 // Mock i18n before importing autoClose.js
-jest.mock('../i18n.ts', () => ({
+jest.mock('../i18n.js', () => ({
   getMessage: jest.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
@@ -23,13 +23,13 @@ import {
   getScreenState,
   setScreenState,
   clearScreenState
-} from '../screenState.ts';
+} from '../screenState.js';
 
 import {
   startAutoCloseTimer,
   clearAutoCloseTimer,
   showCountdown
-} from '../autoClose.ts';
+} from '../autoClose.js';
 
 describe('画面状態追跡 (screenState.js)', () => {
   // 【テストグループの目的】: 画面がメイン画面か設定画面かを判定できる機能を検証

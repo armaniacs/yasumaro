@@ -4,15 +4,15 @@
  * タスク5: 設定キャッシュの実装
  */
 
-import { RecordingLogic, SETTINGS_CACHE_TTL } from '../recordingLogic.ts';
-import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.ts';
-import { PrivacyPipeline } from '../privacyPipeline.ts';
-import { NotificationHelper } from '../notificationHelper.ts';
+import { RecordingLogic, SETTINGS_CACHE_TTL } from '../recordingLogic.js';
+import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.js';
+import { PrivacyPipeline } from '../privacyPipeline.js';
+import { NotificationHelper } from '../notificationHelper.js';
 
-jest.mock('../../utils/storage.ts');
-jest.mock('../privacyPipeline.ts');
-jest.mock('../notificationHelper.ts');
-jest.mock('../../utils/logger.ts', () => ({
+jest.mock('../../utils/storage.js');
+jest.mock('../privacyPipeline.js');
+jest.mock('../notificationHelper.js');
+jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: {
     DEBUG: 'DEBUG',
@@ -21,10 +21,10 @@ jest.mock('../../utils/logger.ts', () => ({
     ERROR: 'ERROR'
   }
 }));
-jest.mock('../../utils/domainUtils.ts', () => ({
+jest.mock('../../utils/domainUtils.js', () => ({
   isDomainAllowed: jest.fn((url) => Promise.resolve(true))
 }));
-jest.mock('../../utils/piiSanitizer.ts', () => ({
+jest.mock('../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: jest.fn()
 }));
 

@@ -1,13 +1,13 @@
 // src/background/__tests__/integration-recording.test.js
-import { RecordingLogic } from '../recordingLogic.ts';
+import { RecordingLogic } from '../recordingLogic.js';
 
-import * as storage from '../../utils/storage.ts';
-import * as domainUtils from '../../utils/domainUtils.ts';
-import * as privacy from '../privacyPipeline.ts';
+import * as storage from '../../utils/storage.js';
+import * as domainUtils from '../../utils/domainUtils.js';
+import * as privacy from '../privacyPipeline.js';
 
-jest.mock('../../utils/storage.ts');
-jest.mock('../../utils/domainUtils.ts');
-jest.mock('../privacyPipeline.ts');
+jest.mock('../../utils/storage.js');
+jest.mock('../../utils/domainUtils.js');
+jest.mock('../privacyPipeline.js');
 
 // Chrome notifications mock
 beforeEach(() => {

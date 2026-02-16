@@ -3,10 +3,10 @@
  * Domain Filter UI Component Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals.js';
 
 // Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.ts', () => {
+jest.mock('../../utils/storage.js', () => {
   const mockGetSettings = jest.fn();
   const mockSaveSettings = jest.fn(() => Promise.resolve());
 
@@ -76,7 +76,7 @@ jest.mock('../../utils/storage.ts', () => {
   };
 });
 
-jest.mock('../../utils/domainUtils.ts', () => ({
+jest.mock('../../utils/domainUtils.js', () => ({
   extractDomain: jest.fn(),
   parseDomainList: jest.fn(),
   validateDomainList: jest.fn(),
@@ -86,26 +86,26 @@ jest.mock('../../utils/domainUtils.ts', () => ({
   matchesPattern: jest.fn(),
 }));
 
-jest.mock('../ublockImport.ts', () => ({
+jest.mock('../ublockImport.js', () => ({
   init: jest.fn(),
   saveUblockSettings: jest.fn(),
 }));
 
-jest.mock('../../utils/logger.ts', () => ({
+jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', SANITIZE: 'SANITIZE' },
 }));
 
-jest.mock('../tabUtils.ts', () => ({
+jest.mock('../tabUtils.js', () => ({
   getCurrentTab: jest.fn(),
   isRecordable: jest.fn(),
 }));
 
-jest.mock('../settingsUiHelper.ts', () => ({
+jest.mock('../settingsUiHelper.js', () => ({
   showStatus: jest.fn(),
 }));
 
-jest.mock('../i18n.ts', () => ({
+jest.mock('../i18n.js', () => ({
   getMessage: jest.fn((key, substitutions) => {
     const messages = {
       'domainList': 'Domain List (1 domain per line)',

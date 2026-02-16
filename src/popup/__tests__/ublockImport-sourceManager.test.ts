@@ -3,13 +3,13 @@
  * uBlock Import - SourceManagerモジュールのユニットテスト
  */
 
-import { StorageKeys } from '../../utils/storage.ts';
+import { StorageKeys } from '../../utils/storage.js';
 import {
   loadAndDisplaySources,
   deleteSource,
   reloadSource,
   saveUblockSettings
-} from '../ublockImport/sourceManager.ts';
+} from '../ublockImport/sourceManager.js';
 
 // =============================================================================
 // Test Utilities - Storage Mock Factory

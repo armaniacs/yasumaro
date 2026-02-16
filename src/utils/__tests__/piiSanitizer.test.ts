@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/piiSanitizer.js
  */
 
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect } from '@jest/globals.js';
 import { sanitizeRegex } from '../piiSanitizer.js';
 
 interface MaskedItem {

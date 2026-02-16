@@ -3,8 +3,8 @@
  * UF-401: マスク情報の可視化機能
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import * as sanitizePreview from '../sanitizePreview.ts';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
+import * as sanitizePreview from '../sanitizePreview.js';
 
 describe('Masked Information Visualization - プレビュー画面のマスク表示', () => {
   // 【修正】: beforeEach/afterEach を追加して jsdom 環境で DOM 要素を作成する

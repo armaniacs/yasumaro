@@ -1,5 +1,5 @@
 // src/background/__tests__/noteSectionEditor.test.js
-import { NoteSectionEditor } from '../noteSectionEditor.ts';
+import { NoteSectionEditor } from '../noteSectionEditor.js';
 
 describe('NoteSectionEditor', () => {
   describe('insertIntoSection', () => {

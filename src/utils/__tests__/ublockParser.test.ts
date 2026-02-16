@@ -6,7 +6,7 @@
  * TDD Redフェーズ: まだ実装されていない関数を呼び出す失敗するテスト
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals.js';
 import {
   parseUblockFilterLine,
   parseUblockFilterList,
@@ -15,7 +15,7 @@ import {
   isValidRulePattern,
   parseOptions,
   generateRuleId
-} from '../ublockParser.ts';
+} from '../ublockParser.js';
 
 describe('ublockParser', () => {
   // 【テスト前準備】: 各テスト実行前にテスト環境を初期化し、一貫したテスト条件を保証

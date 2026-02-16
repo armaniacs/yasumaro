@@ -1,5 +1,5 @@
 // src/background/__tests__/notificationHelper.test.js
-import { NotificationHelper } from '../notificationHelper.ts';
+import { NotificationHelper } from '../notificationHelper.js';
 
 describe('NotificationHelper', () => {
   beforeEach(() => {

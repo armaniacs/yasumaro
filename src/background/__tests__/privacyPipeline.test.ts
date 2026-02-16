@@ -1,5 +1,5 @@
 // src/background/__tests__/privacyPipeline.test.js
-import { PrivacyPipeline } from '../privacyPipeline.ts';
+import { PrivacyPipeline } from '../privacyPipeline.js';
 
 describe('PrivacyPipeline', () => {
   const mockSettings = {

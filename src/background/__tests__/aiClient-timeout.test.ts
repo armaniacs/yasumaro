@@ -1,13 +1,13 @@
 // fetchWithTimeoutをモック
-jest.mock('../../utils/fetch.ts', () => ({
+jest.mock('../../utils/fetch.js', () => ({
   fetchWithTimeout: jest.fn(),
 }));
 
-import { AIClient } from '../aiClient.ts';
-import * as logger from '../../utils/logger.ts';
-import { fetchWithTimeout } from '../../utils/fetch.ts';
+import { AIClient } from '../aiClient.js';
+import * as logger from '../../utils/logger.js';
+import { fetchWithTimeout } from '../../utils/fetch.js';
 
-jest.mock('../../utils/logger.ts');
+jest.mock('../../utils/logger.js');
 
 describe('AIClient timeout', () => {
   beforeEach(() => {

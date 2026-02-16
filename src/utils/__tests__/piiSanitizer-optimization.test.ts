@@ -3,7 +3,7 @@
  * PII置換効率化（アレイjoin方式）に関するテスト
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals.js';
 import { sanitizeRegex, MAX_INPUT_SIZE } from '../piiSanitizer.js';
 
 interface MaskedItem {

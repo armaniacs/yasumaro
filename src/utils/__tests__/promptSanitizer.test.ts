@@ -4,8 +4,8 @@
  * 【テスト対象】: src/utils/promptSanitizer.ts
  */
 
-import { describe, test, expect } from '@jest/globals';
-import { sanitizePromptContent, DangerLevel, formatWarnings } from '../promptSanitizer.ts';
+import { describe, test, expect } from '@jest/globals.js';
+import { sanitizePromptContent, DangerLevel, formatWarnings } from '../promptSanitizer.js';
 
 describe('promptSanitizer', () => {
   describe('sanitizePromptContent - 正常系', () => {

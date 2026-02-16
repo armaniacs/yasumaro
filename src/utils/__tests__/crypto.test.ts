@@ -4,8 +4,8 @@
  * 【テスト対象】: src/utils/crypto.ts
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Crypto } from '@peculiar/webcrypto';
+import { describe, test, expect, beforeEach } from '@jest/globals.js';
+import { Crypto } from '@peculiar/webcrypto.js';
 import {
     generateSalt,
     generateIV,

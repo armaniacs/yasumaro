@@ -17,7 +17,7 @@ import {
   escapeHtml,
   formatDuration,
   formatSuccessMessage
-} from '../errorUtils.ts';
+} from '../errorUtils.js';
 
 // テスト用のi18nモック文字列
 const MOCK_CONNECTION_ERROR = 'Please refresh the page and try again';

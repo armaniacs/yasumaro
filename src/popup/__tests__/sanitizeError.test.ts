@@ -4,7 +4,7 @@
  * タスク3: エラーメッセージの情報流出防止
  */
 
-import { sanitizeErrorMessage, getUserErrorMessage, ErrorType, ErrorMessages } from '../errorUtils.ts';
+import { sanitizeErrorMessage, getUserErrorMessage, ErrorType, ErrorMessages } from '../errorUtils.js';
 
 describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', () => {
   let mockGetMsg;

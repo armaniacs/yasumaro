@@ -5,11 +5,11 @@
  * showSpinner()、hideSpinner()関数によるDOM操作を単体でテストします。
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { jest } from '@jest/globals.js';
 
 // Mock i18n before importing spinner.js
-jest.mock('../i18n.ts', () => ({
+jest.mock('../i18n.js', () => ({
   getMessage: jest.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
@@ -18,7 +18,7 @@ jest.mock('../i18n.ts', () => ({
   })
 }));
 
-import { showSpinner, hideSpinner } from '../spinner.ts';
+import { showSpinner, hideSpinner } from '../spinner.js';
 
 describe('ローディングスピナー制御', () => {
   // 【テストグループの目的】: showSpinner、hideSpinner関数の動作を検証

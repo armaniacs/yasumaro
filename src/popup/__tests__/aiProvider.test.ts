@@ -3,7 +3,7 @@
  * AIプロバイダーUI表示制御のテスト
  */
 
-import { AIProviderElements } from '../../popup/settings/aiProvider';
+import { AIProviderElements } from '../../popup/settings/aiProvider.js';
 
 describe('popup/settings/aiProvider', () => {
     describe('AIProviderElements interface', () => {

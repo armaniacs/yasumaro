@@ -4,16 +4,16 @@
  * ブルーチーム報告 P0: データ整合性の改善 - 書き込み成功後にのみURLを保存
  */
 
-import { RecordingLogic } from '../recordingLogic.ts';
-import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, StorageKeys } from '../../utils/storage.ts';
-import { PrivacyPipeline } from '../privacyPipeline.ts';
-import { NotificationHelper } from '../notificationHelper.ts';
-import { addLog, LogType } from '../../utils/logger.ts';
+import { RecordingLogic } from '../recordingLogic.js';
+import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, StorageKeys } from '../../utils/storage.js';
+import { PrivacyPipeline } from '../privacyPipeline.js';
+import { NotificationHelper } from '../notificationHelper.js';
+import { addLog, LogType } from '../../utils/logger.js';
 
-jest.mock('../../utils/storage.ts');
-jest.mock('../privacyPipeline.ts');
-jest.mock('../notificationHelper.ts');
-jest.mock('../../utils/logger.ts', () => ({
+jest.mock('../../utils/storage.js');
+jest.mock('../privacyPipeline.js');
+jest.mock('../notificationHelper.js');
+jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: {
     DEBUG: 'DEBUG',
@@ -22,10 +22,10 @@ jest.mock('../../utils/logger.ts', () => ({
     ERROR: 'ERROR'
   }
 }));
-jest.mock('../../utils/domainUtils.ts', () => ({
+jest.mock('../../utils/domainUtils.js', () => ({
   isDomainAllowed: jest.fn((url) => Promise.resolve(true))
 }));
-jest.mock('../../utils/piiSanitizer.ts', () => ({
+jest.mock('../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: jest.fn()
 }));
 

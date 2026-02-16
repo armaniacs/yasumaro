@@ -4,23 +4,23 @@
  * タスク6: Obsidian APIの競合回避
  */
 
-import { ObsidianClient } from '../obsidianClient.ts';
-import * as storage from '../../utils/storage.ts';
-import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.ts';
-import { NoteSectionEditor } from '../noteSectionEditor.ts';
-import { addLog, LogType } from '../../utils/logger.ts';
+import { ObsidianClient } from '../obsidianClient.js';
+import * as storage from '../../utils/storage.js';
+import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
+import { NoteSectionEditor } from '../noteSectionEditor.js';
+import { addLog, LogType } from '../../utils/logger.js';
 
-jest.mock('../../utils/storage.ts');
-jest.mock('../../utils/dailyNotePathBuilder.ts', () => ({
+jest.mock('../../utils/storage.js');
+jest.mock('../../utils/dailyNotePathBuilder.js', () => ({
   buildDailyNotePath: jest.fn((pathRaw) => '2026-02-07')
 }));
-jest.mock('../noteSectionEditor.ts', () => ({
+jest.mock('../noteSectionEditor.js', () => ({
   NoteSectionEditor: {
     DEFAULT_SECTION_HEADER: '## History',
     insertIntoSection: jest.fn((existingContent, sectionHeader, content) => `${sectionHeader}\n${content}`)
   }
 }));
-jest.mock('../../utils/logger.ts', () => ({
+jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: {
     DEBUG: 'DEBUG',

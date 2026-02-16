@@ -3,12 +3,12 @@
  * Navigation Functionality Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals.js';
 // 【修正】: モック化されるモジュールのインポートはjest.mockの前に実行
 import { showMainScreen, showSettingsScreen, init } from 'src/popup/navigation.js';
 
 // Mock screenState module (must be defined before import sync import)
-jest.mock('src/popup/screenState.ts', () => ({
+jest.mock('src/popup/screenState.js', () => ({
   getScreenState: jest.fn(),
   setScreenState: jest.fn(),
   clearScreenState: jest.fn(),
@@ -19,7 +19,7 @@ jest.mock('src/popup/screenState.ts', () => ({
 }));
 
 // Mock autoClose module
-jest.mock('src/popup/autoClose.ts', () => ({
+jest.mock('src/popup/autoClose.js', () => ({
   clearAutoCloseTimer: jest.fn()
 }));
 

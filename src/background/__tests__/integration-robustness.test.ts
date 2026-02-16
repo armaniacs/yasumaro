@@ -1,11 +1,11 @@
 // src/background/__tests__/integration-robustness.test.js
-import { ObsidianClient } from '../obsidianClient.ts';
-import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.ts';
-import { AIClient } from '../aiClient.ts';
-import { fetchWithTimeout } from '../../utils/fetch.ts';
+import { ObsidianClient } from '../obsidianClient.js';
+import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.js';
+import { AIClient } from '../aiClient.js';
+import { fetchWithTimeout } from '../../utils/fetch.js';
 
-jest.mock('../../utils/fetch.ts');
-jest.mock('../../utils/logger.ts');
+jest.mock('../../utils/fetch.js');
+jest.mock('../../utils/logger.js');
 
 describe('Integration: Robustness improvements', () => {
   beforeEach(() => {

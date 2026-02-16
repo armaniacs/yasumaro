@@ -4,11 +4,11 @@
  * FEATURE-001: エラーハンドリングの一貫性の欠如と詳細な情報漏洩の検証
  */
 
-import { AIClient } from '../aiClient.ts';
-import * as storage from '../../utils/storage.ts';
-// import { LocalAIClient } from '../localAiClient.ts'; // Unused
+import { AIClient } from '../aiClient.js';
+import * as storage from '../../utils/storage.js';
+// import { LocalAIClient } from '../localAiClient.js'; // Unused
 
-jest.mock('../../utils/storage.ts', () => ({
+jest.mock('../../utils/storage.js', () => ({
   getSettings: jest.fn(),
   getAllowedUrls: jest.fn(() => Promise.resolve([])),
   StorageKeys: {
@@ -23,7 +23,7 @@ jest.mock('../../utils/storage.ts', () => ({
     OPENAI_2_MODEL: 'openai_2_model'
   }
 }));
-jest.mock('../localAiClient.ts');
+jest.mock('../localAiClient.js');
 
 describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報漏洩', () => {
   let aiClient: AIClient;
