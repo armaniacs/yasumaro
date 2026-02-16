@@ -1,4 +1,4 @@
-import { getSettings, type StorageKeys, saveSettings } from '../storage.js';
+import { getSettings, StorageKeys, saveSettings } from '../storage.js';
 import * as migration from '../migration.js';
 
 // Mock migration module

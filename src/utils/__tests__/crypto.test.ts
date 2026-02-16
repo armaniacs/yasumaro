@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Crypto } from '@peculiar/webcrypto.js';
+import { Crypto } from '@peculiar/webcrypto';
 import {
     generateSalt,
     generateIV,

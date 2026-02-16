@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.9.2] - 2026-02-16
+## [3.9.2] - to be relased
 
 ### Docs
 
@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
   - [`README.md`](README.md): `npm install` および `npm run build` の手順を追加
   - ユーザーが `dist/` フォルダを読み込むように明記
   - 日本語版・英語版両方に対応
+
+### Changed
+- すべてのテストファイル（45個）をTypeScriptに移行
+- ESMインポートパスを`.js`拡張子で統一（nodeNextモジュール解決対応）
+- テストコードに型安全性を部分的に適用
+
+### Added
+- `tsconfig.test.json` でテスト専用のTypeScript設定を確立
+- `npm run type-check:test` でテストコード型チェック可能に
+
+
+### Completed TypeScript Migration Summary (2026-02-17)
+
+**Execution Summary**:
+- Test Files: 45/45 migrated to TypeScript (.test.ts)
+- Type Definitions: Central types in src/__tests__/types.ts
+- Jest Setup: Migrated to jest.setup.ts with typed mocks
+- Test Coverage: 1105 passing tests (up from 738)
+
 
 ## [3.9.1] - 2026-02-16
 
@@ -741,37 +760,4 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - Initial Release
 Original idea and codebase was introduced in this article: https://note.com/izuru_tcnkc/n/nd0a758483901
 ## [Unreleased]
-
-### Changed
-- すべてのテストファイル（45個）をTypeScriptに移行
-- ESMインポートパスを`.js`拡張子で統一（nodeNextモジュール解決対応）
-- テストコードに型安全性を部分的に適用
-
-### Added
-- `tsconfig.test.json` でテスト専用のTypeScript設定を確立
-- `npm run type-check:test` でテストコード型チェック可能に
-
-
-### Completed TypeScript Migration Summary (2026-02-17)
-
-**Execution Summary**:
-- Test Files: 45/45 migrated to TypeScript (.test.ts)
-- Type Definitions: Central types in src/__tests__/types.ts
-- Jest Setup: Migrated to jest.setup.ts with typed mocks
-- Test Coverage: 1105 passing tests (up from 738)
-
-**Configuration Changes**:
-- tsconfig.test.json: Test-specific TypeScript compilation
-- jest.config.cjs: Updated to reference jest.setup.ts
-- ESM imports: All use .js extensions except @jest/globals
-
-**Known Limitations**:
-- 10 tests remain with implementation-side issues
-- Some type assertions use @ts-expect-error (jest.fn narrowing)
-- DOM null-checks not fully typed (deferred for future)
-
-**Next Steps**:
-- Address StorageKeys export in implementation
-- Strengthen mock type definitions as needed
-- Complete null-check type safety incrementally
 

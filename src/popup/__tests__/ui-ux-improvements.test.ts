@@ -11,9 +11,9 @@
  * 6. ボタンの操作エリア確保 (中期)
  */
 
-import JSDOM from 'jsdom.js';
-import { readFileSync } from 'fs.js';
-import { join } from 'path.js';
+import JSDOM from 'jsdom';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // popup.htmlを読み込む
 const getPopupHTML = () => {
