@@ -1,13 +1,15 @@
 /**
- * retryHelper.test.js
+ * retryHelper.test.ts
  * Unit tests for retry helper module
  */
 
 import {
     ChromeMessageSender,
     sendMessageWithRetry as sendMessageWithRetry,
-    createSender
-} from '../retryHelper.ts';
+    createSender,
+    type RetryOptions,
+    type MessagePayload
+} from '../retryHelper';
 
 // Mock chrome.runtime.sendMessage
 global.chrome = {
@@ -15,10 +17,10 @@ global.chrome = {
         sendMessage: jest.fn(),
         lastError: null
     }
-};
+} as any;
 
 describe('ChromeMessageSender', () => {
-    let sender;
+    let sender: ChromeMessageSender;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -58,13 +60,13 @@ describe('ChromeMessageSender', () => {
         it('成功時はすぐにレスポンスを返す', async () => {
             const mockResponse = { success: true, data: 'test' };
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-                callback(mockResponse);
+                callback(mockResponse as any);
             });
 
             const result = await sender.sendMessageWithRetry({
                 type: 'TEST',
                 payload: {}
-            });
+            } as MessagePayload<unknown>);
 
             expect(result).toEqual(mockResponse);
             expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
@@ -73,13 +75,13 @@ describe('ChromeMessageSender', () => {
         it('ビジネスロジックエラー（success: false）でもレスポンスを返す', async () => {
             const mockResponse = { success: false, error: 'Domain blocked' };
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-                callback(mockResponse);
+                callback(mockResponse as any);
             });
 
             const result = await sender.sendMessageWithRetry({
                 type: 'TEST',
                 payload: {}
-            });
+            } as MessagePayload<unknown>);
 
             expect(result).toEqual(mockResponse);
             expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
@@ -90,16 +92,16 @@ describe('ChromeMessageSender', () => {
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callCount++;
                 if (callCount === 1) {
-                    chrome.runtime.lastError = { message: 'Could not establish connection' };
+                    global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                     callback();
                 } else {
-                    chrome.runtime.lastError = null;
+                    global.chrome.runtime.lastError = null;
                     callback({ success: true });
                 }
             });
 
             const result = await sender.sendMessageWithRetry(
-                { type: 'TEST', payload: {} },
+                { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                 { initialDelay: 0 }
             );
 
@@ -109,13 +111,13 @@ describe('ChromeMessageSender', () => {
 
         it('最大リトライ回数を超えるとエラーをスローする', async () => {
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-                chrome.runtime.lastError = { message: 'Could not establish connection' };
+                global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                 callback();
             });
 
             await expect(
                 sender.sendMessageWithRetry(
-                    { type: 'TEST', payload: {} },
+                    { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                     { initialDelay: 0 }
                 )
             ).rejects.toThrow('Could not establish connection');
@@ -126,12 +128,12 @@ describe('ChromeMessageSender', () => {
 
         it('非リトライ可能なエラーで即座に失敗する', async () => {
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-                chrome.runtime.lastError = { message: 'Invalid message format' };
+                global.chrome.runtime.lastError = { message: 'Invalid message format' };
                 callback();
             });
 
             await expect(
-                sender.sendMessageWithRetry({ type: 'TEST', payload: {} })
+                sender.sendMessageWithRetry({ type: 'TEST', payload: {} } as MessagePayload<unknown>)
             ).rejects.toThrow('Invalid message format');
 
             expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
@@ -151,7 +153,7 @@ describe('ChromeMessageSender', () => {
             // No response receivedはリトライ可能なエラーとして扱うよう修正
             await expect(
                 sender.sendMessageWithRetry(
-                    { type: 'TEST', payload: {} },
+                    { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                     { initialDelay: 0 }
                 )
             ).resolves.toEqual({ success: true });
@@ -166,7 +168,7 @@ describe('ChromeMessageSender', () => {
 
             await expect(
                 sender.sendMessageWithRetry(
-                    { type: 'TEST', payload: {} },
+                    { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                     { initialDelay: 0 }
                 )
             ).rejects.toThrow('No response received');
@@ -177,13 +179,13 @@ describe('ChromeMessageSender', () => {
 
         it('カスタムリトライオプションを上書きできる', async () => {
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-                chrome.runtime.lastError = { message: 'Could not establish connection' };
+                global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                 callback();
             });
 
             // maxRetries: 1 で total callCount が 2 になる（初期 + 1回リトライ）
             const promise = sender.sendMessageWithRetry(
-                { type: 'TEST', payload: {} },
+                { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                 { maxRetries: 1 }
             );
 
@@ -232,8 +234,8 @@ describe('ChromeMessageSender', () => {
             expect(ChromeMessageSender.isRetryableError(null)).toBe(false);
             expect(ChromeMessageSender.isRetryableError(undefined)).toBe(false);
 
-            expect(ChromeMessageSender.isRetryableError({ message: null })).toBe(false);
-            expect(ChromeMessageSender.isRetryableError({})).toBe(false);
+            expect(ChromeMessageSender.isRetryableError({ message: null } as any)).toBe(false);
+            expect(ChromeMessageSender.isRetryableError({} as any)).toBe(false);
         });
     });
 
@@ -260,18 +262,18 @@ describe('ChromeMessageSender', () => {
                 callCount++;
                 if (callCount <= 3) {
                     // 最初の3回は失敗させる
-                    chrome.runtime.lastError = { message: 'Could not establish connection' };
+                    global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                     callback();
                 } else {
                     // 4回目で成功
-                    chrome.runtime.lastError = null;
+                    global.chrome.runtime.lastError = null;
                     callback({ success: true });
                 }
             });
 
             await expect(
                 senderWithBackoff.sendMessageWithRetry(
-                    { type: 'TEST', payload: {} },
+                    { type: 'TEST', payload: {} } as MessagePayload<unknown>,
                     { initialDelay: 0 }
                 )
             ).resolves.toEqual({ success: true });
@@ -302,13 +304,13 @@ describe('sendMessageWithRetry (factory)', () => {
     it('ファクトリー関数が動作する', async () => {
         const mockResponse = { success: true };
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-            callback(mockResponse);
+            callback(mockResponse as any);
         });
 
         const result = await sendMessageWithRetry({
             type: 'FACTORY_TEST',
             payload: {}
-        });
+        } as MessagePayload<unknown>);
 
         expect(result).toEqual(mockResponse);
     });
@@ -319,15 +321,15 @@ describe('sendMessageWithRetry (factory)', () => {
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
             if (callCount <= 2) {
-                chrome.runtime.lastError = { message: 'Could not establish connection' };
+                global.chrome.runtime.lastError = { message: 'Could not establish connection' };
             } else {
-                chrome.runtime.lastError = null;
+                global.chrome.runtime.lastError = null;
             }
-            callback(mockResponse);
+            callback(mockResponse as any);
         });
 
         const result = await sendMessageWithRetry(
-            { type: 'TEST', payload: {} },
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
             { maxRetries: 5, initialDelay: 0 }
         );
 
@@ -351,13 +353,13 @@ describe('createSender (factory)', () => {
         const customSender = createSender({ maxRetries: 2 });
         const mockResponse = { success: true };
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
-            callback(mockResponse);
+            callback(mockResponse as any);
         });
 
         const result = await customSender.sendMessageWithRetry({
             type: 'SENDER_TEST',
             payload: {}
-        });
+        } as MessagePayload<unknown>);
 
         expect(result).toEqual(mockResponse);
     });
@@ -375,15 +377,15 @@ describe('chrome.runtime.lastError patterns', () => {
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
             if (callCount === 1) {
-                chrome.runtime.lastError = { message: 'Receiving end does not exist' };
+                global.chrome.runtime.lastError = { message: 'Receiving end does not exist' };
             } else {
-                chrome.runtime.lastError = null;
+                global.chrome.runtime.lastError = null;
             }
-            callback(mockResponse);
+            callback(mockResponse as any);
         });
 
         const result = await sendMessageWithRetry(
-            { type: 'TEST', payload: {} },
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
             { initialDelay: 0 }
         );
 
@@ -397,15 +399,15 @@ describe('chrome.runtime.lastError patterns', () => {
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
             if (callCount <= 2) {
-                chrome.runtime.lastError = { message: 'Extension context invalidated' };
+                global.chrome.runtime.lastError = { message: 'Extension context invalidated' };
             } else {
-                chrome.runtime.lastError = null;
+                global.chrome.runtime.lastError = null;
             }
-            callback(mockResponse);
+            callback(mockResponse as any);
         });
 
         const result = await sendMessageWithRetry(
-            { type: 'TEST', payload: {} },
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
             { initialDelay: 0 }
         );
 
