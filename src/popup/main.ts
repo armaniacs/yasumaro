@@ -129,7 +129,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       if (!previewResponse.success) {
         const errorMsg = previewResponse.error || 'Processing failed';
-        console.error('PREVIEW_RECORD failed:', previewResponse);
+        console.error('PREVIEW_RECORD failed:', JSON.stringify(previewResponse, null, 2));
         throw new Error(errorMsg);
       }
 

@@ -1,10 +1,12 @@
 // src/background/notificationHelper.ts
 export class NotificationHelper {
-    static ICON_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    static getIconUrl() {
+        return chrome.runtime.getURL('icons/icon48.png');
+    }
     static notifySuccess(title, message) {
         chrome.notifications.create({
             type: 'basic',
-            iconUrl: this.ICON_URL,
+            iconUrl: this.getIconUrl(),
             title,
             message
         });
@@ -12,7 +14,7 @@ export class NotificationHelper {
     static notifyError(error) {
         chrome.notifications.create({
             type: 'basic',
-            iconUrl: this.ICON_URL,
+            iconUrl: this.getIconUrl(),
             title: 'Obsidian Sync Failed',
             message: `Error: ${error}`
         });

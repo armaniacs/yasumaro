@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.2] - 2026-02-16
+
+### Docs
+
+- **インストール手順の更新**: TypeScript移行に伴いREADME.mdのインストール方法を更新
+  - [`README.md`](README.md): `npm install` および `npm run build` の手順を追加
+  - ユーザーが `dist/` フォルダを読み込むように明記
+  - 日本語版・英語版両方に対応
+
 ## [3.9.1] - 2026-02-16
 
 ### Security

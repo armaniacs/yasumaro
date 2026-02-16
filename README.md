@@ -36,10 +36,29 @@
 
 
 ### インストール方法
-1. このリポジトリをダウンロードまたはクローンします。
-2. Chromeを開き、`chrome://extensions` にアクセスします。
-3. 右上の「デベロッパーモード」を有効にします。
-4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、解凍したフォルダを選択します。
+ビルド済みの拡張機能をインストールするには、以下の手順に従ってください。
+
+1. このリポジトリをクローンまたはダウンロードします:
+   ```bash
+   git clone https://github.com/izuru-tcnkc/obsidian-smart-history.git
+   cd obsidian-smart-history
+   ```
+
+2. 依存パッケージをインストールします:
+   ```bash
+   npm install
+   ```
+
+3. 拡張機能をビルドします:
+   ```bash
+   npm run build
+   ```
+
+4. Chromeを開き、`chrome://extensions` にアクセスします。
+
+5. 右上の「デベロッパーモード」を有効にします。
+
+6. 「パッケージ化されていない拡張機能を読み込む」をクリックし、**`dist` フォルダ**を選択します。
 
 ### 使い方
 
@@ -129,10 +148,29 @@ A Chrome extension that automatically saves your browsing history to Obsidian wi
 - [Google Gemini API key](https://aistudio.google.com/app/apikey) (free tier available)
 
 ### Installation
-1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension directory
+To install the extension, follow these steps:
+
+1. Clone or download this repository:
+   ```bash
+   git clone https://github.com/izuru-tcnkc/obsidian-smart-history.git
+   cd obsidian-smart-history
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Build the extension:
+   ```bash
+   npm run build
+   ```
+
+4. Open Chrome and navigate to `chrome://extensions`
+
+5. Enable "Developer mode" in the top right
+
+6. Click "Load unpacked" and select the **`dist` folder**
 
 ### Usage
 

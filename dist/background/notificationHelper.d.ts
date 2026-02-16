@@ -1,5 +1,5 @@
 export declare class NotificationHelper {
-    static ICON_URL: string;
+    static getIconUrl(): string;
     static notifySuccess(title: string, message: string): void;
     static notifyError(error: any): void;
 }

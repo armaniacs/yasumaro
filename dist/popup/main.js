@@ -102,7 +102,7 @@ export async function recordCurrentPage(force = false) {
             }
             if (!previewResponse.success) {
                 const errorMsg = previewResponse.error || 'Processing failed';
-                console.error('PREVIEW_RECORD failed:', previewResponse);
+                console.error('PREVIEW_RECORD failed:', JSON.stringify(previewResponse, null, 2));
                 throw new Error(errorMsg);
             }
             // マスクが行われた場合のみ確認画面を表示する

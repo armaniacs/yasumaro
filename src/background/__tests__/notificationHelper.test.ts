@@ -8,6 +8,12 @@ describe('NotificationHelper', () => {
     if (!chrome.notifications) {
       chrome.notifications = { create: jest.fn() };
     }
+    // Chrome runtime APIをモック
+    if (!chrome.runtime) {
+      chrome.runtime = { getURL: jest.fn((path) => `chrome-extension://mock-id/${path}`) };
+    } else if (!chrome.runtime.getURL) {
+      chrome.runtime.getURL = jest.fn((path) => `chrome-extension://mock-id/${path}`);
+    }
   });
 
   describe('notifySuccess', () => {
