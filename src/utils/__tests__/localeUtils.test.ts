@@ -1,5 +1,5 @@
 /**
- * localeUtils.test.js
+ * localeUtils.test.ts
  *
  * Locale Utilitiesのユニットテスト
  */
@@ -10,7 +10,7 @@ import {
   formatDate,
   formatDateTime,
   getDateSeparator
-} from '../localeUtils.ts';
+} from '../localeUtils';
 
 // Chrome APIのモック
 const mockGetUILanguage = jest.fn();
@@ -27,7 +27,7 @@ describe('localeUtils', () => {
         lastError: null
       },
       storage: {}
-    };
+    } as any;
   });
 
   describe('getUserLocale', () => {
@@ -47,13 +47,13 @@ describe('localeUtils', () => {
     });
 
     it('chrome.i18nが未定義の場合はフォールバックを返す', () => {
-      global.chrome = undefined;
+      global.chrome = undefined as any;
       const result = getUserLocale();
       expect(result).toBe('en-US');
     });
 
     it('chrome.i18n.getUILanguageが未定義の場合はフォールバックを返す', () => {
-      global.chrome = { i18n: {} };
+      global.chrome = { i18n: {} } as any;
       expect(getUserLocale()).toBe('en-US');
     });
 
@@ -195,7 +195,7 @@ describe('localeUtils', () => {
 
     it('無効な日付に対して現在日時を使用する', () => {
       mockGetUILanguage.mockReturnValue('en-US');
-      const result = formatDate('invalid-date');
+      const result = formatDate('invalid-date' as any);
       expect(result).toBeTruthy();
     });
 
