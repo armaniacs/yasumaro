@@ -29,6 +29,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     jest.useFakeTimers();
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
@@ -54,6 +56,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('_fetchExistingContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -69,6 +73,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('404の場合は空文字列を返すこと', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -103,6 +109,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('_writeContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -118,6 +126,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('エラー応答の場合はエラーをスローすること', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: false,
         text: () => Promise.resolve('Error')
@@ -135,6 +145,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('testConnection - タイムアウト', () => {
     it('正常応答の場合は成功を返すこと', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -146,6 +158,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('エラー応答の場合は失敗を返すこと', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -164,6 +178,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       // 注: 現在はretry戦略が実装されていません
       // 将来的にはexponential backoffを使用したretry戦略を実装することが推奨されます
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockRejectedValue(new Error('Network error'));
 
       await expect(
@@ -215,6 +231,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
     it('15秒タイムアウトでリクエストがキャンセルされること', async () => {
       // Mock fetch to handle AbortController signals
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockFetch.mockImplementation((url, options) => {
         return new Promise((resolve, reject) => {
           if (options?.signal) {

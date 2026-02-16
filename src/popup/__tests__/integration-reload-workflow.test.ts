@@ -24,6 +24,8 @@ describe('フローワーク: URLからインポートしてソースを再読�
   });
 
   test('URLからフィルターを取得してパース', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     global.fetch.mockResolvedValueOnce({
       ok: true,
       headers: { get: () => 'text/plain' },

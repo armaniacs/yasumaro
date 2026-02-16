@@ -12,6 +12,8 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   beforeEach(() => {
     // chrome.i18n.getMessageのモック
     mockGetMsg = jest.fn();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     mockGetMsg.mockImplementation((key) => {
       const messages = {
         'errorPrefix': 'Error:',

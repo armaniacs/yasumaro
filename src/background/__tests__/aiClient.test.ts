@@ -37,12 +37,18 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     jest.clearAllMocks();
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     mockGetSettings.mockResolvedValue({});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     (storage.getAllowedUrls as jest.Mock).mockResolvedValue([]);
   });
 
   describe('未知のプロバイダーが指定された場合のエラーハンドリング', () => {
     it('未知のプロバイダー名がエラーメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({ ai_provider: 'unknown_provider' });
 
       const result = await aiClient.generateSummary('Test content');
@@ -54,6 +60,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({ ai_provider: 'unknown_provider' });
 
       const result = await aiClient.generateSummary('Test content');
@@ -66,6 +74,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
     it('Geminiプロバイダーの場合、プロバイダー名がエラーメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: '' });
 
       const result = await aiClient.generateSummary('Test content');
@@ -77,6 +87,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: '' });
 
       const result = await aiClient.generateSummary('Test content');
@@ -98,6 +110,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('Gemini API 404エラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
@@ -105,6 +119,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       });
 
       // 404エラーのモック - fetchWithTimeoutが正しく動作するようにモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 404,
@@ -121,6 +137,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('Gemini API 一般エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
@@ -129,6 +147,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       // エラーレスポンスのモック
       const errorDetail = 'Detailed error message from API: Invalid request';
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 400,
@@ -145,6 +165,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('OpenAI API エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({
         ai_provider: 'openai',
         openai_base_url: 'https://api.openai.com/v1',
@@ -154,6 +176,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       // エラーレスポンスのモック
       const errorDetail = 'Detailed error message from OpenAI API';
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
@@ -180,6 +204,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
 
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
@@ -188,6 +214,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       // ネットワークエラーのモック
       const networkError = new Error('Failed to fetch: Network request failed');
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       (global.fetch as jest.Mock).mockRejectedValue(networkError);
 
       const result = await aiClient.generateSummary('Test content');

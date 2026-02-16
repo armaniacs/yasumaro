@@ -16,11 +16,17 @@ beforeEach(() => {
     chrome.notifications = { create: jest.fn() };
   }
   // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   storage.getSettings.mockResolvedValue({
     PRIVACY_MODE: 'full_pipeline',
     PII_SANITIZE_LOGS: true
   });
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   storage.setSavedUrlsWithTimestamps.mockResolvedValue();
 
   // Problem #7: URLキャッシュを初期化
@@ -37,9 +43,15 @@ beforeEach(() => {
     PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS'
   };
   // domainUtilsのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   domainUtils.isDomainAllowed.mockResolvedValue(true);
   // PrivacyPipelineのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   privacy.PrivacyPipeline.mockImplementation(() => ({
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     process: jest.fn().mockImplementation(async (content, options) => {
       if (options && options.previewOnly) {
         return {
@@ -60,12 +72,20 @@ describe('Recording Integration Test', () => {
 
   beforeEach(() => {
     mockObsidian = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       appendToDailyNote: jest.fn().mockResolvedValue()
     };
 
     mockAiClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getLocalAvailability: jest.fn().mockResolvedValue('readily'),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       summarizeLocally: jest.fn().mockResolvedValue({ success: true, summary: 'Local summary' }),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       generateSummary: jest.fn().mockResolvedValue('Cloud summary')
     };
 
@@ -86,6 +106,8 @@ describe('Recording Integration Test', () => {
   });
 
   it('should handle force recording for blocked domains', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     domainUtils.isDomainAllowed.mockResolvedValue(false);
 
     const result = await logic.record({
@@ -113,6 +135,8 @@ describe('Recording Integration Test', () => {
   });
 
   it('should handle recording errors gracefully', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     mockObsidian.appendToDailyNote.mockRejectedValue(new Error('Connection failed'));
 
     const result = await logic.record({

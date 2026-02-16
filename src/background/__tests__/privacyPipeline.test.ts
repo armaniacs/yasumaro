@@ -8,11 +8,17 @@ describe('PrivacyPipeline', () => {
   };
 
   const mockAiClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getLocalAvailability: jest.fn().mockResolvedValue('readily'),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     summarizeLocally: jest.fn().mockResolvedValue({
       success: true,
       summary: 'Local summary'
     }),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     generateSummary: jest.fn().mockResolvedValue('Cloud summary')
   };
 

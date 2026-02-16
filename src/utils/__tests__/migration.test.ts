@@ -201,9 +201,13 @@ describe('migration', () => {
         }
       };
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: oldUblockRules
       });
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.storage.local.set.mockResolvedValue(undefined);
 
       const result = await migrateUblockSettings();
@@ -231,6 +235,8 @@ describe('migration', () => {
         metadata: { importedAt: 1000000, ruleCount: 2 }
       };
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: newUblockRules
       });
@@ -249,6 +255,8 @@ describe('migration', () => {
 
       const { StorageKeys } = await import('../storage');
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: undefined
       });

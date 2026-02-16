@@ -46,6 +46,8 @@ describe('RecordingLogic: データ整合性（P0）', () => {
     };
 
     // デフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
@@ -53,12 +55,20 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       PRIVACY_MODE: 'masked_cloud'
     });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     setSavedUrlsWithTimestamps.mockResolvedValue();
     StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
 
     // PrivacyPipelineモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     PrivacyPipeline.mockImplementation(() => ({
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       process: jest.fn().mockResolvedValue({
         summary: 'Test summary',
         maskedContent: 'Masked content'
@@ -73,6 +83,8 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   describe('現在の実装の確認', () => {
     it('Obsidian書き込み失敗時にURLが保存される不整合がある可能性がある', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -89,9 +101,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
     it('Obsidian書き込み成功時にのみURLが保存されていることを確認', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
@@ -108,9 +124,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   describe('エッジケース: 書き込み失敗時のURL整合性', () => {
     it('ネットワークエラー時にURLが保存されないこと', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
@@ -126,9 +146,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
     it('APIエラー時にURLが保存されないこと', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('API Error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
@@ -144,9 +168,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
     it('タイムアウト時にURLが保存されないこと', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Request timeout'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
@@ -164,12 +192,18 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   describe('エッジケース: 重複URLの処理', () => {
     it('既存のURLが保存されている場合、重複チェックが正しく動作すること', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
 
       const urlMap = new Map([['https://example.com', Date.now()]]);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       setSavedUrlsWithTimestamps.mockResolvedValue();
 
       const result = await recordingLogic.record({
@@ -185,12 +219,18 @@ describe('RecordingLogic: データ整合性（P0）', () => {
 
     it('新しいURLの場合にのみsetSavedUrlsWithTimestampsが呼ばれること', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
 
       const urlMap = new Map([['https://existing.com', Date.now()]]);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       setSavedUrlsWithTimestamps.mockResolvedValue();
 
       const result = await recordingLogic.record({
@@ -214,9 +254,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   describe('エッジケース: force記録の場合', () => {
     it('force=trueの場合でも書き込み失敗時にURLが保存されないこと', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
@@ -234,6 +278,8 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   describe('エッジケース: 並列呼び出し時の整合性', () => {
     it('並列呼び出し時にURLが正しく保存されること', async () => {
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -244,8 +290,12 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         for (let j = 0; j < i; j++) {
           urlMap.set(`https://example.com/${j}`, Date.now());
         }
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         getSavedUrlsWithTimestamps.mockResolvedValue(new Map(urlMap));
         setSavedUrlsWithTimestamps.mockClear();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
@@ -265,9 +315,17 @@ describe('RecordingLogic: データ整合性（P0）', () => {
     it('並列呼び出し時に一部のリクエストが失敗した場合の整合性を確認', async () => {
       const mockObsidianClient = {
         appendToDailyNote: jest.fn()
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockResolvedValueOnce()    // 0: 成功
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockRejectedValueOnce(new Error('Alternating error'))  // 1: 失敗
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockResolvedValueOnce()    // 2: 成功
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockRejectedValueOnce(new Error('Alternating error'))  // 3: 失敗
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -277,8 +335,12 @@ describe('RecordingLogic: データ整合性（P0）', () => {
         for (let j = 0; j < i; j++) {
           urlMap.set(`https://example.com/${j}`, Date.now());
         }
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         getSavedUrlsWithTimestamps.mockResolvedValue(new Map(urlMap));
         setSavedUrlsWithTimestamps.mockClear();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({

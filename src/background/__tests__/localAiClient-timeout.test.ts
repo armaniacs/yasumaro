@@ -33,6 +33,8 @@ describe('LocalAIClient timeout', () => {
     jest.useFakeTimers();
     // msgOffscreenが永遠に応答しないようにモック（Promise解決なし）
     const cli = new LocalAIClient();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     cli.msgOffscreen = jest.fn().mockImplementation(() => new Promise(() => { })); // 永遠に解決しない
 
     const resultPromise = cli.summarize('test');
@@ -56,6 +58,8 @@ describe('LocalAIClient timeout', () => {
 
   test('summarize：成功応答', async () => {
     const cli = new LocalAIClient();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     cli.msgOffscreen = jest.fn().mockResolvedValue({
       success: true,
       summary: 'テスト要約'
@@ -68,6 +72,8 @@ describe('LocalAIClient timeout', () => {
 
   test('summarize：オフスクリーンからのエラー応答', async () => {
     const cli = new LocalAIClient();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     cli.msgOffscreen = jest.fn().mockResolvedValue({
       success: false,
       error: 'Offscreen error'

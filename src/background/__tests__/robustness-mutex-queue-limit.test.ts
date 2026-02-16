@@ -39,6 +39,8 @@ describe('ObsidianClient: Mutexキューサイズ制限（P0）', () => {
     jest.useFakeTimers();
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
@@ -54,11 +56,15 @@ describe('ObsidianClient: Mutexキューサイズ制限（P0）', () => {
 
     // fetchのデフォルトモック
     global.fetch = jest.fn()
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       .mockResolvedValueOnce({
         ok: false,
         status: 404,
         text: () => Promise.resolve('Not found')
       })
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       .mockResolvedValueOnce({
         ok: true
       });
@@ -76,11 +82,15 @@ describe('ObsidianClient: Mutexキューサイズ制限（P0）', () => {
       // シリアルにテスト（キューリミットを回避）
       for (let i = 0; i < 50; i++) {
         global.fetch = jest.fn()
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockResolvedValueOnce({
             ok: false,
             status: 404,
             text: () => Promise.resolve('Not found')
           })
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
           .mockResolvedValueOnce({
             ok: true
           });

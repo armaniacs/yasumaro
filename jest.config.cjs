@@ -57,8 +57,8 @@ module.exports = {
   // カスタムリゾルバー - .js -> .ts の解決
   resolver: path.resolve(__dirname, 'jest.resolver.cjs'),
 
-  // Setup files
-  setupFilesAfterEnv: ['./jest.setup.js'],
+  // Setup files (TypeScript)
+  setupFilesAfterEnv: ['./jest.setup.ts'],
 
   // File extensions - Jestが解決すべき拡張子のリスト（順序が重要）
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],

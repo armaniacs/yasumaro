@@ -47,6 +47,8 @@ describe('ローディングスピナー制御', () => {
     jest.clearAllMocks();
 
     // 【モックキャプチャ】: console.warnの出力をキャプチャするモックを設定
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 

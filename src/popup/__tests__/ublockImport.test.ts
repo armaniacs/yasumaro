@@ -137,6 +137,8 @@ describe('ublockImport.js - UI Component Tests', () => {
   describe('UI-005: Import from URL', () => {
     test('fetchFromUrl should successfully fetch from valid URL', async () => {
       const mockText = '||example.com^\n@@||trusted.com^';
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: true,
         data: mockText,
@@ -157,6 +159,8 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('fetchFromUrl should throw error for HTTP errors', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: false,
         error: 'HTTP 404: Not Found'
@@ -181,6 +185,8 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/list1.txt', blockDomains: ['example.com'], exceptionDomains: [] },
@@ -228,6 +234,8 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           {
@@ -240,6 +248,8 @@ describe('ublockImport.js - UI Component Tests', () => {
         ]
       }));
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: true,
         data: '||example.com^\n||newsite.com^\n@@||trusted.com^',
@@ -249,6 +259,8 @@ describe('ublockImport.js - UI Component Tests', () => {
 
     test('reloadSource should fetch and update source', async () => {
       const { reloadSource } = await import('../ublockImport.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const fetchCallback = jest.fn().mockResolvedValue('||example.com^\n||newsite.com^\n@@||trusted.com^');
 
       const result = await reloadSource(0, fetchCallback);
@@ -259,6 +271,8 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('reloadSource should throw error for manual input source', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }
@@ -293,6 +307,8 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [],
         ublock_rules: {
@@ -302,6 +318,8 @@ describe('ublockImport.js - UI Component Tests', () => {
         }
       }));
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockShowStatus.mockImplementation(() => { });
     });
 
@@ -788,6 +806,8 @@ describe('ublockImport.js - UI Component Tests', () => {
       };
 
       let mockReader = null;
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.FileReader.mockImplementation(() => {
         mockReader = {
           readAsText: jest.fn(),

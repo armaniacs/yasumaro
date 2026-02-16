@@ -159,6 +159,8 @@ describe('ublockImport - SourceManager Module', () => {
         ublock_format_enabled: false
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const fetchFromUrlCallback = jest.fn().mockResolvedValue(`||example.com^\n||newdomain.com^`);
 
       const result = await reloadSource(0, fetchFromUrlCallback);
@@ -203,6 +205,8 @@ describe('ublockImport - SourceManager Module', () => {
         ublock_format_enabled: false
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const fetchFromUrlCallback = jest.fn().mockResolvedValue('invalid line without caret');
 
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('エラーが見つかりました');
@@ -218,6 +222,8 @@ describe('ublockImport - SourceManager Module', () => {
       });
 
       // 空または無効なフィルターテキストを返す
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const fetchFromUrlCallback = jest.fn().mockResolvedValue('');
 
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('有効なルールが見つかりませんでした');

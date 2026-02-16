@@ -46,6 +46,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
     };
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
@@ -53,7 +55,11 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       PRIVACY_MODE: 'masked_cloud'
     });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     setSavedUrlsWithTimestamps.mockResolvedValue();
     StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
 
@@ -63,7 +69,11 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
     }
 
     // PrivacyPipelineモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     PrivacyPipeline.mockImplementation(() => ({
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       process: jest.fn().mockResolvedValue({
         summary: 'Test summary',
         maskedContent: 'Masked content'
@@ -81,6 +91,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       // 無制限にURLを追加できる
 
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -90,8 +102,12 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       // シリアルにテスト（Mutexキューリミットを回避）
       for (let i = 0; i < 100; i++) {
         urlMap = new Map(urlMap); // 新しいMapを作成
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
         setSavedUrlsWithTimestamps.mockClear();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
@@ -112,6 +128,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       // メモリ消費が増大する可能性がある
 
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -121,8 +139,12 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       // シリアルにテスト（Mutexキューリミットを回避）
       for (let i = 0; i < 100; i++) {
         urlMap = new Map(urlMap); // 新しいMapを作成
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
         setSavedUrlsWithTimestamps.mockClear();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         setSavedUrlsWithTimestamps.mockResolvedValue();
 
         const result = await recordingLogic.record({
@@ -145,6 +167,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       // 10001個目のURLはエラーをスローすべき
 
       const mockObsidianClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         appendToDailyNote: jest.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, {});
@@ -154,6 +178,8 @@ describe('RecordingLogic: URLセットのサイズ制限（P1）', () => {
       for (let i = 0; i < MAX_URL_SET_SIZE; i++) {
         urlMap.set(`https://example.com/${i}`, Date.now());
       }
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
       // 上限を超えるURLを記録しようとする

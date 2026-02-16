@@ -117,6 +117,8 @@ describe('ublockExport', () => {
 
     test('クリップボードコピー', async () => {
       // navigator.clipboardのモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const mockWriteText = jest.fn().mockResolvedValue();
       Object.defineProperty(navigator, 'clipboard', {
         value: {
@@ -129,6 +131,8 @@ describe('ublockExport', () => {
       
       expect(result).toBe(true);
       expect(mockWriteText).toHaveBeenCalled();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const calledWith = mockWriteText.mock.calls[0][0];
       expect(calledWith).toContain('@@||trusted.com^');
       expect(calledWith).toContain('||example.com^');
@@ -137,6 +141,8 @@ describe('ublockExport', () => {
 
     test('クリップボードコピー失敗', async () => {
       // navigator.clipboardのモック（エラーをスローする）
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       const mockWriteText = jest.fn().mockRejectedValue(new Error('Clipboard error'));
       Object.defineProperty(navigator, 'clipboard', {
         value: {

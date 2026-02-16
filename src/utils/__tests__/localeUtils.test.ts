@@ -58,6 +58,8 @@ describe('localeUtils', () => {
     });
 
     it('例外がスローされた場合はフォールバックを返す', () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockGetUILanguage.mockImplementation(() => {
         throw new Error('API error');
       });

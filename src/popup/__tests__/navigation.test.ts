@@ -113,6 +113,8 @@ describe('navigation', () => {
     it('should initialize event listeners', () => {
       // 【修正】: setScreenStateは同期関数なので mockResolvedValue ではなく mockImplementation を使用
       // 🟢 信頼性レベル: テスト失敗によるバグ特定
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       setScreenState.mockImplementation(() => {});
 
       init();

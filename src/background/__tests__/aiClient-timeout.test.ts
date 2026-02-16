@@ -15,6 +15,8 @@ describe('AIClient timeout', () => {
   });
 
   test('generateGeminiSummary：fetchWithTimeoutに適切なタイムアウトを渡す', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -33,12 +35,16 @@ describe('AIClient timeout', () => {
     expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
 
     // 第3引数が30000であることを確認
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     const callArgs = fetchWithTimeout.mock.calls[0];
     expect(callArgs[2]).toBe(30000);
     expect(callArgs[1].method).toBe('POST');
   });
 
   test('generateGeminiSummary：タイムアウトエラーを適切に処理', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockRejectedValue(new Error('Request timed out after 30000ms'));
 
     const aiClient = new AIClient();
@@ -53,6 +59,8 @@ describe('AIClient timeout', () => {
   });
 
   test('generateOpenAISummary：fetchWithTimeoutに適切なタイムアウトを渡す', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -74,6 +82,8 @@ describe('AIClient timeout', () => {
   });
 
   test('generateOpenAISummary：タイムアウトエラーを適切に処理', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockRejectedValue(new Error('Request timed out after 30000ms'));
 
     const aiClient = new AIClient();

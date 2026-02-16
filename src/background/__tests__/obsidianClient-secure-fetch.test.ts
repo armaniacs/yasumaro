@@ -17,6 +17,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
     jest.clearAllMocks();
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
@@ -41,6 +43,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
     });
 
     it('HTTPS接続が許可されること', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
@@ -48,6 +52,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -69,6 +75,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
 
     it.skip('URLがhttpプロトコルの場合、HTTPSに変換されること（実装後）', async () => {
       // TODO: secureFetch実装後にこのテストを有効化
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http', // HTTP設定だが、secureFetchでHTTPSに変換される
@@ -76,6 +84,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -97,6 +107,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
     });
 
     it('urlパラメータがnullの場合のエラーハンドリング', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockRejectedValue(new Error('Invalid URL'));
 
       await expect(obsidianClient._fetchExistingContent(null, {}))
@@ -114,6 +126,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
     });
 
     it('HTTPS接続で書き込みが成功すること', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockResolvedValue({
         ok: true
       });
@@ -143,6 +157,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
     });
 
     it('HTTPS接続テストが成功すること', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockResolvedValue({
         ok: true
       });
@@ -162,6 +178,8 @@ describe('ObsidianClient: HTTPS通信の強制（タスク1）', () => {
 
   describe('プロトコル設定の検証', () => {
     it('設定にhttpが含まれている場合、警告が表示されること', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http', // 非推奨: HTTPは安全でない

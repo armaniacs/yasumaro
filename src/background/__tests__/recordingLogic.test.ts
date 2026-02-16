@@ -14,8 +14,14 @@ describe('RecordingLogic', () => {
   };
 
   const mockAiClient = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     getLocalAvailability: jest.fn().mockResolvedValue('readily'),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     summarizeLocally: jest.fn().mockResolvedValue({ success: true, summary: 'test' }),
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     generateSummary: jest.fn().mockResolvedValue('Cloud summary')
   };
 
@@ -36,17 +42,29 @@ describe('RecordingLogic', () => {
     };
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.setSavedUrlsWithTimestamps.mockResolvedValue();
     storage.StorageKeys = {
       PRIVACY_MODE: 'PRIVACY_MODE',
       PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS'
     };
     // domainUtilsのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     domainUtils.isDomainAllowed.mockResolvedValue(true);
     // PrivacyPipelineのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     privacy.PrivacyPipeline.mockImplementation(() => ({
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
     }));
   });
@@ -54,6 +72,8 @@ describe('RecordingLogic', () => {
   describe('record', () => {
     it('should skip recording when domain is not allowed', async () => {
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
       const result = await logic.record({
@@ -68,6 +88,8 @@ describe('RecordingLogic', () => {
 
     it('should skip recording when URL is already saved', async () => {
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://test.com', Date.now()]]));
 
       const result = await logic.record({
@@ -87,8 +109,12 @@ describe('RecordingLogic', () => {
       const expectedLimit = 64 * 1024;
 
       const mockPipeline = {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
         process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
 
       await logic.record({

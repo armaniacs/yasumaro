@@ -11,6 +11,8 @@ jest.mock('../../utils/storage.js', () => {
   const mockSaveSettings = jest.fn(() => Promise.resolve());
 
   // Set default mock implementation
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
   mockGetSettings.mockResolvedValue({
     domain_filter_mode: 'disabled',
     domain_whitelist: [],

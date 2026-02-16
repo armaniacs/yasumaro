@@ -28,6 +28,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     jest.clearAllMocks();
 
     // storageのデフォルトモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     storage.getSettings.mockResolvedValue({});
     storage.StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
@@ -39,6 +41,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
     it('APIキーがない場合、ユーザーに分かりやすいエラーメッセージがスローされること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow('Error: API key is missing');
@@ -48,6 +52,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
       const error = await obsidianClient.appendToDailyNote('Test content').catch(e => e);
@@ -60,6 +66,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('URLがエラーメッセージに含まれないこと（修正後）', () => {
     it('接続失敗時、完全なURLがエラーメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -68,6 +76,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch = jest.fn().mockRejectedValue(fetchError);
 
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow();
@@ -86,6 +96,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('HTTPS接続失敗時、自己署名証明書に関するメッセージが含まれること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
@@ -94,6 +106,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch = jest.fn().mockRejectedValue(fetchError);
 
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow();
@@ -122,6 +136,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('読み取りエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -130,6 +146,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       // GETリクエストのエラーレスポンス
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockImplementation((url, options) => {
         if (options.method === 'GET') {
           return Promise.resolve({
@@ -158,6 +176,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('書き込みエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -166,6 +186,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       // 404で空の内容を返し、その後PUTでエラー
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch.mockImplementation((url, options) => {
         if (options.method === 'GET') {
           return Promise.resolve({
@@ -203,6 +225,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('testConnectionメソッドのエラーハンドリング', () => {
     it('接続成功時、詳細なメッセージが返されること（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -210,6 +234,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         status: 200
@@ -224,6 +250,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('接続失敗時、HTTPステータスコードがメッセージに含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -231,6 +259,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch = jest.fn().mockResolvedValue({
         ok: false,
         status: 401
@@ -247,6 +277,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -255,6 +287,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const networkError = new Error('Failed to fetch: Network request failed');
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       global.fetch = jest.fn().mockRejectedValue(networkError);
 
       const result = await obsidianClient.testConnection();

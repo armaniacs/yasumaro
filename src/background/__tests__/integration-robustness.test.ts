@@ -66,6 +66,8 @@ describe('Integration: Robustness improvements', () => {
 
   test('fetchWithTimeoutが正常に動作', async () => {
     const mockResponse = { ok: true, json: async () => ({ data: 'test' }) };
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockResolvedValue(mockResponse);
 
     const response = await fetchWithTimeout('https://example.com', {}, 1000);
@@ -84,6 +86,8 @@ describe('Integration: Robustness improvements', () => {
         }]
       })
     };
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     fetchWithTimeout.mockResolvedValue(mockResponse);
 
     await chrome.storage.local.set({

@@ -46,8 +46,12 @@ describe('domainUtils', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedIsUrlBlocked.mockReset();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     mockedIsUrlBlocked.mockResolvedValue(false);
     mockedGetSettings.mockReset();
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
     mockedGetSettings.mockResolvedValue({});
   });
 
@@ -139,6 +143,8 @@ describe('domainUtils', () => {
 
   describe('isDomainAllowed', () => {
     test('ドメインフィルターが無効な場合は全てのドメインを許可する', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'disabled' } as Settings);
       const url = 'https://any-domain.com';
       const result = await isDomainAllowed(url);
@@ -146,6 +152,8 @@ describe('domainUtils', () => {
     });
 
     test('ホワイトリストモードで登録済みドメインを許可する', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'whitelist',
         domain_whitelist: ['allowed.com']
@@ -156,6 +164,8 @@ describe('domainUtils', () => {
     });
 
     test('ブラックリストモードで登録済みドメインを拒否する', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         domain_blacklist: ['blocked.com']
@@ -166,6 +176,8 @@ describe('domainUtils', () => {
     });
 
     test('ドメイン抽出に失敗した場合はfalseを返す', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'whitelist' } as Settings);
       const invalidUrl = 'invalid-url';
       const result = await isDomainAllowed(invalidUrl);
@@ -173,8 +185,12 @@ describe('domainUtils', () => {
     });
 
     test('シンプル形式とuBlock形式の両方が有効な場合の併用動作を確認', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -187,6 +203,8 @@ describe('domainUtils', () => {
         }
       } as Settings);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockImplementation(async (url) => {
         if (url.includes('blocked-ublock.com')) return true;
         return false;
@@ -198,8 +216,12 @@ describe('domainUtils', () => {
     });
 
     test('片方のみ有効な場合の動作を確認', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -219,8 +241,12 @@ describe('domainUtils', () => {
 
   describe('LOG-006: uBlock block rule - blocked', () => {
     test('Verify uBlock block rule blocks URL', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: false,
@@ -239,8 +265,12 @@ describe('domainUtils', () => {
 
   describe('LOG-007: uBlock exception rule - allowed', () => {
     test('Verify uBlock exception rule allows URL', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(false);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: false,
@@ -259,8 +289,12 @@ describe('domainUtils', () => {
 
   describe('LOG-008: Both enabled - Simple blocks', () => {
     test('Verify Simple blocks when both enabled', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(false);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -280,8 +314,12 @@ describe('domainUtils', () => {
 
   describe('LOG-009: Both enabled - uBlock blocks', () => {
     test('Verify uBlock blocks when both enabled', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -301,8 +339,12 @@ describe('domainUtils', () => {
 
   describe('LOG-010: Both enabled - both block', () => {
     test('Verify both block when both enabled', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -322,8 +364,12 @@ describe('domainUtils', () => {
 
   describe('LOG-011: Both enabled - both allow', () => {
     test('Verify both allow when both enabled', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(false);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -343,8 +389,12 @@ describe('domainUtils', () => {
 
   describe('LOG-012: Simple only - uBlock ignored', () => {
     test('Verify uBlock ignored when Simple only', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(true);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -364,8 +414,12 @@ describe('domainUtils', () => {
 
   describe('LOG-013: uBlock only - Simple ignored', () => {
     test('Verify Simple ignored when uBlock only', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedIsUrlBlocked.mockResolvedValue(false);
 
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: false,
@@ -385,6 +439,8 @@ describe('domainUtils', () => {
 
   describe('LOG-015: Empty rules - all allowed', () => {
     test('Verify empty rules allow all', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -404,6 +460,8 @@ describe('domainUtils', () => {
 
   describe('LOG-016: Wildcard in Simple list', () => {
     test('Verify wildcard patterns work', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: true,
@@ -423,6 +481,8 @@ describe('domainUtils', () => {
 
   describe('LOG-018: uBlock exception overrides block', () => {
     test('Verify exception overrides block', async () => {
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         simple_format_enabled: false,
