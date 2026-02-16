@@ -3,7 +3,7 @@
  * saveSettingsの楽観的ロック機能に関するテスト
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from '@jest/globals.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from '@jest/globals';
 import { saveSettings, getSettings, StorageKeys, clearEncryptionKeyCache } from '../storage.js';
 import { withOptimisticLock, ConflictError, resetConflictStats } from '../optimisticLock.js';
 

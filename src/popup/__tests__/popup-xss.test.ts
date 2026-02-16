@@ -9,7 +9,7 @@
  * - 説明: Line 129 uses innerHTML with user-controlled data (portInput.value)
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 
 // Mock chrome API
 global.chrome = {

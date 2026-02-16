@@ -4,7 +4,7 @@
  */
 
 import { exportToText, downloadAsFile, copyToClipboard } from '../ublockExport.js';
-import { jest } from '@jest/globals.js';
+import { jest } from '@jest/globals';
 
 // DOMのモック
 document.body.innerHTML = `

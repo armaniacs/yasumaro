@@ -3,7 +3,7 @@
  * Main Screen Functionality Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 
 // Mock all dependencies (must be defined before imports)
 jest.mock('src/popup/sanitizePreview.js', () => ({

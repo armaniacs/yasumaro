@@ -4,7 +4,7 @@
  * 【テスト対象】: src/popup/ublockImport.js - renderSourceList function
  */
 
-import { describe, test, expect } from '@jest/globals.js';
+import { describe, test, expect } from '@jest/globals';
 
 // Unit tests that directly verify the XSS protection behavior
 // without relying on complex DOM mocking

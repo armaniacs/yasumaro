@@ -6,7 +6,7 @@
  * TDD Redフェーズ: まだ実装されていない関数を呼び出す失敗するテスト
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import {
   parseUblockFilterLine,
   parseUblockFilterList,

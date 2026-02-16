@@ -3,7 +3,7 @@
  * Domain Filter UI Component Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals.js';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock dependencies (must be defined before imports)
 jest.mock('../../utils/storage.js', () => {

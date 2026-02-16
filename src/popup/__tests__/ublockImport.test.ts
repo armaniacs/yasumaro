@@ -4,7 +4,7 @@
  * Test target: src/popup/ublockImport.js and related modules
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock dependencies (must be defined before imports)
 jest.mock('../../utils/storage.js', () => {

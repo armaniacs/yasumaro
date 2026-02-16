@@ -3,7 +3,7 @@
  * UF-401: マスク情報の可視化機能
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import * as sanitizePreview from '../sanitizePreview.js';
 
 describe('Masked Information Visualization - プレビュー画面のマスク表示', () => {

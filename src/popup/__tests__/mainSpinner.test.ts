@@ -5,8 +5,8 @@
  * showSpinner()、hideSpinner()関数によるDOM操作を単体でテストします。
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
-import { jest } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+import { jest } from '@jest/globals';
 
 // Mock i18n before importing spinner.js
 jest.mock('../i18n.js', () => ({

@@ -3,7 +3,7 @@
  * Navigation Functionality Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals.js';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 // 【修正】: モック化されるモジュールのインポートはjest.mockの前に実行
 import { showMainScreen, showSettingsScreen, init } from 'src/popup/navigation.js';
 

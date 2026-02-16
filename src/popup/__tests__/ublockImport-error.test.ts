@@ -4,7 +4,7 @@
  * 【テスト対象】: src/popup/ublockImport.js - fetchFromUrl function
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals.js';
+import { describe, test, expect, beforeEach } from '@jest/globals';
 import { fetchFromUrl, isValidUrl } from '../ublockImport.js';
 
 // Mock the logger module

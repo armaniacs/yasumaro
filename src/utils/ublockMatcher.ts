@@ -10,7 +10,7 @@ interface Rule {
   [key: string]: any;
 }
 
-interface UblockRules {
+export interface UblockRules {
   blockDomains?: string[];
   exceptionDomains?: string[];
   blockRules?: Rule[];

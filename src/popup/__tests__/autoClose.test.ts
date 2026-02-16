@@ -6,8 +6,8 @@
  * Refactorフェーズ: screenState.js分割による循環参照解消を反映
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals.js';
-import { jest } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+import { jest } from '@jest/globals';
 
 // Mock i18n before importing autoClose.js
 jest.mock('../i18n.js', () => ({

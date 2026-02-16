@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/domainUtils.ts
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals.js';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import {
   extractDomain,
   matchesPattern,

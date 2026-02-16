@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/migration.ts
  */
 
-import { test, expect, jest, beforeEach } from '@jest/globals.js';
+import { test, expect, jest, beforeEach } from '@jest/globals';
 import { migrateToLightweightFormat, migrateUblockSettings } from '../migration.js';
 
 describe('migration', () => {
