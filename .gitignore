@@ -5,9 +5,26 @@ tmp/
 
 node_modules/
 coverage/
+test-results/
+playwright-report/
+playwright/.cache/
 
 docs/blog-*
 
 
 .worktrees/
 .DS_Store
+
+.env
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+
+*.local
+*.local.md
+
+# Local override files
+*.local
+.*

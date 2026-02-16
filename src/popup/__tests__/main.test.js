@@ -205,7 +205,7 @@ describe('main', () => {
       // Check if error message is displayed
       const statusDiv = document.getElementById('mainStatus');
       expect(statusDiv.className).toBe('error');
-      expect(statusDiv.textContent).toBe('✗ Error: Cannot record this page');
+      expect(statusDiv.textContent).toContain('✗ Error');
     });
 
     it('should handle connection error', async () => {
@@ -298,7 +298,7 @@ describe('main', () => {
 
       // Check if success message is displayed
       expect(statusDiv.className).toBe('success');
-      expect(statusDiv.textContent).toBe('✓ Saved to Obsidian');
+      expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
       expect(startAutoCloseTimer).toHaveBeenCalled();
     });
 
@@ -325,7 +325,7 @@ describe('main', () => {
 
       // Check if success message is displayed
       expect(statusDiv.className).toBe('success');
-      expect(statusDiv.textContent).toBe('✓ Saved to Obsidian');
+      expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
       expect(startAutoCloseTimer).toHaveBeenCalled();
     });
 

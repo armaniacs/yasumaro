@@ -18,6 +18,20 @@ All notable changes to this project will be documented in this file.
   - `.js`拡張子のインポートを`.ts`ファイルに解決
   - テスト結果: 45失敗 → 6失敗（モジュール解決問題は解決）
 
+### Added
+- **Playwright E2E Testing**: Added Playwright for end-to-end testing of the extension
+  - [`playwright.config.ts`](playwright.config.ts): Playwright configuration for E2E tests
+  - [`e2e/extension.spec.ts`](e2e/extension.spec.ts): Initial E2E test suite for popup UI and content script
+  - [`e2e/README.md`](e2e/README.md): Bilingual guide for Playwright testing (Japanese/English)
+  - New npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:debug`, `test:e2e:headed`
+  - Chromium browser installed for E2E testing
+  - Updated [`CONTRIBUTING.md`](CONTRIBUTING.md): Added E2E testing documentation and project structure
+  - Updated [`.gitignore`](.gitignore): Added Playwright test results and cache directories
+  - **Test Results**: 8 passed, 7 skipped (1.7s)
+    - Passed: Popup title, main screen, settings screen DOM, navigation tabs DOM, settings form elements, domain filter section, loading spinner, confirmation modal
+    - Skipped: Settings navigation, tab switching, form input, content script injection, content extraction, service worker messages, Chrome storage (require actual Chrome extension environment)
+  - **Technical Notes**: Fixed ES module __dirname issue using `fileURLToPath` and `dirname`
+
 ## [3.9.0] - 2026-02-16
 
 ### Major
@@ -482,7 +496,6 @@ All notable changes to this project will be documented in this file.
 - **deleteSource テスト失敗修正**: `ublockImport/index.js` に `deleteSource` エクスポートを追加
 - **secureFetch テストスキップ**: 未実装の `secureFetch` 機能テストを `.skip` でスキップ
 
-## [Unreleased]
 
 ### Added
 - **処理時間表示**: 保存成功メッセージに処理時間を表示する機能を追加

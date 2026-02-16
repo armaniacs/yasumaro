@@ -147,13 +147,15 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
     it('エラー応答の場合は失敗を返すこと', async () => {
       mockFetch.mockResolvedValue({
-        ok: false
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
       });
 
       const result = await obsidianClient.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('Connection Failed');
+      expect(result.message).toContain('Connection failed');
     });
   });
 

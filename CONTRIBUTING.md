@@ -41,13 +41,30 @@ npm test
 #### テストの実行
 
 ```bash
-npm test              # 全テスト実行
-npm run test:watch    # ウォッチモードでの実行
-npm run test:coverage # カバレッジレポート付き実行
+npm test              # 全テスト実行（Jest）
+npm run test:watch    # ウォッチモードでの実行（Jest）
+npm run test:coverage # カバレッジレポート付き実行（Jest）
+npm run test:e2e      # E2Eテスト実行（Playwright）
+npm run test:e2e:ui   # E2EテストUIモード（Playwright）
+npm run test:e2e:debug # E2Eテストデバッグモード（Playwright）
+npm run test:e2e:headed # E2Eテストヘッドフルモード（Playwright）
 ```
+
+#### テストの種類
+
+このプロジェクトでは2種類のテストを使用しています：
+
+1. **Jest テスト**: ユニットテスト、統合テスト
+   - 位置: `src/**/__tests__/`
+   - 用途: 個別の関数、クラス、モジュールのテスト
+
+2. **Playwright テスト**: E2E（エンドツーエンド）テスト
+   - 位置: `e2e/`
+   - 用途: 拡張機能のポップアップUI、コンテンツスクリプトの統合テスト
 
 #### テストの追加
 
+**Jest テスト**:
 新しいテストは、対応するソースファイルと同じディレクトリの`__tests__`サブディレクトリに配置してください。
 
 ```
@@ -57,6 +74,14 @@ src/
       focusTrap.js
       __tests__/
         focusTrap.test.js
+```
+
+**Playwright テスト**:
+E2Eテストは `e2e/` ディレクトリに配置してください。
+
+```
+e2e/
+  extension.spec.ts
 ```
 
 #### テストの命名規則
@@ -148,6 +173,7 @@ obsidian-smart-history/
 │   ├── content/       # Content Scripts
 │   ├── popup/         # Popup UI
 │   └── utils/         # 共通ユーティリティ
+├── e2e/               # E2Eテスト（Playwright）
 ├── _locales/          # 翻訳キー
 │   ├── en/
 │   │   └── messages.json
@@ -212,7 +238,7 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 レビューの時は以下を確認してください：
 
-- [ ] テストが通っている (`npm test`)
+- [ ] テストが通っている (`npm test` および `npm run test:e2e`)
 - [ ] 新しいコードにテストが含まれている
 - [ ] i18nが適切に実装されている
 - [ ] アクセシビリティ要件を満たしている
@@ -268,13 +294,30 @@ npm test
 #### Running Tests
 
 ```bash
-npm test              # Run all tests
-npm run test:watch    # Run in watch mode
-npm run test:coverage # Run with coverage report
+npm test              # Run all tests (Jest)
+npm run test:watch    # Run in watch mode (Jest)
+npm run test:coverage # Run with coverage report (Jest)
+npm run test:e2e      # Run E2E tests (Playwright)
+npm run test:e2e:ui   # Run E2E tests in UI mode (Playwright)
+npm run test:e2e:debug # Run E2E tests in debug mode (Playwright)
+npm run test:e2e:headed # Run E2E tests in headed mode (Playwright)
 ```
+
+#### Test Types
+
+This project uses two types of tests:
+
+1. **Jest Tests**: Unit tests, integration tests
+   - Location: `src/**/__tests__/`
+   - Purpose: Test individual functions, classes, and modules
+
+2. **Playwright Tests**: E2E (End-to-End) tests
+   - Location: `e2e/`
+   - Purpose: Test extension popup UI, content script integration
 
 #### Adding Tests
 
+**Jest Tests**:
 Place new tests in a `__tests__` subdirectory alongside the corresponding source file.
 
 ```
@@ -284,6 +327,14 @@ src/
       focusTrap.js
       __tests__/
         focusTrap.test.js
+```
+
+**Playwright Tests**:
+Place E2E tests in the `e2e/` directory.
+
+```
+e2e/
+  extension.spec.ts
 ```
 
 #### Test Naming Conventions
@@ -375,6 +426,7 @@ obsidian-smart-history/
 │   ├── content/       # Content Scripts
 │   ├── popup/         # Popup UI
 │   └── utils/         # Shared Utilities
+├── e2e/               # E2E tests (Playwright)
 ├── _locales/          # Translation keys
 │   ├── en/
 │   │   └── messages.json
@@ -439,7 +491,7 @@ feat(domainFilter): uBlock format filter import feature
 
 When reviewing code, check for:
 
-- [ ] Tests pass (`npm test`)
+- [ ] Tests pass (`npm test` and `npm run test:e2e`)
 - [ ] New code includes tests
 - [ ] i18n is properly implemented
 - [ ] Accessibility requirements are met

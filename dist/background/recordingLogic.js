@@ -173,11 +173,19 @@ export class RecordingLogic {
             // 3. Privacy Pipeline Processing
             const pipeline = new PrivacyPipeline(settings, this.aiClient, { sanitizeRegex }); // casting aiClient as any until fully compatible with interface expectation
             let pipelineResult;
+            let aiDuration;
             try {
+                // AI処理時間を測定（alreadyProcessedがfalseの場合のみAI処理が実行される）
+                const aiStartTime = performance.now();
                 pipelineResult = await pipeline.process(content, {
                     previewOnly,
                     alreadyProcessed
                 });
+                const aiEndTime = performance.now();
+                // AI処理が実際に行われた場合のみ時間を記録
+                if (!alreadyProcessed) {
+                    aiDuration = aiEndTime - aiStartTime;
+                }
             }
             catch (pipelineError) {
                 addLog(LogType.ERROR, 'Privacy pipeline failed', {
@@ -201,7 +209,8 @@ export class RecordingLogic {
                     ...pipelineResult,
                     success: pipelineResult.success !== undefined ? pipelineResult.success : true,
                     title,
-                    url
+                    url,
+                    aiDuration
                 };
             }
             const summary = pipelineResult.summary || 'Summary not available.';
@@ -220,7 +229,7 @@ export class RecordingLogic {
             RecordingLogic.invalidateUrlCache();
             // 7. Notification
             NotificationHelper.notifySuccess('Saved to Obsidian', `Saved: ${title}`);
-            return { success: true };
+            return { success: true, aiDuration };
         }
         catch (e) {
             addLog(LogType.ERROR, 'Failed to process recording', { error: e.message, url });

@@ -92,7 +92,7 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    throw new Error('有効なルールが見つかりませんでした。更新を中止します。');
+    throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした。更新中部止します。');
   }
 
   // エラーがあっても、有効なルールが存在すれば更新を許可
@@ -142,8 +142,8 @@ export async function saveUblockSettings(text: string, url: string | null = null
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    showStatus('domainStatus', '有効なルールが見つかりませんでした', 'error');
-    throw new Error('有効なルールが見つかりませんでした');
+    showStatus('domainStatus', 'エラーが見つかりました: 有効なルールが見つかりませんでした', 'error');
+    throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした');
   }
 
   // エラーがあっても、有効なルールが存在すれば保存を許可

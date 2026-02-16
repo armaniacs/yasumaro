@@ -115,5 +115,22 @@ interface ErrorHandlers {
  * @param {Function} handlers.onGeneralError - 一般エラーハンドラー
  */
 export declare function handleError(error: any, handlers: ErrorHandlers): void;
+/**
+ * 処理時間をフォーマット
+ * @param ms - ミリ秒単位の時間
+ * @returns フォーマットされた文字列 (例: "850ms" or "1.2秒")
+ * @example
+ * formatDuration(500)   // => "500ms"
+ * formatDuration(1234)  // => "1.2秒"
+ * formatDuration(-100)  // => "0ms"
+ */
+export declare function formatDuration(ms: number): string;
+/**
+ * 処理時間付き成功メッセージを生成
+ * @param totalDuration - 全体処理時間 (ms)
+ * @param aiDuration - AI処理時間 (ms, optional)
+ * @returns フォーマットされたメッセージ
+ */
+export declare function formatSuccessMessage(totalDuration: number, aiDuration?: number): string;
 export {};
 //# sourceMappingURL=errorUtils.d.ts.map

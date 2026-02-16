@@ -87,6 +87,13 @@ E-mail1件、クレジットカード番号2件をマスクしました
 - メールアドレス
 - 日本の電話番号
 
+#### プロンプトインジェクション対策
+AI要約時のセキュリティ保護機能：
+- **検出パターン**: `ignore above`、`SYSTEM`、`PASSWORD`、`execute()`、`eval()`、`previous conversation` 等の危険パターンを検出
+- **処理**: 危険な部分は `[FILTERED]` に置き換え残り安全なコンテンツをAIに送信
+- **安全評価**: サニタイズ後のコンテンツを再評価し、リスクが残っている場合のみブロック
+- **ログ記録**: 検出されたパターンとブロック原因をログに記録
+
 #### ログ確認
 マスキングの実行ログを確認するには、拡張機能の DevTools コンソールで以下を実行します：
 ```javascript
@@ -181,6 +188,13 @@ Automatically detects and masks the following patterns:
 - Bank account numbers
 - Email addresses
 - Japanese phone numbers
+
+#### Prompt Injection Protection
+Security protection feature during AI summarization:
+- **Detection Patterns**: Detects dangerous patterns like `ignore above`, `SYSTEM`, `PASSWORD`, `execute()`, `eval()`, `previous conversation`
+- **Processing**: Dangerous parts are replaced with `[FILTERED]` and remaining safe content is sent to AI
+- **Safety Evaluation**: Re-evaluates sanitized content; only blocks if risks remain
+- **Logging**: Records detected patterns and block reasons in logs
 
 #### Log Viewing
 To view masking execution logs, run the following in the extension's DevTools console:

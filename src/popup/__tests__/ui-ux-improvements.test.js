@@ -181,7 +181,7 @@ describe('UI/UX Improvements Test Suite', () => {
     });
 
     it('errorUtils.jsでinline 스타イルを使用していないこと', () => {
-      const errorUtilsPath = join(__dirname, '../errorUtils.js');
+      const errorUtilsPath = join(__dirname, '../errorUtils.ts');
       const errorUtils = readFileSync(errorUtilsPath, 'utf-8');
 
       // インラインスタイルの使用を確認（コメントは除外）

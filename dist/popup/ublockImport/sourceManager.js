@@ -59,7 +59,7 @@ export async function reloadSource(index, fetchFromUrlCallback) {
     const result = parseUblockFilterListWithErrors(filterText);
     const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
     if (ruleCount === 0) {
-        throw new Error('有効なルールが見つかりませんでした。更新を中止します。');
+        throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした。更新中部止します。');
     }
     // エラーがあっても、有効なルールが存在すれば更新を許可
     if (result.errors.length > 0) {
@@ -100,8 +100,8 @@ export async function saveUblockSettings(text, url = null) {
     const result = parseUblockFilterListWithErrors(text);
     const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
     if (ruleCount === 0) {
-        showStatus('domainStatus', '有効なルールが見つかりませんでした', 'error');
-        throw new Error('有効なルールが見つかりませんでした');
+        showStatus('domainStatus', 'エラーが見つかりました: 有効なルールが見つかりませんでした', 'error');
+        throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした');
     }
     // エラーがあっても、有効なルールが存在すれば保存を許可
     // (localhost, broadcasthost等の特殊ドメインは意図的にスキップされる)

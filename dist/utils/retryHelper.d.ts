@@ -22,11 +22,22 @@ export interface Message {
 }
 /**
  * Service Workerからのレスポンス構造
+ * RecordingResultのフィールドを含む
  */
 export interface ServiceWorkerResponse {
     success: boolean;
-    data?: any;
     error?: string;
+    skipped?: boolean;
+    reason?: string;
+    summary?: string;
+    title?: string;
+    url?: string;
+    preview?: boolean;
+    processedContent?: string;
+    mode?: string;
+    maskedCount?: number;
+    maskedItems?: any[];
+    aiDuration?: number;
 }
 /**
  * ChromeMessageSenderクラス

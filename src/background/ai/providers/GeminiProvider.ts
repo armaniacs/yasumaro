@@ -41,8 +41,15 @@ export class GeminiProvider extends AIProviderStrategy {
             addLog(LogType.WARN, `[${this.getName()}] Prompt injection detected: ${warnings.join('; ')}`);
         }
         if (dangerLevel === 'high') {
-            addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked`);
-            return "Error: Content blocked due to potential security risk.";
+            // 危険度高でも、サニタイズ後のコンテンツで再評価
+            const { dangerLevel: newDangerLevel } = sanitizePromptContent(sanitizedContent);
+            if (newDangerLevel === 'high') {
+                const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
+                addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked: ${cause}`);
+                return `Error: Content blocked due to potential security risk. (原因: ${cause})`;
+            }
+            // サニタイズ後が安全/低リスクの場合は続行（警告のみ）
+            addLog(LogType.WARN, `[${this.getName()}] Content sanitized and proceeding with AI request`);
         }
 
         const payload = {

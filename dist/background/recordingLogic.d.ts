@@ -31,6 +31,8 @@ export interface RecordingResult {
     mode?: string;
     maskedCount?: number;
     maskedItems?: any[];
+    /** AI処理時間 (ミリ秒) */
+    aiDuration?: number;
 }
 export declare class RecordingLogic {
     static cacheState: CacheState;
