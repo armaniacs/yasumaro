@@ -1,5 +1,5 @@
 /**
- * ublockParser-validation.test.js
+ * ublockParser-validation.test.ts
  * uBlock Parser - Validationモジュールのユニットテスト
  */
 
@@ -9,7 +9,7 @@ import {
   isCommentLine,
   isEmptyLine,
   isValidRulePattern
-} from '../ublockParser.ts';
+} from '../ublockParser.js';
 
 describe('ublockParser - Validation Module', () => {
   // ============================================================================
@@ -23,11 +23,11 @@ describe('ublockParser - Validation Module', () => {
     });
 
     test('nullはfalseを返す', () => {
-      expect(isValidString(null)).toBe(false);
+      expect(isValidString(null as never)).toBe(false);
     });
 
     test('undefinedはfalseを返す', () => {
-      expect(isValidString(undefined)).toBe(false);
+      expect(isValidString(undefined as never)).toBe(false);
     });
 
     test('空文字列はfalseを返す', () => {
@@ -53,8 +53,8 @@ describe('ublockParser - Validation Module', () => {
     });
 
     test('null/undefinedはfalseを返す', () => {
-      expect(validateDomain(null)).toBe(false);
-      expect(validateDomain(undefined)).toBe(false);
+      expect(validateDomain(null as never)).toBe(false);
+      expect(validateDomain(undefined as never)).toBe(false);
     });
   });
 
@@ -85,8 +85,8 @@ describe('ublockParser - Validation Module', () => {
     });
 
     test('null/undefinedはfalseを返す', () => {
-      expect(isCommentLine(null)).toBe(false);
-      expect(isCommentLine(undefined)).toBe(false);
+      expect(isCommentLine(null as never)).toBe(false);
+      expect(isCommentLine(undefined as never)).toBe(false);
     });
   });
 
@@ -112,8 +112,8 @@ describe('ublockParser - Validation Module', () => {
     });
 
     test('null/undefinedはtrueを返す', () => {
-      expect(isEmptyLine(null)).toBe(true);
-      expect(isEmptyLine(undefined)).toBe(true);
+      expect(isEmptyLine(null as never)).toBe(true);
+      expect(isEmptyLine(undefined as never)).toBe(true);
     });
   });
 
@@ -144,8 +144,8 @@ describe('ublockParser - Validation Module', () => {
     });
 
     test('null/undefinedはfalseを返す', () => {
-      expect(isValidRulePattern(null)).toBe(false);
-      expect(isValidRulePattern(undefined)).toBe(false);
+      expect(isValidRulePattern(null as never)).toBe(false);
+      expect(isValidRulePattern(undefined as never)).toBe(false);
     });
   });
 });
