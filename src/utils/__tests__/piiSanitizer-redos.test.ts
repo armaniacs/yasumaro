@@ -1,10 +1,16 @@
 /**
- * piiSanitizer-redos.test.js
+ * piiSanitizer-redos.test.ts
  * ReDoSリスクの検証テスト
  * 問題点4: piiSanitizer.jsの正規表現でReDoSの可能性
  */
 
-import { sanitizeRegex } from '../piiSanitizer.ts';
+import { describe, it, expect } from '@jest/globals';
+import { sanitizeRegex } from '../piiSanitizer.js';
+
+interface SanitizeResult {
+    text?: string;
+    maskedItems?: any[];
+}
 
 describe('ReDoSリスクの検証（問題点4）', () => {
   describe('処理時間の計測', () => {
@@ -35,7 +41,7 @@ describe('ReDoSリスクの検証（問題点4）', () => {
       const nestedStructure = '((' + '('.repeat(100) + 'email@example.com' + ')'.repeat(100) + '))';
 
       const startTime = performance.now();
-      const result = await sanitizeRegex(nestedStructure);
+      const result = await sanitizeRegex(nestedStructure) as SanitizeResult;
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 
@@ -71,7 +77,7 @@ describe('ReDoSリスクの検証（問題点4）', () => {
       const complexText = 'Contact: test@example.com or call 090-1234-5678. '.repeat(1000);
 
       const startTime = performance.now();
-      const result = await sanitizeRegex(complexText);
+      const result = await sanitizeRegex(complexText) as SanitizeResult;
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 
@@ -82,7 +88,7 @@ describe('ReDoSリスクの検証（問題点4）', () => {
     it('小規模から中規模の入力は高速に処理される', async () => {
       const smallText = 'a'.repeat(10000); // 10KB
       const startTime = performance.now();
-      const result = await sanitizeRegex(smallText);
+      const result = await sanitizeRegex(smallText) as SanitizeResult;
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 
@@ -125,11 +131,11 @@ describe('ReDoSリスクの検証（問題点4）', () => {
       ].join(' ');
 
       const startTime = performance.now();
-      const result = await sanitizeRegex(patterns);
+      const result = await sanitizeRegex(patterns) as SanitizeResult;
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 
-      expect(result.maskedItems.length).toBeGreaterThan(0);
+      expect(result.maskedItems!.length).toBeGreaterThan(0);
       expect(executionTime).toBeLessThan(100);
     });
 
@@ -160,8 +166,8 @@ describe('ReDoSリスクの検証（問題点4）', () => {
 
     it('null/undefinedは高速に処理される', async () => {
       const startTime = performance.now();
-      await sanitizeRegex(null);
-      await sanitizeRegex(undefined);
+      await sanitizeRegex(null as string);
+      await sanitizeRegex(undefined as string);
       const endTime = performance.now();
 
       expect(endTime - startTime).toBeLessThan(10);
@@ -181,7 +187,7 @@ describe('ReDoSリスクの検証（問題点4）', () => {
 
   describe('タイムアウト機能の検証', () => {
     it('タイムアウト値が設定可能であること（修正提案）', async () => {
-      const result = await sanitizeRegex('test@example.com');
+      const result = await sanitizeRegex('test@example.com') as SanitizeResult;
       expect(result.text).toBeDefined();
     });
   });
