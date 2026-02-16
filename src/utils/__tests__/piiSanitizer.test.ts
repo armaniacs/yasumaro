@@ -1,11 +1,28 @@
 /**
- * piiSanitizer.test.js
+ * piiSanitizer.test.ts
  * PII（個人情報）サニタイザーのテスト
  * 【テスト対象】: src/utils/piiSanitizer.js
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { sanitizeRegex } from '../piiSanitizer.ts';
+import { sanitizeRegex } from '../piiSanitizer.js';
+
+interface MaskedItem {
+  type: string;
+  original: string;
+  masked: string;
+}
+
+interface SanitizeResult {
+  text: string;
+  maskedItems: MaskedItem[];
+  error?: string;
+}
+
+interface SanitizeOptions {
+  skipSizeLimit?: boolean;
+  timeout?: number;
+}
 
 describe('piiSanitizer', () => {
   describe('sanitizeRegex - 正常系', () => {
@@ -20,7 +37,7 @@ describe('piiSanitizer', () => {
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       // 【処理内容】: PII_PATTERNSの各正規表現でマッチングし、マスク文字列に置換
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: テキストとマスクされた項目の配列を確認
       expect(result.text).toBe('カード番号は [MASKED:creditCard] です'); // 【確認内容】: クレジットカード番号がマスクされることを確認 🟢
@@ -39,7 +56,7 @@ describe('piiSanitizer', () => {
       const text = 'マイナンバー: 1234-5678-9012';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: マイナンバーがマスクされることを確認
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]'); // 【確認内容】: マイナンバーがマスクされることを確認 🟢
@@ -57,7 +74,7 @@ describe('piiSanitizer', () => {
       const text = '連絡先: user@example.com';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: メールアドレスがマスクされることを確認
       expect(result.text).toBe('連絡先: [MASKED:email]'); // 【確認内容】: メールアドレスがマスクされることを確認 🟢
@@ -75,7 +92,7 @@ describe('piiSanitizer', () => {
       const text = '電話: 090-1234-5678';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: 電話番号がマスクされることを確認
       expect(result.text).toBe('電話: [MASKED:phoneJp]'); // 【確認内容】: 電話番号がマスクされることを確認 🟢
@@ -93,7 +110,7 @@ describe('piiSanitizer', () => {
       const text = '連絡先: user@example.com, 電話: 090-1234-5678, カード: 1234-5678-9012-3456';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: すべてのPIIがマスクされることを確認
       expect(result.text).toBe('連絡先: [MASKED:email], 電話: [MASKED:phoneJp], カード: [MASKED:creditCard]'); // 【確認内容】: 3種類のPIIがすべてマスクされることを確認 🟢
@@ -119,7 +136,7 @@ describe('piiSanitizer', () => {
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       // 【処理内容】: 型チェックで早期リターン
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text as never) as SanitizeResult;
 
       // 【結果検証】: 空文字列と空配列が返されることを確認
       expect(result.text).toBe(''); // 【確認内容】: null入力時に空文字列が返されることを確認 🟢
@@ -136,7 +153,7 @@ describe('piiSanitizer', () => {
       const text = undefined;
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text as never) as SanitizeResult;
 
       // 【結果検証】: 空文字列と空配列が返されることを確認
       expect(result.text).toBe(''); // 【確認内容】: undefined入力時に空文字列が返されることを確認 🟢
@@ -153,7 +170,7 @@ describe('piiSanitizer', () => {
       const text = '';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: 空文字列と空配列が返されることを確認
       expect(result.text).toBe(''); // 【確認内容】: 空文字列入力時にそのまま空文字列が返されることを確認 🟢
@@ -170,7 +187,7 @@ describe('piiSanitizer', () => {
       const text = 12345;
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text as never) as SanitizeResult;
 
       // 【結果検証】: 空文字列と空配列が返されることを確認
       expect(result.text).toBe(''); // 【確認内容】: 数値入力時に空文字列が返されることを確認 🟢
@@ -189,7 +206,7 @@ describe('piiSanitizer', () => {
       const text = '商品コード: 1234567';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: 7桁数字が銀行口座としてマスクされることを確認（仕様通り）
       // 【期待値確認】: piiSanitizer.js 15-16行目のコメント「安全側に倒してマスク」の通り
@@ -208,7 +225,7 @@ describe('piiSanitizer', () => {
       const text = 'カード: 1234 5678 9012 3456';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: スペース区切りでもマスクされることを確認
       expect(result.text).toBe('カード: [MASKED:creditCard]'); // 【確認内容】: スペース区切りのカード番号がマスクされることを確認 🟢
@@ -224,7 +241,7 @@ describe('piiSanitizer', () => {
       const text = 'メール1: user1@example.com, メール2: user2@example.com';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       // 【結果検証】: すべてのメールアドレスがマスクされることを確認
       expect(result.text).toBe('メール1: [MASKED:email], メール2: [MASKED:email]'); // 【確認内容】: 複数のメールアドレスがすべてマスクされることを確認 🟢
@@ -245,7 +262,7 @@ describe('piiSanitizer', () => {
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       // 【処理内容】: 長大なテキストに対してPII検出を実行
       const startTime = Date.now();
-      const result = await sanitizeRegex(longText);
+      const result = await sanitizeRegex(longText) as SanitizeResult;
       const elapsedTime = Date.now() - startTime;
 
       // 【結果検証】: メールアドレスがマスクされ、処理時間が許容範囲内であることを確認
@@ -260,7 +277,7 @@ describe('piiSanitizer', () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
       // 【テスト内容】: 64KB未満の入力が正常に処理されることを確認
       const text = 'a'.repeat(64 * 1024 - 1); // 64KB - 1文字
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       expect(result.text).toBe(text);
       expect(result.maskedItems).toEqual([]);
@@ -271,7 +288,7 @@ describe('piiSanitizer', () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
       // 【テスト内容】: ちょうど64KBの入力が正常に処理されることを確認
       const text = 'a'.repeat(64 * 1024); // 64KB
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       expect(result.text).toBe(text);
       expect(result.maskedItems).toEqual([]);
@@ -282,7 +299,7 @@ describe('piiSanitizer', () => {
       // 【テスト目的】: 入力サイズ制限の確認
       // 【テスト内容】: 64KBを超える入力がエラーを返すことを確認
       const text = 'a'.repeat(64 * 1024 + 1); // 64KB + 1文字
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
 
       expect(result.text).toBe(text); // 元のテキストが返される
       expect(result.maskedItems).toEqual([]);
@@ -294,7 +311,7 @@ describe('piiSanitizer', () => {
       // 【テスト目的】: skipSizeLimitオプションの確認
       // 【テスト内容】: skipSizeLimitオプションを使用するとサイズ制限を回避できることを確認
       const text = 'a'.repeat(64 * 1024 + 1); // 64KB + 1文字
-      const result = await sanitizeRegex(text, { skipSizeLimit: true });
+      const result = await sanitizeRegex(text, { skipSizeLimit: true }) as SanitizeResult;
 
       expect(result.text).toBe(text);
       expect(result.maskedItems).toEqual([]);
@@ -308,7 +325,7 @@ describe('piiSanitizer', () => {
       // 【テスト内容】: デフォルトで5秒のタイムアウトが設定されていることを確認
       const text = 'test@example.com';
       const startTime = Date.now();
-      const result = await sanitizeRegex(text);
+      const result = await sanitizeRegex(text) as SanitizeResult;
       const elapsedTime = Date.now() - startTime;
 
       expect(result.text).toBe('[MASKED:email]');
@@ -320,7 +337,7 @@ describe('piiSanitizer', () => {
       // 【テスト目的】: カスタムタイムアウト値の確認
       // 【テスト内容】: timeoutオプションでカスタムタイムアウトを設定できることを確認
       const text = 'test@example.com';
-      const result = await sanitizeRegex(text, { timeout: 1000 }); // 1秒
+      const result = await sanitizeRegex(text, { timeout: 1000 }) as SanitizeResult; // 1秒
 
       expect(result.text).toBe('[MASKED:email]');
       expect(result.maskedItems).toHaveLength(1);
@@ -334,7 +351,7 @@ describe('piiSanitizer', () => {
       // 非常に長いテキストを使用してタイムアウトを強制的に発生させる
       // マッチが多数ある状況を作るとループ回数が増えてタイムアウトしやすくなる
       const text = 'test@example.com '.repeat(5000); // 約100KB (十分重い)
-      const result = await sanitizeRegex(text, { timeout: 1, skipSizeLimit: true }); // 1msでタイムアウト
+      const result = await sanitizeRegex(text, { timeout: 1, skipSizeLimit: true }) as SanitizeResult; // 1msでタイムアウト
 
       // タイムアウトエラーが返されることを確認
       expect(result.error).toBeDefined();
