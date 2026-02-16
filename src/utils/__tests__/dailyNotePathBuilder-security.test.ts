@@ -1,10 +1,10 @@
 /**
- * dailyNotePathBuilder-security.test.js
+ * dailyNotePathBuilder-security.test.ts
  * dailyNotePathBuilderのセキュリティテスト
  * 問題点2: URLパスサニタイズ不足の検証
  */
 
-import { buildDailyNotePath } from '../dailyNotePathBuilder.ts';
+import { buildDailyNotePath } from '../dailyNotePathBuilder';
 
 describe('buildDailyNotePath - セキュリティテスト（問題点2）', () => {
   const testDate = new Date('2026-02-07');
@@ -160,8 +160,8 @@ describe('buildDailyNotePath - セキュリティテスト（問題点2）', () 
  * 4. URLエンコードされた攻撃の検証がない
  * 5. 絶対パス (/ で始まる) の検証がない
  *
- * obsidianClient.jsでの使用:
- * - // obsidianClient.js:118-119
+ * obsidianClient.tsでの使用:
+ * - // obsidianClient.ts:118-119
  * - const pathSegment = dailyPath ? `${dailyPath}/` : '';
  * - const targetUrl = `${baseUrl}/vault/${pathSegment}${buildDailyNotePath('')}.md`;
  *
