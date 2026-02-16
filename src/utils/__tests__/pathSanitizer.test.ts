@@ -1,10 +1,10 @@
 /**
- * pathSanitizer.test.js
+ * pathSanitizer.test.ts
  * パスサニタイズ関数のテスト
  * 問題点2: URLパスサニタイズ不足の修正検証
  */
 
-import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer.ts';
+import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer';
 
 describe('sanitizePathSegment - セキュリティサニタイズ関数（問題点2の修正）', () => {
   describe('パストラバーサル攻撃のブロック', () => {
@@ -241,7 +241,7 @@ describe('encodePathForUrl - URLエンコード関数', () => {
 
 describe('既存コードとの統合検証', () => {
   it('buildDailyNotePathと組み合わせた統合テスト', async () => {
-    const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
+    const { buildDailyNotePath } = await import('../dailyNotePathBuilder');
     const testDate = new Date('2026-02-07');
 
     // 危険な入力をサニタイズしてから使用
@@ -256,7 +256,7 @@ describe('既存コードとの統合検証', () => {
   });
 
   it('安全な入力は正常に処理される統合テスト', async () => {
-    const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
+    const { buildDailyNotePath } = await import('../dailyNotePathBuilder');
     const testDate = new Date('2026-02-07');
 
     // 安全な入力
@@ -268,7 +268,7 @@ describe('既存コードとの統合検証', () => {
     expect(result).toBe('journal/2026-02-07');
   });
 
-  it('dailyNotePathBuilder-security.test.jsの結果に基づいたテスト', () => {
+  it('dailyNotePathBuilder-security.test.tsの結果に基づいたテスト', () => {
     // ユーザー入力 '../../malicious/' をサニタイズして確認
     const dangerousInput = '../../malicious/';
 
@@ -290,7 +290,7 @@ describe('セキュリティテストまとめ', () => {
   });
 
   it('すべてのプロトコルスキーム注入をブロックすることを確認', () => {
-    const schemeAttacks = [
+    const schemeAttacks: string[] = [
       'https://evil.com/path',
       'http://evil.com/path',
       'ftp://evil.com/path',
@@ -306,7 +306,7 @@ describe('セキュリティテストまとめ', () => {
   });
 
   it('すべての制御文字をブロックすることを確認', () => {
-    const controlCharAttacks = [
+    const controlCharAttacks: string[] = [
       'path/\0null',
       'path\nwith\nnewlines',
       'path\rmalicious',
@@ -315,12 +315,12 @@ describe('セキュリティテストまとめ', () => {
     ];
 
     controlCharAttacks.forEach(attack => {
-      expect(() => sanitizePathSegment(attack)).toThrow();
+      expect(() => sanitizePathSegment(attack as any)).toThrow();
     });
   });
 
   it('正当なパスはすべて通過することを確認', () => {
-    const validPaths = [
+    const validPaths: string[] = [
       'journal',
       'journal/daily',
       '2024/01/15',
