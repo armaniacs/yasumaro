@@ -43,13 +43,10 @@
     "exclude": [
         "node_modules",
         "dist",
-        "**/__tests__/**",
-        "**/*.test.ts",
-        "**/*.test.js",
-        "**/*.spec.ts",
-        "**/*.spec.js",
         "jest.setup.js",
+        "jest.setup.ts",
         "jest.config.cjs",
+        "jest.resolver.cjs",
         "babel.config.cjs",
         "build.js"
     ]

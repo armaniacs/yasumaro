@@ -13,6 +13,8 @@
     "test:e2e:headed": "playwright test --headed",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
+    "type-check:test": "tsc --project tsconfig.test.json --noEmit",
+    "test:type-safe": "npm run type-check:test && npm test",
     "lint": "tsc --noEmit",
     "validate": "npm run type-check && npm test",
     "clean": "rm -rf dist",
