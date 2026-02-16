@@ -6,12 +6,12 @@
  */
 
 import {
-    type ErrorType,
+    ErrorType,
     classifyError,
     getUserMessage,
     createErrorResponse,
     convertKnownErrorMessage
-} from '../errorMessages';
+} from '../errorMessages.js';
 
 interface ErrorContext {
     url?: string;

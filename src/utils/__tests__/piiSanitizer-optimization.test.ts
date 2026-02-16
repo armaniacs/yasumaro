@@ -1,16 +1,35 @@
 /**
- * piiSanitizer-optimization.test.js
+ * piiSanitizer-optimization.test.ts
  * PII置換効率化（アレイjoin方式）に関するテスト
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { sanitizeRegex, MAX_INPUT_SIZE } from '../piiSanitizer.ts';
+import { sanitizeRegex, MAX_INPUT_SIZE } from '../piiSanitizer.js';
+
+interface MaskedItem {
+    type: string;
+    original: string;
+    masked: string;
+    index: number;
+}
+
+interface SanitizeResult {
+    text: string;
+    maskedItems: MaskedItem[];
+    error?: string;
+}
+
+interface PiiTestCase {
+    input: string;
+    shouldMatch: boolean;
+    expectedOriginal: string;
+}
 
 describe('PII置換の効率化（アレイjoin方式）', () => {
     describe('機能テスト - 置換結果の正確性', () => {
         it('メールアドレスを正常にマスクできる', async () => {
             const text = 'お問い合わせは example@test.com まで';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.text).not.toContain('example@test.com');
@@ -21,7 +40,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('複数のPIIタイプを一度に検出・置換できる', async () => {
             const text = '連絡先: user@example.com, TEL: 090-1234-5678';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.text).toContain('[MASKED:phoneJp]');
@@ -32,7 +51,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('クレジットカード番号を正しく検出・置換できる', async () => {
             const text = 'カード番号: 1234-5678-9012-3456';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:creditCard]');
             expect(result.text).not.toContain('1234-5678-9012-3456');
@@ -41,7 +60,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('マイナンバーを正しく検出・置換できる', async () => {
             const text = 'マイナンバー: 1234-5678-9012';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:myNumber]');
             expect(result.text).not.toContain('1234-5678-9012');
@@ -50,7 +69,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('銀行口座番号を正しく検出・置換できる', async () => {
             const text = '口座番号: 1234567';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:bankAccount]');
             expect(result.text).not.toContain('1234567');
@@ -59,7 +78,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('重複するPIIを正しく扱える', async () => {
             const text = 'メール: test1@example.com, test2@example.com';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             const emailMasks = result.maskedItems.filter(item => item.type === 'email');
             expect(emailMasks.length).toBe(2);
@@ -70,24 +89,24 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         it('nullやundefinedを正しく扱える', async () => {
             let result;
 
-            result = await sanitizeRegex(null);
+            result = await sanitizeRegex(null as string) as SanitizeResult;
             expect(result.text).toBe('');
             expect(result.maskedItems).toHaveLength(0);
 
-            result = await sanitizeRegex(undefined);
+            result = await sanitizeRegex(undefined as string) as SanitizeResult;
             expect(result.text).toBe('');
             expect(result.maskedItems).toHaveLength(0);
         });
 
         it('空文字列を正しく扱える', async () => {
-            const result = await sanitizeRegex('');
+            const result = await sanitizeRegex('') as SanitizeResult;
             expect(result.text).toBe('');
             expect(result.maskedItems).toHaveLength(0);
         });
 
         it('PIIを含まないテキストを正しく扱える', async () => {
             const text = 'これは単なるテキストです。個人情報は含まれていません。';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toBe(text);
             expect(result.maskedItems).toHaveLength(0);
@@ -95,7 +114,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('PIIが隣接している場合を正しく扱える', async () => {
             const text = '連絡先:jun@test.comTEL:090-1234-5678';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.text).toContain('[MASKED:phoneJp]');
@@ -107,7 +126,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
     describe('パフォーマンステスト', () => {
         it('大量のPIIを含むテキストで効率的に処理できる', async () => {
             // 1000文字のテキストに100個のメールアドレスを含める
-            const parts = [];
+            const parts: string[] = [];
             for (let i = 0; i < 100; i++) {
                 parts.push(`user${i}@example.com`);
                 parts.push(' ');
@@ -115,7 +134,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
             const text = parts.join('');
 
             const startTime = Date.now();
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
             const duration = Date.now() - startTime;
 
             expect(result.maskedItems.length).toBe(100);
@@ -128,7 +147,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
             const text = 'お問い合わせ: support@example.com, 電話: 03-1234-5678';
 
             const startTime = Date.now();
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
             const duration = Date.now() - startTime;
 
             expect(result.maskedItems.length).toBeGreaterThanOrEqual(1);
@@ -142,7 +161,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
             const text = 'a'.repeat(MAX_INPUT_SIZE - 16) + 'user@example.com';
             expect(text.length).toBe(MAX_INPUT_SIZE); // 正確にMAX_INPUT_SIZEであることを確認
 
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.text).not.toContain('user@example.com');
@@ -151,7 +170,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         it('サイズ超過エラーを正しく返す', async () => {
             const text = 'a'.repeat(MAX_INPUT_SIZE + 1);
 
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             // エラーが設定されていることを確認
             expect(result.error).toBeDefined();
@@ -161,7 +180,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         it('サイズ制限をスキップできる', async () => {
             const text = 'a'.repeat(MAX_INPUT_SIZE + 1) + 'user@example.com';
 
-            const result = await sanitizeRegex(text, { skipSizeLimit: true });
+            const result = await sanitizeRegex(text, { skipSizeLimit: true }) as SanitizeResult;
 
             expect(result.error).toBeUndefined();
             expect(result.text).toContain('[MASKED:email]');
@@ -172,7 +191,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         it('タイムアウト設定を変更できる', async () => {
             const text = '連絡先: test@example.com';
 
-            const result = await sanitizeRegex(text, { timeout: 10000 });
+            const result = await sanitizeRegex(text, { timeout: 10000 }) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.error).toBeUndefined();
@@ -189,7 +208,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
                 口座: 0123456, 7654321
             `;
 
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.maskedItems.length).toBeGreaterThan(0);
             expect(result.text).toContain('[MASKED:email]');
@@ -203,7 +222,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
     describe('エッジケース', () => {
         it('連続するPIIを正しく置換できる', async () => {
             const text = 'a@example.comb@example.comc@example.com';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             const emailMasks = result.maskedItems.filter(item => item.type === 'email');
             // 連続している場合、最長一致で検出されるため
@@ -212,7 +231,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('特別文字を含むPIIを正しく扱える', async () => {
             const text = 'メール: user+tag@example-domain.com';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
             expect(result.maskedItems[0].original).toContain('user+tag@example-domain.com');
@@ -220,7 +239,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('置換結果のテキスト長が元のテキスト長を超えない', async () => {
             const text = '連絡先: test@example.com, 電話: 090-1234-5678';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             // マスクされた文字列の長さを測定
             // 文字によっては結果が長くなる可能性があるため、単に変更されていることを確認
@@ -228,7 +247,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('maskedItemsに重複が含まれない', async () => {
             const text = 'email1@example.com email1@example.com';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             // 同じメールアドレスが2回ある場合、2つのアイテムが返る
             expect(result.maskedItems.length).toBe(2);
@@ -240,7 +259,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
     describe('配列join方式の動作検証', () => {
         it('置換インデックスが正しく保たれる', async () => {
             const text = 'A有@example.comB有@test.co.jpC';
-            const result = await sanitizeRegex(text);
+            const result = await sanitizeRegex(text) as SanitizeResult;
 
             // マスクされた項目のインデックスが昇順であることを確認
             for (let i = 1; i < result.maskedItems.length; i++) {
@@ -250,7 +269,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
         it('置換後の文字列の整合性を保つ', async () => {
             const original = '前user@example.com後';
-            const result = await sanitizeRegex(original);
+            const result = await sanitizeRegex(original) as SanitizeResult;
 
             // マスクの前後の文字列が正しく保持されていることを確認
             expect(result.text).toContain('前');
@@ -264,8 +283,8 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
     });
 
     describe('正規表現パターンの検証', () => {
-        const testPiiDetection = async (pattern, type, testCase) => {
-            const result = await sanitizeRegex(testCase.input);
+        const testPiiDetection = async (pattern: any, type: string, testCase: PiiTestCase) => {
+            const result = await sanitizeRegex(testCase.input) as SanitizeResult;
             if (testCase.shouldMatch) {
                 expect(result.maskedItems.some(item =>
                     item.type === type && item.original === testCase.expectedOriginal
@@ -276,7 +295,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         };
 
         it('様々な形式のメールアドレスを検出できる', async () => {
-            const testCases = [
+            const testCases: PiiTestCase[] = [
                 { input: 'simple@domain.com', shouldMatch: true, expectedOriginal: 'simple@domain.com' },
                 { input: 'name.surname@sub.domain.co.uk', shouldMatch: true, expectedOriginal: 'name.surname@sub.domain.co.uk' },
                 { input: 'user123@test-domain.com', shouldMatch: true, expectedOriginal: 'user123@test-domain.com' },
@@ -288,7 +307,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         });
 
         it('様々な形式の電話番号を検出できる', async () => {
-            const testCases = [
+            const testCases: PiiTestCase[] = [
                 { input: '090-1234-5678', shouldMatch: true, expectedOriginal: '090-1234-5678' },
                 { input: '03 1234 5678', shouldMatch: true, expectedOriginal: '03 1234 5678' },
                 { input: '01234567890', shouldMatch: true, expectedOriginal: '01234567890' },

@@ -19,7 +19,7 @@ import {
     encryptApiKey,
     decryptApiKey,
     type EncryptedData
-} from '../crypto';
+} from '../crypto.js';
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {

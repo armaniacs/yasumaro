@@ -4,7 +4,7 @@
  * 問題点2: URLパスサニタイズ不足の検証
  */
 
-import { buildDailyNotePath } from '../dailyNotePathBuilder';
+import { buildDailyNotePath } from '../dailyNotePathBuilder.js';
 
 describe('buildDailyNotePath - セキュリティテスト（問題点2）', () => {
   const testDate = new Date('2026-02-07');

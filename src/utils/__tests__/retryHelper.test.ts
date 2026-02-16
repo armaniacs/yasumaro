@@ -9,7 +9,7 @@ import {
     createSender,
     type RetryOptions,
     type MessagePayload
-} from '../retryHelper';
+} from '../retryHelper.js';
 
 // Mock chrome.runtime.sendMessage
 global.chrome = {

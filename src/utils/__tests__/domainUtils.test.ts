@@ -13,9 +13,9 @@ import {
   isDomainAllowed,
   parseDomainList,
   validateDomainList
-} from '../domainUtils';
-import { isUrlBlocked } from '../ublockMatcher';
-import { getSettings, type Settings } from '../storage';
+} from '../domainUtils.js';
+import { isUrlBlocked } from '../ublockMatcher.js';
+import { getSettings, type Settings } from '../storage.js';
 
 // Mock ublockMatcher.ts
 jest.mock('../ublockMatcher', () => ({

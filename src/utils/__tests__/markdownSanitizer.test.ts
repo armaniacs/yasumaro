@@ -5,7 +5,7 @@
  * 【Code Review P1】: XSS対策 - Markdownリンクのサニタイズ
  */
 
-import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian } from '../markdownSanitizer';
+import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian } from '../markdownSanitizer.js';
 
 describe('markdownSanitizer', () => {
     describe('sanitizeMarkdownLinks', () => {

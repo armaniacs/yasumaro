@@ -4,7 +4,7 @@
  * 問題点2: URLパスサニタイズ不足の修正検証
  */
 
-import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer';
+import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer.js';
 
 describe('sanitizePathSegment - セキュリティサニタイズ関数（問題点2の修正）', () => {
   describe('パストラバーサル攻撃のブロック', () => {
@@ -241,7 +241,7 @@ describe('encodePathForUrl - URLエンコード関数', () => {
 
 describe('既存コードとの統合検証', () => {
   it('buildDailyNotePathと組み合わせた統合テスト', async () => {
-    const { buildDailyNotePath } = await import('../dailyNotePathBuilder');
+    const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
     const testDate = new Date('2026-02-07');
 
     // 危険な入力をサニタイズしてから使用
@@ -256,7 +256,7 @@ describe('既存コードとの統合検証', () => {
   });
 
   it('安全な入力は正常に処理される統合テスト', async () => {
-    const { buildDailyNotePath } = await import('../dailyNotePathBuilder');
+    const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
     const testDate = new Date('2026-02-07');
 
     // 安全な入力
