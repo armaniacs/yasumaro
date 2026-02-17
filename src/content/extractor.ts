@@ -137,6 +137,10 @@ async function reportValidVisit(): Promise<void> {
 
         // レスポンスの成功フラグをチェック
         if (response && !response.success) {
+            if (response.error === 'DOMAIN_BLOCKED') {
+                // 正常な動作: このドメインはブロック対象のため記録しない
+                return;
+            }
             console.error("Background Worker Error:", response.error);
         }
     } catch (error: any) {
