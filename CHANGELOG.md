@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **ブラックリストドメインでのエラー表示を解消**: `extractor.ts` がブラックリスト対象ドメインで `VALID_VISIT` を送信しバックグラウンドに弾かれた際、`DOMAIN_BLOCKED` レスポンスを `console.error` ではなく静かに無視するよう修正。Chrome 拡張のエラーパネルに不要なエラーが表示されていた問題を解消。
+- **ビルド出力から `__tests__` を除外**: `tsconfig.json` の `exclude` に `src/**/__tests__` を追加し、テストファイルが `dist/` に出力されないよう修正。`dist/__tests__` が存在すると Chrome が「Cannot load extension with file or directory name \_\_tests\_\_」エラーで拡張を読み込めない問題を解消。
 
 ### Improved
 
