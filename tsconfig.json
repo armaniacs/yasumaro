@@ -43,6 +43,7 @@
     "exclude": [
         "node_modules",
         "dist",
+        "src/**/__tests__",
         "jest.setup.js",
         "jest.setup.ts",
         "jest.config.cjs",

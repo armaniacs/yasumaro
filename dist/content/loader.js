@@ -7,6 +7,11 @@
 // TypeScriptの`isolatedModules`設定により空のexportが追加されるのを防ぐため、
 // グローバルスコープで実行する即時実行関数として実装
 (async () => {
+    // ブロック対象ドメインには extractor を inject しない
+    const response = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN' });
+    if (!response || !response.allowed) {
+        return;
+    }
     // ビルド後のパスを指定（distディレクトリ内）
     const src = chrome.runtime.getURL('content/extractor.js');
     await import(src);

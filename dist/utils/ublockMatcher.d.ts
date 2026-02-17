@@ -3,7 +3,7 @@ interface Rule {
     options?: Record<string, any>;
     [key: string]: any;
 }
-interface UblockRules {
+export interface UblockRules {
     blockDomains?: string[];
     exceptionDomains?: string[];
     blockRules?: Rule[];

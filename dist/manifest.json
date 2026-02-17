@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Obsidian Smart History",
-  "version": "3.9.1",
+  "version": "3.9.3",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https: http:; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; default-src 'none';"
