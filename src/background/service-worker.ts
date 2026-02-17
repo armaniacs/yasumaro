@@ -4,6 +4,7 @@ import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { getAllowedUrls, getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject } from '../utils/storage.js';
+import { isDomainAllowed } from '../utils/domainUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
 
 // マイグレーション処理を実行
@@ -27,7 +28,7 @@ const recordingLogic = new RecordingLogic(obsidian, aiClient);
 const tabCache = new TabCache();
 
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -47,13 +48,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
-            if (message.payload === undefined || typeof message.payload !== 'object') {
-                sendResponse(INVALID_MESSAGE_ERROR);
-                return;
+            // CHECK_DOMAIN は payload 不要
+            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN'];
+            if (!NO_PAYLOAD_TYPES.includes(message.type)) {
+                if (message.payload === undefined || typeof message.payload !== 'object') {
+                    sendResponse(INVALID_MESSAGE_ERROR);
+                    return;
+                }
             }
 
             // Sender validation: Content Script only message types
-            const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT'];
+            const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN'];
             if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type)) {
                 if (!sender.tab || !sender.tab.id || !sender.tab.url) {
                     sendResponse(INVALID_SENDER_ERROR);
@@ -63,9 +68,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             // 【パフォーマンス改善】: 必要な場合のみTabCache初期化
-            // messages that don't need tab cache: TEST_CONNECTIONS
-            if (message.type !== 'TEST_CONNECTIONS') {
+            // messages that don't need tab cache: TEST_CONNECTIONS, CHECK_DOMAIN
+            if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'CHECK_DOMAIN') {
                 await tabCache.initialize();
+            }
+
+            // Domain Check (Content Script only: loader が extractor を inject する前に確認)
+            if (message.type === 'CHECK_DOMAIN' && sender.tab) {
+                const url = sender.tab.url || '';
+                const allowed = url ? await isDomainAllowed(url) : false;
+                sendResponse({ success: true, allowed });
+                return;
             }
 
             // Automatic Visit Processing (Content Script only)
