@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.3] - 2026-02-17
+
+### Fixed
+
+- **ブラックリストドメインでのエラー表示を解消**: `extractor.ts` がブラックリスト対象ドメインで `VALID_VISIT` を送信しバックグラウンドに弾かれた際、`DOMAIN_BLOCKED` レスポンスを `console.error` ではなく静かに無視するよう修正。Chrome 拡張のエラーパネルに不要なエラーが表示されていた問題を解消。
+
+### Improved
+
+- **ブラックリストドメインでの extractor 起動を根本防止**: `loader.ts` が `extractor.js` を import する前に `CHECK_DOMAIN` メッセージでバックグラウンドにドメインの許可状態を確認するよう修正。ブロック対象ドメインでは extractor 自体が起動しないため、スクロール監視・タイマー・`VALID_VISIT` 送信のすべてが行われなくなる。
+  - `service-worker.ts` に `CHECK_DOMAIN` ハンドラを追加（payload 不要、`sender.tab.url` から `isDomainAllowed()` を呼んで結果を返す）
+  - TabCache 初期化をスキップしてパフォーマンスを確保
+
 ## [3.9.2] - 2026-02-17
 
 ### Major Achievement: TypeScript Migration 100% Complete ✅
