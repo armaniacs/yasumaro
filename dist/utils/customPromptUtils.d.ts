@@ -4,19 +4,8 @@
  * ユーザー定義のプロンプトを管理し、AI要約生成時に適用する
  */
 import { Settings } from './storage.js';
-/**
- * カスタムプロンプトのデータ構造
- */
-export interface CustomPrompt {
-    id: string;
-    name: string;
-    prompt: string;
-    systemPrompt?: string;
-    provider: 'gemini' | 'openai' | 'openai2' | 'all';
-    isActive: boolean;
-    createdAt: number;
-    updatedAt: number;
-}
+import { CustomPrompt } from './types.js';
+export type { CustomPrompt } from './types.js';
 /**
  * プロンプト適用結果
  */

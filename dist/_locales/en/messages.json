@@ -656,5 +656,8 @@
     },
     "importPreviewNote": {
         "message": "Note: Full settings will be applied. API keys and lists are included in the file."
+    },
+    "importNoSignatureWarning": {
+        "message": "⚠️ This settings file contains no signature.\n\nSignatures are used to prevent settings file tampering.\nIt is recommended not to import files from untrusted sources.\n\nDo you want to continue importing?"
     }
 }

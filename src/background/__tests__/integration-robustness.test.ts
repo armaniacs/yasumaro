@@ -1,11 +1,24 @@
 // src/background/__tests__/integration-robustness.test.js
 import { ObsidianClient } from '../obsidianClient.js';
 import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.js';
-import { AIClient } from '../aiClient.js';
+import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithTimeout } from '../../utils/fetch.js';
 
 jest.mock('../../utils/fetch.js');
 jest.mock('../../utils/logger.js');
+jest.mock('../../utils/customPromptUtils.js', () => ({
+  applyCustomPrompt: jest.fn((settings, provider, content) => ({
+    userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。1文または2文で、重要なポイントをまとめてください。改行しないこと。\n\nContent:\n${content}`,
+    systemPrompt: ""
+  }))
+}));
+jest.mock('../../utils/promptSanitizer.js', () => ({
+  sanitizePromptContent: jest.fn((content) => ({
+    sanitized: content,
+    warnings: [],
+    dangerLevel: 'low' as const
+  }))
+}));
 
 describe('Integration: Robustness improvements', () => {
   beforeEach(() => {
@@ -67,14 +80,14 @@ describe('Integration: Robustness improvements', () => {
   test('fetchWithTimeoutが正常に動作', async () => {
     const mockResponse = { ok: true, json: async () => ({ data: 'test' }) };
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
     fetchWithTimeout.mockResolvedValue(mockResponse);
 
     const response = await fetchWithTimeout('https://example.com', {}, 1000);
     expect(response.ok).toBe(true);
   });
 
-  test('AIClientがfetchWithTimeoutを使用', async () => {
+  test('GeminiProviderがfetchWithTimeoutを使用', async () => {
     // fetchWithTimeoutが呼ばれることを確認
     const mockResponse = {
       ok: true,
@@ -87,17 +100,16 @@ describe('Integration: Robustness improvements', () => {
       })
     };
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
     fetchWithTimeout.mockResolvedValue(mockResponse);
 
-    await chrome.storage.local.set({
+    const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
-      [StorageKeys.AI_PROVIDER]: 'gemini',
       [StorageKeys.GEMINI_MODEL]: 'gemini-1.5-flash'
-    });
+    };
 
-    const aiClient = new AIClient();
-    const result = await aiClient.generateGeminiSummary('test content', 'test-key', 'gemini-1.5-flash');
+    const provider = new GeminiProvider(settings);
+    const result = await provider.generateSummary('test content');
 
     expect(result).toBe('テスト要約');
     expect(fetchWithTimeout).toHaveBeenCalledWith(

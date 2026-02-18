@@ -37,10 +37,47 @@ export declare const StorageKeys: {
     readonly CUSTOM_PROMPTS: "custom_prompts";
 };
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
-export declare const ALLOWED_AI_PROVIDER_DOMAINS: string[];
-export interface Settings {
-    [key: string]: any;
+export interface StorageKeyValues {
+    [StorageKeys.OBSIDIAN_API_KEY]: string;
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
+    [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.GEMINI_API_KEY]: string;
+    [StorageKeys.MIN_VISIT_DURATION]: number;
+    [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    [StorageKeys.GEMINI_MODEL]: string;
+    [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
+    [StorageKeys.AI_PROVIDER]: string;
+    [StorageKeys.OPENAI_BASE_URL]: string;
+    [StorageKeys.OPENAI_API_KEY]: string;
+    [StorageKeys.OPENAI_MODEL]: string;
+    [StorageKeys.OPENAI_2_BASE_URL]: string;
+    [StorageKeys.OPENAI_2_API_KEY]: string;
+    [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.DOMAIN_WHITELIST]: string[];
+    [StorageKeys.DOMAIN_BLACKLIST]: string[];
+    [StorageKeys.DOMAIN_FILTER_MODE]: string;
+    [StorageKeys.PRIVACY_MODE]: string;
+    [StorageKeys.PII_CONFIRMATION_UI]: boolean;
+    [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.UBLOCK_RULES]: any;
+    [StorageKeys.UBLOCK_SOURCES]: any[];
+    [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
+    [StorageKeys.SIMPLE_FORMAT_ENABLED]: boolean;
+    [StorageKeys.ALLOWED_URLS]: string[];
+    [StorageKeys.ALLOWED_URLS_HASH]: string;
+    [StorageKeys.ENCRYPTION_SALT]: string;
+    [StorageKeys.ENCRYPTION_SECRET]: string;
+    [StorageKeys.HMAC_SECRET]: string;
+    [StorageKeys.SAVED_URLS_VERSION]: number;
+    [StorageKeys.CUSTOM_PROMPTS]: any[];
 }
+export type StrictSettings = {
+    [K in StorageKey]: StorageKeyValues[K];
+};
+export type Settings = Partial<StorageKeyValues> & {
+    [key: string]: any;
+};
+export declare const ALLOWED_AI_PROVIDER_DOMAINS: string[];
 /**
  * ドメインがホワイトリストに含まれるかチェックする
  * @param {string} url - チェック対象のURL
@@ -71,6 +108,11 @@ export declare function getOrCreateHmacSecret(): Promise<string>;
  */
 export declare function migrateToSingleSettingsObject(): Promise<boolean>;
 export declare function getSettings(): Promise<Settings>;
+/**
+ * 【パフォーマンス改善】設定キャッシュをクリアする（テスト用）
+ * ストレージから完全に再読み込みする場合に使用
+ */
+export declare function clearSettingsCache(): void;
 /**
  * Save settings to chrome.storage.local with optional allowed URL list update.
  *

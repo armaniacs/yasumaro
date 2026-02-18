@@ -4,7 +4,7 @@ import { NotificationHelper } from './notificationHelper.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
-import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
+import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -133,7 +133,8 @@ export class RecordingLogic {
             // 設定キャッシュを使用
             const settings = await this.getSettingsWithCache();
             // Code Review #1: 設定からモードを更新
-            this.mode = settings.privacy_mode || 'full_pipeline';
+            // Settings型は StorageKeys でアクセス可能
+            this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
             // 日付ベース重複チェック: Map<URL, timestamp> を取得
             const urlMap = await this.getSavedUrlsWithCache();
             // 同じURLが保存済みで、かつ同日の場合はスキップ

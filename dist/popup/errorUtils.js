@@ -289,7 +289,7 @@ export function formatDuration(ms) {
     if (ms < 1000) {
         return `${Math.round(ms)}ms`;
     }
-    const secondsUnit = chrome.i18n.getMessage('seconds');
+    const secondsUnit = chrome.i18n.getMessage('seconds') || 's';
     return `${(ms / 1000).toFixed(1)}${secondsUnit}`;
 }
 /**

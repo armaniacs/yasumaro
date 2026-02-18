@@ -11,7 +11,7 @@
 
 <body>
   <!-- Main Screen -->
-  <header id="mainScreen">
+  <div id="mainScreen">
     <div class="header">
       <h1 class="sr-only" data-i18n="appTitle">Smart History</h1>
       <h2 data-i18n="appTitle" aria-hidden="true">Smart History</h2>
@@ -35,7 +35,7 @@
       <span class="spinner-text" data-i18n="processing">Processing...</span>
     </div>
     <div id="mainStatus" aria-live="polite"></div>
-  </header>
+  </div>
 
   <!-- Settings Screen -->
   <main id="settingsScreen" class="settings-screen">
@@ -421,7 +421,7 @@
   <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmContent">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 data-i18n="confirmContent">Review Content</h3>
+        <h3 id="confirmContent" data-i18n="confirmContent">Review Content</h3>
         <button id="closeModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
       </div>
       <div class="modal-body">

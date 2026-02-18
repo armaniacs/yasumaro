@@ -186,7 +186,10 @@ export function toggleFormatUI() {
 export async function loadDomainSettings() {
     const settings = await getSettings();
     // Load filter mode
-    const mode = settings[StorageKeys.DOMAIN_FILTER_MODE] || 'disabled';
+    // Validate mode to prevent CSS selector injection (only allow: disabled, whitelist, blacklist)
+    const ALLOWED_FILTER_MODES = ['disabled', 'whitelist', 'blacklist'];
+    const rawMode = settings[StorageKeys.DOMAIN_FILTER_MODE] || 'disabled';
+    const mode = ALLOWED_FILTER_MODES.includes(rawMode) ? rawMode : 'disabled';
     const modeRadio = document.querySelector(`input[name="domainFilter"][value="${mode}"]`);
     if (modeRadio) {
         modeRadio.checked = true;

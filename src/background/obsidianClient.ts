@@ -173,7 +173,8 @@ export class ObsidianClient {
         try {
             const { baseUrl, headers, settings } = await this._getConfig();
 
-            const dailyPathRaw = (settings as any)[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
+            // Settings型は StorageKeys でアクセス可能
+            const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
             const dailyPath = buildDailyNotePath(dailyPathRaw);
             const pathSegment = dailyPath ? `${dailyPath}/` : '';
             const targetUrl = `${baseUrl}/vault/${pathSegment}${buildDailyNotePath('')}.md`;

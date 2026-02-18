@@ -195,7 +195,8 @@ export class RecordingLogic {
       // 設定キャッシュを使用
       const settings = await this.getSettingsWithCache();
       // Code Review #1: 設定からモードを更新
-      this.mode = (settings as any).privacy_mode || 'full_pipeline';
+      // Settings型は StorageKeys でアクセス可能
+      this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
       // 日付ベース重複チェック: Map<URL, timestamp> を取得
       const urlMap = await this.getSavedUrlsWithCache();
 

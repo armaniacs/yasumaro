@@ -49,12 +49,21 @@ function extractPageContent(): string {
  * 【機能概要】: chrome.storage.localから最小訪問時間と最小スクロール深度を読み込む
  * 【読み込みタイミング】: スクリプト読み込み時（Chrome拡張のコンテントスクリプト読み込み時）
  * 【デフォルト値】: MIN_VISIT_DURATION=5秒, MIN_SCROLL_DEPTH=50%
+ * 【マイグレーション対応】: settingsキー下から値を取得（マイグレーション後の構造に対応）
  * 🟢
  */
 function loadSettings(): void {
-    chrome.storage.local.get(['min_visit_duration', 'min_scroll_depth'], (result: { [key: string]: any }) => {
-        if (result.min_visit_duration) minVisitDuration = parseInt(result.min_visit_duration, 10);
-        if (result.min_scroll_depth) minScrollDepth = parseInt(result.min_scroll_depth, 10);
+    chrome.storage.local.get(['settings'], (result: { [key: string]: any }) => {
+        // マイグレーション後は settings キー下の min_visit_duration, min_scroll_depth を取得
+        if (result.settings) {
+            const settings = result.settings;
+            if (settings.min_visit_duration !== undefined) {
+                minVisitDuration = parseInt(String(settings.min_visit_duration), 10);
+            }
+            if (settings.min_scroll_depth !== undefined) {
+                minScrollDepth = parseInt(String(settings.min_scroll_depth), 10);
+            }
+        }
     });
 }
 
@@ -86,6 +95,47 @@ function checkVisitConditions(): void {
             checkIntervalId = null;
         }
     }
+}
+
+/**
+ * Throttle function using requestAnimationFrame
+ * 【機能概要】: 関数呼び出しをフレーム単位で抑制し、高速スクロール時の負荷を軽減
+ * @param fn - Throttle対象の関数
+ * @returns Throttle化された関数
+ */
+function throttle<T extends (...args: any[]) => void>(fn: T): T {
+    let lastCall = 0;
+    let rafId: number | null = null;
+    let lastArgs: Parameters<T> | null = null;
+
+    return ((...args: Parameters<T>) => {
+        lastArgs = args;
+        const now = performance.now();
+
+        // 既にRAFがスケジュールされている場合は引数だけ更新
+        if (rafId !== null) {
+            return;
+        }
+
+        // 前回の呼び出しから十分時間が経過しているか確認
+        const timeSinceLastCall = now - lastCall;
+        const THROTTLE_DELAY = 100; // 100ms
+
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            const callNow = performance.now() - lastCall >= THROTTLE_DELAY;
+            if (callNow && lastArgs) {
+                lastCall = performance.now();
+                fn(...lastArgs);
+            } else if (lastArgs) {
+                // ディレイ未満の場合は追加のチェック
+                if (performance.now() - lastCall >= THROTTLE_DELAY) {
+                    lastCall = performance.now();
+                    fn(...lastArgs);
+                }
+            }
+        });
+    }) as T;
 }
 
 /**
@@ -194,8 +244,9 @@ function stopPeriodicCheck(): void {
 function init(): void {
     loadSettings();
 
-    // 【イベントリスナー登録】: スクロールイベントを監視
-    window.addEventListener('scroll', updateMaxScroll);
+    // 【イベントリスナー登録】: スクロールイベントを監視（throttle化でパフォーマンス向上）
+    const throttledUpdateMaxScroll = throttle(updateMaxScroll);
+    window.addEventListener('scroll', throttledUpdateMaxScroll);
 
     // 【定期実行】: 1秒ごとに条件をチェック
     startPeriodicCheck();

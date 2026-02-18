@@ -7,20 +7,10 @@
 import { Settings, StorageKeys } from './storage.js';
 import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
 import { addLog, LogType } from './logger.js';
+import { CustomPrompt } from './types.js';
 
-/**
- * カスタムプロンプトのデータ構造
- */
-export interface CustomPrompt {
-    id: string;
-    name: string;
-    prompt: string;           // ユーザープロンプト（{{content}}プレースホルダーを含む）
-    systemPrompt?: string;    // OpenAI用システムプロンプト（オプション）
-    provider: 'gemini' | 'openai' | 'openai2' | 'all';
-    isActive: boolean;
-    createdAt: number;
-    updatedAt: number;
-}
+// 型を再エクスポート
+export type { CustomPrompt } from './types.js';
 
 /**
  * プロンプト適用結果

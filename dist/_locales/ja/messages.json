@@ -240,7 +240,7 @@
         "message": "削除"
     },
     "privacyMode": {
-        "message": "動作モード"
+        "message": "プライバシーモード"
     },
     "modeA": {
         "message": "Mode A: Local Only"
@@ -510,7 +510,7 @@
         "message": "{count}..."
     },
     "autoClosing": {
-        "message": "自動閉じる..."
+        "message": "自動的に閉じています..."
     },
     "errorContentScriptNotAvailable": {
         "message": "このページからコンテンツを取得できません。HTTP/HTTPSページでのみ使用可能です。"
@@ -656,5 +656,8 @@
     },
     "importPreviewNote": {
         "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
+    },
+    "importNoSignatureWarning": {
+        "message": "⚠️ この設定ファイルには署名が含まれていません。\n\n署名は設定ファイルの改ざん防止のために使用されます。\n信頼できないソースからのファイルはインポートしないことを推奨します。\n\nインポートを続行しますか？"
     }
 }

@@ -54,6 +54,54 @@ export const StorageKeys = {
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
 
+// 各 StorageKey に対応する値型
+export interface StorageKeyValues {
+    [StorageKeys.OBSIDIAN_API_KEY]: string;
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
+    [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.GEMINI_API_KEY]: string;
+    [StorageKeys.MIN_VISIT_DURATION]: number;
+    [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    [StorageKeys.GEMINI_MODEL]: string;
+    [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
+    [StorageKeys.AI_PROVIDER]: string;
+    [StorageKeys.OPENAI_BASE_URL]: string;
+    [StorageKeys.OPENAI_API_KEY]: string;
+    [StorageKeys.OPENAI_MODEL]: string;
+    [StorageKeys.OPENAI_2_BASE_URL]: string;
+    [StorageKeys.OPENAI_2_API_KEY]: string;
+    [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.DOMAIN_WHITELIST]: string[];
+    [StorageKeys.DOMAIN_BLACKLIST]: string[];
+    [StorageKeys.DOMAIN_FILTER_MODE]: string;
+    [StorageKeys.PRIVACY_MODE]: string;
+    [StorageKeys.PII_CONFIRMATION_UI]: boolean;
+    [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.UBLOCK_RULES]: any; // UblockRules型は循環参照を避けるためにanyとして扱う
+    [StorageKeys.UBLOCK_SOURCES]: any[]; // Source[]型は循環参照を避けるためにany[]として扱う
+    [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
+    [StorageKeys.SIMPLE_FORMAT_ENABLED]: boolean;
+    [StorageKeys.ALLOWED_URLS]: string[];
+    [StorageKeys.ALLOWED_URLS_HASH]: string;
+    [StorageKeys.ENCRYPTION_SALT]: string;
+    [StorageKeys.ENCRYPTION_SECRET]: string;
+    [StorageKeys.HMAC_SECRET]: string;
+    [StorageKeys.SAVED_URLS_VERSION]: number;
+    [StorageKeys.CUSTOM_PROMPTS]: any[]; // CustomPrompt[]型は循環参照を避けるためにany[]として扱う
+}
+
+// 厳格な Settings 型
+export type StrictSettings = {
+    [K in StorageKey]: StorageKeyValues[K];
+};
+
+// 以前の Settings 型（後方互換性のため）
+// StrictSettings に徐々に移行を進める
+// StorageKeys で型チェック可能にするために index signature を追加
+export type Settings = Partial<StorageKeyValues> & {
+    [key: string]: any; // レガシー互換性
+};
+
 // 暗号化対象のAPIキーフィールド
 const API_KEY_FIELDS: StorageKey[] = [
     StorageKeys.OBSIDIAN_API_KEY,
@@ -127,10 +175,6 @@ export const ALLOWED_AI_PROVIDER_DOMAINS = [
     '127.0.0.1',
 ];
 
-export interface Settings {
-    [key: string]: any;
-}
-
 /**
  * ドメインがホワイトリストに含まれるかチェックする
  * @param {string} url - チェック対象のURL
@@ -165,6 +209,8 @@ export function isDomainInWhitelist(url: string): boolean {
 // メモリキャッシュ
 let cachedEncryptionKey: CryptoKey | null = null;
 let cachedExtensionId: string | null = null;
+let cachedSettings: { data: Settings | null; timestamp: number } | null = null;
+const SETTINGS_CACHE_TTL = 1000; // 1秒間キャッシュ（record()内の重複呼び出し防止）
 
 /**
  * 暗号化キーを取得または作成する
@@ -390,6 +436,12 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
 }
 
 export async function getSettings(): Promise<Settings> {
+    // 【パフォーマンス改善】短時間キャッシュチェック（1秒間有効）
+    const now = Date.now();
+    if (cachedSettings && cachedSettings.data && (now - cachedSettings.timestamp) < SETTINGS_CACHE_TTL) {
+        return cachedSettings.data;
+    }
+
     // 単一settingsオブジェクトが存在する場合はそれを使用
     const result = await chrome.storage.local.get(['settings', SETTINGS_MIGRATED_KEY]);
 
@@ -433,6 +485,9 @@ export async function getSettings(): Promise<Settings> {
             console.error('Failed to get encryption key for decryption:', e);
         }
 
+        // 【パフォーマンス改善】復号後にキャッシュを保存
+        cachedSettings = { data: merged, timestamp: Date.now() };
+
         return merged;
     }
 
@@ -466,7 +521,18 @@ export async function getSettings(): Promise<Settings> {
         console.error('Failed to get encryption key for decryption:', e);
     }
 
+    // 【パフォーマンス改善】復号後にキャッシュを保存
+    cachedSettings = { data: merged, timestamp: Date.now() };
+
     return merged;
+}
+
+/**
+ * 【パフォーマンス改善】設定キャッシュをクリアする（テスト用）
+ * ストレージから完全に再読み込みする場合に使用
+ */
+export function clearSettingsCache(): void {
+    cachedSettings = null;
 }
 
 /**
@@ -476,6 +542,9 @@ export async function getSettings(): Promise<Settings> {
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
 export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: boolean = false): Promise<void> {
+    // 【パフォーマンス改善】設定保存時にキャッシュを無効化
+    cachedSettings = null;
+
     let toSave = { ...settings };
 
     // APIキーフィールドを暗号化
@@ -600,14 +669,21 @@ async function updateUrlTimestamp(url: string): Promise<void> {
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
     // Map to entries array
     const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
+    const urlArray = Array.from(urlMap.keys());
 
-    // 楽観的ロックで安全に保存
+    // savedUrlsWithTimestampsの楽観的ロックを使用
     await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
 
-    // 同時に savedUrls Setも更新（互換性維持）
-    const urlSet = new Set(urlMap.keys());
-    const urlArray = Array.from(urlSet);
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
+    // (互換性維持のため、savedUrlsも保存する)
+    // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
+    const currentSavedUrls = await chrome.storage.local.get('savedUrls');
+    const currentSavedArray = currentSavedUrls['savedUrls'] as string[] || [];
+
+    // 配列が同じならスキップ
+    if (JSON.stringify(currentSavedArray.sort()) !== JSON.stringify(urlArray.sort())) {
+        await chrome.storage.local.set({ savedUrls: urlArray });
+    }
 }
 
 /**

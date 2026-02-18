@@ -305,8 +305,8 @@ function showImportPreview(data: SettingsExportData): void {
     );
     summary.ublock_sources_count = String(s.ublock_sources?.length || 0);
 
-    const summaryMsg = chrome.i18n.getMessage('importPreviewSummary');
-    const noteMsg = chrome.i18n.getMessage('importPreviewNote');
+    const summaryMsg = chrome.i18n.getMessage('importPreviewSummary') || 'Summary:';
+    const noteMsg = chrome.i18n.getMessage('importPreviewNote') || 'Note: Full settings will be applied. API keys and lists are included in the file.';
 
     importPreview.textContent = `${summaryMsg}\n${JSON.stringify(summary, null, 2)}\n\n${noteMsg}`;
 }

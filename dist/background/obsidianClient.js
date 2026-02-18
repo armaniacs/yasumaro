@@ -136,6 +136,7 @@ export class ObsidianClient {
         await globalWriteMutex.acquire();
         try {
             const { baseUrl, headers, settings } = await this._getConfig();
+            // Settings型は StorageKeys でアクセス可能
             const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
             const dailyPath = buildDailyNotePath(dailyPathRaw);
             const pathSegment = dailyPath ? `${dailyPath}/` : '';

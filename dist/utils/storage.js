@@ -143,6 +143,8 @@ export function isDomainInWhitelist(url) {
 // メモリキャッシュ
 let cachedEncryptionKey = null;
 let cachedExtensionId = null;
+let cachedSettings = null;
+const SETTINGS_CACHE_TTL = 1000; // 1秒間キャッシュ（record()内の重複呼び出し防止）
 /**
  * 暗号化キーを取得または作成する
  * ソルト/シークレットが無ければ自動生成してストレージに保存
@@ -337,6 +339,11 @@ export async function migrateToSingleSettingsObject() {
     return true;
 }
 export async function getSettings() {
+    // 【パフォーマンス改善】短時間キャッシュチェック（1秒間有効）
+    const now = Date.now();
+    if (cachedSettings && cachedSettings.data && (now - cachedSettings.timestamp) < SETTINGS_CACHE_TTL) {
+        return cachedSettings.data;
+    }
     // 単一settingsオブジェクトが存在する場合はそれを使用
     const result = await chrome.storage.local.get(['settings', SETTINGS_MIGRATED_KEY]);
     const rawSettings = result.settings;
@@ -378,6 +385,8 @@ export async function getSettings() {
         catch (e) {
             console.error('Failed to get encryption key for decryption:', e);
         }
+        // 【パフォーマンス改善】復号後にキャッシュを保存
+        cachedSettings = { data: merged, timestamp: Date.now() };
         return merged;
     }
     // 旧方式: StorageKeysで定義されているキーのみを取得
@@ -410,7 +419,16 @@ export async function getSettings() {
     catch (e) {
         console.error('Failed to get encryption key for decryption:', e);
     }
+    // 【パフォーマンス改善】復号後にキャッシュを保存
+    cachedSettings = { data: merged, timestamp: Date.now() };
     return merged;
+}
+/**
+ * 【パフォーマンス改善】設定キャッシュをクリアする（テスト用）
+ * ストレージから完全に再読み込みする場合に使用
+ */
+export function clearSettingsCache() {
+    cachedSettings = null;
 }
 /**
  * Save settings to chrome.storage.local with optional allowed URL list update.
@@ -419,6 +437,8 @@ export async function getSettings() {
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
 export async function saveSettings(settings, updateAllowedUrlsFlag = false) {
+    // 【パフォーマンス改善】設定保存時にキャッシュを無効化
+    cachedSettings = null;
     let toSave = { ...settings };
     // APIキーフィールドを暗号化
     try {
@@ -521,12 +541,18 @@ async function updateUrlTimestamp(url) {
 export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
     // Map to entries array
     const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
-    // 楽観的ロックで安全に保存
+    const urlArray = Array.from(urlMap.keys());
+    // savedUrlsWithTimestampsの楽観的ロックを使用
     await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
-    // 同時に savedUrls Setも更新（互換性維持）
-    const urlSet = new Set(urlMap.keys());
-    const urlArray = Array.from(urlSet);
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
+    // (互換性維持のため、savedUrlsも保存する)
+    // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
+    const currentSavedUrls = await chrome.storage.local.get('savedUrls');
+    const currentSavedArray = currentSavedUrls['savedUrls'] || [];
+    // 配列が同じならスキップ
+    if (JSON.stringify(currentSavedArray.sort()) !== JSON.stringify(urlArray.sort())) {
+        await chrome.storage.local.set({ savedUrls: urlArray });
+    }
 }
 /**
  * Add a URL to the saved list with LRU tracking (日付ベース対応)

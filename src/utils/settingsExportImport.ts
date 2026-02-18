@@ -177,12 +177,12 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
     if (!parsed.signature) {
       console.warn('Imported settings has no signature. Proceeding without verification.');
       // 署名がない場合はユーザーに警告し、確認を求める
-      const proceed = confirm(
-        '⚠️ この設定ファイルには署名が含まれていません。\n\n' +
-        '署名は設定ファイルの改ざん防止のために使用されます。\n' +
-        '信頼できないソースからのファイルはインポートしないことを推奨します。\n\n' +
-        'インポートを続行しますか？'
-      );
+      const warningMsg = chrome.i18n.getMessage('importNoSignatureWarning') ||
+        '⚠️ This settings file contains no signature.\n\n' +
+        'Signatures are used to prevent settings file tampering.\n' +
+        'It is recommended not to import files from untrusted sources.\n\n' +
+        'Do you want to continue importing?';
+      const proceed = confirm(warningMsg);
       if (!proceed) {
         console.info('Import cancelled by user due to missing signature.');
         return null;
