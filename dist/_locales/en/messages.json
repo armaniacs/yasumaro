@@ -458,6 +458,9 @@
     "errorScrollDepth": {
         "message": "Error: Minimum scroll depth must be a number between 0 and 100."
     },
+    "errorInvalidUrl": {
+        "message": "Error: Invalid URL format"
+    },
     "domainListError": {
         "message": "Domain list errors:"
     },
@@ -641,5 +644,17 @@
     },
     "confirmDeletePrompt": {
         "message": "Are you sure you want to delete this prompt?"
+    },
+    "confirm": {
+        "message": "Import"
+    },
+    "seconds": {
+        "message": "seconds"
+    },
+    "importPreviewSummary": {
+        "message": "Summary:"
+    },
+    "importPreviewNote": {
+        "message": "Note: Full settings will be applied. API keys and lists are included in the file."
     }
 }

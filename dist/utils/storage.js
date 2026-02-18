@@ -364,16 +364,9 @@ export async function getSettings() {
             const key = await getOrCreateEncryptionKey();
             for (const field of API_KEY_FIELDS) {
                 const value = merged[field];
-                console.log(`Checking ${field}:`, {
-                    exists: !!value,
-                    type: typeof value,
-                    isEncrypted: isEncrypted(value),
-                    value: typeof value === 'string' ? value.substring(0, 10) + '...' : value
-                });
                 if (isEncrypted(value)) {
                     try {
                         merged[field] = await decryptApiKey(value, key);
-                        console.log(`Decrypted ${field} successfully`);
                     }
                     catch (e) {
                         console.error(`Failed to decrypt ${field}:`, e);

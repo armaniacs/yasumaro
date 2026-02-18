@@ -335,7 +335,8 @@ export function formatDuration(ms: number): string {
   if (ms < 1000) {
     return `${Math.round(ms)}ms`;
   }
-  return `${(ms / 1000).toFixed(1)}秒`;
+  const secondsUnit = chrome.i18n.getMessage('seconds');
+  return `${(ms / 1000).toFixed(1)}${secondsUnit}`;
 }
 
 /**

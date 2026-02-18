@@ -176,6 +176,17 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
     // 署名があるかチェック
     if (!parsed.signature) {
       console.warn('Imported settings has no signature. Proceeding without verification.');
+      // 署名がない場合はユーザーに警告し、確認を求める
+      const proceed = confirm(
+        '⚠️ この設定ファイルには署名が含まれていません。\n\n' +
+        '署名は設定ファイルの改ざん防止のために使用されます。\n' +
+        '信頼できないソースからのファイルはインポートしないことを推奨します。\n\n' +
+        'インポートを続行しますか？'
+      );
+      if (!proceed) {
+        console.info('Import cancelled by user due to missing signature.');
+        return null;
+      }
       // 旧形式のエクスポートファイルとの互換性のため、署名検証なしで続行
     } else {
       // 署名検証

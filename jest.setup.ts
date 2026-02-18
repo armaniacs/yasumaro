@@ -321,6 +321,9 @@ const chromeRuntimeMock: ChromeRuntimeMock = {
         piiBankAccount: 'Bank Account Number',
         piiEmail: 'E-mail',
         piiPhoneJp: 'Phone Number',
+        seconds: 'seconds',
+        importPreviewSummary: 'Summary:',
+        importPreviewNote: 'Note: Full settings will be applied. API keys and lists are included in the file.',
       };
 
       let message = messages[key] || key;

@@ -458,6 +458,9 @@
     "errorScrollDepth": {
         "message": "エラー: 最小スクロール深度は0から100の間の数値である必要があります。"
     },
+    "errorInvalidUrl": {
+        "message": "エラー: 無効なURL形式です"
+    },
     "domainListError": {
         "message": "ドメインリストのエラー:"
     },
@@ -641,5 +644,17 @@
     },
     "confirmDeletePrompt": {
         "message": "このプロンプトを削除してもよろしいですか？"
+    },
+    "confirm": {
+        "message": "インポート"
+    },
+    "seconds": {
+        "message": "秒"
+    },
+    "importPreviewSummary": {
+        "message": "概要:"
+    },
+    "importPreviewNote": {
+        "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
     }
 }

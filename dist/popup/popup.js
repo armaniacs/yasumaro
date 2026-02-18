@@ -250,8 +250,9 @@ function showImportPreview(data) {
     summary.privacy_mode = s.privacy_mode;
     summary.domain_count = String((s.domain_whitelist?.length || 0) + (s.domain_blacklist?.length || 0));
     summary.ublock_sources_count = String(s.ublock_sources?.length || 0);
-    importPreview.textContent = `Summary:\n${JSON.stringify(summary, null, 2)}\n\n` +
-        `Note: Full settings will be applied. API keys and lists are included in the file.`;
+    const summaryMsg = chrome.i18n.getMessage('importPreviewSummary');
+    const noteMsg = chrome.i18n.getMessage('importPreviewNote');
+    importPreview.textContent = `${summaryMsg}\n${JSON.stringify(summary, null, 2)}\n\n${noteMsg}`;
 }
 // ============================================================================
 // Tab Navigation

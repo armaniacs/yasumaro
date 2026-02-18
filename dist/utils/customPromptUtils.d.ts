@@ -94,8 +94,8 @@ export declare function deletePrompt(prompts: CustomPrompt[], id: string): Custo
  * アクティブなプロンプトを設定（他のプロンプトのisActiveをfalseに）
  * @param {CustomPrompt[]} prompts - プロンプト配列
  * @param {string} id - アクティブにするプロンプトのID
- * @param {string} provider - プロバイダー名
+ * @param {string} _provider - プロバイダー名（互換性のために残すが、内部ではプロンプトのproviderを使用）
  * @returns {CustomPrompt[]} 更新後のプロンプト配列
  */
-export declare function setActivePrompt(prompts: CustomPrompt[], id: string, provider: string): CustomPrompt[];
+export declare function setActivePrompt(prompts: CustomPrompt[], id: string, _provider: string): CustomPrompt[];
 //# sourceMappingURL=customPromptUtils.d.ts.map
