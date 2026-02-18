@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.4] - to be released
+
+### Added
+
+- **Makefile**: `npm run build` の代わりに `make` コマンドでビルドできる Makefile を追加
+  - `make build` — TypeScript コンパイル＋静的アセットコピー
+  - `make clean` — `dist/` 削除
+  - `make test` / `make test-watch` / `make test-coverage` — Jest テスト
+  - `make test-e2e` — Playwright E2E テスト
+  - `make type-check` — TypeScript 型チェック（`--noEmit`）
+  - `make validate` — 型チェック＋テストの一括実行
+
+- **AIプロンプトカスタマイズ機能**: 設定画面に「AIプロンプト」タブを追加し、AI要約プロンプトをカスタマイズ可能に
+  - プロンプトの新規作成・編集・削除・有効化
+  - プロバイダー（Gemini / OpenAI互換 / 全共通）ごとの個別プロンプト設定
+  - システムプロンプト（OpenAI互換プロバイダー向け）とユーザープロンプトを独立して設定可能
+  - `{{content}}` プレースホルダーによるページ内容の埋め込み
+  - 詳細は [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を参照
+
+### Fixed
+
+- **AIプロンプトタブへの遷移不具合**: タブクリックで画面が切り替わらない問題を修正
+  - `src/popup/popup.ts` にタブ切り替えロジック（`initTabNavigation()`）を追加。タブボタンの `aria-controls` 属性を元に対応パネルの表示・非表示を切り替える
+
+### Docs
+
+- **AIプロンプトカスタマイズガイド追加**: [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を新規作成
+  - デフォルトのシステムプロンプト・ユーザープロンプトを掲載
+  - カスタマイズ例（英語要約・箇条書き・技術観点・システムプロンプト込み）
+  - 日英併記
+
+- **README.md 更新**: AIプロンプトカスタマイズ機能を特徴一覧に追加し、詳細は USER-GUIDE-AI-PROMPT.md へ外出し
+
 ## [3.9.3] - 2026-02-17
 
 ### Fixed

@@ -6,6 +6,7 @@ import { StorageKeys, getSettings } from '../utils/storage.js';
 import { init as initNavigation } from './navigation.js';
 import { init as initDomainFilter, loadDomainSettings } from './domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
+import { initCustomPromptManager } from './customPromptManager.js';
 import { loadSettingsToInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 import { exportSettings, importSettings, validateExportData } from '../utils/settingsExportImport.js';
@@ -253,6 +254,38 @@ function showImportPreview(data) {
         `Note: Full settings will be applied. API keys and lists are included in the file.`;
 }
 // ============================================================================
+// Tab Navigation
+// ============================================================================
+function initTabNavigation() {
+    const tabButtons = document.querySelectorAll('#tabList .tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPanelId = btn.getAttribute('aria-controls');
+            if (!targetPanelId)
+                return;
+            // Update tab buttons
+            tabButtons.forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+            // Update panels
+            tabPanels.forEach(panel => {
+                if (panel.id === targetPanelId) {
+                    panel.classList.add('active');
+                    panel.setAttribute('aria-hidden', 'false');
+                }
+                else {
+                    panel.classList.remove('active');
+                    panel.setAttribute('aria-hidden', 'true');
+                }
+            });
+        });
+    });
+}
+// ============================================================================
 // Initialization
 // ============================================================================
 console.log('[Popup] Starting initialization...');
@@ -263,6 +296,12 @@ try {
 }
 catch (error) {
     console.error('[Popup] Error in initNavigation:', error);
+}
+try {
+    initTabNavigation();
+}
+catch (error) {
+    console.error('[Popup] Error in initTabNavigation:', error);
 }
 try {
     console.log('[Popup] Calling initDomainFilter...');
@@ -280,6 +319,18 @@ try {
 catch (error) {
     console.error('[Popup] Error in initPrivacySettings:', error);
 }
+// Load settings and initialize custom prompt manager after other modules
+async function initCustomPromptFeature() {
+    try {
+        const settings = await getSettings();
+        initCustomPromptManager(settings);
+        console.log('[Popup] initCustomPromptManager complete');
+    }
+    catch (error) {
+        console.error('[Popup] Error in initCustomPromptManager:', error);
+    }
+}
+initCustomPromptFeature();
 try {
     console.log('[Popup] Calling load...');
     load();

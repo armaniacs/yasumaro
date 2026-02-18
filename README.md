@@ -24,6 +24,7 @@
 - 📱 **改良されたUI**: メイン画面と設定画面を分離し、ハンバーガーメニューから簡単にアクセスできます。
 - 🌐 **ドメインフィルター**: ホワイトリスト/ブラックリストで記録するドメインを制御できます。ワイルドカードパターンに対応。
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
+- ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能です。詳細は [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) を参照。
 
 ### 必要なもの
@@ -92,6 +93,12 @@
 
 ドメインリストではワイルドカードも使用できます（例: `*.example.com`）。「現在のページドメインを追加」ボタンで簡単にドメインを追加できます。
 
+#### AIプロンプトのカスタマイズ
+
+設定画面の「AIプロンプト」タブで、AI要約時のプロンプトをカスタマイズできます。プロバイダーごとに異なるプロンプトを設定したり、複数のプロンプトを保存して切り替えたりすることができます。
+
+デフォルトのプロンプト、各設定項目の説明、カスタマイズ例は [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を参照してください。
+
 #### uBlock Origin形式フィルターの使用
 設定画面の「ドメインフィルター」タブで、「フィルター形式」を「uBlock Origin 形式」に切り替えることで、uBlock Origin形式のフィルターリストを使用できます。
 
@@ -141,6 +148,7 @@ A Chrome extension that automatically saves your browsing history to Obsidian wi
 - 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported.
 - 🚫 **uBlock Origin Format Filters**: Import and use existing uBlock filter lists like EasyList directly.
+- ✏️ **AI Prompt Customization**: Edit and save custom AI summarization prompts. Configure different prompts per provider.
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. See [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) for details.
 
 ### Requirements
@@ -203,6 +211,12 @@ In the "Domain Filter" tab of the settings screen, you can control which domains
 - **Blacklist**: Record all domains except those specified
 
 You can use wildcards in the domain list (e.g., `*.example.com`). Use the "Add Current Domain" button to easily add domains.
+
+#### Customizing AI Prompts
+
+In the "AI Prompt" tab of the settings screen, you can customize the prompts used for AI summarization. Configure different prompts per provider or save multiple prompts to switch between them as needed.
+
+For default prompt values, field descriptions, and customization examples, see [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md).
 
 #### Using uBlock Origin Format Filters
 In the "Domain Filter" tab of the settings screen, switch the "Filter Format" to "uBlock Origin Format" to use uBlock Origin format filter lists.

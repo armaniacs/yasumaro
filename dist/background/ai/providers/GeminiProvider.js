@@ -7,6 +7,7 @@ import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
+import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 export class GeminiProvider extends AIProviderStrategy {
     apiKey;
     model;
@@ -44,14 +45,12 @@ export class GeminiProvider extends AIProviderStrategy {
             // サニタイズ後が安全/低リスクの場合は続行（警告のみ）
             addLog(LogType.WARN, `[${this.getName()}] Content sanitized and proceeding with AI request`);
         }
+        // カスタムプロンプトを適用
+        const { userPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizedContent);
         const payload = {
             contents: [{
                     parts: [{
-                            text: `以下のWebページの内容を、日本語で簡潔に要約してください。
-                           1文または2文で、重要なポイントをまとめてください。改行しないこと。
-
-                           Content:
-                           ${sanitizedContent}`
+                            text: userPrompt
                         }]
                 }]
         };

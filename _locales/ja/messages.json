@@ -563,5 +563,83 @@
     "dropZoneLabel": {
         "message": "uBlockフィルタードロップゾーン",
         "description": "uBlockフィルターファイルをドラッグ＆ドロップするドロップゾーンのARIAラベル"
+    },
+    "promptTab": {
+        "message": "AIプロンプト"
+    },
+    "promptDescription": {
+        "message": "AI要約プロンプト設定"
+    },
+    "promptHelp": {
+        "message": "{{content}}をページ内容のプレースホルダーとして使用してください。このプロンプトは要約生成時に使用されます。"
+    },
+    "savedPrompts": {
+        "message": "保存済みプロンプト"
+    },
+    "noPromptsSaved": {
+        "message": "保存されたプロンプトはありません"
+    },
+    "promptEditor": {
+        "message": "プロンプトエディター"
+    },
+    "promptName": {
+        "message": "プロンプト名"
+    },
+    "promptNamePlaceholder": {
+        "message": "例: 短い要約"
+    },
+    "promptProvider": {
+        "message": "適用先プロバイダー"
+    },
+    "promptProviderAll": {
+        "message": "すべてのプロバイダー"
+    },
+    "promptSystem": {
+        "message": "システムプロンプト（OpenAIのみ）"
+    },
+    "promptSystemPlaceholder": {
+        "message": "あなたはWebページを効果的かつ簡潔に要約するアシスタントです..."
+    },
+    "promptSystemHelp": {
+        "message": "OpenAI互換プロバイダー用のシステムプロンプト（オプション）"
+    },
+    "promptText": {
+        "message": "ユーザープロンプト"
+    },
+    "promptTextPlaceholder": {
+        "message": "以下のWebページの内容を日本語で要約してください...\n\n{{content}}"
+    },
+    "savePrompt": {
+        "message": "プロンプトを保存"
+    },
+    "updatePrompt": {
+        "message": "プロンプトを更新"
+    },
+    "activate": {
+        "message": "有効化"
+    },
+    "edit": {
+        "message": "編集"
+    },
+    "activePrompt": {
+        "message": "有効"
+    },
+    "promptNameRequired": {
+        "message": "プロンプト名は必須です"
+    },
+    "promptCreated": {
+        "message": "プロンプトを作成しました"
+    },
+    "promptUpdated": {
+        "message": "プロンプトを更新しました"
+    },
+    "promptDeleted": {
+        "message": "プロンプトを削除しました"
+    },
+    "promptActivated": {
+        "message": "プロンプトを有効化しました"
+    },
+    "confirmDeletePrompt": {
+        "message": "このプロンプトを削除してもよろしいですか？"
     }
 }

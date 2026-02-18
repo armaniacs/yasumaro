@@ -1358,3 +1358,199 @@ label.inline-label {
     background: #1e293b;
   }
 }
+
+/* =============================================================================
+   Custom Prompt Manager Styles
+   ============================================================================= */
+
+.prompt-editor {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.prompt-editor h4 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.prompt-list {
+  margin-top: var(--space-4);
+}
+
+.prompt-list h4 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.prompt-item {
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  transition: all var(--transition-fast);
+}
+
+.prompt-item:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: 0 2px 4px var(--color-shadow-sm);
+}
+
+.prompt-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.prompt-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.prompt-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.prompt-provider {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.prompt-item-content {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  background: var(--color-bg-code);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+.prompt-item-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.btn-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.btn-activate {
+  background: var(--color-success);
+  color: white;
+}
+
+.btn-activate:hover {
+  background: var(--color-success-hover);
+}
+
+.btn-edit {
+  background: var(--color-info);
+  color: white;
+}
+
+.btn-edit:hover {
+  background: var(--color-info-hover);
+}
+
+.btn-delete {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-delete:hover {
+  background: var(--color-danger-hover);
+}
+
+.btn-sm:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-active {
+  background: var(--color-success);
+  color: white;
+}
+
+.no-prompts {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-4);
+  font-size: 13px;
+}
+
+#promptStatus {
+  margin-top: var(--space-3);
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.status-success {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.status-error {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.prompt-help {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-bg-code);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-light);
+}
+
+.prompt-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.prompt-actions button {
+  flex: 1;
+}

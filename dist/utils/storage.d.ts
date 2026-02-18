@@ -34,6 +34,7 @@ export declare const StorageKeys: {
     readonly ENCRYPTION_SECRET: "encryption_secret";
     readonly HMAC_SECRET: "hmac_secret";
     readonly SAVED_URLS_VERSION: "savedUrls_version";
+    readonly CUSTOM_PROMPTS: "custom_prompts";
 };
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
 export declare const ALLOWED_AI_PROVIDER_DOMAINS: string[];

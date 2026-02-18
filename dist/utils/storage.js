@@ -45,7 +45,9 @@ export const StorageKeys = {
     ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）
     HMAC_SECRET: 'hmac_secret', // 設定エクスポート用HMACシークレット（Base64）
     // Version tracking for optimistic locking
-    SAVED_URLS_VERSION: 'savedUrls_version' // savedUrlsのバージョン番号
+    SAVED_URLS_VERSION: 'savedUrls_version', // savedUrlsのバージョン番号
+    // Custom prompts
+    CUSTOM_PROMPTS: 'custom_prompts' // カスタムプロンプト設定
 };
 // 暗号化対象のAPIキーフィールド
 const API_KEY_FIELDS = [
@@ -266,7 +268,9 @@ const DEFAULT_SETTINGS = {
     [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
     // Dynamic URL validation defaults
     [StorageKeys.ALLOWED_URLS]: [], // 許可されたURLのリスト（設定から動的に構築）
-    [StorageKeys.ALLOWED_URLS_HASH]: '' // URLリストのハッシュ（変更検出用）
+    [StorageKeys.ALLOWED_URLS_HASH]: '', // URLリストのハッシュ（変更検出用）
+    // Custom prompts defaults
+    [StorageKeys.CUSTOM_PROMPTS]: [] // カスタムプロンプトのリスト
 };
 /**
  * データ移行フラグ - 古い個別キーから単一settingsオブジェクトへの移行完了済み

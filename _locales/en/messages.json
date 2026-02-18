@@ -563,5 +563,83 @@
     "dropZoneLabel": {
         "message": "uBlock filter file drop zone",
         "description": "ARIA label for the drop zone area where users can drag and drop uBlock filter files"
+    },
+    "promptTab": {
+        "message": "AI Prompt"
+    },
+    "promptDescription": {
+        "message": "AI Summary Prompt Settings"
+    },
+    "promptHelp": {
+        "message": "Use {{content}} as a placeholder for the page content. The prompt will be used when generating summaries."
+    },
+    "savedPrompts": {
+        "message": "Saved Prompts"
+    },
+    "noPromptsSaved": {
+        "message": "No custom prompts saved"
+    },
+    "promptEditor": {
+        "message": "Prompt Editor"
+    },
+    "promptName": {
+        "message": "Prompt Name"
+    },
+    "promptNamePlaceholder": {
+        "message": "e.g. Short Summary"
+    },
+    "promptProvider": {
+        "message": "Apply to Provider"
+    },
+    "promptProviderAll": {
+        "message": "All Providers"
+    },
+    "promptSystem": {
+        "message": "System Prompt (OpenAI only)"
+    },
+    "promptSystemPlaceholder": {
+        "message": "You are a helpful assistant..."
+    },
+    "promptSystemHelp": {
+        "message": "Optional system prompt for OpenAI-compatible providers."
+    },
+    "promptText": {
+        "message": "User Prompt"
+    },
+    "promptTextPlaceholder": {
+        "message": "Summarize the following web page content in Japanese...\n\n{{content}}"
+    },
+    "savePrompt": {
+        "message": "Save Prompt"
+    },
+    "updatePrompt": {
+        "message": "Update Prompt"
+    },
+    "activate": {
+        "message": "Activate"
+    },
+    "edit": {
+        "message": "Edit"
+    },
+    "activePrompt": {
+        "message": "Active"
+    },
+    "promptNameRequired": {
+        "message": "Prompt name is required"
+    },
+    "promptCreated": {
+        "message": "Prompt created successfully"
+    },
+    "promptUpdated": {
+        "message": "Prompt updated successfully"
+    },
+    "promptDeleted": {
+        "message": "Prompt deleted successfully"
+    },
+    "promptActivated": {
+        "message": "Prompt activated"
+    },
+    "confirmDeletePrompt": {
+        "message": "Are you sure you want to delete this prompt?"
     }
 }

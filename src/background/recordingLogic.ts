@@ -289,8 +289,9 @@ export class RecordingLogic {
       // 4. Format Markdown
       // P1: XSS対策 - summaryをサニタイズ（Markdownリンクのエスケープ）
       const sanitizedSummary = sanitizeForObsidian(summary);
+      const sanitizedTitle = sanitizeForObsidian(title);
       const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
-      const markdown = `- ${timestamp} [${title}](${url})\n    - AI要約: ${sanitizedSummary}`;
+      const markdown = `- ${timestamp} [${sanitizedTitle}](${url})\n    - AI要約: ${sanitizedSummary}`;
 
       // 5. Save to Obsidian
       await this.obsidian.appendToDailyNote(markdown);

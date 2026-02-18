@@ -47,7 +47,9 @@ export const StorageKeys = {
     ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）
     HMAC_SECRET: 'hmac_secret',             // 設定エクスポート用HMACシークレット（Base64）
     // Version tracking for optimistic locking
-    SAVED_URLS_VERSION: 'savedUrls_version' // savedUrlsのバージョン番号
+    SAVED_URLS_VERSION: 'savedUrls_version', // savedUrlsのバージョン番号
+    // Custom prompts
+    CUSTOM_PROMPTS: 'custom_prompts' // カスタムプロンプト設定
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -305,7 +307,9 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
     // Dynamic URL validation defaults
     [StorageKeys.ALLOWED_URLS]: [], // 許可されたURLのリスト（設定から動的に構築）
-    [StorageKeys.ALLOWED_URLS_HASH]: '' // URLリストのハッシュ（変更検出用）
+    [StorageKeys.ALLOWED_URLS_HASH]: '', // URLリストのハッシュ（変更検出用）
+    // Custom prompts defaults
+    [StorageKeys.CUSTOM_PROMPTS]: [] // カスタムプロンプトのリスト
 };
 
 /**
@@ -416,17 +420,9 @@ export async function getSettings(): Promise<Settings> {
             const key = await getOrCreateEncryptionKey();
             for (const field of API_KEY_FIELDS) {
                 const value = merged[field];
-                console.log(`Checking ${field}:`, {
-                    exists: !!value,
-                    type: typeof value,
-                    isEncrypted: isEncrypted(value),
-                    value: typeof value === 'string' ? value.substring(0, 10) + '...' : value
-                });
-
                 if (isEncrypted(value)) {
                     try {
                         merged[field] = await decryptApiKey(value, key);
-                        console.log(`Decrypted ${field} successfully`);
                     } catch (e) {
                         console.error(`Failed to decrypt ${field}:`, e);
                         merged[field] = '';

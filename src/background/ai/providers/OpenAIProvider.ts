@@ -8,6 +8,7 @@ import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
+import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
 export class OpenAIProvider extends AIProviderStrategy {
     private providerName: string;
@@ -72,20 +73,19 @@ export class OpenAIProvider extends AIProviderStrategy {
             addLog(LogType.WARN, `[${this.providerName}] Content sanitized and proceeding with AI request`);
         }
 
+        // カスタムプロンプトを適用
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizedContent);
+
         const payload = {
             model: this.model,
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful assistant that summarizes web pages effectively and concisely in Japanese."
+                    content: systemPrompt
                 },
                 {
                     role: "user",
-                    content: `以下のWebページの内容を、日本語で簡潔に要約してください。
-                           1文または2文で、重要なポイントをまとめてください。改行しないこと。
-
-                           Content:
-                           ${sanitizedContent}`
+                    content: userPrompt
                 }
             ]
         };

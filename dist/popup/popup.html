@@ -58,6 +58,8 @@
         data-i18n="mainTab">General</button>
       <button id="domainTab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="domainPanel"
         data-i18n="domainTab">Domain Filter</button>
+      <button id="promptTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="promptPanel"
+        data-i18n="promptTab">Prompt</button>
       <button id="privacyTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="privacyPanel"
         data-i18n="privacyTab">Privacy</button>
     </div>
@@ -284,6 +286,70 @@
 
       <button id="saveDomainSettings" data-i18n="saveDomainSettings">Save</button>
       <div id="domainStatus" aria-live="polite"></div>
+    </div>
+
+    <!-- Custom Prompt Panel -->
+    <div id="promptPanel" class="tab-panel" role="tabpanel" aria-labelledby="promptTab" aria-hidden="true">
+      <div class="form-group">
+        <label data-i18n="promptDescription">Customize the AI summary prompt. Use {{content}} as a placeholder for the page content.</label>
+        <div class="help-text" data-i18n="promptHelp">
+          The prompt will be used when generating summaries. Leave empty to use the default prompt.
+        </div>
+      </div>
+
+      <hr class="settings-hr">
+
+      <!-- Prompt List -->
+      <div id="promptListSection">
+        <h4 data-i18n="savedPrompts">Saved Prompts</h4>
+        <div id="promptList" class="prompt-list">
+          <!-- Prompts will be rendered here -->
+        </div>
+        <p id="noPromptsMessage" class="no-sources" data-i18n="noPromptsSaved">No custom prompts saved</p>
+      </div>
+
+      <hr class="settings-hr">
+
+      <!-- Prompt Editor -->
+      <div id="promptEditorSection">
+        <h4 data-i18n="promptEditor">Prompt Editor</h4>
+        
+        <div class="form-group">
+          <label for="promptName" data-i18n="promptName">Prompt Name</label>
+          <input type="text" id="promptName" data-i18n-input-placeholder="promptNamePlaceholder">
+        </div>
+
+        <div class="form-group">
+          <label for="promptProvider" data-i18n="promptProvider">Apply to Provider</label>
+          <select id="promptProvider">
+            <option value="all" data-i18n-opt="promptProviderAll">All Providers</option>
+            <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+            <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible</option>
+            <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="promptSystem" data-i18n="promptSystem">System Prompt (OpenAI only)</label>
+          <input type="text" id="promptSystem" data-i18n-input-placeholder="promptSystemPlaceholder">
+          <div class="help-text" data-i18n="promptSystemHelp">
+            Optional system prompt for OpenAI-compatible providers.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="promptText" data-i18n="promptText">User Prompt</label>
+          <textarea id="promptText" rows="6" data-i18n-input-placeholder="promptTextPlaceholder"></textarea>
+        </div>
+
+        <div class="form-group">
+          <button id="savePromptBtn" class="secondary-btn" data-i18n="savePrompt">Save Prompt</button>
+          <button id="cancelPromptBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+          <input type="hidden" id="editingPromptId" value="">
+        </div>
+      </div>
+
+      <div id="promptStatus" aria-live="polite"></div>
     </div>
 
     <!-- Privacy Settings Panel -->
