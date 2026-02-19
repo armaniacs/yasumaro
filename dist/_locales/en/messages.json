@@ -659,5 +659,122 @@
     },
     "importNoSignatureWarning": {
         "message": "⚠️ This settings file contains no signature.\n\nSignatures are used to prevent settings file tampering.\nIt is recommended not to import files from untrusted sources.\n\nDo you want to continue importing?"
+    },
+    "errorNetwork": {
+        "message": "A network error occurred. Please check your internet connection."
+    },
+    "errorAuth": {
+        "message": "An authentication error occurred. Please check your API key."
+    },
+    "errorValidation": {
+        "message": "Invalid input."
+    },
+    "errorNotFound": {
+        "message": "Resource not found."
+    },
+    "errorRateLimit": {
+        "message": "Request limit reached. Please try again later."
+    },
+    "errorServer": {
+        "message": "A server error occurred. Please try again later."
+    },
+    "errorGeneric": {
+        "message": "An error occurred."
+    },
+    "errorUrlNotAllowed": {
+        "message": "Access to this URL is not allowed. Please check if the base URL is registered in the settings."
+    },
+    "errorDomainBlocked": {
+        "message": "This domain is blocked."
+    },
+    "errorInvalidUrlGeneric": {
+        "message": "Invalid URL."
+    },
+    "errorObsidianConnection": {
+        "message": "Failed to connect to Obsidian. Please check if Obsidian is running."
+    },
+    "errorDailyNoteSave": {
+        "message": "Failed to save to daily note."
+    },
+    "errorAiSummarize": {
+        "message": "Failed to generate AI summary."
+    },
+    "errorContentEmpty": {
+        "message": "The page content is empty."
+    },
+    "masterPasswordProtection": {
+        "message": "Master Password Protection"
+    },
+    "masterPasswordDesc": {
+        "message": "Protect your settings with a master password. Required for encrypted export/import."
+    },
+    "enableMasterPassword": {
+        "message": "Enable master password protection"
+    },
+    "encryptApiKeys": {
+        "message": "Encrypt API keys in storage"
+    },
+    "encryptApiKeysDesc": {
+        "message": "API keys will be encrypted with your master password"
+    },
+    "encryptOnExport": {
+        "message": "Encrypt settings on export"
+    },
+    "encryptOnExportDesc": {
+        "message": "Exported settings file will be encrypted with your master password"
+    },
+    "requirePasswordOnImport": {
+        "message": "Require password on import"
+    },
+    "requirePasswordOnImportDesc": {
+        "message": "Password will be required to import encrypted settings"
+    },
+    "changeMasterPassword": {
+        "message": "Change Master Password"
+    },
+    "setMasterPassword": {
+        "message": "Set Master Password"
+    },
+    "setMasterPasswordDesc": {
+        "message": "Create a master password to protect your settings. This password cannot be recovered."
+    },
+    "masterPassword": {
+        "message": "Master Password"
+    },
+    "confirmMasterPassword": {
+        "message": "Confirm Master Password"
+    },
+    "enterMasterPassword": {
+        "message": "Enter Master Password"
+    },
+    "enterMasterPasswordDesc": {
+        "message": "Enter your master password to continue."
+    },
+    "passwordMismatch": {
+        "message": "Passwords do not match."
+    },
+    "passwordTooShort": {
+        "message": "Password must be at least 8 characters long."
+    },
+    "passwordStrengthWeak": {
+        "message": "Weak"
+    },
+    "passwordStrengthMedium": {
+        "message": "Medium"
+    },
+    "passwordStrengthStrong": {
+        "message": "Strong"
+    },
+    "passwordIncorrect": {
+        "message": "Incorrect password."
+    },
+    "passwordSaved": {
+        "message": "Master password saved successfully."
+    },
+    "passwordRemoved": {
+        "message": "Master password removed."
+    },
+    "passwordRequired": {
+        "message": "Please enter your master password."
     }
 }

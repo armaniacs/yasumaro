@@ -2,6 +2,7 @@
 
 import { getScreenState, setScreenState, SCREEN_STATES } from './screenState.js';
 import { clearAutoCloseTimer } from './autoClose.js';
+import { setHtmlLangAndDir } from './i18n.js';
 
 /**
  * 【機能概要】: メイン画面を表示し、設定画面を非表示にする
@@ -88,6 +89,9 @@ export function showSettingsScreen(): void {
  */
 export function init(): void {
   console.log('[Navigation] Initializing navigation...');
+
+  // 【アクセシビリティ改善】htmlのlangとdir属性をユーザーロケールに基づいて設定
+  setHtmlLangAndDir();
 
   // 【DOM要素キャプチャ】: イベント設定用に要素を取得 🟢
   // 【設計方針】: 毎回のDOMクエリを避けるために先に取得

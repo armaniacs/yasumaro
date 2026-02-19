@@ -175,7 +175,7 @@ async function reportValidVisit() {
     }
     catch (error) {
         // 全てのリトライが失敗した場合
-        if (error.message && error.message.includes('Extension context invalidated')) {
+        if (error.message && (error.message.includes('Extension context invalidated') || error.message.includes('sendMessage'))) {
             // 拡張機能がリロードされた場合は、定期チェックを停止してページリフレッシュを推奨
             if (checkIntervalId) {
                 clearInterval(checkIntervalId);
@@ -228,6 +228,17 @@ function init() {
     startPeriodicCheck();
     // 【クリーンアップ】: ページ離脱時に定期実行を停止
     window.addEventListener('beforeunload', stopPeriodicCheck);
+    // 【パフォーマンス最適化】: タブが非表示の場合は定期実行を停止
+    // Page Visibility APIを使用して、バックグラウンドタブでの不要な処理を回避
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopPeriodicCheck();
+        }
+        else if (!isValidVisitReported) {
+            // タブが表示され、まだ記録が行われていない場合は再開
+            startPeriodicCheck();
+        }
+    });
 }
 // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

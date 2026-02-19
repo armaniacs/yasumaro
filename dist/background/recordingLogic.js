@@ -89,7 +89,10 @@ export class RecordingLogic {
             const age = now - RecordingLogic.cacheState.urlCacheTimestamp;
             if (age < URL_CACHE_TTL) {
                 addLog(LogType.DEBUG, 'URL cache hit', { count: RecordingLogic.cacheState.urlCache.size, age: age + 'ms' });
-                return new Map(RecordingLogic.cacheState.urlCache); // 新しいMapを返して変更の影響を防ぐ
+                // キャッシュの直接参照を返す
+                // 注: この関数の呼び出し元はurlMapを変更してストレージに保存するため、
+                // キャッシュは処理後にinvalidateUrlCache()で無効化される
+                return RecordingLogic.cacheState.urlCache;
             }
         }
         // キャッシュが無効な場合、storageから取得（タイムスタンプ付き）
@@ -137,17 +140,17 @@ export class RecordingLogic {
             this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
             // 日付ベース重複チェック: Map<URL, timestamp> を取得
             const urlMap = await this.getSavedUrlsWithCache();
-            // 同じURLが保存済みで、かつ同日の場合はスキップ
+            // 同じURLが保存済みで、かつ同日の場合はスキップ（UTCベースで比較）
             if (!skipDuplicateCheck) {
                 const savedTimestamp = urlMap.get(url);
                 if (savedTimestamp) {
                     const savedDate = new Date(savedTimestamp);
                     const today = new Date();
-                    // 同年同月同日なら同日と判断
-                    if (savedDate.getFullYear() === today.getFullYear() &&
-                        savedDate.getMonth() === today.getMonth() &&
-                        savedDate.getDate() === today.getDate()) {
-                        addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', { url, savedDate: savedDate.toDateString() });
+                    // UTCベースで同日かどうか判定（タイムゾーンの影響を受けない）
+                    if (savedDate.getUTCFullYear() === today.getUTCFullYear() &&
+                        savedDate.getUTCMonth() === today.getUTCMonth() &&
+                        savedDate.getUTCDate() === today.getUTCDate()) {
+                        addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', { url, savedDate: savedDate.toUTCString() });
                         return { success: true, skipped: true, reason: 'same_day' };
                     }
                     // 別日なら古いエントリを上書き（以降の処理で追加される）

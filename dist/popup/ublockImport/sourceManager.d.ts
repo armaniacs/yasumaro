@@ -2,13 +2,7 @@
  * sourceManager.ts
  * uBlockインポートモジュール - ソース管理機能
  */
-interface Source {
-    url: string;
-    importedAt: number;
-    ruleCount: number;
-    blockDomains: string[];
-    exceptionDomains: string[];
-}
+import type { Source } from '../../utils/types.js';
 interface ReloadResult {
     sources: Source[];
     ruleCount: number;

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; connect-src https: http:; object-src 'none';">
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
   <title>Obsidian Smart History Settings</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -43,7 +43,7 @@
       <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain" aria-label="Back">←</button>
       <h1 class="sr-only" data-i18n="settings">Settings</h1>
       <h2 data-i18n="settings" aria-hidden="true">Settings</h2>
-      <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true">⋮</button>
+      <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true" aria-expanded="false">⋮</button>
       <!-- Settings Dropdown Menu -->
       <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
         <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
@@ -414,8 +414,112 @@
         </div>
       </div>
 
+      <hr class="settings-hr">
+
+      <!-- Master Password Protection -->
+      <div class="form-group">
+        <label id="masterPasswordLabel" data-i18n="masterPasswordProtection">Master Password Protection</label>
+        <div class="help-text" id="masterPasswordDesc" data-i18n="masterPasswordDesc">
+          Protect your settings with a master password. Required for encrypted export/import.
+        </div>
+        <div class="mb-8">
+          <input type="checkbox" id="masterPasswordEnabled" aria-describedby="masterPasswordDesc">
+          <label for="masterPasswordEnabled" class="inline-label" data-i18n="enableMasterPassword">Enable master password protection</label>
+        </div>
+
+        <!-- Advanced Options (shown when enabled) -->
+        <div id="masterPasswordOptions" class="ml-24 hidden">
+          <div class="mb-8">
+            <input type="checkbox" id="encryptApiKeys" checked aria-describedby="encryptApiKeysDesc">
+            <label for="encryptApiKeys" class="inline-label" data-i18n="encryptApiKeys">Encrypt API keys in storage</label>
+            <div class="help-text ml-24" id="encryptApiKeysDesc" data-i18n="encryptApiKeysDesc">
+              API keys will be encrypted with your master password
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <input type="checkbox" id="encryptOnExport" checked aria-describedby="encryptOnExportDesc">
+            <label for="encryptOnExport" class="inline-label" data-i18n="encryptOnExport">Encrypt settings on export</label>
+            <div class="help-text ml-24" id="encryptOnExportDesc" data-i18n="encryptOnExportDesc">
+              Exported settings file will be encrypted with your master password
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <input type="checkbox" id="requirePasswordOnImport" checked aria-describedby="requirePasswordOnImportDesc">
+            <label for="requirePasswordOnImport" class="inline-label" data-i18n="requirePasswordOnImport">Require password on import</label>
+            <div class="help-text ml-24" id="requirePasswordOnImportDesc" data-i18n="requirePasswordOnImportDesc">
+              Password will be required to import encrypted settings
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button id="changeMasterPassword" class="secondary-btn" data-i18n="changeMasterPassword">Change Master Password</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
+
+  <!-- Password Setup Modal -->
+  <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordModalTitle" data-i18n="setMasterPassword">Set Master Password</h3>
+        <button id="closePasswordModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordModalDesc" data-i18n="setMasterPasswordDesc">
+          Create a master password to protect your settings. This password cannot be recovered.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordInput" aria-describedby="passwordStrengthError">
+          <div id="passwordStrengthError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group" id="confirmPasswordGroup">
+          <label for="masterPasswordConfirm" data-i18n="confirmMasterPassword">Confirm Master Password</label>
+          <input type="password" id="masterPasswordConfirm">
+          <div id="passwordMatchError" class="field-error" role="alert"></div>
+        </div>
+        <div id="passwordStrength" class="password-strength mt-8">
+          <div class="strength-bar">
+            <div class="strength-fill"></div>
+          </div>
+          <div class="strength-text text-xs text-gray" id="passwordStrengthText">Password strength</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="savePasswordBtn" class="btn-confirm" data-i18n="save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Auth Modal -->
+  <div id="passwordAuthModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordAuthModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordAuthModalTitle" data-i18n="enterMasterPassword">Enter Master Password</h3>
+        <button id="closePasswordAuthModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordAuthModalDesc" data-i18n="enterMasterPasswordDesc">
+          Enter your master password to continue.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordAuthInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordAuthInput" autocomplete="current-password">
+        </div>
+        <div id="passwordAuthError" class="field-error" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordAuthBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="submitPasswordAuthBtn" class="btn-confirm" data-i18n="confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Confirmation Modal -->
   <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmContent">
@@ -443,7 +547,7 @@
 
   <!-- Import Confirmation Modal -->
   <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
-    aria-labelledby="importConfirmTitle" aria-hidden="true">
+    aria-labelledby="importConfirmTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>

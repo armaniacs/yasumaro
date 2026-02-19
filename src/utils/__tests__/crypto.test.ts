@@ -6,6 +6,7 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Crypto } from '@peculiar/webcrypto';
+import type { EncryptedData } from '../typesCrypto.js';
 import {
     generateSalt,
     generateIV,
@@ -17,8 +18,7 @@ import {
     decryptData,
     isEncrypted,
     encryptApiKey,
-    decryptApiKey,
-    type EncryptedData
+    decryptApiKey
 } from '../crypto.js';
 
 // Web Crypto APIのセットアップ

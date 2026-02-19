@@ -17,11 +17,26 @@ export interface CustomPrompt {
     updatedAt: number;
 }
 /**
+ * uBlockルール（ublockMatcher.ts 用）
+ */
+export interface UblockRule {
+    domain: string;
+    options?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+/**
  * uBlock形式ルールセット
+ * ストレージに保存される軽量なルールデータ構造
  */
 export interface UblockRules {
-    blockDomains?: Set<string>;
-    exceptionDomains?: Set<string>;
+    blockDomains: string[];
+    exceptionDomains: string[];
+    blockRules?: UblockRule[];
+    exceptionRules?: UblockRule[];
+    metadata?: {
+        importedAt: number;
+        ruleCount: number;
+    };
 }
 /**
  * uBlockソース
@@ -31,6 +46,6 @@ export interface Source {
     ruleCount: number;
     blockDomains: string[];
     exceptionDomains: string[];
-    importedAt?: number;
+    importedAt: number;
 }
 //# sourceMappingURL=types.d.ts.map

@@ -38,6 +38,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **AIプロンプトタブが表示されない問題を修正**: `domainFilter.ts` の `showTab` 関数がパネルの表示切替に `style.display` インラインスタイルを使用していたため、`promptPanel` へ切り替えても `domainPanel` のインラインスタイルが残り消えなかった問題を修正
+  - `showTab` から `style.display` のインライン設定を除去し、`removeAttribute('style')` でリセット
+  - `promptPanel`・`promptTabBtn` を `showTab` の管理対象に追加（`'general' | 'domain' | 'prompt' | 'privacy'`）
+  - `popup.ts` の `initTabNavigation` にも `removeAttribute('style')` を追加して競合を防止
+
+- **uBlockフィルターURL取得エラーの修正**: `manifest.json` の `host_permissions` と `connect-src` に uBlock フィルターソース用ドメインを追加し、Service Worker からの fetch が権限不足でブロックされていた問題を解消
+  - 追加ドメイン: `https://raw.githubusercontent.com/*`, `https://gitlab.com/*`, `https://easylist.to/*`, `https://pgl.yoyo.org/*`, `https://nsfw.oisd.nl/*`, `https://api.ai.sakura.ad.jp/*`
+
+- **CSP: さくらAI APIのCSP許可**: `manifest.json` の `connect-src` に `https://api.ai.sakura.ad.jp` を追加し、さくらAIプロバイダーへの接続エラーを解消
+
+- **CSP: インラインスタイルのCSP違反修正**: `popup.html` の `<div class="strength-fill" style="width: 0%;">` からインラインスタイルを削除し、`styles.css` の `.strength-fill` にデフォルト値 `width: 0%` を追加してCSPの `style-src 'self'` ポリシーに準拠
+
+- **`_locales/ja/messages.json` の構文エラー修正**: `passwordRequired` エントリの閉じ括弧後に余分な `},` があり `importPasswordRequired` が孤立していた問題を修正
+
+- **拡張機能リロード時の `sendMessage` クラッシュ修正**: 拡張機能リロード後もコンテンツスクリプトがページ上で動作し続け `chrome.runtime` が `undefined` になった状態で `sendMessage` を呼んでクラッシュする問題を修正
+  - `src/utils/retryHelper.ts` の `#sendOnce` で `chrome?.runtime?.sendMessage` の存在チェックを追加
+  - `src/content/extractor.ts` のエラーキャッチで `sendMessage` を含むメッセージも Extension context invalidated として静かに処理
+
 - **ublockImport テスト修正**:
   - `src/popup/__tests__/ublockImport-sourceManager.test.ts` のテスト環境設定を改善
   - `settings_migrated` フラグと `settings_version` を初期状態に追加して storage マイグレーション状態を正確に再現
@@ -126,7 +144,61 @@ All notable changes to this project will be documented in this file.
   - `importNoSignatureWarning` (英語モック: "⚠️ This settings file contains no signature...")
 
 - テスト結果: **1160 passed / 4 skipped**（回帰なし）
-- テスト結果: **1160 passed / 4 skipped**（回帰なし）
+
+### Security
+
+- **マスターパスワード保護機能の実装**:
+  - `src/utils/masterPassword.ts` を新規作成し、パスワード管理機能を追加
+    - パスワード強度計算（スコア0-100、Weak/Medium/Strong分類）
+    - パスワード要件検証（8文字以上）
+    - パスワード一致チェック
+    - PBKDF2ベースのハッシュ化・検証
+    - パスワード変更機能（既存APIキーの再暗号化対応）
+  - `src/utils/settingsExportImport.ts` にエクスポート/インポート暗号化機能を追加
+    - AES-GCM暗号化 + HMAC署名による完全性検証
+    - `exportEncryptedSettings()`: マスターパスワードで設定を暗号化エクスポート
+    - `importEncryptedSettings()`: マスターパスワードで暗号化設定を復号・インポート
+    - 非暗号化エクスポートとの後方互換性維持
+  - `src/popup/popup.html` にマスターパスワードUIを追加
+    - Privacyタブにマスターパスワード保護オプション（チェックボックス）
+    - パスワード設定モーダル（設定・変更）
+    - パスワード認証モーダル（エクスポート/インポート時）
+    - パスワード強度インジケーター（バー＋テキスト表示）
+    - フォーカストラップ対応のモーダル
+  - `src/popup/popup.html` にモーダルHTMLを追加（passwordModal, passwordAuthModal）
+  - `src/popup/styles.css` にパスワード強度スタイルを追加
+  - `src/utils/storage.ts` にマスターパスワード用StorageKeysを追加
+    - `MP_PROTECTION_ENABLED`, `MP_ENCRYPT_API_KEYS`, `MP_ENCRYPT_ON_EXPORT`, `MP_REQUIRE_ON_IMPORT`
+  - `src/utils/storageSettings.ts` にデフォルト値を追加
+    - `mp_protection_enabled: false`, `mp_encrypt_api_keys: true`, `mp_encrypt_on_export: true`, `mp_require_on_import: true`
+  - `src/popup/popup.ts` にパスワード管理ロジックを追加
+    - `showPasswordModal()`, `closePasswordModal()`, `savePassword()` - 設定・変更モーダル
+    - `showPasswordAuthModal()`, `closePasswordAuthModal()`, `authenticatePassword()` - 認証モーダル
+    - `updatePasswordStrength()` - パスワード強度リアルタイム更新
+    - `loadMasterPasswordSettings()` - 初期設定ロード
+    - エクスポート時に暗号化オプションが有効な場合、パスワード認証モーダル表示
+    - インポート時に暗号化ファイルを検出した場合、パスワード認証モーダル表示
+  - i18nメッセージを追加（日本語・英語各27件）
+    - `masterPasswordProtection`, `masterPasswordDesc`, `enableMasterPassword`
+    - `setMasterPassword`, `changeMasterPassword`, `enterMasterPassword`
+    - `passwordWeak`, `passwordMedium`, `passwordStrong`, `passwordTooShort`, `passwordMismatch`
+    - `passwordSaved`, `passwordRemoved`, `passwordRequired`, `passwordIncorrect`
+    - `importPasswordRequired` など
+
+### Accessibility
+
+- **ボタン最小ターゲットサイズ確保**: ドロップダウンメニューボタンにWCAG準拠の最小サイズを追加
+  - `.dropdown-menu button` に `min-height: 44px` を追加
+  - `box-sizing: border-box` で正確なサイズ確保
+  - タッチデバイスでの操作性改善
+
+### Performance
+
+- **定期チェックの最適化**: Page Visibility APIを追加し、バックグラウンドタブでの無駄な処理を防止
+  - `document.addEventListener('visibilitychange')` リスナーを追加
+  - タブが非表示の場合（`document.hidden === true`）に定期チェックを自動停止
+  - タブが表示され、まだ記録が行われていない場合は定期チェックを再開
+  - `src/content/extractor.ts:254-261`
 
 ## [3.9.3] - 2026-02-17
 

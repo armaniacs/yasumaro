@@ -168,8 +168,8 @@ export async function handleSaveAndTest(
     const currentSettings = await getSettings();
     console.log('[SettingsSaver] Current settings from storage:', {
         hasObsidianKey: !!currentSettings['obsidian_api_key'],
-        obsidianKeyLength: currentSettings['obsidian_api_key']?.length || 0,
-        obsidianKeyValue: currentSettings['obsidian_api_key']?.substring(0, 10) + '...',
+        obsidianKeyLength: (typeof currentSettings['obsidian_api_key'] === 'string' ? currentSettings['obsidian_api_key'].length : 0),
+        obsidianKeyValue: (typeof currentSettings['obsidian_api_key'] === 'string' ? currentSettings['obsidian_api_key'].substring(0, 10) + '...' : 'NA'),
         hasGeminiKey: !!currentSettings['gemini_api_key'],
         hasOpenaiKey: !!currentSettings['openai_api_key']
     });
@@ -177,7 +177,7 @@ export async function handleSaveAndTest(
     const mergedSettings = { ...currentSettings, ...newSettings };
     console.log('[SettingsSaver] Merged with current settings:', {
         hasObsidianKey: !!mergedSettings['obsidian_api_key'],
-        obsidianKeyLength: mergedSettings['obsidian_api_key']?.length || 0,
+        obsidianKeyLength: (typeof mergedSettings['obsidian_api_key'] === 'string' ? mergedSettings['obsidian_api_key'].length : 0),
         hasGeminiKey: !!mergedSettings['gemini_api_key'],
         hasOpenaiKey: !!mergedSettings['openai_api_key']
     });
@@ -192,7 +192,7 @@ export async function handleSaveAndTest(
     const verifySettings = await getSettings();
     console.log('[SettingsSaver] Verification after save:', {
         hasObsidianKey: !!verifySettings['obsidian_api_key'],
-        obsidianKeyLength: verifySettings['obsidian_api_key']?.length || 0,
+        obsidianKeyLength: (typeof verifySettings['obsidian_api_key'] === 'string' ? verifySettings['obsidian_api_key'].length : 0),
         obsidianKeyType: typeof verifySettings['obsidian_api_key'],
         hasGeminiKey: !!verifySettings['gemini_api_key'],
         hasOpenaiKey: !!verifySettings['openai_api_key']

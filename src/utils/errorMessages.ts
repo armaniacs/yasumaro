@@ -28,14 +28,24 @@ export type ErrorTypeValues = typeof ErrorType[keyof typeof ErrorType];
  * ユーザー向けエラーメッセージのマッピング
  * 技術的な詳細を含まない、ユーザーフレンドリーなメッセージ
  */
-const USER_MESSAGES: Record<string, string> = {
-    [ErrorType.NETWORK]: 'ネットワークエラーが発生しました。インターネット接続を確認してください。',
-    [ErrorType.AUTH]: '認証エラーが発生しました。APIキーを確認してください。',
-    [ErrorType.VALIDATION]: '入力内容が無効です。',
-    [ErrorType.NOT_FOUND]: 'リソースが見つかりませんでした。',
-    [ErrorType.RATE_LIMIT]: 'リクエスト制限に達しました。しばらく待ってから再試行してください。',
-    [ErrorType.SERVER]: 'サーバーエラーが発生しました。しばらく待ってから再試行してください。',
-    [ErrorType.UNKNOWN]: 'エラーが発生しました。'
+const getUserMessageForType = (errorType: ErrorTypeValues): string => {
+    switch (errorType) {
+        case ErrorType.NETWORK:
+            return chrome.i18n.getMessage('errorNetwork') || 'A network error occurred.';
+        case ErrorType.AUTH:
+            return chrome.i18n.getMessage('errorAuth') || 'An authentication error occurred.';
+        case ErrorType.VALIDATION:
+            return chrome.i18n.getMessage('errorValidation') || 'Invalid input.';
+        case ErrorType.NOT_FOUND:
+            return chrome.i18n.getMessage('errorNotFound') || 'Resource not found.';
+        case ErrorType.RATE_LIMIT:
+            return chrome.i18n.getMessage('errorRateLimit') || 'Request limit reached.';
+        case ErrorType.SERVER:
+            return chrome.i18n.getMessage('errorServer') || 'A server error occurred.';
+        case ErrorType.UNKNOWN:
+        default:
+            return chrome.i18n.getMessage('errorGeneric') || 'An error occurred.';
+    }
 };
 
 /**
@@ -95,7 +105,7 @@ export function classifyError(error: any): ErrorTypeValues {
  */
 export function getUserMessage(error: any): string {
     const errorType = classifyError(error);
-    return USER_MESSAGES[errorType] || USER_MESSAGES[ErrorType.UNKNOWN];
+    return getUserMessageForType(errorType);
 }
 
 export interface ErrorResponse {
@@ -157,29 +167,28 @@ function sanitizeContext(context: Record<string, any>): Record<string, any> {
  */
 export function convertKnownErrorMessage(errorMessage: string): string {
     if (!errorMessage || typeof errorMessage !== 'string') {
-        return USER_MESSAGES[ErrorType.UNKNOWN];
+        return getUserMessageForType(ErrorType.UNKNOWN);
     }
 
     const lowerMessage = errorMessage.toLowerCase();
 
     // 既知のエラーパターンをマッピング
-    const knownPatterns = [
-        { pattern: /url.*not allowed/i, message: 'このURLのアクセスは許可されていません。設定画面でベースURLが登録されているか確認してください。' },
-        { pattern: /domain.*block/i, message: 'このドメインはブロックされています。' },
-        { pattern: /url.*invalid/i, message: '無効なURLです。' },
-        { pattern: /obsidian.*connection/i, message: 'Obsidianへの接続に失敗しました。Obsidianが起動していることを確認してください。' },
-        { pattern: /daily note/i, message: 'デイリーノートへの保存に失敗しました。' },
-        { pattern: /ai.*summar/i, message: 'AI要約の生成に失敗しました。' },
-        { pattern: /content.*empty/i, message: 'ページのコンテンツが空です。' }
+    const knownPatterns: Array<{ pattern: RegExp; messageKey: string }> = [
+        { pattern: /url.*not allowed/i, messageKey: 'errorUrlNotAllowed' },
+        { pattern: /domain.*block/i, messageKey: 'errorDomainBlocked' },
+        { pattern: /url.*invalid/i, messageKey: 'errorInvalidUrlGeneric' },
+        { pattern: /obsidian.*connection/i, messageKey: 'errorObsidianConnection' },
+        { pattern: /daily note/i, messageKey: 'errorDailyNoteSave' },
+        { pattern: /ai.*summar/i, messageKey: 'errorAiSummarize' },
+        { pattern: /content.*empty/i, messageKey: 'errorContentEmpty' }
     ];
 
-    for (const { pattern, message } of knownPatterns) {
+    for (const { pattern, messageKey } of knownPatterns) {
         if (pattern.test(lowerMessage)) {
-            return message;
+            return chrome.i18n.getMessage(messageKey) || `Error: ${pattern}`;
         }
     }
 
     // 分類に基づいてメッセージを返す
-    // const fakeError = { message: errorMessage, name: 'Error' };
     return getUserMessage({ message: errorMessage, name: 'Error' });
 }

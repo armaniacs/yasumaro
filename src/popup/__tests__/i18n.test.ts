@@ -8,7 +8,9 @@ import {
   getMessage,
   applyI18n,
   translatePageTitle,
-  getUserLocale
+  getUserLocale,
+  setHtmlLangAndDir,
+  isRTL
 } from '../i18n.js';
 
 describe('i18n', () => {
@@ -181,6 +183,57 @@ describe('i18n', () => {
     it('存在しないキーの場合は空文字を設定する', () => {
       translatePageTitle('nonExistentKey');
       expect(document.title).toBe('');
+    });
+  });
+
+  describe('setHtmlLangAndDir', () => {
+    it('isRTLがエクスポートされていること', () => {
+      expect(typeof isRTL).toBe('function');
+    });
+
+    it('setHtmlLangAndDirがエクスポートされていること', () => {
+      expect(typeof setHtmlLangAndDir).toBe('function');
+    });
+
+    it('日本語ロケールでlangとdirを設定する', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
+      setHtmlLangAndDir();
+
+      expect(document.documentElement.lang).toBe('ja-JP');
+      expect(document.documentElement.dir).toBe('ltr');
+    });
+
+    it('アラビア語ロケールでlangとdirを設定する', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('ar-EG');
+      setHtmlLangAndDir();
+
+      expect(document.documentElement.lang).toBe('ar-EG');
+      expect(document.documentElement.dir).toBe('rtl');
+    });
+
+    it('英語ロケールでlangとdirを設定する', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('en-US');
+      setHtmlLangAndDir();
+
+      expect(document.documentElement.lang).toBe('en-US');
+      expect(document.documentElement.dir).toBe('ltr');
+    });
+
+    it('RTL言語でdirがrtlになる', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('he');
+      setHtmlLangAndDir();
+
+      expect(document.documentElement.lang).toBe('he');
+      expect(document.documentElement.dir).toBe('rtl');
+    });
+
+    it('フォールバックの英語ロケールで正しく設定する', () => {
+      // Chrome APIを削除してフォールバックをテスト
+      delete global.chrome;
+      setHtmlLangAndDir();
+
+      expect(document.documentElement.lang).toBe('en-US');
+      expect(document.documentElement.dir).toBe('ltr');
     });
   });
 

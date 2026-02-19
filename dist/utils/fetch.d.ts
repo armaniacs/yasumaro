@@ -21,6 +21,12 @@ interface FetchOptions extends RequestInit {
  */
 export declare function fetchWithTimeout(url: string, options?: FetchOptions, timeoutMs?: number): Promise<Response>;
 /**
+ * プライベートIPアドレスかどうか判定
+ * @param {string} hostname - チェックするホスト名
+ * @returns {boolean} プライベートIPの場合true
+ */
+export declare function isPrivateIpAddress(hostname: string): boolean;
+/**
  * uBlockインポート用URLの検証（内部ネットワークブロック）
  * SSRF対策 - 内部ネットワークアドレスへのアクセスを防止
  * @param {string} url - 検証するURL

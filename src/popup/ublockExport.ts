@@ -100,7 +100,7 @@ export function init(): void {
 async function handleExport(): Promise<void> {
   try {
     const settings = await getSettings();
-    const rules = settings[StorageKeys.UBLOCK_RULES] as UblockRules;
+    const rules = settings[StorageKeys.UBLOCK_RULES] as unknown as UblockRules;
 
     if (!rules) {
       showStatus('domainStatus', 'エクスポートするルールがありません', 'error');
@@ -121,7 +121,7 @@ async function handleExport(): Promise<void> {
 async function handleCopy(): Promise<void> {
   try {
     const settings = await getSettings();
-    const rules = settings[StorageKeys.UBLOCK_RULES] as UblockRules;
+    const rules = settings[StorageKeys.UBLOCK_RULES] as unknown as UblockRules;
 
     if (!rules) {
       showStatus('domainStatus', 'コピーするルールがありません', 'error');
