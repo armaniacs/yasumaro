@@ -1,5 +1,6 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
+import { StorageKeys } from '../utils/storage.js';
 export class PrivacyPipeline {
     settings;
     aiClient;
@@ -9,7 +10,7 @@ export class PrivacyPipeline {
         this.settings = settings;
         this.aiClient = aiClient;
         this.sanitizers = sanitizers;
-        this.mode = settings.privacy_mode || 'full_pipeline';
+        this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
     }
     async process(content, options = {}) {
         const { previewOnly = false, alreadyProcessed = false } = options;
@@ -63,7 +64,7 @@ export class PrivacyPipeline {
         return { summary: 'Summary not available.' };
     }
     _logMasking(sanitizeResult) {
-        if (this.settings.pii_sanitize_logs !== false) {
+        if (this.settings[StorageKeys.PII_SANITIZE_LOGS] !== false) {
             const count = sanitizeResult.maskedItems.length;
             if (count > 0) {
                 addLog(LogType.SANITIZE, `Masked ${count} PII items`, {

@@ -6,9 +6,19 @@
 // Temporarily disabled to resolve circular dependency
 // import { addLog, LogType } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
-import { generateSalt, deriveKeyWithExtensionId, encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
+import type { EncryptedData } from './typesCrypto.js';
+import {
+    generateSalt,
+    deriveKeyWithExtensionId,
+    encryptApiKey,
+    decryptApiKey,
+    isEncrypted,
+    hashPasswordWithPBKDF2,
+    verifyPasswordWithPBKDF2
+} from './crypto.js';
 import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
+import type { UblockRules, Source, CustomPrompt } from './types.js';
 
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
@@ -44,15 +54,86 @@ export const StorageKeys = {
     ALLOWED_URLS_HASH: 'allowed_urls_hash', // URLリストのハッシュ（変更検出用）
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
-    ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）
+    ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）[廃止予定]
     HMAC_SECRET: 'hmac_secret',             // 設定エクスポート用HMACシークレット（Base64）
+    // 【セキュリティ修正】マスターパスワード関連
+    MASTER_PASSWORD_ENABLED: 'master_password_enabled', // マスターパスワード設定済みフラグ
+    MASTER_PASSWORD_SALT: 'master_password_salt',       // マスターパスワード用ソルト（Base64）
+    MASTER_PASSWORD_HASH: 'master_password_hash',       // マスターパスワードのハッシュ（Base64）
+    IS_LOCKED: 'is_locked',                  // 暗号化がロックされているかどうか
+    // 【マスターパスワード保護オプション】
+    MP_PROTECTION_ENABLED: 'mp_protection_enabled',    // マスターパスワード保護有効フラグ
+    MP_ENCRYPT_API_KEYS: 'mp_encrypt_api_keys',         // APIキー暗号化フラグ
+    MP_ENCRYPT_ON_EXPORT: 'mp_encrypt_on_export',       // エクスポート時暗号化フラグ
+    MP_REQUIRE_ON_IMPORT: 'mp_require_on_import',       // イポート時パスワード要求フラグ
     // Version tracking for optimistic locking
     SAVED_URLS_VERSION: 'savedUrls_version', // savedUrlsのバージョン番号
     // Custom prompts
-    CUSTOM_PROMPTS: 'custom_prompts' // カスタムプロンプト設定
+    CUSTOM_PROMPTS: 'custom_prompts', // カスタムプロンプト設定
+    // Domain filter cache for content scripts (Task #19)
+    DOMAIN_FILTER_CACHE: 'domain_filter_cache', // 許可ドメインキャッシュ（content script用）
+    DOMAIN_FILTER_CACHE_TIMESTAMP: 'domain_filter_cache_timestamp' // キャッシュタイムスタンプ
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
+
+// 各 StorageKey に対応する値型
+export interface StorageKeyValues {
+    [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
+    [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
+    [StorageKeys.MIN_VISIT_DURATION]: number;
+    [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    [StorageKeys.GEMINI_MODEL]: string;
+    [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
+    [StorageKeys.AI_PROVIDER]: string;
+    [StorageKeys.OPENAI_BASE_URL]: string;
+    [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
+    [StorageKeys.OPENAI_MODEL]: string;
+    [StorageKeys.OPENAI_2_BASE_URL]: string;
+    [StorageKeys.OPENAI_2_API_KEY]: string | EncryptedData;
+    [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.DOMAIN_WHITELIST]: string[];
+    [StorageKeys.DOMAIN_BLACKLIST]: string[];
+    [StorageKeys.DOMAIN_FILTER_MODE]: string;
+    [StorageKeys.PRIVACY_MODE]: string;
+    [StorageKeys.PII_CONFIRMATION_UI]: boolean;
+    [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.UBLOCK_RULES]: UblockRules;
+    [StorageKeys.UBLOCK_SOURCES]: Source[];
+    [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
+    [StorageKeys.SIMPLE_FORMAT_ENABLED]: boolean;
+    [StorageKeys.ALLOWED_URLS]: string[];
+    [StorageKeys.ALLOWED_URLS_HASH]: string;
+    [StorageKeys.ENCRYPTION_SALT]: string;
+    [StorageKeys.ENCRYPTION_SECRET]: string;
+    [StorageKeys.HMAC_SECRET]: string;
+    [StorageKeys.MASTER_PASSWORD_ENABLED]: boolean;
+    [StorageKeys.MASTER_PASSWORD_SALT]: string;
+    [StorageKeys.MASTER_PASSWORD_HASH]: string;
+    [StorageKeys.IS_LOCKED]: boolean;
+    [StorageKeys.MP_PROTECTION_ENABLED]: boolean;
+    [StorageKeys.MP_ENCRYPT_API_KEYS]: boolean;
+    [StorageKeys.MP_ENCRYPT_ON_EXPORT]: boolean;
+    [StorageKeys.MP_REQUIRE_ON_IMPORT]: boolean;
+    [StorageKeys.SAVED_URLS_VERSION]: number;
+    [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
+    [StorageKeys.DOMAIN_FILTER_CACHE]: string[];  // 許可ドメインリスト（キャッシュ）
+    [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;  // キャッシュタイムスタンプ
+}
+
+// 厳格な Settings 型
+export type StrictSettings = {
+    [K in StorageKey]: StorageKeyValues[K];
+};
+
+// 以前の Settings 型（後方互換性のため）
+// StrictSettings に徐々に移行を進める
+// StorageKeys で型チェック可能にするために index signature を追加
+export type Settings = Partial<StorageKeyValues> & {
+    [key: string]: unknown; // レガシー互換性
+};
 
 // 暗号化対象のAPIキーフィールド
 const API_KEY_FIELDS: StorageKey[] = [
@@ -127,10 +208,6 @@ export const ALLOWED_AI_PROVIDER_DOMAINS = [
     '127.0.0.1',
 ];
 
-export interface Settings {
-    [key: string]: any;
-}
-
 /**
  * ドメインがホワイトリストに含まれるかチェックする
  * @param {string} url - チェック対象のURL
@@ -165,13 +242,22 @@ export function isDomainInWhitelist(url: string): boolean {
 // メモリキャッシュ
 let cachedEncryptionKey: CryptoKey | null = null;
 let cachedExtensionId: string | null = null;
+let cachedSettings: { data: Settings | null; timestamp: number } | null = null;
+let cachedMasterPassword: string | null = null; // セッション中のマスターパスワードキャッシュ
+let cachedServerKey: CryptoKey | null = null; // 【マイグレーション用】サーバーサイド保存のキー
+const SETTINGS_CACHE_TTL = 1000; // 1秒間キャッシュ（record()内の重複呼び出し防止）
+
+// 【セキュリティ修正】マスターパスワード設定状態を追跡
+let isMasterPasswordRequired = false; // マスターパスワードが設定済みかどうか
 
 /**
  * 暗号化キーを取得または作成する
- * ソルト/シークレットが無ければ自動生成してストレージに保存
- * chrome.runtime.idをキー導出に組み込むことで、異なる環境間のデータ分離を実現
+ *
+ * 【セキュリティ修正】マスターパスワードが設定されている場合、マスターパスワードからキーを導出
+ * マスターパスワード未設定の場合は従来の方式でマイグレーション準備
  *
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
+ * @throws {Error} ロックされている場合（マスターパスワード未入力）
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     if (cachedEncryptionKey && cachedExtensionId) {
@@ -187,11 +273,40 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     }
     cachedExtensionId = extensionId;
 
+    // マスターパスワード設定状態を確認
     const result = await chrome.storage.local.get([
+        StorageKeys.MASTER_PASSWORD_ENABLED,
         StorageKeys.ENCRYPTION_SALT,
-        StorageKeys.ENCRYPTION_SECRET
+        StorageKeys.ENCRYPTION_SECRET,
+        StorageKeys.MASTER_PASSWORD_SALT,
+        StorageKeys.IS_LOCKED
     ]);
 
+    const masterPasswordEnabled = result[StorageKeys.MASTER_PASSWORD_ENABLED] as boolean;
+    const isLocked = result[StorageKeys.IS_LOCKED] as boolean;
+
+    if (masterPasswordEnabled) {
+        // 【セキュリティ修正】マスターパスワードが設定されている場合は強制的にロック
+        isMasterPasswordRequired = true;
+
+        if (!cachedMasterPassword) {
+            throw new Error('ENCRYPTION_LOCKED: Master password required');
+        }
+
+        // マスターパスワードからキーを導出
+        const passwordSaltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
+        if (!passwordSaltBase64) {
+            throw new Error('CORRUPTION: Master password salt missing');
+        }
+
+        const passwordSalt = base64ToUint8Array(passwordSaltBase64);
+        // PBKDF2キー導出を直接使用（マスターパスワードベース）
+        cachedEncryptionKey = await deriveKeyFromPassword(cachedMasterPassword, passwordSalt);
+        return cachedEncryptionKey;
+    }
+
+    // マスターパスワード未設定の場合：従来の方式を使用（マイグレーション準備）
+    // 注意：この方式は脆弱だが、マイグレーション完了まで維持
     let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
     let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
 
@@ -209,16 +324,190 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
         });
     }
 
-    // Base64からUint8Arrayに変換
-    const binaryString = atob(saltBase64);
-    const salt = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        salt[i] = binaryString.charCodeAt(i);
-    }
+    const salt = base64ToUint8Array(saltBase64);
 
-    // Extension IDを使用してキーを導出
+    // 【脆弱な方式】Extension IDを使用してキー導出
+    // マスターパスワード設定後に再暗号化が必要
     cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
     return cachedEncryptionKey;
+}
+
+/**
+ * Base64文字列をUint8Arrayに変換するヘルパー関数
+ */
+function base64ToUint8Array(base64: string): Uint8Array {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+}
+
+/**
+ * パスワードから暗号化キーを導出する（PBKDF2、extensionIdなし）
+ * マスターパスワード方式専用
+ */
+async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
+    const webcrypto = global.crypto || crypto;
+    const encoder = new TextEncoder();
+    const passwordBuffer = encoder.encode(password);
+
+    const baseKey = await webcrypto.subtle.importKey(
+        'raw',
+        passwordBuffer,
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    const derivedKey = await webcrypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt as BufferSource,
+            iterations: 100000,
+            hash: 'SHA-256'
+        },
+        baseKey,
+        {
+            name: 'AES-GCM',
+            length: 256
+        },
+        false,
+        ['encrypt', 'decrypt']
+    );
+
+    return derivedKey;
+}
+
+/**
+ * マスターパスワードが設定されているか確認
+ * @returns {Promise<boolean>} マスターパスワードが設定済みの場合true
+ */
+export async function isMasterPasswordEnabled(): Promise<boolean> {
+    const result = await chrome.storage.local.get(StorageKeys.MASTER_PASSWORD_ENABLED);
+    return Boolean(result[StorageKeys.MASTER_PASSWORD_ENABLED]);
+}
+
+/**
+ * 暗号化がロックされているか確認（マスターパスワード未入力）
+ * @returns {Promise<boolean>} ロックされている場合true
+ */
+export async function isEncryptionLocked(): Promise<boolean> {
+    const enabled = await isMasterPasswordEnabled();
+    return isMasterPasswordRequired && enabled && !cachedMasterPassword;
+}
+
+/**
+ * マスターパスワードを設定する
+ * @param {string} password - マスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export async function setMasterPassword(password: string): Promise<boolean> {
+    if (!password || password.length < 8) {
+        throw new Error('Password must be at least 8 characters');
+    }
+
+    const salt = generateSalt();
+    const saltBase64 = btoa(String.fromCharCode(...salt));
+    const hash = await hashPasswordWithPBKDF2(password, salt);
+
+    await chrome.storage.local.set({
+        [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
+        [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
+        [StorageKeys.MASTER_PASSWORD_HASH]: hash,
+        [StorageKeys.IS_LOCKED]: true // 初期状態でロック（アンロック必要）
+    });
+
+    // 【セキュリティ修正】設定時はパスワードキャッシュをクリア（ロック状態で開始）
+    cachedMasterPassword = null;
+    isMasterPasswordRequired = true;
+
+    // キャッシュをクリア
+    cachedEncryptionKey = null;
+
+    return true;
+}
+
+/**
+ * マスターパスワードを検証し、セッションをアンロックする
+ * @param {string} password - マスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export async function unlockWithPassword(password: string): Promise<boolean> {
+    const result = await chrome.storage.local.get([
+        StorageKeys.MASTER_PASSWORD_HASH,
+        StorageKeys.MASTER_PASSWORD_SALT,
+        StorageKeys.MASTER_PASSWORD_ENABLED
+    ]);
+
+    const enabled = result[StorageKeys.MASTER_PASSWORD_ENABLED] as boolean;
+    if (!enabled) {
+        throw new Error('Master password not enabled');
+    }
+
+    const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string;
+    const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
+
+    if (!storedHash || !saltBase64) {
+        throw new Error('Master password data corrupted');
+    }
+
+    const salt = base64ToUint8Array(saltBase64);
+    const isValid = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+
+    if (isValid) {
+        cachedMasterPassword = password;
+        cachedEncryptionKey = null; // 新しいキーを生成するためにキャッシュをクリア
+        await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * セッションをロックする（マスターパスワードキャッシュをクリア）
+ */
+export function lockSession(): void {
+    cachedMasterPassword = null;
+    cachedEncryptionKey = null;
+    chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
+}
+
+/** * マスターパスワードを再設定する（古いパスワード検証後）
+ * @param {string} oldPassword - 現在のマスターパスワード
+ * @param {string} newPassword - 新しいマスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<boolean> {
+    // まず古いパスワードでアンロック試行
+    const isValid = await unlockWithPassword(oldPassword);
+    if (!isValid) {
+        return false;
+    }
+
+    // 新しいパスワードを設定（ロック状態になる）
+    await setMasterPassword(newPassword);
+
+    // 新しいパスワードでアンロックしてセッションを維持
+    return unlockWithPassword(newPassword);
+}
+
+/**
+ * マスターパスワード設定を解除する（すべての暗号化データを再暗号化できないため注意が必要）
+ */
+export async function removeMasterPassword(): Promise<void> {
+    await chrome.storage.local.remove([
+        StorageKeys.MASTER_PASSWORD_ENABLED,
+        StorageKeys.MASTER_PASSWORD_SALT,
+        StorageKeys.MASTER_PASSWORD_HASH,
+        StorageKeys.IS_LOCKED
+    ]);
+
+    cachedMasterPassword = null;
+    isMasterPasswordRequired = false;
+    cachedEncryptionKey = null;
 }
 
 /**
@@ -226,6 +515,7 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
  */
 export function clearEncryptionKeyCache(): void {
     cachedEncryptionKey = null;
+    cachedMasterPassword = null;
 }
 
 // HMAC Secret用キャッシュ
@@ -325,7 +615,9 @@ const SETTINGS_MIGRATED_KEY = 'settings_migrated';
 function isEncryptionKey(key: string): boolean {
     return key === StorageKeys.ENCRYPTION_SALT ||
         key === StorageKeys.ENCRYPTION_SECRET ||
-        key === StorageKeys.HMAC_SECRET;
+        key === StorageKeys.HMAC_SECRET ||
+        key === StorageKeys.MASTER_PASSWORD_SALT ||
+        key === StorageKeys.MASTER_PASSWORD_HASH;
 }
 
 /**
@@ -376,7 +668,7 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
 
     // 古い個別キーを削除
     const keysToRemove = Object.keys(existingKeys).filter(key =>
-        Object.values(StorageKeys).includes(key as any) &&
+        Object.values(StorageKeys).includes(key as StorageKey) &&
         !key.includes('_version') &&
         !isEncryptionKey(key) &&
         key !== SETTINGS_MIGRATED_KEY
@@ -390,6 +682,12 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
 }
 
 export async function getSettings(): Promise<Settings> {
+    // 【パフォーマンス改善】短時間キャッシュチェック（1秒間有効）
+    const now = Date.now();
+    if (cachedSettings && cachedSettings.data && (now - cachedSettings.timestamp) < SETTINGS_CACHE_TTL) {
+        return cachedSettings.data;
+    }
+
     // 単一settingsオブジェクトが存在する場合はそれを使用
     const result = await chrome.storage.local.get(['settings', SETTINGS_MIGRATED_KEY]);
 
@@ -422,16 +720,20 @@ export async function getSettings(): Promise<Settings> {
                 const value = merged[field];
                 if (isEncrypted(value)) {
                     try {
-                        merged[field] = await decryptApiKey(value, key);
+                        const decryptedValue = await decryptApiKey(value, key);
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                     } catch (e) {
                         console.error(`Failed to decrypt ${field}:`, e);
-                        merged[field] = '';
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                     }
                 }
             }
         } catch (e) {
             console.error('Failed to get encryption key for decryption:', e);
         }
+
+        // 【パフォーマンス改善】復号後にキャッシュを保存
+        cachedSettings = { data: merged, timestamp: Date.now() };
 
         return merged;
     }
@@ -455,10 +757,11 @@ export async function getSettings(): Promise<Settings> {
             const value = merged[field];
             if (isEncrypted(value)) {
                 try {
-                    merged[field] = await decryptApiKey(value, key);
+                    const decryptedValue = await decryptApiKey(value, key);
+                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                 } catch (e) {
                     console.error(`Failed to decrypt ${field}:`, e);
-                    merged[field] = '';
+                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                 }
             }
         }
@@ -466,7 +769,18 @@ export async function getSettings(): Promise<Settings> {
         console.error('Failed to get encryption key for decryption:', e);
     }
 
+    // 【パフォーマンス改善】復号後にキャッシュを保存
+    cachedSettings = { data: merged, timestamp: Date.now() };
+
     return merged;
+}
+
+/**
+ * 【パフォーマンス改善】設定キャッシュをクリアする（テスト用）
+ * ストレージから完全に再読み込みする場合に使用
+ */
+export function clearSettingsCache(): void {
+    cachedSettings = null;
 }
 
 /**
@@ -476,6 +790,9 @@ export async function getSettings(): Promise<Settings> {
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
 export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: boolean = false): Promise<void> {
+    // 【パフォーマンス改善】設定保存時にキャッシュを無効化
+    cachedSettings = null;
+
     let toSave = { ...settings };
 
     // APIキーフィールドを暗号化
@@ -483,8 +800,8 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
         const key = await getOrCreateEncryptionKey();
         for (const field of API_KEY_FIELDS) {
             if (field in toSave && typeof toSave[field] === 'string' && toSave[field] !== '') {
-                const originalValue = toSave[field];
-                toSave[field] = await encryptApiKey(toSave[field], key);
+                const originalValue = toSave[field] as string;
+                (toSave as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = await encryptApiKey(originalValue, key) as StorageKeyValues[StorageKey];
                 console.log(`Encrypted ${field}:`, {
                     hadValue: !!originalValue,
                     originalLength: originalValue.length,
@@ -600,14 +917,21 @@ async function updateUrlTimestamp(url: string): Promise<void> {
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
     // Map to entries array
     const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
+    const urlArray = Array.from(urlMap.keys());
 
-    // 楽観的ロックで安全に保存
+    // savedUrlsWithTimestampsの楽観的ロックを使用
     await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
 
-    // 同時に savedUrls Setも更新（互換性維持）
-    const urlSet = new Set(urlMap.keys());
-    const urlArray = Array.from(urlSet);
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
+    // (互換性維持のため、savedUrlsも保存する)
+    // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
+    const currentSavedUrls = await chrome.storage.local.get('savedUrls');
+    const currentSavedArray = currentSavedUrls['savedUrls'] as string[] || [];
+
+    // 配列が同じならスキップ
+    if (JSON.stringify(currentSavedArray.sort()) !== JSON.stringify(urlArray.sort())) {
+        await chrome.storage.local.set({ savedUrls: urlArray });
+    }
 }
 
 /**
@@ -737,6 +1061,8 @@ export function computeUrlsHash(urls: Set<string>): string {
 export async function saveSettingsWithAllowedUrls(settings: Settings): Promise<void> {
     // 改訂: saveSettings を使用して常に暗号化とURLリスト更新を行う
     await saveSettings(settings, true);
+    // 【Task #19 最適化】ドメインフィルタキャッシュを更新
+    await updateDomainFilterCache(settings);
 }
 
 /**
@@ -760,4 +1086,125 @@ export async function getAllowedUrls(): Promise<Set<string>> {
 export async function ensureUrlVersionInitialized(): Promise<void> {
     await ensureVersionInitialized('savedUrls');
     await ensureVersionInitialized('savedUrlsWithTimestamps');
+}
+
+// ============================================================================
+// Domain Filter Cache for Content Scripts (Task #19)
+// ============================================================================
+
+/**
+ * ドメインフィルタキャッシュの有効期限（ミリ秒）
+ * Content Script内で使用するため、メッセージ通信を減らす目的
+ */
+const DOMAIN_FILTER_CACHE_TTL = 5 * 60 * 1000; // 5分
+
+/**
+ * [同期] ドメインフィルタキャッシュを取得
+ * Content Scriptから直接呼び出すため、ストレージに同期的アクセスはできませんが
+ * chrome.storage.local.get はコールバックで即時取得可能
+ * この関数は Content Script で使用します
+ *
+ * @param {function} callback - キャッシュデータを受け取るコールバック関数
+ */
+export function getDomainFilterCacheSync(callback: (data: { allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }) => void): void {
+    chrome.storage.local.get([
+        StorageKeys.DOMAIN_FILTER_CACHE,
+        StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
+        StorageKeys.DOMAIN_FILTER_MODE
+    ], (result) => {
+        const allowedDomains = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
+        const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
+        const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
+
+        // ブロックドメインは設定に基づいて動的に算出（シンプル形式のみ）
+        // uBlockフォーマットは複雑なため、バックグラウンドでのチェックが必要
+        const blockedDomains: string[] = [];
+
+        callback({ allowedDomains, blockedDomains, cachedAt, mode });
+    });
+}
+
+/**
+ * ドメインフィルタキャッシュが有効かどうかを判定
+ * @param {number} cachedAt - キャッシュ作成時のタイムスタンプ
+ * @returns {boolean} 有効な場合true
+ */
+export function isDomainFilterCacheValid(cachedAt: number): boolean {
+    const now = Date.now();
+    return (now - cachedAt) < DOMAIN_FILTER_CACHE_TTL && cachedAt > 0;
+}
+
+/**
+ * ドメインからパスとクエリを削除して正規化
+ * @param {string} url - 正規化対象のURL
+ * @returns {string | null} 正規化されたURL（失敗時はnull）
+ */
+export function normalizeDomainUrl(url: string): string | null {
+    try {
+        const urlObj = new URL(url);
+        let hostname = urlObj.hostname;
+
+        // www. プレフィックスを削除（ドメインマッチングの一貫性）
+        if (hostname.startsWith('www.')) {
+            hostname = hostname.substring(4);
+        }
+
+        return hostname;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * パターンマッチング（ワイルドカード対応）
+ * Content Scriptで使用するため、パッケージ化
+ * @param {string} domain - チェック対象のドメイン
+ * @param {string} pattern - パターン（*を含む場合あり）
+ * @returns {boolean} 一致する場合true
+ */
+export function matchesWildcardPattern(domain: string, pattern: string): boolean {
+    if (pattern.includes('*')) {
+        // ワイルドカードパターンを正規表現に変換
+        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regexPattern = escaped.replace(/\\\*/g, '.*');
+        const regex = new RegExp(`^${regexPattern}$`, 'i');
+        return regex.test(domain);
+    }
+    // 完全一致（大文字小文字区別なし）
+    return domain.toLowerCase() === pattern.toLowerCase();
+}
+
+/**
+ * バックグラウンドスクリプトでドメインフィルタキャッシュを更新
+ * @param {Settings} settings - 設定オブジェクト
+ */
+export async function updateDomainFilterCache(settings: Settings): Promise<void> {
+    const mode = settings[StorageKeys.DOMAIN_FILTER_MODE];
+    const now = Date.now();
+
+    // モードに応じてキャッシュするドメインを計算
+    let cachedDomains: string[] = [];
+
+    if (mode === 'whitelist') {
+        const whitelist = (settings[StorageKeys.DOMAIN_WHITELIST] as string[]) || [];
+        const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
+        if (simpleEnabled) {
+            cachedDomains = whitelist;
+        }
+        // uBlockフォーマットの算出は複雑で、ここでは単純なシンプル形式のみキャッシュ
+    } else if (mode === 'blacklist') {
+        const blacklist = (settings[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
+        const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
+        if (simpleEnabled) {
+            // ブラックリストモードでは「許可ドメイン」キャッシュは空
+            // 代わりに「ブロックドメイン」をキャッシュ
+            // 実装: 別途ブロックドメインキャッシュが必要だが、TTL短縮で対応
+            cachedDomains = [];
+        }
+    }
+
+    await chrome.storage.local.set({
+        [StorageKeys.DOMAIN_FILTER_CACHE]: cachedDomains,
+        [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now
+    });
 }

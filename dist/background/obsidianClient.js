@@ -75,31 +75,16 @@ export class ObsidianClient {
      * Problem #2: BASE_HEADERS定数を使用してオブジェクト作成を最適化
      */
     async _getConfig() {
-        console.log('[ObsidianClient] Getting settings...');
         const settings = await getSettings();
-        console.log('[ObsidianClient] Settings retrieved:', {
-            hasSettings: !!settings,
-            keys: Object.keys(settings || {}).length
-        });
         // Casting to any for dynamic access or if explicit keys are missing in Settings interface
         const s = settings;
         const protocol = s[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
         const rawPort = s[StorageKeys.OBSIDIAN_PORT] || DEFAULT_PORT;
         const port = this._validatePort(rawPort);
         const apiKey = s[StorageKeys.OBSIDIAN_API_KEY];
-        // デバッグログ: APIキーの状態を確認
-        console.log('[ObsidianClient] API Key check:', {
-            exists: !!apiKey,
-            type: typeof apiKey,
-            isEmpty: apiKey === '',
-            isObject: typeof apiKey === 'object',
-            value: typeof apiKey === 'string' ? apiKey.substring(0, 10) + '...' : apiKey
-        });
         addLog(LogType.DEBUG, 'Obsidian API Key check', {
             exists: !!apiKey,
-            type: typeof apiKey,
-            isEmpty: apiKey === '',
-            isObject: typeof apiKey === 'object'
+            isEmpty: apiKey === ''
         });
         // APIキーが空文字列、undefined、null、またはオブジェクト（暗号化失敗）の場合
         if (!apiKey || apiKey === '' || typeof apiKey === 'object') {
@@ -151,6 +136,7 @@ export class ObsidianClient {
         await globalWriteMutex.acquire();
         try {
             const { baseUrl, headers, settings } = await this._getConfig();
+            // Settings型は StorageKeys でアクセス可能
             const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
             const dailyPath = buildDailyNotePath(dailyPathRaw);
             const pathSegment = dailyPath ? `${dailyPath}/` : '';

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: chrome-extension:; connect-src https: http:; object-src 'none';">
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
   <title>Obsidian Smart History Settings</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
   <!-- Main Screen -->
-  <header id="mainScreen">
+  <div id="mainScreen">
     <div class="header">
       <h1 class="sr-only" data-i18n="appTitle">Smart History</h1>
       <h2 data-i18n="appTitle" aria-hidden="true">Smart History</h2>
@@ -35,7 +35,7 @@
       <span class="spinner-text" data-i18n="processing">Processing...</span>
     </div>
     <div id="mainStatus" aria-live="polite"></div>
-  </header>
+  </div>
 
   <!-- Settings Screen -->
   <main id="settingsScreen" class="settings-screen">
@@ -43,7 +43,7 @@
       <button id="backBtn" class="icon-btn" data-i18n-aria-label="backToMain" aria-label="Back">←</button>
       <h1 class="sr-only" data-i18n="settings">Settings</h1>
       <h2 data-i18n="settings" aria-hidden="true">Settings</h2>
-      <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true">⋮</button>
+      <button id="settingsMenuBtn" class="icon-btn" data-i18n-aria-label="settingsMenu" aria-haspopup="true" aria-expanded="false">⋮</button>
       <!-- Settings Dropdown Menu -->
       <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
         <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
@@ -92,7 +92,7 @@
       <hr class="settings-hr">
 
       <div class="form-group">
-        <label data-i18n="aiProvider">AI Provider</label>
+        <label for="aiProvider" data-i18n="aiProvider">AI Provider</label>
         <select id="aiProvider">
           <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
           <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
@@ -103,12 +103,12 @@
       <!-- Gemini Settings -->
       <div id="geminiSettings">
         <div class="form-group">
-          <label data-i18n="geminiApiKey">Gemini API Key</label>
+          <label for="geminiApiKey" data-i18n="geminiApiKey">Gemini API Key</label>
           <input type="password" id="geminiApiKey" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
-          <label data-i18n="modelName">Model Name (e.g. gemini-1.5-flash)</label>
+          <label for="geminiModel" data-i18n="modelName">Model Name (e.g. gemini-1.5-flash)</label>
           <input type="text" id="geminiModel" value="gemini-1.5-flash">
         </div>
       </div>
@@ -116,17 +116,17 @@
       <!-- OpenAI Settings -->
       <div id="openaiSettings" class="openai-settings">
         <div class="form-group">
-          <label data-i18n="baseUrl">Base URL</label>
+          <label for="openaiBaseUrl" data-i18n="baseUrl">Base URL</label>
           <input type="text" id="openaiBaseUrl" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
         </div>
 
         <div class="form-group">
-          <label data-i18n="aiApiKey">API Key</label>
+          <label for="openaiApiKey" data-i18n="aiApiKey">API Key</label>
           <input type="password" id="openaiApiKey" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
-          <label data-i18n="modelName">Model Name</label>
+          <label for="openaiModel" data-i18n="modelName">Model Name</label>
           <input type="text" id="openaiModel" data-i18n-input-placeholder="openaiModelPlaceholder">
         </div>
       </div>
@@ -134,17 +134,17 @@
       <!-- OpenAI 2 Settings -->
       <div id="openai2Settings" class="openai-settings">
         <div class="form-group">
-          <label data-i18n="baseUrl">Base URL</label>
+          <label for="openai2BaseUrl" data-i18n="baseUrl">Base URL</label>
           <input type="text" id="openai2BaseUrl" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
         </div>
 
         <div class="form-group">
-          <label data-i18n="aiApiKey">API Key</label>
+          <label for="openai2ApiKey" data-i18n="aiApiKey">API Key</label>
           <input type="password" id="openai2ApiKey" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
-          <label data-i18n="modelName">Model Name</label>
+          <label for="openai2Model" data-i18n="modelName">Model Name</label>
           <input type="text" id="openai2Model" data-i18n-input-placeholder="openai2ModelPlaceholder">
         </div>
       </div>
@@ -198,16 +198,18 @@
 
       <!-- Filter Format Selection -->
       <div class="form-group">
-        <label data-i18n="filterFormat">Filter Format (can be combined)</label>
-        <div>
-          <input type="checkbox" id="simpleFormatEnabled" checked>
-          <label for="simpleFormatEnabled" class="inline-label" data-i18n="simpleFormat">Simple (1 domain per
-            line)</label>
-        </div>
-        <div class="mt-5">
-          <input type="checkbox" id="ublockFormatEnabled">
-          <label for="ublockFormatEnabled" class="inline-label" data-i18n="ublockFormat">uBlock Origin Format</label>
-        </div>
+        <fieldset>
+          <legend data-i18n="filterFormat">Filter Format (can be combined)</legend>
+          <div>
+            <input type="checkbox" id="simpleFormatEnabled" checked>
+            <label for="simpleFormatEnabled" class="inline-label" data-i18n="simpleFormat">Simple (1 domain per
+              line)</label>
+          </div>
+          <div class="mt-5">
+            <input type="checkbox" id="ublockFormatEnabled">
+            <label for="ublockFormatEnabled" class="inline-label" data-i18n="ublockFormat">uBlock Origin Format</label>
+          </div>
+        </fieldset>
       </div>
 
       <!-- simple形式用UI（既存） -->
@@ -231,7 +233,7 @@
       <!-- uBlock形式用UI（新規） -->
       <div id="uBlockFormatUI" class="format-section">
         <div class="form-group">
-          <label data-i18n="ublockFilter">uBlock Filter</label>
+          <label for="uBlockFilterInput" data-i18n="ublockFilter">uBlock Filter</label>
           <textarea id="uBlockFilterInput" rows="8" data-i18n-input-placeholder="ublockFilterPlaceholder"></textarea>
           <div class="help-text" data-i18n="ublockHelp">
             Paste uBlock Origin or hosts format filters<br>
@@ -241,7 +243,7 @@
         </div>
 
         <div class="form-group">
-          <label data-i18n="loadFromFile">Load from file (.txt)</label>
+          <label for="uBlockFileInput" data-i18n="loadFromFile">Load from file (.txt)</label>
           <input type="file" id="uBlockFileInput" accept=".txt">
           <button id="uBlockFileSelectBtn" class="secondary-btn" data-i18n="selectFile">Select File</button>
         </div>
@@ -253,7 +255,7 @@
 
         <!-- URL Import -->
         <div class="form-group">
-          <label data-i18n="loadFromUrl">Load from URL</label>
+          <label for="uBlockUrlInput" data-i18n="loadFromUrl">Load from URL</label>
           <input type="url" id="uBlockUrlInput" data-i18n-input-placeholder="urlPlaceholder">
           <button id="uBlockUrlImportBtn" class="secondary-btn" data-i18n="importFromUrl">Import from URL</button>
         </div>
@@ -412,14 +414,118 @@
         </div>
       </div>
 
+      <hr class="settings-hr">
+
+      <!-- Master Password Protection -->
+      <div class="form-group">
+        <label id="masterPasswordLabel" data-i18n="masterPasswordProtection">Master Password Protection</label>
+        <div class="help-text" id="masterPasswordDesc" data-i18n="masterPasswordDesc">
+          Protect your settings with a master password. Required for encrypted export/import.
+        </div>
+        <div class="mb-8">
+          <input type="checkbox" id="masterPasswordEnabled" aria-describedby="masterPasswordDesc">
+          <label for="masterPasswordEnabled" class="inline-label" data-i18n="enableMasterPassword">Enable master password protection</label>
+        </div>
+
+        <!-- Advanced Options (shown when enabled) -->
+        <div id="masterPasswordOptions" class="ml-24 hidden">
+          <div class="mb-8">
+            <input type="checkbox" id="encryptApiKeys" checked aria-describedby="encryptApiKeysDesc">
+            <label for="encryptApiKeys" class="inline-label" data-i18n="encryptApiKeys">Encrypt API keys in storage</label>
+            <div class="help-text ml-24" id="encryptApiKeysDesc" data-i18n="encryptApiKeysDesc">
+              API keys will be encrypted with your master password
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <input type="checkbox" id="encryptOnExport" checked aria-describedby="encryptOnExportDesc">
+            <label for="encryptOnExport" class="inline-label" data-i18n="encryptOnExport">Encrypt settings on export</label>
+            <div class="help-text ml-24" id="encryptOnExportDesc" data-i18n="encryptOnExportDesc">
+              Exported settings file will be encrypted with your master password
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <input type="checkbox" id="requirePasswordOnImport" checked aria-describedby="requirePasswordOnImportDesc">
+            <label for="requirePasswordOnImport" class="inline-label" data-i18n="requirePasswordOnImport">Require password on import</label>
+            <div class="help-text ml-24" id="requirePasswordOnImportDesc" data-i18n="requirePasswordOnImportDesc">
+              Password will be required to import encrypted settings
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button id="changeMasterPassword" class="secondary-btn" data-i18n="changeMasterPassword">Change Master Password</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
+
+  <!-- Password Setup Modal -->
+  <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordModalTitle" data-i18n="setMasterPassword">Set Master Password</h3>
+        <button id="closePasswordModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordModalDesc" data-i18n="setMasterPasswordDesc">
+          Create a master password to protect your settings. This password cannot be recovered.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordInput" aria-describedby="passwordStrengthError">
+          <div id="passwordStrengthError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group" id="confirmPasswordGroup">
+          <label for="masterPasswordConfirm" data-i18n="confirmMasterPassword">Confirm Master Password</label>
+          <input type="password" id="masterPasswordConfirm">
+          <div id="passwordMatchError" class="field-error" role="alert"></div>
+        </div>
+        <div id="passwordStrength" class="password-strength mt-8">
+          <div class="strength-bar">
+            <div class="strength-fill"></div>
+          </div>
+          <div class="strength-text text-xs text-gray" id="passwordStrengthText">Password strength</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="savePasswordBtn" class="btn-confirm" data-i18n="save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Auth Modal -->
+  <div id="passwordAuthModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordAuthModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordAuthModalTitle" data-i18n="enterMasterPassword">Enter Master Password</h3>
+        <button id="closePasswordAuthModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordAuthModalDesc" data-i18n="enterMasterPasswordDesc">
+          Enter your master password to continue.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordAuthInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordAuthInput" autocomplete="current-password">
+        </div>
+        <div id="passwordAuthError" class="field-error" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordAuthBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="submitPasswordAuthBtn" class="btn-confirm" data-i18n="confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Confirmation Modal -->
   <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmContent">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 data-i18n="confirmContent">Review Content</h3>
+        <h3 id="confirmContent" data-i18n="confirmContent">Review Content</h3>
         <button id="closeModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
       </div>
       <div class="modal-body">
@@ -441,7 +547,7 @@
 
   <!-- Import Confirmation Modal -->
   <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
-    aria-labelledby="importConfirmTitle" aria-hidden="true">
+    aria-labelledby="importConfirmTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>

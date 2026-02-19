@@ -12,10 +12,45 @@ export interface SettingsExportData {
     apiKeyExcluded: boolean;
     signature?: string;
 }
+export interface EncryptedExportData {
+    encrypted: true;
+    version: string;
+    exportedAt: string;
+    ciphertext: string;
+    iv: string;
+    hmac: string;
+    salt: string;
+}
+export type ExportFileData = SettingsExportData | EncryptedExportData;
+/**
+ * マスターパスワードで暗号化して設定をエクスポート
+ * @param {string} masterPassword - マスターパスワード
+ * @returns {Promise<{ success: boolean; encryptedData?: EncryptedExportData; error?: string }>}
+ */
+export declare function exportEncryptedSettings(masterPassword: string): Promise<{
+    success: boolean;
+    encryptedData?: EncryptedExportData;
+    error?: string;
+}>;
+/**
+ * マスターパスワードで復号して設定をインポート
+ * @param {string} jsonData - 暗号化されたエクスポートデータのJSON文字列
+ * @param {string} masterPassword - マスターパスワード
+ * @returns {Promise<Settings|null>}
+ */
+export declare function importEncryptedSettings(jsonData: string, masterPassword: string): Promise<Settings | null>;
+/**
+ * エクスポートデータが暗号化されているかどうかを判定
+ */
+export declare function isEncryptedExport(data: unknown): data is EncryptedExportData;
 /**
  * Export all settings to a JSON file
  */
 export declare function exportSettings(): Promise<void>;
+/**
+ * 暗号化エクスポートデータをファイルとして保存
+ */
+export declare function saveEncryptedExportToFile(encryptedData: EncryptedExportData): Promise<void>;
 /**
  * Validate export data structure
  * @param {unknown} data - data to validate

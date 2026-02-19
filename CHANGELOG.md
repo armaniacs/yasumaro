@@ -4,36 +4,201 @@ All notable changes to this project will be documented in this file.
 
 ## [3.9.4] - to be released
 
-### Added
+### Performance
 
-- **Makefile**: `npm run build` の代わりに `make` コマンドでビルドできる Makefile を追加
-  - `make build` — TypeScript コンパイル＋静的アセットコピー
-  - `make clean` — `dist/` 削除
-  - `make test` / `make test-watch` / `make test-coverage` — Jest テスト
-  - `make test-e2e` — Playwright E2E テスト
-  - `make type-check` — TypeScript 型チェック（`--noEmit`）
-  - `make validate` — 型チェック＋テストの一括実行
+- **getSettings() のキャッシュ実装**:
+  - `src/utils/storage.ts` に1秒間の TTL キャッシュを追加
+  - 複数回呼び出しによる冗長な AES-GCM 復号化を削減
+  - `record()` 実行中の `getSettings()` 呼び出し回数を平均2.6回 → 1回に削減
+  - `clearSettingsCache()` 関数を公開してテスト対応
 
-- **AIプロンプトカスタマイズ機能**: 設定画面に「AIプロンプト」タブを追加し、AI要約プロンプトをカスタマイズ可能に
-  - プロンプトの新規作成・編集・削除・有効化
-  - プロバイダー（Gemini / OpenAI互換 / 全共通）ごとの個別プロンプト設定
-  - システムプロンプト（OpenAI互換プロバイダー向け）とユーザープロンプトを独立して設定可能
-  - `{{content}}` プレースホルダーによるページ内容の埋め込み
-  - 詳細は [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を参照
+- **logger のバッチ書き込み実装**:
+  - `src/utils/logger.ts` にメモリバッファ `pendingLogs` を実装
+  - 10個以上のログまたは5秒経過で自動フラッシュ
+  - `flushLogs()` 関数を公開して即時フラッシュ対応（テスト用）
+
+### Code Cleanup
+
+- **deprecated メソッドの削除**:
+  - `src/background/aiClient.ts` から `generateGeminiSummary()`, `generateOpenAISummary()`, `listGeminiModels()`, `getProviderConfig()` を削除（約180行）
+  - 新しいプロバイダークラス（`GeminiProvider`, `OpenAIProvider`）を使用するようコードを統一
+  - カスタムプロンプト機能がプロダクションコード全体で有効に
+
+- **型定義の分離と厳格化**:
+  - `src/utils/types.ts` を新規作成。CustomPrompt, UblockRules, Source 型を集中管理
+  - `src/utils/storage.ts` に `StorageKeyValues` と `StrictSettings` 型を追加
+  - Settings 型を改良して StorageKeys で型チェック可能に
+  - `settings as any` キャストを4箇所から0箇所に削除
+  - `MIN_VISIT_DURATION`, `MIN_SCROLL_DEPTH` の型を string → number 修正
+
+### Changed
+  - `src/background/aiClient.ts` から `generateGeminiSummary()`, `generateOpenAISummary()`, `listGeminiModels()`, `getProviderConfig()` を削除（約180行）
+  - 新しいプロバイダークラス（`GeminiProvider`, `OpenAIProvider`）を使用するようコードを統一
+  - カスタムプロンプト機能がプロダクションコード全体で有効に
 
 ### Fixed
 
-- **AIプロンプトタブへの遷移不具合**: タブクリックで画面が切り替わらない問題を修正
-  - `src/popup/popup.ts` にタブ切り替えロジック（`initTabNavigation()`）を追加。タブボタンの `aria-controls` 属性を元に対応パネルの表示・非表示を切り替える
+- **AIプロンプトタブが表示されない問題を修正**: `domainFilter.ts` の `showTab` 関数がパネルの表示切替に `style.display` インラインスタイルを使用していたため、`promptPanel` へ切り替えても `domainPanel` のインラインスタイルが残り消えなかった問題を修正
+  - `showTab` から `style.display` のインライン設定を除去し、`removeAttribute('style')` でリセット
+  - `promptPanel`・`promptTabBtn` を `showTab` の管理対象に追加（`'general' | 'domain' | 'prompt' | 'privacy'`）
+  - `popup.ts` の `initTabNavigation` にも `removeAttribute('style')` を追加して競合を防止
 
-### Docs
+- **uBlockフィルターURL取得エラーの修正**: `manifest.json` の `host_permissions` と `connect-src` に uBlock フィルターソース用ドメインを追加し、Service Worker からの fetch が権限不足でブロックされていた問題を解消
+  - 追加ドメイン: `https://raw.githubusercontent.com/*`, `https://gitlab.com/*`, `https://easylist.to/*`, `https://pgl.yoyo.org/*`, `https://nsfw.oisd.nl/*`, `https://api.ai.sakura.ad.jp/*`
 
-- **AIプロンプトカスタマイズガイド追加**: [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を新規作成
-  - デフォルトのシステムプロンプト・ユーザープロンプトを掲載
-  - カスタマイズ例（英語要約・箇条書き・技術観点・システムプロンプト込み）
-  - 日英併記
+- **CSP: さくらAI APIのCSP許可**: `manifest.json` の `connect-src` に `https://api.ai.sakura.ad.jp` を追加し、さくらAIプロバイダーへの接続エラーを解消
 
-- **README.md 更新**: AIプロンプトカスタマイズ機能を特徴一覧に追加し、詳細は USER-GUIDE-AI-PROMPT.md へ外出し
+- **CSP: インラインスタイルのCSP違反修正**: `popup.html` の `<div class="strength-fill" style="width: 0%;">` からインラインスタイルを削除し、`styles.css` の `.strength-fill` にデフォルト値 `width: 0%` を追加してCSPの `style-src 'self'` ポリシーに準拠
+
+- **`_locales/ja/messages.json` の構文エラー修正**: `passwordRequired` エントリの閉じ括弧後に余分な `},` があり `importPasswordRequired` が孤立していた問題を修正
+
+- **拡張機能リロード時の `sendMessage` クラッシュ修正**: 拡張機能リロード後もコンテンツスクリプトがページ上で動作し続け `chrome.runtime` が `undefined` になった状態で `sendMessage` を呼んでクラッシュする問題を修正
+  - `src/utils/retryHelper.ts` の `#sendOnce` で `chrome?.runtime?.sendMessage` の存在チェックを追加
+  - `src/content/extractor.ts` のエラーキャッチで `sendMessage` を含むメッセージも Extension context invalidated として静かに処理
+
+- **ublockImport テスト修正**:
+  - `src/popup/__tests__/ublockImport-sourceManager.test.ts` のテスト環境設定を改善
+  - `settings_migrated` フラグと `settings_version` を初期状態に追加して storage マイグレーション状態を正確に再現
+  - `setMock` マージロジックを更新して StorageKeys のキー (`ublock_sources`, `ublock_rules`, `ublock_format_enabled`) を正しく settings オブジェクト内に保存
+  - `setStorageState`, `resetStorage`, `setMock` 内でキャッシュクリアを適切に実行
+  - 全17テストがパスするように修正（以前: 9 failed / 8 passed）
+
+- **i18nキーの欠落**:
+  - `confirm` キーを `_locales/en/messages.json` と `_locales/ja/messages.json` に追加
+  - `errorInvalidUrl` キーを `_locales/en/messages.json` と `_locales/ja/messages.json` に追加
+  - `seconds` キーを `_locales/en/messages.json` と `_locales/ja/messages.json` に追加
+
+- **WCAG 1.3.1 達成**: `<label>` の `for` 属性と `<input>` の `id` 紐付けを約15箇所に追加
+  - スクリーンリーダーユーザーがラベルをクリックしてフォーカス移動できるよう修正
+  - 対象フィールド: aiProvider, geminiApiKey, geminiModel, openaiBaseUrl, openaiApiKey, openaiModel, openai2系, domainFilter系
+  - チェックボックスグループを `<fieldset>` と `<legend>` で包む構造に変更（`src/popup/popup.html`）
+
+- **HMAC署名バイパスの警告強化**:
+  - 署名なし設定ファイルのインポート時に確認ダイアログを追加
+  - `importNoSignatureWarning` i18nキーでローカライズされた警告メッセージを表示
+  - ユーザーの明示的な同意なしでインポートを続行しないように修正（`src/utils/settingsExportImport.ts`）
+
+- **`setActivePrompt` のスコープ制御バグ修正**:
+  - Gemini固有プロンプトをアクティブにするとOpenAI用の `all` プロンプトも無効化される不具合を修正
+  - プロンプト自身の `provider` スコープを使用するようロジック変更（`src/utils/customPromptUtils.ts`）
+
+- **i18n対応の強化（フォールバック追加）**:
+  - `errorUtils.ts` の `formatDuration()` で `chrome.i18n.getMessage('seconds')` にフォールバック `|| 's'` を追加
+  - `popup.ts` の `showImportPreview()` で `importPreviewSummary`, `importPreviewNote` にフォールバックを追加
+  - `settingsExportImport.ts` の警告メッセージにフォールバックを追加
+  - 対応したi18nキー: `seconds`, `importPreviewSummary`, `importPreviewNote`, `importNoSignatureWarning`
+
+- **セマンティックHTMLの修正**: `<header id="mainScreen">` を `<div id="mainScreen">` に変更
+  - 画面全体のコンテナに `<header>` を使用するのはセマンティック上不適切
+  - スクリーンリーダーでのナビゲーションを改善
+
+- **確認モーダルのアクセシビリティ改善**: `aria-labelledby` 参照先に `id` を追加
+  - `<h3 id="confirmContent" data-i18n="confirmContent">` のように明示的に `id` を追加
+  - `popup.html:421,424`
+
+- **CSS Selector Injection 対策**: ドメインフィルターの mode バリデーションを追加
+  - `ALLOWED_FILTER_MODES` 配列（`['disabled', 'whitelist', 'blacklist']`）で whitelist/blacklist のみを許可
+  - `popup.ts:222`
+
+- **extractor.ts の設定読み込み修正**: マイグレーション後の構造に対応
+  - 個別キーから `settings` キー下の値を取得するよう変更
+  - ユーザーのカスタム設定値が正しく反映されるよう修正
+
+- **翻訳品質の改善**: 日本語訳をより自然な表現に変更
+  - `autoClosing`: "自動閉じる..." → "自動的に閉じています..."
+  - `privacyMode`: "動作モード" → "プライバシーモード"
+
+- **デバッグ用コードの除去**: `globalThis.reviewLogs` 関数を削除
+  - 本番コードへのグローバル露出を防止
+
+### Performance
+
+- **getSettings() 呼び出しの重複削減**: 1秒間のキャッシュを追加
+  - `getSettings()` に1000ms TTLのキャッシュを実装
+  - 1回の `record()` 実行中の最大4回の呼び出しを1回に削減
+  - AES-GCM復号の重複実行を防止
+  - `saveSettings()` 呼び出し時にキャッシュを無効化
+  - テスト用 `clearSettingsCache()` 関数を追加
+
+- **logger のバッチ書き込み実装**: メモリバッファでstorage I/O削減
+  - メモリバッファ `pendingLogs` にログを蓄積
+  - バッファサイズ10個以上、または5秒経過でフラッシュ
+  - `flushLogs()` 関数を公開（テスト用・手動フラッシュ用）
+  - `getLogs(), clearLogs()` は保留中ログも考慮
+
+- **setSavedUrlsWithTimestamps の最適化**: 不要な storage I/O を削減
+  - `savedUrls` の保存前に現在値と比較し、変更がある場合のみ保存
+  - `storage.ts:600-636`
+
+- **scrollイベントのthrottle化**: 高速スクロール時の負荷を軽減
+  - `requestAnimationFrame` を使用した `throttle()` 関数を追加
+  - 100ms のディレイでスクロールイベントを抑制
+  - `extractor.ts:128-131,247-248`
+
+### Tests
+
+- テスト環境のi18nモックをjest.setup.tsに更新:
+  - `seconds` (英語モック: "seconds")
+  - `importPreviewSummary` (英語モック: "Summary:")
+  - `importPreviewNote` (英語モック: "Note: Full settings will be applied...")
+  - `importNoSignatureWarning` (英語モック: "⚠️ This settings file contains no signature...")
+
+- テスト結果: **1160 passed / 4 skipped**（回帰なし）
+
+### Security
+
+- **マスターパスワード保護機能の実装**:
+  - `src/utils/masterPassword.ts` を新規作成し、パスワード管理機能を追加
+    - パスワード強度計算（スコア0-100、Weak/Medium/Strong分類）
+    - パスワード要件検証（8文字以上）
+    - パスワード一致チェック
+    - PBKDF2ベースのハッシュ化・検証
+    - パスワード変更機能（既存APIキーの再暗号化対応）
+  - `src/utils/settingsExportImport.ts` にエクスポート/インポート暗号化機能を追加
+    - AES-GCM暗号化 + HMAC署名による完全性検証
+    - `exportEncryptedSettings()`: マスターパスワードで設定を暗号化エクスポート
+    - `importEncryptedSettings()`: マスターパスワードで暗号化設定を復号・インポート
+    - 非暗号化エクスポートとの後方互換性維持
+  - `src/popup/popup.html` にマスターパスワードUIを追加
+    - Privacyタブにマスターパスワード保護オプション（チェックボックス）
+    - パスワード設定モーダル（設定・変更）
+    - パスワード認証モーダル（エクスポート/インポート時）
+    - パスワード強度インジケーター（バー＋テキスト表示）
+    - フォーカストラップ対応のモーダル
+  - `src/popup/popup.html` にモーダルHTMLを追加（passwordModal, passwordAuthModal）
+  - `src/popup/styles.css` にパスワード強度スタイルを追加
+  - `src/utils/storage.ts` にマスターパスワード用StorageKeysを追加
+    - `MP_PROTECTION_ENABLED`, `MP_ENCRYPT_API_KEYS`, `MP_ENCRYPT_ON_EXPORT`, `MP_REQUIRE_ON_IMPORT`
+  - `src/utils/storageSettings.ts` にデフォルト値を追加
+    - `mp_protection_enabled: false`, `mp_encrypt_api_keys: true`, `mp_encrypt_on_export: true`, `mp_require_on_import: true`
+  - `src/popup/popup.ts` にパスワード管理ロジックを追加
+    - `showPasswordModal()`, `closePasswordModal()`, `savePassword()` - 設定・変更モーダル
+    - `showPasswordAuthModal()`, `closePasswordAuthModal()`, `authenticatePassword()` - 認証モーダル
+    - `updatePasswordStrength()` - パスワード強度リアルタイム更新
+    - `loadMasterPasswordSettings()` - 初期設定ロード
+    - エクスポート時に暗号化オプションが有効な場合、パスワード認証モーダル表示
+    - インポート時に暗号化ファイルを検出した場合、パスワード認証モーダル表示
+  - i18nメッセージを追加（日本語・英語各27件）
+    - `masterPasswordProtection`, `masterPasswordDesc`, `enableMasterPassword`
+    - `setMasterPassword`, `changeMasterPassword`, `enterMasterPassword`
+    - `passwordWeak`, `passwordMedium`, `passwordStrong`, `passwordTooShort`, `passwordMismatch`
+    - `passwordSaved`, `passwordRemoved`, `passwordRequired`, `passwordIncorrect`
+    - `importPasswordRequired` など
+
+### Accessibility
+
+- **ボタン最小ターゲットサイズ確保**: ドロップダウンメニューボタンにWCAG準拠の最小サイズを追加
+  - `.dropdown-menu button` に `min-height: 44px` を追加
+  - `box-sizing: border-box` で正確なサイズ確保
+  - タッチデバイスでの操作性改善
+
+### Performance
+
+- **定期チェックの最適化**: Page Visibility APIを追加し、バックグラウンドタブでの無駄な処理を防止
+  - `document.addEventListener('visibilitychange')` リスナーを追加
+  - タブが非表示の場合（`document.hidden === true`）に定期チェックを自動停止
+  - タブが表示され、まだ記録が行われていない場合は定期チェックを再開
+  - `src/content/extractor.ts:254-261`
 
 ## [3.9.3] - 2026-02-17
 

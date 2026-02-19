@@ -3,19 +3,7 @@
 // This module is used by domainUtils.js to extend domain filtering with uBlock rules.
 
 import { extractDomain, matchesPattern } from './domainUtils.js';
-
-interface Rule {
-  domain: string;
-  options?: Record<string, any>;
-  [key: string]: any;
-}
-
-export interface UblockRules {
-  blockDomains?: string[];
-  exceptionDomains?: string[];
-  blockRules?: Rule[];
-  exceptionRules?: Rule[];
-}
+import type { UblockRules, UblockRule } from './types.js';
 
 interface RuleWithDomain {
   domain: string;

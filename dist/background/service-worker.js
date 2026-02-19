@@ -3,7 +3,7 @@ import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject } from '../utils/storage.js';
+import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject, updateDomainFilterCache } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 // マイグレーション処理を実行
@@ -175,7 +175,9 @@ const initializeExtension = async () => {
     try {
         const settings = await getSettings();
         await saveSettingsWithAllowedUrls(settings);
-        console.log('Extension initialized: Allowed URLs list rebuilt.');
+        // 【Task #19 最適化】ドメインフィルタキャッシュを更新
+        await updateDomainFilterCache(settings);
+        console.log('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.');
     }
     catch (error) {
         console.error('Failed to initialize extension:', error);

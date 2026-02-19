@@ -158,7 +158,7 @@ export async function decryptData(encryptedData, key) {
 }
 /**
  * データが暗号化されているかをチェックする
- * @param {any} data - チェック対象のデータ
+ * @param {unknown} data - チェック対象のデータ
  * @returns {boolean} 暗号化されているかどうか
  */
 export function isEncrypted(data) {
@@ -212,5 +212,38 @@ export async function computeHMAC(secret, message) {
     const signature = await webcrypto.subtle.sign('HMAC', secretKey, encoder.encode(message));
     const signatureArray = Array.from(new Uint8Array(signature));
     return btoa(String.fromCharCode(...signatureArray));
+}
+/**
+ * 【セキュリティ修正】PBKDF2を使用したパスワードハッシュ化
+ * パスワードを安全に保存するため、PBKDF2でハッシュ化（100,000回のイテレーション）
+ * @param {string} password - パスワード
+ * @param {Uint8Array} salt - ソルト
+ * @returns {Promise<string>} Base64エンコードされたパスワードハッシュ
+ */
+export async function hashPasswordWithPBKDF2(password, salt) {
+    const webcrypto = getWebCrypto();
+    const encoder = new TextEncoder();
+    const passwordBuffer = encoder.encode(password);
+    const baseKey = await webcrypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveBits']);
+    const derivedBits = await webcrypto.subtle.deriveBits({
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: PBKDF2_ITERATIONS,
+        hash: HASH_ALGORITHM
+    }, baseKey, 256 // 256 bits = 32 bytes
+    );
+    const hashArray = Array.from(new Uint8Array(derivedBits));
+    return btoa(String.fromCharCode(...hashArray));
+}
+/**
+ * パスワードハッシュを検証する（PBKDF2）
+ * @param {string} password - 検証するパスワード
+ * @param {string} storedHash - 保存されているハッシュ（Base64）
+ * @param {Uint8Array} salt - 使用されたソルト
+ * @returns {Promise<boolean>} パスワードが正しければtrue
+ */
+export async function verifyPasswordWithPBKDF2(password, storedHash, salt) {
+    const computedHash = await hashPasswordWithPBKDF2(password, salt);
+    return computedHash === storedHash;
 }
 //# sourceMappingURL=crypto.js.map

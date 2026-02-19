@@ -1,6 +1,6 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
-import { Settings } from '../utils/storage.js';
+import { Settings, StorageKeys } from '../utils/storage.js';
 
 // Temporary interface until AIClient is converted
 interface IAIClient {
@@ -38,7 +38,7 @@ export class PrivacyPipeline {
     this.settings = settings;
     this.aiClient = aiClient;
     this.sanitizers = sanitizers;
-    this.mode = settings.privacy_mode || 'full_pipeline';
+    this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
   }
 
   async process(content: string, options: PrivacyPipelineOptions = {}): Promise<PrivacyPipelineResult> {
@@ -103,7 +103,7 @@ export class PrivacyPipeline {
   }
 
   private _logMasking(sanitizeResult: { maskedItems: any[] }): void {
-    if (this.settings.pii_sanitize_logs !== false) {
+    if (this.settings[StorageKeys.PII_SANITIZE_LOGS] !== false) {
       const count = sanitizeResult.maskedItems.length;
       if (count > 0) {
         addLog(LogType.SANITIZE, `Masked ${count} PII items`, {

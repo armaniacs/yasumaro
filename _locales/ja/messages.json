@@ -240,7 +240,7 @@
         "message": "削除"
     },
     "privacyMode": {
-        "message": "動作モード"
+        "message": "プライバシーモード"
     },
     "modeA": {
         "message": "Mode A: Local Only"
@@ -458,6 +458,9 @@
     "errorScrollDepth": {
         "message": "エラー: 最小スクロール深度は0から100の間の数値である必要があります。"
     },
+    "errorInvalidUrl": {
+        "message": "エラー: 無効なURL形式です"
+    },
     "domainListError": {
         "message": "ドメインリストのエラー:"
     },
@@ -507,7 +510,7 @@
         "message": "{count}..."
     },
     "autoClosing": {
-        "message": "自動閉じる..."
+        "message": "自動的に閉じています..."
     },
     "errorContentScriptNotAvailable": {
         "message": "このページからコンテンツを取得できません。HTTP/HTTPSページでのみ使用可能です。"
@@ -641,5 +644,140 @@
     },
     "confirmDeletePrompt": {
         "message": "このプロンプトを削除してもよろしいですか？"
+    },
+    "confirm": {
+        "message": "インポート"
+    },
+    "seconds": {
+        "message": "秒"
+    },
+    "importPreviewSummary": {
+        "message": "概要:"
+    },
+    "importPreviewNote": {
+        "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
+    },
+    "importNoSignatureWarning": {
+        "message": "⚠️ この設定ファイルには署名が含まれていません。\n\n署名は設定ファイルの改ざん防止のために使用されます。\n信頼できないソースからのファイルはインポートしないことを推奨します。\n\nインポートを続行しますか？"
+    },
+    "errorNetwork": {
+        "message": "ネットワークエラーが発生しました。インターネット接続を確認してください。"
+    },
+    "errorAuth": {
+        "message": "認証エラーが発生しました。APIキーを確認してください。"
+    },
+    "errorValidation": {
+        "message": "入力内容が無効です。"
+    },
+    "errorNotFound": {
+        "message": "リソースが見つかりませんでした。"
+    },
+    "errorRateLimit": {
+        "message": "リクエスト制限に達しました。しばらく待ってから再試行してください。"
+    },
+    "errorServer": {
+        "message": "サーバーエラーが発生しました。しばらく待ってから再試行してください。"
+    },
+    "errorGeneric": {
+        "message": "エラーが発生しました。"
+    },
+    "errorUrlNotAllowed": {
+        "message": "このURLのアクセスは許可されていません。設定画面でベースURLが登録されているか確認してください。"
+    },
+    "errorDomainBlocked": {
+        "message": "このドメインはブロックされています。"
+    },
+    "errorInvalidUrlGeneric": {
+        "message": "無効なURLです。"
+    },
+    "errorObsidianConnection": {
+        "message": "Obsidianへの接続に失敗しました。Obsidianが起動していることを確認してください。"
+    },
+    "errorDailyNoteSave": {
+        "message": "デイリーノートへの保存に失敗しました。"
+    },
+    "errorAiSummarize": {
+        "message": "AI要約の生成に失敗しました。"
+    },
+    "errorContentEmpty": {
+        "message": "ページのコンテンツが空です。"
+    },
+    "masterPasswordProtection": {
+        "message": "マスターパスワード保護"
+    },
+    "masterPasswordDesc": {
+        "message": "マスターパスワードを使用して設定を保護。暗号化されたエクスポート/インポートに必要です。"
+    },
+    "enableMasterPassword": {
+        "message": "マスターパスワード保護を有効にする"
+    },
+    "encryptApiKeys": {
+        "message": "ストレージ内のAPIキーを暗号化"
+    },
+    "encryptApiKeysDesc": {
+        "message": "APIキーはマスターパスワードで暗号化されます"
+    },
+    "encryptOnExport": {
+        "message": "エクスポート時に暗号化"
+    },
+    "encryptOnExportDesc": {
+        "message": "エクスポートされた設定ファイルはマスターパスワードで暗号化されます"
+    },
+    "requirePasswordOnImport": {
+        "message": "インポート時にパスワードを要求"
+    },
+    "requirePasswordOnImportDesc": {
+        "message": "暗号化された設定をインポートするにはパスワードが必要です"
+    },
+    "changeMasterPassword": {
+        "message": "マスターパスワードを変更"
+    },
+    "setMasterPassword": {
+        "message": "マスターパスワードを設定"
+    },
+    "setMasterPasswordDesc": {
+        "message": "マスターパスワードを作成して設定を保護します。このパスワードは復元できません。"
+    },
+    "masterPassword": {
+        "message": "マスターパスワード"
+    },
+    "confirmMasterPassword": {
+        "message": "マスターパスワード（確認）"
+    },
+    "enterMasterPassword": {
+        "message": "マスターパスワードを入力"
+    },
+    "enterMasterPasswordDesc": {
+        "message": "続行するにはマスターパスワードを入力してください。"
+    },
+    "passwordMismatch": {
+        "message": "パスワードが一致しません。"
+    },
+    "passwordTooShort": {
+        "message": "パスワードは8文字以上である必要があります。"
+    },
+    "passwordStrengthWeak": {
+        "message": "弱い"
+    },
+    "passwordStrengthMedium": {
+        "message": "中程度"
+    },
+    "passwordStrengthStrong": {
+        "message": "強い"
+    },
+    "passwordIncorrect": {
+        "message": "パスワードが正しくありません。"
+    },
+    "passwordSaved": {
+        "message": "マスターパスワードを保存しました。"
+    },
+    "passwordRemoved": {
+        "message": "マスターパスワードを削除しました。"
+    },
+    "passwordRequired": {
+        "message": "マスターパスワードを入力してください。"
+    },
+    "importPasswordRequired": {
+        "message": "この設定ファイルは暗号化されています。設定を復号してインポートするにはマスターパスワードを入力する必要があります。\n\n続行しますか？"
     }
 }

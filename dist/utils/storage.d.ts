@@ -2,6 +2,8 @@
  * storage.ts
  * Wrapper for chrome.storage.local to manage settings.
  */
+import type { EncryptedData } from './typesCrypto.js';
+import type { UblockRules, Source, CustomPrompt } from './types.js';
 export declare const StorageKeys: {
     readonly OBSIDIAN_API_KEY: "obsidian_api_key";
     readonly OBSIDIAN_PROTOCOL: "obsidian_protocol";
@@ -33,14 +35,71 @@ export declare const StorageKeys: {
     readonly ENCRYPTION_SALT: "encryption_salt";
     readonly ENCRYPTION_SECRET: "encryption_secret";
     readonly HMAC_SECRET: "hmac_secret";
+    readonly MASTER_PASSWORD_ENABLED: "master_password_enabled";
+    readonly MASTER_PASSWORD_SALT: "master_password_salt";
+    readonly MASTER_PASSWORD_HASH: "master_password_hash";
+    readonly IS_LOCKED: "is_locked";
+    readonly MP_PROTECTION_ENABLED: "mp_protection_enabled";
+    readonly MP_ENCRYPT_API_KEYS: "mp_encrypt_api_keys";
+    readonly MP_ENCRYPT_ON_EXPORT: "mp_encrypt_on_export";
+    readonly MP_REQUIRE_ON_IMPORT: "mp_require_on_import";
     readonly SAVED_URLS_VERSION: "savedUrls_version";
     readonly CUSTOM_PROMPTS: "custom_prompts";
+    readonly DOMAIN_FILTER_CACHE: "domain_filter_cache";
+    readonly DOMAIN_FILTER_CACHE_TIMESTAMP: "domain_filter_cache_timestamp";
 };
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
-export declare const ALLOWED_AI_PROVIDER_DOMAINS: string[];
-export interface Settings {
-    [key: string]: any;
+export interface StorageKeyValues {
+    [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
+    [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
+    [StorageKeys.MIN_VISIT_DURATION]: number;
+    [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    [StorageKeys.GEMINI_MODEL]: string;
+    [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
+    [StorageKeys.AI_PROVIDER]: string;
+    [StorageKeys.OPENAI_BASE_URL]: string;
+    [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
+    [StorageKeys.OPENAI_MODEL]: string;
+    [StorageKeys.OPENAI_2_BASE_URL]: string;
+    [StorageKeys.OPENAI_2_API_KEY]: string | EncryptedData;
+    [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.DOMAIN_WHITELIST]: string[];
+    [StorageKeys.DOMAIN_BLACKLIST]: string[];
+    [StorageKeys.DOMAIN_FILTER_MODE]: string;
+    [StorageKeys.PRIVACY_MODE]: string;
+    [StorageKeys.PII_CONFIRMATION_UI]: boolean;
+    [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.UBLOCK_RULES]: UblockRules;
+    [StorageKeys.UBLOCK_SOURCES]: Source[];
+    [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
+    [StorageKeys.SIMPLE_FORMAT_ENABLED]: boolean;
+    [StorageKeys.ALLOWED_URLS]: string[];
+    [StorageKeys.ALLOWED_URLS_HASH]: string;
+    [StorageKeys.ENCRYPTION_SALT]: string;
+    [StorageKeys.ENCRYPTION_SECRET]: string;
+    [StorageKeys.HMAC_SECRET]: string;
+    [StorageKeys.MASTER_PASSWORD_ENABLED]: boolean;
+    [StorageKeys.MASTER_PASSWORD_SALT]: string;
+    [StorageKeys.MASTER_PASSWORD_HASH]: string;
+    [StorageKeys.IS_LOCKED]: boolean;
+    [StorageKeys.MP_PROTECTION_ENABLED]: boolean;
+    [StorageKeys.MP_ENCRYPT_API_KEYS]: boolean;
+    [StorageKeys.MP_ENCRYPT_ON_EXPORT]: boolean;
+    [StorageKeys.MP_REQUIRE_ON_IMPORT]: boolean;
+    [StorageKeys.SAVED_URLS_VERSION]: number;
+    [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
+    [StorageKeys.DOMAIN_FILTER_CACHE]: string[];
+    [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;
 }
+export type StrictSettings = {
+    [K in StorageKey]: StorageKeyValues[K];
+};
+export type Settings = Partial<StorageKeyValues> & {
+    [key: string]: unknown;
+};
+export declare const ALLOWED_AI_PROVIDER_DOMAINS: string[];
 /**
  * ドメインがホワイトリストに含まれるかチェックする
  * @param {string} url - チェック対象のURL
@@ -49,12 +108,50 @@ export interface Settings {
 export declare function isDomainInWhitelist(url: string): boolean;
 /**
  * 暗号化キーを取得または作成する
- * ソルト/シークレットが無ければ自動生成してストレージに保存
- * chrome.runtime.idをキー導出に組み込むことで、異なる環境間のデータ分離を実現
+ *
+ * 【セキュリティ修正】マスターパスワードが設定されている場合、マスターパスワードからキーを導出
+ * マスターパスワード未設定の場合は従来の方式でマイグレーション準備
  *
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
+ * @throws {Error} ロックされている場合（マスターパスワード未入力）
  */
 export declare function getOrCreateEncryptionKey(): Promise<CryptoKey>;
+/**
+ * マスターパスワードが設定されているか確認
+ * @returns {Promise<boolean>} マスターパスワードが設定済みの場合true
+ */
+export declare function isMasterPasswordEnabled(): Promise<boolean>;
+/**
+ * 暗号化がロックされているか確認（マスターパスワード未入力）
+ * @returns {Promise<boolean>} ロックされている場合true
+ */
+export declare function isEncryptionLocked(): Promise<boolean>;
+/**
+ * マスターパスワードを設定する
+ * @param {string} password - マスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export declare function setMasterPassword(password: string): Promise<boolean>;
+/**
+ * マスターパスワードを検証し、セッションをアンロックする
+ * @param {string} password - マスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export declare function unlockWithPassword(password: string): Promise<boolean>;
+/**
+ * セッションをロックする（マスターパスワードキャッシュをクリア）
+ */
+export declare function lockSession(): void;
+/** * マスターパスワードを再設定する（古いパスワード検証後）
+ * @param {string} oldPassword - 現在のマスターパスワード
+ * @param {string} newPassword - 新しいマスターパスワード
+ * @returns {Promise<boolean>} 成功した場合true
+ */
+export declare function changeMasterPassword(oldPassword: string, newPassword: string): Promise<boolean>;
+/**
+ * マスターパスワード設定を解除する（すべての暗号化データを再暗号化できないため注意が必要）
+ */
+export declare function removeMasterPassword(): Promise<void>;
 /**
  * 暗号化キーのキャッシュをクリアする（テスト用）
  */
@@ -71,6 +168,11 @@ export declare function getOrCreateHmacSecret(): Promise<string>;
  */
 export declare function migrateToSingleSettingsObject(): Promise<boolean>;
 export declare function getSettings(): Promise<Settings>;
+/**
+ * 【パフォーマンス改善】設定キャッシュをクリアする（テスト用）
+ * ストレージから完全に再読み込みする場合に使用
+ */
+export declare function clearSettingsCache(): void;
 /**
  * Save settings to chrome.storage.local with optional allowed URL list update.
  *
@@ -158,4 +260,43 @@ export declare function getAllowedUrls(): Promise<Set<string>>;
  * @returns {Promise<void>}
  */
 export declare function ensureUrlVersionInitialized(): Promise<void>;
+/**
+ * [同期] ドメインフィルタキャッシュを取得
+ * Content Scriptから直接呼び出すため、ストレージに同期的アクセスはできませんが
+ * chrome.storage.local.get はコールバックで即時取得可能
+ * この関数は Content Script で使用します
+ *
+ * @param {function} callback - キャッシュデータを受け取るコールバック関数
+ */
+export declare function getDomainFilterCacheSync(callback: (data: {
+    allowedDomains: string[];
+    blockedDomains: string[];
+    cachedAt: number;
+    mode: string;
+}) => void): void;
+/**
+ * ドメインフィルタキャッシュが有効かどうかを判定
+ * @param {number} cachedAt - キャッシュ作成時のタイムスタンプ
+ * @returns {boolean} 有効な場合true
+ */
+export declare function isDomainFilterCacheValid(cachedAt: number): boolean;
+/**
+ * ドメインからパスとクエリを削除して正規化
+ * @param {string} url - 正規化対象のURL
+ * @returns {string | null} 正規化されたURL（失敗時はnull）
+ */
+export declare function normalizeDomainUrl(url: string): string | null;
+/**
+ * パターンマッチング（ワイルドカード対応）
+ * Content Scriptで使用するため、パッケージ化
+ * @param {string} domain - チェック対象のドメイン
+ * @param {string} pattern - パターン（*を含む場合あり）
+ * @returns {boolean} 一致する場合true
+ */
+export declare function matchesWildcardPattern(domain: string, pattern: string): boolean;
+/**
+ * バックグラウンドスクリプトでドメインフィルタキャッシュを更新
+ * @param {Settings} settings - 設定オブジェクト
+ */
+export declare function updateDomainFilterCache(settings: Settings): Promise<void>;
 //# sourceMappingURL=storage.d.ts.map

@@ -13,6 +13,7 @@ import {
     saveSettings,
     getOrCreateEncryptionKey,
     clearEncryptionKeyCache,
+    clearSettingsCache,
     isDomainInWhitelist
 } from '../storage.js';
 import { normalizeUrl } from '../urlUtils.js';
@@ -21,6 +22,11 @@ import { isEncrypted, encrypt, decrypt } from '../crypto.js';
 jest.mock('../migration.js', () => ({
     migrateUblockSettings: jest.fn(() => Promise.resolve(false))
 }));
+
+// 【パフォーマンス改善】テスト間でキャッシュをクリア
+afterEach(() => {
+    clearSettingsCache();
+});
 
 describe('isDomainInWhitelist', () => {
     it('should return true for exact matches', () => {

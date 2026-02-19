@@ -289,7 +289,8 @@ export function formatDuration(ms) {
     if (ms < 1000) {
         return `${Math.round(ms)}ms`;
     }
-    return `${(ms / 1000).toFixed(1)}秒`;
+    const secondsUnit = chrome.i18n.getMessage('seconds') || 's';
+    return `${(ms / 1000).toFixed(1)}${secondsUnit}`;
 }
 /**
  * 処理時間付き成功メッセージを生成

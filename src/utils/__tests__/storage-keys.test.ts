@@ -1,4 +1,4 @@
-import { getSettings, StorageKeys, saveSettings } from '../storage.js';
+import { getSettings, StorageKeys, saveSettings, clearSettingsCache } from '../storage.js';
 import * as migration from '../migration.js';
 
 // Mock migration module
@@ -9,9 +9,15 @@ jest.mock('../migration', () => ({
 const mockedMigration = migration as jest.Mocked<typeof migration>;
 
 describe('getSettings key refinement', () => {
+  beforeEach(() => {
+    // 各テスト前にキャッシュをクリア
+    clearSettingsCache();
+  });
+
   test('StorageKeysのみを取得する', async () => {
     // 不相応なデータをセット
     await chrome.storage.local.set({ extra_key: 'should_not', another_junk: 123 });
+    clearSettingsCache(); // storage直接更新後にキャッシュクリア
 
     const settings = await getSettings();
 
@@ -22,7 +28,11 @@ describe('getSettings key refinement', () => {
       StorageKeys.ENCRYPTION_SALT,
       StorageKeys.ENCRYPTION_SECRET,
       StorageKeys.SAVED_URLS_VERSION,
-      StorageKeys.HMAC_SECRET
+      StorageKeys.HMAC_SECRET,
+      StorageKeys.MASTER_PASSWORD_ENABLED,
+      StorageKeys.MASTER_PASSWORD_SALT,
+      StorageKeys.MASTER_PASSWORD_HASH,
+      StorageKeys.IS_LOCKED
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {
@@ -46,6 +56,7 @@ describe('getSettings key refinement', () => {
       [StorageKeys.OBSIDIAN_API_KEY]: 'my-api-key',
       [StorageKeys.OBSIDIAN_PORT]: '8000'
     });
+    clearSettingsCache(); // storage直接更新後にキャッシュクリア
 
     // getSettingsを呼ぶ
     const settings = await getSettings();

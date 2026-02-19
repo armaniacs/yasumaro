@@ -8,14 +8,7 @@ import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
 import { LogType, addLog } from '../../utils/logger.js';
 import { showStatus } from '../settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
-
-interface Source {
-  url: string;
-  importedAt: number;
-  ruleCount: number;
-  blockDomains: string[];
-  exceptionDomains: string[];
-}
+import type { Source, UblockRules } from '../../utils/types.js';
 
 interface ReloadResult {
   sources: Source[];
@@ -56,7 +49,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules,
+    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules,
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: sources.length > 0
   }, true);
 
@@ -118,7 +111,7 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules
+    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules
   }, true);
 
   return {
@@ -181,7 +174,7 @@ export async function saveUblockSettings(text: string, url: string | null = null
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules,
+    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules,
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: true
   }, true);
 

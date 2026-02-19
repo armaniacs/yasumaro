@@ -110,11 +110,16 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
  * @param {string} hostname - チェックするホスト名
  * @returns {boolean} プライベートIPの場合true
  */
-function isPrivateIpAddress(hostname) {
+export function isPrivateIpAddress(hostname) {
     // IPv4形式（xxx.xxx.xxx.xxx）
     const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
     if (ipv4Match) {
         const [, a, b, c, d] = ipv4Match.map(Number);
+        // 各オクテットが0-255の範囲内かチェック
+        // 無効なIPアドレス（999.999.999.999など）を識別するため
+        if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255) {
+            return false; // 無効なIPv4アドレスはプライベートアドレスとして扱わない
+        }
         // 10.x.x.x (10.0.0.0/8)
         if (a === 10)
             return true;

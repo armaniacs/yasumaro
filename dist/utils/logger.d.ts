@@ -19,6 +19,19 @@ export interface LogEntry {
     details?: Record<string, any>;
 }
 /**
+ * 【パフォーマンス改善】保留中のログをstorageにフラッシュする
+ * @param {boolean} immediate - trueの場合は即時フラッシュ（テスト用）
+ */
+export declare function flushLogs(immediate?: boolean): Promise<void>;
+/**
+ * 【パフォーマンス改善】保留中のログの数を取得（テスト用）
+ */
+export declare function getPendingLogCount(): number;
+/**
+ * 【パフォーマンス改善】保留中のログをクリア（テスト用）
+ */
+export declare function clearPendingLogs(): void;
+/**
  * Add a log entry
  * @param {LogTypeValues} type - LogType
  * @param {string} message - Log message
@@ -26,7 +39,7 @@ export interface LogEntry {
  */
 export declare function addLog(type: LogTypeValues, message: string, details?: Record<string, any>): Promise<void>;
 /**
- * Get all logs
+ * Get all logs (including pending logs)
  * @returns {Promise<LogEntry[]>}
  */
 export declare function getLogs(): Promise<LogEntry[]>;

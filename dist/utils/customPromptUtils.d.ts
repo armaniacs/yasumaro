@@ -4,19 +4,8 @@
  * ユーザー定義のプロンプトを管理し、AI要約生成時に適用する
  */
 import { Settings } from './storage.js';
-/**
- * カスタムプロンプトのデータ構造
- */
-export interface CustomPrompt {
-    id: string;
-    name: string;
-    prompt: string;
-    systemPrompt?: string;
-    provider: 'gemini' | 'openai' | 'openai2' | 'all';
-    isActive: boolean;
-    createdAt: number;
-    updatedAt: number;
-}
+import { CustomPrompt } from './types.js';
+export type { CustomPrompt } from './types.js';
 /**
  * プロンプト適用結果
  */
@@ -94,8 +83,8 @@ export declare function deletePrompt(prompts: CustomPrompt[], id: string): Custo
  * アクティブなプロンプトを設定（他のプロンプトのisActiveをfalseに）
  * @param {CustomPrompt[]} prompts - プロンプト配列
  * @param {string} id - アクティブにするプロンプトのID
- * @param {string} provider - プロバイダー名
+ * @param {string} _provider - プロバイダー名（互換性のために残すが、内部ではプロンプトのproviderを使用）
  * @returns {CustomPrompt[]} 更新後のプロンプト配列
  */
-export declare function setActivePrompt(prompts: CustomPrompt[], id: string, provider: string): CustomPrompt[];
+export declare function setActivePrompt(prompts: CustomPrompt[], id: string, _provider: string): CustomPrompt[];
 //# sourceMappingURL=customPromptUtils.d.ts.map

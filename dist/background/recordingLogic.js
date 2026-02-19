@@ -4,7 +4,7 @@ import { NotificationHelper } from './notificationHelper.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
-import { getSettings, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
+import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -89,7 +89,10 @@ export class RecordingLogic {
             const age = now - RecordingLogic.cacheState.urlCacheTimestamp;
             if (age < URL_CACHE_TTL) {
                 addLog(LogType.DEBUG, 'URL cache hit', { count: RecordingLogic.cacheState.urlCache.size, age: age + 'ms' });
-                return new Map(RecordingLogic.cacheState.urlCache); // 新しいMapを返して変更の影響を防ぐ
+                // キャッシュの直接参照を返す
+                // 注: この関数の呼び出し元はurlMapを変更してストレージに保存するため、
+                // キャッシュは処理後にinvalidateUrlCache()で無効化される
+                return RecordingLogic.cacheState.urlCache;
             }
         }
         // キャッシュが無効な場合、storageから取得（タイムスタンプ付き）
@@ -133,20 +136,21 @@ export class RecordingLogic {
             // 設定キャッシュを使用
             const settings = await this.getSettingsWithCache();
             // Code Review #1: 設定からモードを更新
-            this.mode = settings.privacy_mode || 'full_pipeline';
+            // Settings型は StorageKeys でアクセス可能
+            this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
             // 日付ベース重複チェック: Map<URL, timestamp> を取得
             const urlMap = await this.getSavedUrlsWithCache();
-            // 同じURLが保存済みで、かつ同日の場合はスキップ
+            // 同じURLが保存済みで、かつ同日の場合はスキップ（UTCベースで比較）
             if (!skipDuplicateCheck) {
                 const savedTimestamp = urlMap.get(url);
                 if (savedTimestamp) {
                     const savedDate = new Date(savedTimestamp);
                     const today = new Date();
-                    // 同年同月同日なら同日と判断
-                    if (savedDate.getFullYear() === today.getFullYear() &&
-                        savedDate.getMonth() === today.getMonth() &&
-                        savedDate.getDate() === today.getDate()) {
-                        addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', { url, savedDate: savedDate.toDateString() });
+                    // UTCベースで同日かどうか判定（タイムゾーンの影響を受けない）
+                    if (savedDate.getUTCFullYear() === today.getUTCFullYear() &&
+                        savedDate.getUTCMonth() === today.getUTCMonth() &&
+                        savedDate.getUTCDate() === today.getUTCDate()) {
+                        addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', { url, savedDate: savedDate.toUTCString() });
                         return { success: true, skipped: true, reason: 'same_day' };
                     }
                     // 別日なら古いエントリを上書き（以降の処理で追加される）
@@ -217,8 +221,9 @@ export class RecordingLogic {
             // 4. Format Markdown
             // P1: XSS対策 - summaryをサニタイズ（Markdownリンクのエスケープ）
             const sanitizedSummary = sanitizeForObsidian(summary);
+            const sanitizedTitle = sanitizeForObsidian(title);
             const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
-            const markdown = `- ${timestamp} [${title}](${url})\n    - AI要約: ${sanitizedSummary}`;
+            const markdown = `- ${timestamp} [${sanitizedTitle}](${url})\n    - AI要約: ${sanitizedSummary}`;
             // 5. Save to Obsidian
             await this.obsidian.appendToDailyNote(markdown);
             addLog(LogType.INFO, 'Saved to Obsidian', { title, url });

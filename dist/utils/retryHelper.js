@@ -96,6 +96,10 @@ export class ChromeMessageSender {
      */
     #sendOnce(message) {
         return new Promise((resolve, reject) => {
+            if (!chrome?.runtime?.sendMessage) {
+                reject(new Error('Extension context invalidated'));
+                return;
+            }
             chrome.runtime.sendMessage(message, (response) => {
                 // ChromeのlastErrorチェック
                 if (chrome.runtime.lastError) {

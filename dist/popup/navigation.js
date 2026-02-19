@@ -1,6 +1,7 @@
 // Navigation functions for popup UI
 import { setScreenState, SCREEN_STATES } from './screenState.js';
 import { clearAutoCloseTimer } from './autoClose.js';
+import { setHtmlLangAndDir } from './i18n.js';
 /**
  * 【機能概要】: メイン画面を表示し、設定画面を非表示にする
  * 【設計方針】: DOM操作と画面状態更新を明確に分離、可読性向上
@@ -78,6 +79,8 @@ export function showSettingsScreen() {
  */
 export function init() {
     console.log('[Navigation] Initializing navigation...');
+    // 【アクセシビリティ改善】htmlのlangとdir属性をユーザーロケールに基づいて設定
+    setHtmlLangAndDir();
     // 【DOM要素キャプチャ】: イベント設定用に要素を取得 🟢
     // 【設計方針】: 毎回のDOMクエリを避けるために先に取得
     const menuBtn = document.getElementById('menuBtn');

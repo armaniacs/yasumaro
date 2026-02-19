@@ -1,14 +1,4 @@
-interface Rule {
-    domain: string;
-    options?: Record<string, any>;
-    [key: string]: any;
-}
-export interface UblockRules {
-    blockDomains?: string[];
-    exceptionDomains?: string[];
-    blockRules?: Rule[];
-    exceptionRules?: Rule[];
-}
+import type { UblockRules } from './types.js';
 /**
  * Context information for rule evaluation.
  */
@@ -25,5 +15,4 @@ export interface UblockMatcherContext {
  * @returns {Promise<boolean>} - true if the URL is blocked, false otherwise.
  */
 export declare function isUrlBlocked(url: string, ublockRules: UblockRules, context?: UblockMatcherContext): Promise<boolean>;
-export {};
 //# sourceMappingURL=ublockMatcher.d.ts.map

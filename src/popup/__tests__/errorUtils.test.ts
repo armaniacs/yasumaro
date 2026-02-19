@@ -384,9 +384,9 @@ describe('formatDuration', () => {
   });
 
   it('should format seconds when 1 second or more', () => {
-    expect(formatDuration(1000)).toBe('1.0秒');
-    expect(formatDuration(1234)).toBe('1.2秒');
-    expect(formatDuration(5678)).toBe('5.7秒');
+    expect(formatDuration(1000)).toBe('1.0seconds');
+    expect(formatDuration(1234)).toBe('1.2seconds');
+    expect(formatDuration(5678)).toBe('5.7seconds');
   });
 
   it('should round milliseconds to nearest integer', () => {
@@ -395,8 +395,8 @@ describe('formatDuration', () => {
   });
 
   it('should round seconds to 1 decimal place', () => {
-    expect(formatDuration(1234)).toBe('1.2秒');
-    expect(formatDuration(1289)).toBe('1.3秒');
+    expect(formatDuration(1234)).toBe('1.2seconds');
+    expect(formatDuration(1289)).toBe('1.3seconds');
   });
 });
 
@@ -416,34 +416,34 @@ describe('formatDuration edge cases', () => {
   });
 
   it('should handle very large durations', () => {
-    expect(formatDuration(3600000)).toBe('3600.0秒'); // 1 hour
+    expect(formatDuration(3600000)).toBe('3600.0seconds'); // 1 hour
   });
 
   it('should handle boundary precision at 1000ms threshold', () => {
     expect(formatDuration(999.9)).toBe('1000ms'); // rounds to 1000ms
-    expect(formatDuration(1000.1)).toBe('1.0秒');
+    expect(formatDuration(1000.1)).toBe('1.0seconds');
   });
 });
 
 describe('formatSuccessMessage', () => {
   it('should format message with total time only', () => {
     const message = formatSuccessMessage(1234);
-    expect(message).toBe('✓ Saved to Obsidian (1.2秒)');
+    expect(message).toBe('✓ Saved to Obsidian (1.2seconds)');
   });
 
   it('should format message with total and AI time', () => {
     const message = formatSuccessMessage(2000, 850);
-    expect(message).toBe('✓ Saved to Obsidian (2.0秒 / AI: 850ms)');
+    expect(message).toBe('✓ Saved to Obsidian (2.0seconds / AI: 850ms)');
   });
 
   it('should not show AI time when undefined', () => {
     const message = formatSuccessMessage(1500, undefined);
-    expect(message).toBe('✓ Saved to Obsidian (1.5秒)');
+    expect(message).toBe('✓ Saved to Obsidian (1.5seconds)');
   });
 
   it('should not show AI time when zero', () => {
     const message = formatSuccessMessage(1500, 0);
-    expect(message).toBe('✓ Saved to Obsidian (1.5秒)');
+    expect(message).toBe('✓ Saved to Obsidian (1.5seconds)');
   });
 
   it('should handle both times in milliseconds', () => {
@@ -453,6 +453,6 @@ describe('formatSuccessMessage', () => {
 
   it('should handle both times in seconds', () => {
     const message = formatSuccessMessage(3456, 1234);
-    expect(message).toBe('✓ Saved to Obsidian (3.5秒 / AI: 1.2秒)');
+    expect(message).toBe('✓ Saved to Obsidian (3.5seconds / AI: 1.2seconds)');
   });
 });

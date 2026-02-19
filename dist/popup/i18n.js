@@ -27,9 +27,9 @@ export function getMessage(key, substitutions = null) {
     }
     return message;
 }
-// getUserLocaleをlocaleUtilsから再エクスポート
-import { getUserLocale } from '../utils/localeUtils.js';
-export { getUserLocale };
+// getUserLocaleとisRTLをlocaleUtilsから再エクスポート
+import { getUserLocale, isRTL } from '../utils/localeUtils.js';
+export { getUserLocale, isRTL };
 /**
  * オプション要素の翻訳（selectタグ内のoption）
  */
@@ -138,6 +138,23 @@ export function applyI18n(element = document) {
  */
 export function translatePageTitle(key) {
     document.title = getMessage(key);
+}
+/**
+ * HTMLのlang属性とdir属性を動的に設定します
+ * ユーザーロケールを取得し、それに応じてlang属性と RTL/LTR のdir属性を設定します
+ *
+ * [用途] ページ読み込み時に呼び出して、ページ全体の言語とテキスト方向を設定
+ *
+ * @see getUserLocale - ユーザーロケールを取得する関数
+ * @see isRTL - RTL言語かどうかを判定する関数
+ */
+export function setHtmlLangAndDir() {
+    const locale = getUserLocale();
+    const htmlElement = document.documentElement;
+    // lang属性を設定
+    htmlElement.lang = locale;
+    // dir属性を設定（RTL言語の場合は'rtl'、それ以外は'ltr'）
+    htmlElement.dir = isRTL(locale) ? 'rtl' : 'ltr';
 }
 // DOMが読み込まれたら自動的に翻訳を適用（埋め込みスクリプト用）
 if (document.readyState === 'loading') {

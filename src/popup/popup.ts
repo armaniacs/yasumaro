@@ -10,7 +10,27 @@ import { init as initPrivacySettings, loadPrivacySettings } from './privacySetti
 import { initCustomPromptManager } from './customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
-import { exportSettings, importSettings, validateExportData, SettingsExportData } from '../utils/settingsExportImport.js';
+import {
+  exportSettings,
+  importSettings,
+  validateExportData,
+  SettingsExportData,
+  exportEncryptedSettings,
+  importEncryptedSettings,
+  saveEncryptedExportToFile,
+  isEncryptedExport,
+  EncryptedExportData,
+  ExportFileData
+} from '../utils/settingsExportImport.js';
+import {
+    setMasterPassword,
+    verifyMasterPassword,
+    changeMasterPassword,
+    isMasterPasswordSet,
+    calculatePasswordStrength,
+    validatePasswordRequirements,
+    validatePasswordMatch
+} from '../utils/masterPassword.js';
 
 import { setupAIProviderChangeListener, updateAIProviderVisibility, AIProviderElements } from './settings/aiProvider.js';
 import {
@@ -132,6 +152,42 @@ let importTrapId: string | null = null;
 let pendingImportData: Settings | null = null;
 let pendingImportJson: string | null = null;
 
+// Master Password Modal elements
+const masterPasswordEnabled = document.getElementById('masterPasswordEnabled') as HTMLInputElement | null;
+const masterPasswordOptions = document.getElementById('masterPasswordOptions') as HTMLElement | null;
+const changeMasterPasswordBtn = document.getElementById('changeMasterPassword') as HTMLButtonElement | null;
+
+// Password Setup Modal elements
+const passwordModal = document.getElementById('passwordModal') as HTMLElement | null;
+const passwordModalTitle = document.getElementById('passwordModalTitle') as HTMLElement | null;
+const passwordModalDesc = document.getElementById('passwordModalDesc') as HTMLElement | null;
+const masterPasswordInput = document.getElementById('masterPasswordInput') as HTMLInputElement | null;
+const masterPasswordConfirm = document.getElementById('masterPasswordConfirm') as HTMLInputElement | null;
+const passwordStrengthError = document.getElementById('passwordStrengthError') as HTMLElement | null;
+const passwordMatchError = document.getElementById('passwordMatchError') as HTMLElement | null;
+const passwordStrengthBar = document.querySelector('#passwordStrength .strength-fill') as HTMLElement | null;
+const passwordStrengthText = document.getElementById('passwordStrengthText') as HTMLElement | null;
+const confirmPasswordGroup = document.getElementById('confirmPasswordGroup') as HTMLElement | null;
+const closePasswordModalBtn = document.getElementById('closePasswordModalBtn') as HTMLButtonElement | null;
+const cancelPasswordBtn = document.getElementById('cancelPasswordBtn') as HTMLButtonElement | null;
+const savePasswordBtn = document.getElementById('savePasswordBtn') as HTMLButtonElement | null;
+
+// Password Auth Modal elements
+const passwordAuthModal = document.getElementById('passwordAuthModal') as HTMLElement | null;
+const passwordAuthModalTitle = document.getElementById('passwordAuthModalTitle') as HTMLElement | null;
+const passwordAuthModalDesc = document.getElementById('passwordAuthModalDesc') as HTMLElement | null;
+const masterPasswordAuthInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement | null;
+const passwordAuthError = document.getElementById('passwordAuthError') as HTMLElement | null;
+const closePasswordAuthModalBtn = document.getElementById('closePasswordAuthModalBtn') as HTMLButtonElement | null;
+const cancelPasswordAuthBtn = document.getElementById('cancelPasswordAuthBtn') as HTMLButtonElement | null;
+const submitPasswordAuthBtn = document.getElementById('submitPasswordAuthBtn') as HTMLButtonElement | null;
+
+// Password modal focus management
+let passwordTrapId: string | null = null;
+let passwordAuthTrapId: string | null = null;
+let passwordModalMode: 'set' | 'change' = 'set';
+let pendingPasswordAction: ((password: string) => Promise<void>) | null = null;
+
 // Toggle settings menu
 if (settingsMenuBtn && settingsMenu) {
     settingsMenuBtn.addEventListener('click', (e: MouseEvent) => {
@@ -157,8 +213,27 @@ exportSettingsBtn?.addEventListener('click', async () => {
     settingsMenuBtn?.setAttribute('aria-expanded', 'false');
 
     try {
-        await exportSettings();
-        showStatus('status', getMessage('settingsExported'), 'success');
+        // マスターパスワード保護オプションを確認
+        const settings = await getSettings();
+        const isMpEnabled = settings.mp_protection_enabled === true;
+        const isMpEncryptOnExport = settings.mp_encrypt_on_export === true;
+
+        if (isMpEnabled && isMpEncryptOnExport) {
+            // マスターパスワード認証モーダルを表示してから暗号化エクスポート
+            showPasswordAuthModal('export', async (password) => {
+                const result = await exportEncryptedSettings(password);
+                if (result.success && result.encryptedData) {
+                    await saveEncryptedExportToFile(result.encryptedData);
+                    showStatus('status', getMessage('settingsExported'), 'success');
+                } else {
+                    showStatus('status', `${getMessage('exportError')}: ${result.error || 'Unknown error'}`, 'error');
+                }
+            });
+        } else {
+            // 通常のエクスポート（暗号化なし）
+            await exportSettings();
+            showStatus('status', getMessage('settingsExported'), 'success');
+        }
     } catch (error: any) {
         console.error('Export error:', error);
         const message = error instanceof Error ? error.message : String(error);
@@ -181,10 +256,49 @@ importFileInput?.addEventListener('change', async (e: Event) => {
 
     try {
         const text = await file.text();
-        const parsed = JSON.parse(text) as SettingsExportData;
+        const parsed = JSON.parse(text) as ExportFileData;
 
+        // 暗号化されたエクスポートかどうか判定
+        if (isEncryptedExport(parsed)) {
+            // 暗号化されたエクスポート - パスワード要求
+            const settings = await getSettings();
+            const isMpRequireOnImport = settings.mp_require_on_import === true;
+
+            const handleEncryptedImport = async (password: string) => {
+                const imported = await importEncryptedSettings(text, password);
+                if (imported) {
+                    showStatus('status', getMessage('settingsImported'), 'success');
+                    await load();
+                    await loadDomainSettings();
+                    await loadPrivacySettings();
+                } else {
+                    showStatus('status', `${getMessage('importError')}: Failed to decrypt or apply settings`, 'error');
+                }
+            };
+
+            if (isMpRequireOnImport) {
+                showPasswordAuthModal('import', handleEncryptedImport);
+            } else {
+                // 警告メッセージを表示してから認証
+                const warningMsg = getMessage('importPasswordRequired') || 'Master password is required to import encrypted settings.';
+                if (confirm(warningMsg)) {
+                    showPasswordAuthModal('import', handleEncryptedImport);
+                }
+            }
+
+            // 暗号化されたファイルの場合はここで終了
+            if (importFileInput) {
+                importFileInput.value = '';
+            }
+            return;
+        }
+
+        // 非暗号化エクスポートの処理（既存のロジック）
         if (!validateExportData(parsed)) {
             showStatus('status', getMessage('invalidSettingsFile'), 'error');
+            if (importFileInput) {
+                importFileInput.value = '';
+            }
             return;
         }
 
@@ -199,6 +313,8 @@ importFileInput?.addEventListener('change', async (e: Event) => {
             importConfirmModal.style.display = 'flex';
             void importConfirmModal.offsetHeight;
             importConfirmModal.classList.add('show');
+            // Update aria-hidden for accessibility (modal is now visible)
+            importConfirmModal.setAttribute('aria-hidden', 'false');
 
             // Set up focus trap with the new manager
             importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
@@ -209,15 +325,14 @@ importFileInput?.addEventListener('change', async (e: Event) => {
         const message = error instanceof Error ? error.message : String(error);
         showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
     }
-
-    if (importFileInput) {
-        importFileInput.value = '';
-    }
 });
 
 // Close import modal
 function closeImportModal(): void {
     if (importConfirmModal) {
+        // Update aria-hidden for accessibility (modal is now hidden)
+        importConfirmModal.setAttribute('aria-hidden', 'true');
+
         // Release focus trap
         if (importTrapId) {
             focusTrapManager.release(importTrapId);
@@ -305,9 +420,348 @@ function showImportPreview(data: SettingsExportData): void {
     );
     summary.ublock_sources_count = String(s.ublock_sources?.length || 0);
 
-    importPreview.textContent = `Summary:\n${JSON.stringify(summary, null, 2)}\n\n` +
-        `Note: Full settings will be applied. API keys and lists are included in the file.`;
+    const summaryMsg = chrome.i18n.getMessage('importPreviewSummary') || 'Summary:';
+    const noteMsg = chrome.i18n.getMessage('importPreviewNote') || 'Note: Full settings will be applied. API keys and lists are included in the file.';
+
+    importPreview.textContent = `${summaryMsg}\n${JSON.stringify(summary, null, 2)}\n\n${noteMsg}`;
 }
+
+// ============================================================================
+// Master Password Modal Functions
+// ============================================================================
+
+/**
+ * パスワード強度を更新
+ */
+function updatePasswordStrength(password: string): void {
+    if (!passwordStrengthBar || !passwordStrengthText) return;
+
+    if (!password) {
+        passwordStrengthBar.style.width = '0%';
+        passwordStrengthBar.className = 'strength-fill';
+        passwordStrengthText.textContent = getMessage('passwordStrengthWeak') || 'Weak';
+        return;
+    }
+
+    const result = calculatePasswordStrength(password);
+    passwordStrengthBar.style.width = `${result.score}%`;
+    passwordStrengthBar.className = `strength-fill ${result.level}`;
+    passwordStrengthText.textContent = getMessage(`passwordStrength${result.level.charAt(0).toUpperCase() + result.level.slice(1)}`) || result.text;
+}
+
+/**
+ * パスワード設定モーダルを表示
+ * @param {'set' | 'change'} mode - モーダルの種類
+ */
+function showPasswordModal(mode: 'set' | 'change' = 'set'): void {
+    if (!passwordModal) return;
+
+    passwordModalMode = mode;
+
+    // モーダルタイトルと説明を更新
+    const titleKey = mode === 'change' ? 'changeMasterPassword' : 'setMasterPassword';
+    const descKey = mode === 'change' ? 'setMasterPasswordDesc' : 'setMasterPasswordDesc';
+    if (passwordModalTitle) passwordModalTitle.textContent = getMessage(titleKey);
+    if (passwordModalDesc) passwordModalDesc.textContent = getMessage(descKey);
+
+    // 確認入力欄の表示/非表示
+    if (mode === 'change' && confirmPasswordGroup) {
+        confirmPasswordGroup.classList.remove('hidden');
+    }
+
+    // 入力フィールドをクリア
+    if (masterPasswordInput) masterPasswordInput.value = '';
+    if (masterPasswordConfirm) {
+        masterPasswordConfirm.value = '';
+        masterPasswordConfirm.classList.toggle('hidden', mode === 'change');
+    }
+
+    // エラーをクリア
+    if (passwordStrengthError) passwordStrengthError.textContent = '';
+    if (passwordMatchError) passwordMatchError.textContent = '';
+
+    // 強度バーをリセット
+    updatePasswordStrength('');
+
+    // モーダルを表示
+    passwordModal.classList.remove('hidden');
+    passwordModal.style.display = 'flex';
+    void passwordModal.offsetHeight;
+    passwordModal.classList.add('show');
+
+    // フォーカストラップ設定
+    passwordTrapId = focusTrapManager.trap(passwordModal, closePasswordModal);
+
+    // フォーカスを設定
+    masterPasswordInput?.focus();
+}
+
+/**
+ * パスワード設定モーダルを閉じる
+ */
+function closePasswordModal(): void {
+    if (!passwordModal) return;
+
+    passwordModal.classList.remove('show');
+    passwordModal.style.display = 'none';
+    passwordModal.classList.add('hidden');
+
+    // フォーカストラップ解放
+    if (passwordTrapId) {
+        focusTrapManager.release(passwordTrapId);
+        passwordTrapId = null;
+    }
+
+    // 入力フィールドをクリア
+    if (masterPasswordInput) masterPasswordInput.value = '';
+    if (masterPasswordConfirm) masterPasswordConfirm.value = '';
+    if (passwordStrengthError) passwordStrengthError.textContent = '';
+    if (passwordMatchError) passwordMatchError.textContent = '';
+
+    // 強度バーをリセット
+    updatePasswordStrength('');
+}
+
+/**
+ * パスワードを保存
+ */
+async function savePassword(): Promise<void> {
+    if (!masterPasswordInput) return;
+
+    const password = masterPasswordInput.value;
+    const confirmPasswordValue = masterPasswordConfirm?.value ?? '';
+
+    // パスワード要件チェック
+    const requirementError = validatePasswordRequirements(password);
+    if (requirementError) {
+        if (passwordStrengthError) {
+            passwordStrengthError.textContent = getMessage('passwordTooShort') || requirementError;
+            passwordStrengthError.classList.add('visible');
+        }
+        return;
+    }
+
+    // パスワード一致チェック（新しいパスワード設定時のみ）
+    if (passwordModalMode === 'set') {
+        const matchError = validatePasswordMatch(password, confirmPasswordValue);
+        if (matchError) {
+            if (passwordMatchError) {
+                passwordMatchError.textContent = getMessage('passwordMismatch') || matchError;
+                passwordMatchError.classList.add('visible');
+            }
+            return;
+        }
+    }
+
+    // パスワード設定
+    const setStorageFn = async (key: string, value: unknown) => {
+        await chrome.storage.local.set({ [key]: value });
+    };
+
+    const result = await setMasterPassword(password, setStorageFn);
+
+    if (result.success) {
+        showStatus('status', getMessage('passwordSaved') || 'Master password saved successfully.', 'success');
+        closePasswordModal();
+
+        // UI更新（マスターパスワードが有効になったことを反映）
+        if (masterPasswordEnabled) masterPasswordEnabled.checked = true;
+        if (masterPasswordOptions) masterPasswordOptions.classList.remove('hidden');
+    } else {
+        showStatus('status', result.error || 'Failed to save password.', 'error');
+    }
+}
+
+/**
+ * パスワード認証モーダルを表示
+ * @param {string} actionType - アクションの種類（\"export\" または \"import\"）
+ * @param {() => Promise<void>} action - 認証成功後に実行するアクション
+ */
+function showPasswordAuthModal(actionType: 'export' | 'import', action: (password: string) => Promise<void>): void {
+    if (!passwordAuthModal) return;
+
+    pendingPasswordAction = action;
+
+    // 入力フィールドとエラーをクリア
+    if (masterPasswordAuthInput) masterPasswordAuthInput.value = '';
+    if (passwordAuthError) passwordAuthError.textContent = '';
+
+    // モーダルを表示
+    passwordAuthModal.classList.remove('hidden');
+    passwordAuthModal.style.display = 'flex';
+    void passwordAuthModal.offsetHeight;
+    passwordAuthModal.classList.add('show');
+
+    // フォーカストラップ設定
+    passwordAuthTrapId = focusTrapManager.trap(passwordAuthModal, closePasswordAuthModal);
+
+    // フォーカスを設定
+    masterPasswordAuthInput?.focus();
+}
+
+/**
+ * パスワード認証モーダルを閉じる
+ */
+function closePasswordAuthModal(): void {
+    if (!passwordAuthModal) return;
+
+    passwordAuthModal.classList.remove('show');
+    passwordAuthModal.style.display = 'none';
+    passwordAuthModal.classList.add('hidden');
+
+    // フォーカストラップ解放
+    if (passwordAuthTrapId) {
+        focusTrapManager.release(passwordAuthTrapId);
+        passwordAuthTrapId = null;
+    }
+
+    // 入力フィールドとエラーをクリア
+    if (masterPasswordAuthInput) masterPasswordAuthInput.value = '';
+    if (passwordAuthError) passwordAuthError.textContent = '';
+
+    pendingPasswordAction = null;
+}
+
+/**
+ * パスワードを認証
+ */
+async function authenticatePassword(): Promise<void> {
+    if (!masterPasswordAuthInput) return;
+
+    const password = masterPasswordAuthInput.value;
+
+    if (!password) {
+        if (passwordAuthError) {
+            passwordAuthError.textContent = getMessage('passwordRequired') || 'Please enter your master password.';
+            passwordAuthError.classList.add('visible');
+        }
+        return;
+    }
+
+    const getStorageFn = async (keys: string[]) => {
+        return chrome.storage.local.get(keys);
+    };
+
+    const result = await verifyMasterPassword(password, getStorageFn);
+
+    if (result.success) {
+        closePasswordAuthModal();
+        // 認証成功後にアクションを実行
+        if (pendingPasswordAction) {
+            await pendingPasswordAction(password);
+        }
+    } else {
+        if (passwordAuthError) {
+            passwordAuthError.textContent = getMessage('passwordIncorrect') || result.error || 'Incorrect password.';
+            passwordAuthError.classList.add('visible');
+        }
+    }
+}
+
+// Master Password Protection Toggle Handler
+if (masterPasswordEnabled && masterPasswordOptions) {
+    masterPasswordEnabled.addEventListener('change', async (e: Event) => {
+        const isChecked = (e.target as HTMLInputElement).checked;
+
+        if (isChecked) {
+            // パスワード設定モーダルを表示
+            showPasswordModal('set');
+        } else {
+            // マスターパスワードを削除
+            await chrome.storage.local.remove([
+                'master_password_enabled',
+                'master_password_salt',
+                'master_password_hash'
+            ]);
+            masterPasswordOptions.classList.add('hidden');
+            showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+        }
+    });
+}
+
+// Change Master Password Button Handler
+if (changeMasterPasswordBtn) {
+    changeMasterPasswordBtn.addEventListener('click', () => {
+        // 既存パスワードを要求してから変更モーダルを表示
+        showPasswordAuthModal('export', async () => {
+            // 認証成功後に変更モーダルを表示
+            showPasswordModal('change');
+        });
+    });
+}
+
+// Password Modal Event Handlers
+if (masterPasswordInput) {
+    masterPasswordInput.addEventListener('input', () => {
+        updatePasswordStrength(masterPasswordInput.value);
+    });
+}
+
+if (closePasswordModalBtn) {
+    closePasswordModalBtn.addEventListener('click', closePasswordModal);
+}
+
+if (cancelPasswordBtn) {
+    cancelPasswordBtn.addEventListener('click', closePasswordModal);
+}
+
+if (savePasswordBtn) {
+    savePasswordBtn.addEventListener('click', savePassword);
+}
+
+if (passwordModal) {
+    passwordModal.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === passwordModal) {
+            closePasswordModal();
+        }
+    });
+}
+
+// Password Auth Modal Event Handlers
+if (closePasswordAuthModalBtn) {
+    closePasswordAuthModalBtn.addEventListener('click', closePasswordAuthModal);
+}
+
+if (cancelPasswordAuthBtn) {
+    cancelPasswordAuthBtn.addEventListener('click', closePasswordAuthModal);
+}
+
+if (submitPasswordAuthBtn) {
+    submitPasswordAuthBtn.addEventListener('click', authenticatePassword);
+}
+
+if (masterPasswordAuthInput) {
+    masterPasswordAuthInput.addEventListener('keypress', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            authenticatePassword();
+        }
+    });
+}
+
+if (passwordAuthModal) {
+    passwordAuthModal.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === passwordAuthModal) {
+            closePasswordAuthModal();
+        }
+    });
+}
+
+// Load Master Password Settings
+async function loadMasterPasswordSettings(): Promise<void> {
+    const isSet = await isMasterPasswordSet(async (keys) => chrome.storage.local.get(keys));
+    if (masterPasswordEnabled) {
+        masterPasswordEnabled.checked = isSet;
+    }
+    if (masterPasswordOptions) {
+        if (isSet) {
+            masterPasswordOptions.classList.remove('hidden');
+        } else {
+            masterPasswordOptions.classList.add('hidden');
+        }
+    }
+}
+
+loadMasterPasswordSettings();
 
 // ============================================================================
 // Tab Navigation
@@ -334,9 +788,11 @@ function initTabNavigation(): void {
             tabPanels.forEach(panel => {
                 if (panel.id === targetPanelId) {
                     panel.classList.add('active');
+                    panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'false');
                 } else {
                     panel.classList.remove('active');
+                    panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'true');
                 }
             });
@@ -348,7 +804,33 @@ function initTabNavigation(): void {
 // Initialization
 // ============================================================================
 
+/**
+ * Set HTML lang and dir attributes based on user locale
+ */
+function setHtmlLangDir(): void {
+    const locale = chrome.i18n.getUILanguage();
+    const langCode = locale.split('-')[0]; // Extract primary language code (e.g., 'ja' from 'ja-JP')
+    document.documentElement.lang = locale;
+
+    // RTL languages (Arabic, Hebrew, Farsi/Persian, Urdu, Kurdish, etc.)
+    const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ku', 'yi', 'dv'];
+    if (rtlLanguages.includes(langCode)) {
+        document.documentElement.dir = 'rtl';
+    } else {
+        document.documentElement.dir = 'ltr';
+    }
+
+    console.log(`[Popup] Set HTML lang="${locale}" dir="${document.documentElement.dir}"`);
+}
+
 console.log('[Popup] Starting initialization...');
+
+// Set HTML lang and dir attributes first (before any DOM operations)
+try {
+    setHtmlLangDir();
+} catch (error) {
+    console.error('[Popup] Error setting HTML lang/dir:', error);
+}
 
 try {
     console.log('[Popup] Calling initNavigation...');

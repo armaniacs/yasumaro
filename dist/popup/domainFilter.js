@@ -13,10 +13,12 @@ import { getMessage } from './i18n.js';
 // Elements
 const generalTabBtn = document.getElementById('generalTab');
 const domainTabBtn = document.getElementById('domainTab');
-const privacyTabBtn = document.getElementById('privacyTab'); // Phase 3
+const promptTabBtn = document.getElementById('promptTab');
+const privacyTabBtn = document.getElementById('privacyTab');
 const generalPanel = document.getElementById('generalPanel');
 const domainPanel = document.getElementById('domainPanel');
-const privacyPanel = document.getElementById('privacyPanel'); // Phase 3
+const promptPanel = document.getElementById('promptPanel');
+const privacyPanel = document.getElementById('privacyPanel');
 // Domain filter elements
 const filterDisabledRadio = document.getElementById('filterDisabled');
 const filterWhitelistRadio = document.getElementById('filterWhitelist');
@@ -42,6 +44,11 @@ export function init() {
     if (domainTabBtn) {
         domainTabBtn.addEventListener('click', () => {
             showTab('domain');
+        });
+    }
+    if (promptTabBtn) {
+        promptTabBtn.addEventListener('click', () => {
+            showTab('prompt');
         });
     }
     if (privacyTabBtn) {
@@ -109,41 +116,38 @@ export function init() {
 }
 function showTab(tabName) {
     // Buttons
-    if (generalTabBtn) {
-        generalTabBtn.classList.toggle('active', tabName === 'general');
-        generalTabBtn.setAttribute('aria-selected', String(tabName === 'general'));
-    }
-    if (domainTabBtn) {
-        domainTabBtn.classList.toggle('active', tabName === 'domain');
-        domainTabBtn.setAttribute('aria-selected', String(tabName === 'domain'));
-    }
-    if (privacyTabBtn) {
-        privacyTabBtn.classList.toggle('active', tabName === 'privacy');
-        privacyTabBtn.setAttribute('aria-selected', String(tabName === 'privacy'));
-    }
-    // Panels - Panel visibility with aria-hidden for accessibility
-    const isActiveGeneral = tabName === 'general';
-    const isActiveDomain = tabName === 'domain';
-    const isActivePrivacy = tabName === 'privacy';
-    if (generalPanel) {
-        generalPanel.classList.toggle('active', isActiveGeneral);
-        generalPanel.style.display = isActiveGeneral ? 'block' : 'none';
-        generalPanel.setAttribute('aria-hidden', String(!isActiveGeneral));
-    }
-    if (domainPanel) {
-        domainPanel.classList.toggle('active', isActiveDomain);
-        domainPanel.style.display = isActiveDomain ? 'block' : 'none';
-        domainPanel.setAttribute('aria-hidden', String(!isActiveDomain));
-    }
-    if (privacyPanel) {
-        privacyPanel.classList.toggle('active', isActivePrivacy);
-        privacyPanel.style.display = isActivePrivacy ? 'block' : 'none';
-        privacyPanel.setAttribute('aria-hidden', String(!isActivePrivacy));
-    }
+    const tabBtns = [
+        { btn: generalTabBtn, name: 'general' },
+        { btn: domainTabBtn, name: 'domain' },
+        { btn: promptTabBtn, name: 'prompt' },
+        { btn: privacyTabBtn, name: 'privacy' },
+    ];
+    tabBtns.forEach(({ btn, name }) => {
+        if (btn) {
+            btn.classList.toggle('active', name === tabName);
+            btn.setAttribute('aria-selected', String(name === tabName));
+        }
+    });
+    // Panels - CSSクラスのみで制御（インラインスタイルを使わない）
+    const tabPanels = [
+        { panel: generalPanel, name: 'general' },
+        { panel: domainPanel, name: 'domain' },
+        { panel: promptPanel, name: 'prompt' },
+        { panel: privacyPanel, name: 'privacy' },
+    ];
+    tabPanels.forEach(({ panel, name }) => {
+        if (panel) {
+            const isActive = name === tabName;
+            panel.classList.toggle('active', isActive);
+            panel.removeAttribute('style');
+            panel.setAttribute('aria-hidden', String(!isActive));
+        }
+    });
     // Move focus to first focusable element in newly activated panel
     const activePanel = tabName === 'general' ? generalPanel :
         tabName === 'domain' ? domainPanel :
-            privacyPanel;
+            tabName === 'prompt' ? promptPanel :
+                privacyPanel;
     if (activePanel) {
         const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
         const firstFocusable = activePanel.querySelector(focusableSelector);
@@ -186,7 +190,10 @@ export function toggleFormatUI() {
 export async function loadDomainSettings() {
     const settings = await getSettings();
     // Load filter mode
-    const mode = settings[StorageKeys.DOMAIN_FILTER_MODE] || 'disabled';
+    // Validate mode to prevent CSS selector injection (only allow: disabled, whitelist, blacklist)
+    const ALLOWED_FILTER_MODES = ['disabled', 'whitelist', 'blacklist'];
+    const rawMode = settings[StorageKeys.DOMAIN_FILTER_MODE] || 'disabled';
+    const mode = ALLOWED_FILTER_MODES.includes(rawMode) ? rawMode : 'disabled';
     const modeRadio = document.querySelector(`input[name="domainFilter"][value="${mode}"]`);
     if (modeRadio) {
         modeRadio.checked = true;

@@ -7,20 +7,10 @@
 import { Settings, StorageKeys } from './storage.js';
 import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
 import { addLog, LogType } from './logger.js';
+import { CustomPrompt } from './types.js';
 
-/**
- * カスタムプロンプトのデータ構造
- */
-export interface CustomPrompt {
-    id: string;
-    name: string;
-    prompt: string;           // ユーザープロンプト（{{content}}プレースホルダーを含む）
-    systemPrompt?: string;    // OpenAI用システムプロンプト（オプション）
-    provider: 'gemini' | 'openai' | 'openai2' | 'all';
-    isActive: boolean;
-    createdAt: number;
-    updatedAt: number;
-}
+// 型を再エクスポート
+export type { CustomPrompt } from './types.js';
 
 /**
  * プロンプト適用結果
@@ -213,23 +203,43 @@ export function deletePrompt(prompts: CustomPrompt[], id: string): CustomPrompt[
  * アクティブなプロンプトを設定（他のプロンプトのisActiveをfalseに）
  * @param {CustomPrompt[]} prompts - プロンプト配列
  * @param {string} id - アクティブにするプロンプトのID
- * @param {string} provider - プロバイダー名
+ * @param {string} _provider - プロバイダー名（互換性のために残すが、内部ではプロンプトのproviderを使用）
  * @returns {CustomPrompt[]} 更新後のプロンプト配列
  */
 export function setActivePrompt(
-    prompts: CustomPrompt[], 
-    id: string, 
-    provider: string
+    prompts: CustomPrompt[],
+    id: string,
+    _provider: string
 ): CustomPrompt[] {
-    return prompts.map(p => {
-        // 同じプロバイダー（またはall）の他のプロンプトを非アクティブに
-        if (p.provider === provider || p.provider === 'all' || 
-            provider === 'all') {
-            if (p.id === id) {
-                return { ...p, isActive: true, updatedAt: Date.now() };
-            } else if (p.isActive) {
-                return { ...p, isActive: false, updatedAt: Date.now() };
-            }
+    // 1. 対象となるプロンプトをアクティブにする
+    const activated = prompts.map(p => {
+        if (p.id === id) {
+            return { ...p, isActive: true, updatedAt: Date.now() };
+        }
+        return p;
+    });
+
+    // 2. 同一スコープの他のプロンプトを非アクティブにする
+    // プロンプト自身が持つproviderスコープを使用
+    const activePrompt = activated.find(p => p.id === id);
+    if (!activePrompt) {
+        return prompts; // 見つからない場合は変更なし
+    }
+
+    const scope = activePrompt.provider;
+
+    return activated.map(p => {
+        // 対象スコープのプロンプトで、かつアクティブなものを非アクティブに
+        // 'all'スコープは全てのプロバイダーを管理
+        // 特定プロバイダーは、そのプロバイダーと'all'プロンプトを管理
+        const shouldDeactivate = p.isActive && p.id !== id && (
+            scope === 'all' || // 'all'プロンプトなら全てを管理
+            p.provider === scope || // 同じプロバイダー
+            (p.provider === 'all') // 'all'プロンプトも管理対象
+        );
+
+        if (shouldDeactivate) {
+            return { ...p, isActive: false, updatedAt: Date.now() };
         }
         return p;
     });

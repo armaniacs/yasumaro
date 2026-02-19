@@ -10,13 +10,13 @@
  */
 interface OldRule {
     domain: string;
-    options?: any;
-    [key: string]: any;
+    options?: Record<string, unknown>;
+    [key: string]: unknown;
 }
 interface OldFormat {
     blockRules?: OldRule[];
     exceptionRules?: OldRule[];
-    metadata?: any;
+    metadata?: Record<string, unknown>;
     blockDomains?: string[];
     exceptionDomains?: string[];
 }
@@ -27,7 +27,7 @@ interface NewFormat {
         importedAt: number;
         ruleCount: number;
         migrated: true;
-        [key: string]: any;
+        [key: string]: unknown;
     };
 }
 /**

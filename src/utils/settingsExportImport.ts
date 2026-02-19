@@ -4,7 +4,8 @@
  */
 
 import { getSettings, saveSettings, getOrCreateHmacSecret, Settings } from './storage.js';
-import { computeHMAC } from './crypto.js';
+import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
+import { hashPasswordWithPBKDF2, verifyPasswordWithPBKDF2, generateSalt } from './crypto.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
@@ -24,6 +25,19 @@ export interface SettingsExportData {
   apiKeyExcluded: boolean;
   signature?: string;
 }
+
+// 【マスターパスワード暗号化形式】
+export interface EncryptedExportData {
+  encrypted: true;
+  version: string;
+  exportedAt: string;
+  ciphertext: string;
+  iv: string;
+  hmac: string;
+  salt: string;
+}
+
+export type ExportFileData = SettingsExportData | EncryptedExportData;
 
 // Deprecated: Internal use only, but keeping for compatibility if needed internally
 interface ExportData extends SettingsExportData { }
@@ -56,6 +70,147 @@ function getExportFilename(): string {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `obsidian-smart-history-settings-${year}${month}${day}-${hours}${minutes}${seconds}.json`;
+}
+
+/**
+ * マスターパスワードで暗号化して設定をエクスポート
+ * @param {string} masterPassword - マスターパスワード
+ * @returns {Promise<{ success: boolean; encryptedData?: EncryptedExportData; error?: string }>}
+ */
+export async function exportEncryptedSettings(
+  masterPassword: string
+): Promise<{ success: boolean; encryptedData?: EncryptedExportData; error?: string }> {
+  try {
+    const settings = await getSettings();
+
+    // APIキーを除外した設定でエクスポート
+    const sanitizedSettings = sanitizeSettingsForExport(settings);
+
+    const exportData: ExportData = {
+      version: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      settings: sanitizedSettings,
+      apiKeyExcluded: true,
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+
+    // ソルト生成
+    const salt = generateSalt();
+
+    // パスワードからキーを派生（PBKDF2）
+    const key = await deriveKey(masterPassword, salt);
+
+    // データを暗号化
+    const encrypted = await encrypt(json, key);
+
+    // HMAC署名を計算（元のデータに対して）
+    const hmacSecret = await getOrCreateHmacSecret();
+    const hmac = await computeHMAC(hmacSecret, json);
+
+    const encryptedExportData: EncryptedExportData = {
+      encrypted: true,
+      version: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      ciphertext: encrypted.ciphertext,
+      iv: encrypted.iv,
+      hmac: hmac,
+      salt: btoa(String.fromCharCode(...salt)),
+    };
+
+    return { success: true, encryptedData: encryptedExportData };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+/**
+ * マスターパスワードで復号して設定をインポート
+ * @param {string} jsonData - 暗号化されたエクスポートデータのJSON文字列
+ * @param {string} masterPassword - マスターパスワード
+ * @returns {Promise<Settings|null>}
+ */
+export async function importEncryptedSettings(
+  jsonData: string,
+  masterPassword: string
+): Promise<Settings | null> {
+  try {
+    const encryptedData = JSON.parse(jsonData) as EncryptedExportData;
+
+    // 暗号化されたデータかどうか確認
+    if (!encryptedData.encrypted) {
+      console.error('This is not an encrypted export file');
+      return null;
+    }
+
+    // ソルトをデコード
+    const salt = new Uint8Array(
+      atob(encryptedData.salt).split('').map(c => c.charCodeAt(0))
+    );
+
+    // パスワードからキーを派生
+    const key = await deriveKey(masterPassword, salt);
+
+    // データを復号
+    const decryptedJson = await decryptData(
+      { ciphertext: encryptedData.ciphertext, iv: encryptedData.iv },
+      key
+    );
+
+    // HMAC署名検証
+    const hmacSecret = await getOrCreateHmacSecret();
+    const computedHmac = await computeHMAC(hmacSecret, decryptedJson);
+
+    if (encryptedData.hmac !== computedHmac) {
+      console.error('HMAC verification failed. Data may have been tampered with.');
+      alert('設定ファイルの整合性チェックに失敗しました。ファイルが改ざんされている可能性があります。');
+      return null;
+    }
+
+    // 復号されたJSONを解析してインポート
+    const parsed = JSON.parse(decryptedJson) as ExportData;
+
+    // 構造検証
+    if (!validateExportData(parsed)) {
+      return null;
+    }
+
+    // APIキーが除外されている場合
+    if (parsed.apiKeyExcluded) {
+      console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
+      const existingSettings = await getSettings();
+      const { obsidian_api_key, gemini_api_key, openai_api_key, openai_2_api_key, ...imported } = parsed.settings;
+      const merged = {
+        ...imported,
+        obsidian_api_key: existingSettings.obsidian_api_key,
+        gemini_api_key: existingSettings.gemini_api_key,
+        openai_api_key: existingSettings.openai_api_key,
+        openai_2_api_key: existingSettings.openai_2_api_key,
+      };
+      await saveSettings(merged);
+      return merged;
+    }
+
+    await saveSettings(parsed.settings);
+    return parsed.settings;
+  } catch (error) {
+    console.error('Failed to import encrypted settings:', error);
+    return null;
+  }
+}
+
+/**
+ * エクスポートデータが暗号化されているかどうかを判定
+ */
+export function isEncryptedExport(data: unknown): data is EncryptedExportData {
+  const obj = data as { encrypted?: unknown };
+  return typeof data === 'object' &&
+    data !== null &&
+    'encrypted' in obj &&
+    obj.encrypted === true;
 }
 
 /**
@@ -94,6 +249,26 @@ export async function exportSettings(): Promise<void> {
   const link = document.createElement('a');
   link.href = url;
   link.download = getExportFilename();
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 暗号化エクスポートデータをファイルとして保存
+ */
+export async function saveEncryptedExportToFile(
+  encryptedData: EncryptedExportData
+): Promise<void> {
+  const json = JSON.stringify(encryptedData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = getExportFilename().replace('.json', '-encrypted.json');
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
@@ -176,6 +351,17 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
     // 署名があるかチェック
     if (!parsed.signature) {
       console.warn('Imported settings has no signature. Proceeding without verification.');
+      // 署名がない場合はユーザーに警告し、確認を求める
+      const warningMsg = chrome.i18n.getMessage('importNoSignatureWarning') ||
+        '⚠️ This settings file contains no signature.\n\n' +
+        'Signatures are used to prevent settings file tampering.\n' +
+        'It is recommended not to import files from untrusted sources.\n\n' +
+        'Do you want to continue importing?';
+      const proceed = confirm(warningMsg);
+      if (!proceed) {
+        console.info('Import cancelled by user due to missing signature.');
+        return null;
+      }
       // 旧形式のエクスポートファイルとの互換性のため、署名検証なしで続行
     } else {
       // 署名検証

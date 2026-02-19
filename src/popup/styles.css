@@ -1143,6 +1143,8 @@ label.inline-label {
   font-weight: 500;
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
+  min-height: 44px; /* アクセシビリティ：タップ/クリックターゲットサイズ */
+  box-sizing: border-box;
 }
 
 .dropdown-menu button:hover {
@@ -1553,4 +1555,43 @@ label.inline-label {
 
 .prompt-actions button {
   flex: 1;
+}
+
+/* =============================================================================
+   Master Password Styles
+   ============================================================================= */
+
+.password-strength {
+  margin-top: var(--space-2);
+}
+
+.strength-bar {
+  height: 4px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.strength-fill {
+  width: 0%;
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  background: var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.strength-fill.weak {
+  width: 33%;
+  background: var(--color-danger);
+}
+
+.strength-fill.medium {
+  width: 66%;
+  background: var(--color-info);
+}
+
+.strength-fill.strong {
+  width: 100%;
+  background: var(--color-success);
 }

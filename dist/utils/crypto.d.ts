@@ -5,6 +5,7 @@
  * 【設計方針】: AES-GCM認証付き暗号化、PBKDF2キー導出
  * 【セキュリティ】: 導出キーはメモリにのみ保存、ソルトとハッシュのみを永続化
  */
+import type { EncryptedData } from './typesCrypto.js';
 /**
  * ランダムなソルトを生成する
  * @returns {Uint8Array} 16バイトのソルト
@@ -44,10 +45,6 @@ export declare function deriveKey(password: string, salt: Uint8Array): Promise<C
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
  */
 export declare function deriveKeyWithExtensionId(secret: string, salt: Uint8Array, extensionId: string): Promise<CryptoKey>;
-export interface EncryptedData {
-    ciphertext: string;
-    iv: string;
-}
 /**
  * 平文を暗号化する
  * @param {string} plaintext - 平文
@@ -73,10 +70,10 @@ export declare function decrypt(ciphertext: string, iv: string, key: CryptoKey):
 export declare function decryptData(encryptedData: EncryptedData, key: CryptoKey): Promise<string>;
 /**
  * データが暗号化されているかをチェックする
- * @param {any} data - チェック対象のデータ
+ * @param {unknown} data - チェック対象のデータ
  * @returns {boolean} 暗号化されているかどうか
  */
-export declare function isEncrypted(data: any): data is EncryptedData;
+export declare function isEncrypted(data: unknown): data is EncryptedData;
 /**
  * APIキーを暗号化する（ユーティリティ関数）
  * @param {string} apiKey - APIキー
@@ -98,4 +95,20 @@ export declare function decryptApiKey(encryptedApiKey: EncryptedData | string, k
  * @returns {Promise<string>} Base64エンコードされたHMACハッシュ
  */
 export declare function computeHMAC(secret: string, message: string): Promise<string>;
+/**
+ * 【セキュリティ修正】PBKDF2を使用したパスワードハッシュ化
+ * パスワードを安全に保存するため、PBKDF2でハッシュ化（100,000回のイテレーション）
+ * @param {string} password - パスワード
+ * @param {Uint8Array} salt - ソルト
+ * @returns {Promise<string>} Base64エンコードされたパスワードハッシュ
+ */
+export declare function hashPasswordWithPBKDF2(password: string, salt: Uint8Array): Promise<string>;
+/**
+ * パスワードハッシュを検証する（PBKDF2）
+ * @param {string} password - 検証するパスワード
+ * @param {string} storedHash - 保存されているハッシュ（Base64）
+ * @param {Uint8Array} salt - 使用されたソルト
+ * @returns {Promise<boolean>} パスワードが正しければtrue
+ */
+export declare function verifyPasswordWithPBKDF2(password: string, storedHash: string, salt: Uint8Array): Promise<boolean>;
 //# sourceMappingURL=crypto.d.ts.map
