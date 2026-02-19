@@ -38,7 +38,9 @@ describe('RecordingLogic', () => {
       cacheTimestamp: null,
       cacheVersion: 0,
       urlCache: null,
-      urlCacheTimestamp: null
+      urlCacheTimestamp: null,
+      privacyCache: null,
+      privacyCacheTimestamp: null
     };
 
     // storageのデフォルトモック
@@ -128,6 +130,79 @@ describe('RecordingLogic', () => {
         largeContent.substring(0, expectedLimit),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('Privacy Cache', () => {
+    beforeEach(() => {
+      // キャッシュをクリア
+      RecordingLogic.invalidatePrivacyCache();
+    });
+
+    test('getPrivacyInfoWithCache - キャッシュヒット時にPrivacyInfoを返す', async () => {
+      const url = 'https://example.com/private';
+      const mockInfo = {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: Date.now()
+      };
+
+      // キャッシュに手動で追加
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockInfo]]);
+      RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+
+      const obsidian = {} as any;
+      const aiClient = {} as any;
+      const logic = new RecordingLogic(obsidian, aiClient);
+
+      const result = await logic.getPrivacyInfoWithCache(url);
+
+      expect(result).toEqual(mockInfo);
+    });
+
+    test('getPrivacyInfoWithCache - キャッシュミス時にnullを返す', async () => {
+      const url = 'https://example.com/unknown';
+
+      RecordingLogic.cacheState.privacyCache = new Map();
+
+      const obsidian = {} as any;
+      const aiClient = {} as any;
+      const logic = new RecordingLogic(obsidian, aiClient);
+
+      const result = await logic.getPrivacyInfoWithCache(url);
+
+      expect(result).toBeNull();
+    });
+
+    test('getPrivacyInfoWithCache - TTL期限切れ時にnullを返す', async () => {
+      const url = 'https://example.com/expired';
+      const oldTimestamp = Date.now() - 6 * 60 * 1000; // 6分前
+      const mockInfo = {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: oldTimestamp
+      };
+
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockInfo]]);
+      RecordingLogic.cacheState.privacyCacheTimestamp = oldTimestamp;
+
+      const obsidian = {} as any;
+      const aiClient = {} as any;
+      const logic = new RecordingLogic(obsidian, aiClient);
+
+      const result = await logic.getPrivacyInfoWithCache(url);
+
+      expect(result).toBeNull();
+    });
+
+    test('invalidatePrivacyCache - キャッシュを無効化できる', () => {
+      RecordingLogic.cacheState.privacyCache = new Map([['test', {} as any]]);
+      RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+
+      RecordingLogic.invalidatePrivacyCache();
+
+      expect(RecordingLogic.cacheState.privacyCache).toBeNull();
+      expect(RecordingLogic.cacheState.privacyCacheTimestamp).toBeNull();
     });
   });
 });

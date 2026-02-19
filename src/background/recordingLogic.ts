@@ -9,6 +9,7 @@ import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import type { PrivacyInfo } from '../utils/privacyChecker.js';
 
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
@@ -19,6 +20,8 @@ interface CacheState {
   cacheVersion: number;
   urlCache: Map<string, number> | null;
   urlCacheTimestamp: number | null;
+  privacyCache: Map<string, PrivacyInfo> | null;
+  privacyCacheTimestamp: number | null;
 }
 
 export interface RecordingData {
@@ -57,7 +60,9 @@ export class RecordingLogic {
     cacheTimestamp: null,
     cacheVersion: 0,
     urlCache: null,
-    urlCacheTimestamp: null
+    urlCacheTimestamp: null,
+    privacyCache: null,
+    privacyCacheTimestamp: null
   };
 
   private obsidian: ObsidianClient;
@@ -166,6 +171,36 @@ export class RecordingLogic {
     addLog(LogType.DEBUG, 'URL cache invalidated');
     RecordingLogic.cacheState.urlCache = null;
     RecordingLogic.cacheState.urlCacheTimestamp = null;
+  }
+
+  /**
+   * URLのプライバシー情報をキャッシュから取得する
+   * TTL: 5分
+   */
+  async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
+    const now = Date.now();
+    const PRIVACY_CACHE_TTL = 5 * 60 * 1000; // 5分
+
+    if (RecordingLogic.cacheState.privacyCache) {
+      const cached = RecordingLogic.cacheState.privacyCache.get(url);
+      if (cached && (now - cached.timestamp) < PRIVACY_CACHE_TTL) {
+        addLog(LogType.DEBUG, 'Privacy cache hit', { url });
+        return cached;
+      }
+    }
+
+    // キャッシュミス: ヘッダー情報がまだ収集されていない
+    addLog(LogType.DEBUG, 'Privacy check skipped: no header data', { url });
+    return null;
+  }
+
+  /**
+   * プライバシーキャッシュを無効化する
+   */
+  static invalidatePrivacyCache(): void {
+    addLog(LogType.DEBUG, 'Privacy cache invalidated');
+    RecordingLogic.cacheState.privacyCache = null;
+    RecordingLogic.cacheState.privacyCacheTimestamp = null;
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
