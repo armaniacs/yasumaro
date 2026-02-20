@@ -170,6 +170,29 @@ async function reportValidVisit() {
                 // 正常な動作: このドメインはブロック対象のため記録しない
                 return;
             }
+            // PRIVATE_PAGE_DETECTED エラーの処理
+            if (response.error === 'PRIVATE_PAGE_DETECTED') {
+                const reasonKey = `privatePageReason_${response.reason?.replace('-', '')}`;
+                const reason = chrome.i18n.getMessage(reasonKey) || response.reason || 'unknown';
+                const message = chrome.i18n.getMessage('privatePageWarning', [reason]);
+                const userConfirmed = confirm(message);
+                if (userConfirmed) {
+                    // force flagを立てて再送信
+                    try {
+                        await messageSender.sendMessageWithRetry({
+                            type: 'VALID_VISIT',
+                            payload: {
+                                content: content,
+                                force: true
+                            }
+                        });
+                    }
+                    catch (retryError) {
+                        console.error("Failed to force save private page:", retryError.message);
+                    }
+                }
+                return;
+            }
             console.error("Background Worker Error:", response.error);
         }
     }
