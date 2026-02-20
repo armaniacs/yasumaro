@@ -261,6 +261,12 @@ async function handleSavePrompt(): Promise<void> {
  * @param {string} promptId - ID of prompt to edit
  */
 function handleEditPrompt(promptId: string): void {
+    // Prevent editing default prompt
+    if (promptId === '__default__') {
+        showStatus('Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
+        return;
+    }
+
     if (!currentSettings || !promptNameInput || !promptProviderSelect || !promptTextInput) return;
 
     const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
@@ -293,6 +299,12 @@ function handleEditPrompt(promptId: string): void {
  * @param {string} promptId - ID of prompt to delete
  */
 async function handleDeletePrompt(promptId: string): Promise<void> {
+    // Prevent deleting default prompt
+    if (promptId === '__default__') {
+        showStatus('Cannot delete default prompt', 'error');
+        return;
+    }
+
     if (!currentSettings) return;
 
     // Confirm deletion
