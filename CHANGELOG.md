@@ -2,7 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.9.4] - to be released
+## [Unreleased]
+
+### Added
+- **Private Page Detection**: Automatic detection of private pages using HTTP headers
+  - Monitor Cache-Control (private/no-store/no-cache)
+  - Monitor Set-Cookie headers
+  - Monitor Authorization headers
+  - Show warning dialog before saving private pages
+  - Support force save with user confirmation
+  - 5-minute cache with 100-entry LRU eviction
+- Add `webRequest` permission to manifest.json
+- Add i18n messages for privacy warnings (en/ja)
+
+### Changed
+- RecordingLogic now checks privacy headers after domain filter
+- Return `PRIVATE_PAGE_DETECTED` error with reason for private pages
+
+### Technical Details
+- New modules: `privacyChecker.ts`, `headerDetector.ts`
+- Extended `RecordingLogic.cacheState` with privacy cache
+- HeaderDetector initialized in service worker startup
+- Content script and popup handle `PRIVATE_PAGE_DETECTED` error
+
+## [3.9.5] - to be released
+
+## [3.9.4] - 2026-02-20
 
 ### Performance
 
