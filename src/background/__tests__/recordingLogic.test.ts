@@ -316,4 +316,139 @@ describe('RecordingLogic', () => {
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
     });
   });
+
+  describe('Privacy Integration (Full Flow)', () => {
+    beforeEach(() => {
+      RecordingLogic.invalidatePrivacyCache();
+      RecordingLogic.invalidateSettingsCache();
+      RecordingLogic.invalidateUrlCache();
+
+      // 既存のmock setup
+      jest.clearAllMocks();
+      if (!chrome.notifications) {
+        chrome.notifications = { create: jest.fn() };
+      }
+
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      // @ts-expect-error - jest.fn() type narrowing issue
+      domainUtils.isDomainAllowed.mockResolvedValue(true);
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => ({
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
+      }));
+    });
+
+    test('プライベートページ → 警告 → キャンセル → 保存されない', async () => {
+      const url = 'https://bank.example.com/account';
+
+      // ヘッダー検出をシミュレート
+      RecordingLogic.cacheState.privacyCache = new Map([
+        [url, {
+          isPrivate: true,
+          reason: 'cache-control' as const,
+          timestamp: Date.now()
+        }]
+      ]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockAiClient = {} as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Bank Account',
+        url,
+        content: 'private data'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+      expect(result.reason).toBe('cache-control');
+      expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+    });
+
+    test('プライベートページ → 警告 → 強制保存 → 保存される', async () => {
+      const url = 'https://bank.example.com/account';
+
+      RecordingLogic.cacheState.privacyCache = new Map([
+        [url, {
+          isPrivate: true,
+          reason: 'set-cookie' as const,
+          timestamp: Date.now()
+        }]
+      ]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      // force=true で再試行
+      const result = await logic.record({
+        title: 'Bank Account',
+        url,
+        content: 'private data',
+        force: true
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+
+    test('通常ページ → 警告なし → 保存される', async () => {
+      const url = 'https://public.example.com/article';
+
+      RecordingLogic.cacheState.privacyCache = new Map([
+        [url, {
+          isPrivate: false,
+          timestamp: Date.now()
+        }]
+      ]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Public Article',
+        url,
+        content: 'public content'
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+
+    test('キャッシュなし(ヘッダー未取得) → 保存継続', async () => {
+      const url = 'https://unknown.example.com/page';
+
+      RecordingLogic.cacheState.privacyCache = new Map();
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Unknown Page',
+        url,
+        content: 'content'
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+  });
 });
