@@ -33,6 +33,17 @@ let promptStatusDiv: HTMLElement | null = null;
 let currentSettings: Settings | null = null;
 
 /**
+ * Check if default prompt is active (no custom prompts are active)
+ * @returns {boolean} True if default should be shown as active
+ */
+function isDefaultActive(): boolean {
+    if (!currentSettings) return true;
+
+    const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+    return prompts.every(p => !p.isActive);
+}
+
+/**
  * Initialize the custom prompt manager
  * @param {Settings} settings - Current settings
  */
