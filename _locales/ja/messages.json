@@ -779,5 +779,22 @@
     },
     "importPasswordRequired": {
         "message": "この設定ファイルは暗号化されています。設定を復号してインポートするにはマスターパスワードを入力する必要があります。\n\n続行しますか？"
+    },
+    "privatePageWarning": {
+        "message": "このページには個人情報が含まれている可能性があります（検出理由: $REASON$）。それでも保存しますか?",
+        "placeholders": {
+            "reason": {
+                "content": "$1"
+            }
+        }
+    },
+    "privatePageReason_cacheControl": {
+        "message": "プライベートキャッシュヘッダー"
+    },
+    "privatePageReason_setCookie": {
+        "message": "認証Cookie"
+    },
+    "privatePageReason_authorization": {
+        "message": "認証ヘッダー"
     }
 }
