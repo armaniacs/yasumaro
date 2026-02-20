@@ -179,6 +179,26 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       });
     }
 
+    // Handle PRIVATE_PAGE_DETECTED error
+    if (result && result.error === 'PRIVATE_PAGE_DETECTED') {
+      hideSpinner();
+
+      // Get localized reason message
+      const reasonKey = `privatePageReason_${result.reason?.replace('-', '') || 'cacheControl'}`;
+      const reason = getMessage(reasonKey) || result.reason || 'unknown';
+      const message = getMessage('privatePageWarning').replace('$REASON$', reason);
+
+      const userConfirmed = confirm(message);
+
+      if (userConfirmed) {
+        // Retry with force=true
+        await recordCurrentPage(true);
+      } else {
+        statusDiv.textContent = getMessage('cancelled');
+      }
+      return;
+    }
+
     if (result && result.success) {
       hideSpinner();
 
