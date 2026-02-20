@@ -205,4 +205,115 @@ describe('RecordingLogic', () => {
       expect(RecordingLogic.cacheState.privacyCacheTimestamp).toBeNull();
     });
   });
+
+  describe('Privacy Check Integration', () => {
+    beforeEach(() => {
+      RecordingLogic.invalidatePrivacyCache();
+      // 既存のmock setup
+      jest.clearAllMocks();
+      if (!chrome.notifications) {
+        chrome.notifications = { create: jest.fn() };
+      }
+
+      RecordingLogic.cacheState = {
+        settingsCache: null,
+        cacheTimestamp: null,
+        cacheVersion: 0,
+        urlCache: null,
+        urlCacheTimestamp: null,
+        privacyCache: null,
+        privacyCacheTimestamp: null
+      };
+
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      // @ts-expect-error - jest.fn() type narrowing issue
+      domainUtils.isDomainAllowed.mockResolvedValue(true);
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => ({
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
+      }));
+    });
+
+    test('プライベートページの場合 PRIVATE_PAGE_DETECTED エラーを返す', async () => {
+      const url = 'https://example.com/private';
+      const mockPrivacyInfo = {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: Date.now()
+      };
+
+      // キャッシュに追加
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockAiClient = {} as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Test',
+        url,
+        content: 'content'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+      expect(result.reason).toBe('cache-control');
+    });
+
+    test('force=true の場合はプライバシーチェックをスキップする', async () => {
+      const url = 'https://example.com/private';
+      const mockPrivacyInfo = {
+        isPrivate: true,
+        reason: 'set-cookie' as const,
+        timestamp: Date.now()
+      };
+
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Test',
+        url,
+        content: 'content',
+        force: true
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+
+    test('キャッシュミス時は通常通り保存を続行する', async () => {
+      const url = 'https://example.com/unknown';
+
+      RecordingLogic.cacheState.privacyCache = new Map();
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.record({
+        title: 'Test',
+        url,
+        content: 'content'
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+  });
 });

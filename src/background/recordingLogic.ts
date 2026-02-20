@@ -229,6 +229,27 @@ export class RecordingLogic {
         addLog(LogType.WARN, 'Force recording blocked domain', { url });
       }
 
+      // 1.5. Check privacy headers
+      const privacyInfo = await this.getPrivacyInfoWithCache(url);
+      if (privacyInfo?.isPrivate && !force) {
+        addLog(LogType.WARN, 'Private page detected', {
+          url,
+          reason: privacyInfo.reason
+        });
+        return {
+          success: false,
+          error: 'PRIVATE_PAGE_DETECTED',
+          reason: privacyInfo.reason
+        };
+      }
+
+      if (privacyInfo?.isPrivate && force) {
+        addLog(LogType.WARN, 'Force recording private page', {
+          url,
+          reason: privacyInfo.reason
+        });
+      }
+
       // 2. Check for duplicates (日付ベース: 同一ページは1日1回のみ)
       // 設定キャッシュを使用
       const settings = await this.getSettingsWithCache();
