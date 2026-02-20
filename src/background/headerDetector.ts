@@ -29,7 +29,7 @@ export class HeaderDetector {
   /**
    * HTTPレスポンスヘッダーを受信した際の処理
    */
-  private static onHeadersReceived(details: chrome.webRequest.WebResponseHeadersDetails): void {
+  private static onHeadersReceived(details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined {
     try {
       // メインフレームのHTMLのみ処理
       if (details.type !== 'main_frame') {
@@ -38,7 +38,7 @@ export class HeaderDetector {
 
       // Content-Typeチェック（HTMLのみ）
       const contentType = details.responseHeaders?.find(
-        h => h.name?.toLowerCase() === 'content-type'
+        (h: chrome.webRequest.HttpHeader) => h.name?.toLowerCase() === 'content-type'
       );
       if (!contentType?.value?.includes('text/html')) {
         return;
@@ -64,6 +64,7 @@ export class HeaderDetector {
         url: details.url
       });
     }
+    return; // Return undefined (non-blocking)
   }
 
   /**
