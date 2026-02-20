@@ -110,6 +110,34 @@ function renderPromptList(): void {
 }
 
 /**
+ * Create HTML for the default prompt item
+ * @returns {string} HTML string
+ */
+function createDefaultPromptItem(): string {
+    const isActive = isDefaultActive();
+    const activeBadge = isActive
+        ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
+        : '';
+
+    return `
+        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="__default__">
+            <div class="prompt-item-header">
+                <span class="prompt-name" data-i18n="defaultPrompt">Default</span>
+                <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+                ${activeBadge}
+            </div>
+            <div class="prompt-item-content">
+                ${escapeHtml(DEFAULT_USER_PROMPT.substring(0, 100))}${DEFAULT_USER_PROMPT.length > 100 ? '...' : ''}
+            </div>
+            <div class="prompt-item-actions">
+                ${!isActive ? `<button id="activate-prompt-__default__" class="btn-sm btn-activate" data-i18n="activate">Activate</button>` : ''}
+                <button id="duplicate-prompt-__default__" class="btn-sm btn-duplicate" data-i18n="duplicate">Duplicate</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Create HTML for a prompt list item
  * @param {CustomPrompt} prompt - The prompt to render
  * @returns {string} HTML string
