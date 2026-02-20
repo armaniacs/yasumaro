@@ -10,8 +10,10 @@ playwright-report/
 playwright/.cache/
 
 docs/blog-*
-
-
+docs/implements/
+docs/plans/
+plan/
+plans/
 .worktrees/
 .DS_Store
 
