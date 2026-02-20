@@ -776,5 +776,31 @@
     },
     "passwordRequired": {
         "message": "Please enter your master password."
+    },
+    "privatePageWarning": {
+        "message": "This page may contain private information (detected: $REASON$). Save anyway?",
+        "placeholders": {
+            "reason": {
+                "content": "$1"
+            }
+        }
+    },
+    "privatePageReason_cacheControl": {
+        "message": "private cache headers"
+    },
+    "privatePageReason_setCookie": {
+        "message": "authentication cookies"
+    },
+    "privatePageReason_authorization": {
+        "message": "authorization headers"
+    },
+    "defaultPrompt": {
+        "message": "Default"
+    },
+    "duplicate": {
+        "message": "Duplicate"
+    },
+    "promptDuplicated": {
+        "message": "Prompt copied to editor"
     }
 }

@@ -793,5 +793,14 @@
     },
     "privatePageReason_authorization": {
         "message": "authorization headers"
+    },
+    "defaultPrompt": {
+        "message": "Default"
+    },
+    "duplicate": {
+        "message": "Duplicate"
+    },
+    "promptDuplicated": {
+        "message": "Prompt copied to editor"
     }
 }

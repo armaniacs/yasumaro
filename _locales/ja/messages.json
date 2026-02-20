@@ -796,5 +796,14 @@
     },
     "privatePageReason_authorization": {
         "message": "認証ヘッダー"
+    },
+    "defaultPrompt": {
+        "message": "デフォルト"
+    },
+    "duplicate": {
+        "message": "複製"
+    },
+    "promptDuplicated": {
+        "message": "プロンプトをエディターにコピーしました"
     }
 }
