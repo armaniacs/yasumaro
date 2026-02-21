@@ -5,10 +5,12 @@ import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
 import { StorageKeys } from '../../utils/storage.js';
 import type { Settings } from '../../utils/storage.js';
+import * as privacy from '../privacyPipeline.js';
 
 // モック設定
 jest.mock('../../utils/storage.js');
 jest.mock('../../utils/domainUtils.js');
+jest.mock('../privacyPipeline.js');
 
 describe('RecordingLogic - Whitelist Privacy Bypass', () => {
   let recordingLogic: RecordingLogic;
@@ -21,6 +23,13 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     RecordingLogic.invalidateSettingsCache();
     RecordingLogic.invalidatePrivacyCache();
     RecordingLogic.invalidateUrlCache();
+
+    // PrivacyPipelineのモック
+    // @ts-expect-error - jest.fn() type narrowing issue
+    privacy.PrivacyPipeline.mockImplementation(() => ({
+      // @ts-expect-error - jest.fn() type narrowing issue
+      process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
+    }));
 
     // モッククライアント作成
     mockObsidian = {
@@ -57,6 +66,47 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
   });
 
   it('should bypass privacy check for whitelisted domain', async () => {
-    // このテストは後で実装
+    // モック設定: ホワイトリストにconfluence.example.comを登録
+    const mockSettings: Partial<Settings> = {
+      [StorageKeys.DOMAIN_WHITELIST]: ['confluence.example.com'],
+      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
+    };
+
+    const { getSettings } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSettings.mockResolvedValue(mockSettings);
+
+    // プライバシーキャッシュ: isPrivate=true をセット
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now()
+    };
+    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingLogic.cacheState.privacyCache.set('https://confluence.example.com/page', privacyInfo);
+
+    // ドメインフィルター: 許可
+    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainAllowed.mockResolvedValue(true);
+
+    // URLキャッシュを空に設定
+    const { getSavedUrlsWithTimestamps } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+
+    // テスト実行
+    const result = await recordingLogic.record({
+      title: 'Test Page',
+      url: 'https://confluence.example.com/page',
+      content: 'Test content',
+      force: false
+    });
+
+    // 検証: 成功すること（プライバシーチェックがバイパスされる）
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+    expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
   });
 });
