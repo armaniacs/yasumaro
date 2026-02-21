@@ -925,5 +925,17 @@
     },
     "btnDiscard": {
         "message": "Discard"
+    },
+    "saveOnce": {
+        "message": "Save Once"
+    },
+    "saveDomain": {
+        "message": "Save & Allow Domain"
+    },
+    "savePath": {
+        "message": "Save & Allow Path"
+    },
+    "saveSuccess": {
+        "message": "Saved successfully"
     }
 }

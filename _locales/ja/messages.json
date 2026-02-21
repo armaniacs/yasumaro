@@ -928,5 +928,17 @@
     },
     "btnDiscard": {
         "message": "破棄"
+    },
+    "saveOnce": {
+        "message": "今回のみ保存"
+    },
+    "saveDomain": {
+        "message": "ドメイン全体を許可して保存"
+    },
+    "savePath": {
+        "message": "このパスのみ許可して保存"
+    },
+    "saveSuccess": {
+        "message": "保存成功"
     }
 }
