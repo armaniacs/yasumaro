@@ -1,5 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { formatTimeAgo } from '../statusChecker.js';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
+import { RecordingLogic } from '../../background/recordingLogic.js';
+import * as storage from '../../utils/storage.js';
+
+// Mock dependencies (must be defined before imports)
+jest.mock('../../utils/storage.js', () => {
+  const mockGetSettings = jest.fn();
+  const mockGetSavedUrlsWithTimestamps = jest.fn();
+
+  // Set default mock implementation
+  mockGetSettings.mockResolvedValue({
+    domain_filter_mode: 'disabled',
+    domain_whitelist: [],
+    domain_blacklist: [],
+    ublock_sources: []
+  });
+  mockGetSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+
+  return {
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      UBLOCK_SOURCES: 'ublock_sources',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+      UBLOCK_RULES: 'ublock_rules',
+    },
+    getSettings: mockGetSettings,
+    getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps,
+  };
+});
 
 describe('formatTimeAgo', () => {
   let originalNow: number;
@@ -58,5 +89,112 @@ describe('formatTimeAgo', () => {
     const month = String(otherDay.getMonth() + 1).padStart(2, '0');
     const day = String(otherDay.getDate()).padStart(2, '0');
     expect(result.formatted).toBe(`${month}/${day} 14:32`);
+  });
+});
+
+describe('checkPageStatus', () => {
+  beforeEach(() => {
+    // Reset caches
+    RecordingLogic.cacheState.privacyCache = new Map();
+
+    // Mock storage
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+    (storage.getSavedUrlsWithTimestamps as jest.Mock).mockResolvedValue(new Map());
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return basic status for normal URL', async () => {
+    const url = 'https://example.com/page';
+    const result = await checkPageStatus(url);
+
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.mode).toBe('disabled');
+    expect(result.privacy.hasCache).toBe(false);
+    expect(result.lastSaved.exists).toBe(false);
+  });
+
+  it('should detect whitelisted domain', async () => {
+    const url = 'https://example.com/page';
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.mode).toBe('whitelist');
+    expect(result.domainFilter.matched).toBe(true);
+    expect(result.domainFilter.matchedPattern).toBe('example.com');
+  });
+
+  it('should use privacy cache when available', async () => {
+    const url = 'https://example.com/page';
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now(),
+      headers: {
+        cacheControl: 'private',
+        hasCookie: true,
+        hasAuth: false
+      }
+    };
+    RecordingLogic.cacheState.privacyCache?.set(url, privacyInfo);
+
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+
+    expect(result.privacy.isPrivate).toBe(true);
+    expect(result.privacy.reason).toBe('cache-control');
+    expect(result.privacy.hasCache).toBe(true);
+    expect(result.cache.cacheControl).toBe('private');
+    expect(result.cache.hasCookie).toBe(true);
+    expect(result.cache.hasAuth).toBe(false);
+  });
+
+  it('should format last saved time when URL exists in history', async () => {
+    const url = 'https://example.com/page';
+    const savedTimestamp = Date.now() - 5 * 60 * 1000; // 5分前
+    const savedUrls = new Map([[url, savedTimestamp]]);
+    (storage.getSavedUrlsWithTimestamps as jest.Mock).mockResolvedValue(savedUrls);
+
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+
+    expect(result.lastSaved.exists).toBe(true);
+    expect(result.lastSaved.timestamp).toBe(savedTimestamp);
+    expect(result.lastSaved.timeAgo).toBe('5分前');
+    expect(result.lastSaved.formatted).toMatch(/\d{2}:\d{2}/);
+  });
+
+  it('should handle special URLs (chrome://)', async () => {
+    const url = 'chrome://extensions';
+
+    const result = await checkPageStatus(url);
+
+    expect(result).toBeNull();
   });
 });
