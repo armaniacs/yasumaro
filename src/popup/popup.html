@@ -90,6 +90,22 @@
       <span class="spinner-text" data-i18n="processing">Processing...</span>
     </div>
     <div id="mainStatus" aria-live="polite"></div>
+
+    <!-- Pending Pages Section -->
+    <div id="pending-section" class="hidden">
+      <h2 data-i18n="pendingPagesTitle">保留中のページ</h2>
+      <div id="pending-pages-list"></div>
+      <div class="pending-buttons">
+        <button id="btn-select-all" data-i18n="btnSelectAll">全て選択</button>
+        <button id="btn-save-selected" data-i18n="btnSaveSelected">保存</button>
+        <button id="btn-save-whitelist" data-i18n="btnSaveWhitelist">許可して保存</button>
+        <button id="btn-discard" data-i18n="btnDiscard">破棄</button>
+      </div>
+    </div>
+
+    <div id="pending-empty" class="hidden text-center text-gray-500">
+      <p data-i18n="pendingPagesEmpty">保留中のページはありません</p>
+    </div>
   </div>
 
   <!-- Settings Screen -->
