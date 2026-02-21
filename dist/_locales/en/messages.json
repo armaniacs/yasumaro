@@ -937,5 +937,32 @@
     },
     "saveSuccess": {
         "message": "Saved successfully"
+    },
+    "domainAddedToWhitelist": {
+        "message": "Domain added to whitelist"
+    },
+    "pathAddedToWhitelist": {
+        "message": "Path added to whitelist"
+    },
+    "whitelistLabel": {
+        "message": "Whitelist (1 domain per line)"
+    },
+    "blacklistLabel": {
+        "message": "Blacklist (1 domain per line)"
+    },
+    "whitelistHelp": {
+        "message": "Domains in this list will be recorded (when Whitelist mode is enabled)"
+    },
+    "blacklistHelp": {
+        "message": "Domains in this list will be excluded (when Blacklist mode is enabled)"
+    },
+    "whitelistTab": {
+        "message": "Whitelist"
+    },
+    "blacklistTab": {
+        "message": "Blacklist"
+    },
+    "ublockFormatDesc": {
+        "message": "Advanced: Import filter lists from uBlock Origin"
     }
 }

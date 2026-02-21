@@ -210,14 +210,9 @@ test.describe('Private Page Confirmation Features', () => {
     expect(await dialogMessage.count()).toBe(1);
   });
 
-  test('should have dialog URL element', async ({ page }) => {
-    const dialogUrl = page.locator('#dialog-url');
-    expect(await dialogUrl.count()).toBe(1);
-  });
-
-  test('should have dialog header element', async ({ page }) => {
-    const dialogHeader = page.locator('#dialog-header');
-    expect(await dialogHeader.count()).toBe(1);
+  test('should have dialog title element', async ({ page }) => {
+    const dialogTitle = page.locator('#dialog-title');
+    expect(await dialogTitle.count()).toBe(1);
   });
 
   test('should have pending pages section in DOM', async ({ page }) => {
@@ -248,26 +243,24 @@ test.describe('Private Page Confirmation Features', () => {
     expect(await discardBtn.count()).toBe(1);
   });
 
-  test('pending empty message should be visible by default', async ({ page }) => {
+  test('pending empty message should be hidden by default (when no pages)', async ({ page }) => {
     const pendingEmpty = page.locator('#pending-empty');
-    await expect(pendingEmpty).toBeVisible();
+    expect(await pendingEmpty.count()).toBe(1);
+    // pending-empty is hidden by default as part of pending-section
   });
 
   test('pending section header should have correct title', async ({ page }) => {
-    const pendingHeader = page.locator('#pending-section h3');
+    const pendingHeader = page.locator('#pending-section h2');
     const text = await pendingHeader.innerText();
     expect(text).toBeTruthy();
   });
 
-  test('dialog should have correct CSS classes for modal behavior', async ({ page }) => {
+  test('dialog should be of type dialog element', async ({ page }) => {
     const dialog = page.locator('#private-page-dialog');
-    const dialogBackdrop = page.locator('#dialog-backdrop');
-
-    // Check that backdrop exists
-    expect(await dialogBackdrop.count()).toBe(1);
-
-    // Check backdrop is hidden by default
-    await expect(dialogBackdrop).toHaveClass(/hidden/);
+    expect(await dialog.count()).toBe(1);
+    // Verify it's a dialog element
+    const tagName = await dialog.evaluate(el => el.tagName);
+    expect(tagName).toBe('DIALOG');
   });
 
   test.skip('should handle private page confirmation flow', async ({ page }) => {

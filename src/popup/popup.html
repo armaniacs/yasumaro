@@ -277,8 +277,9 @@
               line)</label>
           </div>
           <div class="mt-5">
-            <input type="checkbox" id="ublockFormatEnabled">
+            <input type="checkbox" id="ublockFormatEnabled" aria-describedby="ublockFormatDesc">
             <label for="ublockFormatEnabled" class="inline-label" data-i18n="ublockFormat">uBlock Origin Format</label>
+            <div class="help-text" id="ublockFormatDesc" data-i18n="ublockFormatDesc">Advanced: Import filter lists from uBlock Origin</div>
           </div>
         </fieldset>
       </div>
@@ -286,23 +287,20 @@
       <!-- simple形式用UI（既存） -->
       <div id="simpleFormatUI" class="format-section">
         <div id="domainListSection">
+          <!-- Single Domain List (dynamically updated based on mode) -->
           <div class="form-group">
             <label id="domainListLabel" data-i18n="domainList">Domain List (1 domain per line)</label>
-            <textarea id="domainList" rows="8" data-i18n-input-placeholder="domainListPlaceholder"></textarea>
-            <div class="help-text" data-i18n="wildcardHelp">
-              Wildcards are supported (e.g. *.example.com)
-            </div>
+            <textarea id="domainList" rows="10" data-i18n-input-placeholder="domainListPlaceholder"></textarea>
           </div>
 
-          <div class="form-group">
-            <button id="addCurrentDomain" class="secondary-btn" data-i18n="addCurrentDomain">Add Current Page
-              Domain</button>
-          </div>
+          <!-- Hidden textareas for storing both lists -->
+          <textarea id="whitelistTextarea" style="display: none;"></textarea>
+          <textarea id="blacklistTextarea" style="display: none;"></textarea>
         </div>
       </div>
 
       <!-- uBlock形式用UI（新規） -->
-      <div id="uBlockFormatUI" class="format-section">
+      <div id="uBlockFormatUI" class="format-section" style="display: none;">
         <div class="form-group">
           <label for="uBlockFilterInput" data-i18n="ublockFilter">uBlock Filter</label>
           <textarea id="uBlockFilterInput" rows="8" data-i18n-input-placeholder="ublockFilterPlaceholder"></textarea>

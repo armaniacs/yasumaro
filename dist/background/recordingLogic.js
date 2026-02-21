@@ -216,11 +216,10 @@ export class RecordingLogic {
                     });
                     // requireConfirmationの場合、pendingに保存してconfirmationRequired=trueを返す
                     if (requireConfirmation) {
-                        // privacyInfo.headersから適切なヘッダー値を抽出
+                        // privacyInfo.headersから適切なヘッダー値を抽出、なければRecordingData.headerValueを使用
                         const reason = privacyInfo.reason || 'cache-control';
-                        const actualHeaderValue = reason === 'cache-control'
-                            ? privacyInfo.headers?.cacheControl || ''
-                            : privacyInfo.reason || '';
+                        const actualHeaderValue = headerValue ||
+                            (reason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
                         await this._savePendingPage(url, title, reason, actualHeaderValue);
                         return {
                             success: false,
@@ -229,6 +228,11 @@ export class RecordingLogic {
                             confirmationRequired: true
                         };
                     }
+                    // 自動記録の場合：pendingに保存してエラーを返す（ユーザーが後で処理できるように）
+                    const autoReason = privacyInfo.reason || 'cache-control';
+                    const autoHeaderValue = headerValue ||
+                        (autoReason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
+                    await this._savePendingPage(url, title, autoReason, autoHeaderValue);
                     return {
                         success: false,
                         error: 'PRIVATE_PAGE_DETECTED',

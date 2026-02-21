@@ -1,6 +1,6 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2025年12月27日 / Last Updated: December 27, 2025**
+**最終更新日: 2026年2月21日 / Last Updated: February 21, 2026**
 
 [日本語](#日本語) | [English](#english)
 
@@ -36,6 +36,40 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 1. **ページ内容**: 要約を作成するために Google Gemini API、またはユーザーが指定した OpenAI 互換 API (Groq, OpenAI, Local LLM等) に送信されます。
 2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。
 3. **設定**: Obsidian および Gemini API への接続に使用されます。
+
+### プライベートページ保護機能
+
+#### プライベートページ自動検出
+本拡張機能は以下のHTTPヘッダーを分析し、プライベートページを自動的に検出します：
+- `Cache-Control: private` / `no-store` / `no-cache`
+- `Set-Cookie` ヘッダーの存在（特定のパターンを伴う場合）
+- `Authorization` ヘッダーの存在
+
+検出されたページは、以下の方法で保護されます：
+
+1. **手動記録時**:
+   - 確認ダイアログが表示され、以下の選択肢が提供されます
+     - キャンセル
+     - 今回のみ保存（強制保存）
+     - ドメイン全体を許可して保存（ホワイトリスト追加）
+     - このパスのみ許可して保存（パスホワイトリスト追加）
+
+2. **自動記録時**:
+   - プライベートページは「保留中のページ」として一時保存されます
+   - 後からポップアップUIで一括処理が可能：
+     - 選択したページを保存
+     - 選択したドメインをホワイトリストに追加して保存
+     - 選択したページを破棄
+   - 保留中のページは24時間後に自動的に期限切れとなります
+
+#### 保留ページデータ
+プライベート判定されたページを一時保存するために、以下のデータがローカルストレージに保存されます：
+- ページURL
+- ページタイトル
+- 検出理由（cache-control / set-cookie / authorization）
+- 検出されたヘッダー値（1024文字まで）
+- タイムスタンプ
+- 有効期限（24時間後）
 
 ### 第三者サービス
 本拡張機能は、以下の第三者サービスと通信します：
@@ -87,6 +121,40 @@ The Extension collects the following data **locally on your device**:
 1. **Google Gemini API**: Used to generate summaries. Data is sent according to Google's privacy policy.
 2. **User-Specified AI Provider (OpenAI Compatible API)**: If configured (e.g., Groq, OpenAI, Ollama), content is sent to generate summaries. Data handling is subject to the respective provider's policy or your local environment.
 2. **Your Local Obsidian Instance**: Used to save history. This is your own local server.
+
+### Private Page Protection
+
+#### Automatic Private Page Detection
+The extension analyzes the following HTTP headers to automatically detect private pages:
+- `Cache-Control: private` / `no-store` / `no-cache`
+- Presence of `Set-Cookie` headers (in certain patterns)
+- Presence of `Authorization` headers
+
+Detected pages are protected as follows:
+
+1. **Manual Recording**:
+   - A confirmation dialog is displayed with the following options:
+     - Cancel
+     - Save once (force save)
+     - Save and allow entire domain (add to whitelist)
+     - Save and allow this path only (add path to whitelist)
+
+2. **Auto Recording**:
+   - Private pages are temporarily saved as "Pending Pages"
+   - Later you can batch-process from the popup UI:
+     - Save selected pages
+     - Add selected domains to whitelist and save
+     - Discard selected pages
+   - Pending pages automatically expire after 24 hours
+
+#### Pending Page Data
+The following data is temporarily stored locally for pages detected as private:
+- Page URL
+- Page title
+- Detection reason (cache-control / set-cookie / authorization)
+- Detected header value (up to 1024 characters)
+- Timestamp
+- Expiration time (24 hours later)
 
 ### Extension Permissions
 This extension requires the following permissions:

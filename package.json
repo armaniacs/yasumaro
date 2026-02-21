@@ -1,6 +1,6 @@
 {
   "name": "obsidian-smart-history",
-  "version": "3.9.6",
+  "version": "3.9.7",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {

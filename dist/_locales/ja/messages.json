@@ -940,5 +940,32 @@
     },
     "saveSuccess": {
         "message": "保存成功"
+    },
+    "domainAddedToWhitelist": {
+        "message": "ドメインをホワイトリストに追加しました"
+    },
+    "pathAddedToWhitelist": {
+        "message": "パスをホワイトリストに追加しました"
+    },
+    "whitelistLabel": {
+        "message": "ホワイトリスト (1行に1ドメイン)"
+    },
+    "blacklistLabel": {
+        "message": "ブラックリスト (1行に1ドメイン)"
+    },
+    "whitelistHelp": {
+        "message": "このリストのドメインが記録されます（ホワイトリストモード有効時）"
+    },
+    "blacklistHelp": {
+        "message": "このリストのドメインが除外されます（ブラックリストモード有効時）"
+    },
+    "whitelistTab": {
+        "message": "ホワイトリスト"
+    },
+    "blacklistTab": {
+        "message": "ブラックリスト"
+    },
+    "ublockFormatDesc": {
+        "message": "上級者向け: uBlock Originからフィルターリストをインポート"
     }
 }

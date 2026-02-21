@@ -530,11 +530,23 @@ function renderStatusPanel(status) {
                 else if (status.privacy.reason === 'authorization') {
                     html += `<span class="status-value status-warning">${getMessage('statusAuthDetected')}</span>`;
                 }
+                // Add action buttons for private pages
+                html += `
+          <div class="status-actions">
+            <button class="status-action-btn primary" id="statusRecordOnce" data-i18n="saveOnce">今すぐ記録</button>
+            <button class="status-action-btn" id="statusAddDomain" data-i18n="saveDomain">ドメインを許可</button>
+            <button class="status-action-btn" id="statusAddPath" data-i18n="savePath">パスを許可</button>
+          </div>
+        `;
             }
             else {
                 html += `<span class="status-value status-success">${getMessage('statusPublicPage')}</span>`;
             }
             privacyContent.innerHTML = html;
+            // Attach event listeners to action buttons
+            if (status.privacy.isPrivate) {
+                attachPrivacyActionListeners();
+            }
         }
     }
     // キャッシュセクション
@@ -590,6 +602,59 @@ function renderSpecialUrlStatus() {
       </div>
     `;
     }
+}
+/**
+ * Attach event listeners to privacy action buttons
+ */
+function attachPrivacyActionListeners() {
+    // Record once button
+    const recordOnceBtn = document.getElementById('statusRecordOnce');
+    recordOnceBtn?.addEventListener('click', async () => {
+        await recordCurrentPage(true);
+    });
+    // Add domain to whitelist button
+    const addDomainBtn = document.getElementById('statusAddDomain');
+    addDomainBtn?.addEventListener('click', async () => {
+        const tab = await getCurrentTab();
+        if (tab?.url) {
+            const domain = extractDomain(tab.url);
+            if (domain) {
+                const settings = await getSettings();
+                const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+                if (!whitelist.includes(domain)) {
+                    whitelist.push(domain);
+                    await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+                    const statusDiv = document.getElementById('mainStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = getMessage('domainAddedToWhitelist') || `Added ${domain} to whitelist`;
+                        statusDiv.className = 'success';
+                    }
+                    // Refresh status panel
+                    await initStatusPanel();
+                }
+            }
+        }
+    });
+    // Add path to whitelist button
+    const addPathBtn = document.getElementById('statusAddPath');
+    addPathBtn?.addEventListener('click', async () => {
+        const tab = await getCurrentTab();
+        if (tab?.url) {
+            const settings = await getSettings();
+            const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+            if (!whitelist.includes(tab.url)) {
+                whitelist.push(tab.url);
+                await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+                const statusDiv = document.getElementById('mainStatus');
+                if (statusDiv) {
+                    statusDiv.textContent = getMessage('pathAddedToWhitelist') || `Added path to whitelist`;
+                    statusDiv.className = 'success';
+                }
+                // Refresh status panel
+                await initStatusPanel();
+            }
+        }
+    });
 }
 // initStatusPanel is called in DOMContentLoaded event listener above
 //# sourceMappingURL=main.js.map

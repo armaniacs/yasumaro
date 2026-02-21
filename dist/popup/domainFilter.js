@@ -3,11 +3,10 @@
  * Domain filter settings functionality for the popup UI.
  */
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
-import { extractDomain, parseDomainList, validateDomainList } from '../utils/domainUtils.js';
+import { parseDomainList, validateDomainList } from '../utils/domainUtils.js';
 // @ts-ignore: ublockImport/index.js might not be converted yet or type definitions missing
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 // Elements
@@ -26,7 +25,8 @@ const filterBlacklistRadio = document.getElementById('filterBlacklist');
 const domainListSection = document.getElementById('domainListSection');
 const domainListLabel = document.getElementById('domainListLabel');
 const domainListTextarea = document.getElementById('domainList');
-const addCurrentDomainBtn = document.getElementById('addCurrentDomain');
+const whitelistTextarea = document.getElementById('whitelistTextarea');
+const blacklistTextarea = document.getElementById('blacklistTextarea');
 const saveDomainSettingsBtn = document.getElementById('saveDomainSettings');
 // uBlock形式要素
 const simpleFormatEnabledCheckbox = document.getElementById('simpleFormatEnabled');
@@ -42,8 +42,10 @@ export function init() {
         });
     }
     if (domainTabBtn) {
-        domainTabBtn.addEventListener('click', () => {
+        domainTabBtn.addEventListener('click', async () => {
             showTab('domain');
+            // Reload domain settings when switching to domain tab
+            await loadDomainSettings();
         });
     }
     if (promptTabBtn) {
@@ -66,10 +68,6 @@ export function init() {
     if (simpleFormatEnabledCheckbox && ublockFormatEnabledCheckbox) {
         simpleFormatEnabledCheckbox.addEventListener('change', toggleFormatUI);
         ublockFormatEnabledCheckbox.addEventListener('change', toggleFormatUI);
-    }
-    // Add current domain button
-    if (addCurrentDomainBtn) {
-        addCurrentDomainBtn.addEventListener('click', addCurrentDomain);
     }
     // uBlock形式の初期化
     if (typeof initUblockImport === 'function') {
@@ -161,17 +159,24 @@ function updateDomainListVisibility() {
     if (!checkedRadio)
         return;
     const mode = checkedRadio.value;
-    if (domainListSection && domainListLabel) {
+    if (domainListSection && domainListLabel && domainListTextarea) {
         if (mode === 'disabled') {
             domainListSection.style.display = 'none';
         }
         else {
             domainListSection.style.display = 'block';
+            // Update label and load appropriate list
             if (mode === 'whitelist') {
-                domainListLabel.textContent = getMessage('domainList');
+                domainListLabel.textContent = getMessage('whitelistLabel') || 'Whitelist (1 domain per line)';
+                if (whitelistTextarea) {
+                    domainListTextarea.value = whitelistTextarea.value;
+                }
             }
             else if (mode === 'blacklist') {
-                domainListLabel.textContent = getMessage('domainList');
+                domainListLabel.textContent = getMessage('blacklistLabel') || 'Blacklist (1 domain per line)';
+                if (blacklistTextarea) {
+                    domainListTextarea.value = blacklistTextarea.value;
+                }
             }
         }
     }
@@ -198,7 +203,7 @@ export async function loadDomainSettings() {
     if (modeRadio) {
         modeRadio.checked = true;
     }
-    // Load domain list
+    // Load domain list based on mode
     let domainList = [];
     if (mode === 'whitelist') {
         domainList = settings[StorageKeys.DOMAIN_WHITELIST] || [];
@@ -206,6 +211,14 @@ export async function loadDomainSettings() {
     else if (mode === 'blacklist') {
         domainList = settings[StorageKeys.DOMAIN_BLACKLIST] || [];
     }
+    // Store in hidden textareas for later saving
+    if (whitelistTextarea) {
+        whitelistTextarea.value = (settings[StorageKeys.DOMAIN_WHITELIST] || []).join('\n');
+    }
+    if (blacklistTextarea) {
+        blacklistTextarea.value = (settings[StorageKeys.DOMAIN_BLACKLIST] || []).join('\n');
+    }
+    // Display in main textarea
     if (domainListTextarea) {
         domainListTextarea.value = domainList.join('\n');
     }
@@ -217,43 +230,10 @@ export async function loadDomainSettings() {
     if (ublockFormatEnabledCheckbox) {
         ublockFormatEnabledCheckbox.checked = settings[StorageKeys.UBLOCK_FORMAT_ENABLED] === true;
     }
+    // Always call toggleFormatUI to ensure correct UI state
     toggleFormatUI();
 }
-async function addCurrentDomain() {
-    try {
-        const tab = await getCurrentTab();
-        if (!tab) {
-            showStatus('domainStatus', getMessage('noActiveTab'), 'error');
-            return;
-        }
-        if (!isRecordable(tab)) {
-            showStatus('domainStatus', getMessage('cannotRecordHttpHttps'), 'error');
-            return;
-        }
-        const domain = extractDomain(tab.url || '');
-        if (!domain) {
-            showStatus('domainStatus', getMessage('failedToExtractDomain'), 'error');
-            return;
-        }
-        // Get current list
-        if (!domainListTextarea)
-            return;
-        const currentList = parseDomainList(domainListTextarea.value);
-        // Check for duplicates
-        if (currentList.includes(domain)) {
-            showStatus('domainStatus', getMessage('domainAlreadyExists', { domain }), 'error');
-            return;
-        }
-        // Add domain to list
-        currentList.push(domain);
-        domainListTextarea.value = currentList.join('\n');
-        showStatus('domainStatus', getMessage('domainAdded', { domain }), 'success');
-    }
-    catch (error) {
-        addLog(LogType.ERROR, 'Error adding current domain', { error: error.message });
-        showStatus('domainStatus', `${getMessage('errorColon')} ${error.message}`, 'error');
-    }
-}
+// addCurrentDomain function removed - users can now add domains via status panel buttons
 export async function handleSaveDomainSettings() {
     try {
         // シンプル形式の保存
@@ -277,29 +257,36 @@ async function saveSimpleFormatSettings() {
         return;
     }
     const mode = selectedMode.value;
-    if (!domainListTextarea)
-        return;
-    const domainListText = domainListTextarea.value.trim();
-    const domainList = domainListText ? parseDomainList(domainListText) : [];
-    // Validate domain list if not disabled
-    if (mode !== 'disabled' && domainList.length > 0) {
-        const errors = validateDomainList(domainList);
+    // Save current textarea content to appropriate hidden textarea
+    if (domainListTextarea && whitelistTextarea && blacklistTextarea) {
+        if (mode === 'whitelist') {
+            whitelistTextarea.value = domainListTextarea.value;
+        }
+        else if (mode === 'blacklist') {
+            blacklistTextarea.value = domainListTextarea.value;
+        }
+    }
+    // Read both lists from hidden textareas
+    const whitelistText = whitelistTextarea?.value.trim() || '';
+    const blacklistText = blacklistTextarea?.value.trim() || '';
+    const whitelist = whitelistText ? parseDomainList(whitelistText) : [];
+    const blacklist = blacklistText ? parseDomainList(blacklistText) : [];
+    // Validate the current mode's list
+    const currentList = mode === 'whitelist' ? whitelist : blacklist;
+    if (mode !== 'disabled' && currentList.length > 0) {
+        const errors = validateDomainList(currentList);
         if (errors.length > 0) {
             showStatus('domainStatus', `${getMessage('domainListError')}\n${errors.join('\n')}`, 'error');
             return;
         }
     }
-    // Prepare settings object
+    // Prepare settings object - save both lists
     const newSettings = {
         [StorageKeys.DOMAIN_FILTER_MODE]: mode,
-        [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox?.checked
+        [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox?.checked,
+        [StorageKeys.DOMAIN_WHITELIST]: whitelist,
+        [StorageKeys.DOMAIN_BLACKLIST]: blacklist
     };
-    if (mode === 'whitelist') {
-        newSettings[StorageKeys.DOMAIN_WHITELIST] = domainList;
-    }
-    else if (mode === 'blacklist') {
-        newSettings[StorageKeys.DOMAIN_BLACKLIST] = domainList;
-    }
     // Save settings
     try {
         await saveSettings(newSettings, true);
