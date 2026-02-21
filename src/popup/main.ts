@@ -8,7 +8,7 @@ import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, showSuccess, ErrorMessages, isDomainBlockedError, isConnectionError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
-import { getPendingPages } from '../utils/pendingStorage.js';
+import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import type { PendingPage } from '../utils/pendingStorage.js';
 
 // Export functions for testing
@@ -73,6 +73,62 @@ async function loadPendingPages(): Promise<void> {
   } catch (error) {
     console.error('Failed to load pending pages:', error);
   }
+}
+
+// Whitelist operations namespace
+namespace WhitelistOperations {
+  export async function addDomainsOrPaths(urls: string[], type: 'domain' | 'path'): Promise<void> {
+    const { domainWhitelist = [] } = await chrome.storage.local.get('domainWhitelist') as { domainWhitelist?: string[] };
+
+    const newEntries = urls.map(url => {
+      if (type === 'domain') {
+        const domain = new URL(url).hostname;
+        return domain;
+      } else {
+        const urlObj = new URL(url);
+        return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
+      }
+    });
+
+    const updatedList = [...domainWhitelist, ...newEntries];
+    await chrome.storage.local.set({ domainWhitelist: updatedList });
+  }
+
+  function escapeRegex(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+}
+
+// Save selected pending pages
+async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<void> {
+  const checkboxes = document.querySelectorAll('.pending-checkbox:checked') as NodeListOf<HTMLInputElement>;
+  const urls = Array.from(checkboxes).map(cb => cb.value);
+
+  if (urls.length === 0) return;
+
+  if (whitelistType) {
+    await WhitelistOperations.addDomainsOrPaths(urls, whitelistType);
+  }
+
+  // Re-record each page from pending list
+  for (const url of urls) {
+    const pages = await getPendingPages();
+    const page = pages.find(p => p.url === url);
+    if (page) {
+      await chrome.runtime.sendMessage({
+        type: 'record',
+        data: {
+          title: page.title,
+          url: page.url,
+          content: '',
+          force: true
+        }
+      });
+    }
+  }
+
+  await removePendingPages(urls);
+  await loadPendingPages();
 }
 
 // 現在のタブ情報を取得して表示
@@ -288,6 +344,39 @@ const recordBtn = document.getElementById('recordBtn');
 if (recordBtn) {
   recordBtn.addEventListener('click', () => recordCurrentPage(false));
 }
+
+// Pending pages batch operations
+document.getElementById('btn-select-all')?.addEventListener('click', () => {
+  const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+  });
+});
+
+document.getElementById('btn-save-selected')?.addEventListener('click', () => {
+  saveSelectedPages();
+});
+
+document.getElementById('btn-save-whitelist')?.addEventListener('click', () => {
+  saveSelectedPages('domain');
+});
+
+document.getElementById('btn-discard')?.addEventListener('click', async () => {
+  const checkboxes = document.querySelectorAll('.pending-checkbox:checked') as NodeListOf<HTMLInputElement>;
+  const urls = Array.from(checkboxes).map(cb => cb.value);
+
+  if (urls.length === 0) {
+    alert(chrome.i18n.getMessage('pendingPagesEmpty'));
+    return;
+  }
+
+  if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {
+    await removePendingPages(urls);
+    await loadPendingPages();
+  }
+});
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {

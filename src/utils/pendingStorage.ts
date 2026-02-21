@@ -1,4 +1,4 @@
-import { getSettings, saveSettings } from './storage';
+import { getSettings, saveSettings } from './storage.js';
 
 export interface PendingPage {
   url: string;
@@ -15,7 +15,7 @@ export interface PendingPage {
  */
 async function getPendingPagesList(): Promise<PendingPage[]> {
   const settings = await getSettings();
-  return settings['pendingPages'] || [];
+  return (settings['pendingPages'] as PendingPage[]) || [];
 }
 
 /**
