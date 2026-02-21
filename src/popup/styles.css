@@ -1791,6 +1791,11 @@ label.inline-label {
   background-color: var(--color-info-hover);
 }
 
+.btn-save-whitelist:focus {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
 .btn-discard {
   background-color: var(--color-danger);
   color: white;
@@ -1798,6 +1803,11 @@ label.inline-label {
 
 .btn-discard:hover {
   background-color: var(--color-danger-hover);
+}
+
+.btn-discard:focus {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
 }
 
 .text-center {
