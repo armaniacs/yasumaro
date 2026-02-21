@@ -272,7 +272,7 @@ function renderStatusPanel(status) {
         else if (status.privacy.hasCache) {
             privacyIcon.textContent = '✓';
             privacyIcon.className = 'status-icon status-success';
-            privacyIcon.setAttribute('aria-label', 'Public page');
+            privacyIcon.setAttribute('aria-label', getMessage('statusPublicPage'));
         }
         else {
             privacyIcon.textContent = '?';
@@ -289,7 +289,7 @@ function renderStatusPanel(status) {
             : getMessage('statusDomainBlocked');
         domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
         if (status.domainFilter.matchedPattern) {
-            domainState.innerHTML += `<span class="status-value status-muted">パターン: ${status.domainFilter.matchedPattern}</span>`;
+            domainState.innerHTML += `<span class="status-value status-muted">${getMessage('statusPattern', [status.domainFilter.matchedPattern])}</span>`;
         }
     }
     if (domainMode) {
@@ -319,7 +319,7 @@ function renderStatusPanel(status) {
                 }
             }
             else {
-                html += `<span class="status-value status-success">公開ページ</span>`;
+                html += `<span class="status-value status-success">${getMessage('statusPublicPage')}</span>`;
             }
             privacyContent.innerHTML = html;
         }
@@ -343,13 +343,13 @@ function renderStatusPanel(status) {
                 html += `<span class="status-value">Cache-Control: ${status.cache.cacheControl}</span>`;
             }
             if (status.cache.hasCookie) {
-                html += `<span class="status-value">Set-Cookie: あり</span>`;
+                html += `<span class="status-value">${getMessage('statusSetCookiePresent')}</span>`;
             }
             if (status.cache.hasAuth) {
-                html += `<span class="status-value">Authorization: あり</span>`;
+                html += `<span class="status-value">${getMessage('statusAuthorizationPresent')}</span>`;
             }
             if (!html) {
-                html = '<span class="status-value status-muted">情報なし</span>';
+                html = `<span class="status-value status-muted">${getMessage('statusNoCacheInfo')}</span>`;
             }
         }
         cacheContent.innerHTML = html;
@@ -373,7 +373,7 @@ function renderSpecialUrlStatus() {
     if (panel) {
         panel.innerHTML = `
       <div class="status-summary">
-        <span class="status-value status-error">このページは記録できません</span>
+        <span class="status-value status-error">${getMessage('statusPageNotRecordable')}</span>
       </div>
     `;
     }

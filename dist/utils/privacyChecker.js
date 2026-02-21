@@ -1,3 +1,9 @@
+/**
+ * プライバシー判定ロジック
+ *
+ * 詳細な判定基準と技術的根拠については以下を参照:
+ * docs/ADR/2026-02-21-privacy-detection-logic-refinement.md
+ */
 export function checkPrivacy(headers) {
     const timestamp = Date.now();
     // 1. Cache-Control チェック（最優先）
@@ -9,6 +15,8 @@ export function checkPrivacy(headers) {
     const cacheControl = findHeader(headers, 'cache-control');
     const hasCookie = hasHeader(headers, 'set-cookie');
     const hasAuth = hasHeader(headers, 'authorization');
+    const vary = findHeader(headers, 'vary');
+    const varyCookie = vary?.value?.toLowerCase().includes('cookie') || false;
     if (cacheControl) {
         const value = cacheControl.value?.toLowerCase() || '';
         // private ディレクティブは単独でプライベート判定
@@ -38,8 +46,10 @@ export function checkPrivacy(headers) {
             };
         }
     }
-    // 2. Set-Cookie チェック（準優先）
-    if (hasCookie) {
+    // 2. Set-Cookie + Vary: Cookie チェック
+    // Set-Cookie があり、かつ Vary: Cookie がある場合はプライベート判定
+    // 理由: サーバーが「このページは見る人（クッキー）によって中身を出し分けている」と宣言しているため
+    if (hasCookie && varyCookie) {
         return {
             isPrivate: true,
             reason: 'set-cookie',
@@ -70,8 +80,8 @@ export function checkPrivacy(headers) {
         timestamp,
         headers: {
             cacheControl: cacheControl?.value,
-            hasCookie: false,
-            hasAuth: false
+            hasCookie,
+            hasAuth
         }
     };
 }

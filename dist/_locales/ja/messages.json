@@ -356,6 +356,26 @@
     "textFileOnly": {
         "message": "テキストファイルのみ対応しています"
     },
+    "timeDaysAgo": {
+        "message": "{count}日前",
+        "description": "Relative time: X days ago"
+    },
+    "timeHoursAgo": {
+        "message": "{count}時間前",
+        "description": "Relative time: X hours ago"
+    },
+    "timeJustNow": {
+        "message": "たった今",
+        "description": "Relative time: just now"
+    },
+    "timeMinutesAgo": {
+        "message": "{count}分前",
+        "description": "Relative time: X minutes ago"
+    },
+    "timeYesterday": {
+        "message": "昨日",
+        "description": "Relative time: yesterday"
+    },
     "loadEmptyUrl": {
         "message": "URLを入力してください"
     },

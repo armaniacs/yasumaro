@@ -2,7 +2,7 @@
 import { PrivacyPipeline } from './privacyPipeline.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { isDomainAllowed } from '../utils/domainUtils.js';
+import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
@@ -167,17 +167,8 @@ export class RecordingLogic {
                 settings = await this.getSettingsWithCache();
                 const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
                 if (whitelist.length > 0) {
-                    const urlObj = new URL(url);
-                    const domain = urlObj.hostname;
-                    // ドメインがホワイトリストに含まれているかチェック
-                    const isWhitelisted = whitelist.some(pattern => {
-                        // ワイルドカード対応 (例: *.example.com)
-                        if (pattern.startsWith('*.')) {
-                            return domain.endsWith(pattern.slice(1));
-                        }
-                        return domain === pattern || domain.endsWith('.' + pattern);
-                    });
-                    if (isWhitelisted) {
+                    const domain = extractDomain(url);
+                    if (domain && isDomainInList(domain, whitelist)) {
                         addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', {
                             url,
                             domain

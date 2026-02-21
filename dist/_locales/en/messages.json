@@ -356,6 +356,26 @@
     "textFileOnly": {
         "message": "Only text files are supported"
     },
+    "timeDaysAgo": {
+        "message": "{count} days ago",
+        "description": "Relative time: X days ago"
+    },
+    "timeHoursAgo": {
+        "message": "{count} hours ago",
+        "description": "Relative time: X hours ago"
+    },
+    "timeJustNow": {
+        "message": "Just now",
+        "description": "Relative time: just now"
+    },
+    "timeMinutesAgo": {
+        "message": "{count} minutes ago",
+        "description": "Relative time: X minutes ago"
+    },
+    "timeYesterday": {
+        "message": "Yesterday",
+        "description": "Relative time: yesterday"
+    },
     "loadEmptyUrl": {
         "message": "Please enter a URL"
     },
