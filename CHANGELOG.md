@@ -1057,3 +1057,13 @@ All notable changes to this project will be documented in this file.
 Original idea and codebase was introduced in this article: https://note.com/izuru_tcnkc/n/nd0a758483901
 ## [Unreleased]
 
+### Added
+- プライベートページ保存時の警告ダイアログ機能
+- 保留中のページ一括管理UI
+- ホワイトリストへのドメイン/パス追加機能
+- PENDING_PAGES storage key
+
+### Changed
+- RecordingData インターフェースに requireConfirmation フラグを追加
+- RecordingResult インターフェースに confirmationRequired を追加
+

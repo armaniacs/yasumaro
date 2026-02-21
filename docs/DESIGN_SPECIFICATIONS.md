@@ -188,9 +188,53 @@ The implementation MUST strictly conform to uBlock Origin filter format:
 - **Simple Format**: Plain domain list (fallback method)
 - Both formats can be enabled/disabled independently
 
-## 13. Message Passing Protocol
+## 13. Private Page Confirmation
 
-### 13.1 Valid Message Types (`VALID_MESSAGE_TYPES`)
+### 13.1 Purpose
+The Private Page Confirmation feature allows users to review and manage pages that were marked as private before saving. This prevents accidental saving of sensitive content while giving users control over what gets recorded.
+
+### 13.2 Pending Pages Storage
+- **Storage Key**: `PENDING_PAGES`
+- **Structure**: Map of page IDs to pending page data
+- **Data Fields**:
+  - `id`: Unique identifier (timestamp-based)
+  - `url`: Page URL
+  - `title`: Page title
+  - `message`: Privacy warning message
+  - `timestamp`: Detection timestamp
+- **Operations**:
+  - `addPendingPage()`: Add page to pending list
+  - `getPendingPages()`: Retrieve all pending pages
+  - `removePendingPage()`: Remove specific pending page
+  - `clearPendingPages()`: Clear all pending pages
+
+### 13.3 Recording Data Extension
+- **RecordingData interface**:
+  - `requireConfirmation`: Boolean flag to indicate confirmation is required
+- **RecordingResult interface**:
+  - `confirmationRequired`: Boolean flag indicating if user confirmation was required
+
+### 13.4 Whitelist Addition
+Users can add domains/paths to the whitelist from the confirmation dialog:
+- **Source**: Confirmation dialog provides "Add to Whitelist" button
+- **Pattern Support**: Supports wildcard patterns (e.g., `*.example.com`)
+- **PII Masking**: Always applied even for whitelisted domains
+- **Privacy Bypass**: Whitelisted domains skip private page detection warning
+
+### 13.5 UI Components
+- **Confirmation Dialog**:
+  - Shows privacy warning message
+  - Options: Cancel, Force Save, Add to Whitelist
+  - Requires user action before proceeding
+
+- **Pending Pages Panel**:
+  - Lists all pages awaiting confirmation
+  - Bulk actions: Save All, Clear All, Save Selected
+  - Individual actions: Save single page, Remove from pending list
+
+## 14. Message Passing Protocol
+
+### 14.1 Valid Message Types (`VALID_MESSAGE_TYPES`)
 - `VALID_VISIT`: Content Script → Service Worker (automatic visit recording)
 - `GET_CONTENT`: Popup ↔ Content Script (manual content fetch)
 - `FETCH_URL`: Popup → Service Worker (CORS bypass fetch)
@@ -198,7 +242,7 @@ The implementation MUST strictly conform to uBlock Origin filter format:
 - `PREVIEW_RECORD`: Popup → Service Worker (preview with PII masking)
 - `SAVE_RECORD`: Popup → Service Worker (save confirmed preview)
 
-### 13.2 Message Payload Structure
+### 14.2 Message Payload Structure
 ```javascript
 {
   type: string,           // Must be in VALID_MESSAGE_TYPES

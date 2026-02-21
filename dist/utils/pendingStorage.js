@@ -1,4 +1,4 @@
-import { getSettings, saveSettings } from './storage';
+import { getSettings, saveSettings } from './storage.js';
 /**
  * Retrieves the list of pending pages from settings.
  * @returns Promise resolving to an array of PendingPage objects, or an empty array if none exist.

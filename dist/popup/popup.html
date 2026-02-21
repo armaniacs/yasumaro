@@ -90,6 +90,22 @@
       <span class="spinner-text" data-i18n="processing">Processing...</span>
     </div>
     <div id="mainStatus" aria-live="polite"></div>
+
+    <!-- Pending Pages Section -->
+    <div id="pending-section" class="hidden">
+      <h2 data-i18n="pendingPagesTitle">保留中のページ</h2>
+      <div id="pending-pages-list"></div>
+      <div class="pending-buttons">
+        <button id="btn-select-all" type="button" data-i18n="btnSelectAll">全て選択</button>
+        <button id="btn-save-selected" type="button" data-i18n="btnSaveSelected">保存</button>
+        <button id="btn-save-whitelist" type="button" data-i18n="btnSaveWhitelist">許可して保存</button>
+        <button id="btn-discard" type="button" data-i18n="btnDiscard">破棄</button>
+      </div>
+    </div>
+
+    <div id="pending-empty" class="hidden text-center text-gray-500">
+      <p data-i18n="pendingPagesEmpty">保留中のページはありません</p>
+    </div>
   </div>
 
   <!-- Settings Screen -->
@@ -623,6 +639,20 @@
       </div>
     </div>
   </div>
+
+  <!-- Private Page Confirmation Dialog -->
+  <dialog id="private-page-dialog" class="private-page-dialog">
+    <div class="dialog-content">
+      <h3 id="dialog-title" data-i18n="warningPrivatePage">Private Page Detected</h3>
+      <p id="dialog-message" class="dialog-message"></p>
+      <div class="dialog-buttons">
+        <button id="dialog-cancel" type="button" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="dialog-save-once" type="button" class="btn-confirm" data-i18n="saveOnce">Save Once</button>
+        <button id="dialog-save-domain" type="button" class="btn-confirm" data-i18n="saveDomain">Save and Allow Domain</button>
+        <button id="dialog-save-path" type="button" class="btn-confirm" data-i18n="savePath">Save and Allow Path</button>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="i18n.js"></script>
   <script type="module" src="navigation.js"></script>

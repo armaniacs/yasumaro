@@ -1,6 +1,6 @@
 // Main screen functionality
 import { checkPageStatus } from './statusChecker.js';
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings, saveSettings, StorageKeys } from '../utils/storage.js';
 import { showPreview, initializeModalEvents } from './sanitizePreview.js';
 import { showSpinner, hideSpinner } from './spinner.js';
 import { startAutoCloseTimer } from './autoClose.js';
@@ -8,7 +8,8 @@ import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
-import { getPendingPages } from '../utils/pendingStorage.js';
+import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
+import { extractDomain } from '../utils/domainUtils.js';
 // Export functions for testing
 export { getCurrentTab };
 // HTML escape helper function
@@ -17,6 +18,86 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+let currentPendingSave = null;
+function showPrivatePageDialog(url, reason, headerValue) {
+    const dialog = document.getElementById('private-page-dialog');
+    const messageEl = document.getElementById('dialog-message');
+    if (messageEl) {
+        const header = headerValue || reason;
+        messageEl.textContent = chrome.i18n.getMessage('warningPrivatePageMessage', [header, url]);
+    }
+    dialog?.showModal();
+}
+async function recordWithForce() {
+    if (!currentPendingSave)
+        return;
+    const response = await chrome.runtime.sendMessage({
+        type: 'record',
+        data: {
+            title: currentPendingSave.title,
+            url: currentPendingSave.url,
+            content: currentPendingSave.content,
+            force: true
+        }
+    });
+    const statusDiv = document.getElementById('mainStatus');
+    if (response?.success) {
+        if (statusDiv) {
+            statusDiv.textContent = getMessage('saveSuccess');
+            statusDiv.className = 'success';
+        }
+        startAutoCloseTimer();
+    }
+    else {
+        if (statusDiv) {
+            statusDiv.textContent = `${getMessage('saveError')}: ${response?.error || 'Unknown error'}`;
+            statusDiv.className = 'error';
+        }
+    }
+    currentPendingSave = null;
+}
+// Dialog button handlers
+document.getElementById('dialog-cancel')?.addEventListener('click', () => {
+    const dialog = document.getElementById('private-page-dialog');
+    dialog?.close();
+    currentPendingSave = null;
+});
+document.getElementById('dialog-save-once')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog');
+    dialog?.close();
+    if (currentPendingSave) {
+        await recordWithForce();
+    }
+});
+document.getElementById('dialog-save-domain')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog');
+    dialog?.close();
+    if (currentPendingSave) {
+        const domain = extractDomain(currentPendingSave.url);
+        if (domain) {
+            const settings = await getSettings();
+            const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+            if (!whitelist.includes(domain)) {
+                whitelist.push(domain);
+                await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+            }
+        }
+        await recordWithForce();
+    }
+});
+document.getElementById('dialog-save-path')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog');
+    dialog?.close();
+    if (currentPendingSave) {
+        const settings = await getSettings();
+        const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+        if (!whitelist.includes(currentPendingSave.url)) {
+            whitelist.push(currentPendingSave.url);
+            await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+        }
+        await recordWithForce();
+    }
+});
 // Load and display pending pages
 async function loadPendingPages() {
     try {
@@ -52,6 +133,57 @@ async function loadPendingPages() {
     catch (error) {
         console.error('Failed to load pending pages:', error);
     }
+}
+// Whitelist operations namespace
+var WhitelistOperations;
+(function (WhitelistOperations) {
+    async function addDomainsOrPaths(urls, type) {
+        const { domainWhitelist = [] } = await chrome.storage.local.get('domainWhitelist');
+        const newEntries = urls.map(url => {
+            if (type === 'domain') {
+                const domain = new URL(url).hostname;
+                return domain;
+            }
+            else {
+                const urlObj = new URL(url);
+                return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
+            }
+        });
+        const updatedList = [...domainWhitelist, ...newEntries];
+        await chrome.storage.local.set({ domainWhitelist: updatedList });
+    }
+    WhitelistOperations.addDomainsOrPaths = addDomainsOrPaths;
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+})(WhitelistOperations || (WhitelistOperations = {}));
+// Save selected pending pages
+async function saveSelectedPages(whitelistType) {
+    const checkboxes = document.querySelectorAll('.pending-checkbox:checked');
+    const urls = Array.from(checkboxes).map(cb => cb.value);
+    if (urls.length === 0)
+        return;
+    if (whitelistType) {
+        await WhitelistOperations.addDomainsOrPaths(urls, whitelistType);
+    }
+    // Re-record each page from pending list
+    for (const url of urls) {
+        const pages = await getPendingPages();
+        const page = pages.find(p => p.url === url);
+        if (page) {
+            await chrome.runtime.sendMessage({
+                type: 'record',
+                data: {
+                    title: page.title,
+                    url: page.url,
+                    content: '',
+                    force: true
+                }
+            });
+        }
+    }
+    await removePendingPages(urls);
+    await loadPendingPages();
 }
 // 現在のタブ情報を取得して表示
 export async function loadCurrentTab() {
@@ -192,14 +324,22 @@ export async function recordCurrentPage(force = false) {
             // Get localized reason message
             const reasonKey = `privatePageReason_${result.reason?.replace('-', '') || 'cacheControl'}`;
             const reason = getMessage(reasonKey) || result.reason || 'unknown';
-            const message = getMessage('privatePageWarning').replace('$REASON$', reason);
-            const userConfirmed = confirm(message);
-            if (userConfirmed) {
-                // Retry with force=true
-                await recordCurrentPage(true);
+            if (result.confirmationRequired) {
+                // Show modal dialog for user to choose action
+                currentPendingSave = { url: tab.url || '', title: tab.title || '', content: contentResponse.content, privacyData: result };
+                showPrivatePageDialog(tab.url || '', reason, result.headerValue || '');
             }
             else {
-                statusDiv.textContent = getMessage('cancelled');
+                // Fallback to simple confirm dialog
+                const message = getMessage('privatePageWarning').replace('$REASON$', reason);
+                const userConfirmed = confirm(message);
+                if (userConfirmed) {
+                    // Retry with force=true
+                    await recordCurrentPage(true);
+                }
+                else {
+                    statusDiv.textContent = getMessage('cancelled');
+                }
             }
             return;
         }
@@ -239,6 +379,32 @@ const recordBtn = document.getElementById('recordBtn');
 if (recordBtn) {
     recordBtn.addEventListener('click', () => recordCurrentPage(false));
 }
+// Pending pages batch operations
+document.getElementById('btn-select-all')?.addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.pending-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+});
+document.getElementById('btn-save-selected')?.addEventListener('click', () => {
+    saveSelectedPages();
+});
+document.getElementById('btn-save-whitelist')?.addEventListener('click', () => {
+    saveSelectedPages('domain');
+});
+document.getElementById('btn-discard')?.addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.pending-checkbox:checked');
+    const urls = Array.from(checkboxes).map(cb => cb.value);
+    if (urls.length === 0) {
+        alert(chrome.i18n.getMessage('pendingPagesEmpty'));
+        return;
+    }
+    if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {
+        await removePendingPages(urls);
+        await loadPendingPages();
+    }
+});
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
     initializeModalEvents();

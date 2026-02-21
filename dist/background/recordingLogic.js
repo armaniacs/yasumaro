@@ -7,6 +7,7 @@ import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { addPendingPage } from '../utils/pendingStorage.js';
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
 export class RecordingLogic {
@@ -139,8 +140,26 @@ export class RecordingLogic {
         RecordingLogic.cacheState.privacyCache = null;
         RecordingLogic.cacheState.privacyCacheTimestamp = null;
     }
+    /**
+     * 保留中ページを保存するヘルパーメソッド
+     */
+    async _savePendingPage(url, title, reason, headerValue) {
+        // Validate headerValue length to prevent storage abuse
+        const MAX_HEADER_VALUE_LENGTH = 1024;
+        const validatedHeaderValue = (headerValue || '').substring(0, MAX_HEADER_VALUE_LENGTH);
+        const pendingPage = {
+            url,
+            title,
+            timestamp: Date.now(),
+            reason,
+            headerValue: validatedHeaderValue,
+            expiry: Date.now() + (24 * 60 * 60 * 1000) // 24時間後
+        };
+        await addPendingPage(pendingPage);
+        addLog(LogType.INFO, 'Page saved to pending', { url, title, reason });
+    }
     async record(data) {
-        let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false } = data;
+        let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '' } = data;
         const MAX_RECORD_SIZE = 64 * 1024;
         try {
             // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -192,8 +211,24 @@ export class RecordingLogic {
                 if (privacyInfo?.isPrivate && !force) {
                     addLog(LogType.WARN, 'Private page detected', {
                         url,
-                        reason: privacyInfo.reason
+                        reason: privacyInfo.reason,
+                        requireConfirmation
                     });
+                    // requireConfirmationの場合、pendingに保存してconfirmationRequired=trueを返す
+                    if (requireConfirmation) {
+                        // privacyInfo.headersから適切なヘッダー値を抽出
+                        const reason = privacyInfo.reason || 'cache-control';
+                        const actualHeaderValue = reason === 'cache-control'
+                            ? privacyInfo.headers?.cacheControl || ''
+                            : privacyInfo.reason || '';
+                        await this._savePendingPage(url, title, reason, actualHeaderValue);
+                        return {
+                            success: false,
+                            error: 'PRIVATE_PAGE_DETECTED',
+                            reason: privacyInfo.reason,
+                            confirmationRequired: true
+                        };
+                    }
                     return {
                         success: false,
                         error: 'PRIVATE_PAGE_DETECTED',

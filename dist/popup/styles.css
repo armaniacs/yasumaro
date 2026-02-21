@@ -1701,3 +1701,202 @@ label.inline-label {
   width: 100%;
   background: var(--color-success);
 }
+
+/* =============================================================================
+   Pending Pages Section
+   ============================================================================= */
+
+#pending-section {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}
+
+#pending-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+#pending-pages-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.pending-item {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.pending-item:hover {
+  background: var(--color-bg-subtle);
+}
+
+.pending-item:last-child {
+  border-bottom: none;
+}
+
+.pending-item input[type="checkbox"] {
+  margin-top: 4px;
+  margin-right: var(--space-2);
+}
+
+.pending-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.pending-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+  word-break: break-word;
+}
+
+.pending-item-reason {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  word-break: break-word;
+}
+
+.pending-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.pending-buttons button {
+  flex: 1;
+  padding: 6px var(--space-3);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+#btn-save-whitelist {
+  background-color: var(--color-info);
+  color: white;
+}
+
+#btn-save-whitelist:hover {
+  background-color: var(--color-info-hover);
+}
+
+#btn-save-whitelist:focus {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+#btn-discard {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+#btn-discard:hover {
+  background-color: var(--color-danger-hover);
+}
+
+#btn-discard:focus {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-gray-500 {
+  color: var(--color-text-muted);
+}
+
+/* ============================================================================
+   Private Page Confirmation Dialog
+   ============================================================================ */
+
+.private-page-dialog {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.private-page-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-content {
+  padding: var(--space-4);
+  max-width: 400px;
+  min-width: 300px;
+}
+
+.dialog-content h3 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.dialog-message {
+  margin: 0 0 var(--space-4) 0;
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dialog-buttons button {
+  padding: var(--space-2) var(--space-3);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dialog-buttons .btn-cancel {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.dialog-buttons .btn-cancel:hover {
+  background: var(--color-border);
+}
+
+.dialog-buttons .btn-confirm {
+  background: var(--color-primary);
+  color: white;
+}
+
+.dialog-buttons .btn-confirm#dialog-save-domain {
+  background: var(--color-info);
+}
+
+.dialog-buttons .btn-confirm#dialog-save-path {
+  background: var(--color-success);
+}
+
+.dialog-buttons .btn-confirm:hover {
+  opacity: 0.9;
+}
+
+.dialog-buttons .btn-confirm:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}

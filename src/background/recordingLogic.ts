@@ -295,7 +295,12 @@ export class RecordingLogic {
 
           // requireConfirmationの場合、pendingに保存してconfirmationRequired=trueを返す
           if (requireConfirmation) {
-            await this._savePendingPage(url, title, privacyInfo.reason, headerValue);
+            // privacyInfo.headersから適切なヘッダー値を抽出
+            const reason = privacyInfo.reason || 'cache-control';
+            const actualHeaderValue = reason === 'cache-control'
+              ? privacyInfo.headers?.cacheControl || ''
+              : privacyInfo.reason || '';
+            await this._savePendingPage(url, title, reason, actualHeaderValue);
             return {
               success: false,
               error: 'PRIVATE_PAGE_DETECTED',

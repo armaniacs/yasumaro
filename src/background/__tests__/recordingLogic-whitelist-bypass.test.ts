@@ -60,9 +60,31 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
     // domainUtilsのデフォルトモック
-    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    const { isDomainAllowed, extractDomain, isDomainInList } = require('../../utils/domainUtils.js');
     // @ts-expect-error - jest.fn() type narrowing issue
     isDomainAllowed.mockResolvedValue(true);
+    // @ts-expect-error - jest.fn() type narrowing issue
+    extractDomain.mockImplementation((url: string) => {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace(/^www\./, '');
+      } catch {
+        return null;
+      }
+    });
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainInList.mockImplementation((domain: string, list: string[]) => {
+      if (!domain || !list || list.length === 0) return false;
+      return list.some(pattern => {
+        if (pattern.includes('*')) {
+          const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regexPattern = escaped.replace(/\\\*/g, '.*');
+          const regex = new RegExp(`^${regexPattern}$`, 'i');
+          return regex.test(domain);
+        }
+        return domain.toLowerCase() === pattern.toLowerCase();
+      });
+    });
   });
 
   it('should bypass privacy check for whitelisted domain', async () => {

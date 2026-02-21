@@ -640,6 +640,20 @@
     </div>
   </div>
 
+  <!-- Private Page Confirmation Dialog -->
+  <dialog id="private-page-dialog" class="private-page-dialog">
+    <div class="dialog-content">
+      <h3 id="dialog-title" data-i18n="warningPrivatePage">Private Page Detected</h3>
+      <p id="dialog-message" class="dialog-message"></p>
+      <div class="dialog-buttons">
+        <button id="dialog-cancel" type="button" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="dialog-save-once" type="button" class="btn-confirm" data-i18n="saveOnce">Save Once</button>
+        <button id="dialog-save-domain" type="button" class="btn-confirm" data-i18n="saveDomain">Save and Allow Domain</button>
+        <button id="dialog-save-path" type="button" class="btn-confirm" data-i18n="savePath">Save and Allow Path</button>
+      </div>
+    </div>
+  </dialog>
+
   <script type="module" src="i18n.js"></script>
   <script type="module" src="navigation.js"></script>
   <script type="module" src="main.js"></script>

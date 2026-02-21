@@ -885,5 +885,60 @@
     },
     "statusAuthDetected": {
         "message": "Authorization: あり"
+    },
+    "warningPrivatePage": {
+        "message": "プライベートページが検出されました"
+    },
+    "warningPrivatePageMessage": {
+        "message": "$HEADER$ が検出されました。\n\nURL:\n$URL$",
+        "placeholders": {
+            "header": { "content": "$1" },
+            "url": { "content": "$2" }
+        }
+    },
+    "warningConfirmSave": {
+        "message": "保存しますか？"
+    },
+    "btnCancel": {
+        "message": "キャンセル"
+    },
+    "btnSaveOnce": {
+        "message": "今回のみ保存"
+    },
+    "btnSaveWhitelistDomain": {
+        "message": "ドメイン全体を許可して保存"
+    },
+    "btnSaveWhitelistPath": {
+        "message": "このパスのみ許可して保存"
+    },
+    "pendingPagesTitle": {
+        "message": "保留中のページ"
+    },
+    "pendingPagesEmpty": {
+        "message": "保留中のページはありません"
+    },
+    "btnSelectAll": {
+        "message": "全て選択"
+    },
+    "btnSaveSelected": {
+        "message": "保存"
+    },
+    "btnSaveWhitelist": {
+        "message": "許可して保存"
+    },
+    "btnDiscard": {
+        "message": "破棄"
+    },
+    "saveOnce": {
+        "message": "今回のみ保存"
+    },
+    "saveDomain": {
+        "message": "ドメイン全体を許可して保存"
+    },
+    "savePath": {
+        "message": "このパスのみ許可して保存"
+    },
+    "saveSuccess": {
+        "message": "保存成功"
     }
 }

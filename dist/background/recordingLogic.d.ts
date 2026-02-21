@@ -20,6 +20,8 @@ export interface RecordingData {
     skipDuplicateCheck?: boolean;
     alreadyProcessed?: boolean;
     previewOnly?: boolean;
+    requireConfirmation?: boolean;
+    headerValue?: string;
 }
 export interface RecordingResult {
     success: boolean;
@@ -36,6 +38,8 @@ export interface RecordingResult {
     maskedItems?: any[];
     /** AI処理時間 (ミリ秒) */
     aiDuration?: number;
+    confirmationRequired?: boolean;
+    headerValue?: string;
 }
 export declare class RecordingLogic {
     static cacheState: CacheState;
@@ -82,6 +86,10 @@ export declare class RecordingLogic {
      * プライバシーキャッシュを無効化する
      */
     static invalidatePrivacyCache(): void;
+    /**
+     * 保留中ページを保存するヘルパーメソッド
+     */
+    private _savePendingPage;
     record(data: RecordingData): Promise<RecordingResult>;
     recordWithPreview(data: RecordingData): Promise<RecordingResult>;
 }

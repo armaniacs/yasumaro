@@ -38,6 +38,8 @@ export interface ServiceWorkerResponse {
     maskedCount?: number;
     maskedItems?: any[];
     aiDuration?: number;
+    confirmationRequired?: boolean;
+    headerValue?: string;
 }
 /**
  * ChromeMessageSenderクラス
