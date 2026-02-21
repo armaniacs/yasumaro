@@ -26,6 +26,61 @@
       </div>
     </div>
 
+    <!-- Status Panel -->
+    <div id="statusPanel" class="status-panel">
+      <div class="status-summary">
+        <div class="status-icons">
+          <span id="statusDomainIcon" class="status-icon" aria-label="Domain status"></span>
+          <span id="statusPrivacyIcon" class="status-icon" aria-label="Privacy status"></span>
+        </div>
+        <button id="statusToggleBtn" class="status-toggle" aria-expanded="false">
+          <span id="statusToggleText" data-i18n="statusShowDetails">詳細を表示</span>
+          <span class="status-toggle-arrow">▼</span>
+        </button>
+      </div>
+
+      <div id="statusDetails" class="status-details hidden" aria-hidden="true">
+        <!-- ドメインフィルタ -->
+        <div class="status-section">
+          <div class="status-section-header">
+            <span class="status-section-icon">🎯</span>
+            <span class="status-section-title" data-i18n="statusDomainFilter">ドメインフィルタ</span>
+          </div>
+          <div class="status-section-content">
+            <div id="statusDomainState"></div>
+            <div id="statusDomainMode"></div>
+          </div>
+        </div>
+
+        <!-- プライバシー -->
+        <div class="status-section">
+          <div class="status-section-header">
+            <span class="status-section-icon">🔒</span>
+            <span class="status-section-title" data-i18n="statusPrivacy">プライバシー</span>
+          </div>
+          <div class="status-section-content" id="statusPrivacyContent"></div>
+        </div>
+
+        <!-- キャッシュ状況 -->
+        <div class="status-section">
+          <div class="status-section-header">
+            <span class="status-section-icon">💾</span>
+            <span class="status-section-title" data-i18n="statusCache">キャッシュ状況</span>
+          </div>
+          <div class="status-section-content" id="statusCacheContent"></div>
+        </div>
+
+        <!-- 最終保存 -->
+        <div class="status-section">
+          <div class="status-section-header">
+            <span class="status-section-icon">⏱</span>
+            <span class="status-section-title" data-i18n="statusLastSaved">最終保存</span>
+          </div>
+          <div class="status-section-content" id="statusLastSavedContent"></div>
+        </div>
+      </div>
+    </div>
+
     <button id="recordBtn" class="primary-btn" data-i18n-label="recordNow">📝 Record Now</button>
     <div id="loadingSpinner" class="spinner-container">
       <svg class="spinner" viewBox="0 0 50 50">
@@ -54,9 +109,9 @@
 
     <!-- Tab Navigation -->
     <div id="tabList" class="tab-nav" role="tablist">
-      <button id="generalTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="generalPanel"
+      <button id="generalTab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="generalPanel"
         data-i18n="mainTab">General</button>
-      <button id="domainTab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="domainPanel"
+      <button id="domainTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="domainPanel"
         data-i18n="domainTab">Domain Filter</button>
       <button id="promptTab" class="tab-btn" role="tab" aria-selected="false" aria-controls="promptPanel"
         data-i18n="promptTab">Prompt</button>
@@ -65,7 +120,7 @@
     </div>
 
     <!-- General Settings Panel -->
-    <div id="generalPanel" class="tab-panel" role="tabpanel" aria-labelledby="generalTab" aria-hidden="true">
+    <div id="generalPanel" class="tab-panel active" role="tabpanel" aria-labelledby="generalTab" aria-hidden="false">
 
       <div class="form-group">
         <label for="apiKey" data-i18n="obsidianApiKey">Obsidian API Key</label>
@@ -168,7 +223,7 @@
     </div>
 
     <!-- Domain Filter Panel -->
-    <div id="domainPanel" class="tab-panel active" role="tabpanel" aria-labelledby="domainTab" aria-hidden="false">
+    <div id="domainPanel" class="tab-panel" role="tabpanel" aria-labelledby="domainTab" aria-hidden="true">
       <div class="form-group">
         <label id="domainFilterModeLabel" data-i18n="domainFilterMode">Domain Filter Mode</label>
         <div class="radio-group" role="radiogroup" aria-labelledby="domainFilterModeLabel">
