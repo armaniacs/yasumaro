@@ -5,24 +5,41 @@ export function checkPrivacy(headers) {
     // ニュースサイトなど公開ページでも頻繁に使用されるため、プライベート判定から除外
     // private = 共有キャッシュ禁止（CDN/プロキシ経由で他ユーザーに漏れるのを防ぐ）
     // no-store = キャッシュ完全禁止（機密性の高いページ）
+    //   ただし、no-store単独では判定せず、Set-Cookieとの組み合わせで判定
     const cacheControl = findHeader(headers, 'cache-control');
+    const hasCookie = hasHeader(headers, 'set-cookie');
+    const hasAuth = hasHeader(headers, 'authorization');
     if (cacheControl) {
         const value = cacheControl.value?.toLowerCase() || '';
-        if (value.includes('private') || value.includes('no-store')) {
+        // private ディレクティブは単独でプライベート判定
+        if (value.includes('private')) {
             return {
                 isPrivate: true,
                 reason: 'cache-control',
                 timestamp,
                 headers: {
                     cacheControl: cacheControl.value,
-                    hasCookie: hasHeader(headers, 'set-cookie'),
-                    hasAuth: hasHeader(headers, 'authorization')
+                    hasCookie,
+                    hasAuth
+                }
+            };
+        }
+        // no-store は Set-Cookie と組み合わせた場合のみプライベート判定
+        if (value.includes('no-store') && hasCookie) {
+            return {
+                isPrivate: true,
+                reason: 'cache-control',
+                timestamp,
+                headers: {
+                    cacheControl: cacheControl.value,
+                    hasCookie,
+                    hasAuth
                 }
             };
         }
     }
     // 2. Set-Cookie チェック（準優先）
-    if (hasHeader(headers, 'set-cookie')) {
+    if (hasCookie) {
         return {
             isPrivate: true,
             reason: 'set-cookie',
@@ -30,12 +47,12 @@ export function checkPrivacy(headers) {
             headers: {
                 cacheControl: cacheControl?.value,
                 hasCookie: true,
-                hasAuth: hasHeader(headers, 'authorization')
+                hasAuth
             }
         };
     }
     // 3. Authorization チェック
-    if (hasHeader(headers, 'authorization')) {
+    if (hasAuth) {
         return {
             isPrivate: true,
             reason: 'authorization',

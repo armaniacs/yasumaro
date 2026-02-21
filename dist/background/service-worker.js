@@ -25,8 +25,10 @@ const aiClient = new AIClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient);
 // TabCache for storing tab data
 const tabCache = new TabCache();
+// Initialize HeaderDetector (must be initialized on Service Worker startup)
+HeaderDetector.initialize();
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'GET_PRIVACY_CACHE'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 // Listen for messages from Content Script and Popup
@@ -44,8 +46,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
-            // CHECK_DOMAIN は payload 不要
-            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN'];
+            // CHECK_DOMAIN と GET_PRIVACY_CACHE は payload 不要
+            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE'];
             if (!NO_PAYLOAD_TYPES.includes(message.type)) {
                 if (message.payload === undefined || typeof message.payload !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
@@ -130,6 +132,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
                 return;
             }
+            // Get Privacy Cache (for Popup status panel)
+            if (message.type === 'GET_PRIVACY_CACHE') {
+                const cache = RecordingLogic.cacheState.privacyCache;
+                console.log('[ServiceWorker] GET_PRIVACY_CACHE requested, cache size:', cache?.size || 0);
+                if (cache) {
+                    // Map を配列に変換して送信
+                    const cacheArray = Array.from(cache.entries());
+                    console.log('[ServiceWorker] Sending', cacheArray.length, 'cache entries to popup');
+                    sendResponse({ success: true, cache: cacheArray });
+                }
+                else {
+                    console.log('[ServiceWorker] No cache available, sending empty array');
+                    sendResponse({ success: true, cache: [] });
+                }
+                return;
+            }
             // Manual Record Processing & Preview
             if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
                 const result = await recordingLogic.record({
@@ -178,8 +196,6 @@ const initializeExtension = async () => {
         await saveSettingsWithAllowedUrls(settings);
         // 【Task #19 最適化】ドメインフィルタキャッシュを更新
         await updateDomainFilterCache(settings);
-        // HeaderDetector初期化
-        HeaderDetector.initialize();
         console.log('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.');
     }
     catch (error) {

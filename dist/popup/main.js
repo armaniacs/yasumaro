@@ -302,7 +302,7 @@ function renderStatusPanel(status) {
         if (!status.privacy.hasCache) {
             privacyContent.innerHTML = `
         <span class="status-value status-muted">${getMessage('statusNoInfo')}</span>
-        <span class="status-value status-muted" style="font-size: 11px;">${getMessage('statusReloadHint')}</span>
+        <span class="status-value status-muted status-hint">${getMessage('statusReloadHint')}</span>
       `;
         }
         else {
@@ -327,11 +327,18 @@ function renderStatusPanel(status) {
     // キャッシュセクション
     const cacheContent = document.getElementById('statusCacheContent');
     if (cacheContent) {
+        let html = '';
+        // デバッグ情報を表示
+        console.log('[StatusPanel] Cache status:', {
+            hasCache: status.cache.hasCache,
+            cacheControl: status.cache.cacheControl,
+            hasCookie: status.cache.hasCookie,
+            hasAuth: status.cache.hasAuth
+        });
         if (!status.cache.hasCache) {
-            cacheContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+            html = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
         }
         else {
-            let html = '';
             if (status.cache.cacheControl) {
                 html += `<span class="status-value">Cache-Control: ${status.cache.cacheControl}</span>`;
             }
@@ -341,8 +348,11 @@ function renderStatusPanel(status) {
             if (status.cache.hasAuth) {
                 html += `<span class="status-value">Authorization: あり</span>`;
             }
-            cacheContent.innerHTML = html || '<span class="status-value status-muted">情報なし</span>';
+            if (!html) {
+                html = '<span class="status-value status-muted">情報なし</span>';
+            }
         }
+        cacheContent.innerHTML = html;
     }
     // 最終保存セクション
     const lastSavedContent = document.getElementById('statusLastSavedContent');

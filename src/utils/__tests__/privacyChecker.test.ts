@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { checkPrivacy, PrivacyInfo } from '../privacyChecker.js';
+import { checkPrivacy } from '../privacyChecker.js';
 
 describe('privacyChecker', () => {
   describe('checkPrivacy - Cache-Control detection', () => {
@@ -16,15 +16,29 @@ describe('privacyChecker', () => {
       expect(result.headers?.cacheControl).toBe('private, max-age=0');
     });
 
-    test('Cache-Control: no-store を検出できる', () => {
+    test('Cache-Control: no-store 単独ではプライベート判定しない', () => {
       const headers: chrome.webRequest.HttpHeader[] = [
         { name: 'Cache-Control', value: 'no-store' }
       ];
 
       const result = checkPrivacy(headers);
 
+      // no-store 単独では判定しない（ニュースサイト等でも使用されるため）
+      expect(result.isPrivate).toBe(false);
+      expect(result.reason).toBeUndefined();
+    });
+
+    test('Cache-Control: no-store + Set-Cookie でプライベート判定', () => {
+      const headers: chrome.webRequest.HttpHeader[] = [
+        { name: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+        { name: 'Set-Cookie', value: 'session=abc123' }
+      ];
+
+      const result = checkPrivacy(headers);
+
       expect(result.isPrivate).toBe(true);
       expect(result.reason).toBe('cache-control');
+      expect(result.headers?.hasCookie).toBe(true);
     });
 
     test('Cache-Control: no-cache はプライベート判定しない（ニュースサイト等で常用されるため）', () => {
@@ -42,7 +56,7 @@ describe('privacyChecker', () => {
   });
 
   describe('checkPrivacy - Set-Cookie detection', () => {
-    test('Set-Cookie ヘッダーを検出できる', () => {
+    test('Set-Cookie 単独ではプライベート判定しない', () => {
       const headers: chrome.webRequest.HttpHeader[] = [
         { name: 'Set-Cookie', value: 'session=abc123; HttpOnly' },
         { name: 'Content-Type', value: 'text/html' }
@@ -50,6 +64,20 @@ describe('privacyChecker', () => {
 
       const result = checkPrivacy(headers);
 
+      // Set-Cookie 単独では判定しない（CNNなど公開ページでも使用されるため）
+      expect(result.isPrivate).toBe(false);
+      expect(result.headers?.hasCookie).toBe(true);
+    });
+
+    test('Set-Cookie + Vary: Cookie でプライベート判定', () => {
+      const headers: chrome.webRequest.HttpHeader[] = [
+        { name: 'Set-Cookie', value: 'session=abc123; HttpOnly' },
+        { name: 'Vary', value: 'Cookie, Accept-Encoding' }
+      ];
+
+      const result = checkPrivacy(headers);
+
+      // Vary: Cookie があれば、コンテンツがユーザーによって出し分けられている
       expect(result.isPrivate).toBe(true);
       expect(result.reason).toBe('set-cookie');
       expect(result.headers?.hasCookie).toBe(true);
@@ -84,9 +112,10 @@ describe('privacyChecker', () => {
       expect(result.reason).toBe('cache-control');
     });
 
-    test('Set-Cookie が Authorization より優先される', () => {
+    test('Set-Cookie + Vary: Cookie が Authorization より優先される', () => {
       const headers: chrome.webRequest.HttpHeader[] = [
         { name: 'Set-Cookie', value: 'session=abc' },
+        { name: 'Vary', value: 'Cookie' },
         { name: 'Authorization', value: 'Bearer token' }
       ];
 

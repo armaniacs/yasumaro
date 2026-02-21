@@ -102,6 +102,44 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
   return undefined;
 }
 
+/**
+ * URL正規化（キャッシュキーの一貫性のため）
+ * headerDetector.tsと同じロジック
+ */
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // フラグメントを削除
+    parsed.hash = '';
+    let normalized = parsed.toString();
+    // 末尾のスラッシュを削除（ルートパス以外）
+    if (normalized.endsWith('/') && parsed.pathname !== '/') {
+      normalized = normalized.slice(0, -1);
+    }
+    return normalized;
+  } catch {
+    // パース失敗時は元のURLを返す
+    return url;
+  }
+}
+
+/**
+ * fetch APIを使用してCache-Controlヘッダーを直接取得
+ */
+async function fetchCacheControlHeader(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      cache: 'no-store',
+      mode: 'cors'
+    });
+    return response.headers.get('cache-control');
+  } catch (error) {
+    console.warn('[StatusChecker] Failed to fetch headers:', error);
+    return null;
+  }
+}
+
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   // 特殊URLのチェック
   if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')) {
@@ -109,6 +147,25 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   }
 
   try {
+    // URL正規化
+    const normalizedUrl = normalizeUrl(url);
+    console.log('[StatusChecker] Checking status for URL:', { original: url, normalized: normalizedUrl });
+
+    // Service Workerからプライバシーキャッシュを取得
+    let privacyInfo: any = null;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE' });
+      console.log('[StatusChecker] Privacy cache response:', response);
+
+      if (response && response.success && response.cache) {
+        const cacheMap = new Map(response.cache);
+        privacyInfo = cacheMap.get(normalizedUrl);
+        console.log('[StatusChecker] Found privacy info in cache:', privacyInfo);
+      }
+    } catch (error) {
+      console.warn('[StatusChecker] Failed to get privacy cache:', error);
+    }
+
     // 並列処理で設定とURL履歴を取得
     const [settings, savedUrls, allowed] = await Promise.all([
       getSettings(),
@@ -136,17 +193,27 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
       }
     }
 
-    // プライバシー情報取得
-    const privacyCache = RecordingLogic.cacheState.privacyCache;
-    const privacyInfo = privacyCache?.get(url);
-
-    // キャッシュ情報
+    // キャッシュ情報（Service Workerから取得した情報を優先）
+    const headers = privacyInfo?.headers;
     const cacheInfo = {
-      cacheControl: privacyInfo?.headers?.cacheControl,
-      hasCookie: privacyInfo?.headers?.hasCookie ?? false,
-      hasAuth: privacyInfo?.headers?.hasAuth ?? false,
-      hasCache: !!privacyInfo
+      cacheControl: headers?.cacheControl,
+      hasCookie: headers?.hasCookie || false,
+      hasAuth: headers?.hasAuth || false,
+      hasCache: !!headers?.cacheControl
     };
+
+    // プライバシー判定（Service Workerから取得した情報を使用）
+    const isPrivate = privacyInfo?.isPrivate || false;
+    const reason = privacyInfo?.reason;
+
+    console.log('[StatusChecker] Privacy detection:', {
+      isPrivate,
+      reason,
+      cacheControl: cacheInfo.cacheControl,
+      hasCookie: cacheInfo.hasCookie,
+      hasAuth: cacheInfo.hasAuth,
+      hasCache: cacheInfo.hasCache
+    });
 
     // 最終保存時刻
     const savedTimestamp = savedUrls.get(url);
@@ -168,9 +235,9 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
         matchedPattern
       },
       privacy: {
-        isPrivate: privacyInfo?.isPrivate ?? false,
-        reason: privacyInfo?.reason,
-        hasCache: !!privacyInfo,
+        isPrivate,
+        reason,
+        hasCache: cacheInfo.hasCache,
         piiRisk: undefined // 将来の拡張用
       },
       cache: cacheInfo,

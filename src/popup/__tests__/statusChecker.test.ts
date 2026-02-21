@@ -197,4 +197,100 @@ describe('checkPageStatus', () => {
 
     expect(result).toBeNull();
   });
+
+  it('should normalize URL and match cache (trailing slash)', async () => {
+    const urlWithSlash = 'https://example.com/page/';
+    const urlWithoutSlash = 'https://example.com/page';
+
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now(),
+      headers: {
+        cacheControl: 'no-store',
+        hasCookie: false,
+        hasAuth: false
+      }
+    };
+
+    // Cache without slash
+    RecordingLogic.cacheState.privacyCache?.set(urlWithoutSlash, privacyInfo);
+
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    // Query with slash should match
+    const result = await checkPageStatus(urlWithSlash);
+
+    expect(result.privacy.isPrivate).toBe(true);
+    expect(result.privacy.reason).toBe('cache-control');
+    expect(result.cache.cacheControl).toBe('no-store');
+  });
+
+  it('should normalize URL and match cache (fragment)', async () => {
+    const urlWithFragment = 'https://example.com/page#section';
+    const urlWithoutFragment = 'https://example.com/page';
+
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'no-store' as const,
+      timestamp: Date.now(),
+      headers: {
+        cacheControl: 'no-store',
+        hasCookie: false,
+        hasAuth: false
+      }
+    };
+
+    // Cache without fragment
+    RecordingLogic.cacheState.privacyCache?.set(urlWithoutFragment, privacyInfo);
+
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    // Query with fragment should match
+    const result = await checkPageStatus(urlWithFragment);
+
+    expect(result.privacy.isPrivate).toBe(true);
+    expect(result.cache.cacheControl).toBe('no-store');
+  });
+
+  it('should preserve trailing slash for root path', async () => {
+    const rootUrl = 'https://www.yomiuri.co.jp/';
+
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now(),
+      headers: {
+        cacheControl: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        hasCookie: false,
+        hasAuth: false
+      }
+    };
+
+    // Cache with trailing slash (root path)
+    RecordingLogic.cacheState.privacyCache?.set(rootUrl, privacyInfo);
+
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    // Query should match
+    const result = await checkPageStatus(rootUrl);
+
+    expect(result.privacy.isPrivate).toBe(true);
+    expect(result.cache.cacheControl).toBe('no-store, no-cache, must-revalidate, proxy-revalidate');
+  });
 });
