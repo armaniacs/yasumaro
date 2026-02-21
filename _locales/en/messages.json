@@ -802,5 +802,65 @@
     },
     "promptDuplicated": {
         "message": "Prompt copied to editor"
+    },
+    "statusDomainFilter": {
+        "message": "Domain Filter"
+    },
+    "statusPrivacy": {
+        "message": "Privacy"
+    },
+    "statusCache": {
+        "message": "Cache Status"
+    },
+    "statusLastSaved": {
+        "message": "Last Saved"
+    },
+    "statusShowDetails": {
+        "message": "Show Details"
+    },
+    "statusHideDetails": {
+        "message": "Hide Details"
+    },
+    "statusRecordable": {
+        "message": "Recordable"
+    },
+    "statusBlocked": {
+        "message": "Blocked"
+    },
+    "statusPrivateDetected": {
+        "message": "Private"
+    },
+    "statusNoInfo": {
+        "message": "No Info"
+    },
+    "statusNotSaved": {
+        "message": "Not Saved"
+    },
+    "statusReloadHint": {
+        "message": "Reload page to detect"
+    },
+    "statusDomainAllowed": {
+        "message": "Allowed"
+    },
+    "statusDomainBlocked": {
+        "message": "Blocked"
+    },
+    "statusFilterModeDisabled": {
+        "message": "Filter Disabled"
+    },
+    "statusFilterModeWhitelist": {
+        "message": "Whitelist Mode"
+    },
+    "statusFilterModeBlacklist": {
+        "message": "Blacklist Mode"
+    },
+    "statusCacheControlPrivate": {
+        "message": "Cache-Control: private detected"
+    },
+    "statusSetCookieDetected": {
+        "message": "Set-Cookie: present"
+    },
+    "statusAuthDetected": {
+        "message": "Authorization: present"
     }
 }
