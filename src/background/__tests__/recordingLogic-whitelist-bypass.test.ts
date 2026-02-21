@@ -109,4 +109,45 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     expect(result.error).toBeUndefined();
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
   });
+
+  it('should perform normal privacy check for non-whitelisted domain', async () => {
+    // モック設定: ホワイトリストにconfluence.example.comのみ登録
+    const mockSettings: Partial<Settings> = {
+      [StorageKeys.DOMAIN_WHITELIST]: ['confluence.example.com'],
+      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
+    };
+
+    const { getSettings } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSettings.mockResolvedValue(mockSettings);
+
+    // プライバシーキャッシュ: isPrivate=true をセット
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now()
+    };
+    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingLogic.cacheState.privacyCache.set('https://bank.example.com/page', privacyInfo);
+
+    // ドメインフィルター: 許可
+    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainAllowed.mockResolvedValue(true);
+
+    // テスト実行（非ホワイトリストドメイン）
+    const result = await recordingLogic.record({
+      title: 'Bank Page',
+      url: 'https://bank.example.com/page',
+      content: 'Test content',
+      force: false
+    });
+
+    // 検証: PRIVATE_PAGE_DETECTEDエラーが返ること
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+    expect(result.reason).toBe('cache-control');
+    expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+  });
 });
