@@ -150,4 +150,129 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     expect(result.reason).toBe('cache-control');
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
   });
+
+  it('should support wildcard pattern in whitelist', async () => {
+    // モック設定: ワイルドカードパターンをホワイトリストに登録
+    const mockSettings: Partial<Settings> = {
+      [StorageKeys.DOMAIN_WHITELIST]: ['*.confluence.example.com'],
+      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
+    };
+
+    const { getSettings } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSettings.mockResolvedValue(mockSettings);
+
+    // プライバシーキャッシュ: isPrivate=true をセット
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'set-cookie' as const,
+      timestamp: Date.now()
+    };
+    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingLogic.cacheState.privacyCache.set('https://wiki.confluence.example.com/page', privacyInfo);
+
+    // ドメインフィルター: 許可
+    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainAllowed.mockResolvedValue(true);
+
+    // URLキャッシュを空に設定
+    const { getSavedUrlsWithTimestamps } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+
+    // テスト実行（サブドメイン）
+    const result = await recordingLogic.record({
+      title: 'Wiki Page',
+      url: 'https://wiki.confluence.example.com/page',
+      content: 'Test content',
+      force: false
+    });
+
+    // 検証: 成功すること（ワイルドカードマッチでバイパス）
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+    expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+  });
+
+  it('should perform privacy check when whitelist is empty', async () => {
+    // モック設定: 空のホワイトリスト
+    const mockSettings: Partial<Settings> = {
+      [StorageKeys.DOMAIN_WHITELIST]: [],
+      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
+    };
+
+    const { getSettings } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSettings.mockResolvedValue(mockSettings);
+
+    // プライバシーキャッシュ: isPrivate=true をセット
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'authorization' as const,
+      timestamp: Date.now()
+    };
+    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingLogic.cacheState.privacyCache.set('https://example.com/page', privacyInfo);
+
+    // ドメインフィルター: 許可
+    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainAllowed.mockResolvedValue(true);
+
+    // テスト実行
+    const result = await recordingLogic.record({
+      title: 'Test Page',
+      url: 'https://example.com/page',
+      content: 'Test content',
+      force: false
+    });
+
+    // 検証: PRIVATE_PAGE_DETECTEDエラーが返ること
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+    expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+  });
+
+  it('should fallback to privacy check on URL parse error', async () => {
+    // モック設定: ホワイトリストあり
+    const mockSettings: Partial<Settings> = {
+      [StorageKeys.DOMAIN_WHITELIST]: ['example.com'],
+      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
+    };
+
+    const { getSettings } = require('../../utils/storage.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    getSettings.mockResolvedValue(mockSettings);
+
+    // プライバシーキャッシュ: isPrivate=true をセット（不正なURLでもキャッシュキーとして使える）
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now()
+    };
+    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingLogic.cacheState.privacyCache.set('invalid-url', privacyInfo);
+
+    // ドメインフィルター: 許可
+    const { isDomainAllowed } = require('../../utils/domainUtils.js');
+    // @ts-expect-error - jest.fn() type narrowing issue
+    isDomainAllowed.mockResolvedValue(true);
+
+    // テスト実行（不正なURL）
+    const result = await recordingLogic.record({
+      title: 'Invalid URL',
+      url: 'invalid-url',
+      content: 'Test content',
+      force: false
+    });
+
+    // 検証: PRIVATE_PAGE_DETECTEDエラーが返ること（URLパースエラー時はプライバシーチェックにフォールバック）
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+    expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+  });
 });
