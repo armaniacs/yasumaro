@@ -882,5 +882,48 @@
     },
     "statusAuthDetected": {
         "message": "Authorization: present"
+    },
+    "warningPrivatePage": {
+        "message": "Private Page Detected"
+    },
+    "warningPrivatePageMessage": {
+        "message": "$HEADER$ detected.\n\nURL:\n$URL$",
+        "placeholders": {
+            "header": { "content": "$1" },
+            "url": { "content": "$2" }
+        }
+    },
+    "warningConfirmSave": {
+        "message": "Do you want to save?"
+    },
+    "btnCancel": {
+        "message": "Cancel"
+    },
+    "btnSaveOnce": {
+        "message": "Save Once"
+    },
+    "btnSaveWhitelistDomain": {
+        "message": "Save & Allow Domain"
+    },
+    "btnSaveWhitelistPath": {
+        "message": "Save & Allow Path"
+    },
+    "pendingPagesTitle": {
+        "message": "Pending Pages"
+    },
+    "pendingPagesEmpty": {
+        "message": "No pending pages"
+    },
+    "btnSelectAll": {
+        "message": "Select All"
+    },
+    "btnSaveSelected": {
+        "message": "Save"
+    },
+    "btnSaveWhitelist": {
+        "message": "Allow & Save"
+    },
+    "btnDiscard": {
+        "message": "Discard"
     }
 }
