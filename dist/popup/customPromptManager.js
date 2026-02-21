@@ -20,6 +20,16 @@ let promptStatusDiv = null;
 // Current settings
 let currentSettings = null;
 /**
+ * Check if default prompt is active (no custom prompts are active)
+ * @returns {boolean} True if default should be shown as active
+ */
+function isDefaultActive() {
+    if (!currentSettings)
+        return true;
+    const prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
+    return prompts.every(p => !p.isActive);
+}
+/**
  * Initialize the custom prompt manager
  * @param {Settings} settings - Current settings
  */
@@ -53,18 +63,27 @@ function renderPromptList() {
     if (!promptList || !noPromptsMessage || !currentSettings)
         return;
     const prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
-    if (prompts.length === 0) {
-        promptList.innerHTML = '';
-        noPromptsMessage.style.display = 'block';
-        return;
-    }
+    // Always hide "no prompts" message since default is always shown
     noPromptsMessage.style.display = 'none';
-    promptList.innerHTML = prompts.map(prompt => createPromptListItem(prompt)).join('');
-    // Attach event listeners to prompt items
+    // Build HTML: default first, then custom prompts
+    const defaultItemHtml = createDefaultPromptItem();
+    const customItemsHtml = prompts.map(prompt => createPromptListItem(prompt)).join('');
+    promptList.innerHTML = defaultItemHtml + customItemsHtml;
+    // Attach event listeners for default prompt
+    const defaultActivateBtn = document.getElementById('activate-prompt-__default__');
+    const defaultDuplicateBtn = document.getElementById('duplicate-prompt-__default__');
+    if (defaultActivateBtn) {
+        defaultActivateBtn.addEventListener('click', () => handleActivatePrompt('__default__', 'all'));
+    }
+    if (defaultDuplicateBtn) {
+        defaultDuplicateBtn.addEventListener('click', () => handleDuplicatePrompt('__default__'));
+    }
+    // Attach event listeners to custom prompt items
     prompts.forEach(prompt => {
         const editBtn = document.getElementById(`edit-prompt-${prompt.id}`);
         const deleteBtn = document.getElementById(`delete-prompt-${prompt.id}`);
         const activateBtn = document.getElementById(`activate-prompt-${prompt.id}`);
+        const duplicateBtn = document.getElementById(`duplicate-prompt-${prompt.id}`);
         if (editBtn) {
             editBtn.addEventListener('click', () => handleEditPrompt(prompt.id));
         }
@@ -74,7 +93,33 @@ function renderPromptList() {
         if (activateBtn) {
             activateBtn.addEventListener('click', () => handleActivatePrompt(prompt.id, prompt.provider));
         }
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(prompt.id));
+        }
     });
+}
+/**
+ * Create HTML for the default prompt item
+ * @returns {string} HTML string
+ */
+function createDefaultPromptItem() {
+    const isActive = isDefaultActive();
+    const activeBadge = isActive
+        ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
+        : '';
+    return `
+        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="__default__">
+            <div class="prompt-item-header">
+                <span class="prompt-name" data-i18n="defaultPrompt">Default</span>
+                <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+                ${activeBadge}
+            </div>
+            <div class="prompt-item-actions">
+                ${!isActive ? `<button id="activate-prompt-__default__" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
+                <button id="duplicate-prompt-__default__" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+            </div>
+        </div>
+    `;
 }
 /**
  * Create HTML for a prompt list item
@@ -93,13 +138,11 @@ function createPromptListItem(prompt) {
                 <span class="prompt-provider">(${providerLabel})</span>
                 ${activeBadge}
             </div>
-            <div class="prompt-item-content">
-                ${escapeHtml(prompt.prompt.substring(0, 100))}${prompt.prompt.length > 100 ? '...' : ''}
-            </div>
             <div class="prompt-item-actions">
-                ${!prompt.isActive ? `<button id="activate-prompt-${prompt.id}" class="btn-sm btn-activate" data-i18n="activate">Activate</button>` : ''}
-                <button id="edit-prompt-${prompt.id}" class="btn-sm btn-edit" data-i18n="edit">Edit</button>
-                <button id="delete-prompt-${prompt.id}" class="btn-sm btn-delete" data-i18n="delete">Delete</button>
+                ${!prompt.isActive ? `<button id="activate-prompt-${prompt.id}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
+                <button id="duplicate-prompt-${prompt.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+                <button id="edit-prompt-${prompt.id}" class="btn-sm btn-edit" data-i18n="edit">編集</button>
+                <button id="delete-prompt-${prompt.id}" class="btn-sm btn-delete" data-i18n="delete">削除</button>
             </div>
         </div>
     `;
@@ -176,6 +219,11 @@ async function handleSavePrompt() {
  * @param {string} promptId - ID of prompt to edit
  */
 function handleEditPrompt(promptId) {
+    // Prevent editing default prompt
+    if (promptId === '__default__') {
+        showStatus('Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
+        return;
+    }
     if (!currentSettings || !promptNameInput || !promptProviderSelect || !promptTextInput)
         return;
     const prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
@@ -205,6 +253,11 @@ function handleEditPrompt(promptId) {
  * @param {string} promptId - ID of prompt to delete
  */
 async function handleDeletePrompt(promptId) {
+    // Prevent deleting default prompt
+    if (promptId === '__default__') {
+        showStatus('Cannot delete default prompt', 'error');
+        return;
+    }
     if (!currentSettings)
         return;
     // Confirm deletion
@@ -228,13 +281,79 @@ async function handleActivatePrompt(promptId, provider) {
     if (!currentSettings)
         return;
     let prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
-    prompts = setActivePrompt(prompts, promptId, provider);
+    if (promptId === '__default__') {
+        // Deactivate all custom prompts to activate default
+        prompts = prompts.map(p => ({
+            ...p,
+            isActive: false,
+            updatedAt: Date.now()
+        }));
+        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+    }
+    else {
+        // Activate custom prompt
+        prompts = setActivePrompt(prompts, promptId, provider);
+        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+    }
     // Save to settings
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
     await saveSettings(currentSettings);
-    showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
     renderPromptList();
     applyI18n();
+}
+/**
+ * Handle duplicate prompt button click
+ * Loads prompt data into editor without saving
+ * @param {string} promptId - ID of prompt to duplicate (or '__default__' for default)
+ */
+function handleDuplicatePrompt(promptId) {
+    if (!promptNameInput || !promptProviderSelect || !promptTextInput || !currentSettings)
+        return;
+    let name = '';
+    let provider = 'all';
+    let systemPrompt = '';
+    let promptText = '';
+    if (promptId === '__default__') {
+        // Duplicate default prompt
+        name = getMessage('defaultPrompt') || 'Default';
+        provider = 'all';
+        systemPrompt = DEFAULT_SYSTEM_PROMPT;
+        promptText = DEFAULT_USER_PROMPT;
+    }
+    else {
+        // Duplicate custom prompt
+        const prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
+        const prompt = prompts.find(p => p.id === promptId);
+        if (!prompt) {
+            showStatus('Prompt not found', 'error');
+            return;
+        }
+        name = prompt.name;
+        provider = prompt.provider;
+        systemPrompt = prompt.systemPrompt || '';
+        promptText = prompt.prompt;
+    }
+    // Populate editor (clear editingPromptId to ensure new prompt creation)
+    promptNameInput.value = `${name} (Copy)`;
+    promptProviderSelect.value = provider;
+    if (promptSystemInput) {
+        promptSystemInput.value = systemPrompt;
+    }
+    promptTextInput.value = promptText;
+    if (editingPromptIdInput) {
+        editingPromptIdInput.value = ''; // Clear to create new
+    }
+    // Update button text
+    if (savePromptBtn) {
+        savePromptBtn.textContent = getMessage('savePrompt') || 'Save Prompt';
+    }
+    if (cancelPromptBtn) {
+        cancelPromptBtn.style.display = 'inline-block';
+    }
+    // Show status message
+    showStatus(getMessage('promptDuplicated') || 'Prompt copied to editor', 'success');
+    // Scroll to editor
+    promptNameInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 /**
  * Handle cancel edit button click

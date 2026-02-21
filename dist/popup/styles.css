@@ -1409,7 +1409,7 @@ label.inline-label {
 
 .prompt-item.active {
   border-color: var(--color-primary);
-  background: var(--color-primary-bg);
+  background: var(--color-primary-light);
 }
 
 .prompt-item-header {
@@ -1428,20 +1428,6 @@ label.inline-label {
 .prompt-provider {
   font-size: 12px;
   color: var(--color-text-muted);
-}
-
-.prompt-item-content {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-2);
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  background: var(--color-bg-code);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 60px;
-  overflow: hidden;
 }
 
 .prompt-item-actions {

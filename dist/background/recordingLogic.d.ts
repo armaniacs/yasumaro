@@ -2,12 +2,15 @@ import { PrivacyPipeline } from './privacyPipeline.js';
 import { Settings } from '../utils/storage.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import type { PrivacyInfo } from '../utils/privacyChecker.js';
 interface CacheState {
     settingsCache: Settings | null;
     cacheTimestamp: number | null;
     cacheVersion: number;
     urlCache: Map<string, number> | null;
     urlCacheTimestamp: number | null;
+    privacyCache: Map<string, PrivacyInfo> | null;
+    privacyCacheTimestamp: number | null;
 }
 export interface RecordingData {
     title: string;
@@ -70,6 +73,15 @@ export declare class RecordingLogic {
      * Problem #7: URLキャッシュ追加に伴う無効化メソッド
      */
     static invalidateUrlCache(): void;
+    /**
+     * URLのプライバシー情報をキャッシュから取得する
+     * TTL: 5分
+     */
+    getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null>;
+    /**
+     * プライバシーキャッシュを無効化する
+     */
+    static invalidatePrivacyCache(): void;
     record(data: RecordingData): Promise<RecordingResult>;
     recordWithPreview(data: RecordingData): Promise<RecordingResult>;
 }

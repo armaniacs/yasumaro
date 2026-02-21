@@ -18,7 +18,9 @@ export class RecordingLogic {
         cacheTimestamp: null,
         cacheVersion: 0,
         urlCache: null,
-        urlCacheTimestamp: null
+        urlCacheTimestamp: null,
+        privacyCache: null,
+        privacyCacheTimestamp: null
     };
     obsidian;
     aiClient;
@@ -111,6 +113,32 @@ export class RecordingLogic {
         RecordingLogic.cacheState.urlCache = null;
         RecordingLogic.cacheState.urlCacheTimestamp = null;
     }
+    /**
+     * URLのプライバシー情報をキャッシュから取得する
+     * TTL: 5分
+     */
+    async getPrivacyInfoWithCache(url) {
+        const now = Date.now();
+        const PRIVACY_CACHE_TTL = 5 * 60 * 1000; // 5分
+        if (RecordingLogic.cacheState.privacyCache) {
+            const cached = RecordingLogic.cacheState.privacyCache.get(url);
+            if (cached && (now - cached.timestamp) < PRIVACY_CACHE_TTL) {
+                addLog(LogType.DEBUG, 'Privacy cache hit', { url });
+                return cached;
+            }
+        }
+        // キャッシュミス: ヘッダー情報がまだ収集されていない
+        addLog(LogType.DEBUG, 'Privacy check skipped: no header data', { url });
+        return null;
+    }
+    /**
+     * プライバシーキャッシュを無効化する
+     */
+    static invalidatePrivacyCache() {
+        addLog(LogType.DEBUG, 'Privacy cache invalidated');
+        RecordingLogic.cacheState.privacyCache = null;
+        RecordingLogic.cacheState.privacyCacheTimestamp = null;
+    }
     async record(data) {
         let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false } = data;
         const MAX_RECORD_SIZE = 64 * 1024;
@@ -132,9 +160,64 @@ export class RecordingLogic {
             if (!isAllowed && force) {
                 addLog(LogType.WARN, 'Force recording blocked domain', { url });
             }
+            // ホワイトリスト判定と設定の事前取得
+            let shouldSkipPrivacyCheck = false;
+            let settings;
+            try {
+                settings = await this.getSettingsWithCache();
+                const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+                if (whitelist.length > 0) {
+                    const urlObj = new URL(url);
+                    const domain = urlObj.hostname;
+                    // ドメインがホワイトリストに含まれているかチェック
+                    const isWhitelisted = whitelist.some(pattern => {
+                        // ワイルドカード対応 (例: *.example.com)
+                        if (pattern.startsWith('*.')) {
+                            return domain.endsWith(pattern.slice(1));
+                        }
+                        return domain === pattern || domain.endsWith('.' + pattern);
+                    });
+                    if (isWhitelisted) {
+                        addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', {
+                            url,
+                            domain
+                        });
+                        shouldSkipPrivacyCheck = true;
+                    }
+                }
+            }
+            catch (error) {
+                // URLパースエラー等が発生した場合、安全側に倒す - プライバシーチェックにフォールバック
+                settings = await this.getSettingsWithCache();
+                addLog(LogType.ERROR, 'Whitelist check failed, falling back to privacy check', {
+                    error: error.message,
+                    url
+                });
+                // shouldSkipPrivacyCheck は false のまま（プライバシーチェックを実行）
+            }
+            // 1.5b. Check privacy headers (ホワイトリスト該当時はスキップ)
+            if (!shouldSkipPrivacyCheck) {
+                const privacyInfo = await this.getPrivacyInfoWithCache(url);
+                if (privacyInfo?.isPrivate && !force) {
+                    addLog(LogType.WARN, 'Private page detected', {
+                        url,
+                        reason: privacyInfo.reason
+                    });
+                    return {
+                        success: false,
+                        error: 'PRIVATE_PAGE_DETECTED',
+                        reason: privacyInfo.reason
+                    };
+                }
+                if (privacyInfo?.isPrivate && force) {
+                    addLog(LogType.WARN, 'Force recording private page', {
+                        url,
+                        reason: privacyInfo.reason
+                    });
+                }
+            }
             // 2. Check for duplicates (日付ベース: 同一ページは1日1回のみ)
-            // 設定キャッシュを使用
-            const settings = await this.getSettingsWithCache();
+            // 設定は既に取得済み
             // Code Review #1: 設定からモードを更新
             // Settings型は StorageKeys でアクセス可能
             this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';

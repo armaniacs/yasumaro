@@ -2,6 +2,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
+import { HeaderDetector } from './headerDetector.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject, updateDomainFilterCache } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
@@ -177,6 +178,8 @@ const initializeExtension = async () => {
         await saveSettingsWithAllowedUrls(settings);
         // 【Task #19 最適化】ドメインフィルタキャッシュを更新
         await updateDomainFilterCache(settings);
+        // HeaderDetector初期化
+        HeaderDetector.initialize();
         console.log('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.');
     }
     catch (error) {
