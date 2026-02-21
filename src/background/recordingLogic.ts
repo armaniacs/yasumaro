@@ -2,7 +2,7 @@
 import { PrivacyPipeline, PrivacyPipelineOptions, PrivacyPipelineResult } from './privacyPipeline.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { isDomainAllowed } from '../utils/domainUtils.js';
+import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
 import { getUserLocale } from '../utils/localeUtils.js';
@@ -10,6 +10,7 @@ import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
@@ -32,6 +33,8 @@ export interface RecordingData {
   skipDuplicateCheck?: boolean;
   alreadyProcessed?: boolean;
   previewOnly?: boolean;
+  requireConfirmation?: boolean;
+  headerValue?: string;
 }
 
 export interface RecordingResult {
@@ -49,6 +52,7 @@ export interface RecordingResult {
   maskedItems?: any[];
   /** AI処理時間 (ミリ秒) */
   aiDuration?: number;
+  confirmationRequired?: boolean;
 }
 
 export class RecordingLogic {
@@ -203,8 +207,25 @@ export class RecordingLogic {
     RecordingLogic.cacheState.privacyCacheTimestamp = null;
   }
 
+  /**
+   * 保留中ページを保存するヘルパーメソッド
+   */
+  private async _savePendingPage(url: string, title: string, reason: 'cache-control' | 'set-cookie' | 'authorization', headerValue: string): Promise<void> {
+    const pendingPage: PendingPage = {
+      url,
+      title,
+      timestamp: Date.now(),
+      reason,
+      headerValue: headerValue || '',
+      expiry: Date.now() + (24 * 60 * 60 * 1000) // 24時間後
+    };
+
+    await addPendingPage(pendingPage);
+    addLog(LogType.INFO, 'Page saved to pending', { url, title, reason });
+  }
+
   async record(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '' } = data;
     const MAX_RECORD_SIZE = 64 * 1024;
 
     try {
@@ -237,19 +258,9 @@ export class RecordingLogic {
         const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
 
         if (whitelist.length > 0) {
-          const urlObj = new URL(url);
-          const domain = urlObj.hostname;
+          const domain = extractDomain(url);
 
-          // ドメインがホワイトリストに含まれているかチェック
-          const isWhitelisted = whitelist.some(pattern => {
-            // ワイルドカード対応 (例: *.example.com)
-            if (pattern.startsWith('*.')) {
-              return domain.endsWith(pattern.slice(1));
-            }
-            return domain === pattern || domain.endsWith('.' + pattern);
-          });
-
-          if (isWhitelisted) {
+          if (domain && isDomainInList(domain, whitelist)) {
             addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', {
               url,
               domain
@@ -273,8 +284,21 @@ export class RecordingLogic {
         if (privacyInfo?.isPrivate && !force) {
           addLog(LogType.WARN, 'Private page detected', {
             url,
-            reason: privacyInfo.reason
+            reason: privacyInfo.reason,
+            requireConfirmation
           });
+
+          // requireConfirmationの場合、pendingに保存してconfirmationRequired=trueを返す
+          if (requireConfirmation) {
+            await this._savePendingPage(url, title, privacyInfo.reason, headerValue);
+            return {
+              success: false,
+              error: 'PRIVATE_PAGE_DETECTED',
+              reason: privacyInfo.reason,
+              confirmationRequired: true
+            };
+          }
+
           return {
             success: false,
             error: 'PRIVATE_PAGE_DETECTED',

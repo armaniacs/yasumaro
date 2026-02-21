@@ -1,12 +1,14 @@
-// src/background/__tests__/recordingLogic.test.js
+// src/background/__tests__/recordingLogic.test.ts
 import { RecordingLogic } from '../recordingLogic.js';
 import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
+import * as pendingStorage from '../../utils/pendingStorage.js';
 
 jest.mock('../../utils/storage.js');
 jest.mock('../../utils/domainUtils.js');
 jest.mock('../privacyPipeline.js');
+jest.mock('../../utils/pendingStorage.js');
 
 describe('RecordingLogic', () => {
   const mockObsidian = {
@@ -447,6 +449,159 @@ describe('RecordingLogic', () => {
         content: 'content'
       });
 
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+  });
+
+  describe('requireConfirmation', () => {
+    beforeEach(() => {
+      RecordingLogic.invalidatePrivacyCache();
+      RecordingLogic.invalidateSettingsCache();
+      RecordingLogic.invalidateUrlCache();
+
+      // Chrome notifications APIが存在する場合のみモック
+      if (!chrome.notifications) {
+        chrome.notifications = { create: jest.fn() };
+      }
+
+      // Reset cache state
+      RecordingLogic.cacheState = {
+        settingsCache: null,
+        cacheTimestamp: null,
+        cacheVersion: 0,
+        urlCache: null,
+        urlCacheTimestamp: null,
+        privacyCache: null,
+        privacyCacheTimestamp: null
+      };
+
+      jest.clearAllMocks();
+
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      // @ts-expect-error - jest.fn() type narrowing issue
+      domainUtils.isDomainAllowed.mockResolvedValue(true);
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => ({
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
+      }));
+      // @ts-expect-error - jest.fn() type narrowing issue
+      pendingStorage.addPendingPage.mockResolvedValue(undefined);
+    });
+
+    test('プライベートページかつrequireConfirmation=trueの場合、pendingに保存してconfirmationRequiredを返す', async () => {
+      const url = 'https://bank.example.com/account';
+      const mockPrivacyInfo = {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: Date.now()
+      };
+
+      // キャッシュに追加
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockAiClient = {} as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      const result = await logic.record({
+        title: 'Bank Account',
+        url,
+        content: 'private data',
+        headerValue: 'no-cache',
+        requireConfirmation: true
+      });
+
+      // pendingに保存されていることを確認
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith({
+        url,
+        title: 'Bank Account',
+        timestamp: expect.any(Number),
+        reason: 'cache-control',
+        headerValue: 'no-cache',
+        expiry: expect.any(Number)
+      });
+
+      // confirmationRequiredがtrueで返されることを確認
+      expect(result.success).toBe(false);
+      expect(result.confirmationRequired).toBe(true);
+      expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+      expect(result.reason).toBe('cache-control');
+
+      // Obsidianには保存されないことを確認
+      expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+    });
+
+    test('requireConfirmation=falseのプライベートページは通常通りエラーを返す', async () => {
+      const url = 'https://bank.example.com/account';
+      const mockPrivacyInfo = {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: Date.now()
+      };
+
+      // キャッシュに追加
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockAiClient = {} as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      const result = await logic.record({
+        title: 'Bank Account',
+        url,
+        content: 'private data',
+        headerValue: 'no-cache',
+        requireConfirmation: false
+      });
+
+      // pendingには保存されないことを確認
+      expect(pendingStorage.addPendingPage).not.toHaveBeenCalled();
+
+      // 通常通りPRIVATE_PAGE_DETECTEDエラーが返されることを確認
+      expect(result.success).toBe(false);
+      expect(result.confirmationRequired).toBeUndefined();
+      expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+    });
+
+    test('公開ページの場合、requireConfirmation=trueでも通常通り保存される', async () => {
+      const url = 'https://public.example.com/article';
+      const mockPrivacyInfo = {
+        isPrivate: false,
+        timestamp: Date.now()
+      };
+
+      // キャッシュに追加
+      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockAiClient = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        generateSummary: jest.fn().mockResolvedValue('summary')
+      } as any;
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      const result = await logic.record({
+        title: 'Public Article',
+        url,
+        content: 'public content',
+        headerValue: 'public',
+        requireConfirmation: true
+      });
+
+      // pendingには保存されないことを確認
+      expect(pendingStorage.addPendingPage).not.toHaveBeenCalled();
+
+      // 通常通り保存されることを確認
       expect(result.success).toBe(true);
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
     });
