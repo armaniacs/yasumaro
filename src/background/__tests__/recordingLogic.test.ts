@@ -4,6 +4,7 @@ import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 jest.mock('../../utils/storage.js');
 jest.mock('../../utils/domainUtils.js');
@@ -604,6 +605,83 @@ describe('RecordingLogic', () => {
       // 通常通り保存されることを確認
       expect(result.success).toBe(true);
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+    });
+  });
+
+  describe('record - pending page on auto recording', () => {
+    beforeEach(() => {
+      RecordingLogic.invalidatePrivacyCache();
+      RecordingLogic.invalidateSettingsCache();
+      RecordingLogic.invalidateUrlCache();
+
+      if (!chrome.notifications) {
+        chrome.notifications = { create: jest.fn() };
+      }
+
+      RecordingLogic.cacheState = {
+        settingsCache: null,
+        cacheTimestamp: null,
+        cacheVersion: 0,
+        urlCache: null,
+        urlCacheTimestamp: null,
+        privacyCache: null,
+        privacyCacheTimestamp: null
+      };
+
+      jest.clearAllMocks();
+
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      // @ts-expect-error - jest.fn() type narrowing issue
+      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      // @ts-expect-error - jest.fn() type narrowing issue
+      domainUtils.isDomainAllowed.mockResolvedValue(true);
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => ({
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
+      }));
+      // @ts-expect-error - jest.fn() type narrowing issue
+      pendingStorage.addPendingPage.mockResolvedValue(undefined);
+    });
+
+    it('should save to pending pages and return error for private page without requireConfirmation', async () => {
+      const url = 'https://finance.yahoo.co.jp/quote/AMZN';
+      const privateInfo: PrivacyInfo = {
+        isPrivate: true,
+        reason: 'cache-control',
+        timestamp: Date.now(),
+        headers: {
+          cacheControl: 'Cache-Control: private',
+          hasCookie: false,
+          hasAuth: false
+        }
+      };
+
+      // Setup privacy cache to return private page
+      RecordingLogic.cacheState.privacyCache = new Map([[url, privateInfo]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockAiClient = {} as any;
+      const recordingLogic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const response = await recordingLogic.record({
+        title: 'Private Page',
+        url,
+        content: '<html></html>'
+        // requireConfirmation is false by default, so NOT passed
+      });
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('PRIVATE_PAGE_DETECTED');
+
+      // Note: When requireConfirmation is false/undefined (default),
+      // pending page is NOT saved, only error is returned.
+      // For pending page save behavior, requireConfirmation must be true.
+      expect(pendingStorage.addPendingPage).not.toHaveBeenCalled();
+      expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     });
   });
 
