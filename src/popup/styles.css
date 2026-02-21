@@ -1782,30 +1782,30 @@ label.inline-label {
   border: none;
 }
 
-.btn-save-whitelist {
+#btn-save-whitelist {
   background-color: var(--color-info);
   color: white;
 }
 
-.btn-save-whitelist:hover {
+#btn-save-whitelist:hover {
   background-color: var(--color-info-hover);
 }
 
-.btn-save-whitelist:focus {
+#btn-save-whitelist:focus {
   outline: 2px solid var(--color-info);
   outline-offset: 2px;
 }
 
-.btn-discard {
+#btn-discard {
   background-color: var(--color-danger);
   color: white;
 }
 
-.btn-discard:hover {
+#btn-discard:hover {
   background-color: var(--color-danger-hover);
 }
 
-.btn-discard:focus {
+#btn-discard:focus {
   outline: 2px solid var(--color-danger);
   outline-offset: 2px;
 }
