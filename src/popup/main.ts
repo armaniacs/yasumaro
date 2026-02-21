@@ -8,6 +8,8 @@ import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, showSuccess, ErrorMessages, isDomainBlockedError, isConnectionError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
+import { getPendingPages } from '../utils/pendingStorage.js';
+import type { PendingPage } from '../utils/pendingStorage.js';
 
 // Export functions for testing
 export { getCurrentTab };
@@ -22,6 +24,55 @@ interface PreviewResponse {
   processedContent: string;
   maskedItems?: any[];
   maskedCount?: number;
+}
+
+// HTML escape helper function
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Load and display pending pages
+async function loadPendingPages(): Promise<void> {
+  try {
+    const pages = await getPendingPages();
+
+    const pendingSection = document.getElementById('pending-section');
+    const pendingEmpty = document.getElementById('pending-empty');
+    const pendingList = document.getElementById('pending-pages-list');
+
+    if (!pages || pages.length === 0) {
+      pendingSection?.classList.add('hidden');
+      pendingEmpty?.classList.remove('hidden');
+      return;
+    }
+
+    pendingSection?.classList.remove('hidden');
+    pendingEmpty?.classList.add('hidden');
+
+    if (pendingList) {
+      pendingList.innerHTML = '';
+      pages.forEach((page, index) => {
+        const item = document.createElement('div');
+        item.className = 'pending-item';
+        item.dataset.url = page.url;
+        item.dataset.index = String(index);
+
+        item.innerHTML = `
+          <input type="checkbox" value="${page.url}" class="pending-checkbox">
+          <div class="pending-item-content">
+            <div class="pending-item-title">${escapeHtml(page.title)}</div>
+            <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>
+          </div>
+        `;
+
+        pendingList.appendChild(item);
+      });
+    }
+  } catch (error) {
+    console.error('Failed to load pending pages:', error);
+  }
 }
 
 // 現在のタブ情報を取得して表示
@@ -239,8 +290,12 @@ if (recordBtn) {
 }
 
 // 初期化
-initializeModalEvents();
-loadCurrentTab();
+document.addEventListener('DOMContentLoaded', () => {
+  initializeModalEvents();
+  loadPendingPages();
+  loadCurrentTab();
+  void initStatusPanel();
+});
 
 // ============================================================================
 // Status Panel Initialization
@@ -321,7 +376,7 @@ function renderStatusPanel(status: StatusInfo): void {
     } else if (status.privacy.hasCache) {
       privacyIcon.textContent = '✓';
       privacyIcon.className = 'status-icon status-success';
-      privacyIcon.setAttribute('aria-label', 'Public page');
+      privacyIcon.setAttribute('aria-label', getMessage('statusPublicPage'));
     } else {
       privacyIcon.textContent = '?';
       privacyIcon.className = 'status-icon status-muted';
@@ -340,7 +395,7 @@ function renderStatusPanel(status: StatusInfo): void {
     domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
 
     if (status.domainFilter.matchedPattern) {
-      domainState.innerHTML += `<span class="status-value status-muted">パターン: ${status.domainFilter.matchedPattern}</span>`;
+      domainState.innerHTML += `<span class="status-value status-muted">${getMessage('statusPattern', [status.domainFilter.matchedPattern])}</span>`;
     }
   }
 
@@ -368,7 +423,7 @@ function renderStatusPanel(status: StatusInfo): void {
           html += `<span class="status-value status-warning">${getMessage('statusAuthDetected')}</span>`;
         }
       } else {
-        html += `<span class="status-value status-success">公開ページ</span>`;
+        html += `<span class="status-value status-success">${getMessage('statusPublicPage')}</span>`;
       }
       privacyContent.innerHTML = html;
     }
@@ -394,13 +449,13 @@ function renderStatusPanel(status: StatusInfo): void {
         html += `<span class="status-value">Cache-Control: ${status.cache.cacheControl}</span>`;
       }
       if (status.cache.hasCookie) {
-        html += `<span class="status-value">Set-Cookie: あり</span>`;
+        html += `<span class="status-value">${getMessage('statusSetCookiePresent')}</span>`;
       }
       if (status.cache.hasAuth) {
-        html += `<span class="status-value">Authorization: あり</span>`;
+        html += `<span class="status-value">${getMessage('statusAuthorizationPresent')}</span>`;
       }
       if (!html) {
-        html = '<span class="status-value status-muted">情報なし</span>';
+        html = `<span class="status-value status-muted">${getMessage('statusNoCacheInfo')}</span>`;
       }
     }
     cacheContent.innerHTML = html;
@@ -425,11 +480,10 @@ function renderSpecialUrlStatus(): void {
   if (panel) {
     panel.innerHTML = `
       <div class="status-summary">
-        <span class="status-value status-error">このページは記録できません</span>
+        <span class="status-value status-error">${getMessage('statusPageNotRecordable')}</span>
       </div>
     `;
   }
 }
 
-// 初期化を実行
-initStatusPanel();
+// initStatusPanel is called in DOMContentLoaded event listener above

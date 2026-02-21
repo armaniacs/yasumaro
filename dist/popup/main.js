@@ -8,8 +8,51 @@ import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
+import { getPendingPages } from '../utils/pendingStorage.js';
 // Export functions for testing
 export { getCurrentTab };
+// HTML escape helper function
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+// Load and display pending pages
+async function loadPendingPages() {
+    try {
+        const pages = await getPendingPages();
+        const pendingSection = document.getElementById('pending-section');
+        const pendingEmpty = document.getElementById('pending-empty');
+        const pendingList = document.getElementById('pending-pages-list');
+        if (!pages || pages.length === 0) {
+            pendingSection?.classList.add('hidden');
+            pendingEmpty?.classList.remove('hidden');
+            return;
+        }
+        pendingSection?.classList.remove('hidden');
+        pendingEmpty?.classList.add('hidden');
+        if (pendingList) {
+            pendingList.innerHTML = '';
+            pages.forEach((page, index) => {
+                const item = document.createElement('div');
+                item.className = 'pending-item';
+                item.dataset.url = page.url;
+                item.dataset.index = String(index);
+                item.innerHTML = `
+          <input type="checkbox" value="${page.url}" class="pending-checkbox">
+          <div class="pending-item-content">
+            <div class="pending-item-title">${escapeHtml(page.title)}</div>
+            <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>
+          </div>
+        `;
+                pendingList.appendChild(item);
+            });
+        }
+    }
+    catch (error) {
+        console.error('Failed to load pending pages:', error);
+    }
+}
 // 現在のタブ情報を取得して表示
 export async function loadCurrentTab() {
     const tab = await getCurrentTab();
@@ -197,8 +240,12 @@ if (recordBtn) {
     recordBtn.addEventListener('click', () => recordCurrentPage(false));
 }
 // 初期化
-initializeModalEvents();
-loadCurrentTab();
+document.addEventListener('DOMContentLoaded', () => {
+    initializeModalEvents();
+    loadPendingPages();
+    loadCurrentTab();
+    void initStatusPanel();
+});
 // ============================================================================
 // Status Panel Initialization
 // ============================================================================
@@ -378,6 +425,5 @@ function renderSpecialUrlStatus() {
     `;
     }
 }
-// 初期化を実行
-initStatusPanel();
+// initStatusPanel is called in DOMContentLoaded event listener above
 //# sourceMappingURL=main.js.map
