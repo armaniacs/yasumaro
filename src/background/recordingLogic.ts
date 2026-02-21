@@ -53,6 +53,7 @@ export interface RecordingResult {
   /** AI処理時間 (ミリ秒) */
   aiDuration?: number;
   confirmationRequired?: boolean;
+  headerValue?: string;
 }
 
 export class RecordingLogic {

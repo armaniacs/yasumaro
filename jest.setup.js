@@ -286,6 +286,21 @@ global.chrome = {
         'piiBankAccount': 'Bank Account Number',
         'piiEmail': 'E-mail',
         'piiPhoneJp': 'Phone Number',
+        // エラーメッセージ用キー
+        'errorNetwork': 'ネットワークエラーが発生しました。接続を確認してください。',
+        'errorAuth': '認証エラーが発生しました。APIキーを確認してください。',
+        'errorValidation': '入力内容を確認してください。',
+        'errorNotFound': 'リソースが見つかりません。',
+        'errorRateLimit': 'リクエスト制限を超えました。しばらく待ってから再試行してください。',
+        'errorServer': 'サーバーエラーが発生しました。',
+        'errorGeneric': 'エラーが発生しました。',
+        'errorUrlNotAllowed': 'このURLは記録できません。',
+        'errorDomainBlocked': 'このドメインはブロックされています。',
+        'errorInvalidUrlGeneric': '無効なURLです。',
+        'errorObsidianConnection': 'Obsidianとの接続に失敗しました。',
+        'errorDailyNoteSave': 'デイリーノートの保存に失敗しました。',
+        'errorAiSummarize': 'AI要約に失敗しました。',
+        'errorContentEmpty': 'コンテンツが空です。'
       };
 
       let message = messages[key] || key;

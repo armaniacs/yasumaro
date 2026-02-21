@@ -47,12 +47,18 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
 
-1. **全Webサイトへのアクセス権限 (`host_permissions`)**:
+1. **全Webサイトへのアクセス権限 (`<all_urls>`)**:
    - 訪問したページのコンテンツを抽出するために必要です
    - ページのタイトル、URL、本文テキストを取得します
    - このデータはAI要約生成とObsidianへの保存にのみ使用されます
 
-2. **ネットワーク接続権限 (`connect-src`)**:
+2. **Webリクエスト監視権限 (`webRequest`)**:
+   - HTTPレスポンスヘッダーを解析し、プライベートページを自動検出するために必要です
+   - `Cache-Control: no-store`、`Set-Cookie`、`Authorization` ヘッダーを検出します
+   - プライベートページ（銀行、メール等）での誤った記録を防ぐために使用されます
+   - **重要**: リクエストの内容は変更・ブロックしません（読み取りのみ）
+
+3. **ネットワーク接続権限 (`connect-src`)**:
    - Obsidian Local REST API（ローカルサーバー）への接続
    - Google Gemini APIへの接続
    - ユーザーが設定したOpenAI互換APIへの接続
@@ -85,12 +91,18 @@ The Extension collects the following data **locally on your device**:
 ### Extension Permissions
 This extension requires the following permissions:
 
-1. **Access to All Websites (`host_permissions`)**:
+1. **Access to All Websites (`<all_urls>`)**:
    - Required to extract content from visited pages
    - Collects page titles, URLs, and body text
    - Data is used solely for AI summarization and saving to Obsidian
 
-2. **Network Connection Permissions (`connect-src`)**:
+2. **Web Request Monitoring (`webRequest`)**:
+   - Required to analyze HTTP response headers for automatic private page detection
+   - Detects `Cache-Control: no-store`, `Set-Cookie`, and `Authorization` headers
+   - Used to prevent accidental recording of private pages (banking, email, etc.)
+   - **Important**: Does not modify or block requests (read-only)
+
+3. **Network Connection Permissions (`connect-src`)**:
    - Connection to Obsidian Local REST API (local server)
    - Connection to Google Gemini API
    - Connection to user-configured OpenAI-compatible APIs

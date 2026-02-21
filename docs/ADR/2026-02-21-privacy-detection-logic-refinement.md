@@ -334,6 +334,19 @@ Headers:
 理由: no-store + Set-Cookie の組み合わせ
 ```
 
+### 6. BBC News記事（パブリック）
+
+```
+URL: https://www.bbc.com/news/...
+Headers:
+  Cache-Control: public, stale-if-error=90, stale-while-revalidate=30, max-age=30
+
+判定: パブリック（記録される）
+理由: Cache-Control: public が明示的に設定されており、CDN/プロキシでの共有キャッシュが許可されている
+```
+
+**解説**: `public` ディレクティブは「このレスポンスは共有キャッシュ（CDN/プロキシ）で保存してよい」ことを明示的に宣言する。BBC Newsのような公開ニュースサイトでは、`public` を明示的に設定することで、世界中のCDNでキャッシュされ、高速に配信されることを意図している。これは「誰が見ても同じ公開コンテンツ」であることの明確な証拠となる。
+
 ## References（参照）
 
 ### RFC仕様書
