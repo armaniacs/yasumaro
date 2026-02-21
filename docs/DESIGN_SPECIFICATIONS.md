@@ -194,43 +194,66 @@ The implementation MUST strictly conform to uBlock Origin filter format:
 The Private Page Confirmation feature allows users to review and manage pages that were marked as private before saving. This prevents accidental saving of sensitive content while giving users control over what gets recorded.
 
 ### 13.2 Pending Pages Storage
-- **Storage Key**: `PENDING_PAGES`
-- **Structure**: Map of page IDs to pending page data
+- **Storage Key**: `pendingPages`
+- **Structure**: Array of `PendingPage` objects
 - **Data Fields**:
-  - `id`: Unique identifier (timestamp-based)
-  - `url`: Page URL
-  - `title`: Page title
-  - `message`: Privacy warning message
-  - `timestamp`: Detection timestamp
+  - `url`: Page URL (required)
+  - `title`: Page title (required)
+  - `timestamp`: Detection timestamp (required)
+  - `reason`: Detection reason - `cache-control`, `set-cookie`, or `authorization` (required)
+  - `headerValue`: Header value that triggered detection (optional)
+  - `expiry`: Expiration timestamp - 24 hours after detection (required)
 - **Operations**:
-  - `addPendingPage()`: Add page to pending list
-  - `getPendingPages()`: Retrieve all pending pages
-  - `removePendingPage()`: Remove specific pending page
-  - `clearPendingPages()`: Clear all pending pages
+  - `addPendingPage(page)`: Add page to pending list (deduplicates by URL)
+  - `getPendingPages()`: Retrieve all non-expired pending pages
+  - `removePendingPages(urls)`: Remove pages with matching URLs
+  - `clearExpiredPages()`: Remove all expired pages (manual trigger)
+- **Lib Module**: `src/utils/pendingStorage.ts`
 
 ### 13.3 Recording Data Extension
 - **RecordingData interface**:
-  - `requireConfirmation`: Boolean flag to indicate confirmation is required
+  - `requireConfirmation?`: Boolean flag to indicate confirmation is required (manual save)
+  - `headerValue?`: Header value that triggered detection
 - **RecordingResult interface**:
-  - `confirmationRequired`: Boolean flag indicating if user confirmation was required
+  - `confirmationRequired?`: Boolean flag indicating if user confirmation was required
 
-### 13.4 Whitelist Addition
+### 13.4 Recording Behavior
+- **Manual Save** (`requireConfirmation: true`):
+  - Private page detected → Save to pending storage → Return `confirmationRequired: true`
+  - Popup shows confirmation dialog with options
+  - User can: Cancel, Save once, Save with domain whitelist, Save with path whitelist
+
+- **Auto Recording** (`requireConfirmation: false` or undefined):
+  - Private page detected → Save to pending storage → Return `PRIVATE_PAGE_DETECTED` error
+  - No immediate user interaction required
+  - User can review and batch-process pending pages from popup UI
+
+### 13.5 Whitelist Addition
 Users can add domains/paths to the whitelist from the confirmation dialog:
-- **Source**: Confirmation dialog provides "Add to Whitelist" button
-- **Pattern Support**: Supports wildcard patterns (e.g., `*.example.com`)
+- **Source**: Confirmation dialog provides whitelist options
+- **Pattern Support**:
+  - Domain whitelist: Simple domain names or wildcard patterns (e.g., `*.example.com`)
+  - Path whitelist: Regex patterns for precise path matching
 - **PII Masking**: Always applied even for whitelisted domains
 - **Privacy Bypass**: Whitelisted domains skip private page detection warning
 
-### 13.5 UI Components
+### 13.6 UI Components
 - **Confirmation Dialog**:
-  - Shows privacy warning message
-  - Options: Cancel, Force Save, Add to Whitelist
-  - Requires user action before proceeding
+  - Shows privacy warning message with URL and header value
+  - Options: Cancel, Save once, Save with domain whitelist, Save with path whitelist
+  - Located in `src/popup/main.ts`
 
 - **Pending Pages Panel**:
-  - Lists all pages awaiting confirmation
-  - Bulk actions: Save All, Clear All, Save Selected
-  - Individual actions: Save single page, Remove from pending list
+  - Located in `src/popup/popup.html` (#pending-section)
+  - Shows list of pages with URLs, titles, and detection reasons
+  - Batch actions: Save all, Save selected, Save with whitelist, Discard
+  - Auto-excludes expired pages (24-hour TTL)
+
+### 13.7 Security Considerations
+- **Header Value Truncation**: Header values are truncated to 1024 characters to prevent storage abuse
+- **24-Hour Expiry**: Pending pages automatically expire after 24 hours to prevent stale data accumulation
+- **HTML Escaping**: Popup UI properly escapes user-provided content (URL, title, header value)
+- **Whitelist Validation**: Domain patterns are validated before adding to whitelist
 
 ## 14. Message Passing Protocol
 

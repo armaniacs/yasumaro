@@ -12,22 +12,30 @@ All notable changes to this project will be documented in this file.
   - Show warning dialog before saving private pages
   - Support force save with user confirmation
   - 5-minute cache with 100-entry LRU eviction
+- **Private Page Confirmation**: Manual save confirmation for private pages
+  - Display confirmation dialog when manually saving private pages
+  - Options: Cancel, Save once, Save with domain whitelist, Save with path whitelist
+  - Add screening options for whitelist: domain or precise path
+  - i18n support (en/ja)
+- **Pending Pages Management**: Batch processing of auto-detected private pages
+  - Private pages detected during auto-recording are saved to pending storage
+  - Pending pages UI shows list of delayed pages with header values
+  - Batch operations: Save all, Save selected, Save with whitelist, Discard
+  - 24-hour expiry for pending pages
+  - Auto-cleanup of expired pages
 - **Whitelist Privacy Bypass**: Bypass privacy check for whitelisted domains
   - Domains in whitelist skip private page detection warning
   - Support wildcard patterns (e.g., `*.example.com`)
   - PII masking is always applied even for whitelisted domains
-  - Monitor Cache-Control (private/no-store/no-cache)
-  - Monitor Set-Cookie headers
-  - Monitor Authorization headers
-  - Show warning dialog before saving private pages
-  - Support force save with user confirmation
-  - 5-minute cache with 100-entry LRU eviction
 - Add `webRequest` permission to manifest.json
 - Add i18n messages for privacy warnings (en/ja)
 
 ### Changed
 - RecordingLogic now checks privacy headers after domain filter
 - Return `PRIVATE_PAGE_DETECTED` error with reason for private pages
+- `RecordingData` extended with `requireConfirmation` and `headerValue` parameters
+- `RecordingResult` extended with `confirmationRequired` field
+- `PendingPage.headerValue` is now optional (design compliance)
 
 ### Technical Details
 - New modules: `privacyChecker.ts`, `headerDetector.ts`

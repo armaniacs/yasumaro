@@ -540,12 +540,17 @@ describe('RecordingLogic', () => {
       expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     });
 
-    test('requireConfirmation=falseのプライベートページは通常通りエラーを返す', async () => {
+    test('requireConfirmation=falseのプライベートページはpendingに保存してエラーを返す', async () => {
       const url = 'https://bank.example.com/account';
       const mockPrivacyInfo = {
         isPrivate: true,
         reason: 'cache-control' as const,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        headers: {
+          cacheControl: 'private',
+          hasCookie: false,
+          hasAuth: false
+        }
       };
 
       // キャッシュに追加
@@ -564,10 +569,17 @@ describe('RecordingLogic', () => {
         requireConfirmation: false
       });
 
-      // pendingには保存されないことを確認
-      expect(pendingStorage.addPendingPage).not.toHaveBeenCalled();
+      // pendingに保存されることを確認（自動記録動作）
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith({
+        url,
+        title: 'Bank Account',
+        timestamp: expect.any(Number),
+        reason: 'cache-control',
+        headerValue: 'no-cache',
+        expiry: expect.any(Number)
+      });
 
-      // 通常通りPRIVATE_PAGE_DETECTEDエラーが返されることを確認
+      // PRIVATE_PAGE_DETECTEDエラーが返されることを確認
       expect(result.success).toBe(false);
       expect(result.confirmationRequired).toBeUndefined();
       expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
@@ -676,11 +688,17 @@ describe('RecordingLogic', () => {
 
       expect(response.success).toBe(false);
       expect(response.error).toBe('PRIVATE_PAGE_DETECTED');
+      expect(response.confirmationRequired).toBeUndefined();
 
-      // Note: When requireConfirmation is false/undefined (default),
-      // pending page is NOT saved, only error is returned.
-      // For pending page save behavior, requireConfirmation must be true.
-      expect(pendingStorage.addPendingPage).not.toHaveBeenCalled();
+      // Auto-ordered private pages are saved to pending for later processing
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith({
+        url,
+        title: 'Private Page',
+        timestamp: expect.any(Number),
+        reason: 'cache-control',
+        headerValue: 'Cache-Control: private',
+        expiry: expect.any(Number)
+      });
       expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     });
   });

@@ -5,7 +5,7 @@ export interface PendingPage {
   title: string;
   timestamp: number;
   reason: 'cache-control' | 'set-cookie' | 'authorization';
-  headerValue: string;
+  headerValue?: string;
   expiry: number;
 }
 
