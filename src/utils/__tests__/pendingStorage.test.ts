@@ -109,4 +109,104 @@ describe('pendingStorage', () => {
       expect(result).toEqual([validPage]);
     });
   });
+
+  describe('removePendingPages', () => {
+    it('should remove specified pages', async () => {
+      const pages = [
+        { url: 'https://example.com/page1', title: 'Page 1', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 },
+        { url: 'https://example.com/page2', title: 'Page 2', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await removePendingPages(['https://example.com/page1']);
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: [pages[1]]
+      });
+    });
+
+    it('should remove multiple specified pages', async () => {
+      const pages = [
+        { url: 'https://example.com/page1', title: 'Page 1', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 },
+        { url: 'https://example.com/page2', title: 'Page 2', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 },
+        { url: 'https://example.com/page3', title: 'Page 3', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await removePendingPages(['https://example.com/page1', 'https://example.com/page3']);
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: [pages[1]]
+      });
+    });
+
+    it('should handle empty list of URLs to remove', async () => {
+      const pages = [
+        { url: 'https://example.com/page1', title: 'Page 1', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await removePendingPages([]);
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: pages
+      });
+    });
+  });
+
+  describe('clearExpiredPages', () => {
+    it('should clear expired pages', async () => {
+      const pages = [
+        { url: 'https://example.com/expired', title: 'Expired', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() - 1000 },
+        { url: 'https://example.com/valid', title: 'Valid', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await clearExpiredPages();
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: [pages[1]]
+      });
+    });
+
+    it('should clear all pages when all are expired', async () => {
+      const pages = [
+        { url: 'https://example.com/expired1', title: 'Expired 1', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() - 1000 },
+        { url: 'https://example.com/expired2', title: 'Expired 2', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() - 2000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await clearExpiredPages();
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: []
+      });
+    });
+
+    it('should keep all pages when none are expired', async () => {
+      const pages = [
+        { url: 'https://example.com/valid1', title: 'Valid 1', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 },
+        { url: 'https://example.com/valid2', title: 'Valid 2', timestamp: Date.now(), reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: Date.now() + 86400000 }
+      ];
+
+      (getSettings as jest.Mock).mockResolvedValue({ pendingPages: pages });
+      (saveSettings as jest.Mock).mockResolvedValue();
+
+      await clearExpiredPages();
+
+      expect(saveSettings).toHaveBeenCalledWith({
+        pendingPages: pages
+      });
+    });
+  });
 });
