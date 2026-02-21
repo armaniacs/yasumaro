@@ -2,10 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [3.9.6] - to be released (RC) as 4.0
 
 ### Added
 - **Private Page Detection**: Automatic detection of private pages using HTTP headers
+  - Monitor Cache-Control (private/no-store/no-cache)
+  - Monitor Set-Cookie headers
+  - Monitor Authorization headers
+  - Show warning dialog before saving private pages
+  - Support force save with user confirmation
+  - 5-minute cache with 100-entry LRU eviction
+- **Whitelist Privacy Bypass**: Bypass privacy check for whitelisted domains
+  - Domains in whitelist skip private page detection warning
+  - Support wildcard patterns (e.g., `*.example.com`)
+  - PII masking is always applied even for whitelisted domains
   - Monitor Cache-Control (private/no-store/no-cache)
   - Monitor Set-Cookie headers
   - Monitor Authorization headers
