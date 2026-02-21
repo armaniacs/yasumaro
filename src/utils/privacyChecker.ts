@@ -13,10 +13,14 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
   const timestamp = Date.now();
 
   // 1. Cache-Control チェック（最優先）
+  // 注意: no-cache は「再検証必須」を意味するだけで、プライベートページではない
+  // ニュースサイトなど公開ページでも頻繁に使用されるため、プライベート判定から除外
+  // private = 共有キャッシュ禁止（CDN/プロキシ経由で他ユーザーに漏れるのを防ぐ）
+  // no-store = キャッシュ完全禁止（機密性の高いページ）
   const cacheControl = findHeader(headers, 'cache-control');
   if (cacheControl) {
     const value = cacheControl.value?.toLowerCase() || '';
-    if (value.includes('private') || value.includes('no-store') || value.includes('no-cache')) {
+    if (value.includes('private') || value.includes('no-store')) {
       return {
         isPrivate: true,
         reason: 'cache-control',

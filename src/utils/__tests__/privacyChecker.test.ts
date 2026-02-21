@@ -27,15 +27,17 @@ describe('privacyChecker', () => {
       expect(result.reason).toBe('cache-control');
     });
 
-    test('Cache-Control: no-cache を検出できる', () => {
+    test('Cache-Control: no-cache はプライベート判定しない（ニュースサイト等で常用されるため）', () => {
       const headers: chrome.webRequest.HttpHeader[] = [
         { name: 'cache-control', value: 'no-cache, must-revalidate' }
       ];
 
       const result = checkPrivacy(headers);
 
-      expect(result.isPrivate).toBe(true);
-      expect(result.reason).toBe('cache-control');
+      // no-cache は「再検証必須」を意味するだけで、プライベートページではない
+      // ニュースサイトなど公開ページでも頻繁に使用されるため、プライベート判定から除外
+      expect(result.isPrivate).toBe(false);
+      expect(result.reason).toBeUndefined();
     });
   });
 

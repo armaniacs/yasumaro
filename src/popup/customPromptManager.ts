@@ -140,12 +140,9 @@ function createDefaultPromptItem(): string {
                 <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
                 ${activeBadge}
             </div>
-            <div class="prompt-item-content">
-                ${escapeHtml(DEFAULT_USER_PROMPT.substring(0, 100))}${DEFAULT_USER_PROMPT.length > 100 ? '...' : ''}
-            </div>
             <div class="prompt-item-actions">
-                ${!isActive ? `<button id="activate-prompt-__default__" class="btn-sm btn-activate" data-i18n="activate">Activate</button>` : ''}
-                <button id="duplicate-prompt-__default__" class="btn-sm btn-duplicate" data-i18n="duplicate">Duplicate</button>
+                ${!isActive ? `<button id="activate-prompt-__default__" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
+                <button id="duplicate-prompt-__default__" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
             </div>
         </div>
     `;
@@ -169,14 +166,11 @@ function createPromptListItem(prompt: CustomPrompt): string {
                 <span class="prompt-provider">(${providerLabel})</span>
                 ${activeBadge}
             </div>
-            <div class="prompt-item-content">
-                ${escapeHtml(prompt.prompt.substring(0, 100))}${prompt.prompt.length > 100 ? '...' : ''}
-            </div>
             <div class="prompt-item-actions">
-                ${!prompt.isActive ? `<button id="activate-prompt-${prompt.id}" class="btn-sm btn-activate" data-i18n="activate">Activate</button>` : ''}
-                <button id="duplicate-prompt-${prompt.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">Duplicate</button>
-                <button id="edit-prompt-${prompt.id}" class="btn-sm btn-edit" data-i18n="edit">Edit</button>
-                <button id="delete-prompt-${prompt.id}" class="btn-sm btn-delete" data-i18n="delete">Delete</button>
+                ${!prompt.isActive ? `<button id="activate-prompt-${prompt.id}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
+                <button id="duplicate-prompt-${prompt.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+                <button id="edit-prompt-${prompt.id}" class="btn-sm btn-edit" data-i18n="edit">編集</button>
+                <button id="delete-prompt-${prompt.id}" class="btn-sm btn-delete" data-i18n="delete">削除</button>
             </div>
         </div>
     `;

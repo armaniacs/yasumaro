@@ -805,5 +805,65 @@
     },
     "promptDuplicated": {
         "message": "プロンプトをエディターにコピーしました"
+    },
+    "statusDomainFilter": {
+        "message": "ドメインフィルタ"
+    },
+    "statusPrivacy": {
+        "message": "プライバシー"
+    },
+    "statusCache": {
+        "message": "キャッシュ状況"
+    },
+    "statusLastSaved": {
+        "message": "最終保存"
+    },
+    "statusShowDetails": {
+        "message": "詳細を表示"
+    },
+    "statusHideDetails": {
+        "message": "詳細を隠す"
+    },
+    "statusRecordable": {
+        "message": "記録可能"
+    },
+    "statusBlocked": {
+        "message": "記録不可"
+    },
+    "statusPrivateDetected": {
+        "message": "プライベート"
+    },
+    "statusNoInfo": {
+        "message": "情報なし"
+    },
+    "statusNotSaved": {
+        "message": "未保存"
+    },
+    "statusReloadHint": {
+        "message": "ページをリロードすると取得できます"
+    },
+    "statusDomainAllowed": {
+        "message": "許可済み"
+    },
+    "statusDomainBlocked": {
+        "message": "ブロック済み"
+    },
+    "statusFilterModeDisabled": {
+        "message": "フィルタ無効"
+    },
+    "statusFilterModeWhitelist": {
+        "message": "ホワイトリストモード"
+    },
+    "statusFilterModeBlacklist": {
+        "message": "ブラックリストモード"
+    },
+    "statusCacheControlPrivate": {
+        "message": "Cache-Control: private 検出"
+    },
+    "statusSetCookieDetected": {
+        "message": "Set-Cookie: あり"
+    },
+    "statusAuthDetected": {
+        "message": "Authorization: あり"
     }
 }

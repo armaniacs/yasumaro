@@ -100,6 +100,38 @@ AI要約時のセキュリティ保護機能：
 await reviewLogs()
 ```
 
+### ホワイトリストドメインでの自動保存
+
+> [!TIP]
+> **v4.0の新機能**
+> ホワイトリストに登録されたドメインでは、プライベートページ検出による警告が表示されず、自動的に保存されます。
+
+#### 概要
+
+拡張機能はHTTPヘッダー（`Cache-Control`, `Set-Cookie`, `Authorization`）を監視して、プライベートページを自動検出します。通常、プライベートページでは保存前に警告が表示されますが、**ホワイトリストに登録されたドメイン**では警告なしで自動保存されます。
+
+#### 想定される利用シーン
+
+- 社内Confluence、社内Wiki
+- 企業向けドキュメント管理システム
+- その他、信頼できる社内システム
+
+これらのシステムは認証が必要なため「プライベートページ」として検出されますが、ホワイトリストに登録することで、シームレスに自動保存できます。
+
+#### 設定方法
+
+1. 拡張機能のポップアップを開く
+2. **「ドメインフィルター」** タブをクリック
+3. **「ホワイトリスト」** セクションにドメインを追加
+   - 例: `confluence.example.com`
+   - ワイルドカード対応: `*.confluence.example.com`
+
+#### 重要: PIIマスキングは引き続き実行されます
+
+ホワイトリストドメインでプライバシー警告がスキップされても、**マイナンバー、クレジットカード番号、メールアドレス等のPII（個人情報）は必ずマスクされてからAIに送信されます**。
+
+これにより、社内システムでの利便性とセキュリティの両立が実現します。
+
 ### 将来の展望
 
 ブラウザの `window.ai` 実装が安定次第、Mode A/B のローカルAI機能が自動的に有効になる設計となっています。
@@ -201,6 +233,38 @@ To view masking execution logs, run the following in the extension's DevTools co
 ```javascript
 await reviewLogs()
 ```
+
+### Automatic Saving for Whitelisted Domains
+
+> [!TIP]
+> **New in v4.0**
+> Domains registered in the whitelist will be automatically saved without privacy detection warnings.
+
+#### Overview
+
+The extension monitors HTTP headers (`Cache-Control`, `Set-Cookie`, `Authorization`) to automatically detect private pages. Normally, a warning is displayed before saving private pages, but **domains registered in the whitelist** are automatically saved without warnings.
+
+#### Expected Use Cases
+
+- Internal Confluence, internal Wiki
+- Enterprise document management systems
+- Other trusted internal systems
+
+These systems are detected as "private pages" because they require authentication, but by registering them in the whitelist, they can be saved seamlessly.
+
+#### Configuration
+
+1. Open the extension popup
+2. Click the **"Domain Filter"** tab
+3. Add domains to the **"Whitelist"** section
+   - Example: `confluence.example.com`
+   - Wildcard support: `*.confluence.example.com`
+
+#### Important: PII Masking Still Applies
+
+Even if privacy warnings are skipped for whitelisted domains, **PII (Personal Identifiable Information) such as My Number, credit card numbers, and email addresses are always masked before being sent to AI**.
+
+This achieves a balance between convenience and security for internal systems.
 
 ### Future Outlook
 

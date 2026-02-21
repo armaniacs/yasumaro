@@ -1,4 +1,5 @@
 // Main screen functionality
+import { checkPageStatus } from './statusChecker.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { showPreview, initializeModalEvents } from './sanitizePreview.js';
 import { showSpinner, hideSpinner } from './spinner.js';
@@ -198,4 +199,175 @@ if (recordBtn) {
 // 初期化
 initializeModalEvents();
 loadCurrentTab();
+// ============================================================================
+// Status Panel Initialization
+// ============================================================================
+async function initStatusPanel() {
+    try {
+        // 現在のタブ情報を取得
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTab = tabs[0];
+        if (!currentTab?.url) {
+            // URLがない場合はパネルを非表示
+            const panel = document.getElementById('statusPanel');
+            if (panel)
+                panel.style.display = 'none';
+            return;
+        }
+        // ステータス情報を取得
+        const status = await checkPageStatus(currentTab.url);
+        if (!status) {
+            // 特殊URL（chrome://など）の場合
+            renderSpecialUrlStatus();
+            return;
+        }
+        // ステータスをレンダリング
+        renderStatusPanel(status);
+        // 展開/折りたたみイベントリスナー
+        const toggleBtn = document.getElementById('statusToggleBtn');
+        const detailsPanel = document.getElementById('statusDetails');
+        toggleBtn?.addEventListener('click', () => {
+            const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+            toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+            detailsPanel?.classList.toggle('hidden');
+            detailsPanel?.setAttribute('aria-hidden', String(isExpanded));
+            const toggleText = document.getElementById('statusToggleText');
+            if (toggleText) {
+                toggleText.textContent = isExpanded
+                    ? getMessage('statusShowDetails')
+                    : getMessage('statusHideDetails');
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error initializing status panel:', error);
+        // エラー時はパネルを非表示
+        const panel = document.getElementById('statusPanel');
+        if (panel)
+            panel.style.display = 'none';
+    }
+}
+function renderStatusPanel(status) {
+    // アイコン表示
+    const domainIcon = document.getElementById('statusDomainIcon');
+    const privacyIcon = document.getElementById('statusPrivacyIcon');
+    if (domainIcon) {
+        if (status.domainFilter.allowed) {
+            domainIcon.textContent = '✓';
+            domainIcon.className = 'status-icon status-success';
+            domainIcon.setAttribute('aria-label', getMessage('statusRecordable'));
+        }
+        else {
+            domainIcon.textContent = '✗';
+            domainIcon.className = 'status-icon status-error';
+            domainIcon.setAttribute('aria-label', getMessage('statusBlocked'));
+        }
+    }
+    if (privacyIcon) {
+        if (status.privacy.isPrivate) {
+            privacyIcon.textContent = '⚠';
+            privacyIcon.className = 'status-icon status-warning';
+            privacyIcon.setAttribute('aria-label', getMessage('statusPrivateDetected'));
+        }
+        else if (status.privacy.hasCache) {
+            privacyIcon.textContent = '✓';
+            privacyIcon.className = 'status-icon status-success';
+            privacyIcon.setAttribute('aria-label', 'Public page');
+        }
+        else {
+            privacyIcon.textContent = '?';
+            privacyIcon.className = 'status-icon status-muted';
+            privacyIcon.setAttribute('aria-label', getMessage('statusNoInfo'));
+        }
+    }
+    // ドメインフィルタセクション
+    const domainState = document.getElementById('statusDomainState');
+    const domainMode = document.getElementById('statusDomainMode');
+    if (domainState) {
+        const stateMsg = status.domainFilter.allowed
+            ? getMessage('statusDomainAllowed')
+            : getMessage('statusDomainBlocked');
+        domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
+        if (status.domainFilter.matchedPattern) {
+            domainState.innerHTML += `<span class="status-value status-muted">パターン: ${status.domainFilter.matchedPattern}</span>`;
+        }
+    }
+    if (domainMode) {
+        const modeKey = `statusFilterMode${status.domainFilter.mode.charAt(0).toUpperCase()}${status.domainFilter.mode.slice(1)}`;
+        domainMode.innerHTML = `<span class="status-value status-muted">${getMessage(modeKey)}</span>`;
+    }
+    // プライバシーセクション
+    const privacyContent = document.getElementById('statusPrivacyContent');
+    if (privacyContent) {
+        if (!status.privacy.hasCache) {
+            privacyContent.innerHTML = `
+        <span class="status-value status-muted">${getMessage('statusNoInfo')}</span>
+        <span class="status-value status-muted" style="font-size: 11px;">${getMessage('statusReloadHint')}</span>
+      `;
+        }
+        else {
+            let html = '';
+            if (status.privacy.isPrivate) {
+                if (status.privacy.reason === 'cache-control') {
+                    html += `<span class="status-value status-warning">${getMessage('statusCacheControlPrivate')}</span>`;
+                }
+                else if (status.privacy.reason === 'set-cookie') {
+                    html += `<span class="status-value status-warning">${getMessage('statusSetCookieDetected')}</span>`;
+                }
+                else if (status.privacy.reason === 'authorization') {
+                    html += `<span class="status-value status-warning">${getMessage('statusAuthDetected')}</span>`;
+                }
+            }
+            else {
+                html += `<span class="status-value status-success">公開ページ</span>`;
+            }
+            privacyContent.innerHTML = html;
+        }
+    }
+    // キャッシュセクション
+    const cacheContent = document.getElementById('statusCacheContent');
+    if (cacheContent) {
+        if (!status.cache.hasCache) {
+            cacheContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+        }
+        else {
+            let html = '';
+            if (status.cache.cacheControl) {
+                html += `<span class="status-value">Cache-Control: ${status.cache.cacheControl}</span>`;
+            }
+            if (status.cache.hasCookie) {
+                html += `<span class="status-value">Set-Cookie: あり</span>`;
+            }
+            if (status.cache.hasAuth) {
+                html += `<span class="status-value">Authorization: あり</span>`;
+            }
+            cacheContent.innerHTML = html || '<span class="status-value status-muted">情報なし</span>';
+        }
+    }
+    // 最終保存セクション
+    const lastSavedContent = document.getElementById('statusLastSavedContent');
+    if (lastSavedContent) {
+        if (!status.lastSaved.exists) {
+            lastSavedContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNotSaved')}</span>`;
+        }
+        else {
+            lastSavedContent.innerHTML = `
+        <span class="status-value">${status.lastSaved.timeAgo}</span>
+        <span class="status-value status-muted">${status.lastSaved.formatted}</span>
+      `;
+        }
+    }
+}
+function renderSpecialUrlStatus() {
+    const panel = document.getElementById('statusPanel');
+    if (panel) {
+        panel.innerHTML = `
+      <div class="status-summary">
+        <span class="status-value status-error">このページは記録できません</span>
+      </div>
+    `;
+    }
+}
+// 初期化を実行
+initStatusPanel();
 //# sourceMappingURL=main.js.map
