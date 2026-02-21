@@ -211,12 +211,16 @@ export class RecordingLogic {
    * 保留中ページを保存するヘルパーメソッド
    */
   private async _savePendingPage(url: string, title: string, reason: 'cache-control' | 'set-cookie' | 'authorization', headerValue: string): Promise<void> {
+    // Validate headerValue length to prevent storage abuse
+    const MAX_HEADER_VALUE_LENGTH = 1024;
+    const validatedHeaderValue = (headerValue || '').substring(0, MAX_HEADER_VALUE_LENGTH);
+
     const pendingPage: PendingPage = {
       url,
       title,
       timestamp: Date.now(),
       reason,
-      headerValue: headerValue || '',
+      headerValue: validatedHeaderValue,
       expiry: Date.now() + (24 * 60 * 60 * 1000) // 24時間後
     };
 
