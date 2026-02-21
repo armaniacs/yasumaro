@@ -1,3 +1,4 @@
+import { getMessage } from './i18n.js';
 import { RecordingLogic } from '../background/recordingLogic.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
@@ -42,18 +43,21 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
   // 相対時間
   let timeAgo: string;
   if (diff < 60 * 1000) {
-    timeAgo = 'たった今';
+    timeAgo = getMessage('timeJustNow') || 'たった今';
   } else if (diff < 60 * 60 * 1000) {
     const minutes = Math.floor(diff / (60 * 1000));
-    timeAgo = `${minutes}分前`;
+    const msg = getMessage('timeMinutesAgo', { count: minutes });
+    timeAgo = msg || `${minutes}分前`;
   } else if (diff < 24 * 60 * 60 * 1000) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
-    timeAgo = `${hours}時間前`;
+    const msg = getMessage('timeHoursAgo', { count: hours });
+    timeAgo = msg || `${hours}時間前`;
   } else if (diff < 48 * 60 * 60 * 1000) {
-    timeAgo = '昨日';
+    timeAgo = getMessage('timeYesterday') || '昨日';
   } else {
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-    timeAgo = `${days}日前`;
+    const msg = getMessage('timeDaysAgo', { count: days });
+    timeAgo = msg || `${days}日前`;
   }
 
   // 絶対時間
@@ -120,23 +124,6 @@ function normalizeUrl(url: string): string {
   } catch {
     // パース失敗時は元のURLを返す
     return url;
-  }
-}
-
-/**
- * fetch APIを使用してCache-Controlヘッダーを直接取得
- */
-async function fetchCacheControlHeader(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url, {
-      method: 'HEAD',
-      cache: 'no-store',
-      mode: 'cors'
-    });
-    return response.headers.get('cache-control');
-  } catch (error) {
-    console.warn('[StatusChecker] Failed to fetch headers:', error);
-    return null;
   }
 }
 
