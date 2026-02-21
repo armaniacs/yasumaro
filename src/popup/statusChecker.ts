@@ -117,7 +117,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     ]);
 
     // ドメインフィルタチェック
-    const mode: 'disabled' | 'whitelist' | 'blacklist' = settings.domain_filter_mode || 'disabled';
+    const mode: 'disabled' | 'whitelist' | 'blacklist' = (settings.domain_filter_mode || 'disabled') as 'disabled' | 'whitelist' | 'blacklist';
     const whitelist = settings.domain_whitelist || [];
     const blacklist = settings.domain_blacklist || [];
     const domain = extractDomain(url);

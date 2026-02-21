@@ -1071,10 +1071,6 @@ label.inline-label {
   display: none;
 }
 
-#generalPanel {
-  display: none;
-}
-
 .openai-settings {
   display: none;
 }
@@ -1189,6 +1185,126 @@ label.inline-label {
 
 .hidden {
   display: none !important;
+}
+
+/* =============================================================================
+   Status Panel
+   ============================================================================= */
+
+.status-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--color-bg-white);
+  transition: all var(--transition-fast);
+}
+
+.status-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.status-icons {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 18px;
+}
+
+.status-icon {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+}
+
+.status-toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.status-toggle:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.status-toggle-arrow {
+  font-size: 10px;
+  transition: transform var(--transition-fast);
+}
+
+.status-toggle[aria-expanded="true"] .status-toggle-arrow {
+  transform: rotate(180deg);
+}
+
+.status-details {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  animation: fadeIn var(--transition) ease;
+}
+
+.status-section {
+  margin-bottom: var(--space-3);
+}
+
+.status-section:last-child {
+  margin-bottom: 0;
+}
+
+.status-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.status-section-icon {
+  font-size: 14px;
+}
+
+.status-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.status-section-content {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding-left: calc(14px + var(--space-2));
+  line-height: 1.6;
+}
+
+.status-value {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.status-success {
+  color: var(--color-success-text);
+}
+
+.status-warning {
+  color: #92400e; /* amber-800 */
+}
+
+.status-error {
+  color: var(--color-danger-text);
+}
+
+.status-muted {
+  color: var(--color-text-muted);
 }
 
 /* =============================================================================
@@ -1409,7 +1525,7 @@ label.inline-label {
 
 .prompt-item.active {
   border-color: var(--color-primary);
-  background: var(--color-primary-bg);
+  background: var(--color-primary-light);
 }
 
 .prompt-item-header {
@@ -1428,20 +1544,6 @@ label.inline-label {
 .prompt-provider {
   font-size: 12px;
   color: var(--color-text-muted);
-}
-
-.prompt-item-content {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-2);
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  background: var(--color-bg-code);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 60px;
-  overflow: hidden;
 }
 
 .prompt-item-actions {
