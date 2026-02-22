@@ -140,10 +140,8 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
  * @param {RecordType} [recordType] - 記録方式
  */
 export async function addSavedUrl(url: string, recordType?: RecordType): Promise<void> {
-    const urlMap = await getSavedUrlsWithTimestamps();
-    urlMap.set(url, Date.now());
-    await setSavedUrlsWithTimestamps(urlMap, url);
-    await updateUrlTimestamp(url, recordType);
+    recordType ? await updateUrlTimestamp(url, recordType) : await updateUrlTimestamp(url);
+    // recordTypeを含めて1回の書き込みで完了
 }
 
 /**

@@ -450,7 +450,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
         if (recordBtn) {
           setRecordAnywayButton(recordBtn, tab, contentResponse.content);
         }
-        // finally でボタンをリセットしないよう早期リターン（finally は実行されない）
+        // finally でボタンをリセットしないよう、早期リターン後に isAwaitingForceConfirm フラグで制御
         return;
       }
 

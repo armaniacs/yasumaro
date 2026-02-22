@@ -817,6 +817,9 @@ async function initHistoryPanel(): Promise<void> {
       recordBtn.addEventListener('click', async () => {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('processing') || '処理中...';
+        // エラーメッセージ表示用要素を準備
+        let errorEl = row.querySelector('.record-error-message') as HTMLElement;
+        if (errorEl) errorEl.remove();
         try {
           const result = await chrome.runtime.sendMessage({
             type: 'MANUAL_RECORD',
@@ -833,10 +836,28 @@ async function initHistoryPanel(): Promise<void> {
             }
             if (historyStats) historyStats.textContent = `${pendingPages.length} / ${pendingPages.length}`;
           } else {
+            const errorMsg = result?.error || getMessage('recordError') || '記録に失敗しました';
+            console.error('[Dashboard] Manual record failed:', result);
+            // エラーメッセージを表示
+            errorEl = document.createElement('div');
+            errorEl.className = 'record-error-message';
+            errorEl.textContent = errorMsg;
+            info.appendChild(errorEl);
+            // 5秒後にエラーメッセージを自動消去
+            setTimeout(() => { errorEl?.remove(); }, 5000);
             recordBtn.disabled = false;
             recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
           }
-        } catch {
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : getMessage('recordError') || '記録に失敗しました';
+          console.error('[Dashboard] Manual record error:', error);
+          // エラーメッセージを表示
+          errorEl = document.createElement('div');
+          errorEl.className = 'record-error-message';
+          errorEl.textContent = errorMsg;
+          info.appendChild(errorEl);
+          // 5秒後にエラーメッセージを自動消去
+          setTimeout(() => { errorEl?.remove(); }, 5000);
           recordBtn.disabled = false;
           recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
         }
@@ -911,6 +932,9 @@ async function initHistoryPanel(): Promise<void> {
     recordBtn.addEventListener('click', async () => {
       recordBtn.disabled = true;
       recordBtn.textContent = getMessage('processing') || '処理中...';
+      // エラーメッセージ表示用要素を準備
+      let errorEl = row.querySelector('.record-error-message') as HTMLElement;
+      if (errorEl) errorEl.remove();
       try {
         const result = await chrome.runtime.sendMessage({
           type: 'MANUAL_RECORD',
@@ -928,10 +952,28 @@ async function initHistoryPanel(): Promise<void> {
           // スキップフィルター表示中なら再レンダリング
           if (activeFilter === 'skipped') applyFilters();
         } else {
+          const errorMsg = result?.error || getMessage('recordError') || '記録に失敗しました';
+          console.error('[Dashboard] Manual record failed:', result);
+          // エラーメッセージを表示
+          errorEl = document.createElement('div');
+          errorEl.className = 'record-error-message';
+          errorEl.textContent = errorMsg;
+          info.appendChild(errorEl);
+          // 5秒後にエラーメッセージを自動消去
+          setTimeout(() => { errorEl?.remove(); }, 5000);
           recordBtn.disabled = false;
           recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
         }
-      } catch {
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : getMessage('recordError') || '記録に失敗しました';
+        console.error('[Dashboard] Manual record error:', error);
+        // エラーメッセージを表示
+        errorEl = document.createElement('div');
+        errorEl.className = 'record-error-message';
+        errorEl.textContent = errorMsg;
+        info.appendChild(errorEl);
+        // 5秒後にエラーメッセージを自動消去
+        setTimeout(() => { errorEl?.remove(); }, 5000);
         recordBtn.disabled = false;
         recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
       }
