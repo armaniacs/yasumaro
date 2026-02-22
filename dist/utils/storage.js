@@ -403,7 +403,7 @@ export async function getOrCreateHmacSecret() {
 const DEFAULT_SETTINGS = {
     [StorageKeys.OBSIDIAN_API_KEY]: '', // APIキー（ユーザーが設定）
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'http', // Default HTTP for Local REST API
-    [StorageKeys.OBSIDIAN_PORT]: '27123',
+    [StorageKeys.OBSIDIAN_PORT]: '27124',
     [StorageKeys.MIN_VISIT_DURATION]: 5, // seconds
     [StorageKeys.MIN_SCROLL_DEPTH]: 50, // percentage
     [StorageKeys.GEMINI_API_KEY]: '', // APIキー（ユーザーが設定）
@@ -663,6 +663,7 @@ export async function saveSettings(settings, updateAllowedUrlsFlag = false) {
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
+export const URL_RETENTION_DAYS = 7;
 /**
  * Get the list of saved URLs with LRU eviction
  * @returns {Promise<Set<string>>} Set of saved URLs
@@ -709,9 +710,11 @@ async function updateUrlTimestamp(url) {
     entries = entries.filter(entry => entry.url !== url);
     // 新しいエントリを追加
     entries.push({ url, timestamp: Date.now() });
-    // MAX_URL_SET_SIZEを超えたら古いURLを削除
+    // 7日より古いエントリを削除（日数ベース）
+    const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    entries = entries.filter(entry => entry.timestamp >= cutoff);
+    // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
     if (entries.length > MAX_URL_SET_SIZE) {
-        // タイムスタンプでソートして古いものを削除
         entries.sort((a, b) => a.timestamp - b.timestamp);
         entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
     }
@@ -790,7 +793,7 @@ export function buildAllowedUrls(settings) {
     const allowedUrls = new Set();
     // Obsidian API
     const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
-    const port = settings[StorageKeys.OBSIDIAN_PORT] || '27123';
+    const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
     allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
     // Gemini API

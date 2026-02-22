@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.8] - to be released as RC for 4.0
+
+### Added
+- **Recording History Dashboard**: View recorded URL history in the Dashboard → History panel
+  - Record type badges: `Auto` (auto-recorded) / `Manual` (manually recorded)
+  - Filter buttons: All / Auto / Manual / Skipped / 🔒 Masked
+  - **Skipped filter**: Shows pages blocked by privacy detection (Cache-Control/Set-Cookie/Authorization), with "Record Now" button for manual save
+  - **Masked filter**: Shows only entries where PII was masked before sending to AI
+  - **Masked badge** (`🔒 N masked`): Displayed on entries where N PII items were masked; hover shows tooltip
+  - Retention policy note: records from the past 7 days (up to 10,000 entries)
+- **PII Masking Persistence**: `maskedCount` is now stored in `SavedUrlEntry` after recording
+  - `setUrlMaskedCount()` added to `storageUrls.ts`
+  - Recording pipeline writes `maskedCount` to storage after saving to Obsidian
+- **URL Retention Policy**: Changed from count-only limit to 7-day time-based retention
+  - Entries older than 7 days are automatically pruned on each new save
+  - LRU eviction applies if count still exceeds 10,000 after time-based pruning
+  - `URL_RETENTION_DAYS = 7` constant added
+  - Dashboard History panel displays the retention policy to users
+
+### Fixed
+- **Privacy cache key mismatch**: `getPrivacyInfoWithCache()` now normalizes URLs before cache lookup
+  - `HeaderDetector` stores cache keys with trailing slash removed and fragments stripped
+  - Previously, `recordingLogic` searched with raw URLs, causing cache misses and bypassing privacy checks
+  - Added `normalizeUrlForCache()` (same logic as `HeaderDetector.normalizeUrl`) to `RecordingLogic`
+
+### Changed
+- `SavedUrlEntry` interface extended with optional `maskedCount?: number` field (backward compatible)
+- Dashboard History filter bar extended from 4 to 5 buttons (added Masked filter)
+
 ## [3.9.7] - 2026-02-21
 
 ### Added

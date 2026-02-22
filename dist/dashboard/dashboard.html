@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
+  <title>Smart History Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body>
+  <div id="dashboardLayout">
+    <!-- Left Sidebar -->
+    <nav id="sidebar" class="sidebar" role="navigation" aria-label="Dashboard navigation">
+      <div class="sidebar-header">
+        <img src="../icons/icon48.png" alt="" aria-hidden="true" width="32" height="32">
+        <span class="sidebar-title" data-i18n="appTitle">Smart History</span>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="sidebar-section-label" data-i18n="settingsSection">Settings</div>
+        <button class="sidebar-nav-btn active" data-panel="panel-general" data-i18n="mainTabDashboard">初期設定</button>
+        <button class="sidebar-nav-btn" data-panel="panel-domain" data-i18n="domainTab">Domain Filter</button>
+        <button class="sidebar-nav-btn" data-panel="panel-prompt" data-i18n="promptTab">Prompt</button>
+        <button class="sidebar-nav-btn" data-panel="panel-privacy" data-i18n="privacyTab">Privacy</button>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label" data-i18n="dataSection">Data</div>
+        <button class="sidebar-nav-btn" data-panel="panel-history" data-i18n="historyTab">History</button>
+        <button class="sidebar-nav-btn" data-panel="panel-domain-search" data-i18n="domainSearchTab">Domain Search</button>
+        <button class="sidebar-nav-btn" data-panel="panel-diagnostics" data-i18n="diagnosticsTab">Diagnostics</button>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
+        <button class="sidebar-nav-btn" data-panel="panel-export-import" data-i18n="exportImportTab">Export / Import</button>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="contentArea" class="content-area">
+
+      <!-- General Settings Panel -->
+      <section id="panel-general" class="panel active" role="tabpanel">
+        <h2 class="panel-title" data-i18n="mainTabDashboard">初期設定</h2>
+        <p class="panel-description" data-i18n="initialSetupDescription">Obsidianとの接続とAIの設定を行います。</p>
+
+        <!-- Obsidian 接続セクション -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="obsidianSection">Obsidian 接続</h3>
+          <div class="form-group">
+            <label for="apiKey" data-i18n="obsidianApiKey">Obsidian API Key</label>
+            <input type="password" id="apiKey" data-i18n-input-placeholder="apiKeyPlaceholder">
+          </div>
+        </div>
+
+        <!-- 詳細設定（折りたたみ） -->
+        <details class="advanced-details">
+          <summary class="advanced-details-summary" data-i18n="advancedSettings">詳細設定（Protocol / Port / Daily Note Path）</summary>
+          <div class="advanced-details-content">
+            <div class="form-group">
+              <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
+              <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError">
+              <div id="protocolError" class="field-error" role="alert"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="port" data-i18n="port">Port</label>
+              <input type="text" id="port" value="27124" aria-invalid="false" aria-describedby="portError">
+              <div id="portError" class="field-error" role="alert"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="dailyPath" data-i18n="dailyNotePath">Daily Note Path</label>
+              <input type="text" id="dailyPath" data-i18n-input-placeholder="dailyNotePathPlaceholder">
+            </div>
+          </div>
+        </details>
+
+        <!-- AI プロバイダーセクション -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="aiSection">AI プロバイダー</h3>
+
+          <div class="form-group">
+            <label for="aiProvider" data-i18n="aiProvider">AI Provider</label>
+            <select id="aiProvider">
+              <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+              <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+              <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+            </select>
+          </div>
+
+          <!-- Gemini Settings -->
+          <div id="geminiSettings">
+            <div class="form-group">
+              <label for="geminiApiKey" data-i18n="geminiApiKey">Gemini API Key</label>
+              <input type="password" id="geminiApiKey" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="geminiModel" data-i18n="modelName">Model Name (e.g. gemini-1.5-flash)</label>
+              <input type="text" id="geminiModel" value="gemini-1.5-flash">
+            </div>
+          </div>
+
+          <!-- OpenAI Settings -->
+          <div id="openaiSettings" class="openai-settings">
+            <div class="form-group">
+              <label for="openaiBaseUrl" data-i18n="baseUrl">Base URL</label>
+              <input type="text" id="openaiBaseUrl" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="openaiApiKey" data-i18n="aiApiKey">API Key</label>
+              <input type="password" id="openaiApiKey" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="openaiModel" data-i18n="modelName">Model Name</label>
+              <input type="text" id="openaiModel" data-i18n-input-placeholder="openaiModelPlaceholder">
+            </div>
+          </div>
+
+          <!-- OpenAI 2 Settings -->
+          <div id="openai2Settings" class="openai-settings">
+            <div class="form-group">
+              <label for="openai2BaseUrl" data-i18n="baseUrl">Base URL</label>
+              <input type="text" id="openai2BaseUrl" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="openai2ApiKey" data-i18n="aiApiKey">API Key</label>
+              <input type="password" id="openai2ApiKey" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="openai2Model" data-i18n="modelName">Model Name</label>
+              <input type="text" id="openai2Model" data-i18n-input-placeholder="openai2ModelPlaceholder">
+            </div>
+          </div>
+        </div>
+
+        <!-- 記録条件セクション -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="recordingSection">記録条件</h3>
+
+          <div class="form-group">
+            <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
+            <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false"
+              aria-describedby="minVisitDurationError">
+            <div id="minVisitDurationError" class="field-error" role="alert"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
+            <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false"
+              aria-describedby="minScrollDepthError">
+            <div id="minScrollDepthError" class="field-error" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- ボタンエリア -->
+        <div class="general-btn-row">
+          <button id="save" class="primary-btn" data-i18n="saveBtn">保存する</button>
+          <button id="testConnectionBtn" class="secondary-btn" data-i18n="testConnectionBtn">接続テスト</button>
+        </div>
+        <div id="status" aria-live="polite"></div>
+      </section>
+
+      <!-- Domain Filter Panel -->
+      <section id="panel-domain" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="domainTab">Domain Filter</h2>
+        <p class="panel-description" data-i18n="domainFilterDescription">
+          記録するサイトをドメインで制御します。銀行・SNSなど記録不要なサイトはブラックリストに、社内サイトなど特定のサイトだけ記録したい場合はホワイトリストを使います。
+        </p>
+
+        <!-- トグル ON/OFF -->
+        <div class="domain-toggle-row">
+          <label class="toggle-switch" for="domainFilterToggle">
+            <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false">
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </label>
+          <span class="toggle-label" data-i18n="domainFilterEnable">フィルターを有効にする</span>
+        </div>
+
+        <!-- タブ（ON時のみ表示） -->
+        <div id="domainModeTabBar" class="domain-mode-tab-bar" hidden>
+          <div class="domain-mode-tabs" role="tablist">
+            <button id="domainModeTab-blacklist" class="domain-mode-tab active" role="tab" aria-selected="true"
+              data-i18n="domainBlacklistTab">ブラックリスト</button>
+            <button id="domainModeTab-whitelist" class="domain-mode-tab" role="tab" aria-selected="false"
+              data-i18n="domainWhitelistTab">ホワイトリスト</button>
+          </div>
+          <p id="domainModeDesc" class="domain-mode-desc"></p>
+        </div>
+
+        <!-- タグUI（ON時のみ表示） -->
+        <div id="domainTagArea" class="domain-tag-area" hidden>
+          <div id="domainTagCount" class="domain-tag-count"></div>
+          <div id="domainTagList" class="domain-tag-list" role="list" aria-label="登録済みドメイン"></div>
+          <div class="domain-tag-input-row">
+            <input type="text" id="domainTagInput" class="domain-tag-input"
+              data-i18n-input-placeholder="domainTagInputPlaceholder"
+              placeholder="例: bank.example.com"
+              autocomplete="off" autocapitalize="none" spellcheck="false">
+            <button id="domainTagAddBtn" class="secondary-btn" data-i18n="domainTagAdd">追加</button>
+          </div>
+          <div id="domainTagError" class="field-error" role="alert"></div>
+        </div>
+
+        <!-- 保存エリア -->
+        <div id="domainSaveArea" class="domain-save-area">
+          <button id="domainSaveBtn" class="primary-btn" data-i18n="domainSaveBtn">保存する</button>
+          <div id="domainSaveStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
+        <!-- uBlock折りたたみ -->
+        <details id="ublockDetails" class="ublock-details">
+          <summary class="ublock-summary" data-i18n="ublockDetailsTitle">
+            uBlock Origin フィルター（上級者向け）
+          </summary>
+          <div class="ublock-details-content">
+            <div class="form-group">
+              <label for="uBlockFilterInput" data-i18n="ublockFilter">uBlock Filter</label>
+              <textarea id="uBlockFilterInput" rows="8" data-i18n-input-placeholder="ublockFilterPlaceholder"></textarea>
+              <div class="help-text" data-i18n="ublockHelp">
+                Paste uBlock Origin or hosts format filters<br>
+                uBlock: ||hostname^, @@||hostname^, *, !Comments<br>
+                hosts: 0.0.0.0/127.0.0.1 hostname (#comments supported)
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="uBlockFileInput" data-i18n="loadFromFile">Load from file (.txt)</label>
+              <input type="file" id="uBlockFileInput" accept=".txt">
+              <button id="uBlockFileSelectBtn" class="secondary-btn" data-i18n="selectFile">Select File</button>
+            </div>
+
+            <div id="uBlockDropZone" class="drop-zone" role="region" data-i18n-aria-label="dropZoneLabel">
+              <p data-i18n="dropFileHere">Drop file here</p>
+            </div>
+
+            <div class="form-group">
+              <label for="uBlockUrlInput" data-i18n="loadFromUrl">Load from URL</label>
+              <input type="url" id="uBlockUrlInput" data-i18n-input-placeholder="urlPlaceholder">
+              <button id="uBlockUrlImportBtn" class="secondary-btn" data-i18n="importFromUrl">Import from URL</button>
+            </div>
+
+            <div id="uBlockSourceList" class="source-list">
+              <h4 data-i18n="registeredFilterSources">Registered Filter Sources</h4>
+              <div id="uBlockSourceItems"></div>
+              <p id="uBlockNoSources" class="no-sources" data-i18n="noSourcesRegistered">No sources registered</p>
+            </div>
+
+            <div id="uBlockPreview" class="preview-section">
+              <h4 data-i18n="loadPreview">Load Preview</h4>
+              <p><span data-i18n="ruleCount" data-i18n-args='{"count": "0"}'>Rules: 0</span> <span id="uBlockRuleCount"></span></p>
+              <p><span data-i18n="exceptionCount" data-i18n-args='{"count": "0"}'>Exceptions: 0</span> <span id="uBlockExceptionCount"></span></p>
+              <p><span data-i18n="errorCount" data-i18n-args='{"count": "0"}'>Errors: 0</span> <span id="uBlockErrorCount" class="error"></span></p>
+              <p id="uBlockErrorDetails" class="error-text text-sm"></p>
+            </div>
+
+            <div class="form-group">
+              <button id="uBlockExportBtn" class="secondary-btn" data-i18n="export">Export</button>
+              <button id="uBlockCopyBtn" class="secondary-btn" data-i18n="copyToClipboard">Copy to Clipboard</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- hidden: domainFilter.ts が参照する既存要素（変更不可） -->
+        <input type="radio" id="filterDisabled"   name="domainFilter" value="disabled"   hidden>
+        <input type="radio" id="filterWhitelist"  name="domainFilter" value="whitelist"  hidden>
+        <input type="radio" id="filterBlacklist"  name="domainFilter" value="blacklist"  hidden>
+        <input type="checkbox" id="simpleFormatEnabled" checked hidden>
+        <input type="checkbox" id="ublockFormatEnabled" hidden>
+        <div id="simpleFormatUI" hidden>
+          <div id="domainListSection">
+            <label id="domainListLabel"></label>
+            <textarea id="domainList" hidden></textarea>
+            <textarea id="whitelistTextarea" hidden></textarea>
+            <textarea id="blacklistTextarea" hidden></textarea>
+          </div>
+        </div>
+        <div id="uBlockFormatUI" hidden></div>
+        <button id="saveDomainSettings" hidden></button>
+        <div id="domainStatus" hidden aria-live="polite"></div>
+      </section>
+
+      <!-- Custom Prompt Panel -->
+      <section id="panel-prompt" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="promptTab">Prompt</h2>
+
+        <div class="form-group">
+          <label data-i18n="promptDescription">Customize the AI summary prompt. Use {{content}} as a placeholder for the page content.</label>
+          <div class="help-text" data-i18n="promptHelp">
+            The prompt will be used when generating summaries. Leave empty to use the default prompt.
+          </div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div id="promptListSection">
+          <h4 data-i18n="savedPrompts">Saved Prompts</h4>
+          <div id="promptList" class="prompt-list"></div>
+          <p id="noPromptsMessage" class="no-sources" data-i18n="noPromptsSaved">No custom prompts saved</p>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div id="promptEditorSection">
+          <h4 data-i18n="promptEditor">Prompt Editor</h4>
+
+          <div class="form-group">
+            <label for="promptName" data-i18n="promptName">Prompt Name</label>
+            <input type="text" id="promptName" data-i18n-input-placeholder="promptNamePlaceholder">
+          </div>
+
+          <div class="form-group">
+            <label for="promptProvider" data-i18n="promptProvider">Apply to Provider</label>
+            <select id="promptProvider">
+              <option value="all" data-i18n-opt="promptProviderAll">All Providers</option>
+              <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+              <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible</option>
+              <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="promptSystem" data-i18n="promptSystem">System Prompt (OpenAI only)</label>
+            <input type="text" id="promptSystem" data-i18n-input-placeholder="promptSystemPlaceholder">
+            <div class="help-text" data-i18n="promptSystemHelp">
+              Optional system prompt for OpenAI-compatible providers.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="promptText" data-i18n="promptText">User Prompt</label>
+            <textarea id="promptText" rows="6" data-i18n-input-placeholder="promptTextPlaceholder"></textarea>
+          </div>
+
+          <div class="form-group">
+            <button id="savePromptBtn" class="secondary-btn" data-i18n="savePrompt">Save Prompt</button>
+            <button id="cancelPromptBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+            <input type="hidden" id="editingPromptId" value="">
+          </div>
+        </div>
+
+        <div id="promptStatus" aria-live="polite"></div>
+      </section>
+
+      <!-- Privacy Settings Panel -->
+      <section id="panel-privacy" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="privacyTab">Privacy</h2>
+
+        <div class="form-group">
+          <label id="privacyModeLabel" data-i18n="privacyMode">Privacy Mode</label>
+          <div class="radio-group" id="privacyModeGroup" role="radiogroup" aria-labelledby="privacyModeLabel">
+
+            <div>
+              <input type="radio" id="modeA" name="privacyMode" value="local_only" aria-describedby="modeADesc">
+              <label for="modeA"><strong data-i18n="modeA">Mode A: Local Only</strong> <span
+                  data-i18n="modeADetail">(Under development)</span></label>
+              <div class="help-text ml-24" id="modeADesc" data-i18n="modeADesc">
+                Summarize page content using only local AI, without sending data externally.
+              </div>
+            </div>
+
+            <div class="mt-10">
+              <input type="radio" id="modeB" name="privacyMode" value="full_pipeline" aria-describedby="modeBDesc">
+              <label for="modeB"><strong data-i18n="modeB">Mode B: Full Pipeline</strong> <span
+                  data-i18n="modeBCurrently">(Under development)</span></label>
+              <div class="help-text ml-24" id="modeBDesc" data-i18n="modeBDesc">
+                Local AI summary → PII masking → Cloud AI refinement.
+              </div>
+            </div>
+
+            <div class="mt-10">
+              <input type="radio" id="modeC" name="privacyMode" value="masked_cloud" aria-describedby="modeCDesc">
+              <label for="modeC"><strong data-i18n="modeC">Mode C: Masked Cloud</strong> <span
+                  data-i18n="modeCRecommended">(Recommended)</span></label>
+              <div class="help-text ml-24" id="modeCDesc" data-i18n="modeCDesc">
+                Send only masked data to cloud AI.
+              </div>
+            </div>
+
+            <div class="mt-10">
+              <input type="radio" id="modeD" name="privacyMode" value="cloud_only" aria-describedby="modeDDesc">
+              <label for="modeD"><strong data-i18n="modeD">Mode D: Cloud Only</strong></label>
+              <div class="help-text ml-24" id="modeDDesc" data-i18n="modeDDesc">
+                Send raw text directly to cloud AI.
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="form-group">
+          <label data-i18n="confirmSettings">Confirmation Settings</label>
+          <div class="mb-8">
+            <input type="checkbox" id="piiConfirm">
+            <label for="piiConfirm" data-i18n="confirmBeforeSending">Confirm masking result before sending</label>
+          </div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <!-- Master Password Protection -->
+        <div class="form-group">
+          <label id="masterPasswordLabel" data-i18n="masterPasswordProtection">Master Password Protection</label>
+          <div class="help-text" id="masterPasswordDesc" data-i18n="masterPasswordDesc">
+            Protect your settings with a master password. Required for encrypted export/import.
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="masterPasswordEnabled" aria-describedby="masterPasswordDesc">
+            <label for="masterPasswordEnabled" class="inline-label" data-i18n="enableMasterPassword">Enable master password protection</label>
+          </div>
+
+          <div id="masterPasswordOptions" class="ml-24 hidden">
+            <div class="mb-8">
+              <input type="checkbox" id="encryptApiKeys" checked aria-describedby="encryptApiKeysDesc">
+              <label for="encryptApiKeys" class="inline-label" data-i18n="encryptApiKeys">Encrypt API keys in storage</label>
+              <div class="help-text ml-24" id="encryptApiKeysDesc" data-i18n="encryptApiKeysDesc">
+                API keys will be encrypted with your master password
+              </div>
+            </div>
+
+            <div class="mb-8">
+              <input type="checkbox" id="encryptOnExport" checked aria-describedby="encryptOnExportDesc">
+              <label for="encryptOnExport" class="inline-label" data-i18n="encryptOnExport">Encrypt settings on export</label>
+              <div class="help-text ml-24" id="encryptOnExportDesc" data-i18n="encryptOnExportDesc">
+                Exported settings file will be encrypted with your master password
+              </div>
+            </div>
+
+            <div class="mb-8">
+              <input type="checkbox" id="requirePasswordOnImport" checked aria-describedby="requirePasswordOnImportDesc">
+              <label for="requirePasswordOnImport" class="inline-label" data-i18n="requirePasswordOnImport">Require password on import</label>
+              <div class="help-text ml-24" id="requirePasswordOnImportDesc" data-i18n="requirePasswordOnImportDesc">
+                Password will be required to import encrypted settings
+              </div>
+            </div>
+
+            <div class="form-group">
+              <button id="changeMasterPassword" class="secondary-btn" data-i18n="changeMasterPassword">Change Master Password</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- History Panel (New) -->
+      <section id="panel-history" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="historyTab">History</h2>
+
+        <p class="panel-description" data-i18n="historyDescription">
+          URLs recorded by Smart History. Use the search box to filter entries. Click × to delete an individual URL.
+        </p>
+        <p class="panel-description history-retention-note" data-i18n="historyRetentionPolicy">
+          Shows records from the past 7 days (up to 10,000 entries). Older entries are automatically removed.
+        </p>
+
+        <!-- 保留中（記録できなかった）ページ -->
+        <div id="pendingSection" class="pending-section" hidden>
+          <h3 class="pending-section-title">
+            <span class="pending-section-icon">⚠️</span>
+            <span data-i18n="pendingSectionTitle">記録できなかったページ</span>
+          </h3>
+          <p class="panel-description" data-i18n="pendingSectionDesc">
+            PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。
+          </p>
+          <div id="pendingList" class="pending-list" aria-live="polite"></div>
+        </div>
+
+        <hr class="settings-hr" id="pendingDivider">
+
+        <!-- 記録済み履歴 -->
+        <div class="history-controls">
+          <div class="form-group history-search-group">
+            <label for="historySearch" data-i18n="historySearchLabel">Search recorded URLs</label>
+            <input type="search" id="historySearch" class="history-search"
+              data-i18n-input-placeholder="historySearchPlaceholder" placeholder="Filter by URL...">
+          </div>
+          <div class="history-filter-bar" role="group" aria-label="フィルター">
+            <button id="filterAll" class="history-filter-btn active" data-filter="all" data-i18n="filterAll">すべて</button>
+            <button id="filterAuto" class="history-filter-btn" data-filter="auto" data-i18n="filterAuto">自動</button>
+            <button id="filterManual" class="history-filter-btn" data-filter="manual" data-i18n="filterManual">手動</button>
+            <button id="filterSkipped" class="history-filter-btn" data-filter="skipped" data-i18n="filterSkipped">スキップ</button>
+            <button id="filterMasked" class="history-filter-btn" data-filter="masked" data-i18n="filterMasked">🔒 マスクあり</button>
+          </div>
+        </div>
+
+        <div id="historyStats" class="history-stats"></div>
+        <div id="historyList" class="history-list" aria-live="polite"></div>
+      </section>
+
+      <!-- Domain Search Panel (New) -->
+      <section id="panel-domain-search" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="domainSearchTab">Domain Search</h2>
+
+        <!-- Part 1: Filter list search -->
+        <div class="form-group">
+          <label for="domainSearchInput" data-i18n="domainSearchLabel">Search in blacklist / whitelist</label>
+          <input type="search" id="domainSearchInput"
+            data-i18n-input-placeholder="domainSearchPlaceholder"
+            placeholder="e.g. google, x.com, youtube">
+        </div>
+        <div id="domainSearchMatches" class="domain-search-matches" aria-live="polite"></div>
+
+        <hr class="domain-search-divider">
+
+        <!-- Part 2: URL check -->
+        <div class="form-group">
+          <label for="domainCheckInput" data-i18n="domainCheckLabel">Check if a URL will be recorded</label>
+          <input type="text" id="domainCheckInput"
+            data-i18n-input-placeholder="domainCheckPlaceholder"
+            placeholder="https://example.com or example.com">
+        </div>
+        <div id="domainSearchResult" class="domain-search-result" aria-live="polite"></div>
+      </section>
+
+      <!-- Diagnostics Panel (New) -->
+      <section id="panel-diagnostics" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="diagnosticsTab">Diagnostics</h2>
+
+        <p class="panel-description" data-i18n="diagDescription">
+          Check storage usage, verify the Obsidian REST API connection, and view extension information.
+        </p>
+
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagStorageTitle">Storage</h3>
+          <div id="diagStorageStats" class="diag-stats"></div>
+        </div>
+
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagConnectionTitle">Connection Test</h3>
+          <button id="diagTestConnectionBtn" class="secondary-btn" data-i18n="diagTestConnectionBtn">Test Connection</button>
+          <div id="diagConnectionResult" class="diag-result" data-i18n-placeholder="diagConnectionPlaceholder" aria-live="polite"></div>
+        </div>
+
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagInfoTitle">Extension Info</h3>
+          <div id="diagExtInfo" class="diag-stats"></div>
+        </div>
+      </section>
+
+      <!-- Export / Import Panel (New) -->
+      <section id="panel-export-import" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="exportImportTab">Export / Import</h2>
+
+        <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="exportTitle">Export Settings</h3>
+          <p class="help-text" data-i18n="exportDesc">Save your current settings to a JSON file.</p>
+          <button id="exportSettingsBtn" class="secondary-btn" data-i18n="exportSettings">Export Settings</button>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="importTitle">Import Settings</h3>
+          <p class="help-text" data-i18n="importDesc">Restore settings from a previously exported JSON file.</p>
+          <button id="importSettingsBtn" class="secondary-btn" data-i18n="importSettings">Import Settings</button>
+          <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
+        </div>
+
+        <div id="exportImportStatus" aria-live="polite"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Password Setup Modal -->
+  <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordModalTitle" data-i18n="setMasterPassword">Set Master Password</h3>
+        <button id="closePasswordModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordModalDesc" data-i18n="setMasterPasswordDesc">
+          Create a master password to protect your settings. This password cannot be recovered.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordInput" aria-describedby="passwordStrengthError">
+          <div id="passwordStrengthError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group" id="confirmPasswordGroup">
+          <label for="masterPasswordConfirm" data-i18n="confirmMasterPassword">Confirm Master Password</label>
+          <input type="password" id="masterPasswordConfirm">
+          <div id="passwordMatchError" class="field-error" role="alert"></div>
+        </div>
+        <div id="passwordStrength" class="password-strength mt-8">
+          <div class="strength-bar">
+            <div class="strength-fill"></div>
+          </div>
+          <div class="strength-text text-xs text-gray" id="passwordStrengthText">Password strength</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="savePasswordBtn" class="btn-confirm" data-i18n="save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Auth Modal -->
+  <div id="passwordAuthModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordAuthModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="passwordAuthModalTitle" data-i18n="enterMasterPassword">Enter Master Password</h3>
+        <button id="closePasswordAuthModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" id="passwordAuthModalDesc" data-i18n="enterMasterPasswordDesc">
+          Enter your master password to continue.
+        </p>
+        <div class="form-group">
+          <label for="masterPasswordAuthInput" data-i18n="masterPassword">Master Password</label>
+          <input type="password" id="masterPasswordAuthInput" autocomplete="current-password">
+        </div>
+        <div id="passwordAuthError" class="field-error" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPasswordAuthBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="submitPasswordAuthBtn" class="btn-confirm" data-i18n="confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Confirmation Modal -->
+  <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="importConfirmTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>
+        <button id="closeImportModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" data-i18n="confirmImportDesc">
+          Current settings will be overwritten. Continue?
+        </p>
+        <p class="mt-0 text-xs text-danger" data-i18n="confirmImportNote">
+          Note: Please review the settings below before importing.
+        </p>
+        <div id="importPreview" class="import-preview" aria-live="polite"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelImportBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="confirmImportBtn" class="btn-confirm" data-i18n="confirm">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../popup/i18n.js"></script>
+  <script type="module" src="dashboard.js"></script>
+</body>
+
+</html>

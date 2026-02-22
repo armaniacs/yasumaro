@@ -1,5 +1,6 @@
 import { PrivacyPipeline } from './privacyPipeline.js';
 import { Settings } from '../utils/storage.js';
+import type { RecordType } from '../utils/storageUrls.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
@@ -22,6 +23,7 @@ export interface RecordingData {
     previewOnly?: boolean;
     requireConfirmation?: boolean;
     headerValue?: string;
+    recordType?: RecordType;
 }
 export interface RecordingResult {
     success: boolean;
@@ -78,8 +80,14 @@ export declare class RecordingLogic {
      */
     static invalidateUrlCache(): void;
     /**
+     * HeaderDetector と同じ正規化ロジックでURLを正規化する
+     * キャッシュキーの一貫性を保つために必要
+     */
+    private static normalizeUrlForCache;
+    /**
      * URLのプライバシー情報をキャッシュから取得する
      * TTL: 5分
+     * Note: HeaderDetector と同じ normalizeUrl ロジックでキャッシュキーを正規化する
      */
     getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null>;
     /**

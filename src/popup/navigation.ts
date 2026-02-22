@@ -46,37 +46,17 @@ export function showMainScreen(): void {
  * 🟡 設定上の妥当な推測: カウントダウン完了前の画面遷移に対してタイマーを停止することは合理的
  */
 export function showSettingsScreen(): void {
-  console.log('[Navigation] showSettingsScreen called');
+  console.log('[Navigation] showSettingsScreen called - opening dashboard');
 
-  // 【タイマークリア】: 設定画面への遷移時に自動クローズタイマーを解放 🟢
-  // 【設計方針】: DOM操作前にタイマーをクリアし、確実に自動クローズを無効化
-  // 【依存関係】:
-  //   - navigation.js imports screenState.js (画面状態)
-  //   - navigation.js imports autoClose.js (タイマー管理)
-  //   - autoClose.js imports screenState.js (画面状態判定)
-  //   - 循環参照なし
+  // 【タイマークリア】: ダッシュボードを開く前に自動クローズタイマーを解放
   clearAutoCloseTimer();
 
-  // 【DOM操作】: 画面表示の切り替え 🟢
-  const mainScreen = document.getElementById('mainScreen');
-  const settingsScreen = document.getElementById('settingsScreen');
-  const menuBtn = document.getElementById('menuBtn');
+  // 【ダッシュボード遷移】: 設定を新しいタブのダッシュボードページで開く
+  const dashboardUrl = chrome.runtime.getURL('dashboard/dashboard.html');
+  chrome.tabs.create({ url: dashboardUrl });
 
-  console.log('[Navigation] Main screen element:', !!mainScreen);
-  console.log('[Navigation] Settings screen element:', !!settingsScreen);
-
-  if (mainScreen) mainScreen.style.display = 'none';
-  if (settingsScreen) settingsScreen.style.display = 'block';
-
-  // 【アクセシビリティ改善】メニューボタンの aria-expanded 属性を設定
-  if (menuBtn) {
-    menuBtn.setAttribute('aria-expanded', 'true');
-  }
-
-  console.log('[Navigation] Screen transition complete');
-
-  // 【画面状態更新】: 設定画面に切り替わったことを記録 🟢
-  setScreenState(SCREEN_STATES.SETTINGS);
+  // ポップアップを閉じる
+  window.close();
 }
 
 /**

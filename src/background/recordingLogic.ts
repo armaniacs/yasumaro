@@ -5,6 +5,8 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
+import { setUrlRecordType, setUrlMaskedCount } from '../utils/storageUrls.js';
+import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { ObsidianClient } from './obsidianClient.js';
@@ -35,6 +37,7 @@ export interface RecordingData {
   previewOnly?: boolean;
   requireConfirmation?: boolean;
   headerValue?: string;
+  recordType?: RecordType;
 }
 
 export interface RecordingResult {
@@ -179,15 +182,37 @@ export class RecordingLogic {
   }
 
   /**
+   * HeaderDetector と同じ正規化ロジックでURLを正規化する
+   * キャッシュキーの一貫性を保つために必要
+   */
+  private static normalizeUrlForCache(url: string): string {
+    try {
+      const parsed = new URL(url);
+      parsed.hash = '';
+      let normalized = parsed.toString();
+      if (normalized.endsWith('/') && parsed.pathname !== '/') {
+        normalized = normalized.slice(0, -1);
+      }
+      return normalized;
+    } catch {
+      return url;
+    }
+  }
+
+  /**
    * URLのプライバシー情報をキャッシュから取得する
    * TTL: 5分
+   * Note: HeaderDetector と同じ normalizeUrl ロジックでキャッシュキーを正規化する
    */
   async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
     const now = Date.now();
     const PRIVACY_CACHE_TTL = 5 * 60 * 1000; // 5分
 
+    // HeaderDetectorと同じ正規化でキャッシュキーを統一
+    const normalizedUrl = RecordingLogic.normalizeUrlForCache(url);
+
     if (RecordingLogic.cacheState.privacyCache) {
-      const cached = RecordingLogic.cacheState.privacyCache.get(url);
+      const cached = RecordingLogic.cacheState.privacyCache.get(normalizedUrl);
       if (cached && (now - cached.timestamp) < PRIVACY_CACHE_TTL) {
         addLog(LogType.DEBUG, 'Privacy cache hit', { url });
         return cached;
@@ -230,7 +255,7 @@ export class RecordingLogic {
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '' } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType } = data;
     const MAX_RECORD_SIZE = 64 * 1024;
 
     try {
@@ -360,7 +385,7 @@ export class RecordingLogic {
           max: MAX_URL_SET_SIZE,
           url
         });
-        NotificationHelper.notifyError(`URL history limit reached. Maximum ${MAX_URL_SET_SIZE} URLs allowed. Please clear your history.`);
+        NotificationHelper.notifyError(`URL history limit reached. Maximum ${MAX_URL_SET_SIZE} URLs (7-day retention) allowed. Please clear your history.`);
         return { success: false, error: 'URL set size limit exceeded. Please clear your history.' };
       }
 
@@ -437,6 +462,14 @@ export class RecordingLogic {
       // 6. Update saved list (日付ベース: Map<URL, timestamp>で管理)
       urlMap.set(url, Date.now());
       await setSavedUrlsWithTimestamps(urlMap, url);
+      // 記録方式をエントリに保存
+      const resolvedRecordType: RecordType = recordType ?? 'auto';
+      await setUrlRecordType(url, resolvedRecordType);
+      // マスク件数を保存（1件以上の場合のみ）
+      const resolvedMaskedCount = pipelineResult.maskedCount ?? 0;
+      if (resolvedMaskedCount > 0) {
+        await setUrlMaskedCount(url, resolvedMaskedCount);
+      }
       // Problem #7: URLキャッシュを無効化
       RecordingLogic.invalidateUrlCache();
 

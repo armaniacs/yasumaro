@@ -5,12 +5,21 @@
  */
 export declare const MAX_URL_SET_SIZE = 10000;
 export declare const URL_WARNING_THRESHOLD = 8000;
+export declare const URL_RETENTION_DAYS = 7;
+/**
+ * 記録方式
+ * - auto: 自動記録（訪問条件を満たして自動的に記録）
+ * - manual: 手動記録（「今すぐ記録」ボタンで記録）
+ */
+export type RecordType = 'auto' | 'manual';
 /**
  * 保存されたURLエントリ
  */
 export interface SavedUrlEntry {
     url: string;
     timestamp: number;
+    recordType?: RecordType;
+    maskedCount?: number;
 }
 /**
  * 保存されたURLのリストを取得（LRU削除有効）
@@ -22,6 +31,11 @@ export declare function getSavedUrls(): Promise<Set<string>>;
  * @returns {Promise<Map<string, number>>} URLからタイムスタンプへのマップ
  */
 export declare function getSavedUrlsWithTimestamps(): Promise<Map<string, number>>;
+/**
+ * 記録方式を含む詳細なURLエントリをすべて取得
+ * @returns {Promise<SavedUrlEntry[]>} 保存されたURLエントリの配列
+ */
+export declare function getSavedUrlEntries(): Promise<SavedUrlEntry[]>;
 /**
  * URLのリストを保存（LRU削除有効）
  * @param {Set<string>} urlSet - 保存するURLのセット
@@ -37,8 +51,21 @@ export declare function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, 
 /**
  * URLを保存リストに追加（LRU追跡付き、日付ベース対応）
  * @param {string} url - 追加するURL
+ * @param {RecordType} [recordType] - 記録方式
  */
-export declare function addSavedUrl(url: string): Promise<void>;
+export declare function addSavedUrl(url: string, recordType?: RecordType): Promise<void>;
+/**
+ * 記録済みURLのrecordTypeを更新する
+ * @param {string} url - 更新するURL
+ * @param {RecordType} recordType - 記録方式
+ */
+export declare function setUrlRecordType(url: string, recordType: RecordType): Promise<void>;
+/**
+ * 記録済みURLのmaskedCountを更新する
+ * @param {string} url - 更新するURL
+ * @param {number} maskedCount - マスクしたPII件数
+ */
+export declare function setUrlMaskedCount(url: string, maskedCount: number): Promise<void>;
 /**
  * URLを保存リストから削除
  * @param {string} url - 削除するURL

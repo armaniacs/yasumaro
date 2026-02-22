@@ -11,6 +11,14 @@ import type { Source } from './types.js';
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
+export const URL_RETENTION_DAYS = 7;
+
+/**
+ * 記録方式
+ * - auto: 自動記録（訪問条件を満たして自動的に記録）
+ * - manual: 手動記録（「今すぐ記録」ボタンで記録）
+ */
+export type RecordType = 'auto' | 'manual';
 
 /**
  * 保存されたURLエントリ
@@ -18,6 +26,8 @@ export const URL_WARNING_THRESHOLD = 8000;
 export interface SavedUrlEntry {
     url: string;
     timestamp: number;
+    recordType?: RecordType;
+    maskedCount?: number;
 }
 
 /**
@@ -41,6 +51,15 @@ export async function getSavedUrlsWithTimestamps(): Promise<Map<string, number>>
         urlMap.set(entry.url, entry.timestamp);
     }
     return urlMap;
+}
+
+/**
+ * 記録方式を含む詳細なURLエントリをすべて取得
+ * @returns {Promise<SavedUrlEntry[]>} 保存されたURLエントリの配列
+ */
+export async function getSavedUrlEntries(): Promise<SavedUrlEntry[]> {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    return (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
 }
 
 /**
@@ -88,8 +107,9 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
 /**
  * LRU追跡のためのURLタイムスタンプを更新
  * @param {string} url - 更新するURL
+ * @param {RecordType} [recordType] - 記録方式
  */
-async function updateUrlTimestamp(url: string): Promise<void> {
+async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise<void> {
     const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
     let entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
 
@@ -97,11 +117,16 @@ async function updateUrlTimestamp(url: string): Promise<void> {
     entries = entries.filter(entry => entry.url !== url);
 
     // 新しいエントリを追加
-    entries.push({ url, timestamp: Date.now() });
+    const entry: SavedUrlEntry = { url, timestamp: Date.now() };
+    if (recordType) entry.recordType = recordType;
+    entries.push(entry);
 
-    // MAX_URL_SET_SIZEを超えたら古いURLを削除
+    // 7日より古いエントリを削除（日数ベース）
+    const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    entries = entries.filter(entry => entry.timestamp >= cutoff);
+
+    // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
     if (entries.length > MAX_URL_SET_SIZE) {
-        // タイムスタンプでソートして古いものを削除
         entries.sort((a, b) => a.timestamp - b.timestamp);
         entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
     }
@@ -112,11 +137,43 @@ async function updateUrlTimestamp(url: string): Promise<void> {
 /**
  * URLを保存リストに追加（LRU追跡付き、日付ベース対応）
  * @param {string} url - 追加するURL
+ * @param {RecordType} [recordType] - 記録方式
  */
-export async function addSavedUrl(url: string): Promise<void> {
+export async function addSavedUrl(url: string, recordType?: RecordType): Promise<void> {
     const urlMap = await getSavedUrlsWithTimestamps();
     urlMap.set(url, Date.now());
     await setSavedUrlsWithTimestamps(urlMap, url);
+    await updateUrlTimestamp(url, recordType);
+}
+
+/**
+ * 記録済みURLのrecordTypeを更新する
+ * @param {string} url - 更新するURL
+ * @param {RecordType} recordType - 記録方式
+ */
+export async function setUrlRecordType(url: string, recordType: RecordType): Promise<void> {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+    const idx = entries.findIndex(e => e.url === url);
+    if (idx >= 0) {
+        entries[idx] = { ...entries[idx], recordType };
+        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    }
+}
+
+/**
+ * 記録済みURLのmaskedCountを更新する
+ * @param {string} url - 更新するURL
+ * @param {number} maskedCount - マスクしたPII件数
+ */
+export async function setUrlMaskedCount(url: string, maskedCount: number): Promise<void> {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+    const idx = entries.findIndex(e => e.url === url);
+    if (idx >= 0) {
+        entries[idx] = { ...entries[idx], maskedCount };
+        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    }
 }
 
 /**

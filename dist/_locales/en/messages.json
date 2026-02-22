@@ -317,6 +317,9 @@
     "forceRecord": {
         "message": "Force Record"
     },
+    "forceRecordAnyway": {
+        "message": "Record Anyway"
+    },
     "cannotRecordHttpHttps": {
         "message": "Current page is not an HTTP/HTTPS page"
     },
@@ -964,5 +967,197 @@
     },
     "ublockFormatDesc": {
         "message": "Advanced: Import filter lists from uBlock Origin"
+    },
+    "settingsSection": {
+        "message": "Settings"
+    },
+    "dataSection": {
+        "message": "Data"
+    },
+    "toolsSection": {
+        "message": "Tools"
+    },
+    "historyTab": {
+        "message": "History"
+    },
+    "domainSearchTab": {
+        "message": "Domain Search"
+    },
+    "diagnosticsTab": {
+        "message": "Diagnostics"
+    },
+    "exportImportTab": {
+        "message": "Export / Import"
+    },
+    "domainSearchLabel": {
+        "message": "Search in blacklist / whitelist"
+    },
+    "domainSearchPlaceholder": {
+        "message": "e.g. google, x.com, youtube"
+    },
+    "domainCheckLabel": {
+        "message": "Check if a URL will be recorded"
+    },
+    "domainCheckPlaceholder": {
+        "message": "https://example.com or example.com"
+    },
+    "domainNoMatches": {
+        "message": "No matching rules found."
+    },
+    "blacklistLabel": {
+        "message": "Blacklist"
+    },
+    "whitelistLabel": {
+        "message": "Whitelist"
+    },
+    "historyDescription": {
+        "message": "URLs recorded by Smart History. Use the search box to filter entries. Click × to delete an individual URL."
+    },
+    "historyRetentionPolicy": {
+        "message": "Shows records from the past 7 days (up to 10,000 entries). Older entries are automatically removed."
+    },
+    "historySearchLabel": {
+        "message": "Search recorded URLs"
+    },
+    "recordTypeAuto": {
+        "message": "Auto"
+    },
+    "recordTypeManual": {
+        "message": "Manual"
+    },
+    "maskedBadge": {
+        "message": "🔒 {count} masked"
+    },
+    "maskedBadgeTitle": {
+        "message": "Masked {count} personal info item(s) before sending to AI"
+    },
+    "filterMasked": {
+        "message": "🔒 Masked"
+    },
+    "filterAll": {
+        "message": "All"
+    },
+    "filterAuto": {
+        "message": "Auto"
+    },
+    "filterManual": {
+        "message": "Manual"
+    },
+    "filterSkipped": {
+        "message": "Skipped"
+    },
+    "pendingSectionTitle": {
+        "message": "Pages that could not be recorded"
+    },
+    "pendingSectionDesc": {
+        "message": "These pages were skipped due to privacy headers (Cache-Control, Set-Cookie, etc.). You can manually record them here."
+    },
+    "pendingReasonCache": {
+        "message": "Cache-Control header"
+    },
+    "pendingReasonCookie": {
+        "message": "Set-Cookie header"
+    },
+    "pendingReasonAuth": {
+        "message": "Authorization header"
+    },
+    "diagConnectionPlaceholder": {
+        "message": "Click \"Test Connection\" to check the Obsidian API connection."
+    },
+    "diagDescription": {
+        "message": "Check storage usage, verify the Obsidian REST API connection, and view extension information."
+    },
+    "diagStorageTitle": {
+        "message": "Storage"
+    },
+    "diagConnectionTitle": {
+        "message": "Connection Test"
+    },
+    "diagTestConnectionBtn": {
+        "message": "Test Connection"
+    },
+    "diagInfoTitle": {
+        "message": "Extension Info"
+    },
+    "diagStorageUsed": {
+        "message": "Storage Used"
+    },
+    "diagSavedUrls": {
+        "message": "Saved URLs"
+    },
+    "diagVersion": {
+        "message": "Version"
+    },
+    "diagExtName": {
+        "message": "Extension"
+    },
+    "diagLoadError": {
+        "message": "Failed to load storage info."
+    },
+    "testing": {
+        "message": "Testing..."
+    },
+    "domainFilterDescription": {
+        "message": "Control which sites are recorded by domain. Add sites you don't want recorded (e.g. banking, social media) to the blacklist, or use the whitelist to record only specific sites."
+    },
+    "domainFilterEnable": {
+        "message": "Enable domain filter"
+    },
+    "domainBlacklistTab": {
+        "message": "Blacklist"
+    },
+    "domainWhitelistTab": {
+        "message": "Whitelist"
+    },
+    "domainBlacklistDesc": {
+        "message": "Domains in the blacklist will NOT be recorded. All others will be recorded."
+    },
+    "domainWhitelistDesc": {
+        "message": "Only domains in the whitelist will be recorded. All others will be ignored."
+    },
+    "domainTagAdd": {
+        "message": "Add"
+    },
+    "domainTagInputPlaceholder": {
+        "message": "e.g. bank.example.com"
+    },
+    "domainTagCount": {
+        "message": "{count} domains"
+    },
+    "domainTagInvalidError": {
+        "message": "Invalid domain format."
+    },
+    "domainTagDuplicateError": {
+        "message": "Already registered."
+    },
+    "domainSaveBtn": {
+        "message": "Save"
+    },
+    "ublockDetailsTitle": {
+        "message": "uBlock Origin Filter (Advanced)"
+    },
+    "mainTabDashboard": {
+        "message": "Initial Setup"
+    },
+    "initialSetupDescription": {
+        "message": "Configure your Obsidian connection and AI settings."
+    },
+    "obsidianSection": {
+        "message": "Obsidian Connection"
+    },
+    "advancedSettings": {
+        "message": "Advanced Settings (Protocol / Port / Daily Note Path)"
+    },
+    "aiSection": {
+        "message": "AI Provider"
+    },
+    "recordingSection": {
+        "message": "Recording Conditions"
+    },
+    "saveBtn": {
+        "message": "Save"
+    },
+    "testConnectionBtn": {
+        "message": "Test Connection"
     }
 }

@@ -8,6 +8,7 @@ import { normalizeUrl } from './urlUtils.js';
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
+export const URL_RETENTION_DAYS = 7;
 /**
  * 保存されたURLのリストを取得（LRU削除有効）
  * @returns {Promise<Set<string>>} 保存されたURLのセット
@@ -28,6 +29,14 @@ export async function getSavedUrlsWithTimestamps() {
         urlMap.set(entry.url, entry.timestamp);
     }
     return urlMap;
+}
+/**
+ * 記録方式を含む詳細なURLエントリをすべて取得
+ * @returns {Promise<SavedUrlEntry[]>} 保存されたURLエントリの配列
+ */
+export async function getSavedUrlEntries() {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    return result.savedUrlsWithTimestamps || [];
 }
 /**
  * URLのリストを保存（LRU削除有効）
@@ -67,17 +76,23 @@ export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
 /**
  * LRU追跡のためのURLタイムスタンプを更新
  * @param {string} url - 更新するURL
+ * @param {RecordType} [recordType] - 記録方式
  */
-async function updateUrlTimestamp(url) {
+async function updateUrlTimestamp(url, recordType) {
     const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
     let entries = result.savedUrlsWithTimestamps || [];
     // 既存のURLがある場合は削除
     entries = entries.filter(entry => entry.url !== url);
     // 新しいエントリを追加
-    entries.push({ url, timestamp: Date.now() });
-    // MAX_URL_SET_SIZEを超えたら古いURLを削除
+    const entry = { url, timestamp: Date.now() };
+    if (recordType)
+        entry.recordType = recordType;
+    entries.push(entry);
+    // 7日より古いエントリを削除（日数ベース）
+    const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    entries = entries.filter(entry => entry.timestamp >= cutoff);
+    // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
     if (entries.length > MAX_URL_SET_SIZE) {
-        // タイムスタンプでソートして古いものを削除
         entries.sort((a, b) => a.timestamp - b.timestamp);
         entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
     }
@@ -86,11 +101,41 @@ async function updateUrlTimestamp(url) {
 /**
  * URLを保存リストに追加（LRU追跡付き、日付ベース対応）
  * @param {string} url - 追加するURL
+ * @param {RecordType} [recordType] - 記録方式
  */
-export async function addSavedUrl(url) {
+export async function addSavedUrl(url, recordType) {
     const urlMap = await getSavedUrlsWithTimestamps();
     urlMap.set(url, Date.now());
     await setSavedUrlsWithTimestamps(urlMap, url);
+    await updateUrlTimestamp(url, recordType);
+}
+/**
+ * 記録済みURLのrecordTypeを更新する
+ * @param {string} url - 更新するURL
+ * @param {RecordType} recordType - 記録方式
+ */
+export async function setUrlRecordType(url, recordType) {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = result.savedUrlsWithTimestamps || [];
+    const idx = entries.findIndex(e => e.url === url);
+    if (idx >= 0) {
+        entries[idx] = { ...entries[idx], recordType };
+        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    }
+}
+/**
+ * 記録済みURLのmaskedCountを更新する
+ * @param {string} url - 更新するURL
+ * @param {number} maskedCount - マスクしたPII件数
+ */
+export async function setUrlMaskedCount(url, maskedCount) {
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = result.savedUrlsWithTimestamps || [];
+    const idx = entries.findIndex(e => e.url === url);
+    if (idx >= 0) {
+        entries[idx] = { ...entries[idx], maskedCount };
+        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    }
 }
 /**
  * URLを保存リストから削除

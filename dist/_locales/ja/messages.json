@@ -317,6 +317,9 @@
     "forceRecord": {
         "message": "強制記録"
     },
+    "forceRecordAnyway": {
+        "message": "それでも記録"
+    },
     "cannotRecordHttpHttps": {
         "message": "現在のページはHTTP/HTTPSページではありません"
     },
@@ -967,5 +970,197 @@
     },
     "ublockFormatDesc": {
         "message": "上級者向け: uBlock Originからフィルターリストをインポート"
+    },
+    "settingsSection": {
+        "message": "設定"
+    },
+    "dataSection": {
+        "message": "データ"
+    },
+    "toolsSection": {
+        "message": "ツール"
+    },
+    "historyTab": {
+        "message": "記録履歴"
+    },
+    "domainSearchTab": {
+        "message": "ドメイン検索"
+    },
+    "diagnosticsTab": {
+        "message": "診断"
+    },
+    "exportImportTab": {
+        "message": "エクスポート / インポート"
+    },
+    "domainSearchLabel": {
+        "message": "ブラックリスト / ホワイトリストを検索"
+    },
+    "domainSearchPlaceholder": {
+        "message": "例: google, x.com, youtube"
+    },
+    "domainCheckLabel": {
+        "message": "このURLが記録されるか確認"
+    },
+    "domainCheckPlaceholder": {
+        "message": "https://example.com または example.com"
+    },
+    "domainNoMatches": {
+        "message": "一致するルールが見つかりません。"
+    },
+    "blacklistLabel": {
+        "message": "ブラックリスト"
+    },
+    "whitelistLabel": {
+        "message": "ホワイトリスト"
+    },
+    "historyDescription": {
+        "message": "Smart Historyが記録したURLの一覧です。検索ボックスで絞り込み、× で個別に削除できます。"
+    },
+    "historyRetentionPolicy": {
+        "message": "過去7日間の記録を表示（最大10,000件）。古いものから順に自動削除されます。"
+    },
+    "historySearchLabel": {
+        "message": "記録済みURLを検索"
+    },
+    "recordTypeAuto": {
+        "message": "自動"
+    },
+    "recordTypeManual": {
+        "message": "手動"
+    },
+    "maskedBadge": {
+        "message": "🔒 {count}件マスク"
+    },
+    "maskedBadgeTitle": {
+        "message": "{count}件の個人情報をマスクしてAIに送信しました"
+    },
+    "filterMasked": {
+        "message": "🔒 マスクあり"
+    },
+    "filterAll": {
+        "message": "すべて"
+    },
+    "filterAuto": {
+        "message": "自動"
+    },
+    "filterManual": {
+        "message": "手動"
+    },
+    "filterSkipped": {
+        "message": "スキップ"
+    },
+    "pendingSectionTitle": {
+        "message": "記録できなかったページ"
+    },
+    "pendingSectionDesc": {
+        "message": "PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。"
+    },
+    "pendingReasonCache": {
+        "message": "Cache-Control ヘッダー"
+    },
+    "pendingReasonCookie": {
+        "message": "Set-Cookie ヘッダー"
+    },
+    "pendingReasonAuth": {
+        "message": "Authorization ヘッダー"
+    },
+    "diagConnectionPlaceholder": {
+        "message": "「接続テスト」ボタンをクリックして、Obsidian APIへの接続を確認します。"
+    },
+    "diagDescription": {
+        "message": "ストレージの使用状況の確認、Obsidian REST APIへの接続テスト、拡張機能の情報を表示します。"
+    },
+    "diagStorageTitle": {
+        "message": "ストレージ"
+    },
+    "diagConnectionTitle": {
+        "message": "接続テスト"
+    },
+    "diagTestConnectionBtn": {
+        "message": "接続テスト"
+    },
+    "diagInfoTitle": {
+        "message": "拡張機能情報"
+    },
+    "diagStorageUsed": {
+        "message": "使用容量"
+    },
+    "diagSavedUrls": {
+        "message": "記録済みURL数"
+    },
+    "diagVersion": {
+        "message": "バージョン"
+    },
+    "diagExtName": {
+        "message": "拡張機能名"
+    },
+    "diagLoadError": {
+        "message": "ストレージ情報の読み込みに失敗しました。"
+    },
+    "testing": {
+        "message": "テスト中..."
+    },
+    "domainFilterDescription": {
+        "message": "記録するサイトをドメインで制御します。銀行・SNSなど記録不要なサイトはブラックリストに、社内サイトなど特定のサイトだけ記録したい場合はホワイトリストを使います。"
+    },
+    "domainFilterEnable": {
+        "message": "フィルターを有効にする"
+    },
+    "domainBlacklistTab": {
+        "message": "ブラックリスト"
+    },
+    "domainWhitelistTab": {
+        "message": "ホワイトリスト"
+    },
+    "domainBlacklistDesc": {
+        "message": "ブラックリストのドメインは記録されません。それ以外はすべて記録されます。"
+    },
+    "domainWhitelistDesc": {
+        "message": "ホワイトリストのドメインのみ記録されます。それ以外は記録されません。"
+    },
+    "domainTagAdd": {
+        "message": "追加"
+    },
+    "domainTagInputPlaceholder": {
+        "message": "例: bank.example.com"
+    },
+    "domainTagCount": {
+        "message": "{count} 件"
+    },
+    "domainTagInvalidError": {
+        "message": "無効なドメイン形式です。"
+    },
+    "domainTagDuplicateError": {
+        "message": "すでに登録されています。"
+    },
+    "domainSaveBtn": {
+        "message": "保存する"
+    },
+    "ublockDetailsTitle": {
+        "message": "uBlock Origin フィルター（上級者向け）"
+    },
+    "mainTabDashboard": {
+        "message": "初期設定"
+    },
+    "initialSetupDescription": {
+        "message": "Obsidianとの接続とAIの設定を行います。"
+    },
+    "obsidianSection": {
+        "message": "Obsidian 接続"
+    },
+    "advancedSettings": {
+        "message": "詳細設定（Protocol / Port / Daily Note Path）"
+    },
+    "aiSection": {
+        "message": "AI プロバイダー"
+    },
+    "recordingSection": {
+        "message": "記録条件"
+    },
+    "saveBtn": {
+        "message": "保存する"
+    },
+    "testConnectionBtn": {
+        "message": "接続テスト"
     }
 }

@@ -101,7 +101,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     title: sender.tab.title || '',
                     url: sender.tab.url || '',
                     content: message.payload?.content || '',
-                    skipDuplicateCheck: false
+                    skipDuplicateCheck: false,
+                    recordType: 'auto'
                 });
 
                 // 【パフォーマンス改善】: 直接キャッシュを更新
@@ -183,7 +184,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     content: message.payload.content,
                     force: message.payload.force,
                     skipDuplicateCheck: true,
-                    previewOnly: message.type === 'PREVIEW_RECORD'
+                    previewOnly: message.type === 'PREVIEW_RECORD',
+                    recordType: 'manual'
                 });
                 sendResponse(result);
                 return;
@@ -197,7 +199,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     content: message.payload.content,
                     skipDuplicateCheck: true,
                     alreadyProcessed: true,
-                    force: message.payload.force
+                    force: message.payload.force,
+                    recordType: 'manual'
                 });
                 sendResponse(result);
                 return;

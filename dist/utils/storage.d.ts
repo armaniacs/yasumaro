@@ -182,6 +182,7 @@ export declare function clearSettingsCache(): void;
 export declare function saveSettings(settings: Settings, updateAllowedUrlsFlag?: boolean): Promise<void>;
 export declare const MAX_URL_SET_SIZE = 10000;
 export declare const URL_WARNING_THRESHOLD = 8000;
+export declare const URL_RETENTION_DAYS = 7;
 export interface SavedUrlEntry {
     url: string;
     timestamp: number;

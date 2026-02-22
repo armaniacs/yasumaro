@@ -87,6 +87,7 @@ const mockChrome = {
         'connectionError': 'Please refresh the page and try again',
         'domainBlockedError': 'This domain is not allowed to be recorded. Do you want to record it anyway?',
         'forceRecord': 'Force Record',
+        'forceRecordAnyway': 'Record Anyway',
         'success': '✓ Saved to Obsidian',
         'cancelled': 'Cancelled',
         'recordNow': '📝 Record Now',
@@ -449,6 +450,50 @@ describe('main', () => {
       // Check if specific error message is displayed instead of "Processing failed"
       expect(statusDiv.className).toBe('error');
       expect(statusDiv.textContent).toBe('✗ Error: AI_PROVIDER_ERROR: Rate limit exceeded');
+    });
+
+    it('should change button to "Record Anyway" when PRIVATE_PAGE_DETECTED error', async () => {
+      // Mock tab data
+      const mockTab = {
+        id: 1,
+        title: 'Private Page',
+        url: 'https://private.example.com'
+      };
+
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+
+      // Mock chrome API responses
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
+      mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
+      // Simulate PRIVATE_PAGE_DETECTED error
+    // @ts-expect-error - jest.fn() type narrowing issue
+  
+      sendMessageWithRetry.mockResolvedValue({
+        success: false,
+        error: 'PRIVATE_PAGE_DETECTED',
+        reason: 'cache-control',
+        headerValue: 'Cache-Control: private'
+      });
+
+      const statusDiv = document.getElementById('mainStatus');
+      const recordBtn = document.getElementById('recordBtn');
+
+      await recordCurrentPage();
+
+      // Check if error message is displayed
+      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.textContent).toContain('PRIVATE_PAGE_DETECTED');
+
+      // Check if button text changed to "Record Anyway"
+      expect(recordBtn.disabled).toBe(false);
+      expect(recordBtn.textContent).toBe('Record Anyway');
     });
   });
 });

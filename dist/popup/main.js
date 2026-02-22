@@ -19,6 +19,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 let currentPendingSave = null;
+// 「それでも記録」ボタン表示中フラグ（recordCurrentPage の finally でのリセットを防ぐ）
+let isAwaitingForceConfirm = false;
 function showPrivatePageDialog(url, reason, headerValue) {
     const dialog = document.getElementById('private-page-dialog');
     const messageEl = document.getElementById('dialog-message');
@@ -223,14 +225,93 @@ export async function loadCurrentTab() {
         }
     }
 }
+// ボタンをデフォルト状態（「今すぐ記録」）にリセットする
+function resetRecordButton(recordBtn) {
+    recordBtn.disabled = false;
+    recordBtn.textContent = getMessage('recordNow');
+    recordBtn.onclick = () => recordCurrentPage(false);
+}
+// ボタンを「それでも記録」状態に設定する
+function setRecordAnywayButton(recordBtn, tab, content) {
+    isAwaitingForceConfirm = true;
+    recordBtn.disabled = false;
+    recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+    recordBtn.onclick = () => {
+        isAwaitingForceConfirm = false;
+        void forceRecord(recordBtn, tab, content);
+    };
+}
+// PRIVATE_PAGE_DETECTED 後の強制保存処理（再帰なし）
+async function forceRecord(recordBtn, tab, content) {
+    const startTime = performance.now();
+    const statusDiv = document.getElementById('mainStatus');
+    if (!statusDiv)
+        return;
+    // ボタンを「記録中...」状態にして二重クリック防止
+    recordBtn.disabled = true;
+    recordBtn.textContent = getMessage('recording') || 'Recording...';
+    statusDiv.textContent = '';
+    statusDiv.className = '';
+    showSpinner(getMessage('saving'));
+    try {
+        const settings = await getSettings();
+        const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
+        let result;
+        if (usePreview) {
+            result = await sendMessageWithRetry({
+                type: 'SAVE_RECORD',
+                payload: {
+                    title: tab.title,
+                    url: tab.url,
+                    content: content,
+                    force: true
+                }
+            });
+        }
+        else {
+            result = await sendMessageWithRetry({
+                type: 'MANUAL_RECORD',
+                payload: {
+                    title: tab.title,
+                    url: tab.url,
+                    content: content,
+                    force: true
+                }
+            });
+        }
+        hideSpinner();
+        if (result && result.success) {
+            const totalDuration = performance.now() - startTime;
+            const message = formatSuccessMessage(totalDuration, result.aiDuration);
+            statusDiv.textContent = message;
+            statusDiv.className = 'success';
+            startAutoCloseTimer();
+            resetRecordButtonAndClearFlag(recordBtn);
+        }
+        else {
+            statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || 'Unknown error'}`;
+            statusDiv.className = 'error';
+            resetRecordButtonAndClearFlag(recordBtn);
+        }
+    }
+    catch (error) {
+        hideSpinner();
+        showError(statusDiv, error, () => void forceRecord(recordBtn, tab, content));
+        resetRecordButtonAndClearFlag(recordBtn);
+    }
+}
+function resetRecordButtonAndClearFlag(btn) {
+    isAwaitingForceConfirm = false;
+    resetRecordButton(btn);
+}
 // 手動記録処理
 export async function recordCurrentPage(force = false) {
-    const startTime = performance.now(); // 🆕 開始時刻を記録
+    const startTime = performance.now();
     const statusDiv = document.getElementById('mainStatus');
     const recordBtn = document.getElementById('recordBtn');
     if (!statusDiv)
         return;
-    // P2: 二重クリック防止 - 処理中はボタンを無効化
+    // 二重クリック防止 - 処理中はボタンを無効化
     if (recordBtn) {
         recordBtn.disabled = true;
     }
@@ -276,6 +357,19 @@ export async function recordCurrentPage(force = false) {
                 console.error('PREVIEW_RECORD failed: No response');
                 throw new Error(errorMsg);
             }
+            // PRIVATE_PAGE_DETECTED エラーを previewフェーズで検出
+            if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
+                hideSpinner();
+                const reasonKey = `privatePageReason_${previewResponse.reason?.replace('-', '') || 'cacheControl'}`;
+                const reason = getMessage(reasonKey) || previewResponse.reason || 'unknown';
+                statusDiv.textContent = `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reason})`;
+                statusDiv.className = 'error';
+                if (recordBtn) {
+                    setRecordAnywayButton(recordBtn, tab, contentResponse.content);
+                }
+                // finally でボタンをリセットしないよう早期リターン（finally は実行されない）
+                return;
+            }
             if (!previewResponse.success) {
                 const errorMsg = previewResponse.error || 'Processing failed';
                 console.error('PREVIEW_RECORD failed:', JSON.stringify(previewResponse, null, 2));
@@ -290,6 +384,8 @@ export async function recordCurrentPage(force = false) {
                 const confirmation = await showPreview(previewResponse.processedContent, previewResponse.maskedItems, previewResponse.maskedCount || 0);
                 if (!confirmation.confirmed) {
                     statusDiv.textContent = getMessage('cancelled');
+                    if (recordBtn)
+                        resetRecordButton(recordBtn);
                     return;
                 }
                 finalContent = confirmation.content || '';
@@ -301,7 +397,7 @@ export async function recordCurrentPage(force = false) {
                 payload: {
                     title: tab.title,
                     url: tab.url,
-                    content: finalContent, // Edited or processed content
+                    content: finalContent,
                     force: force
                 }
             });
@@ -318,43 +414,26 @@ export async function recordCurrentPage(force = false) {
                 }
             });
         }
-        // Handle PRIVATE_PAGE_DETECTED error
+        // PRIVATE_PAGE_DETECTED エラーを saveフェーズで検出（usePreview=false の場合）
         if (result && result.error === 'PRIVATE_PAGE_DETECTED') {
             hideSpinner();
-            // Get localized reason message
             const reasonKey = `privatePageReason_${result.reason?.replace('-', '') || 'cacheControl'}`;
             const reason = getMessage(reasonKey) || result.reason || 'unknown';
-            if (result.confirmationRequired) {
-                // Show modal dialog for user to choose action
-                currentPendingSave = { url: tab.url || '', title: tab.title || '', content: contentResponse.content, privacyData: result };
-                showPrivatePageDialog(tab.url || '', reason, result.headerValue || '');
-            }
-            else {
-                // Fallback to simple confirm dialog
-                const message = getMessage('privatePageWarning').replace('$REASON$', reason);
-                const userConfirmed = confirm(message);
-                if (userConfirmed) {
-                    // Retry with force=true
-                    await recordCurrentPage(true);
-                }
-                else {
-                    statusDiv.textContent = getMessage('cancelled');
-                }
+            statusDiv.textContent = `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reason})`;
+            statusDiv.className = 'error';
+            if (recordBtn) {
+                setRecordAnywayButton(recordBtn, tab, contentResponse.content);
             }
             return;
         }
         if (result && result.success) {
             hideSpinner();
-            // 🆕 処理時間を計算してメッセージ表示
             const totalDuration = performance.now() - startTime;
             const message = formatSuccessMessage(totalDuration, result.aiDuration);
             if (statusDiv) {
                 statusDiv.textContent = message;
                 statusDiv.className = 'success';
             }
-            // 【自動クローズ起動】: 記録成功後に自動クローズタイマーを起動 🟢
-            // 【処理方針】: 画面状態が'main'なら2秒後にポップアップを閉じる
-            // 【テスト対応】: テストケース「startAutoCloseTimerでタイマーが起動し、2000ms後にwindow.closeが呼ばれる」
             startAutoCloseTimer();
         }
         else {
@@ -366,18 +445,21 @@ export async function recordCurrentPage(force = false) {
         showError(statusDiv, error, () => recordCurrentPage(true));
     }
     finally {
-        // P2: 二重クリック防止 - 処理完了後にボタンを再有効化
-        const recordBtn = document.getElementById('recordBtn');
-        const tab = await getCurrentTab();
-        if (recordBtn && tab && isRecordable(tab)) {
-            recordBtn.disabled = false;
+        // PRIVATE_PAGE_DETECTED で「それでも記録」ボタンを表示中はリセットしない
+        if (!isAwaitingForceConfirm) {
+            const btn = document.getElementById('recordBtn');
+            const currentTab = await getCurrentTab();
+            if (btn && currentTab && isRecordable(currentTab)) {
+                resetRecordButton(btn);
+            }
         }
     }
 }
 // イベントリスナー設定
-const recordBtn = document.getElementById('recordBtn');
-if (recordBtn) {
-    recordBtn.addEventListener('click', () => recordCurrentPage(false));
+// NOTE: onclick プロパティで管理（addEventListener との混在を避ける）
+const recordBtnInit = document.getElementById('recordBtn');
+if (recordBtnInit) {
+    recordBtnInit.onclick = () => recordCurrentPage(false);
 }
 // Pending pages batch operations
 document.getElementById('btn-select-all')?.addEventListener('click', () => {
