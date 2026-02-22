@@ -412,6 +412,10 @@
     "saveError": {
         "message": "保存エラー"
     },
+    "recordError": {
+        "message": "記録に失敗しました",
+        "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
+    },
     "clipboardCopyFailed": {
         "message": "クリップボードへのコピーに失敗しました"
     },

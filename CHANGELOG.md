@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - **Duplicate storage writes in addSavedUrl**: `src/utils/storageUrls.ts:142` - Eliminated redundant writes to improve performance
 - **Missing error feedback in dashboard history panel**: `src/dashboard/dashboard.ts` - Added error messages displayed when "Record Now" fails
   - Errors now shown inline below the entry with auto-dismiss after 5 seconds
+  - Added `recordError` i18n key (`_locales/en/messages.json`, `_locales/ja/messages.json`) for localized error messages
 
 ### Changed
 - `SavedUrlEntry` interface extended with optional `maskedCount?: number` field (backward compatible)

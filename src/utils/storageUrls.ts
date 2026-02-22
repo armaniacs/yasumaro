@@ -131,7 +131,12 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
     }
 
+    // savedUrlsWithTimestampsを保存
     await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+
+    // savedUrlsセットも同期（isUrlSaved, getSavedUrlCountで使用）
+    const urlArray = entries.map(e => e.url);
+    await chrome.storage.local.set({ savedUrls: urlArray });
 }
 
 /**

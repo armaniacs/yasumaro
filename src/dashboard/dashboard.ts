@@ -631,6 +631,26 @@ async function loadMasterPasswordSettings(): Promise<void> {
 // History Panel
 // ============================================================================
 
+/**
+ * Shows an error message for record operations in the history panel
+ * @param info - The info element to append the error to
+ * @param error - The error object or message
+ */
+function showRecordError(info: HTMLElement, error: unknown): void {
+  const errorMsg = error instanceof Error 
+    ? error.message 
+    : (error as { error?: string })?.error 
+    || getMessage('recordError') 
+    || '記録に失敗しました';
+  console.error('[Dashboard] Manual record error:', error);
+  const errorEl = document.createElement('div');
+  errorEl.className = 'record-error-message';
+  errorEl.textContent = errorMsg;
+  info.appendChild(errorEl);
+  // 5秒後にエラーメッセージを自動消去
+  setTimeout(() => { errorEl.remove(); }, 5000);
+}
+
 async function initHistoryPanel(): Promise<void> {
   const historySearchInput = document.getElementById('historySearch') as HTMLInputElement | null;
   const historyList = document.getElementById('historyList') as HTMLElement | null;
@@ -836,28 +856,12 @@ async function initHistoryPanel(): Promise<void> {
             }
             if (historyStats) historyStats.textContent = `${pendingPages.length} / ${pendingPages.length}`;
           } else {
-            const errorMsg = result?.error || getMessage('recordError') || '記録に失敗しました';
-            console.error('[Dashboard] Manual record failed:', result);
-            // エラーメッセージを表示
-            errorEl = document.createElement('div');
-            errorEl.className = 'record-error-message';
-            errorEl.textContent = errorMsg;
-            info.appendChild(errorEl);
-            // 5秒後にエラーメッセージを自動消去
-            setTimeout(() => { errorEl?.remove(); }, 5000);
+            showRecordError(info, result);
             recordBtn.disabled = false;
             recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
           }
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : getMessage('recordError') || '記録に失敗しました';
-          console.error('[Dashboard] Manual record error:', error);
-          // エラーメッセージを表示
-          errorEl = document.createElement('div');
-          errorEl.className = 'record-error-message';
-          errorEl.textContent = errorMsg;
-          info.appendChild(errorEl);
-          // 5秒後にエラーメッセージを自動消去
-          setTimeout(() => { errorEl?.remove(); }, 5000);
+          showRecordError(info, error);
           recordBtn.disabled = false;
           recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
         }
@@ -952,28 +956,12 @@ async function initHistoryPanel(): Promise<void> {
           // スキップフィルター表示中なら再レンダリング
           if (activeFilter === 'skipped') applyFilters();
         } else {
-          const errorMsg = result?.error || getMessage('recordError') || '記録に失敗しました';
-          console.error('[Dashboard] Manual record failed:', result);
-          // エラーメッセージを表示
-          errorEl = document.createElement('div');
-          errorEl.className = 'record-error-message';
-          errorEl.textContent = errorMsg;
-          info.appendChild(errorEl);
-          // 5秒後にエラーメッセージを自動消去
-          setTimeout(() => { errorEl?.remove(); }, 5000);
+          showRecordError(info, result);
           recordBtn.disabled = false;
           recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
         }
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : getMessage('recordError') || '記録に失敗しました';
-        console.error('[Dashboard] Manual record error:', error);
-        // エラーメッセージを表示
-        errorEl = document.createElement('div');
-        errorEl.className = 'record-error-message';
-        errorEl.textContent = errorMsg;
-        info.appendChild(errorEl);
-        // 5秒後にエラーメッセージを自動消去
-        setTimeout(() => { errorEl?.remove(); }, 5000);
+        showRecordError(info, error);
         recordBtn.disabled = false;
         recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
       }

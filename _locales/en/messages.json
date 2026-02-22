@@ -412,6 +412,10 @@
     "saveError": {
         "message": "Save error"
     },
+    "recordError": {
+        "message": "Failed to record",
+        "description": "Error message shown when manual recording fails in dashboard"
+    },
     "clipboardCopyFailed": {
         "message": "Failed to copy to clipboard"
     },
