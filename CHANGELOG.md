@@ -26,10 +26,17 @@ All notable changes to this project will be documented in this file.
   - `HeaderDetector` stores cache keys with trailing slash removed and fragments stripped
   - Previously, `recordingLogic` searched with raw URLs, causing cache misses and bypassing privacy checks
   - Added `normalizeUrlForCache()` (same logic as `HeaderDetector.normalizeUrl`) to `RecordingLogic`
+- **Misleading comment about finally block**: `src/popup/main.ts:453` - Corrected comment accuracy (finally always executes, control is via flag)
+- **Duplicate storage writes in addSavedUrl**: `src/utils/storageUrls.ts:142` - Eliminated redundant writes to improve performance
+- **Missing error feedback in dashboard history panel**: `src/dashboard/dashboard.ts` - Added error messages displayed when "Record Now" fails
+  - Errors now shown inline below the entry with auto-dismiss after 5 seconds
 
 ### Changed
 - `SavedUrlEntry` interface extended with optional `maskedCount?: number` field (backward compatible)
 - Dashboard History filter bar extended from 4 to 5 buttons (added Masked filter)
+- **Default port for HTTPS**: Changed from 27123 to 27124 to support HTTPS communication with Obsidian Local REST API
+  - Breaking change: Existing users using default port need to update settings to port 27124
+  - See `docs/PORT_MIGRATION.md` for migration instructions
 
 ## [3.9.7] - 2026-02-21
 
