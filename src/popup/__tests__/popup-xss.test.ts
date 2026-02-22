@@ -675,3 +675,25 @@ describe('popup.js - Port Validation Edge Cases', () => {
     expect(result.vulnerable).toBe(true);
   });
 });
+
+/**
+ * ============================================================================
+ * 実際の実装に対するセキュリティステータス (2026-02-22)
+ * ============================================================================
+ *
+ * SECURITY-001 脆弱性の状態: **修正済み（FIXED）**
+ *
+ * 実際の実装ファイル: src/popup/settings/settingsSaver.ts
+ *
+ * 修正内容:
+ * - Line 201: `const port = parseInt(portInput.value.trim(), 10);` - ポート値を検証済み
+ * - Line 50: `const url = 'https://127.0.0.1:${port}/';` - 検証済みの `port` 変数を使用
+ * - Line 51: `const link = document.createElement('a');` - `innerHTML` の代わりに `createElement` を使用
+ *
+ * 現在の実装は「SECURE FIX」と同じ安全な方法を採用しており、XSS脆弱性は発生しません。
+ *
+ * このテストファイルは以下の目的で維持されています:
+ * - 過去の脆弱性を文書化する
+ * - 安全な実装と脆弱な実装の違いを示す
+ * - リグレッション（セキュリティ低下）防止
+ */
