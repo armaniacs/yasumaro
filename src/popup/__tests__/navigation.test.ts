@@ -33,6 +33,22 @@ describe('navigation', () => {
     // Clear all mocks before each test
     jest.clearAllMocks();
 
+    // Mock chrome API
+    global.chrome = {
+      runtime: {
+        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+      },
+      tabs: {
+        create: jest.fn()
+      }
+    } as any;
+
+    // Mock window.close
+    Object.defineProperty(window, 'close', {
+      writable: true,
+      value: jest.fn()
+    });
+
     // jsdomを使用したDOM要素の作成
     document.body.innerHTML = `
       <div id="mainScreen">Main Screen</div>
@@ -84,58 +100,58 @@ describe('navigation', () => {
       // Get DOM elements
       const mainScreen = document.getElementById('mainScreen');
       const settingsScreen = document.getElementById('settingsScreen');
-      
+
       showSettingsScreen();
-      
-      // After calling showSettingsScreen, settings screen should be visible
-      expect(settingsScreen.style.display).toBe('block');
-      expect(mainScreen.style.display).toBe('none');
+
+      // showSettingsScreen() はダッシュボードを開き、ポップアップを閉じる
+      // DOM 操作は行われないため、スタイルは変更されない
       expect(clearAutoCloseTimer).toHaveBeenCalled();
-      expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.SETTINGS);
+      expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/dashboard/dashboard.html' });
+      expect(window.close).toHaveBeenCalled();
     });
 
     it('should handle missing DOM elements gracefully', () => {
       // Remove main screen from DOM
       document.getElementById('mainScreen').remove();
-      
+
       expect(() => {
         showSettingsScreen();
       }).not.toThrow();
-      
-      const settingsScreen = document.getElementById('settingsScreen');
-      expect(settingsScreen.style.display).toBe('block');
+
       expect(clearAutoCloseTimer).toHaveBeenCalled();
-      expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.SETTINGS);
+      expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/dashboard/dashboard.html' });
+      expect(window.close).toHaveBeenCalled();
     });
   });
 
   describe('init', () => {
     it('should initialize event listeners', () => {
-      // 【修正】: setScreenStateは同期関数なので mockResolvedValue ではなく mockImplementation を使用
-      // 🟢 信頼性レベル: テスト失敗によるバグ特定
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       setScreenState.mockImplementation(() => {});
 
       init();
-      
+
       // Check if event listeners are attached
       const menuBtn = document.getElementById('menuBtn');
       const backBtn = document.getElementById('backBtn');
-      
+
       expect(menuBtn).toBeDefined();
       expect(backBtn).toBeDefined();
-      
+
       // Trigger click events
       const menuClickEvent = new Event('click');
       const backClickEvent = new Event('click');
-      
+
       menuBtn.dispatchEvent(menuClickEvent);
       backBtn.dispatchEvent(backClickEvent);
-      
-      // Verify that the functions were called
+
+      // init() calls showMainScreen() which calls setScreenState with MAIN
+      expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.MAIN);
+
+      // menuBtn click calls showSettingsScreen() which calls clearAutoCloseTimer
       expect(clearAutoCloseTimer).toHaveBeenCalled();
-      expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.SETTINGS);
+
+      // backBtn click calls showMainScreen() which calls setScreenState with MAIN again
       expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.MAIN);
     });
 

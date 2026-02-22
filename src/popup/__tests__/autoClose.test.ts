@@ -106,6 +106,16 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     `;
     clearScreenState();
 
+    // 【モック設定】: chrome APIをモック
+    global.chrome = {
+      runtime: {
+        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+      },
+      tabs: {
+        create: jest.fn()
+      }
+    } as any;
+
     // 【モック設定】: window.close()をモック
     mockWindowClose = jest.fn();
     Object.defineProperty(window, 'close', {
@@ -222,6 +232,16 @@ describe('連続記録時のタイマー管理', () => {
     `;
     clearScreenState();
 
+    // 【モック設定】: chrome APIをモック
+    global.chrome = {
+      runtime: {
+        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+      },
+      tabs: {
+        create: jest.fn()
+      }
+    } as any;
+
     mockWindowClose = jest.fn();
     Object.defineProperty(window, 'close', {
       writable: true,
@@ -273,6 +293,16 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
       <div id="settingsScreen" style="display: none;"></div>
     `;
 
+    // 【モック設定】: chrome APIをモック
+    global.chrome = {
+      runtime: {
+        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+      },
+      tabs: {
+        create: jest.fn()
+      }
+    } as any;
+
     mockWindowClose = jest.fn();
     Object.defineProperty(window, 'close', {
       writable: true,
@@ -306,18 +336,17 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     // 【画面表示遷移】: showSettingsScreen() を呼び出す
     navigation.showSettingsScreen();
 
+    // 【結果検証】: showSettingsScreen() から window.close() が1回呼ばれたことを確認
+    expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: showSettingsScreen() によりポップアップが閉じられること
+
     // 【タイマー進行】: 2000ms経過させる
     jest.advanceTimersByTime(2000);
 
-    // 【結果検証】: window.closeが呼ばれていないこと
-    expect(mockWindowClose).not.toHaveBeenCalled(); // 【確認内容】: showSettingsScreen() によりタイマーが自動でキャンセルされたこと
+    // 【結果検証】: window.close() は追加で呼ばれていないこと（タイマーがキャンセルされたこと）
+    expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: タイマーからはクローズされず、showSettingsScreen() の1回のみであること
 
-    // 【結果検証】: 画面状態が'settings'に切り替わったこと
-    expect(getScreenState()).toBe('settings'); // 【確認内容】: 設定画面に遷移したこと
-
-    // 【結果検証】: DOMが正しく切り替わったこと
-    expect(document.getElementById('mainScreen').style.display).toBe('none'); // 【確認内容】: メイン画面が非表示であること
-    expect(document.getElementById('settingsScreen').style.display).toBe('block'); // 【確認内容】: 設定画面が表示されていること
+    // 【結果検証】: chrome.tabs.create が呼ばれたこと
+    expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/dashboard/dashboard.html' }); // 【確認内容】: ダッシュボードが新しいタブで開かれたこと
   });
 });
 

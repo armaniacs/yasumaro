@@ -109,10 +109,13 @@ describe('buildAllowedUrls', () => {
 
         const allowedUrls = buildAllowedUrls(settings);
 
-        expect(allowedUrls.has('http://127.0.0.1:27123')).toBe(true);
-        expect(allowedUrls.has('http://localhost:27123')).toBe(true);
+        // デフォルトポートは 27124
+        expect(allowedUrls.has('http://127.0.0.1:27124')).toBe(true);
+        expect(allowedUrls.has('http://localhost:27124')).toBe(true);
         expect(allowedUrls.has('https://generativelanguage.googleapis.com')).toBe(true);
     });
+
+    // 重複したテストを削除
 
     it('should skip empty base URLs', () => {
         const settings = {

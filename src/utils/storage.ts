@@ -599,7 +599,15 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.ALLOWED_URLS]: [], // 許可されたURLのリスト（設定から動的に構築）
     [StorageKeys.ALLOWED_URLS_HASH]: '', // URLリストのハッシュ（変更検出用）
     // Custom prompts defaults
-    [StorageKeys.CUSTOM_PROMPTS]: [] // カスタムプロンプトのリスト
+    [StorageKeys.CUSTOM_PROMPTS]: [], // カスタムプロンプトのリスト
+    // Domain filter cache for content scripts (Task #19)
+    [StorageKeys.DOMAIN_FILTER_CACHE]: [], // 許可ドメインリスト（キャッシュ）
+    [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: 0, // キャッシュタイムスタンプ
+    // Master password protection defaults
+    [StorageKeys.MP_PROTECTION_ENABLED]: false, // マスターパスワード保護有効フラグ
+    [StorageKeys.MP_ENCRYPT_API_KEYS]: false, // APIキー暗号化フラグ
+    [StorageKeys.MP_ENCRYPT_ON_EXPORT]: false, // エクスポート時暗号化フラグ
+    [StorageKeys.MP_REQUIRE_ON_IMPORT]: false // インポート時パスワード要求フラグ
 };
 
 /**
