@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.9.8] - to be released as RC for 4.0
+## [4.0.0] - 2026-02-23
 
 ### Documentation
 - **ドキュメントのOpenAI互換API対応への更新**: Gemini専用だった記述を、OpenAI互換APIを主軸とした表現に修正
