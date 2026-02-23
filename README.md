@@ -250,3 +250,27 @@ All data is stored locally. See [PRIVACY.md](PRIVACY.md) for details.
 
 ## License / ライセンス
 MIT License
+
+## Documentation / ドキュメント
+
+### 文書一覧
+- [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
+- [CHANGELOG.md](CHANGELOG.md) - 更新履歴
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - セットアップガイド
+- [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
+- [LICENSE.md](LICENSE.md) - ライセンス詳細
+- [PRIVACY.md](PRIVACY.md) - プライバシーポリシー
+- [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) - 個人情報保護機能ガイド
+- [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) - AIプロンプトカスタマイズガイド
+- [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) - uBlockフィルターインポートガイド
+
+### Documentation
+- [AGENTS.md](AGENTS.md) - Developer Agent Configuration
+- [CHANGELOG.md](CHANGELOG.md) - Changelog
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Setup Guide
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
+- [LICENSE.md](LICENSE.md) - License Details
+- [PRIVACY.md](PRIVACY.md) - Privacy Policy
+- [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
+- [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) - AI Prompt Customization Guide
+- [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) - uBlock Filter Import Guide

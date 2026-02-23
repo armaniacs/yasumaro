@@ -41,9 +41,27 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 
 #### プライベートページ自動検出
 本拡張機能は以下のHTTPヘッダーを分析し、プライベートページを自動的に検出します：
-- `Cache-Control: private` / `no-store` / `no-cache`
-- `Set-Cookie` ヘッダーの存在（特定のパターンを伴う場合）
-- `Authorization` ヘッダーの存在
+- `Cache-Control: private` ヘッダー
+- `Cache-Control: no-store` + `Set-Cookie` ヘッダーの組み合わせ
+- `Set-Cookie` + `Vary: Cookie` ヘッダーの組み合わせ
+- `Authorization` ヘッダー
+
+> [!NOTE]
+> `Cache-Control: no-cache` は検出対象に含まれません。これはニュースサイトなどでもよく使用されるディレクティブであり、必ずしもプライベートなコンテンツを示すものではありません。
+
+##### プライバシーステータスコード
+
+プライベートページ検出時に割り当てられるステータスコードは以下の通りです：
+
+| コード | 説明 | 検出対象 |
+|------|------|----------|
+| PSH-1001 | `Cache-Control: private` または `no-store` + `Set-Cookie` 検出 | HTTPレスポンスヘッダー |
+| PSH-2001 | `Set-Cookie` + `Vary: Cookie` 検出 | HTTPレスポンスヘッダー |
+| PSH-3001 | `Authorization` ヘッダー検出 | HTTPリクエストヘッダー |
+| PSH-9001 | 不明な理由 | その他のプライベート判定 |
+
+> [!NOTE]
+> PSH-1001 は `Cache-Control: private` 単独、または `Cache-Control: no-store` と `Set-Cookie` の組み合わせを検出します。`no-store` 単独ではプライベート判定されません。
 
 検出されたページは、以下の方法で保護されます：
 
@@ -156,9 +174,27 @@ For regular use (storing API keys within the extension), a separate auto-encrypt
 
 #### Automatic Private Page Detection
 The extension analyzes the following HTTP headers to automatically detect private pages:
-- `Cache-Control: private` / `no-store` / `no-cache`
-- Presence of `Set-Cookie` headers (in certain patterns)
-- Presence of `Authorization` headers
+- `Cache-Control: private` header
+- `Cache-Control: no-store` + `Set-Cookie` header combination
+- `Set-Cookie` + `Vary: Cookie` header combination
+- `Authorization` header
+
+> [!NOTE]
+> `Cache-Control: no-cache` is not included in the detection criteria. This directive is commonly used on news sites and does not necessarily indicate private content.
+
+##### Privacy Status Codes
+
+The following status codes are assigned when private pages are detected:
+
+| Code | Description | Detection Target |
+|------|-------------|------------------|
+| PSH-1001 | `Cache-Control: private` or `no-store` + `Set-Cookie` detected | HTTP response header |
+| PSH-2001 | `Set-Cookie` + `Vary: Cookie` detected | HTTP response header |
+| PSH-3001 | `Authorization` header detected | HTTP request header |
+| PSH-9001 | Unknown reason | Other private detection |
+
+> [!NOTE]
+> PSH-1001 detects `Cache-Control: private` standalone, or `Cache-Control: no-store` combined with `Set-Cookie`. `no-store` alone does not trigger private detection.
 
 Detected pages are protected as follows:
 

@@ -205,6 +205,87 @@ OpenAI互換APIを提供するプロバイダーは多数あります。上記�
 
 対応プロバイダーの追加は比較的簡単な作業です。コントリビューション大歓迎です！
 
+### プライバシーステータスコードの追加
+
+この拡張機能は、プライベートページ検出理由を識別するためにプライバシーステータスコード (PSH-XXXX) を使用します。新しいプライバシーステータスコードを追加する場合は、以下の **6つのファイル** を同時に更新してください。1つでも漏れると、コードとドキュメントの不一致が生じます。
+
+#### 追加手順
+
+1. **ステータスコード定数の更新** (`src/utils/privacyStatusCodes.ts`):
+   - `PrivacyStatusCode` オブジェクトに新しい定数を追加します:
+   ```typescript
+   export const PrivacyStatusCode: Record<string, PrivacyStatusCodeValue> = {
+       CACHE_CONTROL_PRIVATE: 'PSH-1001',
+       SET_COOKIE: 'PSH-2001',
+       AUTHORIZATION: 'PSH-3001',
+       UNKNOWN: 'PSH-9001',
+       NEW_REASON: 'PSH-4001',  // ここに追加
+   };
+   ```
+   - `statusCodeToMessageKey()` 関数を更新します:
+   ```typescript
+   case 'PSH-4001':
+       return 'privacyStatus_newReason';
+   ```
+
+2. **英語翻訳の追加** (`_locales/en/messages.json`):
+   - 国際化キーを追加します:
+   ```json
+   "privacyStatus_newReason": {
+       "message": "New detection reason",
+       "description": "Privacy status message for new reason"
+   }
+   ```
+
+3. **日本語翻訳の追加** (`_locales/ja/messages.json`):
+   - 対応する日本語の翻訳を追加します:
+   ```json
+   "privacyStatus_newReason": {
+       "message": "新しい検出理由",
+       "description": "新しい検出理由のプライバシーステータスメッセージ"
+   }
+   ```
+
+4. **検出ロジックの追加** (`src/utils/privacyChecker.ts`):
+   - `PrivacyInfo.reason` 型を更新します:
+   ```typescript
+   reason?: 'cache-control' | 'set-cookie' | 'authorization' | 'new-reason';
+   ```
+   - `checkPrivacy()` 関数に検出ロジックを追加します:
+   ```typescript
+   // 検出条件を追加
+   if (/* あなたの条件 */) {
+       return {
+           isPrivate: true,
+           reason: 'new-reason',
+           // ...
+       };
+   }
+   ```
+
+5. **日本語ドキュメントの更新** (`PRIVACY.md`):
+   - 日本語セクションのPrivacy Status Codesテーブルに行を追加します:
+   ```markdown
+   | PSH-4001 | 新しい検出理由 | 検出対象の説明 |
+   ```
+
+6. **英語ドキュメントの更新** (`PRIVACY.md`):
+   - 英語セクションのPrivacy Status Codesテーブルに行を追加します:
+   ```markdown
+   | PSH-4001 | New detection reason | Detection target description |
+   ```
+
+#### 重要な注意点
+
+- ステータスコードは `PSH-XXXX` のパターンに従い、最初の桁がカテゴリーを示します:
+  - 1xxx: Cache-Control ヘッダー
+  - 2xxx: Cookie/セッション関連
+  - 3xxx: 認証関連
+  - 9xxx: 不明/その他の理由
+- 既存のコードと競合しない適切なコード番号を選択してください
+- 必ず日本語と英語の両方のドキュメントセクションを更新してください
+- `privacyChecker.ts` の検出ロジックは、`reasonToStatusCode()` を経由してステータスコードにマッピングされる `reason` 文字列を返す必要があります
+
 ### プロジェクト構造
 
 ```
@@ -498,6 +579,87 @@ test('deepseek.com is allowed', () => {
 There are many providers offering OpenAI-compatible APIs. If you follow the steps above and send a Pull Request, we'll be happy to merge it. Feel free to open a GitHub Issue to propose a new provider, or submit a PR directly.
 
 Adding support for a new provider is a straightforward contribution — we'd love your help!
+
+### Adding Privacy Status Codes
+
+This extension uses Privacy Status Codes (PSH-XXXX) to identify different privacy detection reasons. To add a new Privacy Status Code, you must update **6 files simultaneously**. Missing any one will cause inconsistencies between code and documentation.
+
+#### Steps to Add a Status Code
+
+1. **Update Status Code Constants** (`src/utils/privacyStatusCodes.ts`):
+   - Add the new constant to the `PrivacyStatusCode` object:
+   ```typescript
+   export const PrivacyStatusCode: Record<string, PrivacyStatusCodeValue> = {
+       CACHE_CONTROL_PRIVATE: 'PSH-1001',
+       SET_COOKIE: 'PSH-2001',
+       AUTHORIZATION: 'PSH-3001',
+       UNKNOWN: 'PSH-9001',
+       NEW_REASON: 'PSH-4001',  // Add here
+   };
+   ```
+   - Update the `statusCodeToMessageKey()` function:
+   ```typescript
+   case 'PSH-4001':
+       return 'privacyStatus_newReason';
+   ```
+
+2. **Add English Translation** (`_locales/en/messages.json`):
+   - Add the internationalization key:
+   ```json
+   "privacyStatus_newReason": {
+       "message": "New detection reason",
+       "description": "Privacy status message for new reason"
+   }
+   ```
+
+3. **Add Japanese Translation** (`_locales/ja/messages.json`):
+   - Add the corresponding Japanese translation:
+   ```json
+   "privacyStatus_newReason": {
+       "message": "新しい検出理由",
+       "description": "新しい検出理由のプライバシーステータスメッセージ"
+   }
+   ```
+
+4. **Add Detection Logic** (`src/utils/privacyChecker.ts`):
+   - Update the `PrivacyInfo.reason` type:
+   ```typescript
+   reason?: 'cache-control' | 'set-cookie' | 'authorization' | 'new-reason';
+   ```
+   - Add detection logic in the `checkPrivacy()` function:
+   ```typescript
+   // Add your detection condition
+   if (/* your condition */) {
+       return {
+           isPrivate: true,
+           reason: 'new-reason',
+           // ...
+       };
+   }
+   ```
+
+5. **Update Japanese Documentation** (`PRIVACY.md`):
+   - Add a row to the Privacy Status Codes table in the Japanese section:
+   ```markdown
+   | PSH-4001 | 新しい検出理由 | 検出対象の説明 |
+   ```
+
+6. **Update English Documentation** (`PRIVACY.md`):
+   - Add a row to the Privacy Status Codes table in the English section:
+   ```markdown
+   | PSH-4001 | New detection reason | Detection target description |
+   ```
+
+#### Important Notes
+
+- Status codes follow the pattern `PSH-XXXX` where the first digit indicates the category:
+  - 1xxx: Cache-Control headers
+  - 2xxx: Cookie/session related
+  - 3xxx: Authentication related
+  - 9xxx: Unknown/other reasons
+- Choose an appropriate code number that doesn't conflict with existing codes
+- Always update both Japanese and English documentation sections
+- The detection logic in `privacyChecker.ts` must return a matching `reason` string that maps to the status code via `reasonToStatusCode()`
 
 ### Project Structure
 

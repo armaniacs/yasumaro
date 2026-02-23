@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.1] - to be released
+
+### Documentation
+- **Privacy Status Codesのドキュメント追加**: プライベートページ検出ステータスコード (PSH-XXXX) の定義表を `PRIVACY.md` に追加（日英両方）
+  - 各コード (PSH-1001, PSH-2001, PSH-3001, PSH-9001) の説明と検出対象を明記
+  - 検出条件を現在の実装に合わせて更新（`no-store` 単独では判定せず、`Set-Cookie` との組み合わせで判定）
+  - `Cache-Control: no-cache` は検出対象に含まれないことを明記
+- **Added Privacy Status Codes documentation**: Added definition table for private page detection status codes (PSH-XXXX) to `PRIVACY.md` (Japanese and English versions)
+  - Documented each code (PSH-1001, PSH-2001, PSH-3001, PSH-9001) with descriptions and detection targets
+  - Updated detection criteria to reflect current implementation (`no-store` alone does not trigger detection, requires `Set-Cookie` combination)
+  - Clarified that `Cache-Control: no-cache` is not included in detection criteria
+- **CONTRIBUTING.md の更新**: プライバシーステータスコード追加手順を追加（日英両方）
+- **Updated CONTRIBUTING.md**: Added section explaining how to add new Privacy Status Codes (Japanese and English versions)
+
 ## [4.0.0] - 2026-02-23
 
 ### Documentation
