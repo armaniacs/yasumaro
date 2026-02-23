@@ -54,6 +54,7 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       [StorageKeys.DOMAIN_WHITELIST]: [],
       PRIVACY_MODE: 'full_pipeline',
       PII_SANITIZE_LOGS: true,
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     });
     // @ts-expect-error - jest.fn() type narrowing issue
