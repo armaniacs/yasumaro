@@ -77,7 +77,9 @@
     {
       "resources": [
         "content/extractor.js",
-        "utils/retryHelper.js"
+        "utils/retryHelper.js",
+        "utils/privacyStatusCodes.js",
+        "icons/icon48.png"
       ],
       "matches": [
         "<all_urls>"

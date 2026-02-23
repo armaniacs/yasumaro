@@ -56,12 +56,14 @@ export declare function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, 
 export declare function addSavedUrl(url: string, recordType?: RecordType): Promise<void>;
 /**
  * 記録済みURLのrecordTypeを更新する
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
  * @param {string} url - 更新するURL
  * @param {RecordType} recordType - 記録方式
  */
 export declare function setUrlRecordType(url: string, recordType: RecordType): Promise<void>;
 /**
  * 記録済みURLのmaskedCountを更新する
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
  * @param {string} url - 更新するURL
  * @param {number} maskedCount - マスクしたPII件数
  */

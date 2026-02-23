@@ -26,6 +26,7 @@ export declare const StorageKeys: {
     readonly PRIVACY_MODE: "privacy_mode";
     readonly PII_CONFIRMATION_UI: "pii_confirmation_ui";
     readonly PII_SANITIZE_LOGS: "pii_sanitize_logs";
+    readonly AUTO_SAVE_PRIVACY_BEHAVIOR: "auto_save_privacy_behavior";
     readonly UBLOCK_RULES: "ublock_rules";
     readonly UBLOCK_SOURCES: "ublock_sources";
     readonly UBLOCK_FORMAT_ENABLED: "ublock_format_enabled";
@@ -71,6 +72,7 @@ export interface StorageKeyValues {
     [StorageKeys.PRIVACY_MODE]: string;
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save' | 'skip' | 'confirm';
     [StorageKeys.UBLOCK_RULES]: UblockRules;
     [StorageKeys.UBLOCK_SOURCES]: Source[];
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
@@ -186,6 +188,8 @@ export declare const URL_RETENTION_DAYS = 7;
 export interface SavedUrlEntry {
     url: string;
     timestamp: number;
+    recordType?: string;
+    maskedCount?: number;
 }
 /**
  * Get the list of saved URLs with LRU eviction

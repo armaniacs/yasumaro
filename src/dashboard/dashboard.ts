@@ -667,9 +667,44 @@ async function initHistoryPanel(): Promise<void> {
   const pendingPages = await getPendingPages();
   const pendingUrlSet = new Set(pendingPages.map(p => p.url));
 
-  const entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
+  let entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
 
   let activeFilter: 'all' | 'auto' | 'manual' | 'skipped' | 'masked' = 'all';
+
+  // ストレージ変化を監視してリアルタイム更新
+  const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+    if (area !== 'local') return;
+
+    const savedChanged = 'savedUrlsWithTimestamps' in changes;
+    // pendingPages は chrome.storage.local の独立キー 'osh_pending_pages' に保存される
+    const pendingChanged = 'osh_pending_pages' in changes;
+
+    if (!savedChanged && !pendingChanged) return;
+
+    const updatePromises: Promise<void>[] = [];
+
+    if (savedChanged) {
+      updatePromises.push(
+        getSavedUrlEntries().then(updated => {
+          entries = updated.slice().sort((a, b) => b.timestamp - a.timestamp);
+        })
+      );
+    }
+
+    if (pendingChanged) {
+      updatePromises.push(
+        getPendingPages().then(updated => {
+          pendingPages.length = 0;
+          pendingPages.push(...updated);
+          pendingUrlSet.clear();
+          updated.forEach(p => pendingUrlSet.add(p.url));
+        })
+      );
+    }
+
+    Promise.all(updatePromises).then(() => applyFilters());
+  };
+  chrome.storage.onChanged.addListener(onStorageChanged);
 
   function makeRecordTypeBadge(recordType?: string): HTMLElement {
     const badge = document.createElement('span');

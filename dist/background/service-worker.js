@@ -7,6 +7,8 @@ import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js'
 import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject, updateDomainFilterCache } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
+import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
+import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 // マイグレーション処理を実行
 (async () => {
     try {
@@ -95,6 +97,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         isValidVisit: true
                     });
                 }
+                // 自動保存モード confirm: ボタン付き通知で保存確認を促す
+                if (result.confirmationRequired) {
+                    const url = sender.tab.url || '';
+                    const title = sender.tab.title || url;
+                    const reason = result.reason || 'cache-control';
+                    const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
+                    const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
+                    // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64）
+                    const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + btoa(unescape(encodeURIComponent(url))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+                    NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
+                }
                 sendResponse(result);
                 return;
             }
@@ -172,7 +185,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     skipDuplicateCheck: true,
                     alreadyProcessed: true,
                     force: message.payload.force,
-                    recordType: 'manual'
+                    recordType: 'manual',
+                    maskedCount: message.payload.maskedCount
                 });
                 sendResponse(result);
                 return;
@@ -207,4 +221,56 @@ const initializeExtension = async () => {
 };
 chrome.runtime.onInstalled.addListener(initializeExtension);
 chrome.runtime.onStartup.addListener(initializeExtension);
+// ============================================================================
+// Privacy Confirmation Notification Handlers
+// ============================================================================
+/**
+ * Decode URL from notification ID (URL-safe base64).
+ * Encode: btoa(unescape(encodeURIComponent(url))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')
+ */
+function decodeUrlFromNotificationId(notificationId) {
+    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX))
+        return null;
+    try {
+        const b64safe = notificationId.slice(PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length);
+        const b64 = b64safe.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
+        return decodeURIComponent(escape(atob(padded)));
+    }
+    catch {
+        return null;
+    }
+}
+// Button 0: 保存する / Button 1: スキップ
+chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX))
+        return;
+    chrome.notifications.clear(notificationId);
+    const url = decodeUrlFromNotificationId(notificationId);
+    if (!url)
+        return;
+    if (buttonIndex === 0) {
+        // 「保存する」: pendingから取得してforce記録
+        const pages = await getPendingPages();
+        const page = pages.find(p => p.url === url);
+        if (page) {
+            await recordingLogic.record({
+                title: page.title,
+                url: page.url,
+                content: '',
+                force: true,
+                skipDuplicateCheck: true,
+                recordType: 'auto'
+            });
+        }
+    }
+    // buttonIndex === 1 「スキップ」: pending に残したまま何もしない（ダッシュボードから後で登録可能）
+    await removePendingPages([url]);
+});
+// 通知本体クリック時も閉じる
+chrome.notifications.onClicked.addListener((notificationId) => {
+    if (notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
+        chrome.notifications.clear(notificationId);
+    }
+});
 //# sourceMappingURL=service-worker.js.map

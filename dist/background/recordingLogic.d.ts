@@ -24,6 +24,7 @@ export interface RecordingData {
     requireConfirmation?: boolean;
     headerValue?: string;
     recordType?: RecordType;
+    maskedCount?: number;
 }
 export interface RecordingResult {
     success: boolean;

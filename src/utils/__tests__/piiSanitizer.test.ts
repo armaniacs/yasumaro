@@ -355,7 +355,7 @@ describe('piiSanitizer', () => {
 
       // タイムアウトエラーが返されることを確認
       expect(result.error).toBeDefined();
-      expect(result.error).toContain('timed out');
+      expect(result.error).toContain('exceeded maximum match count');
     });
   });
 });

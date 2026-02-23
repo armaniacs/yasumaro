@@ -112,9 +112,17 @@ export class HeaderDetector {
         if (RecordingLogic.cacheState.privacyCache.size >= MAX_CACHE_SIZE) {
             HeaderDetector.evictOldestEntry();
         }
-        // URL正規化してキャッシュに保存
+        // URL正規化してインメモリキャッシュに保存
         const normalizedUrl = HeaderDetector.normalizeUrl(url);
         RecordingLogic.cacheState.privacyCache.set(normalizedUrl, info);
+        // Service Worker 再起動後もプライバシー情報を失わないよう session storage にも保存
+        // chrome.storage.session はブラウザセッション中は永続 (SW 再起動をまたいでも保持される)
+        if (chrome.storage.session) {
+            const sessionKey = 'privacyCache_' + normalizedUrl;
+            chrome.storage.session.set({ [sessionKey]: info }).catch(() => {
+                // session storage エラーは握りつぶす（インメモリが主、sessionは補助）
+            });
+        }
     }
     /**
      * 最も古いキャッシュエントリを削除する（LRU実装）

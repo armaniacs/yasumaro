@@ -600,6 +600,25 @@ async function loadMasterPasswordSettings() {
 // ============================================================================
 // History Panel
 // ============================================================================
+/**
+ * Shows an error message for record operations in the history panel
+ * @param info - The info element to append the error to
+ * @param error - The error object or message
+ */
+function showRecordError(info, error) {
+    const errorMsg = error instanceof Error
+        ? error.message
+        : error?.error
+            || getMessage('recordError')
+            || '記録に失敗しました';
+    console.error('[Dashboard] Manual record error:', error);
+    const errorEl = document.createElement('div');
+    errorEl.className = 'record-error-message';
+    errorEl.textContent = errorMsg;
+    info.appendChild(errorEl);
+    // 5秒後にエラーメッセージを自動消去
+    setTimeout(() => { errorEl.remove(); }, 5000);
+}
 async function initHistoryPanel() {
     const historySearchInput = document.getElementById('historySearch');
     const historyList = document.getElementById('historyList');
@@ -614,8 +633,34 @@ async function initHistoryPanel() {
     // pending URLセットを取得（スキップ表示に使う）
     const pendingPages = await getPendingPages();
     const pendingUrlSet = new Set(pendingPages.map(p => p.url));
-    const entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
+    let entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
     let activeFilter = 'all';
+    // ストレージ変化を監視してリアルタイム更新
+    const onStorageChanged = (changes, area) => {
+        if (area !== 'local')
+            return;
+        const savedChanged = 'savedUrlsWithTimestamps' in changes;
+        // pendingPages は chrome.storage.local の独立キー 'osh_pending_pages' に保存される
+        const pendingChanged = 'osh_pending_pages' in changes;
+        if (!savedChanged && !pendingChanged)
+            return;
+        const updatePromises = [];
+        if (savedChanged) {
+            updatePromises.push(getSavedUrlEntries().then(updated => {
+                entries = updated.slice().sort((a, b) => b.timestamp - a.timestamp);
+            }));
+        }
+        if (pendingChanged) {
+            updatePromises.push(getPendingPages().then(updated => {
+                pendingPages.length = 0;
+                pendingPages.push(...updated);
+                pendingUrlSet.clear();
+                updated.forEach(p => pendingUrlSet.add(p.url));
+            }));
+        }
+        Promise.all(updatePromises).then(() => applyFilters());
+    };
+    chrome.storage.onChanged.addListener(onStorageChanged);
     function makeRecordTypeBadge(recordType) {
         const badge = document.createElement('span');
         if (recordType === 'manual') {
@@ -758,6 +803,10 @@ async function initHistoryPanel() {
             recordBtn.addEventListener('click', async () => {
                 recordBtn.disabled = true;
                 recordBtn.textContent = getMessage('processing') || '処理中...';
+                // エラーメッセージ表示用要素を準備
+                let errorEl = row.querySelector('.record-error-message');
+                if (errorEl)
+                    errorEl.remove();
                 try {
                     const result = await chrome.runtime.sendMessage({
                         type: 'MANUAL_RECORD',
@@ -777,11 +826,13 @@ async function initHistoryPanel() {
                             historyStats.textContent = `${pendingPages.length} / ${pendingPages.length}`;
                     }
                     else {
+                        showRecordError(info, result);
                         recordBtn.disabled = false;
                         recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
                     }
                 }
-                catch {
+                catch (error) {
+                    showRecordError(info, error);
                     recordBtn.disabled = false;
                     recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
                 }
@@ -844,6 +895,10 @@ async function initHistoryPanel() {
         recordBtn.addEventListener('click', async () => {
             recordBtn.disabled = true;
             recordBtn.textContent = getMessage('processing') || '処理中...';
+            // エラーメッセージ表示用要素を準備
+            let errorEl = row.querySelector('.record-error-message');
+            if (errorEl)
+                errorEl.remove();
             try {
                 const result = await chrome.runtime.sendMessage({
                     type: 'MANUAL_RECORD',
@@ -864,11 +919,13 @@ async function initHistoryPanel() {
                         applyFilters();
                 }
                 else {
+                    showRecordError(info, result);
                     recordBtn.disabled = false;
                     recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
                 }
             }
-            catch {
+            catch (error) {
+                showRecordError(info, error);
                 recordBtn.disabled = false;
                 recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
             }

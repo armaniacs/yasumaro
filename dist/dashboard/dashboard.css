@@ -1092,6 +1092,18 @@ button#changeMasterPassword:hover {
   padding: 4px 10px;
 }
 
+/* Record error message */
+.record-error-message {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--color-danger-text);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  animation: fadeIn var(--transition) ease;
+}
+
 /* =============================================================================
    Domain Search Panel
    ============================================================================= */

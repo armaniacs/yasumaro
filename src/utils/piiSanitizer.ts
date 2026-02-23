@@ -8,6 +8,8 @@
 // 定数設定
 export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
 const DEFAULT_TIMEOUT = 5000; // 5秒
+const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
+const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マッチごと）
 
 interface PiiPattern {
     type: string;
@@ -171,9 +173,13 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         let matchCount = 0;
         while ((match = combinedRegex.exec(text)) !== null) {
             matchCount++;
-            // タイムアウトチェック (10マッチごとに1回チェックしてオーバーヘッド削減)
-            if (matchCount % 10 === 0 && Date.now() - startTime > timeout) {
+            // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
+            if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
                 throw new Error(`Operation timed out after ${timeout}ms`);
+            }
+            // 【ReDoS対策】マッチ件数制限を追加
+            if (matchCount > MAX_MATCH_COUNT) {
+                throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
             }
 
             const matchedValue = match[0];

@@ -400,8 +400,30 @@
           <label data-i18n="confirmSettings">Confirmation Settings</label>
           <div class="mb-8">
             <input type="checkbox" id="piiConfirm">
-            <label for="piiConfirm" data-i18n="confirmBeforeSending">Confirm masking result before sending</label>
+            <label for="piiConfirm" data-i18n="confirmBeforeSendingManual">Confirm masking result before sending (manual save only)</label>
           </div>
+          <div class="mt-10">
+            <label data-i18n="autoSavePrivacyBehavior">Auto-save behavior when privacy concern detected</label>
+            <div class="ml-24 mt-4">
+              <div class="mb-4">
+                <input type="radio" id="autoSaveBehaviorDefault" name="autoSavePrivacyBehavior" value="save">
+                <label for="autoSaveBehaviorDefault" data-i18n="autoSaveBehaviorSave">Save normally (default)</label>
+              </div>
+              <div class="mb-4">
+                <input type="radio" id="autoSaveBehaviorSkip" name="autoSavePrivacyBehavior" value="skip">
+                <label for="autoSaveBehaviorSkip" data-i18n="autoSaveBehaviorSkip">Skip and keep in history for later registration</label>
+              </div>
+              <div class="mb-4">
+                <input type="radio" id="autoSaveBehaviorConfirm" name="autoSavePrivacyBehavior" value="confirm">
+                <label for="autoSaveBehaviorConfirm" data-i18n="autoSaveBehaviorConfirm">Ask whether to save</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="savePrivacySettings" class="btn-primary" data-i18n="savePrivacySettings">Save</button>
+          <div id="privacyStatus" class="status-message" aria-live="polite"></div>
         </div>
 
         <hr class="settings-hr">

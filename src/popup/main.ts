@@ -490,7 +490,8 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           title: tab.title,
           url: tab.url,
           content: finalContent,
-          force: force
+          force: force,
+          maskedCount: previewResponse.maskedCount
         }
       });
 

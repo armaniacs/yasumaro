@@ -36,6 +36,13 @@ export async function loadPrivacySettings(): Promise<void> {
     if (confirmCheckbox) {
         confirmCheckbox.checked = settings[StorageKeys.PII_CONFIRMATION_UI] !== false; // Default true
     }
+
+    // Auto-save privacy behavior
+    const behavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
+    const behaviorRadio = document.querySelector(`input[name="autoSavePrivacyBehavior"][value="${behavior}"]`) as HTMLInputElement | null;
+    if (behaviorRadio) {
+        behaviorRadio.checked = true;
+    }
 }
 
 async function savePrivacySettings(): Promise<void> {
@@ -46,9 +53,11 @@ async function savePrivacySettings(): Promise<void> {
             return;
         }
 
+        const selectedBehavior = document.querySelector('input[name="autoSavePrivacyBehavior"]:checked') as HTMLInputElement | null;
         const newSettings = {
             [StorageKeys.PRIVACY_MODE]: selectedMode.value,
-            [StorageKeys.PII_CONFIRMATION_UI]: confirmCheckbox ? confirmCheckbox.checked : true
+            [StorageKeys.PII_CONFIRMATION_UI]: confirmCheckbox ? confirmCheckbox.checked : true,
+            [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: (selectedBehavior?.value || 'save') as 'save' | 'skip' | 'confirm'
         };
 
         await saveSettings(newSettings);

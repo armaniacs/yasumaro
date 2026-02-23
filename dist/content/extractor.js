@@ -8,6 +8,7 @@
  * 🟢
  */
 import { createSender } from '../utils/retryHelper.js';
+import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50; // パーセンテージ
@@ -47,16 +48,12 @@ function extractPageContent() {
  * 🟢
  */
 function loadSettings() {
-    chrome.storage.local.get(['settings'], (result) => {
-        // マイグレーション後は settings キー下の min_visit_duration, min_scroll_depth を取得
-        if (result.settings) {
-            const settings = result.settings;
-            if (settings.min_visit_duration !== undefined) {
-                minVisitDuration = parseInt(String(settings.min_visit_duration), 10);
-            }
-            if (settings.min_scroll_depth !== undefined) {
-                minScrollDepth = parseInt(String(settings.min_scroll_depth), 10);
-            }
+    chrome.storage.local.get(['min_visit_duration', 'min_scroll_depth'], (result) => {
+        if (result.min_visit_duration !== undefined) {
+            minVisitDuration = parseInt(String(result.min_visit_duration), 10);
+        }
+        if (result.min_scroll_depth !== undefined) {
+            minScrollDepth = parseInt(String(result.min_scroll_depth), 10);
         }
     });
 }
@@ -75,8 +72,8 @@ function checkVisitConditions() {
     if (isValidVisitReported)
         return;
     const duration = (Date.now() - startTime) / 1000;
-    // DEBUG LOG: 状態のデバッグログ（必要に応じて有効化）
-    // console.log(`Status: Duration=${duration.toFixed(1)}s, MaxScroll=${maxScrollPercentage.toFixed(1)}%`);
+    // DEBUG LOG: 状態のデバッグログ
+    console.log(`[OSH] Status: Duration=${duration.toFixed(1)}s, MaxScroll=${maxScrollPercentage.toFixed(1)}%, threshold=${minVisitDuration}s/${minScrollDepth}%`);
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
     if (duration >= minVisitDuration && maxScrollPercentage >= minScrollDepth) {
         reportValidVisit();
@@ -156,6 +153,7 @@ function updateMaxScroll() {
  */
 async function reportValidVisit() {
     isValidVisitReported = true;
+    console.log('[OSH] reportValidVisit: sending VALID_VISIT');
     const content = extractPageContent();
     try {
         const response = await messageSender.sendMessageWithRetry({
@@ -164,6 +162,7 @@ async function reportValidVisit() {
                 content: content
             }
         });
+        console.log('[OSH] VALID_VISIT response:', JSON.stringify(response));
         // レスポンスの成功フラグをチェック
         if (response && !response.success) {
             if (response.error === 'DOMAIN_BLOCKED') {
@@ -172,10 +171,17 @@ async function reportValidVisit() {
             }
             // PRIVATE_PAGE_DETECTED エラーの処理
             if (response.error === 'PRIVATE_PAGE_DETECTED') {
-                const reasonKey = `privatePageReason_${response.reason?.replace('-', '')}`;
-                const reason = chrome.i18n.getMessage(reasonKey) || response.reason || 'unknown';
-                const message = chrome.i18n.getMessage('privatePageWarning', [reason]);
-                const userConfirmed = confirm(message);
+                // confirmationRequired=true の場合のみダイアログを表示
+                // （skip モードでは confirmationRequired が返らないのでダイアログ不要）
+                if (!response.confirmationRequired) {
+                    return;
+                }
+                const statusCode = reasonToStatusCode(response.reason);
+                const messageKey = statusCodeToMessageKey(statusCode);
+                const reasonLabel = chrome.i18n.getMessage(messageKey)
+                    || chrome.i18n.getMessage(`privatePageReason_${(response.reason || '').replace('-', '')}`)
+                    || response.reason || 'unknown';
+                const userConfirmed = await showPrivacyConfirmDialog(statusCode, reasonLabel);
                 if (userConfirmed) {
                     // force flagを立てて再送信
                     try {
@@ -210,6 +216,120 @@ async function reportValidVisit() {
             console.warn("Failed to report valid visit:", error.message);
         }
     }
+}
+/**
+ * プライバシー懸念ページの確認ダイアログをページ上に表示する。
+ * ブラウザ標準の confirm() を使わず Shadow DOM でロゴ・ステータスコード付きの
+ * カスタムダイアログを表示する。
+ */
+function showPrivacyConfirmDialog(statusCode, reasonLabel) {
+    return new Promise((resolve) => {
+        const iconUrl = chrome.runtime.getURL('icons/icon48.png');
+        const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Obsidian Smart History';
+        const bodyText = chrome.i18n.getMessage('privacyDialogBody', [reasonLabel])
+            || `このページにはプライバシー懸念があります（${reasonLabel}）。それでも保存しますか？`;
+        const saveLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSave') || '保存する';
+        const cancelLabel = chrome.i18n.getMessage('cancel') || 'キャンセル';
+        const statusLabel = chrome.i18n.getMessage('privacyDialogStatusLabel') || '検出コード';
+        // ホスト要素
+        const host = document.createElement('div');
+        host.id = 'osh-privacy-confirm-host';
+        host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; top: 0; left: 0; width: 100%; height: 100%;';
+        const shadow = host.attachShadow({ mode: 'closed' });
+        // Constructable Stylesheets を使用（CSP style-src 'self' に準拠）
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(`
+            .overlay {
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.45);
+                display: flex; align-items: center; justify-content: center;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            .dialog {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+                padding: 24px 28px 20px;
+                max-width: 380px;
+                width: 90vw;
+                box-sizing: border-box;
+            }
+            .header {
+                display: flex; align-items: center; gap: 10px;
+                margin-bottom: 14px;
+            }
+            .header img { width: 28px; height: 28px; flex-shrink: 0; }
+            .header span {
+                font-size: 15px; font-weight: 700; color: #1a1a1a;
+            }
+            .body { font-size: 14px; color: #333; line-height: 1.6; margin-bottom: 14px; }
+            .status {
+                display: inline-flex; align-items: center; gap: 6px;
+                background: #f3f4f6; border-radius: 6px;
+                padding: 4px 10px; font-size: 12px; color: #555;
+                margin-bottom: 18px;
+            }
+            .status-code { font-family: monospace; font-weight: 700; color: #d97706; }
+            .buttons { display: flex; gap: 10px; justify-content: flex-end; }
+            .btn {
+                padding: 8px 18px; border-radius: 7px; font-size: 14px;
+                cursor: pointer; border: none; font-weight: 600;
+            }
+            .btn-cancel { background: #f3f4f6; color: #555; }
+            .btn-cancel:hover { background: #e5e7eb; }
+            .btn-save { background: #4f46e5; color: #fff; }
+            .btn-save:hover { background: #4338ca; }
+        `);
+        shadow.adoptedStyleSheets = [sheet];
+        // HTMLはスタイルなしで構築（XSS対策: テキストはtextContentで設定）
+        shadow.innerHTML = `
+            <div class="overlay">
+                <div class="dialog" role="dialog" aria-modal="true">
+                    <div class="header">
+                        <img src="${iconUrl}" alt="">
+                        <span id="osh-title"></span>
+                    </div>
+                    <div class="body" id="osh-body"></div>
+                    <div class="status">
+                        <span id="osh-status-label"></span>
+                        <span class="status-code" id="osh-status-code"></span>
+                        <span id="osh-reason"></span>
+                    </div>
+                    <div class="buttons">
+                        <button class="btn btn-cancel" id="osh-cancel"></button>
+                        <button class="btn btn-save" id="osh-save"></button>
+                    </div>
+                </div>
+            </div>
+        `;
+        // テキストはtextContentで安全に設定
+        const setText = (id, text) => {
+            const el = shadow.getElementById(id);
+            if (el)
+                el.textContent = text;
+        };
+        setText('osh-title', title);
+        setText('osh-body', bodyText);
+        setText('osh-status-label', `${statusLabel}:`);
+        setText('osh-status-code', statusCode);
+        setText('osh-reason', `— ${reasonLabel}`);
+        setText('osh-cancel', cancelLabel);
+        setText('osh-save', saveLabel);
+        const cleanup = (result) => {
+            host.remove();
+            resolve(result);
+        };
+        shadow.getElementById('osh-save')?.addEventListener('click', () => cleanup(true));
+        shadow.getElementById('osh-cancel')?.addEventListener('click', () => cleanup(false));
+        // オーバーレイクリックでキャンセル
+        shadow.querySelector('.overlay')?.addEventListener('click', (e) => {
+            if (e.target === shadow.querySelector('.overlay'))
+                cleanup(false);
+        });
+        document.body.appendChild(host);
+        // フォーカスをキャンセルボタンへ
+        setTimeout(() => shadow.getElementById('osh-cancel')?.focus(), 0);
+    });
 }
 /**
  * 定期実行を開始する

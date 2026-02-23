@@ -281,6 +281,21 @@
     "confirmBeforeSending": {
         "message": "Confirm masking result before sending"
     },
+    "confirmBeforeSendingManual": {
+        "message": "Confirm masking result before sending (manual save only)"
+    },
+    "autoSavePrivacyBehavior": {
+        "message": "Auto-save behavior when privacy concern detected"
+    },
+    "autoSaveBehaviorSave": {
+        "message": "Save normally (default)"
+    },
+    "autoSaveBehaviorSkip": {
+        "message": "Skip and keep in history for later registration"
+    },
+    "autoSaveBehaviorConfirm": {
+        "message": "Ask whether to save"
+    },
     "savePrivacySettings": {
         "message": "Save"
     },
@@ -803,6 +818,44 @@
     },
     "passwordRequired": {
         "message": "Please enter your master password."
+    },
+    "privacyDialogBody": {
+        "message": "A privacy concern was detected on this page ($REASON$). Save anyway?",
+        "placeholders": { "reason": { "content": "$1" } }
+    },
+    "privacyDialogStatusLabel": {
+        "message": "Detection code"
+    },
+    "privacyStatus_cacheControlPrivate": {
+        "message": "Private cache header"
+    },
+    "privacyStatus_cacheControlNoStore": {
+        "message": "No-store cache header"
+    },
+    "privacyStatus_setCookie": {
+        "message": "Authentication cookie"
+    },
+    "privacyStatus_authorization": {
+        "message": "Authorization header"
+    },
+    "privacyStatus_unknown": {
+        "message": "Unknown privacy concern"
+    },
+    "notifyPrivacyConfirmTitle": {
+        "message": "Obsidian Smart History"
+    },
+    "notifyPrivacyConfirmBody": {
+        "message": "Privacy concern detected on \"$TITLE$\" ($REASON$). Save this page?",
+        "placeholders": {
+            "title": { "content": "$1" },
+            "reason": { "content": "$2" }
+        }
+    },
+    "notifyPrivacyConfirmSave": {
+        "message": "Save"
+    },
+    "notifyPrivacyConfirmSkip": {
+        "message": "Skip"
     },
     "privatePageWarning": {
         "message": "This page may contain private information (detected: $REASON$). Save anyway?",

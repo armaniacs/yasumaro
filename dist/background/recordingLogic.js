@@ -150,7 +150,28 @@ export class RecordingLogic {
                 return cached;
             }
         }
-        // キャッシュミス: ヘッダー情報がまだ収集されていない
+        // キャッシュミス: Service Worker 再起動でインメモリキャッシュが消えた可能性がある
+        // session storage からフォールバック取得を試みる
+        if (chrome.storage.session) {
+            try {
+                const sessionKey = 'privacyCache_' + normalizedUrl;
+                const result = await chrome.storage.session.get(sessionKey);
+                const cached = result[sessionKey];
+                if (cached) {
+                    // インメモリキャッシュに復元
+                    if (!RecordingLogic.cacheState.privacyCache) {
+                        RecordingLogic.cacheState.privacyCache = new Map();
+                        RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+                    }
+                    RecordingLogic.cacheState.privacyCache.set(normalizedUrl, cached);
+                    addLog(LogType.DEBUG, 'Privacy cache restored from session storage', { url });
+                    return cached;
+                }
+            }
+            catch {
+                // session storage エラーは無視
+            }
+        }
         addLog(LogType.DEBUG, 'Privacy check skipped: no header data', { url });
         return null;
     }
@@ -181,7 +202,7 @@ export class RecordingLogic {
         addLog(LogType.INFO, 'Page saved to pending', { url, title, reason });
     }
     async record(data) {
-        let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType } = data;
+        let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount } = data;
         const MAX_RECORD_SIZE = 64 * 1024;
         try {
             // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -236,7 +257,7 @@ export class RecordingLogic {
                         reason: privacyInfo.reason,
                         requireConfirmation
                     });
-                    // requireConfirmationの場合、pendingに保存してconfirmationRequired=trueを返す
+                    // requireConfirmationの場合（手動保存）、pendingに保存してconfirmationRequired=trueを返す
                     if (requireConfirmation) {
                         // privacyInfo.headersから適切なヘッダー値を抽出、なければRecordingData.headerValueを使用
                         const reason = privacyInfo.reason || 'cache-control';
@@ -250,16 +271,33 @@ export class RecordingLogic {
                             confirmationRequired: true
                         };
                     }
-                    // 自動記録の場合：pendingに保存してエラーを返す（ユーザーが後で処理できるように）
+                    // 自動記録の場合：AUTO_SAVE_PRIVACY_BEHAVIOR 設定に応じた処理
+                    const autoSaveBehavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
                     const autoReason = privacyInfo.reason || 'cache-control';
                     const autoHeaderValue = headerValue ||
                         (autoReason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
-                    await this._savePendingPage(url, title, autoReason, autoHeaderValue);
-                    return {
-                        success: false,
-                        error: 'PRIVATE_PAGE_DETECTED',
-                        reason: privacyInfo.reason
-                    };
+                    if (autoSaveBehavior === 'skip') {
+                        // スキップ：pendingに保存して終了（ユーザーが後で記録履歴から登録できる）
+                        await this._savePendingPage(url, title, autoReason, autoHeaderValue);
+                        return {
+                            success: false,
+                            error: 'PRIVATE_PAGE_DETECTED',
+                            reason: privacyInfo.reason
+                        };
+                    }
+                    else if (autoSaveBehavior === 'confirm') {
+                        // 確認：pendingに保存してconfirmationRequired=trueを返す
+                        await this._savePendingPage(url, title, autoReason, autoHeaderValue);
+                        return {
+                            success: false,
+                            error: 'PRIVATE_PAGE_DETECTED',
+                            reason: privacyInfo.reason,
+                            confirmationRequired: true,
+                            headerValue: autoHeaderValue
+                        };
+                    }
+                    // 'save'（デフォルト）: そのまま続行して保存する
+                    addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url });
                 }
                 if (privacyInfo?.isPrivate && force) {
                     addLog(LogType.WARN, 'Force recording private page', {
@@ -368,8 +406,8 @@ export class RecordingLogic {
             // 記録方式をエントリに保存
             const resolvedRecordType = recordType ?? 'auto';
             await setUrlRecordType(url, resolvedRecordType);
-            // マスク件数を保存（1件以上の場合のみ）
-            const resolvedMaskedCount = pipelineResult.maskedCount ?? 0;
+            // マスク件数を保存（alreadyProcessed の場合は呼び元から渡された値を優先）
+            const resolvedMaskedCount = precomputedMaskedCount ?? pipelineResult.maskedCount ?? 0;
             if (resolvedMaskedCount > 0) {
                 await setUrlMaskedCount(url, resolvedMaskedCount);
             }

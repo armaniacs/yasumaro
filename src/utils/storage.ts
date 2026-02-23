@@ -44,6 +44,7 @@ export const StorageKeys = {
     PRIVACY_MODE: 'privacy_mode',           // 'local_only' | 'full_pipeline' | 'masked_cloud' | 'cloud_only'
     PII_CONFIRMATION_UI: 'pii_confirmation_ui', // true | false
     PII_SANITIZE_LOGS: 'pii_sanitize_logs',  // true | false
+    AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior', // 'save' | 'skip' | 'confirm'
     // uBlock Origin format settings
     UBLOCK_RULES: 'ublock_rules',           // uBlock形式ルールセット（マージ済み）
     UBLOCK_SOURCES: 'ublock_sources',       // uBlockソースリスト（複数対応）
@@ -100,6 +101,7 @@ export interface StorageKeyValues {
     [StorageKeys.PRIVACY_MODE]: string;
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;
+    [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save' | 'skip' | 'confirm';
     [StorageKeys.UBLOCK_RULES]: UblockRules;
     [StorageKeys.UBLOCK_SOURCES]: Source[];
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;
@@ -549,7 +551,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
 
 const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.OBSIDIAN_API_KEY]: '', // APIキー（ユーザーが設定）
-    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http', // Default HTTP for Local REST API
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'https', // Default HTTPS for Local REST API (port 27124)
     [StorageKeys.OBSIDIAN_PORT]: '27124',
     [StorageKeys.MIN_VISIT_DURATION]: 5, // seconds
     [StorageKeys.MIN_SCROLL_DEPTH]: 50, // percentage
@@ -583,6 +585,7 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,
+    [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
     // uBlock format defaults（軽量化版: ドメイン配列のみ）
     [StorageKeys.UBLOCK_RULES]: {
         blockDomains: [],
@@ -852,6 +855,8 @@ export const URL_RETENTION_DAYS = 7;
 export interface SavedUrlEntry {
     url: string;
     timestamp: number;
+    recordType?: string;
+    maskedCount?: number;
 }
 
 /**
@@ -927,12 +932,25 @@ async function updateUrlTimestamp(url: string): Promise<void> {
  * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
  */
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
-    // Map to entries array
-    const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
+    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const existingMap = new Map<string, SavedUrlEntry>();
+        for (const e of (currentEntries || [])) {
+            existingMap.set(e.url, e);
+        }
+        const entries: SavedUrlEntry[] = [];
+        for (const [url, timestamp] of urlMap.entries()) {
+            const existing = existingMap.get(url);
+            const entry: SavedUrlEntry = { url, timestamp };
+            if (existing?.recordType !== undefined) entry.recordType = existing.recordType;
+            if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
+            entries.push(entry);
+        }
+        return entries;
+    }, { maxRetries: 5 });
 
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
@@ -1003,7 +1021,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     const allowedUrls = new Set<string>();
 
     // Obsidian API
-    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
+    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'https';
     const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
     allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));

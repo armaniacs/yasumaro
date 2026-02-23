@@ -13,7 +13,7 @@ function sanitizePathComponent(component: string): string {
     }
 
     // 親ディレクトリ参照（../, ./）をブロック
-    if (/\.\.?\//u.test(component) ||(/\.\.[\\/]/u.test(component))) {
+    if (/\.\.?\//u.test(component) || /\.\.[\\/]/u.test(component)) {
         throw new Error('Invalid path component: path traversal detected');
     }
 

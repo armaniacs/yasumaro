@@ -294,13 +294,13 @@
           </div>
 
           <!-- Hidden textareas for storing both lists -->
-          <textarea id="whitelistTextarea" style="display: none;"></textarea>
-          <textarea id="blacklistTextarea" style="display: none;"></textarea>
+          <textarea id="whitelistTextarea" class="hidden"></textarea>
+          <textarea id="blacklistTextarea" class="hidden"></textarea>
         </div>
       </div>
 
       <!-- uBlock形式用UI（新規） -->
-      <div id="uBlockFormatUI" class="format-section" style="display: none;">
+      <div id="uBlockFormatUI" class="format-section hidden">
         <div class="form-group">
           <label for="uBlockFilterInput" data-i18n="ublockFilter">uBlock Filter</label>
           <textarea id="uBlockFilterInput" rows="8" data-i18n-input-placeholder="ublockFilterPlaceholder"></textarea>
@@ -641,7 +641,10 @@
   <!-- Private Page Confirmation Dialog -->
   <dialog id="private-page-dialog" class="private-page-dialog">
     <div class="dialog-content">
-      <h3 id="dialog-title" data-i18n="warningPrivatePage">Private Page Detected</h3>
+      <div class="dialog-header">
+        <img src="../icons/icon48.png" width="24" height="24" alt="Obsidian Smart History" class="dialog-logo">
+        <h3 id="dialog-title" data-i18n="warningPrivatePage">Private Page Detected</h3>
+      </div>
       <p id="dialog-message" class="dialog-message"></p>
       <div class="dialog-buttons">
         <button id="dialog-cancel" type="button" class="btn-cancel" data-i18n="cancel">Cancel</button>

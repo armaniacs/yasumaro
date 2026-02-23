@@ -1,11 +1,11 @@
-import { getSettings, saveSettings } from './storage.js';
+const PENDING_PAGES_KEY = 'osh_pending_pages';
 /**
- * Retrieves the list of pending pages from settings.
+ * Retrieves the list of pending pages directly from chrome.storage.local.
  * @returns Promise resolving to an array of PendingPage objects, or an empty array if none exist.
  */
 async function getPendingPagesList() {
-    const settings = await getSettings();
-    return settings['pendingPages'] || [];
+    const result = await chrome.storage.local.get(PENDING_PAGES_KEY);
+    return result[PENDING_PAGES_KEY] || [];
 }
 /**
  * Adds a pending page to storage if it doesn't already exist.
@@ -16,10 +16,12 @@ export async function addPendingPage(page) {
     const pages = await getPendingPagesList();
     // Exclusion of duplicates
     const exists = pages.some(p => p.url === page.url);
+    console.log('[OSH pending] addPendingPage:', page.url, 'exists:', exists, 'current count:', pages.length);
     if (exists)
         return;
     const updatedPages = [...pages, page];
-    await saveSettings({ pendingPages: updatedPages });
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    console.log('[OSH pending] saved, new count:', updatedPages.length);
 }
 /**
  * Retrieves all non-expired pending pages from storage.
@@ -38,7 +40,7 @@ export async function removePendingPages(urls) {
     const pages = await getPendingPagesList();
     const urlSet = new Set(urls);
     const updatedPages = pages.filter(p => !urlSet.has(p.url));
-    await saveSettings({ pendingPages: updatedPages });
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
 }
 /**
  * Removes all expired pending pages from storage.
@@ -47,6 +49,6 @@ export async function removePendingPages(urls) {
 export async function clearExpiredPages() {
     const pages = await getPendingPagesList();
     const updatedPages = pages.filter(p => p.expiry > Date.now());
-    await saveSettings({ pendingPages: updatedPages });
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
 }
 //# sourceMappingURL=pendingStorage.js.map

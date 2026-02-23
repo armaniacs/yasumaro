@@ -281,6 +281,21 @@
     "confirmBeforeSending": {
         "message": "送信前にマスキング結果を確認する"
     },
+    "confirmBeforeSendingManual": {
+        "message": "手動保存時に送信前にマスキング結果を確認する"
+    },
+    "autoSavePrivacyBehavior": {
+        "message": "自動保存時にプライバシー懸念がある場合の動作"
+    },
+    "autoSaveBehaviorSave": {
+        "message": "通常通り保存する（デフォルト）"
+    },
+    "autoSaveBehaviorSkip": {
+        "message": "保存をスキップし、記録履歴に残す（あとで記録履歴から登録できる）"
+    },
+    "autoSaveBehaviorConfirm": {
+        "message": "保存するかどうか確認する"
+    },
     "savePrivacySettings": {
         "message": "保存"
     },
@@ -411,6 +426,10 @@
     },
     "saveError": {
         "message": "保存エラー"
+    },
+    "recordError": {
+        "message": "記録に失敗しました",
+        "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
     },
     "clipboardCopyFailed": {
         "message": "クリップボードへのコピーに失敗しました"
@@ -802,6 +821,44 @@
     },
     "importPasswordRequired": {
         "message": "この設定ファイルは暗号化されています。設定を復号してインポートするにはマスターパスワードを入力する必要があります。\n\n続行しますか？"
+    },
+    "privacyDialogBody": {
+        "message": "このページにはプライバシー懸念が検出されました（$REASON$）。それでも保存しますか？",
+        "placeholders": { "reason": { "content": "$1" } }
+    },
+    "privacyDialogStatusLabel": {
+        "message": "検出コード"
+    },
+    "privacyStatus_cacheControlPrivate": {
+        "message": "プライベートキャッシュヘッダー"
+    },
+    "privacyStatus_cacheControlNoStore": {
+        "message": "キャッシュ禁止ヘッダー"
+    },
+    "privacyStatus_setCookie": {
+        "message": "認証Cookie"
+    },
+    "privacyStatus_authorization": {
+        "message": "認証ヘッダー"
+    },
+    "privacyStatus_unknown": {
+        "message": "不明なプライバシー懸念"
+    },
+    "notifyPrivacyConfirmTitle": {
+        "message": "Obsidian Smart History"
+    },
+    "notifyPrivacyConfirmBody": {
+        "message": "「$TITLE$」にプライバシー懸念（$REASON$）が検出されました。保存しますか？",
+        "placeholders": {
+            "title": { "content": "$1" },
+            "reason": { "content": "$2" }
+        }
+    },
+    "notifyPrivacyConfirmSave": {
+        "message": "保存する"
+    },
+    "notifyPrivacyConfirmSkip": {
+        "message": "スキップ"
     },
     "privatePageWarning": {
         "message": "このページには個人情報が含まれている可能性があります（検出理由: $REASON$）。それでも保存しますか?",

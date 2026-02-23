@@ -109,9 +109,9 @@ describe('buildAllowedUrls', () => {
 
         const allowedUrls = buildAllowedUrls(settings);
 
-        // デフォルトポートは 27124
-        expect(allowedUrls.has('http://127.0.0.1:27124')).toBe(true);
-        expect(allowedUrls.has('http://localhost:27124')).toBe(true);
+        // デフォルトプロトコルは https、ポートは 27124
+        expect(allowedUrls.has('https://127.0.0.1:27124')).toBe(true);
+        expect(allowedUrls.has('https://localhost:27124')).toBe(true);
         expect(allowedUrls.has('https://generativelanguage.googleapis.com')).toBe(true);
     });
 

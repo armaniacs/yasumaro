@@ -58,11 +58,26 @@ export async function setSavedUrls(urlSet, urlToAdd = null) {
  * @param {string} [urlToAdd] - 追加/更新するURL（現在のタイムスタンプ付き）（オプション）
  */
 export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
-    // Mapからエントリ配列に変換
-    const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
     const urlArray = Array.from(urlMap.keys());
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
+    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        const existingMap = new Map();
+        for (const e of (currentEntries || [])) {
+            existingMap.set(e.url, e);
+        }
+        const entries = [];
+        for (const [url, timestamp] of urlMap.entries()) {
+            const existing = existingMap.get(url);
+            const entry = { url, timestamp };
+            if (existing?.recordType !== undefined)
+                entry.recordType = existing.recordType;
+            if (existing?.maskedCount !== undefined)
+                entry.maskedCount = existing.maskedCount;
+            entries.push(entry);
+        }
+        return entries;
+    }, { maxRetries: 5 });
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
     // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
@@ -75,28 +90,40 @@ export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
 }
 /**
  * LRU追跡のためのURLタイムスタンプを更新
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
  * @param {string} url - 更新するURL
  * @param {RecordType} [recordType] - 記録方式
  */
 async function updateUrlTimestamp(url, recordType) {
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    let entries = result.savedUrlsWithTimestamps || [];
-    // 既存のURLがある場合は削除
-    entries = entries.filter(entry => entry.url !== url);
-    // 新しいエントリを追加
-    const entry = { url, timestamp: Date.now() };
-    if (recordType)
-        entry.recordType = recordType;
-    entries.push(entry);
-    // 7日より古いエントリを削除（日数ベース）
-    const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    entries = entries.filter(entry => entry.timestamp >= cutoff);
-    // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
-    if (entries.length > MAX_URL_SET_SIZE) {
-        entries.sort((a, b) => a.timestamp - b.timestamp);
-        entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
-    }
-    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    // 【recordType上書き競合対策】楽観的ロックを使用
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        let entries = currentEntries || [];
+        // 既存のURLエントリを取得してから削除
+        const existing = entries.find(entry => entry.url === url);
+        entries = entries.filter(entry => entry.url !== url);
+        // 新しいエントリを追加（既存の maskedCount を引き継ぐ）
+        const entry = { url, timestamp: Date.now() };
+        if (recordType)
+            entry.recordType = recordType;
+        if (existing?.maskedCount !== undefined)
+            entry.maskedCount = existing.maskedCount;
+        entries.push(entry);
+        // 7日より古いエントリを削除（日数ベース）
+        const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+        entries = entries.filter(entry => entry.timestamp >= cutoff);
+        // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
+        if (entries.length > MAX_URL_SET_SIZE) {
+            entries.sort((a, b) => a.timestamp - b.timestamp);
+            entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+        }
+        return entries;
+    }, { maxRetries: 5 });
+    // savedUrlsセットも同期（isUrlSaved, getSavedUrlCountで使用）
+    await withOptimisticLock('savedUrls', (currentUrls) => {
+        const currentSet = new Set(currentUrls || []);
+        currentSet.add(url);
+        return Array.from(currentSet);
+    }, { maxRetries: 5 });
 }
 /**
  * URLを保存リストに追加（LRU追跡付き、日付ベース対応）
@@ -104,38 +131,48 @@ async function updateUrlTimestamp(url, recordType) {
  * @param {RecordType} [recordType] - 記録方式
  */
 export async function addSavedUrl(url, recordType) {
-    const urlMap = await getSavedUrlsWithTimestamps();
-    urlMap.set(url, Date.now());
-    await setSavedUrlsWithTimestamps(urlMap, url);
-    await updateUrlTimestamp(url, recordType);
+    recordType ? await updateUrlTimestamp(url, recordType) : await updateUrlTimestamp(url);
+    // recordTypeを含めて1回の書き込みで完了
 }
 /**
  * 記録済みURLのrecordTypeを更新する
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
  * @param {string} url - 更新するURL
  * @param {RecordType} recordType - 記録方式
  */
 export async function setUrlRecordType(url, recordType) {
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    const entries = result.savedUrlsWithTimestamps || [];
-    const idx = entries.findIndex(e => e.url === url);
-    if (idx >= 0) {
-        entries[idx] = { ...entries[idx], recordType };
-        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
-    }
+    // 【recordType上書き競合対策】楽観的ロックを使用
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            // 既存のエントリをコピーしてrecordTypeを追加
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], recordType };
+            return updatedEntries;
+        }
+        return entries;
+    }, { maxRetries: 5 });
 }
 /**
  * 記録済みURLのmaskedCountを更新する
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
  * @param {string} url - 更新するURL
  * @param {number} maskedCount - マスクしたPII件数
  */
 export async function setUrlMaskedCount(url, maskedCount) {
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    const entries = result.savedUrlsWithTimestamps || [];
-    const idx = entries.findIndex(e => e.url === url);
-    if (idx >= 0) {
-        entries[idx] = { ...entries[idx], maskedCount };
-        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
-    }
+    // 【recordType上書き競合対策】楽観的ロックを使用
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            // 既存のエントリをコピーしてmaskedCountを追加
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], maskedCount };
+            return updatedEntries;
+        }
+        return entries;
+    }, { maxRetries: 5 });
 }
 /**
  * URLを保存リストから削除
@@ -180,8 +217,8 @@ export async function getSavedUrlCount() {
 export function buildAllowedUrls(settings, isDomainInWhitelistFunc) {
     const allowedUrls = new Set();
     // Obsidian API
-    const protocol = settings.obsidian_protocol || 'http';
-    const port = settings.obsidian_port || '27123';
+    const protocol = settings.obsidian_protocol || 'https';
+    const port = settings.obsidian_port || '27124';
     allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
     // Gemini API

@@ -367,7 +367,7 @@ export async function recordCurrentPage(force = false) {
                 if (recordBtn) {
                     setRecordAnywayButton(recordBtn, tab, contentResponse.content);
                 }
-                // finally でボタンをリセットしないよう早期リターン（finally は実行されない）
+                // finally でボタンをリセットしないよう、早期リターン後に isAwaitingForceConfirm フラグで制御
                 return;
             }
             if (!previewResponse.success) {
@@ -398,7 +398,8 @@ export async function recordCurrentPage(force = false) {
                     title: tab.title,
                     url: tab.url,
                     content: finalContent,
-                    force: force
+                    force: force,
+                    maskedCount: previewResponse.maskedCount
                 }
             });
         }

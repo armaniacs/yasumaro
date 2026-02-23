@@ -570,21 +570,21 @@ describe('ublockImport.js - UI Component Tests', () => {
 
       // Extra whitespace (trim should handle)
       expect(isValidUrl('  https://example.com  ')).toBe(true);
-      expect(isValidUrl('\nhttps://example.com\n')).toBe(true);
-      expect(isValidUrl('\thttps://example.com\t')).toBe(true);
+      expect(isValidUrl('\nhttps://example.com\n')).toBe(false); // Control chars rejected
+      expect(isValidUrl('\thttps://example.com\t')).toBe(false);
 
-      // Null bytes (if they make it through)
-      expect(isValidUrl('https://example.com\x00')).toBe(true); // Not explicitly rejected
-      expect(isValidUrl('https://\x00example.com')).toBe(true);
+      // Null bytes (if they make it through) - security improvement: rejected
+      expect(isValidUrl('https://example.com\u0000')).toBe(false); // Rejected by validation
+      expect(isValidUrl('https://\u0000example.com')).toBe(false);
 
-      // Very long URLs (DoS vectors - not screened)
+      // Very long URLs (DoS vectors - screened by domain validation)
       const longDomain = 'a'.repeat(1000);
-      expect(isValidUrl(`https://${longDomain}.com`)).toBe(true);
+      expect(isValidUrl(`https://${longDomain}.com`)).toBe(false); // Invalid domain length
 
-      // Strange but technically valid URLs
-      expect(isValidUrl('https://_localhost')).toBe(true);
-      expect(isValidUrl('https://-example.com')).toBe(true);
-      expect(isValidUrl('https://example.com-')).toBe(true);
+      // Strange but technically valid URLs - rejected by strict domain validation
+      expect(isValidUrl('https://_localhost')).toBe(false); // Invalid domain format
+      expect(isValidUrl('https://-example.com')).toBe(false); // Domain cannot start with hyphen
+      expect(isValidUrl('https://example.com-')).toBe(false); // Domain cannot end with hyphen
       expect(isValidUrl('https://127.1')).toBe(true); // Short IP notation
     });
 
@@ -611,7 +611,7 @@ describe('ublockImport.js - UI Component Tests', () => {
       // Edge case ports
       expect(isValidUrl('https://example.com:0')).toBe(true);
       expect(isValidUrl('https://example.com:65535')).toBe(true);
-      expect(isValidUrl('https://example.com:99999')).toBe(true); // Invalid port but valid URL struct
+      expect(isValidUrl('https://example.com:99999')).toBe(false); // Invalid port - rejected for security
 
       // IPv6 edge cases
       expect(isValidUrl('https://[::]')).toBe(true);

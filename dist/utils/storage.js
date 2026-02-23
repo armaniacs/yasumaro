@@ -32,6 +32,7 @@ export const StorageKeys = {
     PRIVACY_MODE: 'privacy_mode', // 'local_only' | 'full_pipeline' | 'masked_cloud' | 'cloud_only'
     PII_CONFIRMATION_UI: 'pii_confirmation_ui', // true | false
     PII_SANITIZE_LOGS: 'pii_sanitize_logs', // true | false
+    AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior', // 'save' | 'skip' | 'confirm'
     // uBlock Origin format settings
     UBLOCK_RULES: 'ublock_rules', // uBlock形式ルールセット（マージ済み）
     UBLOCK_SOURCES: 'ublock_sources', // uBlockソースリスト（複数対応）
@@ -402,7 +403,7 @@ export async function getOrCreateHmacSecret() {
 }
 const DEFAULT_SETTINGS = {
     [StorageKeys.OBSIDIAN_API_KEY]: '', // APIキー（ユーザーが設定）
-    [StorageKeys.OBSIDIAN_PROTOCOL]: 'http', // Default HTTP for Local REST API
+    [StorageKeys.OBSIDIAN_PROTOCOL]: 'https', // Default HTTPS for Local REST API (port 27124)
     [StorageKeys.OBSIDIAN_PORT]: '27124',
     [StorageKeys.MIN_VISIT_DURATION]: 5, // seconds
     [StorageKeys.MIN_SCROLL_DEPTH]: 50, // percentage
@@ -436,6 +437,7 @@ const DEFAULT_SETTINGS = {
     [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,
+    [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
     // uBlock format defaults（軽量化版: ドメイン配列のみ）
     [StorageKeys.UBLOCK_RULES]: {
         blockDomains: [],
@@ -452,7 +454,15 @@ const DEFAULT_SETTINGS = {
     [StorageKeys.ALLOWED_URLS]: [], // 許可されたURLのリスト（設定から動的に構築）
     [StorageKeys.ALLOWED_URLS_HASH]: '', // URLリストのハッシュ（変更検出用）
     // Custom prompts defaults
-    [StorageKeys.CUSTOM_PROMPTS]: [] // カスタムプロンプトのリスト
+    [StorageKeys.CUSTOM_PROMPTS]: [], // カスタムプロンプトのリスト
+    // Domain filter cache for content scripts (Task #19)
+    [StorageKeys.DOMAIN_FILTER_CACHE]: [], // 許可ドメインリスト（キャッシュ）
+    [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: 0, // キャッシュタイムスタンプ
+    // Master password protection defaults
+    [StorageKeys.MP_PROTECTION_ENABLED]: false, // マスターパスワード保護有効フラグ
+    [StorageKeys.MP_ENCRYPT_API_KEYS]: false, // APIキー暗号化フラグ
+    [StorageKeys.MP_ENCRYPT_ON_EXPORT]: false, // エクスポート時暗号化フラグ
+    [StorageKeys.MP_REQUIRE_ON_IMPORT]: false // インポート時パスワード要求フラグ
 };
 /**
  * データ移行フラグ - 古い個別キーから単一settingsオブジェクトへの移行完了済み
@@ -726,11 +736,26 @@ async function updateUrlTimestamp(url) {
  * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
  */
 export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
-    // Map to entries array
-    const entries = Array.from(urlMap.entries()).map(([url, timestamp]) => ({ url, timestamp }));
     const urlArray = Array.from(urlMap.keys());
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    await withOptimisticLock('savedUrlsWithTimestamps', () => entries, { maxRetries: 5 });
+    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
+        const existingMap = new Map();
+        for (const e of (currentEntries || [])) {
+            existingMap.set(e.url, e);
+        }
+        const entries = [];
+        for (const [url, timestamp] of urlMap.entries()) {
+            const existing = existingMap.get(url);
+            const entry = { url, timestamp };
+            if (existing?.recordType !== undefined)
+                entry.recordType = existing.recordType;
+            if (existing?.maskedCount !== undefined)
+                entry.maskedCount = existing.maskedCount;
+            entries.push(entry);
+        }
+        return entries;
+    }, { maxRetries: 5 });
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
     // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
@@ -792,7 +817,7 @@ export async function getSavedUrlCount() {
 export function buildAllowedUrls(settings) {
     const allowedUrls = new Set();
     // Obsidian API
-    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
+    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'https';
     const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
     allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));

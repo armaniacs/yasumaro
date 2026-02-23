@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 ## [3.9.8] - to be released as RC for 4.0
 
 ### Added
+- **Privacy Status Codes (PSH-XXXX)**: Defined structured status codes for private page detection results
+  - `PSH-1001`: Cache-Control: private detected
+  - `PSH-1002`: Cache-Control: no-store detected
+  - `PSH-2001`: Set-Cookie header detected
+  - `PSH-3001`: Authorization header detected
+  - `PSH-9001`: Unknown reason
+  - New file `src/utils/privacyStatusCodes.ts` with `reasonToStatusCode()` and `statusCodeToMessageKey()` helpers
+- **Custom privacy confirmation dialog**: Replaced browser-native `confirm()` in content script with a Shadow DOM dialog
+  - Shows Obsidian Smart History logo (icon48.png)
+  - Displays PSH-XXXX status code and localized reason
+  - Uses Constructable Stylesheets (`CSSStyleSheet.adoptedStyleSheets`) to comply with `style-src 'self'` CSP
+  - Text set via `textContent` (XSS-safe, no innerHTML interpolation)
+- **Auto-save privacy behavior setting**: New Dashboard → Privacy → Confirmation Settings option
+  - `save` (default): Save private pages as usual
+  - `skip`: Skip saving, retain in "Skipped" history for later manual save
+  - `confirm`: Show confirmation dialog before saving
+  - New `StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR` key; default `'save'` added to `DEFAULT_SETTINGS`
+- **"Manual save only" masking confirmation label**: Confirmation checkbox in Privacy settings now reads "手動保存時に送信前にマスキング結果を確認する" to distinguish from auto-save behavior
+- **Privacy settings Save button**: Added `id="savePrivacySettings"` button and `id="privacyStatus"` status div to Dashboard Privacy tab
+- **Chrome notification for confirm mode**: When auto-save behavior is `confirm`, a button notification (Save / Skip) appears via `NotificationHelper.notifyPrivacyConfirm()`
+  - Notification ID encodes URL as URL-safe Base64
+  - Button 0: force-save the pending page; Button 1: remove from pending
+- **Session storage fallback for privacy cache**: `HeaderDetector` now also writes privacy info to `chrome.storage.session` so the cache survives Service Worker restarts
+  - `getPrivacyInfoWithCache()` restores from session storage on in-memory cache miss
+- **Debug logging**: Temporary `[OSH]` console logs added to `extractor.ts` for diagnosing visit condition and VALID_VISIT response
+
+### Fixed
+- **CSP violation `style-src 'self'` in content script**: Shadow DOM dialog previously used `innerHTML` with `<style>` blocks, violating the extension CSP and preventing `extractor.js` from loading. Replaced with `CSSStyleSheet.replaceSync()` + `adoptedStyleSheets`.
+- **`extractor.js` failed to load (`Failed to fetch dynamically imported module`)**: Root cause was the CSP violation above. Additionally, `utils/privacyStatusCodes.js` and `icons/icon48.png` were missing from `web_accessible_resources` in `manifest.json`; both added.
+- **Confirmation dialog shown even in skip mode**: `extractor.ts` showed the dialog for all `PRIVATE_PAGE_DETECTED` responses. Now only shown when `response.confirmationRequired === true`.
+- **Skipped pages not appearing in Dashboard history**: `pendingStorage.ts` used `saveSettings()`/`getSettings()` which filters out keys not in `StorageKeys`; `pendingPages` was not in `StorageKeys` and was silently discarded. Migrated `pendingStorage.ts` to use `chrome.storage.local` directly with dedicated key `osh_pending_pages`.
+- **Dashboard skipped filter not updating in real-time**: `onStorageChanged` listener was watching `'pendingPages'` key, which never fires because data is stored under `'osh_pending_pages'`. Updated to watch `'osh_pending_pages'`.
+- **`loadSettings()` in extractor reading stale key structure**: Was reading from `result.settings.min_visit_duration`; current storage uses flat keys `min_visit_duration` / `min_scroll_depth` directly. Fixed to `chrome.storage.local.get(['min_visit_duration', 'min_scroll_depth'])`.
+- **Popup CSP violations (`style-src 'self'`)**: Three `style="display: none;"` inline styles in `popup.html` (whitelist/blacklist textareas, uBlock format UI) replaced with `class="hidden"` (existing CSS class).
+
+### Changed
+- `manifest.json` `web_accessible_resources` extended with `utils/privacyStatusCodes.js` and `icons/icon48.png`
+- `pendingStorage.ts` now stores data under `osh_pending_pages` in `chrome.storage.local` (independent of the `settings` object); existing pending data from the old key (`settings.pendingPages`) will be lost on upgrade but was non-functional anyway
+
+
 - **Recording History Dashboard**: View recorded URL history in the Dashboard → History panel
   - Record type badges: `Auto` (auto-recorded) / `Manual` (manually recorded)
   - Filter buttons: All / Auto / Manual / Skipped / 🔒 Masked
@@ -22,6 +62,9 @@ All notable changes to this project will be documented in this file.
   - Dashboard History panel displays the retention policy to users
 
 ### Fixed
+- **Masked badge lost after new recording**: `maskedCount` was stripped when `setSavedUrlsWithTimestamps()` converted `Map<string,number>` to plain `{url,timestamp}` objects, discarding existing `recordType`/`maskedCount` fields. Both `storage.ts` and `storageUrls.ts` versions now preserve these fields via optimistic-lock read-modify-write.
+- **Masked badge lost after manual save (preview flow)**: In the PREVIEW_RECORD → SAVE_RECORD two-step flow, `maskedCount` computed during preview was not forwarded to `SAVE_RECORD`. Now passed through `payload.maskedCount` → `service-worker.ts` → `RecordingData.maskedCount` → stored via `setUrlMaskedCount()`.
+- **History panel not updated without reload**: Dashboard history panel now listens to `chrome.storage.onChanged` for `savedUrlsWithTimestamps` changes and refreshes the list automatically, eliminating the need for Cmd-R after new recordings.
 - **Privacy cache key mismatch**: `getPrivacyInfoWithCache()` now normalizes URLs before cache lookup
   - `HeaderDetector` stores cache keys with trailing slash removed and fragments stripped
   - Previously, `recordingLogic` searched with raw URLs, causing cache misses and bypassing privacy checks
@@ -31,6 +74,12 @@ All notable changes to this project will be documented in this file.
 - **Missing error feedback in dashboard history panel**: `src/dashboard/dashboard.ts` - Added error messages displayed when "Record Now" fails
   - Errors now shown inline below the entry with auto-dismiss after 5 seconds
   - Added `recordError` i18n key (`_locales/en/messages.json`, `_locales/ja/messages.json`) for localized error messages
+- **IPv6 URL validation support**: `src/popup/ublockImport/validation.ts` - Added IPv6 address validation to `hasStrictValidUrlStructure()` function, now correctly validates URLs like `https://[::1]/admin`
+- **Control character rejection in URLs**: `src/popup/ublockImport/validation.ts` - Added pre-parsing validation to reject URLs containing null bytes and control characters for security
+- **Backslash escaping in dailyNotePathBuilder**: `src/utils/dailyNotePathBuilder.ts:26` - Fixed backslash escaping issue causing TypeScript compilation error
+- **Test alignment with security changes**: Updated test expectations to reflect new security behavior
+  - `src/utils/__tests__/piiSanitizer.test.ts:358` - Updated timeout error message expectation
+  - `src/popup/__tests__/ublockImport.test.ts` - Updated expectations for null bytes, invalid ports, and invalid domain formats
 
 ### Changed
 - `SavedUrlEntry` interface extended with optional `maskedCount?: number` field (backward compatible)
