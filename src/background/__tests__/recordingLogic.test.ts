@@ -48,17 +48,24 @@ describe('RecordingLogic', () => {
 
     // storageのデフォルトモック
     // @ts-expect-error - jest.fn() type narrowing issue
-  
-    storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+
+    storage.getSettings.mockResolvedValue({
+      PRIVACY_MODE: 'full_pipeline',
+      PII_SANITIZE_LOGS: true,
+      DOMAIN_WHITELIST: [],
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'save'
+    });
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
     storage.setSavedUrlsWithTimestamps.mockResolvedValue();
     storage.StorageKeys = {
       PRIVACY_MODE: 'PRIVACY_MODE',
-      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS'
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      DOMAIN_WHITELIST: 'DOMAIN_WHITELIST',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR'
     };
     // domainUtilsのデフォルトモック
     // @ts-expect-error - jest.fn() type narrowing issue
@@ -229,7 +236,12 @@ describe('RecordingLogic', () => {
       };
 
       // @ts-expect-error - jest.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      storage.getSettings.mockResolvedValue({
+        PRIVACY_MODE: 'full_pipeline',
+        PII_SANITIZE_LOGS: true,
+        DOMAIN_WHITELIST: [],
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
+      });
       // @ts-expect-error - jest.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - jest.fn() type narrowing issue
@@ -333,7 +345,12 @@ describe('RecordingLogic', () => {
       }
 
       // @ts-expect-error - jest.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      storage.getSettings.mockResolvedValue({
+        PRIVACY_MODE: 'full_pipeline',
+        PII_SANITIZE_LOGS: true,
+        DOMAIN_WHITELIST: [],
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
+      });
       // @ts-expect-error - jest.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - jest.fn() type narrowing issue
@@ -480,7 +497,12 @@ describe('RecordingLogic', () => {
       jest.clearAllMocks();
 
       // @ts-expect-error - jest.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      storage.getSettings.mockResolvedValue({
+        PRIVACY_MODE: 'full_pipeline',
+        PII_SANITIZE_LOGS: true,
+        DOMAIN_WHITELIST: [],
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
+      });
       // @ts-expect-error - jest.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - jest.fn() type narrowing issue
@@ -516,7 +538,7 @@ describe('RecordingLogic', () => {
         title: 'Bank Account',
         url,
         content: 'private data',
-        headerValue: 'no-cache',
+        headerValue: 'private',
         requireConfirmation: true
       });
 
@@ -526,7 +548,7 @@ describe('RecordingLogic', () => {
         title: 'Bank Account',
         timestamp: expect.any(Number),
         reason: 'cache-control',
-        headerValue: 'no-cache',
+        headerValue: 'private',
         expiry: expect.any(Number)
       });
 
@@ -565,7 +587,7 @@ describe('RecordingLogic', () => {
         title: 'Bank Account',
         url,
         content: 'private data',
-        headerValue: 'no-cache',
+        headerValue: 'private',
         requireConfirmation: false
       });
 
@@ -575,7 +597,7 @@ describe('RecordingLogic', () => {
         title: 'Bank Account',
         timestamp: expect.any(Number),
         reason: 'cache-control',
-        headerValue: 'no-cache',
+        headerValue: 'private',
         expiry: expect.any(Number)
       });
 
@@ -643,7 +665,12 @@ describe('RecordingLogic', () => {
       jest.clearAllMocks();
 
       // @ts-expect-error - jest.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      storage.getSettings.mockResolvedValue({
+        PRIVACY_MODE: 'full_pipeline',
+        PII_SANITIZE_LOGS: true,
+        DOMAIN_WHITELIST: [],
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
+      });
       // @ts-expect-error - jest.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - jest.fn() type narrowing issue
@@ -726,7 +753,12 @@ describe('RecordingLogic', () => {
       jest.clearAllMocks();
 
       // @ts-expect-error - jest.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true });
+      storage.getSettings.mockResolvedValue({
+        PRIVACY_MODE: 'full_pipeline',
+        PII_SANITIZE_LOGS: true,
+        DOMAIN_WHITELIST: [],
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
+      });
       // @ts-expect-error - jest.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - jest.fn() type narrowing issue
@@ -756,7 +788,7 @@ describe('RecordingLogic', () => {
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
-      const testHeaderValue = 'no-cache, no-store, must-revalidate';
+      const testHeaderValue = 'private, no-store, must-revalidate';
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Private Page',
