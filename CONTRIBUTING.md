@@ -155,14 +155,55 @@ WCAG 2.1 Level AA準拠を目指してください：
 
 ### セキュリティとAIプロバイダーの追加
 
-この拡張機能は、ユーザー設定のURLへのアクセスを制限する動的URL検証機能を備えています。新しいAIプロバイダーを追加する場合は、以下の手順が必要です：
+この拡張機能は、ユーザー設定のURLへのアクセスを制限する動的URL検証機能を備えています。新しいAIプロバイダーを追加する場合は、以下の **4つのファイル** を同時に更新してください。1つでも漏れると、そのプロバイダーへの通信がブロックされます。
 
-1. **ドメインのホワイトリスト追加**:
-   - `src/utils/storage.js` の `ALLOWED_AI_PROVIDER_DOMAINS` 配列に許可するドメインを追加します。
-2. **CSPの更新**:
-   - `manifest.json` の `content_security_policy.extension_pages` 内の `connect-src` にドメインを追加します。
-3. **テストの追加**:
-   - `src/utils/__tests__/storage.test.js` に新しいドメインが正しく検証されることを確認するテストケースを追加します。
+#### 追加手順
+
+1. **ドメインのホワイトリスト追加** (`src/utils/storage.ts`):
+   - `ALLOWED_AI_PROVIDER_DOMAINS` 配列に許可するドメインを追加します。
+   - コメントにプロバイダー名を記載してください。
+
+   ```typescript
+   // 例: DeepSeek
+   'deepseek.com',  // DeepSeek
+   ```
+
+2. **CSPの更新** (`manifest.json`):
+   - `content_security_policy.extension_pages` 内の `connect-src` にドメインを追加します。
+
+   ```json
+   "connect-src": "... https://deepseek.com ..."
+   ```
+
+3. **host_permissionsの更新** (`manifest.json`):
+   - `host_permissions` 配列にワイルドカードURLを追加します。
+
+   ```json
+   "https://deepseek.com/*"
+   ```
+
+4. **ドキュメントの更新** (`SETUP_GUIDE.md`):
+   - 日英両方の「💡 サポートされているAIプロバイダー」テーブルに行を追加します。
+
+   ```markdown
+   | **DeepSeek** | `deepseek.com` |
+   ```
+
+#### テストの追加
+
+- `src/utils/__tests__/storage.test.ts` に新しいドメインが正しく検証されることを確認するテストケースを追加してください。
+
+```typescript
+test('deepseek.com が許可される', () => {
+  expect(isDomainInWhitelist('https://deepseek.com/v1/chat/completions')).toBe(true);
+});
+```
+
+#### 🙏 新しいAIプロバイダーの追加、お待ちしています！
+
+OpenAI互換APIを提供するプロバイダーは多数あります。上記の手順に従ってPull Requestを送っていただければ、積極的にマージします。追加したいプロバイダーがある場合は、まずGitHub Issuesで提案していただくか、直接PRを作成してください。
+
+対応プロバイダーの追加は比較的簡単な作業です。コントリビューション大歓迎です！
 
 ### プロジェクト構造
 
@@ -408,14 +449,55 @@ Aim for WCAG 2.1 Level AA compliance:
 
 ### Security and Adding AI Providers
 
-This extension features dynamic URL validation to restrict access to user-configured URLs. To add a new AI provider, follow these steps:
+This extension features dynamic URL validation to restrict access to user-configured URLs. To add a new AI provider, you must update **4 files simultaneously**. Missing any one of them will cause connections to that provider to be blocked.
 
-1. **Add to Domain Whitelist**:
-   - Add the domain to the `ALLOWED_AI_PROVIDER_DOMAINS` array in `src/utils/storage.js`.
-2. **Update CSP**:
-   - Add the domain to `connect-src` in the `content_security_policy.extension_pages` section of `manifest.json`.
-3. **Add Tests**:
-   - Add a test case in `src/utils/__tests__/storage.test.js` to ensure the new domain is correctly validated.
+#### Steps to Add a Provider
+
+1. **Add to Domain Whitelist** (`src/utils/storage.ts`):
+   - Add the domain to the `ALLOWED_AI_PROVIDER_DOMAINS` array.
+   - Include a comment with the provider name.
+
+   ```typescript
+   // Example: DeepSeek
+   'deepseek.com',  // DeepSeek
+   ```
+
+2. **Update CSP** (`manifest.json`):
+   - Add the domain to `connect-src` in `content_security_policy.extension_pages`.
+
+   ```json
+   "connect-src": "... https://deepseek.com ..."
+   ```
+
+3. **Update host_permissions** (`manifest.json`):
+   - Add a wildcard URL to the `host_permissions` array.
+
+   ```json
+   "https://deepseek.com/*"
+   ```
+
+4. **Update Documentation** (`SETUP_GUIDE.md`):
+   - Add a row to the "Supported AI Providers" table in both the Japanese and English sections.
+
+   ```markdown
+   | **DeepSeek** | `deepseek.com` |
+   ```
+
+#### Adding Tests
+
+Add a test case to `src/utils/__tests__/storage.test.ts` to verify the new domain is correctly validated:
+
+```typescript
+test('deepseek.com is allowed', () => {
+  expect(isDomainInWhitelist('https://deepseek.com/v1/chat/completions')).toBe(true);
+});
+```
+
+#### 🙏 Pull Requests for New AI Providers Are Welcome!
+
+There are many providers offering OpenAI-compatible APIs. If you follow the steps above and send a Pull Request, we'll be happy to merge it. Feel free to open a GitHub Issue to propose a new provider, or submit a PR directly.
+
+Adding support for a new provider is a straightforward contribution — we'd love your help!
 
 ### Project Structure
 

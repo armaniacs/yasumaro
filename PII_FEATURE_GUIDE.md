@@ -138,6 +138,27 @@ await reviewLogs()
 
 ---
 
+### よくある質問 (FAQ)
+
+#### Q. 「🔒 マスクあり」バッジが表示されたのに、確認通知が出なかった。これは正常ですか？
+
+**A. 正常な動作です。** PIIマスクとプライベートページ検出は**独立した2つの機能**です。
+
+| 機能 | 何を検査するか | いつ動作するか |
+|------|-------------|--------------|
+| **PIIマスク（🔒）** | ページのテキスト内容（電話番号・メールアドレスなど） | AI送信の直前、常時 |
+| **プライベートページ検出** | HTTPレスポンスヘッダー（Cache-Control: private など） | ページ読み込み時 |
+
+例えば、公開されている行政ページ（警視庁・国税庁など）にはPIIが記載されている場合があります。このようなページはHTTPヘッダーでプライベートと宣言されていないため確認通知は出ませんが、テキスト内の電話番号等はPIIマスクにより自動保護されます。
+
+確認通知が出るのは、ネットバンキング・社内システム・医療ポータルなど、サーバーが `Cache-Control: private` や `Set-Cookie` ヘッダーを返すページにアクセスしたときです。
+
+#### Q. 「スキップ済み」として残ったページはどこで確認できますか？
+
+**A. ダッシュボードの History タブ**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、ダッシュボードの「Skipped」フィルターに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存することができます。スキップされたページは24時間後に自動削除されます。
+
+---
+
 ## English
 
 ### Overview
@@ -269,3 +290,24 @@ This achieves a balance between convenience and security for internal systems.
 ### Future Outlook
 
 The design automatically enables Mode A/B local AI functionality once browser `window.ai` implementation stabilizes.
+
+---
+
+### Frequently Asked Questions (FAQ)
+
+#### Q. I see a "🔒 Masked" badge, but no confirmation notification appeared. Is this normal?
+
+**A. Yes, this is normal.** PII masking and private page detection are **two independent features**.
+
+| Feature | What it inspects | When it runs |
+|---------|-----------------|--------------|
+| **PII Masking (🔒)** | Page text content (phone numbers, email addresses, etc.) | Always, just before sending to AI |
+| **Private Page Detection** | HTTP response headers (e.g., `Cache-Control: private`) | At page load time |
+
+For example, public government pages may contain personal information such as phone numbers. Since these pages do not declare themselves private via HTTP headers, no confirmation notification is shown — but any PII in the text is still automatically protected by the masking feature.
+
+Confirmation notifications appear when accessing pages where the server returns `Cache-Control: private` or `Set-Cookie` headers, such as online banking, internal systems, or medical portals.
+
+#### Q. Where can I find pages that were skipped?
+
+**A. In the Dashboard's History tab.** When the auto-save behavior is set to `skip`, pages triggered by private page detection are not saved to Obsidian, but appear in the "Skipped" filter of the Dashboard. You can manually save them from there using the "Record Now" button. Skipped pages are automatically deleted after 24 hours.

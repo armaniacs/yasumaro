@@ -1,6 +1,6 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年2月21日 / Last Updated: February 21, 2026**
+**最終更新日: 2026年2月23日 / Last Updated: February 23, 2026**
 
 [日本語](#日本語) | [English](#english)
 
@@ -24,18 +24,18 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 2. **構成データ**:
    - Obsidian API キー
    - Obsidian サーバー設定（プロトコル、ポート、パス）
-   - Google Gemini API キー
+   - AI プロバイダーの API キー（Google Gemini、OpenAI互換API等）
    - 設定情報（最小滞在時間、スクロール深度など）
 
 ### データの保存場所
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
-- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** に保存されます。
+- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** に保存されます。また、直近7日分（最大10,000件）のメタデータ（URL・タイトル・記録種別等）が **Chrome ローカルストレージ** にも保存され、拡張機能のダッシュボードから確認できます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
 
 ### データの使用方法
-1. **ページ内容**: 要約を作成するために Google Gemini API、またはユーザーが指定した OpenAI 互換 API (Groq, OpenAI, Local LLM等) に送信されます。
-2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。
-3. **設定**: Obsidian および Gemini API への接続に使用されます。
+1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。
+2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。また、直近7日分のメタデータ（URL・タイトル・記録種別・PIIマスク件数等）が Chrome ローカルストレージに保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。
+3. **設定**: Obsidian および AI プロバイダー API への接続に使用されます。
 
 ### プライベートページ保護機能
 
@@ -71,11 +71,24 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 - タイムスタンプ
 - 有効期限（24時間後）
 
+### マスターパスワード保護
+
+設定のエクスポート/インポート時に、**マスターパスワード**でファイルを暗号化することができます。
+
+- **有効にする方法**: ダッシュボード → Privacy タブ → 「マスターパスワード保護を有効にする」をオンにして、パスワードを設定します
+- **暗号化方式**: AES-GCM（業界標準）+ PBKDF2による鍵導出（100,000回反復）
+- **適用範囲**: エクスポートされたJSONファイルに含まれるすべての設定（APIキーを含む）
+- **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+
+通常の使用（拡張機能内でのAPIキー保存）には、マスターパスワードとは別の自動暗号化機構が使用されており、ユーザーの操作は不要です。
+
 ### 第三者サービス
 本拡張機能は、以下の第三者サービスと通信します：
 
-1. **Google Gemini API**: ページ内容の要約を生成するため。データはGoogleのプライバシーポリシーに従って処理されます。
-2. **ユーザー指定のAIプロバイダー (OpenAI互換API)**: ユーザーが設定した場合、要約生成のために使用されます（Groq, OpenAI, Ollama等）。データの処理は各プロバイダーのポリシー、またはローカル環境の仕様に従います。
+1. **AI プロバイダー (ユーザーが選択)**: ページ内容の要約を生成するため。以下のいずれかが使用されます:
+   - **Google Gemini API**: データはGoogleのプライバシーポリシーに従って処理されます。
+   - **OpenAI互換API** (Groq, OpenAI, Anthropic等): データは各プロバイダーのポリシーに従って処理されます。
+   - **ローカルLLM** (Ollama, LM Studio等): データはユーザーのローカル環境内でのみ処理されます。
 2. **ユーザーのローカル Obsidian**: デイリーノートに履歴を保存するため。これはユーザー自身のローカルサーバーです。
 
 ### 拡張機能の権限について
@@ -94,8 +107,7 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 
 3. **ネットワーク接続権限 (`connect-src`)**:
    - Obsidian Local REST API（ローカルサーバー）への接続
-   - Google Gemini APIへの接続
-   - ユーザーが設定したOpenAI互換APIへの接続
+   - ユーザーが選択したAIプロバイダーAPIへの接続（Google Gemini API、OpenAI互換API等）
    - ユーザーが指定するカスタムAPIエンドポイントへの接続
 
 **重要**: すべてのデータ処理はユーザーの明示的な設定に基づいて行われます。開発者はいかなるデータも収集しません。
@@ -114,12 +126,30 @@ The Extension collects the following data **locally on your device**:
 
 ### Storage
 - All configuration data is stored in **Chrome's local storage** on your device.
-- Browsing history entries are saved to **your local Obsidian vault**.
+- Browsing history entries are saved to **your local Obsidian vault**. Additionally, metadata for recent entries (last 7 days, up to 10,000 entries — URL, title, record type, etc.) is also stored in **Chrome's local storage** and viewable in the extension's Dashboard.
 - **No data is stored on our servers.**
 
+### How Data Is Used
+1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries.
+2. **Browsing history**: Saved to your Obsidian vault via the Local REST API. Metadata for the last 7 days (URL, title, record type, PII mask count, etc.) is also stored in Chrome's local storage and can be viewed and managed in the extension's Dashboard (History tab).
+3. **Settings**: Used to connect to Obsidian and the AI provider API.
+
+### Master Password Protection
+
+You can encrypt exported settings files with a **master password**.
+
+- **How to enable**: Dashboard → Privacy tab → Enable "Master Password Protection" and set a password
+- **Encryption**: AES-GCM (industry standard) + PBKDF2 key derivation (100,000 iterations)
+- **Scope**: All settings in the exported JSON file, including API keys
+- **Note**: If you forget your password, encrypted export files cannot be decrypted
+
+For regular use (storing API keys within the extension), a separate auto-encryption mechanism is used that requires no user action.
+
 ### Third-Party Services
-1. **Google Gemini API**: Used to generate summaries. Data is sent according to Google's privacy policy.
-2. **User-Specified AI Provider (OpenAI Compatible API)**: If configured (e.g., Groq, OpenAI, Ollama), content is sent to generate summaries. Data handling is subject to the respective provider's policy or your local environment.
+1. **AI Provider (User-Selected)**: Used to generate summaries. The following options are available:
+   - **Google Gemini API**: Data is processed according to Google's privacy policy.
+   - **OpenAI-Compatible APIs** (Groq, OpenAI, Anthropic, etc.): Data is processed according to each provider's policy.
+   - **Local LLMs** (Ollama, LM Studio, etc.): Data is processed entirely within your local environment.
 2. **Your Local Obsidian Instance**: Used to save history. This is your own local server.
 
 ### Private Page Protection
@@ -172,8 +202,7 @@ This extension requires the following permissions:
 
 3. **Network Connection Permissions (`connect-src`)**:
    - Connection to Obsidian Local REST API (local server)
-   - Connection to Google Gemini API
-   - Connection to user-configured OpenAI-compatible APIs
+   - Connection to user-selected AI provider APIs (Google Gemini, OpenAI-compatible APIs, etc.)
    - Connection to user-specified custom API endpoints
 
 **Important**: All data processing is based on your explicit configuration. The developer does not collect any data.

@@ -15,27 +15,29 @@
 オリジナルからの変更点として、OpenAI互換APIをサポートするようになりました。つまり、GroqやOllamaなども使えるようになりました。
 
 ### 特徴
-- 🤖 **AIによる要約**: Gemini API または Open AI Compatible APIを使用して、ウェブページの内容を簡潔に要約します。
+- 🤖 **AIによる要約**: OpenAI互換APIまたはGemini APIを使用して、ウェブページの内容を簡潔に要約します（Groq、OpenAI、Anthropic、ローカルLLM等に対応）。
 - 📝 **Obsidian連携**: 閲覧履歴を直接Obsidianのデイリーノートに保存します。
 - 🎯 **スマート検出**: 実際に読んだページのみを保存します（滞在時間とスクロール深度に基づきます）。
 - 📂 **整理された保存**: デイリーノート内に専用の「ブラウザ閲覧履歴」セクションを自動作成し、管理します。
 - ⚙️ **カスタマイズ可能**: 最小滞在時間、スクロール深度、API設定などを自由に構成できます。
 - 🖱️ **手動記録機能**: 「今すぐ記録」ボタンで現在のページを即座に記録できます。重複チェックなしで同じページを複数回記録可能です。
-- 📱 **改良されたUI**: メイン画面と設定画面を分離し、ハンバーガーメニューから簡単にアクセスできます。
+- 📱 **改良されたUI**: メイン画面と設定画面を分離し、⚙アイコンから専用ダッシュボードへ簡単にアクセスできます。
 - 🌐 **ドメインフィルター**: ホワイトリスト/ブラックリストで記録するドメインを制御できます。ワイルドカードパターンに対応。
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
 - ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
 - 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](PRIVACY.md) を参照。
+- 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)
-- 好きなAIプロバイダー（お好きのものをどうぞ）
+- AIプロバイダー（以下のいずれか）
+   - [Groq](https://console.groq.com/keys)（無料枠あり・推奨）
    - [Google Gemini API キー](https://aistudio.google.com/app/apikey)（無料枠あり）
-   - [Groq](https://console.groq.com/keys)（無料枠あり）
-   - [OpenAI](https://platform.openai.com/api-keys)（無料枠あり）
-   - ollamaも多分動きます。
+   - [OpenAI](https://platform.openai.com/api-keys)
+   - [Anthropic (Claude)](https://console.anthropic.com/)
+   - Ollama などのローカルLLM（APIキー不要）
 
 
 ### インストール方法
@@ -77,10 +79,10 @@
 
 ### 設定
 1. ツールバーの拡張機能アイコンをクリックします。
-2. メイン画面の右上にある「☰」メニューボタンをクリックして設定画面を開きます。
+2. メイン画面の右上にある「⚙」アイコンをクリックしてダッシュボード（設定画面）を開きます。
 3. 以下の設定を入力してください：
    - **Obsidian API Key**: ObsidianのLocal REST API設定で取得したキー
-   - **Protocol/Port**: Obsidian Local REST APIのプロトコルとポート（通常はhttps/27123）
+   - **Protocol/Port**: Obsidian Local REST APIのプロトコルとポート（通常はhttps/27124）
    - **Daily Notes Path**: デイリーノートの保存先フォルダ（例: `092.Daily`）
    - **AI Provider**: 使用するAIサービスを選択（Gemini、OpenAI互換など）
    - **各AIプロバイダーのAPIキーとモデル設定**
@@ -141,7 +143,7 @@ Obsidian Local REST APIを使用して、そのファイルの現在の内容を
 A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
 ### Features
-- 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using Google's Gemini API or OpenAI-compatible APIs
+- 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using OpenAI-compatible APIs or Google's Gemini API (supports Groq, OpenAI, Anthropic, local LLMs, and more)
 - 📝 **Obsidian Integration**: Saves browsing history directly to your Obsidian daily notes
 - 🎯 **Smart Detection**: Only saves pages you actually read (based on scroll depth and time spent)
 - 📂 **Organized Storage**: Automatically creates and maintains a dedicated "Browser History" section in your daily notes
@@ -154,10 +156,16 @@ A Chrome extension that automatically saves your browsing history to Obsidian wi
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
 - 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](PRIVACY.md) for details.
+- 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api)
-- [Google Gemini API key](https://aistudio.google.com/app/apikey) (free tier available)
+- An AI provider (choose one):
+   - [Groq](https://console.groq.com/keys) (free tier available, recommended)
+   - [Google Gemini API key](https://aistudio.google.com/app/apikey) (free tier available)
+   - [OpenAI](https://platform.openai.com/api-keys)
+   - [Anthropic (Claude)](https://console.anthropic.com/)
+   - Local LLMs like Ollama (no API key required)
 
 ### Installation
 To install the extension, follow these steps:
@@ -198,10 +206,10 @@ To install the extension, follow these steps:
 
 ### Setup
 1. Click the extension icon in your toolbar
-2. Click the "☰" menu button in the top right to open settings
+2. Click the "⚙" icon in the top right to open the Dashboard (settings)
 3. Configure settings:
    - **Obsidian API Key**: Key from Obsidian's Local REST API settings
-   - **Protocol/Port**: Obsidian Local REST API protocol and port (usually https/27123)
+   - **Protocol/Port**: Obsidian Local REST API protocol and port (usually https/27124)
    - **Daily Notes Path**: Folder path for daily notes (e.g., `092.Daily`)
    - **AI Provider**: Select your preferred AI service (Gemini, OpenAI Compatible, etc.)
    - **API keys and model settings for each AI provider**

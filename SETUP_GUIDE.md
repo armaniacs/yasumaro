@@ -17,8 +17,8 @@
 - **Obsidian**: https://obsidian.md/
 - **Google Chrome** ブラウザ
 - **AIプロバイダー** (以下のいずれか、または複数)
+    - OpenAI互換のAPIキー (Groq, OpenAI, Anthropic, Together AIなど)
     - Google アカウント (Gemini API用)
-    - OpenAI互換のAPIキー (Groq, OpenAI, Together AIなど)
     - ローカルLLM (Ollama, LM Studioなど)
 
 ### ステップ1: Obsidianのセットアップ
@@ -46,34 +46,41 @@
 #### メイン画面
 - 現在開いているページのタイトルとURLが表示されます
 - 「📝 今すぐ記録」ボタンで手動記録ができます
-- 右上の「☰」メニューボタンから設定画面にアクセスします
+- 右上の「⚙」アイコンをクリックしてダッシュボード（設定画面）を開きます
 
 #### 手動記録機能
 - 自動記録の条件を満たさなくても、任意のタイミングでページを記録できます
 - 重複チェックがないため、同じページを何度でも記録可能です
 - 記録されるとChrome通知とステータスメッセージで確認できます
 
-#### 設定画面
-右上の「☰」メニューボタンをクリックして設定画面を開きます。
+#### ダッシュボードへのアクセス
+右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。ダッシュボードには以下のタブがあります：
+
+- **一般 (General)**: Obsidian接続設定、AIプロバイダー設定
+- **ドメインフィルター (Domain Filter)**: ホワイトリスト/ブラックリストの管理
+- **AIプロンプト (AI Prompt)**: カスタムプロンプトの作成・管理
+- **プライバシー (Privacy)**: PIIマスク設定、プライベートページ検出の動作設定、マスターパスワード保護
+- **履歴 (History)**: 記録済みURLの一覧確認・管理
 
 #### 1. Obsidian設定
 *   **Obsidian API Key**: ステップ1でコピーしたキーを入力。
-*   **Protocol/Port**: デフォルト (`http`, `27123`) のままで通常はOKです。
+*   **Protocol/Port**: デフォルト (`https`, `27124`) のままで通常はOKです。
 *   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。
 
 #### 2. AIプロバイダー設定
 「AI Provider」のプルダウンから使用するサービスを選択します。
 
-**A. Google Gemini (デフォルト)**
-*   **API Key**: GeminiのAPIキーを入力。
-*   **Model Name**: `gemini-1.5-flash` (推奨) など。
-
-**B. OpenAI Compatible (Groq, OpenAIなど)**
+**A. OpenAI Compatible (Groq, OpenAI, Anthropicなど・推奨)**
 *   **Base URL**: APIのエンドポイントURL。
     *   Groq: `https://api.groq.com/openai/v1`
     *   OpenAI: `https://api.openai.com/v1`
+    *   Anthropic: `https://api.anthropic.com/v1`
 *   **API Key**: 各サービスのAPIキー。
-*   **Model Name**: 使用するモデル名（例: `openai/gpt-oss-20b`, `gpt-3.5-turbo`）。
+*   **Model Name**: 使用するモデル名（例: `llama-3.3-70b-versatile`, `gpt-4o-mini`）。
+
+**B. Google Gemini**
+*   **API Key**: GeminiのAPIキーを入力。
+*   **Model Name**: `gemini-1.5-flash` (推奨) など。
 
 **C. OpenAI Compatible 2 (サブ設定)**
 *   ローカルLLMなどを2つ目の設定として保存できます。
@@ -129,6 +136,34 @@
 
 端末の移行やバックアップにご活用ください。
 
+#### 5. プライバシー設定
+「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
+
+**自動保存時のプライバシー動作** (`Dashboard → Privacy → Confirmation Settings`):
+- **save（デフォルト）**: プライベートページを通常通り保存します
+- **skip**: プライベートページを保存せず「スキップ済み」として履歴に残します。後から手動で保存することも可能です
+- **confirm**: プライベートページ検出時にChrome通知で確認を求めます（「保存」または「スキップ」を選択）
+
+**手動記録時のマスキング確認**: 手動保存時に、AIへの送信前にPIIマスキング結果を確認するダイアログを表示するかどうかを設定できます。
+
+**マスターパスワード保護** (`Dashboard → Privacy → Master Password Protection`):
+- 「マスターパスワード保護を有効にする」をオンにするとパスワード設定画面が表示されます
+- 設定後、設定のエクスポート/インポート時にAES-GCMでファイルが暗号化されます
+- APIキーなどの機密情報を含む設定を安全に移行・バックアップする際に使用してください
+- パスワード強度は設定時にリアルタイム表示（Weak / Medium / Strong）で確認できます
+
+#### 6. ダッシュボード（履歴管理）
+`Dashboard → History` タブで、記録されたURLの履歴を確認・管理できます。
+
+**フィルター**:
+- **All**: 全ての記録を表示
+- **Auto**: 自動記録されたページのみ表示
+- **Manual**: 手動記録されたページのみ表示
+- **Skipped**: プライバシー検出によりスキップされたページを表示。「今すぐ記録」ボタンで手動保存が可能
+- **🔒 Masked**: PIIマスキングが行われた記録のみ表示
+
+**保持ポリシー**: 過去7日間の記録（最大10,000件）が保持されます。
+
 ---
 
 ## English
@@ -144,9 +179,9 @@
 - **Obsidian**: https://obsidian.md/
 - **Google Chrome** Browser
 - **AI Provider** (Any of the following)
+    - OpenAI Compatible Provider (Groq, OpenAI, Anthropic, etc.)
     - Google Account (for Gemini)
-    - OpenAI Compatible Provider (Groq, OpenAI, etc.)
-    - Local LLM (Ollama, etc.)
+    - Local LLM (Ollama, LM Studio, etc.)
 
 ### Step 1: Obsidian Setup
 1. **Install Local REST API Plugin**
@@ -155,9 +190,11 @@
    - Settings → Local REST API → Copy the "API Key".
 
 ### Step 2: Get AI API Key
-*   **Google Gemini**: https://aistudio.google.com/
-*   **Groq**: https://console.groq.com/keys
+*   **Groq (Recommended)**: https://console.groq.com/keys
 *   **OpenAI**: https://platform.openai.com/api-keys
+*   **Anthropic**: https://console.anthropic.com/
+*   **Google Gemini**: https://aistudio.google.com/
+*   **Local LLM**: No API key needed (start your server, e.g., `ollama serve`)
 
 ### Step 3: Install Chrome Extension
 1. Open `chrome://extensions`.
@@ -170,15 +207,21 @@ Click the extension icon to open the main screen.
 #### Main Screen
 - Current page title and URL are displayed
 - "📝 Record Now" button allows manual recording
-- Click the "☰" menu button in the top right to access settings
+- Click the "⚙" icon in the top right to open the Dashboard (settings)
 
 #### Manual Recording Feature
 - Record any page at any time, regardless of automatic recording conditions
 - No duplicate URL restrictions - record the same page multiple times
 - Chrome notifications and status messages confirm successful recording
 
-#### Settings Screen
-Click the "☰" menu button in the top right to open settings.
+#### Accessing the Dashboard
+Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Dashboard has the following tabs:
+
+- **General**: Obsidian connection settings and AI provider settings
+- **Domain Filter**: Manage whitelist/blacklist rules
+- **AI Prompt**: Create and manage custom prompts
+- **Privacy**: PII masking settings, private page detection behavior, and master password protection
+- **History**: View and manage recorded URL history
 
 #### 1. Obsidian Settings
 *   **Obsidian API Key**: Paste the key from Step 1.
@@ -187,11 +230,11 @@ Click the "☰" menu button in the top right to open settings.
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown.
 
-*   **Google Gemini**: Enter API Key and Model (e.g., `gemini-1.5-flash`).
-*   **OpenAI Compatible**:
+*   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, Anthropic, and more.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
-    *   **Model Name**: e.g., `openai/gpt-oss-20b`.
+    *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.
+*   **Google Gemini**: Enter API Key and Model (e.g., `gemini-1.5-flash`).
 *   **OpenAI Compatible 2**: Use this for a secondary provider like a local LLM (`http://localhost:11434/v1`).
 
 ---
@@ -241,3 +284,31 @@ Click the "⋮" (three-dot menu) button in the top right corner of the settings 
 - **Import**: Select a previously exported JSON file. A preview of the settings is shown before applying. Click "Import" to overwrite the current settings.
 
 Useful for migrating settings to another device or creating backups.
+
+#### 5. Privacy Settings
+In the "Privacy" tab, you can configure detailed privacy behavior.
+
+**Auto-save Privacy Behavior** (`Dashboard → Privacy → Confirmation Settings`):
+- **save (default)**: Saves private pages as usual
+- **skip**: Does not save private pages; they appear as "Skipped" in history for later manual save
+- **confirm**: Shows a Chrome notification asking for confirmation (Save or Skip) when a private page is detected
+
+**Manual Recording Masking Confirmation**: Configure whether to show a dialog to review PII masking results before sending to AI during manual saves.
+
+**Master Password Protection** (`Dashboard → Privacy → Master Password Protection`):
+- Enable "Master Password Protection" to set a password for encrypting exported settings files
+- Once configured, settings exports/imports are automatically encrypted with AES-GCM
+- Use this when migrating or backing up settings that include API keys and other sensitive data
+- Password strength is shown in real time during setup (Weak / Medium / Strong)
+
+#### 6. Dashboard (History Management)
+In the `Dashboard → History` tab, you can view and manage your recording history.
+
+**Filters**:
+- **All**: Shows all records
+- **Auto**: Shows only automatically recorded pages
+- **Manual**: Shows only manually recorded pages
+- **Skipped**: Shows pages skipped by privacy detection. Use "Record Now" to manually save them
+- **🔒 Masked**: Shows only records where PII masking was applied
+
+**Retention Policy**: Records from the past 7 days (up to 10,000 entries) are retained.

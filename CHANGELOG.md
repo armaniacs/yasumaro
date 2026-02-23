@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [3.9.8] - to be released as RC for 4.0
 
+### Documentation
+- **ドキュメントのOpenAI互換API対応への更新**: Gemini専用だった記述を、OpenAI互換APIを主軸とした表現に修正
+  - `README.md`: 特徴・必要なもの・英語版セクションをOpenAI互換API優先の記述に更新（Groq, OpenAI, Anthropic, ローカルLLM等を列挙）
+  - `SETUP_GUIDE.md`: AIプロバイダー設定セクションをOpenAI互換APIを推奨として先頭に移動。Gemini設定をサブ項目に変更。Anthropicエンドポイント例を追加
+  - `PRIVACY.md`: 第三者サービス・権限の記述をGemini固有からプロバイダー選択式の表現に更新（日英両方）
+
 ### Added
 - **Privacy Status Codes (PSH-XXXX)**: Defined structured status codes for private page detection results
   - `PSH-1001`: Cache-Control: private detected
