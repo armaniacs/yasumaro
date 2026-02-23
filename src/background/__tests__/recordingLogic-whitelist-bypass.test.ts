@@ -52,9 +52,9 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     // @ts-expect-error - jest.fn() type narrowing issue
     getSettings.mockResolvedValue({
       [StorageKeys.DOMAIN_WHITELIST]: [],
-      PRIVACY_MODE: 'full_pipeline',
-      PII_SANITIZE_LOGS: true,
-      AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip',
+      [StorageKeys.PRIVACY_MODE]: 'full_pipeline',
+      [StorageKeys.PII_SANITIZE_LOGS]: true,
+      'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     });
     // @ts-expect-error - jest.fn() type narrowing issue
@@ -137,7 +137,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     // モック設定: ホワイトリストにconfluence.example.comのみ登録
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: ['confluence.example.com'],
-      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
+      'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
@@ -223,7 +224,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     // モック設定: 空のホワイトリスト
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: [],
-      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
+      'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
@@ -263,7 +265,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     // モック設定: ホワイトリストあり
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: ['example.com'],
-      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
+      'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
