@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.1] - to be released
 
+### Fixed
+- **PSH-1002 未使用コードの削除**: `CACHE_CONTROL_NO_STORE: 'PSH-1002'` が定義されていましたが実際には使用されていないため、`CACHE_CONTROL` (PSH-1001) に統合して削除
+  - `Cache-Control: private` と `no-store + Set-Cookie` の両方が同じステータスコードを使用するように統合
+  - `reasonToStatusCode()` と `statusCodeToMessageKey()` のマッピングを更新
+  - i18n メッセージキーを `privacyStatus_cacheControl` に統合（日英両方）
+- **Removed unused PSH-1002 status code**: `CACHE_CONTROL_NO_STORE: 'PSH-1002'` was defined but never used; consolidated into `CACHE_CONTROL` (PSH-1001)
+  - Both `Cache-Control: private` and `no-store + Set-Cookie` now use the same status code
+  - Updated `reasonToStatusCode()` and `statusCodeToMessageKey()` mappings
+  - Consolidated i18n message keys to `privacyStatus_cacheControl` (Japanese and English)
+
 ### Documentation
 - **Privacy Status Codesのドキュメント追加**: プライベートページ検出ステータスコード (PSH-XXXX) の定義表を `PRIVACY.md` に追加（日英両方）
   - 各コード (PSH-1001, PSH-2001, PSH-3001, PSH-9001) の説明と検出対象を明記

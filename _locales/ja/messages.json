@@ -829,11 +829,8 @@
     "privacyDialogStatusLabel": {
         "message": "検出コード"
     },
-    "privacyStatus_cacheControlPrivate": {
+    "privacyStatus_cacheControl": {
         "message": "プライベートキャッシュヘッダー"
-    },
-    "privacyStatus_cacheControlNoStore": {
-        "message": "キャッシュ禁止ヘッダー"
     },
     "privacyStatus_setCookie": {
         "message": "認証Cookie"

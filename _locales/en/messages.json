@@ -826,11 +826,8 @@
     "privacyDialogStatusLabel": {
         "message": "Detection code"
     },
-    "privacyStatus_cacheControlPrivate": {
+    "privacyStatus_cacheControl": {
         "message": "Private cache header"
-    },
-    "privacyStatus_cacheControlNoStore": {
-        "message": "No-store cache header"
     },
     "privacyStatus_setCookie": {
         "message": "Authentication cookie"
