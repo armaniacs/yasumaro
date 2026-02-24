@@ -8,7 +8,7 @@
 
 ### 概要
 
-Obsidian Smart History拡張機能のuBlock Origin形式フィルターインポート機能を使用すると、既存のuBlock Originフィルターリストやhosts形式のフィルターリスト（例：Steven Black's hosts）を直接インポートして、特定のWebサイトの記録をブロックまたは許可できます。
+Obsidian Weave拡張機能のuBlock Origin形式フィルターインポート機能を使用すると、既存のuBlock Originフィルターリストやhosts形式のフィルターリスト（例：Steven Black's hosts）を直接インポートして、特定のWebサイトの記録をブロックまたは許可できます。
 
 **複数のフィルターソースを同時に登録でき**、それぞれ個別に管理できます。
 
@@ -16,7 +16,7 @@ Obsidian Smart History拡張機能のuBlock Origin形式フィルターインポ
 
 #### 1. 設定画面へのアクセス
 
-1. ブラウザのツールバーにあるObsidian Smart Historyアイコンをクリックします。
+1. ブラウザのツールバーにあるObsidian Weaveアイコンをクリックします。
 2. 表示されるポップアップ画面で、右上の「☰」メニューを開きます。
 3. 「Settings」を選択して設定画面に移動します。
 
@@ -205,7 +205,7 @@ hosts形式のフィルターは自動的にuBlock Origin形式に変換され�
 
 ### Overview
 
-The Obsidian Smart History extension's uBlock Origin format filter import feature allows you to directly import existing uBlock Origin filter lists or hosts format filter lists (e.g., Steven Black's hosts) to block or allow recording of specific websites.
+The Obsidian Weave extension's uBlock Origin format filter import feature allows you to directly import existing uBlock Origin filter lists or hosts format filter lists (e.g., Steven Black's hosts) to block or allow recording of specific websites.
 
 **You can register multiple filter sources simultaneously** and manage each one individually.
 
@@ -213,7 +213,7 @@ The Obsidian Smart History extension's uBlock Origin format filter import featur
 
 #### 1. Accessing Settings
 
-1. Click the Obsidian Smart History icon in your browser's toolbar.
+1. Click the Obsidian Weave icon in your browser's toolbar.
 2. In the popup that appears, open the "☰" menu in the top right.
 3. Select "Settings" to go to the settings screen.
 

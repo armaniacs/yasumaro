@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * E2E Tests for Obsidian Smart History Chrome Extension
+ * E2E Tests for Obsidian Weave Chrome Extension
  * 
  * These tests verify the extension's popup UI functionality.
  * Note: These tests require the extension to be loaded in Chrome.

@@ -25,7 +25,7 @@ export function exportToText(rules: UblockRules): string {
   const lines: string[] = [];
 
   // メタデータ
-  lines.push(`! Auto-exported from Obsidian Smart History`);
+  lines.push(`! Auto-exported from Obsidian Weave`);
   lines.push(`! Exported at: ${new Date().toISOString()}`);
   lines.push(`! Total rules: ${rules.blockRules.length + rules.exceptionRules.length}`);
   lines.push('');

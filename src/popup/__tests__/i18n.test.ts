@@ -23,7 +23,7 @@ describe('i18n', () => {
           const messages = {
             'testKey': 'Test Message',
             'testWithArgs': 'Hello {name}',
-            'extensionName': 'Obsidian Smart History'
+            'extensionName': 'Obsidian Weave'
           };
           return messages[key] || '';
         }),
@@ -177,7 +177,7 @@ describe('i18n', () => {
   describe('translatePageTitle', () => {
     it('ページタイトルを翻訳する', () => {
       translatePageTitle('extensionName');
-      expect(document.title).toBe('Obsidian Smart History');
+      expect(document.title).toBe('Obsidian Weave');
     });
 
     it('存在しないキーの場合は空文字を設定する', () => {

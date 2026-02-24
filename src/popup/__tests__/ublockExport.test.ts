@@ -29,7 +29,7 @@ describe('ublockExport', () => {
       const lines = result.split('\n');
       
       // メタデータ行のチェック
-      expect(lines[0]).toMatch(/^! Auto-exported from Obsidian Smart History/);
+      expect(lines[0]).toMatch(/^! Auto-exported from Obsidian Weave/);
       expect(lines[1]).toMatch(/^! Exported at: /);
       expect(lines[2]).toBe('! Total rules: 3');
       expect(lines[3]).toBe('');
@@ -47,7 +47,7 @@ describe('ublockExport', () => {
       const result = exportToText(emptyRules);
       const lines = result.split('\n');
       
-      expect(lines[0]).toMatch(/^! Auto-exported from Obsidian Smart History/);
+      expect(lines[0]).toMatch(/^! Auto-exported from Obsidian Weave/);
       expect(lines[1]).toMatch(/^! Exported at: /);
       expect(lines[2]).toBe('! Total rules: 0');
       expect(lines[3]).toBe('');
@@ -56,7 +56,7 @@ describe('ublockExport', () => {
 
     test('メタデータ', () => {
       const result = exportToText(mockRules);
-      expect(result).toMatch(/^! Auto-exported from Obsidian Smart History/);
+      expect(result).toMatch(/^! Auto-exported from Obsidian Weave/);
       expect(result).toMatch(/! Exported at: /);
       expect(result).toMatch(/! Total rules: 3/);
     });

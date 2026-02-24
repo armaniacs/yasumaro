@@ -1,4 +1,4 @@
-# スマートな履歴管理 / Obsidian Smart History
+# スマートな履歴管理 / Obsidian Weave
 
 [日本語](#日本語) | [English](#english)
 
@@ -45,8 +45,8 @@
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
-   git clone https://github.com/izuru-tcnkc/obsidian-smart-history.git
-   cd obsidian-smart-history
+   git clone https://github.com/izuru-tcnkc/obsidian-weave.git
+   cd obsidian-weave
    ```
 
 2. 依存パッケージをインストールします:
@@ -172,8 +172,8 @@ To install the extension, follow these steps:
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/izuru-tcnkc/obsidian-smart-history.git
-   cd obsidian-smart-history
+   git clone https://github.com/izuru-tcnkc/obsidian-weave.git
+   cd obsidian-weave
    ```
 
 2. Install dependencies:

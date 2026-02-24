@@ -8,7 +8,7 @@
 
 ### 概要
 
-Obsidian Smart Historyへのコントリビューションに感謝します。このガイドでは、開発環境のセットアップ、コーディング規約、テスト手順、プルリクエストのフローについて説明します。
+Obsidian Weaveへのコントリビューションに感謝します。このガイドでは、開発環境のセットアップ、コーディング規約、テスト手順、プルリクエストのフローについて説明します。
 
 ### 開発環境のセットアップ
 
@@ -22,8 +22,8 @@ Obsidian Smart Historyへのコントリビューションに感謝します。�
 
 1. プロジェクトをクローン
 ```bash
-git clone https://github.com/your-username/obsidian-smart-history.git
-cd obsidian-smart-history
+git clone https://github.com/your-username/obsidian-weave.git
+cd obsidian-weave
 ```
 
 2. 依存関係をインストール
@@ -289,7 +289,7 @@ OpenAI互換APIを提供するプロバイダーは多数あります。上記�
 ### プロジェクト構造
 
 ```
-obsidian-smart-history/
+obsidian-weave/
 ├── src/
 │   ├── background/    # Service Worker
 │   ├── content/       # Content Scripts
@@ -383,7 +383,7 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 ### Overview
 
-Thank you for contributing to Obsidian Smart History. This guide covers development environment setup, coding conventions, testing procedures, and pull request workflows.
+Thank you for contributing to Obsidian Weave. This guide covers development environment setup, coding conventions, testing procedures, and pull request workflows.
 
 ### Development Environment Setup
 
@@ -397,8 +397,8 @@ Thank you for contributing to Obsidian Smart History. This guide covers developm
 
 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/obsidian-smart-history.git
-cd obsidian-smart-history
+git clone https://github.com/your-username/obsidian-weave.git
+cd obsidian-weave
 ```
 
 2. Install dependencies
@@ -664,7 +664,7 @@ This extension uses Privacy Status Codes (PSH-XXXX) to identify different privac
 ### Project Structure
 
 ```
-obsidian-smart-history/
+obsidian-weave/
 ├── src/
 │   ├── background/    # Service Worker
 │   ├── content/       # Content Scripts

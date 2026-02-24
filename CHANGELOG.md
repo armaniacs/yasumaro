@@ -59,7 +59,7 @@ All notable changes to this project will be documented in this file.
   - `PSH-9001`: Unknown reason
   - New file `src/utils/privacyStatusCodes.ts` with `reasonToStatusCode()` and `statusCodeToMessageKey()` helpers
 - **Custom privacy confirmation dialog**: Replaced browser-native `confirm()` in content script with a Shadow DOM dialog
-  - Shows Obsidian Smart History logo (icon48.png)
+  - Shows Obsidian Weave logo (icon48.png)
   - Displays PSH-XXXX status code and localized reason
   - Uses Constructable Stylesheets (`CSSStyleSheet.adoptedStyleSheets`) to comply with `style-src 'self'` CSP
   - Text set via `textContent` (XSS-safe, no innerHTML interpolation)
@@ -640,8 +640,8 @@ All notable changes to this project will be documented in this file.
 - **Sakuraクラウド接続**: `api.ai.sakura.ad.jp` のみを明示的に許可するようにホワイトリストを制限
 
 ### Docs
-- **セットアップガイドの更新**: [SETUP_GUIDE.md](file:///Users/yaar/Playground/obsidian-smart-history/SETUP_GUIDE.md) に公式にサポートされているAIプロバイダーのドメイン一覧を追加
-- **コントリビューションガイドの更新**: [CONTRIBUTING.md](file:///Users/yaar/Playground/obsidian-smart-history/CONTRIBUTING.md) に新しいAIプロバイダーを追加するための開発者向け手順を追加
+- **セットアップガイドの更新**: [SETUP_GUIDE.md](file:///Users/yaar/Playground/obsidian-weave/SETUP_GUIDE.md) に公式にサポートされているAIプロバイダーのドメイン一覧を追加
+- **コントリビューションガイドの更新**: [CONTRIBUTING.md](file:///Users/yaar/Playground/obsidian-weave/CONTRIBUTING.md) に新しいAIプロバイダーを追加するための開発者向け手順を追加
 
 ### Internal
 - **テストスイートの高速化**: Jestの `fakeTimers` を導入し、テスト中の `sleep` / `setTimeout` 待機を排除

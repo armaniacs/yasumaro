@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-smart-history",
+  "name": "obsidian-weave",
   "version": "4.0.1",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
