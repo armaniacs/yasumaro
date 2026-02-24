@@ -16,6 +16,10 @@ All notable changes to this project will be documented in this file.
   - Navigation hidden when only one page
 - **"Delete Forever" button**: Added "🗑 完全削除 / Delete Forever" button to each entry in the "Skipped pages" section to permanently remove without recording
 
+### Added
+- **保留中ページをクリックで確認**: ポップアップの「保留中のページ」リストで、タイトルをクリックすると対象URLを新しいタブで開けるようになった
+- **Clickable pending page titles**: Clicking a page title in the "Pending pages" list now opens the URL in a new tab
+
 ### Fixed
 - **PSH-1002 未使用コードの削除**: `CACHE_CONTROL_NO_STORE: 'PSH-1002'` が定義されていましたが実際には使用されていないため、`CACHE_CONTROL` (PSH-1001) に統合して削除
   - `Cache-Control: private` と `no-store + Set-Cookie` の両方が同じステータスコードを使用するように統合

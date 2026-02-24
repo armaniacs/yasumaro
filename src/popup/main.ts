@@ -172,10 +172,18 @@ async function loadPendingPages(): Promise<void> {
         item.innerHTML = `
           <input type="checkbox" value="${page.url}" class="pending-checkbox">
           <div class="pending-item-content">
-            <div class="pending-item-title">${escapeHtml(page.title)}</div>
+            <div class="pending-item-title pending-item-title--link">${escapeHtml(page.title)}</div>
             <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>
           </div>
         `;
+
+        const titleEl = item.querySelector('.pending-item-title');
+        if (titleEl) {
+          titleEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            chrome.tabs.create({ url: page.url });
+          });
+        }
 
         pendingList.appendChild(item);
       });

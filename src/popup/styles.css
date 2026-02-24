@@ -1850,6 +1850,18 @@ label.inline-label {
   word-break: break-word;
 }
 
+.pending-item-title--link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+}
+
+.pending-item-title--link:hover {
+  color: var(--color-primary, #7c3aed);
+  text-decoration-color: currentColor;
+}
+
 .pending-item-reason {
   font-size: 12px;
   color: var(--color-text-muted);
