@@ -1086,10 +1086,57 @@ button#changeMasterPassword:hover {
   font-style: italic;
 }
 
-.pending-record-btn {
+.pending-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pending-record-btn,
+.pending-delete-btn {
   flex-shrink: 0;
   font-size: 12px;
   padding: 4px 10px;
+  min-width: unset;
+}
+
+.danger-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--color-danger-bg, #fff5f5);
+  color: var(--color-danger, #c0392b);
+  border: 1px solid var(--color-danger-border, #f5c6c6);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.danger-btn:hover {
+  background: var(--color-danger-border, #f5c6c6);
+  border-color: var(--color-danger, #c0392b);
+}
+
+.danger-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pending-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.pending-page-info {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 /* Record error message */

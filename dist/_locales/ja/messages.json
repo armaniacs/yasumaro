@@ -829,11 +829,8 @@
     "privacyDialogStatusLabel": {
         "message": "検出コード"
     },
-    "privacyStatus_cacheControlPrivate": {
+    "privacyStatus_cacheControl": {
         "message": "プライベートキャッシュヘッダー"
-    },
-    "privacyStatus_cacheControlNoStore": {
-        "message": "キャッシュ禁止ヘッダー"
     },
     "privacyStatus_setCookie": {
         "message": "認証Cookie"
@@ -1120,6 +1117,9 @@
     },
     "pendingReasonAuth": {
         "message": "Authorization ヘッダー"
+    },
+    "pendingDeleteForever": {
+        "message": "🗑 完全削除"
     },
     "diagConnectionPlaceholder": {
         "message": "「接続テスト」ボタンをクリックして、Obsidian APIへの接続を確認します。"

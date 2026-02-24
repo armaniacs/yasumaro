@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.1] - to be released
 
+### Changed
+- **記録履歴・記録できなかったページのページネーション対応**: 記録履歴と「記録できなかったページ」セクションをそれぞれ10件ずつページ表示に変更
+  - 最新のエントリが先頭に表示されるよう降順ソートを保証
+  - フィルター・検索変更時はページ1にリセット、削除操作時は現在ページを維持
+  - ページ数が1の場合はナビゲーションを非表示
+- **「完全削除」ボタンの追加**: 「記録できなかったページ」セクションの各エントリに「🗑 完全削除」ボタンを追加。記録せずにストレージから完全に削除可能
+- **Pagination for history and skipped pages**: History list and "Skipped pages" section now display 10 entries per page
+  - Latest entries shown first (descending timestamp order guaranteed)
+  - Page resets to 1 on filter/search change; current page preserved on entry deletion
+  - Navigation hidden when only one page
+- **"Delete Forever" button**: Added "🗑 完全削除 / Delete Forever" button to each entry in the "Skipped pages" section to permanently remove without recording
+
 ### Fixed
 - **PSH-1002 未使用コードの削除**: `CACHE_CONTROL_NO_STORE: 'PSH-1002'` が定義されていましたが実際には使用されていないため、`CACHE_CONTROL` (PSH-1001) に統合して削除
   - `Cache-Control: private` と `no-store + Set-Cookie` の両方が同じステータスコードを使用するように統合
