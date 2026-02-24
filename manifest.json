@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Obsidian Smart History",
+  "name": "Obsidian Weave",
   "version": "4.0.1",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {

@@ -33,7 +33,7 @@ export class NotificationHelper {
   static notifyPrivacyConfirm(notificationId: string, pageTitle: string, reason: string): void {
     const saveLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSave') || '保存する';
     const skipLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSkip') || 'スキップ';
-    const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Obsidian Smart History';
+    const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Obsidian Weave';
     const body = chrome.i18n.getMessage('notifyPrivacyConfirmBody', [pageTitle, reason])
       || `「${pageTitle}」にプライバシー懸念があります（${reason}）。保存しますか？`;
 

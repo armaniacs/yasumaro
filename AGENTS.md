@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides specialized guidance for different agent types when working on the Obsidian Smart History Chrome extension project.
+This file provides specialized guidance for different agent types when working on the Obsidian Weave Chrome extension project.
 
 > **Note:** For general contribution guidelines (setup, testing, PR workflow), see [CONTRIBUTING.md](CONTRIBUTING.md).
 

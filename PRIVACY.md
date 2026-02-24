@@ -9,7 +9,7 @@
 ## 日本語
 
 ### 概要
-Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
+Obsidian Weave（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
 
 ### データの収集
 本拡張機能は、以下のデータを**ユーザーのデバイス上のみ（ローカル）**で収集します。
@@ -135,7 +135,7 @@ Obsidian Smart History（以下「本拡張機能」）は、ユーザーのプ�
 ## English
 
 ### Overview
-Obsidian Smart History ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
+Obsidian Weave ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
 
 ### Data Collection
 The Extension collects the following data **locally on your device**:

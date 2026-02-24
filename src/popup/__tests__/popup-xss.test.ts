@@ -5,7 +5,7 @@
  *
  * 対象脆弱性: SECURITY-001
  * - DOM-based XSS in Connection Error Message
- * - 影響を受けるファイル: /Users/yaar/Playground/obsidian-smart-history/src/popup/popup.js
+ * - 影響を受けるファイル: /Users/yaar/Playground/obsidian-weave/src/popup/popup.js
  * - 説明: Line 129 uses innerHTML with user-controlled data (portInput.value)
  */
 
