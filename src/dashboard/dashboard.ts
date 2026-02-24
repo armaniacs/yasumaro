@@ -670,6 +670,8 @@ async function initHistoryPanel(): Promise<void> {
   let entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
 
   let activeFilter: 'all' | 'auto' | 'manual' | 'skipped' | 'masked' = 'all';
+  const HISTORY_PAGE_SIZE = 10;
+  let historyCurrentPage = 0;
 
   // ストレージ変化を監視してリアルタイム更新
   const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
@@ -728,28 +730,31 @@ async function initHistoryPanel(): Promise<void> {
     return badge;
   }
 
-  function applyFilters(): void {
+  function applyFilters(resetPage = true): void {
     if (!historyList) return;
 
     const searchText = (historySearchInput?.value || '').toLowerCase();
 
     // フィルター適用: activeFilter が 'skipped' のときは pendingUrlSet から表示
-    let filtered;
     if (activeFilter === 'skipped') {
-      // pendingPagesを対象にする（別レンダリング）
       renderSkippedMode(searchText);
       return;
-    } else {
-      filtered = entries.filter(e => {
-        const matchesSearch = !searchText || e.url.toLowerCase().includes(searchText);
-        const matchesType =
-          activeFilter === 'all' ||
-          (activeFilter === 'auto' && (!e.recordType || e.recordType === 'auto')) ||
-          (activeFilter === 'manual' && e.recordType === 'manual') ||
-          (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0);
-        return matchesSearch && matchesType;
-      });
     }
+
+    const filtered = entries.filter(e => {
+      const matchesSearch = !searchText || e.url.toLowerCase().includes(searchText);
+      const matchesType =
+        activeFilter === 'all' ||
+        (activeFilter === 'auto' && (!e.recordType || e.recordType === 'auto')) ||
+        (activeFilter === 'manual' && e.recordType === 'manual') ||
+        (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0);
+      return matchesSearch && matchesType;
+    });
+
+    if (resetPage) historyCurrentPage = 0;
+
+    const totalPages = Math.ceil(filtered.length / HISTORY_PAGE_SIZE);
+    if (historyCurrentPage >= totalPages && historyCurrentPage > 0) historyCurrentPage = totalPages - 1;
 
     if (historyStats) {
       historyStats.textContent = `${filtered.length} / ${entries.length}`;
@@ -760,8 +765,11 @@ async function initHistoryPanel(): Promise<void> {
       return;
     }
 
+    const start = historyCurrentPage * HISTORY_PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + HISTORY_PAGE_SIZE);
+
     historyList.innerHTML = '';
-    filtered.forEach(entry => {
+    pageItems.forEach(entry => {
       const { url, timestamp, recordType, maskedCount } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
@@ -799,13 +807,40 @@ async function initHistoryPanel(): Promise<void> {
         await removeSavedUrl(url);
         const idx = entries.findIndex(e => e.url === url);
         if (idx !== -1) entries.splice(idx, 1);
-        applyFilters();
+        applyFilters(false);
       });
 
       row.appendChild(info);
       row.appendChild(deleteBtn);
       historyList.appendChild(row);
     });
+
+    // ページネーションコントロール
+    if (totalPages > 1) {
+      const nav = document.createElement('div');
+      nav.className = 'pending-pagination';
+
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'secondary-btn';
+      prevBtn.textContent = '←';
+      prevBtn.disabled = historyCurrentPage === 0;
+      prevBtn.addEventListener('click', () => { historyCurrentPage--; applyFilters(false); });
+
+      const pageInfo = document.createElement('span');
+      pageInfo.className = 'pending-page-info';
+      pageInfo.textContent = `${historyCurrentPage + 1} / ${totalPages}`;
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'secondary-btn';
+      nextBtn.textContent = '→';
+      nextBtn.disabled = historyCurrentPage >= totalPages - 1;
+      nextBtn.addEventListener('click', () => { historyCurrentPage++; applyFilters(false); });
+
+      nav.appendChild(prevBtn);
+      nav.appendChild(pageInfo);
+      nav.appendChild(nextBtn);
+      historyList.appendChild(nav);
+    }
   }
 
   function renderPendingReason(reason: string): string {
@@ -937,75 +972,150 @@ async function initHistoryPanel(): Promise<void> {
 
   pendingSection.hidden = false;
 
-  pendingList.innerHTML = '';
-  for (const page of pendingPages) {
-    const row = document.createElement('div');
-    row.className = 'pending-entry';
+  // 最新順（timestamp降順）に並べる
+  const sortedPending = [...pendingPages].sort((a, b) => b.timestamp - a.timestamp);
 
-    const info = document.createElement('div');
-    info.className = 'pending-entry-info';
+  const PENDING_PAGE_SIZE = 10;
+  let pendingCurrentPage = 0;
 
-    const urlEl = document.createElement('a');
-    urlEl.className = 'history-entry-url';
-    urlEl.href = page.url;
-    urlEl.target = '_blank';
-    urlEl.rel = 'noopener noreferrer';
-    urlEl.textContent = page.title || page.url;
+  function renderPendingPage(): void {
+    if (!pendingList) return;
+    pendingList.innerHTML = '';
 
-    const metaEl = document.createElement('div');
-    metaEl.className = 'pending-entry-meta';
-    metaEl.textContent = `${new Date(page.timestamp).toLocaleString()} — ${renderPendingReason(page.reason)}`;
-    if (page.headerValue) {
-      const headerEl = document.createElement('span');
-      headerEl.className = 'pending-entry-header';
-      headerEl.textContent = ` (${page.headerValue})`;
-      metaEl.appendChild(headerEl);
-    }
+    const start = pendingCurrentPage * PENDING_PAGE_SIZE;
+    const pageItems = sortedPending.slice(start, start + PENDING_PAGE_SIZE);
 
-    info.appendChild(urlEl);
-    info.appendChild(metaEl);
+    for (const page of pageItems) {
+      const row = document.createElement('div');
+      row.className = 'pending-entry';
 
-    const recordBtn = document.createElement('button');
-    recordBtn.className = 'secondary-btn pending-record-btn';
-    recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
-    recordBtn.addEventListener('click', async () => {
-      recordBtn.disabled = true;
-      recordBtn.textContent = getMessage('processing') || '処理中...';
-      // エラーメッセージ表示用要素を準備
-      let errorEl = row.querySelector('.record-error-message') as HTMLElement;
-      if (errorEl) errorEl.remove();
-      try {
-        const result = await chrome.runtime.sendMessage({
-          type: 'MANUAL_RECORD',
-          payload: { title: page.title, url: page.url, content: '', force: true }
-        });
-        if (result?.success) {
-          await removePendingPages([page.url]);
-          const pIdx = pendingPages.findIndex(p => p.url === page.url);
-          if (pIdx !== -1) pendingPages.splice(pIdx, 1);
-          pendingUrlSet.delete(page.url);
-          row.remove();
-          if (pendingList.children.length === 0) {
-            pendingSection.hidden = true;
+      const info = document.createElement('div');
+      info.className = 'pending-entry-info';
+
+      const urlEl = document.createElement('a');
+      urlEl.className = 'history-entry-url';
+      urlEl.href = page.url;
+      urlEl.target = '_blank';
+      urlEl.rel = 'noopener noreferrer';
+      urlEl.textContent = page.title || page.url;
+
+      const metaEl = document.createElement('div');
+      metaEl.className = 'pending-entry-meta';
+      metaEl.textContent = `${new Date(page.timestamp).toLocaleString()} — ${renderPendingReason(page.reason)}`;
+      if (page.headerValue) {
+        const headerEl = document.createElement('span');
+        headerEl.className = 'pending-entry-header';
+        headerEl.textContent = ` (${page.headerValue})`;
+        metaEl.appendChild(headerEl);
+      }
+
+      info.appendChild(urlEl);
+      info.appendChild(metaEl);
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'pending-btn-group';
+
+      const recordBtn = document.createElement('button');
+      recordBtn.className = 'secondary-btn pending-record-btn';
+      recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+      recordBtn.addEventListener('click', async () => {
+        recordBtn.disabled = true;
+        recordBtn.textContent = getMessage('processing') || '処理中...';
+        let errorEl = row.querySelector('.record-error-message') as HTMLElement;
+        if (errorEl) errorEl.remove();
+        try {
+          const result = await chrome.runtime.sendMessage({
+            type: 'MANUAL_RECORD',
+            payload: { title: page.title, url: page.url, content: '', force: true }
+          });
+          if (result?.success) {
+            await removePendingPages([page.url]);
+            const pIdx = pendingPages.findIndex(p => p.url === page.url);
+            if (pIdx !== -1) { pendingPages.splice(pIdx, 1); sortedPending.splice(sortedPending.findIndex(p => p.url === page.url), 1); }
+            pendingUrlSet.delete(page.url);
+            if (pendingCurrentPage > 0 && pendingCurrentPage * PENDING_PAGE_SIZE >= sortedPending.length) {
+              pendingCurrentPage--;
+            }
+            if (sortedPending.length === 0) {
+              pendingSection!.hidden = true;
+            } else {
+              renderPendingPage();
+            }
+            if (activeFilter === 'skipped') applyFilters();
+          } else {
+            showRecordError(info, result);
+            recordBtn.disabled = false;
+            recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
           }
-          // スキップフィルター表示中なら再レンダリング
-          if (activeFilter === 'skipped') applyFilters();
-        } else {
-          showRecordError(info, result);
+        } catch (error) {
+          showRecordError(info, error);
           recordBtn.disabled = false;
           recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
         }
-      } catch (error) {
-        showRecordError(info, error);
-        recordBtn.disabled = false;
-        recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
-      }
-    });
+      });
 
-    row.appendChild(info);
-    row.appendChild(recordBtn);
-    pendingList.appendChild(row);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'danger-btn pending-delete-btn';
+      deleteBtn.textContent = getMessage('pendingDeleteForever') || '🗑 完全削除';
+      deleteBtn.addEventListener('click', async () => {
+        deleteBtn.disabled = true;
+        try {
+          await removePendingPages([page.url]);
+          const pIdx = pendingPages.findIndex(p => p.url === page.url);
+          if (pIdx !== -1) pendingPages.splice(pIdx, 1);
+          sortedPending.splice(sortedPending.findIndex(p => p.url === page.url), 1);
+          pendingUrlSet.delete(page.url);
+          if (pendingCurrentPage > 0 && pendingCurrentPage * PENDING_PAGE_SIZE >= sortedPending.length) {
+            pendingCurrentPage--;
+          }
+          if (sortedPending.length === 0) {
+            pendingSection!.hidden = true;
+          } else {
+            renderPendingPage();
+          }
+          if (activeFilter === 'skipped') applyFilters();
+        } catch {
+          deleteBtn.disabled = false;
+        }
+      });
+
+      btnGroup.appendChild(recordBtn);
+      btnGroup.appendChild(deleteBtn);
+      row.appendChild(info);
+      row.appendChild(btnGroup);
+      pendingList!.appendChild(row);
+    }
+
+    // ページネーションコントロール
+    const totalPages = Math.ceil(sortedPending.length / PENDING_PAGE_SIZE);
+    if (totalPages > 1) {
+      const nav = document.createElement('div');
+      nav.className = 'pending-pagination';
+
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'secondary-btn';
+      prevBtn.textContent = '←';
+      prevBtn.disabled = pendingCurrentPage === 0;
+      prevBtn.addEventListener('click', () => { pendingCurrentPage--; renderPendingPage(); });
+
+      const pageInfo = document.createElement('span');
+      pageInfo.className = 'pending-page-info';
+      pageInfo.textContent = `${pendingCurrentPage + 1} / ${totalPages}`;
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'secondary-btn';
+      nextBtn.textContent = '→';
+      nextBtn.disabled = pendingCurrentPage >= totalPages - 1;
+      nextBtn.addEventListener('click', () => { pendingCurrentPage++; renderPendingPage(); });
+
+      nav.appendChild(prevBtn);
+      nav.appendChild(pageInfo);
+      nav.appendChild(nextBtn);
+      pendingList!.appendChild(nav);
+    }
   }
+
+  renderPendingPage();
 }
 
 // ============================================================================

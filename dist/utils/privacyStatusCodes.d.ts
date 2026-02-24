@@ -11,10 +11,8 @@
  *   9xxx = その他 / 不明
  */
 export declare const PrivacyStatusCode: {
-    /** Cache-Control: private が検出された */
-    readonly CACHE_CONTROL_PRIVATE: "PSH-1001";
-    /** Cache-Control: no-store が検出された */
-    readonly CACHE_CONTROL_NO_STORE: "PSH-1002";
+    /** Cache-Control: private または no-store + Set-Cookie が検出された */
+    readonly CACHE_CONTROL: "PSH-1001";
     /** Set-Cookie ヘッダーが検出された（セッションCookie）*/
     readonly SET_COOKIE: "PSH-2001";
     /** Authorization ヘッダーが検出された */

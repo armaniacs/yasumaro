@@ -1118,6 +1118,9 @@
     "pendingReasonAuth": {
         "message": "Authorization ヘッダー"
     },
+    "pendingDeleteForever": {
+        "message": "🗑 完全削除"
+    },
     "diagConnectionPlaceholder": {
         "message": "「接続テスト」ボタンをクリックして、Obsidian APIへの接続を確認します。"
     },

@@ -1115,6 +1115,9 @@
     "pendingReasonAuth": {
         "message": "Authorization header"
     },
+    "pendingDeleteForever": {
+        "message": "🗑 Delete Forever"
+    },
     "diagConnectionPlaceholder": {
         "message": "Click \"Test Connection\" to check the Obsidian API connection."
     },

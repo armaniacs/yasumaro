@@ -12,10 +12,8 @@
  */
 export const PrivacyStatusCode = {
     // 1xxx: Cache-Control ヘッダー系
-    /** Cache-Control: private が検出された */
-    CACHE_CONTROL_PRIVATE: 'PSH-1001',
-    /** Cache-Control: no-store が検出された */
-    CACHE_CONTROL_NO_STORE: 'PSH-1002',
+    /** Cache-Control: private または no-store + Set-Cookie が検出された */
+    CACHE_CONTROL: 'PSH-1001',
     // 2xxx: Cookie / セッション系
     /** Set-Cookie ヘッダーが検出された（セッションCookie）*/
     SET_COOKIE: 'PSH-2001',
@@ -32,7 +30,7 @@ export const PrivacyStatusCode = {
 export function reasonToStatusCode(reason) {
     switch (reason) {
         case 'cache-control':
-            return PrivacyStatusCode.CACHE_CONTROL_PRIVATE;
+            return PrivacyStatusCode.CACHE_CONTROL;
         case 'set-cookie':
             return PrivacyStatusCode.SET_COOKIE;
         case 'authorization':
@@ -46,8 +44,7 @@ export function reasonToStatusCode(reason) {
  */
 export function statusCodeToMessageKey(code) {
     const map = {
-        [PrivacyStatusCode.CACHE_CONTROL_PRIVATE]: 'privacyStatus_cacheControlPrivate',
-        [PrivacyStatusCode.CACHE_CONTROL_NO_STORE]: 'privacyStatus_cacheControlNoStore',
+        [PrivacyStatusCode.CACHE_CONTROL]: 'privacyStatus_cacheControl',
         [PrivacyStatusCode.SET_COOKIE]: 'privacyStatus_setCookie',
         [PrivacyStatusCode.AUTHORIZATION]: 'privacyStatus_authorization',
         [PrivacyStatusCode.UNKNOWN]: 'privacyStatus_unknown',
