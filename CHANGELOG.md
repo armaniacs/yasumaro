@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.0.1] - to be released
+## [4.0.1] - 2026-02-25
 
 ### Changed
 - **記録履歴・記録できなかったページのページネーション対応**: 記録履歴と「記録できなかったページ」セクションをそれぞれ10件ずつページ表示に変更
