@@ -14,8 +14,39 @@ import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 
+// 【設定定数】設定キャッシュの有効期限（秒）🟢
+// 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
-const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
+
+// 【設定定数】URLキャッシュの有効期限（秒 - Problem #7用）🟢
+// 【調整可能性】重複チェックの許容スパンに応じて調整可能
+const URL_CACHE_TTL = 60 * 1000; // 60 seconds
+
+// 【設定定数】記録時の最大コンテンツサイズ（バイト）最大コンテンツサイズ 🟢
+// 【PII保護】64KB以降のPIIはAI APIに送信されず、安全側の挙動
+// 【設定理由】パフォーマンス: 大きなページがパイプラインをハングさせるのを防ぐ
+// 【設定理由】コスト削減: AI APIへの転送データ量を制限
+const MAX_RECORD_SIZE = 64 * 1024; // 64KB
+
+// 【ヘルパー関数】コンテンツを最大サイズに切り詰める
+// 【機能】指定された最大サイズを超えるコンテンツを安全に切り詰める
+// 【PII保護】切り詰められたコンテンツのみがAI APIに送信される
+// 【再利用性】テストやその他のコンテキストで独立して使用可能 🟢
+// 【単一責任】コンテンツのサイズ制御のみを担当
+// @param {string} content - 切り詰め対象のコンテンツ
+// @param {number} maxSize - 最大サイズのバイト数（デフォルト: MAX_RECORD_SIZE）
+// @returns {string} 切り詰められたコンテンツ（元のサイズ以下の場合はそのまま）
+// @see PII_FEATURE_GUIDE.md - コンテンツサイズ制限の詳細
+export function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
+  // 【効率化】lengthプロパティによる高速なサイズチェック 🟢
+  // 【安全性】substringによる範囲外アクセスを防止
+  if (content.length <= maxSize) {
+    return content;
+  }
+  // 【処理】先頭からmaxSizeまでの文字列を抽出 🟢
+  // 【計算量】O(maxSize) - 固定時間処理
+  return content.substring(0, maxSize);
+}
 
 interface CacheState {
   settingsCache: Settings | null;
@@ -278,17 +309,19 @@ export class RecordingLogic {
 
   async record(data: RecordingData): Promise<RecordingResult> {
     let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount } = data;
-    const MAX_RECORD_SIZE = 64 * 1024;
 
     try {
       // 0. Content Truncation (Problem: Large pages can hang the pipeline)
+      // 【PII保護】切り詰められたコンテンツのみがAI APIに送信される 🟢
+      // 【パフォーマンス】大きなページがパイプラインをハングさせるのを防止
       if (content && content.length > MAX_RECORD_SIZE) {
+        const originalLength = content.length;
+        content = truncateContentSize(content);
         addLog(LogType.WARN, 'Content truncated for recording', {
-          originalLength: content.length,
+          originalLength,
           truncatedLength: MAX_RECORD_SIZE,
           url
         });
-        content = content.substring(0, MAX_RECORD_SIZE);
       }
 
       // 1. Check domain filter

@@ -122,11 +122,11 @@ describe('RecordingLogic', () => {
 
       const mockPipeline = {
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
         process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
       privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
 
       await logic.record({
@@ -140,6 +140,72 @@ describe('RecordingLogic', () => {
         largeContent.substring(0, expectedLimit),
         expect.any(Object)
       );
+    });
+
+    // 【追加テスト #1】64KB以下のコンテンツは切り詰められない（正常系・必須）🟢
+    it('should not truncate content under 64KB', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const smallContent = 'a'.repeat(10 * 1024); // 10KB
+
+      const mockPipeline = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+      };
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+
+      await logic.record({
+        url: 'https://small-page.com',
+        title: 'Small Page',
+        content: smallContent
+      });
+
+      // コンテンツがそのまま渡されていることを確認
+      expect(mockPipeline.process).toHaveBeenCalledWith(smallContent, expect.any(Object));
+    });
+
+    // 【追加テスト #2】正好64KBのコンテンツは変更なし（境界値テスト）🟢
+    it('should not truncate content exactly at 64KB boundary', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const exact64KB = 'a'.repeat(64 * 1024); // 正確に64KB
+
+      const mockPipeline = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+      };
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+
+      await logic.record({
+        url: 'https://exact-boundary.com',
+        title: 'Exact Boundary Page',
+        content: exact64KB
+      });
+
+      // 64KBのコンテンツが変更なく渡されていることを確認
+      expect(mockPipeline.process).toHaveBeenCalledWith(exact64KB, expect.any(Object));
+    });
+
+    // 【追加テスト #3】空文字列コンテンツは処理可能（異常系・コーナーケース）🟢
+    it('should handle empty string content', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const emptyContent = '';
+
+      const mockPipeline = {
+        // @ts-expect-error - jest.fn() type narrowing issue
+        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+      };
+      // @ts-expect-error - jest.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+
+      await logic.record({
+        url: 'https://empty.com',
+        title: 'Empty Page',
+        content: emptyContent
+      });
+
+      // 空文字列がエラーなく処理され、そのまま渡されていることを確認
+      expect(mockPipeline.process).toHaveBeenCalledWith('', expect.any(Object));
     });
   });
 

@@ -1,4 +1,4 @@
-# PII 機能ガイド / PII Feature Guide (v2.3)
+# PII 機能ガイド / PII Feature Guide (v2.4)
 
 [日本語](#日本語) | [English](#english)
 
@@ -78,6 +78,32 @@ E-mail1件、クレジットカード番号2件をマスクしました
 - ポップアップのサイズ変更に合わせて自動調整
 
 ### 技術的詳細
+
+#### コンテンツサイズ制限
+
+大きなページの内容は64KB（65,536文字）に切り詰められ、先頭の64KBのみが処理されます。これは以下の理由で実施されています：
+
+- パフォーマンス：大きなページが処理パイプラインをハングさせるのを防ぐ
+- APIコスト：AI APIに送信するデータ量を制限
+
+**処理の順序とAI APIへの送信について：**
+
+| 処理順序 | ステップ | 内容 |
+|----------|----------|------|
+| 1 | コンテンツ切り詰め | 64KB超過時、先頭64KBのみに切り詰め |
+| 2 | プライバシーヘッダーチェック | `Cache-Control` などのHTTPヘッダー確認 |
+| 3 | PrivacyPipeline処理 | PIIマスキング、プロンプトインジェクション対策 |
+| 4 | AI API送信 | 切り詰められた64KBのコンテンツを送信 |
+| 5 | Obsidian保存 | AI要約結果を保存 |
+
+**重要なポイント：**
+- 切り詰められた64KBのコンテンツのみがAI APIに送信されます
+- 64KB以降のコンテンツはAI APIには送信されません
+
+これはPIIの観点から言えば、**「64KB以降に含まれるPIIはAI APIに送信されない」** という意味で、**安全側の挙動**です。
+
+> [!TIP]
+> AI APIに送信されるのは先頭の64KBのみであるため、ページの後半部分に含まれる機密情報はAI APIには送信されません。これはプライバシー保護の観点から安全な設計です。
 
 #### PII検出 (Regex)
 以下のパターンを自動検出してマスクします：
@@ -233,6 +259,32 @@ Text area size can now be adjusted freely.
 - Auto-adjusts with popup size changes
 
 ### Technical Details
+
+#### Content Size Limit
+
+Large page content is truncated to 64KB (65,536 characters), and only the first 64KB is processed. This is implemented for the following reasons:
+
+- Performance: Prevents large pages from hanging the processing pipeline
+- API Cost: Limits the amount of data sent to AI APIs
+
+**Processing Order and AI API Transmission:**
+
+| Processing Order | Step | Description |
+|------------------|------|-------------|
+| 1 | Content Truncation | If over 64KB, truncate to first 64KB only |
+| 2 | Privacy Header Check | Check HTTP headers like `Cache-Control` |
+| 3 | PrivacyPipeline Processing | PII masking, prompt injection protection |
+| 4 | Send to AI API | Send the truncated 64KB content |
+| 5 | Save to Obsidian | Save AI summary result |
+
+**Key Points:**
+- Only the truncated 64KB content is sent to the AI API
+- Content beyond 64KB is NOT sent to the AI API
+
+From a PII perspective, this means **"PII contained beyond 64KB will not be transmitted to the AI API"**, which is a **conservative/safe behavior**.
+
+> [!TIP]
+- Since only the first 64KB is sent to the AI API, sensitive information in the latter part of the page is not transmitted to the AI API. This is a safe design from a privacy protection perspective.
 
 #### PII Detection (Regex)
 Automatically detects and masks the following patterns:

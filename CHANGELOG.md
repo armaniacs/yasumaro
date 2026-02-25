@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.4] - to be released
+
+### Documentation
+- **PII_FEATURE_GUIDE.md v2.4 にコンテンツサイズ制限セクションを追加**（日英両方）
+  - 64KB超過時の挙動の説明
+  - 処理順序（切り詰め → ヘッダーチェック → PrivacyPipeline → AI API送信 → 保存）を表形式で整理
+  - 重要ポイント：先頭64KBのみがAI APIに送信され、64KB以降のPIIは送信されないため安全側の挙動
+- **Updated PII_FEATURE_GUIDE.md to v2.4 with Content Size Limit section** (Japanese and English)
+  - Documented behavior when content exceeds 64KB limit
+  - Organized processing order in table format: truncation → header check → PrivacyPipeline → AI API send → save
+  - Key point: Only first 64KB is sent to AI API, and PII beyond 64KB is not transmitted (conservative/safe behavior)
+
+### Added
+- **64KBコンテンツサイズ制限機能のテストケースを追加**（4個追加）
+  - `should not truncate content under 64KB` - 64KB以下のコンテンツは切り詰められないことを確認
+  - `should not truncate content exactly at 64KB boundary` - 正好64KBの境界値テスト
+  - `should handle empty string content` - 空文字列の安全処理を確認
+  - （既存）`should truncate extremely large content to 64KB` - 100KBコンテンツの切り詰め確認
+- **Added test cases for 64KB content size limit feature** (4 tests added)
+  - `should not truncate content under 64KB` - Verifies content under 64KB is not truncated
+  - `should not truncate content exactly at 64KB boundary` - Boundary value test for exact 64KB
+  - `should handle empty string content` - Verifies safe handling of empty strings
+  - (Existing) `should truncate extremely large content to 64KB` - Confirms 100KB content truncation
+
+### Refactor
+- **recordingLogic.tsのリファクタリング**
+  - `MAX_RECORD_SIZE`をローカル定数からモジュール定数に移動
+  - `truncateContentSize`ヘルパー関数を抽出して再利用性を向上
+  - 日本語ドキュメントコメントを追加（PII保護、パフォーマンス、カスタマイズ可能性）
+- **Refactored recordingLogic.ts**
+  - Moved `MAX_RECORD_SIZE` from local constant to module-level constant
+  - Extracted `truncateContentSize` helper function for better reusability
+  - Added Japanese documentation comments (PII protection, performance, customization possibilities)
+
 ## [4.0.3] - 2026-02-25
 
 ### Security
