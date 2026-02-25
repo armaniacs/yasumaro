@@ -149,6 +149,13 @@ Obsidian Local REST APIを使用して、そのファイルの現在の内容を
 ### Overview
 A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
+### About the Original — Obsidian Smart History
+Obsidian Weave is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901).
+
+### Why This Fork?
+The primary motivation was to add OpenAI-compatible API support — enabling Groq, Ollama, Sakura AI Engine, and many other providers alongside the original Gemini support.
+If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### Features
 - 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using OpenAI-compatible APIs or Google's Gemini API (supports Groq, OpenAI, Anthropic, local LLMs, and more)
 - 📝 **Obsidian Integration**: Saves browsing history directly to your Obsidian daily notes
