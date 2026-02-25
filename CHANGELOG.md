@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.2] - 2026-02-25 as 1st Obsidian Weave release
+
 ## [4.0.1] - 2026-02-25
 
 ### Changed
