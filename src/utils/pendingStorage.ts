@@ -30,13 +30,13 @@ export async function addPendingPage(page: PendingPage): Promise<void> {
 
   // Exclusion of duplicates
   const exists = pages.some(p => p.url === page.url);
-  console.log('[OSH pending] addPendingPage:', page.url, 'exists:', exists, 'current count:', pages.length);
+  console.log('[OWeave pending] addPendingPage:', page.url, 'exists:', exists, 'current count:', pages.length);
   if (exists) return;
 
   const updatedPages = [...pages, page];
 
   await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
-  console.log('[OSH pending] saved, new count:', updatedPages.length);
+  console.log('[OWeave pending] saved, new count:', updatedPages.length);
 }
 
 /**

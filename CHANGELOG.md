@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.3] - 2026-02-25
+
+### Security
+- **ステータスパネルのXSS脆弱性を修正**: ユーザー入力値（ドメインフィルターパターン、Cache-Controlヘッダー、保存時刻）をHTMLエスケープする `escapeHtml()` 関数の適用を追加
+  - `src/popup/main.ts` のステータスレンダリング箇所において、クロスサイトスクリプティング攻撃を防ぐためのエスケープ処理を強化
+- **Fixed XSS vulnerability in status panel**: Added `escapeHtml()` function calls to sanitize user input values (domain filter patterns, Cache-Control headers, saved timestamps) before displaying them
+  - Enhanced escaping in status rendering in `src/popup/main.ts` to prevent cross-site scripting attacks
+
+### Fixed
+- **ダッシュボードのタブタイトルを "Obsidian Weave" に修正**: ブラウザタブに "Smart History Dashboard" と表示されていた問題を修正
+- **拡張機能名の残存箇所を完全に修正**: 以下の箇所で残っていた古い名称 "Smart History" 及びログプレフィックス "[OSH]" を "Obsidian Weave" 及び "[OWeave]" に置換
+  - `src/popup/popup.html`, `src/dashboard/dashboard.html` の appTitle デフォルト値
+  - `_locales/ja/messages.json`, `_locales/en/messages.json` の appTitle メッセージ
+  - `src/content/extractor.ts`, `src/utils/pendingStorage.ts` のコンソールログプレフィックス
+- **パッケージバージョンを 4.0.3 に更新**: v4.0.2 リリース後のセキュリティ修正と名称 cleanup を反映
+- **Fixed dashboard browser tab title to "Obsidian Weave"**: Tab was showing "Smart History Dashboard" instead of the new extension name
+- **Completed renaming to "Obsidian Weave"**: Fixed remaining legacy references to "Smart History" and log prefixes from "[OSH]" to "[OWeave]"
+  - Default appTitle values in `src/popup/popup.html` and `src/dashboard/dashboard.html`
+  - appTitle messages in `_locales/ja/messages.json` and `_locales/en/messages.json`
+  - Console log prefixes in `src/content/extractor.ts` and `src/utils/pendingStorage.ts`
+- **Bumped version to 4.0.3**: Reflects security fixes and naming cleanup after v4.0.2 release
+
 ## [4.0.2] - 2026-02-25 — 1st Obsidian Weave release
 
 ### Changed

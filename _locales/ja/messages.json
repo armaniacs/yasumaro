@@ -9,7 +9,7 @@
         "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
     },
     "appTitle": {
-        "message": "Weave"
+        "message": "Obsidian Weave"
     },
     "settings": {
         "message": "設定"

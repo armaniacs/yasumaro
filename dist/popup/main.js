@@ -592,7 +592,9 @@ function renderStatusPanel(status) {
             : getMessage('statusDomainBlocked');
         domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
         if (status.domainFilter.matchedPattern) {
-            domainState.innerHTML += `<span class="status-value status-muted">${getMessage('statusPattern', [status.domainFilter.matchedPattern])}</span>`;
+            // 【セキュリティ】: ユーザー入力（matchedPattern）をHTMLエスケープし、XSS攻撃を防ぐ 🟢
+            const patternMsg = getMessage('statusPattern', [escapeHtml(status.domainFilter.matchedPattern)]);
+            domainState.innerHTML += `<span class="status-value status-muted">${patternMsg}</span>`;
         }
     }
     if (domainMode) {
@@ -655,7 +657,8 @@ function renderStatusPanel(status) {
         }
         else {
             if (status.cache.cacheControl) {
-                html += `<span class="status-value">Cache-Control: ${status.cache.cacheControl}</span>`;
+                // 【セキュリティ】: ユーザー入力（cacheControl HTTPヘッダー値）をHTMLエスケープし、XSS攻撃を防ぐ 🟢
+                html += `<span class="status-value">Cache-Control: ${escapeHtml(status.cache.cacheControl)}</span>`;
             }
             if (status.cache.hasCookie) {
                 html += `<span class="status-value">${getMessage('statusSetCookiePresent')}</span>`;
@@ -676,9 +679,11 @@ function renderStatusPanel(status) {
             lastSavedContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNotSaved')}</span>`;
         }
         else {
+            // 【セキュリティ】: ユーザー入力（timeAgo, formatted）をHTMLエスケープし、XSS攻撃を防ぐ 🟢
+            // 【型安全性】: undefined値の可能性を考慮し、空文字をデフォルト値として提供
             lastSavedContent.innerHTML = `
-        <span class="status-value">${status.lastSaved.timeAgo}</span>
-        <span class="status-value status-muted">${status.lastSaved.formatted}</span>
+        <span class="status-value">${escapeHtml(status.lastSaved.timeAgo || '')}</span>
+        <span class="status-value status-muted">${escapeHtml(status.lastSaved.formatted || '')}</span>
       `;
         }
     }
