@@ -52,7 +52,7 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
-   git clone https://github.com/izuru-tcnkc/obsidian-weave.git
+   git clone https://github.com/armaniacs/obsidian-weave.git
    cd obsidian-weave
    ```
 
@@ -179,7 +179,7 @@ To install the extension, follow these steps:
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/izuru-tcnkc/obsidian-weave.git
+   git clone https://github.com/armaniacs/obsidian-weave.git
    cd obsidian-weave
    ```
 
