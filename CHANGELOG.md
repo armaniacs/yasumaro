@@ -2,7 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.0.2] - 2026-02-25 as 1st Obsidian Weave release
+## [4.0.2] - 2026-02-25 — 1st Obsidian Weave release
+
+### Changed
+- **拡張機能名を "Obsidian Weave" に変更**: Chrome Web Store に同名の拡張機能（Obsidian Smart History）が存在するため、名称を変更（ADR-003）
+  - `manifest.json` / `package.json` の name を `obsidian-weave` に更新
+  - i18n（日英）の extensionName / shortName / appTitle を更新
+  - ファイルエクスポートヘッダー、ソースコード内コメント等を一括置換
+  - ストレージキー（`osh_pending_pages`）はデータ互換性のため変更しない
+- **Renamed to "Obsidian Weave"**: Changed extension name to avoid conflict with the original "Obsidian Smart History" on Chrome Web Store (see ADR-003)
+  - Updated `name` in `manifest.json` and `package.json` to `obsidian-weave`
+  - Updated i18n (en/ja) extensionName, shortName, and appTitle
+  - Replaced all occurrences in source code, comments, and export file headers
+  - Storage key (`osh_pending_pages`) is intentionally kept unchanged for data compatibility
+
+### Documentation
+- **README に「オリジナルの紹介」「フォークの理由」セクションを追加**（日英両方）
+- **Added "About the Original" and "Why This Fork?" sections to README** (Japanese and English)
+- **README の英語版に Weave 独自機能の区切りを追加**: version 2 以降に追加した機能を明示
+- **Added Weave-specific features separator in English README**: Clearly marks features added from version 2 onwards
+- **ADR-003 追加**: "Obsidian Weave" への改名決定の記録
+- **Added ADR-003**: Documents the decision to rename to "Obsidian Weave"
 
 ## [4.0.1] - 2026-02-25
 
