@@ -1,4 +1,4 @@
-# スマートな履歴管理 / Obsidian Weave
+# Obsidian Weave
 
 [日本語](#日本語) | [English](#english)
 
