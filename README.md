@@ -162,6 +162,9 @@ If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md
 - 🎯 **Smart Detection**: Only saves pages you actually read (based on scroll depth and time spent)
 - 📂 **Organized Storage**: Automatically creates and maintains a dedicated "Browser History" section in your daily notes
 - ⚙️ **Customizable**: Configure minimum visit duration, scroll depth, and API settings
+
+The following features were added exclusively in Obsidian Weave from version 2 onwards:
+
 - 🖱️ **Manual Recording**: Record any page instantly with the "Record Now" button. No duplicate URL restrictions - record the same page multiple times.
 - 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported.
