@@ -5,10 +5,11 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { parseTagsFromSummary } from '../utils/tagUtils.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
@@ -476,13 +477,17 @@ export class RecordingLogic {
       let pipelineResult: PrivacyPipelineResult;
       let aiDuration: number | undefined;
 
+      // タグ付き要約モードの設定を取得
+      const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;
+
       try {
         // AI処理時間を測定（alreadyProcessedがfalseの場合のみAI処理が実行される）
         const aiStartTime = performance.now();
 
         pipelineResult = await pipeline.process(content, {
           previewOnly,
-          alreadyProcessed
+          alreadyProcessed,
+          tagSummaryMode
         });
 
         const aiEndTime = performance.now();
@@ -542,6 +547,11 @@ export class RecordingLogic {
       const resolvedMaskedCount = precomputedMaskedCount ?? pipelineResult.maskedCount ?? 0;
       if (resolvedMaskedCount > 0) {
         await setUrlMaskedCount(url, resolvedMaskedCount);
+      }
+      // タグを保存（タグ付き要約モード時）
+      if (pipelineResult.tags && pipelineResult.tags.length > 0) {
+        await setUrlTags(url, pipelineResult.tags);
+        addLog(LogType.INFO, 'Tags saved', { url, tags: pipelineResult.tags });
       }
       // Problem #7: URLキャッシュを無効化
       RecordingLogic.invalidateUrlCache();

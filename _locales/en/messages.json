@@ -1216,5 +1216,65 @@
     },
     "testConnectionBtn": {
         "message": "Test Connection"
+    },
+    "tagEditTitle": {
+        "message": "Edit Tags"
+    },
+    "currentTags": {
+        "message": "Current Tags"
+    },
+    "addTag": {
+        "message": "Add Tag"
+    },
+    "selectCategory": {
+        "message": "Select category..."
+    },
+    "noTags": {
+        "message": "None"
+    },
+    "editTags": {
+        "message": "Edit Tags"
+    },
+    "saveTagError": {
+        "message": "Failed to save tags"
+    },
+    "tagsTab": {
+        "message": "Tags"
+    },
+    "tagsDescription": {
+        "message": "Configure tag categories and enable/disable automatic tag extraction during AI summarization."
+    },
+    "tagSummaryTitle": {
+        "message": "Tag Summary Mode"
+    },
+    "tagSummaryModeLabel": {
+        "message": "Use tag summary mode"
+    },
+    "tagSummaryModeDesc": {
+        "message": "Automatically add category tags to AI summaries based on content"
+    },
+    "tagCategoriesTitle": {
+        "message": "Tag Categories"
+    },
+    "defaultCategoriesTitle": {
+        "message": "Default Categories"
+    },
+    "defaultCategoriesDesc": {
+        "message": "(Default categories cannot be deleted)"
+    },
+    "userCategoriesTitle": {
+        "message": "User Categories"
+    },
+    "noUserCategories": {
+        "message": "None"
+    },
+    "newCategoryPlaceholder": {
+        "message": "Enter new category name..."
+    },
+    "duplicateCategoryError": {
+        "message": "This category name already exists"
+    },
+    "tagSettingsSaved": {
+        "message": "Tag settings saved successfully"
     }
 }

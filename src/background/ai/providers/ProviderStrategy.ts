@@ -19,8 +19,10 @@ export abstract class AIProviderStrategy {
 
     /**
      * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    abstract generateSummary(content: string): Promise<string>;
+    abstract generateSummary(content: string, tagSummaryMode?: boolean): Promise<string>;
 
     /**
      * 接続テストを実行する

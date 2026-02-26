@@ -34,9 +34,10 @@ import {
 import { setupAIProviderChangeListener, updateAIProviderVisibility, AIProviderElements } from '../popup/settings/aiProvider.js';
 import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
-import { getSavedUrlsWithTimestamps, getSavedUrlEntries, removeSavedUrl, getSavedUrlCount } from '../utils/storageUrls.js';
+import { getSavedUrlsWithTimestamps, getSavedUrlEntries, removeSavedUrl, getSavedUrlCount, setUrlTags } from '../utils/storageUrls.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { extractDomain, isDomainAllowed } from '../utils/domainUtils.js';
+import { DEFAULT_CATEGORIES, getAllCategories } from '../utils/tagUtils.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -659,7 +660,21 @@ async function initHistoryPanel(): Promise<void> {
   const pendingList = document.getElementById('pendingList') as HTMLElement | null;
   const filterBtns = document.querySelectorAll<HTMLButtonElement>('.history-filter-btn');
 
+  // タグ編集モーダル要素
+  const tagEditModal = document.getElementById('tagEditModal') as HTMLElement | null;
+  const closeTagEditModalBtn = document.getElementById('closeTagEditModalBtn') as HTMLButtonElement | null;
+  const tagEditUrl = document.getElementById('tagEditUrl') as HTMLElement | null;
+  const currentTagsList = document.getElementById('currentTagsList') as HTMLElement | null;
+  const noCurrentTagsMsg = document.getElementById('noCurrentTagsMsg') as HTMLElement | null;
+  const tagCategorySelect = document.getElementById('tagCategorySelect') as HTMLSelectElement | null;
+  const addTagBtn = document.getElementById('addTagBtn') as HTMLButtonElement | null;
+  const saveTagEditsBtn = document.getElementById('saveTagEditsBtn') as HTMLButtonElement | null;
+
   if (!historyList) return;
+
+  // タグ編集モーダルの状態
+  let editingUrl: string | null = null;
+  let editingTags: string[] = [];
 
   // 記録済みエントリ（recordType付き）を取得
   const rawEntries = await getSavedUrlEntries();
@@ -670,6 +685,7 @@ async function initHistoryPanel(): Promise<void> {
   let entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
 
   let activeFilter: 'all' | 'auto' | 'manual' | 'skipped' | 'masked' = 'all';
+  let activeTagFilter: string | null = null;  // タグフィルター用
   const HISTORY_PAGE_SIZE = 10;
   let historyCurrentPage = 0;
 
@@ -730,6 +746,88 @@ async function initHistoryPanel(): Promise<void> {
     return badge;
   }
 
+  /**
+   * タグバッジコンテナを作成
+   * @param {string[] | undefined} tags - タグ配列
+   * @param {string} url - 対象URL（タグクリック時に使用）
+   * @returns {HTMLElement | null} タグバッジコンテナ
+   */
+  function makeTagBadges(tags: string[] | undefined, url: string): HTMLElement | null {
+    if (!tags || tags.length === 0) return null;
+
+    const container = document.createElement('div');
+    container.className = 'tag-badges';
+
+    tags.forEach(tag => {
+      const badge = document.createElement('span');
+      badge.className = 'tag-badge';
+      badge.textContent = `#${tag}`;
+
+      // アクティブなフィルターと同じタグの場合はハイライト
+      if (activeTagFilter === tag) {
+        badge.classList.add('filter-active');
+      }
+
+      // タグクリックでフィルター切り替え
+      badge.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (activeTagFilter === tag) {
+          // 同じタグをクリックした場合はフィルター解除
+          activeTagFilter = null;
+        } else {
+          // 新しいタグでフィルター
+          activeTagFilter = tag;
+        }
+        historyCurrentPage = 0;
+        applyFilters(false);
+        updateTagFilterIndicator();
+      });
+
+      container.appendChild(badge);
+    });
+
+    return container;
+  }
+
+  /**
+   * タグフィルターインジケーターを更新
+   */
+  function updateTagFilterIndicator(): void {
+    // 既存のインジケーターを削除
+    const existingIndicator = document.getElementById('tagFilterIndicator');
+    if (existingIndicator) {
+      existingIndicator.remove();
+    }
+
+    // アクティブなタグフィルターがない場合は何もしない
+    if (!activeTagFilter) return;
+
+    // 履歴コントロールの後にインジケーターを追加
+    const controls = document.querySelector('.history-controls');
+    if (!controls) return;
+
+    const indicator = document.createElement('div');
+    indicator.id = 'tagFilterIndicator';
+    indicator.className = 'tag-filter-indicator';
+
+    indicator.innerHTML = `
+      <span class="tag-filter-label">フィルター:</span>
+      <span class="tag-filter-value">#${activeTagFilter}</span>
+      <button class="tag-filter-close" title="フィルター解除">×</button>
+    `;
+
+    const closeBtn = indicator.querySelector('.tag-filter-close');
+    closeBtn?.addEventListener('click', () => {
+      activeTagFilter = null;
+      historyCurrentPage = 0;
+      applyFilters(false);
+      updateTagFilterIndicator();
+    });
+
+    controls.appendChild(indicator);
+  }
+
   function applyFilters(resetPage = true): void {
     if (!historyList) return;
 
@@ -748,7 +846,9 @@ async function initHistoryPanel(): Promise<void> {
         (activeFilter === 'auto' && (!e.recordType || e.recordType === 'auto')) ||
         (activeFilter === 'manual' && e.recordType === 'manual') ||
         (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0);
-      return matchesSearch && matchesType;
+      // タグフィルター
+      const matchesTag = !activeTagFilter || (e.tags && e.tags.includes(activeTagFilter));
+      return matchesSearch && matchesType && matchesTag;
     });
 
     if (resetPage) historyCurrentPage = 0;
@@ -770,7 +870,7 @@ async function initHistoryPanel(): Promise<void> {
 
     historyList.innerHTML = '';
     pageItems.forEach(entry => {
-      const { url, timestamp, recordType, maskedCount } = entry;
+      const { url, timestamp, recordType, maskedCount, tags } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -799,6 +899,12 @@ async function initHistoryPanel(): Promise<void> {
       info.appendChild(topRow);
       info.appendChild(timeEl);
 
+      // タグバッジを追加
+      const tagBadges = makeTagBadges(tags, url);
+      if (tagBadges) {
+        info.appendChild(tagBadges);
+      }
+
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'history-entry-delete';
       deleteBtn.textContent = '×';
@@ -810,7 +916,18 @@ async function initHistoryPanel(): Promise<void> {
         applyFilters(false);
       });
 
+      // タグ編集ボタン
+      const editBtn = document.createElement('button');
+      editBtn.className = 'history-entry-edit-btn';
+      editBtn.textContent = '✎';
+      editBtn.setAttribute('aria-label', getMessage('editTags') || 'タグを編集');
+      editBtn.title = getMessage('editTags') || 'タグを編集';
+      editBtn.addEventListener('click', () => {
+        openTagEditModal(url, tags || []);
+      });
+
       row.appendChild(info);
+      row.appendChild(editBtn);
       row.appendChild(deleteBtn);
       historyList.appendChild(row);
     });
@@ -946,6 +1063,9 @@ async function initHistoryPanel(): Promise<void> {
   applyFilters();
 
   historySearchInput?.addEventListener('input', () => {
+    // 検索入力時にタグフィルターをリセット
+    activeTagFilter = null;
+    updateTagFilterIndicator();
     applyFilters();
   });
 
@@ -956,6 +1076,9 @@ async function initHistoryPanel(): Promise<void> {
       btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
       activeFilter = (btn.dataset['filter'] || 'all') as typeof activeFilter;
+      // タグフィルターをリセット
+      activeTagFilter = null;
+      updateTagFilterIndicator();
       applyFilters();
     });
   });
@@ -1114,6 +1237,176 @@ async function initHistoryPanel(): Promise<void> {
       pendingList!.appendChild(nav);
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // タグ編集モーダル
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * タグ編集モーダルを開く
+   * @param {string} url - 編集対象URL
+   * @param {string[]} currentTags - 現在のタグ
+   */
+  function openTagEditModal(url: string, currentTags: string[]): void {
+    editingUrl = url;
+    editingTags = [...currentTags];
+
+    if (tagEditUrl) tagEditUrl.textContent = url;
+    renderCurrentTags();
+    updateTagCategorySelect();
+
+    if (tagEditModal) tagEditModal.classList.remove('hidden');
+
+    // モーダルを開いたときにフォーカストラップ
+    setTimeout(() => {
+      if (tagCategorySelect) {
+        tagCategorySelect.focus();
+      }
+    }, 100);
+
+    // ARIA属性の設定
+    tagEditModal?.setAttribute('aria-hidden', 'false');
+  }
+
+  /**
+   * タグ編集モーダルを閉じる
+   */
+  function closeTagEditModal(): void {
+    editingUrl = null;
+    editingTags = [];
+    if (tagEditModal) {
+      tagEditModal.classList.add('hidden');
+      tagEditModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  /**
+   * 現在のタグリストをレンダリング
+   */
+  function renderCurrentTags(): void {
+    if (!currentTagsList || !noCurrentTagsMsg) return;
+
+    currentTagsList.innerHTML = '';
+
+    if (editingTags.length === 0) {
+      noCurrentTagsMsg.hidden = false;
+      return;
+    }
+
+    noCurrentTagsMsg.hidden = true;
+
+    editingTags.forEach(tag => {
+      const tagItem = document.createElement('span');
+      tagItem.className = 'current-tag-item';
+      tagItem.textContent = `#${tag}`;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'current-tag-remove';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        editingTags = editingTags.filter(t => t !== tag);
+        renderCurrentTags();
+        updateTagCategorySelect();
+      });
+
+      tagItem.appendChild(removeBtn);
+      currentTagsList.appendChild(tagItem);
+    });
+  }
+
+  /**
+   * タグカテゴリセレクトボックスを更新
+   */
+  async function updateTagCategorySelect(): Promise<void> {
+    if (!tagCategorySelect || !addTagBtn) return;
+
+    const settings = await getSettings();
+    const categories = getAllCategories(settings);
+
+    // 既存のタグを除外
+    const availableCategories = categories.filter(c => !editingTags.includes(c));
+
+    tagCategorySelect.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = getMessage('selectCategory') || 'カテゴリを選択...';
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    tagCategorySelect.appendChild(defaultOption);
+
+    availableCategories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      tagCategorySelect.appendChild(option);
+    });
+
+    addTagBtn.disabled = availableCategories.length === 0;
+  }
+
+  /**
+   * タグを追加
+   */
+  function addTag(): void {
+    if (!tagCategorySelect || !tagCategorySelect.value) return;
+    const newTag = tagCategorySelect.value;
+    if (!editingTags.includes(newTag)) {
+      editingTags.push(newTag);
+      renderCurrentTags();
+      updateTagCategorySelect();
+    }
+    tagCategorySelect.value = '';
+  }
+
+  /**
+   * タグ編集を保存
+   */
+  async function saveTagEdits(): Promise<void> {
+    if (!editingUrl) return;
+
+    try {
+      await setUrlTags(editingUrl, editingTags);
+
+      // エントリの更新
+      const entryIndex = entries.findIndex(e => e.url === editingUrl);
+      if (entryIndex !== -1) {
+        entries[entryIndex].tags = editingTags;
+      }
+
+      closeTagEditModal();
+      applyFilters(false);
+    } catch (error) {
+      console.error('[Dashboard] Failed to save tags:', error);
+      alert(getMessage('saveTagError') || 'タグの保存に失敗しました');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // タグ編集モーダルのイベントハンドラ
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  closeTagEditModalBtn?.addEventListener('click', closeTagEditModal);
+
+  tagEditModal?.addEventListener('click', (e) => {
+    if (e.target === tagEditModal) {
+      closeTagEditModal();
+    }
+  });
+
+  // Escapeキーでモーダルを閉じる
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && tagEditModal && !tagEditModal.classList.contains('hidden')) {
+      closeTagEditModal();
+    }
+  });
+
+  tagCategorySelect?.addEventListener('change', () => {
+    if (addTagBtn) addTagBtn.disabled = !tagCategorySelect.value;
+  });
+
+  addTagBtn?.addEventListener('click', addTag);
+
+  saveTagEditsBtn?.addEventListener('click', saveTagEdits);
 
   renderPendingPage();
 }
@@ -1334,6 +1627,155 @@ function initDomainFilterTagUI(): void {
 
   // 初期化: domainFilter.ts の loadDomainSettings() 完了後に同期
   setTimeout(syncFromHidden, 50);
+}
+
+// ============================================================================
+// Tags Settings Panel
+// ============================================================================
+
+async function initTagsPanel(): Promise<void> {
+  const tagSummaryModeInput = document.getElementById('tagSummaryMode') as HTMLInputElement | null;
+  const defaultCategoriesList = document.getElementById('defaultCategoriesList') as HTMLElement | null;
+  const userCategoriesList = document.getElementById('userCategoriesUserList') as HTMLElement | null;
+  const noUserCategoriesMsg = document.getElementById('noUserCategoriesMsg') as HTMLElement | null;
+  const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement | null;
+  const addCategoryBtn = document.getElementById('addCategoryBtn') as HTMLButtonElement | null;
+  const saveTagsBtn = document.getElementById('saveTagsBtn') as HTMLButtonElement | null;
+  const userCategoriesListEl = document.getElementById('userCategoriesList') as HTMLElement | null;
+
+  // ユーザーが追加したカテゴリの状態（一時保存）
+  let userCategories: string[] = [];
+
+  /**
+   * デフォルトカテゴリを表示
+   */
+  function renderDefaultCategories(): void {
+    if (!defaultCategoriesList) return;
+    defaultCategoriesList.innerHTML = '';
+    DEFAULT_CATEGORIES.forEach(category => {
+      const item = document.createElement('span');
+      item.className = 'default-category-item';
+      item.textContent = `#${category}`;
+      defaultCategoriesList.appendChild(item);
+    });
+  }
+
+  /**
+   * ユーザーカテゴリを表示
+   */
+  function renderUserCategories(): void {
+    if (!userCategoriesListEl || !noUserCategoriesMsg) return;
+
+    userCategoriesListEl.innerHTML = '';
+
+    if (userCategories.length === 0) {
+      noUserCategoriesMsg.hidden = false;
+      return;
+    }
+
+    noUserCategoriesMsg.hidden = true;
+
+    userCategories.forEach((category, index) => {
+      const item = document.createElement('div');
+      item.className = 'user-category-item';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'user-category-name';
+      nameEl.textContent = `#${category}`;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'user-category-delete';
+      deleteBtn.textContent = '×';
+      deleteBtn.setAttribute('aria-label', `Delete ${category}`);
+      deleteBtn.addEventListener('click', () => {
+        userCategories.splice(index, 1);
+        renderUserCategories();
+      });
+
+      item.appendChild(nameEl);
+      item.appendChild(deleteBtn);
+      userCategoriesListEl.appendChild(item);
+    });
+  }
+
+  /**
+   * カテゴリを追加
+   */
+  function addCategory(): void {
+    if (!newCategoryInput) return;
+    const categoryName = newCategoryInput.value.trim();
+
+    if (!categoryName) return;
+
+    // 重複チェック
+    const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
+    if (allCategories.includes(categoryName)) {
+      alert(getMessage('duplicateCategoryError') || 'このカテゴリ名は既に存在します');
+      return;
+    }
+
+    userCategories.push(categoryName);
+    newCategoryInput.value = '';
+    renderUserCategories();
+  }
+
+  /**
+   * 設定を保存
+   */
+  async function saveTagSettings(): Promise<void> {
+    const settings = await getSettings();
+
+    // タグ付き要約モード
+    settings[StorageKeys.TAG_SUMMARY_MODE] = tagSummaryModeInput?.checked || false;
+
+    // ユーザーカテゴリ
+    settings[StorageKeys.TAG_CATEGORIES] = userCategories.map(name => ({
+      name,
+      isDefault: false,
+      createdAt: Date.now()
+    }));
+
+    try {
+      await saveSettingsWithAllowedUrls(settings);
+      showStatus('exportImportStatus', getMessage('tagSettingsSaved') || 'タグ設定を保存しました', 'success');
+    } catch (error) {
+      console.error('[TagsPanel] Failed to save tag settings:', error);
+      showStatus('exportImportStatus', getMessage('saveError') || '保存エラー', 'error');
+    }
+  }
+
+  /**
+   * 設定をロード
+   */
+  async function loadTagSettings(): Promise<void> {
+    const settings = await getSettings();
+
+    // タグ付き要約モード
+    if (tagSummaryModeInput) {
+      tagSummaryModeInput.checked = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean || false;
+    }
+
+    // ユーザーカテゴリ
+    const savedUserCategories = settings[StorageKeys.TAG_CATEGORIES] as any[] || [];
+    userCategories = savedUserCategories.filter(c => !c.isDefault).map(c => c.name);
+    renderUserCategories();
+  }
+
+  // 初期化
+  renderDefaultCategories();
+  await loadTagSettings();
+
+  // イベントハンドラ
+  addCategoryBtn?.addEventListener('click', addCategory);
+
+  newCategoryInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCategory();
+    }
+  });
+
+  saveTagsBtn?.addEventListener('click', saveTagSettings);
 }
 
 // ============================================================================
@@ -1577,6 +2019,7 @@ function setHtmlLangDir(): void {
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
+  try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
 
   console.log('[Dashboard] Initialization complete');

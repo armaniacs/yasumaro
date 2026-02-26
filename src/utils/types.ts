@@ -5,6 +5,15 @@
  */
 
 /**
+ * タグカテゴリ
+ */
+export interface TagCategory {
+    name: string;
+    isDefault: boolean;  // デフォルトカテゴリかどうか
+    createdAt: number;
+}
+
+/**
  * カスタムプロンプトのデータ構造
  */
 export interface CustomPrompt {

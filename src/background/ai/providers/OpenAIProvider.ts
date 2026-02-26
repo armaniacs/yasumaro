@@ -47,7 +47,12 @@ export class OpenAIProvider extends AIProviderStrategy {
         return this.providerName;
     }
 
-    async generateSummary(content: string): Promise<string> {
+    /**
+     * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     */
+    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<string> {
         if (!this.baseUrl) {
             return "Error: Base URL is missing. Please check your settings.";
         }
@@ -73,8 +78,8 @@ export class OpenAIProvider extends AIProviderStrategy {
             addLog(LogType.WARN, `[${this.providerName}] Content sanitized and proceeding with AI request`);
         }
 
-        // カスタムプロンプトを適用
-        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizedContent);
+        // カスタムプロンプトを適用（タグ付き要約モード対応）
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizedContent, tagSummaryMode);
 
         const payload = {
             model: this.model,

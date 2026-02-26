@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.4] - to be released
 
+### Added
+- **タグ機能のバックエンド実装**
+  - 10種類のデフォルトカテゴリ（IT・プログラミング、インフラ・ネットワーク、サイエンス・アカデミック etc.）を追加
+  - タグ付き要約モードによるカテゴリータグの自動抽出機能
+  - `SavedUrlEntry` に `tags` フィールドを追加
+  - タグ管理ユーティリティ `tagUtils.ts` を作成
+  - `TAG_CATEGORIES`, `TAG_SUMMARY_MODE` 設定キーを追加
+  - デフォルトタグ付き要約プロンプト `DEFAULT_TAGGED_SUMMARY_PROMPT` を追加
+- **タグ機能のダッシュボード実装**
+  - 履歴リストの各エントリにタグバッジを表示
+  - タグをクリックしてフィルタリングする機能
+  - タグ編集モーダルの実装（タグの追加・削除）
+  - タグフィルターインジケーターの表示
+  - 日英両言語のi18n対応
+- **タグ機能の設定パネル実装**
+  - タグ付き要約モードの有効/無効トグルスイッチ
+  - デフォルトカテゴリ（10種類）の表示（読み取り専用）
+  - ユーザーカテゴリの追加・削除機能
+  - 重複カテゴリのバリデーション
+- **Added tag feature backend implementation**
+  - Added 10 default categories (IT & Programming, Infrastructure & Network, Science & Academic, etc.)
+  - Auto-extraction of category tags via tag summary mode
+  - Added `tags` field to `SavedUrlEntry`
+  - Created tag management utilities `tagUtils.ts`
+  - Added `TAG_CATEGORIES`, `TAG_SUMMARY_MODE` settings keys
+  - Added default tag summary prompt `DEFAULT_TAGGED_SUMMARY_PROMPT`
+- **Added tag feature dashboard implementation**
+  - Tag badges displayed in history list entries
+  - Click-to-filter functionality by tags
+  - Tag edit modal implementation (add/remove tags)
+  - Tag filter indicator display
+  - Japanese/English i18n support
+- **Added tag feature settings panel implementation**
+  - Tag summary mode enable/disable toggle switch
+  - Default categories display (read-only, 10 categories)
+  - User category add/remove functionality
+  - Duplicate category validation
+
 ### Documentation
 - **PII_FEATURE_GUIDE.md v2.4 にコンテンツサイズ制限セクションを追加**（日英両方）
   - 64KB超過時の挙動の説明

@@ -36,6 +36,20 @@ Content:
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
 
 /**
+ * タグ付き要約用デフォルトプロンプト
+ */
+export const DEFAULT_TAGGED_SUMMARY_PROMPT = `以下のWebページの内容を分析し、指定したカテゴリから最も関連度の高いものを1つまたは2つ選んでタグ形式で出力し、その後に日本語で簡潔に要約してください。
+
+カテゴリ候補:
+[IT・プログラミング, インフラ・ネットワーク, サイエンス・アカデミック, ビジネス・経済, ライフスタイル・雑記, フード・レシピ, トラベル・アウトドア, エンタメ・ゲーム, クリエイティブ・アート, ヘルス・ウェルネス]
+
+出力形式:
+#カテゴリ1 #カテゴリ2 | 要約文（改行なし）
+
+Content:
+{{content}}`;
+
+/**
  * プロンプト内のプレースホルダーを置換
  * @param {string} prompt - プロンプトテンプレート
  * @param {string} content - 置換するコンテンツ
@@ -109,34 +123,37 @@ export function getActivePrompt(settings: Settings, providerName: string): Custo
  * @param {Settings} settings - 設定オブジェクト
  * @param {string} providerName - プロバイダー名
  * @param {string} sanitizedContent - サニタイズ済みコンテンツ
+ * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
  * @returns {PromptResult} 適用結果
  */
 export function applyCustomPrompt(
-    settings: Settings, 
-    providerName: string, 
-    sanitizedContent: string
+    settings: Settings,
+    providerName: string,
+    sanitizedContent: string,
+    tagSummaryMode: boolean = false
 ): PromptResult {
     const customPrompt = getActivePrompt(settings, providerName);
 
-    if (!customPrompt) {
-        // デフォルトプロンプトを使用
+    if (customPrompt) {
+        // カスタムプロンプトを適用
+        const userPrompt = replaceContentPlaceholder(customPrompt.prompt, sanitizedContent);
+        addLog(LogType.INFO, `Using custom prompt: ${customPrompt.name} for ${providerName}`);
+
         return {
-            userPrompt: replaceContentPlaceholder(DEFAULT_USER_PROMPT, sanitizedContent),
-            systemPrompt: DEFAULT_SYSTEM_PROMPT,
-            isCustom: false
+            userPrompt,
+            systemPrompt: customPrompt.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+            isCustom: true
         };
     }
 
-    // カスタムプロンプトを適用
-    const userPrompt = replaceContentPlaceholder(customPrompt.prompt, sanitizedContent);
-    
-    // カスタムプロンプトの使用をログに記録
-    addLog(LogType.INFO, `Using custom prompt: ${customPrompt.name} for ${providerName}`);
+    // デフォルトプロンプトを使用
+    // タグ付き要約モードの場合はタグ付きプロンプトを使用
+    const basePrompt = tagSummaryMode ? DEFAULT_TAGGED_SUMMARY_PROMPT : DEFAULT_USER_PROMPT;
 
     return {
-        userPrompt,
-        systemPrompt: customPrompt.systemPrompt || DEFAULT_SYSTEM_PROMPT,
-        isCustom: true
+        userPrompt: replaceContentPlaceholder(basePrompt, sanitizedContent),
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        isCustom: false
     };
 }
 

@@ -1827,7 +1827,268 @@ details[open] .advanced-details-summary::before {
    Animations
    ============================================================================= */
 
+/* =============================================================================
+   Tag Styles
+   ============================================================================= */
+
+/* Tag Badges in History List */
+.tag-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.tag-badge:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-hover);
+}
+
+.tag-badge.clickable {
+  text-decoration: underline;
+}
+
+.tag-badge.filter-active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary-hover);
+}
+
+/* Tag Filter Indicator */
+.tag-filter-indicator {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.tag-filter-label {
+  margin-right: var(--space-2);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.tag-filter-value {
+  margin-right: var(--space-2);
+  color: var(--color-text);
+}
+
+.tag-filter-close {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.tag-filter-close:hover {
+  background: var(--color-primary-light);
+}
+
+/* History Entry Edit Button */
+.history-entry-edit-btn {
+  background: none;
+  border: none;
+  color: var(--color-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: background-color 0.15s;
+  margin-left: var(--space-2);
+}
+
+.history-entry-edit-btn:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-primary);
+}
+
+/* Tag Edit Modal */
+.tag-edit-modal {
+  max-width: 450px;
+}
+
+.url-display {
+  padding: var(--space-3);
+  background: var(--color-bg-code);
+  border-radius: var(--radius);
+  font-size: 13px;
+  word-break: break-all;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.tag-edit-section {
+  margin-bottom: var(--space-5);
+}
+
+.tag-edit-section:last-child {
+  margin-bottom: 0;
+}
+
+.tag-edit-section-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+
+.current-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.current-tag-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-primary);
+}
+
+.current-tag-remove {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  margin-left: var(--space-2);
+  cursor: pointer;
+  padding: 2px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+
+.current-tag-remove:hover {
+  background: var(--color-primary-light);
+}
+
+.no-tags-msg {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.tag-category-select {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-white);
+  color: var(--color-text);
+  font-size: 14px;
+  margin-bottom: var(--space-2);
+}
+
+.tag-category-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Tag Categories List */
+.tag-categories-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius);
+}
+
+.default-category-item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+/* User Category List */
+.tag-categories-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 40px;
+}
+
+.user-category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.user-category-name {
+  font-size: 14px;
+}
+
+.user-category-delete {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  font-size: 16px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s;
+}
+
+.user-category-delete:hover {
+  background: var(--color-danger-bg);
+}
+
+.mt-4 {
+  margin-top: var(--space-4);
+}
+
+.mb-4 {
+  margin-bottom: var(--space-4);
+}
+
+.mb-8 {
+  margin-bottom: var(--space-5);
+}
+
+.ml-24 {
+  margin-left: 24px;
 }

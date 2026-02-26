@@ -9,7 +9,8 @@ import { withOptimisticLock } from './optimisticLock.js';
 import type {
     UblockRules,
     Source,
-    CustomPrompt
+    CustomPrompt,
+    TagCategory
 } from './types.js';
 
 // 暗号化対象のAPIキーフィールド
@@ -60,6 +61,8 @@ export interface SettingsValue {
     allowed_urls?: string[];
     allowed_urls_hash?: string;
     custom_prompts?: CustomPrompt[];
+    tag_categories?: TagCategory[];  // タグカテゴリリスト
+    tag_summary_mode?: boolean;        // タグ付き要約モード
     [key: string]: unknown; // レガシー互換性
 }
 
@@ -118,6 +121,8 @@ export const DEFAULT_SETTINGS: Settings = {
     allowed_urls: [],
     allowed_urls_hash: '',
     custom_prompts: [],
+    tag_categories: [],        // タグカテゴリリスト（空=デフォルトカテゴリを使用）
+    tag_summary_mode: false,    // タグ付き要約モード（デフォルト: 無効）
     // マスターパスワード保護オプション
     mp_protection_enabled: false,
     mp_encrypt_api_keys: true,

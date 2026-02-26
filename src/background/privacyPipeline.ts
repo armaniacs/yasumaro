@@ -1,12 +1,13 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
 import { Settings, StorageKeys } from '../utils/storage.js';
+import { parseTagsFromSummary } from '../utils/tagUtils.js';
 
 // Temporary interface until AIClient is converted
 interface IAIClient {
   getLocalAvailability(): Promise<string>;
   summarizeLocally(content: string): Promise<{ success: boolean; summary: string }>;
-  generateSummary(text: string): Promise<string>;
+  generateSummary(text: string, tagSummaryMode?: boolean): Promise<string>;
 }
 
 interface ISanitizers {
@@ -16,6 +17,7 @@ interface ISanitizers {
 export interface PrivacyPipelineOptions {
   previewOnly?: boolean;
   alreadyProcessed?: boolean;
+  tagSummaryMode?: boolean;  // タグ付き要約モード
 }
 
 export interface PrivacyPipelineResult {
@@ -26,6 +28,7 @@ export interface PrivacyPipelineResult {
   mode?: string;
   maskedCount?: number;
   maskedItems?: any[];
+  tags?: string[];  // タグリスト（タグ付き要約モード時）
 }
 
 export class PrivacyPipeline {
@@ -95,8 +98,16 @@ export class PrivacyPipeline {
 
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
-      const summary = await this.aiClient.generateSummary(processingText);
-      return { summary, maskedCount };
+      const summary = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
+
+      // タグ付き要約モードの場合はタグを抽出
+      let tags: string[] | undefined;
+      if (options.tagSummaryMode && summary) {
+        const parsed = parseTagsFromSummary(summary);
+        tags = parsed.tags;
+      }
+
+      return { summary, maskedCount, tags };
     }
 
     return { summary: 'Summary not available.' };

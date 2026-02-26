@@ -28,6 +28,7 @@ export interface SavedUrlEntry {
     timestamp: number;
     recordType?: RecordType;
     maskedCount?: number;
+    tags?: string[];  // タグリスト（オプション）
 }
 
 /**
@@ -88,7 +89,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
@@ -100,6 +101,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             const entry: SavedUrlEntry = { url, timestamp };
             if (existing?.recordType !== undefined) entry.recordType = existing.recordType;
             if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
+            if (existing?.tags !== undefined) entry.tags = existing.tags;
             entries.push(entry);
         }
         return entries;
@@ -132,10 +134,11 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         const existing = entries.find(entry => entry.url === url);
         entries = entries.filter(entry => entry.url !== url);
 
-        // 新しいエントリを追加（既存の maskedCount を引き継ぐ）
+        // 新しいエントリを追加（既存の tags / maskedCount を引き継ぐ）
         const entry: SavedUrlEntry = { url, timestamp: Date.now() };
         if (recordType) entry.recordType = recordType;
         if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
+        if (existing?.tags !== undefined) entry.tags = existing.tags;
         entries.push(entry);
 
         // 7日より古いエントリを削除（日数ベース）
@@ -361,4 +364,71 @@ export async function getAllowedUrls(ALLOWED_URLS_KEY: string): Promise<Set<stri
 export async function ensureUrlVersionInitialized(): Promise<void> {
     await ensureVersionInitialized('savedUrls');
     await ensureVersionInitialized('savedUrlsWithTimestamps');
+}
+
+// ============================================================================
+// タグ管理機能
+// ============================================================================
+
+/**
+ * URLのタグを設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {string[]} tags - 設定するタグリスト
+ * @returns {Promise<void>}
+ */
+export async function setUrlTags(url: string, tags: string[]): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const targetEntry = entries.find(e => e.url === url);
+        if (targetEntry) {
+            targetEntry.tags = tags;
+        }
+        return entries;
+    }, { maxRetries: 5 });
+}
+
+/**
+ * URLにタグを追加する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - URL
+ * @param {string} tag - 追加するタグ
+ * @returns {Promise<void>}
+ */
+export async function addUrlTag(url: string, tag: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const targetEntry = entries.find(e => e.url === url);
+        if (targetEntry) {
+            if (!targetEntry.tags) {
+                targetEntry.tags = [];
+            }
+            if (!targetEntry.tags.includes(tag)) {
+                targetEntry.tags.push(tag);
+            }
+        }
+        return entries;
+    }, { maxRetries: 5 });
+}
+
+/**
+ * URLからタグを削除する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - URL
+ * @param {string} tag - 削除するタグ
+ * @returns {Promise<void>}
+ */
+export async function removeUrlTag(url: string, tag: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const targetEntry = entries.find(e => e.url === url);
+        if (targetEntry && targetEntry.tags) {
+            targetEntry.tags = targetEntry.tags.filter(t => t !== tag);
+            // 空配列になった場合はundefinedにする（未設定との区別）
+            if (targetEntry.tags.length === 0) {
+                targetEntry.tags = undefined;
+            }
+        }
+        return entries;
+    }, { maxRetries: 5 });
 }
