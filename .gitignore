@@ -32,3 +32,5 @@ docs/features/
 # Local override files
 *.local
 .*
+
+video-autotag/

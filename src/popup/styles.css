@@ -45,6 +45,13 @@
   --color-success-bg: #f0fdf4;
   --color-success-border: #bbf7d0;
 
+  /* Warning */
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-text: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fde68a;
+
   /* Info */
   --color-info: #3b82f6;
   --color-info-hover: #2563eb;
@@ -282,7 +289,7 @@ h4 {
 }
 
 .primary-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
   box-shadow: 0 1px 2px var(--color-shadow-sm);
 }
 
@@ -317,6 +324,10 @@ h4 {
   background: var(--color-bg-subtle);
   border-color: var(--color-border-hover);
   color: var(--color-text);
+}
+
+.secondary-btn:active {
+  transform: scale(0.98);
 }
 
 .secondary-btn:focus {
@@ -577,11 +588,13 @@ input[type="checkbox"]:focus {
 
 .tab-nav {
   display: flex;
-  gap: var(--space-2);
+  gap: 2px;
   margin-bottom: var(--space-5);
-  padding: var(--space-1);
+  padding: 2px;
   background: var(--color-bg-subtle);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  position: relative;
+  z-index: 0;
 }
 
 .tab-btn {
@@ -589,38 +602,56 @@ input[type="checkbox"]:focus {
   padding: var(--space-2) var(--space-3);
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: calc(var(--radius-lg) - 2px);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
   position: relative;
+  z-index: 1;
 }
 
 .tab-btn:hover {
   color: var(--color-text);
-  background: rgba(124, 58, 237, 0.05);
 }
 
 .tab-btn.active {
   background: var(--color-bg-white);
   color: var(--color-primary);
   box-shadow: 0 1px 3px var(--color-shadow-sm);
+  font-weight: 600;
 }
 
-.tab-btn:focus {
+.tab-btn.focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .tab-panel {
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.tab-panel.active {
   display: block;
-  animation: fadeIn var(--transition) ease;
+  animation: slideFadeIn var(--transition-slow) ease forwards;
 }
 
 .tab-panel:not(.active) {
   display: none;
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* =============================================================================
@@ -729,6 +760,10 @@ input[type="checkbox"]:focus {
 
 .btn-confirm:hover {
   background: var(--color-primary-hover);
+}
+
+.btn-confirm:active {
+  transform: scale(0.98);
 }
 
 .btn-confirm:focus {
@@ -1239,13 +1274,104 @@ label.inline-label {
    Status Panel
    ============================================================================= */
 
+/* ==============================================================================
+   SVG Icon Styles (Status Panel)
+   ============================================================================= */
+
+.status-svg {
+  width: 18px;
+  height: 18px;
+  transition: stroke var(--transition-fast);
+}
+
+/* Status Icons - SVG Based */
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.status-icon.status-success .status-svg {
+  stroke: var(--color-success);
+}
+
+.status-icon.status-success {
+  background-color: var(--color-success-bg);
+}
+
+.status-icon.status-error .status-svg {
+  stroke: var(--color-danger);
+}
+
+.status-icon.status-error {
+  background-color: var(--color-danger-bg);
+}
+
+.status-icon.status-warning .status-svg {
+  stroke: #d97706;
+}
+
+.status-icon.status-warning {
+  background-color: var(--color-warning-bg);
+}
+
+.status-icon.status-muted .status-svg {
+  stroke: var(--color-text-muted);
+}
+
+/* Checkmark icon for success state */
+.status-icon.status-success .status-svg .status-circle {
+  fill: none;
+  stroke: var(--color-success);
+  stroke-width: 2;
+}
+
+.status-icon.status-success .status-svg::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  border: solid var(--color-success);
+  border-width: 0 2px 2px 0;
+  transform: translate(3px, -4px) rotate(45deg);
+}
+
+/* Section Icons */
+.status-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.status-section-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+}
+
+/* ==============================================================================
+   Status Panel
+   ============================================================================= */
+
 .status-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-3);
   margin-bottom: var(--space-4);
   background: var(--color-bg-white);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-slow);
+}
+
+.status-panel:hover {
+  box-shadow: 0 2px 8px var(--color-shadow-sm);
+  border-color: var(--color-border-hover);
 }
 
 .status-summary {
@@ -1258,13 +1384,6 @@ label.inline-label {
 .status-icons {
   display: flex;
   gap: var(--space-2);
-  font-size: 18px;
-}
-
-.status-icon {
-  display: inline-block;
-  min-width: 20px;
-  text-align: center;
 }
 
 .status-toggle {
@@ -1317,10 +1436,6 @@ label.inline-label {
   margin-bottom: var(--space-2);
 }
 
-.status-section-icon {
-  font-size: 14px;
-}
-
 .status-section-title {
   font-size: 13px;
   font-weight: 600;
@@ -1330,7 +1445,7 @@ label.inline-label {
 .status-section-content {
   font-size: 12px;
   color: var(--color-text-secondary);
-  padding-left: calc(14px + var(--space-2));
+  padding-left: calc(18px + var(--space-2));
   line-height: 1.6;
 }
 

@@ -1277,6 +1277,12 @@
     "duplicateCategoryError": {
         "message": "このカテゴリ名は既に存在します"
     },
+    "categoryNameTooLong": {
+        "message": "カテゴリ名が長すぎます（50文字以内）"
+    },
+    "categoryNameInvalidChars": {
+        "message": "カテゴリ名に使用できない文字が含まれています（|、# は使用不可）"
+    },
     "tagSettingsSaved": {
         "message": "タグ設定を保存しました"
     }

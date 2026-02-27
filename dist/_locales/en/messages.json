@@ -1274,6 +1274,12 @@
     "duplicateCategoryError": {
         "message": "This category name already exists"
     },
+    "categoryNameTooLong": {
+        "message": "Category name is too long (max 50 characters)"
+    },
+    "categoryNameInvalidChars": {
+        "message": "Category name contains invalid characters (|, # are not allowed)"
+    },
     "tagSettingsSaved": {
         "message": "Tag settings saved successfully"
     }

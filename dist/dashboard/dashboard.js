@@ -641,6 +641,7 @@ async function initHistoryPanel() {
     // タグ編集モーダルの状態
     let editingUrl = null;
     let editingTags = [];
+    let tagEditTrapId = null;
     // 記録済みエントリ（recordType付き）を取得
     const rawEntries = await getSavedUrlEntries();
     // pending URLセットを取得（スキップ表示に使う）
@@ -757,18 +758,23 @@ async function initHistoryPanel() {
         const indicator = document.createElement('div');
         indicator.id = 'tagFilterIndicator';
         indicator.className = 'tag-filter-indicator';
-        indicator.innerHTML = `
-      <span class="tag-filter-label">フィルター:</span>
-      <span class="tag-filter-value">#${activeTagFilter}</span>
-      <button class="tag-filter-close" title="フィルター解除">×</button>
-    `;
-        const closeBtn = indicator.querySelector('.tag-filter-close');
-        closeBtn?.addEventListener('click', () => {
+        const filterLabel = document.createElement('span');
+        filterLabel.className = 'tag-filter-label';
+        filterLabel.textContent = 'フィルター:';
+        const filterValue = document.createElement('span');
+        filterValue.className = 'tag-filter-value';
+        filterValue.textContent = `#${activeTagFilter}`;
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'tag-filter-close';
+        closeBtn.title = 'フィルター解除';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => {
             activeTagFilter = null;
             historyCurrentPage = 0;
             applyFilters(false);
             updateTagFilterIndicator();
         });
+        indicator.append(filterLabel, filterValue, closeBtn);
         controls.appendChild(indicator);
     }
     function applyFilters(resetPage = true) {
@@ -833,6 +839,16 @@ async function initHistoryPanel() {
             const tagBadges = makeTagBadges(tags, url);
             if (tagBadges) {
                 info.appendChild(tagBadges);
+            }
+            else {
+                const noTagRow = document.createElement('div');
+                noTagRow.className = 'tag-badges tag-badges-empty';
+                const addTagLink = document.createElement('button');
+                addTagLink.className = 'tag-add-inline-btn';
+                addTagLink.textContent = '+ タグを追加';
+                addTagLink.addEventListener('click', () => openTagEditModal(url, []));
+                noTagRow.appendChild(addTagLink);
+                info.appendChild(noTagRow);
             }
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'history-entry-delete';
@@ -973,6 +989,20 @@ async function initHistoryPanel() {
         }
     }
     applyFilters();
+    // タグパネルからのナビゲーションイベントを受信
+    document.addEventListener('navigate-to-tag', (e) => {
+        const tag = e.detail;
+        activeTagFilter = tag;
+        activeFilter = 'all';
+        historyCurrentPage = 0;
+        // 履歴パネルに切り替え
+        document.querySelectorAll('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('[data-panel="panel-history"]')?.classList.add('active');
+        document.getElementById('panel-history')?.classList.add('active');
+        applyFilters(false);
+        updateTagFilterIndicator();
+    });
     historySearchInput?.addEventListener('input', () => {
         // 検索入力時にタグフィルターをリセット
         activeTagFilter = null;
@@ -1155,16 +1185,11 @@ async function initHistoryPanel() {
             tagEditUrl.textContent = url;
         renderCurrentTags();
         updateTagCategorySelect();
-        if (tagEditModal)
+        if (tagEditModal) {
             tagEditModal.classList.remove('hidden');
-        // モーダルを開いたときにフォーカストラップ
-        setTimeout(() => {
-            if (tagCategorySelect) {
-                tagCategorySelect.focus();
-            }
-        }, 100);
-        // ARIA属性の設定
-        tagEditModal?.setAttribute('aria-hidden', 'false');
+            tagEditModal.setAttribute('aria-hidden', 'false');
+            tagEditTrapId = focusTrapManager.trap(tagEditModal, closeTagEditModal);
+        }
     }
     /**
      * タグ編集モーダルを閉じる
@@ -1172,6 +1197,10 @@ async function initHistoryPanel() {
     function closeTagEditModal() {
         editingUrl = null;
         editingTags = [];
+        if (tagEditTrapId) {
+            focusTrapManager.release(tagEditTrapId);
+            tagEditTrapId = null;
+        }
         if (tagEditModal) {
             tagEditModal.classList.add('hidden');
             tagEditModal.setAttribute('aria-hidden', 'true');
@@ -1274,12 +1303,6 @@ async function initHistoryPanel() {
             closeTagEditModal();
         }
     });
-    // Escapeキーでモーダルを閉じる
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && tagEditModal && !tagEditModal.classList.contains('hidden')) {
-            closeTagEditModal();
-        }
-    });
     tagCategorySelect?.addEventListener('change', () => {
         if (addTagBtn)
             addTagBtn.disabled = !tagCategorySelect.value;
@@ -1291,7 +1314,7 @@ async function initHistoryPanel() {
 // ============================================================================
 // Domain Filter Tag UI
 // ============================================================================
-function initDomainFilterTagUI() {
+async function initDomainFilterTagUI() {
     // --- hidden要素参照（domainFilter.ts が管理する既存ロジック）---
     const radioBlacklist = document.getElementById('filterBlacklist');
     const radioWhitelist = document.getElementById('filterWhitelist');
@@ -1492,8 +1515,9 @@ function initDomainFilterTagUI() {
         });
         observer.observe(realStatus, { childList: true, characterData: true, subtree: true, attributes: true });
     }
-    // 初期化: domainFilter.ts の loadDomainSettings() 完了後に同期
-    setTimeout(syncFromHidden, 50);
+    // 初期化: loadDomainSettings() を await して確実に同期
+    await loadDomainSettings();
+    syncFromHidden();
 }
 // ============================================================================
 // Tags Settings Panel
@@ -1517,9 +1541,13 @@ async function initTagsPanel() {
             return;
         defaultCategoriesList.innerHTML = '';
         DEFAULT_CATEGORIES.forEach(category => {
-            const item = document.createElement('span');
-            item.className = 'default-category-item';
+            const item = document.createElement('button');
+            item.className = 'default-category-item category-tag-btn';
             item.textContent = `#${category}`;
+            item.title = `「#${category}」の履歴を表示`;
+            item.addEventListener('click', () => {
+                document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
+            });
             defaultCategoriesList.appendChild(item);
         });
     }
@@ -1538,9 +1566,13 @@ async function initTagsPanel() {
         userCategories.forEach((category, index) => {
             const item = document.createElement('div');
             item.className = 'user-category-item';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'user-category-name';
+            const nameEl = document.createElement('button');
+            nameEl.className = 'user-category-name category-tag-btn';
             nameEl.textContent = `#${category}`;
+            nameEl.title = `「#${category}」の履歴を表示`;
+            nameEl.addEventListener('click', () => {
+                document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
+            });
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'user-category-delete';
             deleteBtn.textContent = '×';
@@ -1557,12 +1589,25 @@ async function initTagsPanel() {
     /**
      * カテゴリを追加
      */
+    const MAX_CATEGORY_NAME_LENGTH = 50;
+    // タグパース形式（`# tag | summary`）を壊す可能性のある文字を禁止
+    const INVALID_CATEGORY_CHARS = /[|#\n\r]/;
     function addCategory() {
         if (!newCategoryInput)
             return;
         const categoryName = newCategoryInput.value.trim();
         if (!categoryName)
             return;
+        // 最大長チェック
+        if (categoryName.length > MAX_CATEGORY_NAME_LENGTH) {
+            alert(getMessage('categoryNameTooLong') || `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`);
+            return;
+        }
+        // 禁止文字チェック（|や#はタグパース形式を壊す可能性があるため禁止）
+        if (INVALID_CATEGORY_CHARS.test(categoryName)) {
+            alert(getMessage('categoryNameInvalidChars') || 'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）');
+            return;
+        }
         // 重複チェック
         const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
         if (allCategories.includes(categoryName)) {
@@ -1724,11 +1769,65 @@ async function initDiagnosticsPanel() {
     const extInfo = document.getElementById('diagExtInfo');
     const testConnectionBtn = document.getElementById('diagTestConnectionBtn');
     const connectionResult = document.getElementById('diagConnectionResult');
-    function makeStatRow(label, value) {
+    const obsidianSettingsEl = document.getElementById('diagObsidianSettings');
+    const aiSettingsEl = document.getElementById('diagAiSettings');
+    function makeStatRow(label, value, masked = false) {
         const row = document.createElement('div');
         row.className = 'diag-stat-row';
-        row.innerHTML = `<span class="diag-stat-label">${label}</span><span class="diag-stat-value">${value}</span>`;
+        const valueHtml = masked
+            ? `<span class="diag-stat-value diag-stat-masked">${value}</span>`
+            : `<span class="diag-stat-value">${value}</span>`;
+        row.innerHTML = `<span class="diag-stat-label">${label}</span>${valueHtml}`;
         return row;
+    }
+    // Obsidian / AI 設定情報
+    try {
+        const settings = await getSettings();
+        if (obsidianSettingsEl) {
+            const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'https';
+            const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
+            const apiKey = settings[StorageKeys.OBSIDIAN_API_KEY] || '';
+            const dailyPath = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
+            obsidianSettingsEl.appendChild(makeStatRow('Protocol', protocol));
+            obsidianSettingsEl.appendChild(makeStatRow('Port', port));
+            obsidianSettingsEl.appendChild(makeStatRow('REST API URL', `${protocol}://127.0.0.1:${port}`));
+            obsidianSettingsEl.appendChild(makeStatRow('Daily Note Path', dailyPath || '(デフォルト)'));
+            obsidianSettingsEl.appendChild(makeStatRow('API Key', apiKey ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !apiKey));
+        }
+        if (aiSettingsEl) {
+            const provider = settings[StorageKeys.AI_PROVIDER] || 'gemini';
+            const providerLabels = {
+                gemini: 'Google Gemini',
+                openai: 'OpenAI Compatible',
+                openai2: 'OpenAI Compatible 2',
+            };
+            aiSettingsEl.appendChild(makeStatRow('Provider', providerLabels[provider] || provider));
+            if (provider === 'gemini') {
+                const model = settings[StorageKeys.GEMINI_MODEL] || '';
+                const key = settings[StorageKeys.GEMINI_API_KEY] || '';
+                aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+                aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+            }
+            else if (provider === 'openai') {
+                const baseUrl = settings[StorageKeys.OPENAI_BASE_URL] || '';
+                const model = settings[StorageKeys.OPENAI_MODEL] || '';
+                const key = settings[StorageKeys.OPENAI_API_KEY] || '';
+                aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
+                aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+                aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+            }
+            else if (provider === 'openai2') {
+                const baseUrl = settings[StorageKeys.OPENAI_2_BASE_URL] || '';
+                const model = settings[StorageKeys.OPENAI_2_MODEL] || '';
+                const key = settings[StorageKeys.OPENAI_2_API_KEY] || '';
+                aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
+                aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+                aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+            }
+        }
+    }
+    catch {
+        obsidianSettingsEl && (obsidianSettingsEl.textContent = '設定の読み込みに失敗しました。');
     }
     // Storage stats
     if (storageStats) {
@@ -1813,7 +1912,7 @@ function setHtmlLangDir() {
         console.error('[Dashboard] initDomainFilter error:', e);
     }
     try {
-        initDomainFilterTagUI();
+        await initDomainFilterTagUI();
     }
     catch (e) {
         console.error('[Dashboard] initDomainFilterTagUI error:', e);

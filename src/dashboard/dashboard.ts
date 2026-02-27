@@ -911,6 +911,15 @@ async function initHistoryPanel(): Promise<void> {
       const tagBadges = makeTagBadges(tags, url);
       if (tagBadges) {
         info.appendChild(tagBadges);
+      } else {
+        const noTagRow = document.createElement('div');
+        noTagRow.className = 'tag-badges tag-badges-empty';
+        const addTagLink = document.createElement('button');
+        addTagLink.className = 'tag-add-inline-btn';
+        addTagLink.textContent = '+ タグを追加';
+        addTagLink.addEventListener('click', () => openTagEditModal(url, []));
+        noTagRow.appendChild(addTagLink);
+        info.appendChild(noTagRow);
       }
 
       const deleteBtn = document.createElement('button');
@@ -1069,6 +1078,21 @@ async function initHistoryPanel(): Promise<void> {
   }
 
   applyFilters();
+
+  // タグパネルからのナビゲーションイベントを受信
+  document.addEventListener('navigate-to-tag', (e: Event) => {
+    const tag = (e as CustomEvent<string>).detail;
+    activeTagFilter = tag;
+    activeFilter = 'all';
+    historyCurrentPage = 0;
+    // 履歴パネルに切り替え
+    document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll<HTMLElement>('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector<HTMLButtonElement>('[data-panel="panel-history"]')?.classList.add('active');
+    document.getElementById('panel-history')?.classList.add('active');
+    applyFilters(false);
+    updateTagFilterIndicator();
+  });
 
   historySearchInput?.addEventListener('input', () => {
     // 検索入力時にタグフィルターをリセット
@@ -1414,7 +1438,7 @@ async function initHistoryPanel(): Promise<void> {
 // Domain Filter Tag UI
 // ============================================================================
 
-function initDomainFilterTagUI(): void {
+async function initDomainFilterTagUI(): Promise<void> {
   // --- hidden要素参照（domainFilter.ts が管理する既存ロジック）---
   const radioBlacklist  = document.getElementById('filterBlacklist')   as HTMLInputElement | null;
   const radioWhitelist  = document.getElementById('filterWhitelist')   as HTMLInputElement | null;
@@ -1624,8 +1648,9 @@ function initDomainFilterTagUI(): void {
     observer.observe(realStatus, { childList: true, characterData: true, subtree: true, attributes: true });
   }
 
-  // 初期化: domainFilter.ts の loadDomainSettings() 完了後に同期
-  setTimeout(syncFromHidden, 50);
+  // 初期化: loadDomainSettings() を await して確実に同期
+  await loadDomainSettings();
+  syncFromHidden();
 }
 
 // ============================================================================
@@ -1652,9 +1677,13 @@ async function initTagsPanel(): Promise<void> {
     if (!defaultCategoriesList) return;
     defaultCategoriesList.innerHTML = '';
     DEFAULT_CATEGORIES.forEach(category => {
-      const item = document.createElement('span');
-      item.className = 'default-category-item';
+      const item = document.createElement('button');
+      item.className = 'default-category-item category-tag-btn';
       item.textContent = `#${category}`;
+      item.title = `「#${category}」の履歴を表示`;
+      item.addEventListener('click', () => {
+        document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
+      });
       defaultCategoriesList.appendChild(item);
     });
   }
@@ -1678,9 +1707,13 @@ async function initTagsPanel(): Promise<void> {
       const item = document.createElement('div');
       item.className = 'user-category-item';
 
-      const nameEl = document.createElement('span');
-      nameEl.className = 'user-category-name';
+      const nameEl = document.createElement('button');
+      nameEl.className = 'user-category-name category-tag-btn';
       nameEl.textContent = `#${category}`;
+      nameEl.title = `「#${category}」の履歴を表示`;
+      nameEl.addEventListener('click', () => {
+        document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
+      });
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'user-category-delete';
@@ -1906,12 +1939,68 @@ async function initDiagnosticsPanel(): Promise<void> {
   const extInfo = document.getElementById('diagExtInfo') as HTMLElement | null;
   const testConnectionBtn = document.getElementById('diagTestConnectionBtn') as HTMLButtonElement | null;
   const connectionResult = document.getElementById('diagConnectionResult') as HTMLElement | null;
+  const obsidianSettingsEl = document.getElementById('diagObsidianSettings') as HTMLElement | null;
+  const aiSettingsEl = document.getElementById('diagAiSettings') as HTMLElement | null;
 
-  function makeStatRow(label: string, value: string): HTMLElement {
+  function makeStatRow(label: string, value: string, masked = false): HTMLElement {
     const row = document.createElement('div');
     row.className = 'diag-stat-row';
-    row.innerHTML = `<span class="diag-stat-label">${label}</span><span class="diag-stat-value">${value}</span>`;
+    const valueHtml = masked
+      ? `<span class="diag-stat-value diag-stat-masked">${value}</span>`
+      : `<span class="diag-stat-value">${value}</span>`;
+    row.innerHTML = `<span class="diag-stat-label">${label}</span>${valueHtml}`;
     return row;
+  }
+
+  // Obsidian / AI 設定情報
+  try {
+    const settings = await getSettings();
+
+    if (obsidianSettingsEl) {
+      const protocol = (settings[StorageKeys.OBSIDIAN_PROTOCOL] as string) || 'https';
+      const port = (settings[StorageKeys.OBSIDIAN_PORT] as string) || '27124';
+      const apiKey = (settings[StorageKeys.OBSIDIAN_API_KEY] as string) || '';
+      const dailyPath = (settings[StorageKeys.OBSIDIAN_DAILY_PATH] as string) || '';
+
+      obsidianSettingsEl.appendChild(makeStatRow('Protocol', protocol));
+      obsidianSettingsEl.appendChild(makeStatRow('Port', port));
+      obsidianSettingsEl.appendChild(makeStatRow('REST API URL', `${protocol}://127.0.0.1:${port}`));
+      obsidianSettingsEl.appendChild(makeStatRow('Daily Note Path', dailyPath || '(デフォルト)'));
+      obsidianSettingsEl.appendChild(makeStatRow('API Key', apiKey ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !apiKey));
+    }
+
+    if (aiSettingsEl) {
+      const provider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
+      const providerLabels: Record<string, string> = {
+        gemini: 'Google Gemini',
+        openai: 'OpenAI Compatible',
+        openai2: 'OpenAI Compatible 2',
+      };
+      aiSettingsEl.appendChild(makeStatRow('Provider', providerLabels[provider] || provider));
+
+      if (provider === 'gemini') {
+        const model = (settings[StorageKeys.GEMINI_MODEL] as string) || '';
+        const key = (settings[StorageKeys.GEMINI_API_KEY] as string) || '';
+        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+      } else if (provider === 'openai') {
+        const baseUrl = (settings[StorageKeys.OPENAI_BASE_URL] as string) || '';
+        const model = (settings[StorageKeys.OPENAI_MODEL] as string) || '';
+        const key = (settings[StorageKeys.OPENAI_API_KEY] as string) || '';
+        aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
+        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+      } else if (provider === 'openai2') {
+        const baseUrl = (settings[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
+        const model = (settings[StorageKeys.OPENAI_2_MODEL] as string) || '';
+        const key = (settings[StorageKeys.OPENAI_2_API_KEY] as string) || '';
+        aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
+        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
+        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+      }
+    }
+  } catch {
+    obsidianSettingsEl && (obsidianSettingsEl.textContent = '設定の読み込みに失敗しました。');
   }
 
   // Storage stats
@@ -2008,7 +2097,7 @@ function setHtmlLangDir(): void {
   initSidebarNav();
 
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
-  try { initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
+  try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
 
   try {

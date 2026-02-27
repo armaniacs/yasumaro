@@ -60,7 +60,7 @@ export function isValidCategory(category, settings) {
 export function parseTagsFromSummary(summary) {
     // 出力形式: `#カテゴリ1 #カテゴリ2 | 要約文` のパターン
     // 最初の `|` でタグ部分と要約部分を分離
-    const pipeMatch = summary.match(/^([^|]+)\|(.+)$/);
+    const pipeMatch = summary.match(/^([^|]+)\|(.+)$/s); // sフラグ: `.`が改行にもマッチ
     if (!pipeMatch) {
         // パターンに一致しない場合はタグなしとみなす
         return { tags: [], summary };
@@ -72,12 +72,8 @@ export function parseTagsFromSummary(summary) {
     const tags = [];
     let match;
     while ((match = tagRegex.exec(tagPart)) !== null) {
-        // `#マーク` を外したカテゴリ名を追加
-        let tagName = match[1];
-        // `#IT・プログラミング` -> `IT・プログラミング` (先頭の#を削除)
-        if (tagName.startsWith('#')) {
-            tagName = tagName.substring(1);
-        }
+        // 正規表現 /#(\S+)/g は # をキャプチャグループ外にあるため、match[1] には # は含まれない
+        const tagName = match[1];
         if (tagName && !tags.includes(tagName)) {
             tags.push(tagName);
         }

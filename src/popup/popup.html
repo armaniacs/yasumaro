@@ -30,8 +30,16 @@
     <div id="statusPanel" class="status-panel">
       <div class="status-summary">
         <div class="status-icons">
-          <span id="statusDomainIcon" class="status-icon" aria-label="Domain status"></span>
-          <span id="statusPrivacyIcon" class="status-icon" aria-label="Privacy status"></span>
+          <span id="statusDomainIcon" class="status-icon" aria-label="Domain status">
+            <svg class="status-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle class="status-circle" cx="12" cy="12" r="10"/>
+            </svg>
+          </span>
+          <span id="statusPrivacyIcon" class="status-icon" aria-label="Privacy status">
+            <svg class="status-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle class="status-circle" cx="12" cy="12" r="10"/>
+            </svg>
+          </span>
         </div>
         <button id="statusToggleBtn" class="status-toggle" aria-expanded="false">
           <span id="statusToggleText" data-i18n="statusShowDetails">詳細を表示</span>
@@ -43,7 +51,12 @@
         <!-- ドメインフィルタ -->
         <div class="status-section">
           <div class="status-section-header">
-            <span class="status-section-icon">🎯</span>
+            <span class="status-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </span>
             <span class="status-section-title" data-i18n="statusDomainFilter">ドメインフィルタ</span>
           </div>
           <div class="status-section-content">
@@ -55,7 +68,12 @@
         <!-- プライバシー -->
         <div class="status-section">
           <div class="status-section-header">
-            <span class="status-section-icon">🔒</span>
+            <span class="status-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </span>
             <span class="status-section-title" data-i18n="statusPrivacy">プライバシー</span>
           </div>
           <div class="status-section-content" id="statusPrivacyContent"></div>
@@ -64,7 +82,13 @@
         <!-- キャッシュ状況 -->
         <div class="status-section">
           <div class="status-section-header">
-            <span class="status-section-icon">💾</span>
+            <span class="status-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </span>
             <span class="status-section-title" data-i18n="statusCache">キャッシュ状況</span>
           </div>
           <div class="status-section-content" id="statusCacheContent"></div>
@@ -73,7 +97,12 @@
         <!-- 最終保存 -->
         <div class="status-section">
           <div class="status-section-header">
-            <span class="status-section-icon">⏱</span>
+            <span class="status-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </span>
             <span class="status-section-title" data-i18n="statusLastSaved">最終保存</span>
           </div>
           <div class="status-section-content" id="statusLastSavedContent"></div>

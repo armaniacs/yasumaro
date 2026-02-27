@@ -2,7 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.0.4] - to be released
+## [4.0.4] - 2026-02-28
+It is released candidate as version 4.1.0
+
+### Changed
+- **ダッシュボードUIの大幅な視覚改善**
+  - ステータスパネルの絵文字アイコンをSVGアイコンに置き換え（✓、✗、⚠、?、🎯、🔒、💾、⏱）
+  - ダッシュボードサイドバーに各メニュー項目の視覚的アイコンを追加
+  - パネル切り替え時のスムーズなスライドイン/フェードインアニメーションを追加
+  - 詳細設定（advanced-details、uBlock-details）の折りたたみUIを強化
+  - ボタン押下時の視覚的フィードバック（scaleエフェクト）を追加
+  - タブナビゲーションのデザインをモダンなポップアップスタイルに改善
+  - カラーパレットにwarning系の色を追加
+- **Significant UI/UX Improvements to dashboard**
+  - Replaced emoji icons with SVG icons in status panel
+  - Added visual icons to sidebar navigation items
+  - Added smooth slide-in/fade-in animations for panel transitions
+  - Enhanced collapsible UI for advanced settings
+  - Added visual feedback on button press (scale effect)
+  - Improved tab navigation with modern pill-style design
+  - Expanded color palette with warning color tokens
 
 ### Added
 - **タグ機能のバックエンド実装**
@@ -41,6 +60,60 @@ All notable changes to this project will be documented in this file.
   - Default categories display (read-only, 10 categories)
   - User category add/remove functionality
   - Duplicate category validation
+
+### Fixed (Dashboard improvements)
+- **ダッシュボードの「タグ」パネルが真っ黒で表示されない問題を修正**
+  - `.panel` の初期スタイル `opacity: 0; transform: translateX(10px)` と未定義CSS変数 `--transition-slow` が原因でアニメーションが完了せずパネルが非表示のままになっていた
+  - アニメーションを廃止し `display: none / block` によるシンプルな切り替えに変更
+  - `--transition-slow` 変数を `:root` に追加
+- **インラインスタイルによるCSPエラーを修正**（dashboard.html:558）
+  - `style-src 'self'` ポリシー違反となっていたインライン `style=""` 属性を CSS クラス（`.category-title`、`.new-category-row`）に置き換え
+- **診断パネルの設定情報セクションタイトルが赤い大文字で表示される問題を修正**
+  - 未定義のi18nキー `diagObsidianSettingsTitle` / `diagAiSettingsTitle` を `data-i18n` 属性として指定していたため、i18nシステムがキー名をそのまま大文字スタイルで表示していた
+  - `data-i18n` 属性を削除してハードコードのラベルをそのまま使用するよう変更
+- **ドメインフィルターパネルの初回表示時にリストが空になる問題を修正**
+  - `initDomainFilterTagUI()` 内で `setTimeout(syncFromHidden, 50)` を使っていたため、`loadDomainSettings()` 完了前に描画が走りドメインリストが表示されなかった
+  - `initDomainFilterTagUI()` を `async` 化し `await loadDomainSettings()` → `syncFromHidden()` の順で実行するよう変更
+
+- **Fixed dashboard "Tags" panel showing as blank/black**
+  - Caused by `.panel` initial style `opacity: 0; transform: translateX(10px)` and undefined CSS variable `--transition-slow` preventing animation completion
+  - Replaced animation with simple `display: none / block` toggle
+  - Added `--transition-slow` variable to `:root`
+- **Fixed CSP violation from inline styles** (dashboard.html:558)
+  - Replaced inline `style=""` attributes violating `style-src 'self'` policy with CSS classes (`.category-title`, `.new-category-row`)
+- **Fixed diagnostics panel section titles rendering as large red text**
+  - Undefined i18n keys `diagObsidianSettingsTitle` / `diagAiSettingsTitle` caused the i18n system to display raw key names in heading style
+  - Removed `data-i18n` attributes to use hardcoded labels directly
+- **Fixed domain filter panel showing empty list on initial display**
+  - `setTimeout(syncFromHidden, 50)` in `initDomainFilterTagUI()` caused rendering before `loadDomainSettings()` completed
+  - Made `initDomainFilterTagUI()` async and changed to `await loadDomainSettings()` → `syncFromHidden()` sequence
+
+### Added (Dashboard improvements)
+- **ダッシュボード診断パネルに接続設定情報を追加**
+  - Obsidian接続設定（プロトコル、ポート、REST API URL、APIキー設定状態）を表示
+  - AI設定（プロバイダー、ベースURL、モデル名、APIキー設定状態）を表示
+  - APIキー未設定時は赤字イタリックで強調表示（`.diag-stat-masked`）
+- **タグ管理画面のカテゴリクリックで履歴フィルタリング機能を追加**
+  - タグパネルのカテゴリ項目をクリックすると履歴パネルに切り替わり、そのタグで絞り込み表示
+  - `CustomEvent('navigate-to-tag')` を使ったパネル間通信で実装
+- **履歴エントリにタグ未設定時の「＋タグを追加」ボタンを追加**
+- **アクティブプロンプトの視認性向上**
+  - Active バッジをプライマリカラー（紫）＋ボックスシャドウで強調
+  - アクティブな `.prompt-item` に左ボーダー（4px solid primary）を追加
+  - ダッシュボードに不足していた `.badge`, `.badge-active`, `.prompt-item`, `.btn-sm` 等のCSSクラスを追加
+
+- **Added connection settings info to diagnostics panel**
+  - Displays Obsidian connection settings (protocol, port, REST API URL, API key status)
+  - Displays AI settings (provider, base URL, model name, API key status)
+  - Unset API keys shown in red italic (`.diag-stat-masked`)
+- **Added tag category click-to-filter navigation in dashboard**
+  - Clicking a category in the Tags panel switches to History panel filtered by that tag
+  - Implemented via `CustomEvent('navigate-to-tag')` cross-panel communication
+- **Added inline "＋タグを追加" button for history entries without tags**
+- **Improved Active prompt badge visibility**
+  - Active badge uses primary color (purple) with box-shadow emphasis
+  - Active `.prompt-item` gets left border (4px solid primary)
+  - Added missing CSS classes to dashboard: `.badge`, `.badge-active`, `.prompt-item`, `.btn-sm`, etc.
 
 ### Fixed (Code Review - feature-autotag)
 - **未使用インポートの削除**: `recordingLogic.ts` の `parseTagsFromSummary` インポートが使用されていなかったため削除
