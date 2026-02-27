@@ -3,7 +3,7 @@
  * Wrapper for chrome.storage.local to manage settings.
  */
 import type { EncryptedData } from './typesCrypto.js';
-import type { UblockRules, Source, CustomPrompt } from './types.js';
+import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
 export declare const StorageKeys: {
     readonly OBSIDIAN_API_KEY: "obsidian_api_key";
     readonly OBSIDIAN_PROTOCOL: "obsidian_protocol";
@@ -42,6 +42,8 @@ export declare const StorageKeys: {
     readonly IS_LOCKED: "is_locked";
     readonly MP_PROTECTION_ENABLED: "mp_protection_enabled";
     readonly MP_ENCRYPT_API_KEYS: "mp_encrypt_api_keys";
+    readonly TAG_CATEGORIES: "tag_categories";
+    readonly TAG_SUMMARY_MODE: "tag_summary_mode";
     readonly MP_ENCRYPT_ON_EXPORT: "mp_encrypt_on_export";
     readonly MP_REQUIRE_ON_IMPORT: "mp_require_on_import";
     readonly SAVED_URLS_VERSION: "savedUrls_version";
@@ -94,6 +96,8 @@ export interface StorageKeyValues {
     [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
     [StorageKeys.DOMAIN_FILTER_CACHE]: string[];
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;
+    [StorageKeys.TAG_CATEGORIES]: TagCategory[];
+    [StorageKeys.TAG_SUMMARY_MODE]: boolean;
 }
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];

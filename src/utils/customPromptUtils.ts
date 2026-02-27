@@ -8,6 +8,7 @@ import { Settings, StorageKeys } from './storage.js';
 import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
 import { addLog, LogType } from './logger.js';
 import { CustomPrompt } from './types.js';
+import { getAllCategories } from './tagUtils.js';
 
 // 型を再エクスポート
 export type { CustomPrompt } from './types.js';
@@ -36,18 +37,26 @@ Content:
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
 
 /**
- * タグ付き要約用デフォルトプロンプト
+ * タグ付き要約用プロンプトを動的生成
+ * ユーザー追加カテゴリを含む全カテゴリをプロンプトに反映する
+ * @param {Settings} settings - 設定オブジェクト
+ * @param {string} content - 要約対象コンテンツ
+ * @returns {string} タグ付き要約用プロンプト
  */
-export const DEFAULT_TAGGED_SUMMARY_PROMPT = `以下のWebページの内容を分析し、指定したカテゴリから最も関連度の高いものを1つまたは2つ選んでタグ形式で出力し、その後に日本語で簡潔に要約してください。
+export function buildTaggedSummaryPrompt(settings: Settings, content: string): string {
+    const categories = getAllCategories(settings);
+    const categoryList = categories.join(', ');
+    return `以下のWebページの内容を分析し、指定したカテゴリから最も関連度の高いものを1つまたは2つ選んでタグ形式で出力し、その後に日本語で簡潔に要約してください。
 
 カテゴリ候補:
-[IT・プログラミング, インフラ・ネットワーク, サイエンス・アカデミック, ビジネス・経済, ライフスタイル・雑記, フード・レシピ, トラベル・アウトドア, エンタメ・ゲーム, クリエイティブ・アート, ヘルス・ウェルネス]
+[${categoryList}]
 
 出力形式:
 #カテゴリ1 #カテゴリ2 | 要約文（改行なし）
 
 Content:
-{{content}}`;
+${content}`;
+}
 
 /**
  * プロンプト内のプレースホルダーを置換
@@ -138,6 +147,10 @@ export function applyCustomPrompt(
         // カスタムプロンプトを適用
         const userPrompt = replaceContentPlaceholder(customPrompt.prompt, sanitizedContent);
         addLog(LogType.INFO, `Using custom prompt: ${customPrompt.name} for ${providerName}`);
+        // カスタムプロンプトが有効な場合、タグ付き要約モードは無視される
+        if (tagSummaryMode) {
+            addLog(LogType.WARN, `[applyCustomPrompt] tagSummaryMode is enabled but a custom prompt is active ("${customPrompt.name}"). Tag extraction may not work unless the custom prompt includes tag output format.`);
+        }
 
         return {
             userPrompt,
@@ -147,11 +160,17 @@ export function applyCustomPrompt(
     }
 
     // デフォルトプロンプトを使用
-    // タグ付き要約モードの場合はタグ付きプロンプトを使用
-    const basePrompt = tagSummaryMode ? DEFAULT_TAGGED_SUMMARY_PROMPT : DEFAULT_USER_PROMPT;
+    // タグ付き要約モードの場合はユーザー追加カテゴリを含む動的プロンプトを使用
+    if (tagSummaryMode) {
+        return {
+            userPrompt: buildTaggedSummaryPrompt(settings, sanitizedContent),
+            systemPrompt: DEFAULT_SYSTEM_PROMPT,
+            isCustom: false
+        };
+    }
 
     return {
-        userPrompt: replaceContentPlaceholder(basePrompt, sanitizedContent),
+        userPrompt: replaceContentPlaceholder(DEFAULT_USER_PROMPT, sanitizedContent),
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         isCustom: false
     };

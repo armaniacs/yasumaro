@@ -5,7 +5,7 @@ interface IAIClient {
         success: boolean;
         summary: string;
     }>;
-    generateSummary(text: string): Promise<string>;
+    generateSummary(text: string, tagSummaryMode?: boolean): Promise<string>;
 }
 interface ISanitizers {
     sanitizeRegex(text: string): Promise<{
@@ -16,6 +16,7 @@ interface ISanitizers {
 export interface PrivacyPipelineOptions {
     previewOnly?: boolean;
     alreadyProcessed?: boolean;
+    tagSummaryMode?: boolean;
 }
 export interface PrivacyPipelineResult {
     summary?: string;
@@ -25,6 +26,7 @@ export interface PrivacyPipelineResult {
     mode?: string;
     maskedCount?: number;
     maskedItems?: any[];
+    tags?: string[];
 }
 export declare class PrivacyPipeline {
     private settings;

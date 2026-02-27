@@ -10,7 +10,12 @@ export declare class GeminiProvider extends AIProviderStrategy {
     private timeoutMs;
     constructor(settings: Settings);
     getName(): string;
-    generateSummary(content: string): Promise<string>;
+    /**
+     * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     */
+    generateSummary(content: string, tagSummaryMode?: boolean): Promise<string>;
     testConnection(): Promise<AIProviderConnectionResult>;
     private _getAllowedUrls;
     private _handleError;

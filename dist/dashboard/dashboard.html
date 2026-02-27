@@ -15,7 +15,7 @@
     <nav id="sidebar" class="sidebar" role="navigation" aria-label="Dashboard navigation">
       <div class="sidebar-header">
         <img src="../icons/icon48.png" alt="" aria-hidden="true" width="32" height="32">
-        <span class="sidebar-title" data-i18n="appTitle">Smart History</span>
+        <span class="sidebar-title" data-i18n="appTitle">Obsidian Weave</span>
       </div>
 
       <div class="sidebar-nav">
@@ -24,6 +24,7 @@
         <button class="sidebar-nav-btn" data-panel="panel-domain" data-i18n="domainTab">Domain Filter</button>
         <button class="sidebar-nav-btn" data-panel="panel-prompt" data-i18n="promptTab">Prompt</button>
         <button class="sidebar-nav-btn" data-panel="panel-privacy" data-i18n="privacyTab">Privacy</button>
+        <button class="sidebar-nav-btn" data-panel="panel-tags" data-i18n="tagsTab">Tags</button>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label" data-i18n="dataSection">Data</div>
@@ -472,12 +473,70 @@
 
       </section>
 
+      <!-- Tags Settings Panel -->
+      <section id="panel-tags" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="tagsTab">Tags</h2>
+
+        <p class="panel-description" data-i18n="tagsDescription">
+          Configure tag categories and enable/disable automatic tag extraction during AI summarization.
+        </p>
+
+        <!-- Tag Summary Mode Toggle -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="tagSummaryTitle">Tag Summary Mode</h3>
+
+          <div class="mb-8">
+            <input type="checkbox" id="tagSummaryMode" aria-describedby="tagSummaryModeDesc">
+            <label for="tagSummaryMode" class="inline-label" data-i18n="tagSummaryModeLabel">Use tag summary mode</label>
+            <div class="help-text ml-24" id="tagSummaryModeDesc" data-i18n="tagSummaryModeDesc">
+              Automatically add category tags to AI summaries based on content
+            </div>
+          </div>
+        </div>
+
+        <!-- Tag Categories -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="tagCategoriesTitle">Tag Categories</h3>
+
+          <!-- Default Categories -->
+          <div class="mb-8">
+            <h4 class="mb-4" style="font-weight: 500; margin-bottom: 12px;" data-i18n="defaultCategoriesTitle">Default Categories</h4>
+            <div class="help-text" data-i18n="defaultCategoriesDesc">
+              (Default categories cannot be deleted)
+            </div>
+            <div id="defaultCategoriesList" class="tag-categories-list mt-4"></div>
+          </div>
+
+          <hr class="settings-hr">
+
+          <!-- User Categories -->
+          <div class="mb-8">
+            <h4 class="mb-4" style="font-weight: 500; margin-bottom: 12px;" data-i18n="userCategoriesTitle">User Categories</h4>
+            <div id="userCategoriesList" class="tag-categories-user-list"></div>
+            <p id="noUserCategoriesMsg" class="no-tags-msg" data-i18n="noUserCategories" hidden>None</p>
+
+            <div class="form-group mt-4">
+              <div style="display: flex; gap: var(--space-2);">
+                <input type="text" id="newCategoryInput" class="w-full"
+                  data-i18n-input-placeholder="newCategoryPlaceholder"
+                  placeholder="Enter new category name..." aria-label="New category name">
+                <button id="addCategoryBtn" class="secondary-btn" data-i18n="add">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="saveTagsBtn" class="primary-btn" data-i18n="saveBtn">Save</button>
+        </div>
+      </section>
+
       <!-- History Panel (New) -->
       <section id="panel-history" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="historyTab">History</h2>
 
         <p class="panel-description" data-i18n="historyDescription">
-          URLs recorded by Smart History. Use the search box to filter entries. Click × to delete an individual URL.
+          URLs recorded by Obsidian Weave. Use the search box to filter entries. Click × to delete an individual URL.
         </p>
         <p class="panel-description history-retention-note" data-i18n="historyRetentionPolicy">
           Shows records from the past 7 days (up to 10,000 entries). Older entries are automatically removed.
@@ -671,6 +730,40 @@
       <div class="modal-footer">
         <button id="cancelImportBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
         <button id="confirmImportBtn" class="btn-confirm" data-i18n="confirm">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tag Edit Modal -->
+  <div id="tagEditModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tagEditTitle">
+    <div class="modal-content tag-edit-modal">
+      <div class="modal-header">
+        <h3 id="tagEditTitle" data-i18n="tagEditTitle">タグを編集</h3>
+        <button id="closeTagEditModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="url-display" id="tagEditUrl"></p>
+
+        <!-- Current Tags -->
+        <div class="tag-edit-section">
+          <h4 class="tag-edit-section-title" data-i18n="currentTags">現在のタグ</h4>
+          <div id="currentTagsList" class="current-tags-list"></div>
+          <p id="noCurrentTagsMsg" class="no-tags-msg" data-i18n="noTags" hidden>なし</p>
+        </div>
+
+        <!-- Add Tags -->
+        <div class="tag-edit-section">
+          <h4 class="tag-edit-section-title" data-i18n="addTag">タグを追加</h4>
+          <div class="form-group">
+            <select id="tagCategorySelect" class="tag-category-select" aria-label="タグカテゴリ">
+              <option value="" data-i18n="selectCategory" disabled selected>カテゴリを選択...</option>
+            </select>
+          </div>
+          <button id="addTagBtn" class="secondary-btn" data-i18n="add" disabled>追加</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveTagEditsBtn" class="btn-confirm" data-i18n="save">保存する</button>
       </div>
     </div>
   </div>

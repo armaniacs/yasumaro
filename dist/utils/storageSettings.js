@@ -68,6 +68,8 @@ export const DEFAULT_SETTINGS = {
     allowed_urls: [],
     allowed_urls_hash: '',
     custom_prompts: [],
+    tag_categories: [], // タグカテゴリリスト（空=デフォルトカテゴリを使用）
+    tag_summary_mode: false, // タグ付き要約モード（デフォルト: 無効）
     // マスターパスワード保護オプション
     mp_protection_enabled: false,
     mp_encrypt_api_keys: true,

@@ -53,6 +53,9 @@ export const StorageKeys = {
     // 【マスターパスワード保護オプション】
     MP_PROTECTION_ENABLED: 'mp_protection_enabled', // マスターパスワード保護有効フラグ
     MP_ENCRYPT_API_KEYS: 'mp_encrypt_api_keys', // APIキー暗号化フラグ
+    // タグ機能設定
+    TAG_CATEGORIES: 'tag_categories', // ユーザー追加カテゴリ + デフォルト管理
+    TAG_SUMMARY_MODE: 'tag_summary_mode', // タグ付き要約を使用するか
     MP_ENCRYPT_ON_EXPORT: 'mp_encrypt_on_export', // エクスポート時暗号化フラグ
     MP_REQUIRE_ON_IMPORT: 'mp_require_on_import', // イポート時パスワード要求フラグ
     // Version tracking for optimistic locking
@@ -462,7 +465,10 @@ const DEFAULT_SETTINGS = {
     [StorageKeys.MP_PROTECTION_ENABLED]: false, // マスターパスワード保護有効フラグ
     [StorageKeys.MP_ENCRYPT_API_KEYS]: false, // APIキー暗号化フラグ
     [StorageKeys.MP_ENCRYPT_ON_EXPORT]: false, // エクスポート時暗号化フラグ
-    [StorageKeys.MP_REQUIRE_ON_IMPORT]: false // インポート時パスワード要求フラグ
+    [StorageKeys.MP_REQUIRE_ON_IMPORT]: false, // インポート時パスワード要求フラグ
+    // Tag feature defaults
+    [StorageKeys.TAG_CATEGORIES]: [], // タグカテゴリリスト（空=デフォルトカテゴリを使用）
+    [StorageKeys.TAG_SUMMARY_MODE]: false // タグ付き要約モード（デフォルト: 無効）
 };
 /**
  * データ移行フラグ - 古い個別キーから単一settingsオブジェクトへの移行完了済み

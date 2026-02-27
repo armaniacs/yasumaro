@@ -5,12 +5,40 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { addPendingPage } from '../utils/pendingStorage.js';
+// 【設定定数】設定キャッシュの有効期限（秒）🟢
+// 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
-const URL_CACHE_TTL = 60 * 1000; // 60 seconds (Problem #7用)
+// 【設定定数】URLキャッシュの有効期限（秒 - Problem #7用）🟢
+// 【調整可能性】重複チェックの許容スパンに応じて調整可能
+const URL_CACHE_TTL = 60 * 1000; // 60 seconds
+// 【設定定数】記録時の最大コンテンツサイズ（バイト）最大コンテンツサイズ 🟢
+// 【PII保護】64KB以降のPIIはAI APIに送信されず、安全側の挙動
+// 【設定理由】パフォーマンス: 大きなページがパイプラインをハングさせるのを防ぐ
+// 【設定理由】コスト削減: AI APIへの転送データ量を制限
+const MAX_RECORD_SIZE = 64 * 1024; // 64KB
+// 【ヘルパー関数】コンテンツを最大サイズに切り詰める
+// 【機能】指定された最大サイズを超えるコンテンツを安全に切り詰める
+// 【PII保護】切り詰められたコンテンツのみがAI APIに送信される
+// 【再利用性】テストやその他のコンテキストで独立して使用可能 🟢
+// 【単一責任】コンテンツのサイズ制御のみを担当
+// @param {string} content - 切り詰め対象のコンテンツ
+// @param {number} maxSize - 最大サイズのバイト数（デフォルト: MAX_RECORD_SIZE）
+// @returns {string} 切り詰められたコンテンツ（元のサイズ以下の場合はそのまま）
+// @see PII_FEATURE_GUIDE.md - コンテンツサイズ制限の詳細
+export function truncateContentSize(content, maxSize = MAX_RECORD_SIZE) {
+    // 【効率化】lengthプロパティによる高速なサイズチェック 🟢
+    // 【安全性】substringによる範囲外アクセスを防止
+    if (content.length <= maxSize) {
+        return content;
+    }
+    // 【処理】先頭からmaxSizeまでの文字列を抽出 🟢
+    // 【計算量】O(maxSize) - 固定時間処理
+    return content.substring(0, maxSize);
+}
 export class RecordingLogic {
     // キャッシュ状態永続化（SERVICE-WORKER再起動間で保持）
     // Problem #3: 2重キャッシュ構造を1段階に簡素化 - staticキャッシュのみ使用
@@ -203,16 +231,18 @@ export class RecordingLogic {
     }
     async record(data) {
         let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount } = data;
-        const MAX_RECORD_SIZE = 64 * 1024;
         try {
             // 0. Content Truncation (Problem: Large pages can hang the pipeline)
+            // 【PII保護】切り詰められたコンテンツのみがAI APIに送信される 🟢
+            // 【パフォーマンス】大きなページがパイプラインをハングさせるのを防止
             if (content && content.length > MAX_RECORD_SIZE) {
+                const originalLength = content.length;
+                content = truncateContentSize(content);
                 addLog(LogType.WARN, 'Content truncated for recording', {
-                    originalLength: content.length,
+                    originalLength,
                     truncatedLength: MAX_RECORD_SIZE,
                     url
                 });
-                content = content.substring(0, MAX_RECORD_SIZE);
             }
             // 1. Check domain filter
             const isAllowed = await isDomainAllowed(url);
@@ -351,12 +381,15 @@ export class RecordingLogic {
             const pipeline = new PrivacyPipeline(settings, this.aiClient, { sanitizeRegex }); // casting aiClient as any until fully compatible with interface expectation
             let pipelineResult;
             let aiDuration;
+            // タグ付き要約モードの設定を取得
+            const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE];
             try {
                 // AI処理時間を測定（alreadyProcessedがfalseの場合のみAI処理が実行される）
                 const aiStartTime = performance.now();
                 pipelineResult = await pipeline.process(content, {
                     previewOnly,
-                    alreadyProcessed
+                    alreadyProcessed,
+                    tagSummaryMode
                 });
                 const aiEndTime = performance.now();
                 // AI処理が実際に行われた場合のみ時間を記録
@@ -410,6 +443,11 @@ export class RecordingLogic {
             const resolvedMaskedCount = precomputedMaskedCount ?? pipelineResult.maskedCount ?? 0;
             if (resolvedMaskedCount > 0) {
                 await setUrlMaskedCount(url, resolvedMaskedCount);
+            }
+            // タグを保存（タグ付き要約モード時）
+            if (pipelineResult.tags && pipelineResult.tags.length > 0) {
+                await setUrlTags(url, pipelineResult.tags);
+                addLog(LogType.INFO, 'Tags saved', { url, tags: pipelineResult.tags });
             }
             // Problem #7: URLキャッシュを無効化
             RecordingLogic.invalidateUrlCache();

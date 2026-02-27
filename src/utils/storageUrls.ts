@@ -382,7 +382,11 @@ export async function setUrlTags(url: string, tags: string[]): Promise<void> {
         const entries = currentEntries || [];
         const targetEntry = entries.find(e => e.url === url);
         if (targetEntry) {
-            targetEntry.tags = tags;
+            // 空配列の場合は undefined に設定（未設定との区別）
+            targetEntry.tags = tags.length > 0 ? tags : undefined;
+        } else {
+            // URLが存在しない場合はサイレント失敗（ログで追跡可能）
+            console.warn(`[setUrlTags] URL not found in savedUrlsWithTimestamps: ${url}`);
         }
         return entries;
     }, { maxRetries: 5 });

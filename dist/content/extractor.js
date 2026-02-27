@@ -73,7 +73,7 @@ function checkVisitConditions() {
         return;
     const duration = (Date.now() - startTime) / 1000;
     // DEBUG LOG: 状態のデバッグログ
-    console.log(`[OSH] Status: Duration=${duration.toFixed(1)}s, MaxScroll=${maxScrollPercentage.toFixed(1)}%, threshold=${minVisitDuration}s/${minScrollDepth}%`);
+    console.log(`[OWeave] Status: Duration=${duration.toFixed(1)}s, MaxScroll=${maxScrollPercentage.toFixed(1)}%, threshold=${minVisitDuration}s/${minScrollDepth}%`);
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
     if (duration >= minVisitDuration && maxScrollPercentage >= minScrollDepth) {
         reportValidVisit();
@@ -153,7 +153,7 @@ function updateMaxScroll() {
  */
 async function reportValidVisit() {
     isValidVisitReported = true;
-    console.log('[OSH] reportValidVisit: sending VALID_VISIT');
+    console.log('[OWeave] reportValidVisit: sending VALID_VISIT');
     const content = extractPageContent();
     try {
         const response = await messageSender.sendMessageWithRetry({
@@ -162,7 +162,7 @@ async function reportValidVisit() {
                 content: content
             }
         });
-        console.log('[OSH] VALID_VISIT response:', JSON.stringify(response));
+        console.log('[OWeave] VALID_VISIT response:', JSON.stringify(response));
         // レスポンスの成功フラグをチェック
         if (response && !response.success) {
             if (response.error === 'DOMAIN_BLOCKED') {

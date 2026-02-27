@@ -33,8 +33,10 @@ export class AIClient {
     }
     /**
      * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content) {
+    async generateSummary(content, tagSummaryMode = false) {
         const settings = await getSettings();
         // Settings型は StorageKeys でアクセス可能
         const providerName = settings[StorageKeys.AI_PROVIDER] || 'gemini';
@@ -45,7 +47,7 @@ export class AIClient {
         }
         try {
             const providerInstance = factory(settings);
-            return await providerInstance.generateSummary(content);
+            return await providerInstance.generateSummary(content, tagSummaryMode);
         }
         catch (error) {
             addLog(LogType.ERROR, `Generate summary failed: ${error.message}`);

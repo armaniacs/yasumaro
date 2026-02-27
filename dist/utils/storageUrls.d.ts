@@ -20,6 +20,7 @@ export interface SavedUrlEntry {
     timestamp: number;
     recordType?: RecordType;
     maskedCount?: number;
+    tags?: string[];
 }
 /**
  * 保存されたURLのリストを取得（LRU削除有効）
@@ -118,4 +119,28 @@ export declare function getAllowedUrls(ALLOWED_URLS_KEY: string): Promise<Set<st
  * @returns {Promise<void>}
  */
 export declare function ensureUrlVersionInitialized(): Promise<void>;
+/**
+ * URLのタグを設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {string[]} tags - 設定するタグリスト
+ * @returns {Promise<void>}
+ */
+export declare function setUrlTags(url: string, tags: string[]): Promise<void>;
+/**
+ * URLにタグを追加する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - URL
+ * @param {string} tag - 追加するタグ
+ * @returns {Promise<void>}
+ */
+export declare function addUrlTag(url: string, tag: string): Promise<void>;
+/**
+ * URLからタグを削除する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - URL
+ * @param {string} tag - 削除するタグ
+ * @returns {Promise<void>}
+ */
+export declare function removeUrlTag(url: string, tag: string): Promise<void>;
 //# sourceMappingURL=storageUrls.d.ts.map

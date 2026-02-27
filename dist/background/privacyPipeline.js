@@ -1,6 +1,7 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
 import { StorageKeys } from '../utils/storage.js';
+import { parseTagsFromSummary } from '../utils/tagUtils.js';
 export class PrivacyPipeline {
     settings;
     aiClient;
@@ -58,8 +59,14 @@ export class PrivacyPipeline {
         }
         // L3: Cloud Summarization
         if (sanitizedSettings.useCloudAi) {
-            const summary = await this.aiClient.generateSummary(processingText);
-            return { summary, maskedCount };
+            const summary = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
+            // タグ付き要約モードの場合はタグを抽出
+            let tags;
+            if (options.tagSummaryMode && summary) {
+                const parsed = parseTagsFromSummary(summary);
+                tags = parsed.tags;
+            }
+            return { summary, maskedCount, tags };
         }
         return { summary: 'Summary not available.' };
     }

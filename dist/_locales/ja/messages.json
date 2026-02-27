@@ -9,7 +9,7 @@
         "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
     },
     "appTitle": {
-        "message": "Weave"
+        "message": "Obsidian Weave"
     },
     "settings": {
         "message": "設定"
@@ -1219,5 +1219,65 @@
     },
     "testConnectionBtn": {
         "message": "接続テスト"
+    },
+    "tagEditTitle": {
+        "message": "タグを編集"
+    },
+    "currentTags": {
+        "message": "現在のタグ"
+    },
+    "addTag": {
+        "message": "タグを追加"
+    },
+    "selectCategory": {
+        "message": "カテゴリを選択..."
+    },
+    "noTags": {
+        "message": "なし"
+    },
+    "editTags": {
+        "message": "タグを編集"
+    },
+    "saveTagError": {
+        "message": "タグの保存に失敗しました"
+    },
+    "tagsTab": {
+        "message": "タグ"
+    },
+    "tagsDescription": {
+        "message": "AI要約時に自動でタグを付与するカテゴリを設定します。"
+    },
+    "tagSummaryTitle": {
+        "message": "タグ付き要約モード"
+    },
+    "tagSummaryModeLabel": {
+        "message": "タグ付き要約を使用"
+    },
+    "tagSummaryModeDesc": {
+        "message": "AI要約時にコンテンツに基づいて自動的にカテゴリータグを付与します"
+    },
+    "tagCategoriesTitle": {
+        "message": "タグカテゴリ"
+    },
+    "defaultCategoriesTitle": {
+        "message": "デフォルトカテゴリ"
+    },
+    "defaultCategoriesDesc": {
+        "message": "（デフォルトカテゴリは削除できません）"
+    },
+    "userCategoriesTitle": {
+        "message": "ユーザーカテゴリ"
+    },
+    "noUserCategories": {
+        "message": "なし"
+    },
+    "newCategoryPlaceholder": {
+        "message": "新しいカテゴリ名を入力..."
+    },
+    "duplicateCategoryError": {
+        "message": "このカテゴリ名は既に存在します"
+    },
+    "tagSettingsSaved": {
+        "message": "タグ設定を保存しました"
     }
 }

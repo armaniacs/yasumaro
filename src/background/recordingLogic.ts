@@ -9,7 +9,6 @@ import { setUrlRecordType, setUrlMaskedCount, setUrlTags } from '../utils/storag
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
-import { parseTagsFromSummary } from '../utils/tagUtils.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';

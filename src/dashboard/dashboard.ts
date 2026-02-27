@@ -675,6 +675,7 @@ async function initHistoryPanel(): Promise<void> {
   // タグ編集モーダルの状態
   let editingUrl: string | null = null;
   let editingTags: string[] = [];
+  let tagEditTrapId: string | null = null;
 
   // 記録済みエントリ（recordType付き）を取得
   const rawEntries = await getSavedUrlEntries();
@@ -811,19 +812,26 @@ async function initHistoryPanel(): Promise<void> {
     indicator.id = 'tagFilterIndicator';
     indicator.className = 'tag-filter-indicator';
 
-    indicator.innerHTML = `
-      <span class="tag-filter-label">フィルター:</span>
-      <span class="tag-filter-value">#${activeTagFilter}</span>
-      <button class="tag-filter-close" title="フィルター解除">×</button>
-    `;
+    const filterLabel = document.createElement('span');
+    filterLabel.className = 'tag-filter-label';
+    filterLabel.textContent = 'フィルター:';
 
-    const closeBtn = indicator.querySelector('.tag-filter-close');
-    closeBtn?.addEventListener('click', () => {
+    const filterValue = document.createElement('span');
+    filterValue.className = 'tag-filter-value';
+    filterValue.textContent = `#${activeTagFilter}`;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tag-filter-close';
+    closeBtn.title = 'フィルター解除';
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => {
       activeTagFilter = null;
       historyCurrentPage = 0;
       applyFilters(false);
       updateTagFilterIndicator();
     });
+
+    indicator.append(filterLabel, filterValue, closeBtn);
 
     controls.appendChild(indicator);
   }
@@ -1255,17 +1263,11 @@ async function initHistoryPanel(): Promise<void> {
     renderCurrentTags();
     updateTagCategorySelect();
 
-    if (tagEditModal) tagEditModal.classList.remove('hidden');
-
-    // モーダルを開いたときにフォーカストラップ
-    setTimeout(() => {
-      if (tagCategorySelect) {
-        tagCategorySelect.focus();
-      }
-    }, 100);
-
-    // ARIA属性の設定
-    tagEditModal?.setAttribute('aria-hidden', 'false');
+    if (tagEditModal) {
+      tagEditModal.classList.remove('hidden');
+      tagEditModal.setAttribute('aria-hidden', 'false');
+      tagEditTrapId = focusTrapManager.trap(tagEditModal, closeTagEditModal);
+    }
   }
 
   /**
@@ -1274,6 +1276,10 @@ async function initHistoryPanel(): Promise<void> {
   function closeTagEditModal(): void {
     editingUrl = null;
     editingTags = [];
+    if (tagEditTrapId) {
+      focusTrapManager.release(tagEditTrapId);
+      tagEditTrapId = null;
+    }
     if (tagEditModal) {
       tagEditModal.classList.add('hidden');
       tagEditModal.setAttribute('aria-hidden', 'true');
@@ -1389,13 +1395,6 @@ async function initHistoryPanel(): Promise<void> {
 
   tagEditModal?.addEventListener('click', (e) => {
     if (e.target === tagEditModal) {
-      closeTagEditModal();
-    }
-  });
-
-  // Escapeキーでモーダルを閉じる
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && tagEditModal && !tagEditModal.classList.contains('hidden')) {
       closeTagEditModal();
     }
   });
@@ -1701,11 +1700,27 @@ async function initTagsPanel(): Promise<void> {
   /**
    * カテゴリを追加
    */
+  const MAX_CATEGORY_NAME_LENGTH = 50;
+  // タグパース形式（`# tag | summary`）を壊す可能性のある文字を禁止
+  const INVALID_CATEGORY_CHARS = /[|#\n\r]/;
+
   function addCategory(): void {
     if (!newCategoryInput) return;
     const categoryName = newCategoryInput.value.trim();
 
     if (!categoryName) return;
+
+    // 最大長チェック
+    if (categoryName.length > MAX_CATEGORY_NAME_LENGTH) {
+      alert(getMessage('categoryNameTooLong') || `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`);
+      return;
+    }
+
+    // 禁止文字チェック（|や#はタグパース形式を壊す可能性があるため禁止）
+    if (INVALID_CATEGORY_CHARS.test(categoryName)) {
+      alert(getMessage('categoryNameInvalidChars') || 'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）');
+      return;
+    }
 
     // 重複チェック
     const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];

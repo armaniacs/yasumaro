@@ -42,6 +42,31 @@ All notable changes to this project will be documented in this file.
   - User category add/remove functionality
   - Duplicate category validation
 
+### Fixed (Code Review - feature-autotag)
+- **未使用インポートの削除**: `recordingLogic.ts` の `parseTagsFromSummary` インポートが使用されていなかったため削除
+  - タグパースは `privacyPipeline.ts` で行われており `recordingLogic.ts` では `pipelineResult.tags` を直接参照するため不要
+- **タグ付きプロンプトにユーザー追加カテゴリを反映**: `customPromptUtils.ts` の `DEFAULT_TAGGED_SUMMARY_PROMPT` ハードコードをやめ、`buildTaggedSummaryPrompt(settings, content)` 関数に置き換え
+  - `getAllCategories(settings)` でデフォルト + ユーザー追加カテゴリを動的取得してプロンプトに埋め込む
+  - 旧: カテゴリリストがハードコードでユーザー追加カテゴリが AI プロンプトに反映されなかった
+- **タグフィルターインジケーターの XSS 修正**: `dashboard.ts` の `indicator.innerHTML` へのテンプレートリテラル補間を `textContent` ベース DOM 操作に変更
+  - `activeTagFilter`（ユーザー定義カテゴリ名）をそのまま HTML に挿入していたため XSS リスクがあった
+- **タグ編集モーダルへの `focusTrapManager` 適用**: モーダル開閉時にフォーカストラップを適用し、WCAG 2.1 Level AA のフォーカス管理要件に準拠
+  - `openTagEditModal()` で `focusTrapManager.trap()` を呼出し、`closeTagEditModal()` で `release()` を呼出す
+  - 従来は `setTimeout(() => tagCategorySelect.focus(), 100)` でのみフォーカス管理していた
+- **`document.keydown` グローバルリスナー削除**: タグ編集モーダルの Escape キー処理を `document.addEventListener('keydown', ...)` から `focusTrapManager` 内のハンドリングに委譲
+  - `initHistoryPanel()` 実行時に登録されるグローバルリスナーがクリーンアップされない問題を解消
+- **カテゴリ名の最大長バリデーション追加**: `addCategory()` にカテゴリ名 50 文字以内チェックを追加し、超過時は `categoryNameTooLong` i18n キーのエラーを表示
+- **i18n キー追加**: `categoryNameTooLong` を日本語・英語の messages.json に追加
+- **ファイル末尾改行追加**: `src/utils/tagUtils.ts` と `src/utils/storageUrls.ts` のファイル末尾に改行を追加
+- **Fixed unused import**: Removed `parseTagsFromSummary` import from `recordingLogic.ts` (parsing is done in `privacyPipeline.ts`)
+- **Fixed tagged prompt ignoring user-added categories**: Replaced hardcoded `DEFAULT_TAGGED_SUMMARY_PROMPT` with `buildTaggedSummaryPrompt(settings, content)` that dynamically builds the category list
+- **Fixed XSS risk in tag filter indicator**: Replaced `indicator.innerHTML` template literal interpolation with safe `textContent`-based DOM manipulation
+- **Applied `focusTrapManager` to tag edit modal**: Modal now properly manages focus per WCAG 2.1 Level AA requirements
+- **Removed uncleanable `document.keydown` listener**: Delegated Escape key handling to `focusTrapManager`
+- **Added max-length validation for category names**: Rejects names longer than 50 characters with localized error message
+- **Added `categoryNameTooLong` i18n key** to Japanese and English message files
+- **Added trailing newlines** to `tagUtils.ts` and `storageUrls.ts`
+
 ### Documentation
 - **PII_FEATURE_GUIDE.md v2.4 にコンテンツサイズ制限セクションを追加**（日英両方）
   - 64KB超過時の挙動の説明

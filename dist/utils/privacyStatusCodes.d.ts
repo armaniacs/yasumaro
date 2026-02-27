@@ -3,8 +3,7 @@
  *
  * プライバシー検出のステータスコード定義。
  *
- * コード体系: PSH-XXXX
- *   PSH = Privacy Smart History
+ * コード体系: PSH-XXXX (Privacy Status History - 歴史的略称を維持)
  *   1xxx = Cache-Control ヘッダー系
  *   2xxx = Cookie / セッション系
  *   3xxx = 認証系

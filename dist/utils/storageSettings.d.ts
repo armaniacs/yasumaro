@@ -3,7 +3,7 @@
  * 設定管理関連の機能
  * 設定の取得、保存、マイグレーション
  */
-import type { UblockRules, Source, CustomPrompt } from './types.js';
+import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
 export declare const API_KEY_FIELDS: readonly ["obsidian_api_key", "gemini_api_key", "openai_api_key", "openai_2_api_key"];
 export declare const SETTINGS_MIGRATED_KEY = "settings_migrated";
 /**
@@ -51,6 +51,8 @@ export interface SettingsValue {
     allowed_urls?: string[];
     allowed_urls_hash?: string;
     custom_prompts?: CustomPrompt[];
+    tag_categories?: TagCategory[];
+    tag_summary_mode?: boolean;
     [key: string]: unknown;
 }
 export type Settings = SettingsValue & {

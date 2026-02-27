@@ -23,6 +23,10 @@ export declare const DEFAULT_USER_PROMPT = "\u4EE5\u4E0B\u306EWeb\u30DA\u30FC\u3
  */
 export declare const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.";
 /**
+ * タグ付き要約用デフォルトプロンプト
+ */
+export declare const DEFAULT_TAGGED_SUMMARY_PROMPT = "\u4EE5\u4E0B\u306EWeb\u30DA\u30FC\u30B8\u306E\u5185\u5BB9\u3092\u5206\u6790\u3057\u3001\u6307\u5B9A\u3057\u305F\u30AB\u30C6\u30B4\u30EA\u304B\u3089\u6700\u3082\u95A2\u9023\u5EA6\u306E\u9AD8\u3044\u3082\u306E\u30921\u3064\u307E\u305F\u306F2\u3064\u9078\u3093\u3067\u30BF\u30B0\u5F62\u5F0F\u3067\u51FA\u529B\u3057\u3001\u305D\u306E\u5F8C\u306B\u65E5\u672C\u8A9E\u3067\u7C21\u6F54\u306B\u8981\u7D04\u3057\u3066\u304F\u3060\u3055\u3044\u3002\n\n\u30AB\u30C6\u30B4\u30EA\u5019\u88DC:\n[IT\u30FB\u30D7\u30ED\u30B0\u30E9\u30DF\u30F3\u30B0, \u30A4\u30F3\u30D5\u30E9\u30FB\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF, \u30B5\u30A4\u30A8\u30F3\u30B9\u30FB\u30A2\u30AB\u30C7\u30DF\u30C3\u30AF, \u30D3\u30B8\u30CD\u30B9\u30FB\u7D4C\u6E08, \u30E9\u30A4\u30D5\u30B9\u30BF\u30A4\u30EB\u30FB\u96D1\u8A18, \u30D5\u30FC\u30C9\u30FB\u30EC\u30B7\u30D4, \u30C8\u30E9\u30D9\u30EB\u30FB\u30A2\u30A6\u30C8\u30C9\u30A2, \u30A8\u30F3\u30BF\u30E1\u30FB\u30B2\u30FC\u30E0, \u30AF\u30EA\u30A8\u30A4\u30C6\u30A3\u30D6\u30FB\u30A2\u30FC\u30C8, \u30D8\u30EB\u30B9\u30FB\u30A6\u30A7\u30EB\u30CD\u30B9]\n\n\u51FA\u529B\u5F62\u5F0F:\n#\u30AB\u30C6\u30B4\u30EA1 #\u30AB\u30C6\u30B4\u30EA2 | \u8981\u7D04\u6587\uFF08\u6539\u884C\u306A\u3057\uFF09\n\nContent:\n{{content}}";
+/**
  * プロンプト内のプレースホルダーを置換
  * @param {string} prompt - プロンプトテンプレート
  * @param {string} content - 置換するコンテンツ
@@ -50,9 +54,10 @@ export declare function getActivePrompt(settings: Settings, providerName: string
  * @param {Settings} settings - 設定オブジェクト
  * @param {string} providerName - プロバイダー名
  * @param {string} sanitizedContent - サニタイズ済みコンテンツ
+ * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
  * @returns {PromptResult} 適用結果
  */
-export declare function applyCustomPrompt(settings: Settings, providerName: string, sanitizedContent: string): PromptResult;
+export declare function applyCustomPrompt(settings: Settings, providerName: string, sanitizedContent: string, tagSummaryMode?: boolean): PromptResult;
 /**
  * 一意のIDを生成
  * @returns {string} 一意のID

@@ -4,6 +4,7 @@ import type { RecordType } from '../utils/storageUrls.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+export declare function truncateContentSize(content: string, maxSize?: number): string;
 interface CacheState {
     settingsCache: Settings | null;
     cacheTimestamp: number | null;

@@ -17,6 +17,7 @@ plans/
 .worktrees/
 .DS_Store
 docs/reviews/
+docs/features/
 
 .env
 .idea/

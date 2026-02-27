@@ -4,6 +4,14 @@
  * モジュール間の循環参照を避けるために型定義を集約
  */
 /**
+ * タグカテゴリ
+ */
+export interface TagCategory {
+    name: string;
+    isDefault: boolean;
+    createdAt: number;
+}
+/**
  * カスタムプロンプトのデータ構造
  */
 export interface CustomPrompt {
