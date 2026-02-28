@@ -6,15 +6,15 @@
 export declare const RATE_LIMIT_ATTEMPTS = 5;
 export declare const RATE_LIMIT_WINDOW_MS: number;
 export declare const LOCKOUT_DURATION_MS: number;
+export declare const LOCKOUT_DURATION_MINUTES = 30;
 export interface RateLimitResult {
     success: boolean;
     error?: string;
 }
 /**
  * レート制限チェックを行う
- * @param _password - パスワード（現在は未使用、将来の拡張用）
  */
-export declare function checkRateLimit(_password?: string): Promise<RateLimitResult>;
+export declare function checkRateLimit(): Promise<RateLimitResult>;
 /**
  * 失敗回数を記録する
  */

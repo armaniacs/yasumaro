@@ -5,7 +5,8 @@
  */
 export const RATE_LIMIT_ATTEMPTS = 5; // 5分以内の最大試行回数
 export const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 評価ウインドウ: 5分
-export const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // ロックアウト期間: 30分
+export const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // ロックアウト期間: 30分 (pre-computed)
+export const LOCKOUT_DURATION_MINUTES = 30; // ロックアウト期間（分、エラーメッセージ用）
 const STORAGE_KEYS = {
     FAILED_ATTEMPTS: 'passwordFailedAttempts',
     FIRST_ATTEMPT_TIME: 'firstFailedAttemptTime',
@@ -13,9 +14,8 @@ const STORAGE_KEYS = {
 };
 /**
  * レート制限チェックを行う
- * @param _password - パスワード（現在は未使用、将来の拡張用）
  */
-export async function checkRateLimit(_password) {
+export async function checkRateLimit() {
     const storage = await chrome.storage.session.get([
         STORAGE_KEYS.FAILED_ATTEMPTS,
         STORAGE_KEYS.FIRST_ATTEMPT_TIME,
@@ -40,7 +40,7 @@ export async function checkRateLimit(_password) {
             await chrome.storage.session.set({ [STORAGE_KEYS.LOCKED_UNTIL]: now + LOCKOUT_DURATION_MS });
             return {
                 success: false,
-                error: `Too many attempts. Please try again in ${LOCKOUT_DURATION_MS / (60 * 1000)} minutes.`
+                error: `Too many attempts. Please try again in ${LOCKOUT_DURATION_MINUTES} minutes.`
             };
         }
     }

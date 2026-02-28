@@ -116,7 +116,8 @@ export async function addLog(type, message, details = {}) {
         };
         // バッファに追加（上限超過時は古いエントリを破棄）
         if (pendingLogs.length >= MAX_PENDING_LOGS) {
-            pendingLogs.shift();
+            // slice(1) creates new array but avoids in-place shifting
+            pendingLogs = pendingLogs.slice(1);
         }
         pendingLogs.push(entry);
         // 【パフォーマンス改善】フラッシュ条件をチェック

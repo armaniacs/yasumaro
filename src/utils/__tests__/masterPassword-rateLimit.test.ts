@@ -53,7 +53,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         (chrome.storage.session.get as jest.Mock).mockResolvedValue({});
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('correct-password');
+        const result = await checkRateLimit();
 
         // 【結果検証】認証が成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: 認証が成功することを確認 🟢
@@ -91,7 +91,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
 
         // 【リセット後の確認】: session storageが空の場合に許可される
         (chrome.storage.session.get as jest.Mock).mockResolvedValue({});
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】リセット後は認証が成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: リセット後は認証成功 🟢
@@ -117,7 +117,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         });
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】ロックアウト中は拒否されることを確認
         expect(result.success).toBe(false); // 【確認内容】: 認証が拒否されること 🟢
@@ -176,7 +176,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
             firstFailedAttemptTime: now - 2 * 60 * 1000,
         });
 
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】ロックアウトが発動することを確認
         expect(result.success).toBe(false); // 【確認内容】: 認証が拒否されること 🟢
@@ -206,7 +206,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         });
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】ロックアウト解除後は認証が成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: ロック解除後は認証成功 🟢
@@ -232,7 +232,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         });
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】5分経過後は許可されることを確認
         expect(result.success).toBe(true); // 【確認内容】: 評価ウインドウ超過後は認証成功 🟢
@@ -263,7 +263,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         });
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】ロック解除直後は認証成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: 30分1秒経過後は認証成功 🟢
@@ -285,7 +285,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         (chrome.storage.session.get as jest.Mock).mockResolvedValue({});
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】storageクリア後は認証成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: storageクリア後は認証成功 🟢
@@ -307,7 +307,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         (chrome.storage.session.get as jest.Mock).mockResolvedValue({});
 
         // 【実際の処理実行】最初の認証を試行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】新しいセッションでは最初の認証が成功することを確認
         expect(result.success).toBe(true); // 【確認内容】: 新セッションの初回認証は成功 🟢
@@ -333,7 +333,7 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         });
 
         // 【実際の処理実行】レート制限チェックを実行
-        const result = await checkRateLimit('password');
+        const result = await checkRateLimit();
 
         // 【結果検証】エラーをスローせずに安全に処理されることを確認
         expect(result).toBeDefined(); // 【確認内容】: 結果オブジェクトが返されること 🟢

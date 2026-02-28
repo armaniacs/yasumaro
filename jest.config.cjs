@@ -41,7 +41,8 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/e2e/'
+    '/e2e/',
+    '/video-autotag/'
   ],
 
   // Coverage collection

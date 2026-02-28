@@ -5,15 +5,9 @@
 import { getSettings, saveSettings, getOrCreateHmacSecret } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
 import { generateSalt } from './crypto.js';
+import { API_KEY_FIELDS } from './storageSettings.js';
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
-// APIキーフィールドのリスト
-const API_KEY_FIELDS = [
-    'obsidian_api_key',
-    'gemini_api_key',
-    'openai_api_key',
-    'openai_2_api_key',
-];
 /**
  * APIキーフィールドを除外した設定を取得する
  * @param {Settings} settings - 元の設定

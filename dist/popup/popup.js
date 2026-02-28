@@ -544,7 +544,7 @@ async function authenticatePassword() {
         return;
     }
     // 【セキュリティ強化】レート制限チェック - 認証前に確認
-    const rateLimitResult = await checkRateLimit(password);
+    const rateLimitResult = await checkRateLimit();
     if (!rateLimitResult.success) {
         if (passwordAuthError) {
             passwordAuthError.textContent = rateLimitResult.error || 'Too many attempts.';

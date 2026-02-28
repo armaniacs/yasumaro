@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.0.5] - 2026-03-01
+## [4.0.6] - 2026-03-01
+
+### Refactored
+- **コード品質改善・技術的負債の解消** ([settingsExportImport.ts](src/utils/settingsExportImport.ts), [redaction.ts](src/utils/redaction.ts), [rateLimiter.ts](src/utils/rateLimiter.ts), [logger.ts](src/utils/logger.ts))
+  - `API_KEY_FIELDS`の重複排除 - [`settingsExportImport.ts`](src/utils/settingsExportImport.ts)で[`storageSettings.js`](src/utils/storageSettings.js)からインポートするよう変更
+  - `redaction.ts`の効率化 - `LOWERCASE_SENSITIVE_KEYS`の事前計算、`API_KEY_FIELDS`のインポートで単一の真実のソースを確立
+  - `rateLimiter.ts`の簡素化 - 未使用の`_password`パラメータ削除、`LOCKOUT_DURATION_MS`定数追加（コンパイル時事前計算）
+  - `logger.ts`のコメント修正 - 誤った`O(1)`の記述を正確な記述に変更
+
+### Fixed
+- **Jest設定の修正** ([jest.config.cjs](jest.config.cjs))
+  - `testPathIgnorePatterns`に`/video-autotag/`を追加し、Playwright用テストがJestで実行されないように修正
+
+---
 
 ### Security
 - **APIキー値のコンソール露出を修正** ([obsidianClient.ts](src/background/obsidianClient.ts))

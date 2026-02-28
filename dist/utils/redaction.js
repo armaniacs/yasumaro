@@ -3,22 +3,33 @@
  * コンソールログの機密情報削除モジュール
  * APIキー、パスワードなどの機密情報をログ出力から保護
  */
+import { API_KEY_FIELDS } from './storageSettings.js';
 const MAX_RECURSION_DEPTH = 100;
-const SENSITIVE_KEYS = [
+// Additional sensitive patterns beyond API keys
+const ADDITIONAL_SENSITIVE_KEYS = [
     'apiKey',
     'fullKey',
     'authToken',
     'auth',
     'password',
     'token',
-    'api_key',
-    'obsidian_api_key',
-    'gemini_api_key',
-    'openai_api_key',
-    'openai_2_api_key',
     'master_password_hash',
     'hmac_secret',
 ];
+// Combine API keys with additional patterns for single source of truth
+const SENSITIVE_KEYS = [
+    ...API_KEY_FIELDS,
+    ...ADDITIONAL_SENSITIVE_KEYS,
+];
+// Pre-lowercase for efficient matching (computed once at module load)
+const LOWERCASE_SENSITIVE_KEYS = SENSITIVE_KEYS.map(k => k.toLowerCase());
+/**
+ * Check if a key is sensitive (case-insensitive)
+ */
+function isSensitiveKey(key) {
+    const lowerKey = key.toLowerCase();
+    return LOWERCASE_SENSITIVE_KEYS.some(sensitiveKey => lowerKey.includes(sensitiveKey));
+}
 /**
  * 再帰的に機密情報を削除する
  */
@@ -34,8 +45,7 @@ export function redactSensitiveData(data, depth = 0) {
     }
     const result = {};
     for (const [key, value] of Object.entries(data)) {
-        const isSensitiveKey = SENSITIVE_KEYS.some(sensitive => key.toLowerCase().includes(sensitive.toLowerCase()));
-        if (isSensitiveKey) {
+        if (isSensitiveKey(key)) {
             result[key] = '[REDACTED]';
         }
         else if (typeof value === 'object' && value !== null) {

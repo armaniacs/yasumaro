@@ -6,17 +6,10 @@
 import { getSettings, saveSettings, getOrCreateHmacSecret, Settings } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
 import { hashPasswordWithPBKDF2, verifyPasswordWithPBKDF2, generateSalt } from './crypto.js';
+import { API_KEY_FIELDS } from './storageSettings.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
-
-// APIキーフィールドのリスト
-const API_KEY_FIELDS = [
-  'obsidian_api_key',
-  'gemini_api_key',
-  'openai_api_key',
-  'openai_2_api_key',
-];
 
 export interface SettingsExportData {
   version: string;
