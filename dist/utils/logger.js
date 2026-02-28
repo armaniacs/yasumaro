@@ -9,9 +9,20 @@ const MAX_LOGS = 1000; // Prevent unlimited growth
 // 【パフォーマンス改善】バッチ書き込み用設定
 const BATCH_FLUSH_SIZE = 10; // バッファがこのサイズを超えるとフラッシュ
 const BATCH_FLUSH_DELAY_MS = 5000; // 5秒間書き込みがないとフラッシュ
+const MAX_PENDING_LOGS = 100; // バッファ上限（メモリリーク防止）
 let pendingLogs = []; // 保留中のログバッファ
 let flushTimer = null; // フラッシュ遅延タイマー
 let isFlushing = false; // フラッシュ中フラグ（多重フラッシュ防止）
+/**
+ * 【機能概要】: 環境判定関数
+ * 【実装方針】: process.env.NODE_ENVでdevelopmentかどうかを判定
+ * 【テスト対応】: logger-production.test.ts
+ * 🟡 信頼性レベル: 黄信号（環境変数による判定は一般的なパターンによる）
+ * @returns {boolean} development環境の場合はtrue
+ */
+export const isDevelopment = () => {
+    return typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+};
 export const LogType = {
     INFO: 'INFO',
     WARN: 'WARN',
@@ -89,6 +100,13 @@ export function clearPendingLogs() {
  */
 export async function addLog(type, message, details = {}) {
     try {
+        // 【セキュリティ強化】本番環境ではDEBUGログを破棄
+        // 【実装方針】: isDevelopment()で環境判定し、本番ならDEBUGを早期return
+        // 【テスト対応**: logger-production.test.ts - 本番環境のDEBUGログが出力されない
+        // 🟡 信頼性レベル: 黄信号（要件定義書のログ制約による）
+        if (!isDevelopment() && type === 'DEBUG') {
+            return; // DEBUGログは保存せず破棄
+        }
         const entry = {
             id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
             timestamp: Date.now(),
@@ -96,7 +114,10 @@ export async function addLog(type, message, details = {}) {
             message,
             details
         };
-        // バッファに追加
+        // バッファに追加（上限超過時は古いエントリを破棄）
+        if (pendingLogs.length >= MAX_PENDING_LOGS) {
+            pendingLogs.shift();
+        }
         pendingLogs.push(entry);
         // 【パフォーマンス改善】フラッシュ条件をチェック
         if (pendingLogs.length >= BATCH_FLUSH_SIZE) {

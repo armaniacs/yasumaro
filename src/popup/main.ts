@@ -722,7 +722,10 @@ document.getElementById('btn-discard')?.addEventListener('click', async () => {
   const urls = Array.from(checkboxes).map(cb => cb.value);
 
   if (urls.length === 0) {
-    alert(chrome.i18n.getMessage('pendingPagesEmpty'));
+    const statusDiv = document.getElementById('mainStatus');
+    if (statusDiv) {
+      showSuccess(statusDiv, getMessage('pendingPagesEmpty') || 'No items selected.');
+    }
     return;
   }
 

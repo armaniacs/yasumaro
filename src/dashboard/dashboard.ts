@@ -94,7 +94,8 @@ const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputEl
 const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
 const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
-const testConnectionBtn = document.getElementById('testConnectionBtn') as HTMLButtonElement | null;
+const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
+const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
 const statusDiv = document.getElementById('status') as HTMLElement;
 
 const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement> = {
@@ -157,38 +158,35 @@ async function handleSaveOnly(): Promise<void> {
   statusDiv.className = 'success';
 }
 
-async function handleTestOnly(): Promise<void> {
-  if (!testConnectionBtn) return;
+async function handleTestObsidian(): Promise<void> {
+  if (!testObsidianBtn) return;
 
   statusDiv.innerHTML = '';
   statusDiv.className = '';
   statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  testConnectionBtn.disabled = true;
+  testObsidianBtn.disabled = true;
   try {
     const testResult = await chrome.runtime.sendMessage({
-      type: 'TEST_CONNECTIONS',
+      type: 'TEST_OBSIDIAN',
       payload: {}
-    }) as { obsidian?: { success: boolean; message: string }; ai?: { success: boolean; message: string } };
+    }) as { obsidian?: { success: boolean; message: string } };
 
     const obsidianResult = testResult?.obsidian || { success: false, message: 'No response' };
-    const aiResult = testResult?.ai || { success: false, message: 'No response' };
 
-    // ステータスエリアをクリア
     statusDiv.innerHTML = '';
 
-    // Obsidian接続結果
     const obsidianStatus = document.createElement('div');
     obsidianStatus.style.marginBottom = '8px';
     const obsidianLabel = document.createElement('strong');
-    obsidianLabel.textContent = '📦 Obsidian: ';
+    obsidianLabel.textContent = 'Obsidian: ';
     obsidianStatus.appendChild(obsidianLabel);
     const obsidianSpan = document.createElement('span');
     if (obsidianResult.success) {
-      obsidianSpan.textContent = '✅ ' + (getMessage('connectionSuccess') || '接続成功');
+      obsidianSpan.textContent = getMessage('connectionSuccess') || '接続成功';
       obsidianSpan.style.color = '#2E7D32';
     } else {
-      obsidianSpan.textContent = '❌ ' + obsidianResult.message;
+      obsidianSpan.textContent = obsidianResult.message;
       obsidianSpan.style.color = '#D32F2F';
     }
     obsidianStatus.appendChild(obsidianSpan);
@@ -207,29 +205,55 @@ async function handleTestOnly(): Promise<void> {
       statusDiv.appendChild(link);
     }
 
-    // AI接続結果
+    statusDiv.className = obsidianResult.success ? 'success' : 'error';
+  } catch (e) {
+    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    statusDiv.className = 'error';
+  } finally {
+    testObsidianBtn.disabled = false;
+  }
+}
+
+async function handleTestAi(): Promise<void> {
+  if (!testAiBtn) return;
+
+  statusDiv.innerHTML = '';
+  statusDiv.className = '';
+  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+
+  testAiBtn.disabled = true;
+  try {
+    const testResult = await chrome.runtime.sendMessage({
+      type: 'TEST_AI',
+      payload: {}
+    }) as { ai?: { success: boolean; message: string } };
+
+    const aiResult = testResult?.ai || { success: false, message: 'No response' };
+
+    statusDiv.innerHTML = '';
+
     const aiStatus = document.createElement('div');
     aiStatus.style.marginBottom = '8px';
     const aiLabel = document.createElement('strong');
-    aiLabel.textContent = '🤖 AI: ';
+    aiLabel.textContent = 'AI: ';
     aiStatus.appendChild(aiLabel);
     const aiSpan = document.createElement('span');
     if (aiResult.success) {
-      aiSpan.textContent = '✅ ' + (getMessage('connectionSuccess') || '接続成功');
+      aiSpan.textContent = getMessage('connectionSuccess') || '接続成功';
       aiSpan.style.color = '#2E7D32';
     } else {
-      aiSpan.textContent = '❌ ' + aiResult.message;
+      aiSpan.textContent = aiResult.message;
       aiSpan.style.color = '#D32F2F';
     }
     aiStatus.appendChild(aiSpan);
     statusDiv.appendChild(aiStatus);
 
-    statusDiv.className = (obsidianResult.success && aiResult.success) ? 'success' : 'error';
+    statusDiv.className = aiResult.success ? 'success' : 'error';
   } catch (e) {
     statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
     statusDiv.className = 'error';
   } finally {
-    testConnectionBtn.disabled = false;
+    testAiBtn.disabled = false;
   }
 }
 
@@ -760,14 +784,18 @@ async function initHistoryPanel(): Promise<void> {
     container.className = 'tag-badges';
 
     tags.forEach(tag => {
-      const badge = document.createElement('span');
+      const badge = document.createElement('button');
+      badge.type = 'button';
       badge.className = 'tag-badge';
       badge.textContent = `#${tag}`;
+      badge.setAttribute('aria-label', getMessage('tagFilterAriaLabel', [tag]) || `#${tag}`);
 
       // アクティブなフィルターと同じタグの場合はハイライト
-      if (activeTagFilter === tag) {
+      const isActive = activeTagFilter === tag;
+      if (isActive) {
         badge.classList.add('filter-active');
       }
+      badge.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 
       // タグクリックでフィルター切り替え
       badge.addEventListener('click', (e) => {
@@ -1937,7 +1965,8 @@ function initDomainSearchPanel(): void {
 async function initDiagnosticsPanel(): Promise<void> {
   const storageStats = document.getElementById('diagStorageStats') as HTMLElement | null;
   const extInfo = document.getElementById('diagExtInfo') as HTMLElement | null;
-  const testConnectionBtn = document.getElementById('diagTestConnectionBtn') as HTMLButtonElement | null;
+  const diagTestObsidianBtn = document.getElementById('diagTestObsidianBtn') as HTMLButtonElement | null;
+  const diagTestAiBtn = document.getElementById('diagTestAiBtn') as HTMLButtonElement | null;
   const connectionResult = document.getElementById('diagConnectionResult') as HTMLElement | null;
   const obsidianSettingsEl = document.getElementById('diagObsidianSettings') as HTMLElement | null;
   const aiSettingsEl = document.getElementById('diagAiSettings') as HTMLElement | null;
@@ -2041,38 +2070,55 @@ async function initDiagnosticsPanel(): Promise<void> {
     connectionResult.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
   }
 
-  // Connection test
-  testConnectionBtn?.addEventListener('click', async () => {
+  // Obsidian 接続テスト
+  diagTestObsidianBtn?.addEventListener('click', async () => {
     if (!connectionResult) return;
-    testConnectionBtn.disabled = true;
+    diagTestObsidianBtn.disabled = true;
     connectionResult.textContent = getMessage('testing') || 'Testing...';
     connectionResult.className = 'diag-result';
 
     try {
       const testResult = await chrome.runtime.sendMessage({
-        type: 'TEST_CONNECTIONS',
+        type: 'TEST_OBSIDIAN',
         payload: {}
-      }) as { obsidian?: { success: boolean; message: string }; ai?: { success: boolean; message: string } };
+      }) as { obsidian?: { success: boolean; message: string } };
 
       const obsidian = testResult?.obsidian;
-      const ai = testResult?.ai;
-
-      const lines: string[] = [];
-      if (obsidian) {
-        lines.push(`Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`);
-      }
-      if (ai) {
-        lines.push(`AI: ${ai.success ? '✓' : '✗'} ${ai.message}`);
-      }
-
-      connectionResult.textContent = lines.join('\n') || getMessage('testComplete') || 'Test complete.';
-      const allOk = obsidian?.success && ai?.success;
-      connectionResult.style.color = allOk ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)';
+      connectionResult.textContent = obsidian
+        ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
+        : getMessage('testComplete') || 'Test complete.';
+      connectionResult.style.color = obsidian?.success ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)';
     } catch (e) {
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
       connectionResult.style.color = 'var(--color-danger, #ef4444)';
     } finally {
-      testConnectionBtn.disabled = false;
+      diagTestObsidianBtn.disabled = false;
+    }
+  });
+
+  // AI 接続テスト
+  diagTestAiBtn?.addEventListener('click', async () => {
+    if (!connectionResult) return;
+    diagTestAiBtn.disabled = true;
+    connectionResult.textContent = getMessage('testing') || 'Testing...';
+    connectionResult.className = 'diag-result';
+
+    try {
+      const testResult = await chrome.runtime.sendMessage({
+        type: 'TEST_AI',
+        payload: {}
+      }) as { ai?: { success: boolean; message: string } };
+
+      const ai = testResult?.ai;
+      connectionResult.textContent = ai
+        ? `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`
+        : getMessage('testComplete') || 'Test complete.';
+      connectionResult.style.color = ai?.success ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)';
+    } catch (e) {
+      connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
+      connectionResult.style.color = 'var(--color-danger, #ef4444)';
+    } finally {
+      diagTestAiBtn.disabled = false;
     }
   });
 }
@@ -2117,8 +2163,12 @@ function setHtmlLangDir(): void {
   });
 
   // 接続テストボタン（保存なし）
-  testConnectionBtn?.addEventListener('click', async () => {
-    await handleTestOnly();
+  testObsidianBtn?.addEventListener('click', async () => {
+    await handleTestObsidian();
+  });
+
+  testAiBtn?.addEventListener('click', async () => {
+    await handleTestAi();
   });
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }

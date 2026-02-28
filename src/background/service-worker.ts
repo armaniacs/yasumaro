@@ -41,7 +41,7 @@ const tabCache = new TabCache();
 HeaderDetector.initialize();
 
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'GET_PRIVACY_CACHE'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -81,8 +81,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             // 【パフォーマンス改善】: 必要な場合のみTabCache初期化
-            // messages that don't need tab cache: TEST_CONNECTIONS, CHECK_DOMAIN
-            if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'CHECK_DOMAIN') {
+            // messages that don't need tab cache: TEST_CONNECTIONS, TEST_OBSIDIAN, TEST_AI, CHECK_DOMAIN
+            if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'TEST_OBSIDIAN' && message.type !== 'TEST_AI' && message.type !== 'CHECK_DOMAIN') {
                 await tabCache.initialize();
             }
 
@@ -171,6 +171,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const obsidianResult = await obsidian.testConnection();
                 const aiResult = await aiClient.testConnection();
                 sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
+                return;
+            }
+
+            // Obsidian のみ接続テスト
+            if (message.type === 'TEST_OBSIDIAN') {
+                const obsidianResult = await obsidian.testConnection();
+                sendResponse({ success: true, obsidian: obsidianResult });
+                return;
+            }
+
+            // AI のみ接続テスト
+            if (message.type === 'TEST_AI') {
+                const aiResult = await aiClient.testConnection();
+                sendResponse({ success: true, ai: aiResult });
                 return;
             }
 

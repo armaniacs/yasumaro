@@ -11,6 +11,7 @@ import { loadSettingsToInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 import { exportSettings, importSettings, validateExportData, exportEncryptedSettings, importEncryptedSettings, saveEncryptedExportToFile, isEncryptedExport } from '../utils/settingsExportImport.js';
 import { setMasterPassword, verifyMasterPassword, isMasterPasswordSet, calculatePasswordStrength, validatePasswordRequirements, validatePasswordMatch } from '../utils/masterPassword.js';
+import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
 import { setupAIProviderChangeListener, updateAIProviderVisibility } from './settings/aiProvider.js';
 import { setupAllFieldValidations } from './settings/fieldValidation.js';
 import { setupSaveButtonListener } from './settings/settingsSaver.js';
@@ -375,7 +376,7 @@ function showPasswordModal(mode = 'set') {
     passwordModalMode = mode;
     // モーダルタイトルと説明を更新
     const titleKey = mode === 'change' ? 'changeMasterPassword' : 'setMasterPassword';
-    const descKey = mode === 'change' ? 'setMasterPasswordDesc' : 'setMasterPasswordDesc';
+    const descKey = mode === 'change' ? 'changeMasterPasswordDesc' : 'setMasterPasswordDesc';
     if (passwordModalTitle)
         passwordModalTitle.textContent = getMessage(titleKey);
     if (passwordModalDesc)
@@ -526,7 +527,10 @@ function closePasswordAuthModal() {
     pendingPasswordAction = null;
 }
 /**
- * パスワードを認証
+ * 【機能概要】: パスワードを認証
+ * 【実装方針】: checkRateLimitでレート制限チェック後、verifyMasterPasswordで認証
+ * 【テスト対応】: masterPassword-rateLimit.test.ts - 初回認証成功時、失敗回数が増加しない
+ * 🟢 信頼性レベル: 青信号（要件定義書のデータフローベース）
  */
 async function authenticatePassword() {
     if (!masterPasswordAuthInput)
@@ -539,11 +543,22 @@ async function authenticatePassword() {
         }
         return;
     }
+    // 【セキュリティ強化】レート制限チェック - 認証前に確認
+    const rateLimitResult = await checkRateLimit(password);
+    if (!rateLimitResult.success) {
+        if (passwordAuthError) {
+            passwordAuthError.textContent = rateLimitResult.error || 'Too many attempts.';
+            passwordAuthError.classList.add('visible');
+        }
+        return;
+    }
     const getStorageFn = async (keys) => {
         return chrome.storage.local.get(keys);
     };
     const result = await verifyMasterPassword(password, getStorageFn);
     if (result.success) {
+        // 【レート制限リセット】認証成功時に失敗回数をリセット
+        await resetFailedAttempts();
         closePasswordAuthModal();
         // 認証成功後にアクションを実行
         if (pendingPasswordAction) {
@@ -551,6 +566,8 @@ async function authenticatePassword() {
         }
     }
     else {
+        // 【失敗記録】認証失敗時に失敗回数を記録
+        await recordFailedAttempt();
         if (passwordAuthError) {
             passwordAuthError.textContent = getMessage('passwordIncorrect') || result.error || 'Incorrect password.';
             passwordAuthError.classList.add('visible');
@@ -566,14 +583,19 @@ if (masterPasswordEnabled && masterPasswordOptions) {
             showPasswordModal('set');
         }
         else {
-            // マスターパスワードを削除
-            await chrome.storage.local.remove([
-                'master_password_enabled',
-                'master_password_salt',
-                'master_password_hash'
-            ]);
-            masterPasswordOptions.classList.add('hidden');
-            showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+            // チェックを一旦元に戻して認証待ち状態にする
+            masterPasswordEnabled.checked = true;
+            // 認証成功後にのみマスターパスワードを削除
+            showPasswordAuthModal('export', async () => {
+                await chrome.storage.local.remove([
+                    'master_password_enabled',
+                    'master_password_salt',
+                    'master_password_hash'
+                ]);
+                masterPasswordEnabled.checked = false;
+                masterPasswordOptions.classList.add('hidden');
+                showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+            });
         }
     });
 }
@@ -701,9 +723,7 @@ function setHtmlLangDir() {
     else {
         document.documentElement.dir = 'ltr';
     }
-    console.log(`[Popup] Set HTML lang="${locale}" dir="${document.documentElement.dir}"`);
 }
-console.log('[Popup] Starting initialization...');
 // Set HTML lang and dir attributes first (before any DOM operations)
 try {
     setHtmlLangDir();
@@ -712,9 +732,7 @@ catch (error) {
     console.error('[Popup] Error setting HTML lang/dir:', error);
 }
 try {
-    console.log('[Popup] Calling initNavigation...');
     initNavigation();
-    console.log('[Popup] initNavigation complete');
 }
 catch (error) {
     console.error('[Popup] Error in initNavigation:', error);
@@ -726,17 +744,13 @@ catch (error) {
     console.error('[Popup] Error in initTabNavigation:', error);
 }
 try {
-    console.log('[Popup] Calling initDomainFilter...');
     initDomainFilter();
-    console.log('[Popup] initDomainFilter complete');
 }
 catch (error) {
     console.error('[Popup] Error in initDomainFilter:', error);
 }
 try {
-    console.log('[Popup] Calling initPrivacySettings...');
     initPrivacySettings();
-    console.log('[Popup] initPrivacySettings complete');
 }
 catch (error) {
     console.error('[Popup] Error in initPrivacySettings:', error);
@@ -746,7 +760,6 @@ async function initCustomPromptFeature() {
     try {
         const settings = await getSettings();
         initCustomPromptManager(settings);
-        console.log('[Popup] initCustomPromptManager complete');
     }
     catch (error) {
         console.error('[Popup] Error in initCustomPromptManager:', error);
@@ -754,9 +767,7 @@ async function initCustomPromptFeature() {
 }
 initCustomPromptFeature();
 try {
-    console.log('[Popup] Calling load...');
     load();
-    console.log('[Popup] load complete');
 }
 catch (error) {
     console.error('[Popup] Error in load:', error);
@@ -769,5 +780,5 @@ setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScr
 if (saveBtn) {
     setupSaveButtonListener(saveBtn, statusDiv, protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, settingsMapping);
 }
-console.log('[Popup] Initialization sequence complete');
+;
 //# sourceMappingURL=popup.js.map

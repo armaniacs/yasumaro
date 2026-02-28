@@ -581,8 +581,20 @@
     "exportSettings": {
         "message": "エクスポート"
     },
+    "exportTitle": {
+        "message": "設定のエクスポート"
+    },
+    "exportDesc": {
+        "message": "現在の設定をJSONファイルに保存します。"
+    },
     "importSettings": {
         "message": "インポート"
+    },
+    "importTitle": {
+        "message": "設定のインポート"
+    },
+    "importDesc": {
+        "message": "以前にエクスポートしたJSONファイルから設定を復元します。"
     },
     "settingsExported": {
         "message": "設定をエクスポートしました"
@@ -779,6 +791,9 @@
     },
     "setMasterPasswordDesc": {
         "message": "マスターパスワードを作成して設定を保護します。このパスワードは復元できません。"
+    },
+    "changeMasterPasswordDesc": {
+        "message": "変更するには現在のマスターパスワードを入力してください。"
     },
     "masterPassword": {
         "message": "マスターパスワード"
@@ -1220,6 +1235,12 @@
     "testConnectionBtn": {
         "message": "接続テスト"
     },
+    "testObsidianBtn": {
+        "message": "Obsidian テスト"
+    },
+    "testAiBtn": {
+        "message": "AI テスト"
+    },
     "tagEditTitle": {
         "message": "タグを編集"
     },
@@ -1237,6 +1258,10 @@
     },
     "editTags": {
         "message": "タグを編集"
+    },
+    "tagFilterAriaLabel": {
+        "message": "タグ #$TAG$ でフィルター",
+        "placeholders": { "tag": { "content": "$1" } }
     },
     "saveTagError": {
         "message": "タグの保存に失敗しました"

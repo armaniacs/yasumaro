@@ -3,6 +3,14 @@
  * Sanitization and Error Logging Utility
  * Stores logs in chrome.storage.local with 7-day retention policy.
  */
+/**
+ * 【機能概要】: 環境判定関数
+ * 【実装方針】: process.env.NODE_ENVでdevelopmentかどうかを判定
+ * 【テスト対応】: logger-production.test.ts
+ * 🟡 信頼性レベル: 黄信号（環境変数による判定は一般的なパターンによる）
+ * @returns {boolean} development環境の場合はtrue
+ */
+export declare const isDevelopment: () => boolean;
 export declare const LogType: {
     readonly INFO: "INFO";
     readonly WARN: "WARN";

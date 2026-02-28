@@ -51,6 +51,9 @@ Object.defineProperty(global, 'CryptoKey', {
 const localStorage: Record<string, any> = {};
 const syncStorage: Record<string, any> = {};
 
+// セッションストレージ（ephemeral）
+const sessionStorage: Record<string, any> = {};
+
 // Chrome Storage Mock
 const chromeStorageMock: ChromeStorageMock = {
   local: {
@@ -92,6 +95,45 @@ const chromeStorageMock: ChromeStorageMock = {
       return Promise.resolve();
     }),
   },
+  session: {
+    get: jest.fn<Promise<Record<string, any>>, [string | string[] | null | undefined]>(
+      (keys?: string | string[] | null) => {
+        let result: Record<string, any> = {};
+
+        if (keys === null || keys === undefined) {
+          result = { ...sessionStorage };
+        } else if (Array.isArray(keys)) {
+          keys.forEach((key) => {
+            if (key in sessionStorage) {
+              result[key] = sessionStorage[key];
+            }
+          });
+        } else if (typeof keys === 'string') {
+          if (keys in sessionStorage) {
+            result[keys] = sessionStorage[keys];
+          }
+        }
+
+        return Promise.resolve(result);
+      }
+    ),
+    set: jest.fn<Promise<void>, [Record<string, any>]>((items) => {
+      Object.assign(sessionStorage, items);
+      return Promise.resolve();
+    }),
+    remove: jest.fn<Promise<void>, [string | string[]]>((keys) => {
+      if (Array.isArray(keys)) {
+        keys.forEach((key) => delete sessionStorage[key]);
+      } else {
+        delete sessionStorage[keys];
+      }
+      return Promise.resolve();
+    }),
+    clear: jest.fn<Promise<void>, []>(() => {
+      Object.keys(sessionStorage).forEach((key) => delete sessionStorage[key]);
+      return Promise.resolve();
+    }),
+  },
 };
 
 // Chrome Runtime Mock
@@ -111,6 +153,7 @@ const chromeRuntimeMock: ChromeRuntimeMock = {
 (global as any).chrome = {
   storage: {
     local: chromeStorageMock.local,
+    session: chromeStorageMock.session,
     sync: {
       get: jest.fn<Promise<Record<string, any>>, any[]>((keys?: any) => {
         let result: Record<string, any> = {};
@@ -369,9 +412,14 @@ beforeEach(() => {
   // ストレージのクリア
   Object.keys(localStorage).forEach((key) => delete localStorage[key]);
   Object.keys(syncStorage).forEach((key) => delete syncStorage[key]);
+  Object.keys(sessionStorage).forEach((key) => delete sessionStorage[key]);
 });
 
 afterEach(() => {
   // DOMのリセット
   document.body.innerHTML = '';
 });
+
+// 【モック設定】alertとconfirmをグローバルに設定
+global.alert = jest.fn(() => {});
+global.confirm = jest.fn(() => false); // デフォルトでキャンセル

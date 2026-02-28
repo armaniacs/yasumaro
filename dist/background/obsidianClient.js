@@ -3,6 +3,7 @@ import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from './Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
+import { redactSensitiveData } from '../utils/redaction.js';
 /**
  * Problem #2: HTTPヘッダーの固定部分を定数化
  * 毎回のConfig生成で同じオブジェクトを作成するのを防ぐ
@@ -88,10 +89,13 @@ export class ObsidianClient {
         });
         // APIキーが空文字列、undefined、null、またはオブジェクト（暗号化失敗）の場合
         if (!apiKey || apiKey === '' || typeof apiKey === 'object') {
-            console.error('[ObsidianClient] API Key is missing or invalid!', {
-                apiKey: typeof apiKey,
-                fullKey: apiKey
-            });
+            // 【セキュリティ強化】redactionを適用してAPIキー情報を保護
+            // 【実装方針】: redactSensitiveDataでfullKeyをredactionしてから出力
+            // 【テスト対応】: obsidianClient-security.test.ts
+            // 🟢 信頼性レベル: 青信号（要件定義書の機密情報保護要件通り）
+            console.error('[ObsidianClient] API Key is missing or invalid!', redactSensitiveData({
+                apiKey: typeof apiKey
+            }));
             addLog(LogType.WARN, 'Obsidian API Key is missing or invalid', { apiKey: typeof apiKey });
             throw new Error('Error: API key is missing. Please check your Obsidian settings.');
         }
@@ -133,7 +137,7 @@ export class ObsidianClient {
     }
     async appendToDailyNote(content) {
         // ロックを取得して競合を回避
-        await globalWriteMutex.acquire();
+        await this.mutex.acquire();
         try {
             const { baseUrl, headers, settings } = await this._getConfig();
             // Settings型は StorageKeys でアクセス可能
@@ -152,7 +156,7 @@ export class ObsidianClient {
         }
         finally {
             // 確実にロックを解放
-            globalWriteMutex.release();
+            this.mutex.release();
         }
     }
     async _fetchExistingContent(url, headers) {

@@ -744,7 +744,7 @@ async function updateUrlTimestamp(url) {
 export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
     const urlArray = Array.from(urlMap.keys());
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
         const existingMap = new Map();
         for (const e of (currentEntries || [])) {
@@ -758,6 +758,8 @@ export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
                 entry.recordType = existing.recordType;
             if (existing?.maskedCount !== undefined)
                 entry.maskedCount = existing.maskedCount;
+            if (existing?.tags !== undefined)
+                entry.tags = existing.tags;
             entries.push(entry);
         }
         return entries;

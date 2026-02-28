@@ -5,7 +5,7 @@ import { showPreview, initializeModalEvents } from './sanitizePreview.js';
 import { showSpinner, hideSpinner } from './spinner.js';
 import { startAutoCloseTimer } from './autoClose.js';
 import { getCurrentTab, isRecordable } from './tabUtils.js';
-import { showError, formatSuccessMessage } from './errorUtils.js';
+import { showError, showSuccess, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
@@ -606,7 +606,10 @@ document.getElementById('btn-discard')?.addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('.pending-checkbox:checked');
     const urls = Array.from(checkboxes).map(cb => cb.value);
     if (urls.length === 0) {
-        alert(chrome.i18n.getMessage('pendingPagesEmpty'));
+        const statusDiv = document.getElementById('mainStatus');
+        if (statusDiv) {
+            showSuccess(statusDiv, getMessage('pendingPagesEmpty') || 'No items selected.');
+        }
         return;
     }
     if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {

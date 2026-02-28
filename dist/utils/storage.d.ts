@@ -194,6 +194,7 @@ export interface SavedUrlEntry {
     timestamp: number;
     recordType?: string;
     maskedCount?: number;
+    tags?: string[];
 }
 /**
  * Get the list of saved URLs with LRU eviction

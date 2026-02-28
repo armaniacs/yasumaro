@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.5] - 2026-03-01
+
+### Security
+- **APIキー値のコンソール露出を修正** ([obsidianClient.ts](src/background/obsidianClient.ts))
+  - `console.error` に渡していた `fullKey: apiKey`（実値）を削除
+  - `typeof apiKey` のみを出力するよう変更し、APIキー漏洩リスクを排除
+- **マスターパスワード無効化時の認証バイパスを修正** ([popup.ts](src/popup/popup.ts))
+  - パスワード削除前に認証なしでストレージを消去できた問題を修正
+  - 無効化操作に `showPasswordAuthModal` による認証を要求するよう変更
+
+### Added
+- **i18nキー追加** ([_locales/en/messages.json](_locales/en/messages.json), [_locales/ja/messages.json](_locales/ja/messages.json))
+  - `exportTitle`, `exportDesc`, `importTitle`, `importDesc` を en/ja 両方に追加
+  - `changeMasterPasswordDesc` を en/ja 両方に追加（パスワード変更モーダルの説明文）
+  - `importPasswordRequired` を en に追加（jaのみ定義されていたキーを補完）
+  - `tagFilterAriaLabel` を en/ja 両方に追加（タグバッジのアクセシビリティラベル）
+
+### Changed
+- **接続テストボタンを Obsidian / AI 別々に分離** ([dashboard.html](src/dashboard/dashboard.html), [dashboard.ts](src/dashboard/dashboard.ts), [service-worker.ts](src/background/service-worker.ts))
+  - 「接続テスト」1ボタンを「Obsidian テスト」「AI テスト」2ボタンに分割
+  - 設定パネル・診断パネル両方で独立したテストが可能に
+  - `TEST_OBSIDIAN` / `TEST_AI` メッセージタイプをサービスワーカーに追加
+- **タグバッジをインタラクティブ要素として適切にマークアップ** ([dashboard.ts](src/dashboard/dashboard.ts))
+  - `<span>` → `<button type="button">` に変更し、キーボードアクセシビリティを向上
+  - `aria-pressed` 属性でフィルターの on/off 状態をスクリーンリーダーに通知
+  - `aria-label` を i18n キー `tagFilterAriaLabel` 経由に変更（日本語固定から多言語対応へ）
+- **デバッグログの本番コード除去** ([popup.ts](src/popup/popup.ts))
+  - 初期化フローの `console.log` 11箇所を削除
+- **ブラウザ標準ダイアログの廃止** ([main.ts](src/popup/main.ts))
+  - 未選択状態での `alert()` を `showSuccess()` によるインライン表示に置換
+
+### Fixed
+- **新規記録追加時に既存エントリのタグが消える問題を修正** ([storage.ts](src/utils/storage.ts))
+  - `storage.ts` の `setSavedUrlsWithTimestamps` で `tags` フィールドを引き継いでいなかったバグを修正
+  - `recordType` / `maskedCount` と同様に `existing?.tags` を引き継ぐよう変更
+  - `SavedUrlEntry` インターフェースに `tags?: string[]` フィールドを追加
+- **マスターパスワード変更モーダルの説明文バグ** ([popup.ts](src/popup/popup.ts))
+  - `mode === 'change'` 時も `setMasterPasswordDesc` を表示していたコピペバグを修正
+  - 変更モードでは `changeMasterPasswordDesc` を使用するよう修正
+- **セキュリティ: redaction深度超過時のデータ漏洩を修正** ([redaction.js](src/utils/redaction.js))
+  - `MAX_RECURSION_DEPTH` 超過時に元データをそのまま返していた問題を修正
+  - `'[REDACTED: too deep]'` を返すよう変更し、深いネスト構造によるredactionバイパスを防止
+- **メモリリーク防止: ログバッファに上限を追加** ([logger.ts](src/utils/logger.ts))
+  - `pendingLogs` バッファが無制限に成長する可能性があった問題を修正
+  - `MAX_PENDING_LOGS = 100` を追加し、超過時は古いエントリを破棄
+- **テスト: ObsidianClientのMutex依存性注入を修正** ([obsidianClient.ts](src/background/obsidianClient.ts))
+  - `appendToDailyNote` 内で `globalWriteMutex` をハードコードしていた問題を修正
+  - `this.mutex` を使用するよう変更し、テスト時のカスタムMutex注入が正しく機能するように
+
+### Refactored
+- **APIキーマージロジックの共通化** ([settingsExportImport.ts](src/utils/settingsExportImport.ts))
+  - 暗号化インポートと通常インポートで重複していたAPIキー保持ロジックを `mergeWithExistingApiKeys()` に抽出
+- **rateLimiter / redaction を TypeScript 化** ([src/utils/](src/utils/))
+  - `rateLimiter.js` → `rateLimiter.ts`（`RateLimitResult` インターフェース追加）
+  - `redaction.js` → `redaction.ts`（完全型アノテーション付き）
+
+### Dependencies
+- **minimatch の高脆弱性を修正** (`npm audit fix`)
+  - ReDoS 脆弱性 3件（GHSA-3ppc-4f35-3m26, GHSA-7r86-cg39-jmmj, GHSA-23c5-xmqv-rm74）を解消
+
 ## [4.0.4] - 2026-02-28
 It is released candidate as version 4.1.0
 
@@ -1455,15 +1515,4 @@ It is released candidate as version 4.1.0
 
 ## [1.0.0] - Initial Release
 Original idea and codebase was introduced in this article: https://note.com/izuru_tcnkc/n/nd0a758483901
-## [Unreleased]
-
-### Added
-- プライベートページ保存時の警告ダイアログ機能
-- 保留中のページ一括管理UI
-- ホワイトリストへのドメイン/パス追加機能
-- PENDING_PAGES storage key
-
-### Changed
-- RecordingData インターフェースに requireConfirmation フラグを追加
-- RecordingResult インターフェースに confirmationRequired を追加
 

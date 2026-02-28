@@ -866,6 +866,7 @@ export interface SavedUrlEntry {
     timestamp: number;
     recordType?: string;
     maskedCount?: number;
+    tags?: string[];
 }
 
 /**
@@ -944,7 +945,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
@@ -956,6 +957,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             const entry: SavedUrlEntry = { url, timestamp };
             if (existing?.recordType !== undefined) entry.recordType = existing.recordType;
             if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
+            if (existing?.tags !== undefined) entry.tags = existing.tags;
             entries.push(entry);
         }
         return entries;

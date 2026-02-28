@@ -27,6 +27,17 @@ function sanitizeSettingsForExport(settings) {
     return sanitized;
 }
 /**
+ * インポート設定とAPIキーをマージする（APIキー除外時の共通処理）
+ */
+async function mergeWithExistingApiKeys(importedSettings) {
+    const existingSettings = await getSettings();
+    const merged = { ...importedSettings };
+    for (const field of API_KEY_FIELDS) {
+        merged[field] = existingSettings[field];
+    }
+    return merged;
+}
+/**
  * Generate filename for export with timestamp
  * @returns {string} filename for settings export
  */
@@ -121,15 +132,7 @@ export async function importEncryptedSettings(jsonData, masterPassword) {
         // APIキーが除外されている場合
         if (parsed.apiKeyExcluded) {
             console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
-            const existingSettings = await getSettings();
-            const { obsidian_api_key, gemini_api_key, openai_api_key, openai_2_api_key, ...imported } = parsed.settings;
-            const merged = {
-                ...imported,
-                obsidian_api_key: existingSettings.obsidian_api_key,
-                gemini_api_key: existingSettings.gemini_api_key,
-                openai_api_key: existingSettings.openai_api_key,
-                openai_2_api_key: existingSettings.openai_2_api_key,
-            };
+            const merged = await mergeWithExistingApiKeys(parsed.settings);
             await saveSettings(merged);
             return merged;
         }
@@ -262,34 +265,25 @@ export function validateExportData(data) {
 export async function importSettings(jsonData) {
     try {
         const parsed = JSON.parse(jsonData);
-        // 署名があるかチェック
+        // 【セキュリティ強化】署名があるかチェック
+        // 【実装方針】: 署名なしファイルは即時拒否（警告ダイアログなし）
+        // 【テスト対応】: settingsExportImport-signature.test.ts
+        // 🟢 信頼性レベル: 青信号（要件定義書の署名強化仕様通り）
         if (!parsed.signature) {
-            console.warn('Imported settings has no signature. Proceeding without verification.');
-            // 署名がない場合はユーザーに警告し、確認を求める
-            const warningMsg = chrome.i18n.getMessage('importNoSignatureWarning') ||
-                '⚠️ This settings file contains no signature.\n\n' +
-                    'Signatures are used to prevent settings file tampering.\n' +
-                    'It is recommended not to import files from untrusted sources.\n\n' +
-                    'Do you want to continue importing?';
-            const proceed = confirm(warningMsg);
-            if (!proceed) {
-                console.info('Import cancelled by user due to missing signature.');
-                return null;
-            }
-            // 旧形式のエクスポートファイルとの互換性のため、署名検証なしで続行
+            console.error('Import rejected: Missing signature.');
+            alert('設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。');
+            return null; // 旧形式の互換性を削除
         }
-        else {
-            // 署名検証
-            const hmacSecret = await getOrCreateHmacSecret();
-            // 署名を除いてハッシュ計算
-            const { signature, ...dataForVerification } = parsed;
-            const dataJson = JSON.stringify(dataForVerification, null, 2);
-            const computedSignature = await computeHMAC(hmacSecret, dataJson);
-            if (signature !== computedSignature) {
-                console.error('Signature verification failed. Settings may have been tampered with.');
-                alert('設定ファイルの署名検証に失敗しました。ファイルが改ざんされている可能性があります。');
-                return null;
-            }
+        // 署名検証
+        const hmacSecret = await getOrCreateHmacSecret();
+        // 署名を除いてハッシュ計算
+        const { signature, ...dataForVerification } = parsed;
+        const dataJson = JSON.stringify(dataForVerification, null, 2);
+        const computedSignature = await computeHMAC(hmacSecret, dataJson);
+        if (signature !== computedSignature) {
+            console.error('Signature verification failed. Settings may have been tampered with.');
+            alert('設定ファイルの署名検証に失敗しました。ファイルが改ざんされている可能性があります。');
+            return null;
         }
         // 構造検証（既存のvalidateExportDataを使用）
         if (!validateExportData(parsed)) {
@@ -298,16 +292,7 @@ export async function importSettings(jsonData) {
         // APIキーが除外されている場合、インポートしない
         if (parsed.apiKeyExcluded) {
             console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
-            // 既存の設定を取得し、APIキーのみ維持
-            const existingSettings = await getSettings();
-            const { obsidian_api_key, gemini_api_key, openai_api_key, openai_2_api_key, ...imported } = parsed.settings;
-            const merged = {
-                ...imported,
-                obsidian_api_key: existingSettings.obsidian_api_key,
-                gemini_api_key: existingSettings.gemini_api_key,
-                openai_api_key: existingSettings.openai_api_key,
-                openai_2_api_key: existingSettings.openai_2_api_key,
-            };
+            const merged = await mergeWithExistingApiKeys(parsed.settings);
             await saveSettings(merged);
             return merged;
         }

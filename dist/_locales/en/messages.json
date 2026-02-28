@@ -581,8 +581,20 @@
     "exportSettings": {
         "message": "Export"
     },
+    "exportTitle": {
+        "message": "Export Settings"
+    },
+    "exportDesc": {
+        "message": "Save your current settings to a JSON file."
+    },
     "importSettings": {
         "message": "Import"
+    },
+    "importTitle": {
+        "message": "Import Settings"
+    },
+    "importDesc": {
+        "message": "Restore settings from a previously exported JSON file."
     },
     "settingsExported": {
         "message": "Settings exported successfully"
@@ -780,6 +792,9 @@
     "setMasterPasswordDesc": {
         "message": "Create a master password to protect your settings. This password cannot be recovered."
     },
+    "changeMasterPasswordDesc": {
+        "message": "Enter your current master password to change it."
+    },
     "masterPassword": {
         "message": "Master Password"
     },
@@ -818,6 +833,9 @@
     },
     "passwordRequired": {
         "message": "Please enter your master password."
+    },
+    "importPasswordRequired": {
+        "message": "This settings file is encrypted. You need to enter your master password to decrypt and import the settings.\n\nDo you want to continue?"
     },
     "privacyDialogBody": {
         "message": "A privacy concern was detected on this page ($REASON$). Save anyway?",
@@ -1217,6 +1235,12 @@
     "testConnectionBtn": {
         "message": "Test Connection"
     },
+    "testObsidianBtn": {
+        "message": "Test Obsidian"
+    },
+    "testAiBtn": {
+        "message": "Test AI"
+    },
     "tagEditTitle": {
         "message": "Edit Tags"
     },
@@ -1234,6 +1258,10 @@
     },
     "editTags": {
         "message": "Edit Tags"
+    },
+    "tagFilterAriaLabel": {
+        "message": "Filter by tag #$TAG$",
+        "placeholders": { "tag": { "content": "$1" } }
     },
     "saveTagError": {
         "message": "Failed to save tags"
