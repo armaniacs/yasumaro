@@ -1,8 +1,41 @@
 /**
  * logger.ts
- * Sanitization and Error Logging Utility
+ * Structured Logging Utility with Error Codes
  * Stores logs in chrome.storage.local with 7-day retention policy.
  */
+export declare const ErrorCode: {
+    readonly STORAGE_READ_FAILURE: "STRG_RD_001";
+    readonly STORAGE_WRITE_FAILURE: "STRG_WR_001";
+    readonly STORAGE_KEY_NOT_FOUND: "STRG_NF_001";
+    readonly STORAGE_MIGRATION_FAILURE: "STRG_MIG_001";
+    readonly CRYPTO_DECRYPTION_FAILURE: "CRPT_DEC_001";
+    readonly CRYPTO_ENCRYPTION_FAILURE: "CRPT_ENC_001";
+    readonly CRYPTO_KEY_DERIVE_FAILURE: "CRPT_KEY_001";
+    readonly CRYPTO_HASH_FAILURE: "CRPT_HSH_001";
+    readonly CRYPTO_HMAC_FAILURE: "CRPT_HMAC_001";
+    readonly API_REQUEST_FAILURE: "API_REQ_001";
+    readonly API_TIMEOUT: "API_TIM_001";
+    readonly API_RATE_LIMIT: "API_RL_001";
+    readonly API_AUTH_FAILURE: "API_AUTH_001";
+    readonly OBSIDIAN_CONNECT_FAILURE: "OBS_CONN_001";
+    readonly OBSIDIAN_SEND_FAILURE: "OBS_SEND_001";
+    readonly OBSIDIAN_RESPONSE_PARSE_FAILURE: "OBS_PARSE_001";
+    readonly CONTENT_EXTRACTION_FAILURE: "CONT_EXT_001";
+    readonly CONTENT_TRUNCATION: "CONT_TRUNC_001";
+    readonly PII_DETECTION_FAILURE: "PII_DET_001";
+    readonly PII_REDACTION_FAILURE: "PII_RED_001";
+    readonly PRIVACY_MODE_VIOLATION: "PRIV_VIOL_001";
+    readonly INVALID_INPUT: "VAL_INP_001";
+    readonly MISSING_REQUIRED_FIELD: "VAL_REQ_001";
+    readonly SETTINGS_IMPORT_FAILURE: "SET_IMP_001";
+    readonly SETTINGS_EXPORT_FAILURE: "SET_EXP_001";
+    readonly SETTINGS_SIGNATURE_FAILURE: "SET_SIG_001";
+    readonly API_KEY_EXCLUDED: "SET_AK_EXCL_001";
+    readonly API_KEY_MERGE_CONFLICT: "SET_AK_MRG_001";
+    readonly UNKNOWN_ERROR: "UNKN_001";
+    readonly INTERNAL_ERROR: "INT_001";
+};
+export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
 /**
  * 【機能概要】: 環境判定関数
  * 【実装方針】: process.env.NODE_ENVでdevelopmentかどうかを判定
@@ -24,7 +57,10 @@ export interface LogEntry {
     timestamp: number;
     type: LogTypeValues;
     message: string;
+    errorCode?: ErrorCodeValues;
     details?: Record<string, any>;
+    source?: string;
+    userId?: string;
 }
 /**
  * 【パフォーマンス改善】保留中のログをstorageにフラッシュする
@@ -55,4 +91,42 @@ export declare function getLogs(): Promise<LogEntry[]>;
  * Clear all logs
  */
 export declare function clearLogs(): Promise<void>;
+/**
+ * 構造化されたINFOログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export declare function logInfo(message: string, details?: Record<string, any>, source?: string): Promise<void>;
+/**
+ * 構造化されたWARNログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} [errorCode] - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export declare function logWarn(message: string, details?: Record<string, any>, errorCode?: ErrorCodeValues, source?: string): Promise<void>;
+/**
+ * 構造化されたERRORログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} errorCode - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export declare function logError(message: string, details?: Record<string, any>, errorCode?: ErrorCodeValues, source?: string): Promise<void>;
+/**
+ * 構造化されたDEBUGログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export declare function logDebug(message: string, details?: Record<string, any>, source?: string): Promise<void>;
+/**
+ * 構造化されたSANITIZEログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} [errorCode] - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export declare function logSanitize(message: string, details?: Record<string, any>, errorCode?: ErrorCodeValues, source?: string): Promise<void>;
 //# sourceMappingURL=logger.d.ts.map

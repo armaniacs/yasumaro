@@ -1,8 +1,63 @@
 /**
  * logger.ts
- * Sanitization and Error Logging Utility
+ * Structured Logging Utility with Error Codes
  * Stores logs in chrome.storage.local with 7-day retention policy.
  */
+
+// エラーコード定義（SRE/Logging改善 #8）
+export const ErrorCode = {
+    // ストレージ関連
+    STORAGE_READ_FAILURE: 'STRG_RD_001',
+    STORAGE_WRITE_FAILURE: 'STRG_WR_001',
+    STORAGE_KEY_NOT_FOUND: 'STRG_NF_001',
+    STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+
+    // 暗号化関連
+    CRYPTO_DECRYPTION_FAILURE: 'CRPT_DEC_001',
+    CRYPTO_ENCRYPTION_FAILURE: 'CRPT_ENC_001',
+    CRYPTO_KEY_DERIVE_FAILURE: 'CRPT_KEY_001',
+    CRYPTO_HASH_FAILURE: 'CRPT_HSH_001',
+    CRYPTO_HMAC_FAILURE: 'CRPT_HMAC_001',
+
+    // API通信関連
+    API_REQUEST_FAILURE: 'API_REQ_001',
+    API_TIMEOUT: 'API_TIM_001',
+    API_RATE_LIMIT: 'API_RL_001',
+    API_AUTH_FAILURE: 'API_AUTH_001',
+
+    // Obsidian通信関連
+    OBSIDIAN_CONNECT_FAILURE: 'OBS_CONN_001',
+    OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001',
+    OBSIDIAN_RESPONSE_PARSE_FAILURE: 'OBS_PARSE_001',
+
+    // コンテンツ抽出関連
+    CONTENT_EXTRACTION_FAILURE: 'CONT_EXT_001',
+    CONTENT_TRUNCATION: 'CONT_TRUNC_001',
+
+    // PII/プライバシー関連
+    PII_DETECTION_FAILURE: 'PII_DET_001',
+    PII_REDACTION_FAILURE: 'PII_RED_001',
+    PRIVACY_MODE_VIOLATION: 'PRIV_VIOL_001',
+
+    // 入力検証関連
+    INVALID_INPUT: 'VAL_INP_001',
+    MISSING_REQUIRED_FIELD: 'VAL_REQ_001',
+
+    // 設定管理関連
+    SETTINGS_IMPORT_FAILURE: 'SET_IMP_001',
+    SETTINGS_EXPORT_FAILURE: 'SET_EXP_001',
+    SETTINGS_SIGNATURE_FAILURE: 'SET_SIG_001',
+
+    // APIキー管理関連
+    API_KEY_EXCLUDED: 'SET_AK_EXCL_001',
+    API_KEY_MERGE_CONFLICT: 'SET_AK_MRG_001',
+
+    // 汎用エラー
+    UNKNOWN_ERROR: 'UNKN_001',
+    INTERNAL_ERROR: 'INT_001'
+} as const;
+
+export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
 
 const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 7;
@@ -42,7 +97,10 @@ export interface LogEntry {
     timestamp: number;
     type: LogTypeValues;
     message: string;
+    errorCode?: ErrorCodeValues;
     details?: Record<string, any>;
+    source?: string; // ログ出力元モジュール
+    userId?: string; // ユーザー識別子（匿名化済み）
 }
 
 /**
@@ -184,10 +242,157 @@ export async function clearLogs(): Promise<void> {
 
 /**
  * Filter out logs older than RETENTION_DAYS
- * @param {LogEntry[]} logs 
+ * @param {LogEntry[]} logs
  * @returns {LogEntry[]}
  */
 function pruneLogs(logs: LogEntry[]): LogEntry[] {
     const cutoff = Date.now() - (RETENTION_DAYS * 24 * 60 * 60 * 1000);
     return logs.filter(log => log.timestamp > cutoff);
+}
+
+// 【SRE/Logging改善 #8】構造化ロギング便利関数
+
+/**
+ * 構造化されたログエントリを作成する（内部関数）
+ * @param {LogTypeValues} type - ログタイプ
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} [errorCode] - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ * @returns {LogEntry} ログエントリ
+ */
+function createStructuredLog(
+    type: LogTypeValues,
+    message: string,
+    details: Record<string, any> = {},
+    errorCode?: ErrorCodeValues,
+    source?: string
+): LogEntry {
+    return {
+        id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+        timestamp: Date.now(),
+        type,
+        message,
+        errorCode,
+        source,
+        details
+    };
+}
+
+/**
+ * 構造化されたINFOログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export async function logInfo(
+    message: string,
+    details: Record<string, any> = {},
+    source?: string
+): Promise<void> {
+    const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
+    await writeStructuredLog(entry);
+}
+
+/**
+ * 構造化されたWARNログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} [errorCode] - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export async function logWarn(
+    message: string,
+    details: Record<string, any> = {},
+    errorCode?: ErrorCodeValues,
+    source?: string
+): Promise<void> {
+    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, source);
+    await writeStructuredLog(entry);
+}
+
+/**
+ * 構造化されたERRORログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} errorCode - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export async function logError(
+    message: string,
+    details: Record<string, any> = {},
+    errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
+    source?: string
+): Promise<void> {
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
+    await writeStructuredLog(entry);
+
+    // 開発環境ではconsole.errorにも出力
+    if (isDevelopment()) {
+        console.error(`[${errorCode}] ${message}`, details);
+    }
+}
+
+/**
+ * 構造化されたDEBUGログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export async function logDebug(
+    message: string,
+    details: Record<string, any> = {},
+    source?: string
+): Promise<void> {
+    // 本番環境ではDEBUGログを出力しない
+    if (!isDevelopment()) {
+        return;
+    }
+    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, source);
+    await writeStructuredLog(entry);
+
+    // 開発環境ではconsole.debugにも出力
+    if (isDevelopment()) {
+        console.debug(`[DEBUG] ${message}`, details);
+    }
+}
+
+/**
+ * 構造化されたSANITIZEログを出力する
+ * @param {string} message - メッセージ
+ * @param {Record<string, any>} details - 詳細情報
+ * @param {ErrorCodeValues} [errorCode] - エラーコード
+ * @param {string} [source] - ログ出力元モジュール
+ */
+export async function logSanitize(
+    message: string,
+    details: Record<string, any> = {},
+    errorCode?: ErrorCodeValues,
+    source?: string
+): Promise<void> {
+    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
+    await writeStructuredLog(entry);
+}
+
+/**
+ * 構造化ログを書き込む（内部関数）
+ * @param {LogEntry} entry - ログエントリ
+ */
+async function writeStructuredLog(entry: LogEntry): Promise<void> {
+    try {
+        const { id, timestamp, type, message, errorCode, source, details } = entry;
+
+        // 既存のaddLog関数を使用（entryを分割して渡す）
+        await addLog(
+            type,
+            message,
+            {
+                ...details,
+                _errorCode: errorCode,
+                _source: source
+            }
+        );
+    } catch (e) {
+        console.error('Logger: Failed to write structured log', e);
+    }
 }

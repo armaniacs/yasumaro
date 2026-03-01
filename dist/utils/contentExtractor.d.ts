@@ -16,6 +16,7 @@ export declare function isExcludedElement(element: Element): boolean;
 /**
  * 要素のテキストスコアを計算
  * テキストの多さ、段落の数、リンク密度などに基づいてスコアを計算
+ * 【パフォーマンス最適化】DOM走査を一度に集約し、querySelectorAll呼び出しを削減
  */
 export declare function calculateTextScore(element: Element): number;
 /**

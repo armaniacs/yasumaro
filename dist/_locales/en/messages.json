@@ -1326,5 +1326,11 @@
     "tagCategory": {
         "message": "Tag Category",
         "description": "ARIA label for tag category select"
+    },
+    "hmacVerificationFailedConfirm": {
+        "message": "Settings file signature verification failed.\n\nReason: HMAC secret may have changed (extension update/reload, etc.).\n\nIf this is a trusted settings file, click \"OK\" to force import.\nIf not, click \"Cancel\"."
+    },
+    "importNoSignature": {
+        "message": "Settings file does not contain a signature. Only signed files can be imported."
     }
 }

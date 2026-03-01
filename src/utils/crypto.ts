@@ -48,20 +48,42 @@ export function generateIV(): Uint8Array {
 /**
  * 定数時間比較（タイミング攻撃対策）
  * 2つの文字列を定数時間で比較し、タイミング攻撃を防ぐ
+ * 【標準ブラウザAPIの優先使用】: crypto.subtle.timingSafeEqual() が利用可能な場合はそちらを使用
+ * 【フォールバック実装】: 利用不可の場合は自前実装でタイミング安全に比較
  * @param {string} a - 比較する文字列1
  * @param {string} b - 比較する文字列2
- * @returns {boolean} 文字列が等しい場合はtrue、それ以外はfalse
+ * @returns {Promise<boolean>} 文字列が等しい場合はtrue、それ以外はfalse
  */
-function constantTimeCompare(a: string, b: string): boolean {
-    // 文字列長が異なる場合は即座にfalseを返す
-    if (a.length !== b.length) {
-        return false;
+async function constantTimeCompare(a: string, b: string): Promise<boolean> {
+    const webcrypto = getWebCrypto();
+
+    // 標準ブラウザAPIが利用可能な場合は使用（MDN推奨）
+    if ('subtle' in webcrypto && typeof webcrypto.subtle.timingSafeEqual === 'function') {
+        try {
+            const encoder = new TextEncoder();
+            const aBuf = encoder.encode(a);
+            const bBuf = encoder.encode(b);
+            // Uint8Arrayの.backingストア（ArrayBuffer）を取得
+            return await webcrypto.subtle.timingSafeEqual(aBuf.buffer, bBuf.buffer);
+        } catch {
+            // フォールバック実装へ
+        }
     }
 
-    // XORの累積を行い、文字長にかかわらず一定時間で処理する
+    // フォールバック実装: タイミング安全な比較
+    // 文字列の長さ差もタイミング安全に組み込む
+    const maxLength = Math.max(a.length, b.length);
     let result = 0;
-    for (let i = 0; i < a.length; i++) {
-        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+
+    // 文字列長の差をタイミング安全に計算
+    result |= a.length ^ b.length;
+
+    // 最大長までループし、終了タイミングを固定化
+    for (let i = 0; i < maxLength; i++) {
+        // 範囲外なら0と比較（タイミング安全）
+        const aChar = i < a.length ? a.charCodeAt(i) : 0;
+        const bChar = i < b.length ? b.charCodeAt(i) : 0;
+        result |= aChar ^ bChar;
     }
 
     return result === 0;

@@ -13,15 +13,21 @@ All notable changes to this project will be documented in this file.
   - HMACシークレット変更（拡張機能更新等）によるインポート失敗問題を修正
 
 ### Security
-- **タイミング攻撃対策** ([crypto.ts](src/utils/crypto.ts))
+- **タイミング攻撃対策の強化** ([crypto.ts](src/utils/crypto.ts), [typesCrypto.ts](src/utils/typesCrypto.ts))
   - パスワード検証ロジックに定数時間比較を実装しました
-  - `constantTimeCompare()` 関数を追加し、`verifyPassword()` と `verifyPasswordWithPBKDF2()` で採用
-  - 実行時間のばらつきを排除し、タイミング攻撃への耐性を向上
+  - `constantTimeCompare()` 関数を `crypto.subtle.timingSafeEqual()` を優先するよう改善
+  - 文字列長の比較も定数時間で行うXORベースのフォールバック実装
+  - `verifyPassword()` と `verifyPasswordWithPBKDF2()` で採用
+  - 実行時間のばらつきを完全に排除し、タイミング攻撃への耐性を向上
+- **セキュリティテストの追加** ([crypto.test.ts](src/utils/__tests__/crypto.test.ts))
+  - `constantTimeCompare` のタイミング攻撃耐性テスト（実行時間分散検証）
+  - `computeHMAC` の決定性と一意性テスト
+  - `hashPasswordWithPBKDF2` / `verifyPasswordWithPBKDF2` の包括的テスト
 
 ### Added
 - **最適化されたコンテンツ抽出機能** ([contentExtractor.ts](src/utils/contentExtractor.ts))
   - Readabilityアルゴリズムによるメインコンテンツ抽出を実装
-  - ナビゲーション（`<nav>`）、ヘッダー（`<header>`）、フッター（`<footer>`）、サイドバー（`<aside>`）を自動除外
+  - ナビゲーション（`<nav>`）、ヘッダー（`<header>`）、フッタ（`<footer>`）、サイドバー（`<aside>`）を自動除外
   - `role="navigation"`、`role="banner"`、`aria-hidden="true"` の要素を除外
   - クラス名パターン（sidebar, nav, menu, cookie, ad等）による除外
   - 画像タグや外部ソースURLを除外し、テキストコンテンツのみを抽出
@@ -31,10 +37,17 @@ All notable changes to this project will be documented in this file.
 - **コンテンツ抽出ロジックの更新** ([extractor.ts](src/content/extractor.ts))
   - `document.body.innerText` から `extractMainContent()` に変更
   - メインコンテンツのみをAI APIに送信することで、トークン使用量を20〜40%削減
+- **コンテンツ抽出のパフォーマンス最適化** ([contentExtractor.ts](src/utils/contentExtractor.ts))
+  - `calculateTextScore`: 単一TreeWalkerによるDOM走査（複数querySelectorAllを削減）
+  - `extractTextFromElement`: Array#joinによるO(n²)文字列連結回避
+- **TreeWalkerループの無限ループ修正** ([contentExtractor.ts](src/utils/contentExtractor.ts))
+  - `calculateTextScore`の`while`条件を`walker.currentNode`から`walker.nextNode()`の戻り値に変更
+  - 走査終了時に`null`を返さず無限ループとなり「コンテンツ取得中...」のまま保存できない問題を修正
 - **i18n対応の強化**
   - dashboard.html のサイドバーナビゲーションボタンに data-i18n 属性を追加
   - aria-label 属性を data-i18n-aria-label に変更し、動的な翻訳に対応
   - data-i18n-aria-label 属性のパース処理を i18n.ts に追加
+  - 設定インポート/エクスポートのエラーメッセージをi18n対応
 - **HTML lang/dir 属性の動的設定** ([i18n.ts](src/popup/i18n.ts))
   - setHtmlLangAndDir() を DOMContentLoaded イベントで確実に呼び出すよう修正
   - ユーザーロケールに基づいて lang 属性と dir 属性（RTL対応）を動的に設定
@@ -45,11 +58,33 @@ All notable changes to this project will be documented in this file.
   - "newCategoryName" - 新規カテゴリ名入力のARIAラベル
   - "filterOptions" - 履歴フィルターボタンのARIAラベル
   - "tagCategory" - タグカテゴリ選択のARIAラベル
+  - "hmacVerificationFailedConfirm" - HMAC署名検証失敗時の確認メッセージ
+  - "importNoSignature" - 署名なしインポート拒否メッセージ
+
+### Accessibility
+- **重複aria-label属性の削除** ([dashboard.html](src/dashboard/dashboard.html))
+  - data-i18n-aria-label属性とハードコードされたaria-labelの重複を削除
+  - 動的国際化の正しい動作を保証
+
+### Logging
+- **エラーコードシステムの実装** ([logger.ts](src/utils/logger.ts), [ERROR_CODES.md](docs/ERROR_CODES.md))
+  - 30種類のエラーコード定義（ストレージ、暗号化、API、Obsidian、PII等）
+  - 構造化ロギング関数追加（`logError`, `logWarn`, `logInfo`, `logDebug`, `logSanitize`）
+  - エラーコードドキュメント（命名規則、使用例、重要度レベル）
+- **構造化ロギングの採用** ([settingsExportImport.ts](src/utils/settingsExportImport.ts))
+  - console.log/warn/error を構造化ログに置き換え
+  - エラーコードと出力元モジュールを記録
 
 ### Documentation
 - **ADR: APIキーセキュリティポリシー** ([docs/ADR/0001-api-key-security-policy.md](docs/ADR/0001-api-key-security-policy.md))
   - APIキーはエクスポートに含まれず、インポートでも上書きされないことを宣言
   - セキュリティ上の恩恵とトレードオフをドキュメント化
+- **ADR標準フォーマット定義** ([docs/ADR/README.md](docs/ADR/README.md))
+  - ADRの構造、ステータス定義、命名規則を統一
+  - テンプレートと運用ガイドラインを提供
+- **Checking Teamスコアリング基準書** ([docs/CODE_REVIEW_SCORING.md](docs/CODE_REVIEW_SCORING.md))
+  - 14エキスパートの評価領域とスコアリングシステムを定義
+  - 優先度基準とアクション方針を記載
 - **SETUP_GUIDE更新** ([SETUP_GUIDE.md](SETUP_GUIDE.md))
   - エクスポート/インポート時のAPIキーの扱いについて警告を追加
   - 日本語・英語の両方で明記

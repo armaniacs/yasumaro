@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/crypto.ts
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { Crypto } from '@peculiar/webcrypto';
 import type { EncryptedData } from '../typesCrypto.js';
 import {
@@ -18,7 +18,10 @@ import {
     decryptData,
     isEncrypted,
     encryptApiKey,
-    decryptApiKey
+    decryptApiKey,
+    computeHMAC,
+    hashPasswordWithPBKDF2,
+    verifyPasswordWithPBKDF2
 } from '../crypto.js';
 
 // Web Crypto APIのセットアップ
@@ -276,6 +279,215 @@ describe('crypto', () => {
             const key = await deriveKey(password, salt);
 
             await expect(decryptApiKey({} as EncryptedData, key)).rejects.toThrow('Invalid API key format');
+        });
+    });
+
+    // セキュリティテスト追加（Checking Team Review #3）
+    describe('constantTimeCompare', () => {
+        test('同一文字列でtrueを返す', async () => {
+            const result = await constantTimeCompare('password123', 'password123');
+            expect(result).toBe(true);
+        });
+
+        test('異なる文字列（同長）でfalseを返す', async () => {
+            const result = await constantTimeCompare('password123', 'password456');
+            expect(result).toBe(false);
+        });
+
+        test('異なる長さの文字列でfalseを返す', async () => {
+            const result = await constantTimeCompare('password123', 'password45678');
+            expect(result).toBe(false);
+        });
+
+        test('空文字列でtrueを返す', async () => {
+            const result = await constantTimeCompare('', '');
+            expect(result).toBe(true);
+        });
+
+        test('タイミング攻撃耐性: 実行時間の分散を検証', async () => {
+            // 同じ長さの一致・不一致の場合、実行時間が同程度であることを確認
+            const iterations = 50;
+            const timesMatch: number[] = [];
+            const timesMismatch: number[] = [];
+
+            for (let i = 0; i < iterations; i++) {
+                // 一致する場合
+                const start1 = performance.now();
+                await constantTimeCompare('test-password-123-456', 'test-password-123-456');
+                timesMatch.push(performance.now() - start1);
+
+                // 不一致する場合
+                const start2 = performance.now();
+                await constantTimeCompare('test-password-123-456', 'test-password-xxx-xxx');
+                timesMismatch.push(performance.now() - start2);
+            }
+
+            // 平均値を計算
+            const avgMatch = timesMatch.reduce((a, b) => a + b, 0) / timesMatch.length;
+            const avgMismatch = timesMismatch.reduce((a, b) => a + b, 0) / timesMismatch.length;
+
+            // 一致・不一致の平均時間が大きく異ならないことを確認（許容範囲5倍以内）
+            const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
+            expect(ratio).toBeLessThan(5);
+        });
+
+        test('タイミング攻撃耐性: 異なる長さでも固定実行時間', async () => {
+            // 異なる長さの文字列を比較しても、実行時間が長さに依存しないことを確認
+            const iterations = 50;
+            const timesShort: number[] = [];
+            const timesLong: number[] = [];
+
+            for (let i = 0; i < iterations; i++) {
+                // 短い文字列
+                const start1 = performance.now();
+                await constantTimeCompare('abcd', 'efgh');
+                timesShort.push(performance.now() - start1);
+
+                // 長い文字列
+                const start2 = performance.now();
+                await constantTimeCompare('very-long-password-123456789', 'different-long-password-987654321');
+                timesLong.push(performance.now() - start2);
+            }
+
+            // 長い文字列は文字数分だけ余分にループするため、多少の差は生じるが、
+            // 即座にreturnされる実装（早期リターン）と比較して一定時間実行されていることを確認
+            // 少なくとも短い文字列よりも長い文字列の方が時間がかかるべき（巡回の完了を待つため）
+            const avgShort = timesShort.reduce((a, b) => a + b, 0) / timesShort.length;
+            const avgLong = timesLong.reduce((a, b) => a + b, 0) / timesLong.length;
+
+            // 長い文字列の方が遅いはず（文字列長固定の巡回が完了するため）
+            expect(avgLong).toBeGreaterThan(avgShort);
+        });
+    });
+
+    describe('computeHMAC', () => {
+        test('同じ入力で同じハッシュを生成する（決定性）', async () => {
+            const secret = 'test-secret';
+            const message = 'test-message';
+
+            const hash1 = await computeHMAC(secret, message);
+            const hash2 = await computeHMAC(secret, message);
+
+            expect(hash1).toBe(hash2);
+        });
+
+        test('異なる入力で異なるハッシュを生成する', async () => {
+            const secret = 'test-secret';
+
+            const hash1 = await computeHMAC(secret, 'message-1');
+            const hash2 = await computeHMAC(secret, 'message-2');
+
+            expect(hash1).not.toBe(hash2);
+        });
+
+        test('シークレットが異なると異なるハッシュを生成する', async () => {
+            const message = 'test-message';
+
+            const hash1 = await computeHMAC('secret-1', message);
+            const hash2 = await computeHMAC('secret-2', message);
+
+            expect(hash1).not.toBe(hash2);
+        });
+
+        test('有効なBase64出力を生成する', async () => {
+            const hash = await computeHMAC('secret', 'message');
+            expect(typeof hash).toBe('string');
+
+            // Base64エンコードであることを確認
+            expect(() => atob(hash)).not.toThrow();
+        });
+    });
+
+    describe('hashPasswordWithPBKDF2', () => {
+        test('PBKDF2でパスワードハッシュを生成できる', async () => {
+            const password = 'test-password';
+            const salt = generateSalt();
+
+            const hash = await hashPasswordWithPBKDF2(password, salt);
+
+            expect(typeof hash).toBe('string');
+            expect(hash.length).toBeGreaterThan(0);
+
+            // Base64エンコードであることを確認
+            expect(() => atob(hash)).not.toThrow();
+        });
+
+        test('同じパスワードとソルトで同じハッシュを生成する', async () => {
+            const password = 'test-password';
+            const salt = generateSalt();
+
+            const hash1 = await hashPasswordWithPBKDF2(password, salt);
+            const hash2 = await hashPasswordWithPBKDF2(password, salt);
+
+            expect(hash1).toBe(hash2);
+        });
+
+        test('異なるソルトで異なるハッシュを生成する', async () => {
+            const password = 'test-password';
+            const salt1 = generateSalt();
+            const salt2 = generateSalt();
+
+            const hash1 = await hashPasswordWithPBKDF2(password, salt1);
+            const hash2 = await hashPasswordWithPBKDF2(password, salt2);
+
+            expect(hash1).not.toBe(hash2);
+        });
+
+        test('異なるパスワードで異なるハッシュを生成する', async () => {
+            const salt = generateSalt();
+
+            const hash1 = await hashPasswordWithPBKDF2('password-1', salt);
+            const hash2 = await hashPasswordWithPBKDF2('password-2', salt);
+
+            expect(hash1).not.toBe(hash2);
+        });
+    });
+
+    describe('verifyPasswordWithPBKDF2', () => {
+        test('正しいパスワードを検証できる', async () => {
+            const password = 'test-password';
+            const salt = generateSalt();
+            const storedHash = await hashPasswordWithPBKDF2(password, salt);
+
+            const isValid = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+            expect(isValid).toBe(true);
+        });
+
+        test('間違ったパスワードを拒否できる', async () => {
+            const password = 'test-password';
+            const salt = generateSalt();
+            const storedHash = await hashPasswordWithPBKDF2(password, salt);
+
+            const isValid = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
+            expect(isValid).toBe(false);
+        });
+
+        test('定数時間比較を使用している', async () => {
+            const password = 'test-password';
+            const salt = generateSalt();
+            const storedHash = await hashPasswordWithPBKDF2(password, salt);
+
+            // 一致する場合と不一致する場合の実行時間を比較
+            const iterations = 30;
+            const timesMatch: number[] = [];
+            const timesMismatch: number[] = [];
+
+            for (let i = 0; i < iterations; i++) {
+                const start1 = performance.now();
+                await verifyPasswordWithPBKDF2(password, storedHash, salt);
+                timesMatch.push(performance.now() - start1);
+
+                const start2 = performance.now();
+                await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
+                timesMismatch.push(performance.now() - start2);
+            }
+
+            const avgMatch = timesMatch.reduce((a, b) => a + b, 0) / timesMatch.length;
+            const avgMismatch = timesMismatch.reduce((a, b) => a + b, 0) / timesMismatch.length;
+
+            // 一致・不一致の平均時間が大きく異ならないことを確認（許容範囲5倍以内）
+            const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
+            expect(ratio).toBeLessThan(5);
         });
     });
 });

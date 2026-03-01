@@ -85,30 +85,54 @@ export function isExcludedElement(element: Element): boolean {
 /**
  * 要素のテキストスコアを計算
  * テキストの多さ、段落の数、リンク密度などに基づいてスコアを計算
+ * 【パフォーマンス最適化】DOM走査を一度に集約し、querySelectorAll呼び出しを削減
  */
 export function calculateTextScore(element: Element): number {
     let score = 0;
 
-    // テキストノードの長さ（innerTextはjsdomで未サポートの場合があるためtextContentを使用）
+    // テキストノードの長さ
     const text = (element as any).innerText || element.textContent || '';
     score += text.length;
 
-    // 段落の数
-    const paragraphs = element.querySelectorAll('p');
-    score += paragraphs.length * 50;
+    // 単一DOM走覧でp, h*, ul, ol, aの要素をカウント（パフォーマンス改善）
+    let pCount = 0;
+    let hCount = 0;
+    let listCount = 0;
+    let linkCount = 0;
+    let linkTextLength = 0;
 
-    // 見出しの数
-    const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6, h7');
-    score += headings.length * 100;
+    const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_ELEMENT,
+        undefined
+    );
 
-    // リストの数
-    const lists = element.querySelectorAll('ul, ol');
-    score += lists.length * 30;
+    let node: Node | null = walker.nextNode();
+    while (node) {
+        const elem = node as Element;
+        const tag = elem.tagName.toLowerCase();
+
+        if (tag === 'p') {
+            pCount++;
+        } else if (/^h[1-7]$/.test(tag)) {
+            hCount++;
+        } else if (tag === 'ul' || tag === 'ol') {
+            listCount++;
+        } else if (tag === 'a') {
+            linkCount++;
+            linkTextLength += (elem as any).innerText?.length || elem.textContent?.length || 0;
+        }
+
+        node = walker.nextNode();
+    }
+
+    // スコア計算
+    score += pCount * 50;      // 段落: 50点
+    score += hCount * 100;     // 見出し: 100点
+    score += listCount * 30;   // リスト: 30点
 
     // リンク密度（比率が高い場合はスコアを下げる）
-    const links = element.querySelectorAll('a');
-    const linkText = Array.from(links).map(a => (a as any).innerText || a.textContent || '').join('');
-    const linkRatio = text.length > 0 ? linkText.length / text.length : 0;
+    const linkRatio = text.length > 0 ? linkTextLength / text.length : 0;
     if (linkRatio > 0.5) {
         score *= 0.3; // リンクが多い要素はスコアを下げる
     }
@@ -159,19 +183,21 @@ function findMainContentCandidates(): Element[] {
 
 /**
  * 要素内のテキストを抽出し、除外対象の子要素をフィルタリング
+ * 【パフォーマンス最適化】Array#joinを使用し、O(n²)文字列連結を回避
  */
 function extractTextFromElement(element: Element): string {
-    // 再帰的にテキストを抽出
-    let text = '';
+    // 文字列連結用の配列（パフォーマンス改善）
+    const parts: string[] = [];
 
+    // 再帰的にテキストを抽出
     for (const node of Array.from(element.childNodes)) {
         // ノードタイプ定数（jsdom互換性のために直接数値を使用）
         const TEXT_NODE = 3 as number;
         const ELEMENT_NODE = 1 as number;
 
         if (node.nodeType === TEXT_NODE) {
-            // テキストノードを追加
-            text += node.nodeValue || '';
+            // テキストノードを配列に追加
+            parts.push(node.nodeValue || '');
         } else if (node.nodeType === ELEMENT_NODE) {
             const elem = node as Element;
 
@@ -185,12 +211,14 @@ function extractTextFromElement(element: Element): string {
                 continue;
             }
 
-            // 再帰的に子要素を処理
-            text += extractTextFromElement(elem) + ' ';
+            // 再帰的に子要素を処理（パフォーマンス改善）
+            parts.push(extractTextFromElement(elem));
+            parts.push(' ');
         }
     }
 
-    return text;
+    // 一度に結合（パフォーマンス改善）
+    return parts.join('');
 }
 
 /**

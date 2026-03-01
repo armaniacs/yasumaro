@@ -6,6 +6,7 @@ import { getSettings, saveSettings, getOrCreateHmacSecret } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
 import { generateSalt } from './crypto.js';
 import { API_KEY_FIELDS } from './storageSettings.js';
+import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
 /**
@@ -100,7 +101,7 @@ export async function importEncryptedSettings(jsonData, masterPassword) {
         const encryptedData = JSON.parse(jsonData);
         // 暗号化されたデータかどうか確認
         if (!encryptedData.encrypted) {
-            console.error('This is not an encrypted export file');
+            await logError('Not an encrypted export file', {}, ErrorCode.SETTINGS_IMPORT_FAILURE, 'settingsExportImport.ts');
             return null;
         }
         // ソルトをデコード
@@ -113,15 +114,12 @@ export async function importEncryptedSettings(jsonData, masterPassword) {
         const hmacSecret = await getOrCreateHmacSecret();
         const computedHmac = await computeHMAC(hmacSecret, decryptedJson);
         if (encryptedData.hmac !== computedHmac) {
-            console.error('HMAC verification failed. Data may have been tampered with.');
-            const forceImport = confirm('設定ファイルの署名検証に失敗しました。\n\n' +
-                '原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n' +
-                '信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n' +
-                '信頼できない場合は「キャンセル」をクリックしてください。');
+            await logError('HMAC verification failed', {}, ErrorCode.SETTINGS_SIGNATURE_FAILURE, 'settingsExportImport.ts');
+            const forceImport = confirm(chrome.i18n.getMessage('hmacVerificationFailedConfirm'));
             if (!forceImport) {
                 return null;
             }
-            console.warn('Force importing encrypted settings despite HMAC verification failure');
+            await logWarn('Force importing encrypted settings despite HMAC verification failure', {}, ErrorCode.SETTINGS_SIGNATURE_FAILURE, 'settingsExportImport.ts');
         }
         // 復号されたJSONを解析してインポート
         const parsed = JSON.parse(decryptedJson);
@@ -131,7 +129,7 @@ export async function importEncryptedSettings(jsonData, masterPassword) {
         }
         // APIキーが除外されている場合
         if (parsed.apiKeyExcluded) {
-            console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
+            await logInfo('Imported settings have API keys excluded. Existing API keys will be preserved.', { apiKeyExcluded: true }, 'settingsExportImport.ts');
             const merged = await mergeWithExistingApiKeys(parsed.settings);
             await saveSettings(merged);
             return merged;
@@ -140,7 +138,7 @@ export async function importEncryptedSettings(jsonData, masterPassword) {
         return parsed.settings;
     }
     catch (error) {
-        console.error('Failed to import encrypted settings:', error);
+        await logError('Failed to import encrypted settings', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE, 'settingsExportImport.ts');
         return null;
     }
 }
@@ -266,12 +264,12 @@ export async function importSettings(jsonData) {
     try {
         const parsed = JSON.parse(jsonData);
         // 【セキュリティ強化】署名があるかチェック
-        // 【実装方針】: 署名なしファイルは即時拒否（警告ダイアログなし）
+        // 【実装方針】: 署名なしファイルは即時拒否（警告ダイアログあり＝i18n化済み）
         // 【テスト対応】: settingsExportImport-signature.test.ts
         // 🟢 信頼性レベル: 青信号（要件定義書の署名強化仕様通り）
         if (!parsed.signature) {
-            console.error('Import rejected: Missing signature.');
-            alert('設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。');
+            await logError('Import rejected: Missing signature', {}, ErrorCode.SETTINGS_SIGNATURE_FAILURE, 'settingsExportImport.ts');
+            alert(chrome.i18n.getMessage('importNoSignature'));
             return null; // 旧形式の互換性を削除
         }
         // 署名検証
@@ -281,15 +279,12 @@ export async function importSettings(jsonData) {
         const dataJson = JSON.stringify(dataForVerification, null, 2);
         const computedSignature = await computeHMAC(hmacSecret, dataJson);
         if (signature !== computedSignature) {
-            console.error('Signature verification failed. Settings may have been tampered with.');
-            const forceImport = confirm('設定ファイルの署名検証に失敗しました。\n\n' +
-                '原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n' +
-                '信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n' +
-                '信頼できない場合は「キャンセル」をクリックしてください。');
+            await logError('Signature verification failed', {}, ErrorCode.SETTINGS_SIGNATURE_FAILURE, 'settingsExportImport.ts');
+            const forceImport = confirm(chrome.i18n.getMessage('hmacVerificationFailedConfirm'));
             if (!forceImport) {
                 return null;
             }
-            console.warn('Force importing settings despite signature verification failure');
+            await logWarn('Force importing settings despite signature verification failure', {}, ErrorCode.SETTINGS_SIGNATURE_FAILURE, 'settingsExportImport.ts');
         }
         // 構造検証（既存のvalidateExportDataを使用）
         if (!validateExportData(parsed)) {
@@ -297,7 +292,7 @@ export async function importSettings(jsonData) {
         }
         // APIキーが除外されている場合、インポートしない
         if (parsed.apiKeyExcluded) {
-            console.info('Imported settings have API keys excluded. Existing API keys will be preserved.');
+            await logInfo('Imported settings have API keys excluded. Existing API keys will be preserved.', { apiKeyExcluded: true }, 'settingsExportImport.ts');
             const merged = await mergeWithExistingApiKeys(parsed.settings);
             await saveSettings(merged);
             return merged;
@@ -306,7 +301,7 @@ export async function importSettings(jsonData) {
         return parsed.settings;
     }
     catch (error) {
-        console.error('Failed to import settings:', error);
+        await logError('Failed to import settings', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE, 'settingsExportImport.ts');
         return null;
     }
 }

@@ -1326,5 +1326,11 @@
     "tagCategory": {
         "message": "タグカテゴリ",
         "description": "ARIA label for tag category select"
+    },
+    "hmacVerificationFailedConfirm": {
+        "message": "設定ファイルの署名検証に失敗しました。\n\n原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n信頼できない場合は「キャンセル」をクリックしてください。"
+    },
+    "importNoSignature": {
+        "message": "設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。"
     }
 }
