@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.7] - to be released
+
+### Fixed
+- **PBKDF2イテレーション数の復帰** ([crypto.ts](src/utils/crypto.ts))
+  - PBKDF2イテレーション数を310,000回から100,000回に戻しました
+  - 変更により既存の暗号化APIキーが復号できなくなる問題を修正
+- **HMAC署名検証失敗時の強制インポート対応** ([settingsExportImport.ts](src/utils/settingsExportImport.ts))
+  - HMAC署名検証失敗時に確認ダイアログを追加し、信頼できる設定ファイルの強制インポートを可能に
+  - HMACシークレット変更（拡張機能更新等）によるインポート失敗問題を修正
+
+### Security
+- **タイミング攻撃対策** ([crypto.ts](src/utils/crypto.ts))
+  - パスワード検証ロジックに定数時間比較を実装しました
+  - `constantTimeCompare()` 関数を追加し、`verifyPassword()` と `verifyPasswordWithPBKDF2()` で採用
+  - 実行時間のばらつきを排除し、タイミング攻撃への耐性を向上
+
+### Added
+- **最適化されたコンテンツ抽出機能** ([contentExtractor.ts](src/utils/contentExtractor.ts))
+  - Readabilityアルゴリズムによるメインコンテンツ抽出を実装
+  - ナビゲーション（`<nav>`）、ヘッダー（`<header>`）、フッター（`<footer>`）、サイドバー（`<aside>`）を自動除外
+  - `role="navigation"`、`role="banner"`、`aria-hidden="true"` の要素を除外
+  - クラス名パターン（sidebar, nav, menu, cookie, ad等）による除外
+  - 画像タグや外部ソースURLを除外し、テキストコンテンツのみを抽出
+  - ADR: [最適化されたコンテンツ抽出手法の採用](docs/ADR/2026-03-01-optimized-content-extraction.md)
+
+### Changed
+- **コンテンツ抽出ロジックの更新** ([extractor.ts](src/content/extractor.ts))
+  - `document.body.innerText` から `extractMainContent()` に変更
+  - メインコンテンツのみをAI APIに送信することで、トークン使用量を20〜40%削減
+- **i18n対応の強化**
+  - dashboard.html のサイドバーナビゲーションボタンに data-i18n 属性を追加
+  - aria-label 属性を data-i18n-aria-label に変更し、動的な翻訳に対応
+  - data-i18n-aria-label 属性のパース処理を i18n.ts に追加
+- **HTML lang/dir 属性の動的設定** ([i18n.ts](src/popup/i18n.ts))
+  - setHtmlLangAndDir() を DOMContentLoaded イベントで確実に呼び出すよう修正
+  - ユーザーロケールに基づいて lang 属性と dir 属性（RTL対応）を動的に設定
+
+### Added
+- **翻訳キー追加** (_locales/en/messages.json, _locales/ja/messages.json)
+  - "registeredDomains" - 登録済みドメインリストのARIAラベル
+  - "newCategoryName" - 新規カテゴリ名入力のARIAラベル
+  - "filterOptions" - 履歴フィルターボタンのARIAラベル
+  - "tagCategory" - タグカテゴリ選択のARIAラベル
+
 ## [4.0.6] - 2026-03-01
 
 ### Refactored

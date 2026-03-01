@@ -1310,5 +1310,21 @@
     },
     "tagSettingsSaved": {
         "message": "Tag settings saved successfully"
+    },
+    "registeredDomains": {
+        "message": "Registered Domains",
+        "description": "ARIA label for list of registered domains"
+    },
+    "newCategoryName": {
+        "message": "New category name",
+        "description": "ARIA label for new category name input"
+    },
+    "filterOptions": {
+        "message": "Filter Options",
+        "description": "ARIA label for history filter buttons"
+    },
+    "tagCategory": {
+        "message": "Tag Category",
+        "description": "ARIA label for tag category select"
     }
 }

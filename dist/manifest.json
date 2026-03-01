@@ -106,6 +106,7 @@
         "content/extractor.js",
         "utils/retryHelper.js",
         "utils/privacyStatusCodes.js",
+        "utils/contentExtractor.js",
         "icons/icon48.png"
       ],
       "matches": [

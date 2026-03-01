@@ -39,6 +39,25 @@ export function generateIV() {
     return getWebCrypto().getRandomValues(new Uint8Array(IV_LENGTH));
 }
 /**
+ * 定数時間比較（タイミング攻撃対策）
+ * 2つの文字列を定数時間で比較し、タイミング攻撃を防ぐ
+ * @param {string} a - 比較する文字列1
+ * @param {string} b - 比較する文字列2
+ * @returns {boolean} 文字列が等しい場合はtrue、それ以外はfalse
+ */
+function constantTimeCompare(a, b) {
+    // 文字列長が異なる場合は即座にfalseを返す
+    if (a.length !== b.length) {
+        return false;
+    }
+    // XORの累積を行い、文字長にかかわらず一定時間で処理する
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return result === 0;
+}
+/**
  * パスワードをハッシュ化する
  * @param {string} password - 平文パスワード
  * @returns {Promise<string>} Base64エンコードされたハッシュ
@@ -59,7 +78,7 @@ export async function hashPassword(password) {
  */
 export async function verifyPassword(password, hash) {
     const computedHash = await hashPassword(password);
-    return computedHash === hash;
+    return constantTimeCompare(computedHash, hash);
 }
 /**
  * パスワードとソルトから暗号化キーを導出する
@@ -244,6 +263,6 @@ export async function hashPasswordWithPBKDF2(password, salt) {
  */
 export async function verifyPasswordWithPBKDF2(password, storedHash, salt) {
     const computedHash = await hashPasswordWithPBKDF2(password, salt);
-    return computedHash === storedHash;
+    return constantTimeCompare(computedHash, storedHash);
 }
 //# sourceMappingURL=crypto.js.map

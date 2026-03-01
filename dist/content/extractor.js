@@ -9,6 +9,7 @@
  */
 import { createSender } from '../utils/retryHelper.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
+import { extractMainContent } from '../utils/contentExtractor.js';
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50; // パーセンテージ
@@ -23,21 +24,19 @@ let checkIntervalId = null; // 【パフォーマンス向上】: 定期実行�
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
 /**
  * コンテンツを抽出する共通関数
- * 【機能概要】: ページの本文テキストを抽出し、空白文字を正規化する
- * 【抽出範囲】: document.body.innerText（最大10,000文字）
+ * 【機能概要】: ページの本文テキスト（メインコンテンツ）を抽出し、空白文字を正規化する
+ * 【抽出範囲】: メインコンテンツ（ナビゲーション、ヘッダー等除外、最大10,000文字）
  * 【処理内容】:
- *   1. bodyのテキストを抽出
+ *   1. メインコンテンツ（article/mainタグ等優先）を抽出
  *   2. 連続する空白文字を単一のスペースに置換
  *   3. 前後の空白を削除
  *   4. 最大10,000文字で切り詰め
+ * 【改善点】: Readabilityアルゴリズムでナビゲーション等のノイズを除外
  * 🟢
  * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
  */
 function extractPageContent() {
-    return document.body.innerText
-        .replace(/\s+/g, ' ')
-        .trim()
-        .substring(0, 10000);
+    return extractMainContent(10000);
 }
 /**
  * 設定をロードする

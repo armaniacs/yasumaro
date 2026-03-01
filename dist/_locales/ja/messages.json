@@ -1310,5 +1310,21 @@
     },
     "tagSettingsSaved": {
         "message": "タグ設定を保存しました"
+    },
+    "registeredDomains": {
+        "message": "登録済みドメイン",
+        "description": "ARIA label for list of registered domains"
+    },
+    "newCategoryName": {
+        "message": "新しいカテゴリ名",
+        "description": "ARIA label for new category name input"
+    },
+    "filterOptions": {
+        "message": "フィルターオプション",
+        "description": "ARIA label for history filter buttons"
+    },
+    "tagCategory": {
+        "message": "タグカテゴリ",
+        "description": "ARIA label for tag category select"
     }
 }

@@ -171,8 +171,16 @@ export async function importEncryptedSettings(
 
     if (encryptedData.hmac !== computedHmac) {
       console.error('HMAC verification failed. Data may have been tampered with.');
-      alert('設定ファイルの整合性チェックに失敗しました。ファイルが改ざんされている可能性があります。');
-      return null;
+      const forceImport = confirm(
+        '設定ファイルの署名検証に失敗しました。\n\n' +
+        '原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n' +
+        '信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n' +
+        '信頼できない場合は「キャンセル」をクリックしてください。'
+      );
+      if (!forceImport) {
+        return null;
+      }
+      console.warn('Force importing encrypted settings despite HMAC verification failure');
     }
 
     // 復号されたJSONを解析してインポート
@@ -366,8 +374,16 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
 
     if (signature !== computedSignature) {
       console.error('Signature verification failed. Settings may have been tampered with.');
-      alert('設定ファイルの署名検証に失敗しました。ファイルが改ざんされている可能性があります。');
-      return null;
+      const forceImport = confirm(
+        '設定ファイルの署名検証に失敗しました。\n\n' +
+        '原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n' +
+        '信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n' +
+        '信頼できない場合は「キャンセル」をクリックしてください。'
+      );
+      if (!forceImport) {
+        return null;
+      }
+      console.warn('Force importing settings despite signature verification failure');
     }
 
     // 構造検証（既存のvalidateExportDataを使用）

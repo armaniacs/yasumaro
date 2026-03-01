@@ -159,6 +159,7 @@ export function setHtmlLangAndDir() {
 // DOMが読み込まれたら自動的に翻訳を適用（埋め込みスクリプト用）
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+        setHtmlLangAndDir();
         applyI18n();
     });
 }
@@ -167,6 +168,7 @@ else {
     // But we need to make sure applyI18n is available when imported as module
     // This side-effect might be undesirable if imported.
     // We can leave it for now as it was in original JS.
+    setHtmlLangAndDir();
     applyI18n();
 }
 //# sourceMappingURL=i18n.js.map
