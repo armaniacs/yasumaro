@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2026-03-01
+
 ## [4.0.7] - to be released
 
 ### Fixed
