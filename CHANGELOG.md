@@ -46,6 +46,14 @@ All notable changes to this project will be documented in this file.
   - "filterOptions" - 履歴フィルターボタンのARIAラベル
   - "tagCategory" - タグカテゴリ選択のARIAラベル
 
+### Documentation
+- **ADR: APIキーセキュリティポリシー** ([docs/ADR/0001-api-key-security-policy.md](docs/ADR/0001-api-key-security-policy.md))
+  - APIキーはエクスポートに含まれず、インポートでも上書きされないことを宣言
+  - セキュリティ上の恩恵とトレードオフをドキュメント化
+- **SETUP_GUIDE更新** ([SETUP_GUIDE.md](SETUP_GUIDE.md))
+  - エクスポート/インポート時のAPIキーの扱いについて警告を追加
+  - 日本語・英語の両方で明記
+
 ## [4.0.6] - 2026-03-01
 
 ### Refactored
