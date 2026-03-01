@@ -132,9 +132,11 @@
 設定画面の右上にある「⋮」（三点メニュー）ボタンをクリックすると、ドロップダウンメニューが表示されます。
 
 - **エクスポート**: 現在の全設定をJSONファイルとしてダウンロードします。ファイル名には日時が含まれます（例: `obsidian-weave-settings-20240101-120000.json`）。
+  - **⚠️ 注意**: APIキー（Obsidian API Key、各AIプロバイダーのAPI Key）はセキュリティ上の理由からエクスポートに含まれません。
 - **インポート**: エクスポートしたJSONファイルを選択すると、設定内容のプレビューが表示されます。確認後「インポート」をクリックすると、現在の設定が上書きされます。
+  - APIキーは上書きされず、既存の設定が保持されます。
 
-端末の移行やバックアップにご活用ください。
+端末の移行やバックアップにご活用ください（APIキーは別途再入力が必要です）。
 
 #### 5. プライバシー設定
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
@@ -281,9 +283,11 @@ In the "Domain Filter" tab, you can control which domains to record.
 Click the "⋮" (three-dot menu) button in the top right corner of the settings screen to reveal a dropdown menu.
 
 - **Export**: Downloads all current settings as a JSON file. The filename includes a timestamp (e.g., `obsidian-weave-settings-20240101-120000.json`).
+  - **⚠️ Note**: For security reasons, API keys (Obsidian API Key and AI provider API keys) are NOT included in the export.
 - **Import**: Select a previously exported JSON file. A preview of the settings is shown before applying. Click "Import" to overwrite the current settings.
+  - API keys are NOT overwritten - existing settings are preserved.
 
-Useful for migrating settings to another device or creating backups.
+Useful for migrating settings to another device or creating backups (you will need to re-enter API keys).
 
 #### 5. Privacy Settings
 In the "Privacy" tab, you can configure detailed privacy behavior.
