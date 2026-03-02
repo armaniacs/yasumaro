@@ -21,7 +21,8 @@ import {
     decryptApiKey,
     computeHMAC,
     hashPasswordWithPBKDF2,
-    verifyPasswordWithPBKDF2
+    verifyPasswordWithPBKDF2,
+    constantTimeCompare
 } from '../crypto.js';
 
 // Web Crypto APIのセットアップ

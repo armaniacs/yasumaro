@@ -47,7 +47,7 @@ export function generateIV() {
  * @param {string} b - 比較する文字列2
  * @returns {Promise<boolean>} 文字列が等しい場合はtrue、それ以外はfalse
  */
-async function constantTimeCompare(a, b) {
+export async function constantTimeCompare(a, b) {
     const webcrypto = getWebCrypto();
     // 標準ブラウザAPIが利用可能な場合は使用（MDN推奨）
     if ('subtle' in webcrypto && typeof webcrypto.subtle.timingSafeEqual === 'function') {
@@ -284,5 +284,139 @@ export async function hashPasswordWithPBKDF2(password, salt) {
 export async function verifyPasswordWithPBKDF2(password, storedHash, salt) {
     const computedHash = await hashPasswordWithPBKDF2(password, salt);
     return constantTimeCompare(computedHash, storedHash);
+}
+// ============================================================================
+// Notification Security Utils for HMAC Key Management
+// ============================================================================
+const HMAC_SIGNATURE_KEY_STORAGE = 'notification-signature-key';
+const HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
+const textEncoder = new TextEncoder();
+/**
+ * Get or create HMAC signature key for notification IDs
+ * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
+ */
+export async function getNotificationHmacKey() {
+    const webcrypto = getWebCrypto();
+    // Try to load encrypted key from storage
+    try {
+        const result = await chrome.storage.local.get([
+            HMAC_SIGNATURE_KEY_STORAGE,
+            HMAC_SIGNATURE_KEY_VERSION
+        ]);
+        const encryptedData = result[HMAC_SIGNATURE_KEY_STORAGE];
+        if (encryptedData && isEncrypted(encryptedData)) {
+            // Derive decryption key from extension ID (same as API key encryption)
+            const extensionId = chrome.runtime.id;
+            const salt = textEncoder.encode('notification-salt');
+            const decryptKey = await deriveKeyWithExtensionId('notification-secret', salt, extensionId);
+            const keyDataBase64 = await decryptData(encryptedData, decryptKey);
+            const keyData = base64ToUint8Array(keyDataBase64);
+            return await webcrypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+        }
+    }
+    catch (error) {
+        // If loading fails, we'll generate a new key
+        console.warn('Failed to load HMAC key, generating new one:', error);
+    }
+    // Generate new key
+    const keyData = webcrypto.getRandomValues(new Uint8Array(32));
+    // Encrypt the key with same mechanism as API keys
+    const extensionId = chrome.runtime.id;
+    const salt = textEncoder.encode('notification-salt');
+    const encryptKey = await deriveKeyWithExtensionId('notification-secret', salt, extensionId);
+    const encryptedKey = await encrypt(uint8ArrayToBase64(keyData), encryptKey);
+    // Store encrypted key
+    await chrome.storage.local.set({
+        [HMAC_SIGNATURE_KEY_STORAGE]: encryptedKey,
+        [HMAC_SIGNATURE_KEY_VERSION]: '1'
+    });
+    return await webcrypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+/**
+ * Generate URL-safe base64 HMAC signature for notification IDs
+ * Uses full signature (no truncation) for cryptographic guarantee
+ * @param {string} data - Data to sign (typically URL)
+ * @param {CryptoKey} key - HMAC key
+ * @returns {Promise<string>} URL-safe base64 encoded full signature
+ */
+export async function generateHmacSignature(data, key) {
+    const webcrypto = getWebCrypto();
+    const dataArray = textEncoder.encode(data);
+    const signature = await webcrypto.subtle.sign('HMAC', key, dataArray);
+    const signatureChars = Array.from(new Uint8Array(signature), b => String.fromCharCode(b));
+    return btoa(signatureChars.join(''))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+/**
+ * Verify HMAC signature using constant-time comparison
+ * @param {string} data - Original data
+ * @param {string} signature - URL-safe base64 encoded signature
+ * @param {CryptoKey} key - HMAC key
+ * @returns {Promise<boolean>} True if signature is valid
+ */
+export async function verifyHmacSignature(data, signature, key) {
+    try {
+        const computedSignature = await generateHmacSignature(data, key);
+        const webcrypto = getWebCrypto();
+        // Use constantTimeCompare if available (from crypto.ts)
+        const encoder = textEncoder;
+        const sigBuf = encoder.encode(signature);
+        const compBuf = encoder.encode(computedSignature);
+        // Check length mismatch first (timing-safe via length comparison)
+        if (sigBuf.byteLength !== compBuf.byteLength) {
+            return false;
+        }
+        // Use browser's timingSafeEqual if available
+        if ('subtle' in webcrypto && typeof webcrypto.subtle.timingSafeEqual === 'function') {
+            try {
+                return await webcrypto.subtle.timingSafeEqual(sigBuf.buffer, compBuf.buffer);
+            }
+            catch {
+                // Fall through to manual comparison
+            }
+        }
+        // Manual constant-time comparison
+        let result = 0;
+        const sig8 = new Uint8Array(sigBuf);
+        const comp8 = new Uint8Array(compBuf);
+        for (let i = 0; i < sigBuf.byteLength; i++) {
+            result |= sig8[i] ^ comp8[i];
+        }
+        return result === 0;
+    }
+    catch {
+        return false;
+    }
+}
+// Helper functions for uint8Array <-> base64 conversion
+function uint8ArrayToBase64(bytes) {
+    return btoa(String.fromCharCode(...bytes));
+}
+function base64ToUint8Array(base64) {
+    const binaryString = atob(base64);
+    return Uint8Array.from(binaryString, c => c.charCodeAt(0));
+}
+// ============================================================================
+// Privacy Utils for Hash-Based Logging
+// ============================================================================
+/**
+ * URLのSHA-256ハッシュを生成し、先頭8文字のプレフィックス付き文字列を返す
+ * ログ出力時のプライバシー保護用（URLの生値を直接ログに記録しないため）
+ * @param {string} url - ハッシュ化するURL
+ * @returns {Promise<string>} 先頭8文字のSHA-256ハッシュ値（プレフィックス付き）
+ *
+ * @example
+ * const hash = await hashUrl('https://example.com/path');
+ * // Returns: '[hash:a1b2c3d4]'
+ */
+export async function hashUrl(url) {
+    const webcrypto = getWebCrypto();
+    const msgBuffer = textEncoder.encode(url);
+    const hashBuffer = await webcrypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `[hash:${hashHex.substring(0, 8)}]`;
 }
 //# sourceMappingURL=crypto.js.map

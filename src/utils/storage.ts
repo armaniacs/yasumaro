@@ -3,8 +3,7 @@
  * Wrapper for chrome.storage.local to manage settings.
  */
 
-// Temporarily disabled to resolve circular dependency
-// import { addLog, LogType } from './logger.js';
+import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
 import type { EncryptedData } from './typesCrypto.js';
 import {
@@ -712,11 +711,10 @@ export async function getSettings(): Promise<Settings> {
     const result = await chrome.storage.local.get(['settings', SETTINGS_MIGRATED_KEY]);
 
     const rawSettings = result.settings as Settings | undefined;
-    console.log('[Storage] Raw storage result:', {
+    await logInfo('[Storage] Raw storage result:', {
         hasSettings: !!rawSettings,
         hasMigratedKey: !!result[SETTINGS_MIGRATED_KEY],
         obsidianKeyInSettings: rawSettings ? StorageKeys.OBSIDIAN_API_KEY in rawSettings : false,
-        obsidianKeyValue: rawSettings?.[StorageKeys.OBSIDIAN_API_KEY],
         obsidianKeyType: typeof rawSettings?.[StorageKeys.OBSIDIAN_API_KEY],
         isEncryptedCheck: rawSettings?.[StorageKeys.OBSIDIAN_API_KEY] ? isEncrypted(rawSettings[StorageKeys.OBSIDIAN_API_KEY]) : false
     });
@@ -743,13 +741,13 @@ export async function getSettings(): Promise<Settings> {
                         const decryptedValue = await decryptApiKey(value, key);
                         (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                     } catch (e) {
-                        console.error(`Failed to decrypt ${field}:`, e);
+                        await logError(`Failed to decrypt ${field}`, { error: e instanceof Error ? e.message : String(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
                         (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                     }
                 }
             }
         } catch (e) {
-            console.error('Failed to get encryption key for decryption:', e);
+            await logError('Failed to get encryption key for decryption', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
         }
 
         // 【パフォーマンス改善】復号後にキャッシュを保存
@@ -780,13 +778,13 @@ export async function getSettings(): Promise<Settings> {
                     const decryptedValue = await decryptApiKey(value, key);
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                 } catch (e) {
-                    console.error(`Failed to decrypt ${field}:`, e);
+                    await logError(`Failed to decrypt ${field}`, { error: e instanceof Error ? e.message : String(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                 }
             }
         }
     } catch (e) {
-        console.error('Failed to get encryption key for decryption:', e);
+        await logError('Failed to get encryption key for decryption', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
     }
 
     // 【パフォーマンス改善】復号後にキャッシュを保存
@@ -822,7 +820,7 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
             if (field in toSave && typeof toSave[field] === 'string' && toSave[field] !== '') {
                 const originalValue = toSave[field] as string;
                 (toSave as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = await encryptApiKey(originalValue, key) as StorageKeyValues[StorageKey];
-                console.log(`Encrypted ${field}:`, {
+                await logDebug(`Encrypted ${field}:`, {
                     hadValue: !!originalValue,
                     originalLength: originalValue.length,
                     encrypted: !!toSave[field]
@@ -830,7 +828,7 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
             }
         }
     } catch (e) {
-        console.error('Failed to encrypt API keys:', e);
+        await logError('Failed to encrypt API keys', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
     }
 
     if (updateAllowedUrlsFlag) {
@@ -942,6 +940,11 @@ async function updateUrlTimestamp(url: string): Promise<void> {
  * @param {string} [urlToAdd] - URL to add/update with current timestamp（オプション）
  */
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
+    // urlToAddが指定されている場合は、現在のタイムスタンプで追加/更新
+    if (urlToAdd) {
+        urlMap.set(urlToAdd, Date.now());
+    }
+
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用

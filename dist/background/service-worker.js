@@ -9,16 +9,18 @@ import { isDomainAllowed } from '../utils/domainUtils.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
+import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto.js';
 // マイグレーション処理を実行
 (async () => {
     try {
         const migrated = await migrateToSingleSettingsObject();
         if (migrated) {
-            console.log('[ServiceWorker] Settings migrated to single object');
+            logInfo('Settings migrated to single object', { migrated: true }, 'service-worker');
         }
     }
     catch (e) {
-        console.error('[ServiceWorker] Failed to migrate settings:', e);
+        logError('Failed to migrate settings', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     }
 })();
 // Initialize clients
@@ -104,9 +106,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const reason = result.reason || 'cache-control';
                     const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
                     const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
-                    // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64）
-                    const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + btoa(unescape(encodeURIComponent(url))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-                    NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
+                    // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64 + HMAC署名）
+                    const encodedUrl = await encodeUrlSafeBase64(url);
+                    if (encodedUrl) {
+                        const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encodedUrl;
+                        NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
+                    }
                 }
                 sendResponse(result);
                 return;
@@ -132,7 +137,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({ success: true, data: text, contentType });
                 }
                 catch (error) {
-                    console.error('Fetch URL Error:', error);
+                    await logError('Fetch URL Error', {
+                        url: message.payload?.url,
+                        error: error instanceof Error ? error.message : String(error)
+                    }, ErrorCode.API_REQUEST_FAILURE, 'service-worker');
                     // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
                     sendResponse(createErrorResponse(error, { url: message.payload?.url }));
                 }
@@ -161,15 +169,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Get Privacy Cache (for Popup status panel)
             if (message.type === 'GET_PRIVACY_CACHE') {
                 const cache = RecordingLogic.cacheState.privacyCache;
-                console.log('[ServiceWorker] GET_PRIVACY_CACHE requested, cache size:', cache?.size || 0);
+                await logDebug('GET_PRIVACY_CACHE requested', { cacheSize: cache?.size || 0 }, 'service-worker');
                 if (cache) {
                     // Map を配列に変換して送信
                     const cacheArray = Array.from(cache.entries());
-                    console.log('[ServiceWorker] Sending', cacheArray.length, 'cache entries to popup');
+                    await logDebug('Sending cache entries to popup', { count: cacheArray.length }, 'service-worker');
                     sendResponse({ success: true, cache: cacheArray });
                 }
                 else {
-                    console.log('[ServiceWorker] No cache available, sending empty array');
+                    await logDebug('No cache available, sending empty array', undefined, 'service-worker');
                     sendResponse({ success: true, cache: [] });
                 }
                 return;
@@ -206,7 +214,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse(null);
         }
         catch (error) {
-            console.error('Service Worker Error:', error);
+            logError('Service Worker Error', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
             // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
             sendResponse(createErrorResponse(error));
         }
@@ -225,10 +233,10 @@ const initializeExtension = async () => {
         await saveSettingsWithAllowedUrls(settings);
         // 【Task #19 最適化】ドメインフィルタキャッシュを更新
         await updateDomainFilterCache(settings);
-        console.log('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.');
+        logInfo('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.', undefined, 'service-worker');
     }
     catch (error) {
-        console.error('Failed to initialize extension:', error);
+        logError('Failed to initialize extension', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
     }
 };
 chrome.runtime.onInstalled.addListener(initializeExtension);
@@ -236,48 +244,207 @@ chrome.runtime.onStartup.addListener(initializeExtension);
 // ============================================================================
 // Privacy Confirmation Notification Handlers
 // ============================================================================
+// URLスキーマの許可リスト
+const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
+const BLOCKED_URL_SCHEMES = ['javascript:', 'data:', 'file:', 'vbscript:', 'about:'];
+// 最大URL長（Base64エンコード後の通知ID上限を考慮）
+const MAX_URL_LENGTH = 2000;
+const MAX_ENCODED_LENGTH = 5000;
 /**
- * Decode URL from notification ID (URL-safe base64).
- * Encode: btoa(unescape(encodeURIComponent(url))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')
+ * URLのバリデーションを行う
+ * @param {string} url - 検証するURL
+ * @returns {boolean} URLが有効で安全な場合はtrue
  */
-function decodeUrlFromNotificationId(notificationId) {
-    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX))
-        return null;
+function isValidUrl(url) {
+    if (typeof url !== 'string' || url.length === 0) {
+        return false;
+    }
+    if (url.length > MAX_URL_LENGTH) {
+        return false;
+    }
     try {
-        const b64safe = notificationId.slice(PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length);
-        const b64 = b64safe.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
-        return decodeURIComponent(escape(atob(padded)));
+        const parsedUrl = new URL(url);
+        // ブロックされたスキーマを拒否
+        for (const blockedScheme of BLOCKED_URL_SCHEMES) {
+            if (parsedUrl.protocol === blockedScheme && url.startsWith(blockedScheme)) {
+                return false;
+            }
+        }
+        // 許可されたスキーマのみ受け付ける
+        // chrome-extension: は内部使用のみ
+        for (const allowedScheme of ALLOWED_URL_SCHEMES) {
+            if (parsedUrl.protocol === allowedScheme) {
+                return true;
+            }
+        }
+        return false;
     }
     catch {
+        return false;
+    }
+}
+/**
+ * 署名を生成する（crypto.tsのgenerateHmacSignatureをラップ）
+ * @param {string} data - 署名するデータ
+ * @param {CryptoKey} key - HMAC署名キー
+ * @returns {Promise<string>} URL-safe base64エンコードされた署名
+ */
+async function generateSignature(data, key) {
+    return generateHmacSignature(data, key);
+}
+/**
+ * 署名を検証する（crypto.tsのverifyHmacSignatureをラップ）
+ * @param {string} data - 元データ
+ * @param {string} signature - URL-safe base64エンコードされた署名
+ * @param {CryptoKey} key - HMAC署名キー
+ * @returns {Promise<boolean>} 署名が有効な場合はtrue
+ */
+async function verifySignature(data, signature, key) {
+    return verifyHmacSignature(data, signature, key);
+}
+/**
+ * URLをURL-safe base64でエンコードし、HMAC署名を付与する（P0: 通知ID偽造脆弱性対策）
+ * @param {string} url - エンコードするURL
+ * @param {number} [maxLength] - 最大エンコード長（デフォルト: 256）
+ * @returns {Promise<string>} URL-safe base64エンコードされたURLと署名
+ *
+ * @example
+ * const notificationId = await encodeUrlSafeBase64('https://example.com/path');
+ */
+async function encodeUrlSafeBase64(url, maxLength = 256) {
+    try {
+        // 入力バリデーション
+        if (!isValidUrl(url)) {
+            await logWarn('encodeUrlSafeBase64: Invalid URL', { urlLength: url.length }, ErrorCode.INVALID_INPUT, 'service-worker');
+            return '';
+        }
+        // プレフィックス長を考慮してURL長を制限
+        // 完全なHMAC-SHA256署名は32バイト → URL-safe base64で43文字
+        const prefixLength = PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length;
+        const signatureLength = 43; // 完全な署名長（URL-safe base64）
+        const maxUrlLength = (maxLength - prefixLength - signatureLength) * 0.75; // Base64オーバーヘッドを考慮
+        if (url.length > maxUrlLength) {
+            await logWarn('encodeUrlSafeBase64: URL too long', { urlLength: url.length, maxLength: maxUrlLength }, ErrorCode.INVALID_INPUT, 'service-worker');
+            return '';
+        }
+        const encoder = new TextEncoder();
+        const data = encoder.encode(url);
+        // ループベースでスタックオーバーフロー回避（P1: `String.fromCharCode(...data)` の改善）
+        const binaryString = Array.from(data, b => String.fromCharCode(b)).join('');
+        const urlB64 = btoa(binaryString)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+        // HMAC署名を付与（P0: 通知ID偽造脆弱性対策）
+        const key = await getNotificationHmacKey();
+        const signature = await generateSignature(url, key);
+        return `${urlB64}.${signature}`;
+    }
+    catch (error) {
+        await logError('encodeUrlSafeBase64: Failed to encode URL', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'service-worker');
+        return '';
+    }
+}
+/**
+ * 通知IDからURLをデコードし、署名を検証する（P0: 通知ID偽造脆弱性対策）
+ * CRITICAL: レガシーフォーマット（署名なし）は廃止済み - 有効な署名必須
+ * @param {string} notificationId - デコードする通知ID
+ * @returns {Promise<string | null>} デコードされたURL、またはnull（無効な場合）
+ *
+ * @example
+ * const url = await decodeUrlFromNotificationId('privacy-confirm-abc123.def456');
+ */
+async function decodeUrlFromNotificationId(notificationId) {
+    // プレフィックスチェック
+    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
+        return null;
+    }
+    const encodedPart = notificationId.slice(PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length);
+    // 入力長チェック（P1: 入力バリデーション）
+    if (encodedPart.length > MAX_ENCODED_LENGTH) {
+        await logWarn('decodeUrlFromNotificationId: Notification ID too long', { length: encodedPart.length, maxLength: MAX_ENCODED_LENGTH }, ErrorCode.INVALID_INPUT, 'service-worker');
+        return null;
+    }
+    try {
+        // 署名とURLの部分を分離
+        const parts = encodedPart.split('.');
+        if (parts.length !== 2) {
+            await logWarn('decodeUrlFromNotificationId: Invalid format (must be URL.signature)', { format: 'missing_signature' }, ErrorCode.CRYPTO_HMAC_FAILURE, 'service-worker');
+            return null;
+        }
+        const [urlB64, signature] = parts;
+        // デコードしてURLを取得
+        const b64 = urlB64.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
+        const binaryString = atob(padded);
+        const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
+        const decoder = new TextDecoder();
+        const url = decoder.decode(bytes);
+        // URLバリデーション（署名検証の前）
+        if (!isValidUrl(url)) {
+            await logWarn('decodeUrlFromNotificationId: Invalid URL after decoding', { urlHash: url.substring(0, 10) + '...' }, ErrorCode.INVALID_INPUT, 'service-worker');
+            return null;
+        }
+        // 署名検証（P0: 通知ID偽造脆弱性対策）- 必須
+        const key = await getNotificationHmacKey();
+        const isValid = await verifySignature(url, signature, key);
+        if (isValid) {
+            return url;
+        }
+        else {
+            await logWarn('decodeUrlFromNotificationId: Invalid signature - forged notification rejected', { urlHash: url.substring(0, 10) + '...' }, ErrorCode.CRYPTO_HMAC_FAILURE, 'service-worker');
+            return null;
+        }
+    }
+    catch (error) {
+        await logError('decodeUrlFromNotificationId: Failed to decode notification ID', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'service-worker');
         return null;
     }
 }
 // Button 0: 保存する / Button 1: スキップ
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
-    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX))
-        return;
-    chrome.notifications.clear(notificationId);
-    const url = decodeUrlFromNotificationId(notificationId);
-    if (!url)
-        return;
-    if (buttonIndex === 0) {
-        // 「保存する」: pendingから取得してforce記録
-        const pages = await getPendingPages();
-        const page = pages.find(p => p.url === url);
-        if (page) {
-            await recordingLogic.record({
-                title: page.title,
-                url: page.url,
-                content: '',
-                force: true,
-                skipDuplicateCheck: true,
-                recordType: 'auto'
-            });
+    try {
+        if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
+            return;
         }
+        chrome.notifications.clear(notificationId).catch(e => {
+            logWarn('Failed to clear notification', { notificationId, error: e instanceof Error ? e.message : String(e) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+        });
+        const url = await decodeUrlFromNotificationId(notificationId);
+        if (!url) {
+            // デコード失敗時はsilent return（既存の挙動）
+            return;
+        }
+        // URLのバリデーション（P1: 入力バリデーション）
+        if (!isValidUrl(url)) {
+            await logWarn('Invalid URL decoded from notification ID', { urlHash: url.substring(0, 10) + '...' }, ErrorCode.INVALID_INPUT, 'service-worker');
+            return;
+        }
+        if (buttonIndex === 0) {
+            // 「保存する」: pendingから取得してforce記録
+            const pages = await getPendingPages();
+            const page = pages.find(p => p.url === url);
+            if (page) {
+                await recordingLogic.record({
+                    title: page.title,
+                    url: page.url,
+                    content: '',
+                    force: true,
+                    skipDuplicateCheck: true,
+                    recordType: 'auto'
+                });
+            }
+        }
+        // buttonIndex === 1 「スキップ」: pending に残したまま何もしない（ダッシュボードから後で登録可能）
+        await removePendingPages([url]);
     }
-    // buttonIndex === 1 「スキップ」: pending に残したまま何もしない（ダッシュボードから後で登録可能）
-    await removePendingPages([url]);
+    catch (error) {
+        await logError('Notification button click handler failed', {
+            notificationId: notificationId.substring(0, 20) + '...',
+            buttonIndex,
+            error: error instanceof Error ? error.message : String(error)
+        }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+    }
 });
 // 通知本体クリック時も閉じる
 chrome.notifications.onClicked.addListener((notificationId) => {

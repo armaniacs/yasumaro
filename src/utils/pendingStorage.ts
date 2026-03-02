@@ -1,4 +1,6 @@
 import { getSettings, saveSettings } from './storage.js';
+import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { hashUrl } from './crypto.js';
 
 export interface PendingPage {
   url: string;
@@ -16,8 +18,17 @@ const PENDING_PAGES_KEY = 'osh_pending_pages';
  * @returns Promise resolving to an array of PendingPage objects, or an empty array if none exist.
  */
 async function getPendingPagesList(): Promise<PendingPage[]> {
-  const result = await chrome.storage.local.get(PENDING_PAGES_KEY);
-  return (result[PENDING_PAGES_KEY] as PendingPage[]) || [];
+  try {
+    const result = await chrome.storage.local.get(PENDING_PAGES_KEY);
+    return (result[PENDING_PAGES_KEY] as PendingPage[]) || [];
+  } catch (error) {
+    await logError(
+      'Failed to get pending pages list',
+      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      ErrorCode.STORAGE_READ_FAILURE
+    );
+    return [];
+  }
 }
 
 /**
@@ -26,17 +37,32 @@ async function getPendingPagesList(): Promise<PendingPage[]> {
  * @returns Promise that resolves when the operation is complete.
  */
 export async function addPendingPage(page: PendingPage): Promise<void> {
-  const pages = await getPendingPagesList();
+  try {
+    let pages: PendingPage[];
+    try {
+      pages = await getPendingPagesList();
+    } catch {
+      pages = [];
+    }
 
-  // Exclusion of duplicates
-  const exists = pages.some(p => p.url === page.url);
-  console.log('[OWeave pending] addPendingPage:', page.url, 'exists:', exists, 'current count:', pages.length);
-  if (exists) return;
+    // Exclusion of duplicates
+    const exists = pages.some(p => p.url === page.url);
+    const urlHash = await hashUrl(page.url);
+    await logInfo('addPendingPage called', { urlHash, exists, currentCount: pages.length, source: 'pendingStorage' });
+    if (exists) return;
 
-  const updatedPages = [...pages, page];
+    const updatedPages = [...pages, page];
 
-  await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
-  console.log('[OWeave pending] saved, new count:', updatedPages.length);
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await logDebug('Pending page saved', { newCount: updatedPages.length, source: 'pendingStorage' });
+  } catch (error) {
+    await logError(
+      'Failed to add pending page',
+      { error: error instanceof Error ? error.message : String(error), urlHash: await hashUrl(page.url), source: 'pendingStorage' },
+      ErrorCode.STORAGE_WRITE_FAILURE
+    );
+    throw error;
+  }
 }
 
 /**
@@ -44,8 +70,17 @@ export async function addPendingPage(page: PendingPage): Promise<void> {
  * @returns Promise resolving to an array of PendingPage objects that have not expired.
  */
 export async function getPendingPages(): Promise<PendingPage[]> {
-  const pages = await getPendingPagesList();
-  return pages.filter(p => p.expiry > Date.now());
+  try {
+    const pages = await getPendingPagesList();
+    return pages.filter(p => p.expiry > Date.now());
+  } catch (error) {
+    await logError(
+      'Failed to get pending pages',
+      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      ErrorCode.STORAGE_READ_FAILURE
+    );
+    return [];
+  }
 }
 
 /**
@@ -54,11 +89,19 @@ export async function getPendingPages(): Promise<PendingPage[]> {
  * @returns Promise that resolves when the operation is complete.
  */
 export async function removePendingPages(urls: string[]): Promise<void> {
-  const pages = await getPendingPagesList();
-  const urlSet = new Set(urls);
-  const updatedPages = pages.filter(p => !urlSet.has(p.url));
+  try {
+    const pages = await getPendingPagesList();
+    const urlSet = new Set(urls);
+    const updatedPages = pages.filter(p => !urlSet.has(p.url));
 
-  await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+  } catch (error) {
+    await logError(
+      'Failed to remove pending pages',
+      { error: error instanceof Error ? error.message : String(error), urlsCount: urls.length, source: 'pendingStorage' },
+      ErrorCode.STORAGE_WRITE_FAILURE
+    );
+  }
 }
 
 /**
@@ -66,8 +109,16 @@ export async function removePendingPages(urls: string[]): Promise<void> {
  * @returns Promise that resolves when the operation is complete.
  */
 export async function clearExpiredPages(): Promise<void> {
-  const pages = await getPendingPagesList();
-  const updatedPages = pages.filter(p => p.expiry > Date.now());
+  try {
+    const pages = await getPendingPagesList();
+    const updatedPages = pages.filter(p => p.expiry > Date.now());
 
-  await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+  } catch (error) {
+    await logError(
+      'Failed to clear expired pages',
+      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      ErrorCode.STORAGE_WRITE_FAILURE
+    );
+  }
 }

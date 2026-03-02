@@ -1,6 +1,8 @@
 import { getMessage } from './i18n.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
+import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { hashUrl } from '../utils/crypto.js';
 export function formatTimeAgo(timestamp) {
     const now = Date.now();
     const diff = now - timestamp;
@@ -96,20 +98,22 @@ export async function checkPageStatus(url) {
     try {
         // URL正規化
         const normalizedUrl = normalizeUrl(url);
-        console.log('[StatusChecker] Checking status for URL:', { original: url, normalized: normalizedUrl });
+        const originalHash = await hashUrl(url);
+        const normalizedHash = await hashUrl(normalizedUrl);
+        await logDebug('Checking status for URL', { originalHash, normalizedHash, source: 'statusChecker' });
         // Service Workerからプライバシーキャッシュを取得
         let privacyInfo = null;
         try {
             const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE' });
-            console.log('[StatusChecker] Privacy cache response:', response);
+            await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
             if (response && response.success && response.cache) {
                 const cacheMap = new Map(response.cache);
                 privacyInfo = cacheMap.get(normalizedUrl);
-                console.log('[StatusChecker] Found privacy info in cache:', privacyInfo);
+                await logDebug('Found privacy info in cache', { isPrivate: privacyInfo?.isPrivate, reason: privacyInfo?.reason, source: 'statusChecker' });
             }
         }
         catch (error) {
-            console.warn('[StatusChecker] Failed to get privacy cache:', error);
+            await logWarn('Failed to get privacy cache', { error: error instanceof Error ? error.message : String(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
         }
         // 並列処理で設定とURL履歴を取得
         const [settings, savedUrls, allowed] = await Promise.all([
@@ -146,13 +150,13 @@ export async function checkPageStatus(url) {
         // プライバシー判定（Service Workerから取得した情報を使用）
         const isPrivate = privacyInfo?.isPrivate || false;
         const reason = privacyInfo?.reason;
-        console.log('[StatusChecker] Privacy detection:', {
+        await logDebug('Privacy detection result', {
             isPrivate,
             reason,
-            cacheControl: cacheInfo.cacheControl,
+            hasCache: cacheInfo.hasCache,
             hasCookie: cacheInfo.hasCookie,
             hasAuth: cacheInfo.hasAuth,
-            hasCache: cacheInfo.hasCache
+            source: 'statusChecker'
         });
         // 最終保存時刻
         const savedTimestamp = savedUrls.get(url);
@@ -183,7 +187,7 @@ export async function checkPageStatus(url) {
         };
     }
     catch (error) {
-        console.error('Error checking page status:', error);
+        await logError('Error checking page status', { error: error instanceof Error ? error.message : String(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
         // エラー時はデフォルト値を返す
         return {
             domainFilter: {

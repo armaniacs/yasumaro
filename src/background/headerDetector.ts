@@ -1,6 +1,7 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import { RecordingLogic } from './recordingLogic.js';
-import { addLog, LogType } from '../utils/logger.js';
+import { logInfo, logDebug, logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { hashUrl } from '../utils/crypto.js';
 
 const MAX_CACHE_SIZE = 100;
 
@@ -8,10 +9,9 @@ export class HeaderDetector {
   /**
    * webRequest.onHeadersReceivedリスナーを初期化する
    */
-  static initialize(): void {
+  static async initialize(): Promise<void> {
     if (!chrome.webRequest) {
-      console.error('[HeaderDetector] webRequest API not available');
-      addLog(LogType.ERROR, 'webRequest API not available');
+      await logError('webRequest API not available', { source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
       return;
     }
 
@@ -25,11 +25,9 @@ export class HeaderDetector {
         ['responseHeaders', 'extraHeaders']
       );
 
-      console.log('[HeaderDetector] Successfully initialized webRequest listener');
-      addLog(LogType.INFO, 'HeaderDetector initialized');
+      await logInfo('Successfully initialized webRequest listener', { source: 'headerDetector' });
     } catch (error: any) {
-      console.error('[HeaderDetector] Failed to initialize:', error);
-      addLog(LogType.ERROR, 'HeaderDetector initialization failed: ' + error.message);
+      await logError('HeaderDetector initialization failed', { error: error.message, source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
     }
   }
 
@@ -37,12 +35,17 @@ export class HeaderDetector {
    * HTTPレスポンスヘッダーを受信した際の処理
    */
   private static onHeadersReceived(details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined {
-    console.log('[HeaderDetector] onHeadersReceived fired for:', details.url);
+    // 【注意】webRequest.onHeadersReceived は同期コールバックのため async 関数にできない
+    // URLハッシュ化にはcrypto APIが必要なため、即時実行の非同期関数を経由してログ出力を行う
+    (async () => {
+      const urlHash = await hashUrl(details.url);
+      await logDebug('onHeadersReceived fired', { type: details.type, urlHash, source: 'headerDetector' });
+    })();
 
     try {
       // メインフレームのHTMLのみ処理
       if (details.type !== 'main_frame') {
-        console.log('[HeaderDetector] Skipping non-main_frame:', details.type);
+        (async () => await logDebug('Skipping non-main_frame', { type: details.type, source: 'headerDetector' }))();
         return;
       }
 
@@ -50,13 +53,17 @@ export class HeaderDetector {
       const contentType = details.responseHeaders?.find(
         (h: chrome.webRequest.HttpHeader) => h.name?.toLowerCase() === 'content-type'
       );
-      console.log('[HeaderDetector] Content-Type:', contentType?.value || 'unknown');
+      (async () => await logDebug('Content-Type check', { contentType: contentType?.value || 'unknown', source: 'headerDetector' }))();
 
       if (!contentType?.value?.includes('text/html')) {
-        addLog(LogType.DEBUG, 'Skipping non-HTML response', {
-          url: details.url,
-          contentType: contentType?.value || 'unknown'
-        });
+        (async () => {
+          const urlHash = await hashUrl(details.url);
+          await logDebug('Skipping non-HTML response', {
+            urlHash,
+            contentType: contentType?.value || 'unknown',
+            source: 'headerDetector'
+          });
+        })();
         return;
       }
 
@@ -64,33 +71,37 @@ export class HeaderDetector {
       const headers = details.responseHeaders || [];
       const privacyInfo = checkPrivacy(headers);
 
-      console.log('[HeaderDetector] Privacy info:', {
-        url: details.url,
-        isPrivate: privacyInfo.isPrivate,
-        reason: privacyInfo.reason,
-        cacheControl: privacyInfo.headers?.cacheControl,
-        hasCookie: privacyInfo.headers?.hasCookie,
-        hasAuth: privacyInfo.headers?.hasAuth
-      });
+      (async () => {
+        const urlHash = await hashUrl(details.url);
+        await logDebug('Privacy detection result', {
+          urlHash,
+          isPrivate: privacyInfo.isPrivate,
+          reason: privacyInfo.reason,
+          hasCache: !!privacyInfo.headers?.cacheControl,
+          hasCookie: privacyInfo.headers?.hasCookie,
+          hasAuth: privacyInfo.headers?.hasAuth,
+          source: 'headerDetector'
+        });
+      })();
 
       // キャッシュに保存
       HeaderDetector.cachePrivacyInfo(details.url, privacyInfo);
 
-      console.log('[HeaderDetector] Privacy info cached, cache size:', RecordingLogic.cacheState.privacyCache?.size || 0);
-
-      // すべてのケースでログ出力（デバッグ用）
-      addLog(LogType.DEBUG, 'Privacy info cached', {
-        url: details.url,
-        isPrivate: privacyInfo.isPrivate,
-        reason: privacyInfo.reason,
-        cacheControl: privacyInfo.headers?.cacheControl
-      });
+      const cacheSize = RecordingLogic.cacheState.privacyCache?.size || 0;
+      (async () => {
+        const urlHash = await hashUrl(details.url);
+        await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
+      })();
     } catch (error: any) {
       // エラーは握りつぶしてログのみ記録
-      addLog(LogType.ERROR, 'HeaderDetector error', {
-        error: error.message,
-        url: details.url
-      });
+      (async () => {
+        const urlHash = await hashUrl(details.url);
+        await logError('HeaderDetector error', {
+          error: error.message,
+          urlHash,
+          source: 'headerDetector'
+        }, ErrorCode.UNKNOWN_ERROR);
+      })();
     }
     return; // Return undefined (non-blocking)
   }
@@ -149,7 +160,7 @@ export class HeaderDetector {
   /**
    * 最も古いキャッシュエントリを削除する（LRU実装）
    */
-  private static evictOldestEntry(): void {
+  private static async evictOldestEntry(): Promise<void> {
     const cache = RecordingLogic.cacheState.privacyCache;
     if (!cache || cache.size === 0) {
       return;
@@ -168,7 +179,8 @@ export class HeaderDetector {
 
     if (oldestUrl) {
       cache.delete(oldestUrl);
-      addLog(LogType.DEBUG, 'Evicted oldest privacy cache entry', { url: oldestUrl });
+      const urlHash = await hashUrl(oldestUrl);
+      await logDebug('Evicted oldest privacy cache entry', { urlHash, source: 'headerDetector' });
     }
   }
 }

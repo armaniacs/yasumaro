@@ -17,6 +17,16 @@ export declare function generateSalt(): Uint8Array;
  */
 export declare function generateIV(): Uint8Array;
 /**
+ * 定数時間比較（タイミング攻撃対策）
+ * 2つの文字列を定数時間で比較し、タイミング攻撃を防ぐ
+ * 【標準ブラウザAPIの優先使用】: crypto.subtle.timingSafeEqual() が利用可能な場合はそちらを使用
+ * 【フォールバック実装】: 利用不可の場合は自前実装でタイミング安全に比較
+ * @param {string} a - 比較する文字列1
+ * @param {string} b - 比較する文字列2
+ * @returns {Promise<boolean>} 文字列が等しい場合はtrue、それ以外はfalse
+ */
+export declare function constantTimeCompare(a: string, b: string): Promise<boolean>;
+/**
  * パスワードをハッシュ化する
  * @param {string} password - 平文パスワード
  * @returns {Promise<string>} Base64エンコードされたハッシュ
@@ -111,4 +121,36 @@ export declare function hashPasswordWithPBKDF2(password: string, salt: Uint8Arra
  * @returns {Promise<boolean>} パスワードが正しければtrue
  */
 export declare function verifyPasswordWithPBKDF2(password: string, storedHash: string, salt: Uint8Array): Promise<boolean>;
+/**
+ * Get or create HMAC signature key for notification IDs
+ * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
+ */
+export declare function getNotificationHmacKey(): Promise<CryptoKey>;
+/**
+ * Generate URL-safe base64 HMAC signature for notification IDs
+ * Uses full signature (no truncation) for cryptographic guarantee
+ * @param {string} data - Data to sign (typically URL)
+ * @param {CryptoKey} key - HMAC key
+ * @returns {Promise<string>} URL-safe base64 encoded full signature
+ */
+export declare function generateHmacSignature(data: string, key: CryptoKey): Promise<string>;
+/**
+ * Verify HMAC signature using constant-time comparison
+ * @param {string} data - Original data
+ * @param {string} signature - URL-safe base64 encoded signature
+ * @param {CryptoKey} key - HMAC key
+ * @returns {Promise<boolean>} True if signature is valid
+ */
+export declare function verifyHmacSignature(data: string, signature: string, key: CryptoKey): Promise<boolean>;
+/**
+ * URLのSHA-256ハッシュを生成し、先頭8文字のプレフィックス付き文字列を返す
+ * ログ出力時のプライバシー保護用（URLの生値を直接ログに記録しないため）
+ * @param {string} url - ハッシュ化するURL
+ * @returns {Promise<string>} 先頭8文字のSHA-256ハッシュ値（プレフィックス付き）
+ *
+ * @example
+ * const hash = await hashUrl('https://example.com/path');
+ * // Returns: '[hash:a1b2c3d4]'
+ */
+export declare function hashUrl(url: string): Promise<string>;
 //# sourceMappingURL=crypto.d.ts.map

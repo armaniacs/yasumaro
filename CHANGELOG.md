@@ -2,9 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.1] - 2026-03-02
+
+### Security
+- **通知IDのHMAC署名保護** ([service-worker.ts](src/background/service-worker.ts), [crypto.ts](src/utils/crypto.ts))
+  - 通知ID生成時に完全なHMAC-SHA256署名を追加し、通知ID偽造脆弱性に対策
+  - デコード時に署名を検証し、偽造された通知を確実に拒否
+  - HMACキーを暗号化して`chrome.storage.local`に保存（平文保存の脆弱性を修正）
+  - レガシーフォーマット（署名なし）のサポートを廃止（署名偽造バイパスを修正）
+- **ログ出力時のプライバシー保護** ([pendingStorage.ts](src/utils/pendingStorage.ts), [statusChecker.ts](src/popup/statusChecker.ts), [headerDetector.ts](src/background/headerDetector.ts))
+  - URLをSHA-256ハッシュ化してログ出力（先頭8文字のみ）
+  - センシティブなURL情報がログに直接出力されることを防止
+  - Structured Loggingの統一的な使用
+
+### Fixed
+- **セキュリティ脆弱性の修正** ([service-worker.ts](src/background/service-worker.ts), [crypto.ts](src/utils/crypto.ts))
+  - **署名切り捨ての削除**: 16文字切り捨てを廃止し、完全なHMAC署名（43文字）を使用
+  - **レガシーフォーマット廃止**: 署名なしの通知IDを完全に拒否（署名バイパス脆弱性を修正）
+  - **キー暗号化**: HMACキーをAES-GCM暗号化で保存（平文保存の脆弱性を修正）
+- **Unicode URL処理の改善** ([service-worker.ts](src/background/service-worker.ts))
+  - `btoa(unescape(encodeURIComponent(url)))` から TextEncoder/TextDecoder APIへ移行
+  - 日本語・アラビア語・中国語など非ASCII文字を含むURLを正確に処理
+  - 長いURL処理時のスタックオーバーフロー回避（Array.from採用）
+- **入力バリデーションの強化** ([service-worker.ts](src/background/service-worker.ts))
+  - URLスキーマ検証（javascript:, data:, file: 等を拒否）
+  - URL長の上限チェック（MAX_URL_LENGTH: 2000文字）
+  - 通知ID長の上限チェック（MAX_ENCODED_LENGTH: 5000文字）
+
+### Changed
+- **デバッグログのセキュリティ改善** ([storage.ts](src/utils/storage.ts))
+  - APIキーの生値をログ出力から削除（`obsidianKeyValue` 削除）
+  - 構造化ロギングシステム（logger.ts）の統一的な使用へ移行
+- **Structured Loggingへの移行** ([service-worker.ts](src/background/service-worker.ts), [pendingStorage.ts](src/utils/pendingStorage.ts), [statusChecker.ts](src/popup/statusChecker.ts), [headerDetector.ts](src/background/headerDetector.ts))
+  - `console.log`, `console.warn`, `console.error` を `logInfo`, `logWarn`, `logError` に置き換え
+  - ErrorCodeによるエラー分類と詳細なトラブルシューティング
+
+### Added
+- **プライバシー保護ヘルパー関数** ([pendingStorage.ts](src/utils/pendingStorage.ts), [statusChecker.ts](src/popup/statusChecker.ts), [headerDetector.ts](src/background/headerDetector.ts))
+  - `hashUrl()`: URLをSHA-256ハッシュ化し、先頭8文字でログ出力（crypto.tsに中央集約）
+- **Base64エンコード/デコード関数の改善**
+  - `encodeUrlSafeBase64()`: 文字列処理をループベースに変更し、大容量URLでも安全に処理
+  - `decodeUrlFromNotificationId()`: エラーハンドリングとURL検証を強化
+  - `isValidUrl()`: URLの妥当性を検証するヘルパー関数
+- **通知セキュリティ関数** ([crypto.ts](src/utils/crypto.ts))
+  - `getNotificationHmacKey()`: 暗号化されたHMACキーを取得または生成
+  - `generateHmacSignature()`: 完全なURL-safe base64署名を生成
+  - `verifyHmacSignature()`: 定数時間比較で署名を検証
+- **エラーハンドリングの強化** ([pendingStorage.ts](src/utils/pendingStorage.ts))
+  - すべてのstorage操作にtry-catchを追加
+  - 構造化ロギングによるエラー追跡
+
 ## [4.1.0] - 2026-03-01
 
-## [4.0.7] - to be released
+## [4.0.7] - 2026-03-01
 
 ### Fixed
 - **PBKDF2イテレーション数の復帰** ([crypto.ts](src/utils/crypto.ts))

@@ -2,7 +2,7 @@ export declare class HeaderDetector {
     /**
      * webRequest.onHeadersReceivedリスナーを初期化する
      */
-    static initialize(): void;
+    static initialize(): Promise<void>;
     /**
      * HTTPレスポンスヘッダーを受信した際の処理
      */
