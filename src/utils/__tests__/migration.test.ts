@@ -171,7 +171,8 @@ describe('migration', () => {
         storage: {
           local: {
             get: jest.fn(),
-            set: jest.fn()
+            set: jest.fn(),
+            remove: jest.fn()
           }
         },
         runtime: {

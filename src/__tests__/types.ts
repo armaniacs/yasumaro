@@ -25,6 +25,7 @@ export interface ChromeStorageMock {
     set: jest.Mock<Promise<void>, [items: Record<string, any>]>;
     remove: jest.Mock<Promise<void>, [keys: string | string[]]>;
     clear: jest.Mock<Promise<void>, []>;
+    getBytesInUse: jest.Mock<Promise<number>, []>;
   };
 }
 

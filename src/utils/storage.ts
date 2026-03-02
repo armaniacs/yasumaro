@@ -6,6 +6,7 @@
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
 import type { EncryptedData } from './typesCrypto.js';
+import { calculatePasswordStrength } from './masterPassword.js';
 import {
     generateSalt,
     deriveKeyWithExtensionId,
@@ -18,6 +19,104 @@ import {
 import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
+
+// セッションタイムアウト設定
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
+const SESSION_CHECK_INTERVAL_MS = 60 * 1000; // 1分ごとにチェック
+let lastActivityTimestamp = Date.now();
+let activityTimeoutId: number | null = null;
+
+/**
+ * アクティビティを更新
+ */
+function updateActivity(): void {
+    lastActivityTimestamp = Date.now();
+}
+
+/**
+ * タイムアウトチェッカーを開始
+ */
+function startSessionTimeoutChecker(): void {
+    if (activityTimeoutId !== null) {
+        return; // 既に実行中
+    }
+
+    activityTimeoutId = window.setInterval(async () => {
+        if (!cachedMasterPassword) {
+            return; // 既にロックされている
+        }
+
+        if (Date.now() - lastActivityTimestamp > SESSION_TIMEOUT_MS) {
+            // タイムアウト: セッションをロック
+            lockSession();
+            await logInfo(
+                'Session locked due to inactivity',
+                { timeoutMinutes: SESSION_TIMEOUT_MS / 60000 },
+                'storage.ts'
+            );
+        }
+    }, SESSION_CHECK_INTERVAL_MS);
+}
+
+// ストレージクォータ監視設定
+const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB (Chrome拡張機能のデフォルト)
+
+/**
+ * ストレージ使用量を取得
+ * @returns {Promise<number>} 使用量（バイト）
+ */
+export async function getStorageUsage(): Promise<number> {
+  return await chrome.storage.local.getBytesInUse();
+}
+
+/**
+ * 新しいデータのサイズを推定
+ * @param {unknown} data - データ
+ * @returns {number} サイズ（バイト）
+ */
+function estimateDataSize(data: unknown): number {
+  return new Blob([JSON.stringify(data || {})]).size;
+}
+
+/**
+ * 安全なストレージ書き込み
+ * @param {Record<string, unknown>} data - 書き込むデータ
+ * @param {string} [caller] - 呼び出し元（ログ用）
+ * @throws {Error} クォータ超過またはエラー
+ */
+async function safeStorageSet(data: Record<string, unknown>, caller = 'unknown'): Promise<void> {
+  try {
+    // 書き込み前にクォータチェック
+    const currentUsage = await getStorageUsage();
+    const newDataSize = estimateDataSize(data);
+
+    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
+      throw new Error(
+        `Storage quota exceeded (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
+      );
+    }
+
+    // 書き込み実行
+    await new Promise<void>((resolve, reject) => {
+      chrome.storage.local.set(data, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve();
+        }
+      });
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await logError(
+      `Storage write failed (${caller})`,
+      { error: errorMessage },
+      ErrorCode.STORAGE_QUOTA_EXCEEDED,
+      'storage.ts'
+    );
+    throw error;
+  }
+}
 
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
@@ -309,6 +408,9 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
         const passwordSalt = base64ToUint8Array(passwordSaltBase64);
         // PBKDF2キー導出を直接使用（マスターパスワードベース）
         cachedEncryptionKey = await deriveKeyFromPassword(cachedMasterPassword, passwordSalt);
+        // セッションタイムアウトチェックを開始（まだ開始していない場合）
+        startSessionTimeoutChecker();
+        updateActivity(); // アクティビティ更新
         return cachedEncryptionKey;
     }
 
@@ -336,6 +438,8 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // 【脆弱な方式】Extension IDを使用してキー導出
     // マスターパスワード設定後に再暗号化が必要
     cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
+    // セッションタイムアウトチェックを開始（まだ開始していない場合）
+    startSessionTimeoutChecker();
     return cachedEncryptionKey;
 }
 
@@ -415,6 +519,14 @@ export async function setMasterPassword(password: string): Promise<boolean> {
         throw new Error('Password must be at least 8 characters');
     }
 
+    // 【セキュリティ改善】パスワード強度チェック
+    const strength = calculatePasswordStrength(password);
+    if (strength.score < 40) {
+        throw new Error(
+            `Password is too weak (score: ${strength.score}, level: ${strength.level}). Please include a mix of uppercase, lowercase, numbers, and special characters.`
+        );
+    }
+
     const salt = generateSalt();
     const saltBase64 = btoa(String.fromCharCode(...salt));
     const hash = await hashPasswordWithPBKDF2(password, salt);
@@ -432,6 +544,12 @@ export async function setMasterPassword(password: string): Promise<boolean> {
 
     // キャッシュをクリア
     cachedEncryptionKey = null;
+
+    await logInfo(
+        'Master password set',
+        { strength: strength.score, level: strength.level },
+        'storage.ts'
+    );
 
     return true;
 }
@@ -467,6 +585,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         cachedMasterPassword = password;
         cachedEncryptionKey = null; // 新しいキーを生成するためにキャッシュをクリア
         await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
+        updateActivity(); // タイムアウトリセットのためにアクティビティを更新
         return true;
     }
 
@@ -847,6 +966,15 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
         };
     }
 
+    // 【セキュリティ改善】保存前にクォータチェック
+    const currentUsage = await getStorageUsage();
+    const newDataSize = estimateDataSize(toSave);
+    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
+        throw new Error(
+            `Storage quota exceeded (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
+        );
+    }
+
     // 楽観的ロックを使用して同時実行時の競合を防止
     await withOptimisticLock('settings', (currentSettings: Settings) => {
         return { ...currentSettings, ...toSave };
@@ -897,6 +1025,15 @@ export async function getSavedUrlsWithTimestamps(): Promise<Map<string, number>>
  */
 export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null = null): Promise<void> {
     const urlArray = Array.from(urlSet);
+
+    // 【セキュリティ改善】保存前にクォータチェック
+    const currentUsage = await getStorageUsage();
+    const newDataSize = estimateDataSize(urlArray);
+    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
+        throw new Error(
+            `Storage quota exceeded for saved URLs (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
+        );
+    }
 
     // 楽観的ロックで安全に保存
     await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });

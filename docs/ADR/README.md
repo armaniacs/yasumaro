@@ -1,6 +1,24 @@
+# ADR (Architecture Decision Records)
+
+Obsidian WeaveプロジェクトのArchitecture Decision Record（ADR）一覧です。
+
+## ADR一覧
+
+| # | タイトル | 日付 | ステータス |
+|---|---------|------|----------|
+| 0001 | [APIキーセキュリティポリシー](./0001-api-key-security-policy.md) | 2026-03-01 | 採用済み |
+| - | [ポート移行からHTTPS経由のAPI呼び出しへ](./2026-02-22-port-migration-to-https.md) | 2026-02-22 | 採用済み |
+| - | [プロジェクト名変更](./2026-02-25-rename-to-obsidian-weave.md) | 2026-02-25 | 採用済み |
+| - | [CICDは使用しない](./2026-03-01-CICD-is-not-use.md) | 2026-03-01 | 採用済み |
+| - | [最適化されたコンテンツ抽出](./2026-03-01-optimized-content-extraction.md) | 2026-03-01 | 採用済み |
+| - | [通知IDセキュリティ強化とログ出力のプライバシー保護](./2026-03-02-notification-id-security-and-log-privacy.md) | 2026-03-02 | 採用済み |
+| - | [HMAC署名検証失敗時のユーザー確認によるインポート許可](./2026-03-03-user-override-for-hmac-verification-failure.md) | 2026-03-03 | 採用済み |
+
+---
+
 # ADR標準フォーマット
 
-このドキュメントは、Obsidian WeaveプロジェクトのArchitecture Decision Record (ADR) で使用する標準フォーマットを定義します。
+以下は、Obsidian WeaveプロジェクトのADRで使用する標準フォーマットです。
 
 ## フォーマット構造
 

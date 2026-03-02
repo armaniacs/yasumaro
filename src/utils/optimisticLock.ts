@@ -93,6 +93,7 @@ export async function withOptimisticLock<T>(key: string, updateFn: (currentValue
             const newValue = updateFn(currentValue);
 
             // Step 3: 新しい値とバージョン+1をアトミックに書き込み
+            // chrome.storage.local jest mockがPromiseを返す前提
             await chrome.storage.local.set({
                 [key]: newValue,
                 [versionKey]: currentVersion + 1

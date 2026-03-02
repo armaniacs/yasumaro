@@ -83,6 +83,13 @@ global.chrome = {
         Object.assign(localStorage, items);
         if (callback) callback();
         return Promise.resolve();
+      }),
+      getBytesInUse: jest.fn(() => Promise.resolve(1024)),
+      remove: jest.fn((keys, callback) => {
+        const keysToRemove = Array.isArray(keys) ? keys : [keys];
+        keysToRemove.forEach(key => delete localStorage[key]);
+        if (callback) callback();
+        return Promise.resolve();
       })
     },
     sync: {

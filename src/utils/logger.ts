@@ -4,6 +4,8 @@
  * Stores logs in chrome.storage.local with 7-day retention policy.
  */
 
+import { sanitizeRegex } from './piiSanitizer.js';
+
 // エラーコード定義（SRE/Logging改善 #8）
 export const ErrorCode = {
     // ストレージ関連
@@ -11,6 +13,8 @@ export const ErrorCode = {
     STORAGE_WRITE_FAILURE: 'STRG_WR_001',
     STORAGE_KEY_NOT_FOUND: 'STRG_NF_001',
     STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+    STORAGE_QUOTA_EXCEEDED: 'STRG_QUOTA_001',
+    MIGRATION_ROLLBACK_FAILED: 'STRG_ROLLBACK_001',
 
     // 暗号化関連
     CRYPTO_DECRYPTION_FAILURE: 'CRPT_DEC_001',
@@ -177,6 +181,41 @@ export function clearPendingLogs(): void {
 }
 
 /**
+ * ログの詳細情報をサニタイズする（PII検出とマスキング）
+ * @param {Record<string, any>} details - サニタイズ対象の詳細情報
+ * @returns {Record<string, any>} サニタイズ済みの詳細情報
+ */
+async function sanitizeLogDetails(details: Record<string, any>): Promise<Record<string, any>> {
+    const sanitized: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(details)) {
+        if (value === null || value === undefined) {
+            sanitized[key] = value;
+            continue;
+        }
+
+        // 文字列値の場合はPII検出を実行
+        if (typeof value === 'string') {
+            const result = await sanitizeRegex(value);
+            if (result.maskedItems.length > 0) {
+                // PII検出時はmaskedTextを使用し、検出したPIIの型も記録
+                sanitized[key] = result.text;
+                sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m: any) => m.type);
+            } else {
+                sanitized[key] = value;
+            }
+        } else if (typeof value === 'object') {
+            // オブジェクトの場合は再帰的に処理
+            sanitized[key] = await sanitizeLogDetails(value);
+        } else {
+            sanitized[key] = value;
+        }
+    }
+
+    return sanitized;
+}
+
+/**
  * Add a log entry
  * @param {LogTypeValues} type - LogType
  * @param {string} message - Log message
@@ -197,7 +236,7 @@ export async function addLog(type: LogTypeValues, message: string, details: Reco
             timestamp: Date.now(),
             type,
             message,
-            details
+            details: sanitizeLogDetails(details)
         };
 
         // バッファに追加（上限超過時は古いエントリを破棄）

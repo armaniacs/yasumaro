@@ -45,7 +45,8 @@ const mockChrome = {
                     delete mockStorage[keys];
                 }
                 return Promise.resolve();
-            })
+            }),
+            getBytesInUse: jest.fn(() => Promise.resolve(1024))
         }
     },
     runtime: {

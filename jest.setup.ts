@@ -94,6 +94,7 @@ const chromeStorageMock: ChromeStorageMock = {
       Object.keys(localStorage).forEach((key) => delete localStorage[key]);
       return Promise.resolve();
     }),
+    getBytesInUse: jest.fn<Promise<number>, []>(() => Promise.resolve(1024)),
   },
   session: {
     get: jest.fn<Promise<Record<string, any>>, [string | string[] | null | undefined]>(

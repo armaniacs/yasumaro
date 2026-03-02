@@ -139,7 +139,8 @@ function createStorageMocks() {
   chrome.storage.local = {
     get: getMock,
     set: setMock,
-    remove: removeMock
+    remove: removeMock,
+    getBytesInUse: jest.fn(() => Promise.resolve(1024))
   } as any;
 
   return {

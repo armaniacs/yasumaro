@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.2] - to be released
+
+### Fixed
+- **追加のセキュリティ脆弱性修正（Checking Teamレビュー対応）**
+  - **PIIサニタイザー出力制限** ([piiSanitizer.ts](src/utils/piiSanitizer.ts)): 置換サイズ上限(128KB)を設定し、出力拡大によるリスクを低減
+  - **ストレージクォータ監視** ([storage.ts](src/utils/storage.ts)): クォータ超過検出機能を追加し、`chrome.storage.local`容量不足によるデータ損失を防止
+  - **マイグレーション安全強化** ([migration.ts](src/utils/migration.ts)): バックアップ作成と自動ロールバック機能を追加し、マイグレーション失敗時にデータを確実に復旧
+  - **セッションタイムアウト** ([storage.ts](src/utils/storage.ts)): 30分のアイドルタイムアウトを実装し、長時間無操作時のセセッション保護を強化
+  - **パスワード複雑性チェック** ([storage.ts](src/utils/storage.ts)): マスターパスワード設定時に強度スコアをチェック
+  - **ログサニタイズ** ([logger.ts](src/utils/logger.ts)): ログ出力時に自動的にPIIを検出・マスクするサニタイズ機能を追加
+  - **IPv6 SSRF保護** ([fetch.ts](src/utils/fetch.ts)): IPv6 プライベートアドレス(fc00::/7, fe80::/10, ::1)をSSRF保護対象に追加
+
 ## [4.1.1] - 2026-03-02
 
 ### Security
