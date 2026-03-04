@@ -4,6 +4,11 @@
  */
 import type { EncryptedData } from './typesCrypto.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
+/**
+ * ストレージ使用量を取得
+ * @returns {Promise<number>} 使用量（バイト）
+ */
+export declare function getStorageUsage(): Promise<number>;
 export declare const StorageKeys: {
     readonly OBSIDIAN_API_KEY: "obsidian_api_key";
     readonly OBSIDIAN_PROTOCOL: "obsidian_protocol";
@@ -50,6 +55,7 @@ export declare const StorageKeys: {
     readonly CUSTOM_PROMPTS: "custom_prompts";
     readonly DOMAIN_FILTER_CACHE: "domain_filter_cache";
     readonly DOMAIN_FILTER_CACHE_TIMESTAMP: "domain_filter_cache_timestamp";
+    readonly PRIVACY_CONSENT: "privacy_consent";
 };
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
 export interface StorageKeyValues {
@@ -98,6 +104,11 @@ export interface StorageKeyValues {
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;
     [StorageKeys.TAG_CATEGORIES]: TagCategory[];
     [StorageKeys.TAG_SUMMARY_MODE]: boolean;
+    [StorageKeys.PRIVACY_CONSENT]: {
+        hasConsented: boolean;
+        consentDate?: string;
+        consentVersion?: string;
+    } | boolean;
 }
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];

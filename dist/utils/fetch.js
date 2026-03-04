@@ -137,8 +137,23 @@ export function isPrivateIpAddress(hostname) {
             return true;
         return false;
     }
-    // IPv6形式のローカルアドレス
-    if (hostname === '::1' || hostname.startsWith('::ffff:127.') || hostname.startsWith('fe80:')) {
+    // IPv6形式のプライベートアドレスの完全なチェック
+    const ipv6Lower = hostname.toLowerCase();
+    // ::1 - ループバックアドレス
+    if (ipv6Lower === '::1') {
+        return true;
+    }
+    // ::ffff:127.x.x.x - IPv4マップアドレス（ループバック）
+    if (ipv6Lower.startsWith('::ffff:127.')) {
+        return true;
+    }
+    // fe80::/10 - リンクローカルアドレス (fe80:: ~ febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
+    if (/^fe[89ab][0-9a-f](:|$)/i.test(ipv6Lower)) {
+        return true;
+    }
+    // fc00::/7 - ユニークローカルアドレス (ULAs)
+    // fc00::/7 には fc00::/8 と fd00::/8 が含まれます (fc00:: ~ fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
+    if (/^fc[0-9a-f]{0,2}:/i.test(ipv6Lower) || /^fd[0-9a-f]{0,2}:/i.test(ipv6Lower)) {
         return true;
     }
     return false;

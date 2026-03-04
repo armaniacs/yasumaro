@@ -3,6 +3,7 @@
  * Structured Logging Utility with Error Codes
  * Stores logs in chrome.storage.local with 7-day retention policy.
  */
+import { sanitizeRegex } from './piiSanitizer.js';
 // エラーコード定義（SRE/Logging改善 #8）
 export const ErrorCode = {
     // ストレージ関連
@@ -10,6 +11,8 @@ export const ErrorCode = {
     STORAGE_WRITE_FAILURE: 'STRG_WR_001',
     STORAGE_KEY_NOT_FOUND: 'STRG_NF_001',
     STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+    STORAGE_QUOTA_EXCEEDED: 'STRG_QUOTA_001',
+    MIGRATION_ROLLBACK_FAILED: 'STRG_ROLLBACK_001',
     // 暗号化関連
     CRYPTO_DECRYPTION_FAILURE: 'CRPT_DEC_001',
     CRYPTO_ENCRYPTION_FAILURE: 'CRPT_ENC_001',
@@ -49,6 +52,12 @@ export const ErrorCode = {
 const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 7;
 const MAX_LOGS = 1000; // Prevent unlimited growth
+// 【セキュリティ強化】log sanitizationへの深度制限と循環参照保護
+const MAX_RECURSION_DEPTH = 100; // redaction.tsと整合
+const SANITIZE_RESULT = {
+    TOO_DEEP: '[SANITIZED: too deep]',
+    CIRCULAR_REF: '[SANITIZED: circular reference]'
+};
 // 【パフォーマンス改善】バッチ書き込み用設定
 const BATCH_FLUSH_SIZE = 10; // バッファがこのサイズを超えるとフラッシュ
 const BATCH_FLUSH_DELAY_MS = 5000; // 5秒間書き込みがないとフラッシュ
@@ -136,6 +145,132 @@ export function clearPendingLogs() {
     pendingLogs = [];
 }
 /**
+ * ログの詳細情報をサニタイズする（PII検出とマスキング）
+ * 【深度制限と循環参照保護】
+ * @param {Record<string, any>} details - サニタイズ対象の詳細情報
+ * @param {WeakSet<object>} [visitedObjects] - 循環参照検出用WeakSet
+ * @param {number} [depth] - 現在の再帰深度
+ * @returns {Record<string, any>} サニタイズ済みの詳細情報
+ */
+async function sanitizeLogDetails(details, visitedObjects, depth = 0) {
+    // 入力チェック
+    if (details === null || details === undefined) {
+        return details;
+    }
+    if (typeof details !== 'object') {
+        throw new Error(`Expected object, got ${typeof details}`);
+    }
+    // 循環参照検出の初期化
+    if (typeof WeakSet !== 'undefined' && !visitedObjects) {
+        visitedObjects = new WeakSet();
+    }
+    // 深度制限チェック
+    if (depth >= MAX_RECURSION_DEPTH) {
+        return SANITIZE_RESULT.TOO_DEEP;
+    }
+    // 循環参照検出
+    if (visitedObjects && visitedObjects.has(details)) {
+        return SANITIZE_RESULT.CIRCULAR_REF;
+    }
+    // メタオブジェクトは文字列化
+    if (details instanceof Date) {
+        return details.toISOString();
+    }
+    if (details instanceof Error) {
+        return { message: details.message, stack: details.stack };
+    }
+    // WeakSetに現在のオブジェクトを追加
+    if (visitedObjects) {
+        visitedObjects.add(details);
+    }
+    const sanitized = {};
+    for (const [key, value] of Object.entries(details)) {
+        if (value === null || value === undefined) {
+            sanitized[key] = value;
+            continue;
+        }
+        // 文字列値の場合はPII検出を実行
+        if (typeof value === 'string') {
+            const result = await sanitizeRegex(value);
+            if (result.maskedItems.length > 0) {
+                sanitized[key] = result.text;
+                sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m) => m.type);
+            }
+            else {
+                sanitized[key] = value;
+            }
+        }
+        else if (typeof value === 'object') {
+            // 配列の明示的な処理
+            if (Array.isArray(value)) {
+                sanitized[key] = await sanitizeArray(value, visitedObjects, depth + 1);
+            }
+            else {
+                // オブジェクトの場合は再帰的に処理
+                sanitized[key] = await sanitizeLogDetails(value, visitedObjects, depth + 1);
+            }
+        }
+        else {
+            sanitized[key] = value; // primitive types
+        }
+    }
+    return sanitized;
+}
+/**
+ * 配列を再帰的にサニタイズする（ヘルパー関数）
+ */
+async function sanitizeArray(arr, visitedObjects, depth = 0) {
+    // 深度制限チェック
+    if (depth >= MAX_RECURSION_DEPTH) {
+        return SANITIZE_RESULT.TOO_DEEP;
+    }
+    // 循環参照検出
+    if (visitedObjects && visitedObjects.has(arr)) {
+        return SANITIZE_RESULT.CIRCULAR_REF;
+    }
+    // WeakSetに配列を追加
+    if (visitedObjects) {
+        visitedObjects.add(arr);
+    }
+    const sanitized = [];
+    for (const item of arr) {
+        if (item === null || item === undefined) {
+            sanitized.push(item);
+            continue;
+        }
+        if (typeof item === 'string') {
+            const result = await sanitizeRegex(item);
+            if (result.maskedItems.length > 0) {
+                sanitized.push(result.text);
+            }
+            else {
+                sanitized.push(item);
+            }
+        }
+        else if (typeof item === 'object') {
+            if (Array.isArray(item)) {
+                sanitized.push(await sanitizeArray(item, visitedObjects, depth + 1));
+            }
+            else {
+                // メタオブジェクトのチェック
+                if (item instanceof Date) {
+                    sanitized.push(item.toISOString());
+                }
+                else if (item instanceof Error) {
+                    sanitized.push({ message: item.message, stack: item.stack });
+                }
+                else {
+                    sanitized.push(await sanitizeLogDetails(item, visitedObjects, depth + 1));
+                }
+            }
+        }
+        else {
+            sanitized.push(item); // primitive types
+        }
+    }
+    return sanitized;
+}
+/**
  * Add a log entry
  * @param {LogTypeValues} type - LogType
  * @param {string} message - Log message
@@ -155,7 +290,7 @@ export async function addLog(type, message, details = {}) {
             timestamp: Date.now(),
             type,
             message,
-            details
+            details: await sanitizeLogDetails(details)
         };
         // バッファに追加（上限超過時は古いエントリを破棄）
         if (pendingLogs.length >= MAX_PENDING_LOGS) {

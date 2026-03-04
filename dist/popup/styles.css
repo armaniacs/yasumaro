@@ -2117,3 +2117,109 @@ label.inline-label {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+/* =============================================================================
+   Privacy Consent Modal
+   ============================================================================= */
+
+.privacy-consent-content {
+  max-width: 550px;
+}
+
+.modal-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+}
+
+.privacy-consent-summary {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.privacy-consent-summary h4 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.privacy-consent-summary ul {
+  margin: 0;
+  padding-left: var(--space-6);
+}
+
+.privacy-consent-summary li {
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.privacy-consent-summary li:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-policy-link {
+  text-align: center;
+  margin: var(--space-4) 0;
+}
+
+.link-btn {
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.link-btn:hover {
+  color: var(--color-primary-hover);
+  text-decoration: none;
+}
+
+.link-btn:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  text-decoration: underline;
+}
+
+.consent-checkbox-group {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.5;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-label input[type="checkbox"]:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--color-secondary);
+}

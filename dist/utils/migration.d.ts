@@ -38,7 +38,9 @@ interface NewFormat {
 export declare function migrateToLightweightFormat(oldRules: OldFormat): OldFormat | NewFormat;
 /**
  * Migrate uBlock settings in storage to new lightweight format.
+ * With rollback support on failure.
  * @returns {Promise<boolean>} - true if migration was performed, false otherwise
+ * @throws {Error} - Migration failure (after rollback attempt)
  */
 export declare function migrateUblockSettings(): Promise<boolean>;
 export {};

@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.1.3] - to be released
+## [4.1.3] - to be released as 4.2
 
 ### Added
 - **プライバシーポリシー同意UI** ([privacyConsent.ts](src/popup/privacyConsent.ts), [privacyConsentController.ts](src/popup/privacyConsentController.ts))

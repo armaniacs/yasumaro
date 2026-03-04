@@ -23,6 +23,33 @@ export declare const DEFAULT_USER_PROMPT = "\u4EE5\u4E0B\u306EWeb\u30DA\u30FC\u3
  */
 export declare const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.";
 /**
+ * プリセットプロンプトの定義
+ */
+export interface PresetPrompt {
+    id: string;
+    name: string;
+    nameJa: string;
+    userPrompt: string;
+    systemPrompt?: string;
+}
+/**
+ * プリセットプロンプト一覧
+ */
+export declare const PRESET_PROMPTS: PresetPrompt[];
+/**
+ * IDからプリセットプロンプトを取得
+ * @param {string} id - プリセットID
+ * @returns {PresetPrompt | undefined} プリセットプロンプト、またはundefined
+ */
+export declare function getPresetPrompt(id: string): PresetPrompt | undefined;
+/**
+ * 使用言語に基づいてプリセットの表示名を取得
+ * @param {PresetPrompt} preset - プリセットプロンプト
+ * @param {string} locale - 言語コード ('ja' または 'en')
+ * @returns {string} 表示名
+ */
+export declare function getPromptDisplayName(preset: PresetPrompt, locale: string): string;
+/**
  * タグ付き要約用プロンプトを動的生成
  * ユーザー追加カテゴリを含む全カテゴリをプロンプトに反映する
  * @param {Settings} settings - 設定オブジェクト

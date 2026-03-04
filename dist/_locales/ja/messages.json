@@ -1332,5 +1332,47 @@
     },
     "importNoSignature": {
         "message": "設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。"
+    },
+    "privacyConsentTitle": {
+        "message": "プライバシーポリシーへの同意"
+    },
+    "privacyConsentDesc": {
+        "message": "Obsidian Weaveを使用する前に、プライバシーポリシーをご確認ください。"
+    },
+    "keyPointsTitle": {
+        "message": "重要なポイント:"
+    },
+    "consentPoint1": {
+        "message": "すべてのデータはデバイス上にローカル保存されます"
+    },
+    "consentPoint2": {
+        "message": "開発者のサーバーにはデータが送信されません"
+    },
+    "consentPoint3": {
+        "message": "ページコンテンツは選択したAIプロバイダーにのみ送信されます"
+    },
+    "consentPoint4": {
+        "message": "拡張機能のアンインストールですべてのデータを削除できます"
+    },
+    "viewFullPolicy": {
+        "message": "プライバシーポリシー全文を表示"
+    },
+    "consentCheckboxLabel": {
+        "message": "プライバシーポリシーを読み、同意しました"
+    },
+    "accept": {
+        "message": "同意して続行"
+    },
+    "decline": {
+        "message": "拒否"
+    },
+    "consentRequired": {
+        "message": "この拡張機能を使用するにはプライバシーポリシーへの同意が必要です。"
+    },
+    "consentRequiredFeature": {
+        "message": "同意が必要です"
+    },
+    "saveFailed": {
+        "message": "同意の保存に失敗しました"
     }
 }

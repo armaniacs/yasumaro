@@ -4,7 +4,7 @@
  * Handles the prompt editor and list in the popup UI
  */
 import { StorageKeys, saveSettings } from '../utils/storage.js';
-import { createPrompt, updatePrompt, deletePrompt, setActivePrompt, validatePrompt, DEFAULT_USER_PROMPT, DEFAULT_SYSTEM_PROMPT } from '../utils/customPromptUtils.js';
+import { createPrompt, updatePrompt, deletePrompt, setActivePrompt, validatePrompt, DEFAULT_USER_PROMPT, DEFAULT_SYSTEM_PROMPT, PRESET_PROMPTS, getPresetPrompt, getPromptDisplayName } from '../utils/customPromptUtils.js';
 import { applyI18n, getMessage } from './i18n.js';
 // DOM Elements
 let promptList = null;
@@ -63,12 +63,28 @@ function renderPromptList() {
     if (!promptList || !noPromptsMessage || !currentSettings)
         return;
     const prompts = currentSettings[StorageKeys.CUSTOM_PROMPTS] || [];
+    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
     // Always hide "no prompts" message since default is always shown
     noPromptsMessage.style.display = 'none';
-    // Build HTML: default first, then custom prompts
+    // Build HTML: presets first (excluding default which is always shown), default, then custom prompts
+    const presetItemsHtml = PRESET_PROMPTS
+        .filter(p => p.id !== 'default')
+        .map(preset => createPresetPromptItem(preset, locale))
+        .join('');
     const defaultItemHtml = createDefaultPromptItem();
     const customItemsHtml = prompts.map(prompt => createPromptListItem(prompt)).join('');
-    promptList.innerHTML = defaultItemHtml + customItemsHtml;
+    promptList.innerHTML = presetItemsHtml + defaultItemHtml + customItemsHtml;
+    // Attach event listeners for preset prompts
+    PRESET_PROMPTS.filter(p => p.id !== 'default').forEach(preset => {
+        const activateBtn = document.getElementById(`activate-prompt-__preset__${preset.id}`);
+        const duplicateBtn = document.getElementById(`duplicate-prompt-__preset__${preset.id}`);
+        if (activateBtn) {
+            activateBtn.addEventListener('click', () => handleActivatePrompt(`__preset__${preset.id}`, 'all'));
+        }
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(`__preset__${preset.id}`));
+        }
+    });
     // Attach event listeners for default prompt
     const defaultActivateBtn = document.getElementById('activate-prompt-__default__');
     const defaultDuplicateBtn = document.getElementById('duplicate-prompt-__default__');
@@ -99,6 +115,28 @@ function renderPromptList() {
     });
 }
 /**
+ * Create HTML for a preset prompt item
+ * @param {import('../utils/customPromptUtils.js').PresetPrompt} preset - The preset prompt to render
+ * @param {string} locale - Locale ('ja' or 'en')
+ * @returns {string} HTML string
+ */
+function createPresetPromptItem(preset, locale) {
+    // Presets are reference items only; they are never "active" in the storage sense
+    const displayName = getPromptDisplayName(preset, locale);
+    return `
+        <div class="prompt-item" data-prompt-id="__preset__${preset.id}">
+            <div class="prompt-item-header">
+                <span class="prompt-name">${escapeHtml(displayName)}</span>
+                <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+            </div>
+            <div class="prompt-item-actions">
+                <button id="activate-prompt-__preset__${preset.id}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>
+                <button id="duplicate-prompt-__preset__${preset.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+            </div>
+        </div>
+    `;
+}
+/**
  * Create HTML for the default prompt item
  * @returns {string} HTML string
  */
@@ -107,10 +145,13 @@ function createDefaultPromptItem() {
     const activeBadge = isActive
         ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
         : '';
+    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
+    const defaultPreset = getPresetPrompt('default');
+    const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
     return `
         <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="__default__">
             <div class="prompt-item-header">
-                <span class="prompt-name" data-i18n="defaultPrompt">Default</span>
+                <span class="prompt-name">${escapeHtml(displayName)}</span>
                 <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
                 ${activeBadge}
             </div>
@@ -304,7 +345,7 @@ async function handleActivatePrompt(promptId, provider) {
 /**
  * Handle duplicate prompt button click
  * Loads prompt data into editor without saving
- * @param {string} promptId - ID of prompt to duplicate (or '__default__' for default)
+ * @param {string} promptId - ID of prompt to duplicate (or '__default__' or '__preset__{id}' for presets)
  */
 function handleDuplicatePrompt(promptId) {
     if (!promptNameInput || !promptProviderSelect || !promptTextInput || !currentSettings)
@@ -313,12 +354,27 @@ function handleDuplicatePrompt(promptId) {
     let provider = 'all';
     let systemPrompt = '';
     let promptText = '';
+    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
     if (promptId === '__default__') {
         // Duplicate default prompt
-        name = getMessage('defaultPrompt') || 'Default';
+        const defaultPreset = getPresetPrompt('default');
+        name = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
         provider = 'all';
         systemPrompt = DEFAULT_SYSTEM_PROMPT;
         promptText = DEFAULT_USER_PROMPT;
+    }
+    else if (promptId.startsWith('__preset__')) {
+        // Duplicate preset prompt
+        const presetId = promptId.replace('__preset__', '');
+        const preset = getPresetPrompt(presetId);
+        if (!preset) {
+            showStatus('Preset not found', 'error');
+            return;
+        }
+        name = getPromptDisplayName(preset, locale);
+        provider = 'all';
+        systemPrompt = preset.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+        promptText = preset.userPrompt;
     }
     else {
         // Duplicate custom prompt

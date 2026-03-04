@@ -6,6 +6,7 @@
  */
 // 定数設定
 export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
+const MAX_OUTPUT_SIZE = 128 * 1024; // 128KB (入力の2倍を許容)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
 const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マッチごと）
@@ -190,12 +191,26 @@ export async function sanitizeRegex(text, options = {}) {
         // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
         finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
         const resultItems = finalMaskedItems.map(item => ({ type: item.type, original: item.original }));
+        // 出力サイズチェック（置換によりサイズが大きくなる可能性があるため）
+        const outputSize = processedText.length;
+        if (outputSize > MAX_OUTPUT_SIZE) {
+            // 元のテキストの範囲に切り詰め
+            processedText = processedText.substring(0, MAX_OUTPUT_SIZE);
+            // 切り詰められた範囲内のマスク項目のみを保持
+            const trimmedMaskedItems = finalMaskedItems.filter(item => (item.index || 0) < MAX_OUTPUT_SIZE);
+            return {
+                text: processedText,
+                maskedItems: trimmedMaskedItems.map(item => ({ type: item.type, original: item.original })),
+                error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
+            };
+        }
         return { text: processedText, maskedItems: resultItems };
     }
     catch (error) {
         // タイムアウトまたはその他のエラー
+        // 【セキュリティ改善】エラー時に生テキストを返さず、安全なプレースホルダーを返す
         return {
-            text,
+            text: '[SANITIZATION_FAILED]',
             maskedItems: [],
             error: error.message
         };

@@ -780,5 +780,21 @@ setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScr
 if (saveBtn) {
     setupSaveButtonListener(saveBtn, statusDiv, protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, settingsMapping);
 }
+// ============================================================================
+// Privacy Consent Initialization
+// ============================================================================
+import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
+try {
+    initPrivacyConsent();
+}
+catch (error) {
+    console.error('[Popup] Error in initPrivacyConsent:', error);
+}
+try {
+    setupPrivacyConsentListeners();
+}
+catch (error) {
+    console.error('[Popup] Error in setupPrivacyConsentListeners:', error);
+}
 ;
 //# sourceMappingURL=popup.js.map

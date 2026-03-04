@@ -11,6 +11,7 @@ import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notif
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto.js';
+import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 // マイグレーション処理を実行
 (async () => {
     try {
@@ -32,7 +33,7 @@ const tabCache = new TabCache();
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 // Listen for messages from Content Script and Popup
@@ -50,8 +51,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
-            // CHECK_DOMAIN と GET_PRIVACY_CACHE は payload 不要
-            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE'];
+            // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE は payload 不要
+            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE'];
             if (!NO_PAYLOAD_TYPES.includes(message.type)) {
                 if (message.payload === undefined || typeof message.payload !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
@@ -211,6 +212,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse(result);
                 return;
             }
+            // Activity Update (Popupからのアクティビティ通知)
+            if (message.type === 'ACTIVITY_UPDATE') {
+                await updateActivity();
+                sendResponse({ success: true });
+                return;
+            }
             sendResponse(null);
         }
         catch (error) {
@@ -233,7 +240,9 @@ const initializeExtension = async () => {
         await saveSettingsWithAllowedUrls(settings);
         // 【Task #19 最適化】ドメインフィルタキャッシュを更新
         await updateDomainFilterCache(settings);
-        logInfo('Extension initialized: Allowed URLs list rebuilt and domain filter cache updated.', undefined, 'service-worker');
+        // セッションタイムアウト監視開始
+        await initializeSessionAlarms();
+        logInfo('Extension initialized: Allowed URLs list rebuilt, domain filter cache updated, and session timeout monitoring started.', undefined, 'service-worker');
     }
     catch (error) {
         logError('Failed to initialize extension', { error: error instanceof Error ? error.message : String(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');

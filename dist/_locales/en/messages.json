@@ -1332,5 +1332,47 @@
     },
     "importNoSignature": {
         "message": "Settings file does not contain a signature. Only signed files can be imported."
+    },
+    "privacyConsentTitle": {
+        "message": "Privacy Policy Consent"
+    },
+    "privacyConsentDesc": {
+        "message": "Before using Obsidian Weave, please review our Privacy Policy."
+    },
+    "keyPointsTitle": {
+        "message": "Key Points:"
+    },
+    "consentPoint1": {
+        "message": "All data is stored locally on your device"
+    },
+    "consentPoint2": {
+        "message": "No data is sent to developer servers"
+    },
+    "consentPoint3": {
+        "message": "Page content is sent only to your chosen AI provider"
+    },
+    "consentPoint4": {
+        "message": "You can delete all data by uninstalling the extension"
+    },
+    "viewFullPolicy": {
+        "message": "View Full Privacy Policy"
+    },
+    "consentCheckboxLabel": {
+        "message": "I have read and agree to the Privacy Policy"
+    },
+    "accept": {
+        "message": "Accept & Continue"
+    },
+    "decline": {
+        "message": "Decline"
+    },
+    "consentRequired": {
+        "message": "Privacy consent is required to use this extension."
+    },
+    "consentRequiredFeature": {
+        "message": "Privacy consent required"
+    },
+    "saveFailed": {
+        "message": "Failed to save consent"
     }
 }

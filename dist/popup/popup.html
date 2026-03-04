@@ -684,6 +684,48 @@
     </div>
   </dialog>
 
+  <!-- Privacy Consent Modal -->
+  <div id="privacyConsentModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
+    <div class="modal-content privacy-consent-content">
+      <div class="modal-header">
+        <img src="../icons/icon48.png" width="24" height="24" alt="Obsidian Weave" class="modal-logo">
+        <h3 id="privacyConsentTitle" data-i18n="privacyConsentTitle">Privacy Policy Consent</h3>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" data-i18n="privacyConsentDesc">
+          Before using Obsidian Weave, please review our Privacy Policy.
+        </p>
+
+        <div class="privacy-consent-summary">
+          <h4 data-i18n="keyPointsTitle">Key Points:</h4>
+          <ul>
+            <li data-i18n="consentPoint1">All data is stored locally on your device</li>
+            <li data-i18n="consentPoint2">No data is sent to developer servers</li>
+            <li data-i18n="consentPoint3">Page content is sent only to your chosen AI provider</li>
+            <li data-i18n="consentPoint4">You can delete all data by uninstalling the extension</li>
+          </ul>
+        </div>
+
+        <div class="privacy-policy-link">
+          <a id="viewPrivacyPolicyBtn" href="#" target="_blank" class="link-btn" data-i18n="viewFullPolicy">
+            View Full Privacy Policy
+          </a>
+        </div>
+
+        <div class="consent-checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="consentCheckbox">
+            <span data-i18n="consentCheckboxLabel">I have read and agree to the Privacy Policy</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="declineConsentBtn" class="btn-cancel" data-i18n="decline">Decline</button>
+        <button id="acceptConsentBtn" class="btn-confirm" disabled data-i18n="accept">Accept & Continue</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="i18n.js"></script>
   <script type="module" src="navigation.js"></script>
   <script type="module" src="main.js"></script>
