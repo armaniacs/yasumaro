@@ -40,8 +40,8 @@ export interface RetryOptions {
  * デフォルトのリトライ設定
  */
 const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
-    maxRetries: 3,
-    initialDelay: 100,
+    maxRetries: 5,
+    initialDelay: 300,
     backoffMultiplier: 2,
     maxDelay: MAX_RETRY_DELAY_MS
 };
