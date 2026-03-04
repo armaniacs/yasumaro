@@ -16,7 +16,7 @@ import {
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2
 } from './crypto.js';
-import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.js';
+import { withOptimisticLock } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
 
@@ -1002,7 +1002,7 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
     }
 
     // 楽観的ロックで安全に保存
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    await withOptimisticLock('savedUrls', () => urlArray);
 
     // LRUタイムスタンプを管理
     if (urlToAdd) {
@@ -1067,7 +1067,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             entries.push(entry);
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
@@ -1101,13 +1101,13 @@ export async function removeSavedUrl(url: string): Promise<void> {
         const urlSet = new Set(currentUrls || []);
         urlSet.delete(url);
         return Array.from(urlSet);
-    }, { maxRetries: 5 });
+    });
 
     // タムスタンプ管理からも削除
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const entries = currentEntries || [];
         return entries.filter(entry => entry.url !== url);
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -1220,19 +1220,6 @@ export async function getAllowedUrls(): Promise<Set<string>> {
     const result = await chrome.storage.local.get(StorageKeys.ALLOWED_URLS);
     const urls = (result[StorageKeys.ALLOWED_URLS] as string[]) || [];
     return new Set(urls);
-}
-
-/**
- * 楽観的ロック用のバージョンフィールドを初期化（移行用）
- *
- * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
- * この関数はアプリ起動時に呼び出されることを想定しています。
- *
- * @returns {Promise<void>}
- */
-export async function ensureUrlVersionInitialized(): Promise<void> {
-    await ensureVersionInitialized('savedUrls');
-    await ensureVersionInitialized('savedUrlsWithTimestamps');
 }
 
 // ============================================================================

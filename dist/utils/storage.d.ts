@@ -273,15 +273,6 @@ export declare function saveSettingsWithAllowedUrls(settings: Settings): Promise
  */
 export declare function getAllowedUrls(): Promise<Set<string>>;
 /**
- * 楽観的ロック用のバージョンフィールドを初期化（移行用）
- *
- * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
- * この関数はアプリ起動時に呼び出されることを想定しています。
- *
- * @returns {Promise<void>}
- */
-export declare function ensureUrlVersionInitialized(): Promise<void>;
-/**
  * [同期] ドメインフィルタキャッシュを取得
  * Content Scriptから直接呼び出すため、ストレージに同期的アクセスはできませんが
  * chrome.storage.local.get はコールバックで即時取得可能

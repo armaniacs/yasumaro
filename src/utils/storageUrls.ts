@@ -4,7 +4,7 @@
  * 保存URLの管理、LRU追跡、許可URLリストの構築
  */
 
-import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.js';
+import { withOptimisticLock } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 import type { Source } from './types.js';
 
@@ -72,7 +72,7 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
     const urlArray = Array.from(urlSet);
 
     // 楽観的ロックで安全に保存
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    await withOptimisticLock('savedUrls', () => urlArray);
 
     // LRUタイムスタンプを管理
     if (urlToAdd) {
@@ -105,7 +105,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             entries.push(entry);
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
@@ -152,14 +152,14 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         }
 
         return entries;
-    }, { maxRetries: 5 });
+    });
 
     // savedUrlsセットも同期（isUrlSaved, getSavedUrlCountで使用）
     await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
         const currentSet = new Set(currentUrls || []);
         currentSet.add(url);
         return Array.from(currentSet);
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -190,7 +190,7 @@ export async function setUrlRecordType(url: string, recordType: RecordType): Pro
             return updatedEntries;
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -211,7 +211,7 @@ export async function setUrlMaskedCount(url: string, maskedCount: number): Promi
             return updatedEntries;
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -224,13 +224,13 @@ export async function removeSavedUrl(url: string): Promise<void> {
         const urlSet = new Set(currentUrls || []);
         urlSet.delete(url);
         return Array.from(urlSet);
-    }, { maxRetries: 5 });
+    });
 
     // タイムスタンプ管理からも削除
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const entries = currentEntries || [];
         return entries.filter(entry => entry.url !== url);
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -353,19 +353,6 @@ export async function getAllowedUrls(ALLOWED_URLS_KEY: string): Promise<Set<stri
     return new Set(urls);
 }
 
-/**
- * 楽観的ロック用のバージョンフィールドを初期化（移行用）
- *
- * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
- * この関数はアプリ起動時に呼び出されることを想定しています。
- *
- * @returns {Promise<void>}
- */
-export async function ensureUrlVersionInitialized(): Promise<void> {
-    await ensureVersionInitialized('savedUrls');
-    await ensureVersionInitialized('savedUrlsWithTimestamps');
-}
-
 // ============================================================================
 // タグ管理機能
 // ============================================================================
@@ -389,7 +376,7 @@ export async function setUrlTags(url: string, tags: string[]): Promise<void> {
             console.warn(`[setUrlTags] URL not found in savedUrlsWithTimestamps: ${url}`);
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -412,7 +399,7 @@ export async function addUrlTag(url: string, tag: string): Promise<void> {
             }
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 }
 
 /**
@@ -434,5 +421,5 @@ export async function removeUrlTag(url: string, tag: string): Promise<void> {
             }
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
 }

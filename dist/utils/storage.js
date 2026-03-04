@@ -6,7 +6,7 @@ import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { migrateUblockSettings } from './migration.js';
 import { calculatePasswordStrength } from './masterPassword.js';
 import { generateSalt, deriveKeyWithExtensionId, encryptApiKey, decryptApiKey, isEncrypted, hashPasswordWithPBKDF2, verifyPasswordWithPBKDF2 } from './crypto.js';
-import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.js';
+import { withOptimisticLock } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 // ストレージクォータ監視設定
 const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB (Chrome拡張機能のデフォルト)
@@ -783,7 +783,7 @@ export async function setSavedUrls(urlSet, urlToAdd = null) {
         throw new Error(`Storage quota exceeded for saved URLs (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`);
     }
     // 楽観的ロックで安全に保存
-    await withOptimisticLock('savedUrls', () => urlArray, { maxRetries: 5 });
+    await withOptimisticLock('savedUrls', () => urlArray);
     // LRUタイムスタンプを管理
     if (urlToAdd) {
         await updateUrlTimestamp(urlToAdd);
@@ -841,7 +841,7 @@ export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
             entries.push(entry);
         }
         return entries;
-    }, { maxRetries: 5 });
+    });
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
     // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
@@ -871,12 +871,12 @@ export async function removeSavedUrl(url) {
         const urlSet = new Set(currentUrls || []);
         urlSet.delete(url);
         return Array.from(urlSet);
-    }, { maxRetries: 5 });
+    });
     // タムスタンプ管理からも削除
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries) => {
         const entries = currentEntries || [];
         return entries.filter(entry => entry.url !== url);
-    }, { maxRetries: 5 });
+    });
 }
 /**
  * Check if URL is in the saved list
@@ -979,18 +979,6 @@ export async function getAllowedUrls() {
     const result = await chrome.storage.local.get(StorageKeys.ALLOWED_URLS);
     const urls = result[StorageKeys.ALLOWED_URLS] || [];
     return new Set(urls);
-}
-/**
- * 楽観的ロック用のバージョンフィールドを初期化（移行用）
- *
- * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
- * この関数はアプリ起動時に呼び出されることを想定しています。
- *
- * @returns {Promise<void>}
- */
-export async function ensureUrlVersionInitialized() {
-    await ensureVersionInitialized('savedUrls');
-    await ensureVersionInitialized('savedUrlsWithTimestamps');
 }
 // ============================================================================
 // Domain Filter Cache for Content Scripts (Task #19)

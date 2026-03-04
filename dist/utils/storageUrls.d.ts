@@ -111,15 +111,6 @@ export declare function saveSettingsWithAllowedUrls(settings: import('./storageS
  */
 export declare function getAllowedUrls(ALLOWED_URLS_KEY: string): Promise<Set<string>>;
 /**
- * 楽観的ロック用のバージョンフィールドを初期化（移行用）
- *
- * 新規インストールまたは既存データにバージョンフィールドがない場合に初期化します。
- * この関数はアプリ起動時に呼び出されることを想定しています。
- *
- * @returns {Promise<void>}
- */
-export declare function ensureUrlVersionInitialized(): Promise<void>;
-/**
  * URLのタグを設定する
  * 【楽観的ロックを使用して安全に更新】
  * @param {string} url - 設定するURL
