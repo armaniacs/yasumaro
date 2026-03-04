@@ -17,7 +17,7 @@ export interface PrivacyConsentState {
 export declare function getPrivacyConsent(): Promise<PrivacyConsentState>;
 /**
  * プライバシーポリシー同意状態を保存
- * @param version 同意したポリシーバージョン（デフォルト: 2026-02-23）
+ * @param version 同意したポリシーバージョン（デフォルト: PRIVACY_POLICY_VERSION）
  */
 export declare function savePrivacyConsent(version?: string): Promise<void>;
 /**

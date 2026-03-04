@@ -6,6 +6,9 @@
 import { StorageKeys } from '../utils/storage.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
+/** プライバシーポリシーバージョン定数 */
+const PRIVACY_POLICY_VERSION = '2026-02-23';
+
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {
     /** ユーザーが同意しているかどうか */
@@ -57,9 +60,9 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
 
 /**
  * プライバシーポリシー同意状態を保存
- * @param version 同意したポリシーバージョン（デフォルト: 2026-02-23）
+ * @param version 同意したポリシーバージョン（デフォルト: PRIVACY_POLICY_VERSION）
  */
-export async function savePrivacyConsent(version: string = '2026-02-23'): Promise<void> {
+export async function savePrivacyConsent(version: string = PRIVACY_POLICY_VERSION): Promise<void> {
     try {
         const data: PrivacyConsentState = {
             hasConsented: true,
@@ -110,19 +113,26 @@ export async function requireConsent(): Promise<void> {
  */
 export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
     try {
-        // 既に同意がある場合はマイグレーション不要
-        const existing = await getPrivacyConsent();
-        if (existing.hasConsented) {
-            return false;
-        }
-
-        // 既存のプライバシー機能使用状況をチェック
+        // 単一のストレージ呼び出しで同意状態とプライバシー機能使用状況を取得
         const result = await chrome.storage.local.get([
+            StorageKeys.PRIVACY_CONSENT,
             StorageKeys.PRIVACY_MODE,
             StorageKeys.PII_CONFIRMATION_UI,
             StorageKeys.MASTER_PASSWORD_ENABLED
         ]);
 
+        // 既に同意がある場合はマイグレーション不要
+        const consentValue = result[StorageKeys.PRIVACY_CONSENT];
+        const hasAlreadyConsented =
+            typeof consentValue === 'boolean' ? consentValue :
+            typeof consentValue === 'object' && consentValue !== null ? (consentValue as PrivacyConsentState).hasConsented === true :
+            false;
+
+        if (hasAlreadyConsented) {
+            return false;
+        }
+
+        // 既存のプライバシー機能使用状況をチェック
         const hasUsedPrivacyFeatures =
             result[StorageKeys.PRIVACY_MODE] !== undefined ||
             result[StorageKeys.PII_CONFIRMATION_UI] !== undefined ||

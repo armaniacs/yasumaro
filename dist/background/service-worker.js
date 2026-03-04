@@ -4,7 +4,7 @@ import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject, updateDomainFilterCache } from '../utils/storage.js';
+import { getSettings, buildAllowedUrls, saveSettingsWithAllowedUrls, migrateToSingleSettingsObject, updateDomainFilterCache, lockSession } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
@@ -33,7 +33,7 @@ const tabCache = new TabCache();
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 // Listen for messages from Content Script and Popup
@@ -51,8 +51,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
-            // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE は payload 不要
-            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE'];
+            // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE、SESSION_LOCK_REQUEST は payload 不要
+            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
             if (!NO_PAYLOAD_TYPES.includes(message.type)) {
                 if (message.payload === undefined || typeof message.payload !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
@@ -215,6 +215,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Activity Update (Popupからのアクティビティ通知)
             if (message.type === 'ACTIVITY_UPDATE') {
                 await updateActivity();
+                sendResponse({ success: true });
+                return;
+            }
+            // Session Lock Request (from sessionAlarmsManager.ts)
+            if (message.type === 'SESSION_LOCK_REQUEST') {
+                lockSession();
                 sendResponse({ success: true });
                 return;
             }

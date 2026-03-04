@@ -5,6 +5,7 @@
  */
 
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { StorageKeys } from '../utils/storage.js';
 
 // 定数
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
@@ -43,10 +44,8 @@ export async function startTimeoutChecker(): Promise<void> {
             periodInMinutes: 1
         });
 
-        // アラームリスナーが既に登録されているか確認
-        if (!hasAlarmListener()) {
-            setupAlarmListener();
-        }
+        // アラームリスナーを設定（内部で重複チェックあり）
+        setupAlarmListener();
 
         await logInfo(
             'Session timeout checker started',
@@ -128,7 +127,7 @@ async function lockSession(): Promise<void> {
     try {
         // storage.tsのlockSessionをエクスポートして使用するか、
         // 直接ロック処理を実装
-        await chrome.storage.local.set({ is_locked: true });
+        await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
         // マスターパスワードキャッシュはstorage.tsで管理されるため、
         // 通知メッセージを送信してstorage.tsにロックをさせる
         chrome.runtime.sendMessage({ type: 'SESSION_LOCK_REQUEST' }).catch(() => {
@@ -147,11 +146,6 @@ async function lockSession(): Promise<void> {
 
 /** アラームリスナーが設定されているか */
 let alarmListenerSetUp = false;
-
-/** アラームリスナーが設定されているか確認 */
-function hasAlarmListener(): boolean {
-    return alarmListenerSetUp;
-}
 
 /** アラームリスナーを設定 */
 function setupAlarmListener(): void {

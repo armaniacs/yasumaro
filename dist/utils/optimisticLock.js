@@ -56,48 +56,22 @@ const DEFAULT_LOCK_OPTIONS = {
  */
 export async function withOptimisticLock(key, updateFn, options = {}) {
     const opts = { ...DEFAULT_LOCK_OPTIONS, ...options };
-    const versionKey = `${key}_version`;
-    let attempt = 0;
-    while (attempt < opts.maxRetries) {
-        attempt++;
-        conflictStats.totalAttempts++;
-        // Step 1: 現在の値とバージョンをアトミックに読み込み
-        const result = await chrome.storage.local.get([key, versionKey]);
+    conflictStats.totalAttempts++;
+    try {
+        // Step 1: 現在の値を読み込み
+        const result = await chrome.storage.local.get(key);
         const currentValue = result[key];
-        const currentVersion = result[versionKey] || 0;
-        try {
-            // Step 2: 新しい値を計算
-            const newValue = updateFn(currentValue);
-            // Step 3: 新しい値とバージョン+1をアトミックに書き込み
-            // chrome.storage.local jest mockがPromiseを返す前提
-            await chrome.storage.local.set({
-                [key]: newValue,
-                [versionKey]: currentVersion + 1
-            });
-            // Step 4: バージョンと値が変わっていないか検証（楽観的チェック）
-            // chrome.storage.localの書き込みはアトミックなので、
-            // もし競合していれば、他のプロセスが異なるバージョンか値を書いているはず
-            const verifyResult = await chrome.storage.local.get([key, versionKey]);
-            const verifyValue = verifyResult[key];
-            const verifyVersion = verifyResult[versionKey] || 0;
-            // 書き込んだ値とバージョンの両方を確認することで、競合をより確実に検出
-            if (verifyVersion === currentVersion + 1 &&
-                JSON.stringify(verifyValue) === JSON.stringify(newValue)) {
-                // 成功 - 自分の書き込みが維持されていることを確認
-                conflictStats.totalConflicts += attempt - 1; // 競合回数を記録
-                return newValue;
-            }
-            // 競合検出 - リトライ
-            conflictStats.totalConflicts++;
-            await sleep(attempt * opts.retryDelay);
-        }
-        catch (error) {
-            conflictStats.totalFailures++;
-            throw error;
-        }
+        // Step 2: 新しい値を計算
+        const newValue = updateFn(currentValue);
+        // Step 3: アトミックに書き込み
+        // chrome.storage.local.set はアトミックであり、書き込みは保証される
+        await chrome.storage.local.set({ [key]: newValue });
+        return newValue;
     }
-    // 最大リトライ回数超過
-    throw new ConflictError(`Max retries (${opts.maxRetries}) exceeded for key: ${key}`, key, attempt);
+    catch (error) {
+        conflictStats.totalFailures++;
+        throw error;
+    }
 }
 /**
  * 現在の競合統計を取得

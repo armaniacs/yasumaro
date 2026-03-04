@@ -19,6 +19,13 @@ import {
     getPromptDisplayName
 } from '../utils/customPromptUtils.js';
 import { applyI18n, getMessage } from './i18n.js';
+import { escapeHtml } from './errorUtils.js';
+
+// Prompt ID prefix constants
+const PROMPT_ID = {
+    DEFAULT: '__default__',
+    PRESET_PREFIX: '__preset__'
+} as const;
 
 // DOM Elements
 let promptList: HTMLElement | null = null;
@@ -100,26 +107,26 @@ function renderPromptList(): void {
 
     // Attach event listeners for preset prompts
     PRESET_PROMPTS.filter(p => p.id !== 'default').forEach(preset => {
-        const activateBtn = document.getElementById(`activate-prompt-__preset__${preset.id}`);
-        const duplicateBtn = document.getElementById(`duplicate-prompt-__preset__${preset.id}`);
+        const activateBtn = document.getElementById(`activate-prompt-${PROMPT_ID.PRESET_PREFIX}${preset.id}`);
+        const duplicateBtn = document.getElementById(`duplicate-prompt-${PROMPT_ID.PRESET_PREFIX}${preset.id}`);
 
         if (activateBtn) {
-            activateBtn.addEventListener('click', () => handleActivatePrompt(`__preset__${preset.id}`, 'all'));
+            activateBtn.addEventListener('click', () => handleActivatePrompt(`${PROMPT_ID.PRESET_PREFIX}${preset.id}`, 'all'));
         }
         if (duplicateBtn) {
-            duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(`__preset__${preset.id}`));
+            duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(`${PROMPT_ID.PRESET_PREFIX}${preset.id}`));
         }
     });
 
     // Attach event listeners for default prompt
-    const defaultActivateBtn = document.getElementById('activate-prompt-__default__');
-    const defaultDuplicateBtn = document.getElementById('duplicate-prompt-__default__');
+    const defaultActivateBtn = document.getElementById(`activate-prompt-${PROMPT_ID.DEFAULT}`);
+    const defaultDuplicateBtn = document.getElementById(`duplicate-prompt-${PROMPT_ID.DEFAULT}`);
 
     if (defaultActivateBtn) {
-        defaultActivateBtn.addEventListener('click', () => handleActivatePrompt('__default__', 'all'));
+        defaultActivateBtn.addEventListener('click', () => handleActivatePrompt(PROMPT_ID.DEFAULT, 'all'));
     }
     if (defaultDuplicateBtn) {
-        defaultDuplicateBtn.addEventListener('click', () => handleDuplicatePrompt('__default__'));
+        defaultDuplicateBtn.addEventListener('click', () => handleDuplicatePrompt(PROMPT_ID.DEFAULT));
     }
 
     // Attach event listeners to custom prompt items
@@ -156,16 +163,17 @@ function createPresetPromptItem(
 ): string {
     // Presets are reference items only; they are never "active" in the storage sense
     const displayName = getPromptDisplayName(preset, locale);
+    const presetId = `${PROMPT_ID.PRESET_PREFIX}${preset.id}`;
 
     return `
-        <div class="prompt-item" data-prompt-id="__preset__${preset.id}">
+        <div class="prompt-item" data-prompt-id="${presetId}">
             <div class="prompt-item-header">
                 <span class="prompt-name">${escapeHtml(displayName)}</span>
                 <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
             </div>
             <div class="prompt-item-actions">
-                <button id="activate-prompt-__preset__${preset.id}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>
-                <button id="duplicate-prompt-__preset__${preset.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+                <button id="activate-prompt-${presetId}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>
+                <button id="duplicate-prompt-${presetId}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
             </div>
         </div>
     `;
@@ -185,15 +193,15 @@ function createDefaultPromptItem(): string {
     const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
 
     return `
-        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="__default__">
+        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${PROMPT_ID.DEFAULT}">
             <div class="prompt-item-header">
                 <span class="prompt-name">${escapeHtml(displayName)}</span>
                 <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
                 ${activeBadge}
             </div>
             <div class="prompt-item-actions">
-                ${!isActive ? `<button id="activate-prompt-__default__" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
-                <button id="duplicate-prompt-__default__" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
+                ${!isActive ? `<button id="activate-prompt-${PROMPT_ID.DEFAULT}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
+                <button id="duplicate-prompt-${PROMPT_ID.DEFAULT}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
             </div>
         </div>
     `;
@@ -307,7 +315,7 @@ async function handleSavePrompt(): Promise<void> {
  */
 function handleEditPrompt(promptId: string): void {
     // Prevent editing default prompt
-    if (promptId === '__default__') {
+    if (promptId === PROMPT_ID.DEFAULT) {
         showStatus('Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
         return;
     }
@@ -345,7 +353,7 @@ function handleEditPrompt(promptId: string): void {
  */
 async function handleDeletePrompt(promptId: string): Promise<void> {
     // Prevent deleting default prompt
-    if (promptId === '__default__') {
+    if (promptId === PROMPT_ID.DEFAULT) {
         showStatus('Cannot delete default prompt', 'error');
         return;
     }
@@ -378,7 +386,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
 
     let prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
 
-    if (promptId === '__default__') {
+    if (promptId === PROMPT_ID.DEFAULT) {
         // Deactivate all custom prompts to activate default
         prompts = prompts.map(p => ({
             ...p,
@@ -404,7 +412,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
 /**
  * Handle duplicate prompt button click
  * Loads prompt data into editor without saving
- * @param {string} promptId - ID of prompt to duplicate (or '__default__' or '__preset__{id}' for presets)
+ * @param {string} promptId - ID of prompt to duplicate (or PROMPT_ID.DEFAULT or '${PROMPT_ID.PRESET_PREFIX}{id}' for presets)
  */
 function handleDuplicatePrompt(promptId: string): void {
     if (!promptNameInput || !promptProviderSelect || !promptTextInput || !currentSettings) return;
@@ -415,16 +423,16 @@ function handleDuplicatePrompt(promptId: string): void {
     let promptText = '';
     const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
 
-    if (promptId === '__default__') {
+    if (promptId === PROMPT_ID.DEFAULT) {
         // Duplicate default prompt
         const defaultPreset = getPresetPrompt('default');
         name = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
         provider = 'all';
         systemPrompt = DEFAULT_SYSTEM_PROMPT;
         promptText = DEFAULT_USER_PROMPT;
-    } else if (promptId.startsWith('__preset__')) {
+    } else if (promptId.startsWith(PROMPT_ID.PRESET_PREFIX)) {
         // Duplicate preset prompt
-        const presetId = promptId.replace('__preset__', '');
+        const presetId = promptId.replace(PROMPT_ID.PRESET_PREFIX, '');
         const preset = getPresetPrompt(presetId);
         if (!preset) {
             showStatus('Preset not found', 'error');
@@ -520,17 +528,6 @@ function showStatus(message: string, type: 'success' | 'error'): void {
             promptStatusDiv.className = '';
         }
     }, 3000);
-}
-
-/**
- * Escape HTML to prevent XSS
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 /**

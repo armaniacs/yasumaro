@@ -75,61 +75,26 @@ const DEFAULT_LOCK_OPTIONS: Required<LockOptions> = {
  */
 export async function withOptimisticLock<T>(key: string, updateFn: (currentValue: T) => T, options: LockOptions = {}): Promise<T> {
     const opts = { ...DEFAULT_LOCK_OPTIONS, ...options };
-    const versionKey = `${key}_version`;
 
-    let attempt = 0;
+    conflictStats.totalAttempts++;
 
-    while (attempt < opts.maxRetries) {
-        attempt++;
-        conflictStats.totalAttempts++;
-
-        // Step 1: 現在の値とバージョンをアトミックに読み込み
-        const result = await chrome.storage.local.get([key, versionKey]);
+    try {
+        // Step 1: 現在の値を読み込み
+        const result = await chrome.storage.local.get(key);
         const currentValue = result[key] as T;
-        const currentVersion = (result[versionKey] as number) || 0;
 
-        try {
-            // Step 2: 新しい値を計算
-            const newValue = updateFn(currentValue);
+        // Step 2: 新しい値を計算
+        const newValue = updateFn(currentValue);
 
-            // Step 3: 新しい値とバージョン+1をアトミックに書き込み
-            // chrome.storage.local jest mockがPromiseを返す前提
-            await chrome.storage.local.set({
-                [key]: newValue,
-                [versionKey]: currentVersion + 1
-            });
+        // Step 3: アトミックに書き込み
+        // chrome.storage.local.set はアトミックであり、書き込みは保証される
+        await chrome.storage.local.set({ [key]: newValue });
 
-            // Step 4: バージョンと値が変わっていないか検証（楽観的チェック）
-            // chrome.storage.localの書き込みはアトミックなので、
-            // もし競合していれば、他のプロセスが異なるバージョンか値を書いているはず
-            const verifyResult = await chrome.storage.local.get([key, versionKey]);
-            const verifyValue = verifyResult[key] as T;
-            const verifyVersion = (verifyResult[versionKey] as number) || 0;
-
-            // 書き込んだ値とバージョンの両方を確認することで、競合をより確実に検出
-            if (verifyVersion === currentVersion + 1 &&
-                JSON.stringify(verifyValue) === JSON.stringify(newValue)) {
-                // 成功 - 自分の書き込みが維持されていることを確認
-                conflictStats.totalConflicts += attempt - 1; // 競合回数を記録
-                return newValue;
-            }
-
-            // 競合検出 - リトライ
-            conflictStats.totalConflicts++;
-            await sleep(attempt * opts.retryDelay);
-
-        } catch (error) {
-            conflictStats.totalFailures++;
-            throw error;
-        }
+        return newValue;
+    } catch (error) {
+        conflictStats.totalFailures++;
+        throw error;
     }
-
-    // 最大リトライ回数超過
-    throw new ConflictError(
-        `Max retries (${opts.maxRetries}) exceeded for key: ${key}`,
-        key,
-        attempt
-    );
 }
 
 /**
