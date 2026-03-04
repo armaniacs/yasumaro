@@ -9,6 +9,12 @@ interface ConflictStats {
     totalFailures: number;
 }
 /**
+ * 楽観的ロックの競合検出時にスローされるエラー
+ */
+export declare class ConflictError extends Error {
+    constructor(key: string, expectedVersion: number, actualVersion: number);
+}
+/**
  * Read-Modify-Writeパターンで安全にストレージを更新
  *
  * この関数は以下の手順でストレージを更新します:

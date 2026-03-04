@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from '@jest/globals';
 import { saveSettings, getSettings, StorageKeys, clearEncryptionKeyCache } from '../storage.js';
-import { withOptimisticLock, ConflictError, resetConflictStats } from '../optimisticLock.js';
+import { withOptimisticLock, resetConflictStats } from '../optimisticLock.js';
 
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};

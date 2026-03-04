@@ -10,8 +10,19 @@ let conflictStats = {
     totalConflicts: 0,
     totalFailures: 0
 };
-// 競合統計のタイムアウト（テスト用）
-let lastConflictStatsReset = Date.now();
+/**
+ * 楽観的ロックの競合検出時にスローされるエラー
+ */
+export class ConflictError extends Error {
+    constructor(key, expectedVersion, actualVersion) {
+        super(`Conflict detected for key: ${key} (expected: ${expectedVersion}, actual: ${actualVersion})`);
+        this.name = 'ConflictError';
+        // TypeScriptでプロパティを追加
+        Object.defineProperty(this, 'key', { value: key, enumerable: true });
+        Object.defineProperty(this, 'expectedVersion', { value: expectedVersion, enumerable: true });
+        Object.defineProperty(this, 'actualVersion', { value: actualVersion, enumerable: true });
+    }
+}
 /**
  * Read-Modify-Writeパターンで安全にストレージを更新
  *
@@ -45,7 +56,7 @@ export async function withOptimisticLock(key, updateFn) {
         const currentVersionAfterRead = currentResult[`${key}_version`] || 0;
         if (currentVersionAfterRead !== currentVersion) {
             conflictStats.totalConflicts++;
-            throw new Error(`Conflict detected for key: ${key}`);
+            throw new ConflictError(key, currentVersion, currentVersionAfterRead);
         }
         // アトミックに書き込み（chrome.storage.local.setはアトミック）
         await chrome.storage.local.set({

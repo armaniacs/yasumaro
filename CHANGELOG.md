@@ -20,6 +20,11 @@ All notable changes to this project will be documented in this file.
   - フォーカストラップによるアクセシビリティ対応（ESCによる誤操作防止）
 
 ### Fixed
+- **楽観的ロックの実装改善** ([optimisticLock.ts](src/utils/optimisticLock.ts))
+  - JSDocで記載されていた `ConflictError` クラスを実装しエクスポート
+  - 競合検出時に `ConflictError` をスローするように変更（以前は標準Error）
+  - 未使用の `lastConflictStatsReset` 変数を削除
+  - テストファイルのインポート文を修正（存在しない `ConflictError` インポートを削除）
 - **セッションタイムアウト: Service Worker対応** ([sessionAlarmsManager.ts](src/background/sessionAlarmsManager.ts), [service-worker.ts](src/background/service-worker.ts))
   - `window.setInterval` から `chrome.alarms` API へ移行し、Service Worker環境で動作
   - アクティビティ更新（記録成功・設定更新・アンロック）に連動した30分アイドルタイムアウト
