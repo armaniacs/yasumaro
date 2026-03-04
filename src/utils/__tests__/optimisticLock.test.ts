@@ -5,10 +5,8 @@
 
 import {
     withOptimisticLock,
-    ConflictError,
     getConflictStats,
-    resetConflictStats,
-    ensureVersionInitialized
+    resetConflictStats
 } from '../optimisticLock.js';
 
 describe('withOptimisticLock', () => {
@@ -69,11 +67,11 @@ describe('withOptimisticLock', () => {
             // 並行実行
             const promise1 = withOptimisticLock('testKey', (current) => {
                 return [...current, 'item1'];
-            }, { maxRetries: 10, retryDelay: 0 });
+            });
 
             const promise2 = withOptimisticLock('testKey', (current) => {
                 return [...current, 'item2'];
-            }, { maxRetries: 10, retryDelay: 0 });
+            });
 
             await Promise.all([promise1, promise2]);
 
@@ -117,41 +115,6 @@ describe('withOptimisticLock', () => {
             chrome.storage.local.set = originalSet;
         });
     });
-
-    describe('カスタムオプション', () => {
-        beforeEach(async () => {
-            await chrome.storage.local.set({});
-            resetConflictStats();
-        });
-
-        it('カスタムmaxRetriesを適用する', async () => {
-            await chrome.storage.local.set({ testKey: ['initial'] });
-
-            // 成功ケースでオプションが適用されることを確認
-            const result = await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 10 });
-
-            expect(result).toEqual(['initial', 'item']);
-        });
-    });
-});
-
-describe('ConflictError', () => {
-    it('正しくインスタンス化できる', () => {
-        const error = new ConflictError('Test error', 'testKey', 5);
-
-        expect(error.name).toBe('ConflictError');
-        expect(error.message).toBe('Test error');
-        expect(error.key).toBe('testKey');
-        expect(error.attempts).toBe(5);
-        expect(error.isConflictError).toBe(true);
-    });
-
-    it('Errorサブクラスとして振る舞う', () => {
-        const error = new ConflictError('Test', 'key', 1);
-
-        expect(error instanceof Error).toBe(true);
-        expect(error instanceof ConflictError).toBe(true);
-    });
 });
 
 describe('getConflictStats', () => {
@@ -187,7 +150,7 @@ describe('resetConflictStats', () => {
     it('統計情報をリセットする', async () => {
         await chrome.storage.local.set({ testKey: ['initial'] });
 
-        await withOptimisticLock('testKey', (current) => [...current, 'item']);
+        await withOptimisticLock<string[]>('testKey', (current) => [...current, 'item']);
 
         resetConflictStats();
 
@@ -195,45 +158,6 @@ describe('resetConflictStats', () => {
         expect(stats.totalAttempts).toBe(0);
         expect(stats.totalConflicts).toBe(0);
         expect(stats.totalFailures).toBe(0);
-    });
-});
-
-describe('ensureVersionInitialized', () => {
-    beforeEach(async () => {
-        await chrome.storage.local.set({});
-    });
-
-    it('バージョンフィールドが存在しない場合に初期化する', async () => {
-        await chrome.storage.local.set({ testKey: ['initial'] });
-
-        const initialized = await ensureVersionInitialized('testKey');
-
-        expect(initialized).toBe(true);
-        const stored = await chrome.storage.local.get('testKey_version');
-        expect(stored.testKey_version).toBe(0);
-    });
-
-    it('バージョンフィールドが既に存在する場合は初期化しない', async () => {
-        await chrome.storage.local.set({ testKey: ['initial'], testKey_version: 5 });
-
-        const initialized = await ensureVersionInitialized('testKey');
-
-        expect(initialized).toBe(false);
-        const stored = await chrome.storage.local.get('testKey_version');
-        expect(stored.testKey_version).toBe(5);
-    });
-
-    it('複数のキーに対して初期化できる', async () => {
-        await chrome.storage.local.set({ key1: ['val1'], key2: ['val2'] });
-
-        const init1 = await ensureVersionInitialized('key1');
-        const init2 = await ensureVersionInitialized('key2');
-
-        expect(init1).toBe(true);
-        expect(init2).toBe(true);
-        const stored = await chrome.storage.local.get(['key1_version', 'key2_version']);
-        expect(stored.key1_version).toBe(0);
-        expect(stored.key2_version).toBe(0);
     });
 });
 
@@ -246,7 +170,7 @@ describe('URLセット用のユースケース', () => {
         await chrome.storage.local.set({ savedUrls: ['https://example.com'] });
 
         const newUrl = 'https://new-website.com';
-        await withOptimisticLock('savedUrls', (current) => {
+        await withOptimisticLock<string[]>('savedUrls', (current) => {
             const urlSet = new Set(current || []);
             urlSet.add(newUrl);
             return Array.from(urlSet);
@@ -263,7 +187,7 @@ describe('URLセット用のユースケース', () => {
         });
 
         const urlToRemove = 'https://to-remove.com';
-        await withOptimisticLock('savedUrls', (current) => {
+        await withOptimisticLock<string[]>('savedUrls', (current) => {
             const urlSet = new Set(current || []);
             urlSet.delete(urlToRemove);
             return Array.from(urlSet);
@@ -275,6 +199,7 @@ describe('URLセット用のユースケース', () => {
     });
 
     it('最大値制限でLRU削除するユースケース', async () => {
+        type UrlEntry = { url: string; timestamp: number };
         await chrome.storage.local.set({
             savedUrlsWithTimestamps: [
                 { url: 'https://old.com', timestamp: 1000 },
@@ -282,13 +207,14 @@ describe('URLセット用のユースケース', () => {
             ]
         });
 
-        await withOptimisticLock('savedUrlsWithTimestamps', (current) => {
+        await withOptimisticLock<UrlEntry[]>('savedUrlsWithTimestamps', (current) => {
             const entries = current || [];
-            return entries.filter(entry => entry.timestamp > 1500);
+            return entries.filter((entry) => entry.timestamp > 1500);
         });
 
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        expect(stored.savedUrlsWithTimestamps).toHaveLength(1);
-        expect(stored.savedUrlsWithTimestamps[0].url).toBe('https://new.com');
+        const urls = stored.savedUrlsWithTimestamps as UrlEntry[];
+        expect(urls).toHaveLength(1);
+        expect(urls[0].url).toBe('https://new.com');
     });
 });

@@ -176,5 +176,5 @@ async function checkDomainAllowedFromCache(url) {
     const src = chrome.runtime.getURL('content/extractor.js');
     await import(src);
 })();
-
+export {};
 //# sourceMappingURL=loader.js.map

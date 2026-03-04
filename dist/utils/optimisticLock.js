@@ -1,7 +1,7 @@
 /**
  * optimisticLock.ts
- * Read-Modify-Wirteパターンにおける競合を検出し、自動リトライを行う
- * バージョンベースの楽観的ロック機構を提供
+ * Read-Modify-Writeパターンを提供するユーティリティ
+ * chrome.storage.local.set のアトミック性に依存した簡易実装
  */
 // 競合統計情報（グローバル状態）
 let conflictStats = {
@@ -10,52 +10,22 @@ let conflictStats = {
     totalFailures: 0
 };
 /**
- * ConflictErrorクラス
- * 楽観的ロックの最大リトライ回数超過時にスロー
- */
-export class ConflictError extends Error {
-    key;
-    attempts;
-    isConflictError;
-    /**
-     * ConflictErrorを作成
-     * @param {string} message - エラーメッセージ
-     * @param {string} [key] - 対象のストレージキー
-     * @param {number} [attempts] - 試行回数
-     */
-    constructor(message, key, attempts) {
-        super(message);
-        this.name = 'ConflictError';
-        this.key = key;
-        this.attempts = attempts;
-        this.isConflictError = true;
-    }
-}
-/**
- * デフォルトのロックオプション
- */
-const DEFAULT_LOCK_OPTIONS = {
-    maxRetries: 5,
-    retryDelay: 50
-};
-/**
- * バージョンベースの楽観的ロックで安全にRead-Modify-Wirteを実行
+ * Read-Modify-Writeパターンで安全にストレージを更新
  *
- * この関数は以下の手順で競合を検出し、自動的にリトライします:
- * 1. 現在の値とバージョン番号をアトミックに読み込む
+ * この関数は以下の手順でストレージを更新します:
+ * 1. 現在の値を読み込む
  * 2. updateFnで新しい値を計算
- * 3. バージョン番号が変わっていないか確認
- * 4. 変わっていなければ、新しい値とバージョン+1を保存
- * 5. 変わっていれば競合と判断し、手順1からやり直し
+ * 3. アトミックに書き込み
  *
- * @param {string} key - ロック対象のストレージキー（例: 'savedUrls', 'savedUrlsWithTimestamps'）
+ * 注意: chrome.storage.local.set はアトミックですが、Read と Write の間に
+ * 他のプロセスが書き込むと、データが上書きされる可能性があります。
+ * 並行性が重要な場合は、より高度な同期機構を検討してください。
+ *
+ * @param {string} key - 更新対象のストレージキー（例: 'savedUrls', 'savedUrlsWithTimestamps'）
  * @param {function(T): T} updateFn - 更新関数 `(currentValue) => newValue`
- * @param {LockOptions} [options] - ロックオプション
  * @returns {Promise<T>} 成功時の新しい値
- * @throws {ConflictError} 最大リトライ回数を超えた場合
  */
-export async function withOptimisticLock(key, updateFn, options = {}) {
-    const opts = { ...DEFAULT_LOCK_OPTIONS, ...options };
+export async function withOptimisticLock(key, updateFn) {
     conflictStats.totalAttempts++;
     try {
         // Step 1: 現在の値を読み込み
@@ -90,32 +60,5 @@ export function resetConflictStats() {
         totalConflicts: 0,
         totalFailures: 0
     };
-}
-/**
- * 指定ミリ秒遅延実行
- * @private
- * @param {number} ms
- * @returns {Promise<void>}
- */
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-/**
- * 指定されたキーのバージョン番号を初期化（移行用）
- *
- * 新規インストール用、または既存データにバージョンフィールドがない場合に初期化します
- *
- * @param {string} key - 初期化対象のキー
- * @returns {Promise<boolean>} 初期化が実行された場合はtrue
- */
-export async function ensureVersionInitialized(key) {
-    const versionKey = `${key}_version`;
-    const result = await chrome.storage.local.get(versionKey);
-    if (result[versionKey] === undefined) {
-        // 初回: バージョンを0に初期化
-        await chrome.storage.local.set({ [versionKey]: 0 });
-        return true;
-    }
-    return false;
 }
 //# sourceMappingURL=optimisticLock.js.map
