@@ -12,17 +12,18 @@ interface ConflictStats {
  * Read-Modify-Writeパターンで安全にストレージを更新
  *
  * この関数は以下の手順でストレージを更新します:
- * 1. 現在の値を読み込む
+ * 1. 現在の値とバージョンを読み込む
  * 2. updateFnで新しい値を計算
- * 3. アトミックに書き込み
+ * 3. バージョンチェックを行い、アトミックに書き込み
  *
  * 注意: chrome.storage.local.set はアトミックですが、Read と Write の間に
  * 他のプロセスが書き込むと、データが上書きされる可能性があります。
- * 並行性が重要な場合は、より高度な同期機構を検討してください。
+ * この実装ではバージョンベースの競合検出を追加し、データの一貫性を保証します。
  *
  * @param {string} key - 更新対象のストレージキー（例: 'savedUrls', 'savedUrlsWithTimestamps'）
  * @param {function(T): T} updateFn - 更新関数 `(currentValue) => newValue`
  * @returns {Promise<T>} 成功時の新しい値
+ * @throws {ConflictError} 競合が検出された場合
  */
 export declare function withOptimisticLock<T>(key: string, updateFn: (currentValue: T) => T): Promise<T>;
 /**

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [4.1.3] - to be released as 4.2
 
 ### Added
+- **楽観的ロックのバージョンベース競合検出** ([optimisticLock.ts](src/utils/optimisticLock.ts))
+  - `${key}_version` によるバージョンベースの競合検出を実装
+  - Read-Modify-Write パターンで書き込み前にバージョンチェックを実行
+  - 競合検出時に `ConflictError` をスローし、統計情報を記録
+  - エラー発生時に `logDebug` で詳細なエラー情報をログ出力
+  - 競合統計機能（`getConflictStats`, `resetConflictStats`）を維持
 - **プライバシーポリシー同意UI** ([privacyConsent.ts](src/popup/privacyConsent.ts), [privacyConsentController.ts](src/popup/privacyConsentController.ts))
   - 初回起動時にプライバシーポリシー同意モーダルを表示
   - GDPR/CCPAコンプライアンス対応のため、機能使用前に明示的な同意を要求
