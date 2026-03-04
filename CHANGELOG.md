@@ -2,7 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.1.2] - to be released
+## [4.1.3] - to be released
+
+### Added
+- **プライバシーポリシー同意UI** ([privacyConsent.ts](src/popup/privacyConsent.ts), [privacyConsentController.ts](src/popup/privacyConsentController.ts))
+  - 初回起動時にプライバシーポリシー同意モーダルを表示
+  - GDPR/CCPAコンプライアンス対応のため、機能使用前に明示的な同意を要求
+  - 既存ユーザーのプライバシー機能使用状況を検出し、自動的に同意済みとしてマイグレーション
+  - 同意されていない場合、機能をブロックするガード関数 `requireConsent()` を追加
+  - 多言語対応（英語・日本語）のUIとi18nメッセージ
+  - フォーカストラップによるアクセシビリティ対応（ESCによる誤操作防止）
+
+### Fixed
+- **セッションタイムアウト: Service Worker対応** ([sessionAlarmsManager.ts](src/background/sessionAlarmsManager.ts), [service-worker.ts](src/background/service-worker.ts))
+  - `window.setInterval` から `chrome.alarms` API へ移行し、Service Worker環境で動作
+  - アクティビティ更新（記録成功・設定更新・アンロック）に連動した30分アイドルタイムアウト
+  - タイムアウト時のセッションロック機能（chrome.runtime経由で通知）
+  - [`manifest.json`](manifest.json) に `alarms` パーミッションを追加
+- **ログサニタイズ: 再帰処理の安全性向上** ([logger.ts](src/utils/logger.ts))
+  - 深度制限 `MAX_RECURSION_DEPTH = 100` を追加し、スタックオーバーフローを防止
+  - `WeakSet` による循環参照検出を実装
+  - 循環参照時に `[SANITIZED: circular reference]` プレースホルダーで置換
+  - 深度超過時に `[SANITIZED: too deep]` プレースホルダーで置換
+  - Dateオブジェクト → ISO文字列、Errorオブジェクト → `{message, stack}` へ自動変換
+  - 配列とオブジェクトそれぞれのサニタイズ関数を分離
+
+### Security
+- **ログ出力時のPII保護強化** ([logger.ts](src/utils/logger.ts), [piiSanitizer.ts](src/utils/piiSanitizer.ts))
+  - `sanitizeLogDetails` に深度制限と循環参照保護を追加
+  - センシティブデータが含まれるオブジェクトの深いネストを安全にサニタイズ
+  - 循環参照による無限ループ攻撃を防止
+  - 多数のループテストを追加し、セキュリティ要件を検証 ([logger-security.test.ts](src/utils/__tests__/logger-security.test.ts))
+
+## [4.1.2] - skipped
+
+### Added
+- **AIプロンプトプリセット** ([customPromptManager.ts](src/popup/customPromptManager.ts), [customPromptUtils.ts](src/utils/customPromptUtils.ts))
+  - 標準的なプロンプトテンプレートを5種類プリセットとして追加
+  - 「デフォルト」「タグ付き要約」「箇条書き」「英語要約」「技術的観点」のプリセットから選択可能
+  - プリセットをそのまま使用するか、複製してカスタマイズ可能
 
 ### Fixed
 - **追加のセキュリティ脆弱性修正（Checking Teamレビュー対応）**

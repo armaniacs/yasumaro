@@ -67,6 +67,13 @@ const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 7;
 const MAX_LOGS = 1000; // Prevent unlimited growth
 
+// 【セキュリティ強化】log sanitizationへの深度制限と循環参照保護
+const MAX_RECURSION_DEPTH = 100; // redaction.tsと整合
+const SANITIZE_RESULT = {
+  TOO_DEEP: '[SANITIZED: too deep]',
+  CIRCULAR_REF: '[SANITIZED: circular reference]'
+} as const;
+
 // 【パフォーマンス改善】バッチ書き込み用設定
 const BATCH_FLUSH_SIZE = 10; // バッファがこのサイズを超えるとフラッシュ
 const BATCH_FLUSH_DELAY_MS = 5000; // 5秒間書き込みがないとフラッシュ
@@ -182,10 +189,55 @@ export function clearPendingLogs(): void {
 
 /**
  * ログの詳細情報をサニタイズする（PII検出とマスキング）
+ * 【深度制限と循環参照保護】
  * @param {Record<string, any>} details - サニタイズ対象の詳細情報
+ * @param {WeakSet<object>} [visitedObjects] - 循環参照検出用WeakSet
+ * @param {number} [depth] - 現在の再帰深度
  * @returns {Record<string, any>} サニタイズ済みの詳細情報
  */
-async function sanitizeLogDetails(details: Record<string, any>): Promise<Record<string, any>> {
+async function sanitizeLogDetails(
+    details: Record<string, any>,
+    visitedObjects?: WeakSet<object>,
+    depth = 0
+): Promise<Record<string, any>> {
+    // 入力チェック
+    if (details === null || details === undefined) {
+        return details;
+    }
+
+    if (typeof details !== 'object') {
+        throw new Error(`Expected object, got ${typeof details}`);
+    }
+
+    // 循環参照検出の初期化
+    if (typeof WeakSet !== 'undefined' && !visitedObjects) {
+        visitedObjects = new WeakSet<object>();
+    }
+
+    // 深度制限チェック
+    if (depth >= MAX_RECURSION_DEPTH) {
+        return SANITIZE_RESULT.TOO_DEEP as any;
+    }
+
+    // 循環参照検出
+    if (visitedObjects && visitedObjects.has(details)) {
+        return SANITIZE_RESULT.CIRCULAR_REF as any;
+    }
+
+    // メタオブジェクトは文字列化
+    if (details instanceof Date) {
+        return details.toISOString() as any;
+    }
+
+    if (details instanceof Error) {
+        return { message: details.message, stack: details.stack } as any;
+    }
+
+    // WeakSetに現在のオブジェクトを追加
+    if (visitedObjects) {
+        visitedObjects.add(details);
+    }
+
     const sanitized: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(details)) {
@@ -198,17 +250,80 @@ async function sanitizeLogDetails(details: Record<string, any>): Promise<Record<
         if (typeof value === 'string') {
             const result = await sanitizeRegex(value);
             if (result.maskedItems.length > 0) {
-                // PII検出時はmaskedTextを使用し、検出したPIIの型も記録
                 sanitized[key] = result.text;
                 sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m: any) => m.type);
             } else {
                 sanitized[key] = value;
             }
         } else if (typeof value === 'object') {
-            // オブジェクトの場合は再帰的に処理
-            sanitized[key] = await sanitizeLogDetails(value);
+            // 配列の明示的な処理
+            if (Array.isArray(value)) {
+                sanitized[key] = await sanitizeArray(value, visitedObjects, depth + 1);
+            } else {
+                // オブジェクトの場合は再帰的に処理
+                sanitized[key] = await sanitizeLogDetails(value as Record<string, any>, visitedObjects, depth + 1);
+            }
         } else {
-            sanitized[key] = value;
+            sanitized[key] = value; // primitive types
+        }
+    }
+
+    return sanitized;
+}
+
+/**
+ * 配列を再帰的にサニタイズする（ヘルパー関数）
+ */
+async function sanitizeArray(
+    arr: any[],
+    visitedObjects?: WeakSet<object>,
+    depth = 0
+): Promise<any> {
+    // 深度制限チェック
+    if (depth >= MAX_RECURSION_DEPTH) {
+        return SANITIZE_RESULT.TOO_DEEP;
+    }
+
+    // 循環参照検出
+    if (visitedObjects && visitedObjects.has(arr)) {
+        return SANITIZE_RESULT.CIRCULAR_REF;
+    }
+
+    // WeakSetに配列を追加
+    if (visitedObjects) {
+        visitedObjects.add(arr);
+    }
+
+    const sanitized: any[] = [];
+
+    for (const item of arr) {
+        if (item === null || item === undefined) {
+            sanitized.push(item);
+            continue;
+        }
+
+        if (typeof item === 'string') {
+            const result = await sanitizeRegex(item);
+            if (result.maskedItems.length > 0) {
+                sanitized.push(result.text);
+            } else {
+                sanitized.push(item);
+            }
+        } else if (typeof item === 'object') {
+            if (Array.isArray(item)) {
+                sanitized.push(await sanitizeArray(item, visitedObjects, depth + 1));
+            } else {
+                // メタオブジェクトのチェック
+                if (item instanceof Date) {
+                    sanitized.push(item.toISOString());
+                } else if (item instanceof Error) {
+                    sanitized.push({ message: item.message, stack: item.stack });
+                } else {
+                    sanitized.push(await sanitizeLogDetails(item as Record<string, any>, visitedObjects, depth + 1) as any);
+                }
+            }
+        } else {
+            sanitized.push(item); // primitive types
         }
     }
 
@@ -236,7 +351,7 @@ export async function addLog(type: LogTypeValues, message: string, details: Reco
             timestamp: Date.now(),
             type,
             message,
-            details: sanitizeLogDetails(details)
+            details: await sanitizeLogDetails(details)
         };
 
         // バッファに追加（上限超過時は古いエントリを破棄）

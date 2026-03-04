@@ -99,12 +99,17 @@ export async function withOptimisticLock<T>(key: string, updateFn: (currentValue
                 [versionKey]: currentVersion + 1
             });
 
-            // Step 4: バージョンが変わっていないか検証（楽観的チェック）
+            // Step 4: バージョンと値が変わっていないか検証（楽観的チェック）
             // chrome.storage.localの書き込みはアトミックなので、
-            // もし競合していれば、他のプロセスが異なるバージョンを書いているはず
-            const verifyResult = await chrome.storage.local.get(versionKey);
-            if ((verifyResult[versionKey] as number) === currentVersion + 1) {
-                // 成功
+            // もし競合していれば、他のプロセスが異なるバージョンか値を書いているはず
+            const verifyResult = await chrome.storage.local.get([key, versionKey]);
+            const verifyValue = verifyResult[key] as T;
+            const verifyVersion = (verifyResult[versionKey] as number) || 0;
+
+            // 書き込んだ値とバージョンの両方を確認することで、競合をより確実に検出
+            if (verifyVersion === currentVersion + 1 &&
+                JSON.stringify(verifyValue) === JSON.stringify(newValue)) {
+                // 成功 - 自分の書き込みが維持されていることを確認
                 conflictStats.totalConflicts += attempt - 1; // 競合回数を記録
                 return newValue;
             }

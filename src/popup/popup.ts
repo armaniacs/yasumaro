@@ -921,4 +921,22 @@ if (saveBtn) {
     );
 }
 
+// ============================================================================
+// Privacy Consent Initialization
+// ============================================================================
+
+import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
+
+try {
+    initPrivacyConsent();
+} catch (error) {
+    console.error('[Popup] Error in initPrivacyConsent:', error);
+}
+
+try {
+    setupPrivacyConsentListeners();
+} catch (error) {
+    console.error('[Popup] Error in setupPrivacyConsentListeners:', error);
+}
+
 ;

@@ -20,44 +20,6 @@ import { withOptimisticLock, ensureVersionInitialized } from './optimisticLock.j
 import { normalizeUrl } from './urlUtils.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
 
-// セッションタイムアウト設定
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
-const SESSION_CHECK_INTERVAL_MS = 60 * 1000; // 1分ごとにチェック
-let lastActivityTimestamp = Date.now();
-let activityTimeoutId: number | null = null;
-
-/**
- * アクティビティを更新
- */
-function updateActivity(): void {
-    lastActivityTimestamp = Date.now();
-}
-
-/**
- * タイムアウトチェッカーを開始
- */
-function startSessionTimeoutChecker(): void {
-    if (activityTimeoutId !== null) {
-        return; // 既に実行中
-    }
-
-    activityTimeoutId = window.setInterval(async () => {
-        if (!cachedMasterPassword) {
-            return; // 既にロックされている
-        }
-
-        if (Date.now() - lastActivityTimestamp > SESSION_TIMEOUT_MS) {
-            // タイムアウト: セッションをロック
-            lockSession();
-            await logInfo(
-                'Session locked due to inactivity',
-                { timeoutMinutes: SESSION_TIMEOUT_MS / 60000 },
-                'storage.ts'
-            );
-        }
-    }, SESSION_CHECK_INTERVAL_MS);
-}
-
 // ストレージクォータ監視設定
 const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB (Chrome拡張機能のデフォルト)
 
@@ -174,7 +136,9 @@ export const StorageKeys = {
     CUSTOM_PROMPTS: 'custom_prompts', // カスタムプロンプト設定
     // Domain filter cache for content scripts (Task #19)
     DOMAIN_FILTER_CACHE: 'domain_filter_cache', // 許可ドメインキャッシュ（content script用）
-    DOMAIN_FILTER_CACHE_TIMESTAMP: 'domain_filter_cache_timestamp' // キャッシュタイムスタンプ
+    DOMAIN_FILTER_CACHE_TIMESTAMP: 'domain_filter_cache_timestamp', // キャッシュタイムスタンプ
+    // Privacy consent (GDPR/CCPA compliance)
+    PRIVACY_CONSENT: 'privacy_consent' // プライバシーポリシーへの同意状態
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -227,6 +191,8 @@ export interface StorageKeyValues {
     // タグ機能
     [StorageKeys.TAG_CATEGORIES]: TagCategory[];  // タグカテゴリリスト
     [StorageKeys.TAG_SUMMARY_MODE]: boolean;      // タグ付き要約モード
+    // プライバシーポリシー同意（オブジェクトまたはブール値）
+    [StorageKeys.PRIVACY_CONSENT]: { hasConsented: boolean; consentDate?: string; consentVersion?: string } | boolean;
 }
 
 // 厳格な Settings 型
@@ -409,8 +375,7 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
         // PBKDF2キー導出を直接使用（マスターパスワードベース）
         cachedEncryptionKey = await deriveKeyFromPassword(cachedMasterPassword, passwordSalt);
         // セッションタイムアウトチェックを開始（まだ開始していない場合）
-        startSessionTimeoutChecker();
-        updateActivity(); // アクティビティ更新
+        // Note: Session timeoutはchrome.alarms APIに移行済み（sessionAlarmsManager.ts）
         return cachedEncryptionKey;
     }
 
@@ -438,8 +403,6 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // 【脆弱な方式】Extension IDを使用してキー導出
     // マスターパスワード設定後に再暗号化が必要
     cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
-    // セッションタイムアウトチェックを開始（まだ開始していない場合）
-    startSessionTimeoutChecker();
     return cachedEncryptionKey;
 }
 
@@ -582,10 +545,13 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     const isValid = await verifyPasswordWithPBKDF2(password, storedHash, salt);
 
     if (isValid) {
+        // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
+        chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {
+            // 送信失敗は無視（Service Workerが起動していない可能性）
+        });
         cachedMasterPassword = password;
         cachedEncryptionKey = null; // 新しいキーを生成するためにキャッシュをクリア
         await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
-        updateActivity(); // タイムアウトリセットのためにアクティビティを更新
         return true;
     }
 

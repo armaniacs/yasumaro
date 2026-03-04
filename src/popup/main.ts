@@ -488,6 +488,11 @@ async function forceRecord(
     hideSpinner();
 
     if (result && result.success) {
+      // アクティビティ通知（セッションタイムアウト防止）
+      chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {
+        // 送信失敗は無視
+      });
+
       const totalDuration = performance.now() - startTime;
       const message = formatSuccessMessage(totalDuration, result.aiDuration);
       statusDiv.textContent = message;
@@ -664,6 +669,11 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
     if (result && result.success) {
       hideSpinner();
+
+      // アクティビティ通知（セッションタイムアウト防止）
+      chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {
+        // 送信失敗は無視
+      });
 
       const totalDuration = performance.now() - startTime;
       const message = formatSuccessMessage(totalDuration, result.aiDuration);

@@ -183,14 +183,14 @@ export function isPrivateIpAddress(hostname: string): boolean {
     return true;
   }
 
-  // fe80::/10 - リンクローカルアドレス
-  if (ipv6Lower.startsWith('fe80:') || ipv6Lower.startsWith('fe9:')) {
+  // fe80::/10 - リンクローカルアドレス (fe80:: ~ febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
+  if (/^fe[89ab][0-9a-f](:|$)/i.test(ipv6Lower)) {
     return true;
   }
 
   // fc00::/7 - ユニークローカルアドレス (ULAs)
-  // fc00::/7 には fc00::/8 と fd00::/8 が含まれます
-  if (ipv6Lower.startsWith('fc') || ipv6Lower.startsWith('fd')) {
+  // fc00::/7 には fc00::/8 と fd00::/8 が含まれます (fc00:: ~ fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
+  if (/^fc[0-9a-f]{0,2}:/i.test(ipv6Lower) || /^fd[0-9a-f]{0,2}:/i.test(ipv6Lower)) {
     return true;
   }
 

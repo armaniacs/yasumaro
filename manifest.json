@@ -21,7 +21,8 @@
     "offscreen",
     "favicon",
     "unlimitedStorage",
-    "webRequest"
+    "webRequest",
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>",

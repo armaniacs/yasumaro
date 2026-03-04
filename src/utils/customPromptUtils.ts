@@ -37,6 +37,97 @@ Content:
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
 
 /**
+ * プリセットプロンプトの定義
+ */
+export interface PresetPrompt {
+    id: string;
+    name: string;
+    nameJa: string;
+    userPrompt: string;
+    systemPrompt?: string;
+}
+
+/**
+ * プリセットプロンプト一覧
+ */
+export const PRESET_PROMPTS: PresetPrompt[] = [
+    {
+        id: 'default',
+        name: 'Default',
+        nameJa: 'デフォルト',
+        userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。
+1文または2文で、重要なポイントをまとめてください。改行しないこと。
+
+Content:
+{{content}}`,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT
+    },
+    {
+        id: 'tagged',
+        name: 'With Tags',
+        nameJa: 'タグ付き要約',
+        userPrompt: `以下のWebページの内容を分析し、指定したカテゴリから最も関連度の高いものを1つまたは2つ選んでタグ形式で出力し、その後に日本語で簡潔に要約してください。
+
+カテゴリ候補:
+[IT・プログラミング, インフラ・ネットワーク, サイエンス・アカデミック, ビジネス・経済, ライフスタイル・雑記, フード・レシピ, トラベル・アウトドア, エンタメ・ゲーム, クリエイティブ・アート, ヘルス・ウェルネス]
+
+出力形式:
+#カテゴリ1 #カテゴリ2 | 要約文（改行なし）
+
+Content:
+{{content}}`,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT
+    },
+    {
+        id: 'bullet',
+        name: 'Bullet Points',
+        nameJa: '箇条書き',
+        userPrompt: `以下のWebページの内容を、日本語で箇条書き3点で要約してください。
+
+{{content}}`,
+        systemPrompt: 'You are a helpful assistant that organizes information into clear bullet points.'
+    },
+    {
+        id: 'english',
+        name: 'English Summary',
+        nameJa: '英語要約',
+        userPrompt: `Please summarize the following web page in English in 1-2 sentences.
+
+Content:
+{{content}}`,
+        systemPrompt: 'You are a helpful assistant that summarizes web pages effectively and concisely in English.'
+    },
+    {
+        id: 'technical',
+        name: 'Technical Focus',
+        nameJa: '技術的観点',
+        userPrompt: `以下のWebページの技術的なポイントを日本語で簡潔に3点まとめてください。
+
+{{content}}`,
+        systemPrompt: 'You are a technical assistant. Focus on technical details and key insights.'
+    }
+];
+
+/**
+ * IDからプリセットプロンプトを取得
+ * @param {string} id - プリセットID
+ * @returns {PresetPrompt | undefined} プリセットプロンプト、またはundefined
+ */
+export function getPresetPrompt(id: string): PresetPrompt | undefined {
+    return PRESET_PROMPTS.find(p => p.id === id);
+}
+
+/**
+ * 使用言語に基づいてプリセットの表示名を取得
+ * @param {PresetPrompt} preset - プリセットプロンプト
+ * @param {string} locale - 言語コード ('ja' または 'en')
+ * @returns {string} 表示名
+ */
+export function getPromptDisplayName(preset: PresetPrompt, locale: string): string {
+    return locale === 'ja' ? preset.nameJa : preset.name;
+}
+
+/**
  * タグ付き要約用プロンプトを動的生成
  * ユーザー追加カテゴリを含む全カテゴリをプロンプトに反映する
  * @param {Settings} settings - 設定オブジェクト

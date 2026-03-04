@@ -266,8 +266,9 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         return { text: processedText, maskedItems: resultItems };
     } catch (error: any) {
         // タイムアウトまたはその他のエラー
+        // 【セキュリティ改善】エラー時に生テキストを返さず、安全なプレースホルダーを返す
         return {
-            text,
+            text: '[SANITIZATION_FAILED]',
             maskedItems: [],
             error: error.message
         };
