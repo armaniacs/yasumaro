@@ -40,46 +40,6 @@ function estimateDataSize(data: unknown): number {
   return new Blob([JSON.stringify(data || {})]).size;
 }
 
-/**
- * 安全なストレージ書き込み
- * @param {Record<string, unknown>} data - 書き込むデータ
- * @param {string} [caller] - 呼び出し元（ログ用）
- * @throws {Error} クォータ超過またはエラー
- */
-async function safeStorageSet(data: Record<string, unknown>, caller = 'unknown'): Promise<void> {
-  try {
-    // 書き込み前にクォータチェック
-    const currentUsage = await getStorageUsage();
-    const newDataSize = estimateDataSize(data);
-
-    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
-      throw new Error(
-        `Storage quota exceeded (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
-      );
-    }
-
-    // 書き込み実行
-    await new Promise<void>((resolve, reject) => {
-      chrome.storage.local.set(data, () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve();
-        }
-      });
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    await logError(
-      `Storage write failed (${caller})`,
-      { error: errorMessage },
-      ErrorCode.STORAGE_QUOTA_EXCEEDED,
-      'storage.ts'
-    );
-    throw error;
-  }
-}
-
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
     OBSIDIAN_PROTOCOL: 'obsidian_protocol', // 'http' or 'https'
@@ -130,8 +90,6 @@ export const StorageKeys = {
     TAG_SUMMARY_MODE: 'tag_summary_mode',              // タグ付き要約を使用するか
     MP_ENCRYPT_ON_EXPORT: 'mp_encrypt_on_export',       // エクスポート時暗号化フラグ
     MP_REQUIRE_ON_IMPORT: 'mp_require_on_import',       // イポート時パスワード要求フラグ
-    // Version tracking for optimistic locking
-    SAVED_URLS_VERSION: 'savedUrls_version', // savedUrlsのバージョン番号
     // Custom prompts
     CUSTOM_PROMPTS: 'custom_prompts', // カスタムプロンプト設定
     // Domain filter cache for content scripts (Task #19)
@@ -184,7 +142,6 @@ export interface StorageKeyValues {
     [StorageKeys.MP_ENCRYPT_API_KEYS]: boolean;
     [StorageKeys.MP_ENCRYPT_ON_EXPORT]: boolean;
     [StorageKeys.MP_REQUIRE_ON_IMPORT]: boolean;
-    [StorageKeys.SAVED_URLS_VERSION]: number;
     [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
     [StorageKeys.DOMAIN_FILTER_CACHE]: string[];  // 許可ドメインリスト（キャッシュ）
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;  // キャッシュタイムスタンプ
@@ -546,8 +503,9 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 
     if (isValid) {
         // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
-        chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {
+        chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch((error) => {
             // 送信失敗は無視（Service Workerが起動していない可能性）
+            logDebug('Failed to send activity update', { error: error.message }, 'storage.ts');
         });
         cachedMasterPassword = password;
         cachedEncryptionKey = null; // 新しいキーを生成するためにキャッシュをクリア
@@ -703,7 +661,9 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.MP_REQUIRE_ON_IMPORT]: false, // インポート時パスワード要求フラグ
     // Tag feature defaults
     [StorageKeys.TAG_CATEGORIES]: [],       // タグカテゴリリスト（空=デフォルトカテゴリを使用）
-    [StorageKeys.TAG_SUMMARY_MODE]: false   // タグ付き要約モード（デフォルト: 無効）
+    [StorageKeys.TAG_SUMMARY_MODE]: false,   // タグ付き要約モード（デフォルト: 無効）
+    // Privacy consent default
+    [StorageKeys.PRIVACY_CONSENT]: false    // プライバシーポリシー同意状態（デフォルト: 未同意）
 };
 
 /**

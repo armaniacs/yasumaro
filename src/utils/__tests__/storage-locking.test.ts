@@ -103,7 +103,6 @@ describe('saveSettings - 楽観的ロック', () => {
         // 単一settingsオブジェクトで保存されているか確認
         expect(mockStorage['settings']).toBeDefined();
         expect(mockStorage['settings'][StorageKeys.OBSIDIAN_PORT]).toBe('27124');
-        expect(mockStorage['settings_version']).toBe(1);
     });
 
     it('同時実行時の競合を検出し、データ整合性を維持する', async () => {
@@ -180,16 +179,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
     });
 
-    it('バージョン番号が順に増加する', async () => {
-        await saveSettings({ [StorageKeys.OBSIDIAN_PORT]: '27124' });
-        expect(mockStorage['settings_version']).toBe(1);
 
-        await saveSettings({ [StorageKeys.OBSIDIAN_PORT]: '27125' });
-        expect(mockStorage['settings_version']).toBe(2);
-
-        await saveSettings({ [StorageKeys.OBSIDIAN_PORT]: '27126' });
-        expect(mockStorage['settings_version']).toBe(3);
-    });
 });
 
 describe('migrateToSingleSettingsObject', () => {

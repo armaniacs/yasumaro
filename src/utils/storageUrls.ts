@@ -109,14 +109,17 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
 
     // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
     // (互換性維持のため、savedUrlsも保存する)
-    // Note: これは競合の可能性がありますが、savedUrlsはsavedUrlsWithTimestampsから再生成可能です
-    const currentSavedUrls = await chrome.storage.local.get('savedUrls');
-    const currentSavedArray = currentSavedUrls['savedUrls'] as string[] || [];
-
-    // 配列が同じならスキップ
-    if (JSON.stringify(currentSavedArray.sort()) !== JSON.stringify(urlArray.sort())) {
-        await chrome.storage.local.set({ savedUrls: urlArray });
-    }
+    // withOptimisticLockを使用して原子的に更新
+    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
+        const currentSet = new Set(currentUrls || []);
+        const newSet = new Set(urlArray);
+        
+        if (JSON.stringify(Array.from(currentSet).sort()) !== JSON.stringify(Array.from(newSet).sort())) {
+            return Array.from(newSet);
+        }
+        
+        return currentUrls; // 変更なしの場合は元の値を返す
+    });
 }
 
 /**

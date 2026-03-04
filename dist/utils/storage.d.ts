@@ -51,7 +51,6 @@ export declare const StorageKeys: {
     readonly TAG_SUMMARY_MODE: "tag_summary_mode";
     readonly MP_ENCRYPT_ON_EXPORT: "mp_encrypt_on_export";
     readonly MP_REQUIRE_ON_IMPORT: "mp_require_on_import";
-    readonly SAVED_URLS_VERSION: "savedUrls_version";
     readonly CUSTOM_PROMPTS: "custom_prompts";
     readonly DOMAIN_FILTER_CACHE: "domain_filter_cache";
     readonly DOMAIN_FILTER_CACHE_TIMESTAMP: "domain_filter_cache_timestamp";
@@ -98,7 +97,6 @@ export interface StorageKeyValues {
     [StorageKeys.MP_ENCRYPT_API_KEYS]: boolean;
     [StorageKeys.MP_ENCRYPT_ON_EXPORT]: boolean;
     [StorageKeys.MP_REQUIRE_ON_IMPORT]: boolean;
-    [StorageKeys.SAVED_URLS_VERSION]: number;
     [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
     [StorageKeys.DOMAIN_FILTER_CACHE]: string[];
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;

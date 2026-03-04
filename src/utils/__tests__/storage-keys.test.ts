@@ -27,7 +27,6 @@ describe('getSettings key refinement', () => {
     const internalKeys: StorageKeys[] = [
       StorageKeys.ENCRYPTION_SALT,
       StorageKeys.ENCRYPTION_SECRET,
-      StorageKeys.SAVED_URLS_VERSION,
       StorageKeys.HMAC_SECRET,
       StorageKeys.MASTER_PASSWORD_ENABLED,
       StorageKeys.MASTER_PASSWORD_SALT,

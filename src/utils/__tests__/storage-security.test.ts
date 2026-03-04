@@ -72,11 +72,12 @@ const storageData: Record<string, any> = { settings_migrated: true };
                 return Promise.resolve();
             })
         },
-        runtime: {
-            id: 'test-extension-id',
-            getURL: jest.fn(() => 'chrome-extension://test-extension-id/'),
-            reconnect: jest.fn()
-        }
+            runtime: {
+                id: 'test-extension-id',
+                getURL: jest.fn(() => 'chrome-extension://test-extension-id/'),
+                reconnect: jest.fn(),
+                sendMessage: jest.fn(() => Promise.resolve())
+            }
     }
 };
 
@@ -158,7 +159,8 @@ describe('Master Password Security', () => {
             runtime: {
                 id: 'test-extension-id',
                 getURL: jest.fn(() => 'chrome-extension://test-extension-id/'),
-                reconnect: jest.fn()
+                reconnect: jest.fn(),
+                sendMessage: jest.fn(() => Promise.resolve())
             }
         };
 
