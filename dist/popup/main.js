@@ -345,17 +345,23 @@ export async function loadCurrentTab() {
             recordBtn.disabled = true;
             recordBtn.textContent = getMessage('cannotRecordPage');
         }
-        else {
-            recordBtn.disabled = false;
-            recordBtn.textContent = getMessage('recordNow');
-        }
+        // 記録可能な場合はinitStatusPanel内のrenderStatusPanelでボタンを設定する
     }
 }
-// ボタンをデフォルト状態（「今すぐ記録」）にリセットする
-function resetRecordButton(recordBtn) {
+// ボタンをデフォルト状態にリセットする（ドメインブロック時は「それでも記録」）
+async function resetRecordButton(recordBtn) {
     recordBtn.disabled = false;
-    recordBtn.textContent = getMessage('recordNow');
-    recordBtn.onclick = () => recordCurrentPage(false);
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url = tabs[0]?.url;
+    const status = url ? await checkPageStatus(url) : null;
+    if (status && !status.domainFilter.allowed) {
+        recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+        recordBtn.onclick = () => void recordCurrentPage(true);
+    }
+    else {
+        recordBtn.textContent = getMessage('recordNow');
+        recordBtn.onclick = () => recordCurrentPage(false);
+    }
 }
 // ボタンを「それでも記録」状態に設定する
 function setRecordAnywayButton(recordBtn, tab, content) {
@@ -432,7 +438,7 @@ async function forceRecord(recordBtn, tab, content) {
 }
 function resetRecordButtonAndClearFlag(btn) {
     isAwaitingForceConfirm = false;
-    resetRecordButton(btn);
+    void resetRecordButton(btn);
 }
 // 手動記録処理
 export async function recordCurrentPage(force = false) {
@@ -460,13 +466,38 @@ export async function recordCurrentPage(force = false) {
         const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false; // Default true
         // Content Scriptにコンテンツ取得を要求
         showSpinner(getMessage('fetchingContent'));
-        const contentResponse = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' });
-        // Content Script不在時のエラーハンドリング
-        if (chrome.runtime.lastError) {
-            throw new Error(getMessage('errorContentScriptNotAvailable'));
+        let contentResponse;
+        try {
+            contentResponse = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' });
+            if (chrome.runtime.lastError) {
+                throw new Error(chrome.runtime.lastError.message);
+            }
+        }
+        catch (e) {
+            if (force) {
+                // force=true の場合は executeScript でコンテンツを直接取得
+                try {
+                    const results = await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: () => document.body?.innerText || ''
+                    });
+                    contentResponse = { content: results?.[0]?.result || '' };
+                }
+                catch {
+                    contentResponse = { content: '' };
+                }
+            }
+            else {
+                throw new Error(getMessage('errorContentScriptNotAvailable'));
+            }
         }
         if (!contentResponse) {
-            throw new Error(getMessage('errorNoContentResponse'));
+            if (force) {
+                contentResponse = { content: '' };
+            }
+            else {
+                throw new Error(getMessage('errorNoContentResponse'));
+            }
         }
         // Background Workerに記録を要求
         let result;
@@ -515,7 +546,7 @@ export async function recordCurrentPage(force = false) {
                 if (!confirmation.confirmed) {
                     statusDiv.textContent = getMessage('cancelled');
                     if (recordBtn)
-                        resetRecordButton(recordBtn);
+                        void resetRecordButton(recordBtn);
                     return;
                 }
                 finalContent = confirmation.content || '';
@@ -585,7 +616,7 @@ export async function recordCurrentPage(force = false) {
             const btn = document.getElementById('recordBtn');
             const currentTab = await getCurrentTab();
             if (btn && currentTab && isRecordable(currentTab)) {
-                resetRecordButton(btn);
+                await resetRecordButton(btn);
             }
         }
     }
@@ -629,8 +660,10 @@ document.getElementById('btn-discard')?.addEventListener('click', async () => {
 document.addEventListener('DOMContentLoaded', () => {
     initializeModalEvents();
     loadPendingPages();
-    loadCurrentTab();
-    void initStatusPanel();
+    void (async () => {
+        await loadCurrentTab();
+        await initStatusPanel();
+    })();
 });
 // ============================================================================
 // Status Panel Initialization
@@ -815,6 +848,18 @@ function renderStatusPanel(status) {
         <span class="status-value">${escapeHtml(status.lastSaved.timeAgo || '')}</span>
         <span class="status-value status-muted">${escapeHtml(status.lastSaved.formatted || '')}</span>
       `;
+        }
+    }
+    // ドメイン状態に応じてrecordBtnを設定
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn && !recordBtn.disabled) {
+        if (!status.domainFilter.allowed) {
+            recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+            recordBtn.onclick = () => void recordCurrentPage(true);
+        }
+        else {
+            recordBtn.textContent = getMessage('recordNow');
+            recordBtn.onclick = () => recordCurrentPage(false);
         }
     }
 }
