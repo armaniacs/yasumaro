@@ -4,15 +4,15 @@ export declare class HeaderDetector {
      */
     static initialize(): Promise<void>;
     /**
-     * HTTPレスポンスヘッダーを受信した際の処理
-     */
-    private static onHeadersReceived;
-    /**
      * URL正規化（キャッシュキーの一貫性のため）
      * - 末尾のスラッシュを削除
      * - フラグメント（#...）を削除
      */
-    private static normalizeUrl;
+    static normalizeUrl(url: string): string;
+    /**
+     * HTTPレスポンスヘッダーを受信した際の処理
+     */
+    private static onHeadersReceived;
     /**
      * プライバシー情報をキャッシュに保存する
      * キャッシュサイズが上限を超えたら最も古いエントリを削除

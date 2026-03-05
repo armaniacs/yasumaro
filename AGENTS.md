@@ -19,6 +19,8 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 | For Documentation | See |
 |------------------|-----|
 | Project Architecture | [docs/DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md) |
+| Architecture Decisions | [docs/ADR/](docs/ADR/) |
+| Error Codes | [docs/ERROR_CODES.md](docs/ERROR_CODES.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
 | i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
@@ -35,13 +37,29 @@ The extension follows a modular design pattern:
 Service Worker (background/)
   ├── ObsidianClient → Obsidian Local REST API
   ├── AIClient (multiple implementations) → AI Providers
-  └── DOMHandler → Content injection
+  ├── localAiClient → Local AI provider (Ollama, etc.)
+  ├── sessionAlarmsManager → Session timeout management
+  ├── Mutex / ServiceWorkerContext → Concurrency management
+  └── recordingLogic → Core recording orchestration
 
 Popup UI (popup/)
-  ├── navigation.js → Tab management
-  ├── domainFilter.js → Domain filter settings
-  ├── main.js → Core popup logic
+  ├── navigation.ts → Tab management
+  ├── domainFilter.ts → Domain filter settings
+  ├── main.ts → Core popup logic
+  ├── ublockImport/ → uBlock filter import functionality
+  ├── settings/ → Settings management
   └── utils/ → Shared utilities (focusTrap, i18n, etc.)
+
+Dashboard (dashboard/)
+  ├── dashboard.html → Settings configuration interface
+  └── dashboard.ts → Dashboard logic
+
+Offscreen (offscreen/)
+  └── offscreen.ts → DOM operations requiring offscreen document
+
+Content Scripts (content/)
+  ├── loader.ts → Injection orchestrator
+  └── extractor.ts → DOM content extraction
 ```
 
 ### Key Patterns to Follow
@@ -56,10 +74,18 @@ Popup UI (popup/)
 
 | Feature Type | Location | Notes |
 |--------------|----------|-------|
-| UI features | `popup/` (HTML/CSS/JS) | Follow accessibility patterns (see ACCESSIBILITY.md) |
-| Background processing | `background/` service-worker.js | Use modular client classes |
-| Page interaction | `content/` extractor.js | Consider CSP restrictions |
-| Storage | `utils/storage.js` | Use StorageKeys constant |
+| UI features | `popup/` (HTML/CSS/TS) | Follow accessibility patterns (see ACCESSIBILITY.md) |
+| Dashboard settings | `dashboard/` (HTML/CSS/TS) | Settings management interface |
+| uBlock Import | `popup/ublockImport/` | Filter list import functionality |
+| Background processing | `background/` service-worker.ts | Use modular client classes |
+| Local AI Integration | `background/localAiClient.ts` | Ollama and other local providers |
+| Page interaction | `content/` extractor.ts | Consider CSP restrictions |
+| Storage | `utils/storage.ts` | Use StorageKeys constant |
+| API Key Encryption | `utils/crypto.ts` | PBKDF2 + AES-GCM encryption |
+| PII Masking | `utils/piiSanitizer.ts` | Privacy-preserving data handling |
+| DOM operations | `offscreen/` offscreen.ts | For operations requiring offscreen document |
+
+**Before implementing major features**, review [docs/ADR/](docs/ADR/) for existing architectural decisions and consistency.
 
 ### Critical Considerations
 
@@ -67,6 +93,7 @@ Popup UI (popup/)
 - **Accessibility**: Follow WCAG 2.1 Level AA guidelines (see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md))
 - **Manifest V3**: No background scripts, use service workers
 - **CSP**: Adhere to Content Security Policy
+- **Offscreen API**: Use offscreen documents for DOM operations that cannot run in service workers
 
 ---
 
@@ -91,6 +118,7 @@ Popup UI (popup/)
 ### Code Quality Standards
 
 - [ ] Consistent error handling with user notifications
+- [ ] Use structured error codes (see [docs/ERROR_CODES.md](docs/ERROR_CODES.md))
 - [ ] Proper cleanup of event listeners and intervals
 - [ ] No memory leaks in long-running service worker
 - [ ] Modular code organization
@@ -104,20 +132,23 @@ Popup UI (popup/)
 
 | Issue Area | Primary Files |
 |------------|---------------|
-| API Integration Failures | `background/aiClient/*.js` |
-| Obsidian Connection Issues | `background/obsidianClient.js` |
-| Content Script Not Injecting | `manifest.json`, `content/extractor.js` |
-| Settings Not Persisting | `utils/storage.js` |
-| Duplicate Entries | `background/service-worker.js` |
-| Focus Trap Issues | `popup/utils/focusTrap.js` |
+| API Integration Failures | `background/aiClient/*.ts`, `background/ai/providers/*.ts` |
+| Obsidian Connection Issues | `background/obsidianClient.ts` |
+| Content Script Not Injecting | `manifest.json`, `content/loader.ts`, `content/extractor.ts` |
+| Settings Not Persisting | `utils/storage.ts` |
+| Duplicate Entries | `background/service-worker.ts`, `background/recordingLogic.ts` |
+| Focus Trap Issues | `popup/utils/focusTrap.ts` |
+| Offscreen Document Issues | `offscreen/offscreen.ts` |
+| Optimistic Lock Conflicts | `utils/optimisticLock.ts` |
 
 ### Debugging Workflow
 
 1. Reproduce the issue consistently
 2. Check browser extension error logs (`chrome://extensions`)
 3. Inspect service worker logs (Extensions → Service Worker → inspect)
-4. Test popup UI with browser dev tools
-5. Verify API connectivity using built-in test functions
+4. Inspect offscreen document logs (if applicable)
+5. Test popup UI with browser dev tools
+6. Verify API connectivity using built-in test functions
 
 ### Breaking Changes Risk
 
@@ -195,6 +226,17 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 npm test              # Run all tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report
+npm test:e2e          # Run Playwright E2E tests
+npm test:e2e:ui       # Playwright with UI mode
+npm type-check        # TypeScript type checking
+npm validate          # Type check + run tests (pre-commit gate)
+```
+
+### Building
+
+```bash
+npm build             # Build TypeScript and copy assets to dist/
+npm run build:watch   # Watch mode for development
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
@@ -219,6 +261,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 | Document | Language | Purpose |
 |----------|----------|---------|
 | DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
+| ADR/ | English | Architecture Decision Records |
+| ERROR_CODES.md | English | Structured error code definitions |
 | CONTRIBUTING.md | Bilingual (JP/EN) | Development & contribution guide |
 | AGENTS.md | English | This file - agent-specific guidance |
 | UBLOCK_MIGRATION.md | Bilingual (JP/EN) | Migration guide |
@@ -305,10 +349,25 @@ Respect modular architecture and avoid cross-contamination of concerns.
 ### Chrome Extension Lifecycle Quirks
 
 - Service workers can be terminated at any time (stateless)
-- Content scrips reload on page navigation
+- Offscreen documents have limited lifecycle and cannot persist UI state
+- Content scripts reload on page navigation
 - Message passing is async, no return values
 - `chrome.storage.local.get/set` is preferred for state
 - Not suitable for persistent background tasks
+
+### Concurrency Management
+
+- **Mutex** (`background/Mutex.ts`): Prevents race conditions in service worker
+- **ServiceWorkerContext** (`background/ServiceWorkerContext.ts`): Manages context state
+- **Optimistic Lock** (`utils/optimisticLock.ts`): Version-based conflict detection for storage updates
+- Use `withOptimisticLock()` for critical storage operations
+
+### Privacy Features
+
+- **PII Sanitization** (`utils/piiSanitizer.ts`): Masks personally identifiable information
+- **Privacy Consent** (`popup/privacyConsent.ts`): User consent tracking for data collection
+- **Privacy Pipeline** (`background/privacyPipeline.ts`): Privacy-preserving content processing
+- All API keys encrypted in storage (PBKDF2 + AES-GCM)
 
 ### Testing Limitations
 
@@ -316,6 +375,13 @@ Respect modular architecture and avoid cross-contamination of concerns.
 - Content script tests require jsdom environment
 - Service worker tests have limitations
 - Always verify with actual Chrome browser
+
+### TypeScript Configuration
+
+- **ESM imports**: All imports must use `.js` extensions (including `.ts` source files)
+- **Module resolution**: `nodeNext` mode with strict type checking
+- **Testing**: Jest + jsdom with Web Crypto API polyfill (`@peculiar/webcrypto`)
+- Run `npm run type-check` before committing to catch type errors
 
 ### Release Considerations
 

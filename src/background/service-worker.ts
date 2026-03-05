@@ -311,6 +311,41 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     tabCache.remove(tabId);
 });
 
+// Handle Tab Activation - Update badge to reflect privacy status of new active tab
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        if (!tab.url) {
+            chrome.action.setBadgeText({ text: '' });
+            return;
+        }
+        const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
+        const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
+        if (privacyInfo?.isPrivate) {
+            chrome.action.setBadgeText({ text: '!' });
+            chrome.action.setBadgeBackgroundColor({ color: '#F97316' });
+        } else {
+            chrome.action.setBadgeText({ text: '' });
+        }
+    } catch {
+        // タブ取得失敗時はバッジをクリア
+        chrome.action.setBadgeText({ text: '' });
+    }
+});
+
+// Handle Tab Navigation - Update badge after page load completes
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status !== 'complete' || !tab.url) return;
+    const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
+    const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
+    if (privacyInfo?.isPrivate) {
+        chrome.action.setBadgeText({ text: '!', tabId });
+        chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
+    } else {
+        chrome.action.setBadgeText({ text: '', tabId });
+    }
+});
+
 // Extension Startup / Installation initialization
 const initializeExtension = async () => {
     try {

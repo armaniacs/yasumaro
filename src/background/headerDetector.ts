@@ -32,6 +32,25 @@ export class HeaderDetector {
   }
 
   /**
+   * URL正規化（キャッシュキーの一貫性のため）
+   * - 末尾のスラッシュを削除
+   * - フラグメント（#...）を削除
+   */
+  static normalizeUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      parsed.hash = '';
+      let normalized = parsed.toString();
+      if (normalized.endsWith('/') && parsed.pathname !== '/') {
+        normalized = normalized.slice(0, -1);
+      }
+      return normalized;
+    } catch {
+      return url;
+    }
+  }
+
+  /**
    * HTTPレスポンスヘッダーを受信した際の処理
    */
   private static onHeadersReceived(details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined {
@@ -85,7 +104,7 @@ export class HeaderDetector {
       })();
 
       // キャッシュに保存
-      HeaderDetector.cachePrivacyInfo(details.url, privacyInfo);
+      HeaderDetector.cachePrivacyInfo(details.url, privacyInfo, details.tabId);
 
       const cacheSize = RecordingLogic.cacheState.privacyCache?.size || 0;
       (async () => {
@@ -107,32 +126,10 @@ export class HeaderDetector {
   }
 
   /**
-   * URL正規化（キャッシュキーの一貫性のため）
-   * - 末尾のスラッシュを削除
-   * - フラグメント（#...）を削除
-   */
-  private static normalizeUrl(url: string): string {
-    try {
-      const parsed = new URL(url);
-      // フラグメントを削除
-      parsed.hash = '';
-      let normalized = parsed.toString();
-      // 末尾のスラッシュを削除（ルートパス以外）
-      if (normalized.endsWith('/') && parsed.pathname !== '/') {
-        normalized = normalized.slice(0, -1);
-      }
-      return normalized;
-    } catch {
-      // パース失敗時は元のURLを返す
-      return url;
-    }
-  }
-
-  /**
    * プライバシー情報をキャッシュに保存する
    * キャッシュサイズが上限を超えたら最も古いエントリを削除
    */
-  private static cachePrivacyInfo(url: string, info: PrivacyInfo): void {
+  private static cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): void {
     if (!RecordingLogic.cacheState.privacyCache) {
       RecordingLogic.cacheState.privacyCache = new Map();
       RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
@@ -154,6 +151,13 @@ export class HeaderDetector {
       chrome.storage.session.set({ [sessionKey]: info }).catch(() => {
         // session storage エラーは握りつぶす（インメモリが主、sessionは補助）
       });
+    }
+
+    // バッジ更新（プライベート検出時のみ設定。非プライベートでは上書きしない）
+    // tabId=-1はバックグラウンドリクエストのためスキップ
+    if (tabId !== undefined && tabId >= 0 && info.isPrivate) {
+      chrome.action.setBadgeText({ text: '!', tabId });
+      chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
     }
   }
 

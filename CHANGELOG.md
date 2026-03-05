@@ -2,9 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.1.3] - to be released as 4.2
+## [Unreleased] - to be released as 4.1.4 (as 4.2 soon)
 
 ### Added
+
+### Fixed
+
+### Changed
+
+### Security
+
+---
+
+## [4.1.3] - 2026-03-06
+
+### Added
+- **プライバシー検出時のアイコンバッジ表示** ([headerDetector.ts](src/background/headerDetector.ts), [service-worker.ts](src/background/service-worker.ts), [popup/main.ts](src/popup/main.ts))
+  - `Cache-Control: private` / `Set-Cookie` / `Authorization` ヘッダー検出時、ツールバーアイコンにオレンジ色の `!` バッジを表示
+  - `chrome.action.setBadgeText` / `setBadgeBackgroundColor` を `tabId` 指定で呼び出し、タブ単位でバッジを管理
+  - `chrome.tabs.onActivated` でタブ切り替え時にキャッシュを参照してバッジを更新
+  - `chrome.tabs.onUpdated` でページロード完了時（`status: 'complete'`）にバッジを確定（リダイレクトによる誤クリアを防止）
+  - ポップアップを開いたタイミングで当該タブのバッジをクリア
+  - `HeaderDetector.normalizeUrl()` を `public static` に昇格し `service-worker.ts` から再利用
+
 - **ブラックリストドメインでの強制記録** ([main.ts](src/popup/main.ts))
   - ドメインフィルタでブロック中のページでポップアップを開くと、記録ボタンが「それでも記録」に変化
   - `force=true` で記録することでブラックリストを一時的にバイパス可能

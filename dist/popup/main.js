@@ -663,6 +663,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCurrentTabAndInitStatus().catch((error) => {
         console.error('[Initialize] Failed to load current tab or init status panel:', error);
     });
+    // ポップアップを開いたタイミングでバッジをクリア
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tabId = tabs[0]?.id;
+        if (tabId !== undefined) {
+            chrome.action.setBadgeText({ text: '', tabId });
+        }
+    });
 });
 /**
  * 現在のタブ情報をロードし、ステータスパネルを初期化する
