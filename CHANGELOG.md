@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [4.1.3] - to be released as 4.2
 
 ### Added
+- **ブラックリストドメインでの強制記録** ([main.ts](src/popup/main.ts))
+  - ドメインフィルタでブロック中のページでポップアップを開くと、記録ボタンが「それでも記録」に変化
+  - `force=true` で記録することでブラックリストを一時的にバイパス可能
+  - Content Script が未ロードの場合は `chrome.scripting.executeScript` でコンテンツを直接取得するフォールバックを追加
+  - Service Worker リトライ回数を3→5回、初回遅延を100→300ms に増加 ([retryHelper.ts](src/utils/retryHelper.ts))
+
 - **楽観的ロックのバージョンベース競合検出** ([optimisticLock.ts](src/utils/optimisticLock.ts))
   - `${key}_version` によるバージョンベースの競合検出を実装
   - Read-Modify-Write パターンで書き込み前にバージョンチェックを実行
