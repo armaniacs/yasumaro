@@ -86,7 +86,8 @@ export async function setSavedUrlsWithTimestamps(urlMap, urlToAdd = null) {
     await withOptimisticLock('savedUrls', (currentUrls) => {
         const currentSet = new Set(currentUrls || []);
         const newSet = new Set(urlArray);
-        if (JSON.stringify(Array.from(currentSet).sort()) !== JSON.stringify(Array.from(newSet).sort())) {
+        // Set ネイティブ操作で比較（O(n) より効率的）
+        if (currentSet.size !== newSet.size || ![...currentSet].every(x => newSet.has(x))) {
             return Array.from(newSet);
         }
         return currentUrls; // 変更なしの場合は元の値を返す

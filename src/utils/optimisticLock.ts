@@ -12,6 +12,9 @@ interface ConflictStats {
     totalFailures: number;
 }
 
+// グローバル定数
+const INITIAL_VERSION = 0;
+
 // 競合統計情報（グローバル状態）
 let conflictStats: ConflictStats = {
     totalAttempts: 0,
@@ -57,17 +60,17 @@ export async function withOptimisticLock<T>(key: string, updateFn: (currentValue
         // Step 1: 現在の値とバージョンを読み込み
         const result = await chrome.storage.local.get([key, `${key}_version`]);
         const currentValue = result[key] as T;
-        const currentVersion = result[`${key}_version`] as number || 0;
+        const currentVersion = result[`${key}_version`] as number || INITIAL_VERSION;
 
         // Step 2: 新しい値を計算
         const newValue = updateFn(currentValue);
 
         // Step 3: バージョンチェックを行い、アトミックに書き込み
         const newVersion = currentVersion + 1;
-        
+
         // 楽観的ロック: バージョンが変わっていないことを確認してから書き込み
         const currentResult = await chrome.storage.local.get([key, `${key}_version`]);
-        const currentVersionAfterRead = currentResult[`${key}_version`] as number || 0;
+        const currentVersionAfterRead = currentResult[`${key}_version`] as number || INITIAL_VERSION;
 
         if (currentVersionAfterRead !== currentVersion) {
             conflictStats.totalConflicts++;
