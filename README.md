@@ -84,6 +84,15 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 3. 「📝 今すぐ記録」ボタンをクリックすると、即座に現在のページが記録されます
 4. 手動記録では重複チェックがないため、同じページを何度でも記録できます
 
+> **📌 「それでも記録」機能について**
+> ドメインフィルターにブラックリストモードが設定されている場合、ブラックリストに登録されたドメインは自動記録されません。
+> しかし、手動記録時に「それでも記録」ボタンが表示され、ドメインフィルターを上書きして記録することができます。
+>
+> **使用方法:**
+> - ブラックリスト登録ドメインで「📝 今すぐ記録」ボタンをクリックすると確認ダイアログが表示されます
+> - 「それでも記録」ボタンを選択すると、そのドメインのページのみ記録されます
+> - 引き続きそのドメインを記録したい場合は、ドメインフィルターの設定を見直してください（ホワイトリストへの追加やブラックリストからの削除）
+
 ### 設定
 1. ツールバーの拡張機能アイコンをクリックします。
 2. メイン画面の右上にある「⚙」アイコンをクリックしてダッシュボード（設定画面）を開きます。
@@ -220,6 +229,15 @@ To install the extension, follow these steps:
 2. Current page information will be displayed
 3. Click the "📝 Record Now" button to instantly record the current page
 4. Manual recording has no duplicate restrictions - record the same page multiple times
+
+> **📌 About the "Record Anyway" Feature**
+> When domain filter blacklist mode is enabled, blacklisted domains are not automatically recorded.
+> However, the "Record Anyway" button appears during manual recording, allowing you to override the domain filter.
+>
+> **Usage:**
+> - Click "📝 Record Now" on a blacklisted domain to see a confirmation dialog
+> - Select "Record Anyway" to record that specific page
+> - If you want to continue recording that domain, review your domain filter settings (add to whitelist or remove from blacklist)
 
 ### Setup
 1. Click the extension icon in your toolbar

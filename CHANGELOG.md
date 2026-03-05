@@ -26,6 +26,10 @@ All notable changes to this project will be documented in this file.
   - フォーカストラップによるアクセシビリティ対応（ESCによる誤操作防止）
 
 ### Fixed
+- **checking-team レビュー推奨事項への対応**
+  - [README.md](README.md): 日本語・英語版に「それでも記録」機能の説明を追加
+  - [main.ts](src/popup/main.ts): DOMContentLoaded の async void パターンを改善し、エラーハンドリングを追加（`loadCurrentTabAndInitStatus` 関数化）
+  - [optimisticLock-security.test.ts](src/utils/__tests__/optimisticLock-security.test.ts): ヘッダーコメントを更新し、バージョンベース競合検出の説明を修正（実装と整合性を確保）
 - **楽観的ロックの実装改善** ([optimisticLock.ts](src/utils/optimisticLock.ts))
   - JSDocで記載されていた `ConflictError` クラスを実装しエクスポート
   - 競合検出時に `ConflictError` をスローするように変更（以前は標準Error）

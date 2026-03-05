@@ -1,9 +1,11 @@
 /**
  * optimisticLock-security.test.ts
  * 楽観的ロックのセキュリティテスト
- * 
- * 注意: 楽観的ロックは簡素化され、バージョンベースの競合検出は削除されました。
- * 現在は chrome.storage.local.set のアトミック性に依存した簡易実装です。
+ *
+ * 楽観的ロックの仕組み:
+ * - バージョンベースの競合検出を使用 (ConflictErrorクラス)
+ * - ストレージキーに `{key}_version` を使用してバージョン管理
+ * - 読み込み→更新→書き込み間での競合を検出
  */
 
 import { withOptimisticLock, getConflictStats, resetConflictStats } from '../optimisticLock';

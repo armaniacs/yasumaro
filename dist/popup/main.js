@@ -660,11 +660,17 @@ document.getElementById('btn-discard')?.addEventListener('click', async () => {
 document.addEventListener('DOMContentLoaded', () => {
     initializeModalEvents();
     loadPendingPages();
-    void (async () => {
-        await loadCurrentTab();
-        await initStatusPanel();
-    })();
+    loadCurrentTabAndInitStatus().catch((error) => {
+        console.error('[Initialize] Failed to load current tab or init status panel:', error);
+    });
 });
+/**
+ * 現在のタブ情報をロードし、ステータスパネルを初期化する
+ */
+async function loadCurrentTabAndInitStatus() {
+    await loadCurrentTab();
+    await initStatusPanel();
+}
 // ============================================================================
 // Status Panel Initialization
 // ============================================================================
