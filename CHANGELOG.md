@@ -20,6 +20,9 @@ All notable changes to this project will be documented in this file.
   - README.md のオリジナルリポジトリ言及・CHANGELOG の名称変更履歴・ADR-003・AGENTS.md の禁止表記ガイドラインは保持
 
 ### Changed
+- **`dist/` をバージョン管理から除外** ([.gitignore](.gitignore))
+  - ビルド成果物である `dist/` ディレクトリを `.gitignore` に追加
+  - `git rm --cached` により既存の追跡を解除（ローカルファイルは保持）
 
 ### Security
 
