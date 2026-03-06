@@ -1,6 +1,6 @@
 # Design Specifications
 
-This document outlines the critical design decisions and technical constraints for the Obsidian Smart History Chrome extension. These rules are derived from production issues and security requirements to prevent regressions.
+This document outlines the critical design decisions and technical constraints for the Obsidian Weave Chrome extension. These rules are derived from production issues and security requirements to prevent regressions.
 
 ## 1. Security & Network Policies
 

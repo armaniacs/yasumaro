@@ -2,7 +2,7 @@
 
 ## 概要
 
-Obsidian Smart History バージョン 3.9.8 から、デフォルトの通信設定が変更されました。
+Obsidian Weave バージョン 3.9.8 から、デフォルトの通信設定が変更されました。
 
 | 項目 | 変更前 | 変更後 |
 |------|--------|--------|
@@ -195,8 +195,8 @@ ls -l ~/.config/obsidian/obsidian_key.pem
 
 移行に関する問題が発生した場合は、以下の方法でサポートを受けてください：
 
-1. [GitHub Issues](https://github.com/your-repo/obsidian-smart-history/issues)
-2. [ドキュメント](https://your-repo.github.io/obsidian-smart-history/)
+1. [GitHub Issues](https://github.com/armaniacs/obsidian-weave/issues)
+2. [ドキュメント](https://github.com/armaniacs/obsidian-weave)
 
 ---
 

@@ -76,7 +76,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Obsidian Smart History Settings</title>
+  <title>Obsidian Weave Settings</title>
 ```
 
 **変更後**:
@@ -85,7 +85,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Obsidian Smart History Settings</title>
+  <title>Obsidian Weave Settings</title>
 ```
 
 **効果**:
@@ -109,7 +109,7 @@
    - 右上のトグルスイッチをONにする
 
 3. **拡張機能を再読み込み**
-   - "Obsidian Smart History" の「更新」（Reload）ボタンをクリック
+   - "Obsidian Weave" の「更新」（Reload）ボタンをクリック
 
 4. **現在のタブをリロード**
    - **重要**: 拡張機能を更新した後、テストするタブを**必ずリロード**してください

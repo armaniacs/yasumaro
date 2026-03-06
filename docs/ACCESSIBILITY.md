@@ -8,7 +8,7 @@
 
 ### 概要
 
-Obsidian Smart Historyは、WCAG 2.1 Level AAのアクセシビリティ標準への準拠を目指しています。このガイドでは、実装されているアクセシビリティ機能と、コントリビューション時のガイドラインについて説明します。
+Obsidian Weaveは、WCAG 2.1 Level AAのアクセシビリティ標準への準拠を目指しています。このガイドでは、実装されているアクセシビリティ機能と、コントリビューション時のガイドラインについて説明します。
 
 ### WCAG 2.1 Level AA コンプライアンス
 
@@ -190,7 +190,7 @@ function showTab(tabName) {
 
 ### Overview
 
-Obsidian Smart History aims to comply with WCAG 2.1 Level AA accessibility standards. This guide covers implemented accessibility features and guidelines for contributions.
+Obsidian Weave aims to comply with WCAG 2.1 Level AA accessibility standards. This guide covers implemented accessibility features and guidelines for contributions.
 
 ### WCAG 2.1 Level AA Compliance
 

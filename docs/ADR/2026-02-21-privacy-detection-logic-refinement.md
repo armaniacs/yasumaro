@@ -8,7 +8,7 @@
 
 ### 初期実装での問題
 
-Obsidian Smart Historyのプライバシー判定機能（`src/utils/privacyChecker.ts`）は、HTTPレスポンスヘッダーを解析してプライベートページを自動判定する機能として実装されました。初期設計（[Private Page Detection Design](../plans/2026-02-20-private-page-detection-design.md)）では、以下の条件でプライベートページと判定していました：
+Obsidian Weaveのプライバシー判定機能（`src/utils/privacyChecker.ts`）は、HTTPレスポンスヘッダーを解析してプライベートページを自動判定する機能として実装されました。初期設計（[Private Page Detection Design](../plans/2026-02-20-private-page-detection-design.md)）では、以下の条件でプライベートページと判定していました：
 
 1. `Cache-Control: private`, `no-store`, `no-cache` のいずれかが含まれる
 2. `Set-Cookie` ヘッダーが存在する

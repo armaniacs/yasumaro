@@ -8,7 +8,7 @@
 
 ### 初期実装
 
-Obsidian Smart History は、Obsidian Local REST API と通信するためにデフォルトポート `27123` を使用していました。これは Obsidian が提供する HTTP（非暗号化）通信の標準ポートです。
+Obsidian Weave は、Obsidian Local REST API と通信するためにデフォルトポート `27123` を使用していました。これは Obsidian が提供する HTTP（非暗号化）通信の標準ポートです。
 
 ### 変更が必要になった理由
 

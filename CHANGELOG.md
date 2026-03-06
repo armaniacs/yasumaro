@@ -5,8 +5,19 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - to be released as 4.1.4 (as 4.2 soon)
 
 ### Added
+- **自動保存成功時の青色バッジ表示** ([service-worker.ts](src/background/service-worker.ts))
+  - ページが自動記録されると、ツールバーアイコンに青色（`#3B82F6`）の `◎` バッジを表示
+  - `autoSavedBadgeTabs: Set<number>` でバッジ表示中のタブIDを管理
+  - 表示中のタブにいる間はバッジを継続表示。タブ切り替え後に戻っても `◎` を維持
+  - 同タブでページ遷移（`onUpdated` の `status: 'complete'`）が完了した時点でバッジをクリア
 
 ### Fixed
+- **旧名称 "Obsidian Smart History" の残存表記を一括置換**
+  - [docs/DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md), [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [docs/i18n-guide.md](docs/i18n-guide.md), [docs/PORT_MIGRATION.md](docs/PORT_MIGRATION.md): 本文中の旧称を "Obsidian Weave" に更新
+  - [docs/ADR/2026-02-22-port-migration-to-https.md](docs/ADR/2026-02-22-port-migration-to-https.md), [docs/ADR/2026-02-21-privacy-detection-logic-refinement.md](docs/ADR/2026-02-21-privacy-detection-logic-refinement.md): 技術背景説明の旧称を更新
+  - [issues/hamburger-menu-not-displayed.md](issues/hamburger-menu-not-displayed.md): 課題記録内の旧称を更新
+  - [docs/PORT_MIGRATION.md](docs/PORT_MIGRATION.md): サポートリンクのプレースホルダー URL を `armaniacs/obsidian-weave` に修正
+  - README.md のオリジナルリポジトリ言及・CHANGELOG の名称変更履歴・ADR-003・AGENTS.md の禁止表記ガイドラインは保持
 
 ### Changed
 

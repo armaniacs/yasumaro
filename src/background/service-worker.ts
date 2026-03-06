@@ -54,6 +54,9 @@ const recordingLogic = new RecordingLogic(obsidian, aiClient);
 // TabCache for storing tab data
 const tabCache = new TabCache();
 
+// 自動保存成功バッジを表示中のタブIDセット
+const autoSavedBadgeTabs = new Set<number>();
+
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
 
@@ -132,6 +135,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         content: message.payload?.content || '',
                         isValidVisit: true
                     });
+                }
+
+                // 自動保存成功時: 青色バッジ ◎ を表示（タブを離れるまで継続）
+                if (result.success && sender.tab.id) {
+                    const savedTabId = sender.tab.id;
+                    autoSavedBadgeTabs.add(savedTabId);
+                    chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
+                    chrome.action.setBadgeBackgroundColor({ color: '#3B82F6', tabId: savedTabId });
                 }
 
                 // 自動保存モード confirm: ボタン付き通知で保存確認を促す
@@ -315,6 +326,12 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
     try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
+        // 自動保存バッジ表示中のタブは ◎ を維持
+        if (autoSavedBadgeTabs.has(activeInfo.tabId)) {
+            chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
+            chrome.action.setBadgeBackgroundColor({ color: '#3B82F6', tabId: activeInfo.tabId });
+            return;
+        }
         if (!tab.url) {
             chrome.action.setBadgeText({ text: '' });
             return;
@@ -336,6 +353,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 // Handle Tab Navigation - Update badge after page load completes
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status !== 'complete' || !tab.url) return;
+    // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
+    autoSavedBadgeTabs.delete(tabId);
     const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
     const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
     if (privacyInfo?.isPrivate) {
