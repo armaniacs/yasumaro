@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased] - to be released
+
+### Docs
+- **README.md に v4.2 新機能を追記** ([README.md](README.md))
+  - `📋 AIプロンプトプリセット` / `🔔 ツールバーバッジ通知` を日英両方の特徴リストに追加
+
 ## [4.2.0] - 2026-03-07
 
 ### Added
