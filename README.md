@@ -133,7 +133,7 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 詳細な使い方は [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) を参照してください。
 
 
-### Obsidianへの追加の仕組み（`src/background/obsidianClient.js`）
+### Obsidianへの追加の仕組み（`src/background/obsidianClient.ts`）
 
 **方式: Read-Modify-Write（読み込み → 加工 → 書き込み）**
 

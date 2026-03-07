@@ -71,9 +71,9 @@ npm run test:e2e:headed # E2Eテストヘッドフルモード（Playwright）
 src/
   popup/
     utils/
-      focusTrap.js
+      focusTrap.ts
       __tests__/
-        focusTrap.test.js
+        focusTrap.test.ts
 ```
 
 **Playwright テスト**:
@@ -86,11 +86,11 @@ e2e/
 
 #### テストの命名規則
 
-- テストファイル: `{filename}.test.js`
+- テストファイル: `{filename}.test.ts`
 - テストスイート: 関数名やモジュール名を記述
 - 個別テスト: テスト内容を簡潔に記述（日本語可）
 
-```javascript
+```typescript
 describe('FocusTrapManager', () => {
   describe('trap', () => {
     test('ESCキーで閉じる', () => {
@@ -113,6 +113,29 @@ describe('FocusTrapManager', () => {
 import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from './utils/focusTrap.js';
 ```
+
+#### TypeScript / ES Modules
+
+このプロジェクトは TypeScript で書かれており、ESM（ECMAScript Modules）を使用しています。
+
+**インポート構文**:
+- ソースコードのファイル拡張子は `.ts` または `.test.ts` です
+- しかし、TypeScript は ESM モジュール解決のためにインポート文に `.js` 拡張子を使用します
+
+```typescript
+// ファイル: src/popup/main.ts
+import { getMessage } from '../utils/i18n.js';  // i18n.ts を参照
+import { focusTrapManager } from './utils/focusTrap.js';  // focusTrap.ts を参照
+```
+
+**重要なルール**:
+- インポート文の拡張子は常に `.js` を使用してください
+- 実際のファイルは `.ts` または `.test.ts` です
+- これは TypeScript ESM の仕様で、ビルド時に `.js` ファイルが生成されるため
+
+**テストファイル**:
+- テストは `.test.ts` 拡張子を使用します
+- 同様にインポート時は `.js` を使用します
 
 #### 命名規則
 
@@ -446,9 +469,9 @@ Place new tests in a `__tests__` subdirectory alongside the corresponding source
 src/
   popup/
     utils/
-      focusTrap.js
+      focusTrap.ts
       __tests__/
-        focusTrap.test.js
+        focusTrap.test.ts
 ```
 
 **Playwright Tests**:
@@ -461,11 +484,11 @@ e2e/
 
 #### Test Naming Conventions
 
-- Test files: `{filename}.test.js`
+- Test files: `{filename}.test.ts`
 - Test suites: Describe function or module name
 - Individual tests: Describe test content briefly
 
-```javascript
+```typescript
 describe('FocusTrapManager', () => {
   describe('trap', () => {
     test('closes on ESC key', () => {
@@ -488,6 +511,29 @@ describe('FocusTrapManager', () => {
 import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from './utils/focusTrap.js';
 ```
+
+#### TypeScript / ES Modules
+
+This project is written in TypeScript and uses ESM (ECMAScript Modules).
+
+**Import Syntax**:
+- Source files use `.ts` or `.test.ts` extensions
+- However, TypeScript imports must use `.js` extension for ESM module resolution
+
+```typescript
+// File: src/popup/main.ts
+import { getMessage } from '../utils/i18n.js';  // References i18n.ts
+import { focusTrapManager } from './utils/focusTrap.js';  // References focusTrap.ts
+```
+
+**Important Rules**:
+- Always use `.js` extension in import statements
+- Actual files are `.ts` or `.test.ts`
+- This is TypeScript ESM specification - `.js` files are generated during build
+
+**Test Files**:
+- Tests use `.test.ts` extension
+- Likewise, use `.js` in imports
 
 #### Naming Conventions
 

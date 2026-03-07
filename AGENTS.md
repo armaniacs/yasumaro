@@ -334,6 +334,23 @@ Trigger updates when:
 - Architecture decisions rationalized
 - New user-facing features introduced
 
+### Documentation Update Checklist
+
+When making architectural changes that affect documentation (e.g., TypeScript migration, directory restructuring), verify and update:
+
+- [ ] **CONTRIBUTING.md**: File paths, test naming conventions, import examples
+- [ ] **AGENTS.md**: File paths in feature tables, bug fixing tables, test scenarios
+- [ ] **README.md**: Any file references or technical explanations
+- [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
+- [ ] **User documentation** (Setup guides, feature guides)
+
+### TypeScript-Specific Notes
+
+For projects using TypeScript with ESM:
+- Source files: `.ts` / `.test.ts`
+- Import statements: Use `.js` extension (TypeScript ESM resolution spec)
+- Documentation: Reference `.ts` file names, explain `.js` in imports
+
 ### Localization Notes
 
 - Primary UI language: Japanese
