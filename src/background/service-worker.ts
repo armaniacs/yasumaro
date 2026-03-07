@@ -320,6 +320,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle Tab Closure - Cleanup only
 chrome.tabs.onRemoved.addListener((tabId) => {
     tabCache.remove(tabId);
+    autoSavedBadgeTabs.delete(tabId);
 });
 
 // Handle Tab Activation - Update badge to reflect privacy status of new active tab
@@ -344,8 +345,11 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         } else {
             chrome.action.setBadgeText({ text: '' });
         }
-    } catch {
-        // タブ取得失敗時はバッジをクリア
+    } catch (error) {
+        await logError('Failed to update badge on tab activation', {
+            tabId: activeInfo.tabId,
+            error: error instanceof Error ? error.message : String(error)
+        }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
         chrome.action.setBadgeText({ text: '' });
     }
 });

@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - to be released as 4.1.4 (as 4.2 soon)
+## [4.2.0] - 2026-03-07
 
 ### Added
 - **自動保存成功時の青色バッジ表示** ([service-worker.ts](src/background/service-worker.ts))
@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file.
   - 同タブでページ遷移（`onUpdated` の `status: 'complete'`）が完了した時点でバッジをクリア
 
 ### Fixed
+- **バッジ更新メモリリークの修正** ([service-worker.ts](src/background/service-worker.ts))
+  - `chrome.tabs.onRemoved` に `autoSavedBadgeTabs.delete(tabId)` を追加
+  - タブが閉じられた時にSetからエントリーを削除し、メモリリークを防止
+- **バッジ更新エラーハンドリングの強化** ([headerDetector.ts](src/background/headerDetector.ts), [service-worker.ts](src/background/service-worker.ts))
+  - バッジ更新のtry-catchと構造化ログを追加
+  - 新しいエラーコード `BADGE_UPDATE_FAILED: 'UI_BADGE_001'` を追加
+- **ConflictErrorテストカバレッジの追加** ([optimisticLock.test.ts](src/utils/__tests__/optimisticLock.test.ts))
+  - ConflictErrorクラスの3つのテストケースを追加
 - **旧名称 "Obsidian Smart History" の残存表記を一括置換**
   - [docs/DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md), [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [docs/i18n-guide.md](docs/i18n-guide.md), [docs/PORT_MIGRATION.md](docs/PORT_MIGRATION.md): 本文中の旧称を "Obsidian Weave" に更新
   - [docs/ADR/2026-02-22-port-migration-to-https.md](docs/ADR/2026-02-22-port-migration-to-https.md), [docs/ADR/2026-02-21-privacy-detection-logic-refinement.md](docs/ADR/2026-02-21-privacy-detection-logic-refinement.md): 技術背景説明の旧称を更新

@@ -6,7 +6,8 @@
 import {
     withOptimisticLock,
     getConflictStats,
-    resetConflictStats
+    resetConflictStats,
+    ConflictError
 } from '../optimisticLock.js';
 
 describe('withOptimisticLock', () => {
@@ -80,6 +81,105 @@ describe('withOptimisticLock', () => {
             expect(stored.testKey).toContain('initial');
             // 少なくとも1つのアイテムが追加されていること
             expect(stored.testKey.length).toBeGreaterThan(1);
+        });
+    });
+
+    describe('競合検出', () => {
+        beforeEach(async () => {
+            await chrome.storage.local.set({});
+            resetConflictStats();
+        });
+
+        it('ConflictErrorが正しくスローされる', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            // chrome.storage.local.getをモックして競合をシミュレート
+            // 1回目の呼び出しではtestKeyとtestKey_versionを返し、2回目では異なるバージョンを返す
+            const originalGet = chrome.storage.local.get;
+            let callCount = 0;
+            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    // 最初のget: testKeyと直前のバージョンを返す
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    // 2回目のget: バージョンが変わったことを返す（競合シミュレーション）
+                    return { testKey: ['modified'], testKey_version: 10 };
+                }
+                return originalGet.call(chrome.storage.local, keys);
+            });
+
+            await expect(
+                withOptimisticLock('testKey', (current) => [...current, 'item'])
+            ).rejects.toThrow(ConflictError);
+
+            // 元のgetを復元
+            chrome.storage.local.get = originalGet;
+            callCount = 0;
+        });
+
+        it('ConflictErrorに正しいプロパティが設定される', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            // chrome.storage.local.getをモックして競合をシミュレート
+            const originalGet = chrome.storage.local.get;
+            let callCount = 0;
+            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    return { testKey: ['modified'], testKey_version: 10 };
+                }
+                return originalGet.call(chrome.storage.local, keys);
+            });
+
+            try {
+                await withOptimisticLock('testKey', (current) => [...current, 'item']);
+                fail('Expected ConflictError to be thrown');
+            } catch (error) {
+                expect(error).toBeInstanceOf(ConflictError);
+                const conflictError = error as ConflictError;
+                expect(conflictError.name).toBe('ConflictError');
+                expect(conflictError.key).toBe('testKey');
+                expect(conflictError.expectedVersion).toBe(0);
+                expect(conflictError.actualVersion).toBe(10);
+            }
+
+            // 元のgetを復元
+            chrome.storage.local.get = originalGet;
+            callCount = 0;
+        });
+
+        it('競合が統計に記録される', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            // chrome.storage.local.getをモックして競合をシミュレート
+            const originalGet = chrome.storage.local.get;
+            let callCount = 0;
+            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    return { testKey: ['modified'], testKey_version: 10 };
+                }
+                return originalGet.call(chrome.storage.local, keys);
+            });
+
+            try {
+                await withOptimisticLock('testKey', (current) => [...current, 'item']);
+            } catch (error) {
+                // Expected ConflictError
+            }
+
+            const stats = getConflictStats();
+            expect(stats.totalAttempts).toBe(1);
+            expect(stats.totalConflicts).toBe(1);
+
+            // 元のgetを復元
+            chrome.storage.local.get = originalGet;
+            callCount = 0;
         });
     });
 

@@ -104,7 +104,9 @@ export class HeaderDetector {
       })();
 
       // キャッシュに保存
-      HeaderDetector.cachePrivacyInfo(details.url, privacyInfo, details.tabId);
+      HeaderDetector.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch(() => {
+        // バッジ更新失敗は無視（非重要なUI操作）
+      });
 
       const cacheSize = RecordingLogic.cacheState.privacyCache?.size || 0;
       (async () => {
@@ -129,7 +131,7 @@ export class HeaderDetector {
    * プライバシー情報をキャッシュに保存する
    * キャッシュサイズが上限を超えたら最も古いエントリを削除
    */
-  private static cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): void {
+  private static async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
     if (!RecordingLogic.cacheState.privacyCache) {
       RecordingLogic.cacheState.privacyCache = new Map();
       RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
@@ -156,8 +158,16 @@ export class HeaderDetector {
     // バッジ更新（プライベート検出時のみ設定。非プライベートでは上書きしない）
     // tabId=-1はバックグラウンドリクエストのためスキップ
     if (tabId !== undefined && tabId >= 0 && info.isPrivate) {
-      chrome.action.setBadgeText({ text: '!', tabId });
-      chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
+      try {
+        await chrome.action.setBadgeText({ text: '!', tabId });
+        await chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
+      } catch (error) {
+        logError('Failed to set privacy badge', {
+          tabId,
+          url: normalizedUrl,
+          error: error instanceof Error ? error.message : String(error)
+        }, ErrorCode.BADGE_UPDATE_FAILED, 'headerDetector.ts');
+      }
     }
   }
 

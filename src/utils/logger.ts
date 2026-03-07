@@ -58,7 +58,10 @@ export const ErrorCode = {
 
     // 汎用エラー
     UNKNOWN_ERROR: 'UNKN_001',
-    INTERNAL_ERROR: 'INT_001'
+    INTERNAL_ERROR: 'INT_001',
+
+    // UI/Badge関連
+    BADGE_UPDATE_FAILED: 'UI_BADGE_001'
 } as const;
 
 export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
