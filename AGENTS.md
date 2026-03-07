@@ -27,6 +27,24 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 
 ---
 
+## Quick Start
+
+```bash
+npm install              # Install dependencies
+npm run build:watch      # Build and watch for development changes
+npm validate             # Type check + run tests (pre-commit gate)
+```
+
+### Loading the Extension
+
+1. Run `npm build` to build the extension
+2. Open Chrome and navigate to `chrome://extensions`
+3. Enable "Developer mode" (toggle in top-right)
+4. Click "Load unpacked" and select the `dist/` directory
+5. The extension is now installed
+
+---
+
 ## For Feature Development Agents
 
 ### Architecture Context
@@ -34,7 +52,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 The extension follows a modular design pattern:
 
 ```
-Service Worker (background/)
+Service Worker (src/background/)
   ├── ObsidianClient → Obsidian Local REST API
   ├── AIClient (multiple implementations) → AI Providers
   ├── localAiClient → Local AI provider (Ollama, etc.)
@@ -42,7 +60,7 @@ Service Worker (background/)
   ├── Mutex / ServiceWorkerContext → Concurrency management
   └── recordingLogic → Core recording orchestration
 
-Popup UI (popup/)
+Popup UI (src/popup/)
   ├── navigation.ts → Tab management
   ├── domainFilter.ts → Domain filter settings
   ├── main.ts → Core popup logic
@@ -50,14 +68,14 @@ Popup UI (popup/)
   ├── settings/ → Settings management
   └── utils/ → Shared utilities (focusTrap, i18n, etc.)
 
-Dashboard (dashboard/)
+Dashboard (src/dashboard/)
   ├── dashboard.html → Settings configuration interface
   └── dashboard.ts → Dashboard logic
 
-Offscreen (offscreen/)
+Offscreen (src/offscreen/)
   └── offscreen.ts → DOM operations requiring offscreen document
 
-Content Scripts (content/)
+Content Scripts (src/content/)
   ├── loader.ts → Injection orchestrator
   └── extractor.ts → DOM content extraction
 ```
@@ -74,16 +92,16 @@ Content Scripts (content/)
 
 | Feature Type | Location | Notes |
 |--------------|----------|-------|
-| UI features | `popup/` (HTML/CSS/TS) | Follow accessibility patterns (see ACCESSIBILITY.md) |
-| Dashboard settings | `dashboard/` (HTML/CSS/TS) | Settings management interface |
-| uBlock Import | `popup/ublockImport/` | Filter list import functionality |
-| Background processing | `background/` service-worker.ts | Use modular client classes |
-| Local AI Integration | `background/localAiClient.ts` | Ollama and other local providers |
-| Page interaction | `content/` extractor.ts | Consider CSP restrictions |
-| Storage | `utils/storage.ts` | Use StorageKeys constant |
-| API Key Encryption | `utils/crypto.ts` | PBKDF2 + AES-GCM encryption |
-| PII Masking | `utils/piiSanitizer.ts` | Privacy-preserving data handling |
-| DOM operations | `offscreen/` offscreen.ts | For operations requiring offscreen document |
+| UI features | `src/popup/` (HTML/CSS/TS) | Follow accessibility patterns (see ACCESSIBILITY.md) |
+| Dashboard settings | `src/dashboard/` (HTML/CSS/TS) | Settings management interface |
+| uBlock Import | `src/popup/ublockImport/` | Filter list import functionality |
+| Background processing | `src/background/` service-worker.ts | Use modular client classes |
+| Local AI Integration | `src/background/localAiClient.ts` | Ollama and other local providers |
+| Page interaction | `src/content/` extractor.ts | Consider CSP restrictions |
+| Storage | `src/utils/storage.ts` | Use StorageKeys constant |
+| API Key Encryption | `src/utils/crypto.ts` | PBKDF2 + AES-GCM encryption |
+| PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
+| DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |
 
 **Before implementing major features**, review [docs/ADR/](docs/ADR/) for existing architectural decisions and consistency.
 
@@ -132,14 +150,14 @@ Content Scripts (content/)
 
 | Issue Area | Primary Files |
 |------------|---------------|
-| API Integration Failures | `background/aiClient/*.ts`, `background/ai/providers/*.ts` |
-| Obsidian Connection Issues | `background/obsidianClient.ts` |
-| Content Script Not Injecting | `manifest.json`, `content/loader.ts`, `content/extractor.ts` |
-| Settings Not Persisting | `utils/storage.ts` |
-| Duplicate Entries | `background/service-worker.ts`, `background/recordingLogic.ts` |
-| Focus Trap Issues | `popup/utils/focusTrap.ts` |
-| Offscreen Document Issues | `offscreen/offscreen.ts` |
-| Optimistic Lock Conflicts | `utils/optimisticLock.ts` |
+| API Integration Failures | `src/background/aiClient/*.ts`, `src/background/ai/providers/*.ts` |
+| Obsidian Connection Issues | `src/background/obsidianClient.ts` |
+| Content Script Not Injecting | `manifest.json`, `src/content/loader.ts`, `src/content/extractor.ts` |
+| Settings Not Persisting | `src/utils/storage.ts` |
+| Duplicate Entries | `src/background/service-worker.ts`, `src/background/recordingLogic.ts` |
+| Focus Trap Issues | `src/popup/utils/focusTrap.ts` |
+| Offscreen Document Issues | `src/offscreen/offscreen.ts` |
+| Optimistic Lock Conflicts | `src/utils/optimisticLock.ts` |
 
 ### Debugging Workflow
 
@@ -174,7 +192,7 @@ Content Scripts (content/)
 ### Security Controls
 
 1. **API Key Protection**: Keys never logged or exposed in error messages
-2. **URL Validation**: Proper validation before making requests (see `utils/urlValidator.js`)
+2. **URL Validation**: Proper validation before making requests (see `src/utils/urlUtils.ts`)
 3. **Self-signed Certificates**: Optional support for HTTPS Obsidian with custom certs
 4. **Permission Minimization**: Request only necessary permissions in manifest
 5. **Content Security**: CSP headers, avoid XSS vulnerabilities
@@ -212,9 +230,9 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 
 | Scenario | Coverage |
 |----------|----------|
-| Multiple AI provider configurations | `aiClient/*.js` |
-| Various Obsidian daily note path formats | `obsidianClient.js` |
-| Different web page structures for content extraction | `extractor.js` |
+| Multiple AI provider configurations | `src/background/aiClient/*.ts` |
+| Various Obsidian daily note path formats | `src/background/obsidianClient.ts` |
+| Different web page structures for content extraction | `src/content/extractor.ts` |
 | Network failure scenarios | All API clients |
 | Chrome extension permission states | `manifest.json` |
 | Accessibility compliance | Lighthouse/axe DevTools |
@@ -232,12 +250,16 @@ npm type-check        # TypeScript type checking
 npm validate          # Type check + run tests (pre-commit gate)
 ```
 
+> Note: After code changes, run `npm build` before testing in Chrome Extension.
+
 ### Building
 
 ```bash
 npm build             # Build TypeScript and copy assets to dist/
 npm run build:watch   # Watch mode for development
 ```
+
+> The extension loads from the `dist/` directory in Chrome.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 
@@ -260,9 +282,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 
 | Document | Language | Purpose |
 |----------|----------|---------|
-| DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
-| ADR/ | English | Architecture Decision Records |
-| ERROR_CODES.md | English | Structured error code definitions |
+| docs/DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
+| docs/ADR/ | English | Architecture Decision Records |
+| docs/ERROR_CODES.md | English | Structured error code definitions |
 | CONTRIBUTING.md | Bilingual (JP/EN) | Development & contribution guide |
 | AGENTS.md | English | This file - agent-specific guidance |
 | UBLOCK_MIGRATION.md | Bilingual (JP/EN) | Migration guide |
@@ -376,16 +398,16 @@ Respect modular architecture and avoid cross-contamination of concerns.
 
 ### Concurrency Management
 
-- **Mutex** (`background/Mutex.ts`): Prevents race conditions in service worker
-- **ServiceWorkerContext** (`background/ServiceWorkerContext.ts`): Manages context state
-- **Optimistic Lock** (`utils/optimisticLock.ts`): Version-based conflict detection for storage updates
+- **Mutex** (`src/background/Mutex.ts`): Prevents race conditions in service worker
+- **ServiceWorkerContext** (`src/background/ServiceWorkerContext.ts`): Manages context state
+- **Optimistic Lock** (`src/utils/optimisticLock.ts`): Version-based conflict detection for storage updates
 - Use `withOptimisticLock()` for critical storage operations
 
 ### Privacy Features
 
-- **PII Sanitization** (`utils/piiSanitizer.ts`): Masks personally identifiable information
-- **Privacy Consent** (`popup/privacyConsent.ts`): User consent tracking for data collection
-- **Privacy Pipeline** (`background/privacyPipeline.ts`): Privacy-preserving content processing
+- **PII Sanitization** (`src/utils/piiSanitizer.ts`): Masks personally identifiable information
+- **Privacy Consent** (`src/popup/privacyConsent.ts`): User consent tracking for data collection
+- **Privacy Pipeline** (`src/background/privacyPipeline.ts`): Privacy-preserving content processing
 - All API keys encrypted in storage (PBKDF2 + AES-GCM)
 
 ### Testing Limitations
