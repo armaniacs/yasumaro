@@ -691,3 +691,75 @@ chrome.notifications.onClicked.addListener((notificationId) => {
         chrome.notifications.clear(notificationId);
     }
 });
+
+/**
+ * Service Worker アクティベート時のキャッシュ再水和
+ * Chrome が Service Worker を再起動した場合、キャッシュを再初期化
+ */
+chrome.runtime.onStartup.addListener(async () => {
+    logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
+
+    try {
+        // 関連キャッシュを無効化して再読み込みを強制
+        RecordingLogic.invalidateSettingsCache();
+        const settings = await getSettings();
+        await updateDomainFilterCache(settings);
+
+        logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
+    } catch (error) {
+        await logError(
+            'Service Worker startup - cache rehydration failed',
+            { error: error instanceof Error ? error.message : String(error) },
+            ErrorCode.STORAGE_READ_FAILURE,
+            'service-worker'
+        );
+    }
+});
+
+/**
+ * Service Worker インストール/更新時の処理
+ */
+chrome.runtime.onInstalled.addListener(async (details) => {
+    if (details.reason === 'install') {
+        logInfo('Service Worker installed', {}, 'service-worker');
+    } else if (details.reason === 'update') {
+        logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
+
+        // 更新時はキャッシュをクリアして再初期化
+        RecordingLogic.invalidateSettingsCache();
+        const settings = await getSettings();
+        await updateDomainFilterCache(settings);
+    }
+});
+
+/**
+ * 長時間実行操作中の Service Worker キープアライブ
+ *
+ * Chrome Extension Service Worker はアイドル時に終了する可能性があります。
+ * AI 要約やプライバシーパイプラインなど長時間の操作中に Worker が終了すると、
+ * 操作が中断される可能性があります。この関数でキープアライブを維持します。
+ *
+ * @param operation 実行するPromise
+ * @param durationMs キープアライブ時間（ミリ秒、デフォルト: 90秒）
+ * @returns 操作結果
+ */
+async function withKeepAlive<T>(operation: Promise<T>, durationMs: number = 90000): Promise<T> {
+    // キープアライブ用に定期的に Chrome API を呼び出す
+    const interval = setInterval(() => {
+        // No-op 呼び出しで Worker を活性状態に保つ
+        void chrome.runtime.getPlatformInfo(() => {});
+    }, 20000); // 20秒間隔は安全（Chrome SW のアイドルタイムアウト約30秒）
+
+    try {
+        return await operation;
+    } finally {
+        clearInterval(interval);
+    }
+}
+
+// Export for use in RecordingLogic and other modules
+if (typeof globalThis !== 'undefined') {
+    (globalThis as any).__serviceWorkerUtils__ = {
+        withKeepAlive
+    };
+}
