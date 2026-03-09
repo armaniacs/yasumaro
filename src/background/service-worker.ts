@@ -11,9 +11,11 @@ import {
     saveSettingsWithAllowedUrls,
     migrateToSingleSettingsObject,
     updateDomainFilterCache,
-    lockSession
+    lockSession,
+    StorageKeys
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
+import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
 import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
@@ -64,6 +66,11 @@ HeaderDetector.initialize();
 const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
+
+// Rate limit configuration for skipAi operations
+const SKIP_AI_RATE_LIMIT_MAX = 5; // Max 5 operations per window
+const SKIP_AI_RATE_LIMIT_WINDOW_MS = 60000; // 1 minute window
+const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>();
 
 // Listen for messages from Content Script and Popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -260,8 +267,67 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 let content = message.payload.content;
                 const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
 
-                // contentが空でskipAiでない場合、タブからページ本文を取得
+                // URLバリデーション - http/httpsのみ許可
+                if (!isSecureUrl(message.payload.url)) {
+                    await logWarn(
+                        'Blocked MANUAL_RECORD with insecure URL',
+                        { url: message.payload.url, type: message.type },
+                        undefined,
+                        'service-worker'
+                    );
+                    sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
+                    return;
+                }
+
+                // skipAi操作のレート制限
+                if (skipAi) {
+                    const now = Date.now();
+                    const senderKey = sender.tab?.id ? `tab_${sender.tab.id}` : 'unknown';
+                    const limiterState = skipAiRateLimiter.get(senderKey);
+
+                    if (limiterState) {
+                        // ウィンドウが期限切れならリセット
+                        if (now > limiterState.resetTime) {
+                            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + SKIP_AI_RATE_LIMIT_WINDOW_MS });
+                        } else if (limiterState.count >= SKIP_AI_RATE_LIMIT_MAX) {
+                            await logWarn(
+                                'Rate limit exceeded for skipAi operation',
+                                { sender: senderKey, limit: SKIP_AI_RATE_LIMIT_MAX },
+                                undefined,
+                                'service-worker'
+                            );
+                            sendResponse({ success: false, error: 'Rate limit exceeded. Please try again later.' });
+                            return;
+                        } else {
+                            limiterState.count++;
+                        }
+                    } else {
+                        skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + SKIP_AI_RATE_LIMIT_WINDOW_MS });
+                    }
+                }
+
+                // 【プライバシー（v4.2.1）】コンテンツフェッチ設定のチェック
+                const settings = await getSettings();
+                const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
+                const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
+
+                // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
                 if (!content && !skipAi) {
+                    if (!autoContentFetchEnabled) {
+                        // コンテンツフェッチが無効な場合は空コンテンツで続行
+                        await logDebug(
+                            'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
+                            { url: sanitizedUrl },
+                            'service-worker'
+                        );
+                        // 対処方法を示すエラーメッセージを返す
+                        sendResponse({
+                            success: true,
+                            warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
+                        });
+                        return;
+                    }
+
                     let createdTabId: number | undefined;
                     try {
                         // 既存タブを探す
@@ -298,7 +364,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             content = results?.[0]?.result?.trim().substring(0, 10000) || '';
                         }
                     } catch (err: any) {
-                        await logWarn('Failed to get page content from tab', { url: message.payload.url, error: err.message }, undefined, 'service-worker');
+                        await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err.message }, undefined, 'service-worker');
                     } finally {
                         // 新規作成したタブを閉じる
                         if (createdTabId !== undefined) {

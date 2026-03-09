@@ -96,7 +96,9 @@ export const StorageKeys = {
     DOMAIN_FILTER_CACHE: 'domain_filter_cache', // 許可ドメインキャッシュ（content script用）
     DOMAIN_FILTER_CACHE_TIMESTAMP: 'domain_filter_cache_timestamp', // キャッシュタイムスタンプ
     // Privacy consent (GDPR/CCPA compliance)
-    PRIVACY_CONSENT: 'privacy_consent' // プライバシーポリシーへの同意状態
+    PRIVACY_CONSENT: 'privacy_consent', // プライバシーポリシーへの同意状態
+    // Privacy（v4.2.1） - 自動コンテンツフェッチ設定（明示的 consent を要求）
+    AUTO_CONTENT_FETCH_ENABLED: 'auto_content_fetch_enabled' // バックグラウンドタブからのコンテンツフェッチを有効化するか（デフォルト: false）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -150,6 +152,8 @@ export interface StorageKeyValues {
     [StorageKeys.TAG_SUMMARY_MODE]: boolean;      // タグ付き要約モード
     // プライバシーポリシー同意（オブジェクトまたはブール値）
     [StorageKeys.PRIVACY_CONSENT]: { hasConsented: boolean; consentDate?: string; consentVersion?: string } | boolean;
+    // 自動コンテンツフェッチ設定（v4.2.1）
+    [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型
@@ -663,7 +667,9 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.TAG_CATEGORIES]: [],       // タグカテゴリリスト（空=デフォルトカテゴリを使用）
     [StorageKeys.TAG_SUMMARY_MODE]: false,   // タグ付き要約モード（デフォルト: 無効）
     // Privacy consent default
-    [StorageKeys.PRIVACY_CONSENT]: false    // プライバシーポリシー同意状態（デフォルト: 未同意）
+    [StorageKeys.PRIVACY_CONSENT]: false,    // プライバシーポリシー同意状態（デフォルト: 未同意）
+    // Auto content fetch default (v4.2.1) - 明示的同意を要求するためデフォルトで無効
+    [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: false
 };
 
 /**

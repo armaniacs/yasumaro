@@ -9,6 +9,7 @@ import { setUrlRecordType, setUrlMaskedCount, setUrlTags } from '../utils/storag
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
@@ -27,6 +28,78 @@ const URL_CACHE_TTL = 60 * 1000; // 60 seconds
 // 【設定理由】パフォーマンス: 大きなページがパイプラインをハングさせるのを防ぐ
 // 【設定理由】コスト削減: AI APIへの転送データ量を制限
 const MAX_RECORD_SIZE = 64 * 1024; // 64KB
+
+// 【セキュリティ】プライベートIPアドレスの検出
+// 【目的】SSRF攻撃に対する保護
+// @param {string} hostname - 検証するホスト名またはIPアドレス
+// @returns {boolean} プライベートIPアドレスの場合はtrue
+function isPrivateIp(hostname: string): boolean {
+    // IPv4 プライベート範囲
+    const ipv4PrivatePatterns = [
+        /^10\./,                          // 10.0.0.0/8
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+        /^192\.168\./,                    // 192.168.0.0/16
+        /^127\./,                         // 127.0.0.0/8 (loopback)
+        /^169\.254\./,                    // 169.254.0.0/16 (link-local)
+        /^(::1)$/,                        // IPv6 loopback
+        /^fc00:/i,                        // IPv6 private fc00::/7
+        /^fd/,                            // IPv6 ULA fc00::/7
+        /^fe80:/i,                        // IPv6 link-local fe80::/10
+    ];
+
+    // IPv6 loopback
+    if (hostname === '::1' || hostname === 'localhost' || hostname === '127.0.0.1') {
+        return true;
+    }
+
+    // IPv4 プロパーターンチェック
+    for (const pattern of ipv4PrivatePatterns) {
+        if (pattern.test(hostname)) {
+            return true;
+        }
+    }
+
+    // IPv6 プライベートアドレスチェック（簡易）
+    if (hostname.includes(':')) {
+        // IPv6 アドレスの場合、プライベート範囲をチェック
+        const ipv6Lower = hostname.toLowerCase();
+        if (ipv6Lower.startsWith('fc') || ipv6Lower.startsWith('fd') || ipv6Lower.startsWith('fe')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// 【セキュリティ】フェッチ操作に安全なURLか検証
+// 【目的】SSRF攻撃に対する保護
+// @param {string} url - 検証するURL
+// @returns {boolean} 安全なURLの場合はtrue
+function isValidFetchUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+
+        // 非HTTP(S)プロトコルを拒否
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return false;
+        }
+
+        // localhostおよびループバックアドレスを拒否
+        const hostname = parsed.hostname.toLowerCase();
+        if (hostname === 'localhost' || isPrivateIp(hostname)) {
+            return false;
+        }
+
+        // .internal, .local などの特殊ドメインを拒否
+        if (hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+            return false;
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 // 【ヘルパー関数】コンテンツを最大サイズに切り詰める
 // 【機能】指定された最大サイズを超えるコンテンツを安全に切り詰める
@@ -494,6 +567,12 @@ export class RecordingLogic {
       // 3b. contentが空のとき、URLをfetchしてテキスト抽出（AI要約のため）
       if (!content) {
         try {
+          // 【セキュリティ】SSRF保護: 特定のURLパターンをブロック
+          if (!isValidFetchUrl(url)) {
+            addLog(LogType.WARN, 'Blocked fetch of restricted URL for AI summary', { url: sanitizeUrlForLogging(url) });
+            return { success: false, error: 'URL not allowed for fetch operation' };
+          }
+
           const response = await fetch(url, { method: 'GET', cache: 'no-cache' });
           if (response.ok) {
             const html = await response.text();
@@ -506,7 +585,7 @@ export class RecordingLogic {
               .substring(0, 10000);
           }
         } catch (fetchError: any) {
-          addLog(LogType.WARN, 'Failed to fetch page content for AI summary', { url, error: fetchError.message });
+          addLog(LogType.WARN, 'Failed to fetch page content for AI summary', { url: sanitizeUrlForLogging(url), error: fetchError.message });
         }
       }
 

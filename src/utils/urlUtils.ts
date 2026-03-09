@@ -24,3 +24,45 @@ export function normalizeUrl(url: string): string {
     normalized = normalized.replace(/^http:/i, 'http:');
     return normalized;
 }
+
+/**
+ * 安全なURLか判定（http/httpsのみ許可）
+ * @param {string} url - 検証するURL
+ * @returns {boolean} 安全なURLかどうか
+ */
+export function isSecureUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * URLをログ記録用にサニタイズ（ドメインのみを抽出）
+ * @param {string} url - サニタイズするURL
+ * @returns {string} ドメインのみの安全な文字列
+ */
+export function sanitizeUrlForLogging(url: string): string {
+    try {
+        const parsed = new URL(url);
+        return parsed.hostname || '[INVALID_URL]';
+    } catch {
+        return '[INVALID_URL]';
+    }
+}
+
+/**
+ * URLのパス情報を削除したサニタイズ版（詳細デバッグ用）
+ * @param {string} url - サニタイズするURL
+ * @returns {string} プロトコル+ドメインのみ
+ */
+export function urlWithoutPath(url: string): string {
+    try {
+        const parsed = new URL(url);
+        return `${parsed.protocol}//${parsed.hostname}${parsed.port ? ':' + parsed.port : ''}`;
+    } catch {
+        return '[INVALID_URL]';
+    }
+}

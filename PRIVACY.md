@@ -2,6 +2,10 @@
 
 **最終更新日: 2026年2月23日 / Last Updated: February 23, 2026**
 
+> **更新履歴 / Update History**:
+> - **2026年3月9日**: v4.2.1 - 自動コンテンツフェッチ機能の有効化手順、URLログの記録について追加
+> - **2026年2月23日**: v4.1.3 - マスターパスワード保護機能追加
+
 [日本語](#日本語) | [English](#english)
 
 ---
@@ -100,6 +104,32 @@ Obsidian Weave（以下「本拡張機能」）は、ユーザーのプライバ
 
 通常の使用（拡張機能内でのAPIキー保存）には、マスターパスワードとは別の自動暗号化機構が使用されており、ユーザーの操作は不要です。
 
+### v4.2.1 プライバシー保護機能（追加）
+
+#### 自動コンテンツフェッチ（オプトイン方式）
+v4.2.1以降、以下の機能が追加されました：
+
+1. **"Record without AI" ボタン**: AI処理をスキップして直接Obsidianに記録
+   - ダッシュボードからページ内容なしで記録を試みる場合に使用可能
+   - AIプロバイダーへのデータ送信を完全に回避
+   - すべてのプライバシーチェック（プライベートページ検出）は適用されます
+
+2. **自動コンテンツフェッチ（デフォルトで無効）**:
+   - マニュアル記録時にページ内容が空の場合、バックグラウンドタブでページを開いてコンテンツを取得
+   - この機能は**デフォルトで無効化**されています（明示的な同意が必要）
+   - 有効化するには:
+     - ダッシュボード → Privacy タブ → 「自動コンテンツフェッチ」をオンにします
+   - 有効化時の動作:
+     - バックグラウンドタブでページを読み込み、テキストを抽出（最大10,000文字）
+     - 抽出したコンテンツはAI要約に使用される可能性があります
+     - タブは処理完了後に自動的に閉じられます
+   - **重要**: 無効化（デフォルト）設定では、バックグラウンドタブは開かれません
+
+3. **URL ログの記録**:
+   - 記録操作のログにURLが含まれる場合があります（最大7日間保存）
+   - URLはドメイン名のみが記録され（パス情報は除外）、完全なURLは記録されません
+   - これらのログはデバッグ目的のみであり、ダッシュボードから確認や削除が可能です
+
 ### 第三者サービス
 本拡張機能は、以下の第三者サービスと通信します：
 
@@ -162,6 +192,32 @@ You can encrypt exported settings files with a **master password**.
 - **Note**: If you forget your password, encrypted export files cannot be decrypted
 
 For regular use (storing API keys within the extension), a separate auto-encryption mechanism is used that requires no user action.
+
+### v4.2.1 Privacy Protections (Updated)
+
+#### Automatic Content Fetching (Opt-In)
+v4.2.1 introduces the following privacy features:
+
+1. **"Record without AI" Button**: Skip AI processing and record directly to Obsidian
+   - Available when attempting manual recording without page content from the dashboard
+   - Completely bypasses AI provider data transmission
+   - All privacy checks (private page detection) still apply
+
+2. **Automatic Content Fetching (Disabled by Default)**:
+   - When page content is empty during manual recording, a background tab opens to fetch content
+   - This feature is **disabled by default** (requires explicit opt-in)
+   - To enable:
+     - Dashboard → Privacy tab → Enable "Auto Content Fetch"
+   - Behavior when enabled:
+     - Background tab loads the page and extracts text (up to 10,000 characters)
+     - Extracted content may be used for AI summarization
+     - Tab automatically closes after processing
+   - **Important**: With disabled (default) setting, no background tabs are opened
+
+3. **URL Logging**:
+   - Recording operation logs may contain URLs (retained for up to 7 days)
+   - URLs are logged as domain names only (path information excluded); full URLs are not recorded
+   - These logs are for debugging purposes only and can be viewed or deleted from the dashboard
 
 ### Third-Party Services
 1. **AI Provider (User-Selected)**: Used to generate summaries. The following options are available:
