@@ -257,14 +257,65 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Manual Record Processing & Preview
             if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
+                let content = message.payload.content;
+                const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
+
+                // contentが空でskipAiでない場合、タブからページ本文を取得
+                if (!content && !skipAi) {
+                    let createdTabId: number | undefined;
+                    try {
+                        // 既存タブを探す
+                        const allTabs = await chrome.tabs.query({});
+                        const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
+                        let targetTabId: number | undefined = existingTab?.id;
+
+                        // タブが開いていなければバックグラウンドで開く
+                        if (!targetTabId) {
+                            const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
+                            createdTabId = newTab.id;
+                            targetTabId = newTab.id;
+
+                            // ページが読み込まれるまで待機（最大15秒）
+                            await new Promise<void>((resolve) => {
+                                const timeout = setTimeout(resolve, 15000);
+                                const listener = (tabId: number, info: { status?: string }): void => {
+                                    if (tabId === targetTabId && info.status === 'complete') {
+                                        clearTimeout(timeout);
+                                        chrome.tabs.onUpdated.removeListener(listener);
+                                        resolve();
+                                    }
+                                };
+                                chrome.tabs.onUpdated.addListener(listener);
+                            });
+                        }
+
+                        // scripting.executeScriptでページ本文を取得（Content Script不要）
+                        if (targetTabId) {
+                            const results = await chrome.scripting.executeScript({
+                                target: { tabId: targetTabId },
+                                func: () => document.body?.innerText || ''
+                            });
+                            content = results?.[0]?.result?.trim().substring(0, 10000) || '';
+                        }
+                    } catch (err: any) {
+                        await logWarn('Failed to get page content from tab', { url: message.payload.url, error: err.message }, undefined, 'service-worker');
+                    } finally {
+                        // 新規作成したタブを閉じる
+                        if (createdTabId !== undefined) {
+                            chrome.tabs.remove(createdTabId).catch(() => {});
+                        }
+                    }
+                }
+
                 const result = await recordingLogic.record({
                     title: message.payload.title,
                     url: message.payload.url,
-                    content: message.payload.content,
+                    content,
                     force: message.payload.force,
                     skipDuplicateCheck: true,
                     previewOnly: message.type === 'PREVIEW_RECORD',
-                    recordType: 'manual'
+                    recordType: 'manual',
+                    skipAi
                 });
                 sendResponse(result);
                 return;
@@ -731,35 +782,3 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         await updateDomainFilterCache(settings);
     }
 });
-
-/**
- * 長時間実行操作中の Service Worker キープアライブ
- *
- * Chrome Extension Service Worker はアイドル時に終了する可能性があります。
- * AI 要約やプライバシーパイプラインなど長時間の操作中に Worker が終了すると、
- * 操作が中断される可能性があります。この関数でキープアライブを維持します。
- *
- * @param operation 実行するPromise
- * @param durationMs キープアライブ時間（ミリ秒、デフォルト: 90秒）
- * @returns 操作結果
- */
-async function withKeepAlive<T>(operation: Promise<T>, durationMs: number = 90000): Promise<T> {
-    // キープアライブ用に定期的に Chrome API を呼び出す
-    const interval = setInterval(() => {
-        // No-op 呼び出しで Worker を活性状態に保つ
-        void chrome.runtime.getPlatformInfo(() => {});
-    }, 20000); // 20秒間隔は安全（Chrome SW のアイドルタイムアウト約30秒）
-
-    try {
-        return await operation;
-    } finally {
-        clearInterval(interval);
-    }
-}
-
-// Export for use in RecordingLogic and other modules
-if (typeof globalThis !== 'undefined') {
-    (globalThis as any).__serviceWorkerUtils__ = {
-        withKeepAlive
-    };
-}

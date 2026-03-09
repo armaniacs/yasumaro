@@ -51,6 +51,56 @@ const EXCLUDED_CLASS_PATTERNS = [
 ];
 
 /**
+ * アジア圏のWebサイトでよく使用されるコンテンツを示すクラス名パターン
+ * 東アジアの网站（ウェブサイト）で使用される主要なコンテンツ識別子
+ */
+const ASIA_CONTENT_CLASS_PATTERNS = [
+    // 日本語・中国語・韓国語共通
+    'content',
+    'article',
+    'post',
+    'entry',
+    'article-body',
+    'article-content',
+    'post-content',
+    'entry-content',
+    'main-content',
+    'story',
+    'text',
+    // 中国語固有
+    'article_main',
+    'TRS_Editor',
+    'nr-col',
+    // 韓国語固有
+    'article_view',
+    'article_body',
+    'view_content',
+    // 共通
+    'blog-content',
+    'news-content',
+    'product-detail',
+    'description'
+];
+
+/**
+ * アジア圏のWebサイトでよく使用されるIDパターン
+ */
+const ASIA_CONTENT_ID_PATTERNS = [
+    'content',
+    'article',
+    'post',
+    'entry',
+    'main',
+    'article-content',
+    'article-body',
+    'post-content',
+    'main-content',
+    'text',
+    'article_view',
+    'article_main'
+];
+
+/**
  * 要素が除外対象かどうかを判定
  * @internal テスト用にエクスポート
  */
@@ -75,6 +125,36 @@ export function isExcludedElement(element: Element): boolean {
     const classes = element.className.toLowerCase();
     for (const pattern of EXCLUDED_CLASS_PATTERNS) {
         if (classes.includes(pattern)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Check if an element is an Asian content structure
+ * @param element - Element to check
+ * @returns true if it's an Asian content structure
+ */
+export function isAsianContentElement(element: Element): boolean {
+    // Check if DOM is available (for Node.js/test environments)
+    if (typeof document === 'undefined') return false;
+    
+    const classes = (element.className || '').toLowerCase();
+    const id = (element.id || '').toLowerCase();
+
+    // Check by class name
+    for (const pattern of ASIA_CONTENT_CLASS_PATTERNS) {
+        if (classes.includes(pattern)) {
+            return true;
+        }
+    }
+
+    // Check by ID (exact match, or prefix/suffix match)
+    for (const pattern of ASIA_CONTENT_ID_PATTERNS) {
+        // Exact match, or content- prefix or -content suffix
+        if (id === pattern || id.startsWith('content-') || id.endsWith('-content')) {
             return true;
         }
     }
@@ -159,6 +239,20 @@ function findMainContentCandidates(): Element[] {
         // スコア順にソート
         candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a));
         return candidates.slice(0, 1);
+    }
+
+    // アジア圏のコンテンツ構造を検索
+    const allElements = document.querySelectorAll('div, section');
+    for (const elem of allElements) {
+        if (isAsianContentElement(elem) && !isExcludedElement(elem)) {
+            candidates.push(elem);
+        }
+    }
+
+    // アジアコンテンツが見つかった場合、スコア順にソートして返す
+    if (candidates.length > 0) {
+        candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a));
+        return candidates.slice(0, 3);
     }
 
     // 候補がない場合、階層的に探索

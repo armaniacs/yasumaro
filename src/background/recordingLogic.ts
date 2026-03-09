@@ -70,6 +70,7 @@ export interface RecordingData {
   headerValue?: string;
   recordType?: RecordType;
   maskedCount?: number;
+  skipAi?: boolean;
 }
 
 export interface RecordingResult {
@@ -308,7 +309,7 @@ export class RecordingLogic {
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false } = data;
 
     try {
       // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -469,6 +470,44 @@ export class RecordingLogic {
           threshold: URL_WARNING_THRESHOLD,
           remaining: MAX_URL_SET_SIZE - urlMap.size
         });
+      }
+
+      // 3a. skipAi: AI処理をスキップして直接Obsidianに記録
+      if (skipAi) {
+        const sanitizedTitle = sanitizeForObsidian(title);
+        const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
+        const markdown = `- ${timestamp} [${sanitizedTitle}](${url})`;
+
+        await this.obsidian.appendToDailyNote(markdown);
+        addLog(LogType.INFO, 'Saved to Obsidian (skipAi)', { title, url });
+
+        urlMap.set(url, Date.now());
+        await setSavedUrlsWithTimestamps(urlMap, url);
+        const resolvedRecordType: RecordType = recordType ?? 'manual';
+        await setUrlRecordType(url, resolvedRecordType);
+        RecordingLogic.invalidateUrlCache();
+
+        NotificationHelper.notifySuccess('Saved to Obsidian', `Saved: ${title}`);
+        return { success: true };
+      }
+
+      // 3b. contentが空のとき、URLをfetchしてテキスト抽出（AI要約のため）
+      if (!content) {
+        try {
+          const response = await fetch(url, { method: 'GET', cache: 'no-cache' });
+          if (response.ok) {
+            const html = await response.text();
+            content = html
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .substring(0, 10000);
+          }
+        } catch (fetchError: any) {
+          addLog(LogType.WARN, 'Failed to fetch page content for AI summary', { url, error: fetchError.message });
+        }
       }
 
       // 3. Privacy Pipeline Processing

@@ -149,8 +149,13 @@ async function performCasUpdate<T>(
         throw new ConflictError(key, currentVersion, verifyVersion);
     }
 
-    // 値の一致も確認（比較可能な場合）
-    if (currentValue !== undefined && currentValue !== null && currentValue !== verifyValue) {
+    // 値の一致も確認（プリミティブ型のみ、オブジェクト/配列は参照比較できないためスキップ）
+    if (
+        currentValue !== undefined &&
+        currentValue !== null &&
+        typeof currentValue !== 'object' &&
+        currentValue !== verifyValue
+    ) {
         conflictStats.totalConflicts++;
         throw new ConflictError(key, currentVersion, verifyVersion);
     }

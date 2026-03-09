@@ -17,7 +17,7 @@ export type ServiceWorkerRequest =
   | { type: 'CHECK_DOMAIN'; payload?: never }
   | { type: 'GET_CONTENT'; payload: never }
   | { type: 'FETCH_URL'; payload: { url: string } }
-  | { type: 'MANUAL_RECORD'; payload: { title: string; url: string; content: string; force?: boolean } }
+  | { type: 'MANUAL_RECORD'; payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } }
   | { type: 'PREVIEW_RECORD'; payload: { title: string; url: string; content: string } }
   | { type: 'SAVE_RECORD'; payload: never }
   | { type: 'TEST_CONNECTIONS'; payload: never }
@@ -133,13 +133,16 @@ export function extractMessageContent(sender: chrome.runtime.MessageSender): Mes
   const tabId = sender.tab?.id;
   const tabUrl = sender.tab?.url;
 
-  // VALID_VISIT, CHECK_DOMAIN は Content Script からのメッセージのみ許可
-  const isValidSender = !sender.tab || (!sender.tab.id || !sender.tab.url);
+  // VALID_VISIT, CHECK_DOMAIN are only allowed from Content Scripts
+  // Returns true if sender is a content script (all of tab, tab.id, tab.url exist)
+  const isContentScriptSender = !!(sender.tab && sender.tab.id && sender.tab.url);
 
   return {
     tabId,
     tabUrl,
-    isValidSender
+    // isValidSender: Allow all messages from popup/dashboard (no tab)
+    // VALID_VISIT, CHECK_DOMAIN are restricted to content scripts only (checked separately in service-worker.ts)
+    isValidSender: true
   };
 }
 

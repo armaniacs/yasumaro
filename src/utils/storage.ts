@@ -1100,8 +1100,16 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     // Obsidian API
     const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'https';
     const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
-    allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
-    allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
+    try {
+        allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
+    } catch (e) {
+        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+        allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
+    } catch (e) {
+        console.warn(`Invalid Obsidian URL (localhost), skipping: ${e instanceof Error ? e.message : String(e)}`);
+    }
 
     // Gemini API
     allowedUrls.add('https://generativelanguage.googleapis.com');
@@ -1110,8 +1118,12 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     const openaiBaseUrl = settings[StorageKeys.OPENAI_BASE_URL];
     if (openaiBaseUrl) {
         if (isDomainInWhitelist(openaiBaseUrl)) {
-            const normalized = normalizeUrl(openaiBaseUrl);
-            allowedUrls.add(normalized);
+            try {
+                const normalized = normalizeUrl(openaiBaseUrl);
+                allowedUrls.add(normalized);
+            } catch (e) {
+                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+            }
         } else {
             console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
         }
@@ -1120,8 +1132,12 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     const openai2BaseUrl = settings[StorageKeys.OPENAI_2_BASE_URL];
     if (openai2BaseUrl) {
         if (isDomainInWhitelist(openai2BaseUrl)) {
-            const normalized = normalizeUrl(openai2BaseUrl);
-            allowedUrls.add(normalized);
+            try {
+                const normalized = normalizeUrl(openai2BaseUrl);
+                allowedUrls.add(normalized);
+            } catch (e) {
+                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+            }
         } else {
             console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
         }

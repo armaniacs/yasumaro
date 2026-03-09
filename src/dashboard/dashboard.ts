@@ -1063,19 +1063,15 @@ async function initHistoryPanel(): Promise<void> {
       info.appendChild(topRow);
       info.appendChild(metaEl);
 
-      const recordBtn = document.createElement('button');
-      recordBtn.className = 'secondary-btn pending-record-btn';
-      recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
-      recordBtn.addEventListener('click', async () => {
-        recordBtn.disabled = true;
-        recordBtn.textContent = getMessage('processing') || '処理中...';
-        // エラーメッセージ表示用要素を準備
+      const sendManualRecord = async (skipAi: boolean, btn: HTMLButtonElement): Promise<void> => {
+        btn.disabled = true;
+        btn.textContent = getMessage('processing') || '処理中...';
         let errorEl = row.querySelector('.record-error-message') as HTMLElement;
         if (errorEl) errorEl.remove();
         try {
           const result = await chrome.runtime.sendMessage({
             type: 'MANUAL_RECORD',
-            payload: { title: page.title, url: page.url, content: '', force: true }
+            payload: { title: page.title, url: page.url, content: '', force: true, skipAi }
           });
           if (result?.success) {
             await removePendingPages([page.url]);
@@ -1089,18 +1085,38 @@ async function initHistoryPanel(): Promise<void> {
             if (historyStats) historyStats.textContent = `${pendingPages.length} / ${pendingPages.length}`;
           } else {
             showRecordError(info, result);
-            recordBtn.disabled = false;
-            recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+            btn.disabled = false;
+            btn.textContent = skipAi
+              ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')
+              : (getMessage('recordNow') || '📝 今すぐ記録');
           }
         } catch (error) {
           showRecordError(info, error);
-          recordBtn.disabled = false;
-          recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+          btn.disabled = false;
+          btn.textContent = skipAi
+            ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')
+            : (getMessage('recordNow') || '📝 今すぐ記録');
         }
-      });
+      };
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'pending-btn-group';
+
+      const recordBtn = document.createElement('button');
+      recordBtn.className = 'secondary-btn pending-record-btn';
+      recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+      recordBtn.addEventListener('click', () => sendManualRecord(false, recordBtn));
+
+      const recordNoAiBtn = document.createElement('button');
+      recordNoAiBtn.className = 'secondary-btn pending-record-btn';
+      recordNoAiBtn.textContent = getMessage('recordWithoutAi') || '📝 AI要約なしで記録';
+      recordNoAiBtn.addEventListener('click', () => sendManualRecord(true, recordNoAiBtn));
+
+      btnGroup.appendChild(recordBtn);
+      btnGroup.appendChild(recordNoAiBtn);
 
       row.appendChild(info);
-      row.appendChild(recordBtn);
+      row.appendChild(btnGroup);
       historyList.appendChild(row);
     }
   }
@@ -1198,18 +1214,15 @@ async function initHistoryPanel(): Promise<void> {
       const btnGroup = document.createElement('div');
       btnGroup.className = 'pending-btn-group';
 
-      const recordBtn = document.createElement('button');
-      recordBtn.className = 'secondary-btn pending-record-btn';
-      recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
-      recordBtn.addEventListener('click', async () => {
-        recordBtn.disabled = true;
-        recordBtn.textContent = getMessage('processing') || '処理中...';
+      const sendPendingRecord = async (skipAi: boolean, btn: HTMLButtonElement): Promise<void> => {
+        btn.disabled = true;
+        btn.textContent = getMessage('processing') || '処理中...';
         let errorEl = row.querySelector('.record-error-message') as HTMLElement;
         if (errorEl) errorEl.remove();
         try {
           const result = await chrome.runtime.sendMessage({
             type: 'MANUAL_RECORD',
-            payload: { title: page.title, url: page.url, content: '', force: true }
+            payload: { title: page.title, url: page.url, content: '', force: true, skipAi }
           });
           if (result?.success) {
             await removePendingPages([page.url]);
@@ -1227,15 +1240,29 @@ async function initHistoryPanel(): Promise<void> {
             if (activeFilter === 'skipped') applyFilters();
           } else {
             showRecordError(info, result);
-            recordBtn.disabled = false;
-            recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+            btn.disabled = false;
+            btn.textContent = skipAi
+              ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')
+              : (getMessage('recordNow') || '📝 今すぐ記録');
           }
         } catch (error) {
           showRecordError(info, error);
-          recordBtn.disabled = false;
-          recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+          btn.disabled = false;
+          btn.textContent = skipAi
+            ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')
+            : (getMessage('recordNow') || '📝 今すぐ記録');
         }
-      });
+      };
+
+      const recordBtn = document.createElement('button');
+      recordBtn.className = 'secondary-btn pending-record-btn';
+      recordBtn.textContent = getMessage('recordNow') || '📝 今すぐ記録';
+      recordBtn.addEventListener('click', () => sendPendingRecord(false, recordBtn));
+
+      const recordNoAiBtn = document.createElement('button');
+      recordNoAiBtn.className = 'secondary-btn pending-record-btn';
+      recordNoAiBtn.textContent = getMessage('recordWithoutAi') || '📝 AI要約なしで記録';
+      recordNoAiBtn.addEventListener('click', () => sendPendingRecord(true, recordNoAiBtn));
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'danger-btn pending-delete-btn';
@@ -1263,6 +1290,7 @@ async function initHistoryPanel(): Promise<void> {
       });
 
       btnGroup.appendChild(recordBtn);
+      btnGroup.appendChild(recordNoAiBtn);
       btnGroup.appendChild(deleteBtn);
       row.appendChild(info);
       row.appendChild(btnGroup);

@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased] - to be released
 
+## [4.2.1] - 2026-03-09
+
+### Added
+- **「記録できなかったページ」に「AI要約なしで記録」ボタンを追加** ([dashboard.ts](src/dashboard/dashboard.ts))
+  - Cache-ControlやPII保護でスキップされたページを、AI要約なしで即座にObsidianへ記録できるボタンを追加
+  - 「今すぐ記録」（AI要約あり）と「AI要約なしで記録」の2択から選べるようになった
+  - `skipAi: true` を `MANUAL_RECORD` メッセージで渡すことでPipelineをバイパスし、`- HH:MM [タイトル](URL)` 形式でシンプルに記録する
+
+### Fixed
+- **「今すぐ記録」でAI要約が生成されない問題を修正** ([service-worker.ts](src/background/service-worker.ts))
+  - ダッシュボードから「今すぐ記録」を押した際、`content: ''` が渡されてPrivacyPipelineが即座に `Summary not available.` を返していた問題を修正
+  - `MANUAL_RECORD` 受信時、content が空かつ skipAi でない場合、対象URLのタブを探して `scripting.executeScript` でページ本文を取得するようになった
+  - タブが開いていない場合はバックグラウンドでタブを新規作成し、ページ読み込み完了（最大15秒待機）後にコンテンツを取得してタブを自動的に閉じる
+  - content が空のままの場合は `fetch(url)` でHTMLを取得し、script/style/タグを除去してフォールバックとして使用
+
 ### Docs
 - **README.md に v4.2 新機能を追記** ([README.md](README.md))
   - `📋 AIプロンプトプリセット` / `🔔 ツールバーバッジ通知` を日英両方の特徴リストに追加

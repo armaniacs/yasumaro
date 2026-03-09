@@ -81,8 +81,8 @@ describe('normalizeUrl', () => {
         expect(normalizeUrl('HTTP://example.com')).toBe('http://example.com');
     });
 
-    it('should return original URL if invalid', () => {
-        expect(normalizeUrl('not-a-url')).toBe('not-a-url');
+    it('should throw error for invalid URL', () => {
+        expect(() => normalizeUrl('not-a-url')).toThrow('Invalid URL');
     });
 });
 

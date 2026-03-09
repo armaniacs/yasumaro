@@ -25,16 +25,66 @@ export interface PromptResult {
 /**
  * デフォルトのユーザープロンプト
  */
-export const DEFAULT_USER_PROMPT = `以下のWebページの内容を、日本語で簡潔に要約してください。
+export const DEFAULT_USER_PROMPT_JA = `以下のWebページの内容を、日本語で簡潔に要約してください。
 1文または2文で、重要なポイントをまとめてください。改行しないこと。
 
 Content:
 {{content}}`;
 
+export const DEFAULT_USER_PROMPT_EN = `Please summarize the following web page in English in 1-2 sentences.
+Focus on the key points and keep it concise.
+
+Content:
+{{content}}`;
+
+/**
+ * デフォルトのユーザープロンプト（言語自動選択）
+ * @param {string} locale - 言語コード ('ja' または 'en')
+ * @returns {string} デフォルトユーザープロンプト
+ */
+export function getDefaultUserPrompt(locale: string = 'ja'): string {
+    return locale === 'ja' ? DEFAULT_USER_PROMPT_JA : DEFAULT_USER_PROMPT_EN;
+}
+
 /**
  * デフォルトのシステムプロンプト（OpenAI用）
  */
-export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
+export const DEFAULT_SYSTEM_PROMPT_JA = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
+export const DEFAULT_SYSTEM_PROMPT_EN = 'You are a helpful assistant that summarizes web pages effectively and concisely in English.';
+
+/**
+ * デフォルトのシステムプロンプト（言語自動選択）
+ * @param {string} locale - 言語コード ('ja' または 'en')
+ * @returns {string} デフォルトシステムプロンプト
+ */
+export function getDefaultSystemPrompt(locale: string = 'ja'): string {
+    return locale === 'ja' ? DEFAULT_SYSTEM_PROMPT_JA : DEFAULT_SYSTEM_PROMPT_EN;
+}
+
+/**
+ * Get browser language setting
+ * @returns Language code ('ja' or 'en', default is 'ja')
+ */
+export function getBrowserLocale(): string {
+    // Service worker does not have navigator, return default
+    if (typeof navigator === 'undefined') return 'ja';
+    
+    try {
+        const lang = navigator.language || (navigator as any).userLanguage || 'ja';
+        const locale = lang.startsWith('ja') ? 'ja' : 'en';
+        return locale;
+    } catch (e) {
+        console.warn('[customPromptUtils] Failed to detect browser locale, using default: ja');
+        return 'ja'; // Default is Japanese
+    }
+}
+
+/**
+ * 後方互換性のためのエイリアス
+ * @deprecated 代わりに getDefaultUserPrompt() と getDefaultSystemPrompt() を使用してください
+ */
+export const DEFAULT_USER_PROMPT = DEFAULT_USER_PROMPT_JA;
+export const DEFAULT_SYSTEM_PROMPT = DEFAULT_SYSTEM_PROMPT_JA;
 
 /**
  * プリセットプロンプトの定義
@@ -55,12 +105,8 @@ export const PRESET_PROMPTS: PresetPrompt[] = [
         id: 'default',
         name: 'Default',
         nameJa: 'デフォルト',
-        userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。
-1文または2文で、重要なポイントをまとめてください。改行しないこと。
-
-Content:
-{{content}}`,
-        systemPrompt: DEFAULT_SYSTEM_PROMPT
+        userPrompt: DEFAULT_USER_PROMPT_JA,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT_JA
     },
     {
         id: 'tagged',
@@ -76,7 +122,7 @@ Content:
 
 Content:
 {{content}}`,
-        systemPrompt: DEFAULT_SYSTEM_PROMPT
+        systemPrompt: DEFAULT_SYSTEM_PROMPT_JA
     },
     {
         id: 'bullet',
@@ -85,17 +131,14 @@ Content:
         userPrompt: `以下のWebページの内容を、日本語で箇条書き3点で要約してください。
 
 {{content}}`,
-        systemPrompt: 'You are a helpful assistant that organizes information into clear bullet points.'
+        systemPrompt: DEFAULT_SYSTEM_PROMPT_EN
     },
     {
         id: 'english',
         name: 'English Summary',
         nameJa: '英語要約',
-        userPrompt: `Please summarize the following web page in English in 1-2 sentences.
-
-Content:
-{{content}}`,
-        systemPrompt: 'You are a helpful assistant that summarizes web pages effectively and concisely in English.'
+        userPrompt: DEFAULT_USER_PROMPT_EN,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT_EN
     },
     {
         id: 'technical',
@@ -224,14 +267,19 @@ export function getActivePrompt(settings: Settings, providerName: string): Custo
  * @param {string} providerName - プロバイダー名
  * @param {string} sanitizedContent - サニタイズ済みコンテンツ
  * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+ * @param {string} [locale] - 言語コード（指定がない場合はブラウザ設定を使用）
  * @returns {PromptResult} 適用結果
  */
 export function applyCustomPrompt(
     settings: Settings,
     providerName: string,
     sanitizedContent: string,
-    tagSummaryMode: boolean = false
+    tagSummaryMode: boolean = false,
+    locale?: string
 ): PromptResult {
+    // 言語が指定されていない場合はブラウザ設定から取得
+    const effectiveLocale = locale || getBrowserLocale();
+    
     const customPrompt = getActivePrompt(settings, providerName);
 
     if (customPrompt) {
@@ -245,7 +293,7 @@ export function applyCustomPrompt(
 
         return {
             userPrompt,
-            systemPrompt: customPrompt.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+            systemPrompt: customPrompt.systemPrompt || getDefaultSystemPrompt(effectiveLocale),
             isCustom: true
         };
     }
@@ -255,14 +303,14 @@ export function applyCustomPrompt(
     if (tagSummaryMode) {
         return {
             userPrompt: buildTaggedSummaryPrompt(settings, sanitizedContent),
-            systemPrompt: DEFAULT_SYSTEM_PROMPT,
+            systemPrompt: getDefaultSystemPrompt(effectiveLocale),
             isCustom: false
         };
     }
 
     return {
-        userPrompt: replaceContentPlaceholder(DEFAULT_USER_PROMPT, sanitizedContent),
-        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        userPrompt: replaceContentPlaceholder(getDefaultUserPrompt(effectiveLocale), sanitizedContent),
+        systemPrompt: getDefaultSystemPrompt(effectiveLocale),
         isCustom: false
     };
 }

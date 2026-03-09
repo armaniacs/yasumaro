@@ -16,8 +16,8 @@ describe('normalizeUrl', () => {
         expect(normalizeUrl('HTTP://example.com')).toBe('http://example.com');
     });
 
-    test('無効なURLの場合はそのまま返す', () => {
-        expect(normalizeUrl('not-a-url')).toBe('not-a-url');
+    test('無効なURLの場合はエラーを投げる', () => {
+        expect(() => normalizeUrl('not-a-url')).toThrow();
     });
 
     test('既に正規化されているURLはそのまま返す', () => {

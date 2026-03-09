@@ -35,6 +35,9 @@
     "recordNow": {
         "message": "📝 Record Now"
     },
+    "recordWithoutAi": {
+        "message": "📝 Record Without AI"
+    },
     "cannotRecordPage": {
         "message": "Cannot record this page"
     },
@@ -555,7 +558,7 @@
         "message": "Auto-closing..."
     },
     "errorContentScriptNotAvailable": {
-        "message": "Cannot fetch content from this page. Only available on HTTP/HTTPS pages."
+        "message": "Cannot fetch content from this page. Please reload the page and try again."
     },
     "errorNoContentResponse": {
         "message": "No response from content fetch."

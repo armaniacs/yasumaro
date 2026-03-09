@@ -35,6 +35,9 @@
     "recordNow": {
         "message": "📝 今すぐ記録"
     },
+    "recordWithoutAi": {
+        "message": "📝 AI要約なしで記録"
+    },
     "cannotRecordPage": {
         "message": "記録できないページです"
     },
@@ -555,7 +558,7 @@
         "message": "自動的に閉じています..."
     },
     "errorContentScriptNotAvailable": {
-        "message": "このページからコンテンツを取得できません。HTTP/HTTPSページでのみ使用可能です。"
+        "message": "このページからコンテンツを取得できません。ページをリロードしてから再度お試しください。"
     },
     "errorNoContentResponse": {
         "message": "コンテンツ取得レスポンスがありません。"

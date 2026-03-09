@@ -169,7 +169,6 @@ export async function handleSaveAndTest(
     console.log('[SettingsSaver] Current settings from storage:', {
         hasObsidianKey: !!currentSettings['obsidian_api_key'],
         obsidianKeyLength: (typeof currentSettings['obsidian_api_key'] === 'string' ? currentSettings['obsidian_api_key'].length : 0),
-        obsidianKeyValue: (typeof currentSettings['obsidian_api_key'] === 'string' ? currentSettings['obsidian_api_key'].substring(0, 10) + '...' : 'NA'),
         hasGeminiKey: !!currentSettings['gemini_api_key'],
         hasOpenaiKey: !!currentSettings['openai_api_key']
     });

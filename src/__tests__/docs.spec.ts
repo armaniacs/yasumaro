@@ -12,7 +12,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Configuration
-const PROJECT_ROOT = '/Users/yaar/Playground/obsidian-smart-history';
+const PROJECT_ROOT = process.cwd();
 const DOCS_TO_CHECK = [
   'AGENTS.md',
   'README.md',
@@ -28,7 +28,7 @@ const FILE_REFERENCE_PATTERNS = [
 ];
 
 // Known exceptions (files that legitimately have .js in docs)
-const KNOWN_JS_EXCEPTIONS = [
+const KNOWN_JS_EXCEPTIONS: string[] = [
   // Note: Imports in code examples use .js for TypeScript ESM resolution
   // These are not actual file references but import syntax
 ];
@@ -36,7 +36,7 @@ const KNOWN_JS_EXCEPTIONS = [
 /**
  * Check if a file exists
  */
-function fileExists(filePath) {
+function fileExists(filePath: string): boolean {
   const absolutePath = path.join(PROJECT_ROOT, filePath);
   return fs.existsSync(absolutePath);
 }
@@ -44,7 +44,7 @@ function fileExists(filePath) {
 /**
  * Extract file references from markdown content
  */
-function extractFileReferences(content, docName) {
+function extractFileReferences(content: string, docName: string): string[] {
   const references = [];
 
   for (const pattern of FILE_REFERENCE_PATTERNS) {
@@ -61,8 +61,8 @@ function extractFileReferences(content, docName) {
 /**
  * Check a single reference
  */
-function checkReference(reference, docName) {
-  const issues = [];
+function checkReference(reference: string, docName: string): { type: string; message: string }[] {
+  const issues: { type: string; message: string }[] = [];
 
   // Check 1: File should exist
   if (!fileExists(reference)) {
@@ -114,7 +114,7 @@ function checkReference(reference, docName) {
 /**
  * Process a single documentation file
  */
-function processDocumentation(docName) {
+function processDocumentation(docName: string): { document: string; totalReferences: number; issues: { type: string; message: string; reference: string; document: string }[] } | null {
   const docPath = path.join(PROJECT_ROOT, docName);
 
   if (!fs.existsSync(docPath)) {
@@ -125,7 +125,7 @@ function processDocumentation(docName) {
   const content = fs.readFileSync(docPath, 'utf-8');
   const references = extractFileReferences(content, docName);
 
-  const allIssues = [];
+  const allIssues: { type: string; message: string; reference: string; document: string }[] = [];
   const uniqueRefs = new Set(references);
 
   for (const ref of uniqueRefs) {

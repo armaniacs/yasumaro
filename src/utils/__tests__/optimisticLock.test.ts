@@ -343,8 +343,8 @@ describe('withOptimisticLock', () => {
 
             chrome.storage.local.get = jest.fn(async () => {
                 callCount++;
-                // 常に競合を返す
-                return { testKey: ['modified'], testKey_version: 100 };
+                // 呼び出しごとにバージョンを変化させて常にバージョン不一致を起こす
+                return { testKey: ['modified'], testKey_version: callCount * 100 };
             });
 
             await expect(
