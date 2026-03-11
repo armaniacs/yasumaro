@@ -3,7 +3,6 @@
         "message": "Obsidian Weave"
     },
     "extensionShortName": {
-        "message": "Weave"
     },
     "extensionDescription": {
         "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
@@ -1377,5 +1376,24 @@
     },
     "saveFailed": {
         "message": "同意の保存に失敗しました"
+    }
+}
+    "openaiCompatibleModelsDev": {
+        "message": "OpenAI Compatible (Models.dev)"
+    },
+    "modelsDevDescription": {
+        "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Perplexity、DeepSeek等）から選択"
+    },
+    "selectProvider": {
+        "message": "プロバイダー選択"
+    },
+    "selectedProviderInfo": {
+        "message": "選択されたプロバイダー:"
+    },
+    "providerApiKeyPlaceholder": {
+        "message": "APIキーを入力..."
+    },
+    "providerModelPlaceholder": {
+        "message": "モデル名（オプション）"
     }
 }

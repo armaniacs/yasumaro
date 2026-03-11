@@ -1377,5 +1377,23 @@
     },
     "saveFailed": {
         "message": "Failed to save consent"
+    },
+    "openaiCompatibleModelsDev": {
+        "message": "OpenAI Compatible (Models.dev)"
+    },
+    "modelsDevDescription": {
+        "message": "Select from 70+ OpenAI-compatible providers (OpenRouter, Perplexity, DeepSeek, etc.)"
+    },
+    "selectProvider": {
+        "message": "Select Provider"
+    },
+    "selectedProviderInfo": {
+        "message": "Selected Provider:"
+    },
+    "providerApiKeyPlaceholder": {
+        "message": "Enter your API key..."
+    },
+    "providerModelPlaceholder": {
+        "message": "Model name (optional)"
     }
 }
