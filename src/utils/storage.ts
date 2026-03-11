@@ -56,6 +56,11 @@ export const StorageKeys = {
     OPENAI_2_BASE_URL: 'openai_2_base_url',
     OPENAI_2_API_KEY: 'openai_2_api_key',
     OPENAI_2_MODEL: 'openai_2_model',
+    // OpenAI-compatible provider settings (dynamic)
+    PROVIDER_TYPE: 'provider_type',       // 'openrouter' | 'perplexity' | 'groq' | ...
+    PROVIDER_BASE_URL: 'provider_base_url', // Dynamic API URL
+    PROVIDER_API_KEY: 'provider_api_key',   // Dynamic API key
+    PROVIDER_MODEL: 'provider_model',       // Dynamic model ID
     // Domain filter settings
     DOMAIN_WHITELIST: 'domain_whitelist',
     DOMAIN_BLACKLIST: 'domain_blacklist',
@@ -120,6 +125,10 @@ export interface StorageKeyValues {
     [StorageKeys.OPENAI_2_BASE_URL]: string;
     [StorageKeys.OPENAI_2_API_KEY]: string | EncryptedData;
     [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.PROVIDER_TYPE]: string;
+    [StorageKeys.PROVIDER_BASE_URL]: string;
+    [StorageKeys.PROVIDER_API_KEY]: string | EncryptedData;
+    [StorageKeys.PROVIDER_MODEL]: string;
     [StorageKeys.DOMAIN_WHITELIST]: string[];
     [StorageKeys.DOMAIN_BLACKLIST]: string[];
     [StorageKeys.DOMAIN_FILTER_MODE]: string;
@@ -173,7 +182,8 @@ const API_KEY_FIELDS: StorageKey[] = [
     StorageKeys.OBSIDIAN_API_KEY,
     StorageKeys.GEMINI_API_KEY,
     StorageKeys.OPENAI_API_KEY,
-    StorageKeys.OPENAI_2_API_KEY
+    StorageKeys.OPENAI_2_API_KEY,
+    StorageKeys.PROVIDER_API_KEY,
 ];
 
 // 許可するAIプロバイダードメインのホワイトリスト
@@ -617,6 +627,11 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1',
     [StorageKeys.OPENAI_2_API_KEY]: '', // APIキー（ユーザーが設定）
     [StorageKeys.OPENAI_2_MODEL]: 'llama3',
+    // OpenAI-compatible provider defaults
+    [StorageKeys.PROVIDER_TYPE]: '',
+    [StorageKeys.PROVIDER_BASE_URL]: '',
+    [StorageKeys.PROVIDER_API_KEY]: '', // APIキー（ユーザーが設定）
+    [StorageKeys.PROVIDER_MODEL]: '',
     // Domain filter defaults
     [StorageKeys.DOMAIN_WHITELIST]: [],
     [StorageKeys.DOMAIN_BLACKLIST]: [

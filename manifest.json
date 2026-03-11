@@ -108,7 +108,8 @@
         "utils/retryHelper.js",
         "utils/privacyStatusCodes.js",
         "utils/contentExtractor.js",
-        "icons/icon48.png"
+        "icons/icon48.png",
+        "data/models-dev-openai-compatible.json"
       ],
       "matches": [
         "<all_urls>"
