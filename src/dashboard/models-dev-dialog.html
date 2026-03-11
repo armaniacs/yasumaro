@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Models.dev Provider Selection</title>
+    <link rel="stylesheet" href="models-dev-dialog.css">
+</head>
+<body>
+    <div id="models-dev-dialog" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="dialog-title" data-i18n="modelsDevDialogTitle">OpenAI-Compatible Provider</h2>
+                <button type="button" id="dialog-close" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button type="button" class="tab-btn active" data-tab="all" data-i18n="tabAll">All</button>
+                <button type="button" class="tab-btn" data-tab="aggregators" data-i18n="tabAggregator">Aggregators</button>
+                <button type="button" class="tab-btn" data-tab="others" data-i18n="tabOthers">Others</button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="search-bar">
+                <input type="text" id="provider-search" placeholder="Search providers..." data-i18n-placeholder="searchPlaceholder">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="filter-free-tier">
+                    <span data-i18n="filterFreeTier">Free Tier Only</span>
+                </label>
+            </div>
+
+            <!-- Loading state -->
+            <div id="dialog-loading" class="loading-state">
+                <div class="spinner"></div>
+                <span data-i18n="loadingProviders">Loading providers...</span>
+            </div>
+
+            <!-- Provider List -->
+            <div id="provider-count" class="provider-count"></div>
+            <div id="provider-list" class="provider-list"></div>
+
+            <!-- Selected Info -->
+            <div id="selected-provider-info" class="selected-info hidden">
+                <div class="selected-label" data-i18n="selectedProvider">Selected Provider:</div>
+                <div id="selected-provider-name" class="selected-name"></div>
+                <div id="selected-model-name" class="selected-model"></div>
+            </div>
+
+            <!-- Model Selection (if needed) -->
+            <div id="model-selection" class="model-selection hidden">
+                <label for="model-input" data-i18n="selectModel">Model (optional):</label>
+                <input type="text" id="model-input" placeholder="e.g., gpt-3.5-turbo">
+            </div>
+
+            <!-- API Key Input -->
+            <div class="api-key-section">
+                <label for="api-key-input" data-i18n="apiKey">API Key:</label>
+                <input type="password" id="api-key-input" placeholder="Enter your API key..." data-i18n-placeholder="apiKeyPlaceholder">
+            </div>
+
+            <!-- Error message -->
+            <div id="dialog-error" class="error-message hidden"></div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" id="dialog-cancel" class="btn btn-secondary" data-i18n="cancel">Cancel</button>
+                <button type="button" id="dialog-save" class="btn btn-primary" data-i18n="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="models-dev-dialog.js"></script>
+</body>
+</html>
