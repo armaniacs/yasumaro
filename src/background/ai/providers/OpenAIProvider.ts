@@ -6,7 +6,7 @@
 import { AIProviderStrategy, AIProviderConnectionResult } from './ProviderStrategy.js';
 import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls, Settings } from '../../../utils/storage.js';
+import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
@@ -20,17 +20,22 @@ export class OpenAIProvider extends AIProviderStrategy {
     constructor(settings: Settings, providerName: string = 'openai') {
         super(settings);
         this.providerName = providerName;
-        // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
-        const normalizedName = providerName.replace('2', '_2').toLowerCase();
+        this.timeoutMs = 30000;
 
-        // Settings interface needs index signature or explicit properties
-        // For now, casting strict Settings to any to access dynamic properties or assume Settings has index signature
         const s = settings as any;
 
-        this.baseUrl = s[`${normalizedName}_base_url`] || 'https://api.openai.com/v1';
-        this.apiKey = s[`${normalizedName}_api_key`];
-        this.model = s[`${normalizedName}_model`] || 'gpt-3.5-turbo';
-        this.timeoutMs = 30000;
+        // For openai-compatible provider, use generic provider keys
+        if (providerName === 'openai-compatible') {
+            this.baseUrl = s[StorageKeys.PROVIDER_BASE_URL] || '';
+            this.apiKey = s[StorageKeys.PROVIDER_API_KEY];
+            this.model = s[StorageKeys.PROVIDER_MODEL] || '';
+        } else {
+            // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
+            const normalizedName = providerName.replace('2', '_2').toLowerCase();
+            this.baseUrl = s[`${normalizedName}_base_url`] || 'https://api.openai.com/v1';
+            this.apiKey = s[`${normalizedName}_api_key`];
+            this.model = s[`${normalizedName}_model`] || 'gpt-3.5-turbo';
+        }
 
         // BaseUrl SSRF対策
         if (this.baseUrl) {

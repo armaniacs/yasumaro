@@ -36,6 +36,7 @@ export class AIClient {
         this.registerProvider('gemini', (settings: Settings) => new GeminiProvider(settings));
         this.registerProvider('openai', (settings: Settings) => new OpenAIProvider(settings, 'openai'));
         this.registerProvider('openai2', (settings: Settings) => new OpenAIProvider(settings, 'openai2'));
+        this.registerProvider('openai-compatible', (settings: Settings) => new OpenAIProvider(settings, 'openai-compatible'));
     }
 
     /**
