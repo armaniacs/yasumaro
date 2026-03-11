@@ -11,6 +11,7 @@ export interface AIProviderElements {
     geminiSettings: HTMLElement;
     openaiSettings: HTMLElement;
     openai2Settings: HTMLElement;
+    openaiCompatibleSettings?: HTMLElement;
 }
 
 /**
@@ -23,12 +24,18 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
     elements.openaiSettings.style.display = 'none';
     elements.openai2Settings.style.display = 'none';
 
+    if (elements.openaiCompatibleSettings) {
+        elements.openaiCompatibleSettings.style.display = 'none';
+    }
+
     if (provider === 'gemini') {
         elements.geminiSettings.style.display = 'block';
     } else if (provider === 'openai') {
         elements.openaiSettings.style.display = 'block';
     } else if (provider === 'openai2') {
         elements.openai2Settings.style.display = 'block';
+    } else if (provider === 'openai-compatible' && elements.openaiCompatibleSettings) {
+        elements.openaiCompatibleSettings.style.display = 'block';
     }
 }
 

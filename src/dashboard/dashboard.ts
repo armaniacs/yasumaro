@@ -38,6 +38,7 @@ import { getSavedUrlsWithTimestamps, getSavedUrlEntries, removeSavedUrl, getSave
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { extractDomain, isDomainAllowed } from '../utils/domainUtils.js';
 import { DEFAULT_CATEGORIES, getAllCategories } from '../utils/tagUtils.js';
+import { ModelsDevDialog } from './models-dev-dialog.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -79,6 +80,7 @@ const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElem
 const geminiSettingsDiv = document.getElementById('geminiSettings') as HTMLElement;
 const openaiSettingsDiv = document.getElementById('openaiSettings') as HTMLElement;
 const openai2SettingsDiv = document.getElementById('openai2Settings') as HTMLElement;
+const openaiCompatibleSettingsDiv = document.getElementById('openai-compatibleSettings') as HTMLElement;
 
 const geminiApiKeyInput = document.getElementById('geminiApiKey') as HTMLInputElement;
 const geminiModelInput = document.getElementById('geminiModel') as HTMLInputElement;
@@ -91,6 +93,9 @@ const openai2BaseUrlInput = document.getElementById('openai2BaseUrl') as HTMLInp
 const openai2ApiKeyInput = document.getElementById('openai2ApiKey') as HTMLInputElement;
 const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputElement;
 
+const providerApiKeyInput = document.getElementById('providerApiKey') as HTMLInputElement;
+const providerModelInput = document.getElementById('providerModel') as HTMLInputElement;
+
 const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
 const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
@@ -98,7 +103,7 @@ const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButton
 const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
 const statusDiv = document.getElementById('status') as HTMLElement;
 
-const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement> = {
+const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement | null> = {
   [StorageKeys.OBSIDIAN_API_KEY]: apiKeyInput,
   [StorageKeys.OBSIDIAN_PROTOCOL]: protocolInput,
   [StorageKeys.OBSIDIAN_PORT]: portInput,
@@ -112,6 +117,10 @@ const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement> = {
   [StorageKeys.OPENAI_2_BASE_URL]: openai2BaseUrlInput,
   [StorageKeys.OPENAI_2_API_KEY]: openai2ApiKeyInput,
   [StorageKeys.OPENAI_2_MODEL]: openai2ModelInput,
+  [StorageKeys.PROVIDER_TYPE]: null,
+  [StorageKeys.PROVIDER_BASE_URL]: null,
+  [StorageKeys.PROVIDER_API_KEY]: providerApiKeyInput,
+  [StorageKeys.PROVIDER_MODEL]: providerModelInput,
   [StorageKeys.MIN_VISIT_DURATION]: minVisitDurationInput,
   [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput
 };
@@ -120,13 +129,26 @@ const aiProviderElements: AIProviderElements = {
   select: aiProviderSelect,
   geminiSettings: geminiSettingsDiv,
   openaiSettings: openaiSettingsDiv,
-  openai2Settings: openai2SettingsDiv
+  openai2Settings: openai2SettingsDiv,
+  openaiCompatibleSettings: openaiCompatibleSettingsDiv
 };
 
 async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, settingsMapping);
   updateAIProviderVisibility(aiProviderElements);
+
+  // Load openai-compatible provider selection
+  const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
+  const providerInfoDisplayDiv = document.getElementById('providerInfoDisplay') as HTMLElement | null;
+  const providerType = settings[StorageKeys.PROVIDER_TYPE] as string;
+  const providerBaseUrl = settings[StorageKeys.PROVIDER_BASE_URL] as string;
+  if (providerType && providerBaseUrl && selectedProviderInfoDiv && providerInfoDisplayDiv) {
+    selectedProviderInfoDiv.classList.remove('hidden');
+    providerInfoDisplayDiv.textContent = `${providerType} (${providerBaseUrl})`;
+  } else if (selectedProviderInfoDiv) {
+    selectedProviderInfoDiv.classList.add('hidden');
+  }
 }
 
 // ============================================================================
@@ -2183,6 +2205,42 @@ function setHtmlLangDir(): void {
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
 
   setupAIProviderChangeListener(aiProviderElements);
+
+  // Initialize models.dev dialog
+  let modelsDevDialog: ModelsDevDialog | null = null;
+
+  const openModelsDevDialogBtn = document.getElementById('openModelsDevDialogBtn') as HTMLButtonElement;
+  const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement;
+  const providerInfoDisplayDiv = document.getElementById('providerInfoDisplay') as HTMLElement;
+
+  openModelsDevDialogBtn?.addEventListener('click', async () => {
+    if (!modelsDevDialog) {
+      modelsDevDialog = new ModelsDevDialog({
+        onSave: async (providerId, baseUrl, apiKey, model) => {
+          // Update UI
+          selectedProviderInfoDiv?.classList.remove('hidden');
+          const providerData = JSON.parse(JSON.stringify({ id: providerId, baseUrl, hasKey: !!apiKey, model }));
+          providerInfoDisplayDiv!.textContent = `${providerId} (${baseUrl})${model ? ` - ${model}` : ''}`;
+
+          // Update input values
+          providerApiKeyInput.value = apiKey;
+          providerModelInput.value = model;
+
+          // Store in settings
+          const settings = await getSettings();
+          settings[StorageKeys.PROVIDER_TYPE] = providerId;
+          settings[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
+          settings[StorageKeys.PROVIDER_API_KEY] = apiKey;
+          settings[StorageKeys.PROVIDER_MODEL] = model;
+          await saveSettingsWithAllowedUrls(settings);
+        },
+        onCancel: () => {
+          console.log('[Dashboard] Provider dialog cancelled');
+        }
+      });
+    }
+    await modelsDevDialog.show();
+  });
   setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput);
 
   // 保存ボタン（テストなし）

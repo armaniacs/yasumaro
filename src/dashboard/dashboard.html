@@ -7,6 +7,7 @@
     content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
   <title>Obsidian Weave</title>
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="models-dev-dialog.css">
 </head>
 
 <body>
@@ -143,6 +144,7 @@
               <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
               <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
               <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+              <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
             </select>
           </div>
 
@@ -192,6 +194,29 @@
             <div class="form-group">
               <label for="openai2Model" data-i18n="modelName">Model Name</label>
               <input type="text" id="openai2Model" data-i18n-input-placeholder="openai2ModelPlaceholder">
+            </div>
+          </div>
+
+          <!-- OpenAI-Compatible (Models.dev) Settings -->
+          <div id="openai-compatibleSettings" class="openai-settings">
+            <div class="form-group">
+              <label data-i18n="modelsDevDescription">Select from 70+ OpenAI-compatible providers (OpenRouter, Perplexity, DeepSeek, etc.)</label>
+              <button type="button" id="openModelsDevDialogBtn" class="secondary-btn" data-i18n="selectProvider">Select Provider</button>
+            </div>
+
+            <div id="selectedProviderInfo" class="selected-provider-info hidden">
+              <label data-i18n="selectedProviderInfo">Selected Provider:</label>
+              <div id="providerInfoDisplay" class="provider-display"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="providerApiKey" data-i18n="apiKey">API Key</label>
+              <input type="password" id="providerApiKey" data-i18n-input-placeholder="providerApiKeyPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="providerModel" data-i18n="modelName">Model Name (optional)</label>
+              <input type="text" id="providerModel" data-i18n-input-placeholder="providerModelPlaceholder">
             </div>
           </div>
         </div>
