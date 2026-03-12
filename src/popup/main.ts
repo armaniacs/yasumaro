@@ -11,6 +11,7 @@ import { sendMessageWithRetry } from '../utils/retryHelper.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import type { PendingPage } from '../utils/pendingStorage.js';
 import { extractDomain } from '../utils/domainUtils.js';
+import { getSavedUrlEntries } from '../utils/storageUrls.js';
 
 // Export functions for testing
 export { getCurrentTab };
@@ -522,6 +523,30 @@ function resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
   void resetRecordButton(btn);
 }
 
+// AIタグ分類結果を表示し、タグがある場合は自動クローズを延長する
+async function showTagResult(url: string): Promise<void> {
+  if (!url) return;
+
+  const panel = document.getElementById('tagResultPanel');
+  if (!panel) return;
+
+  try {
+    const entries = await getSavedUrlEntries();
+    const entry = entries.find(e => e.url === url);
+    const tags = entry?.tags;
+
+    if (!tags || tags.length === 0) return;
+
+    panel.textContent = `🏷 ${getMessage('aiTagsLabel')}: ${tags.map(t => `#${t}`).join('  ')}`;
+    panel.classList.remove('hidden');
+
+    // タグが表示される場合は自動クローズを延長（通常の2倍）
+    startAutoCloseTimer(4000);
+  } catch {
+    // タグ取得失敗はサイレントフェール
+  }
+}
+
 // 手動記録処理
 export async function recordCurrentPage(force: boolean = false): Promise<void> {
   const startTime = performance.now();
@@ -538,6 +563,8 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
   hideSpinner(); // 前回のスピナー状態をクリア
   statusDiv.textContent = '';
   statusDiv.className = '';
+  const tagPanel = document.getElementById('tagResultPanel');
+  if (tagPanel) { tagPanel.textContent = ''; tagPanel.classList.add('hidden'); }
 
   try {
     const tab = await getCurrentTab();
@@ -710,6 +737,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       }
 
       startAutoCloseTimer();
+      await showTagResult(tab.url ?? '');
     } else {
       throw new Error(result.error || 'Save failed');
     }

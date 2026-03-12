@@ -71,27 +71,30 @@ export async function loadModelsDevData(): Promise<ModelsDevData | null> {
 }
 
 /**
+ * Environment variable name mapping for providers
+ * Cached constant to avoid recreating on every function call
+ */
+const ENV_MAP: Record<string, string> = {
+    'openrouter': 'OPENROUTER_API_KEY',
+    'groq': 'GROQ_API_KEY',
+    'perplexity': 'PERPLEXITY_API_KEY',
+    'anthropic': 'ANTHROPIC_API_KEY',
+    'cohere': 'COHERE_API_KEY',
+    'mistral': 'MISTRAL_API_KEY',
+    'together': 'TOGETHER_API_KEY',
+    'fireworks': 'FIREWORKS_API_KEY',
+    'deepseek': 'DEEPSEEK_API_KEY',
+    'xai': 'XAI_API_KEY',
+    'google': 'GOOGLE_API_KEY',
+    'openai': 'OPENAI_API_KEY',
+    'moonshot': 'MOONSHOT_API_KEY',
+    'zhipu': 'ZHIPU_API_KEY',
+    'minimax': 'MINIMAX_API_KEY',
+};
+
+/**
  * Get API key environment name for a provider
  */
 export function getApiKeyEnvName(providerId: string): string {
-    // Map provider IDs to environment variable names
-    const envMap: Record<string, string> = {
-        'openrouter': 'OPENROUTER_API_KEY',
-        'groq': 'GROQ_API_KEY',
-        'perplexity': 'PERPLEXITY_API_KEY',
-        'anthropic': 'ANTHROPIC_API_KEY',
-        'cohere': 'COHERE_API_KEY',
-        'mistral': 'MISTRAL_API_KEY',
-        'together': 'TOGETHER_API_KEY',
-        'fireworks': 'FIREWORKS_API_KEY',
-        'deepseek': 'DEEPSEEK_API_KEY',
-        'xai': 'XAI_API_KEY',
-        'google': 'GOOGLE_API_KEY',
-        'openai': 'OPENAI_API_KEY',
-        'moonshot': 'MOONSHOT_API_KEY',
-        'zhipu': 'ZHIPU_API_KEY',
-        'minimax': 'MINIMAX_API_KEY',
-    };
-
-    return envMap[providerId] || `${providerId.toUpperCase()}_API_KEY`;
+    return ENV_MAP[providerId] || `${providerId.toUpperCase()}_API_KEY`;
 }

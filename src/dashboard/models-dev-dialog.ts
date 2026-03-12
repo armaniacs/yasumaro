@@ -28,6 +28,15 @@ export class ModelsDevDialog {
     private filterFreeTier: boolean = false;
     private options: DialogOptions;
 
+    // Cached DOM element references
+    private listEl: HTMLElement | null = null;
+    private countEl: HTMLElement | null = null;
+    private loadingEl: HTMLElement | null = null;
+    private selectedInfoEl: HTMLElement | null = null;
+    private selectedNameEl: HTMLElement | null = null;
+    private selectedModelEl: HTMLElement | null = null;
+    private errorEl: HTMLElement | null = null;
+
     constructor(options: DialogOptions = {}) {
         this.options = options;
     }
@@ -135,8 +144,24 @@ export class ModelsDevDialog {
         document.body.appendChild(overlay);
         this.dialog = overlay;
 
+        // Cache DOM element references
+        this.cacheDomReferences();
+
         // Attach event listeners
         this.attachEventListeners();
+    }
+
+    /**
+     * Cache DOM element references for performance
+     */
+    private cacheDomReferences(): void {
+        this.listEl = document.getElementById('provider-list');
+        this.countEl = document.getElementById('provider-count');
+        this.loadingEl = document.getElementById('dialog-loading');
+        this.selectedInfoEl = document.getElementById('selected-provider-info');
+        this.selectedNameEl = document.getElementById('selected-provider-name');
+        this.selectedModelEl = document.getElementById('selected-model-name');
+        this.errorEl = document.getElementById('dialog-error');
     }
 
     /**
@@ -200,13 +225,13 @@ export class ModelsDevDialog {
      * Load providers from data
      */
     private async loadProviders(): Promise<void> {
-        const loadingEl = document.getElementById('dialog-loading');
-        const countEl = document.getElementById('provider-count');
-        const listEl = document.getElementById('provider-list');
+        if (!this.listEl || !this.countEl || !this.loadingEl) {
+            return;
+        }
 
-        loadingEl?.classList.remove('hidden');
-        listEl!.innerHTML = '';
-        countEl!.textContent = '';
+        this.loadingEl.classList.remove('hidden');
+        this.listEl.innerHTML = '';
+        this.countEl.textContent = '';
 
         try {
             const data = await loadModelsDevData();
@@ -218,10 +243,10 @@ export class ModelsDevDialog {
             this.filteredProviders = [...this.providers];
             this.filterProviders();
 
-            loadingEl?.classList.add('hidden');
+            this.loadingEl.classList.add('hidden');
         } catch (error) {
             console.error('Failed to load providers:', error);
-            loadingEl?.classList.add('hidden');
+            this.loadingEl.classList.add('hidden');
             this.showError('Failed to load providers. Please try again.');
         }
     }
@@ -281,13 +306,10 @@ export class ModelsDevDialog {
      * Render provider list
      */
     private renderProviders(): void {
-        const listEl = document.getElementById('provider-list');
-        const countEl = document.getElementById('provider-count');
+        if (!this.listEl || !this.countEl) return;
 
-        if (!listEl) return;
-
-        listEl.innerHTML = '';
-        countEl!.textContent = `${this.filteredProviders.length} providers`;
+        this.listEl.innerHTML = '';
+        this.countEl.textContent = `${this.filteredProviders.length} providers`;
 
         this.filteredProviders.forEach(provider => {
             const item = document.createElement('div');
@@ -315,7 +337,7 @@ export class ModelsDevDialog {
                 this.selectProvider(provider);
             });
 
-            listEl.appendChild(item);
+            this.listEl?.appendChild(item);
         });
     }
 
@@ -326,30 +348,26 @@ export class ModelsDevDialog {
         this.selectedProvider = provider;
         this.selectedModel = null;
 
-        // Update UI
-        document.querySelectorAll('.provider-item').forEach(item => {
-            item.classList.remove('selected');
+        // Update UI - optimize by finding index first, then updating in one pass
+        const providerItems = this.listEl?.querySelectorAll('.provider-item') || [];
+        const index = this.filteredProviders.findIndex(p => p.id === provider.id);
+
+        providerItems.forEach((item, i) => {
+            item.classList.toggle('selected', i === index);
         });
 
-        // Find and select the DOM element
-        const providerItems = document.querySelectorAll('.provider-item');
-        const index = this.filteredProviders.findIndex(p => p.id === provider.id);
-        if (index !== -1) {
-            providerItems[index]?.classList.add('selected');
+        // Show selected info (using cached references)
+        if (this.selectedInfoEl && this.selectedNameEl && this.selectedModelEl) {
+            this.selectedInfoEl.classList.remove('hidden');
+            this.selectedNameEl.textContent = provider.name;
+            this.selectedModelEl.textContent = `Env: ${getApiKeyEnvName(provider.id)}`;
         }
-
-        // Show selected info
-        const infoEl = document.getElementById('selected-provider-info');
-        const nameEl = document.getElementById('selected-provider-name');
-        const modelEl = document.getElementById('selected-model-name');
-
-        infoEl?.classList.remove('hidden');
-        nameEl!.textContent = provider.name;
-        modelEl!.textContent = `Env: ${getApiKeyEnvName(provider.id)}`;
 
         // Update API key placeholder
         const apiKeyInput = document.getElementById('api-key-input') as HTMLInputElement;
-        apiKeyInput.placeholder = `Enter ${getApiKeyEnvName(provider.id)}...`;
+        if (apiKeyInput) {
+            apiKeyInput.placeholder = `Enter ${getApiKeyEnvName(provider.id)}...`;
+        }
     }
 
     /**
@@ -404,14 +422,13 @@ export class ModelsDevDialog {
      * Show error message
      */
     private showError(message: string): void {
-        const errorEl = document.getElementById('dialog-error');
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
+        if (this.errorEl) {
+            this.errorEl.textContent = message;
+            this.errorEl.classList.remove('hidden');
 
             // Hide after 5 seconds
             setTimeout(() => {
-                errorEl.classList.add('hidden');
+                this.errorEl?.classList.add('hidden');
             }, 5000);
         }
     }
