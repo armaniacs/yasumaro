@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased] - to be released as version 5.0.0
 
+### Fixed
+- **`main.test.ts`のテスト失敗を修正** ([main.test.ts](src/popup/__tests__/main.test.ts))
+  - `errorUtils.js`モックを追加（`showError`, `isConnectionError`, `isDomainBlockedError`, `formatSuccessMessage`）
+  - `beforeEach`でのモック設定を適切に実装し、エラータイプに基づいたメッセージ表示を保証
+  - i18nメッセージキーを追加（`recording`, `saving`, `fetchingContent`, `localAiProcessing`等）
+  - DOMの`disabled`属性設定を修正
+  - 成功パスのテストでChrome APIモック（`chrome.runtime.sendMessage`）を適切に設定
+  - 全テストスイート（1498テスト）が合格することを確認
+
 ### Added
 - **手動保存後のAIタグ分類結果表示** ([popup.html](src/popup/popup.html), [main.ts](src/popup/main.ts))
   - 「今すぐ記録」で保存した直後、AIが分類したタグ（例: `#IT・プログラミング #ビジネス・経済`）をポップアップに表示
