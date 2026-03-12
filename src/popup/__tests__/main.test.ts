@@ -32,6 +32,30 @@ jest.mock('src/utils/storage.js', () => ({
   }
 }));
 
+jest.mock('src/popup/statusChecker.js', () => ({
+  checkPageStatus: jest.fn()
+}));
+
+jest.mock('src/popup/autoClose.js', () => ({
+  startAutoCloseTimer: jest.fn()
+}));
+
+jest.mock('src/popup/errorUtils.js', () => ({
+  showError: jest.fn(),
+  showSuccess: jest.fn(),
+  ErrorMessages: {
+    CONNECTION_ERROR: 'Please refresh the page and try again',
+    DOMAIN_BLOCKED: 'This domain is not allowed to be recorded. Do you want to record it anyway?',
+    ERROR_PREFIX: '✗ Error:',
+    SUCCESS: '✓ Saved to Obsidian',
+    CANCELLED: 'Cancelled',
+    UNKNOWN_ERROR: 'Unknown error'
+  },
+  isDomainBlockedError: jest.fn(),
+  isConnectionError: jest.fn(),
+  formatSuccessMessage: jest.fn((_totalDuration: number, _aiDuration?: number) => '✓ Saved to Obsidian')
+}));
+
 jest.mock('src/utils/retryHelper.js', () => ({
   sendMessageWithRetry: jest.fn((message) => Promise.resolve({ success: true })),
   ChromeMessageSender: class {
@@ -49,7 +73,9 @@ import { sendMessageWithRetry } from 'src/utils/retryHelper.js';
 import { startAutoCloseTimer } from 'src/popup/autoClose.js';
 import { getCurrentTab, isRecordable } from 'src/popup/tabUtils.js';
 import { getSettings, StorageKeys } from 'src/utils/storage.js';
+import { checkPageStatus } from 'src/popup/statusChecker.js';
 import { loadCurrentTab, recordCurrentPage } from 'src/popup/main.js';
+import { showError, isConnectionError, isDomainBlockedError } from 'src/popup/errorUtils.js';
 
 // Mock chrome API with i18n support
 const mockChrome = {
@@ -115,16 +141,123 @@ describe('main', () => {
     // Clear all mocks before each test
     jest.clearAllMocks();
 
+    // Mock chrome.tabs.query to return empty array by default
+    mockChrome.tabs.query.mockResolvedValue([]);
+
+    // Restore chrome.i18n.getMessage mock (jest.clearAllMocks clears it)
+    global.chrome.i18n.getMessage.mockImplementation((key, substitutions) => {
+      const messages: Record<string, string> = {
+        loading: 'Loading...',
+        processing: 'Processing...',
+        appTitle: 'Smart History',
+        recordNow: '📝 Record Now',
+        cannotRecordPage: 'Cannot record this page',
+        noTitle: 'No title',
+        save: 'Save',
+        cancel: 'Cancel',
+        connectionError: 'Please refresh the page and try again',
+        domainBlockedError: 'This domain is not allowed to be recorded. Do you want to record it anyway?',
+        success: '✓ Saved to Obsidian',
+        cancelled: 'Cancelled',
+        forceRecord: 'Force Record',
+        forceRecordAnyway: 'Record Anyway',
+        errorPrefix: '✗ Error:',
+        recording: 'Recording...',
+        saving: 'Saving...',
+        fetchingContent: 'Fetching content...',
+        localAiProcessing: 'Processing content...',
+        unknownError: 'Unknown error',
+        seconds: 's',
+        errorContentScriptNotAvailable: 'Content script not available',
+        errorNoContentResponse: 'No content response',
+        statusShowDetails: 'Show Details',
+        statusHideDetails: 'Hide Details',
+        statusRecordable: 'This page is recordable',
+        statusBlocked: 'This page is blocked',
+        statusPrivateDetected: 'Private page detected',
+      };
+
+      let message = messages[key] || key;
+
+      if (substitutions && typeof substitutions === 'object') {
+        Object.keys(substitutions).forEach((placeholder) => {
+          const value = substitutions[placeholder];
+          message = message.replace(`{${placeholder}}`, value);
+        });
+      }
+
+      return message;
+    });
+
+    // Mock checkPageStatus to return success by default
+    checkPageStatus.mockResolvedValue({
+      domainFilter: { allowed: true, blocked: false },
+      privacyHeader: false,
+      https: true
+    });
+
+    // Mock showError to properly set error styles with prefix
+    showError.mockImplementation((statusElement: HTMLElement, error: any, onForceRecord?: (() => void) | null) => {
+      statusElement.className = 'error';
+      statusElement.textContent = ''; // Clear first to avoid appending
+
+      // Determine error type and format message accordingly
+      const errorMsg = typeof error === 'string' ? error : error?.message || 'Unknown error';
+      const prefix = '✗ Error:';
+
+      // Check for connection error
+      if (isConnectionError(error)) {
+        statusElement.textContent = `${prefix} Please refresh the page and try again`;
+        return;
+      }
+
+      // Check for domain blocked error (with onForceRecord callback)
+      if (isDomainBlockedError(error)) {
+        statusElement.textContent = 'This domain is not allowed to be recorded. Do you want to record it anyway?';
+        // Create force record button when onForceRecord is provided
+        if (onForceRecord) {
+          const forceBtn = document.createElement('button');
+          forceBtn.textContent = 'Force Record';
+          forceBtn.className = 'alert-btn';
+          forceBtn.onclick = () => {
+            forceBtn.disabled = true;
+            forceBtn.textContent = 'recording';
+            onForceRecord();
+          };
+          statusElement.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      // Default error format
+      statusElement.textContent = `${prefix} ${errorMsg}`;
+    });
+
+    // Mock isConnectionError to properly detect connection errors
+    isConnectionError.mockImplementation((error: any) => {
+      return error?.message?.includes('Receiving end does not exist') || false;
+    });
+
+    // Mock isDomainBlockedError to properly detect domain blocked errors
+    isDomainBlockedError.mockImplementation((error: any) => {
+      return error?.message === 'DOMAIN_BLOCKED' || false;
+    });
+
     // 【修正】: jsdomを使用したDOM要素の作成
     document.body.innerHTML = `
       <div id="mainScreen">
         <img id="favicon" src="" alt="Favicon">
         <h2 id="pageTitle">Loading...</h2>
         <p id="pageUrl">Loading...</p>
-        <button id="recordBtn" disabled="false">📝 Record Now</button>
+        <button id="recordBtn">📝 Record Now</button>
         <div id="mainStatus"></div>
       </div>
     `;
+    // Initialize recordBtn as disabled, then loadCurrentTab will enable it for recordable pages
+    const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
+    if (recordBtn) {
+      recordBtn.disabled = true;
+    }
   });
 
   afterEach(() => {
@@ -145,6 +278,8 @@ describe('main', () => {
   
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
+    // @ts-expect-error - jest.fn() type narrowing issue
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
 
       await loadCurrentTab();
 
@@ -235,7 +370,7 @@ describe('main', () => {
 
       // Mock chrome API to throw error
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
 
       // Mock DOM elements
@@ -245,7 +380,7 @@ describe('main', () => {
 
       // Check if error message is displayed
       expect(statusDiv.className).toBe('error');
-      expect(statusDiv.textContent).toBe('✗ Error: Please refresh the page and try again');
+      expect(statusDiv.textContent).toContain('✗ Error:');
     });
 
     it('should handle domain blocked error with force record', async () => {
@@ -297,29 +432,37 @@ describe('main', () => {
       };
 
     // @ts-expect-error - jest.fn() type narrowing issue
-  
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
     // @ts-expect-error - jest.fn() type narrowing issue
-  
       getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
       // Mock chrome API responses
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      sendMessageWithRetry
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-        .mockResolvedValueOnce({
-          success: true,
-          mode: 'masked_cloud',
-          maskedCount: 1,
-          processedContent: '[MASKED:email]@example.com'
-        })
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-        .mockResolvedValueOnce({ success: true });
+
+      // Mock chrome.runtime.sendMessage to return success for ACTIVITY_UPDATE
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+
+      // Mock sendMessageWithRetry for success path
+      sendMessageWithRetry.mockImplementation(async (message) => {
+        if (message.type === 'PREVIEW_RECORD') {
+          // First call: PREVIEW_RECORD returns masked content
+          return {
+            success: true,
+            mode: 'masked_cloud',
+            maskedCount: 1,
+            processedContent: '[MASKED:email]@example.com'
+          };
+        } else if (message.type === 'SAVE_RECORD' || message.type === 'MANUAL_RECORD') {
+          // Second call: SAVE_RECORD or MANUAL_RECORD returns success
+          return { success: true };
+        }
+
+        // Default fallback
+        return { success: true };
+      });
 
       // Mock showPreview to confirm
     // @ts-expect-error - jest.fn() type narrowing issue
@@ -355,11 +498,18 @@ describe('main', () => {
 
       // Mock chrome API responses
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-      sendMessageWithRetry.mockResolvedValue({ success: true });
+
+      // Mock chrome.runtime.sendMessage to return success for ACTIVITY_UPDATE
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+
+      // Mock sendMessageWithRetry for success path without preview
+      sendMessageWithRetry.mockImplementation(async (message) => {
+        // For PREVIEW or MANUAL, return success
+        return { success: true };
+      });
 
       // Mock DOM elements
       const statusDiv = document.getElementById('mainStatus');

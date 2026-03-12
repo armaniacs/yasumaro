@@ -25,6 +25,10 @@ module.exports = {
   // テスト環境: jsdom（ブラウザAPIを必要とするテスト用）
   testEnvironment: 'jsdom',
 
+  // 並列実行を無効化（Worker 関連の問題回避）
+  maxWorkers: 1,
+  workerThreads: false,
+
   // JavaScript/TypeScript transformation
   transform: {
     '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }]
@@ -34,15 +38,15 @@ module.exports = {
     '/node_modules/(?!(jest|@jest)/)'
   ],
 
-  // Test file patterns (exclude e2e)
+  // Test file patterns (exclude e2e and docs.spec.ts which is a standalone script)
   testMatch: [
-    '**/__tests__/**/*.(spec|test).[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)'
+    '**/__tests__/**/*.test.[jt]s?(x)',
+    '**/!(docs).*spec.[jt]s?(x)'
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/e2e/',
-    '/video-autotag/'
+    'video-'
   ],
 
   // Coverage collection

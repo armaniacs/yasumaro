@@ -74,7 +74,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【Greenフェーズ】署名なしファイルは即時アラートで拒否
         expect(global.alert).toHaveBeenCalledWith(
-            expect.stringContaining('署名が含まれていません')
+            expect.stringContaining('does not contain a signature')
         ); // 【確認内容】: アラート（エラー）が表示されたことを確認 🟢
 
         // confirmダイアログが呼ばれていないことを確認（警告ダイアログなしで即時拒否）
@@ -191,9 +191,9 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【結果検証】改ざんされた署名でインポート拒否
         expect(result).toBeNull(); // 【確認内容】: インポートが拒否されたこと 🟢
-        expect(global.alert).toHaveBeenCalledWith(
-            expect.stringContaining('署名検証に失敗')
-        ); // 【確認内容】: 改ざん警告が表示されたこと 🟢
+        expect(global.confirm).toHaveBeenCalledWith(
+            expect.stringContaining('signature verification failed')
+        ); // 【確認内容】: force import 確認が表示されたこと 🟢
     });
 
     /**
@@ -249,9 +249,9 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【結果検証】データ改ざんでインポート拒否
         expect(result).toBeNull(); // 【確認内容】: インポートが拒否されたこと 🟢
-        expect(global.alert).toHaveBeenCalledWith(
-            expect.stringContaining('署名検証に失敗')
-        ); // 【確認内容】: 改ざん警告が表示されたこと 🟢
+        expect(global.confirm).toHaveBeenCalledWith(
+            expect.stringContaining('signature verification failed')
+        ); // 【確認内容】: force import 確認が表示されたこと 🟢
     });
 
     /**

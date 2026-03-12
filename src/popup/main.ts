@@ -413,6 +413,9 @@ export async function loadCurrentTab(): Promise<void> {
     if (!isRecordable(tab)) {
       recordBtn.disabled = true;
       recordBtn.textContent = getMessage('cannotRecordPage');
+    } else {
+      recordBtn.disabled = false;
+      recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
     }
     // 記録可能な場合はinitStatusPanel内のrenderStatusPanelでボタンを設定する
   }

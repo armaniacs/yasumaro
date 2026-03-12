@@ -383,6 +383,8 @@ const chromeRuntimeMock: ChromeRuntimeMock = {
         errorContentEmpty: 'コンテンツが空です。',
         importPreviewNote: 'Note: Full settings will be applied. API keys and lists are included in the file.',
         importNoSignatureWarning: '⚠️ This settings file contains no signature.\n\nSignatures are used to prevent settings file tampering.\n\nIt is recommended not to import files from untrusted sources.\n\nDo you want to continue importing?',
+        importNoSignature: 'Settings file does not contain a signature. Only signed files can be imported.',
+        hmacVerificationFailedConfirm: 'Settings file signature verification failed.\n\nReason: HMAC secret may have changed (extension update/reload, etc.).\n\nIf this is a trusted settings file, click "OK" to force import.\nIf not, click "Cancel".',
       };
 
       let message = messages[key] || key;

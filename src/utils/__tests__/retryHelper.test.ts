@@ -31,8 +31,8 @@ describe('ChromeMessageSender', () => {
     describe('constructor', () => {
         it('デフォルトオプションでインスタンスを作成できる', () => {
             expect(sender.options).toEqual({
-                maxRetries: 3,
-                initialDelay: 100,
+                maxRetries: 5,
+                initialDelay: 300,
                 backoffMultiplier: 2,
                 maxDelay: 10000
             });
@@ -52,7 +52,7 @@ describe('ChromeMessageSender', () => {
                 maxRetries: 10
             });
             expect(customSender.options.maxRetries).toBe(10);
-            expect(customSender.options.initialDelay).toBe(100); // デフォルト値が維持
+            expect(customSender.options.initialDelay).toBe(300); // デフォルト値が維持
         });
     });
 
@@ -117,7 +117,7 @@ describe('ChromeMessageSender', () => {
 
         it('最大リトライ回数を超えるとエラーをスローする', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                 callback();
@@ -130,8 +130,8 @@ describe('ChromeMessageSender', () => {
                 )
             ).rejects.toThrow('Could not establish connection');
 
-            // 1回目 + 3回リトライ = 4回
-            expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(4);
+            // 初期 + 5回リトライ = 6回
+            expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(6);
         });
 
         it('非リトライ可能なエラーで即座に失敗する', async () => {
@@ -187,13 +187,13 @@ describe('ChromeMessageSender', () => {
                 )
             ).rejects.toThrow('No response received');
 
-            // 初期 + 3回リトライ = 4回
-            expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(4);
+            // 初期 + 5回リトライ = 6回
+            expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(6);
         });
 
         it('カスタムリトライオプションを上書きできる', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 global.chrome.runtime.lastError = { message: 'Could not establish connection' };
                 callback();
@@ -202,10 +202,8 @@ describe('ChromeMessageSender', () => {
             // maxRetries: 1 で total callCount が 2 になる（初期 + 1回リトライ）
             const promise = sender.sendMessageWithRetry(
                 { type: 'TEST', payload: {} } as MessagePayload<unknown>,
-                { maxRetries: 1 }
+                { maxRetries: 1, initialDelay: 0 }
             );
-
-            await jest.runAllTimersAsync();
 
             await expect(promise).rejects.toThrow();
 
