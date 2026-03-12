@@ -191,7 +191,11 @@ async function handleTestObsidian(): Promise<void> {
   try {
     const testResult = await chrome.runtime.sendMessage({
       type: 'TEST_OBSIDIAN',
-      payload: {}
+      payload: {
+        protocol: protocolInput?.value?.trim(),
+        port: portInput?.value?.trim(),
+        apiKey: apiKeyInput?.value?.trim(),
+      }
     }) as { obsidian?: { success: boolean; message: string } };
 
     const obsidianResult = testResult?.obsidian || { success: false, message: 'No response' };

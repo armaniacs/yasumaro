@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Obsidian Weave",
+  "name": "__MSG_extensionName__",
+  "short_name": "__MSG_extensionShortName__",
   "version": "4.2.1",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {
@@ -109,7 +110,11 @@
         "utils/privacyStatusCodes.js",
         "utils/contentExtractor.js",
         "icons/icon48.png",
-        "data/models-dev-openai-compatible.json"
+        "data/models-dev-openai-compatible.json",
+        "PRIVACY.md",
+        "privacy/privacy.html",
+        "privacy/privacy.js",
+        "privacy/privacy.css"
       ],
       "matches": [
         "<all_urls>"

@@ -236,8 +236,14 @@ export function isUrlAllowed(url: string, allowedUrls: Set<string> | null): bool
     return true;
   }
 
-  // URLの正規化
-  const normalizedUrl = normalizeUrl(url);
+  // URLの正規化（無効なURLの場合はfalseを返す）
+  let normalizedUrl: string;
+  try {
+    normalizedUrl = normalizeUrl(url);
+  } catch {
+    // 無効なURLは許可しない
+    return false;
+  }
 
   // 完全一致チェック
   if (allowedUrls.has(normalizedUrl)) {

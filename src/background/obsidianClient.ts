@@ -249,9 +249,22 @@ export class ObsidianClient {
         return globalWriteMutex;
     }
 
-    async testConnection(): Promise<ObsidianConnectionResult> {
+    async testConnection(override?: { protocol?: string; port?: string | number; apiKey?: string }): Promise<ObsidianConnectionResult> {
         try {
-            const { baseUrl, headers } = await this._getConfig();
+            let baseUrl: string;
+            let headers: HeadersInit;
+            if (override) {
+                const protocol = override.protocol || 'http';
+                const port = this._validatePort(override.port);
+                const apiKey = override.apiKey;
+                if (!apiKey) {
+                    return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
+                }
+                baseUrl = `${protocol}://127.0.0.1:${port}`;
+                headers = { ...BASE_HEADERS, 'Authorization': `Bearer ${apiKey}` };
+            } else {
+                ({ baseUrl, headers } = await this._getConfig());
+            }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 
             const response = await _fetchWithTimeout(`${baseUrl}/`, {

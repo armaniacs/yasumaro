@@ -449,6 +449,9 @@
     "success": {
         "message": "✓ Saved to Obsidian"
     },
+    "aiTagsLabel": {
+        "message": "AI tags"
+    },
     "cancelled": {
         "message": "Cancelled"
     },

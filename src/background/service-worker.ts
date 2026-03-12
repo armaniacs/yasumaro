@@ -222,7 +222,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Obsidian のみ接続テスト
             if (message.type === 'TEST_OBSIDIAN') {
-                const obsidianResult = await obsidian.testConnection();
+                const obsidianResult = await obsidian.testConnection(message.payload || undefined);
                 sendResponse({ success: true, obsidian: obsidianResult });
                 return;
             }

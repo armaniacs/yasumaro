@@ -97,12 +97,16 @@ function renderPromptList(): void {
     noPromptsMessage.style.display = 'none';
 
     // Build HTML: presets first (excluding default which is always shown), default, then custom prompts
+    const activePromptId = prompts.find(p => p.isActive)?.id;
     const presetItemsHtml = PRESET_PROMPTS
         .filter(p => p.id !== 'default')
-        .map(preset => createPresetPromptItem(preset, locale))
+        .map(preset => createPresetPromptItem(preset, locale, activePromptId))
         .join('');
     const defaultItemHtml = createDefaultPromptItem();
-    const customItemsHtml = prompts.map(prompt => createPromptListItem(prompt)).join('');
+    // Filter out preset-backed entries from custom list (shown in preset section)
+    const customItemsHtml = prompts
+        .filter(p => !p.id.startsWith(PROMPT_ID.PRESET_PREFIX))
+        .map(prompt => createPromptListItem(prompt)).join('');
     promptList.innerHTML = presetItemsHtml + defaultItemHtml + customItemsHtml;
 
     // Attach event listeners for preset prompts
@@ -159,20 +163,25 @@ function renderPromptList(): void {
  */
 function createPresetPromptItem(
     preset: import('../utils/customPromptUtils.js').PresetPrompt,
-    locale: string
+    locale: string,
+    activePromptId?: string
 ): string {
-    // Presets are reference items only; they are never "active" in the storage sense
     const displayName = getPromptDisplayName(preset, locale);
     const presetId = `${PROMPT_ID.PRESET_PREFIX}${preset.id}`;
+    const isActive = activePromptId === presetId;
+    const activeBadge = isActive
+        ? `<span class="badge badge-active" data-i18n="activePrompt">有効</span>`
+        : '';
 
     return `
-        <div class="prompt-item" data-prompt-id="${presetId}">
+        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${presetId}">
             <div class="prompt-item-header">
                 <span class="prompt-name">${escapeHtml(displayName)}</span>
                 <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+                ${activeBadge}
             </div>
             <div class="prompt-item-actions">
-                <button id="activate-prompt-${presetId}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>
+                ${!isActive ? `<button id="activate-prompt-${presetId}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
                 <button id="duplicate-prompt-${presetId}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
             </div>
         </div>
@@ -393,6 +402,37 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
             isActive: false,
             updatedAt: Date.now()
         }));
+
+        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+    } else if (promptId.startsWith(PROMPT_ID.PRESET_PREFIX)) {
+        // Activate preset: upsert it into CUSTOM_PROMPTS with isActive=true
+        const presetRawId = promptId.slice(PROMPT_ID.PRESET_PREFIX.length);
+        const preset = getPresetPrompt(presetRawId);
+        if (!preset) return;
+
+        // Deactivate all existing prompts
+        prompts = prompts.map(p => ({ ...p, isActive: false, updatedAt: Date.now() }));
+
+        // Upsert preset entry
+        const existing = prompts.findIndex(p => p.id === promptId);
+        const locale = getMessage('locale') || (navigator.language.startsWith('ja') ? 'ja' : 'en');
+        const name = getPromptDisplayName(preset, locale);
+        const now = Date.now();
+        if (existing >= 0) {
+            prompts[existing] = { ...prompts[existing], isActive: true, updatedAt: now };
+        } else {
+            const newEntry: CustomPrompt = {
+                id: promptId,
+                name,
+                provider: 'all',
+                systemPrompt: preset.systemPrompt || '',
+                prompt: preset.userPrompt,
+                isActive: true,
+                createdAt: now,
+                updatedAt: now
+            };
+            prompts = [...prompts, newEntry];
+        }
 
         showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
     } else {

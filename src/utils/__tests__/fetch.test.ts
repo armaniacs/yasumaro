@@ -124,6 +124,13 @@ describe('isUrlAllowed', () => {
     expect(isUrlAllowed('https://example.com/', allowedUrls)).toBe(true);
     expect(isUrlAllowed('HTTPS://example.com', allowedUrls)).toBe(true);
   });
+
+  test('無効なURLの場合はfalseを返す', () => {
+    const allowedUrls = new Set(['https://example.com']);
+    expect(isUrlAllowed('not-a-url', allowedUrls)).toBe(false);
+    expect(isUrlAllowed('javascript:alert(1)', allowedUrls)).toBe(false);
+    expect(isUrlAllowed('data:text/html,<script>alert(1)</script>', allowedUrls)).toBe(false);
+  });
 });
 
 // タスク #10: IPv4アドレス検証の脆弱性修正に関するテスト

@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased] - to be released
+## [unreleased] - to be released as version 5.0.0
+
+### Added
+- **手動保存後のAIタグ分類結果表示** ([popup.html](src/popup/popup.html), [main.ts](src/popup/main.ts))
+  - 「今すぐ記録」で保存した直後、AIが分類したタグ（例: `#IT・プログラミング #ビジネス・経済`）をポップアップに表示
+  - タグが1件以上ある場合のみ表示（タグなし・タグモード無効時はUIに変化なし）
+  - タグ表示中は自動クローズタイマーを通常の2倍（4秒）に延長
+  - バックエンド変更なし — 保存済みタグを `chrome.storage.local` から取得して表示
+  - `startAutoCloseTimerWithDelay(ms)` を `autoClose.ts` に追加してタイマー管理を一元化
 
 ## [4.2.1] - 2026-03-09
 

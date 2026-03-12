@@ -100,11 +100,13 @@ export class PrivacyPipeline {
     if (sanitizedSettings.useCloudAi) {
       const summary = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
 
-      // タグ付き要約モードの場合はタグを抽出
+      // タグを抽出（タグ付き要約モード、またはカスタムプロンプトが #タグ | 要約 形式を返した場合）
       let tags: string[] | undefined;
-      if (options.tagSummaryMode && summary) {
+      if (summary) {
         const parsed = parseTagsFromSummary(summary);
-        tags = parsed.tags;
+        if (parsed.tags.length > 0) {
+          tags = parsed.tags;
+        }
       }
 
       return { summary, maskedCount, tags };
