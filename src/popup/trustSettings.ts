@@ -9,6 +9,7 @@ import { getTrustDb } from '../utils/trustDb/trustDb.js';
 import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from './i18n.js';
+import { getTrustChecker } from '../utils/trustChecker.js';
 
 // ============================================================================
 // DOM Elements
@@ -323,18 +324,16 @@ function switchCategory(category: 'finance' | 'gaming' | 'sns'): void {
 // ============================================================================
 
 async function saveTrustSettings(): Promise<void> {
-  // Alert settings are stored in regular settings storage
-  const alertSettings = {
+  const checker = getTrustChecker();
+  await checker.saveAlertSettings({
     alertFinance: alertFinanceCheckbox?.checked ?? false,
     alertSensitive: alertSensitiveCheckbox?.checked ?? false,
     alertUnverified: alertUnverifiedCheckbox?.checked ?? false
-  };
+  });
 
   // Note: Trust Database changes are already saved immediately when modified
-  // Alert settings would need to be saved to chrome.storage.local with proper StorageKeys
-
   showStatus((getMessage('settingsSaved') || 'Settings saved'));
-  logInfo('TrustSettings', { alertSettings }, 'Trust settings saved');
+  logInfo('TrustSettings', { alertConfig: checker.getAlertConfig() }, 'Trust settings saved');
 }
 
 // ============================================================================
@@ -378,8 +377,20 @@ export async function loadTrustSettings(): Promise<void> {
   // Whitelist
   renderWhitelistList(db.getWhitelist());
 
-  // Alert Settings (would be loaded from settings storage)
-  // Implementation depends on how alert settings are stored
+  // Alert Settings をTrustCheckerから読み込む
+  const checker = getTrustChecker();
+  await checker.loadAlertSettings();
+  const alertConfig = checker.getAlertConfig();
+
+  if (alertFinanceCheckbox) {
+    alertFinanceCheckbox.checked = alertConfig.alertFinance;
+  }
+  if (alertSensitiveCheckbox) {
+    alertSensitiveCheckbox.checked = alertConfig.alertSensitive;
+  }
+  if (alertUnverifiedCheckbox) {
+    alertUnverifiedCheckbox.checked = alertConfig.alertUnverified;
+  }
 }
 
 // ============================================================================

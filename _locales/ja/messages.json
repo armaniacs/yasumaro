@@ -1651,5 +1651,23 @@
   },
   "statusCleansingTotal": {
     "message": "合計: $1件削除"
+  },
+  "statusTrust": {
+    "message": "Trust"
+  },
+  "statusTrustTrusted": {
+    "message": "🟢 TRUSTED"
+  },
+  "statusTrustSensitive": {
+    "message": "🟡 SENSITIVE"
+  },
+  "statusTrustUnverified": {
+    "message": "⚪ UNVERIFIED"
+  },
+  "statusTrustAlertFinance": {
+    "message": "金融サイト"
+  },
+  "statusTrustAlertSensitive": {
+    "message": "警戒リスト"
   }
 }

@@ -623,6 +623,11 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     // クレンジング情報をステータスパネルに反映
     updateCleansingStatus(contentResponse.cleanseStats, contentResponse.cleansedReason);
 
+    // Trustレベルを更新
+    if (tab.url) {
+      void updateTrustStatus(tab.url);
+    }
+
     // Background Workerに記録を要求
     let result;
 
@@ -874,6 +879,11 @@ async function initStatusPanel(): Promise<void> {
       });
     }
 
+    // Trustレベルを表示
+    if (currentTab.url) {
+      void updateTrustStatus(currentTab.url);
+    }
+
     // 展開/折りたたみイベントリスナー
     const toggleBtn = document.getElementById('statusToggleBtn');
     const detailsPanel = document.getElementById('statusDetails');
@@ -949,6 +959,37 @@ function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cl
     html += `<span class="status-value status-muted">${getMessage('statusCleansingTotal', [String(cleanseStats.totalRemoved)])}</span>`;
   }
   cleansingContent.innerHTML = html;
+}
+
+async function updateTrustStatus(url: string): Promise<void> {
+  const trustContent = document.getElementById('statusTrustContent');
+  if (!trustContent) return;
+
+  try {
+    const { getTrustLevelDisplay, checkDomainTrust } = await import('../utils/trustChecker.js');
+    const [display, checkResult] = await Promise.all([
+      getTrustLevelDisplay(url),
+      checkDomainTrust(url)
+    ]);
+
+    const levelKey = `statusTrust${display.level.charAt(0) + display.level.slice(1).toLowerCase()}` as
+      'statusTrustTrusted' | 'statusTrustSensitive' | 'statusTrustUnverified';
+    const levelText = getMessage(levelKey) || display.level;
+
+    let html = `<span class="status-value" style="color: ${display.color}">${levelText}</span>`;
+
+    // Alert表示（sensitiveカテゴリの場合）
+    if (checkResult.showAlert && checkResult.trustResult.category) {
+      const catKey = checkResult.trustResult.category === 'finance'
+        ? 'statusTrustAlertFinance'
+        : 'statusTrustAlertSensitive';
+      html += `<span class="status-value status-warning">${getMessage(catKey)}</span>`;
+    }
+
+    trustContent.innerHTML = html;
+  } catch {
+    trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+  }
 }
 
 function renderStatusPanel(status: StatusInfo): void {
@@ -1097,6 +1138,12 @@ function renderStatusPanel(status: StatusInfo): void {
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (cleansingContent) {
     cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+  }
+
+  // Trustセクション（初期表示は情報なし）
+  const trustContent = document.getElementById('statusTrustContent');
+  if (trustContent) {
+    trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
   }
 
   // ドメイン状態に応じてrecordBtnを設定

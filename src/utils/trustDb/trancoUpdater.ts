@@ -14,10 +14,12 @@ import { fetchWithTimeout } from '../fetch.js';
 
 // ===== 定数 =====
 
-const TRANC_URLS: Record<TrancoTier, string> = {
-  top1k: 'https://tranco-list.eu/list/W300/1000000',
-  top10k: 'https://tranco-list.eu/list/W300/1000000',
-  top100k: 'https://tranco-list.eu/list/W300/1000000'
+// Tranco API: fetch latest list ID first, then download CSV
+const TRANC_API_LATEST = 'https://tranco-list.eu/api/lists/date/latest';
+const TRANC_TIER_COUNT: Record<TrancoTier, number> = {
+  top1k: 1000,
+  top10k: 10000,
+  top100k: 100000
 };
 
 const TRANC_FETCH_TIMEOUT = 60000; // 60秒
@@ -67,6 +69,7 @@ export class TrancoUpdater {
 
       // 2. データベースを更新
       const db = getTrustDb();
+      await db.initialize();
       await db.updateTranco(domains, tier);
 
       const duration = performance.now() - startTime;
@@ -93,17 +96,29 @@ export class TrancoUpdater {
   }
 
   /**
-   * Tranco API からデータを取得
+   * Tranco API からデータを取得（最新リストID取得 → CSV ダウンロード）
    */
   private async fetchTrancoList(tier: TrancoTier): Promise<string[]> {
-    const url = TRANC_URLS[tier];
+    // Step 1: 最新リストIDを取得
+    logInfo('TrancoUpdater', {}, `Fetching latest Tranco list ID`);
+    const metaResponse = await fetchWithTimeout(TRANC_API_LATEST, { method: 'GET' }, TRANC_FETCH_TIMEOUT);
+    if (!metaResponse.ok) {
+      throw new Error(`Tranco API returned status ${metaResponse.status}: ${metaResponse.statusText}`);
+    }
+    const meta = await metaResponse.json() as { list_id?: string; id?: string };
+    const listId = meta.list_id ?? meta.id;
+    if (!listId) {
+      throw new Error('Tranco API response missing list_id');
+    }
 
-    logInfo('TrancoUpdater', { url }, `Fetching from: ${url}`);
+    // Step 2: CSV をダウンロード
+    const count = TRANC_TIER_COUNT[tier];
+    const url = `https://tranco-list.eu/download/${listId}/${count}`;
+    logInfo('TrancoUpdater', { url }, `Fetching CSV from: ${url}`);
 
     const response = await fetchWithTimeout(url, { method: 'GET' }, TRANC_FETCH_TIMEOUT);
-
     if (!response.ok) {
-      throw new Error(`Tranco API returned status ${response.status}: ${response.statusText}`);
+      throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
 
     const text = await response.text();

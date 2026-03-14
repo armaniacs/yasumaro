@@ -1651,5 +1651,23 @@
   },
   "statusCleansingTotal": {
     "message": "Total: $1 removed"
+  },
+  "statusTrust": {
+    "message": "Trust"
+  },
+  "statusTrustTrusted": {
+    "message": "🟢 TRUSTED"
+  },
+  "statusTrustSensitive": {
+    "message": "🟡 SENSITIVE"
+  },
+  "statusTrustUnverified": {
+    "message": "⚪ UNVERIFIED"
+  },
+  "statusTrustAlertFinance": {
+    "message": "Finance site"
+  },
+  "statusTrustAlertSensitive": {
+    "message": "Sensitive site"
   }
 }

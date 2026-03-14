@@ -31,7 +31,8 @@ module.exports = {
 
   // JavaScript/TypeScript transformation
   transform: {
-    '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }]
+    '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }],
+    '^.+\\.mjs$': ['babel-jest', { configFile: './babel.config.cjs' }]
   },
 
   transformIgnorePatterns: [
@@ -70,7 +71,7 @@ module.exports = {
   setupFilesAfterEnv: ['./jest.setup.ts'],
 
   // File extensions - Jestが解決すべき拡張子のリスト（順序が重要）
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'mjs', 'jsx', 'json', 'node'],
 
   // タイムアウト設定 (15秒)
   testTimeout: 15000,

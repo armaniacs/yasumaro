@@ -203,7 +203,15 @@ class TrustDb {
       };
     }
 
-    const normalizedDomain = domain.toLowerCase().trim();
+    // URL が渡された場合はホスト名を抽出する
+    let normalizedDomain = domain.toLowerCase().trim();
+    if (normalizedDomain.startsWith('http://') || normalizedDomain.startsWith('https://')) {
+      try {
+        normalizedDomain = new URL(normalizedDomain).hostname;
+      } catch {
+        // パース失敗はそのまま使用
+      }
+    }
 
     // Step 1: JP-Anchor TLD 判定
     const anchorResult = this.checkJpAnchor(normalizedDomain);
@@ -327,23 +335,32 @@ class TrustDb {
       return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Tranco list is empty' };
     }
 
-    // Bloom Filter でチェック
-    if (!this.state.bloomFilter!.mightContain(domain)) {
-      return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not in Tranco list' };
+    // サブドメインを除いた候補リストを生成 (例: edition.cnn.com → [edition.cnn.com, cnn.com])
+    const candidates: string[] = [domain];
+    const parts = domain.split('.');
+    for (let i = 1; i < parts.length - 1; i++) {
+      candidates.push(parts.slice(i).join('.'));
     }
 
-    // 精密照合（インデックス取得）
-    const index = db.tranco.domains.indexOf(domain);
-    if (index !== -1) {
-      return {
-        level: DomainTrustLevel.TRUSTED,
-        source: 'tranco',
-        reason: `Domain is in Tranco top ${db.tranco.tier} at rank ${index + 1}`,
-        category: 'tranco'
-      };
+    for (const candidate of candidates) {
+      // Bloom Filter でチェック
+      if (!this.state.bloomFilter!.mightContain(candidate)) {
+        continue;
+      }
+
+      // 精密照合
+      const index = db.tranco.domains.indexOf(candidate);
+      if (index !== -1) {
+        return {
+          level: DomainTrustLevel.TRUSTED,
+          source: 'tranco',
+          reason: `Domain is in Tranco top ${db.tranco.tier} at rank ${index + 1}`,
+          category: 'tranco'
+        };
+      }
     }
 
-    return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Bloom filter false positive (Tranco)' };
+    return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not in Tranco list' };
   }
 
   /**

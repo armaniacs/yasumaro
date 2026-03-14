@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [unreleased] - to be released as version 5.0.0
 
 ### Added
+- **Trust Checkerモジュールを実装** ([trustChecker.ts](src/utils/trustChecker.ts), [trustChecker.test.ts](src/utils/__tests__/trustChecker.test.ts))
+  - Alert Settingsによる警告制御（金融サイト、警戒リスト、未検証サイトの各個別トグル）
+  - ドメインTrustチェック結果判定（canProceed, trustResult, showAlert, reason）
+  - Trustレベル表示用メソッド（TRUSTED/SENSITIVE/UNVERIFIED に対応したカラーマッピング）
+  - Safety ModeとTranco Tierの連動設定（strict→top1k, balanced→top10k, relaxed→top100k）
+  - 警告で中断したページの履歴保存設定（saveAbortedPagesトグル）
+  - chrome.storage.localからのAlert Settings読み込み・保存機能
+- **Alert Settings用StorageKeysを追加** ([storage.ts](src/utils/storage.ts))
+  - `alert_finance`: 金融サイト警告（デフォルト: true）
+  - `alert_sensitive`: 警戒リスト警告（デフォルト: true）
+  - `alert_unverified`: 未検証サイト警告（デフォルト: false）
+  - `save_aborted_pages`: 警告で中断したページを履歴に残す（デフォルト: false）
+  - `safety_mode`: Safety Mode（strict/balanced/relaxed, デフォルト: balanced）
+  - `tranc_tier`: Tranco Tier（top1k/top10k/top100k, デフォルト: top10k）
 - **ドメイン信頼度判定システム（Trust Database）を実装** ([trustDb.ts](src/utils/trustDb/trustDb.ts), [bloomFilter.ts](src/utils/trustDb/bloomFilter.ts), [trancoUpdater.ts](src/utils/trustDb/trancoUpdater.ts))
   - 3-Step Verification（JP-Anchor TLD → Sensitive List → Tranco Ranking）によるドメイン信頼度判定
   - Bloom Filterによる高速ドメイン照合（偽陽性率~1%）

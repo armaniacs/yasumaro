@@ -4,7 +4,8 @@
  * Uses the bloomfilter npm package
  */
 
-import { BloomFilter } from 'bloomfilter';
+// @ts-ignore — vendor JS file bundled from bloomfilter npm package
+import { BloomFilter } from './bloomfilter.mjs';
 import type { BloomFilterData } from './trustDbSchema.js';
 
 /**

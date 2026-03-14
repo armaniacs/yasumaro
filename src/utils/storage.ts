@@ -107,7 +107,15 @@ export const StorageKeys = {
     // Privacy consent (GDPR/CCPA compliance)
     PRIVACY_CONSENT: 'privacy_consent', // プライバシーポリシーへの同意状態
     // Privacy（v4.2.1） - 自動コンテンツフェッチ設定（明示的 consent を要求）
-    AUTO_CONTENT_FETCH_ENABLED: 'auto_content_fetch_enabled' // バックグラウンドタブからのコンテンツフェッチを有効化するか（デフォルト: false）
+    AUTO_CONTENT_FETCH_ENABLED: 'auto_content_fetch_enabled', // バックグラウンドタブからのコンテンツフェッチを有効化するか（デフォルト: false）
+    // Trust & Alert Settings (Phase 2)
+    ALERT_FINANCE: 'alert_finance', // 金融サイト警告（デフォルト: true）
+    ALERT_SENSITIVE: 'alert_sensitive', // 警戒リスト警告（デフォルト: true）
+    ALERT_UNVERIFIED: 'alert_unverified', // 未検証サイト警告（デフォルト: false）
+    SAVE_ABORTED_PAGES: 'save_aborted_pages', // 警告で中断したページを履歴に残す（デフォルト: false）
+    // Trust Database Settings (Phase 1)
+    SAFETY_MODE: 'safety_mode', // Safety Mode (strict/balanced/relaxed, デフォルト: balanced)
+    TRANC_TIER: 'tranc_tier' // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -170,6 +178,14 @@ export interface StorageKeyValues {
     [StorageKeys.PRIVACY_CONSENT]: { hasConsented: boolean; consentDate?: string; consentVersion?: string } | boolean;
     // 自動コンテンツフェッチ設定（v4.2.1）
     [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: boolean;
+    // Trust & Alert Settings (Phase 2)
+    [StorageKeys.ALERT_FINANCE]: boolean;
+    [StorageKeys.ALERT_SENSITIVE]: boolean;
+    [StorageKeys.ALERT_UNVERIFIED]: boolean;
+    [StorageKeys.SAVE_ABORTED_PAGES]: boolean;
+    // Trust Database Settings (Phase 1/2)
+    [StorageKeys.SAFETY_MODE]: 'strict' | 'balanced' | 'relaxed';
+    [StorageKeys.TRANC_TIER]: 'top1k' | 'top10k' | 'top100k';
 }
 
 // 厳格な Settings 型
@@ -695,7 +711,15 @@ const DEFAULT_SETTINGS: Settings = {
     // Privacy consent default
     [StorageKeys.PRIVACY_CONSENT]: false,    // プライバシーポリシー同意状態（デフォルト: 未同意）
     // Auto content fetch default (v4.2.1) - 明示的同意を要求するためデフォルトで無効
-    [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: false
+    [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: false,
+    // Trust & Alert Settings (Phase 2)
+    [StorageKeys.ALERT_FINANCE]: true,      // 金融サイト警告（デフォルト: ON）
+    [StorageKeys.ALERT_SENSITIVE]: true,     // 警戒リスト警告（デフォルト: ON）
+    [StorageKeys.ALERT_UNVERIFIED]: false,   // 未検証サイト警告（デフォルト: OFF）
+    [StorageKeys.SAVE_ABORTED_PAGES]: false, // 警告で中断したページを履歴に残す（デフォルト: OFF）
+    // Trust Database Settings (Phase 1/2)
+    [StorageKeys.SAFETY_MODE]: 'balanced', // Safety Mode（デフォルト: balanced）
+    [StorageKeys.TRANC_TIER]: 'top10k'      // Tranco Tier（デフォルト: top10k）
 };
 
 /**

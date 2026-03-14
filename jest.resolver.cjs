@@ -39,6 +39,15 @@ module.exports = function resolver(modulePath, options) {
       }
     }
 
+    // .mjs ファイルの解決（vendor JS ファイル用）
+    if (modulePath.endsWith('.mjs')) {
+      try {
+        return defaultResolver(modulePath, rest);
+      } catch (mjsError) {
+        // .mjs も失敗した場合はエラーをスロー
+      }
+    }
+
     // 元のエラーをスロー
     throw e;
   }
