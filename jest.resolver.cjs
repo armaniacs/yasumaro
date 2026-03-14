@@ -14,7 +14,7 @@ const fs = require('fs');
  */
 module.exports = function resolver(modulePath, options) {
   const { defaultResolver, ...rest } = options;
-  
+
   // まずデフォルトのリゾルバーで解決を試みる
   try {
     const resolved = defaultResolver(modulePath, rest);
@@ -24,7 +24,7 @@ module.exports = function resolver(modulePath, options) {
     if (modulePath.endsWith('.js')) {
       // .js を .ts に変換
       const tsPath = modulePath.replace(/\.js$/, '.ts');
-      
+
       try {
         // .ts ファイルとして解決を試みる
         return defaultResolver(tsPath, rest);
@@ -38,7 +38,7 @@ module.exports = function resolver(modulePath, options) {
         }
       }
     }
-    
+
     // 元のエラーをスロー
     throw e;
   }

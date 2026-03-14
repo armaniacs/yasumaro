@@ -35,7 +35,7 @@ module.exports = {
   },
 
   transformIgnorePatterns: [
-    '/node_modules/(?!(jest|@jest)/)'
+    '/node_modules/(?!(bloomfilter|jest|@jest)/)'
   ],
 
   // Test file patterns (exclude e2e and docs.spec.ts which is a standalone script)
