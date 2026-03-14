@@ -4,16 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased] - to be released as version 5.0.0
 
-### Fixed
-- **`main.test.ts`のテスト失敗を修正** ([main.test.ts](src/popup/__tests__/main.test.ts))
-  - `errorUtils.js`モックを追加（`showError`, `isConnectionError`, `isDomainBlockedError`, `formatSuccessMessage`）
-  - `beforeEach`でのモック設定を適切に実装し、エラータイプに基づいたメッセージ表示を保証
-  - i18nメッセージキーを追加（`recording`, `saving`, `fetchingContent`, `localAiProcessing`等）
-  - DOMの`disabled`属性設定を修正
-  - 成功パスのテストでChrome APIモック（`chrome.runtime.sendMessage`）を適切に設定
-  - 全テストスイート（1498テスト）が合格することを確認
-
 ### Added
+- **ドメイン信頼度判定システム（Trust Database）を実装** ([trustDb.ts](src/utils/trustDb/trustDb.ts), [bloomFilter.ts](src/utils/trustDb/bloomFilter.ts), [trancoUpdater.ts](src/utils/trustDb/trancoUpdater.ts))
+  - 3-Step Verification（JP-Anchor TLD → Sensitive List → Tranco Ranking）によるドメイン信頼度判定
+  - Bloom Filterによる高速ドメイン照合（偽陽性率~1%）
+  - Tranco List APIを使用した信頼済みドメインリストの更新機能
+  - JP-Anchorプリセット（.go.jp, .ac.jp, .lg.jp）とユーザー追加可能なTLD管理
+  - Sensitiveプリセット（金融20、ゲーム10、SNS7ドメイン）とユーザー追加可能なブラックリスト
+  - ホワイトリストによる除外機能
+  - Safety Mode（strict/balanced/relaxed）とTranco Tier（top1k/top10k/top100k）の連動
+- **Dashboard TrustパネルUIを実装** ([trustSettings.ts](src/popup/trustSettings.ts), [dashboard.html](src/dashboard/dashboard.html), [dashboard.css](src/dashboard/dashboard.css))
+  - Trust設定パネルの追加
+  - Safety ModeとTranco Tierの連動UI
+  - JP-Anchor TLD追加・削除機能
+  - Sensitiveドメイン管理（金融/ゲーム/SNSカテゴリ）
+  - ホワイトリスト管理機能
+  - Tranco List手動更新ボタンとステータス表示
+- **i18n対応** (_locales/ja/en/messages.json)
+  - Trustパネル関連メッセージの日本語・英語対応（40+キー）
 - **Content Cleansingフィルタと記録履歴へのコンテンツ保存を追加** ([dashboard.ts](src/dashboard/dashboard.ts), [storageUrls.ts](src/utils/storageUrls.ts))
   - 記録履歴に「🧹 クレンジング」フィルタを追加。Hard Strip / Keyword Strip / Both を実行したページだけを絞り込める
   - `SavedUrlEntry` に `content`（抽出コンテンツ）と `cleansedReason`（`hard` / `keyword` / `both`）フィールドを追加
@@ -34,6 +42,15 @@ All notable changes to this project will be documented in this file.
   - タグ表示中は自動クローズタイマーを通常の2倍（4秒）に延長
   - バックエンド変更なし — 保存済みタグを `chrome.storage.local` から取得して表示
   - `startAutoCloseTimerWithDelay(ms)` を `autoClose.ts` に追加してタイマー管理を一元化
+
+### Fixed
+- **`main.test.ts`のテスト失敗を修正** ([main.test.ts](src/popup/__tests__/main.test.ts))
+  - `errorUtils.js`モックを追加（`showError`, `isConnectionError`, `isDomainBlockedError`, `formatSuccessMessage`）
+  - `beforeEach`でのモック設定を適切に実装し、エラータイプに基づいたメッセージ表示を保証
+  - i18nメッセージキーを追加（`recording`, `saving`, `fetchingContent`, `localAiProcessing`等）
+  - DOMの`disabled`属性設定を修正
+  - 成功パスのテストでChrome APIモック（`chrome.runtime.sendMessage`）を適切に設定
+  - 全テストスイート（1498テスト）が合格することを確認
 
 ### Changed
 - **Content Cleansingの改善** ([contentCleaner.ts](src/utils/contentCleaner.ts), [main.ts](src/popup/main.ts), [sanitizePreview.ts](src/popup/sanitizePreview.ts))
