@@ -49,6 +49,12 @@
           </svg>
           <span data-i18n="privacyTab">Privacy</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-content">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span data-i18n="contentTab">Content</span>
+        </button>
         <button class="sidebar-nav-btn" data-panel="panel-tags">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
@@ -427,6 +433,45 @@
         </div>
 
         <div id="promptStatus" aria-live="polite"></div>
+      </section>
+
+      <!-- Content Cleansing Settings Panel -->
+      <section id="panel-content" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="contentTabPanelTitle">コンテンツ・クレンジング</h2>
+        <p class="panel-description" data-i18n="contentTabPanelDescription">Webページから機密情報を含む可能性がある要素を自動的に削除します。</p>
+
+        <!-- Hard Strip 設定 -->
+        <div class="form-group">
+          <label data-i18n="contentStripHardEnabled">Hard Strip（タグ・属性削除）を有効にする</label>
+          <div class="mb-8">
+            <input type="checkbox" id="contentStripHardEnabled" aria-describedby="contentStripHardEnabledDesc">
+            <label for="contentStripHardEnabled" class="inline-label" data-i18n="contentStripHardEnabledDesc">input、password、script、iframe 等のタグと属性を削除します。</label>
+          </div>
+        </div>
+
+        <!-- Keyword Strip 設定 -->
+        <div class="form-group">
+          <label data-i18n="contentStripKeywordEnabled">Keyword Strip（キーワード削除）を有効にする</label>
+          <div class="mb-8">
+            <input type="checkbox" id="contentStripKeywordEnabled" aria-describedby="contentStripKeywordEnabledDesc">
+            <label for="contentStripKeywordEnabled" class="inline-label" data-i18n="contentStripKeywordEnabledDesc">ID/クラス属性に指定されたキーワードを含む要素を削除します。</label>
+          </div>
+        </div>
+
+        <!-- キーワードリスト -->
+        <div class="form-group">
+          <label for="contentStripKeywords" data-i18n="contentStripKeywords">キーワード</label>
+          <div class="help-text mb-4" data-i18n="contentStripKeywordsDesc">削除対象とするキーワード（1行に1つ）</div>
+          <textarea id="contentStripKeywords" class="keyword-textarea" rows="10" aria-describedby="contentStripKeywordsHelp"></textarea>
+          <div class="button-group mt-8">
+            <button type="button" id="contentStripResetKeywords" class="secondary-btn" data-i18n="contentStripResetKeywords">デフォルトに戻す</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">保存</button>
+          <div id="contentSettingsStatus" class="status-message" aria-live="polite"></div>
+        </div>
       </section>
 
       <!-- Privacy Settings Panel -->

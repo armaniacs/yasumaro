@@ -70,6 +70,10 @@ export const StorageKeys = {
     PII_CONFIRMATION_UI: 'pii_confirmation_ui', // true | false
     PII_SANITIZE_LOGS: 'pii_sanitize_logs',  // true | false
     AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior', // 'save' | 'skip' | 'confirm'
+    // Content cleansing settings (Phase 0)
+    CONTENT_STRIP_HARD_ENABLED: 'content_strip_hard_enabled', // Hard Strip 有効化フラグ
+    CONTENT_STRIP_KEYWORDS: 'content_strip_keywords', // Keyword Strip キーワードリスト
+    CONTENT_STRIP_KEYWORD_ENABLED: 'content_strip_keyword_enabled', // Keyword Strip 有効化フラグ
     // uBlock Origin format settings
     UBLOCK_RULES: 'ublock_rules',           // uBlock形式ルールセット（マージ済み）
     UBLOCK_SOURCES: 'ublock_sources',       // uBlockソースリスト（複数対応）
@@ -136,6 +140,9 @@ export interface StorageKeyValues {
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save' | 'skip' | 'confirm';
+    [StorageKeys.CONTENT_STRIP_HARD_ENABLED]: boolean;
+    [StorageKeys.CONTENT_STRIP_KEYWORDS]: string[];
+    [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED]: boolean;
     [StorageKeys.UBLOCK_RULES]: UblockRules;
     [StorageKeys.UBLOCK_SOURCES]: Source[];
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: boolean;

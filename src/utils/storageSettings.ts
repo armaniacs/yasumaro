@@ -54,6 +54,9 @@ export interface SettingsValue {
     privacy_mode?: string;
     pii_confirmation_ui?: boolean;
     pii_sanitize_logs?: boolean;
+    content_strip_hard_enabled?: boolean;
+    content_strip_keywords?: string[];
+    content_strip_keyword_enabled?: boolean;
     ublock_rules?: UblockRules;
     ublock_sources?: Source[];
     ublock_format_enabled?: boolean;
@@ -107,6 +110,9 @@ export const DEFAULT_SETTINGS: Settings = {
     privacy_mode: 'masked_cloud',
     pii_confirmation_ui: true,
     pii_sanitize_logs: true,
+    content_strip_hard_enabled: true,
+    content_strip_keywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'],
+    content_strip_keyword_enabled: true,
     ublock_rules: {
         blockDomains: [],
         exceptionDomains: [],

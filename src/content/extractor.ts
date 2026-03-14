@@ -12,6 +12,11 @@ import { createSender } from '../utils/retryHelper.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
 
+// StorageKeys（content script で使用するもののみ）
+const CONTENT_STRIP_HARD_ENABLED = 'content_strip_hard_enabled';
+const CONTENT_STRIP_KEYWORD_ENABLED = 'content_strip_keyword_enabled';
+const CONTENT_STRIP_KEYWORDS = 'content_strip_keywords';
+
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
@@ -23,6 +28,11 @@ let startTime = Date.now();
 let maxScrollPercentage = 0;
 let isValidVisitReported = false;
 let checkIntervalId: number | NodeJS.Timeout | null = null; // 【パフォーマンス向上】: 定期実行のIDを管理し、条件満了後に停止
+
+// 【クレンジング設定】: コンテンツクレンジングの有効化状態を管理
+let contentStripHardEnabled = true;
+let contentStripKeywordEnabled = true;
+let contentStripKeywords: string[] = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'];
 
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
@@ -37,28 +47,51 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  *   3. 前後の空白を削除
  *   4. 最大10,000文字で切り詰め
  * 【改善点】: Readabilityアルゴリズムでナビゲーション等のノイズを除外
+ * 【クレンジング】: 設定に従って機密情報を含む要素を削除
  * 🟢
  * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
  */
 function extractPageContent(): string {
-    return extractMainContent(10000);
+    const cleanseOptions = {
+        cleanseEnabled: contentStripHardEnabled || contentStripKeywordEnabled,
+        hardStripEnabled: contentStripHardEnabled,
+        keywordStripEnabled: contentStripKeywordEnabled,
+        keywords: contentStripKeywords
+    };
+    return extractMainContent(10000, cleanseOptions);
 }
 
 /**
  * 設定をロードする
- * 【機能概要】: chrome.storage.localから最小訪問時間と最小スクロール深度を読み込む
+ * 【機能概要】: chrome.storage.localから設定を読み込む
  * 【読み込みタイミング】: スクリプト読み込み時（Chrome拡張のコンテントスクリプト読み込み時）
  * 【デフォルト値】: MIN_VISIT_DURATION=5秒, MIN_SCROLL_DEPTH=50%
  * 【マイグレーション対応】: settingsキー下から値を取得（マイグレーション後の構造に対応）
  * 🟢
  */
 function loadSettings(): void {
-    chrome.storage.local.get(['min_visit_duration', 'min_scroll_depth'], (result: { [key: string]: any }) => {
+    chrome.storage.local.get([
+        'min_visit_duration',
+        'min_scroll_depth',
+        CONTENT_STRIP_HARD_ENABLED,
+        CONTENT_STRIP_KEYWORD_ENABLED,
+        CONTENT_STRIP_KEYWORDS
+    ], (result: { [key: string]: any }) => {
         if (result.min_visit_duration !== undefined) {
             minVisitDuration = parseInt(String(result.min_visit_duration), 10);
         }
         if (result.min_scroll_depth !== undefined) {
             minScrollDepth = parseInt(String(result.min_scroll_depth), 10);
+        }
+        // クレンジング設定を取得
+        if (result[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
+            contentStripHardEnabled = result[CONTENT_STRIP_HARD_ENABLED];
+        }
+        if (result[CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
+            contentStripKeywordEnabled = result[CONTENT_STRIP_KEYWORD_ENABLED];
+        }
+        if (result[CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(result[CONTENT_STRIP_KEYWORDS])) {
+            contentStripKeywords = result[CONTENT_STRIP_KEYWORDS];
         }
     });
 }

@@ -1,1402 +1,1451 @@
 {
-    "extensionName": {
-        "message": "Obsidian Weave"
-    },
-    "extensionShortName": {
-        "message": "Weave"
-    },
-    "extensionDescription": {
-        "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
-    },
-    "appTitle": {
-        "message": "Obsidian Weave"
-    },
-    "settings": {
-        "message": "設定"
-    },
-    "save": {
-        "message": "保存"
-    },
-    "cancel": {
-        "message": "キャンセル"
-    },
-    "close": {
-        "message": "閉じる"
-    },
-    "saveAndTest": {
-        "message": "保存 & 接続テスト"
-    },
-    "loading": {
-        "message": "読み込み中..."
-    },
-    "processing": {
-        "message": "処理中..."
-    },
-    "recordNow": {
-        "message": "📝 今すぐ記録"
-    },
-    "recordWithoutAi": {
-        "message": "📝 AI要約なしで記録"
-    },
-    "cannotRecordPage": {
-        "message": "記録できないページです"
-    },
-    "pageInfo": {
-        "message": "ページ情報"
-    },
-    "noTitle": {
-        "message": "タイトルなし"
-    },
-    "mainTab": {
-        "message": "一般"
-    },
-    "domainTab": {
-        "message": "ドメインフィルター"
-    },
-    "privacyTab": {
-        "message": "プライバシー"
-    },
-    "back": {
-        "message": "←"
-    },
-    "obsidianApiKey": {
-        "message": "Obsidian API Key"
-    },
-    "aiApiKey": {
-        "message": "OpenAI API Key"
-    },
-    "apiKeyPlaceholder": {
-        "message": "キーをここに貼り付けてください..."
-    },
-    "protocol": {
-        "message": "プロトコル (http/https)"
-    },
-    "port": {
-        "message": "ポート"
-    },
-    "dailyNotePath": {
-        "message": "デイリーノートのパス"
-    },
-    "dailyNotePathPlaceholder": {
-        "message": "例: 092.Daily"
-    },
-    "aiProvider": {
-        "message": "AIプロバイダー"
-    },
-    "googleGemini": {
-        "message": "Google Gemini"
-    },
-    "openaiCompatible": {
-        "message": "OpenAI互換 (Groq, etc.)"
-    },
-    "openaiCompatible2": {
-        "message": "OpenAI互換 2 (Local, etc.)"
-    },
-    "geminiApiKey": {
-        "message": "Gemini API Key"
-    },
-    "geminiApiKeyPlaceholder": {
-        "message": "Geminiキーをここに貼り付けてください..."
-    },
-    "modelName": {
-        "message": "モデル名"
-    },
-    "geminiModelPlaceholder": {
-        "message": "gemini-1.5-flash"
-    },
-    "baseUrl": {
-        "message": "Base URL"
-    },
-    "openaiBaseUrlPlaceholder": {
-        "message": "https://api.openai.com/v1"
-    },
-    "openaiApiKeyPlaceholder": {
-        "message": "sk-..."
-    },
-    "openaiModelPlaceholder": {
-        "message": "gpt-3.5-turbo"
-    },
-    "openai2BaseUrlPlaceholder": {
-        "message": "http://127.0.0.1:11434/v1"
-    },
-    "openai2ApiKeyPlaceholder": {
-        "message": "一部のローカルLLMでは省略可能"
-    },
-    "openai2ModelPlaceholder": {
-        "message": "llama3"
-    },
-    "minVisitDuration": {
-        "message": "最小滞在時間（秒）"
-    },
-    "minScrollDepth": {
-        "message": "最小スクロール深度（%）"
-    },
-    "domainFilterMode": {
-        "message": "ドメインフィルターモード"
-    },
-    "filterDisabled": {
-        "message": "無効（すべて記録）"
-    },
-    "filterWhitelist": {
-        "message": "ホワイトリスト（指定ドメインのみ記録）"
-    },
-    "filterBlacklist": {
-        "message": "ブラックリスト（指定ドメインを除外）"
-    },
-    "filterDisabledDesc": {
-        "message": "ドメインに関係なく、訪問したすべてのWebサイトを記録します。",
-        "description": "ドメインフィルタ無効モードの説明"
-    },
-    "filterWhitelistDesc": {
-        "message": "ホワイトリストに含まれるドメインのWebサイトのみを記録します。",
-        "description": "ホワイトリストモードの説明"
-    },
-    "filterBlacklistDesc": {
-        "message": "ブラックリストに含まれるドメイン以外のWebサイトを記録します。",
-        "description": "ブラックリストモードの説明"
-    },
-    "filterFormat": {
-        "message": "フィルター形式（併用可能）"
-    },
-    "simpleFormat": {
-        "message": "シンプル（1行1ドメイン）"
-    },
-    "ublockFormat": {
-        "message": "uBlock Origin 形式"
-    },
-    "domainList": {
-        "message": "ドメインリスト（1行1ドメイン）"
-    },
-    "domainListPlaceholder": {
-        "message": "example.com\n*.example.org\ncompany.net"
-    },
-    "wildcardHelp": {
-        "message": "ワイルドカードも使用できます（例: *.example.com）"
-    },
-    "addCurrentDomain": {
-        "message": "現在のページドメインを追加"
-    },
-    "saveDomainSettings": {
-        "message": "保存"
-    },
-    "ublockFilter": {
-        "message": "uBlockフィルター"
-    },
-    "ublockFilterPlaceholder": {
-        "message": "||example.com^\n@@||trusted.com^\n0.0.0.0 ads.example.com\n! コメント行"
-    },
-    "ublockHelp": {
-        "message": "uBlock Origin形式 または hosts形式のフィルターを貼り付け\nuBlock: ||hostname^, @@||hostname^, *, !Comments\nhosts: 0.0.0.0/127.0.0.1 hostname (#コメント対応)"
-    },
-    "loadFromFile": {
-        "message": "ファイルから読み込み (.txt)"
-    },
-    "selectFile": {
-        "message": "ファイルを選択"
-    },
-    "dropFileHere": {
-        "message": "ファイルをここにドロップ"
-    },
-    "loadFromUrl": {
-        "message": "URLから読み込み"
-    },
-    "importFromUrl": {
-        "message": "URLからインポート"
-    },
-    "urlPlaceholder": {
-        "message": "https://example.com/filters.txt"
-    },
-    "registeredFilterSources": {
-        "message": "登録済みフィルターソース"
-    },
-    "noSourcesRegistered": {
-        "message": "ソースが登録されていません"
-    },
-    "loadPreview": {
-        "message": "読み込みプレビュー"
-    },
-    "ruleCount": {
-        "message": "ルール数: {count}"
-    },
-    "exceptionCount": {
-        "message": "例外数: {count}"
-    },
-    "errorCount": {
-        "message": "エラー: {count}"
-    },
-    "export": {
-        "message": "エクスポート"
-    },
-    "copyToClipboard": {
-        "message": "クリップボードにコピー"
-    },
-    "manualInput": {
-        "message": "手動入力"
-    },
-    "rulesLabel": {
-        "message": "ルール"
-    },
-    "reload": {
-        "message": "再読込"
-    },
-    "delete": {
-        "message": "削除"
-    },
-    "privacyMode": {
-        "message": "プライバシーモード"
-    },
-    "modeA": {
-        "message": "Mode A: Local Only"
-    },
-    "modeADesc": {
-        "message": "ページ内容を外部送信せず、ローカルAIのみで要約します。\n現在、多くのブラウザで動作しません。"
-    },
-    "modeADetail": {
-        "message": "（開発中）"
-    },
-    "modeB": {
-        "message": "Mode B: Full Pipeline"
-    },
-    "modeBDesc": {
-        "message": "ローカルAIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
-    },
-    "modeBCurrently": {
-        "message": "（開発中）"
-    },
-    "modeC": {
-        "message": "Mode C: Masked Cloud"
-    },
-    "modeCDesc": {
-        "message": "PIIのみマスクしてクラウドAIへ送信。\nローカルAIが使えない環境向け。"
-    },
-    "modeCRecommended": {
-        "message": "（推奨）"
-    },
-    "modeD": {
-        "message": "Mode D: Cloud Only"
-    },
-    "modeDDesc": {
-        "message": "生のテキストをそのままクラウドAIへ送信。\n速度優先。"
-    },
-    "confirmSettings": {
-        "message": "確認設定"
-    },
-    "confirmBeforeSending": {
-        "message": "送信前にマスキング結果を確認する"
-    },
-    "confirmBeforeSendingManual": {
-        "message": "手動保存時に送信前にマスキング結果を確認する"
-    },
-    "autoSavePrivacyBehavior": {
-        "message": "自動保存時にプライバシー懸念がある場合の動作"
-    },
-    "autoSaveBehaviorSave": {
-        "message": "通常通り保存する（デフォルト）"
-    },
-    "autoSaveBehaviorSkip": {
-        "message": "保存をスキップし、記録履歴に残す（あとで記録履歴から登録できる）"
-    },
-    "autoSaveBehaviorConfirm": {
-        "message": "保存するかどうか確認する"
-    },
-    "savePrivacySettings": {
-        "message": "保存"
-    },
-    "confirmContent": {
-        "message": "内容の確認"
-    },
-    "confirmContentDesc": {
-        "message": "Obsidianに保存する内容を確認・編集できます。"
-    },
-    "confirmContentNote": {
-        "message": "※ マスキングされた箇所を確認してください。"
-    },
-    "cancelPreviewBtn": {
-        "message": "キャンセル"
-    },
-    "sendBtn": {
-        "message": "送信する"
-    },
-    "closeModalBtn": {
-        "message": "×"
-    },
-    "fetchingContent": {
-        "message": "コンテンツ取得中..."
-    },
-    "localAiProcessing": {
-        "message": "ローカルAI処理中..."
-    },
-    "saving": {
-        "message": "保存中..."
-    },
-    "recording": {
-        "message": "記録中..."
-    },
-    "forceRecord": {
-        "message": "強制記録"
-    },
-    "forceRecordAnyway": {
-        "message": "それでも記録"
-    },
-    "cannotRecordHttpHttps": {
-        "message": "現在のページはHTTP/HTTPSページではありません"
-    },
-    "failedToExtractDomain": {
-        "message": "ドメインを抽出できませんでした"
-    },
-    "domainAlreadyExists": {
-        "message": "ドメイン \"{domain}\" は既にリストに存在します"
-    },
-    "domainAdded": {
-        "message": "ドメイン \"{domain}\" を追加しました"
-    },
-    "filterModeRequired": {
-        "message": "フィルターモードを選択してください"
-    },
-    "domainFilterSaved": {
-        "message": "ドメインフィルター設定を保存しました"
-    },
-    "modeRequired": {
-        "message": "モードを選択してください"
-    },
-    "privacySaved": {
-        "message": "プライバシー設定を保存しました"
-    },
-    "noTextToCopy": {
-        "message": "コピーするテキストがありません"
-    },
-    "copiedToClipboard": {
-        "message": "クリップボードにコピーしました"
-    },
-    "nothingToExport": {
-        "message": "エクスポートするデータがありません"
-    },
-    "fileExported": {
-        "message": "ファイルをエクスポートしました"
-    },
-    "textFileOnly": {
-        "message": "テキストファイルのみ対応しています"
-    },
-    "timeDaysAgo": {
-        "message": "{count}日前",
-        "description": "Relative time: X days ago"
-    },
-    "timeHoursAgo": {
-        "message": "{count}時間前",
-        "description": "Relative time: X hours ago"
-    },
-    "timeJustNow": {
-        "message": "たった今",
-        "description": "Relative time: just now"
-    },
-    "timeMinutesAgo": {
-        "message": "{count}分前",
-        "description": "Relative time: X minutes ago"
-    },
-    "timeYesterday": {
-        "message": "昨日",
-        "description": "Relative time: yesterday"
-    },
-    "loadEmptyUrl": {
-        "message": "URLを入力してください"
-    },
-    "loadingUrl": {
-        "message": "読み込み中..."
-    },
-    "loadedFromUrl": {
-        "message": "\"{url}\" からフィルターを読み込みました"
-    },
-    "fileLoaded": {
-        "message": "\"{filename}\" を読み込みました"
-    },
-    "fileReadError": {
-        "message": "ファイル読み込みエラー"
-    },
-    "exportError": {
-        "message": "エクスポートエラー"
-    },
-    "copyError": {
-        "message": "コピーエラー"
-    },
-    "deleteError": {
-        "message": "削除エラー"
-    },
-    "reloadError": {
-        "message": "更新エラー"
-    },
-    "updateError": {
-        "message": "更新エラー"
-    },
-    "saveError": {
-        "message": "保存エラー"
-    },
-    "recordError": {
-        "message": "記録に失敗しました",
-        "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
-    },
-    "clipboardCopyFailed": {
-        "message": "クリップボードへのコピーに失敗しました"
-    },
-    "connectionError": {
-        "message": "ページを再読み込みしてから再度お試しください"
-    },
-    "domainBlockedError": {
-        "message": "このドメインは記録が許可されていませんが特別に記録しますか？"
-    },
-    "errorPrefix": {
-        "message": "✗ エラー:"
-    },
-    "success": {
-        "message": "✓ Obsidianに保存しました"
-    },
-    "aiTagsLabel": {
-        "message": "AIタグ"
-    },
-    "cancelled": {
-        "message": "キャンセルしました"
-    },
-    "unknownError": {
-        "message": "不明なエラーが発生しました"
-    },
-    "sourceUpdated": {
-        "message": "ソースを更新しました（{ruleCount}ルール）"
-    },
-    "sourceUpdatedWithDiff": {
-        "message": "ソースを更新しました（合計: {ruleCount} {diff}）"
-    },
-    "autoCloseError": {
-        "message": "自動クローズに失敗しました"
-    },
-    "testingConnection": {
-        "message": "接続テスト中..."
-    },
-    "connectionSuccess": {
-        "message": "接続成功"
-    },
-    "successConnected": {
-        "message": "成功！Obsidianに接続しました。設定を保存しました。"
-    },
-    "successAllConnected": {
-        "message": "成功！Obsidian・AI両方に接続しました。設定を保存しました。"
-    },
-    "obsidianOkAiFailed": {
-        "message": "Obsidian: OK / AI接続失敗: {message}"
-    },
-    "obsidianFailedAiOk": {
-        "message": "Obsidian接続失敗: {message} / AI: OK"
-    },
-    "bothConnectionFailed": {
-        "message": "Obsidian接続失敗: {obsidianMessage} / AI接続失敗: {aiMessage}"
-    },
-    "connectionFailed": {
-        "message": "接続失敗: {message}"
-    },
-    "acceptCertificate": {
-        "message": "ここをクリックして自己署名証明書を承認"
-    },
-    "errorProtocol": {
-        "message": "エラー: プロトコルは\"http\"または\"https\"である必要があります。"
-    },
-    "errorPort": {
-        "message": "エラー: ポートは1から65535の間の数値である必要があります。"
-    },
-    "errorDuration": {
-        "message": "エラー: 最小滞在時間は0以上の数値である必要があります。"
-    },
-    "errorScrollDepth": {
-        "message": "エラー: 最小スクロール深度は0から100の間の数値である必要があります。"
-    },
-    "errorInvalidUrl": {
-        "message": "エラー: 無効なURL形式です"
-    },
-    "domainListError": {
-        "message": "ドメインリストのエラー:"
-    },
-    "noActiveTab": {
-        "message": "アクティブなタブが見つかりません"
-    },
-    "errorColon": {
-        "message": "エラー:"
-    },
-    "maskStatusCount": {
-        "message": "{count}件の個人情報をマスクしました"
-    },
-    "maskStatusDetails": {
-        "message": "{details}をマスクしました"
-    },
-    "itemsCount": {
-        "message": "{count}件"
-    },
-    "items": {
-        "message": "、"
-    },
-    "previousMaskedItem": {
-        "message": "前のマスク箇所"
-    },
-    "nextMaskedItem": {
-        "message": "次のマスク箇所"
-    },
-    "generatedBy": {
-        "message": "! Generated by Obsidian Weave"
-    },
-    "piiCreditCard": {
-        "message": "クレジットカード番号"
-    },
-    "piiMyNumber": {
-        "message": "マイナンバー"
-    },
-    "piiBankAccount": {
-        "message": "銀行口座番号"
-    },
-    "piiEmail": {
-        "message": "Eメール"
-    },
-    "piiPhoneJp": {
-        "message": "電話番号"
-    },
-    "countdownNumber": {
-        "message": "{count}..."
-    },
-    "autoClosing": {
-        "message": "自動的に閉じています..."
-    },
-    "errorContentScriptNotAvailable": {
-        "message": "このページからコンテンツを取得できません。ページをリロードしてから再度お試しください。"
-    },
-    "errorNoContentResponse": {
-        "message": "コンテンツ取得レスポンスがありません。"
-    },
-    "errorPrivateNetworkAccess": {
-        "message": "プライベートネットワークへのアクセスは許可されていません: {hostname}"
-    },
-    "errorLocalhostAccess": {
-        "message": "フィルターインポートでのlocalhostアクセスは許可されていません"
-    },
-    "openSettings": {
-        "message": "設定"
-    },
-    "backToMain": {
-        "message": "メイン画面に戻る"
-    },
-    "closeModal": {
-        "message": "閉じる"
-    },
-    "settingsMenu": {
-        "message": "設定メニュー"
-    },
-    "exportSettings": {
-        "message": "エクスポート"
-    },
-    "exportTitle": {
-        "message": "設定のエクスポート"
-    },
-    "exportDesc": {
-        "message": "現在の設定をJSONファイルに保存します。"
-    },
-    "importSettings": {
-        "message": "インポート"
-    },
-    "importTitle": {
-        "message": "設定のインポート"
-    },
-    "importDesc": {
-        "message": "以前にエクスポートしたJSONファイルから設定を復元します。"
-    },
-    "settingsExported": {
-        "message": "設定をエクスポートしました"
-    },
-    "settingsImported": {
-        "message": "設定をインポートしました"
-    },
-    "confirmImport": {
-        "message": "設定のインポート"
-    },
-    "confirmImportDesc": {
-        "message": "現在の設定は上書きされます。よろしいですか？"
-    },
-    "confirmImportNote": {
-        "message": "※ インポート前に以下の設定を確認してください。"
-    },
-    "importError": {
-        "message": "インポートエラー"
-    },
-    "invalidSettingsFile": {
-        "message": "無効な設定ファイルです"
-    },
-    "dropZoneLabel": {
-        "message": "uBlockフィルタードロップゾーン",
-        "description": "uBlockフィルターファイルをドラッグ＆ドロップするドロップゾーンのARIAラベル"
-    },
-    "promptTab": {
-        "message": "AIプロンプト"
-    },
-    "promptDescription": {
-        "message": "AI要約プロンプト設定"
-    },
-    "promptHelp": {
-        "message": "{{content}}をページ内容のプレースホルダーとして使用してください。このプロンプトは要約生成時に使用されます。"
-    },
-    "savedPrompts": {
-        "message": "保存済みプロンプト"
-    },
-    "noPromptsSaved": {
-        "message": "保存されたプロンプトはありません"
-    },
-    "promptEditor": {
-        "message": "プロンプトエディター"
-    },
-    "promptName": {
-        "message": "プロンプト名"
-    },
-    "promptNamePlaceholder": {
-        "message": "例: 短い要約"
-    },
-    "promptProvider": {
-        "message": "適用先プロバイダー"
-    },
-    "promptProviderAll": {
-        "message": "すべてのプロバイダー"
-    },
-    "promptSystem": {
-        "message": "システムプロンプト（OpenAIのみ）"
-    },
-    "promptSystemPlaceholder": {
-        "message": "あなたはWebページを効果的かつ簡潔に要約するアシスタントです..."
-    },
-    "promptSystemHelp": {
-        "message": "OpenAI互換プロバイダー用のシステムプロンプト（オプション）"
-    },
-    "promptText": {
-        "message": "ユーザープロンプト"
-    },
-    "promptTextPlaceholder": {
-        "message": "以下のWebページの内容を日本語で要約してください...\n\n{{content}}"
-    },
-    "savePrompt": {
-        "message": "プロンプトを保存"
-    },
-    "updatePrompt": {
-        "message": "プロンプトを更新"
-    },
-    "activate": {
-        "message": "有効化"
-    },
-    "edit": {
-        "message": "編集"
-    },
-    "activePrompt": {
-        "message": "有効"
-    },
-    "promptNameRequired": {
-        "message": "プロンプト名は必須です"
-    },
-    "promptCreated": {
-        "message": "プロンプトを作成しました"
-    },
-    "promptUpdated": {
-        "message": "プロンプトを更新しました"
-    },
-    "promptDeleted": {
-        "message": "プロンプトを削除しました"
-    },
-    "promptActivated": {
-        "message": "プロンプトを有効化しました"
-    },
-    "confirmDeletePrompt": {
-        "message": "このプロンプトを削除してもよろしいですか？"
-    },
-    "confirm": {
-        "message": "インポート"
-    },
-    "seconds": {
-        "message": "秒"
-    },
-    "importPreviewSummary": {
-        "message": "概要:"
-    },
-    "importPreviewNote": {
-        "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
-    },
-    "importNoSignatureWarning": {
-        "message": "⚠️ この設定ファイルには署名が含まれていません。\n\n署名は設定ファイルの改ざん防止のために使用されます。\n信頼できないソースからのファイルはインポートしないことを推奨します。\n\nインポートを続行しますか？"
-    },
-    "errorNetwork": {
-        "message": "ネットワークエラーが発生しました。インターネット接続を確認してください。"
-    },
-    "errorAuth": {
-        "message": "認証エラーが発生しました。APIキーを確認してください。"
-    },
-    "errorValidation": {
-        "message": "入力内容が無効です。"
-    },
-    "errorNotFound": {
-        "message": "リソースが見つかりませんでした。"
-    },
-    "errorRateLimit": {
-        "message": "リクエスト制限に達しました。しばらく待ってから再試行してください。"
-    },
-    "errorServer": {
-        "message": "サーバーエラーが発生しました。しばらく待ってから再試行してください。"
-    },
-    "errorGeneric": {
-        "message": "エラーが発生しました。"
-    },
-    "errorUrlNotAllowed": {
-        "message": "このURLのアクセスは許可されていません。設定画面でベースURLが登録されているか確認してください。"
-    },
-    "errorDomainBlocked": {
-        "message": "このドメインはブロックされています。"
-    },
-    "errorInvalidUrlGeneric": {
-        "message": "無効なURLです。"
-    },
-    "errorObsidianConnection": {
-        "message": "Obsidianへの接続に失敗しました。Obsidianが起動していることを確認してください。"
-    },
-    "errorDailyNoteSave": {
-        "message": "デイリーノートへの保存に失敗しました。"
-    },
-    "errorAiSummarize": {
-        "message": "AI要約の生成に失敗しました。"
-    },
-    "errorContentEmpty": {
-        "message": "ページのコンテンツが空です。"
-    },
-    "masterPasswordProtection": {
-        "message": "マスターパスワード保護"
-    },
-    "masterPasswordDesc": {
-        "message": "マスターパスワードを使用して設定を保護。暗号化されたエクスポート/インポートに必要です。"
-    },
-    "enableMasterPassword": {
-        "message": "マスターパスワード保護を有効にする"
-    },
-    "encryptApiKeys": {
-        "message": "ストレージ内のAPIキーを暗号化"
-    },
-    "encryptApiKeysDesc": {
-        "message": "APIキーはマスターパスワードで暗号化されます"
-    },
-    "encryptOnExport": {
-        "message": "エクスポート時に暗号化"
-    },
-    "encryptOnExportDesc": {
-        "message": "エクスポートされた設定ファイルはマスターパスワードで暗号化されます"
-    },
-    "requirePasswordOnImport": {
-        "message": "インポート時にパスワードを要求"
-    },
-    "requirePasswordOnImportDesc": {
-        "message": "暗号化された設定をインポートするにはパスワードが必要です"
-    },
-    "changeMasterPassword": {
-        "message": "マスターパスワードを変更"
-    },
-    "setMasterPassword": {
-        "message": "マスターパスワードを設定"
-    },
-    "setMasterPasswordDesc": {
-        "message": "マスターパスワードを作成して設定を保護します。このパスワードは復元できません。"
-    },
-    "changeMasterPasswordDesc": {
-        "message": "変更するには現在のマスターパスワードを入力してください。"
-    },
-    "masterPassword": {
-        "message": "マスターパスワード"
-    },
-    "confirmMasterPassword": {
-        "message": "マスターパスワード（確認）"
-    },
-    "enterMasterPassword": {
-        "message": "マスターパスワードを入力"
-    },
-    "enterMasterPasswordDesc": {
-        "message": "続行するにはマスターパスワードを入力してください。"
-    },
-    "passwordMismatch": {
-        "message": "パスワードが一致しません。"
-    },
-    "passwordTooShort": {
-        "message": "パスワードは8文字以上である必要があります。"
-    },
-    "passwordStrengthWeak": {
-        "message": "弱い"
-    },
-    "passwordStrengthMedium": {
-        "message": "中程度"
-    },
-    "passwordStrengthStrong": {
-        "message": "強い"
-    },
-    "passwordIncorrect": {
-        "message": "パスワードが正しくありません。"
-    },
-    "passwordSaved": {
-        "message": "マスターパスワードを保存しました。"
-    },
-    "passwordRemoved": {
-        "message": "マスターパスワードを削除しました。"
-    },
-    "passwordRequired": {
-        "message": "マスターパスワードを入力してください。"
-    },
-    "importPasswordRequired": {
-        "message": "この設定ファイルは暗号化されています。設定を復号してインポートするにはマスターパスワードを入力する必要があります。\n\n続行しますか？"
-    },
-    "privacyDialogBody": {
-        "message": "このページにはプライバシー懸念が検出されました（$REASON$）。それでも保存しますか？",
-        "placeholders": { "reason": { "content": "$1" } }
-    },
-    "privacyDialogStatusLabel": {
-        "message": "検出コード"
-    },
-    "privacyStatus_cacheControl": {
-        "message": "プライベートキャッシュヘッダー"
-    },
-    "privacyStatus_setCookie": {
-        "message": "認証Cookie"
-    },
-    "privacyStatus_authorization": {
-        "message": "認証ヘッダー"
-    },
-    "privacyStatus_unknown": {
-        "message": "不明なプライバシー懸念"
-    },
-    "notifyPrivacyConfirmTitle": {
-        "message": "Obsidian Weave"
-    },
-    "notifyPrivacyConfirmBody": {
-        "message": "「$TITLE$」にプライバシー懸念（$REASON$）が検出されました。保存しますか？",
-        "placeholders": {
-            "title": { "content": "$1" },
-            "reason": { "content": "$2" }
-        }
-    },
-    "notifyPrivacyConfirmSave": {
-        "message": "保存する"
-    },
-    "notifyPrivacyConfirmSkip": {
-        "message": "スキップ"
-    },
-    "privatePageWarning": {
-        "message": "このページには個人情報が含まれている可能性があります（検出理由: $REASON$）。それでも保存しますか?",
-        "placeholders": {
-            "reason": {
-                "content": "$1"
-            }
-        }
-    },
-    "privatePageReason_cacheControl": {
-        "message": "プライベートキャッシュヘッダー"
-    },
-    "privatePageReason_setCookie": {
-        "message": "認証Cookie"
-    },
-    "privatePageReason_authorization": {
-        "message": "認証ヘッダー"
-    },
-    "defaultPrompt": {
-        "message": "デフォルト"
-    },
-    "duplicate": {
-        "message": "複製"
-    },
-    "promptDuplicated": {
-        "message": "プロンプトをエディターにコピーしました"
-    },
-    "statusDomainFilter": {
-        "message": "ドメインフィルタ"
-    },
-    "statusPrivacy": {
-        "message": "プライバシー"
-    },
-    "statusCache": {
-        "message": "キャッシュ状況"
-    },
-    "statusLastSaved": {
-        "message": "最終保存"
-    },
-    "statusShowDetails": {
-        "message": "詳細を表示"
-    },
-    "statusHideDetails": {
-        "message": "詳細を隠す"
-    },
-    "statusRecordable": {
-        "message": "記録可能"
-    },
-    "statusBlocked": {
-        "message": "記録不可"
-    },
-    "statusPrivateDetected": {
-        "message": "プライベート"
-    },
-    "statusNoInfo": {
-        "message": "情報なし"
-    },
-    "statusNotSaved": {
-        "message": "未保存"
-    },
-    "statusReloadHint": {
-        "message": "ページをリロードすると取得できます"
-    },
-    "statusDomainAllowed": {
-        "message": "許可済み"
-    },
-    "statusDomainBlocked": {
-        "message": "ブロック済み"
-    },
-    "statusFilterModeDisabled": {
-        "message": "フィルタ無効"
-    },
-    "statusFilterModeWhitelist": {
-        "message": "ホワイトリストモード"
-    },
-    "statusFilterModeBlacklist": {
-        "message": "ブラックリストモード"
-    },
-    "statusCacheControlPrivate": {
-        "message": "Cache-Control: private 検出"
-    },
-    "statusSetCookieDetected": {
-        "message": "Set-Cookie: あり"
-    },
-    "statusAuthDetected": {
-        "message": "Authorization: あり"
-    },
-    "warningPrivatePage": {
-        "message": "プライベートページが検出されました"
-    },
-    "warningPrivatePageMessage": {
-        "message": "$HEADER$ が検出されました。\n\nURL:\n$URL$",
-        "placeholders": {
-            "header": { "content": "$1" },
-            "url": { "content": "$2" }
-        }
-    },
-    "warningConfirmSave": {
-        "message": "保存しますか？"
-    },
-    "btnCancel": {
-        "message": "キャンセル"
-    },
-    "btnSaveOnce": {
-        "message": "今回のみ保存"
-    },
-    "btnSaveWhitelistDomain": {
-        "message": "ドメイン全体を許可して保存"
-    },
-    "btnSaveWhitelistPath": {
-        "message": "このパスのみ許可して保存"
-    },
-    "pendingPagesTitle": {
-        "message": "保留中のページ"
-    },
-    "pendingPagesEmpty": {
-        "message": "保留中のページはありません"
-    },
-    "btnSelectAll": {
-        "message": "全て選択"
-    },
-    "btnSaveSelected": {
-        "message": "保存"
-    },
-    "btnSaveWhitelist": {
-        "message": "許可して保存"
-    },
-    "btnDiscard": {
-        "message": "破棄"
-    },
-    "saveOnce": {
-        "message": "今回のみ保存"
-    },
-    "saveDomain": {
-        "message": "ドメイン全体を許可して保存"
-    },
-    "savePath": {
-        "message": "このパスのみ許可して保存"
-    },
-    "saveSuccess": {
-        "message": "保存成功"
-    },
-    "domainAddedToWhitelist": {
-        "message": "ドメインをホワイトリストに追加しました"
-    },
-    "pathAddedToWhitelist": {
-        "message": "パスをホワイトリストに追加しました"
-    },
-    "whitelistLabel": {
-        "message": "ホワイトリスト (1行に1ドメイン)"
-    },
-    "blacklistLabel": {
-        "message": "ブラックリスト (1行に1ドメイン)"
-    },
-    "whitelistHelp": {
-        "message": "このリストのドメインが記録されます（ホワイトリストモード有効時）"
-    },
-    "blacklistHelp": {
-        "message": "このリストのドメインが除外されます（ブラックリストモード有効時）"
-    },
-    "whitelistTab": {
-        "message": "ホワイトリスト"
-    },
-    "blacklistTab": {
-        "message": "ブラックリスト"
-    },
-    "ublockFormatDesc": {
-        "message": "上級者向け: uBlock Originからフィルターリストをインポート"
-    },
-    "settingsSection": {
-        "message": "設定"
-    },
-    "dataSection": {
-        "message": "データ"
-    },
-    "toolsSection": {
-        "message": "ツール"
-    },
-    "historyTab": {
-        "message": "記録履歴"
-    },
-    "domainSearchTab": {
-        "message": "ドメイン検索"
-    },
-    "diagnosticsTab": {
-        "message": "診断"
-    },
-    "exportImportTab": {
-        "message": "エクスポート / インポート"
-    },
-    "domainSearchLabel": {
-        "message": "ブラックリスト / ホワイトリストを検索"
-    },
-    "domainSearchPlaceholder": {
-        "message": "例: google, x.com, youtube"
-    },
-    "domainCheckLabel": {
-        "message": "このURLが記録されるか確認"
-    },
-    "domainCheckPlaceholder": {
-        "message": "https://example.com または example.com"
-    },
-    "domainNoMatches": {
-        "message": "一致するルールが見つかりません。"
-    },
-    "blacklistLabel": {
-        "message": "ブラックリスト"
-    },
-    "whitelistLabel": {
-        "message": "ホワイトリスト"
-    },
-    "historyDescription": {
-        "message": "Obsidian Weaveが記録したURLの一覧です。検索ボックスで絞り込み、× で個別に削除できます。"
-    },
-    "historyRetentionPolicy": {
-        "message": "過去7日間の記録を表示（最大10,000件）。古いものから順に自動削除されます。"
-    },
-    "historySearchLabel": {
-        "message": "記録済みURLを検索"
-    },
-    "recordTypeAuto": {
-        "message": "自動"
-    },
-    "recordTypeManual": {
-        "message": "手動"
-    },
-    "maskedBadge": {
-        "message": "🔒 {count}件マスク"
-    },
-    "maskedBadgeTitle": {
-        "message": "{count}件の個人情報をマスクしてAIに送信しました"
-    },
-    "filterMasked": {
-        "message": "🔒 マスクあり"
-    },
-    "filterAll": {
-        "message": "すべて"
-    },
-    "filterAuto": {
-        "message": "自動"
-    },
-    "filterManual": {
-        "message": "手動"
-    },
-    "filterSkipped": {
-        "message": "スキップ"
-    },
-    "pendingSectionTitle": {
-        "message": "記録できなかったページ"
-    },
-    "pendingSectionDesc": {
-        "message": "PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。"
-    },
-    "pendingReasonCache": {
-        "message": "Cache-Control ヘッダー"
-    },
-    "pendingReasonCookie": {
-        "message": "Set-Cookie ヘッダー"
-    },
-    "pendingReasonAuth": {
-        "message": "Authorization ヘッダー"
-    },
-    "pendingDeleteForever": {
-        "message": "🗑 完全削除"
-    },
-    "diagConnectionPlaceholder": {
-        "message": "「接続テスト」ボタンをクリックして、Obsidian APIへの接続を確認します。"
-    },
-    "diagDescription": {
-        "message": "ストレージの使用状況の確認、Obsidian REST APIへの接続テスト、拡張機能の情報を表示します。"
-    },
-    "diagStorageTitle": {
-        "message": "ストレージ"
-    },
-    "diagConnectionTitle": {
-        "message": "接続テスト"
-    },
-    "diagTestConnectionBtn": {
-        "message": "接続テスト"
-    },
-    "diagInfoTitle": {
-        "message": "拡張機能情報"
-    },
-    "diagStorageUsed": {
-        "message": "使用容量"
-    },
-    "diagSavedUrls": {
-        "message": "記録済みURL数"
-    },
-    "diagVersion": {
-        "message": "バージョン"
-    },
-    "diagExtName": {
-        "message": "拡張機能名"
-    },
-    "diagLoadError": {
-        "message": "ストレージ情報の読み込みに失敗しました。"
-    },
-    "testing": {
-        "message": "テスト中..."
-    },
-    "domainFilterDescription": {
-        "message": "記録するサイトをドメインで制御します。銀行・SNSなど記録不要なサイトはブラックリストに、社内サイトなど特定のサイトだけ記録したい場合はホワイトリストを使います。"
-    },
-    "domainFilterEnable": {
-        "message": "フィルターを有効にする"
-    },
-    "domainBlacklistTab": {
-        "message": "ブラックリスト"
-    },
-    "domainWhitelistTab": {
-        "message": "ホワイトリスト"
-    },
-    "domainBlacklistDesc": {
-        "message": "ブラックリストのドメインは記録されません。それ以外はすべて記録されます。"
-    },
-    "domainWhitelistDesc": {
-        "message": "ホワイトリストのドメインのみ記録されます。それ以外は記録されません。"
-    },
-    "domainTagAdd": {
-        "message": "追加"
-    },
-    "domainTagInputPlaceholder": {
-        "message": "例: bank.example.com"
-    },
-    "domainTagCount": {
-        "message": "{count} 件"
-    },
-    "domainTagInvalidError": {
-        "message": "無効なドメイン形式です。"
-    },
-    "domainTagDuplicateError": {
-        "message": "すでに登録されています。"
-    },
-    "domainSaveBtn": {
-        "message": "保存する"
-    },
-    "ublockDetailsTitle": {
-        "message": "uBlock Origin フィルター（上級者向け）"
-    },
-    "mainTabDashboard": {
-        "message": "初期設定"
-    },
-    "initialSetupDescription": {
-        "message": "Obsidianとの接続とAIの設定を行います。"
-    },
-    "obsidianSection": {
-        "message": "Obsidian 接続"
-    },
-    "advancedSettings": {
-        "message": "詳細設定（Protocol / Port / Daily Note Path）"
-    },
-    "aiSection": {
-        "message": "AI プロバイダー"
-    },
-    "recordingSection": {
-        "message": "記録条件"
-    },
-    "saveBtn": {
-        "message": "保存する"
-    },
-    "testConnectionBtn": {
-        "message": "接続テスト"
-    },
-    "testObsidianBtn": {
-        "message": "Obsidian テスト"
-    },
-    "testAiBtn": {
-        "message": "AI テスト"
-    },
-    "tagEditTitle": {
-        "message": "タグを編集"
-    },
-    "currentTags": {
-        "message": "現在のタグ"
-    },
-    "addTag": {
-        "message": "タグを追加"
-    },
-    "selectCategory": {
-        "message": "カテゴリを選択..."
-    },
-    "noTags": {
-        "message": "なし"
-    },
-    "editTags": {
-        "message": "タグを編集"
-    },
-    "tagFilterAriaLabel": {
-        "message": "タグ #$TAG$ でフィルター",
-        "placeholders": { "tag": { "content": "$1" } }
-    },
-    "saveTagError": {
-        "message": "タグの保存に失敗しました"
-    },
-    "tagsTab": {
-        "message": "タグ"
-    },
-    "tagsDescription": {
-        "message": "AI要約時に自動でタグを付与するカテゴリを設定します。"
-    },
-    "tagSummaryTitle": {
-        "message": "タグ付き要約モード"
-    },
-    "tagSummaryModeLabel": {
-        "message": "タグ付き要約を使用"
-    },
-    "tagSummaryModeDesc": {
-        "message": "AI要約時にコンテンツに基づいて自動的にカテゴリータグを付与します"
-    },
-    "tagCategoriesTitle": {
-        "message": "タグカテゴリ"
-    },
-    "defaultCategoriesTitle": {
-        "message": "デフォルトカテゴリ"
-    },
-    "defaultCategoriesDesc": {
-        "message": "（デフォルトカテゴリは削除できません）"
-    },
-    "userCategoriesTitle": {
-        "message": "ユーザーカテゴリ"
-    },
-    "noUserCategories": {
-        "message": "なし"
-    },
-    "newCategoryPlaceholder": {
-        "message": "新しいカテゴリ名を入力..."
-    },
-    "duplicateCategoryError": {
-        "message": "このカテゴリ名は既に存在します"
-    },
-    "categoryNameTooLong": {
-        "message": "カテゴリ名が長すぎます（50文字以内）"
-    },
-    "categoryNameInvalidChars": {
-        "message": "カテゴリ名に使用できない文字が含まれています（|、# は使用不可）"
-    },
-    "tagSettingsSaved": {
-        "message": "タグ設定を保存しました"
-    },
-    "registeredDomains": {
-        "message": "登録済みドメイン",
-        "description": "ARIA label for list of registered domains"
-    },
-    "newCategoryName": {
-        "message": "新しいカテゴリ名",
-        "description": "ARIA label for new category name input"
-    },
-    "filterOptions": {
-        "message": "フィルターオプション",
-        "description": "ARIA label for history filter buttons"
-    },
-    "tagCategory": {
-        "message": "タグカテゴリ",
-        "description": "ARIA label for tag category select"
-    },
-    "hmacVerificationFailedConfirm": {
-        "message": "設定ファイルの署名検証に失敗しました。\n\n原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n信頼できない場合は「キャンセル」をクリックしてください。"
-    },
-    "importNoSignature": {
-        "message": "設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。"
-    },
-    "privacyConsentTitle": {
-        "message": "プライバシーポリシーへの同意"
-    },
-    "privacyConsentDesc": {
-        "message": "Obsidian Weaveを使用する前に、プライバシーポリシーをご確認ください。"
-    },
-    "keyPointsTitle": {
-        "message": "重要なポイント:"
-    },
-    "consentPoint1": {
-        "message": "すべてのデータはデバイス上にローカル保存されます"
-    },
-    "consentPoint2": {
-        "message": "開発者のサーバーにはデータが送信されません"
-    },
-    "consentPoint3": {
-        "message": "ページコンテンツは選択したAIプロバイダーにのみ送信されます"
-    },
-    "consentPoint4": {
-        "message": "拡張機能のアンインストールですべてのデータを削除できます"
-    },
-    "viewFullPolicy": {
-        "message": "プライバシーポリシー全文を表示"
-    },
-    "consentCheckboxLabel": {
-        "message": "プライバシーポリシーを読み、同意しました"
-    },
-    "accept": {
-        "message": "同意して続行"
-    },
-    "decline": {
-        "message": "拒否"
-    },
-    "consentRequired": {
-        "message": "この拡張機能を使用するにはプライバシーポリシーへの同意が必要です。"
-    },
-    "consentRequiredFeature": {
-        "message": "同意が必要です"
-    },
-    "saveFailed": {
-        "message": "同意の保存に失敗しました"
-    },
-    "openaiCompatibleModelsDev": {
-        "message": "OpenAI Compatible (Models.dev)"
-    },
-    "modelsDevDescription": {
-        "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Perplexity、DeepSeek等）から選択"
-    },
-    "selectProvider": {
-        "message": "プロバイダー選択"
-    },
-    "selectedProviderInfo": {
-        "message": "選択されたプロバイダー:"
-    },
-    "providerApiKeyPlaceholder": {
-        "message": "APIキーを入力..."
-    },
-    "providerModelPlaceholder": {
-        "message": "モデル名（オプション）"
+  "extensionName": {
+    "message": "Obsidian Weave"
+  },
+  "extensionShortName": {
+    "message": "Weave"
+  },
+  "extensionDescription": {
+    "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
+  },
+  "appTitle": {
+    "message": "Obsidian Weave"
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "cancel": {
+    "message": "キャンセル"
+  },
+  "close": {
+    "message": "閉じる"
+  },
+  "saveAndTest": {
+    "message": "保存 & 接続テスト"
+  },
+  "loading": {
+    "message": "読み込み中..."
+  },
+  "processing": {
+    "message": "処理中..."
+  },
+  "recordNow": {
+    "message": "📝 今すぐ記録"
+  },
+  "recordWithoutAi": {
+    "message": "📝 AI要約なしで記録"
+  },
+  "cannotRecordPage": {
+    "message": "記録できないページです"
+  },
+  "pageInfo": {
+    "message": "ページ情報"
+  },
+  "noTitle": {
+    "message": "タイトルなし"
+  },
+  "mainTab": {
+    "message": "一般"
+  },
+  "domainTab": {
+    "message": "ドメインフィルター"
+  },
+  "privacyTab": {
+    "message": "プライバシー"
+  },
+  "back": {
+    "message": "←"
+  },
+  "obsidianApiKey": {
+    "message": "Obsidian API Key"
+  },
+  "aiApiKey": {
+    "message": "OpenAI API Key"
+  },
+  "apiKeyPlaceholder": {
+    "message": "キーをここに貼り付けてください..."
+  },
+  "protocol": {
+    "message": "プロトコル (http/https)"
+  },
+  "port": {
+    "message": "ポート"
+  },
+  "dailyNotePath": {
+    "message": "デイリーノートのパス"
+  },
+  "dailyNotePathPlaceholder": {
+    "message": "例: 092.Daily"
+  },
+  "aiProvider": {
+    "message": "AIプロバイダー"
+  },
+  "googleGemini": {
+    "message": "Google Gemini"
+  },
+  "openaiCompatible": {
+    "message": "OpenAI互換 (Groq, etc.)"
+  },
+  "openaiCompatible2": {
+    "message": "OpenAI互換 2 (Local, etc.)"
+  },
+  "geminiApiKey": {
+    "message": "Gemini API Key"
+  },
+  "geminiApiKeyPlaceholder": {
+    "message": "Geminiキーをここに貼り付けてください..."
+  },
+  "modelName": {
+    "message": "モデル名"
+  },
+  "geminiModelPlaceholder": {
+    "message": "gemini-1.5-flash"
+  },
+  "baseUrl": {
+    "message": "Base URL"
+  },
+  "openaiBaseUrlPlaceholder": {
+    "message": "https://api.openai.com/v1"
+  },
+  "openaiApiKeyPlaceholder": {
+    "message": "sk-..."
+  },
+  "openaiModelPlaceholder": {
+    "message": "gpt-3.5-turbo"
+  },
+  "openai2BaseUrlPlaceholder": {
+    "message": "http://127.0.0.1:11434/v1"
+  },
+  "openai2ApiKeyPlaceholder": {
+    "message": "一部のローカルLLMでは省略可能"
+  },
+  "openai2ModelPlaceholder": {
+    "message": "llama3"
+  },
+  "minVisitDuration": {
+    "message": "最小滞在時間（秒）"
+  },
+  "minScrollDepth": {
+    "message": "最小スクロール深度（%）"
+  },
+  "domainFilterMode": {
+    "message": "ドメインフィルターモード"
+  },
+  "filterDisabled": {
+    "message": "無効（すべて記録）"
+  },
+  "filterWhitelist": {
+    "message": "ホワイトリスト（指定ドメインのみ記録）"
+  },
+  "filterBlacklist": {
+    "message": "ブラックリスト（指定ドメインを除外）"
+  },
+  "filterDisabledDesc": {
+    "message": "ドメインに関係なく、訪問したすべてのWebサイトを記録します。",
+    "description": "ドメインフィルタ無効モードの説明"
+  },
+  "filterWhitelistDesc": {
+    "message": "ホワイトリストに含まれるドメインのWebサイトのみを記録します。",
+    "description": "ホワイトリストモードの説明"
+  },
+  "filterBlacklistDesc": {
+    "message": "ブラックリストに含まれるドメイン以外のWebサイトを記録します。",
+    "description": "ブラックリストモードの説明"
+  },
+  "filterFormat": {
+    "message": "フィルター形式（併用可能）"
+  },
+  "simpleFormat": {
+    "message": "シンプル（1行1ドメイン）"
+  },
+  "ublockFormat": {
+    "message": "uBlock Origin 形式"
+  },
+  "domainList": {
+    "message": "ドメインリスト（1行1ドメイン）"
+  },
+  "domainListPlaceholder": {
+    "message": "example.com\n*.example.org\ncompany.net"
+  },
+  "wildcardHelp": {
+    "message": "ワイルドカードも使用できます（例: *.example.com）"
+  },
+  "addCurrentDomain": {
+    "message": "現在のページドメインを追加"
+  },
+  "saveDomainSettings": {
+    "message": "保存"
+  },
+  "ublockFilter": {
+    "message": "uBlockフィルター"
+  },
+  "ublockFilterPlaceholder": {
+    "message": "||example.com^\n@@||trusted.com^\n0.0.0.0 ads.example.com\n! コメント行"
+  },
+  "ublockHelp": {
+    "message": "uBlock Origin形式 または hosts形式のフィルターを貼り付け\nuBlock: ||hostname^, @@||hostname^, *, !Comments\nhosts: 0.0.0.0/127.0.0.1 hostname (#コメント対応)"
+  },
+  "loadFromFile": {
+    "message": "ファイルから読み込み (.txt)"
+  },
+  "selectFile": {
+    "message": "ファイルを選択"
+  },
+  "dropFileHere": {
+    "message": "ファイルをここにドロップ"
+  },
+  "loadFromUrl": {
+    "message": "URLから読み込み"
+  },
+  "importFromUrl": {
+    "message": "URLからインポート"
+  },
+  "urlPlaceholder": {
+    "message": "https://example.com/filters.txt"
+  },
+  "registeredFilterSources": {
+    "message": "登録済みフィルターソース"
+  },
+  "noSourcesRegistered": {
+    "message": "ソースが登録されていません"
+  },
+  "loadPreview": {
+    "message": "読み込みプレビュー"
+  },
+  "ruleCount": {
+    "message": "ルール数: {count}"
+  },
+  "exceptionCount": {
+    "message": "例外数: {count}"
+  },
+  "errorCount": {
+    "message": "エラー: {count}"
+  },
+  "export": {
+    "message": "エクスポート"
+  },
+  "copyToClipboard": {
+    "message": "クリップボードにコピー"
+  },
+  "manualInput": {
+    "message": "手動入力"
+  },
+  "rulesLabel": {
+    "message": "ルール"
+  },
+  "reload": {
+    "message": "再読込"
+  },
+  "delete": {
+    "message": "削除"
+  },
+  "privacyMode": {
+    "message": "プライバシーモード"
+  },
+  "modeA": {
+    "message": "Mode A: Local Only"
+  },
+  "modeADesc": {
+    "message": "ページ内容を外部送信せず、ローカルAIのみで要約します。\n現在、多くのブラウザで動作しません。"
+  },
+  "modeADetail": {
+    "message": "（開発中）"
+  },
+  "modeB": {
+    "message": "Mode B: Full Pipeline"
+  },
+  "modeBDesc": {
+    "message": "ローカルAIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
+  },
+  "modeBCurrently": {
+    "message": "（開発中）"
+  },
+  "modeC": {
+    "message": "Mode C: Masked Cloud"
+  },
+  "modeCDesc": {
+    "message": "PIIのみマスクしてクラウドAIへ送信。\nローカルAIが使えない環境向け。"
+  },
+  "modeCRecommended": {
+    "message": "（推奨）"
+  },
+  "modeD": {
+    "message": "Mode D: Cloud Only"
+  },
+  "modeDDesc": {
+    "message": "生のテキストをそのままクラウドAIへ送信。\n速度優先。"
+  },
+  "confirmSettings": {
+    "message": "確認設定"
+  },
+  "confirmBeforeSending": {
+    "message": "送信前にマスキング結果を確認する"
+  },
+  "confirmBeforeSendingManual": {
+    "message": "手動保存時に送信前にマスキング結果を確認する"
+  },
+  "autoSavePrivacyBehavior": {
+    "message": "自動保存時にプライバシー懸念がある場合の動作"
+  },
+  "autoSaveBehaviorSave": {
+    "message": "通常通り保存する（デフォルト）"
+  },
+  "autoSaveBehaviorSkip": {
+    "message": "保存をスキップし、記録履歴に残す（あとで記録履歴から登録できる）"
+  },
+  "autoSaveBehaviorConfirm": {
+    "message": "保存するかどうか確認する"
+  },
+  "savePrivacySettings": {
+    "message": "保存"
+  },
+  "confirmContent": {
+    "message": "内容の確認"
+  },
+  "confirmContentDesc": {
+    "message": "Obsidianに保存する内容を確認・編集できます。"
+  },
+  "confirmContentNote": {
+    "message": "※ マスキングされた箇所を確認してください。"
+  },
+  "cancelPreviewBtn": {
+    "message": "キャンセル"
+  },
+  "sendBtn": {
+    "message": "送信する"
+  },
+  "closeModalBtn": {
+    "message": "×"
+  },
+  "fetchingContent": {
+    "message": "コンテンツ取得中..."
+  },
+  "localAiProcessing": {
+    "message": "ローカルAI処理中..."
+  },
+  "saving": {
+    "message": "保存中..."
+  },
+  "recording": {
+    "message": "記録中..."
+  },
+  "forceRecord": {
+    "message": "強制記録"
+  },
+  "forceRecordAnyway": {
+    "message": "それでも記録"
+  },
+  "cannotRecordHttpHttps": {
+    "message": "現在のページはHTTP/HTTPSページではありません"
+  },
+  "failedToExtractDomain": {
+    "message": "ドメインを抽出できませんでした"
+  },
+  "domainAlreadyExists": {
+    "message": "ドメイン \"{domain}\" は既にリストに存在します"
+  },
+  "domainAdded": {
+    "message": "ドメイン \"{domain}\" を追加しました"
+  },
+  "filterModeRequired": {
+    "message": "フィルターモードを選択してください"
+  },
+  "domainFilterSaved": {
+    "message": "ドメインフィルター設定を保存しました"
+  },
+  "modeRequired": {
+    "message": "モードを選択してください"
+  },
+  "privacySaved": {
+    "message": "プライバシー設定を保存しました"
+  },
+  "noTextToCopy": {
+    "message": "コピーするテキストがありません"
+  },
+  "copiedToClipboard": {
+    "message": "クリップボードにコピーしました"
+  },
+  "nothingToExport": {
+    "message": "エクスポートするデータがありません"
+  },
+  "fileExported": {
+    "message": "ファイルをエクスポートしました"
+  },
+  "textFileOnly": {
+    "message": "テキストファイルのみ対応しています"
+  },
+  "timeDaysAgo": {
+    "message": "{count}日前",
+    "description": "Relative time: X days ago"
+  },
+  "timeHoursAgo": {
+    "message": "{count}時間前",
+    "description": "Relative time: X hours ago"
+  },
+  "timeJustNow": {
+    "message": "たった今",
+    "description": "Relative time: just now"
+  },
+  "timeMinutesAgo": {
+    "message": "{count}分前",
+    "description": "Relative time: X minutes ago"
+  },
+  "timeYesterday": {
+    "message": "昨日",
+    "description": "Relative time: yesterday"
+  },
+  "loadEmptyUrl": {
+    "message": "URLを入力してください"
+  },
+  "loadingUrl": {
+    "message": "読み込み中..."
+  },
+  "loadedFromUrl": {
+    "message": "\"{url}\" からフィルターを読み込みました"
+  },
+  "fileLoaded": {
+    "message": "\"{filename}\" を読み込みました"
+  },
+  "fileReadError": {
+    "message": "ファイル読み込みエラー"
+  },
+  "exportError": {
+    "message": "エクスポートエラー"
+  },
+  "copyError": {
+    "message": "コピーエラー"
+  },
+  "deleteError": {
+    "message": "削除エラー"
+  },
+  "reloadError": {
+    "message": "更新エラー"
+  },
+  "updateError": {
+    "message": "更新エラー"
+  },
+  "saveError": {
+    "message": "保存エラー"
+  },
+  "recordError": {
+    "message": "記録に失敗しました",
+    "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
+  },
+  "clipboardCopyFailed": {
+    "message": "クリップボードへのコピーに失敗しました"
+  },
+  "connectionError": {
+    "message": "ページを再読み込みしてから再度お試しください"
+  },
+  "domainBlockedError": {
+    "message": "このドメインは記録が許可されていませんが特別に記録しますか？"
+  },
+  "errorPrefix": {
+    "message": "✗ エラー:"
+  },
+  "success": {
+    "message": "✓ Obsidianに保存しました"
+  },
+  "aiTagsLabel": {
+    "message": "AIタグ"
+  },
+  "cancelled": {
+    "message": "キャンセルしました"
+  },
+  "unknownError": {
+    "message": "不明なエラーが発生しました"
+  },
+  "sourceUpdated": {
+    "message": "ソースを更新しました（{ruleCount}ルール）"
+  },
+  "sourceUpdatedWithDiff": {
+    "message": "ソースを更新しました（合計: {ruleCount} {diff}）"
+  },
+  "autoCloseError": {
+    "message": "自動クローズに失敗しました"
+  },
+  "testingConnection": {
+    "message": "接続テスト中..."
+  },
+  "connectionSuccess": {
+    "message": "接続成功"
+  },
+  "successConnected": {
+    "message": "成功！Obsidianに接続しました。設定を保存しました。"
+  },
+  "successAllConnected": {
+    "message": "成功！Obsidian・AI両方に接続しました。設定を保存しました。"
+  },
+  "obsidianOkAiFailed": {
+    "message": "Obsidian: OK / AI接続失敗: {message}"
+  },
+  "obsidianFailedAiOk": {
+    "message": "Obsidian接続失敗: {message} / AI: OK"
+  },
+  "bothConnectionFailed": {
+    "message": "Obsidian接続失敗: {obsidianMessage} / AI接続失敗: {aiMessage}"
+  },
+  "connectionFailed": {
+    "message": "接続失敗: {message}"
+  },
+  "acceptCertificate": {
+    "message": "ここをクリックして自己署名証明書を承認"
+  },
+  "errorProtocol": {
+    "message": "エラー: プロトコルは\"http\"または\"https\"である必要があります。"
+  },
+  "errorPort": {
+    "message": "エラー: ポートは1から65535の間の数値である必要があります。"
+  },
+  "errorDuration": {
+    "message": "エラー: 最小滞在時間は0以上の数値である必要があります。"
+  },
+  "errorScrollDepth": {
+    "message": "エラー: 最小スクロール深度は0から100の間の数値である必要があります。"
+  },
+  "errorInvalidUrl": {
+    "message": "エラー: 無効なURL形式です"
+  },
+  "domainListError": {
+    "message": "ドメインリストのエラー:"
+  },
+  "noActiveTab": {
+    "message": "アクティブなタブが見つかりません"
+  },
+  "errorColon": {
+    "message": "エラー:"
+  },
+  "maskStatusCount": {
+    "message": "{count}件の個人情報をマスクしました"
+  },
+  "maskStatusDetails": {
+    "message": "{details}をマスクしました"
+  },
+  "itemsCount": {
+    "message": "{count}件"
+  },
+  "items": {
+    "message": "、"
+  },
+  "previousMaskedItem": {
+    "message": "前のマスク箇所"
+  },
+  "nextMaskedItem": {
+    "message": "次のマスク箇所"
+  },
+  "generatedBy": {
+    "message": "! Generated by Obsidian Weave"
+  },
+  "piiCreditCard": {
+    "message": "クレジットカード番号"
+  },
+  "piiMyNumber": {
+    "message": "マイナンバー"
+  },
+  "piiBankAccount": {
+    "message": "銀行口座番号"
+  },
+  "piiEmail": {
+    "message": "Eメール"
+  },
+  "piiPhoneJp": {
+    "message": "電話番号"
+  },
+  "countdownNumber": {
+    "message": "{count}..."
+  },
+  "autoClosing": {
+    "message": "自動的に閉じています..."
+  },
+  "errorContentScriptNotAvailable": {
+    "message": "このページからコンテンツを取得できません。ページをリロードしてから再度お試しください。"
+  },
+  "errorNoContentResponse": {
+    "message": "コンテンツ取得レスポンスがありません。"
+  },
+  "errorPrivateNetworkAccess": {
+    "message": "プライベートネットワークへのアクセスは許可されていません: {hostname}"
+  },
+  "errorLocalhostAccess": {
+    "message": "フィルターインポートでのlocalhostアクセスは許可されていません"
+  },
+  "openSettings": {
+    "message": "設定"
+  },
+  "backToMain": {
+    "message": "メイン画面に戻る"
+  },
+  "closeModal": {
+    "message": "閉じる"
+  },
+  "settingsMenu": {
+    "message": "設定メニュー"
+  },
+  "exportSettings": {
+    "message": "エクスポート"
+  },
+  "exportTitle": {
+    "message": "設定のエクスポート"
+  },
+  "exportDesc": {
+    "message": "現在の設定をJSONファイルに保存します。"
+  },
+  "importSettings": {
+    "message": "インポート"
+  },
+  "importTitle": {
+    "message": "設定のインポート"
+  },
+  "importDesc": {
+    "message": "以前にエクスポートしたJSONファイルから設定を復元します。"
+  },
+  "settingsExported": {
+    "message": "設定をエクスポートしました"
+  },
+  "settingsImported": {
+    "message": "設定をインポートしました"
+  },
+  "confirmImport": {
+    "message": "設定のインポート"
+  },
+  "confirmImportDesc": {
+    "message": "現在の設定は上書きされます。よろしいですか？"
+  },
+  "confirmImportNote": {
+    "message": "※ インポート前に以下の設定を確認してください。"
+  },
+  "importError": {
+    "message": "インポートエラー"
+  },
+  "invalidSettingsFile": {
+    "message": "無効な設定ファイルです"
+  },
+  "dropZoneLabel": {
+    "message": "uBlockフィルタードロップゾーン",
+    "description": "uBlockフィルターファイルをドラッグ＆ドロップするドロップゾーンのARIAラベル"
+  },
+  "promptTab": {
+    "message": "AIプロンプト"
+  },
+  "promptDescription": {
+    "message": "AI要約プロンプト設定"
+  },
+  "promptHelp": {
+    "message": "{{content}}をページ内容のプレースホルダーとして使用してください。このプロンプトは要約生成時に使用されます。"
+  },
+  "savedPrompts": {
+    "message": "保存済みプロンプト"
+  },
+  "noPromptsSaved": {
+    "message": "保存されたプロンプトはありません"
+  },
+  "promptEditor": {
+    "message": "プロンプトエディター"
+  },
+  "promptName": {
+    "message": "プロンプト名"
+  },
+  "promptNamePlaceholder": {
+    "message": "例: 短い要約"
+  },
+  "promptProvider": {
+    "message": "適用先プロバイダー"
+  },
+  "promptProviderAll": {
+    "message": "すべてのプロバイダー"
+  },
+  "promptSystem": {
+    "message": "システムプロンプト（OpenAIのみ）"
+  },
+  "promptSystemPlaceholder": {
+    "message": "あなたはWebページを効果的かつ簡潔に要約するアシスタントです..."
+  },
+  "promptSystemHelp": {
+    "message": "OpenAI互換プロバイダー用のシステムプロンプト（オプション）"
+  },
+  "promptText": {
+    "message": "ユーザープロンプト"
+  },
+  "promptTextPlaceholder": {
+    "message": "以下のWebページの内容を日本語で要約してください...\n\n{{content}}"
+  },
+  "savePrompt": {
+    "message": "プロンプトを保存"
+  },
+  "updatePrompt": {
+    "message": "プロンプトを更新"
+  },
+  "activate": {
+    "message": "有効化"
+  },
+  "edit": {
+    "message": "編集"
+  },
+  "activePrompt": {
+    "message": "有効"
+  },
+  "promptNameRequired": {
+    "message": "プロンプト名は必須です"
+  },
+  "promptCreated": {
+    "message": "プロンプトを作成しました"
+  },
+  "promptUpdated": {
+    "message": "プロンプトを更新しました"
+  },
+  "promptDeleted": {
+    "message": "プロンプトを削除しました"
+  },
+  "promptActivated": {
+    "message": "プロンプトを有効化しました"
+  },
+  "confirmDeletePrompt": {
+    "message": "このプロンプトを削除してもよろしいですか？"
+  },
+  "confirm": {
+    "message": "インポート"
+  },
+  "seconds": {
+    "message": "秒"
+  },
+  "importPreviewSummary": {
+    "message": "概要:"
+  },
+  "importPreviewNote": {
+    "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
+  },
+  "importNoSignatureWarning": {
+    "message": "⚠️ この設定ファイルには署名が含まれていません。\n\n署名は設定ファイルの改ざん防止のために使用されます。\n信頼できないソースからのファイルはインポートしないことを推奨します。\n\nインポートを続行しますか？"
+  },
+  "errorNetwork": {
+    "message": "ネットワークエラーが発生しました。インターネット接続を確認してください。"
+  },
+  "errorAuth": {
+    "message": "認証エラーが発生しました。APIキーを確認してください。"
+  },
+  "errorValidation": {
+    "message": "入力内容が無効です。"
+  },
+  "errorNotFound": {
+    "message": "リソースが見つかりませんでした。"
+  },
+  "errorRateLimit": {
+    "message": "リクエスト制限に達しました。しばらく待ってから再試行してください。"
+  },
+  "errorServer": {
+    "message": "サーバーエラーが発生しました。しばらく待ってから再試行してください。"
+  },
+  "errorGeneric": {
+    "message": "エラーが発生しました。"
+  },
+  "errorUrlNotAllowed": {
+    "message": "このURLのアクセスは許可されていません。設定画面でベースURLが登録されているか確認してください。"
+  },
+  "errorDomainBlocked": {
+    "message": "このドメインはブロックされています。"
+  },
+  "errorInvalidUrlGeneric": {
+    "message": "無効なURLです。"
+  },
+  "errorObsidianConnection": {
+    "message": "Obsidianへの接続に失敗しました。Obsidianが起動していることを確認してください。"
+  },
+  "errorDailyNoteSave": {
+    "message": "デイリーノートへの保存に失敗しました。"
+  },
+  "errorAiSummarize": {
+    "message": "AI要約の生成に失敗しました。"
+  },
+  "errorContentEmpty": {
+    "message": "ページのコンテンツが空です。"
+  },
+  "masterPasswordProtection": {
+    "message": "マスターパスワード保護"
+  },
+  "masterPasswordDesc": {
+    "message": "マスターパスワードを使用して設定を保護。暗号化されたエクスポート/インポートに必要です。"
+  },
+  "enableMasterPassword": {
+    "message": "マスターパスワード保護を有効にする"
+  },
+  "encryptApiKeys": {
+    "message": "ストレージ内のAPIキーを暗号化"
+  },
+  "encryptApiKeysDesc": {
+    "message": "APIキーはマスターパスワードで暗号化されます"
+  },
+  "encryptOnExport": {
+    "message": "エクスポート時に暗号化"
+  },
+  "encryptOnExportDesc": {
+    "message": "エクスポートされた設定ファイルはマスターパスワードで暗号化されます"
+  },
+  "requirePasswordOnImport": {
+    "message": "インポート時にパスワードを要求"
+  },
+  "requirePasswordOnImportDesc": {
+    "message": "暗号化された設定をインポートするにはパスワードが必要です"
+  },
+  "changeMasterPassword": {
+    "message": "マスターパスワードを変更"
+  },
+  "setMasterPassword": {
+    "message": "マスターパスワードを設定"
+  },
+  "setMasterPasswordDesc": {
+    "message": "マスターパスワードを作成して設定を保護します。このパスワードは復元できません。"
+  },
+  "changeMasterPasswordDesc": {
+    "message": "変更するには現在のマスターパスワードを入力してください。"
+  },
+  "masterPassword": {
+    "message": "マスターパスワード"
+  },
+  "confirmMasterPassword": {
+    "message": "マスターパスワード（確認）"
+  },
+  "enterMasterPassword": {
+    "message": "マスターパスワードを入力"
+  },
+  "enterMasterPasswordDesc": {
+    "message": "続行するにはマスターパスワードを入力してください。"
+  },
+  "passwordMismatch": {
+    "message": "パスワードが一致しません。"
+  },
+  "passwordTooShort": {
+    "message": "パスワードは8文字以上である必要があります。"
+  },
+  "passwordStrengthWeak": {
+    "message": "弱い"
+  },
+  "passwordStrengthMedium": {
+    "message": "中程度"
+  },
+  "passwordStrengthStrong": {
+    "message": "強い"
+  },
+  "passwordIncorrect": {
+    "message": "パスワードが正しくありません。"
+  },
+  "passwordSaved": {
+    "message": "マスターパスワードを保存しました。"
+  },
+  "passwordRemoved": {
+    "message": "マスターパスワードを削除しました。"
+  },
+  "passwordRequired": {
+    "message": "マスターパスワードを入力してください。"
+  },
+  "importPasswordRequired": {
+    "message": "この設定ファイルは暗号化されています。設定を復号してインポートするにはマスターパスワードを入力する必要があります。\n\n続行しますか？"
+  },
+  "privacyDialogBody": {
+    "message": "このページにはプライバシー懸念が検出されました（$REASON$）。それでも保存しますか？",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
     }
+  },
+  "privacyDialogStatusLabel": {
+    "message": "検出コード"
+  },
+  "privacyStatus_cacheControl": {
+    "message": "プライベートキャッシュヘッダー"
+  },
+  "privacyStatus_setCookie": {
+    "message": "認証Cookie"
+  },
+  "privacyStatus_authorization": {
+    "message": "認証ヘッダー"
+  },
+  "privacyStatus_unknown": {
+    "message": "不明なプライバシー懸念"
+  },
+  "notifyPrivacyConfirmTitle": {
+    "message": "Obsidian Weave"
+  },
+  "notifyPrivacyConfirmBody": {
+    "message": "「$TITLE$」にプライバシー懸念（$REASON$）が検出されました。保存しますか？",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "notifyPrivacyConfirmSave": {
+    "message": "保存する"
+  },
+  "notifyPrivacyConfirmSkip": {
+    "message": "スキップ"
+  },
+  "privatePageWarning": {
+    "message": "このページには個人情報が含まれている可能性があります（検出理由: $REASON$）。それでも保存しますか?",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "privatePageReason_cacheControl": {
+    "message": "プライベートキャッシュヘッダー"
+  },
+  "privatePageReason_setCookie": {
+    "message": "認証Cookie"
+  },
+  "privatePageReason_authorization": {
+    "message": "認証ヘッダー"
+  },
+  "defaultPrompt": {
+    "message": "デフォルト"
+  },
+  "duplicate": {
+    "message": "複製"
+  },
+  "promptDuplicated": {
+    "message": "プロンプトをエディターにコピーしました"
+  },
+  "statusDomainFilter": {
+    "message": "ドメインフィルタ"
+  },
+  "statusPrivacy": {
+    "message": "プライバシー"
+  },
+  "statusCache": {
+    "message": "キャッシュ状況"
+  },
+  "statusLastSaved": {
+    "message": "最終保存"
+  },
+  "statusShowDetails": {
+    "message": "詳細を表示"
+  },
+  "statusHideDetails": {
+    "message": "詳細を隠す"
+  },
+  "statusRecordable": {
+    "message": "記録可能"
+  },
+  "statusBlocked": {
+    "message": "記録不可"
+  },
+  "statusPrivateDetected": {
+    "message": "プライベート"
+  },
+  "statusNoInfo": {
+    "message": "情報なし"
+  },
+  "statusNotSaved": {
+    "message": "未保存"
+  },
+  "statusReloadHint": {
+    "message": "ページをリロードすると取得できます"
+  },
+  "statusDomainAllowed": {
+    "message": "許可済み"
+  },
+  "statusDomainBlocked": {
+    "message": "ブロック済み"
+  },
+  "statusFilterModeDisabled": {
+    "message": "フィルタ無効"
+  },
+  "statusFilterModeWhitelist": {
+    "message": "ホワイトリストモード"
+  },
+  "statusFilterModeBlacklist": {
+    "message": "ブラックリストモード"
+  },
+  "statusCacheControlPrivate": {
+    "message": "Cache-Control: private 検出"
+  },
+  "statusSetCookieDetected": {
+    "message": "Set-Cookie: あり"
+  },
+  "statusAuthDetected": {
+    "message": "Authorization: あり"
+  },
+  "warningPrivatePage": {
+    "message": "プライベートページが検出されました"
+  },
+  "warningPrivatePageMessage": {
+    "message": "$HEADER$ が検出されました。\n\nURL:\n$URL$",
+    "placeholders": {
+      "header": {
+        "content": "$1"
+      },
+      "url": {
+        "content": "$2"
+      }
+    }
+  },
+  "warningConfirmSave": {
+    "message": "保存しますか？"
+  },
+  "btnCancel": {
+    "message": "キャンセル"
+  },
+  "btnSaveOnce": {
+    "message": "今回のみ保存"
+  },
+  "btnSaveWhitelistDomain": {
+    "message": "ドメイン全体を許可して保存"
+  },
+  "btnSaveWhitelistPath": {
+    "message": "このパスのみ許可して保存"
+  },
+  "pendingPagesTitle": {
+    "message": "保留中のページ"
+  },
+  "pendingPagesEmpty": {
+    "message": "保留中のページはありません"
+  },
+  "btnSelectAll": {
+    "message": "全て選択"
+  },
+  "btnSaveSelected": {
+    "message": "保存"
+  },
+  "btnSaveWhitelist": {
+    "message": "許可して保存"
+  },
+  "btnDiscard": {
+    "message": "破棄"
+  },
+  "saveOnce": {
+    "message": "今回のみ保存"
+  },
+  "saveDomain": {
+    "message": "ドメイン全体を許可して保存"
+  },
+  "savePath": {
+    "message": "このパスのみ許可して保存"
+  },
+  "saveSuccess": {
+    "message": "保存成功"
+  },
+  "domainAddedToWhitelist": {
+    "message": "ドメインをホワイトリストに追加しました"
+  },
+  "pathAddedToWhitelist": {
+    "message": "パスをホワイトリストに追加しました"
+  },
+  "whitelistLabel": {
+    "message": "ホワイトリスト"
+  },
+  "blacklistLabel": {
+    "message": "ブラックリスト"
+  },
+  "whitelistHelp": {
+    "message": "このリストのドメインが記録されます（ホワイトリストモード有効時）"
+  },
+  "blacklistHelp": {
+    "message": "このリストのドメインが除外されます（ブラックリストモード有効時）"
+  },
+  "whitelistTab": {
+    "message": "ホワイトリスト"
+  },
+  "blacklistTab": {
+    "message": "ブラックリスト"
+  },
+  "ublockFormatDesc": {
+    "message": "上級者向け: uBlock Originからフィルターリストをインポート"
+  },
+  "settingsSection": {
+    "message": "設定"
+  },
+  "dataSection": {
+    "message": "データ"
+  },
+  "toolsSection": {
+    "message": "ツール"
+  },
+  "historyTab": {
+    "message": "記録履歴"
+  },
+  "domainSearchTab": {
+    "message": "ドメイン検索"
+  },
+  "diagnosticsTab": {
+    "message": "診断"
+  },
+  "exportImportTab": {
+    "message": "エクスポート / インポート"
+  },
+  "domainSearchLabel": {
+    "message": "ブラックリスト / ホワイトリストを検索"
+  },
+  "domainSearchPlaceholder": {
+    "message": "例: google, x.com, youtube"
+  },
+  "domainCheckLabel": {
+    "message": "このURLが記録されるか確認"
+  },
+  "domainCheckPlaceholder": {
+    "message": "https://example.com または example.com"
+  },
+  "domainNoMatches": {
+    "message": "一致するルールが見つかりません。"
+  },
+  "historyDescription": {
+    "message": "Obsidian Weaveが記録したURLの一覧です。検索ボックスで絞り込み、× で個別に削除できます。"
+  },
+  "historyRetentionPolicy": {
+    "message": "過去7日間の記録を表示（最大10,000件）。古いものから順に自動削除されます。"
+  },
+  "historySearchLabel": {
+    "message": "記録済みURLを検索"
+  },
+  "recordTypeAuto": {
+    "message": "自動"
+  },
+  "recordTypeManual": {
+    "message": "手動"
+  },
+  "maskedBadge": {
+    "message": "🔒 {count}件マスク"
+  },
+  "maskedBadgeTitle": {
+    "message": "{count}件の個人情報をマスクしてAIに送信しました"
+  },
+  "filterMasked": {
+    "message": "🔒 マスクあり"
+  },
+  "filterAll": {
+    "message": "すべて"
+  },
+  "filterAuto": {
+    "message": "自動"
+  },
+  "filterManual": {
+    "message": "手動"
+  },
+  "filterSkipped": {
+    "message": "スキップ"
+  },
+  "pendingSectionTitle": {
+    "message": "記録できなかったページ"
+  },
+  "pendingSectionDesc": {
+    "message": "PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。"
+  },
+  "pendingReasonCache": {
+    "message": "Cache-Control ヘッダー"
+  },
+  "pendingReasonCookie": {
+    "message": "Set-Cookie ヘッダー"
+  },
+  "pendingReasonAuth": {
+    "message": "Authorization ヘッダー"
+  },
+  "pendingDeleteForever": {
+    "message": "🗑 完全削除"
+  },
+  "diagConnectionPlaceholder": {
+    "message": "「接続テスト」ボタンをクリックして、Obsidian APIへの接続を確認します。"
+  },
+  "diagDescription": {
+    "message": "ストレージの使用状況の確認、Obsidian REST APIへの接続テスト、拡張機能の情報を表示します。"
+  },
+  "diagStorageTitle": {
+    "message": "ストレージ"
+  },
+  "diagConnectionTitle": {
+    "message": "接続テスト"
+  },
+  "diagTestConnectionBtn": {
+    "message": "接続テスト"
+  },
+  "diagInfoTitle": {
+    "message": "拡張機能情報"
+  },
+  "diagStorageUsed": {
+    "message": "使用容量"
+  },
+  "diagSavedUrls": {
+    "message": "記録済みURL数"
+  },
+  "diagVersion": {
+    "message": "バージョン"
+  },
+  "diagExtName": {
+    "message": "拡張機能名"
+  },
+  "diagLoadError": {
+    "message": "ストレージ情報の読み込みに失敗しました。"
+  },
+  "testing": {
+    "message": "テスト中..."
+  },
+  "domainFilterDescription": {
+    "message": "記録するサイトをドメインで制御します。銀行・SNSなど記録不要なサイトはブラックリストに、社内サイトなど特定のサイトだけ記録したい場合はホワイトリストを使います。"
+  },
+  "domainFilterEnable": {
+    "message": "フィルターを有効にする"
+  },
+  "domainBlacklistTab": {
+    "message": "ブラックリスト"
+  },
+  "domainWhitelistTab": {
+    "message": "ホワイトリスト"
+  },
+  "domainBlacklistDesc": {
+    "message": "ブラックリストのドメインは記録されません。それ以外はすべて記録されます。"
+  },
+  "domainWhitelistDesc": {
+    "message": "ホワイトリストのドメインのみ記録されます。それ以外は記録されません。"
+  },
+  "domainTagAdd": {
+    "message": "追加"
+  },
+  "domainTagInputPlaceholder": {
+    "message": "例: bank.example.com"
+  },
+  "domainTagCount": {
+    "message": "{count} 件"
+  },
+  "domainTagInvalidError": {
+    "message": "無効なドメイン形式です。"
+  },
+  "domainTagDuplicateError": {
+    "message": "すでに登録されています。"
+  },
+  "domainSaveBtn": {
+    "message": "保存する"
+  },
+  "ublockDetailsTitle": {
+    "message": "uBlock Origin フィルター（上級者向け）"
+  },
+  "mainTabDashboard": {
+    "message": "初期設定"
+  },
+  "initialSetupDescription": {
+    "message": "Obsidianとの接続とAIの設定を行います。"
+  },
+  "obsidianSection": {
+    "message": "Obsidian 接続"
+  },
+  "advancedSettings": {
+    "message": "詳細設定（Protocol / Port / Daily Note Path）"
+  },
+  "aiSection": {
+    "message": "AI プロバイダー"
+  },
+  "recordingSection": {
+    "message": "記録条件"
+  },
+  "saveBtn": {
+    "message": "保存する"
+  },
+  "testConnectionBtn": {
+    "message": "接続テスト"
+  },
+  "testObsidianBtn": {
+    "message": "Obsidian テスト"
+  },
+  "testAiBtn": {
+    "message": "AI テスト"
+  },
+  "tagEditTitle": {
+    "message": "タグを編集"
+  },
+  "currentTags": {
+    "message": "現在のタグ"
+  },
+  "addTag": {
+    "message": "タグを追加"
+  },
+  "selectCategory": {
+    "message": "カテゴリを選択..."
+  },
+  "noTags": {
+    "message": "なし"
+  },
+  "editTags": {
+    "message": "タグを編集"
+  },
+  "tagFilterAriaLabel": {
+    "message": "タグ #$TAG$ でフィルター",
+    "placeholders": {
+      "tag": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveTagError": {
+    "message": "タグの保存に失敗しました"
+  },
+  "tagsTab": {
+    "message": "タグ"
+  },
+  "tagsDescription": {
+    "message": "AI要約時に自動でタグを付与するカテゴリを設定します。"
+  },
+  "tagSummaryTitle": {
+    "message": "タグ付き要約モード"
+  },
+  "tagSummaryModeLabel": {
+    "message": "タグ付き要約を使用"
+  },
+  "tagSummaryModeDesc": {
+    "message": "AI要約時にコンテンツに基づいて自動的にカテゴリータグを付与します"
+  },
+  "tagCategoriesTitle": {
+    "message": "タグカテゴリ"
+  },
+  "defaultCategoriesTitle": {
+    "message": "デフォルトカテゴリ"
+  },
+  "defaultCategoriesDesc": {
+    "message": "（デフォルトカテゴリは削除できません）"
+  },
+  "userCategoriesTitle": {
+    "message": "ユーザーカテゴリ"
+  },
+  "noUserCategories": {
+    "message": "なし"
+  },
+  "newCategoryPlaceholder": {
+    "message": "新しいカテゴリ名を入力..."
+  },
+  "duplicateCategoryError": {
+    "message": "このカテゴリ名は既に存在します"
+  },
+  "categoryNameTooLong": {
+    "message": "カテゴリ名が長すぎます（50文字以内）"
+  },
+  "categoryNameInvalidChars": {
+    "message": "カテゴリ名に使用できない文字が含まれています（|、# は使用不可）"
+  },
+  "tagSettingsSaved": {
+    "message": "タグ設定を保存しました"
+  },
+  "registeredDomains": {
+    "message": "登録済みドメイン",
+    "description": "ARIA label for list of registered domains"
+  },
+  "newCategoryName": {
+    "message": "新しいカテゴリ名",
+    "description": "ARIA label for new category name input"
+  },
+  "filterOptions": {
+    "message": "フィルターオプション",
+    "description": "ARIA label for history filter buttons"
+  },
+  "tagCategory": {
+    "message": "タグカテゴリ",
+    "description": "ARIA label for tag category select"
+  },
+  "hmacVerificationFailedConfirm": {
+    "message": "設定ファイルの署名検証に失敗しました。\n\n原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n信頼できない場合は「キャンセル」をクリックしてください。"
+  },
+  "importNoSignature": {
+    "message": "設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。"
+  },
+  "privacyConsentTitle": {
+    "message": "プライバシーポリシーへの同意"
+  },
+  "privacyConsentDesc": {
+    "message": "Obsidian Weaveを使用する前に、プライバシーポリシーをご確認ください。"
+  },
+  "keyPointsTitle": {
+    "message": "重要なポイント:"
+  },
+  "consentPoint1": {
+    "message": "すべてのデータはデバイス上にローカル保存されます"
+  },
+  "consentPoint2": {
+    "message": "開発者のサーバーにはデータが送信されません"
+  },
+  "consentPoint3": {
+    "message": "ページコンテンツは選択したAIプロバイダーにのみ送信されます"
+  },
+  "consentPoint4": {
+    "message": "拡張機能のアンインストールですべてのデータを削除できます"
+  },
+  "viewFullPolicy": {
+    "message": "プライバシーポリシー全文を表示"
+  },
+  "consentCheckboxLabel": {
+    "message": "プライバシーポリシーを読み、同意しました"
+  },
+  "accept": {
+    "message": "同意して続行"
+  },
+  "decline": {
+    "message": "拒否"
+  },
+  "consentRequired": {
+    "message": "この拡張機能を使用するにはプライバシーポリシーへの同意が必要です。"
+  },
+  "consentRequiredFeature": {
+    "message": "同意が必要です"
+  },
+  "saveFailed": {
+    "message": "同意の保存に失敗しました"
+  },
+  "openaiCompatibleModelsDev": {
+    "message": "OpenAI Compatible (Models.dev)"
+  },
+  "modelsDevDescription": {
+    "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Perplexity、DeepSeek等）から選択"
+  },
+  "selectProvider": {
+    "message": "プロバイダー選択"
+  },
+  "selectedProviderInfo": {
+    "message": "選択されたプロバイダー:"
+  },
+  "providerApiKeyPlaceholder": {
+    "message": "APIキーを入力..."
+  },
+  "providerModelPlaceholder": {
+    "message": "モデル名（オプション）"
+  },
+  "contentTab": {
+    "message": "Content Cleansing"
+  },
+  "contentTabPanelTitle": {
+    "message": "コンテンツ・クレンジング"
+  },
+  "contentTabPanelDescription": {
+    "message": "Webページから機密情報を含む可能性がある要素を自動的に削除します。"
+  },
+  "contentStripHardEnabled": {
+    "message": "Hard Strip（タグ・属性削除）を有効にする"
+  },
+  "contentStripHardEnabledDesc": {
+    "message": "input、password、script、iframe 等のタグと属性を削除します。"
+  },
+  "contentStripKeywordEnabled": {
+    "message": "Keyword Strip（キーワード削除）を有効にする"
+  },
+  "contentStripKeywordEnabledDesc": {
+    "message": "ID/クラス属性に指定されたキーワードを含む要素を削除します。"
+  },
+  "contentStripKeywords": {
+    "message": "キーワード"
+  },
+  "contentStripKeywordsDesc": {
+    "message": "削除対象とするキーワード（1行に1つ）"
+  },
+  "contentStripAddKeyword": {
+    "message": "追加"
+  },
+  "contentStripRemoveKeyword": {
+    "message": "削除"
+  },
+  "contentStripResetKeywords": {
+    "message": "デフォルトに戻しました"
+  },
+  "contentStripSave": {
+    "message": "保存"
+  }
 }

@@ -9,6 +9,9 @@
  * 🟢
  */
 
+import { cleanseContent, type CleanseOptions, type CleanseResult } from './contentCleaner.js';
+import { logSanitize } from './logger.js';
+
 /**
  * 除外するセクメンタルコンテンツのロール属性
  * HTMLテキスト抽出の際、ナビゲーションやバナー等の補助的UI要素を除外するために使用
@@ -316,6 +319,12 @@ function extractTextFromElement(element: Element): string {
 }
 
 /**
+ * クレンジング実行時のコールバック関数
+ * @param {CleanseResult | null} result - クレンジング結果
+ */
+type CleanseCallback = (result: CleanseResult | null) => void;
+
+/**
  * ページのメインコンテンツを抽出する
  * 【機能概要】: メインコンテンツ（記事、本文等）をテキストとして抽出
  * 【処理内容】:
@@ -327,17 +336,95 @@ function extractTextFromElement(element: Element): string {
  * 【サイズ制限】: maxChars で指定された最大文字数（デフォルト: 10000）
  * 🟢
  * @param maxChars - 最大文字数（デフォルト: 10000）
+ * @param cleanseOptions - クレンジングオプション
+ * @param cleanseCallback - クレンジング実行時のコールバック（オプション）
  * @returns 抽出されたテキスト（空白正規化済み、最大文字数制限適用）
  */
-export function extractMainContent(maxChars: number = 10000): string {
+/**
+ * ページのメインコンテンツを抽出する
+ * 【機能概要】: メインコンテンツ（記事、本文等）をテキストとして抽出
+ * 【処理内容】:
+ *   1. article/mainタグを優先的に探索
+ *   2. 見出し、段落の多い要素を選択
+ *   3. ナビゲーション、ヘッダー等を除外
+ *   4. （オプション）コンテンツ・クレンジング（Hard Strip + Keyword Strip）
+ *   5. 最大文字数で切り詰め
+ * 【フォールバック】: メインコンテンツが見つからない場合は body.innerText を使用
+ * 【サイズ制限】: maxChars で指定された最大文字数（デフォルト: 10000）
+ * 🟢
+ * @param maxChars - 最大文字数（デフォルト: 10000）
+ * @param cleanseOptions - クレンジングオプション（デフォルト: クレンジング無効）
+ * @returns 抽出されたテキスト（空白正規化済み、最大文字数制限適用）
+ */
+export function extractMainContent(
+    maxChars: number = 10000,
+    cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean } = { cleanseEnabled: false }
+): string {
     let content = '';
+    const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'] } = cleanseOptions;
 
     try {
         const candidates = findMainContentCandidates();
 
         if (candidates.length > 0) {
-            // 最高スコアの候補からテキストを抽出
-            content = extractTextFromElement(candidates[0]);
+            // クレンジングが有効な場合、クローンを作成してからクレンジングを実行
+            let targetElement: Element;
+
+            if (cleanseEnabled) {
+                // DOMを直接操作しないようにクローンを作成
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const clone = candidates[0].cloneNode(true) as Element;
+
+                // クローンに対してクレンジングを実行
+                const cleanseResult: CleanseResult = cleanseContent(clone, {
+                    hardStripEnabled,
+                    keywordStripEnabled,
+                    keywords
+                });
+
+                if (cleanseResult.totalRemoved > 0) {
+                    console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
+                        + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
+
+                    // サニタイズログに記録（非同期で実行）
+                    void logSanitize(
+                        'Content cleansing executed',
+                        {
+                            hardStripRemoved: cleanseResult.hardStripRemoved,
+                            keywordStripRemoved: cleanseResult.keywordStripRemoved,
+                            totalRemoved: cleanseResult.totalRemoved,
+                            keywords: keywords.join(', '),
+                            mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword'
+                        },
+                        undefined,
+                        'contentExtractor'
+                    );
+
+                    // Chrome Extension 環境の場合のみ、Badge 通知を送信
+                    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                        console.log('[ContentExtractor] Sending CONTENT_CLEANSING_EXECUTED message');
+                        void chrome.runtime.sendMessage({
+                            type: 'CONTENT_CLEANSING_EXECUTED',
+                            payload: {
+                                hardStripRemoved: cleanseResult.hardStripRemoved,
+                                keywordStripRemoved: cleanseResult.keywordStripRemoved,
+                                totalRemoved: cleanseResult.totalRemoved
+                            }
+                        }).then(() => {
+                            console.log('[ContentExtractor] CONTENT_CLEANSING_EXECUTED message sent successfully');
+                        }).catch((e) => {
+                            console.error('[ContentExtractor] Failed to send CONTENT_CLEANSING_EXECUTED message:', e);
+                        });
+                    }
+                }
+
+                targetElement = clone;
+            } else {
+                targetElement = candidates[0];
+            }
+
+            // 要素からテキストを抽出
+            content = extractTextFromElement(targetElement);
 
             // 抽出テキストが短すぎる場合、フォールバック
             if (content.trim().length < 100) {

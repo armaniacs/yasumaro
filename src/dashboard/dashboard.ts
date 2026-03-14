@@ -7,6 +7,7 @@
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
 import { init as initDomainFilter, loadDomainSettings } from '../popup/domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../popup/privacySettings.js';
+import { init as initContentSettings, loadContentSettings } from '../popup/contentSettings.js';
 import { initCustomPromptManager } from '../popup/customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from '../popup/settingsUiHelper.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
@@ -351,6 +352,7 @@ importFileInput?.addEventListener('change', async (e: Event) => {
           await loadGeneralSettings();
           await loadDomainSettings();
           await loadPrivacySettings();
+          await loadContentSettings();
         } else {
           showStatus('exportImportStatus', `${getMessage('importError')}: Failed to decrypt or apply settings`, 'error');
         }
@@ -421,6 +423,7 @@ confirmImportBtn?.addEventListener('click', async () => {
       await loadGeneralSettings();
       await loadDomainSettings();
       await loadPrivacySettings();
+          await loadContentSettings();
     } else {
       showStatus('exportImportStatus', `${getMessage('importError')}: Failed to apply settings`, 'error');
     }
@@ -2199,6 +2202,7 @@ function setHtmlLangDir(): void {
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
   try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
+  try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
 
   try {
     const settings = await getSettings();

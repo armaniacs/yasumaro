@@ -63,7 +63,7 @@ const autoSavedBadgeTabs = new Set<number>();
 HeaderDetector.initialize();
 
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
+const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED'];
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -113,6 +113,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 await tabCache.initialize();
             }
 
+            // Content Cleansing executed notification (Content Script only)
+            if (message.type === 'CONTENT_CLEANSING_EXECUTED' && sender.tab && sender.tab.id) {
+                const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
+                const tabId = sender.tab.id;
+
+                // Badge にクレンジング情報を表示（C + 削除数）
+                const badgeText = `C${totalRemoved || 0}`;
+                chrome.action.setBadgeText({ text: badgeText, tabId });
+                chrome.action.setBadgeBackgroundColor({ color: '#10B981', tabId: tabId }); // Green
+
+                // 3秒後に Badge をクリア
+                setTimeout(() => {
+                    // まだ自動保存されていない場合のみクリア
+                    if (!autoSavedBadgeTabs.has(tabId)) {
+                        chrome.action.setBadgeText({ text: '', tabId });
+                    }
+                }, 3000);
+
+                sendResponse({ success: true });
+                return;
+            }
+
             // Domain Check (Content Script only: loader が extractor を inject する前に確認)
             if (message.type === 'CHECK_DOMAIN' && sender.tab) {
                 const url = sender.tab.url || '';
@@ -145,7 +167,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
 
                 // 自動保存成功時: 青色バッジ ◎ を表示（タブを離れるまで継続）
-                if (result.success && sender.tab.id) {
+                // スキップされた場合は表示しない
+                if (result.success && !result.skipped && sender.tab.id) {
                     const savedTabId = sender.tab.id;
                     autoSavedBadgeTabs.add(savedTabId);
                     chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
