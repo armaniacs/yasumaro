@@ -660,6 +660,10 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
+    // Content cleansing defaults (Phase 0)
+    [StorageKeys.CONTENT_STRIP_HARD_ENABLED]: true,
+    [StorageKeys.CONTENT_STRIP_KEYWORDS]: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'],
+    [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED]: true,
     // uBlock format defaults（軽量化版: ドメイン配列のみ）
     [StorageKeys.UBLOCK_RULES]: {
         blockDomains: [],
