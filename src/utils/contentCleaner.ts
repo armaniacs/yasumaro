@@ -9,6 +9,24 @@
  */
 
 /**
+ * CSSセレクタで使用する文字列をエスケープする
+ * CSS.escape()が利用可能な場合はそれを使用し、そうでない場合はフォールバック実装を使用
+ * @param str - エスケープ対象の文字列
+ * @returns エスケープされた文字列
+ */
+function escapeCssSelector(str: string): string {
+    // CSS.escape()が利用可能な場合はそれを使用（モダンブラウザ）
+    if (typeof CSS !== 'undefined' && CSS.escape) {
+        return CSS.escape(str);
+    }
+    
+    // フォールバック: CSS識別子のルールに従ってエスケープ
+    // CSS識別子は [a-zA-Z0-9] と ISO 10646 U+00A0 以上、ハイフン(-)、アンダースコア(_) のみを含むことができる
+    // それ以外の文字はバックスラッシュでエスケープする必要がある
+    return str.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+}
+
+/**
  * Hard Strip 用タグセレクタ
  * これらのタグに一致する要素をすべて削除
  */
@@ -22,7 +40,10 @@ const HARD_STRIP_TAGS = new Set([
     'iframe',
     'style',
     'canvas',
-    'embed'
+    'embed',
+    'object',
+    'audio',
+    'video'
 ]);
 
 /**
@@ -37,6 +58,9 @@ interface AttributeSelector {
 const HARD_STRIP_ATTRIBUTES: AttributeSelector[] = [
     { name: 'type', value: 'password' },
     { name: 'type', value: 'hidden' },
+    { name: 'type', value: 'file' },
+    { name: 'type', value: 'email' },
+    { name: 'type', value: 'tel' },
     { name: 'autocomplete' }
 ];
 
@@ -86,22 +110,24 @@ export function stripHardStripElements(element: Element): number {
     // 削除対象の要素を収集（後から削除してDOM操作の問題を回避）
     const elementsToRemove: Element[] = [];
 
-    // TreeWalker で全要素を走査
-    const walker = element.ownerDocument.createTreeWalker(
-        element,
-        NodeFilter.SHOW_ELEMENT,
-        undefined
-    );
+    // タグセレクタをCSSセレクタ文字列に変換
+    const tagSelector = Array.from(HARD_STRIP_TAGS).join(',');
 
-    let node: Node | null = walker.nextNode();
-    while (node) {
-        const elem = node as Element;
+    // タグに一致する要素を取得
+    if (tagSelector) {
+        const tagElements = element.querySelectorAll(tagSelector);
+        tagElements.forEach(elem => elementsToRemove.push(elem));
+    }
 
-        if (isHardStripTarget(elem)) {
-            elementsToRemove.push(elem);
-        }
-
-        node = walker.nextNode();
+    // 属性に一致する要素を取得
+    for (const attr of HARD_STRIP_ATTRIBUTES) {
+        const selector = buildAttributeSelector(attr);
+        const attrElements = element.querySelectorAll(selector);
+        attrElements.forEach(elem => {
+            if (!elementsToRemove.includes(elem)) {
+                elementsToRemove.push(elem);
+            }
+        });
     }
 
     // 削除実行
@@ -111,6 +137,21 @@ export function stripHardStripElements(element: Element): number {
     }
 
     return removedCount;
+}
+
+/**
+ * 属性セレクタを構築するヘルパー関数
+ * @param attr - 属性セレクタ情報
+ * @returns CSS属性セレクタ文字列
+ */
+function buildAttributeSelector(attr: AttributeSelector): string {
+    if (attr.value === undefined) {
+        // 属性が存在する場合のみ
+        return `[${attr.name}]`;
+    } else {
+        // 完全一致
+        return `[${attr.name}="${attr.value}"]`;
+    }
 }
 
 /**
@@ -128,38 +169,27 @@ export function stripKeywordElements(element: Element, keywords: string[]): numb
     let removedCount = 0;
     const elementsToRemove: Element[] = [];
 
-    // TreeWalker で全要素を走査
-    const walker = element.ownerDocument.createTreeWalker(
-        element,
-        NodeFilter.SHOW_ELEMENT,
-        undefined
-    );
+    // キーワードごとにIDとクラスをチェック
+    for (const keyword of keywords) {
+        const kw = escapeCssSelector(keyword.toLowerCase());
 
-    let node: Node | null = walker.nextNode();
-    while (node) {
-        const elem = node as Element;
-
-        // IDで判定
-        const id = elem.id?.toLowerCase() || '';
-        for (const keyword of keywords) {
-            if (id.includes(keyword.toLowerCase())) {
+        // IDにキーワードを含む要素を取得
+        const idSelector = `[id*="${kw}"]`;
+        const idElements = element.querySelectorAll(idSelector);
+        idElements.forEach(elem => {
+            if (!elementsToRemove.includes(elem)) {
                 elementsToRemove.push(elem);
-                break;
             }
-        }
+        });
 
-        // クラス名で判定（まだ削除リストにない場合のみ）
-        if (!elementsToRemove.includes(elem)) {
-            const classes = elem.className?.toLowerCase() || '';
-            for (const keyword of keywords) {
-                if (classes.includes(keyword.toLowerCase())) {
-                    elementsToRemove.push(elem);
-                    break;
-                }
+        // クラスにキーワードを含む要素を取得
+        const classSelector = `[class*="${kw}"]`;
+        const classElements = element.querySelectorAll(classSelector);
+        classElements.forEach(elem => {
+            if (!elementsToRemove.includes(elem)) {
+                elementsToRemove.push(elem);
             }
-        }
-
-        node = walker.nextNode();
+        });
     }
 
     // 削除実行
@@ -206,33 +236,47 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     let keywordStripCount = 0;
 
     if (hardStripEnabled) {
-        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ELEMENT, undefined);
-        let node: Node | null = walker.nextNode();
-        while (node) {
-            if (isHardStripTarget(node as Element)) hardStripCount++;
-            node = walker.nextNode();
+        // タグセレクタをCSSセレクタ文字列に変換
+        const tagSelector = Array.from(HARD_STRIP_TAGS).join(',');
+
+        // タグに一致する要素をカウント
+        if (tagSelector) {
+            hardStripCount += element.querySelectorAll(tagSelector).length;
+        }
+
+        // 属性に一致する要素をカウント
+        for (const attr of HARD_STRIP_ATTRIBUTES) {
+            const selector = buildAttributeSelector(attr);
+            hardStripCount += element.querySelectorAll(selector).length;
         }
     }
 
     if (keywordStripEnabled && keywords.length > 0) {
-        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ELEMENT, undefined);
         const counted = new Set<Element>();
-        let node: Node | null = walker.nextNode();
-        while (node) {
-            const elem = node as Element;
-            if (!counted.has(elem)) {
-                const id = elem.id?.toLowerCase() || '';
-                const classes = elem.className?.toLowerCase() || '';
-                for (const keyword of keywords) {
-                    const kw = keyword.toLowerCase();
-                    if (id.includes(kw) || classes.includes(kw)) {
-                        keywordStripCount++;
-                        counted.add(elem);
-                        break;
-                    }
+
+        // キーワードごとにIDとクラスをチェック
+        for (const keyword of keywords) {
+            const kw = escapeCssSelector(keyword.toLowerCase());
+
+            // IDにキーワードを含む要素をカウント
+            const idSelector = `[id*="${kw}"]`;
+            const idElements = element.querySelectorAll(idSelector);
+            idElements.forEach(elem => {
+                if (!counted.has(elem)) {
+                    keywordStripCount++;
+                    counted.add(elem);
                 }
-            }
-            node = walker.nextNode();
+            });
+
+            // クラスにキーワードを含む要素をカウント
+            const classSelector = `[class*="${kw}"]`;
+            const classElements = element.querySelectorAll(classSelector);
+            classElements.forEach(elem => {
+                if (!counted.has(elem)) {
+                    keywordStripCount++;
+                    counted.add(elem);
+                }
+            });
         }
     }
 

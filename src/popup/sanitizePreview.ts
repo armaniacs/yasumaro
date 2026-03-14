@@ -139,8 +139,12 @@ function resetBodyWidth(): void {
 /**
  * クレンジング情報の表示を更新
  * @param cleansedReason - クレンジング理由
+ * @param cleanseStats - クレンジング統計情報
  */
-function updateCleansingInfo(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): void {
+function updateCleansingInfo(
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none',
+  cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }
+): void {
   const cleansingInfo = document.getElementById('cleansingInfo');
   const cleansingBadge = document.getElementById('cleansingBadge');
 
@@ -170,6 +174,20 @@ function updateCleansingInfo(cleansedReason?: 'hard' | 'keyword' | 'both' | 'non
       break;
   }
 
+  // 統計情報を追加
+  if (cleanseStats && cleanseStats.totalRemoved > 0) {
+    const details: string[] = [];
+    if (cleanseStats.hardStripRemoved > 0) {
+      details.push(`Hard: ${cleanseStats.hardStripRemoved}`);
+    }
+    if (cleanseStats.keywordStripRemoved > 0) {
+      details.push(`Keyword: ${cleanseStats.keywordStripRemoved}`);
+    }
+    if (details.length > 0) {
+      badgeText += ` (${details.join(', ')})`;
+    }
+  }
+
   cleansingBadge.textContent = badgeText;
   cleansingBadge.className = 'cleansing-badge';
 }
@@ -182,7 +200,8 @@ export function showPreview(
   content: string,
   maskedItems: MaskedItem[] | null = null,
   maskedCount: number = 0,
-  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none',
+  cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }
 ): Promise<ConfirmationResult> {
   const modal = getModal();
   const previewContent = getPreviewContent();
@@ -215,7 +234,7 @@ export function showPreview(
   }
 
   // クレンジング情報の表示
-  updateCleansingInfo(cleansedReason);
+  updateCleansingInfo(cleansedReason, cleanseStats);
 
   // プレビューコンテンツの設定（プレーンテキストのまま表示）
   setPreviewContent(previewContent, content || '');

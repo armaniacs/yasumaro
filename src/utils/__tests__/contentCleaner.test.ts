@@ -47,6 +47,14 @@ describe('contentCleaner', () => {
                         <iframe src="ads.html"></iframe>
                         <canvas id="chart"></canvas>
                         <embed src="plugin.swf">
+                        <object data="media.swf"></object>
+                        <audio src="audio.mp3"></audio>
+                        <video src="video.mp4"></video>
+
+                        <!-- Hard Strip targets: additional attributes -->
+                        <input type="file" id="file-upload">
+                        <input type="email" id="email-input">
+                        <input type="tel" id="tel-input">
 
                         <!-- Keyword Strip targets -->
                         <div id="account-balance">Your balance is $1000</div>
@@ -108,7 +116,7 @@ describe('contentCleaner', () => {
             expect(form?.id).not.toBe('login-form');
         });
 
-        it('should remove script, style, iframe, canvas, embed tags', () => {
+        it('should remove script, style, iframe, canvas, embed, object, audio, video tags', () => {
             const container = document.getElementById('test-container')!;
             const removed = stripHardStripElements(container);
 
@@ -118,6 +126,9 @@ describe('contentCleaner', () => {
             expect(container.querySelector('iframe')).toBeNull();
             expect(container.querySelector('canvas')).toBeNull();
             expect(container.querySelector('embed')).toBeNull();
+            expect(container.querySelector('object')).toBeNull();
+            expect(container.querySelector('audio')).toBeNull();
+            expect(container.querySelector('video')).toBeNull();
         });
 
         it('should remove elements with type="password" attribute', () => {
@@ -151,6 +162,39 @@ describe('contentCleaner', () => {
 
             const autocompleteInputAfter = container.querySelector('#search-field');
             expect(autocompleteInputAfter).toBeNull();
+        });
+
+        it('should remove elements with type="file" attribute', () => {
+            const container = document.getElementById('test-container')!;
+            const fileInput = container.querySelector('#file-upload');
+            expect(fileInput).not.toBeNull();
+
+            stripHardStripElements(container);
+
+            const fileInputAfter = container.querySelector('#file-upload');
+            expect(fileInputAfter).toBeNull();
+        });
+
+        it('should remove elements with type="email" attribute', () => {
+            const container = document.getElementById('test-container')!;
+            const emailInput = container.querySelector('#email-input');
+            expect(emailInput).not.toBeNull();
+
+            stripHardStripElements(container);
+
+            const emailInputAfter = container.querySelector('#email-input');
+            expect(emailInputAfter).toBeNull();
+        });
+
+        it('should remove elements with type="tel" attribute', () => {
+            const container = document.getElementById('test-container')!;
+            const telInput = container.querySelector('#tel-input');
+            expect(telInput).not.toBeNull();
+
+            stripHardStripElements(container);
+
+            const telInputAfter = container.querySelector('#tel-input');
+            expect(telInputAfter).toBeNull();
         });
 
         it('should not remove normal content', () => {
@@ -321,6 +365,106 @@ describe('contentCleaner', () => {
             });
 
             expect(result.totalRemoved).toBe(0);
+        });
+    });
+
+    describe('Performance with many keywords', () => {
+        it('should handle 20+ keywords efficiently', () => {
+            // 20個のキーワードを生成
+            const keywords = Array.from({ length: 20 }, (_, i) => `keyword${i}`);
+
+            // テスト用DOMを作成（各キーワードに対応する要素を含む）
+            const testDom = new JSDOM(`
+                <html>
+                    <body>
+                        <div id="test-container">
+                            ${keywords.map((kw, i) => `
+                                <div id="${kw}-element">Element ${i}</div>
+                                <div class="${kw}-class">Class Element ${i}</div>
+                            `).join('')}
+                        </div>
+                    </body>
+                </html>
+            `);
+            const testDocument = testDom.window.document;
+            const container = testDocument.getElementById('test-container')!;
+
+            // パフォーマンス計測
+            const startTime = performance.now();
+            const result = stripKeywordElements(container, keywords);
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+
+            // 40個の要素が削除されるはず（各キーワードにつきIDとClassの2つ）
+            expect(result).toBe(40);
+
+            // パフォーマンス要件: 100ms以内で完了すること
+            expect(duration).toBeLessThan(100);
+
+            testDom.window.close();
+        });
+
+        it('should handle 50+ keywords efficiently', () => {
+            // 50個のキーワードを生成
+            const keywords = Array.from({ length: 50 }, (_, i) => `keyword${i}`);
+
+            // テスト用DOMを作成（各キーワードに対応する要素を含む）
+            const testDom = new JSDOM(`
+                <html>
+                    <body>
+                        <div id="test-container">
+                            ${keywords.map((kw, i) => `
+                                <div id="${kw}-element">Element ${i}</div>
+                                <div class="${kw}-class">Class Element ${i}</div>
+                            `).join('')}
+                        </div>
+                    </body>
+                </html>
+            `);
+            const testDocument = testDom.window.document;
+            const container = testDocument.getElementById('test-container')!;
+
+            // パフォーマンス計測
+            const startTime = performance.now();
+            const result = stripKeywordElements(container, keywords);
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+
+            // 100個の要素が削除されるはず（各キーワードにつきIDとClassの2つ）
+            expect(result).toBe(100);
+
+            // パフォーマンス要件: 200ms以内で完了すること
+            expect(duration).toBeLessThan(200);
+
+            testDom.window.close();
+        });
+
+        it('should handle keywords with special characters', () => {
+            // 特殊文字を含むキーワード
+            const keywords = ['test"quote', 'test\'apostrophe', 'test[bracket]', 'test\\backslash'];
+
+            // テスト用DOMを作成
+            const testDom = new JSDOM(`
+                <html>
+                    <body>
+                        <div id="test-container">
+                            <div id="test&quot;quote-element">Element 1</div>
+                            <div id="test&#39;apostrophe-element">Element 2</div>
+                            <div id="test[bracket]-element">Element 3</div>
+                            <div id="test\\backslash-element">Element 4</div>
+                        </div>
+                    </body>
+                </html>
+            `);
+            const testDocument = testDom.window.document;
+            const container = testDocument.getElementById('test-container')!;
+
+            // DOMExceptionがスローされずに正常に動作することを確認
+            expect(() => {
+                stripKeywordElements(container, keywords);
+            }).not.toThrow();
+
+            testDom.window.close();
         });
     });
 });

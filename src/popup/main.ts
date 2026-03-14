@@ -680,7 +680,8 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           previewResponse.processedContent,
           previewResponse.maskedItems,
           previewResponse.maskedCount || 0,
-          contentResponse.cleansedReason
+          contentResponse.cleansedReason,
+          contentResponse.cleanseStats
         );
 
         if (!confirmation.confirmed) {
@@ -898,6 +899,28 @@ async function initStatusPanel(): Promise<void> {
   }
 }
 
+/**
+ * クレンジング理由の表示テキストを取得する
+ * @param cleansedReason - クレンジング理由
+ * @returns 表示テキスト
+ */
+function getCleansedReasonText(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): string {
+  if (!cleansedReason || cleansedReason === 'none') {
+    return '';
+  }
+
+  switch (cleansedReason) {
+    case 'hard':
+      return getMessage('cleansedBadgeHard') || '🧹 Hard';
+    case 'keyword':
+      return getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
+    case 'both':
+      return getMessage('cleansedBadgeBoth') || '🧹 Both';
+    default:
+      return '';
+  }
+}
+
 function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cleansedReason?: ContentResponse['cleansedReason']): void {
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (!cleansingContent) return;
@@ -908,6 +931,14 @@ function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cl
   }
 
   let html = '';
+
+  // クレンジング理由を表示
+  const reasonText = getCleansedReasonText(cleansedReason);
+  if (reasonText) {
+    html += `<span class="status-value">${reasonText}</span>`;
+  }
+
+  // 統計情報を表示
   if (cleanseStats.hardStripRemoved > 0) {
     html += `<span class="status-value">${getMessage('statusCleansingHard', [String(cleanseStats.hardStripRemoved)])}</span>`;
   }

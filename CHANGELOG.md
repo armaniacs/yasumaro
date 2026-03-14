@@ -35,6 +35,14 @@ All notable changes to this project will be documented in this file.
   - バックエンド変更なし — 保存済みタグを `chrome.storage.local` から取得して表示
   - `startAutoCloseTimerWithDelay(ms)` を `autoClose.ts` に追加してタイマー管理を一元化
 
+### Changed
+- **Content Cleansingの改善** ([contentCleaner.ts](src/utils/contentCleaner.ts), [main.ts](src/popup/main.ts), [sanitizePreview.ts](src/popup/sanitizePreview.ts))
+  - **高優先度**: Hard Stripターゲットを追加（type="file", type="email", type="tel", object, audio, video）
+  - **中優先度**: パフォーマンス最適化（querySelectorAllでTreeWalkerを置換）
+  - **低優先度**: ユーザー向け改善（クレンジング詳細をポップアップに表示）
+  - クレンジングバッジにHard/Keywordの内訳を表示（例: "🧹 Hard (Hard: 5, Keyword: 3)"）
+  - ステータスパネルにクレンジング理由バッジを表示（🧹 Hard / 🧹 Keyword / 🧹 Both）
+
 ## [4.2.1] - 2026-03-09
 
 ### Added
