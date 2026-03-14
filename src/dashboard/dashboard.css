@@ -1180,6 +1180,12 @@ button#changeMasterPassword:hover {
   border: 1px solid #ffc107;
 }
 
+.history-badge-cleansed {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #10b981;
+}
+
 /* pending-entry-inline: スキップフィルター時にhistoryListに表示するスタイル */
 .pending-entry-inline {
   border-color: var(--color-danger-border);
@@ -2391,4 +2397,49 @@ details[open] .advanced-details-summary {
 .secondary-btn:hover {
   background: var(--color-bg-hover);
   border-color: var(--color-border-hover);
+}
+
+/* Content Preview Styles */
+.content-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin-top: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.content-toggle-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+.content-toggle-btn:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.content-preview {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.content-preview.hidden {
+  display: none;
 }

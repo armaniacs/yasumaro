@@ -1115,8 +1115,29 @@
   "maskedBadgeTitle": {
     "message": "{count}件の個人情報をマスクしてAIに送信しました"
   },
+  "cleansedBadgeHard": {
+    "message": "🧹 Hard"
+  },
+  "cleansedBadgeHardTitle": {
+    "message": "タグ・属性ベース削除"
+  },
+  "cleansedBadgeKeyword": {
+    "message": "🧹 Keyword"
+  },
+  "cleansedBadgeKeywordTitle": {
+    "message": "キーワードベース削除"
+  },
+  "cleansedBadgeBoth": {
+    "message": "🧹 Both"
+  },
+  "cleansedBadgeBothTitle": {
+    "message": "Hard Strip + Keyword Strip"
+  },
   "filterMasked": {
     "message": "🔒 マスクあり"
+  },
+  "filterCleansed": {
+    "message": "🧹 クレンジング"
   },
   "filterAll": {
     "message": "すべて"

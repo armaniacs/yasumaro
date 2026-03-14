@@ -1115,8 +1115,29 @@
   "maskedBadgeTitle": {
     "message": "Masked {count} personal info item(s) before sending to AI"
   },
+  "cleansedBadgeHard": {
+    "message": "🧹 Hard"
+  },
+  "cleansedBadgeHardTitle": {
+    "message": "Tag/Attribute-based removal"
+  },
+  "cleansedBadgeKeyword": {
+    "message": "🧹 Keyword"
+  },
+  "cleansedBadgeKeywordTitle": {
+    "message": "Keyword-based removal"
+  },
+  "cleansedBadgeBoth": {
+    "message": "🧹 Both"
+  },
+  "cleansedBadgeBothTitle": {
+    "message": "Hard Strip + Keyword Strip"
+  },
   "filterMasked": {
     "message": "🔒 Masked"
+  },
+  "filterCleansed": {
+    "message": "🧹 Cleansed"
   },
   "filterAll": {
     "message": "All"

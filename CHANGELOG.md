@@ -14,6 +14,12 @@ All notable changes to this project will be documented in this file.
   - 全テストスイート（1498テスト）が合格することを確認
 
 ### Added
+- **Content Cleansingフィルタと記録履歴へのコンテンツ保存を追加** ([dashboard.ts](src/dashboard/dashboard.ts), [storageUrls.ts](src/utils/storageUrls.ts))
+  - 記録履歴に「🧹 クレンジング」フィルタを追加。Hard Strip / Keyword Strip / Both を実行したページだけを絞り込める
+  - `SavedUrlEntry` に `content`（抽出コンテンツ）と `cleansedReason`（`hard` / `keyword` / `both`）フィールドを追加
+  - クレンジング実行時に `cleansedReason` を記録履歴へ保存
+  - 記録エントリに「📄 コンテンツを表示」展開ボタンを追加し、保存されたコンテンツをインラインで確認できるように
+  - クレンジングバッジ（🧹 Hard / 🧹 Keyword / 🧹 Both）を日英両対応で追加
 - **手動保存後のAIタグ分類結果表示** ([popup.html](src/popup/popup.html), [main.ts](src/popup/main.ts))
   - 「今すぐ記録」で保存した直後、AIが分類したタグ（例: `#IT・プログラミング #ビジネス・経済`）をポップアップに表示
   - タグが1件以上ある場合のみ表示（タグなし・タグモード無効時はUIに変化なし）

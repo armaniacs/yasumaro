@@ -26,6 +26,7 @@ import {
     verifyHmacSignature
 } from '../utils/crypto.js';
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 
 // マイグレーション処理を実行
 (async () => {
@@ -130,6 +131,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         chrome.action.setBadgeText({ text: '', tabId });
                     }
                 }, 3000);
+
+                // 記録履歴にクレンジング理由を保存
+                if (sender.tab.url && totalRemoved > 0) {
+                    // クレンジング理由を決定
+                    const hardEnabled = hardStripRemoved > 0;
+                    const keywordEnabled = keywordStripRemoved > 0;
+                    let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
+                    if (hardEnabled && !keywordEnabled) {
+                        cleansedReason = 'hard';
+                    } else if (!hardEnabled && keywordEnabled) {
+                        cleansedReason = 'keyword';
+                    }
+                    await setUrlCleansedReason(sender.tab.url, cleansedReason);
+                }
 
                 sendResponse({ success: true });
                 return;
@@ -406,6 +421,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     recordType: 'manual',
                     skipAi
                 });
+
+                // コンテンツを記録履歴に保存（成功時のみ）
+                if (result.success) {
+                    await setUrlContent(message.payload.url, content);
+                }
+
                 sendResponse(result);
                 return;
             }
@@ -422,6 +443,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     recordType: 'manual',
                     maskedCount: message.payload.maskedCount
                 });
+
+                // コンテンツを記録履歴に保存（成功時のみ）
+                if (result.success && message.payload.content) {
+                    await setUrlContent(message.payload.url, message.payload.content);
+                }
+
                 sendResponse(result);
                 return;
             }

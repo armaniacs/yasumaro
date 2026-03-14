@@ -21,6 +21,11 @@ export const URL_RETENTION_DAYS = 7;
 export type RecordType = 'auto' | 'manual';
 
 /**
+ * クレンジング実行理由
+ */
+export type CleansedReason = 'hard' | 'keyword' | 'both' | 'none';
+
+/**
  * 保存されたURLエントリ
  */
 export interface SavedUrlEntry {
@@ -29,6 +34,8 @@ export interface SavedUrlEntry {
     recordType?: RecordType;
     maskedCount?: number;
     tags?: string[];  // タグリスト（オプション）
+    content?: string;  // 抽出されたコンテンツ（クレンジング後）
+    cleansedReason?: CleansedReason;  // クレンジング実行理由
 }
 
 /**
@@ -138,11 +145,12 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         const existing = entries.find(entry => entry.url === url);
         entries = entries.filter(entry => entry.url !== url);
 
-        // 新しいエントリを追加（既存の tags / maskedCount を引き継ぐ）
+        // 新しいエントリを追加（既存の tags / maskedCount / cleansedReason を引き継ぐ）
         const entry: SavedUrlEntry = { url, timestamp: Date.now() };
         if (recordType) entry.recordType = recordType;
         if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
         if (existing?.tags !== undefined) entry.tags = existing.tags;
+        if (existing?.cleansedReason !== undefined) entry.cleansedReason = existing.cleansedReason;
         entries.push(entry);
 
         // 7日より古いエントリを削除（日数ベース）
@@ -191,6 +199,44 @@ export async function setUrlRecordType(url: string, recordType: RecordType): Pro
             // 既存のエントリをコピーしてrecordTypeを追加
             const updatedEntries = [...entries];
             updatedEntries[idx] = { ...updatedEntries[idx], recordType };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * 記録済みURLのcontentを保存する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 更新するURL
+ * @param {string} content - 抽出されたコンテンツ
+ */
+export async function setUrlContent(url: string, content: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], content };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * 記録済みURLのcleansedReasonを更新する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 更新するURL
+ * @param {CleansedReason} cleansedReason - クレンジング実行理由
+ */
+export async function setUrlCleansedReason(url: string, cleansedReason: CleansedReason): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], cleansedReason };
             return updatedEntries;
         }
         return entries;

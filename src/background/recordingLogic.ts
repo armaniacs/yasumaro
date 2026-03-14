@@ -5,7 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -581,6 +581,10 @@ export class RecordingLogic {
       const resolvedMaskedCount = precomputedMaskedCount ?? pipelineResult.maskedCount ?? 0;
       if (resolvedMaskedCount > 0) {
         await setUrlMaskedCount(url, resolvedMaskedCount);
+      }
+      // コンテンツを記録履歴に保存
+      if (content) {
+        await setUrlContent(url, content);
       }
       // タグを保存（タグ付き要約モード時）
       if (pipelineResult.tags && pipelineResult.tags.length > 0) {

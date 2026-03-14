@@ -738,7 +738,7 @@ async function initHistoryPanel(): Promise<void> {
 
   let entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
 
-  let activeFilter: 'all' | 'auto' | 'manual' | 'skipped' | 'masked' = 'all';
+  let activeFilter: 'all' | 'auto' | 'manual' | 'skipped' | 'masked' | 'cleansed' = 'all';
   let activeTagFilter: string | null = null;  // タグフィルター用
   const HISTORY_PAGE_SIZE = 10;
   let historyCurrentPage = 0;
@@ -797,6 +797,34 @@ async function initHistoryPanel(): Promise<void> {
     const label = getMessage('maskedBadge', { count: String(maskedCount) }) || `🔒 ${maskedCount}`;
     badge.textContent = label;
     badge.title = getMessage('maskedBadgeTitle', { count: String(maskedCount) }) || `${maskedCount}件の個人情報をマスクしてAIに送信しました`;
+    return badge;
+  }
+
+  function makeCleansedBadge(cleansedReason: import('../utils/storageUrls.js').CleansedReason | undefined): HTMLSpanElement | null {
+    if (!cleansedReason || cleansedReason === 'none') return null;
+    const badge = document.createElement('span');
+    badge.className = 'history-badge history-badge-cleansed';
+
+    let label = '';
+    let title = '';
+
+    switch (cleansedReason) {
+      case 'hard':
+        label = getMessage('cleansedBadgeHard') || '🧹 Hard';
+        title = getMessage('cleansedBadgeHardTitle') || 'タグ・属性ベース削除';
+        break;
+      case 'keyword':
+        label = getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
+        title = getMessage('cleansedBadgeKeywordTitle') || 'キーワードベース削除';
+        break;
+      case 'both':
+        label = getMessage('cleansedBadgeBoth') || '🧹 Both';
+        title = getMessage('cleansedBadgeBothTitle') || 'Hard Strip + Keyword Strip';
+        break;
+    }
+
+    badge.textContent = label;
+    badge.title = title;
     return badge;
   }
 
@@ -910,7 +938,8 @@ async function initHistoryPanel(): Promise<void> {
         activeFilter === 'all' ||
         (activeFilter === 'auto' && (!e.recordType || e.recordType === 'auto')) ||
         (activeFilter === 'manual' && e.recordType === 'manual') ||
-        (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0);
+        (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0) ||
+        (activeFilter === 'cleansed' && !!e.cleansedReason && e.cleansedReason !== 'none');
       // タグフィルター
       const matchesTag = !activeTagFilter || (e.tags && e.tags.includes(activeTagFilter));
       return matchesSearch && matchesType && matchesTag;
@@ -935,7 +964,7 @@ async function initHistoryPanel(): Promise<void> {
 
     historyList.innerHTML = '';
     pageItems.forEach(entry => {
-      const { url, timestamp, recordType, maskedCount, tags } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -955,6 +984,8 @@ async function initHistoryPanel(): Promise<void> {
       topRow.appendChild(makeRecordTypeBadge(recordType));
       const maskBadge = makeMaskBadge(maskedCount);
       if (maskBadge) topRow.appendChild(maskBadge);
+      const cleansedBadge = makeCleansedBadge(cleansedReason);
+      if (cleansedBadge) topRow.appendChild(cleansedBadge);
       topRow.appendChild(urlEl);
 
       const timeEl = document.createElement('div');
@@ -977,6 +1008,33 @@ async function initHistoryPanel(): Promise<void> {
         addTagLink.addEventListener('click', () => openTagEditModal(url, []));
         noTagRow.appendChild(addTagLink);
         info.appendChild(noTagRow);
+      }
+
+      // コンテンツ表示エリア（展開可能）
+      if (content && content.trim().length > 0) {
+        const contentToggle = document.createElement('button');
+        contentToggle.className = 'content-toggle-btn';
+        contentToggle.textContent = '📄 ';
+        contentToggle.setAttribute('aria-expanded', 'false');
+        contentToggle.setAttribute('aria-controls', `content-${extractDomain(url)}`);
+
+        const contentLabel = document.createElement('span');
+        contentLabel.textContent = 'コンテンツを表示';
+        contentToggle.appendChild(contentLabel);
+
+        const contentArea = document.createElement('div');
+        contentArea.className = 'content-preview hidden';
+        contentArea.id = `content-${extractDomain(url)}`;
+        contentArea.textContent = content;
+
+        contentToggle.addEventListener('click', () => {
+          const isHidden = contentArea.classList.toggle('hidden');
+          contentToggle.setAttribute('aria-expanded', (!isHidden).toString());
+          contentLabel.textContent = isHidden ? 'コンテンツを表示' : 'コンテンツを非表示';
+        });
+
+        info.appendChild(contentToggle);
+        info.appendChild(contentArea);
       }
 
       const deleteBtn = document.createElement('button');
