@@ -8,6 +8,7 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, Settings } from 
 import { init as initDomainFilter, loadDomainSettings } from '../popup/domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../popup/privacySettings.js';
 import { init as initContentSettings, loadContentSettings } from '../popup/contentSettings.js';
+import { init as initTrustSettings, loadTrustSettings } from '../popup/trustSettings.js';
 import { initCustomPromptManager } from '../popup/customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from '../popup/settingsUiHelper.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
@@ -353,6 +354,7 @@ importFileInput?.addEventListener('change', async (e: Event) => {
           await loadDomainSettings();
           await loadPrivacySettings();
           await loadContentSettings();
+          await loadTrustSettings();
         } else {
           showStatus('exportImportStatus', `${getMessage('importError')}: Failed to decrypt or apply settings`, 'error');
         }
@@ -424,6 +426,7 @@ confirmImportBtn?.addEventListener('click', async () => {
       await loadDomainSettings();
       await loadPrivacySettings();
           await loadContentSettings();
+          await loadTrustSettings();
     } else {
       showStatus('exportImportStatus', `${getMessage('importError')}: Failed to apply settings`, 'error');
     }
@@ -2261,6 +2264,7 @@ function setHtmlLangDir(): void {
   try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
   try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
+  try { initTrustSettings(); } catch (e) { console.error('[Dashboard] initTrustSettings error:', e); }
 
   try {
     const settings = await getSettings();

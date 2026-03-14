@@ -1469,6 +1469,174 @@
   "contentStripSave": {
     "message": "Save"
   },
+  "trustTab": {
+    "message": "Trust"
+  },
+  "trustTabPanelTitle": {
+    "message": "Domain Trust Evaluation"
+  },
+  "trustTabPanelDescription": {
+    "message": "Determine the trustworthiness of websites you visit and choose appropriate responses."
+  },
+  "safetyModeSection": {
+    "message": "Safety Mode"
+  },
+  "safetyModeLabel": {
+    "message": "Safety Mode"
+  },
+  "safetyModeStrict": {
+    "message": "Strict - Trust Top 1,000 only"
+  },
+  "safetyModeBalanced": {
+    "message": "Balanced - Trust Top 10,000"
+  },
+  "safetyModeRelaxed": {
+    "message": "Relaxed - Trust Top 100,000"
+  },
+  "safetyModeDesc": {
+    "message": "Strict trusts only stricter domains. Relaxed trusts more domains."
+  },
+  "safetyModeChanged": {
+    "message": "Safety mode changed"
+  },
+  "trancoSection": {
+    "message": "Tranco List (Trusted Domains)"
+  },
+  "trancoTierLabel": {
+    "message": "Tranco Trust Tier"
+  },
+  "trustTierLabelDesc": {
+    "message": "Top domains from Tranco List are treated as trusted."
+  },
+  "trancoTierTop1k": {
+    "message": "Top 1,000"
+  },
+  "trancoTierTop10k": {
+    "message": "Top 10,000"
+  },
+  "trancoTierTop100k": {
+    "message": "Top 100,000"
+  },
+  "trancoTierDesc": {
+    "message": "Linked with Safety Mode. You can also change manually."
+  },
+  "trancoUpdating": {
+    "message": "Updating..."
+  },
+  "trancoNotUpdated": {
+    "message": "Not updated"
+  },
+  "trancoStatusFormat": {
+    "message": "Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}"
+  },
+  "trancoUpdateInProgress": {
+    "message": "Update already in progress"
+  },
+  "trancoUpdateSuccess": {
+    "message": "Tranco list updated successfully"
+  },
+  "updateTrancoBtn": {
+    "message": "Update Tranco List"
+  },
+  "jpAnchorSection": {
+    "message": "JP-Anchor List (Official Japan Domains)"
+  },
+  "jpAnchorSectionDesc": {
+    "message": "Domains ending with these TLDs are automatically treated as trusted."
+  },
+  "jpAnchorAddLabel": {
+    "message": "Add TLD (e.g., .ed.jp)"
+  },
+  "jpAnchorAddHelp": {
+    "message": "Include the leading dot (.)"
+  },
+  "jpAnchorInvalidFormat": {
+    "message": "Invalid TLD format. Must start with dot (.)"
+  },
+  "jpAnchorDuplicate": {
+    "message": "TLD already exists"
+  },
+  "jpAnchorAdded": {
+    "message": "TLD added"
+  },
+  "sensitiveSection": {
+    "message": "Sensitive List (Warning Domains)"
+  },
+  "sensitiveSectionDesc": {
+    "message": "Finance, Gaming, SNS, and similar domains are treated as warning targets."
+  },
+  "categoryFinance": {
+    "message": "Finance"
+  },
+  "categoryGaming": {
+    "message": "Gaming"
+  },
+  "categorySns": {
+    "message": "SNS"
+  },
+  "sensitiveAddLabel": {
+    "message": "Add domain"
+  },
+  "sensitiveAddHelp": {
+    "message": "Enter domain name"
+  },
+  "sensitiveInvalidDomain": {
+    "message": "Invalid domain format"
+  },
+  "sensitiveDuplicate": {
+    "message": "Domain already exists"
+  },
+  "sensitiveAdded": {
+    "message": "Domain added"
+  },
+  "whitelistSection": {
+    "message": "Whitelist (Trusted Domains)"
+  },
+  "whitelistSectionDesc": {
+    "message": "These domains are not warned even if included in the warning list."
+  },
+  "whitelistAddLabel": {
+    "message": "Add domain"
+  },
+  "whitelistAddHelp": {
+    "message": "Enter domain name to exclude"
+  },
+  "whitelistInvalidDomain": {
+    "message": "Invalid domain format"
+  },
+  "whitelistDuplicate": {
+    "message": "Domain already exists"
+  },
+  "whitelistAdded": {
+    "message": "Domain added"
+  },
+  "alertSettingsSection": {
+    "message": "Alert Settings"
+  },
+  "alertFinanceLabel": {
+    "message": "Show financial site warning"
+  },
+  "alertFinanceDesc": {
+    "message": "Display warning when trying to record on financial sites."
+  },
+  "alertSensitiveLabel": {
+    "message": "Show warning list site warning"
+  },
+  "alertSensitiveDesc": {
+    "message": "Display warning when trying to record on sites in the warning list."
+  },
+  "alertUnverifiedLabel": {
+    "message": "Show unverified site warning"
+  },
+  "alertUnverifiedDesc": {
+    "message": "Display warning when trying to record on unverified sites not in Tranco or JP-Anchor."
+  },
+  "add": {
+    "message": "Add"
+  },
+  "settingsSaved": {
+    "message": "Settings saved"
+  },
   "statusCleansing": {
     "message": "Cleansing"
   },

@@ -1469,6 +1469,174 @@
   "contentStripSave": {
     "message": "保存"
   },
+  "trustTab": {
+    "message": "Trust"
+  },
+  "trustTabPanelTitle": {
+    "message": "ドメイン信頼度判定"
+  },
+  "trustTabPanelDescription": {
+    "message": "訪問するWebサイトの信頼度を判定し、適切な対応を選択できます。"
+  },
+  "safetyModeSection": {
+    "message": "Safety Mode（セーフティモード）"
+  },
+  "safetyModeLabel": {
+    "message": "Safety Mode"
+  },
+  "safetyModeStrict": {
+    "message": "Strict（厳格）- Top 1,000まで信頼"
+  },
+  "safetyModeBalanced": {
+    "message": "Balanced（バランス）- Top 10,000まで信頼"
+  },
+  "safetyModeRelaxed": {
+    "message": "Relaxed（緩和）- Top 100,000まで信頼"
+  },
+  "safetyModeDesc": {
+    "message": "Strictではより厳格なドメインのみを信頼します。Relaxedでは多くのドメインを信頼します。"
+  },
+  "safetyModeChanged": {
+    "message": "Safety mode changed"
+  },
+  "trancoSection": {
+    "message": "Tranco List（信頼済みドメイン）"
+  },
+  "trancoTierLabel": {
+    "message": "Tranco Trust Tier"
+  },
+  "trustTierLabelDesc": {
+    "message": "Tranco Listの上位ドメインを信頼済みとして扱います。"
+  },
+  "trancoTierTop1k": {
+    "message": "Top 1,000"
+  },
+  "trancoTierTop10k": {
+    "message": "Top 10,000"
+  },
+  "trancoTierTop100k": {
+    "message": "Top 100,000"
+  },
+  "trancoTierDesc": {
+    "message": "Safety Modeと連動しています。手動で変更することもできます。"
+  },
+  "trancoUpdating": {
+    "message": "Updating..."
+  },
+  "trancoNotUpdated": {
+    "message": "Not updated"
+  },
+  "trancoStatusFormat": {
+    "message": "ドメイン数: {count} | Tier: {tier} | 最終更新: {lastUpdated}"
+  },
+  "trancoUpdateInProgress": {
+    "message": "Update already in progress"
+  },
+  "trancoUpdateSuccess": {
+    "message": "Tranco list updated successfully"
+  },
+  "updateTrancoBtn": {
+    "message": "Tranco Listを更新"
+  },
+  "jpAnchorSection": {
+    "message": "JP-Anchor List（日本公式ドメイン）"
+  },
+  "jpAnchorSectionDesc": {
+    "message": "以下のTLDで終わるドメインは自動的に信頼済みとして扱います。"
+  },
+  "jpAnchorAddLabel": {
+    "message": "TLDを追加（例: .ed.jp）"
+  },
+  "jpAnchorAddHelp": {
+    "message": "先頭のドット（.）を含めて入力してください"
+  },
+  "jpAnchorInvalidFormat": {
+    "message": "Invalid TLD format. Must start with dot (.)"
+  },
+  "jpAnchorDuplicate": {
+    "message": "TLD already exists"
+  },
+  "jpAnchorAdded": {
+    "message": "TLD added"
+  },
+  "sensitiveSection": {
+    "message": "Sensitive List（警戒ドメイン）"
+  },
+  "sensitiveSectionDesc": {
+    "message": "金融、ゲーム、SNS等のドメインは警告対象として扱います。"
+  },
+  "categoryFinance": {
+    "message": "金融"
+  },
+  "categoryGaming": {
+    "message": "ゲーム"
+  },
+  "categorySns": {
+    "message": "SNS"
+  },
+  "sensitiveAddLabel": {
+    "message": "ドメインを追加"
+  },
+  "sensitiveAddHelp": {
+    "message": "ドメイン名を入力してください"
+  },
+  "sensitiveInvalidDomain": {
+    "message": "Invalid domain format"
+  },
+  "sensitiveDuplicate": {
+    "message": "Domain already exists"
+  },
+  "sensitiveAdded": {
+    "message": "Domain added"
+  },
+  "whitelistSection": {
+    "message": "ホワイトリスト（信頼済み除外）"
+  },
+  "whitelistSectionDesc": {
+    "message": "これらのドメインは警戒リストに含まれていても警告しません。"
+  },
+  "whitelistAddLabel": {
+    "message": "ドメインを追加"
+  },
+  "whitelistAddHelp": {
+    "message": "除外するドメイン名を入力してください"
+  },
+  "whitelistInvalidDomain": {
+    "message": "Invalid domain format"
+  },
+  "whitelistDuplicate": {
+    "message": "Domain already exists"
+  },
+  "whitelistAdded": {
+    "message": "Domain added"
+  },
+  "alertSettingsSection": {
+    "message": "警告設定"
+  },
+  "alertFinanceLabel": {
+    "message": "金融サイトの警告を表示"
+  },
+  "alertFinanceDesc": {
+    "message": "金融系サイトで記録しようとする場合に警告を表示します。"
+  },
+  "alertSensitiveLabel": {
+    "message": "警戒ドメインの警告を表示"
+  },
+  "alertSensitiveDesc": {
+    "message": "警戒リストにあるドメインで記録しようとする場合に警告を表示します。"
+  },
+  "alertUnverifiedLabel": {
+    "message": "未検証サイトの警告を表示"
+  },
+  "alertUnverifiedDesc": {
+    "message": "TrancoリストやJP-Anchorに含まれない未検証のサイトで記録しようとする場合に警告を表示します。"
+  },
+  "add": {
+    "message": "追加"
+  },
+  "settingsSaved": {
+    "message": "Settings saved"
+  },
   "statusCleansing": {
     "message": "クレンジング"
   },

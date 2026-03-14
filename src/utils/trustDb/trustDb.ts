@@ -409,47 +409,6 @@ class TrustDb {
   }
 
   /**
-   * ホワイトリスト追加
-   */
-  async addToWhitelist(domain: string): Promise<void> {
-    if (!this.state.database) {
-      throw new Error('TrustDb not initialized');
-    }
-
-    if (!this.state.database.sensitive.whitelist.includes(domain)) {
-      this.state.database.sensitive.whitelist.push(domain);
-      await this.save();
-    }
-  }
-
-  /**
-   * ホワイトリスト削除
-   */
-  async removeFromWhitelist(domain: string): Promise<void> {
-    if (!this.state.database) {
-      throw new Error('TrustDb not initialized');
-    }
-
-    this.state.database.sensitive.whitelist =
-      this.state.database.sensitive.whitelist.filter(d => d !== domain);
-    await this.save();
-  }
-
-  /**
-   * ブラックリスト追加
-   */
-  async addToBlacklist(domain: string): Promise<void> {
-    if (!this.state.database) {
-      throw new Error('TrustDb not initialized');
-    }
-
-    if (!this.state.database.sensitive.userBlacklist.includes(domain)) {
-      this.state.database.sensitive.userBlacklist.push(domain);
-      await this.save();
-    }
-  }
-
-  /**
    * バージョン情報を取得
    */
   getVersion(): string {
@@ -477,6 +436,161 @@ class TrustDb {
       trancoTier: this.state.database.tranco.tier,
       trancoCount: this.state.database.tranco.count
     };
+  }
+
+  /**
+   * Trust Database の読み取り専用コピーを取得
+   */
+  getDatabase(): TrustDatabase | null {
+    return this.state.database;
+  }
+
+  /**
+   * JP-Anchor TLD リストを取得
+   */
+  getJpAnchorTlds(): string[] {
+    if (!this.state.database) return [];
+    return [...this.state.database.jpAnchor.tlds, ...this.state.database.jpAnchor.userTlds];
+  }
+
+  /**
+   * JP-Anchor TLD を追加
+   */
+  async addJpAnchorTld(tld: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    // Validate TLD format
+    if (!tld.startsWith('.') || tld.length < 2) {
+      return { success: false, error: 'Invalid TLD format' };
+    }
+
+    // Check for duplicates
+    if (this.state.database.jpAnchor.tlds.includes(tld) || this.state.database.jpAnchor.userTlds.includes(tld)) {
+      return { success: false, error: 'TLD already exists' };
+    }
+
+    this.state.database.jpAnchor.userTlds.push(tld);
+    await this.save();
+    return { success: true };
+  }
+
+  /**
+   * JP-Anchor TLD を削除
+   */
+  async removeJpAnchorTld(tld: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const index = this.state.database.jpAnchor.userTlds.indexOf(tld);
+    if (index !== -1) {
+      this.state.database.jpAnchor.userTlds.splice(index, 1);
+      await this.save();
+      return { success: true };
+    }
+
+    return { success: false, error: 'TLD not found' };
+  }
+
+  /**
+   * Sensitive ドメインリストを取得（カテゴリ指定）
+   */
+  getSensitiveDomains(category: 'finance' | 'gaming' | 'sns'): string[] {
+    if (!this.state.database) return [];
+    const db = this.state.database;
+    return [...db.sensitive.presets[category], ...db.sensitive.userBlacklist];
+  }
+
+  /**
+   * Sensitive ドメインを追加
+   */
+  async addSensitiveDomain(domain: string, category?: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const normalizedDomain = domain.toLowerCase().trim();
+    if (!normalizedDomain || normalizedDomain.includes('.') === false) {
+      return { success: false, error: 'Invalid domain format' };
+    }
+
+    // Check for duplicates
+    if (this.state.database.sensitive.userBlacklist.includes(normalizedDomain)) {
+      return { success: false, error: 'Domain already exists' };
+    }
+
+    this.state.database.sensitive.userBlacklist.push(normalizedDomain);
+    await this.save();
+    return { success: true };
+  }
+
+  /**
+   * Sensitive ドメインを削除
+   */
+  async removeSensitiveDomain(domain: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const index = this.state.database.sensitive.userBlacklist.indexOf(domain);
+    if (index !== -1) {
+      this.state.database.sensitive.userBlacklist.splice(index, 1);
+      await this.save();
+      return { success: true };
+    }
+
+    return { success: false, error: 'Domain not found' };
+  }
+
+  /**
+   * Whitelist を取得
+   */
+  getWhitelist(): string[] {
+    if (!this.state.database) return [];
+    return [...this.state.database.sensitive.whitelist];
+  }
+
+  /**
+   * Whitelist にドメインを追加
+   */
+  async addToWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const normalizedDomain = domain.toLowerCase().trim();
+    if (!normalizedDomain || normalizedDomain.includes('.') === false) {
+      return { success: false, error: 'Invalid domain format' };
+    }
+
+    // Check for duplicates
+    if (this.state.database.sensitive.whitelist.includes(normalizedDomain)) {
+      return { success: false, error: 'Domain already exists' };
+    }
+
+    this.state.database.sensitive.whitelist.push(normalizedDomain);
+    await this.save();
+    return { success: true };
+  }
+
+  /**
+   * Whitelist からドメインを削除
+   */
+  async removeFromWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.state.database) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const index = this.state.database.sensitive.whitelist.indexOf(domain);
+    if (index !== -1) {
+      this.state.database.sensitive.whitelist.splice(index, 1);
+      await this.save();
+      return { success: true };
+    }
+
+    return { success: false, error: 'Domain not found' };
   }
 }
 

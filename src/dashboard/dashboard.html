@@ -55,6 +55,12 @@
           </svg>
           <span data-i18n="contentTab">Content</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-trust">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span data-i18n="trustTab">Trust</span>
+        </button>
         <button class="sidebar-nav-btn" data-panel="panel-tags">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
@@ -471,6 +477,135 @@
         <div class="form-group">
           <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">保存</button>
           <div id="contentSettingsStatus" class="status-message" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- Trust Database Settings Panel -->
+      <section id="panel-trust" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="trustTabPanelTitle">ドメイン信頼度判定</h2>
+        <p class="panel-description" data-i18n="trustTabPanelDescription">訪問するWebサイトの信頼度を判定し、適切な対応を選択できます。</p>
+
+        <!-- Safety Mode 設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="safetyModeSection">Safety Mode（セーフティモード）</h3>
+          <div class="form-group">
+            <label for="safetyMode" data-i18n="safetyModeLabel">Safety Mode</label>
+            <select id="safetyMode" class="form-select" aria-describedby="safetyModeDesc">
+              <option value="strict" data-i18n="safetyModeStrict">Strict（厳格）- Top 1,000まで信頼</option>
+              <option value="balanced" selected data-i18n="safetyModeBalanced">Balanced（バランス）- Top 10,000まで信頼</option>
+              <option value="relaxed" data-i18n="safetyModeRelaxed">Relaxed（緩和）- Top 100,000まで信頼</option>
+            </select>
+            <div class="help-text" id="safetyModeDesc" data-i18n="safetyModeDesc">Strictではより厳格なドメインのみを信頼します。Relaxedでは多くのドメインを信頼します。</div>
+          </div>
+        </div>
+
+        <!-- Tranco List 設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="trancoSection">Tranco List（信頼済みドメイン）</h3>
+          <div class="form-group">
+            <label for="trancoTier" data-i18n="trancoTierLabel">Tranco Trust Tier</label>
+            <div class="help-text mb-4" data-i18n="trustTierLabelDesc">
+              Tranco Listの上位ドメインを信頼済みとして扱います。
+            </div>
+            <select id="trancoTier" class="form-select" aria-describedby="trancoTierDesc">
+              <option value="top1k" data-i18n="trancoTierTop1k">Top 1,000</option>
+              <option value="top10k" selected data-i18n="trancoTierTop10k">Top 10,000</option>
+              <option value="top100k" data-i18n="trancoTierTop100k">Top 100,000</option>
+            </select>
+            <div class="help-text" id="trancoTierDesc" data-i18n="trancoTierDesc">
+              Safety Modeと連動しています。手動で変更することもできます。
+            </div>
+          </div>
+          <div id="trancoStatus" class="status-message" aria-live="polite"></div>
+          <div class="button-group mt-8">
+            <button id="updateTrancoBtn" class="btn-primary" data-i18n="updateTrancoBtn">Tranco Listを更新</button>
+          </div>
+        </div>
+
+        <!-- JP-Anchor List 設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="jpAnchorSection">JP-Anchor List（日本公式ドメイン）</h3>
+          <div class="help-text mb-4" data-i18n="jpAnchorSectionDesc">
+            以下のTLDで終わるドメインは自動的に信頼済みとして扱います。
+          </div>
+          <div id="jpAnchorList" class="preset-list"></div>
+          <div class="form-group mt-8">
+            <label for="jpAnchorAdd" data-i18n="jpAnchorAddLabel">TLDを追加（例: .ed.jp）</label>
+            <div class="input-group">
+              <input type="text" id="jpAnchorAdd" class="form-input" placeholder=".ed.jp" aria-describedby="jpAnchorAddHelp">
+              <button id="jpAnchorAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+            </div>
+            <div class="help-text" id="jpAnchorAddHelp" data-i18n="jpAnchorAddHelp">先頭のドット（.）を含めて入力してください</div>
+          </div>
+        </div>
+
+        <!-- Sensitive List 設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="sensitiveSection">Sensitive List（警戒ドメイン）</h3>
+          <div class="help-text mb-4" data-i18n="sensitiveSectionDesc">
+            金融、ゲーム、SNS等のドメインは警告対象として扱います。
+          </div>
+          <div class="category-tabs">
+            <button class="category-tab active" data-category="finance" data-i18n="categoryFinance">金融</button>
+            <button class="category-tab" data-category="gaming" data-i18n="categoryGaming">ゲーム</button>
+            <button class="category-tab" data-category="sns" data-i18n="categorySns">SNS</button>
+          </div>
+          <div id="sensitiveList" class="domain-list"></div>
+          <div class="form-group mt-8">
+            <label for="sensitiveAdd" data-i18n="sensitiveAddLabel">ドメインを追加</label>
+            <div class="input-group">
+              <select id="sensitiveCategory" class="form-select" aria-label="Category">
+                <option value="finance" data-i18n="categoryFinance">金融</option>
+                <option value="gaming" data-i18n="categoryGaming">ゲーム</option>
+                <option value="sns" data-i18n="categorySns">SNS</option>
+              </select>
+              <input type="text" id="sensitiveAdd" class="form-input" placeholder="example.com" aria-describedby="sensitiveAddHelp">
+              <button id="sensitiveAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+            </div>
+            <div class="help-text" id="sensitiveAddHelp" data-i18n="sensitiveAddHelp">ドメイン名を入力してください</div>
+          </div>
+        </div>
+
+        <!-- Whitelist 設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="whitelistSection">ホワイトリスト（信頼済み除外）</h3>
+          <div class="help-text mb-4" data-i18n="whitelistSectionDesc">
+            これらのドメインは警戒リストに含まれていても警告しません。
+          </div>
+          <div id="whitelist" class="domain-list"></div>
+          <div class="form-group mt-8">
+            <label for="whitelistAdd" data-i18n="whitelistAddLabel">ドメインを追加</label>
+            <div class="input-group">
+              <input type="text" id="whitelistAdd" class="form-input" placeholder="example.com" aria-describedby="whitelistAddHelp">
+              <button id="whitelistAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+            </div>
+            <div class="help-text" id="whitelistAddHelp" data-i18n="whitelistAddHelp">除外するドメイン名を入力してください</div>
+          </div>
+        </div>
+
+        <!-- Alert Settings -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="alertSettingsSection">警告設定</h3>
+          <div class="form-group">
+            <input type="checkbox" id="alertFinance" aria-describedby="alertFinanceDesc">
+            <label for="alertFinance" class="inline-label" data-i18n="alertFinanceLabel">金融サイトの警告を表示</label>
+            <div class="help-text" id="alertFinanceDesc" data-i18n="alertFinanceDesc">金融系サイトで記録しようとする場合に警告を表示します。</div>
+          </div>
+          <div class="form-group">
+            <input type="checkbox" id="alertSensitive" aria-describedby="alertSensitiveDesc">
+            <label for="alertSensitive" class="inline-label" data-i18n="alertSensitiveLabel">警戒ドメインの警告を表示</label>
+            <div class="help-text" id="alertSensitiveDesc" data-i18n="alertSensitiveDesc">警戒リストにあるドメインで記録しようとする場合に警告を表示します。</div>
+          </div>
+          <div class="form-group">
+            <input type="checkbox" id="alertUnverified" aria-describedby="alertUnverifiedDesc">
+            <label for="alertUnverified" class="inline-label" data-i18n="alertUnverifiedLabel">未検証サイトの警告を表示</label>
+            <div class="help-text" id="alertUnverifiedDesc" data-i18n="alertUnverifiedDesc">TrancoリストやJP-Anchorに含まれない未検証のサイトで記録しようとする場合に警告を表示します。</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="saveTrustSettings" class="btn-primary" data-i18n="saveSettings">設定を保存</button>
+          <div id="trustSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
 
