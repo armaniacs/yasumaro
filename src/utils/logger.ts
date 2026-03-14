@@ -68,7 +68,10 @@ export const ErrorCode = {
     INTERNAL_ERROR: 'INT_001',
 
     // UI/Badge関連
-    BADGE_UPDATE_FAILED: 'UI_BADGE_001'
+    BADGE_UPDATE_FAILED: 'UI_BADGE_001',
+
+    // Permission Manager関連（P0）
+    PERMISSION_REQUIRED: 'PERM_REQ_001'
 } as const;
 
 export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];

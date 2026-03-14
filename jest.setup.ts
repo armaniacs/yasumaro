@@ -213,6 +213,10 @@ const chromeRuntimeMock: ChromeRuntimeMock = {
     createDocument: jest.fn(() => Promise.resolve()),
     closeDocument: jest.fn(() => Promise.resolve()),
   },
+  permissions: {
+    contains: jest.fn<Promise<boolean>, any[]>(() => Promise.resolve(true)),
+    request: jest.fn<Promise<boolean>, any[]>(() => Promise.resolve(true)),
+  },
   i18n: {
     getMessage: jest.fn((key: string, substitutions?: Record<string, string>) => {
       const messages: Record<string, string> = {

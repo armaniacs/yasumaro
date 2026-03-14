@@ -19,7 +19,8 @@ export type SafetyMode = 'strict' | 'balanced' | 'relaxed';
 export enum DomainTrustLevel {
   TRUSTED = 'trusted',        // JP-Anchor or Tranco上位
   SENSITIVE = 'sensitive',    // 金融/ゲーム/SNS
-  UNVERIFIED = 'unverified'   // その他
+  UNVERIFIED = 'unverified',  // その他
+  LOCKED = 'locked'           // 未許可ドメイン（P0）
 }
 
 /**

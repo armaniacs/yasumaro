@@ -344,6 +344,36 @@ a:hover {
   border-bottom: 1px solid var(--color-border);
 }
 
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.permission-suggest-list {
+  margin-bottom: 1rem;
+}
+
+.permission-suggest-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.permission-suggest-allow {
+  margin-right: 0.5rem;
+}
+
+.permission-suggest-dismiss {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .panel-description {
   margin: -12px 0 20px;
   font-size: 13px;

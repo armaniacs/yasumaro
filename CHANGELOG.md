@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 ## [unreleased] - to be released as version 5.0.0
 
 ### Added
+- **P0: `<all_urls>` 権限を `optional_host_permissions` に移動** ([manifest.json](manifest.json), [permissionManager.ts](src/utils/permissionManager.ts))
+  - `host_permissions` から `<all_urls>` を削除し、`optional_host_permissions` に移動
+  - `PermissionManager` クラスを新規実装（`src/utils/permissionManager.ts`）：
+    - `isHostPermitted(url)`: `chrome.permissions.contains()` でホスト権限を確認
+    - `requestPermission(url)`: `chrome.permissions.request()` でオプション権限を要求
+    - `recordDeniedVisit(domain)`: 拒否ドメインの訪問回数をカウント（`denied_domains` ストレージ）
+    - `recordDomainDismissal(domain)`: Dashboard「×」操作で14日間再表示を抑制
+    - `cleanupOldDeniedEntries(days)`: 90日経過した拒否エントリーを自動削除
+    - `getFrequentDeniedDomains(threshold)`: 閾値超えのドメインを訪問数降順で返す
+    - `removeDeniedDomain(domain)`: 許可済みドメインのエントリーを削除
+  - Popup に権限要求UIを追加：LOCKEDバッジ、「🔓 このサイトを許可する」ボタン、拒否時フェードアウトエラーメッセージ
+  - `recordingLogic.ts` で自動記録時も `isHostPermitted` チェックを実施し、未許可なら `recordDeniedVisit` を呼び出す
+  - Dashboard に「権限提案リスト」UIを追加：頻繁に拒否されたドメインを一括許可できる
+  - `DomainTrustLevel.LOCKED` を追加し、未許可ドメインを表す新しい信頼レベルとして扱う
+  - `StorageKeys.DENIED_DOMAINS` / `StorageKeys.PERMISSION_NOTIFY_THRESHOLD` を追加
+  - `ErrorCode.PERMISSION_REQUIRED` (`PERM_REQ_001`) を追加
+  - 権限提案閾値UI（1〜50、デフォルト3）をDashboard Trustパネルに追加
+  - i18n対応（10キー追加）: `permissionRequired`, `permissionAllow`, `permissionDenied`, `permissionSuggestTitle`, `permissionSuggestHint`, `permissionSuggestCount`, `permissionSuggestAdd`, `permissionSuggestDismiss`, `permissionThresholdLabel`, `permissionThresholdNote`
+  - `scripts/update-preset-domains.ts` を追加（Tranco Top 500 ドメインの取得スクリプト）
+
 - **Trust Checkerモジュールを実装** ([trustChecker.ts](src/utils/trustChecker.ts), [trustChecker.test.ts](src/utils/__tests__/trustChecker.test.ts))
   - Alert Settingsによる警告制御（金融サイト、警戒リスト、未検証サイトの各個別トグル）
   - ドメインTrustチェック結果判定（canProceed, trustResult, showAlert, reason）

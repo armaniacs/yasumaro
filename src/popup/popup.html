@@ -12,6 +12,16 @@
 <body>
   <!-- Main Screen -->
   <div id="mainScreen">
+    <!-- Global Permission Banner: <all_urls> 未許可時のみ表示 -->
+    <div id="allUrlsPermissionBanner" class="global-permission-banner hidden" role="alert">
+      <span class="banner-icon" aria-hidden="true">🔓</span>
+      <div class="banner-body">
+        <p class="banner-title" data-i18n="allUrlsBannerTitle"></p>
+        <p class="banner-desc" data-i18n="allUrlsBannerDesc"></p>
+      </div>
+      <button id="btnRequestAllUrls" class="btn-sm btn-banner-allow" data-i18n="allUrlsBannerAllow"></button>
+    </div>
+
     <div class="header">
       <h1 class="sr-only" data-i18n="appTitle">Obsidian Weave</h1>
       <h2 data-i18n="appTitle" aria-hidden="true">Obsidian Weave</h2>
@@ -137,10 +147,24 @@
           </div>
           <div class="status-section-content" id="statusTrustContent"></div>
         </div>
+
+        <!-- Permission Request Area (P0) -->
+        <div id="permissionRequestArea" class="hidden">
+          <button id="btnRequestPermission" class="btn-secondary btn-sm" data-i18n="permissionAllow">
+            🔓 このサイトを許可する
+          </button>
+          <p class="status-hint" data-i18n="permissionRequired"></p>
+        </div>
       </div>
     </div>
 
     <button id="recordBtn" class="primary-btn" data-i18n-label="recordNow">📝 Record Now</button>
+
+    <!-- Permission Denied Message (P0) -->
+    <div id="permissionDeniedMessage" class="error-message permission-denied-msg hidden" aria-live="polite">
+      <span class="error-icon">⚠️</span>
+      <span data-i18n="permissionDenied"></span>
+    </div>
     <div id="loadingSpinner" class="spinner-container">
       <svg class="spinner" viewBox="0 0 50 50">
         <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke="#2E7D32" stroke-width="4"

@@ -1669,5 +1669,44 @@
   },
   "statusTrustAlertSensitive": {
     "message": "Sensitive site"
+  },
+  "permissionRequired": {
+    "message": "Permission required for this site"
+  },
+  "permissionAllow": {
+    "message": "🔓 Allow this site"
+  },
+  "permissionDenied": {
+    "message": "Access denied"
+  },
+  "permissionSuggestTitle": {
+    "message": "Sites to consider allowing"
+  },
+  "permissionSuggestHint": {
+    "message": "Frequently visited but not permitted. Allowing enables page recording."
+  },
+  "permissionSuggestCount": {
+    "message": " visits"
+  },
+  "permissionSuggestAdd": {
+    "message": "🔓 Allow"
+  },
+  "permissionSuggestDismiss": {
+    "message": "Dismiss (hide for 14 days)"
+  },
+  "permissionThresholdLabel": {
+    "message": "Notification threshold (visits)"
+  },
+  "permissionThresholdNote": {
+    "message": "(1-50, default 3)"
+  },
+  "allUrlsBannerTitle": {
+    "message": "Enable recording on all sites"
+  },
+  "allUrlsBannerDesc": {
+    "message": "Grant permission once to record pages across all websites."
+  },
+  "allUrlsBannerAllow": {
+    "message": "Allow"
   }
 }

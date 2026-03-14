@@ -441,6 +441,79 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   line-height: 1.5;
 }
 
+.error-message {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.permission-denied-msg {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.permission-denied-msg.visible {
+  opacity: 1;
+}
+
+/* Global Permission Banner */
+.global-permission-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+}
+
+.banner-body {
+  flex: 1;
+}
+
+.banner-title {
+  font-weight: 600;
+  margin: 0 0 var(--space-1) 0;
+  color: #92400e;
+}
+
+.banner-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.btn-banner-allow {
+  flex-shrink: 0;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-banner-allow:hover {
+  background: #d97706;
+}
+
+.btn-banner-allow:focus {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
 .tag-result-panel {
   font-size: 12px;
   color: var(--color-text-secondary);

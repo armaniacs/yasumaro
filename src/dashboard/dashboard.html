@@ -609,6 +609,29 @@
         </div>
       </section>
 
+      <!-- 許可を検討するサイトセクション（P0） -->
+      <section class="panel hidden" id="permissionSuggestSection">
+        <div class="section-header section-header-row">
+          <h2 class="panel-title" data-i18n="permissionSuggestTitle">許可を検討するサイト</h2>
+          <button class="btn-icon" id="dismissAllPermissions" title="全て無視する">×</button>
+        </div>
+        <p class="section-hint" data-i18n="permissionSuggestHint">
+          よく訪問するのに未許可のサイトです。許可するとページ記録が有効になります。
+        </p>
+        <div id="permissionSuggestList" class="permission-suggest-list"></div>
+
+        <!-- 閾値設定 -->
+        <div class="form-group">
+          <label for="permissionThreshold" data-i18n="permissionThresholdLabel">
+            通知する訪問回数の閾値:
+          </label>
+          <input type="number" id="permissionThreshold" min="1" max="50" value="3" step="1">
+          <span class="setting-note" data-i18n="permissionThresholdNote">
+            （1〜50、デフォルト3）
+          </span>
+        </div>
+      </section>
+
       <!-- Privacy Settings Panel -->
       <section id="panel-privacy" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="privacyTab">Privacy</h2>

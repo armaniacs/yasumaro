@@ -5,6 +5,7 @@
  */
 
 import type { TrancoTier, SafetyMode } from '../utils/trustDb/trustDbSchema.js';
+import { StorageKeys } from '../utils/storage.js';
 import { getTrustDb } from '../utils/trustDb/trustDb.js';
 import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
@@ -34,6 +35,8 @@ const alertSensitiveCheckbox = document.getElementById('alertSensitive') as HTML
 const alertUnverifiedCheckbox = document.getElementById('alertUnverified') as HTMLInputElement;
 const saveTrustSettingsBtn = document.getElementById('saveTrustSettings') as HTMLButtonElement;
 const trustSettingsStatusDiv = document.getElementById('trustSettingsStatus') as HTMLElement;
+// P0: 許可検討セクション
+const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
 
 // Category tabs
 const categoryTabs = document.querySelectorAll<HTMLButtonElement>('.category-tab');
@@ -391,6 +394,9 @@ export async function loadTrustSettings(): Promise<void> {
   if (alertUnverifiedCheckbox) {
     alertUnverifiedCheckbox.checked = alertConfig.alertUnverified;
   }
+
+  // P0: 「許可を検討するサイト」セッションを描画
+  await renderPermissionSuggestList();
 }
 
 // ============================================================================
@@ -488,6 +494,100 @@ export function init(): void {
   }
 
   logInfo('TrustSettings', {}, 'Trust settings module initialized');
+
+  // P0: 許可検討セクションのイベントリスナー
+  if (thresholdInput) {
+    thresholdInput.addEventListener('change', async (e) => {
+      const newValue = parseInt((e.target as HTMLInputElement).value, 10);
+       if (newValue >= 1 && newValue <= 50) {
+         await chrome.storage.local.set({ [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: newValue });
+         const _ = await renderPermissionSuggestList(); // 再描画
+       }
+    });
+  }
+
+  document.getElementById('dismissAllPermissions')?.addEventListener('click', async () => {
+    const { recordDomainDismissal } = await import('../utils/permissionManager.js');
+    const denied = await renderPermissionSuggestList();
+    for (const { domain } of denied) {
+      await recordDomainDismissal(domain);
+    }
+    await renderPermissionSuggestList(); // 再描画
+  });
+}
+
+// ============================================================================
+// P0: Permission Suggest Section（許可を検討するサイト）
+// ============================================================================
+
+/**
+ * 許可を検討するサイトリストを描画
+ * @returns 描画されたエントリの配列
+ */
+export async function renderPermissionSuggestList(): Promise<{ domain: string; count: number }[]> {
+  const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
+  const section = document.getElementById('permissionSuggestSection');
+  const list = document.getElementById('permissionSuggestList');
+  if (!section || !list) {
+    return [];
+  }
+
+  const threshold = thresholdInput ? parseInt(thresholdInput.value, 10) : 3;
+  const { getFrequentDeniedDomains, requestPermission, removeDeniedDomain, recordDomainDismissal, isHostPermitted } =
+    await import('../utils/permissionManager.js');
+
+  const denied = await getFrequentDeniedDomains(threshold);
+  if (denied.length > 0) {
+    section.classList.remove('hidden');
+  } else {
+    section.classList.add('hidden');
+  }
+  list.innerHTML = '';
+
+  const entries: { domain: string; count: number }[] = [];
+  for (const { domain, count } of denied) {
+    entries.push({ domain, count });
+
+    const row = document.createElement('div');
+    row.className = 'permission-suggest-row';
+
+    const span = document.createElement('span');
+    span.textContent = `${domain} — ${count}${getMessage('permissionSuggestCount') || '回訪問'}`;
+
+    const allowed = await isHostPermitted(`https://${domain}`);
+    if (!allowed) {
+      const allowBtn = document.createElement('button');
+      allowBtn.className = 'btn-secondary btn-sm permission-suggest-allow';
+      allowBtn.textContent = getMessage('permissionSuggestAdd') || '🔓 許可する';
+      allowBtn.addEventListener('click', async () => {
+        const granted = await requestPermission(`https://${domain}`);
+        if (granted) {
+          await removeDeniedDomain(domain);
+          await renderPermissionSuggestList(); // 再描画
+        }
+      });
+
+      const dismissBtn = document.createElement('button');
+      dismissBtn.className = 'btn-icon permission-suggest-dismiss';
+      dismissBtn.textContent = '×';
+      dismissBtn.title = getMessage('permissionSuggestDismiss') || '無視する（14日表示しない）';
+      dismissBtn.addEventListener('click', async () => {
+        await recordDomainDismissal(domain);
+        await renderPermissionSuggestList(); // 再描画
+      });
+
+      row.appendChild(span);
+      row.appendChild(allowBtn);
+      row.appendChild(dismissBtn);
+    } else {
+      // 既に許可済みならdenied_domainsから削除
+      await removeDeniedDomain(domain);
+    }
+
+    list.appendChild(row);
+  }
+
+  return entries;
 }
 
 /**

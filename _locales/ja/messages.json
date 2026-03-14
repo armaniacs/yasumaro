@@ -1669,5 +1669,44 @@
   },
   "statusTrustAlertSensitive": {
     "message": "警戒リスト"
+  },
+  "permissionRequired": {
+    "message": "このサイトへのアクセス権限が必要です"
+  },
+  "permissionAllow": {
+    "message": "🔓 このサイトを許可する"
+  },
+  "permissionDenied": {
+    "message": "アクセスが拒否されました"
+  },
+  "permissionSuggestTitle": {
+    "message": "許可を検討するサイト"
+  },
+  "permissionSuggestHint": {
+    "message": "よく訪問するのに未許可のサイトです。許可するとページ記録が有効になります。"
+  },
+  "permissionSuggestCount": {
+    "message": "回訪問"
+  },
+  "permissionSuggestAdd": {
+    "message": "🔓 許可する"
+  },
+  "permissionSuggestDismiss": {
+    "message": "無視する（14日表示しない）"
+  },
+  "permissionThresholdLabel": {
+    "message": "通知する訪問回数の閾値"
+  },
+  "permissionThresholdNote": {
+    "message": "（1〜50、デフォルト3）"
+  },
+  "allUrlsBannerTitle": {
+    "message": "全サイトで記録を有効にする"
+  },
+  "allUrlsBannerDesc": {
+    "message": "一度許可するだけで、すべてのサイトでページ記録が使えます。"
+  },
+  "allUrlsBannerAllow": {
+    "message": "許可する"
   }
 }

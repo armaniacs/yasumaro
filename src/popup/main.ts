@@ -825,6 +825,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCurrentTabAndInitStatus().catch((error) => {
     console.error('[Initialize] Failed to load current tab or init status panel:', error);
   });
+  initAllUrlsPermissionBanner().catch((error) => {
+    console.error('[Initialize] Failed to init all-urls permission banner:', error);
+  });
   // ポップアップを開いたタイミングでバッジをクリア
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tabId = tabs[0]?.id;
@@ -840,6 +843,36 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadCurrentTabAndInitStatus(): Promise<void> {
   await loadCurrentTab();
   await initStatusPanel();
+}
+
+// ============================================================================
+// Global Permission Banner
+// ============================================================================
+
+async function initAllUrlsPermissionBanner(): Promise<void> {
+  const banner = document.getElementById('allUrlsPermissionBanner');
+  if (!banner) return;
+
+  const { isAllUrlsPermitted, requestAllUrls } = await import('../utils/permissionManager.js');
+  const permitted = await isAllUrlsPermitted();
+
+  if (permitted) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  banner.classList.remove('hidden');
+
+  document.getElementById('btnRequestAllUrls')?.addEventListener('click', async () => {
+    const granted = await requestAllUrls();
+    if (granted) {
+      banner.classList.add('hidden');
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]?.url) {
+        void updateTrustStatus(tabs[0].url);
+      }
+    }
+  });
 }
 
 // ============================================================================
@@ -963,9 +996,56 @@ function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cl
 
 async function updateTrustStatus(url: string): Promise<void> {
   const trustContent = document.getElementById('statusTrustContent');
+  const permArea = document.getElementById('permissionRequestArea');
+  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
+  const errorMsg = document.getElementById('permissionDeniedMessage') as HTMLElement | null;
   if (!trustContent) return;
 
   try {
+    // 1. host_permissions チェック（<all_urls> 一括許可済みならスキップ）
+    const { isAllUrlsPermitted, isHostPermitted, requestPermission, recordDeniedVisit } = await import('../utils/permissionManager.js');
+    const allUrlsGranted = await isAllUrlsPermitted();
+    const permitted = allUrlsGranted || await isHostPermitted(url);
+    if (!permitted) {
+      // LOCKED 表示
+      trustContent.innerHTML = `<span class="status-value" style="color:#6b7280">🔒 LOCKED</span>`;
+      // 記録ボタンを非活性化
+      if (recordBtn) recordBtn.disabled = true;
+      // 許可ボタンエリアを表示
+      if (permArea) {
+        permArea.classList.remove('hidden');
+        document.getElementById('btnRequestPermission')?.addEventListener('click', async () => {
+          const granted = await requestPermission(url);
+          if (granted) {
+            permArea.classList.add('hidden');
+            if (recordBtn) recordBtn.disabled = false;
+            void updateTrustStatus(url);  // 再描画
+          } else {
+            const domain = new URL(url).hostname;
+            await recordDeniedVisit(domain);
+            // 拒否メッセージ表示（フェードイン→3秒後フェードアウト）
+            if (errorMsg) {
+              errorMsg.classList.remove('hidden');
+              requestAnimationFrame(() => {
+                errorMsg.classList.add('visible');
+              });
+              setTimeout(() => {
+                errorMsg.classList.remove('visible');
+                setTimeout(() => {
+                  errorMsg.classList.add('hidden');
+                }, 300);
+              }, 3000);
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    // 2. 許可済み → 既存の Trust レベル表示
+    if (permArea) permArea.classList.add('hidden');
+    if (recordBtn) recordBtn.disabled = false;
+
     const { getTrustLevelDisplay, checkDomainTrust } = await import('../utils/trustChecker.js');
     const [display, checkResult] = await Promise.all([
       getTrustLevelDisplay(url),
