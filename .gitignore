@@ -37,3 +37,16 @@ docs/features/
 video-autotag/
 video-config-export/
 video-*/
+
+# i18n message backup/temp files
+_locales/*-base.json
+_locales/*-fixed.json
+_locales/*-new.json
+_locales/*-temp.json
+_locales/*.bak*
+
+_locales/*/*-base.json
+_locales/*/*-fixed.json
+_locales/*/*-new.json
+_locales/*/*-temp.json
+_locales/*/*.bak*
