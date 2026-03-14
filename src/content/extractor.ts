@@ -34,6 +34,14 @@ let contentStripHardEnabled = true;
 let contentStripKeywordEnabled = true;
 let contentStripKeywords: string[] = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'];
 
+// 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
+export let lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
+export let lastCleanseStats: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } = {
+    hardStripRemoved: 0,
+    keywordStripRemoved: 0,
+    totalRemoved: 0
+};
+
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
 
@@ -56,9 +64,20 @@ function extractPageContent(): string {
         cleanseEnabled: contentStripHardEnabled || contentStripKeywordEnabled,
         hardStripEnabled: contentStripHardEnabled,
         keywordStripEnabled: contentStripKeywordEnabled,
-        keywords: contentStripKeywords
+        keywords: contentStripKeywords,
+        returnInfo: true
     };
-    return extractMainContent(10000, cleanseOptions);
+    const result = extractMainContent(10000, cleanseOptions);
+    // クレンジング情報を保存
+    if (typeof result === 'object' && 'cleansedReason' in result) {
+        lastCleansedReason = result.cleansedReason || 'none';
+        lastCleanseStats = {
+            hardStripRemoved: result.hardStripRemoved ?? 0,
+            keywordStripRemoved: result.keywordStripRemoved ?? 0,
+            totalRemoved: result.totalRemoved ?? 0
+        };
+    }
+    return typeof result === 'string' ? result : result.content;
 }
 
 /**
@@ -455,7 +474,7 @@ function init(): void {
 chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
     if (message.type === 'GET_CONTENT') {
         const content = extractPageContent();
-        sendResponse({ content });
+        sendResponse({ content, cleansedReason: lastCleansedReason, cleanseStats: lastCleanseStats });
     }
     return true;
 });

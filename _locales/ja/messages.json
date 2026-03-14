@@ -1468,5 +1468,20 @@
   },
   "contentStripSave": {
     "message": "保存"
+  },
+  "statusCleansing": {
+    "message": "クレンジング"
+  },
+  "statusCleansingNone": {
+    "message": "実行なし"
+  },
+  "statusCleansingHard": {
+    "message": "フォーム入力等: $1件削除"
+  },
+  "statusCleansingKeyword": {
+    "message": "キーワード: $1件削除"
+  },
+  "statusCleansingTotal": {
+    "message": "合計: $1件削除"
   }
 }

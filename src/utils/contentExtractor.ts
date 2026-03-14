@@ -9,7 +9,7 @@
  * 🟢
  */
 
-import { cleanseContent, type CleanseOptions, type CleanseResult } from './contentCleaner.js';
+import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from './contentCleaner.js';
 import { logSanitize } from './logger.js';
 
 /**
@@ -325,6 +325,17 @@ function extractTextFromElement(element: Element): string {
 type CleanseCallback = (result: CleanseResult | null) => void;
 
 /**
+ * 抽出結果の型（コンテンツのみ、またはコンテンツとクレンジング情報）
+ */
+export interface ExtractResult {
+    content: string;
+    cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
+    hardStripRemoved?: number;
+    keywordStripRemoved?: number;
+    totalRemoved?: number;
+}
+
+/**
  * ページのメインコンテンツを抽出する
  * 【機能概要】: メインコンテンツ（記事、本文等）をテキストとして抽出
  * 【処理内容】:
@@ -358,10 +369,14 @@ type CleanseCallback = (result: CleanseResult | null) => void;
  */
 export function extractMainContent(
     maxChars: number = 10000,
-    cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean } = { cleanseEnabled: false }
-): string {
+    cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean; returnInfo?: boolean } = { cleanseEnabled: false }
+): ExtractResult | string {
     let content = '';
-    const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'] } = cleanseOptions;
+    const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'], returnInfo = false } = cleanseOptions;
+    let cleansedReason: ExtractResult['cleansedReason'] = 'none';
+    let hardStripRemoved = 0;
+    let keywordStripRemoved = 0;
+    let totalRemoved = 0;
 
     try {
         const candidates = findMainContentCandidates();
@@ -383,6 +398,18 @@ export function extractMainContent(
                 });
 
                 if (cleanseResult.totalRemoved > 0) {
+                    // クレンジング理由を決定
+                    if (hardStripEnabled && keywordStripEnabled) {
+                        cleansedReason = 'both';
+                    } else if (hardStripEnabled) {
+                        cleansedReason = 'hard';
+                    } else if (keywordStripEnabled) {
+                        cleansedReason = 'keyword';
+                    }
+                    hardStripRemoved = cleanseResult.hardStripRemoved;
+                    keywordStripRemoved = cleanseResult.keywordStripRemoved;
+                    totalRemoved = cleanseResult.totalRemoved;
+
                     console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
                         + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
 
@@ -426,13 +453,35 @@ export function extractMainContent(
             // 要素からテキストを抽出
             content = extractTextFromElement(targetElement);
 
-            // 抽出テキストが短すぎる場合、フォールバック
+            // 抽出テキストが短すぎる場合、body全体でフォールバック（クレンジング済み統計は保持）
             if (content.trim().length < 100) {
                 content = document.body?.innerText || '';
             }
         } else {
-            // 候補がない場合、フォールバック
-            content = document.body?.innerText || '';
+            // 候補がない場合、body全体をクレンジング対象としてフォールバック
+            if (cleanseEnabled && document.body) {
+                const clone = document.body.cloneNode(true) as Element;
+                const cleanseResult: CleanseResult = cleanseContent(clone, {
+                    hardStripEnabled,
+                    keywordStripEnabled,
+                    keywords
+                });
+                if (cleanseResult.totalRemoved > 0) {
+                    if (hardStripEnabled && keywordStripEnabled) {
+                        cleansedReason = 'both';
+                    } else if (hardStripEnabled) {
+                        cleansedReason = 'hard';
+                    } else if (keywordStripEnabled) {
+                        cleansedReason = 'keyword';
+                    }
+                    hardStripRemoved = cleanseResult.hardStripRemoved;
+                    keywordStripRemoved = cleanseResult.keywordStripRemoved;
+                    totalRemoved = cleanseResult.totalRemoved;
+                }
+                content = extractTextFromElement(clone);
+            } else {
+                content = document.body?.innerText || '';
+            }
         }
     } catch (error) {
         // エラー時は安全なフォールバック
@@ -447,6 +496,32 @@ export function extractMainContent(
     // 最大文字数で切り詰め
     if (content.length > maxChars) {
         content = content.substring(0, maxChars);
+    }
+
+    // returnInfoオプションに従って返り値を変える
+    if (returnInfo) {
+        // クレンジングが実行されなかった場合（または0件だった場合）、
+        // body全体をスキャンして対象候補数をカウント（削除はしない）
+        if (totalRemoved === 0 && document.body) {
+            const countResult = countCleanseTargets(document.body, {
+                hardStripEnabled,
+                keywordStripEnabled,
+                keywords
+            });
+            hardStripRemoved = countResult.hardStripRemoved;
+            keywordStripRemoved = countResult.keywordStripRemoved;
+            totalRemoved = countResult.totalRemoved;
+            if (totalRemoved > 0) {
+                if (hardStripEnabled && keywordStripEnabled) {
+                    cleansedReason = 'both';
+                } else if (hardStripEnabled) {
+                    cleansedReason = 'hard';
+                } else if (keywordStripEnabled) {
+                    cleansedReason = 'keyword';
+                }
+            }
+        }
+        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved };
     }
 
     return content;

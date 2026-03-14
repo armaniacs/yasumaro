@@ -1138,6 +1138,26 @@ label.inline-label {
   color: var(--color-danger);
 }
 
+.cleansing-info {
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cleansing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #10b981;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* =============================================================================
    Modal Close Button
    ============================================================================= */

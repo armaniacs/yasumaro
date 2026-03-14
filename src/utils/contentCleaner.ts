@@ -189,6 +189,60 @@ export interface CleanseOptions {
     keywords?: string[];
 }
 
+/**
+ * DOMのクレンジング対象要素数をカウントする（削除は行わない）
+ * @param element - カウント対象のルート要素
+ * @param options - クレンジングオプション
+ * @returns カウント結果（削除数と同じ構造だがDOMは変更しない）
+ */
+export function countCleanseTargets(element: Element, options: CleanseOptions = {}): CleanseResult {
+    const {
+        hardStripEnabled = true,
+        keywordStripEnabled = true,
+        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku']
+    } = options;
+
+    let hardStripCount = 0;
+    let keywordStripCount = 0;
+
+    if (hardStripEnabled) {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ELEMENT, undefined);
+        let node: Node | null = walker.nextNode();
+        while (node) {
+            if (isHardStripTarget(node as Element)) hardStripCount++;
+            node = walker.nextNode();
+        }
+    }
+
+    if (keywordStripEnabled && keywords.length > 0) {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ELEMENT, undefined);
+        const counted = new Set<Element>();
+        let node: Node | null = walker.nextNode();
+        while (node) {
+            const elem = node as Element;
+            if (!counted.has(elem)) {
+                const id = elem.id?.toLowerCase() || '';
+                const classes = elem.className?.toLowerCase() || '';
+                for (const keyword of keywords) {
+                    const kw = keyword.toLowerCase();
+                    if (id.includes(kw) || classes.includes(kw)) {
+                        keywordStripCount++;
+                        counted.add(elem);
+                        break;
+                    }
+                }
+            }
+            node = walker.nextNode();
+        }
+    }
+
+    return {
+        hardStripRemoved: hardStripCount,
+        keywordStripRemoved: keywordStripCount,
+        totalRemoved: hardStripCount + keywordStripCount
+    };
+}
+
 export function cleanseContent(element: Element, options: CleanseOptions = {}): CleanseResult {
     const {
         hardStripEnabled = true,

@@ -1468,5 +1468,20 @@
   },
   "contentStripSave": {
     "message": "Save"
+  },
+  "statusCleansing": {
+    "message": "Cleansing"
+  },
+  "statusCleansingNone": {
+    "message": "Not executed"
+  },
+  "statusCleansingHard": {
+    "message": "Form inputs: $1 removed"
+  },
+  "statusCleansingKeyword": {
+    "message": "Keywords: $1 removed"
+  },
+  "statusCleansingTotal": {
+    "message": "Total: $1 removed"
   }
 }

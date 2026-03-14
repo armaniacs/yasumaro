@@ -137,10 +137,53 @@ function resetBodyWidth(): void {
 }
 
 /**
+ * クレンジング情報の表示を更新
+ * @param cleansedReason - クレンジング理由
+ */
+function updateCleansingInfo(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): void {
+  const cleansingInfo = document.getElementById('cleansingInfo');
+  const cleansingBadge = document.getElementById('cleansingBadge');
+
+  if (!cleansingInfo || !cleansingBadge) {
+    return;
+  }
+
+  if (!cleansedReason || cleansedReason === 'none') {
+    cleansingInfo.classList.add('hidden');
+    cleansingBadge.textContent = '';
+    return;
+  }
+
+  cleansingInfo.classList.remove('hidden');
+
+  let badgeText = '';
+  let badgeClass = '';
+  switch (cleansedReason) {
+    case 'hard':
+      badgeText = getMessage('cleansedBadgeHard') || '🧹 Hard';
+      break;
+    case 'keyword':
+      badgeText = getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
+      break;
+    case 'both':
+      badgeText = getMessage('cleansedBadgeBoth') || '🧹 Both';
+      break;
+  }
+
+  cleansingBadge.textContent = badgeText;
+  cleansingBadge.className = 'cleansing-badge';
+}
+
+/**
  * プレビューモーダルを表示し、マスクされた個人情報を可視化する
  * UF-401: マスク情報の可視化機能 - Refactorフェーズ実装（定数化・JSDoc・関数分割）
  */
-export function showPreview(content: string, maskedItems: MaskedItem[] | null = null, maskedCount: number = 0): Promise<ConfirmationResult> {
+export function showPreview(
+  content: string,
+  maskedItems: MaskedItem[] | null = null,
+  maskedCount: number = 0,
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'
+): Promise<ConfirmationResult> {
   const modal = getModal();
   const previewContent = getPreviewContent();
   const modalBody = modal?.querySelector('.modal-body');
@@ -170,6 +213,9 @@ export function showPreview(content: string, maskedItems: MaskedItem[] | null = 
       maskStatusMessage.style.display = 'none';
     }
   }
+
+  // クレンジング情報の表示
+  updateCleansingInfo(cleansedReason);
 
   // プレビューコンテンツの設定（プレーンテキストのまま表示）
   setPreviewContent(previewContent, content || '');

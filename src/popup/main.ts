@@ -18,6 +18,12 @@ export { getCurrentTab };
 
 interface ContentResponse {
   content: string;
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
+  cleanseStats?: {
+    hardStripRemoved: number;
+    keywordStripRemoved: number;
+    totalRemoved: number;
+  };
 }
 
 interface PreviewResponse {
@@ -614,6 +620,9 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       }
     }
 
+    // クレンジング情報をステータスパネルに反映
+    updateCleansingStatus(contentResponse.cleanseStats, contentResponse.cleansedReason);
+
     // Background Workerに記録を要求
     let result;
 
@@ -670,7 +679,8 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
         const confirmation = await showPreview(
           previewResponse.processedContent,
           previewResponse.maskedItems,
-          previewResponse.maskedCount || 0
+          previewResponse.maskedCount || 0,
+          contentResponse.cleansedReason
         );
 
         if (!confirmation.confirmed) {
@@ -855,6 +865,14 @@ async function initStatusPanel(): Promise<void> {
     // ステータスをレンダリング
     renderStatusPanel(status);
 
+    // ポップアップ表示時にクレンジング情報を事前取得（記録前に表示するため）
+    if (currentTab.id) {
+      chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CONTENT' }, (response: ContentResponse | undefined) => {
+        if (chrome.runtime.lastError || !response) return;
+        updateCleansingStatus(response.cleanseStats, response.cleansedReason);
+      });
+    }
+
     // 展開/折りたたみイベントリスナー
     const toggleBtn = document.getElementById('statusToggleBtn');
     const detailsPanel = document.getElementById('statusDetails');
@@ -878,6 +896,28 @@ async function initStatusPanel(): Promise<void> {
     const panel = document.getElementById('statusPanel');
     if (panel) panel.style.display = 'none';
   }
+}
+
+function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cleansedReason?: ContentResponse['cleansedReason']): void {
+  const cleansingContent = document.getElementById('statusCleansingContent');
+  if (!cleansingContent) return;
+
+  if (!cleanseStats || cleanseStats.totalRemoved === 0) {
+    cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusCleansingNone')}</span>`;
+    return;
+  }
+
+  let html = '';
+  if (cleanseStats.hardStripRemoved > 0) {
+    html += `<span class="status-value">${getMessage('statusCleansingHard', [String(cleanseStats.hardStripRemoved)])}</span>`;
+  }
+  if (cleanseStats.keywordStripRemoved > 0) {
+    html += `<span class="status-value">${getMessage('statusCleansingKeyword', [String(cleanseStats.keywordStripRemoved)])}</span>`;
+  }
+  if (cleanseStats.totalRemoved > 0) {
+    html += `<span class="status-value status-muted">${getMessage('statusCleansingTotal', [String(cleanseStats.totalRemoved)])}</span>`;
+  }
+  cleansingContent.innerHTML = html;
 }
 
 function renderStatusPanel(status: StatusInfo): void {
@@ -1020,6 +1060,12 @@ function renderStatusPanel(status: StatusInfo): void {
         <span class="status-value status-muted">${escapeHtml(status.lastSaved.formatted || '')}</span>
       `;
     }
+  }
+
+  // クレンジングセクション（初期表示は情報なし）
+  const cleansingContent = document.getElementById('statusCleansingContent');
+  if (cleansingContent) {
+    cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
   }
 
   // ドメイン状態に応じてrecordBtnを設定

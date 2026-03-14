@@ -20,6 +20,14 @@ All notable changes to this project will be documented in this file.
   - クレンジング実行時に `cleansedReason` を記録履歴へ保存
   - 記録エントリに「📄 コンテンツを表示」展開ボタンを追加し、保存されたコンテンツをインラインで確認できるように
   - クレンジングバッジ（🧹 Hard / 🧹 Keyword / 🧹 Both）を日英両対応で追加
+- **ポップアップのクレンジング情報表示** ([popup.html](src/popup/popup.html), [main.ts](src/popup/main.ts), [sanitizePreview.ts](src/popup/sanitizePreview.ts), [styles.css](src/popup/styles.css))
+  - ポップアップのステータスパネルに「クレンジング」セクションを追加し、Hard/Keyword/Total削除数をリアルタイム表示
+  - プレビューモーダルにクレンジングバッジを表示し、記録前にクレンジング対象が含まれていることを確認できるように
+  - ページ読み込み時に事前クレンジング情報を取得し、記録ボタンを押す前に削除候補を確認できるように
+  - i18n メッセージ `statusCleansing`, `statusCleansingHard`, `statusCleansingKeyword`, `statusCleansingTotal`, `statusCleansingNone` を追加
+- **extractMainContentの拡張** ([contentExtractor.ts](src/utils/contentExtractor.ts))
+  - `returnInfo` オプションでクレンジング統計（`hardStripRemoved`, `keywordStripRemoved`, `totalRemoved`）も返せるように
+  - `countCleanseTargets()` を追加し、削除されなかった対象数もカウントできるように（ユーザーがクレンジング無効でも削除候補を確認）
 - **手動保存後のAIタグ分類結果表示** ([popup.html](src/popup/popup.html), [main.ts](src/popup/main.ts))
   - 「今すぐ記録」で保存した直後、AIが分類したタグ（例: `#IT・プログラミング #ビジネス・経済`）をポップアップに表示
   - タグが1件以上ある場合のみ表示（タグなし・タグモード無効時はUIに変化なし）
