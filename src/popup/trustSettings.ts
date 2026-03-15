@@ -267,12 +267,12 @@ async function updateTrancoList(): Promise<void> {
       showStatus(getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully');
       logInfo('TrustSettings', { tier, count: result.domainsCount }, `Tranco update completed`);
     } else {
-      logError('TrustSettings', { error: result.error }, ErrorCode.TRANC_FETCH_FAILED);
+      logError('TrustSettings', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED);
       updateTrancoStatus({ error: result.error || 'Update failed' });
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logError('TrustSettings', { error: errorMessage }, ErrorCode.TRANC_FETCH_FAILED);
+    logError('TrustSettings', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
     updateTrancoStatus({ error: errorMessage });
   }
 }
