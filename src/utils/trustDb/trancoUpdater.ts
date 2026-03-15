@@ -15,24 +15,24 @@ import { fetchWithTimeout } from '../fetch.js';
 // ===== 定数 =====
 
 // Tranco API: fetch latest list ID first, then download CSV
-const TRANC_API_LATEST = 'https://tranco-list.eu/api/lists/date/latest';
-const TRANC_TIER_COUNT: Record<TrancoTier, number> = {
+const TRANCO_API_LATEST = 'https://tranco-list.eu/api/lists/date/latest';
+const TRANCO_TIER_COUNT: Record<TrancoTier, number> = {
   top1k: 1000,
   top10k: 10000,
   top100k: 100000
 };
 
-const TRANC_FETCH_TIMEOUT = 60000; // 60秒
-const TRANC_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24時間
+const TRANCO_FETCH_TIMEOUT = 60000; // 60秒
+const TRANCO_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24時間
 
 // Safety Mode と Tranco Tier のマッピング
-export const SAFETY_MODE_TO_TRANC_TIER: Record<SafetyMode, TrancoTier> = {
+export const SAFETY_MODE_TO_TRANCO_TIER: Record<SafetyMode, TrancoTier> = {
   strict: 'top1k',
   balanced: 'top10k',
   relaxed: 'top100k'
 };
 
-export const TRANC_TIER_TO_SAFETY_MODE: Record<TrancoTier, SafetyMode> = {
+export const TRANCO_TIER_TO_SAFETY_MODE: Record<TrancoTier, SafetyMode> = {
   top1k: 'strict',
   top10k: 'balanced',
   top100k: 'relaxed'
@@ -83,7 +83,7 @@ export class TrancoUpdater {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logError('TrancoUpdater', { error: errorMessage }, ErrorCode.TRANC_FETCH_FAILED);
+      logError('TrancoUpdater', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
       return {
         success: false,
         domainsCount: 0,
@@ -101,7 +101,7 @@ export class TrancoUpdater {
   private async fetchTrancoList(tier: TrancoTier): Promise<string[]> {
     // Step 1: 最新リストIDを取得
     logInfo('TrancoUpdater', {}, `Fetching latest Tranco list ID`);
-    const metaResponse = await fetchWithTimeout(TRANC_API_LATEST, { method: 'GET' }, TRANC_FETCH_TIMEOUT);
+    const metaResponse = await fetchWithTimeout(TRANCO_API_LATEST, { method: 'GET' }, TRANCO_FETCH_TIMEOUT);
     if (!metaResponse.ok) {
       throw new Error(`Tranco API returned status ${metaResponse.status}: ${metaResponse.statusText}`);
     }
@@ -112,11 +112,11 @@ export class TrancoUpdater {
     }
 
     // Step 2: CSV をダウンロード
-    const count = TRANC_TIER_COUNT[tier];
+    const count = TRANCO_TIER_COUNT[tier];
     const url = `https://tranco-list.eu/download/${listId}/${count}`;
     logInfo('TrancoUpdater', { url }, `Fetching CSV from: ${url}`);
 
-    const response = await fetchWithTimeout(url, { method: 'GET' }, TRANC_FETCH_TIMEOUT);
+    const response = await fetchWithTimeout(url, { method: 'GET' }, TRANCO_FETCH_TIMEOUT);
     if (!response.ok) {
       throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
@@ -165,14 +165,14 @@ export class TrancoUpdater {
    * Safety Mode から Tranco Tier を取得
    */
   safetyModeToTier(mode: SafetyMode): TrancoTier {
-    return SAFETY_MODE_TO_TRANC_TIER[mode];
+    return SAFETY_MODE_TO_TRANCO_TIER[mode];
   }
 
   /**
    * Tranco Tier から Safety Mode を取得
    */
   tierToSafetyMode(tier: TrancoTier): SafetyMode {
-    return TRANC_TIER_TO_SAFETY_MODE[tier];
+    return TRANCO_TIER_TO_SAFETY_MODE[tier];
   }
 
   /**
@@ -192,7 +192,7 @@ export class TrancoUpdater {
     const now = new Date();
     const elapsed = now.getTime() - lastUpdated.getTime();
 
-    return elapsed > TRANC_UPDATE_INTERVAL_MS;
+    return elapsed > TRANCO_UPDATE_INTERVAL_MS;
   }
 }
 

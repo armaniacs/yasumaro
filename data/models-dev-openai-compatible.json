@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-11T12:20:10.713Z",
+  "generatedAt": "2026-03-15T18:01:39.506Z",
   "providers": [
     {
       "id": "openrouter",
@@ -393,6 +393,14 @@
           "contextLimit": 1050000,
           "inputPrice": 2,
           "outputPrice": 12,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemini-3.1-flash-lite-preview",
+          "name": "Gemini 3.1 Flash Lite Preview",
+          "contextLimit": 1048576,
+          "inputPrice": 0.25,
+          "outputPrice": 1.5,
           "isFreeTier": false
         },
         {
@@ -852,12 +860,36 @@
           "isFreeTier": false
         },
         {
+          "id": "x-ai/grok-4.20-beta",
+          "name": "Grok 4.20 Beta",
+          "contextLimit": 2000000,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
+          "id": "x-ai/grok-4.20-multi-agent-beta",
+          "name": "Grok 4.20 Multi - Agent Beta",
+          "contextLimit": 2000000,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
           "id": "x-ai/grok-code-fast-1",
           "name": "Grok Code Fast 1",
           "contextLimit": 256000,
           "inputPrice": 0.2,
           "outputPrice": 1.5,
           "isFreeTier": false
+        },
+        {
+          "id": "openrouter/healer-alpha",
+          "name": "Healer Alpha",
+          "contextLimit": 262144,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
         },
         {
           "id": "nousresearch/hermes-3-llama-3.1-405b:free",
@@ -882,6 +914,14 @@
           "inputPrice": 0.13,
           "outputPrice": 0.4,
           "isFreeTier": false
+        },
+        {
+          "id": "openrouter/hunter-alpha",
+          "name": "Hunter Alpha",
+          "contextLimit": 1048576,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
         },
         {
           "id": "prime-intellect/intellect-3",
@@ -3040,7 +3080,7 @@
           "isFreeTier": false
         },
         {
-          "id": "THUDM 2/GLM-4-32B-0414",
+          "id": "THUDM/GLM-4-32B-0414",
           "name": "GLM 4 32B 0414",
           "contextLimit": 128000,
           "inputPrice": 0.2,
@@ -3048,7 +3088,7 @@
           "isFreeTier": false
         },
         {
-          "id": "THUDM 2/GLM-4-9B-0414",
+          "id": "THUDM/GLM-4-9B-0414",
           "name": "GLM 4 9B 0414",
           "contextLimit": 32000,
           "inputPrice": 0.2,
@@ -3192,6 +3232,22 @@
           "isFreeTier": false
         },
         {
+          "id": "zai-org/glm-4.7",
+          "name": "GLM 4.7",
+          "contextLimit": 200000,
+          "inputPrice": 0.15,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/glm-4.7-flash",
+          "name": "GLM 4.7 Flash",
+          "contextLimit": 200000,
+          "inputPrice": 0.07,
+          "outputPrice": 0.4,
+          "isFreeTier": false
+        },
+        {
           "id": "TEE/glm-4.7-flash",
           "name": "GLM 4.7 Flash TEE",
           "contextLimit": 203000,
@@ -3232,7 +3288,7 @@
           "isFreeTier": false
         },
         {
-          "id": "THUDM 2/GLM-Z1-32B-0414",
+          "id": "THUDM/GLM-Z1-32B-0414",
           "name": "GLM Z1 32B 0414",
           "contextLimit": 128000,
           "inputPrice": 0.2,
@@ -3240,7 +3296,7 @@
           "isFreeTier": false
         },
         {
-          "id": "THUDM 2/GLM-Z1-9B-0414",
+          "id": "THUDM/GLM-Z1-9B-0414",
           "name": "GLM Z1 9B 0414",
           "contextLimit": 32000,
           "inputPrice": 0.2,
@@ -3264,7 +3320,7 @@
           "isFreeTier": false
         },
         {
-          "id": "THUDM 2/GLM-Z1-Rumination-32B-0414",
+          "id": "THUDM/GLM-Z1-Rumination-32B-0414",
           "name": "GLM Z1 Rumination 32B 0414",
           "contextLimit": 32000,
           "inputPrice": 0.2,
@@ -5692,6 +5748,54 @@
       "isAggregator": false,
       "models": [
         {
+          "id": "ai21/jamba-large-1.7",
+          "name": "AI21: Jamba Large 1.7",
+          "contextLimit": 256000,
+          "inputPrice": 2,
+          "outputPrice": 8,
+          "isFreeTier": false
+        },
+        {
+          "id": "aion-labs/aion-1.0",
+          "name": "AionLabs: Aion-1.0",
+          "contextLimit": 131072,
+          "inputPrice": 4,
+          "outputPrice": 8,
+          "isFreeTier": false
+        },
+        {
+          "id": "aion-labs/aion-1.0-mini",
+          "name": "AionLabs: Aion-1.0-Mini",
+          "contextLimit": 131072,
+          "inputPrice": 0.7,
+          "outputPrice": 1.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "aion-labs/aion-2.0",
+          "name": "AionLabs: Aion-2.0",
+          "contextLimit": 131072,
+          "inputPrice": 0.8,
+          "outputPrice": 1.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "aion-labs/aion-rp-llama-3.1-8b",
+          "name": "AionLabs: Aion-RP 1.0 (8B)",
+          "contextLimit": 32768,
+          "inputPrice": 0.8,
+          "outputPrice": 1.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "alfredpros/codellama-7b-instruct-solidity",
+          "name": "AlfredPros: CodeLLaMa 7B Instruct Solidity",
+          "contextLimit": 4096,
+          "inputPrice": 0.8,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
           "id": "allenai/molmo-2-8b",
           "name": "AllenAI: Molmo2 8B",
           "contextLimit": 36864,
@@ -5700,11 +5804,83 @@
           "isFreeTier": false
         },
         {
+          "id": "allenai/olmo-2-0325-32b-instruct",
+          "name": "AllenAI: Olmo 2 32B Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.05,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "allenai/olmo-3-32b-think",
+          "name": "AllenAI: Olmo 3 32B Think",
+          "contextLimit": 65536,
+          "inputPrice": 0.15,
+          "outputPrice": 0.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "allenai/olmo-3-7b-instruct",
+          "name": "AllenAI: Olmo 3 7B Instruct",
+          "contextLimit": 65536,
+          "inputPrice": 0.1,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "allenai/olmo-3-7b-think",
+          "name": "AllenAI: Olmo 3 7B Think",
+          "contextLimit": 65536,
+          "inputPrice": 0.12,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "allenai/olmo-3.1-32b-instruct",
+          "name": "AllenAI: Olmo 3.1 32B Instruct",
+          "contextLimit": 65536,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "allenai/olmo-3.1-32b-think",
+          "name": "AllenAI: Olmo 3.1 32B Think",
+          "contextLimit": 65536,
+          "inputPrice": 0.15,
+          "outputPrice": 0.5,
+          "isFreeTier": false
+        },
+        {
           "id": "amazon/nova-2-lite-v1",
           "name": "Amazon: Nova 2 Lite",
           "contextLimit": 1000000,
           "inputPrice": 0.3,
           "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "amazon/nova-lite-v1",
+          "name": "Amazon: Nova Lite 1.0",
+          "contextLimit": 300000,
+          "inputPrice": 0.06,
+          "outputPrice": 0.24,
+          "isFreeTier": false
+        },
+        {
+          "id": "amazon/nova-micro-v1",
+          "name": "Amazon: Nova Micro 1.0",
+          "contextLimit": 128000,
+          "inputPrice": 0.035,
+          "outputPrice": 0.14,
+          "isFreeTier": false
+        },
+        {
+          "id": "amazon/nova-premier-v1",
+          "name": "Amazon: Nova Premier 1.0",
+          "contextLimit": 1000000,
+          "inputPrice": 2.5,
+          "outputPrice": 12.5,
           "isFreeTier": false
         },
         {
@@ -5798,7 +5974,7 @@
         {
           "id": "anthropic/claude-sonnet-4",
           "name": "Anthropic: Claude Sonnet 4",
-          "contextLimit": 1000000,
+          "contextLimit": 200000,
           "inputPrice": 3,
           "outputPrice": 15,
           "isFreeTier": false
@@ -5809,6 +5985,38 @@
           "contextLimit": 1000000,
           "inputPrice": 3,
           "outputPrice": 15,
+          "isFreeTier": false
+        },
+        {
+          "id": "anthropic/claude-sonnet-4.6",
+          "name": "Anthropic: Claude Sonnet 4.6",
+          "contextLimit": 1000000,
+          "inputPrice": 3,
+          "outputPrice": 15,
+          "isFreeTier": false
+        },
+        {
+          "id": "arcee-ai/coder-large",
+          "name": "Arcee AI: Coder Large",
+          "contextLimit": 32768,
+          "inputPrice": 0.5,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "arcee-ai/maestro-reasoning",
+          "name": "Arcee AI: Maestro Reasoning",
+          "contextLimit": 131072,
+          "inputPrice": 0.9,
+          "outputPrice": 3.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "arcee-ai/spotlight",
+          "name": "Arcee AI: Spotlight",
+          "contextLimit": 131072,
+          "inputPrice": 0.18,
+          "outputPrice": 0.18,
           "isFreeTier": false
         },
         {
@@ -5828,17 +6036,17 @@
           "isFreeTier": false
         },
         {
-          "id": "arcee-ai/trinity-mini:free",
-          "name": "Arcee AI: Trinity Mini (free)",
+          "id": "arcee-ai/virtuoso-large",
+          "name": "Arcee AI: Virtuoso Large",
           "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.75,
+          "outputPrice": 1.2,
+          "isFreeTier": false
         },
         {
-          "id": "openrouter/aurora-alpha",
-          "name": "Aurora Alpha (free)",
-          "contextLimit": 128000,
+          "id": "openrouter/auto",
+          "name": "Auto Router",
+          "contextLimit": 2000000,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -5884,11 +6092,51 @@
           "isFreeTier": false
         },
         {
+          "id": "openrouter/bodybuilder",
+          "name": "Body Builder (beta)",
+          "contextLimit": 128000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
           "id": "bytedance-seed/seed-1.6",
           "name": "ByteDance Seed: Seed 1.6",
           "contextLimit": 262144,
           "inputPrice": 0.25,
           "outputPrice": 2,
+          "isFreeTier": false
+        },
+        {
+          "id": "bytedance-seed/seed-1.6-flash",
+          "name": "ByteDance Seed: Seed 1.6 Flash",
+          "contextLimit": 262144,
+          "inputPrice": 0.075,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "bytedance-seed/seed-2.0-lite",
+          "name": "ByteDance Seed: Seed-2.0-Lite",
+          "contextLimit": 262144,
+          "inputPrice": 0.25,
+          "outputPrice": 2,
+          "isFreeTier": false
+        },
+        {
+          "id": "bytedance-seed/seed-2.0-mini",
+          "name": "ByteDance Seed: Seed-2.0-Mini",
+          "contextLimit": 262144,
+          "inputPrice": 0.1,
+          "outputPrice": 0.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "bytedance/ui-tars-1.5-7b",
+          "name": "ByteDance: UI-TARS 7B ",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.2,
           "isFreeTier": false
         },
         {
@@ -5924,19 +6172,35 @@
           "isFreeTier": false
         },
         {
+          "id": "corethink:free",
+          "name": "CoreThink (free)",
+          "contextLimit": 78000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "deepcogito/cogito-v2.1-671b",
+          "name": "Deep Cogito: Cogito v2.1 671B",
+          "contextLimit": 128000,
+          "inputPrice": 1.25,
+          "outputPrice": 1.25,
+          "isFreeTier": false
+        },
+        {
           "id": "deepseek/deepseek-chat",
           "name": "DeepSeek: DeepSeek V3",
           "contextLimit": 163840,
-          "inputPrice": 0.3,
-          "outputPrice": 1.2,
+          "inputPrice": 0.32,
+          "outputPrice": 0.89,
           "isFreeTier": false
         },
         {
           "id": "deepseek/deepseek-chat-v3-0324",
           "name": "DeepSeek: DeepSeek V3 0324",
           "contextLimit": 163840,
-          "inputPrice": 0.19,
-          "outputPrice": 0.87,
+          "inputPrice": 0.2,
+          "outputPrice": 0.77,
           "isFreeTier": false
         },
         {
@@ -5956,18 +6220,10 @@
           "isFreeTier": false
         },
         {
-          "id": "deepseek/deepseek-v3.1-terminus:exacto",
-          "name": "DeepSeek: DeepSeek V3.1 Terminus (exacto)",
-          "contextLimit": 163840,
-          "inputPrice": 0.21,
-          "outputPrice": 0.79,
-          "isFreeTier": false
-        },
-        {
           "id": "deepseek/deepseek-v3.2",
           "name": "DeepSeek: DeepSeek V3.2",
           "contextLimit": 163840,
-          "inputPrice": 0.25,
+          "inputPrice": 0.26,
           "outputPrice": 0.38,
           "isFreeTier": false
         },
@@ -5983,8 +6239,8 @@
           "id": "deepseek/deepseek-v3.2-speciale",
           "name": "DeepSeek: DeepSeek V3.2 Speciale",
           "contextLimit": 163840,
-          "inputPrice": 0.27,
-          "outputPrice": 0.41,
+          "inputPrice": 0.4,
+          "outputPrice": 1.2,
           "isFreeTier": false
         },
         {
@@ -5999,24 +6255,16 @@
           "id": "deepseek/deepseek-r1-0528",
           "name": "DeepSeek: R1 0528",
           "contextLimit": 163840,
-          "inputPrice": 0.4,
-          "outputPrice": 1.75,
+          "inputPrice": 0.45,
+          "outputPrice": 2.15,
           "isFreeTier": false
-        },
-        {
-          "id": "deepseek/deepseek-r1-0528:free",
-          "name": "DeepSeek: R1 0528 (free)",
-          "contextLimit": 163840,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "deepseek/deepseek-r1-distill-llama-70b",
           "name": "DeepSeek: R1 Distill Llama 70B",
           "contextLimit": 131072,
-          "inputPrice": 0.03,
-          "outputPrice": 0.11,
+          "inputPrice": 0.7,
+          "outputPrice": 0.8,
           "isFreeTier": false
         },
         {
@@ -6028,11 +6276,67 @@
           "isFreeTier": false
         },
         {
+          "id": "kilo/auto-free",
+          "name": "Deprecated Kilo Auto Free",
+          "contextLimit": 204800,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "kilo/auto-small",
+          "name": "Deprecated Kilo Auto Small",
+          "contextLimit": 400000,
+          "inputPrice": 0.05,
+          "outputPrice": 0.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "eleutherai/llemma_7b",
+          "name": "EleutherAI: Llemma 7b",
+          "contextLimit": 4096,
+          "inputPrice": 0.8,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
           "id": "essentialai/rnj-1-instruct",
           "name": "EssentialAI: Rnj 1 Instruct",
           "contextLimit": 32768,
           "inputPrice": 0.15,
           "outputPrice": 0.15,
+          "isFreeTier": false
+        },
+        {
+          "id": "openrouter/free",
+          "name": "Free Models Router",
+          "contextLimit": 200000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "giga-potato",
+          "name": "Giga Potato (free)",
+          "contextLimit": 256000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "giga-potato-thinking",
+          "name": "Giga Potato Thinking (free)",
+          "contextLimit": 256000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "alpindale/goliath-120b",
+          "name": "Goliath 120B",
+          "contextLimit": 6144,
+          "inputPrice": 3.75,
+          "outputPrice": 7.5,
           "isFreeTier": false
         },
         {
@@ -6076,14 +6380,6 @@
           "isFreeTier": false
         },
         {
-          "id": "google/gemini-2.5-flash-preview-09-2025",
-          "name": "Google: Gemini 2.5 Flash Preview 09-2025",
-          "contextLimit": 1048576,
-          "inputPrice": 0.3,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
           "id": "google/gemini-2.5-pro",
           "name": "Google: Gemini 2.5 Pro",
           "contextLimit": 1048576,
@@ -6124,6 +6420,30 @@
           "isFreeTier": false
         },
         {
+          "id": "google/gemini-3.1-flash-lite-preview",
+          "name": "Google: Gemini 3.1 Flash Lite Preview",
+          "contextLimit": 1048576,
+          "inputPrice": 0.25,
+          "outputPrice": 1.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemini-3.1-pro-preview",
+          "name": "Google: Gemini 3.1 Pro Preview",
+          "contextLimit": 1048576,
+          "inputPrice": 2,
+          "outputPrice": 12,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemini-3.1-pro-preview-customtools",
+          "name": "Google: Gemini 3.1 Pro Preview Custom Tools",
+          "contextLimit": 1048576,
+          "inputPrice": 2,
+          "outputPrice": 12,
+          "isFreeTier": false
+        },
+        {
           "id": "google/gemma-2-27b-it",
           "name": "Google: Gemma 2 27B",
           "contextLimit": 8192,
@@ -6143,57 +6463,25 @@
           "id": "google/gemma-3-12b-it",
           "name": "Google: Gemma 3 12B",
           "contextLimit": 131072,
-          "inputPrice": 0.03,
-          "outputPrice": 0.1,
+          "inputPrice": 0.04,
+          "outputPrice": 0.13,
           "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-3-12b-it:free",
-          "name": "Google: Gemma 3 12B (free)",
-          "contextLimit": 32768,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "google/gemma-3-27b-it",
           "name": "Google: Gemma 3 27B",
           "contextLimit": 128000,
-          "inputPrice": 0.04,
-          "outputPrice": 0.15,
+          "inputPrice": 0.03,
+          "outputPrice": 0.11,
           "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-3-27b-it:free",
-          "name": "Google: Gemma 3 27B (free)",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "google/gemma-3-4b-it",
           "name": "Google: Gemma 3 4B",
-          "contextLimit": 96000,
-          "inputPrice": 0.01703,
-          "outputPrice": 0.068154,
+          "contextLimit": 131072,
+          "inputPrice": 0.04,
+          "outputPrice": 0.08,
           "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-3-4b-it:free",
-          "name": "Google: Gemma 3 4B (free)",
-          "contextLimit": 32768,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
-          "id": "google/gemma-3n-e2b-it:free",
-          "name": "Google: Gemma 3n 2B (free)",
-          "contextLimit": 8192,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "google/gemma-3n-e4b-it",
@@ -6204,19 +6492,59 @@
           "isFreeTier": false
         },
         {
-          "id": "google/gemma-3n-e4b-it:free",
-          "name": "Google: Gemma 3n 4B (free)",
-          "contextLimit": 8192,
+          "id": "google/gemini-2.5-flash-image",
+          "name": "Google: Nano Banana (Gemini 2.5 Flash Image)",
+          "contextLimit": 32768,
+          "inputPrice": 0.3,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemini-3.1-flash-image-preview",
+          "name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)",
+          "contextLimit": 65536,
+          "inputPrice": 0.5,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemini-3-pro-image-preview",
+          "name": "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)",
+          "contextLimit": 65536,
+          "inputPrice": 2,
+          "outputPrice": 12,
+          "isFreeTier": false
+        },
+        {
+          "id": "openrouter/healer-alpha",
+          "name": "Healer Alpha",
+          "contextLimit": 262144,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
+        },
+        {
+          "id": "openrouter/hunter-alpha",
+          "name": "Hunter Alpha",
+          "contextLimit": 1048576,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "ibm-granite/granite-4.0-h-micro",
+          "name": "IBM: Granite 4.0 Micro",
+          "contextLimit": 131000,
+          "inputPrice": 0.017,
+          "outputPrice": 0.11,
+          "isFreeTier": false
         },
         {
           "id": "inception/mercury",
           "name": "Inception: Mercury",
           "contextLimit": 128000,
           "inputPrice": 0.25,
-          "outputPrice": 1,
+          "outputPrice": 0.75,
           "isFreeTier": false
         },
         {
@@ -6232,23 +6560,63 @@
           "name": "Inception: Mercury Coder",
           "contextLimit": 128000,
           "inputPrice": 0.25,
-          "outputPrice": 1,
+          "outputPrice": 0.75,
           "isFreeTier": false
         },
         {
-          "id": "inception/mercury-edit",
-          "name": "Inception: Mercury Edit",
-          "contextLimit": 128000,
-          "inputPrice": 0.25,
-          "outputPrice": 0.75,
+          "id": "inflection/inflection-3-pi",
+          "name": "Inflection: Inflection 3 Pi",
+          "contextLimit": 8000,
+          "inputPrice": 2.5,
+          "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
+          "id": "inflection/inflection-3-productivity",
+          "name": "Inflection: Inflection 3 Productivity",
+          "contextLimit": 8000,
+          "inputPrice": 2.5,
+          "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
+          "id": "kilo-auto/balanced",
+          "name": "Kilo Auto Balanced",
+          "contextLimit": 204800,
+          "inputPrice": 0.6,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "kilo-auto/free",
+          "name": "Kilo Auto Free",
+          "contextLimit": 204800,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "kilo-auto/frontier",
+          "name": "Kilo Auto Frontier",
+          "contextLimit": 1000000,
+          "inputPrice": 5,
+          "outputPrice": 25,
+          "isFreeTier": false
+        },
+        {
+          "id": "kilo-auto/small",
+          "name": "Kilo Auto Small",
+          "contextLimit": 400000,
+          "inputPrice": 0.05,
+          "outputPrice": 0.4,
           "isFreeTier": false
         },
         {
           "id": "kilo/auto",
           "name": "Kilo: Auto",
-          "contextLimit": 200000,
-          "inputPrice": 1,
-          "outputPrice": 1,
+          "contextLimit": 1000000,
+          "inputPrice": 5,
+          "outputPrice": 25,
           "isFreeTier": false
         },
         {
@@ -6260,20 +6628,28 @@
           "isFreeTier": false
         },
         {
-          "id": "liquid/lfm-2.5-1.2b-instruct:free",
-          "name": "LiquidAI: LFM2.5-1.2B-Instruct (free)",
+          "id": "liquid/lfm-2.2-6b",
+          "name": "LiquidAI: LFM2-2.6B",
           "contextLimit": 32768,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.01,
+          "outputPrice": 0.02,
+          "isFreeTier": false
         },
         {
-          "id": "liquid/lfm-2.5-1.2b-thinking:free",
-          "name": "LiquidAI: LFM2.5-1.2B-Thinking (free)",
+          "id": "liquid/lfm-2-24b-a2b",
+          "name": "LiquidAI: LFM2-24B-A2B",
           "contextLimit": 32768,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.03,
+          "outputPrice": 0.12,
+          "isFreeTier": false
+        },
+        {
+          "id": "liquid/lfm2-8b-a1b",
+          "name": "LiquidAI: LFM2-8B-A1B",
+          "contextLimit": 32768,
+          "inputPrice": 0.01,
+          "outputPrice": 0.02,
+          "isFreeTier": false
         },
         {
           "id": "meta-llama/llama-guard-3-8b",
@@ -6281,6 +6657,22 @@
           "contextLimit": 131072,
           "inputPrice": 0.02,
           "outputPrice": 0.06,
+          "isFreeTier": false
+        },
+        {
+          "id": "anthracite-org/magnum-v4-72b",
+          "name": "Magnum v4 72B",
+          "contextLimit": 16384,
+          "inputPrice": 3,
+          "outputPrice": 5,
+          "isFreeTier": false
+        },
+        {
+          "id": "mancer/weaver",
+          "name": "Mancer: Weaver (alpha)",
+          "contextLimit": 8000,
+          "inputPrice": 0.75,
+          "outputPrice": 1,
           "isFreeTier": false
         },
         {
@@ -6305,6 +6697,14 @@
           "contextLimit": 8192,
           "inputPrice": 0.03,
           "outputPrice": 0.04,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/llama-3.1-405b",
+          "name": "Meta: Llama 3.1 405B (base)",
+          "contextLimit": 32768,
+          "inputPrice": 4,
+          "outputPrice": 4,
           "isFreeTier": false
         },
         {
@@ -6350,18 +6750,10 @@
         {
           "id": "meta-llama/llama-3.2-3b-instruct",
           "name": "Meta: Llama 3.2 3B Instruct",
-          "contextLimit": 131072,
-          "inputPrice": 0.02,
-          "outputPrice": 0.02,
+          "contextLimit": 80000,
+          "inputPrice": 0.051,
+          "outputPrice": 0.34,
           "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/llama-3.2-3b-instruct:free",
-          "name": "Meta: Llama 3.2 3B Instruct (free)",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "meta-llama/llama-3.3-70b-instruct",
@@ -6370,14 +6762,6 @@
           "inputPrice": 0.1,
           "outputPrice": 0.32,
           "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/llama-3.3-70b-instruct:free",
-          "name": "Meta: Llama 3.3 70B Instruct (free)",
-          "contextLimit": 128000,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "meta-llama/llama-4-maverick",
@@ -6428,6 +6812,14 @@
           "isFreeTier": false
         },
         {
+          "id": "minimax/minimax-m2-her",
+          "name": "MiniMax: MiniMax M2-her",
+          "contextLimit": 65536,
+          "inputPrice": 0.3,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
           "id": "minimax/minimax-m2.1",
           "name": "MiniMax: MiniMax M2.1",
           "contextLimit": 196608,
@@ -6439,7 +6831,7 @@
           "id": "minimax/minimax-m2.5",
           "name": "MiniMax: MiniMax M2.5",
           "contextLimit": 196608,
-          "inputPrice": 0.3,
+          "inputPrice": 0.25,
           "outputPrice": 1.2,
           "isFreeTier": false
         },
@@ -6468,6 +6860,14 @@
           "isFreeTier": false
         },
         {
+          "id": "mistralai/mistral-large-2407",
+          "name": "Mistral Large 2407",
+          "contextLimit": 131072,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
           "id": "mistralai/mistral-large-2411",
           "name": "Mistral Large 2411",
           "contextLimit": 131072,
@@ -6487,8 +6887,8 @@
           "id": "mistralai/devstral-2512",
           "name": "Mistral: Devstral 2 2512",
           "contextLimit": 262144,
-          "inputPrice": 0.05,
-          "outputPrice": 0.22,
+          "inputPrice": 0.4,
+          "outputPrice": 2,
           "isFreeTier": false
         },
         {
@@ -6516,11 +6916,19 @@
           "isFreeTier": false
         },
         {
-          "id": "mistralai/mistral-7b-instruct",
-          "name": "Mistral: Mistral 7B Instruct",
-          "contextLimit": 32768,
-          "inputPrice": 0.2,
-          "outputPrice": 0.2,
+          "id": "mistralai/ministral-3b-2512",
+          "name": "Mistral: Ministral 3 3B 2512",
+          "contextLimit": 131072,
+          "inputPrice": 0.1,
+          "outputPrice": 0.1,
+          "isFreeTier": false
+        },
+        {
+          "id": "mistralai/ministral-8b-2512",
+          "name": "Mistral: Ministral 3 8B 2512",
+          "contextLimit": 262144,
+          "inputPrice": 0.15,
+          "outputPrice": 0.15,
           "isFreeTier": false
         },
         {
@@ -6529,14 +6937,6 @@
           "contextLimit": 2824,
           "inputPrice": 0.11,
           "outputPrice": 0.19,
-          "isFreeTier": false
-        },
-        {
-          "id": "mistralai/mistral-7b-instruct-v0.3",
-          "name": "Mistral: Mistral 7B Instruct v0.3",
-          "contextLimit": 32768,
-          "inputPrice": 0.2,
-          "outputPrice": 0.2,
           "isFreeTier": false
         },
         {
@@ -6582,18 +6982,10 @@
         {
           "id": "mistralai/mistral-small-3.1-24b-instruct",
           "name": "Mistral: Mistral Small 3.1 24B",
-          "contextLimit": 131072,
-          "inputPrice": 0.03,
-          "outputPrice": 0.11,
-          "isFreeTier": false
-        },
-        {
-          "id": "mistralai/mistral-small-3.1-24b-instruct:free",
-          "name": "Mistral: Mistral Small 3.1 24B (free)",
           "contextLimit": 128000,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.35,
+          "outputPrice": 0.56,
+          "isFreeTier": false
         },
         {
           "id": "mistralai/mistral-small-3.2-24b-instruct",
@@ -6604,11 +6996,43 @@
           "isFreeTier": false
         },
         {
+          "id": "mistralai/mistral-small-creative",
+          "name": "Mistral: Mistral Small Creative",
+          "contextLimit": 32768,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
           "id": "mistralai/mixtral-8x22b-instruct",
           "name": "Mistral: Mixtral 8x22B Instruct",
           "contextLimit": 65536,
           "inputPrice": 2,
           "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
+          "id": "mistralai/mixtral-8x7b-instruct",
+          "name": "Mistral: Mixtral 8x7B Instruct",
+          "contextLimit": 32768,
+          "inputPrice": 0.54,
+          "outputPrice": 0.54,
+          "isFreeTier": false
+        },
+        {
+          "id": "mistralai/pixtral-large-2411",
+          "name": "Mistral: Pixtral Large 2411",
+          "contextLimit": 131072,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
+          "id": "mistralai/mistral-saba",
+          "name": "Mistral: Saba",
+          "contextLimit": 32768,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
           "isFreeTier": false
         },
         {
@@ -6622,9 +7046,9 @@
         {
           "id": "moonshotai/kimi-k2",
           "name": "MoonshotAI: Kimi K2 0711",
-          "contextLimit": 131072,
-          "inputPrice": 0.5,
-          "outputPrice": 2.4,
+          "contextLimit": 131000,
+          "inputPrice": 0.55,
+          "outputPrice": 2.2,
           "isFreeTier": false
         },
         {
@@ -6636,27 +7060,19 @@
           "isFreeTier": false
         },
         {
-          "id": "moonshotai/kimi-k2-0905:exacto",
-          "name": "MoonshotAI: Kimi K2 0905 (exacto)",
-          "contextLimit": 262144,
-          "inputPrice": 0.6,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
           "id": "moonshotai/kimi-k2-thinking",
           "name": "MoonshotAI: Kimi K2 Thinking",
-          "contextLimit": 262144,
-          "inputPrice": 0.4,
-          "outputPrice": 1.75,
+          "contextLimit": 131072,
+          "inputPrice": 0.47,
+          "outputPrice": 2,
           "isFreeTier": false
         },
         {
           "id": "moonshotai/kimi-k2.5",
           "name": "MoonshotAI: Kimi K2.5",
           "contextLimit": 262144,
-          "inputPrice": 0.23,
-          "outputPrice": 3,
+          "inputPrice": 0.45,
+          "outputPrice": 2.2,
           "isFreeTier": false
         },
         {
@@ -6676,6 +7092,14 @@
           "isFreeTier": false
         },
         {
+          "id": "morph-warp-grep-v2",
+          "name": "Morph: WarpGrep V2",
+          "contextLimit": 256000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
           "id": "gryphe/mythomax-l2-13b",
           "name": "MythoMax 13B",
           "contextLimit": 4096,
@@ -6692,14 +7116,6 @@
           "isFreeTier": false
         },
         {
-          "id": "nousresearch/deephermes-3-mistral-24b-preview",
-          "name": "Nous: DeepHermes 3 Mistral 24B Preview",
-          "contextLimit": 32768,
-          "inputPrice": 0.02,
-          "outputPrice": 0.1,
-          "isFreeTier": false
-        },
-        {
           "id": "nousresearch/hermes-3-llama-3.1-405b",
           "name": "Nous: Hermes 3 405B Instruct",
           "contextLimit": 131072,
@@ -6708,12 +7124,12 @@
           "isFreeTier": false
         },
         {
-          "id": "nousresearch/hermes-3-llama-3.1-405b:free",
-          "name": "Nous: Hermes 3 405B Instruct (free)",
+          "id": "nousresearch/hermes-3-llama-3.1-70b",
+          "name": "Nous: Hermes 3 70B Instruct",
           "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.3,
+          "outputPrice": 0.3,
+          "isFreeTier": false
         },
         {
           "id": "nousresearch/hermes-4-405b",
@@ -6727,8 +7143,8 @@
           "id": "nousresearch/hermes-4-70b",
           "name": "Nous: Hermes 4 70B",
           "contextLimit": 131072,
-          "inputPrice": 0.11,
-          "outputPrice": 0.38,
+          "inputPrice": 0.13,
+          "outputPrice": 0.4,
           "isFreeTier": false
         },
         {
@@ -6748,14 +7164,6 @@
           "isFreeTier": false
         },
         {
-          "id": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-          "name": "NVIDIA: Llama 3.1 Nemotron Ultra 253B v1",
-          "contextLimit": 131072,
-          "inputPrice": 0.6,
-          "outputPrice": 1.8,
-          "isFreeTier": false
-        },
-        {
           "id": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
           "name": "NVIDIA: Llama 3.3 Nemotron Super 49B V1.5",
           "contextLimit": 131072,
@@ -6772,9 +7180,9 @@
           "isFreeTier": false
         },
         {
-          "id": "nvidia/nemotron-3-nano-30b-a3b:free",
-          "name": "NVIDIA: Nemotron 3 Nano 30B A3B (free)",
-          "contextLimit": 256000,
+          "id": "nvidia/nemotron-3-super-120b-a12b:free",
+          "name": "NVIDIA: Nemotron 3 Super (free)",
+          "contextLimit": 262144,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -6788,14 +7196,6 @@
           "isFreeTier": false
         },
         {
-          "id": "nvidia/nemotron-nano-12b-v2-vl:free",
-          "name": "NVIDIA: Nemotron Nano 12B 2 VL (free)",
-          "contextLimit": 128000,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
           "id": "nvidia/nemotron-nano-9b-v2",
           "name": "NVIDIA: Nemotron Nano 9B V2",
           "contextLimit": 131072,
@@ -6804,19 +7204,19 @@
           "isFreeTier": false
         },
         {
-          "id": "nvidia/nemotron-nano-9b-v2:free",
-          "name": "NVIDIA: Nemotron Nano 9B V2 (free)",
+          "id": "openai/gpt-audio",
+          "name": "OpenAI: GPT Audio",
           "contextLimit": 128000,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 2.5,
+          "outputPrice": 10,
+          "isFreeTier": false
         },
         {
-          "id": "openai/chatgpt-4o-latest",
-          "name": "OpenAI: ChatGPT-4o",
+          "id": "openai/gpt-audio-mini",
+          "name": "OpenAI: GPT Audio Mini",
           "contextLimit": 128000,
-          "inputPrice": 5,
-          "outputPrice": 15,
+          "inputPrice": 0.6,
+          "outputPrice": 2.4,
           "isFreeTier": false
         },
         {
@@ -6836,6 +7236,14 @@
           "isFreeTier": false
         },
         {
+          "id": "openai/gpt-3.5-turbo-16k",
+          "name": "OpenAI: GPT-3.5 Turbo 16k",
+          "contextLimit": 16385,
+          "inputPrice": 3,
+          "outputPrice": 4,
+          "isFreeTier": false
+        },
+        {
           "id": "openai/gpt-3.5-turbo-instruct",
           "name": "OpenAI: GPT-3.5 Turbo Instruct",
           "contextLimit": 4095,
@@ -6852,8 +7260,32 @@
           "isFreeTier": false
         },
         {
+          "id": "openai/gpt-4-0314",
+          "name": "OpenAI: GPT-4 (older v0314)",
+          "contextLimit": 8191,
+          "inputPrice": 30,
+          "outputPrice": 60,
+          "isFreeTier": false
+        },
+        {
           "id": "openai/gpt-4-turbo",
           "name": "OpenAI: GPT-4 Turbo",
+          "contextLimit": 128000,
+          "inputPrice": 10,
+          "outputPrice": 30,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-4-1106-preview",
+          "name": "OpenAI: GPT-4 Turbo (older v1106)",
+          "contextLimit": 128000,
+          "inputPrice": 10,
+          "outputPrice": 30,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-4-turbo-preview",
+          "name": "OpenAI: GPT-4 Turbo Preview",
           "contextLimit": 128000,
           "inputPrice": 10,
           "outputPrice": 30,
@@ -6924,8 +7356,32 @@
           "isFreeTier": false
         },
         {
+          "id": "openai/gpt-4o-audio-preview",
+          "name": "OpenAI: GPT-4o Audio",
+          "contextLimit": 128000,
+          "inputPrice": 2.5,
+          "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-4o-search-preview",
+          "name": "OpenAI: GPT-4o Search Preview",
+          "contextLimit": 128000,
+          "inputPrice": 2.5,
+          "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
           "id": "openai/gpt-4o-mini",
           "name": "OpenAI: GPT-4o-mini",
+          "contextLimit": 128000,
+          "inputPrice": 0.15,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-4o-mini-2024-07-18",
+          "name": "OpenAI: GPT-4o-mini (2024-07-18)",
           "contextLimit": 128000,
           "inputPrice": 0.15,
           "outputPrice": 0.6,
@@ -6961,6 +7417,22 @@
           "contextLimit": 400000,
           "inputPrice": 1.25,
           "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-5-image",
+          "name": "OpenAI: GPT-5 Image",
+          "contextLimit": 400000,
+          "inputPrice": 10,
+          "outputPrice": 10,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-5-image-mini",
+          "name": "OpenAI: GPT-5 Image Mini",
+          "contextLimit": 400000,
+          "inputPrice": 2.5,
+          "outputPrice": 2,
           "isFreeTier": false
         },
         {
@@ -7060,6 +7532,38 @@
           "isFreeTier": false
         },
         {
+          "id": "openai/gpt-5.3-chat",
+          "name": "OpenAI: GPT-5.3 Chat",
+          "contextLimit": 128000,
+          "inputPrice": 1.75,
+          "outputPrice": 14,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-5.3-codex",
+          "name": "OpenAI: GPT-5.3-Codex",
+          "contextLimit": 400000,
+          "inputPrice": 1.75,
+          "outputPrice": 14,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-5.4",
+          "name": "OpenAI: GPT-5.4",
+          "contextLimit": 1050000,
+          "inputPrice": 2.5,
+          "outputPrice": 15,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-5.4-pro",
+          "name": "OpenAI: GPT-5.4 Pro",
+          "contextLimit": 1050000,
+          "inputPrice": 30,
+          "outputPrice": 180,
+          "isFreeTier": false
+        },
+        {
           "id": "openai/gpt-oss-120b",
           "name": "OpenAI: gpt-oss-120b",
           "contextLimit": 131072,
@@ -7068,36 +7572,12 @@
           "isFreeTier": false
         },
         {
-          "id": "openai/gpt-oss-120b:exacto",
-          "name": "OpenAI: gpt-oss-120b (exacto)",
-          "contextLimit": 131072,
-          "inputPrice": 0.039,
-          "outputPrice": 0.19,
-          "isFreeTier": false
-        },
-        {
-          "id": "openai/gpt-oss-120b:free",
-          "name": "OpenAI: gpt-oss-120b (free)",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
           "id": "openai/gpt-oss-20b",
           "name": "OpenAI: gpt-oss-20b",
           "contextLimit": 131072,
           "inputPrice": 0.03,
           "outputPrice": 0.14,
           "isFreeTier": false
-        },
-        {
-          "id": "openai/gpt-oss-20b:free",
-          "name": "OpenAI: gpt-oss-20b (free)",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "openai/gpt-oss-safeguard-20b",
@@ -7180,6 +7660,14 @@
           "isFreeTier": false
         },
         {
+          "id": "openai/o4-mini-high",
+          "name": "OpenAI: o4 Mini High",
+          "contextLimit": 200000,
+          "inputPrice": 1.1,
+          "outputPrice": 4.4,
+          "isFreeTier": false
+        },
+        {
           "id": "perplexity/sonar",
           "name": "Perplexity: Sonar",
           "contextLimit": 127072,
@@ -7204,6 +7692,14 @@
           "isFreeTier": false
         },
         {
+          "id": "perplexity/sonar-pro-search",
+          "name": "Perplexity: Sonar Pro Search",
+          "contextLimit": 200000,
+          "inputPrice": 3,
+          "outputPrice": 15,
+          "isFreeTier": false
+        },
+        {
           "id": "perplexity/sonar-reasoning-pro",
           "name": "Perplexity: Sonar Reasoning Pro",
           "contextLimit": 128000,
@@ -7220,6 +7716,22 @@
           "isFreeTier": false
         },
         {
+          "id": "qwen/qwen-plus-2025-07-28",
+          "name": "Qwen: Qwen Plus 0728",
+          "contextLimit": 1000000,
+          "inputPrice": 0.26,
+          "outputPrice": 0.78,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen-plus-2025-07-28:thinking",
+          "name": "Qwen: Qwen Plus 0728 (thinking)",
+          "contextLimit": 1000000,
+          "inputPrice": 0.26,
+          "outputPrice": 0.78,
+          "isFreeTier": false
+        },
+        {
           "id": "qwen/qwen-vl-max",
           "name": "Qwen: Qwen VL Max",
           "contextLimit": 131072,
@@ -7231,16 +7743,16 @@
           "id": "qwen/qwen-vl-plus",
           "name": "Qwen: Qwen VL Plus",
           "contextLimit": 131072,
-          "inputPrice": 0.21,
-          "outputPrice": 0.63,
+          "inputPrice": 0.1365,
+          "outputPrice": 0.4095,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen-max",
           "name": "Qwen: Qwen-Max ",
           "contextLimit": 32768,
-          "inputPrice": 1.6,
-          "outputPrice": 6.4,
+          "inputPrice": 1.04,
+          "outputPrice": 4.16,
           "isFreeTier": false
         },
         {
@@ -7255,8 +7767,8 @@
           "id": "qwen/qwen-turbo",
           "name": "Qwen: Qwen-Turbo",
           "contextLimit": 131072,
-          "inputPrice": 0.05,
-          "outputPrice": 0.2,
+          "inputPrice": 0.0325,
+          "outputPrice": 0.13,
           "isFreeTier": false
         },
         {
@@ -7278,17 +7790,17 @@
         {
           "id": "qwen/qwen2.5-vl-32b-instruct",
           "name": "Qwen: Qwen2.5 VL 32B Instruct",
-          "contextLimit": 16384,
-          "inputPrice": 0.05,
-          "outputPrice": 0.22,
+          "contextLimit": 128000,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen2.5-vl-72b-instruct",
           "name": "Qwen: Qwen2.5 VL 72B Instruct",
           "contextLimit": 32768,
-          "inputPrice": 0.15,
-          "outputPrice": 0.6,
+          "inputPrice": 0.8,
+          "outputPrice": 0.8,
           "isFreeTier": false
         },
         {
@@ -7303,16 +7815,16 @@
           "id": "qwen/qwen3-14b",
           "name": "Qwen: Qwen3 14B",
           "contextLimit": 40960,
-          "inputPrice": 0.05,
-          "outputPrice": 0.22,
+          "inputPrice": 0.06,
+          "outputPrice": 0.24,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-235b-a22b",
           "name": "Qwen: Qwen3 235B A22B",
-          "contextLimit": 40960,
-          "inputPrice": 0.3,
-          "outputPrice": 1.2,
+          "contextLimit": 131072,
+          "inputPrice": 0.455,
+          "outputPrice": 1.82,
           "isFreeTier": false
         },
         {
@@ -7326,25 +7838,25 @@
         {
           "id": "qwen/qwen3-235b-a22b-thinking-2507",
           "name": "Qwen: Qwen3 235B A22B Thinking 2507",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "contextLimit": 262144,
+          "inputPrice": 0.11,
+          "outputPrice": 0.6,
+          "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-30b-a3b",
           "name": "Qwen: Qwen3 30B A3B",
           "contextLimit": 40960,
-          "inputPrice": 0.06,
-          "outputPrice": 0.22,
+          "inputPrice": 0.08,
+          "outputPrice": 0.28,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-30b-a3b-instruct-2507",
           "name": "Qwen: Qwen3 30B A3B Instruct 2507",
           "contextLimit": 262144,
-          "inputPrice": 0.08,
-          "outputPrice": 0.33,
+          "inputPrice": 0.09,
+          "outputPrice": 0.3,
           "isFreeTier": false
         },
         {
@@ -7364,25 +7876,9 @@
           "isFreeTier": false
         },
         {
-          "id": "qwen/qwen3-4b",
-          "name": "Qwen: Qwen3 4B",
-          "contextLimit": 131072,
-          "inputPrice": 0.0715,
-          "outputPrice": 0.273,
-          "isFreeTier": false
-        },
-        {
-          "id": "qwen/qwen3-4b:free",
-          "name": "Qwen: Qwen3 4B (free)",
-          "contextLimit": 40960,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
           "id": "qwen/qwen3-8b",
           "name": "Qwen: Qwen3 8B",
-          "contextLimit": 32000,
+          "contextLimit": 40960,
           "inputPrice": 0.05,
           "outputPrice": 0.4,
           "isFreeTier": false
@@ -7404,43 +7900,27 @@
           "isFreeTier": false
         },
         {
-          "id": "qwen/qwen3-coder:exacto",
-          "name": "Qwen: Qwen3 Coder 480B A35B (exacto)",
-          "contextLimit": 262144,
-          "inputPrice": 0.22,
-          "outputPrice": 1.8,
-          "isFreeTier": false
-        },
-        {
-          "id": "qwen/qwen3-coder:free",
-          "name": "Qwen: Qwen3 Coder 480B A35B (free)",
-          "contextLimit": 262000,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
           "id": "qwen/qwen3-coder-flash",
           "name": "Qwen: Qwen3 Coder Flash",
           "contextLimit": 1000000,
-          "inputPrice": 0.3,
-          "outputPrice": 1.5,
+          "inputPrice": 0.195,
+          "outputPrice": 0.975,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-coder-next",
           "name": "Qwen: Qwen3 Coder Next",
           "contextLimit": 262144,
-          "inputPrice": 0.07,
-          "outputPrice": 0.3,
+          "inputPrice": 0.12,
+          "outputPrice": 0.75,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-coder-plus",
           "name": "Qwen: Qwen3 Coder Plus",
           "contextLimit": 1000000,
-          "inputPrice": 1,
-          "outputPrice": 5,
+          "inputPrice": 0.65,
+          "outputPrice": 3.25,
           "isFreeTier": false
         },
         {
@@ -7455,32 +7935,24 @@
           "id": "qwen/qwen3-max-thinking",
           "name": "Qwen: Qwen3 Max Thinking",
           "contextLimit": 262144,
-          "inputPrice": 1.2,
-          "outputPrice": 6,
+          "inputPrice": 0.78,
+          "outputPrice": 3.9,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-next-80b-a3b-instruct",
           "name": "Qwen: Qwen3 Next 80B A3B Instruct",
-          "contextLimit": 262144,
+          "contextLimit": 131072,
           "inputPrice": 0.09,
           "outputPrice": 1.1,
           "isFreeTier": false
         },
         {
-          "id": "qwen/qwen3-next-80b-a3b-instruct:free",
-          "name": "Qwen: Qwen3 Next 80B A3B Instruct (free)",
-          "contextLimit": 262144,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
           "id": "qwen/qwen3-next-80b-a3b-thinking",
           "name": "Qwen: Qwen3 Next 80B A3B Thinking",
-          "contextLimit": 128000,
-          "inputPrice": 0.15,
-          "outputPrice": 1.2,
+          "contextLimit": 131072,
+          "inputPrice": 0.0975,
+          "outputPrice": 0.78,
           "isFreeTier": false
         },
         {
@@ -7495,9 +7967,9 @@
           "id": "qwen/qwen3-vl-235b-a22b-thinking",
           "name": "Qwen: Qwen3 VL 235B A22B Thinking",
           "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.26,
+          "outputPrice": 2.6,
+          "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-vl-30b-a3b-instruct",
@@ -7511,9 +7983,9 @@
           "id": "qwen/qwen3-vl-30b-a3b-thinking",
           "name": "Qwen: Qwen3 VL 30B A3B Thinking",
           "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "inputPrice": 0.13,
+          "outputPrice": 1.56,
+          "isFreeTier": false
         },
         {
           "id": "qwen/qwen3-vl-32b-instruct",
@@ -7542,17 +8014,57 @@
         {
           "id": "qwen/qwen3.5-397b-a17b",
           "name": "Qwen: Qwen3.5 397B A17B",
-          "contextLimit": 256000,
-          "inputPrice": 0.6,
-          "outputPrice": 3.6,
+          "contextLimit": 262144,
+          "inputPrice": 0.39,
+          "outputPrice": 2.34,
           "isFreeTier": false
         },
         {
           "id": "qwen/qwen3.5-plus-02-15",
           "name": "Qwen: Qwen3.5 Plus 2026-02-15",
           "contextLimit": 1000000,
-          "inputPrice": 0.4,
-          "outputPrice": 2.4,
+          "inputPrice": 0.26,
+          "outputPrice": 1.56,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen3.5-122b-a10b",
+          "name": "Qwen: Qwen3.5-122B-A10B",
+          "contextLimit": 262144,
+          "inputPrice": 0.26,
+          "outputPrice": 2.08,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen3.5-27b",
+          "name": "Qwen: Qwen3.5-27B",
+          "contextLimit": 262144,
+          "inputPrice": 0.195,
+          "outputPrice": 1.56,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen3.5-35b-a3b",
+          "name": "Qwen: Qwen3.5-35B-A3B",
+          "contextLimit": 262144,
+          "inputPrice": 0.1625,
+          "outputPrice": 1.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen3.5-9b",
+          "name": "Qwen: Qwen3.5-9B",
+          "contextLimit": 256000,
+          "inputPrice": 0.05,
+          "outputPrice": 0.15,
+          "isFreeTier": false
+        },
+        {
+          "id": "qwen/qwen3.5-flash-02-23",
+          "name": "Qwen: Qwen3.5-Flash",
+          "contextLimit": 1000000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.4,
           "isFreeTier": false
         },
         {
@@ -7575,8 +8087,72 @@
           "id": "qwen/qwen-2.5-coder-32b-instruct",
           "name": "Qwen2.5 Coder 32B Instruct",
           "contextLimit": 32768,
-          "inputPrice": 0.03,
-          "outputPrice": 0.11,
+          "inputPrice": 0.2,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "relace/relace-apply-3",
+          "name": "Relace: Relace Apply 3",
+          "contextLimit": 256000,
+          "inputPrice": 0.85,
+          "outputPrice": 1.25,
+          "isFreeTier": false
+        },
+        {
+          "id": "relace/relace-search",
+          "name": "Relace: Relace Search",
+          "contextLimit": 256000,
+          "inputPrice": 1,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "undi95/remm-slerp-l2-13b",
+          "name": "ReMM SLERP 13B",
+          "contextLimit": 6144,
+          "inputPrice": 0.45,
+          "outputPrice": 0.65,
+          "isFreeTier": false
+        },
+        {
+          "id": "sao10k/l3-lunaris-8b",
+          "name": "Sao10K: Llama 3 8B Lunaris",
+          "contextLimit": 8192,
+          "inputPrice": 0.04,
+          "outputPrice": 0.05,
+          "isFreeTier": false
+        },
+        {
+          "id": "sao10k/l3-euryale-70b",
+          "name": "Sao10k: Llama 3 Euryale 70B v2.1",
+          "contextLimit": 8192,
+          "inputPrice": 1.48,
+          "outputPrice": 1.48,
+          "isFreeTier": false
+        },
+        {
+          "id": "sao10k/l3.1-70b-hanami-x1",
+          "name": "Sao10K: Llama 3.1 70B Hanami x1",
+          "contextLimit": 16000,
+          "inputPrice": 3,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "sao10k/l3.1-euryale-70b",
+          "name": "Sao10K: Llama 3.1 Euryale 70B v2.2",
+          "contextLimit": 131072,
+          "inputPrice": 0.85,
+          "outputPrice": 0.85,
+          "isFreeTier": false
+        },
+        {
+          "id": "sao10k/l3.3-euryale-70b",
+          "name": "Sao10K: Llama 3.3 Euryale 70B",
+          "contextLimit": 131072,
+          "inputPrice": 0.65,
+          "outputPrice": 0.75,
           "isFreeTier": false
         },
         {
@@ -7596,6 +8172,14 @@
           "isFreeTier": true
         },
         {
+          "id": "switchpoint/router",
+          "name": "Switchpoint Router",
+          "contextLimit": 131072,
+          "inputPrice": 0.85,
+          "outputPrice": 3.4,
+          "isFreeTier": false
+        },
+        {
           "id": "tencent/hunyuan-a13b-instruct",
           "name": "Tencent: Hunyuan A13B Instruct",
           "contextLimit": 131072,
@@ -7604,11 +8188,35 @@
           "isFreeTier": false
         },
         {
-          "id": "tngtech/deepseek-r1t-chimera",
-          "name": "TNG: DeepSeek R1T Chimera",
-          "contextLimit": 163840,
+          "id": "thedrummer/cydonia-24b-v4.1",
+          "name": "TheDrummer: Cydonia 24B V4.1",
+          "contextLimit": 131072,
           "inputPrice": 0.3,
-          "outputPrice": 1.2,
+          "outputPrice": 0.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "thedrummer/rocinante-12b",
+          "name": "TheDrummer: Rocinante 12B",
+          "contextLimit": 32768,
+          "inputPrice": 0.17,
+          "outputPrice": 0.43,
+          "isFreeTier": false
+        },
+        {
+          "id": "thedrummer/skyfall-36b-v2",
+          "name": "TheDrummer: Skyfall 36B V2",
+          "contextLimit": 32768,
+          "inputPrice": 0.55,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "thedrummer/unslopnemo-12b",
+          "name": "TheDrummer: UnslopNemo 12B",
+          "contextLimit": 32768,
+          "inputPrice": 0.4,
+          "outputPrice": 0.4,
           "isFreeTier": false
         },
         {
@@ -7620,20 +8228,20 @@
           "isFreeTier": false
         },
         {
-          "id": "tngtech/tng-r1t-chimera",
-          "name": "TNG: R1T Chimera",
-          "contextLimit": 163840,
-          "inputPrice": 0.25,
-          "outputPrice": 0.85,
+          "id": "alibaba/tongyi-deepresearch-30b-a3b",
+          "name": "Tongyi DeepResearch 30B A3B",
+          "contextLimit": 131072,
+          "inputPrice": 0.09,
+          "outputPrice": 0.45,
           "isFreeTier": false
         },
         {
-          "id": "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-          "name": "Venice: Uncensored (free)",
-          "contextLimit": 32768,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
+          "id": "upstage/solar-pro-3",
+          "name": "Upstage: Solar Pro 3",
+          "contextLimit": 128000,
+          "inputPrice": 0.15,
+          "outputPrice": 0.6,
+          "isFreeTier": false
         },
         {
           "id": "microsoft/wizardlm-2-8x22b",
@@ -7708,12 +8316,36 @@
           "isFreeTier": false
         },
         {
+          "id": "x-ai/grok-4.20-beta",
+          "name": "xAI: Grok 4.20 Beta",
+          "contextLimit": 2000000,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
+          "id": "x-ai/grok-4.20-multi-agent-beta",
+          "name": "xAI: Grok 4.20 Multi-Agent Beta",
+          "contextLimit": 2000000,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
           "id": "x-ai/grok-code-fast-1",
           "name": "xAI: Grok Code Fast 1",
           "contextLimit": 256000,
           "inputPrice": 0.2,
           "outputPrice": 1.5,
           "isFreeTier": false
+        },
+        {
+          "id": "x-ai/grok-code-fast-1:optimized:free",
+          "name": "xAI: Grok Code Fast 1 Optimized (experimental, free)",
+          "contextLimit": 256000,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
         },
         {
           "id": "xiaomi/mimo-v2-flash",
@@ -7724,11 +8356,19 @@
           "isFreeTier": false
         },
         {
+          "id": "z-ai/glm-4-32b",
+          "name": "Z.ai: GLM 4 32B ",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.1,
+          "isFreeTier": false
+        },
+        {
           "id": "z-ai/glm-4.5",
           "name": "Z.ai: GLM 4.5",
           "contextLimit": 131072,
-          "inputPrice": 0.35,
-          "outputPrice": 1.55,
+          "inputPrice": 0.6,
+          "outputPrice": 2.2,
           "isFreeTier": false
         },
         {
@@ -7738,14 +8378,6 @@
           "inputPrice": 0.13,
           "outputPrice": 0.85,
           "isFreeTier": false
-        },
-        {
-          "id": "z-ai/glm-4.5-air:free",
-          "name": "Z.ai: GLM 4.5 Air (free)",
-          "contextLimit": 131072,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         },
         {
           "id": "z-ai/glm-4.5v",
@@ -7758,17 +8390,9 @@
         {
           "id": "z-ai/glm-4.6",
           "name": "Z.ai: GLM 4.6",
-          "contextLimit": 202752,
-          "inputPrice": 0.35,
-          "outputPrice": 1.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "z-ai/glm-4.6:exacto",
-          "name": "Z.ai: GLM 4.6 (exacto)",
           "contextLimit": 204800,
-          "inputPrice": 0.44,
-          "outputPrice": 1.76,
+          "inputPrice": 0.39,
+          "outputPrice": 1.9,
           "isFreeTier": false
         },
         {
@@ -7783,8 +8407,8 @@
           "id": "z-ai/glm-4.7",
           "name": "Z.ai: GLM 4.7",
           "contextLimit": 202752,
-          "inputPrice": 0.4,
-          "outputPrice": 1.5,
+          "inputPrice": 0.38,
+          "outputPrice": 1.98,
           "isFreeTier": false
         },
         {
@@ -7798,18 +8422,10 @@
         {
           "id": "z-ai/glm-5",
           "name": "Z.ai: GLM 5",
-          "contextLimit": 204800,
-          "inputPrice": 0.3,
-          "outputPrice": 2.55,
+          "contextLimit": 202752,
+          "inputPrice": 0.72,
+          "outputPrice": 2.3,
           "isFreeTier": false
-        },
-        {
-          "id": "z-ai/glm-5:free",
-          "name": "Z.ai: GLM 5 (free)",
-          "contextLimit": 202800,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
         }
       ]
     },
@@ -12768,7 +13384,7 @@
           "isFreeTier": true
         },
         {
-          "id": "stepfun-ai/step-3-5-flash",
+          "id": "stepfun-ai/step-3.5-flash",
           "name": "Step 3.5 Flash",
           "contextLimit": 256000,
           "inputPrice": null,
@@ -15922,6 +16538,410 @@
       ]
     },
     {
+      "id": "nebius",
+      "name": "Nebius Token Factory",
+      "api": "https://api.tokenfactory.nebius.com/v1",
+      "env": [
+        "NEBIUS_API_KEY"
+      ],
+      "doc": "https://docs.tokenfactory.nebius.com/",
+      "isAggregator": false,
+      "models": [
+        {
+          "id": "BAAI/bge-en-icl",
+          "name": "BGE-ICL",
+          "contextLimit": 32768,
+          "inputPrice": 0.01,
+          "outputPrice": null,
+          "isFreeTier": false
+        },
+        {
+          "id": "BAAI/bge-multilingual-gemma2",
+          "name": "bge-multilingual-gemma2",
+          "contextLimit": 8192,
+          "inputPrice": 0.01,
+          "outputPrice": null,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-R1-0528-fast",
+          "name": "DeepSeek R1 0528 Fast",
+          "contextLimit": 131072,
+          "inputPrice": 2,
+          "outputPrice": 6,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-R1-0528",
+          "name": "DeepSeek-R1-0528",
+          "contextLimit": 128000,
+          "inputPrice": 0.8,
+          "outputPrice": 2.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V3-0324",
+          "name": "DeepSeek-V3-0324",
+          "contextLimit": 128000,
+          "inputPrice": 0.5,
+          "outputPrice": 1.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V3-0324-fast",
+          "name": "DeepSeek-V3-0324 (Fast)",
+          "contextLimit": 128000,
+          "inputPrice": 0.75,
+          "outputPrice": 2.25,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V3.2",
+          "name": "DeepSeek-V3.2",
+          "contextLimit": 163000,
+          "inputPrice": 0.3,
+          "outputPrice": 0.45,
+          "isFreeTier": false
+        },
+        {
+          "id": "intfloat/e5-mistral-7b-instruct",
+          "name": "e5-mistral-7b-instruct",
+          "contextLimit": 32768,
+          "inputPrice": 0.01,
+          "outputPrice": null,
+          "isFreeTier": false
+        },
+        {
+          "id": "black-forest-labs/flux-dev",
+          "name": "FLUX.1-dev",
+          "contextLimit": 77,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "black-forest-labs/flux-schnell",
+          "name": "FLUX.1-schnell",
+          "contextLimit": 77,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "google/gemma-2-2b-it",
+          "name": "Gemma-2-2b-it",
+          "contextLimit": 8192,
+          "inputPrice": 0.02,
+          "outputPrice": 0.06,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemma-2-9b-it-fast",
+          "name": "Gemma-2-9b-it (Fast)",
+          "contextLimit": 8192,
+          "inputPrice": 0.03,
+          "outputPrice": 0.09,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemma-3-27b-it",
+          "name": "Gemma-3-27b-it",
+          "contextLimit": 110000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "google/gemma-3-27b-it-fast",
+          "name": "Gemma-3-27b-it (Fast)",
+          "contextLimit": 110000,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-4.5",
+          "name": "GLM-4.5",
+          "contextLimit": 128000,
+          "inputPrice": 0.6,
+          "outputPrice": 2.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-4.5-Air",
+          "name": "GLM-4.5-Air",
+          "contextLimit": 128000,
+          "inputPrice": 0.2,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-4.7-FP8",
+          "name": "GLM-4.7 (FP8)",
+          "contextLimit": 128000,
+          "inputPrice": 0.4,
+          "outputPrice": 2,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-5",
+          "name": "GLM-5",
+          "contextLimit": 200000,
+          "inputPrice": 1,
+          "outputPrice": 3.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "gpt-oss-120b",
+          "contextLimit": 128000,
+          "inputPrice": 0.15,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "gpt-oss-20b",
+          "contextLimit": 128000,
+          "inputPrice": 0.05,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "NousResearch/Hermes-4-405B",
+          "name": "Hermes-4-405B",
+          "contextLimit": 128000,
+          "inputPrice": 1,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "NousResearch/Hermes-4-70B",
+          "name": "Hermes-4-70B",
+          "contextLimit": 128000,
+          "inputPrice": 0.13,
+          "outputPrice": 0.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "PrimeIntellect/INTELLECT-3",
+          "name": "INTELLECT-3",
+          "contextLimit": 128000,
+          "inputPrice": 0.2,
+          "outputPrice": 1.1,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2-Instruct",
+          "name": "Kimi-K2-Instruct",
+          "contextLimit": 200000,
+          "inputPrice": 0.5,
+          "outputPrice": 2.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2-Thinking",
+          "name": "Kimi-K2-Thinking",
+          "contextLimit": 128000,
+          "inputPrice": 0.6,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2.5",
+          "name": "Kimi-K2.5",
+          "contextLimit": 256000,
+          "inputPrice": 0.5,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2.5-fast",
+          "name": "Kimi-K2.5-fast",
+          "contextLimit": 256000,
+          "inputPrice": 0.5,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
+          "name": "Llama-3.1-Nemotron-Ultra-253B-v1",
+          "contextLimit": 128000,
+          "inputPrice": 0.6,
+          "outputPrice": 1.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-3.3-70B-Instruct",
+          "name": "Llama-3.3-70B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.13,
+          "outputPrice": 0.4,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-3.3-70B-Instruct-fast",
+          "name": "Llama-3.3-70B-Instruct (Fast)",
+          "contextLimit": 128000,
+          "inputPrice": 0.25,
+          "outputPrice": 0.75,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-Guard-3-8B",
+          "name": "Llama-Guard-3-8B",
+          "contextLimit": 8192,
+          "inputPrice": 0.02,
+          "outputPrice": 0.06,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+          "name": "Meta-Llama-3.1-8B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.02,
+          "outputPrice": 0.06,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Meta-Llama-3.1-8B-Instruct-fast",
+          "name": "Meta-Llama-3.1-8B-Instruct (Fast)",
+          "contextLimit": 128000,
+          "inputPrice": 0.03,
+          "outputPrice": 0.09,
+          "isFreeTier": false
+        },
+        {
+          "id": "MiniMaxAI/MiniMax-M2.1",
+          "name": "MiniMax-M2.1",
+          "contextLimit": 128000,
+          "inputPrice": 0.3,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+          "name": "Nemotron-3-Nano-30B-A3B",
+          "contextLimit": 32000,
+          "inputPrice": 0.06,
+          "outputPrice": 0.24,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/nemotron-3-super-120b-a12b",
+          "name": "Nemotron-3-Super-120B-A12B",
+          "contextLimit": 256000,
+          "inputPrice": 0.3,
+          "outputPrice": 0.9,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/Nemotron-Nano-V2-12b",
+          "name": "Nemotron-Nano-V2-12b",
+          "contextLimit": 32000,
+          "inputPrice": 0.07,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen2.5-Coder-7B-fast",
+          "name": "Qwen2.5-Coder-7B (Fast)",
+          "contextLimit": 128000,
+          "inputPrice": 0.03,
+          "outputPrice": 0.09,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen2.5-VL-72B-Instruct",
+          "name": "Qwen2.5-VL-72B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.25,
+          "outputPrice": 0.75,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
+          "name": "Qwen3 235B A22B Instruct 2507",
+          "contextLimit": 262144,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
+          "name": "Qwen3 235B A22B Thinking 2507",
+          "contextLimit": 262144,
+          "inputPrice": 0.2,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "name": "Qwen3 Coder 480B A35B Instruct",
+          "contextLimit": 262144,
+          "inputPrice": 0.4,
+          "outputPrice": 1.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+          "name": "Qwen3-30B-A3B-Instruct-2507",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-30B-A3B-Thinking-2507",
+          "name": "Qwen3-30B-A3B-Thinking-2507",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-32B",
+          "name": "Qwen3-32B",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-32B-fast",
+          "name": "Qwen3-32B (Fast)",
+          "contextLimit": 128000,
+          "inputPrice": 0.2,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+          "name": "Qwen3-Coder-30B-A3B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-Embedding-8B",
+          "name": "Qwen3-Embedding-8B",
+          "contextLimit": 32768,
+          "inputPrice": 0.01,
+          "outputPrice": null,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-Next-80B-A3B-Thinking",
+          "name": "Qwen3-Next-80B-A3B-Thinking",
+          "contextLimit": 128000,
+          "inputPrice": 0.15,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        }
+      ]
+    },
+    {
       "id": "aihubmix",
       "name": "AIHubMix",
       "api": "https://aihubmix.com/v1",
@@ -16318,386 +17338,6 @@
       ]
     },
     {
-      "id": "nebius",
-      "name": "Nebius Token Factory",
-      "api": "https://api.tokenfactory.nebius.com/v1",
-      "env": [
-        "NEBIUS_API_KEY"
-      ],
-      "doc": "https://docs.tokenfactory.nebius.com/",
-      "isAggregator": false,
-      "models": [
-        {
-          "id": "BAAI/bge-en-icl",
-          "name": "BGE-ICL",
-          "contextLimit": 32768,
-          "inputPrice": 0.01,
-          "outputPrice": null,
-          "isFreeTier": false
-        },
-        {
-          "id": "BAAI/bge-multilingual-gemma2",
-          "name": "bge-multilingual-gemma2",
-          "contextLimit": 8192,
-          "inputPrice": 0.01,
-          "outputPrice": null,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-R1-0528-fast",
-          "name": "DeepSeek R1 0528 Fast",
-          "contextLimit": 131072,
-          "inputPrice": 2,
-          "outputPrice": 6,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-R1-0528",
-          "name": "DeepSeek-R1-0528",
-          "contextLimit": 128000,
-          "inputPrice": 0.8,
-          "outputPrice": 2.4,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-V3-0324",
-          "name": "DeepSeek-V3-0324",
-          "contextLimit": 128000,
-          "inputPrice": 0.5,
-          "outputPrice": 1.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-V3-0324-fast",
-          "name": "DeepSeek-V3-0324 (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.75,
-          "outputPrice": 2.25,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-V3.2",
-          "name": "DeepSeek-V3.2",
-          "contextLimit": 128000,
-          "inputPrice": 0.3,
-          "outputPrice": 0.45,
-          "isFreeTier": false
-        },
-        {
-          "id": "intfloat/e5-mistral-7b-instruct",
-          "name": "e5-mistral-7b-instruct",
-          "contextLimit": 32768,
-          "inputPrice": 0.01,
-          "outputPrice": null,
-          "isFreeTier": false
-        },
-        {
-          "id": "black-forest-labs/flux-dev",
-          "name": "FLUX.1-dev",
-          "contextLimit": 77,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
-          "id": "black-forest-labs/flux-schnell",
-          "name": "FLUX.1-schnell",
-          "contextLimit": 77,
-          "inputPrice": null,
-          "outputPrice": null,
-          "isFreeTier": true
-        },
-        {
-          "id": "google/gemma-2-2b-it",
-          "name": "Gemma-2-2b-it",
-          "contextLimit": 8192,
-          "inputPrice": 0.02,
-          "outputPrice": 0.06,
-          "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-2-9b-it-fast",
-          "name": "Gemma-2-9b-it (Fast)",
-          "contextLimit": 8192,
-          "inputPrice": 0.03,
-          "outputPrice": 0.09,
-          "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-3-27b-it",
-          "name": "Gemma-3-27b-it",
-          "contextLimit": 128000,
-          "inputPrice": 0.1,
-          "outputPrice": 0.3,
-          "isFreeTier": false
-        },
-        {
-          "id": "google/gemma-3-27b-it-fast",
-          "name": "Gemma-3-27b-it (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.2,
-          "outputPrice": 0.6,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-4.5",
-          "name": "GLM-4.5",
-          "contextLimit": 128000,
-          "inputPrice": 0.6,
-          "outputPrice": 2.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-4.5-Air",
-          "name": "GLM-4.5-Air",
-          "contextLimit": 128000,
-          "inputPrice": 0.2,
-          "outputPrice": 1.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-4.7-FP8",
-          "name": "GLM-4.7 (FP8)",
-          "contextLimit": 128000,
-          "inputPrice": 0.4,
-          "outputPrice": 2,
-          "isFreeTier": false
-        },
-        {
-          "id": "openai/gpt-oss-120b",
-          "name": "gpt-oss-120b",
-          "contextLimit": 128000,
-          "inputPrice": 0.15,
-          "outputPrice": 0.6,
-          "isFreeTier": false
-        },
-        {
-          "id": "openai/gpt-oss-20b",
-          "name": "gpt-oss-20b",
-          "contextLimit": 128000,
-          "inputPrice": 0.05,
-          "outputPrice": 0.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "NousResearch/Hermes-4-405B",
-          "name": "Hermes-4-405B",
-          "contextLimit": 128000,
-          "inputPrice": 1,
-          "outputPrice": 3,
-          "isFreeTier": false
-        },
-        {
-          "id": "NousResearch/Hermes-4-70B",
-          "name": "Hermes-4-70B",
-          "contextLimit": 128000,
-          "inputPrice": 0.13,
-          "outputPrice": 0.4,
-          "isFreeTier": false
-        },
-        {
-          "id": "PrimeIntellect/INTELLECT-3",
-          "name": "INTELLECT-3",
-          "contextLimit": 128000,
-          "inputPrice": 0.2,
-          "outputPrice": 1.1,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2-Instruct",
-          "name": "Kimi-K2-Instruct",
-          "contextLimit": 200000,
-          "inputPrice": 0.5,
-          "outputPrice": 2.4,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2-Thinking",
-          "name": "Kimi-K2-Thinking",
-          "contextLimit": 128000,
-          "inputPrice": 0.6,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2.5",
-          "name": "Kimi-K2.5",
-          "contextLimit": 262144,
-          "inputPrice": 0.5,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
-          "name": "Llama-3.1-Nemotron-Ultra-253B-v1",
-          "contextLimit": 128000,
-          "inputPrice": 0.6,
-          "outputPrice": 1.8,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-3.3-70B-Instruct",
-          "name": "Llama-3.3-70B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.13,
-          "outputPrice": 0.4,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-3.3-70B-Instruct-fast",
-          "name": "Llama-3.3-70B-Instruct (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.25,
-          "outputPrice": 0.75,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-Guard-3-8B",
-          "name": "Llama-Guard-3-8B",
-          "contextLimit": 8192,
-          "inputPrice": 0.02,
-          "outputPrice": 0.06,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-          "name": "Meta-Llama-3.1-8B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.02,
-          "outputPrice": 0.06,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Meta-Llama-3.1-8B-Instruct-fast",
-          "name": "Meta-Llama-3.1-8B-Instruct (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.03,
-          "outputPrice": 0.09,
-          "isFreeTier": false
-        },
-        {
-          "id": "MiniMaxAI/MiniMax-M2.1",
-          "name": "MiniMax-M2.1",
-          "contextLimit": 128000,
-          "inputPrice": 0.3,
-          "outputPrice": 1.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
-          "name": "Nemotron-3-Nano-30B-A3B",
-          "contextLimit": 32000,
-          "inputPrice": 0.06,
-          "outputPrice": 0.24,
-          "isFreeTier": false
-        },
-        {
-          "id": "nvidia/Nemotron-Nano-V2-12b",
-          "name": "Nemotron-Nano-V2-12b",
-          "contextLimit": 32000,
-          "inputPrice": 0.07,
-          "outputPrice": 0.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen2.5-Coder-7B-fast",
-          "name": "Qwen2.5-Coder-7B (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.03,
-          "outputPrice": 0.09,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen2.5-VL-72B-Instruct",
-          "name": "Qwen2.5-VL-72B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.25,
-          "outputPrice": 0.75,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
-          "name": "Qwen3 235B A22B Instruct 2507",
-          "contextLimit": 262144,
-          "inputPrice": 0.2,
-          "outputPrice": 0.6,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
-          "name": "Qwen3 235B A22B Thinking 2507",
-          "contextLimit": 262144,
-          "inputPrice": 0.2,
-          "outputPrice": 0.8,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
-          "name": "Qwen3 Coder 480B A35B Instruct",
-          "contextLimit": 262144,
-          "inputPrice": 0.4,
-          "outputPrice": 1.8,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-          "name": "Qwen3-30B-A3B-Instruct-2507",
-          "contextLimit": 128000,
-          "inputPrice": 0.1,
-          "outputPrice": 0.3,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-30B-A3B-Thinking-2507",
-          "name": "Qwen3-30B-A3B-Thinking-2507",
-          "contextLimit": 128000,
-          "inputPrice": 0.1,
-          "outputPrice": 0.3,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-32B",
-          "name": "Qwen3-32B",
-          "contextLimit": 128000,
-          "inputPrice": 0.1,
-          "outputPrice": 0.3,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-32B-fast",
-          "name": "Qwen3-32B (Fast)",
-          "contextLimit": 128000,
-          "inputPrice": 0.2,
-          "outputPrice": 0.6,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-          "name": "Qwen3-Coder-30B-A3B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.1,
-          "outputPrice": 0.3,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Embedding-8B",
-          "name": "Qwen3-Embedding-8B",
-          "contextLimit": 32768,
-          "inputPrice": 0.01,
-          "outputPrice": null,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Next-80B-A3B-Thinking",
-          "name": "Qwen3-Next-80B-A3B-Thinking",
-          "contextLimit": 128000,
-          "inputPrice": 0.15,
-          "outputPrice": 1.2,
-          "isFreeTier": false
-        }
-      ]
-    },
-    {
       "id": "opencode",
       "name": "OpenCode Zen",
       "api": "https://opencode.ai/zen/v1",
@@ -17023,6 +17663,14 @@
           "id": "minimax-m2.5-free",
           "name": "MiniMax M2.5 Free",
           "contextLimit": 204800,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
+          "id": "nemotron-3-super-free",
+          "name": "Nemotron 3 Super Free",
+          "contextLimit": 1000000,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -17761,6 +18409,14 @@
           "isFreeTier": false
         },
         {
+          "id": "anthropic/claude-opus-4-6",
+          "name": "Claude Opus 4.6",
+          "contextLimit": 1000000,
+          "inputPrice": 5,
+          "outputPrice": 25,
+          "isFreeTier": false
+        },
+        {
           "id": "anthropic/claude-3-7-sonnet",
           "name": "Claude Sonnet 3.7",
           "contextLimit": 200000,
@@ -17779,6 +18435,14 @@
         {
           "id": "anthropic/claude-sonnet-4-5",
           "name": "Claude Sonnet 4.5",
+          "contextLimit": 1000000,
+          "inputPrice": 3,
+          "outputPrice": 15,
+          "isFreeTier": false
+        },
+        {
+          "id": "anthropic/claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6",
           "contextLimit": 1000000,
           "inputPrice": 3,
           "outputPrice": 15,
@@ -18229,6 +18893,14 @@
           "isFreeTier": true
         },
         {
+          "id": "nemotron-3-super",
+          "name": "nemotron-3-super",
+          "contextLimit": 262144,
+          "inputPrice": null,
+          "outputPrice": null,
+          "isFreeTier": true
+        },
+        {
           "id": "qwen3-coder-next",
           "name": "qwen3-coder-next",
           "contextLimit": 262144,
@@ -18289,7 +18961,7 @@
     {
       "id": "synthetic",
       "name": "Synthetic",
-      "api": "https://api.synthetic.new/v1",
+      "api": "https://api.synthetic.new/openai/v1",
       "env": [
         "SYNTHETIC_API_KEY"
       ],
@@ -18366,6 +19038,14 @@
           "contextLimit": 200000,
           "inputPrice": 0.55,
           "outputPrice": 2.19,
+          "isFreeTier": false
+        },
+        {
+          "id": "hf:zai-org/GLM-4.7-Flash",
+          "name": "GLM-4.7-Flash",
+          "contextLimit": 196608,
+          "inputPrice": 0.06,
+          "outputPrice": 0.4,
           "isFreeTier": false
         },
         {
@@ -18470,6 +19150,14 @@
           "contextLimit": 204800,
           "inputPrice": 0.55,
           "outputPrice": 2.19,
+          "isFreeTier": false
+        },
+        {
+          "id": "hf:MiniMaxAI/MiniMax-M2.5",
+          "name": "MiniMax-M2.5",
+          "contextLimit": 191488,
+          "inputPrice": 0.6,
+          "outputPrice": 3,
           "isFreeTier": false
         },
         {
@@ -18671,7 +19359,7 @@
         {
           "id": "gpt-5.2",
           "name": "GPT-5.2",
-          "contextLimit": 128000,
+          "contextLimit": 264000,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -18679,7 +19367,7 @@
         {
           "id": "gpt-5.2-codex",
           "name": "GPT-5.2-Codex",
-          "contextLimit": 272000,
+          "contextLimit": 400000,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -19595,6 +20283,154 @@
       ]
     },
     {
+      "id": "wandb",
+      "name": "Weights & Biases",
+      "api": "https://api.inference.wandb.ai/v1",
+      "env": [
+        "WANDB_API_KEY"
+      ],
+      "doc": "https://docs.wandb.ai/guides/integrations/inference/",
+      "isAggregator": false,
+      "models": [
+        {
+          "id": "deepseek-ai/DeepSeek-V3.1",
+          "name": "DeepSeek V3.1",
+          "contextLimit": 161000,
+          "inputPrice": 0.55,
+          "outputPrice": 1.65,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-5-FP8",
+          "name": "GLM 5",
+          "contextLimit": 200000,
+          "inputPrice": 1,
+          "outputPrice": 3.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "gpt-oss-120b",
+          "contextLimit": 131072,
+          "inputPrice": 0.15,
+          "outputPrice": 0.6,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "gpt-oss-20b",
+          "contextLimit": 131072,
+          "inputPrice": 0.05,
+          "outputPrice": 0.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2.5",
+          "name": "Kimi K2.5",
+          "contextLimit": 262144,
+          "inputPrice": 0.5,
+          "outputPrice": 2.85,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-3.1-70B-Instruct",
+          "name": "Llama 3.1 70B",
+          "contextLimit": 128000,
+          "inputPrice": 0.8,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+          "name": "Llama 4 Scout 17B 16E Instruct",
+          "contextLimit": 64000,
+          "inputPrice": 0.17,
+          "outputPrice": 0.66,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-3.3-70B-Instruct",
+          "name": "Llama-3.3-70B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.71,
+          "outputPrice": 0.71,
+          "isFreeTier": false
+        },
+        {
+          "id": "meta-llama/Llama-3.1-8B-Instruct",
+          "name": "Meta-Llama-3.1-8B-Instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.22,
+          "outputPrice": 0.22,
+          "isFreeTier": false
+        },
+        {
+          "id": "MiniMaxAI/MiniMax-M2.5",
+          "name": "MiniMax M2.5",
+          "contextLimit": 196608,
+          "inputPrice": 0.3,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8",
+          "name": "NVIDIA Nemotron 3 Super 120B",
+          "contextLimit": 262144,
+          "inputPrice": 0.2,
+          "outputPrice": 0.8,
+          "isFreeTier": false
+        },
+        {
+          "id": "OpenPipe/Qwen3-14B-Instruct",
+          "name": "OpenPipe Qwen3 14B Instruct",
+          "contextLimit": 32768,
+          "inputPrice": 0.05,
+          "outputPrice": 0.22,
+          "isFreeTier": false
+        },
+        {
+          "id": "microsoft/Phi-4-mini-instruct",
+          "name": "Phi-4-mini-instruct",
+          "contextLimit": 128000,
+          "inputPrice": 0.08,
+          "outputPrice": 0.35,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
+          "name": "Qwen3 235B A22B Instruct 2507",
+          "contextLimit": 262144,
+          "inputPrice": 0.1,
+          "outputPrice": 0.1,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+          "name": "Qwen3 30B A3B Instruct 2507",
+          "contextLimit": 262144,
+          "inputPrice": 0.1,
+          "outputPrice": 0.3,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
+          "name": "Qwen3-235B-A22B-Thinking-2507",
+          "contextLimit": 262144,
+          "inputPrice": 0.1,
+          "outputPrice": 0.1,
+          "isFreeTier": false
+        },
+        {
+          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "name": "Qwen3-Coder-480B-A35B-Instruct",
+          "contextLimit": 262144,
+          "inputPrice": 1,
+          "outputPrice": 1.5,
+          "isFreeTier": false
+        }
+      ]
+    },
+    {
       "id": "fastrouter",
       "name": "FastRouter",
       "api": "https://go.fastrouter.ai/api/v1",
@@ -20315,6 +21151,114 @@
       ]
     },
     {
+      "id": "baseten",
+      "name": "Baseten",
+      "api": "https://inference.baseten.co/v1",
+      "env": [
+        "BASETEN_API_KEY"
+      ],
+      "doc": "https://docs.baseten.co/development/model-apis/overview",
+      "isAggregator": false,
+      "models": [
+        {
+          "id": "deepseek-ai/DeepSeek-V3-0324",
+          "name": "DeepSeek V3 0324",
+          "contextLimit": 164000,
+          "inputPrice": 0.77,
+          "outputPrice": 0.77,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V3.1",
+          "name": "DeepSeek V3.1",
+          "contextLimit": 164000,
+          "inputPrice": 0.5,
+          "outputPrice": 1.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V3.2",
+          "name": "DeepSeek V3.2",
+          "contextLimit": 163800,
+          "inputPrice": 0.3,
+          "outputPrice": 0.45,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-4.6",
+          "name": "GLM 4.6",
+          "contextLimit": 200000,
+          "inputPrice": 0.6,
+          "outputPrice": 2.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-4.7",
+          "name": "GLM-4.7",
+          "contextLimit": 204800,
+          "inputPrice": 0.6,
+          "outputPrice": 2.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "zai-org/GLM-5",
+          "name": "GLM-5",
+          "contextLimit": 202752,
+          "inputPrice": 0.95,
+          "outputPrice": 3.15,
+          "isFreeTier": false
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "GPT OSS 120B",
+          "contextLimit": 128000,
+          "inputPrice": 0.1,
+          "outputPrice": 0.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2-Instruct-0905",
+          "name": "Kimi K2 Instruct 0905",
+          "contextLimit": 262144,
+          "inputPrice": 0.6,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2-Thinking",
+          "name": "Kimi K2 Thinking",
+          "contextLimit": 262144,
+          "inputPrice": 0.6,
+          "outputPrice": 2.5,
+          "isFreeTier": false
+        },
+        {
+          "id": "moonshotai/Kimi-K2.5",
+          "name": "Kimi K2.5",
+          "contextLimit": 262144,
+          "inputPrice": 0.6,
+          "outputPrice": 3,
+          "isFreeTier": false
+        },
+        {
+          "id": "MiniMaxAI/MiniMax-M2.5",
+          "name": "MiniMax-M2.5",
+          "contextLimit": 204000,
+          "inputPrice": 0.3,
+          "outputPrice": 1.2,
+          "isFreeTier": false
+        },
+        {
+          "id": "nvidia/Nemotron-3-Super",
+          "name": "Nemotron 3 Super",
+          "contextLimit": 262144,
+          "inputPrice": 0.3,
+          "outputPrice": 0.75,
+          "isFreeTier": false
+        }
+      ]
+    },
+    {
       "id": "clarifai",
       "name": "Clarifai",
       "api": "https://api.clarifai.com/v2/ext/openai/v1",
@@ -20410,98 +21354,6 @@
           "contextLimit": 131072,
           "inputPrice": 0.045,
           "outputPrice": 0.15,
-          "isFreeTier": false
-        }
-      ]
-    },
-    {
-      "id": "wandb",
-      "name": "Weights & Biases",
-      "api": "https://api.inference.wandb.ai/v1",
-      "env": [
-        "WANDB_API_KEY"
-      ],
-      "doc": "https://weave-docs.wandb.ai/guides/integrations/inference/",
-      "isAggregator": false,
-      "models": [
-        {
-          "id": "deepseek-ai/DeepSeek-R1-0528",
-          "name": "DeepSeek-R1-0528",
-          "contextLimit": 161000,
-          "inputPrice": 1.35,
-          "outputPrice": 5.4,
-          "isFreeTier": false
-        },
-        {
-          "id": "deepseek-ai/DeepSeek-V3-0324",
-          "name": "DeepSeek-V3-0324",
-          "contextLimit": 161000,
-          "inputPrice": 1.14,
-          "outputPrice": 2.75,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2-Instruct",
-          "name": "Kimi-K2-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 1.35,
-          "outputPrice": 4,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-          "name": "Llama 4 Scout 17B 16E Instruct",
-          "contextLimit": 64000,
-          "inputPrice": 0.17,
-          "outputPrice": 0.66,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-3.3-70B-Instruct",
-          "name": "Llama-3.3-70B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.71,
-          "outputPrice": 0.71,
-          "isFreeTier": false
-        },
-        {
-          "id": "meta-llama/Llama-3.1-8B-Instruct",
-          "name": "Meta-Llama-3.1-8B-Instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.22,
-          "outputPrice": 0.22,
-          "isFreeTier": false
-        },
-        {
-          "id": "microsoft/Phi-4-mini-instruct",
-          "name": "Phi-4-mini-instruct",
-          "contextLimit": 128000,
-          "inputPrice": 0.08,
-          "outputPrice": 0.35,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
-          "name": "Qwen3 235B A22B Instruct 2507",
-          "contextLimit": 262144,
-          "inputPrice": 0.1,
-          "outputPrice": 0.1,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
-          "name": "Qwen3-235B-A22B-Thinking-2507",
-          "contextLimit": 262144,
-          "inputPrice": 0.1,
-          "outputPrice": 0.1,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
-          "name": "Qwen3-Coder-480B-A35B-Instruct",
-          "contextLimit": 262144,
-          "inputPrice": 1,
-          "outputPrice": 1.5,
           "isFreeTier": false
         }
       ]
@@ -21103,90 +21955,6 @@
       ]
     },
     {
-      "id": "baseten",
-      "name": "Baseten",
-      "api": "https://inference.baseten.co/v1",
-      "env": [
-        "BASETEN_API_KEY"
-      ],
-      "doc": "https://docs.baseten.co/development/model-apis/overview",
-      "isAggregator": false,
-      "models": [
-        {
-          "id": "deepseek-ai/DeepSeek-V3.2",
-          "name": "DeepSeek V3.2",
-          "contextLimit": 163800,
-          "inputPrice": 0.3,
-          "outputPrice": 0.45,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-4.6",
-          "name": "GLM 4.6",
-          "contextLimit": 200000,
-          "inputPrice": 0.6,
-          "outputPrice": 2.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-4.7",
-          "name": "GLM-4.7",
-          "contextLimit": 204800,
-          "inputPrice": 0.6,
-          "outputPrice": 2.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "zai-org/GLM-5",
-          "name": "GLM-5",
-          "contextLimit": 202752,
-          "inputPrice": 0.95,
-          "outputPrice": 3.15,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2-Instruct-0905",
-          "name": "Kimi K2 Instruct 0905",
-          "contextLimit": 262144,
-          "inputPrice": 0.6,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2-Thinking",
-          "name": "Kimi K2 Thinking",
-          "contextLimit": 262144,
-          "inputPrice": 0.6,
-          "outputPrice": 2.5,
-          "isFreeTier": false
-        },
-        {
-          "id": "moonshotai/Kimi-K2.5",
-          "name": "Kimi K2.5",
-          "contextLimit": 262144,
-          "inputPrice": 0.6,
-          "outputPrice": 3,
-          "isFreeTier": false
-        },
-        {
-          "id": "MiniMaxAI/MiniMax-M2.5",
-          "name": "MiniMax-M2.5",
-          "contextLimit": 204000,
-          "inputPrice": 0.3,
-          "outputPrice": 1.2,
-          "isFreeTier": false
-        },
-        {
-          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
-          "name": "Qwen3 Coder 480B A35B Instruct",
-          "contextLimit": 262144,
-          "inputPrice": 0.38,
-          "outputPrice": 1.53,
-          "isFreeTier": false
-        }
-      ]
-    },
-    {
       "id": "alibaba-coding-plan",
       "name": "Alibaba Coding Plan",
       "api": "https://coding-intl.dashscope.aliyuncs.com/v1",
@@ -21223,7 +21991,7 @@
         {
           "id": "MiniMax-M2.5",
           "name": "MiniMax-M2.5",
-          "contextLimit": 16608,
+          "contextLimit": 196608,
           "inputPrice": null,
           "outputPrice": null,
           "isFreeTier": true
@@ -22414,8 +23182,8 @@
   ],
   "stats": {
     "totalProviders": 72,
-    "totalModels": 2693,
+    "totalModels": 2789,
     "aggregatorProviders": 1,
-    "aggregatorModels": 193
+    "aggregatorModels": 198
   }
 }

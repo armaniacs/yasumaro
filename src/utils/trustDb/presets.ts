@@ -84,7 +84,7 @@ export const SENSITIVE_DOMAINS_PRESETS = {
  * デフォルト Tranco Tier 設定（初回のみ）
  * ユーザーが更新した場合、設定が上書きされる
  */
-export const DEFAULT_TRANC_TIER: 'top1k' | 'top10k' | 'top100k' = 'top10k';
+export const DEFAULT_TRANCO_TIER: 'top1k' | 'top10k' | 'top100k' = 'top10k';
 
 /**
  * Trust Database 初期値を生成
@@ -96,7 +96,7 @@ export function createDefaultTrustDb(): TrustDatabase {
     version: '1.0.0',
     lastUpdated: now,
     tranco: {
-      tier: DEFAULT_TRANC_TIER,
+      tier: DEFAULT_TRANCO_TIER,
       domains: [],  // 初回は空、ユーザー更新で埋める
       count: 0,
       sizeBytes: 0,

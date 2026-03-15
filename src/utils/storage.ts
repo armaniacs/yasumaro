@@ -115,7 +115,7 @@ export const StorageKeys = {
     SAVE_ABORTED_PAGES: 'save_aborted_pages', // 警告で中断したページを履歴に残す（デフォルト: false）
     // Trust Database Settings (Phase 1)
     SAFETY_MODE: 'safety_mode', // Safety Mode (strict/balanced/relaxed, デフォルト: balanced)
-    TRANC_TIER: 'tranc_tier', // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
+    TRANCO_TIER: 'tranco_tier', // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
     // Permission Manager Settings (P0)
     DENIED_DOMAINS: 'denied_domains', // 拒否ドメイン情報: { [domain: string]: { count: number; lastDenied: string; lastDismissed?: string } }
     PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold', // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
@@ -191,7 +191,7 @@ export interface StorageKeyValues {
     [StorageKeys.SAVE_ABORTED_PAGES]: boolean;
     // Trust Database Settings (Phase 1/2)
     [StorageKeys.SAFETY_MODE]: 'strict' | 'balanced' | 'relaxed';
-    [StorageKeys.TRANC_TIER]: 'top1k' | 'top10k' | 'top100k';
+    [StorageKeys.TRANCO_TIER]: 'top1k' | 'top10k' | 'top100k';
     // Permission Manager Settings (P0)
     [StorageKeys.DENIED_DOMAINS]: Record<string, { count: number; lastDenied: string; lastDismissed?: string }>;
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: number;
@@ -731,7 +731,7 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.SAVE_ABORTED_PAGES]: false, // 警告で中断したページを履歴に残す（デフォルト: OFF）
     // Trust Database Settings (Phase 1/2)
     [StorageKeys.SAFETY_MODE]: 'balanced', // Safety Mode（デフォルト: balanced）
-    [StorageKeys.TRANC_TIER]: 'top10k',   // Tranco Tier（デフォルト: top10k）
+    [StorageKeys.TRANCO_TIER]: 'top10k',   // Tranco Tier（デフォルト: top10k）
     // Permission Manager Settings (P0)
     [StorageKeys.DENIED_DOMAINS]: {},                  // 拒否ドメイン情報（デフォルト: 空）
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3,      // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）

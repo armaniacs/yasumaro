@@ -259,7 +259,7 @@ export class TrustChecker {
 
     const tier = tierMap[mode];
     if (tier) {
-      await chrome.storage.local.set({ [StorageKeys.TRANC_TIER]: tier });
+      await chrome.storage.local.set({ [StorageKeys.TRANCO_TIER]: tier });
     }
 
     logInfo('TrustChecker', { mode, tier }, `Safety mode set to ${mode} (Tranco tier: ${tier})`);
@@ -270,9 +270,9 @@ export class TrustChecker {
    */
   async getTrancoTier(): Promise<TrancoTier> {
     const settings = await chrome.storage.local.get({
-      [StorageKeys.TRANC_TIER]: 'top10k'
+      [StorageKeys.TRANCO_TIER]: 'top10k'
     });
-    return settings[StorageKeys.TRANC_TIER] as TrancoTier || 'top10k';
+    return settings[StorageKeys.TRANCO_TIER] as TrancoTier || 'top10k';
   }
 
   /**
