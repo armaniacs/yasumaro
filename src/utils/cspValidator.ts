@@ -84,6 +84,8 @@ export class CSPValidator {
       const domain = CSPValidator.extractDomainFromProvider(provider);
       if (domain && !CSPValidator.allowedDomains.has(domain)) {
         CSPValidator.allowedDomains.add(domain);
+      } else if (!domain) {
+        console.warn(`Unknown AI provider: ${provider}`);
       }
     }
 

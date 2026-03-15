@@ -377,7 +377,13 @@ export class RecordingLogic {
       const permitted = await permissionManager.isHostPermitted(url);
       if (!permitted) {
         // 権限なし → 記録ブロック + 拒否記録
-        const domain = extractDomain(url) || new URL(url).hostname;
+        let domain: string;
+        try {
+          domain = extractDomain(url) || new URL(url).hostname;
+        } catch {
+          addLog(LogType.ERROR, 'Failed to extract domain from URL', { url });
+          return { success: false, error: 'INVALID_URL' };
+        }
         await permissionManager.recordDeniedVisit(domain);
         addLog(LogType.WARN, 'Permission required for recording', { url, domain });
         return { success: false, error: 'PERMISSION_REQUIRED' };

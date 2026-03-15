@@ -261,7 +261,7 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
   });
 
-  it('should fallback to privacy check on URL parse error', async () => {
+  it('should return invalid URL error on URL parse error', async () => {
     // モック設定: ホワイトリストあり
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: ['example.com'],
@@ -273,15 +273,6 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
     const { getSettings } = require('../../utils/storage.js');
     // @ts-expect-error - jest.fn() type narrowing issue
     getSettings.mockResolvedValue(mockSettings);
-
-    // プライバシーキャッシュ: isPrivate=true をセット（不正なURLでもキャッシュキーとして使える）
-    const privacyInfo = {
-      isPrivate: true,
-      reason: 'cache-control' as const,
-      timestamp: Date.now()
-    };
-    RecordingLogic.cacheState.privacyCache = new Map();
-    RecordingLogic.cacheState.privacyCache.set('invalid-url', privacyInfo);
 
     // ドメインフィルター: 許可
     const { isDomainAllowed } = require('../../utils/domainUtils.js');
@@ -296,9 +287,9 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       force: false
     });
 
-    // 検証: PRIVATE_PAGE_DETECTEDエラーが返ること（URLパースエラー時はプライバシーチェックにフォールバック）
+    // 検証: INVALID_URLエラーが返ること
     expect(result.success).toBe(false);
-    expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
+    expect(result.error).toBe('INVALID_URL');
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
   });
 });

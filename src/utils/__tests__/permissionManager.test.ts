@@ -127,15 +127,12 @@ describe('PermissionManager - P0 - isHostPermitted', () => {
   });
 
   it('should handle invalid URL gracefully', async () => {
-    (chrome.permissions.contains as jest.Mock).mockResolvedValue(false);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
     const result = await manager.isHostPermitted('invalid-url');
     expect(result).toBe(false);
-    expect(chrome.permissions.contains).toHaveBeenCalledWith({
-      origins: ['*://invalid/*']
-    });
+    expect(chrome.permissions.contains).not.toHaveBeenCalled();
   });
 });
 

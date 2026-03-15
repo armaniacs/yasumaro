@@ -41,6 +41,7 @@ export class PermissionManager {
   async isHostPermitted(url: string): Promise<boolean> {
     try {
       const origin = this.urlToOrigin(url);
+      if (!origin) return false; // nullの場合は許可されていないとみなす
       return await chrome.permissions.contains({ origins: [origin] });
     } catch (error) {
       logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), url }, undefined, 'Failed to check host permission');
@@ -56,6 +57,7 @@ export class PermissionManager {
   async requestPermission(url: string): Promise<boolean> {
     try {
       const origin = this.urlToOrigin(url);
+      if (!origin) return false; // nullの場合は許可を要求しない
       return await chrome.permissions.request({ origins: [origin] });
     } catch (error) {
       logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), url }, undefined, 'Failed to request permission');
@@ -246,15 +248,17 @@ export class PermissionManager {
     }
   }
 
-   private urlToOrigin(url: string): string {
-     try {
-       const urlObj = new URL(url);
-       return `*://${urlObj.hostname}/*`;
-     } catch {
-       // URLパース失敗は安全側に倒して無効なオリジンを返す
-       return "*://invalid/*";
-     }
-   }
+  private urlToOrigin(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return null; // 非HTTP(S) URLは無効
+      }
+      return `*://${urlObj.hostname}/*`;
+    } catch {
+      return null; // 無効なURLの場合はnullを返す
+    }
+  }
 }
 
 // ============================================================================
