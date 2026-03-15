@@ -118,7 +118,10 @@ export const StorageKeys = {
     TRANC_TIER: 'tranc_tier', // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
     // Permission Manager Settings (P0)
     DENIED_DOMAINS: 'denied_domains', // 拒否ドメイン情報: { [domain: string]: { count: number; lastDenied: string; lastDismissed?: string } }
-    PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold' // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
+    PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold', // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
+    // Conditional CSP Settings (P1)
+    CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled', // 条件付きCSP有効フラグ（デフォルト: true）
+    CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers' // 追加するAIプロバイダーIDリスト（デフォルト: []）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -192,6 +195,9 @@ export interface StorageKeyValues {
     // Permission Manager Settings (P0)
     [StorageKeys.DENIED_DOMAINS]: Record<string, { count: number; lastDenied: string; lastDismissed?: string }>;
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: number;
+    // Conditional CSP Settings (P1)
+    [StorageKeys.CONDITIONAL_CSP_ENABLED]: boolean;
+    [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
 }
 
 // 厳格な Settings 型
@@ -728,7 +734,10 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.TRANC_TIER]: 'top10k',   // Tranco Tier（デフォルト: top10k）
     // Permission Manager Settings (P0)
     [StorageKeys.DENIED_DOMAINS]: {},                  // 拒否ドメイン情報（デフォルト: 空）
-    [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3        // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
+    [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3,      // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
+    // Conditional CSP Settings (P1)
+    [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,       // 条件付きCSP有効フラグ（デフォルト: 有効）
+    [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: []        // 追加するAIプロバイダーIDリスト（デフォルト: 空）
 };
 
 /**

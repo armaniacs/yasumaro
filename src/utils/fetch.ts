@@ -5,9 +5,12 @@
  * Security features (from P1 code review):
  * - Parameter validation for timeoutMs
  * - Support for optional URL validation
+ * - CSPValidator integration for AI provider URL validation (P1)
  */
 
 import { normalizeUrl } from './urlUtils.js';
+import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
+import { getSettings, StorageKeys } from './storage.js';
 
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
@@ -31,6 +34,7 @@ interface FetchOptions extends RequestInit {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;
   allowedUrls?: Set<string> | null;
+  skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
 }
 
 /**
@@ -102,9 +106,33 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     requireValidProtocol = true,
     blockLocalhost = false,
     allowedUrls = null, // 動的URL検証用オプション
+    skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
     ...fetchOptions
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
+
+  // P1: CSPValidatorによるAIプロバイダーURL検証
+  if (!skipCspValidation) {
+    const settings = await getSettings();
+    const conditionalCspEnabled = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false; // デフォルトはtrue
+
+    if (conditionalCspEnabled) {
+      // CSPValidatorが初期化されていない場合、設定から初期化
+      if (!CSPValidator.isInitialized()) {
+        CSPValidator.initializeFromSettings(settings);
+      }
+
+      // CSP検証
+      if (!CSPValidator.isUrlAllowed(url)) {
+        const cspError = getCspErrorMessage(url);
+        if (cspError) {
+          throw new Error(cspError);
+        }
+        // メッセージがない場合は汎用エラー
+        throw new Error(`URL blocked by CSP policy: ${url}`);
+      }
+    }
+  }
 
   // 動的URL検証（オプション）
   if (allowedUrls) {

@@ -1,10 +1,10 @@
 {
   "name": "obsidian-weave",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {
-    "update-preset": "npx ts-node scripts/update-preset-domains.ts",
+    "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
     "update-tranco": "npm run update-preset && npm run update-manifest",
     "test": "jest",
@@ -23,8 +23,7 @@
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "build": "tsc && cp -r manifest.json _locales icons data dist/ && cp PRIVACY.md dist/ && cp src/popup/popup.html dist/popup/ && cp src/popup/styles.css dist/popup/ && mkdir -p dist/dashboard && cp src/dashboard/dashboard.html dist/dashboard/ && cp src/dashboard/dashboard.css dist/dashboard/ && cp src/dashboard/models-dev-dialog.html dist/dashboard/ && cp src/dashboard/models-dev-dialog.css dist/dashboard/ && mkdir -p dist/privacy && cp src/privacy/privacy.html src/privacy/privacy.css dist/privacy/ && cp src/utils/trustDb/bloomfilter.mjs dist/utils/trustDb/bloomfilter.mjs && node -e \"const fs=require('fs'); const file='dist/content/loader.js'; let content=fs.readFileSync(file,'utf8'); content=content.replace(/export \\{\\};?\\s*$/m,''); fs.writeFileSync(file,content);\"",
-    "build:watch": "tsc --watch",
-    "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts"
+    "build:watch": "tsc --watch"
   },
   "keywords": [
     "obsidian",

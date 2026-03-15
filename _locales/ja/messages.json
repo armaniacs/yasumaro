@@ -1469,6 +1469,9 @@
   "contentStripSave": {
     "message": "保存"
   },
+  "cspTab": {
+    "message": "CSP"
+  },
   "trustTab": {
     "message": "Trust"
   },
@@ -1708,5 +1711,53 @@
   },
   "allUrlsBannerAllow": {
     "message": "許可する"
+  },
+  "cspSettingsTitle": {
+    "message": "条件付きCSP設定"
+  },
+  "cspGeneralSettings": {
+    "message": "基本設定"
+  },
+  "conditionalCspEnabledLabel": {
+    "message": "条件付きCSPを有効にする"
+  },
+  "conditionalCspEnabledDesc": {
+    "message": "設定したAIプロバイダーのみCSPに含めることで、セキュリティを強化"
+  },
+  "selectProvidersSection": {
+    "message": "追加するAIプロバイダーを選択"
+  },
+  "selectProvidersDesc": {
+    "message": "利用したい中小AIプロバイダーを選択してください"
+  },
+  "providerList": {
+    "message": "利用可能なAIプロバイダー"
+  },
+  "cspSaveSuccess": {
+    "message": "CSP設定を保存しました"
+  },
+  "cspSaveError": {
+    "message": "CSP設定の保存に失敗しました"
+  },
+  "cspResetSuccess": {
+    "message": "CSP設定をリセットしました"
+  },
+  "cspResetError": {
+    "message": "CSP設定のリセットに失敗しました"
+  },
+  "cspResetConfirm": {
+    "message": "CSP設定をリセットしてもよろしいですか？"
+  },
+  "cspDescription": {
+    "message": "設定したAIプロバイダーのみCSPに含めることで、セキュリティを強化"
+  },
+  "cspProviderSearchPlaceholder": {
+    "message": "プロバイダーを検索..."
+  },
+  "cspSaveBtn": {
+    "message": "保存する"
+  },
+  "cspResetBtn": {
+    "message": "リセット"
   }
 }

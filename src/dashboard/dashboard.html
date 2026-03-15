@@ -61,6 +61,14 @@
           </svg>
           <span data-i18n="trustTab">Trust</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-csp">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+            <line x1="12" y1="22" x2="12" y2="11"/>
+          </svg>
+          <span data-i18n="cspTab">CSP</span>
+        </button>
         <button class="sidebar-nav-btn" data-panel="panel-tags">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
@@ -604,7 +612,7 @@
         </div>
 
         <div class="form-group">
-          <button id="saveTrustSettings" class="btn-primary" data-i18n="saveSettings">設定を保存</button>
+          <button id="saveTrustSettings" class="btn-primary" data-i18n="save">設定を保存</button>
           <div id="trustSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
@@ -881,6 +889,47 @@
             data-i18n-input-placeholder="domainCheckPlaceholder">
         </div>
         <div id="domainSearchResult" class="domain-search-result" aria-live="polite"></div>
+      </section>
+
+      <!-- CSP Settings Panel (P1) -->
+      <section id="panel-csp" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="cspSettingsTitle">Conditional CSP Settings</h2>
+
+        <p class="panel-description" data-i18n="cspDescription">
+          Enable conditional CSP to restrict the AI providers that can connect. Only configured providers will be permitted by the CSP policy.
+        </p>
+
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="cspGeneralSettings">General Settings</h3>
+          <div class="form-group">
+            <input type="checkbox" id="conditionalCspEnabled" aria-describedby="conditionalCspEnabledDesc">
+            <label for="conditionalCspEnabled" class="inline-label" data-i18n="conditionalCspEnabledLabel">Enable Conditional CSP</label>
+            <div class="help-text" id="conditionalCspEnabledDesc" data-i18n="conditionalCspEnabledDesc">
+              When enabled, only configured AI providers will be allowed by the CSP policy.
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="selectProvidersSection">Select AI Providers</h3>
+          <p class="help-text mb-4" data-i18n="selectProvidersDesc">
+            Choose additional AI providers to allow. Default providers (Google, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Perplexity, Jina, Voyage) are always allowed.
+          </p>
+          <input type="search" id="cspProviderSearch" class="csp-provider-search"
+            data-i18n-input-placeholder="cspProviderSearchPlaceholder">
+          <div id="cspProviderList" class="csp-provider-list"></div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="csp-save-area">
+          <button id="cspSaveButton" class="primary-btn" data-i18n="cspSaveBtn">保存する</button>
+          <button id="cspResetButton" class="secondary-btn" data-i18n="cspResetBtn">リセット</button>
+          <div id="cspSaveMessage" class="success-message" aria-live="polite"></div>
+          <div id="cspResetMessage" class="success-message" aria-live="polite"></div>
+        </div>
       </section>
 
       <!-- Diagnostics Panel (New) -->

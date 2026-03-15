@@ -1469,6 +1469,9 @@
   "contentStripSave": {
     "message": "Save"
   },
+  "cspTab": {
+    "message": "CSP"
+  },
   "trustTab": {
     "message": "Trust"
   },
@@ -1708,5 +1711,53 @@
   },
   "allUrlsBannerAllow": {
     "message": "Allow"
+  },
+  "cspSettingsTitle": {
+    "message": "Conditional CSP Settings"
+  },
+  "cspGeneralSettings": {
+    "message": "General Settings"
+  },
+  "conditionalCspEnabledLabel": {
+    "message": "Enable conditional CSP"
+  },
+  "conditionalCspEnabledDesc": {
+    "message": "Only include configured AI providers in CSP to improve security"
+  },
+  "selectProvidersSection": {
+    "message": "Select additional AI providers"
+  },
+  "selectProvidersDesc": {
+    "message": "Select the medium/small AI providers you want to use"
+  },
+  "providerList": {
+    "message": "Available AI providers"
+  },
+  "cspSaveSuccess": {
+    "message": "CSP settings saved successfully"
+  },
+  "cspSaveError": {
+    "message": "Failed to save CSP settings"
+  },
+  "cspResetSuccess": {
+    "message": "CSP settings reset successfully"
+  },
+  "cspResetError": {
+    "message": "Failed to reset CSP settings"
+  },
+  "cspResetConfirm": {
+    "message": "Are you sure you want to reset CSP settings?"
+  },
+  "cspDescription": {
+    "message": "Only include configured AI providers in CSP to improve security"
+  },
+  "cspProviderSearchPlaceholder": {
+    "message": "Search providers..."
+  },
+  "cspSaveBtn": {
+    "message": "Save"
+  },
+  "cspResetBtn": {
+    "message": "Reset"
   }
 }

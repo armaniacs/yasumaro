@@ -41,6 +41,7 @@ import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js'
 import { extractDomain, isDomainAllowed } from '../utils/domainUtils.js';
 import { DEFAULT_CATEGORIES, getAllCategories } from '../utils/tagUtils.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
+import { CSPSettings } from './cspSettings.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -191,13 +192,16 @@ async function handleTestObsidian(): Promise<void> {
 
   testObsidianBtn.disabled = true;
   try {
+    const typedApiKey = apiKeyInput?.value?.trim();
     const testResult = await chrome.runtime.sendMessage({
       type: 'TEST_OBSIDIAN',
-      payload: {
-        protocol: protocolInput?.value?.trim(),
-        port: portInput?.value?.trim(),
-        apiKey: apiKeyInput?.value?.trim(),
-      }
+      payload: typedApiKey
+        ? {
+            protocol: protocolInput?.value?.trim(),
+            port: portInput?.value?.trim(),
+            apiKey: typedApiKey,
+          }
+        : {}  // 空の場合は保存済み設定を使用
     }) as { obsidian?: { success: boolean; message: string } };
 
     const obsidianResult = testResult?.obsidian || { success: false, message: 'No response' };
@@ -2265,6 +2269,7 @@ function setHtmlLangDir(): void {
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
   try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
   try { initTrustSettings(); } catch (e) { console.error('[Dashboard] initTrustSettings error:', e); }
+  try { await CSPSettings.loadCSPSettings(); } catch (e) { console.error('[Dashboard] loadCSPSettings error:', e); }
 
   try {
     const settings = await getSettings();

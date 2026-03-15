@@ -6,7 +6,7 @@ describe('fetchWithTimeout', () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = jest.fn(() => Promise.resolve(mockResponse));
 
-    const response = await fetchWithTimeout('https://example.com', {}, 1000);
+    const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000);
     expect(response.ok).toBe(true);
   });
 
@@ -22,7 +22,7 @@ describe('fetchWithTimeout', () => {
       const mockResponse = { ok: true } as Response;
       global.fetch = jest.fn(() => Promise.resolve(mockResponse));
 
-      const response = await fetchWithTimeout('https://example.com', {}, 1000);
+      const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000);
       expect(response.ok).toBe(true);
       expect(clearTimeoutCalled).toBe(true);
     } finally {
@@ -34,7 +34,7 @@ describe('fetchWithTimeout', () => {
     const testError = new Error('Network error');
     global.fetch = jest.fn(() => Promise.reject(testError));
 
-    await expect(fetchWithTimeout('https://example.com', {}, 1000))
+    await expect(fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000))
       .rejects.toBe(testError);
   });
 
@@ -51,7 +51,7 @@ describe('fetchWithTimeout', () => {
     });
 
     try {
-      const response = await fetchWithTimeout('https://example.com');
+      const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true });
       expect(actualTimeout).toBe(30000);
     } finally {
       global.setTimeout = originalSetTimeout;
@@ -71,7 +71,7 @@ describe('fetchWithTimeout', () => {
     });
 
     try {
-      const response = await fetchWithTimeout('https://example.com', {}, 5000);
+      const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 5000);
       expect(actualTimeout).toBe(5000);
     } finally {
       global.setTimeout = originalSetTimeout;

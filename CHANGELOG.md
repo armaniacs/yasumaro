@@ -8,6 +8,73 @@ All notable changes to this project will be documented in this file.
 
 ### Security / breaking changes planned
 
+## [4.10.2] - 2026-03-15
+
+### Fixed
+- **Obsidian 接続テスト: APIキー未入力時に保存済みキーを使用するよう修正** ([src/dashboard/dashboard.ts](src/dashboard/dashboard.ts), [src/background/service-worker.ts](src/background/service-worker.ts))
+  - APIキー入力欄が空（「Already set」表示）の状態で「Obsidian テスト」を押すと `API key is missing` エラーになっていた
+  - 入力欄が空の場合は `override` を渡さず、保存済み設定で接続テストを実行するよう修正
+
+- **Trust パネル: 保存ボタンのテキストが空白になっていた問題を修正** ([src/dashboard/dashboard.html](src/dashboard/dashboard.html))
+  - `data-i18n="saveSettings"` という存在しないキーを使用していた → `"save"` キーに修正
+
+## [4.10.1] - 2026-03-15
+
+### Fixed
+- **CSP: `optional_host_permissions` から `<all_urls>` を削除** ([manifest.json](manifest.json))
+  - `<all_urls>` が `host_permissions` と重複していたため Chrome が "redundant permission" 警告を 30 件出力していた問題を修正
+  - `host_permissions` にすでに登録済みのドメインを `optional_host_permissions` からすべて削除（`api-inference.huggingface.co` のみ残存）
+  - `manifest.json` の `connect-src` に全 AI プロバイダードメイン（sakura 等）を追加し、実際の CSP ブロックを解消
+
+- **CSP パネル UI: プロバイダーリストが表示されなかった問題を修正** ([src/dashboard/dashboard.ts](src/dashboard/dashboard.ts))
+  - `dashboard.ts` に `CSPSettings` のインポートと `loadCSPSettings()` 呼び出しが抜けていた
+
+- **CSP パネル UI: 保存・リセットボタンが表示されなかった問題を修正** ([src/dashboard/dashboard.html](src/dashboard/dashboard.html), [src/dashboard/dashboard.css](src/dashboard/dashboard.css))
+  - `data-i18n="saveSettings"` キーが存在せずボタンテキストが空になっていた → `cspSaveBtn` / `cspResetBtn` キーを新設
+  - ボタンを `csp-save-area` に移動してリストと分離、常に視認できるように配置
+
+- **CSP パネル: 設定保存後に反映されなかった問題を修正** ([src/utils/cspValidator.ts](src/utils/cspValidator.ts), [src/dashboard/cspSettings.ts](src/dashboard/cspSettings.ts))
+  - `CSPValidator.initializeFromSettings()` の「初回のみ実行」ガードを削除し、再呼び出し時に最新設定を反映するよう変更
+  - `saveCSPSettings()` で `reset()` 後に再初期化するよう修正
+
+- **「今すぐ記録」がObsidianに記録されなかった問題を修正** ([src/background/service-worker.ts](src/background/service-worker.ts))
+  - `AUTO_CONTENT_FETCH_ENABLED=false` のとき `force=true` でも `success: true` を返して記録せず終了していた
+  - `force=true`（ダッシュボードからの明示的な記録）の場合はコンテンツ取得を試みてから記録処理に進むよう修正
+
+- **Popup の inline style CSP 違反を修正** ([src/popup/main.ts](src/popup/main.ts), [src/popup/styles.css](src/popup/styles.css))
+  - `updateTrustStatus()` の `style="color:..."` を `status-trust-trusted` / `status-trust-sensitive` / `status-trust-unverified` / `status-trust-locked` CSSクラスに置き換え
+
+### Added
+- **CSP プロバイダー検索ボックスを追加** ([src/dashboard/dashboard.html](src/dashboard/dashboard.html), [src/dashboard/cspSettings.ts](src/dashboard/cspSettings.ts))
+  - プロバイダーリストをリアルタイムフィルタリングできる検索ボックスを追加
+  - i18n キー追加: `cspProviderSearchPlaceholder`, `cspSaveBtn`, `cspResetBtn`
+
+- **CSPValidator テスト更新** ([src/utils/__tests__/cspValidator.test.ts](src/utils/__tests__/cspValidator.test.ts))
+  - 再初期化の仕様変更に合わせてテストを更新
+
+## [4.10.0] - 2026-03-15
+
+### Changed
+- **P1: CSP connect-src 削減** ([manifest.json](manifest.json))
+  - AI プロバイダー 29 ドメインから 10 デフォルトドメインのみに削減
+  - 残り 28 中小プロバイダーを `optional_host_permissions` に移動
+  - GitHub/GitLab (uBlock Import 用) を `optional_host_permissions` に移動
+
+- **P1: identity 権限削除** ([manifest.json](manifest.json))
+  - 未使用の `identity` 権限を削除（Chrome Web Store 審査対応）
+
+### Added
+- **条件付き CSP 設定実装** ([src/utils/cspValidator.ts](src/utils/cspValidator.ts), [src/dashboard/cspSettings.ts](src/dashboard/cspSettings.ts))
+  - CSPValidator クラスで URL 検証による動的 CSP 制御
+  - デフォルト 10 プロバイダー (Google Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Perplexity, Jina, Voyage)
+  - 28 中小 AI プロバイダーをオプション選択可能
+  - Dashboard に CSP 設定 UI を追加（基本設定、プロバイダー選択）
+  - fetch.ts に CSPValidator を統合（fetchWithTimeout で AI プロバイダー URL 検証）
+  - i18n 対応 (9 キー追加): `cspTab`, `cspSettingsTitle`, `cspDescription`, `cspGeneralSettings`, `conditionalCspEnabledLabel`, `conditionalCspEnabledDesc`, `selectProvidersSection`, `selectProvidersDesc`, `cspSaveSuccess`, `cspSaveError`, `cspResetSuccess`, `cspResetError`, `cspResetConfirm`
+
+- **CSPValidator テスト実装** ([src/utils/__tests__/cspValidator.test.ts](src/utils/__tests__/cspValidator.test.ts))
+  - 21 テスト（.Module Loading, Default Domains, User Selected Providers, Non-AI Domains, isAProviderUrl, Helper Functions, safeFetch, getCspErrorMessage）
+
 ## [4.9.0] - 2026-03-15
 
 ### Changed

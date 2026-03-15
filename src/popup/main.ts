@@ -1008,7 +1008,7 @@ async function updateTrustStatus(url: string): Promise<void> {
     const permitted = allUrlsGranted || await isHostPermitted(url);
     if (!permitted) {
       // LOCKED 表示
-      trustContent.innerHTML = `<span class="status-value" style="color:#6b7280">🔒 LOCKED</span>`;
+      trustContent.innerHTML = `<span class="status-value status-trust-locked">🔒 LOCKED</span>`;
       // 記録ボタンを非活性化
       if (recordBtn) recordBtn.disabled = true;
       // 許可ボタンエリアを表示
@@ -1056,7 +1056,8 @@ async function updateTrustStatus(url: string): Promise<void> {
       'statusTrustTrusted' | 'statusTrustSensitive' | 'statusTrustUnverified';
     const levelText = getMessage(levelKey) || display.level;
 
-    let html = `<span class="status-value" style="color: ${display.color}">${levelText}</span>`;
+    const trustClass = `status-trust-${display.level.toLowerCase()}`;
+    let html = `<span class="status-value ${trustClass}">${levelText}</span>`;
 
     // Alert表示（sensitiveカテゴリの場合）
     if (checkResult.showAlert && checkResult.trustResult.category) {

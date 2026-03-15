@@ -260,7 +260,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Obsidian のみ接続テスト
             if (message.type === 'TEST_OBSIDIAN') {
-                const obsidianResult = await obsidian.testConnection(message.payload || undefined);
+                const override = message.payload?.apiKey ? message.payload : undefined;
+                const obsidianResult = await obsidian.testConnection(override);
                 sendResponse({ success: true, obsidian: obsidianResult });
                 return;
             }
@@ -351,14 +352,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                 // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
                 if (!content && !skipAi) {
-                    if (!autoContentFetchEnabled) {
-                        // コンテンツフェッチが無効な場合は空コンテンツで続行
+                    if (!autoContentFetchEnabled && !message.payload.force) {
+                        // 通常フローではコンテンツフェッチ無効を通知して終了
                         await logDebug(
                             'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
                             { url: sanitizedUrl },
                             'service-worker'
                         );
-                        // 対処方法を示すエラーメッセージを返す
                         sendResponse({
                             success: true,
                             warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
