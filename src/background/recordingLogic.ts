@@ -15,6 +15,8 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
+// P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
+import { getPermissionManager } from '../utils/permissionManager.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -368,6 +370,17 @@ export class RecordingLogic {
 
       if (!isAllowed && force) {
         addLog(LogType.WARN, 'Force recording blocked domain', { url });
+      }
+
+      // P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
+      const permissionManager = getPermissionManager();
+      const permitted = await permissionManager.isHostPermitted(url);
+      if (!permitted) {
+        // 権限なし → 記録ブロック + 拒否記録
+        const domain = extractDomain(url) || new URL(url).hostname;
+        await permissionManager.recordDeniedVisit(domain);
+        addLog(LogType.WARN, 'Permission required for recording', { url, domain });
+        return { success: false, error: 'PERMISSION_REQUIRED' };
       }
 
       // ホワイトリスト判定と設定の事前取得

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const TRANCO_URL = 'https://tranco-list.eu/top-1m.csv.zip';
-const TOP_N = 500;
+const TOP_N = 1000;
 const OUTPUT_FILE = path.join(__dirname, '../src/utils/trustDb/presetDomains.ts');
 
 async function fetchTrancoTop500(): Promise<string[]> {

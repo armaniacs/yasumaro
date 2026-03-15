@@ -1,9 +1,12 @@
 {
   "name": "obsidian-weave",
-  "version": "4.2.1",
+  "version": "4.9.0",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {
+    "update-preset": "npx ts-node scripts/update-preset-domains.ts",
+    "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
+    "update-tranco": "npm run update-preset && npm run update-manifest",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -41,6 +44,7 @@
     "@types/chrome": "^0.1.36",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.2.3",
+    "adm-zip": "^0.5.16",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",

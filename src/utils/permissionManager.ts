@@ -171,8 +171,8 @@ export class PermissionManager {
        const entries: DeniedDomainEntry[] = [];
 
        for (const [domain, entry] of Object.entries(deniedDomains)) {
-         // 閾値を超えたドメインのみ
-         if (entry.count < notifyThreshold) {
+         // 閾値を超えたドメインのみ（count > threshold）
+         if (entry.count <= notifyThreshold) {
            continue;
          }
 

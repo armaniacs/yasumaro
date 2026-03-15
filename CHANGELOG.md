@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 ## [unreleased] - to be released as version 5.0.0
 
 ### Added
+
+### Security / breaking changes planned
+
+## [4.9.0] - 2026-03-15
+
+### Changed
+- **Security: host_permissions から `<all_urls>` を削除** ([manifest.json](manifest.json))
+  - Chrome Web Store審査対応のため、`<all_urls>` 権限を `optional_host_permissions` に移動
+  - Tranco Top 1000 の信頼済みドメイン（2053 host_permissions）をプリセットとして追加
+
+### Added
 - **P0: `<all_urls>` 権限を `optional_host_permissions` に移動** ([manifest.json](manifest.json), [permissionManager.ts](src/utils/permissionManager.ts))
   - `host_permissions` から `<all_urls>` を削除し、`optional_host_permissions` に移動
   - `PermissionManager` クラスを新規実装（`src/utils/permissionManager.ts`）：
@@ -23,7 +34,9 @@ All notable changes to this project will be documented in this file.
   - `ErrorCode.PERMISSION_REQUIRED` (`PERM_REQ_001`) を追加
   - 権限提案閾値UI（1〜50、デフォルト3）をDashboard Trustパネルに追加
   - i18n対応（10キー追加）: `permissionRequired`, `permissionAllow`, `permissionDenied`, `permissionSuggestTitle`, `permissionSuggestHint`, `permissionSuggestCount`, `permissionSuggestAdd`, `permissionSuggestDismiss`, `permissionThresholdLabel`, `permissionThresholdNote`
-  - `scripts/update-preset-domains.ts` を追加（Tranco Top 500 ドメインの取得スクリプト）
+  - `scripts/update-preset-domains.ts` を追加（Tranco Top 1000 ドメインの取得スクリプト）
+  - `scripts/update-manifest-from-preset.ts` を追加（manifest.json に Tranco Top 1000 ドメインの host_permissions を追加するスクリプト）
+  - Tranco Top 1000 プリセットドメイン（約2000行の host_permissions）を `manifest.json` に収録
 
 - **Trust Checkerモジュールを実装** ([trustChecker.ts](src/utils/trustChecker.ts), [trustChecker.test.ts](src/utils/__tests__/trustChecker.test.ts))
   - Alert Settingsによる警告制御（金融サイト、警戒リスト、未検証サイトの各個別トグル）
