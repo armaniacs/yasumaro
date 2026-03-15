@@ -76,6 +76,7 @@ const SENSITIVE_DOMAINS_PRESETS = {
 interface TrustDbState {
   database: TrustDatabase | null;
   bloomFilter: TrustBloomFilter | null;
+  trancoSet: Set<string>;
   initialized: boolean;
 }
 
@@ -83,6 +84,7 @@ class TrustDb {
   private state: TrustDbState = {
     database: null,
     bloomFilter: null,
+    trancoSet: new Set(),
     initialized: false
   };
 
@@ -106,6 +108,8 @@ class TrustDb {
         // 既存データを復元
         this.state.database = savedDb as TrustDatabase;
         this.state.bloomFilter = bloomFilterFromData(savedBloom as BloomFilterData);
+        // trancoSet を再構築（サービスワーカー再起動後もキャッシュを有効化）
+        this.state.trancoSet = new Set((savedDb as TrustDatabase).tranco.domains);
         logInfo('TrustDb', { domainCount: (savedDb as any).domainCount || 'unknown' }, 'Loaded existing database');
       } else {
         // 新規作成
@@ -327,6 +331,7 @@ class TrustDb {
 
   /**
    * Step 3: Tranco 判定
+   * 最適化: キャッシュされたSet を使用して O(1) 検索
    */
   private checkTranco(domain: string): TrustResult {
     const db = this.state.database!;
@@ -342,15 +347,19 @@ class TrustDb {
       candidates.push(parts.slice(i).join('.'));
     }
 
+    // キャッシュされたSetを使用 (O(1) 検索)
+    const trancoSet = this.state.trancoSet;
+
     for (const candidate of candidates) {
       // Bloom Filter でチェック
       if (!this.state.bloomFilter!.mightContain(candidate)) {
         continue;
       }
 
-      // 精密照合
-      const index = db.tranco.domains.indexOf(candidate);
-      if (index !== -1) {
+      // 精密照合 (Set.has は O(1))
+      if (trancoSet.has(candidate)) {
+        // インデックスを取得 (rank 報告用)
+        const index = db.tranco.domains.indexOf(candidate);
         return {
           level: DomainTrustLevel.TRUSTED,
           source: 'tranco',
@@ -389,6 +398,7 @@ class TrustDb {
     };
 
     this.state.bloomFilter = bloom;
+    this.state.trancoSet = new Set(domains); // Setをキャッシュ
     await this.save();
 
     logInfo('TrustDb', { tier, count: domains.length }, `Updated Tranco list: ${domains.length} domains`);
@@ -397,32 +407,48 @@ class TrustDb {
   /**
    * ユーザー TLD 追加
    */
-  async addUserTld(tld: string): Promise<void> {
+  async addUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
     if (!this.state.database) {
-      throw new Error('TrustDb not initialized');
+      return { success: false, error: 'Database not initialized' };
     }
 
+    // Validate TLD format
     if (!tld.startsWith('.')) {
       tld = '.' + tld;
     }
 
-    if (!this.state.database.jpAnchor.userTlds.includes(tld)) {
-      this.state.database.jpAnchor.userTlds.push(tld);
-      await this.save();
+    // TLD length validation (minimum 2 characters after the dot to prevent overly broad matches)
+    // Example: .com (4 chars), .jp (3 chars), .ai (3 chars) are valid; .a is too broad
+    if (tld.length < 3) {
+      return { success: false, error: 'TLD must be at least 2 characters long (e.g., .com, .jp)' };
     }
+
+    // Check for duplicates
+    if (this.state.database.jpAnchor.tlds.includes(tld) || this.state.database.jpAnchor.userTlds.includes(tld)) {
+      return { success: false, error: 'TLD already exists' };
+    }
+
+    this.state.database.jpAnchor.userTlds.push(tld);
+    await this.save();
+    return { success: true };
   }
 
   /**
    * ユーザー TLD 削除
    */
-  async removeUserTld(tld: string): Promise<void> {
+  async removeUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
     if (!this.state.database) {
-      throw new Error('TrustDb not initialized');
+      return { success: false, error: 'Database not initialized' };
     }
 
-    this.state.database.jpAnchor.userTlds =
-      this.state.database.jpAnchor.userTlds.filter(t => t !== tld);
-    await this.save();
+    const index = this.state.database.jpAnchor.userTlds.indexOf(tld);
+    if (index !== -1) {
+      this.state.database.jpAnchor.userTlds.splice(index, 1);
+      await this.save();
+      return { success: true };
+    }
+
+    return { success: false, error: 'TLD not found' };
   }
 
   /**

@@ -132,6 +132,12 @@ export class TrancoUpdater {
   /**
    * Tranco CSV を解析
    */
+  // RFC 準拠のドメイン名バリデーション正規表現
+  private isValidDomain(domain: string): boolean {
+    const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*\.?$/i;
+    return domain.length <= 253 && domainRegex.test(domain) && !domain.startsWith('.') && !domain.endsWith('.');
+  }
+
   private parseTrancoCSV(csvText: string, tier: TrancoTier): string[] {
     const lines = csvText.trim().split('\n');
     const domains: string[] = [];
@@ -143,7 +149,10 @@ export class TrancoUpdater {
       // CSV 形式: rank,domain
       const [rank, domain] = line.split(',');
       if (domain && domains.length < limit) {
-        domains.push(domain.trim().toLowerCase());
+        const trimmedDomain = domain.trim().toLowerCase();
+        if (this.isValidDomain(trimmedDomain)) {
+          domains.push(trimmedDomain);
+        }
       }
 
       if (domains.length >= limit) {

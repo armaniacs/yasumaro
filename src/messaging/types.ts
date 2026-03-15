@@ -25,7 +25,8 @@ export type ServiceWorkerRequest =
   | { type: 'TEST_AI'; payload: never }
   | { type: 'GET_PRIVACY_CACHE'; payload?: never }
   | { type: 'ACTIVITY_UPDATE'; payload?: never }
-  | { type: 'SESSION_LOCK_REQUEST'; payload?: never };
+  | { type: 'SESSION_LOCK_REQUEST'; payload?: never }
+  | { type: 'CONTENT_CLEANSING_EXECUTED'; payload: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } };
 
 // ============================================================================
 // Response メッセージ型定義
@@ -91,7 +92,8 @@ export function isServiceWorkerRequest(message: unknown): message is ServiceWork
     'TEST_AI',
     'GET_PRIVACY_CACHE',
     'ACTIVITY_UPDATE',
-    'SESSION_LOCK_REQUEST'
+    'SESSION_LOCK_REQUEST',
+    'CONTENT_CLEANSING_EXECUTED'
   ];
 
   if (!msg.type || !validTypes.includes(msg.type)) {

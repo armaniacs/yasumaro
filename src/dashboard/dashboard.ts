@@ -2278,6 +2278,7 @@ function setHtmlLangDir(): void {
 
   try { await loadGeneralSettings(); } catch (e) { console.error('[Dashboard] loadGeneralSettings error:', e); }
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
+  try { await loadTrustSettings(); } catch (e) { console.error('[Dashboard] loadTrustSettings error:', e); }
 
   setupAIProviderChangeListener(aiProviderElements);
 

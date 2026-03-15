@@ -1,6 +1,6 @@
 {
   "name": "obsidian-weave",
-  "version": "4.10.0",
+  "version": "4.10.3",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {

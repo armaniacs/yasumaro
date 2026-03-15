@@ -321,7 +321,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // skipAi操作のレート制限
                 if (skipAi) {
                     const now = Date.now();
-                    const senderKey = sender.tab?.id ? `tab_${sender.tab.id}` : 'unknown';
+                    const senderKey = sender.tab?.id?.toString() || 'unknown';
                     const limiterState = skipAiRateLimiter.get(senderKey);
 
                     if (limiterState) {

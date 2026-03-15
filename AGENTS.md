@@ -102,6 +102,9 @@ Content Scripts (src/content/)
 | API Key Encryption | `src/utils/crypto.ts` | PBKDF2 + AES-GCM encryption |
 | PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
 | DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |
+| Trust Database | `src/utils/trustDb/` | Domain trust verification with 3-step check |
+| Permission Manager | `src/utils/permissionManager.ts` | chrome.permissions API wrapper + denied domain tracking |
+| CSP Settings | `src/dashboard/cspSettings.ts` | Conditional CSP configuration for AI providers |
 
 **Before implementing major features**, review [docs/ADR/](docs/ADR/) for existing architectural decisions and consistency.
 

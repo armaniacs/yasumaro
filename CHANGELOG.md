@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ### Security / breaking changes planned
 
+## [4.10.3] - 2026-03-16
+
+### Fixed
+- **Trust パネル: リロード後に Tranco List・JP-Anchor List の表示が消える問題を修正** ([src/dashboard/dashboard.ts](src/dashboard/dashboard.ts), [src/utils/trustDb/trustDb.ts](src/utils/trustDb/trustDb.ts))
+  - ダッシュボード初期化時に `loadTrustSettings()` が呼ばれておらず、リロード後に Trust パネルの設定が描画されなかった → 他のパネルと同様に初期ロードを追加
+  - サービスワーカー再起動後にストレージから TrustDb を復元する際、`trancoSet`（O(1)検索用 Set キャッシュ）を再構築していなかったため Tranco による信頼判定が常に失敗していた → `initialize()` 内で `trancoSet` を再構築するよう修正
+
 ## [4.10.2] - 2026-03-15
 
 ### Fixed

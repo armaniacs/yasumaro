@@ -6,6 +6,7 @@
 
 import { StorageKeys } from './storage.js';
 import { logDebug, logWarn } from './logger.js';
+import { withOptimisticLock } from './optimisticLock.js';
 
 // ============================================================================
 // Types
@@ -33,6 +34,38 @@ export interface DeniedDomainData {
 // ============================================================================
 
 export class PermissionManager {
+  /**
+   * 共通: denied_domains を取得するヘルパーメソッド
+   */
+  private async getDeniedDomains(): Promise<Record<string, DeniedDomainData>> {
+    const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
+    return (data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData>) || {};
+  }
+
+  /**
+   * 共通: denied_domains を保存するヘルパーメソッド
+   */
+  private async saveDeniedDomains(deniedDomains: Record<string, DeniedDomainData>): Promise<void> {
+    await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: deniedDomains });
+  }
+
+  /**
+   * 共通: denied_domains を更新するヘルパーメソッド
+   * Optimistic Lockを使用して競合状態を防止
+   */
+  private async updateDeniedDomains(
+    updater: (domains: Record<string, DeniedDomainData>) => Record<string, DeniedDomainData>
+  ): Promise<void> {
+    await withOptimisticLock(
+      StorageKeys.DENIED_DOMAINS,
+      async () => {
+        const deniedDomains = await this.getDeniedDomains();
+        const updated = updater(deniedDomains);
+        await this.saveDeniedDomains(updated);
+      }
+    );
+  }
+
   /**
    * ドメインが現在の host_permissions に含まれるか確認
    * @param url - チェック対象のURL
@@ -71,26 +104,24 @@ export class PermissionManager {
    */
   async recordDeniedVisit(domain: string): Promise<void> {
     try {
-      const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
-      const deniedDomains: Record<string, DeniedDomainData> = data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> || {} as Record<string, DeniedDomainData>;
-
       const nowISO = new Date().toISOString();
-
-      if (!deniedDomains[domain]) {
-        // 初回拒否
-        deniedDomains[domain] = {
-          count: 1,
-          lastDenied: nowISO,
-          lastDismissed: undefined
-        };
-      } else {
-        // 既存エントリー: カウントインクリメントと最後の拒否日時更新
-        deniedDomains[domain].count++;
-        deniedDomains[domain].lastDenied = nowISO;
-      }
-
-      await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: deniedDomains });
-      logDebug('PermissionManager', { domain, count: deniedDomains[domain].count }, `Recorded denied visit for ${domain}`);
+      await this.updateDeniedDomains((deniedDomains) => {
+        if (!deniedDomains[domain]) {
+          // 初回拒否
+          deniedDomains[domain] = {
+            count: 1,
+            lastDenied: nowISO,
+            lastDismissed: undefined
+          };
+        } else {
+          // 既存エントリー: カウントインクリメントと最後の拒否日時更新
+          deniedDomains[domain].count++;
+          deniedDomains[domain].lastDenied = nowISO;
+        }
+        return deniedDomains;
+      });
+      const deniedDomains = await this.getDeniedDomains();
+      logDebug('PermissionManager', { domain, count: deniedDomains[domain]?.count }, `Recorded denied visit for ${domain}`);
     } catch (error) {
       logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), domain }, undefined, 'Failed to record denied visit');
     }
@@ -103,15 +134,14 @@ export class PermissionManager {
    */
   async recordDomainDismissal(domain: string): Promise<void> {
     try {
-      const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
-      const deniedDomains: Record<string, DeniedDomainData> = data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> || {} as Record<string, DeniedDomainData>;
-
-      if (deniedDomains[domain]) {
-        const nowISO = new Date().toISOString();
-        deniedDomains[domain].lastDismissed = nowISO;
-        await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: deniedDomains });
-        logDebug('PermissionManager', { domain }, `Recorded dismissal for ${domain}`);
-      }
+      await this.updateDeniedDomains((deniedDomains) => {
+        if (deniedDomains[domain]) {
+          const nowISO = new Date().toISOString();
+          deniedDomains[domain].lastDismissed = nowISO;
+          logDebug('PermissionManager', { domain }, `Recorded dismissal for ${domain}`);
+        }
+        return deniedDomains;
+      });
     } catch (error) {
       logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), domain }, undefined, 'Failed to record domain dismissal');
     }
@@ -123,24 +153,23 @@ export class PermissionManager {
    */
   async cleanupOldDeniedEntries(days: number = 90): Promise<void> {
     try {
-      const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
-      const deniedDomains: Record<string, DeniedDomainData> = data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> || {} as Record<string, DeniedDomainData>;
-
       const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
-      const cleaned: Record<string, DeniedDomainData> = {};
-
       let removedCount = 0;
-      for (const [domain, entry] of Object.entries(deniedDomains)) {
-        const lastDeniedTime = new Date(entry.lastDenied).getTime();
-        if (lastDeniedTime > threshold) {
-          cleaned[domain] = entry;
-        } else {
-          removedCount++;
+
+      await this.updateDeniedDomains((deniedDomains) => {
+        const cleaned: Record<string, DeniedDomainData> = {};
+        for (const [domain, entry] of Object.entries(deniedDomains)) {
+          const lastDeniedTime = new Date(entry.lastDenied).getTime();
+          if (lastDeniedTime > threshold) {
+            cleaned[domain] = entry;
+          } else {
+            removedCount++;
+          }
         }
-      }
+        return cleaned;
+      });
 
       if (removedCount > 0) {
-        await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: cleaned });
         logDebug('PermissionManager', { removedCount, totalRemoved: removedCount }, `Cleaned up ${removedCount} old denied domain entries`);
       }
     } catch (error) {
@@ -161,13 +190,10 @@ export class PermissionManager {
      dismissalDays: number = 14
    ): Promise<DeniedDomainEntry[]> {
      try {
-       const data = await chrome.storage.local.get({
-         [StorageKeys.DENIED_DOMAINS]: {},
-         [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3
-       });
-       const deniedDomains: Record<string, DeniedDomainData> = data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> || {} as Record<string, DeniedDomainData>;
+       const deniedDomains = await this.getDeniedDomains();
+       const thresholdData = await chrome.storage.local.get({ [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3 });
        // Validate threshold is within expected range (1-50)
-       const notifyThreshold = Math.max(1, Math.min(50, threshold ?? (data[StorageKeys.PERMISSION_NOTIFY_THRESHOLD] as number)));
+       const notifyThreshold = Math.max(1, Math.min(50, threshold ?? (thresholdData[StorageKeys.PERMISSION_NOTIFY_THRESHOLD] as number)));
 
        const dismissalThreshold = Date.now() - (dismissalDays * 24 * 60 * 60 * 1000);
        const entries: DeniedDomainEntry[] = [];
@@ -204,14 +230,13 @@ export class PermissionManager {
    */
   async removeDeniedDomain(domain: string): Promise<void> {
     try {
-      const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
-      const deniedDomains: Record<string, DeniedDomainData> = data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> || {} as Record<string, DeniedDomainData>;
-
-      if (deniedDomains[domain]) {
-        delete deniedDomains[domain];
-        await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: deniedDomains });
-        logDebug('PermissionManager', { domain }, `Removed denied domain entry for ${domain}`);
-      }
+      await this.updateDeniedDomains((deniedDomains) => {
+        if (deniedDomains[domain]) {
+          delete deniedDomains[domain];
+          logDebug('PermissionManager', { domain }, `Removed denied domain entry for ${domain}`);
+        }
+        return deniedDomains;
+      });
     } catch (error) {
       logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), domain }, undefined, 'Failed to remove denied domain');
     }

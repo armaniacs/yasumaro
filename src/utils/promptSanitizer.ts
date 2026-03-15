@@ -6,21 +6,56 @@
  */
 
 /**
+ * HTMLエンティティをデコードする
+ * エンコード回避対策として、HTMLエンティティをデコードしてからチェックする
+ * DOM APIを使用しない実装（Service Worker対応）
+ */
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+    '&nbsp;': ' ',
+    '&#60;': '<',
+    '&#62;': '>',
+    '&#34;': '"',
+    '&#38;': '&'
+  };
+  return text.replace(/&[#a-zA-Z0-9]+;/g, (match) => entities[match] || match);
+}
+
+/**
+ * Unicode正規化を行う
+ * 同じ文字の異なる表現（結合文字など）を統一する
+ */
+function normalizeUnicode(text: string): string {
+  return text.normalize('NFC');
+}
+
+/**
  * プロンプトインジェクションパターン
+ * エンコード回避対策として、より包括的なパターンを使用
  */
 const INJECTION_PATTERNS = [
-  // 指示無効化パターン
+  // 指示無効化パターン（エンコード回避対策）
   /ignore\s+(?:above|all|previous|other|input|instructions?)/gi,
   /disregard\s+(?:above|all|previous|other|input|instructions?)/gi,
   /forget\s+(?:above|all|previous|other|input|instructions?)/gi,
+  /(?:^|[\s\n])ignore\s+(?:the\s+)?(?:above|all|previous|other|input|instructions?)/gi,
 
   // 代わりにパターン
   /instead/gi,
   /rather\s+than/gi,
 
-  // 新しい命令パターン
-  /(?:^|\n)now/gi,
-  /(?:^|\n)update\s+/gi,
+  // 新しい命令パターン（改行回避対策）
+  /(?:^|[\s\n])now/gi,
+  /(?:^|[\s\n])update\s+/gi,
+  /(?:^|[\s\n])from\s+now\s+on/gi,
 
   // 大文字の指示コマンド（明らかな命令パターン）
   /\b(?:PROVIDE|SHOW|EXHIBIT|REVEAL|DISPLAY|OUTPUT|PRINT|ECHO|RETURN|SEND|TRANSMIT|EXTRACT|ENCRYPT|DECRYPT|EMAIL|EMAILING|SHARE)\b(?!\s+(?:me|us|now|please))/gi,
@@ -34,6 +69,18 @@ const INJECTION_PATTERNS = [
 
   // コード実行関連
   /\b(?:execute|run|eval|eval\(|function|__proto__|constructor)\s*\(.*\)/gi,
+
+  // 追加: ロール切り替えパターン
+  /(?:act|behave|pretend)\s+(?:as|like|to\s+be)\s+(?:a|an|the)?\s*(?:system|admin|root|superuser|developer|programmer)/gi,
+
+  // 追加: コンテキスト操作パターン
+  /(?:change|modify|alter|update)\s+(?:the\s+)?(?:context|conversation|prompt|instruction)/gi,
+
+  // 追加: 出力制御パターン
+  /(?:output|print|display|show|return)\s+(?:the\s+)?(?:following|above|previous|all)/gi,
+
+  // 追加: JSON/構造化データ抽出パターン
+  /(?:extract|parse|get|retrieve)\s+(?:the\s+)?(?:json|data|information|content)/gi,
 ];
 
 /**
@@ -100,16 +147,28 @@ export function sanitizePromptContent(content: string): SanitizeResult {
   // クレジットカード番号、銀行口座等のPIIはpiiSanitizerで処理済みと想定
   // ここではプロンプトインジェクションのみを対象
 
-  // 1. インジェクションパターンの検出と警告
-  for (const pattern of INJECTION_PATTERNS) {
-    const matches = sanitized.match(pattern);
-    if (matches) {
-      const matchStr = matches.join(', ');
-      warnings.push(`Detected possible prompt injection pattern: ${matchStr}`);
-      dangerLevel = DangerLevel.HIGH;
+  // 0. 前処理: HTMLエンティティデコードとUnicode正規化（エンコード回避対策）
+  const decodedContent = decodeHtmlEntities(sanitized);
+  const normalizedContent = normalizeUnicode(decodedContent);
 
-      // 危険パターンを置換（マスキング処理）
-      sanitized = sanitized.replace(pattern, '[FILTERED]');
+  // デコード後のコンテンツでもチェック（エンコード回避対策）
+  if (decodedContent !== sanitized) {
+    warnings.push('HTML entities detected and decoded for security check');
+  }
+
+  // 1. インジェクションパターンの検出と警告（元のコンテンツとデコード後の両方でチェック）
+  const allContentToCheck = [sanitized, normalizedContent];
+  for (const contentToCheck of allContentToCheck) {
+    for (const pattern of INJECTION_PATTERNS) {
+      const matches = contentToCheck.match(pattern);
+      if (matches) {
+        const matchStr = matches.join(', ');
+        warnings.push(`Detected possible prompt injection pattern: ${matchStr}`);
+        dangerLevel = DangerLevel.HIGH;
+
+        // 危険パターンを置換（マスキング処理）
+        sanitized = sanitized.replace(pattern, '[FILTERED]');
+      }
     }
   }
 

@@ -138,6 +138,13 @@ v4.2.1以降、以下の機能が追加されました：
    - **OpenAI互換API** (Groq, OpenAI, Anthropic等): データは各プロバイダーのポリシーに従って処理されます。
    - **ローカルLLM** (Ollama, LM Studio等): データはユーザーのローカル環境内でのみ処理されます。
 2. **ユーザーのローカル Obsidian**: デイリーノートに履歴を保存するため。これはユーザー自身のローカルサーバーです。
+3. **Tranco リスト (信頼できるドメインリスト)**: ドメイン信頼性判定のため。以下の動作を行います:
+   - **Tranco Top 1000 リストの自動更新**: 拡張機能は定期的に Tranco Top 1000 ドメインリストを自動的に更新します
+   - **データ取得元**: Tranco プロジェクトの公開 API (https://tranco-list.eu/) からドメインリストを取得します
+   - **取得するデータ**: ドメイン名のみ（例: google.com, amazon.co.jp）。個人を特定できる情報は含まれません
+   - **保存場所**: 取得したドメインリストは Chrome ローカルストレージに保存されます
+   - **使用目的**: 訪問したドメインが信頼できるかどうかを判定するため（Tranco Top 1000 に含まれるドメインは信頼できるとみなされます）
+   - **プライバシーへの影響**: ドメイン名のみを取得・保存するため、ユーザーの閲覧履歴や個人を特定できる情報は Tranco に送信されません
 
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
@@ -225,6 +232,13 @@ v4.2.1 introduces the following privacy features:
    - **OpenAI-Compatible APIs** (Groq, OpenAI, Anthropic, etc.): Data is processed according to each provider's policy.
    - **Local LLMs** (Ollama, LM Studio, etc.): Data is processed entirely within your local environment.
 2. **Your Local Obsidian Instance**: Used to save history. This is your own local server.
+3. **Tranco List (Trusted Domain List)**: Used for domain trust verification. The following operations are performed:
+   - **Automatic Tranco Top 1000 List Updates**: The extension periodically automatically updates the Tranco Top 1000 domain list
+   - **Data Source**: Domain list is retrieved from the Tranco project's public API (https://tranco-list.eu/)
+   - **Data Retrieved**: Domain names only (e.g., google.com, amazon.co.jp). No personally identifiable information is included
+   - **Storage Location**: Retrieved domain lists are stored in Chrome local storage
+   - **Purpose**: To determine whether visited domains are trustworthy (domains included in Tranco Top 1000 are considered trusted)
+   - **Privacy Impact**: Since only domain names are retrieved and stored, your browsing history or personally identifiable information is not sent to Tranco
 
 ### Private Page Protection
 

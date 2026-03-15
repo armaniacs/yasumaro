@@ -19,6 +19,7 @@ import {
 import { withOptimisticLock } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory } from './types.js';
+import type { SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
 
 // ストレージクォータ監視設定
 const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB (Chrome拡張機能のデフォルト)
@@ -190,8 +191,8 @@ export interface StorageKeyValues {
     [StorageKeys.ALERT_UNVERIFIED]: boolean;
     [StorageKeys.SAVE_ABORTED_PAGES]: boolean;
     // Trust Database Settings (Phase 1/2)
-    [StorageKeys.SAFETY_MODE]: 'strict' | 'balanced' | 'relaxed';
-    [StorageKeys.TRANCO_TIER]: 'top1k' | 'top10k' | 'top100k';
+    [StorageKeys.SAFETY_MODE]: SafetyMode;
+    [StorageKeys.TRANCO_TIER]: TrancoTier;
     // Permission Manager Settings (P0)
     [StorageKeys.DENIED_DOMAINS]: Record<string, { count: number; lastDenied: string; lastDismissed?: string }>;
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: number;

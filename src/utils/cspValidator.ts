@@ -222,6 +222,16 @@ export class CSPValidator {
  * @throws 未許可URLの場合エラー
  */
 export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  // 初期化前はデフォルトドメインのみ許可（Service Worker再起動後のセキュリティ対策）
+  if (!CSPValidator.isInitialized()) {
+    if (CSPValidator.isUrlAllowed(url)) {
+      return fetch(url, options);
+    }
+    const error = new Error(`URL blocked: CSP not initialized for ${url}`);
+    (error as any).code = 'CSP_NOT_INITIALIZED';
+    throw error;
+  }
+  
   if (!CSPValidator.isUrlAllowed(url)) {
     const error = new Error(`URL blocked by CSP policy: ${url}`);
     (error as any).code = 'CSP_BLOCKED';
