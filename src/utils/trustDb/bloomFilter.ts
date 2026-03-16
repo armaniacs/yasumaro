@@ -164,15 +164,19 @@ function simpleHash(str: string): string {
 
 /**
  * Uint32Array を Base64 に変換
+ * Uses chunk-based encoding to avoid O(n²) string concatenation and stack overflow
  */
 function uint32ArrayToBase64(uint32Array: Uint32Array): string {
   // Convert to Uint8Array for base64 encoding
   const uint8Array = new Uint8Array(uint32Array.buffer);
-  let binaryString = '';
-  for (let i = 0; i < uint8Array.byteLength; i++) {
-    binaryString += String.fromCharCode(uint8Array[i]);
+  // Use chunk-based approach to avoid O(n²) complexity
+  const chunkSize = 0x8000; // 32KB chunks (safe for apply/call stack)
+  const chunks: string[] = [];
+  for (let i = 0; i < uint8Array.byteLength; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, i + chunkSize);
+    chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
   }
-  return btoa(binaryString);
+  return btoa(chunks.join(''));
 }
 
 /**

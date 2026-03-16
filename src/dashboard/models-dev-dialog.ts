@@ -37,6 +37,9 @@ export class ModelsDevDialog {
     private selectedModelEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
+    // Flag to prevent duplicate event listener attachment
+    private eventListenersAttached = false;
+
     constructor(options: DialogOptions = {}) {
         this.options = options;
     }
@@ -168,6 +171,11 @@ export class ModelsDevDialog {
      * Attach event listeners
      */
     private attachEventListeners(): void {
+        // Prevent duplicate event listener attachment
+        if (this.eventListenersAttached) {
+            return;
+        }
+        this.eventListenersAttached = true;
         // Close button
         document.getElementById('dialog-close')?.addEventListener('click', () => {
             this.hide();

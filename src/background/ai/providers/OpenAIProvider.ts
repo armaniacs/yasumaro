@@ -97,7 +97,9 @@ export class OpenAIProvider extends AIProviderStrategy {
                     role: "user",
                     content: userPrompt
                 }
-            ]
+            ],
+            max_tokens: 1000,
+            temperature: 0.1
         };
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };

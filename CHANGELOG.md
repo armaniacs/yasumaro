@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### Fixed / Changes (2026-03-17)
+
+- **AI Provider APIパラメータ設定の追加**
+  - OpenAIProvider: `max_tokens: 1000`, `temperature: 0.1` を追加
+  - GeminiProvider: `generationConfig` に `temperature: 0.1`, `maxOutputTokens: 1000` を追加
+  - AIモデルの暴走防止と、決定論的な要約結果を安定させるための対策
+
+- **コード品質: bloomFilter.ts の重複関数を削除**
+  - `base64ToUint32Array` 関数が重複定義されていた問題を修正
+
 ## [4.10.4] - 2026-03-16
 
 ### Added
@@ -39,47 +49,6 @@ All notable changes to this project will be documented in this file.
   - バージョン管理の強化
 
 ### Changed
-
-### Fixed
-
-- **エラーハンドリング: CSPバリデータのサイレント失敗を修正**
-  - URLチェック時の例外がログに記録されない問題を修正
-  - 構造化ロギングを追加することで、セキュリティ違反の可観測性を向上
-  - 追加: `console.warn` → `logWarn` 置換、`UNKNOWN_AI_PROVIDER` エラーコード追加
-
-## [4.10.4] - 2026-03-16
-
-### Added
-
-- **将来の破壊的変更への通知ダイヤログ（Breaking Changes Notification Modal）**
-  - 将来的な権限モデル変更時に通知を表示するためのUI基盤を追加
-  - Focus Trapによるアクセシビリティ対応
-  - 多言語対応（日本語・英語）
-
-- **Permission Manager: データ保存期限の自動クリーンアップ**
-  - 90日以上前の拒否ドメインエントリーを自動削除
-  - 7日以上前にdismissされたエントリーを自動削除（プライバシーポリシー対応）
-  - Service Worker起動時に実行
-
-### Security
-
-- **XSS脆弱性の修正（trustSettings.ts）**
-  - InnerHTMLの使用をcreateElement + textContentに置換
-  - 追加修正: `innerHTML = ''` → `textContent = ''`（クリア処理の一貫性向上）
-  - ユーザーがドメイン/TLDを追加する際、悪意のあるスクリプトを注入される脆弱性を修正
-
-- **入力バリデーションの強化: RFC 1035/1123準拠の検証**
-  - ドメイン/TLD追加時にRFC準拠のバリデーションを実施
-  - 特殊文字、IDN、URLスキーム等の適切なサニタイズを実装
-
-- **データ整合性の強化: Trust Databaseの同時書き込み保護**
-  - `trustDb.save()` を楽観的ロック（`withOptimisticLock`）で保護
-  - 競合状態によるデータ破損リスクを低減
-  - BloomFilterデータの整合性チェック用ハッシュを追加
-
-- **データ整合性の強化: Trust Databaseのスキーママイグレーション機能**
-  - 自動マイグレーションロジックの実装
-  - バージョン管理の強化
 
 ### Fixed
 

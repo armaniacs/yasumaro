@@ -66,7 +66,11 @@ export class GeminiProvider extends AIProviderStrategy {
                 parts: [{
                     text: userPrompt
                 }]
-            }]
+            }],
+            generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 1000
+            }
         };
 
         try {

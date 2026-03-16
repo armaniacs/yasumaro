@@ -14,7 +14,7 @@
  */
 export type ServiceWorkerRequest =
   | { type: 'VALID_VISIT'; payload: { content: string } }
-  | { type: 'CHECK_DOMAIN'; payload?: never }
+  | { type: 'CHECK_DOMAIN'; payload: never }
   | { type: 'GET_CONTENT'; payload: never }
   | { type: 'FETCH_URL'; payload: { url: string } }
   | { type: 'MANUAL_RECORD'; payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } }
@@ -23,9 +23,9 @@ export type ServiceWorkerRequest =
   | { type: 'TEST_CONNECTIONS'; payload: never }
   | { type: 'TEST_OBSIDIAN'; payload: never }
   | { type: 'TEST_AI'; payload: never }
-  | { type: 'GET_PRIVACY_CACHE'; payload?: never }
-  | { type: 'ACTIVITY_UPDATE'; payload?: never }
-  | { type: 'SESSION_LOCK_REQUEST'; payload?: never }
+  | { type: 'GET_PRIVACY_CACHE'; payload: never }
+  | { type: 'ACTIVITY_UPDATE'; payload: never }
+  | { type: 'SESSION_LOCK_REQUEST'; payload: never }
   | { type: 'CONTENT_CLEANSING_EXECUTED'; payload: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } };
 
 // ============================================================================
@@ -100,8 +100,18 @@ export function isServiceWorkerRequest(message: unknown): message is ServiceWork
     return false;
   }
 
-  // CHECK_DOMAIN, GET_PRIVACY_CACHE, ACTIVITY_UPDATE, SESSION_LOCK_REQUEST は payload 不許可
-  const noPayloadTypes = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
+  // CHECK_DOMAIN, GET_CONTENT, SAVE_RECORD, TEST_CONNECTIONS, TEST_OBSIDIAN, TEST_AI, GET_PRIVACY_CACHE, ACTIVITY_UPDATE, SESSION_LOCK_REQUEST は payload 不許可
+  const noPayloadTypes = [
+    'CHECK_DOMAIN',
+    'GET_CONTENT',
+    'SAVE_RECORD',
+    'TEST_CONNECTIONS',
+    'TEST_OBSIDIAN',
+    'TEST_AI',
+    'GET_PRIVACY_CACHE',
+    'ACTIVITY_UPDATE',
+    'SESSION_LOCK_REQUEST'
+  ];
 
   if (noPayloadTypes.includes(msg.type)) {
     return msg.payload === undefined;
