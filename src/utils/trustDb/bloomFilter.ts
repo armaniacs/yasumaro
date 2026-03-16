@@ -50,9 +50,9 @@ export class TrustBloomFilter {
   }
 
   /**
-   * パラメータを取得
+   * パラメータを取得（hash はデータ生成時に計算されるため含まれない）
    */
-  getParams(): Omit<BloomFilterData, 'data'> {
+  getParams(): Pick<BloomFilterData, 'hashCount' | 'bitCount' | 'expectedDomainCount'> {
     return {
       hashCount: this.hashCount,
       bitCount: this.bitCount,
@@ -68,9 +68,13 @@ export class TrustBloomFilter {
     const buckets = this.bloomFilter.buckets;
     const base64Data = uint32ArrayToBase64(buckets);
 
+    // 簡易的なハッシュ計算で整合性チェック用の値を生成
+    const hash = simpleHash(base64Data);
+
     return {
       data: base64Data,
-      ...this.getParams()
+      ...this.getParams(),
+      hash
     };
   }
 }
@@ -126,11 +130,34 @@ export function bloomFilterFromBase64(data: string, params: {
  * BloomFilterData から復元
  */
 export function bloomFilterFromData(data: BloomFilterData): TrustBloomFilter {
+  // ハッシュ検証（データ整合性チェック）
+  if (data.hash) {
+    const computedHash = simpleHash(data.data);
+    if (computedHash !== data.hash) {
+      throw new Error('Bloom Filter data integrity check failed: hash mismatch');
+    }
+  }
+
   return bloomFilterFromBase64(data.data, {
     hashCount: data.hashCount,
     bitCount: data.bitCount,
     expectedDomainCount: data.expectedDomainCount
   });
+}
+
+/**
+ * 簡易的なハッシュ関数（整合性チェック用）
+ * 注: セキュリティ用途ではなく、データ破損検出のみに使用
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // シフト演算後に文字列に変換
+  return Math.abs(hash).toString(16);
 }
 
 // ===== ユーティリティ関数 =====

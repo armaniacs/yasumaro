@@ -2246,6 +2246,53 @@ async function initDiagnosticsPanel(): Promise<void> {
 }
 
 // ============================================================================
+// Breaking Changes Notification Modal
+// ============================================================================
+
+const breakingChangesModal = document.getElementById('breakingChangesModal') as HTMLElement | null;
+const closeBreakingChangesModalBtn = document.getElementById('closeBreakingChangesModalBtn') as HTMLButtonElement | null;
+const dismissBreakingChangesModalBtn = document.getElementById('dismissBreakingChangesModalBtn') as HTMLButtonElement | null;
+let breakingChangesTrapId: string | null = null;
+
+const BREAKING_CHANGES_SHOWN_KEY = 'breaking_changes_v5_shown';
+
+async function showBreakingChangesModal(): Promise<void> {
+  // 既に表示済みの場合はスキップ
+  const shown = await chrome.storage.local.get(BREAKING_CHANGES_SHOWN_KEY).then(result => result[BREAKING_CHANGES_SHOWN_KEY]);
+  if (shown) return;
+
+  if (!breakingChangesModal) return;
+  breakingChangesModal.classList.remove('hidden');
+  breakingChangesModal.style.display = 'flex';
+  void breakingChangesModal.offsetHeight;
+  breakingChangesModal.classList.add('show');
+
+  // Focus trap
+  breakingChangesTrapId = focusTrapManager.trap(breakingChangesModal, closeBreakingChangesModal);
+  dismissBreakingChangesModalBtn?.focus();
+}
+
+async function closeBreakingChangesModal(): Promise<void> {
+  if (!breakingChangesModal) return;
+  breakingChangesModal.classList.remove('show');
+  breakingChangesModal.style.display = 'none';
+  breakingChangesModal.classList.add('hidden');
+  if (breakingChangesTrapId) {
+    focusTrapManager.release(breakingChangesTrapId);
+    breakingChangesTrapId = null;
+  }
+
+  // 表示済みとして記録
+  await chrome.storage.local.set({ [BREAKING_CHANGES_SHOWN_KEY]: true });
+}
+
+closeBreakingChangesModalBtn?.addEventListener('click', closeBreakingChangesModal);
+dismissBreakingChangesModalBtn?.addEventListener('click', closeBreakingChangesModal);
+breakingChangesModal?.addEventListener('click', (e: MouseEvent) => {
+  if (e.target === breakingChangesModal) closeBreakingChangesModal();
+});
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -2337,6 +2384,7 @@ function setHtmlLangDir(): void {
   try { initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
+  try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
 
   console.log('[Dashboard] Initialization complete');
 })();

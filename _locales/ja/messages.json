@@ -1759,5 +1759,29 @@
   },
   "cspResetBtn": {
     "message": "リセット"
+  },
+  "breakingChangesTitle": {
+    "message": "重要: 権限変更が必要です"
+  },
+  "understood": {
+    "message": "理解しました"
+  },
+  "breakingChangesDesc": {
+    "message": "v5.0.0 で拡張機能の権限モデルが変更されました。`<all_urls>` 権限が削除され、より安全なモデルに移行しました。"
+  },
+  "breakingChangesDesc2": {
+    "message": "新しいモデルでは、各ドメインごとに個別の権限許可が必要です。以下のドメインへのアクセス許可を確認してください。"
+  },
+  "requiredPermissions": {
+    "message": "必要な権限"
+  },
+  "breakingChangesPermissionList": {
+    "message": "以下のドメインへのアクセス許可を確認してください。"
+  },
+  "otherDomainsText": {
+    "message": "その他、閲覧するWebサイト（随時許可）"
+  },
+  "breakingChangesHelp": {
+    "message": "ヒント: 訪問したWebサイトを初めて記録する際、権限を許可するように促されます。"
   }
 }

@@ -1759,5 +1759,29 @@
   },
   "cspResetBtn": {
     "message": "Reset"
+  },
+  "breakingChangesTitle": {
+    "message": "Breaking Changes: Permission Update Required"
+  },
+  "understood": {
+    "message": "I understand"
+  },
+  "breakingChangesDesc": {
+    "message": "v5.0.0 has updated the permission model. The `<all_urls>` permission has been removed for better security."
+  },
+  "breakingChangesDesc2": {
+    "message": "The new model requires individual permission for each domain. Please verify you have permissions for:"
+  },
+  "requiredPermissions": {
+    "message": "Required Permissions"
+  },
+  "breakingChangesPermissionList": {
+    "message": "Verify you have access to each domain shown below."
+  },
+  "otherDomainsText": {
+    "message": "Other websites you visit (grant as prompted)"
+  },
+  "breakingChangesHelp": {
+    "message": "Tip: When recording a new website for the first time, you will be prompted to grant permission."
   }
 }

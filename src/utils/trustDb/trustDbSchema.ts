@@ -52,6 +52,7 @@ export interface BloomFilterData {
   hashCount: number;         // ハッシュ関数の数
   bitCount: number;          // ビット数
   expectedDomainCount: number;
+  hash: string;              // データ整合性検証用SHA256ハッシュ
 }
 
 /**

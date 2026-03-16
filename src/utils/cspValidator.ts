@@ -4,6 +4,8 @@
  * 設定したAIプロバイダーのみCSPに含めるためのURL検証
  */
 
+import { logWarn, ErrorCode } from './logger.js';
+
 /**
  * デフォルトAIプロバイダードメイン（常に許可）
  */
@@ -85,7 +87,12 @@ export class CSPValidator {
       if (domain && !CSPValidator.allowedDomains.has(domain)) {
         CSPValidator.allowedDomains.add(domain);
       } else if (!domain) {
-        console.warn(`Unknown AI provider: ${provider}`);
+        logWarn(
+          'Unknown AI provider',
+          { provider },
+          ErrorCode.UNKNOWN_AI_PROVIDER,
+          'cspValidator'
+        );
       }
     }
 
@@ -128,7 +135,14 @@ export class CSPValidator {
       }
 
       return false;
-    } catch {
+    } catch (error) {
+      // Log error without including the URL to avoid logging sensitive data
+      logWarn(
+        'CSP validation failed for URL',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'cspValidator'
+      );
       return false;
     }
   }
@@ -158,7 +172,14 @@ export class CSPValidator {
       }
 
       return false;
-    } catch {
+    } catch (error) {
+      // Log error without including the URL to avoid logging sensitive data
+      logWarn(
+        'CSP provider URL validation failed',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'cspValidator'
+      );
       return false;
     }
   }
@@ -246,8 +267,18 @@ export async function safeFetch(url: string, options?: RequestInit): Promise<Res
  * @returns エラーメッセージ or null
  */
 export function getCspErrorMessage(url: string): string | null {
-  if (CSPValidator.isAProviderUrl(url) && !CSPValidator.isUrlAllowed(url)) {
-    return `APIプロバイダー "${new URL(url).hostname}" は条件付きCSPによりブロックされました。Dashboard設定で追加してください。`;
+  try {
+    if (CSPValidator.isAProviderUrl(url) && !CSPValidator.isUrlAllowed(url)) {
+      const hostname = new URL(url).hostname;
+      return `APIプロバイダー "${hostname}" は条件付きCSPによりブロックされました。Dashboard設定で追加してください。`;
+    }
+  } catch (error) {
+    logWarn(
+      'Failed to generate CSP error message',
+      { error: error instanceof Error ? error.message : String(error) },
+      undefined,
+      'cspValidator'
+    );
   }
   return null;
 }

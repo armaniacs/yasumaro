@@ -6,7 +6,65 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-### Security / breaking changes planned
+- **破壊的変更の通知ダイヤログ（Breaking Changes Notification Modal）**
+  - v5.0.0 アップデート後にダッシュボード初回起動時に権限変更に関する通知を表示
+  - Focus Trapによるアクセシビリティ対応
+  - 多言語サポート（日本語・英語）
+
+- **Permission Manager: データ保存期限の自動クリーンアップ**
+  - 90日以上前の拒否ドメインエントリーを自動削除
+  - 7日以上前にdismissされたエントリーを自動削除（プライバシーポリシー対応）
+  - Service Worker起動時に実行
+
+### Security
+
+- **XSS脆弱性の修正（trustSettings.ts）**
+  - 初回実装: InnerHTMLの使用をcreateElement + textContentに置換
+  - 追加修正: `innerHTML = ''` → `textContent = ''`（クリア処理の一貫性向上）
+  - ユーザーがドメイン/TLDを追加する際、悪意のあるスクリプトを注入される脆弱性を修正
+
+- **入力バリデーションの強化: RFC 1035/1123準拠の検証**
+  - ドメイン/TLD追加時にRFC準拠のバリデーションを実施
+  - 特殊文字、IDN、URLスキーム等の適切なサニタイズを実装
+
+- **データ整合性の強化: Trust Databaseの同時書き込み保護**
+  - `trustDb.save()` を楽観的ロック（`withOptimisticLock`）で保護
+  - 競合状態によるデータ破損リスクを低減
+  - BloomFilterデータの整合性チェック用ハッシュを追加
+
+- **データ整合性の強化: Trust Databaseのスキーママイグレーション機能**
+  - 自動マイグレーションロジックの実装
+  - バージョン管理の強化
+
+### Breaking Changes
+
+- **`<all_urls>` 権限の削除（ユーザーアクションが必要）**
+  - v4.9.0 で `<all_urls>` 権限を `host_permissions` から削除し、`optional_host_permissions` に移動
+  - アップデート後、各ドメインごとに権限を再付与する必要があります
+
+#### マイグレーション手順
+
+**既存ユーザー向け：**
+
+1. 拡張機能をアップデート後、ダッシュボードを開くと通知ダイアログが表示されます
+2. 指示に従って、必要なドメインへの権限を許可してください
+3. 許可するドメイン:
+   - Obsidianローカルサーバー（デフォルト: `localhost:27124`）
+   - 訪問する可能性のあるWebサイト（随時追加可能）
+
+**初回インストールユーザー向け：**
+
+- 各Webサイトを訪問した際、初回のみ権限の許可を求められます
+- 「許可」を選択することで、そのドメインからのデータ収集が可能になります
+
+### Changed
+
+### Fixed
+
+- **エラーハンドリング: CSPバリデータのサイレント失敗を修正**
+  - URLチェック時の例外がログに記録されない問題を修正
+  - 構造化ロギングを追加することで、セキュリティ違反の可観測性を向上
+  - 追加: `console.warn` → `logWarn` 置換、`UNKNOWN_AI_PROVIDER` エラーコード追加
 
 ## [4.10.3] - 2026-03-16
 

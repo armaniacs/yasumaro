@@ -178,6 +178,47 @@ export class PermissionManager {
   }
 
   /**
+   * 7日以上前にdismissされたエントリー（かつdismiss以降に再拒否されていない）を削除
+   * プライバシーポリシーに基づく保持期限の適用
+   */
+  async cleanupDismissedEntries(days: number = 7): Promise<void> {
+    try {
+      const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
+      let removedCount = 0;
+
+      await this.updateDeniedDomains((deniedDomains) => {
+        const cleaned: Record<string, DeniedDomainData> = {};
+        for (const [domain, entry] of Object.entries(deniedDomains)) {
+          // lastDismissedがある場合のみチェック
+          if (entry.lastDismissed) {
+            const dismissalTime = new Date(entry.lastDismissed).getTime();
+            const lastDeniedTime = new Date(entry.lastDenied).getTime();
+
+            // dismissが7日以上前、かつdismiss後に再拒否されていない場合に削除
+            if (dismissalTime >= threshold && lastDeniedTime < dismissalTime) {
+              // 保持条件を満たす：dismissから7日未満、またはdismiss後に再拒否あり
+              cleaned[domain] = entry;
+            } else {
+              // 削除条件：7日以上前にdismissされ、かつその後に再拒否なし
+              removedCount++;
+            }
+          } else {
+            // lastDismissedがない場合は最初の90日クリーンアップロジックに任せる
+            cleaned[domain] = entry;
+          }
+        }
+        return cleaned;
+      });
+
+      if (removedCount > 0) {
+        logDebug('PermissionManager', { removedCount }, `Cleaned up ${removedCount} dismissed domain entries (>${days} days old)`);
+      }
+    } catch (error) {
+      logWarn('PermissionManager', { error: error instanceof Error ? error.message : String(error), days }, undefined, 'Failed to cleanup dismissed entries');
+    }
+  }
+
+  /**
    * 閾値を超えた拒否ドメインを訪問数の降順で返す
    * threshold が未指定なら StorageKeys.PERMISSION_NOTIFY_THRESHOLD の値を使う
    * また、lastDismissedから14日経過していないドメインは除外する
@@ -307,6 +348,7 @@ export const requestPermission = (url: string) => getPermissionManager().request
 export const recordDeniedVisit = (domain: string) => getPermissionManager().recordDeniedVisit(domain);
 export const recordDomainDismissal = (domain: string) => getPermissionManager().recordDomainDismissal(domain);
 export const cleanupOldDeniedEntries = (days?: number) => getPermissionManager().cleanupOldDeniedEntries(days);
+export const cleanupDismissedEntries = (days?: number) => getPermissionManager().cleanupDismissedEntries(days);
 export const getFrequentDeniedDomains = (threshold?: number, dismissalDays?: number) =>
   getPermissionManager().getFrequentDeniedDomains(threshold, dismissalDays);
 export const isAllUrlsPermitted = () => getPermissionManager().isAllUrlsPermitted();

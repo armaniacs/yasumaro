@@ -13,6 +13,7 @@ import type {
 import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from './bloomFilter.js';
 import { logDebug, logInfo, logError, ErrorCode } from '../logger.js';
+import { withOptimisticLock } from '../optimisticLock.js';
 
 // ===== 定数 =====
 
@@ -71,6 +72,100 @@ const SENSITIVE_DOMAINS_PRESETS = {
   ]
 } as const;
 
+// 入力バリデーション /////////////////////////
+
+// RFC 1035 / RFC 1123 準拠のドメイン名正規表現（trancoUpdater.ts から移植）
+// ルール:
+// - ラベルには英字、数字、ハイフンのみ使用可能
+// - ラベルは英字または数字で始まり、英字または数字で終わる（ハイフンは不可）
+// - ラベルの最大長: 63 文字
+// - ドメイン全体の最大長: 253 文字
+// - 大文字小文字は区別しない
+const DOMAIN_REGEX = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*\.?$/i;
+
+/**
+ * RFC準拠のドメイン名バリデーション
+ * @param domain バリデーション対象のドメイン名
+ * @returns 有効なドメイン名の場合 true、それ以外の場合 false
+ */
+function isValidDomain(domain: string): boolean {
+  const normalized = domain.toLowerCase().trim();
+
+  // ドメインが空でないこと
+  if (!normalized) {
+    return false;
+  }
+
+  // 最大長チェック（RFC 1035: 253文字）
+  if (normalized.length > 253) {
+    return false;
+  }
+
+  // ドットで始まらないこと（TLD用プレフィックスとして使用する場合を除く）
+  if (normalized.startsWith('.')) {
+    return false;
+  }
+
+  // ドットで終わらないこと
+  if (normalized.endsWith('.')) {
+    return false;
+  }
+
+  // ドットを含まない場合（TLD単体など）はドメインとして扱わない
+  if (!normalized.includes('.')) {
+    return false;
+  }
+
+  // 正規表現による構造チェック
+  if (!DOMAIN_REGEX.test(normalized)) {
+    return false;
+  }
+
+  // 各ラベルの長さチェック（最大63文字）
+  const labels = normalized.split('.');
+  for (const label of labels) {
+    if (label.length === 0) {
+      return false; // 連続するドット
+    }
+    if (label.length > 63) {
+      return false; // ラベルが長すぎる
+    }
+  }
+
+  return true;
+}
+
+/**
+ * TLD バリデーション
+ * @param tld バリデーション対象のTLD（.を含むか含まない）
+ * @returns 有効なTLDの場合 true、それ以外の場合 false
+ */
+function isValidTld(tld: string): boolean {
+  const normalized = tld.trim();
+
+  // ドットがない場合は追加
+  if (!normalized.startsWith('.')) {
+    return isValidTld('.' + normalized);
+  }
+
+  // . を除いた部分のみをドメインとして検証
+  const tldWithoutDot = normalized.slice(1);
+
+  // 最小長チェック（最低2文字）
+  if (tldWithoutDot.length < 2) {
+    return false;
+  }
+
+  // 最大長チェック（63文字）
+  if (tldWithoutDot.length > 63) {
+    return false;
+  }
+
+  // ドメインルールと同様の構造チェック（ドットを含まない単一ラベルとして）
+  const labelRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+  return labelRegex.test(tldWithoutDot);
+}
+
 // ===== trustDb インターフェース =====
 
 interface TrustDbState {
@@ -105,12 +200,21 @@ class TrustDb {
       ]);
 
       if (savedDb && savedBloom) {
-        // 既存データを復元
+        // 既存データをロード
         this.state.database = savedDb as TrustDatabase;
         this.state.bloomFilter = bloomFilterFromData(savedBloom as BloomFilterData);
+
+        // バージョンを確認・マイグレーション
+        if (this.state.database.version !== DB_VERSION) {
+          await this.migrateDatabase(this.state.database);
+        }
+
         // trancoSet を再構築（サービスワーカー再起動後もキャッシュを有効化）
-        this.state.trancoSet = new Set((savedDb as TrustDatabase).tranco.domains);
-        logInfo('TrustDb', { domainCount: (savedDb as any).domainCount || 'unknown' }, 'Loaded existing database');
+        this.state.trancoSet = new Set(this.state.database.tranco.domains);
+        logInfo('TrustDb', {
+          version: this.state.database.version,
+          domainCount: this.state.database.tranco.count
+        }, 'Loaded existing database');
       } else {
         // 新規作成
         await this.createDefaultDatabase();
@@ -120,6 +224,86 @@ class TrustDb {
     } catch (error) {
       logError('TrustDb', { error }, ErrorCode.TRUST_DB_INIT_FAILED);
       throw error;
+    }
+  }
+
+  /**
+   * データベースのマイグレーション
+   * @param db マイグレーション対象のデータベース
+   */
+  private async migrateDatabase(db: TrustDatabase): Promise<void> {
+    const currentVersion = db.version || '0.0.0';
+    const targetVersion = DB_VERSION;
+
+    logInfo('TrustDb', { from: currentVersion, to: targetVersion }, 'Starting database migration');
+
+    try {
+      // バージョン比較とマイグレーションパスの実行
+      if (this.compareVersions(currentVersion, targetVersion) < 0) {
+        await this.applyMigrations(currentVersion, targetVersion, db);
+
+        // バージョンを更新
+        db.version = targetVersion;
+        db.lastUpdated = new Date().toISOString();
+
+        // マイグレーション後のデータを保存
+        await this.save();
+
+        logInfo('TrustDb', { to: targetVersion }, 'Database migration completed');
+      }
+    } catch (error) {
+      logError('TrustDb', { from: currentVersion, to: targetVersion, error }, ErrorCode.TRUST_DB_MIGRATION_FAILED);
+      throw error;
+    }
+  }
+
+  /**
+   * バージョン比較
+   * @param v1 比較対象1
+   * @param v2 比較対象2
+   * @returns v1 < v2 の場合は負の値、v1 > v2 の場合は正の値、等しい場合は 0
+   */
+  private compareVersions(v1: string, v2: string): number {
+    const normalize = (v: string) => v.split('.').map(x => parseInt(x, 10) || 0);
+    const [major1, minor1, patch1] = normalize(v1);
+    const [major2, minor2, patch2] = normalize(v2);
+
+    if (major1 !== major2) return major1 - major2;
+    if (minor1 !== minor2) return minor1 - minor2;
+    return patch1 - patch2;
+  }
+
+  /**
+   * マイグレーションパスの適用
+   * @param from 以前のバージョン
+   * @param to ターゲットバージョン
+   * @param db データベース
+   */
+  private async applyMigrations(from: string, to: string, db: TrustDatabase): Promise<void> {
+    // 将来的なマイグレーションパスはここに追加
+    // 例: v1.0.0 -> v1.1.0、v1.1.0 -> v1.2.0 など
+
+    // 現在はマイグレーションパスが定義されていないため、
+    // 新規スキーマに合うようにデフォルト値を設定するのみ
+    logDebug('TrustDb', { from, to }, 'Applying migration defaults');
+
+    // デフォルト値の設定（既存データに欠けているフィールドがあれば追加）
+    if (!db.tranco) {
+      db.tranco = { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 };
+    }
+    if (!db.jpAnchor) {
+      db.jpAnchor = { tlds: [...JP_ANCHOR_TLDS_PRESET], userTlds: [] };
+    }
+    if (!db.sensitive) {
+      db.sensitive = {
+        presets: {
+          finance: [...SENSITIVE_DOMAINS_PRESETS.finance],
+          gaming: [...SENSITIVE_DOMAINS_PRESETS.gaming],
+          sns: [...SENSITIVE_DOMAINS_PRESETS.sns]
+        },
+        userBlacklist: [],
+        whitelist: []
+      };
     }
   }
 
@@ -174,7 +358,7 @@ class TrustDb {
   }
 
   /**
-   * データベースを保存
+   * データベースを保存（楽観的ロックで保護）
    */
   async save(): Promise<void> {
     if (!this.state.database || !this.state.bloomFilter) {
@@ -182,16 +366,21 @@ class TrustDb {
     }
 
     const bloomData = this.state.bloomFilter.toData();
-
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    await chrome.storage.local.set({
-      [STORAGE_KEY]: this.state.database,
-      [STORAGE_KEY_BLOOM]: bloomData
+    // 楽観的ロックで保護して保存
+    await withOptimisticLock(STORAGE_KEY, (_currentDb) => {
+      // 初期化時は currentDb が undefined でも許可する
+      return this.state.database;
     });
 
-    logDebug('TrustDb', {}, 'Database saved');
+    // Bloom Filterをアトミックに保存（データベースと同時に更新）
+    await withOptimisticLock(STORAGE_KEY_BLOOM, () => {
+      return bloomData;
+    });
+
+    logDebug('TrustDb', {}, 'Database saved with optimistic lock');
   }
 
   /**
@@ -412,15 +601,17 @@ class TrustDb {
       return { success: false, error: 'Database not initialized' };
     }
 
-    // Validate TLD format
-    if (!tld.startsWith('.')) {
-      tld = '.' + tld;
+    // Validate TLD format using RFC-compliant function
+    if (!isValidTld(tld)) {
+      return {
+        success: false,
+        error: 'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)'
+      };
     }
 
-    // TLD length validation (minimum 2 characters after the dot to prevent overly broad matches)
-    // Example: .com (4 chars), .jp (3 chars), .ai (3 chars) are valid; .a is too broad
-    if (tld.length < 3) {
-      return { success: false, error: 'TLD must be at least 2 characters long (e.g., .com, .jp)' };
+    // Ensure TLD starts with dot
+    if (!tld.startsWith('.')) {
+      tld = '.' + tld;
     }
 
     // Check for duplicates
@@ -504,9 +695,17 @@ class TrustDb {
       return { success: false, error: 'Database not initialized' };
     }
 
-    // Validate TLD format
-    if (!tld.startsWith('.') || tld.length < 2) {
-      return { success: false, error: 'Invalid TLD format' };
+    // Validate TLD format using RFC-compliant function
+    if (!isValidTld(tld)) {
+      return {
+        success: false,
+        error: 'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)'
+      };
+    }
+
+    // Ensure TLD starts with dot
+    if (!tld.startsWith('.')) {
+      tld = '.' + tld;
     }
 
     // Check for duplicates
@@ -549,14 +748,19 @@ class TrustDb {
   /**
    * Sensitive ドメインを追加
    */
-  async addSensitiveDomain(domain: string, category?: string): Promise<{ success: boolean; error?: string }> {
+  async addSensitiveDomain(domain: string, _category?: string): Promise<{ success: boolean; error?: string }> {
     if (!this.state.database) {
       return { success: false, error: 'Database not initialized' };
     }
 
     const normalizedDomain = domain.toLowerCase().trim();
-    if (!normalizedDomain || normalizedDomain.includes('.') === false) {
-      return { success: false, error: 'Invalid domain format' };
+
+    // Validate domain format using RFC-compliant function
+    if (!isValidDomain(normalizedDomain)) {
+      return {
+        success: false,
+        error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
+      };
     }
 
     // Check for duplicates
@@ -604,8 +808,13 @@ class TrustDb {
     }
 
     const normalizedDomain = domain.toLowerCase().trim();
-    if (!normalizedDomain || normalizedDomain.includes('.') === false) {
-      return { success: false, error: 'Invalid domain format' };
+
+    // Validate domain format using RFC-compliant function
+    if (!isValidDomain(normalizedDomain)) {
+      return {
+        success: false,
+        error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
+      };
     }
 
     // Check for duplicates

@@ -993,6 +993,39 @@
     </main>
   </div>
 
+  <!-- Breaking Changes Notification Modal -->
+  <div id="breakingChangesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="breakingChangesTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="breakingChangesTitle" data-i18n="breakingChangesTitle">重要: 権限変更 / Breaking Changes</h3>
+        <button id="closeBreakingChangesModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p data-i18n="breakingChangesDesc">
+          v5.0.0 で拡張機能の権限モデルが変更されました。`<all_urls>` 権限が削除され、より安全なモデルに移行しました。
+        </p>
+        <p data-i18n="breakingChangesDesc2">
+          新しいモデルでは、各ドメインごとに個別の権限許可が必要です。以下のドメインへのアクセス許可を確認してください。
+        </p>
+
+        <div class="permission-list">
+          <h4 data-i18n="requiredPermissions">必要な権限</h4>
+          <ul id="breakingChangesPermissionList">
+            <li><strong>localhost:27124</strong> - Obsidian Local REST API（必須）</li>
+            <li data-i18n="otherDomainsText">その他、閲覧するWebサイト（随時許可）</li>
+          </ul>
+        </div>
+
+        <div class="help-text" data-i18n="breakingChangesHelp">
+          ヒント: 訪問したWebサイトを初めて記録する際、権限を許可するように促されます。
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="dismissBreakingChangesModalBtn" class="btn btn-primary" data-i18n="understood">理解しました / I understand</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Password Setup Modal -->
   <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
     <div class="modal-content">

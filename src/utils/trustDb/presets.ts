@@ -120,6 +120,7 @@ export function createDefaultTrustDb(): TrustDatabase {
       hashCount: 0,
       bitCount: 0,
       expectedDomainCount: 0,
+      hash: '',  // プレースホルダー
     },
   };
 }
@@ -158,6 +159,7 @@ export function createEmptyBloomFilterData(): BloomFilterData {
     hashCount: 0,
     bitCount: 0,
     expectedDomainCount: 0,
+    hash: '',  // プレースホルダー
   };
 }
 

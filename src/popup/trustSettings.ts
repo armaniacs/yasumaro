@@ -113,18 +113,26 @@ function updateTrancoStatus(status: {
 
 function renderJpAnchorList(tlds: string[]): void {
   if (!jpAnchorListDiv) return;
-  jpAnchorListDiv.innerHTML = '';
+  jpAnchorListDiv.textContent = '';
 
   tlds.forEach(tld => {
     const div = document.createElement('div');
     div.className = 'domain-tag';
-    div.innerHTML = `
-      <span>${tld}</span>
-      <button class="domain-tag-remove" data-tld="${tld}" aria-label="Remove ${tld}">×</button>
-    `;
+
+    // XSS-safe: Use createElement and textContent instead of innerHTML
+    const span = document.createElement('span');
+    span.textContent = tld;
+    div.appendChild(span);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'domain-tag-remove';
+    removeBtn.textContent = '×';
+    removeBtn.dataset.tld = tld;
+    removeBtn.setAttribute('aria-label', `Remove ${tld}`);
+    div.appendChild(removeBtn);
+
     jpAnchorListDiv.appendChild(div);
 
-    const removeBtn = div.querySelector('.domain-tag-remove') as HTMLButtonElement;
     removeBtn.addEventListener('click', () => {
       removeJpAnchorTld(tld);
     });
@@ -162,18 +170,26 @@ async function removeJpAnchorTld(tld: string): Promise<void> {
 function renderSensitiveList(domains: string[], isWhitelist = false): void {
   const container = isWhitelist ? whitelistDiv : sensitiveListDiv;
   if (!container) return;
-  container.innerHTML = '';
+  container.textContent = '';
 
   domains.forEach(domain => {
     const div = document.createElement('div');
     div.className = 'domain-tag';
-    div.innerHTML = `
-      <span>${domain}</span>
-      <button class="domain-tag-remove" data-domain="${domain}" aria-label="Remove ${domain}">×</button>
-    `;
+
+    // XSS-safe: Use createElement and textContent instead of innerHTML
+    const span = document.createElement('span');
+    span.textContent = domain;
+    div.appendChild(span);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'domain-tag-remove';
+    removeBtn.textContent = '×';
+    removeBtn.dataset.domain = domain;
+    removeBtn.setAttribute('aria-label', `Remove ${domain}`);
+    div.appendChild(removeBtn);
+
     container.appendChild(div);
 
-    const removeBtn = div.querySelector('.domain-tag-remove') as HTMLButtonElement;
     removeBtn.addEventListener('click', () => {
       if (isWhitelist) {
         removeWhitelistDomain(domain);
@@ -542,7 +558,7 @@ export async function renderPermissionSuggestList(): Promise<{ domain: string; c
   } else {
     section.classList.add('hidden');
   }
-  list.innerHTML = '';
+  list.textContent = '';
 
   const entries: { domain: string; count: number }[] = [];
   for (const { domain, count } of denied) {

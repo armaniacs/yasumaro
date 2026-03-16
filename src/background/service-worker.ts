@@ -21,6 +21,10 @@ import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notif
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import {
+    cleanupOldDeniedEntries,
+    cleanupDismissedEntries
+} from '../utils/permissionManager.js';
+import {
     getNotificationHmacKey,
     generateHmacSignature,
     verifyHmacSignature
@@ -878,6 +882,20 @@ chrome.runtime.onStartup.addListener(async () => {
             'Service Worker startup - cache rehydration failed',
             { error: error instanceof Error ? error.message : String(error) },
             ErrorCode.STORAGE_READ_FAILURE,
+            'service-worker'
+        );
+    }
+
+    // 期限切れの権限データをクリーンアップ（起動時のみ実行）
+    try {
+        await cleanupOldDeniedEntries(90);
+        await cleanupDismissedEntries(7);
+        logDebug('Permission cleanup completed on startup', {}, 'service-worker');
+    } catch (error) {
+        logWarn(
+            'Permission cleanup failed on startup',
+            { error: error instanceof Error ? error.message : String(error) },
+            undefined,
             'service-worker'
         );
     }
