@@ -242,11 +242,14 @@ class TrustDb {
       if (this.compareVersions(currentVersion, targetVersion) < 0) {
         await this.applyMigrations(currentVersion, targetVersion, db);
 
-        // バージョンを更新
+        // マイグレーション後のデータを保存（バージョン更新前に保存）
+        await this.save();
+
+        // バージョンを更新（保存成功後にのみ更新）
         db.version = targetVersion;
         db.lastUpdated = new Date().toISOString();
 
-        // マイグレーション後のデータを保存
+        // バージョン更新を保存
         await this.save();
 
         logInfo('TrustDb', { to: targetVersion }, 'Database migration completed');

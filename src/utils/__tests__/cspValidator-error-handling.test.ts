@@ -50,8 +50,6 @@ jest.mock('../logger.js', () => ({
   logInfo: jest.fn((...args) => mockLogInfo(...args))
 }));
 
-Promise.resolve(await import('../logger.js'));
-
 describe('CSP Validator - Error Handling', () => {
   let cspValidator: any;
   let logger: any;

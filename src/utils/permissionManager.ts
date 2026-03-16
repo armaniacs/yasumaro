@@ -194,12 +194,11 @@ export class PermissionManager {
             const dismissalTime = new Date(entry.lastDismissed).getTime();
             const lastDeniedTime = new Date(entry.lastDenied).getTime();
 
-            // dismissが7日以上前、かつdismiss後に再拒否されていない場合に削除
-            if (dismissalTime >= threshold && lastDeniedTime < dismissalTime) {
-              // 保持条件を満たす：dismissから7日未満、またはdismiss後に再拒否あり
+            // 保持条件：dismissから7日未満（最近）、またはdismiss後に再拒否あり
+            if (dismissalTime >= threshold || lastDeniedTime >= dismissalTime) {
               cleaned[domain] = entry;
             } else {
-              // 削除条件：7日以上前にdismissされ、かつその後に再拒否なし
+              // 削除条件：7日より前にdismissされ（= 7日前より古い）、かつその後に再拒否なし
               removedCount++;
             }
           } else {
