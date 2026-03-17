@@ -66,7 +66,7 @@
     "message": "OpenAI API Key"
   },
   "apiKeyPlaceholder": {
-    "message": "キーをここに貼り付けてください..."
+    "message": "APIキーを入力..."
   },
   "protocol": {
     "message": "プロトコル (http/https)"
@@ -1783,5 +1783,62 @@
   },
   "breakingChangesHelp": {
     "message": "ヒント: 訪問したWebサイトを初めて記録する際、権限を許可するように促されます。"
+  },
+  "label_max_tokens": {
+    "message": "最大トークン数"
+  },
+  "note_max_tokens_cost_control": {
+    "message": "これはAIへのデータ送信量を制限し、APIコストを抑制するための設定です。"
+  },
+  "error_max_tokens_range": {
+    "message": "トークン数は 10 〜 16,000 の範囲で入力してください"
+  },
+  "dialogCloseAriaLabel": {
+    "message": "閉じる"
+  },
+  "filterFreeTierLabel": {
+    "message": "無料枠のみ"
+  },
+  "loadingProvidersLabel": {
+    "message": "読み込み中..."
+  },
+  "selectedProviderLabel": {
+    "message": "選択済みプロバイダー:"
+  },
+  "modelInputLabel": {
+    "message": "モデル（省略可）:"
+  },
+  "modelInputPlaceholder": {
+    "message": "例: gpt-3.5-turbo"
+  },
+  "apiKeyLabel": {
+    "message": "APIキー:"
+  },
+  "withdrawConsent": {
+    "message": "同意を撤回する"
+  },
+  "withdrawConsentConfirm": {
+    "message": "同意を撤回すると一部の機能が使えなくなります。続行しますか？"
+  },
+  "withdrawConsentSuccess": {
+    "message": "同意が撤回されました"
+  },
+  "privacyConsentStatus": {
+    "message": "プライバシー同意状態"
+  },
+  "deleteAllData": {
+    "message": "すべてのデータを削除"
+  },
+  "deleteAllDataConfirm": {
+    "message": "設定・履歴・APIキーを含むすべてのデータを削除します。取り消せません。続行しますか？"
+  },
+  "deleteAllDataSuccess": {
+    "message": "すべてのデータを削除しました。拡張機能を再設定してください。"
+  },
+  "dataManagementSection": {
+    "message": "データ管理"
+  },
+  "dataManagementDesc": {
+    "message": "拡張機能に保存されているすべてのデータを削除する権利があります（GDPR 第17条 / CCPA）。"
   }
 }

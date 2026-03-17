@@ -573,13 +573,14 @@ select:hover {
   border-color: var(--color-border-hover);
 }
 
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="url"]:focus,
-input[type="number"]:focus,
-textarea:focus,
-select:focus {
-  outline: none;
+input[type="text"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="url"]:focus-visible,
+input[type="number"]:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
@@ -867,8 +868,9 @@ input[type="checkbox"]:focus {
   color: var(--color-text);
 }
 
-.preview-textarea:focus {
-  outline: none;
+.preview-textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
@@ -1331,8 +1333,9 @@ label.inline-label {
   color: var(--color-text);
 }
 
-.dropdown-menu button:focus {
-  outline: none;
+.dropdown-menu button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
   background-color: var(--color-primary-light);
   color: var(--color-primary);
 }
@@ -1355,8 +1358,9 @@ label.inline-label {
   line-height: 1.6;
 }
 
-.import-preview:focus {
-  outline: none;
+.import-preview:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }

@@ -81,7 +81,7 @@ const SENSITIVE_DOMAINS_PRESETS = {
 // - ラベルの最大長: 63 文字
 // - ドメイン全体の最大長: 253 文字
 // - 大文字小文字は区別しない
-const DOMAIN_REGEX = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*\.?$/i;
+const DOMAIN_REGEX = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$/i;
 
 /**
  * RFC準拠のドメイン名バリデーション
@@ -597,9 +597,9 @@ class TrustDb {
   }
 
   /**
-   * ユーザー TLD 追加
+   * TLD を jpAnchor.userTlds に追加する共通ロジック（addUserTld / addJpAnchorTld の共有）
    */
-  async addUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
+  private async _addTldToUserList(tld: string): Promise<{ success: boolean; error?: string }> {
     if (!this.state.database) {
       return { success: false, error: 'Database not initialized' };
     }
@@ -625,6 +625,13 @@ class TrustDb {
     this.state.database.jpAnchor.userTlds.push(tld);
     await this.save();
     return { success: true };
+  }
+
+  /**
+   * ユーザー TLD 追加
+   */
+  async addUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
+    return this._addTldToUserList(tld);
   }
 
   /**
@@ -694,31 +701,7 @@ class TrustDb {
    * JP-Anchor TLD を追加
    */
   async addJpAnchorTld(tld: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
-      return { success: false, error: 'Database not initialized' };
-    }
-
-    // Validate TLD format using RFC-compliant function
-    if (!isValidTld(tld)) {
-      return {
-        success: false,
-        error: 'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)'
-      };
-    }
-
-    // Ensure TLD starts with dot
-    if (!tld.startsWith('.')) {
-      tld = '.' + tld;
-    }
-
-    // Check for duplicates
-    if (this.state.database.jpAnchor.tlds.includes(tld) || this.state.database.jpAnchor.userTlds.includes(tld)) {
-      return { success: false, error: 'TLD already exists' };
-    }
-
-    this.state.database.jpAnchor.userTlds.push(tld);
-    await this.save();
-    return { success: true };
+    return this._addTldToUserList(tld);
   }
 
   /**

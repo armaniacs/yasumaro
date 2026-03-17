@@ -318,4 +318,10 @@ This extension requires the following permissions:
 ## 権利 / Rights
 すべてのデータはローカルに保存されており、拡張機能のアンインストールやObsidian内のノート削除によっていつでも破棄できます。
 
+### データ削除権 / Right to Erasure (GDPR Art. 17 / CCPA)
+
+ダッシュボード → プライバシー設定 → 「データ管理」セクション → 「すべてのデータを削除」ボタン
+
+Dashboard → Privacy Settings → "Data Management" section → "Delete All Data" button
+
 All data is stored locally and can be deleted by uninstalling the extension or manually deleting notes in Obsidian.

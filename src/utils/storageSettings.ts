@@ -66,6 +66,7 @@ export interface SettingsValue {
     custom_prompts?: CustomPrompt[];
     tag_categories?: TagCategory[];  // タグカテゴリリスト
     tag_summary_mode?: boolean;        // タグ付き要約モード
+    max_tokens_per_prompt?: number;    // 最大トークン数
     [key: string]: unknown; // レガシー互換性
 }
 
@@ -129,6 +130,8 @@ export const DEFAULT_SETTINGS: Settings = {
     custom_prompts: [],
     tag_categories: [],        // タグカテゴリリスト（空=デフォルトカテゴリを使用）
     tag_summary_mode: false,    // タグ付き要約モード（デフォルト: 無効）
+    // AI Limits Settings
+    max_tokens_per_prompt: 1000, // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     // マスターパスワード保護オプション
     mp_protection_enabled: false,
     mp_encrypt_api_keys: true,

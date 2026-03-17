@@ -15,10 +15,13 @@
             </div>
 
             <!-- Tabs -->
-            <div class="tabs">
-                <button type="button" class="tab-btn active" data-tab="all" data-i18n="tabAll">All</button>
-                <button type="button" class="tab-btn" data-tab="aggregators" data-i18n="tabAggregator">Aggregators</button>
-                <button type="button" class="tab-btn" data-tab="others" data-i18n="tabOthers">Others</button>
+            <div class="tabs" role="tablist" aria-label="Provider categories">
+                <button type="button" class="tab-btn active" data-tab="all" data-i18n="tabAll"
+                    role="tab" aria-selected="true" aria-controls="provider-list" id="tab-all">All</button>
+                <button type="button" class="tab-btn" data-tab="aggregators" data-i18n="tabAggregator"
+                    role="tab" aria-selected="false" aria-controls="provider-list" id="tab-aggregators">Aggregators</button>
+                <button type="button" class="tab-btn" data-tab="others" data-i18n="tabOthers"
+                    role="tab" aria-selected="false" aria-controls="provider-list" id="tab-others">Others</button>
             </div>
 
             <!-- Search and Filter -->
@@ -38,7 +41,7 @@
 
             <!-- Provider List -->
             <div id="provider-count" class="provider-count"></div>
-            <div id="provider-list" class="provider-list"></div>
+            <div id="provider-list" class="provider-list" role="tabpanel" aria-labelledby="tab-all"></div>
 
             <!-- Selected Info -->
             <div id="selected-provider-info" class="selected-info hidden">

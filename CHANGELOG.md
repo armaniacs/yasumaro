@@ -4,11 +4,52 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### Added (2026-03-17)
+
+- **GDPR/CCPA コンプライアンス機能**
+  - プライバシー同意撤回機能（GDPR Art.7）を実装
+    - `withdrawPrivacyConsent()`で同意を撤回、履歴を記録
+    - Dashboardに同意撤回ボタンとステータス表示を追加
+  - データ削除権（GDPR Art.17/CCPA）の実装
+    - Dashboardの「データ管理」セクションで全データ削除が可能
+    - `chrome.storage.local.clear()`で全設定データを削除
+  - i18n対応: 日本語・英語メッセージを追加
+
+- **ADR: CSP 二層セキュリティモデル**
+  - ドキュメント: `docs/ADR/0002-csp-layered-security.md`
+  - manifest.json connect-src（第一層）とCSPValidator（第二層）の役割を明確化
+
 ### Fixed / Changes (2026-03-17)
 
+- **セキュリティ修正**
+  - DOMAIN_REGEX: 末尾の`\.?`を削除し、不正ドメイン（`a.`等）を拒否するように修正
+  - addUserTld/addJpAnchorTld重複排除: `_addTldToUserList`ヘルパーを抽出
+
+- **アクセシビリティ改善**
+  - Models.dev Dialog: 完全なARIAタブパターン（role="tablist/tab/tabpanel", aria-selected, aria-controls）
+  - フォーカスインジケーター: `:focus`を`:focus-visible`に変更、`outline: none`を削除（ハイコントラストモード対応）
+
+- **i18n改善**
+  - models-dev-dialog.tsのハードコード英語文字列を`data-i18n`属性に置換
+  - 動的HTML作成後に`applyI18n()`を呼び出すように修正
+
+- **データ整合性強化**
+  - マイグレーションロールバックにチェックサム検証を追加
+  - ロールバック失敗時は例外を投げるように修正（以前はfalseを返すのみ）
+  - 新規テスト: migration rollback integrity（3件パス）
+
+- **AIトークン制限設定 (Max Tokens Per Prompt)**
+  - ユーザーがAIへの1プロンプトあたりの最大トークン数を設定可能に
+  - デフォルト値: 1000トークン、範囲: 10-16000
+  - プロバイダー別上限（OpenAI: 16384, Gemini: 8192, anthropic/claude: 100000, localai: 16384, ollama: 32000）
+  - UI: popup.htmlとdashboard.htmlに設定フィールドを追加
+  - バリデーション: フィールドバリデーションとエラー表示対応
+  - エクスポート/インポート: 設定のエクスポート・インポートに対応
+  - 単体テスト: 28個のテストケースを追加してパス確認
+
 - **AI Provider APIパラメータ設定の追加**
-  - OpenAIProvider: `max_tokens: 1000`, `temperature: 0.1` を追加
-  - GeminiProvider: `generationConfig` に `temperature: 0.1`, `maxOutputTokens: 1000` を追加
+  - OpenAIProvider: `max_tokens: this.getMaxTokens()`, `temperature: 0.1` を追加
+  - GeminiProvider: `generationConfig` に `temperature: 0.1`, `maxOutputTokens: this.getMaxTokens()` を追加
   - AIモデルの暴走防止と、決定論的な要約結果を安定させるための対策
 
 - **コード品質: bloomFilter.ts の重複関数を削除**

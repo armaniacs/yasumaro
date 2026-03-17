@@ -122,7 +122,9 @@ export const StorageKeys = {
     PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold', // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
     // Conditional CSP Settings (P1)
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled', // 条件付きCSP有効フラグ（デフォルト: true）
-    CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers' // 追加するAIプロバイダーIDリスト（デフォルト: []）
+    CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers', // 追加するAIプロバイダーIDリスト（デフォルト: []）
+    // AI Limits Settings
+    MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt' // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -199,6 +201,8 @@ export interface StorageKeyValues {
     // Conditional CSP Settings (P1)
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: boolean;
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
+    // AI Limits Settings
+    [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
 }
 
 // 厳格な Settings 型
@@ -1215,6 +1219,21 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
             }
         } else {
             console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
+        }
+    }
+
+    // OpenAI互換プロバイダー（provider_base_url）- ホワイトリストチェック
+    const providerBaseUrl = settings[StorageKeys.PROVIDER_BASE_URL];
+    if (providerBaseUrl) {
+        if (isDomainInWhitelist(providerBaseUrl)) {
+            try {
+                const normalized = normalizeUrl(providerBaseUrl);
+                allowedUrls.add(normalized);
+            } catch (e) {
+                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        } else {
+            console.warn(`Provider Base URL not in whitelist, skipped: ${providerBaseUrl}`);
         }
     }
 

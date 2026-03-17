@@ -160,3 +160,48 @@ export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
         return false;
     }
 }
+
+/** プライバシーポリシー同意撤回記録 */
+export interface PrivacyConsentWithdrawal {
+    withdrawalDate: string;
+    previousConsentDate?: string;
+    previousConsentVersion?: string;
+}
+
+/**
+ * プライバシーポリシー同意を撤回する (GDPR Art.7)
+ */
+export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal> {
+    try {
+        const currentConsent = await getPrivacyConsent();
+        const withdrawal: PrivacyConsentWithdrawal = {
+            withdrawalDate: new Date().toISOString(),
+            previousConsentDate: currentConsent.consentDate,
+            previousConsentVersion: currentConsent.consentVersion
+        };
+
+        const withdrawnState: PrivacyConsentState & { withdrawal?: PrivacyConsentWithdrawal } = {
+            hasConsented: false,
+            withdrawal
+        };
+
+        await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT]: withdrawnState });
+        await logInfo('Privacy consent withdrawn', { withdrawalDate: withdrawal.withdrawalDate }, 'privacyConsent.ts');
+        return withdrawal;
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        await logError('Failed to withdraw privacy consent', { error: errorMessage }, ErrorCode.STORAGE_WRITE_FAILURE, 'privacyConsent.ts');
+        throw error;
+    }
+}
+
+/**
+ * 同意撤回履歴を取得 */
+export async function getConsentWithdrawalHistory(): Promise<PrivacyConsentWithdrawal | null> {
+    const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT);
+    const data = result[StorageKeys.PRIVACY_CONSENT];
+    if (typeof data === 'object' && data !== null && 'withdrawal' in data) {
+        return (data as Record<string, unknown>).withdrawal as PrivacyConsentWithdrawal;
+    }
+    return null;
+}

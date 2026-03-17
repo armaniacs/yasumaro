@@ -41,6 +41,14 @@ interface NewFormat {
 interface MigrationBackup {
   timestamp: number;
   originalData: OldFormat | null;
+  checksum: string;
+}
+
+/** 簡易チェックサム（データ長 + 先頭100文字の charCode 合計） */
+export function computeChecksum(data: unknown): string {
+  const str = JSON.stringify(data) ?? '';
+  const sum = str.slice(0, 100).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return `${str.length}-${sum}`;
 }
 
 const MIGRATION_BACKUP_KEY = 'migration_backup';
@@ -53,17 +61,14 @@ const MIGRATION_BACKUP_RETENTION = 7 * 24 * 60 * 60 * 1000; // 7日
  */
 async function createMigrationBackup(key: string): Promise<void> {
   const result = await chrome.storage.local.get([key]);
+  const originalData = (result[key] as OldFormat | undefined) || null;
   const backup: MigrationBackup = {
     timestamp: Date.now(),
-    originalData: (result[key] as OldFormat | undefined) || null
+    originalData,
+    checksum: computeChecksum(originalData)
   };
-
-  await chrome.storage.local.set({
-    [MIGRATION_BACKUP_KEY]: backup
-  });
-
-  // ログはstorage.tsからimportするのを避けるためconsoleを使用
-  console.log('[Migration] Backup created for key:', key, 'timestamp:', backup.timestamp);
+  await chrome.storage.local.set({ [MIGRATION_BACKUP_KEY]: backup });
+  console.log('[Migration] Backup created with checksum:', backup.checksum);
 }
 
 /**
@@ -71,24 +76,23 @@ async function createMigrationBackup(key: string): Promise<void> {
  * @param {string} key - 復元先のストレージキー
  * @returns {Promise<boolean>} 復元成功時true
  */
-async function restoreFromMigrationBackup(key: string): Promise<boolean> {
+export async function restoreFromMigrationBackup(key: string): Promise<boolean> {
   const result = await chrome.storage.local.get([MIGRATION_BACKUP_KEY]);
   const backup = result[MIGRATION_BACKUP_KEY] as MigrationBackup | undefined;
 
   if (!backup || !backup.originalData) {
     console.error('[Migration] Backup not found for key:', key);
-    return false;
+    throw new Error('[Migration] Rollback failed: backup not found');
+  }
+
+  const actualChecksum = computeChecksum(backup.originalData);
+  if (backup.checksum && backup.checksum !== actualChecksum) {
+    console.error('[Migration] Backup checksum mismatch', { expected: backup.checksum, actual: actualChecksum });
+    throw new Error('[Migration] Rollback failed: data integrity check failed');
   }
 
   await chrome.storage.local.set({ [key]: backup.originalData });
-
-  console.warn(
-    '[Migration] Rolled back from backup',
-    key,
-    'backup timestamp:',
-    backup.timestamp
-  );
-
+  console.warn('[Migration] Rolled back from backup', key, 'at:', backup.timestamp);
   return true;
 }
 
@@ -175,16 +179,17 @@ export async function migrateUblockSettings(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    // 失敗時はロールバック
     console.error('[Migration] Migration failed, attempting rollback:', error);
-    const restored = await restoreFromMigrationBackup(UBLOCK_RULES_KEY);
-
-    if (restored) {
+    try {
+      await restoreFromMigrationBackup(UBLOCK_RULES_KEY);
       console.log('[Migration] Rollback successful');
-    } else {
-      console.error('[Migration] Rollback failed');
+    } catch (rollbackError) {
+      console.error('[Migration] Rollback also failed:', rollbackError);
+      throw new Error(
+        `Migration failed and rollback also failed. ` +
+        `Original: ${error}. Rollback: ${rollbackError}`
+      );
     }
-
     throw error;
   }
 }

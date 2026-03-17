@@ -10,6 +10,7 @@ import {
     getApiKeyEnvName
 } from '../utils/modelsDevApi.js';
 import { StorageKeys, saveSettings, getSettings, Settings } from '../utils/storage.js';
+import { applyI18n } from '../popup/i18n.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -85,52 +86,65 @@ export class ModelsDevDialog {
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 id="dialog-title" data-i18n="modelsDevDialogTitle">OpenAI-Compatible Provider</h2>
-                    <button type="button" id="dialog-close" class="close-btn" aria-label="Close">&times;</button>
+                    <button type="button" id="dialog-close" class="close-btn"
+                        data-i18n-aria-label="dialogCloseAriaLabel" aria-label="Close">&times;</button>
                 </div>
 
                 <!-- Tabs -->
-                <div class="tabs">
-                    <button type="button" class="tab-btn active" data-tab="all">All</button>
-                    <button type="button" class="tab-btn" data-tab="aggregators">Aggregators</button>
-                    <button type="button" class="tab-btn" data-tab="others">Others</button>
+                <div class="tabs" role="tablist" aria-label="Provider categories">
+                    <button type="button" class="tab-btn active" data-tab="all"
+                        role="tab" aria-selected="true" aria-controls="provider-list" id="tab-all"
+                        data-i18n="tabAll">All</button>
+                    <button type="button" class="tab-btn" data-tab="aggregators"
+                        role="tab" aria-selected="false" aria-controls="provider-list" id="tab-aggregators"
+                        data-i18n="tabAggregator">Aggregators</button>
+                    <button type="button" class="tab-btn" data-tab="others"
+                        role="tab" aria-selected="false" aria-controls="provider-list" id="tab-others"
+                        data-i18n="tabOthers">Others</button>
                 </div>
 
                 <!-- Search and Filter -->
                 <div class="search-bar">
-                    <input type="text" id="provider-search" placeholder="Search providers...">
+                    <input type="text" id="provider-search"
+                        placeholder="Search providers..."
+                        data-i18n-placeholder="providerSearchPlaceholder">
                     <label class="checkbox-label">
                         <input type="checkbox" id="filter-free-tier">
-                        <span>Free Tier Only</span>
+                        <span data-i18n="filterFreeTierLabel">Free Tier Only</span>
                     </label>
                 </div>
 
                 <!-- Loading state -->
                 <div id="dialog-loading" class="loading-state">
                     <div class="spinner"></div>
-                    <span>Loading providers...</span>
+                    <span data-i18n="loadingProvidersLabel">Loading providers...</span>
                 </div>
 
                 <!-- Provider List -->
                 <div id="provider-count" class="provider-count"></div>
-                <div id="provider-list" class="provider-list"></div>
+                <div id="provider-list" class="provider-list" role="tabpanel" aria-labelledby="tab-all"></div>
 
                 <!-- Selected Info -->
                 <div id="selected-provider-info" class="selected-info hidden">
-                    <div class="selected-label">Selected Provider:</div>
+                    <div class="selected-label" data-i18n="selectedProviderLabel">Selected Provider:</div>
                     <div id="selected-provider-name" class="selected-name"></div>
                     <div id="selected-model-name" class="selected-model"></div>
                 </div>
 
                 <!-- Model Selection -->
                 <div id="model-selection" class="model-selection hidden">
-                    <label for="model-input">Model (optional):</label>
-                    <input type="text" id="model-input" placeholder="e.g., gpt-3.5-turbo">
+                    <label for="model-input" data-i18n="modelInputLabel">Model (optional):</label>
+                    <input type="text" id="model-input"
+                        placeholder="e.g., gpt-3.5-turbo"
+                        data-i18n-placeholder="modelInputPlaceholder">
                 </div>
 
                 <!-- API Key Input -->
                 <div class="api-key-section">
-                    <label for="api-key-input">API Key:</label>
-                    <input type="password" id="api-key-input" placeholder="Enter your API key...">
+                    <label for="api-key-input" data-i18n="apiKeyLabel">API Key:</label>
+                    <input type="password" id="api-key-input"
+                        placeholder="Enter your API key..."
+                        data-i18n-placeholder="apiKeyPlaceholder">
                 </div>
 
                 <!-- Error message -->
@@ -138,8 +152,8 @@ export class ModelsDevDialog {
 
                 <!-- Footer -->
                 <div class="modal-footer">
-                    <button type="button" id="dialog-cancel" class="btn btn-secondary">Cancel</button>
-                    <button type="button" id="dialog-save" class="btn btn-primary">Save</button>
+                    <button type="button" id="dialog-cancel" class="btn btn-secondary" data-i18n="cancel">Cancel</button>
+                    <button type="button" id="dialog-save" class="btn btn-primary" data-i18n="save">Save</button>
                 </div>
             </div>
         `;
@@ -152,6 +166,9 @@ export class ModelsDevDialog {
 
         // Attach event listeners
         this.attachEventListeners();
+
+        // Apply i18n translations to dynamically created HTML
+        applyI18n(overlay);
     }
 
     /**
@@ -265,11 +282,15 @@ export class ModelsDevDialog {
     private switchTab(tab: 'all' | 'aggregators' | 'others'): void {
         this.currentTab = tab;
 
-        // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
             const btnEl = btn as HTMLElement;
-            btnEl.classList.toggle('active', (btnEl.dataset.tab === tab));
+            const isActive = btnEl.dataset.tab === tab;
+            btnEl.classList.toggle('active', isActive);
+            btnEl.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
+
+        // tabpanel の aria-labelledby を更新
+        document.getElementById('provider-list')?.setAttribute('aria-labelledby', `tab-${tab}`);
 
         this.filterProviders();
     }

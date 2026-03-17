@@ -66,7 +66,7 @@
     "message": "OpenAI API Key"
   },
   "apiKeyPlaceholder": {
-    "message": "Paste your key here..."
+    "message": "Enter your API key..."
   },
   "protocol": {
     "message": "Protocol (http/https)"
@@ -1783,5 +1783,62 @@
   },
   "breakingChangesHelp": {
     "message": "Tip: When recording a new website for the first time, you will be prompted to grant permission."
+  },
+  "label_max_tokens": {
+    "message": "Max Tokens"
+  },
+  "note_max_tokens_cost_control": {
+    "message": "This setting limits the amount of data sent to AI, helping to control API costs."
+  },
+  "error_max_tokens_range": {
+    "message": "Please enter a value between 10 and 16,000 tokens"
+  },
+  "dialogCloseAriaLabel": {
+    "message": "Close"
+  },
+  "filterFreeTierLabel": {
+    "message": "Free Tier Only"
+  },
+  "loadingProvidersLabel": {
+    "message": "Loading providers..."
+  },
+  "selectedProviderLabel": {
+    "message": "Selected Provider:"
+  },
+  "modelInputLabel": {
+    "message": "Model (optional):"
+  },
+  "modelInputPlaceholder": {
+    "message": "e.g., gpt-3.5-turbo"
+  },
+  "apiKeyLabel": {
+    "message": "API Key:"
+  },
+  "withdrawConsent": {
+    "message": "Withdraw Consent"
+  },
+  "withdrawConsentConfirm": {
+    "message": "Withdrawing consent will disable some features. Continue?"
+  },
+  "withdrawConsentSuccess": {
+    "message": "Consent withdrawn successfully"
+  },
+  "privacyConsentStatus": {
+    "message": "Privacy Consent Status"
+  },
+  "deleteAllData": {
+    "message": "Delete All Data"
+  },
+  "deleteAllDataConfirm": {
+    "message": "This will permanently delete all stored data including settings, history, and API keys. This cannot be undone. Continue?"
+  },
+  "deleteAllDataSuccess": {
+    "message": "All data deleted. Please reconfigure the extension."
+  },
+  "dataManagementSection": {
+    "message": "Data Management"
+  },
+  "dataManagementDesc": {
+    "message": "You have the right to delete all data stored by this extension (GDPR Art. 17 / CCPA)."
   }
 }

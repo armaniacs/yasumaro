@@ -79,6 +79,7 @@ const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputEl
 
 const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
 const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
+const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const statusDiv = document.getElementById('status') as HTMLElement;
 
@@ -98,7 +99,8 @@ const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement> = {
     [StorageKeys.OPENAI_2_API_KEY]: openai2ApiKeyInput,
     [StorageKeys.OPENAI_2_MODEL]: openai2ModelInput,
     [StorageKeys.MIN_VISIT_DURATION]: minVisitDurationInput,
-    [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput
+    [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput,
+    [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensPerPromptInput
 };
 
 // ============================================================================
@@ -130,7 +132,8 @@ const errorPairs: [HTMLInputElement, string][] = [
     [protocolInput, 'protocolError'],
     [portInput, 'portError'],
     [minVisitDurationInput, 'minVisitDurationError'],
-    [minScrollDepthInput, 'minScrollDepthError']
+    [minScrollDepthInput, 'minScrollDepthError'],
+    [maxTokensPerPromptInput, 'maxTokensError']
 ];
 
 // ============================================================================
@@ -905,7 +908,8 @@ setupAllFieldValidations(
     protocolInput,
     portInput,
     minVisitDurationInput,
-    minScrollDepthInput
+    minScrollDepthInput,
+    maxTokensPerPromptInput
 );
 
 // Setup save button listener
@@ -917,6 +921,7 @@ if (saveBtn) {
         portInput,
         minVisitDurationInput,
         minScrollDepthInput,
+        maxTokensPerPromptInput,
         settingsMapping
     );
 }

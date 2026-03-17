@@ -137,8 +137,9 @@ export async function handleSaveAndTest(
     portInput: HTMLInputElement,
     minVisitDurationInput: HTMLInputElement,
     minScrollDepthInput: HTMLInputElement,
+    maxTokensPerPromptInput: HTMLInputElement,
     settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement>,
-    validateFn: (p1: HTMLInputElement, p2: HTMLInputElement, p3: HTMLInputElement, p4: HTMLInputElement) => boolean
+    validateFn: (p1: HTMLInputElement, p2: HTMLInputElement, p3: HTMLInputElement, p4: HTMLInputElement, p5: HTMLInputElement) => boolean
 ): Promise<void> {
     statusDiv.textContent = getMessage('testingConnection');
     statusDiv.className = '';
@@ -147,11 +148,12 @@ export async function handleSaveAndTest(
         [protocolInput, 'protocolError'],
         [portInput, 'portError'],
         [minVisitDurationInput, 'minVisitDurationError'],
-        [minScrollDepthInput, 'minScrollDepthError']
+        [minScrollDepthInput, 'minScrollDepthError'],
+        [maxTokensPerPromptInput, 'maxTokensError']
     ];
     clearAllFieldErrors(errorPairs);
 
-    if (!validateFn(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput)) {
+    if (!validateFn(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
         statusDiv.textContent = '';
         statusDiv.className = '';
         return;
@@ -222,6 +224,7 @@ export function setupSaveButtonListener(
     portInput: HTMLInputElement,
     minVisitDurationInput: HTMLInputElement,
     minScrollDepthInput: HTMLInputElement,
+    maxTokensPerPromptInput: HTMLInputElement,
     settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement>
 ): () => void {
     const handler = async () => {
@@ -231,10 +234,11 @@ export function setupSaveButtonListener(
             portInput,
             minVisitDurationInput,
             minScrollDepthInput,
+            maxTokensPerPromptInput,
             settingsMapping,
-            (p1, p2, p3, p4) => {
+            (p1, p2, p3, p4, p5) => {
                 // デフォルトバリデーション
-                return validateAllFields(p1, p2, p3, p4);
+                return validateAllFields(p1, p2, p3, p4, p5);
             }
         );
     };

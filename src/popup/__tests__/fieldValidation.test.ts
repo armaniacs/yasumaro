@@ -168,8 +168,9 @@ describe('popup/settings/fieldValidation', () => {
             const portInput = createMockInput('27123');
             const durationInput = createMockInput('5');
             const scrollInput = createMockInput('50');
-            
-            const result = validateAllFields(protocolInput, portInput, durationInput, scrollInput);
+            const maxTokensInput = createMockInput('1000');
+
+            const result = validateAllFields(protocolInput, portInput, durationInput, scrollInput, maxTokensInput);
             expect(result).toBe(true);
         });
 
@@ -178,8 +179,9 @@ describe('popup/settings/fieldValidation', () => {
             const portInput = createMockInput('27123');
             const durationInput = createMockInput('5');
             const scrollInput = createMockInput('50');
-            
-            const result = validateAllFields(protocolInput, portInput, durationInput, scrollInput);
+            const maxTokensInput = createMockInput('1000');
+
+            const result = validateAllFields(protocolInput, portInput, durationInput, scrollInput, maxTokensInput);
             expect(result).toBe(false);
         });
     });

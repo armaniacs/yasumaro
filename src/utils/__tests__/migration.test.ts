@@ -270,3 +270,49 @@ describe('migration', () => {
     });
   });
 });
+
+describe('migration rollback integrity', () => {
+  it('restoreFromMigrationBackup throws when backup not found', async () => {
+    // モック: バックアップなし
+    (global as any).chrome.storage.local.get.mockResolvedValue({});
+    (global as any).chrome.storage.local.set.mockResolvedValue(undefined);
+
+    const { restoreFromMigrationBackup } = await import('../migration');
+    await expect(restoreFromMigrationBackup('test_key')).rejects.toThrow();
+  });
+
+  it('restoreFromMigrationBackup validates checksum', async () => {
+    // 正しいバックアップデータ
+    const validData = { blockRules: ['example.com'], exceptionRules: [] };
+    const { computeChecksum } = await import('../migration');
+    const checksum = computeChecksum(validData);
+
+    (global as any).chrome.storage.local.get.mockResolvedValue({
+      migration_backup: {
+        timestamp: Date.now(),
+        originalData: validData,
+        checksum
+      }
+    });
+
+    const { restoreFromMigrationBackup } = await import('../migration');
+    const result = await restoreFromMigrationBackup('test_key');
+    expect(result).toBe(true);
+  });
+
+  it('restoreFromMigrationBackup throws on checksum mismatch', async () => {
+    const validData = { blockRules: ['example.com'], exceptionRules: [] };
+    const invalidChecksum = 'invalid-123';
+
+    (global as any).chrome.storage.local.get.mockResolvedValue({
+      migration_backup: {
+        timestamp: Date.now(),
+        originalData: validData,
+        checksum: invalidChecksum
+      }
+    });
+
+    const { restoreFromMigrationBackup } = await import('../migration');
+    await expect(restoreFromMigrationBackup('test_key')).rejects.toThrow('data integrity check failed');
+  });
+});

@@ -195,6 +195,32 @@ export function setupMinScrollDepthValidation(input: HTMLInputElement): () => vo
 }
 
 /**
+ * 最大トークン数フィールドのバリデーション
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {boolean} 有効な場合はtrue
+ */
+export function validateMaxTokens(input: HTMLInputElement): boolean {
+    const v = parseInt(input.value, 10);
+    if (isNaN(v) || v < 10 || v > 16000) {
+        setFieldError(input, 'maxTokensError', getMessage('error_max_tokens_range'));
+        return false;
+    }
+    clearFieldError(input, 'maxTokensError');
+    return true;
+}
+
+/**
+ * 最大トークン数フィールドのバリデーションイベントリスナーを設定
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {() => void} リスナー削除関数
+ */
+export function setupMaxTokensValidation(input: HTMLInputElement): () => void {
+    const handler = () => validateMaxTokens(input);
+    input.addEventListener('blur', handler);
+    return () => input.removeEventListener('blur', handler);
+}
+
+/**
  * 主要フィールドのバリデーションイベントリスナーを一括設定
  * @param {HTMLInputElement} protocolInput - プロトコル入力
  * @param {HTMLInputElement} portInput - ポート入力
@@ -206,13 +232,15 @@ export function setupAllFieldValidations(
     protocolInput: HTMLInputElement,
     portInput: HTMLInputElement,
     minVisitDurationInput: HTMLInputElement,
-    minScrollDepthInput: HTMLInputElement
+    minScrollDepthInput: HTMLInputElement,
+    maxTokensPerPromptInput: HTMLInputElement
 ): (() => void)[] {
     return [
         setupProtocolValidation(protocolInput),
         setupPortValidation(portInput),
         setupMinVisitDurationValidation(minVisitDurationInput),
-        setupMinScrollDepthValidation(minScrollDepthInput)
+        setupMinScrollDepthValidation(minScrollDepthInput),
+        setupMaxTokensValidation(maxTokensPerPromptInput)
     ];
 }
 
@@ -228,7 +256,8 @@ export function validateAllFields(
     protocolInput: HTMLInputElement,
     portInput: HTMLInputElement,
     minVisitDurationInput: HTMLInputElement,
-    minScrollDepthInput: HTMLInputElement
+    minScrollDepthInput: HTMLInputElement,
+    maxTokensPerPromptInput: HTMLInputElement
 ): boolean {
     let hasError = false;
 
@@ -236,6 +265,7 @@ export function validateAllFields(
     if (!validatePort(portInput)) hasError = true;
     if (!validateMinVisitDuration(minVisitDurationInput)) hasError = true;
     if (!validateMinScrollDepth(minScrollDepthInput)) hasError = true;
+    if (!validateMaxTokens(maxTokensPerPromptInput)) hasError = true;
 
     return !hasError;
 }

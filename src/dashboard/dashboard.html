@@ -258,6 +258,14 @@
               aria-describedby="minScrollDepthError">
             <div id="minScrollDepthError" class="field-error" role="alert"></div>
           </div>
+
+          <div class="form-group">
+            <label for="maxTokensPerPrompt" data-i18n="label_max_tokens">Max Tokens Per Prompt</label>
+            <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" aria-invalid="false"
+              aria-describedby="maxTokensError maxTokensNote">
+            <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
+            <div id="maxTokensError" class="field-error" role="alert"></div>
+          </div>
         </div>
 
         <!-- ボタンエリア -->
@@ -716,6 +724,28 @@
         <div class="form-group">
           <button id="savePrivacySettings" class="btn-primary" data-i18n="savePrivacySettings">Save</button>
           <div id="privacyStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="form-group">
+          <label data-i18n="privacyConsentStatus">Privacy Consent Status</label>
+          <div id="consentStatusDisplay" class="help-text"></div>
+          <button type="button" id="btnWithdrawConsent" class="btn-danger hidden"
+            data-i18n="withdrawConsent">Withdraw Consent</button>
+          <div id="withdrawConsentStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="form-group">
+          <label data-i18n="dataManagementSection">Data Management</label>
+          <p class="help-text" data-i18n="dataManagementDesc">
+            You have the right to delete all data stored by this extension (GDPR Art. 17 / CCPA).
+          </p>
+          <button type="button" id="btnDeleteAllData" class="btn-danger"
+            data-i18n="deleteAllData">Delete All Data</button>
+          <div id="deleteAllDataStatus" class="status-message" aria-live="polite"></div>
         </div>
 
         <hr class="settings-hr">

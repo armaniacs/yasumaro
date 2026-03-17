@@ -98,7 +98,7 @@ export class OpenAIProvider extends AIProviderStrategy {
                     content: userPrompt
                 }
             ],
-            max_tokens: 1000,
+            max_tokens: this.getMaxTokens(),
             temperature: 0.1
         };
 

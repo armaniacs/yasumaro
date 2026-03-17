@@ -33,6 +33,7 @@ import {
   validatePasswordRequirements,
   validatePasswordMatch
 } from '../utils/masterPassword.js';
+import { getPrivacyConsent, withdrawPrivacyConsent } from '../popup/privacyConsent.js';
 import { setupAIProviderChangeListener, updateAIProviderVisibility, AIProviderElements } from '../popup/settings/aiProvider.js';
 import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
@@ -101,6 +102,7 @@ const providerModelInput = document.getElementById('providerModel') as HTMLInput
 
 const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
 const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
+const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
 const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
@@ -125,7 +127,8 @@ const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement | nul
   [StorageKeys.PROVIDER_API_KEY]: providerApiKeyInput,
   [StorageKeys.PROVIDER_MODEL]: providerModelInput,
   [StorageKeys.MIN_VISIT_DURATION]: minVisitDurationInput,
-  [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput
+  [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput,
+  [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensPerPromptInput
 };
 
 const aiProviderElements: AIProviderElements = {
@@ -166,11 +169,12 @@ async function handleSaveOnly(): Promise<void> {
     [protocolInput, 'protocolError'],
     [portInput, 'portError'],
     [minVisitDurationInput, 'minVisitDurationError'],
-    [minScrollDepthInput, 'minScrollDepthError']
+    [minScrollDepthInput, 'minScrollDepthError'],
+    [maxTokensPerPromptInput, 'maxTokensError']
   ];
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput)) {
+  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
     return;
   }
 
@@ -2304,6 +2308,33 @@ function setHtmlLangDir(): void {
   document.documentElement.dir = rtlLanguages.includes(langCode) ? 'rtl' : 'ltr';
 }
 
+async function initConsentWithdrawal(): Promise<void> {
+    const display = document.getElementById('consentStatusDisplay');
+    const btn = document.getElementById('btnWithdrawConsent');
+    const statusEl = document.getElementById('withdrawConsentStatus');
+
+    const state = await getPrivacyConsent();
+    if (display) {
+        display.textContent = state.hasConsented
+            ? chrome.i18n.getMessage('consented') || `Consented (${state.consentDate || ''})`
+            : chrome.i18n.getMessage('notConsented') || 'Not consented';
+    }
+    if (btn) {
+        btn.classList.toggle('hidden', !state.hasConsented);
+    }
+
+    btn?.addEventListener('click', async () => {
+        if (!confirm(chrome.i18n.getMessage('withdrawConsentConfirm'))) return;
+        try {
+            await withdrawPrivacyConsent();
+            if (statusEl) statusEl.textContent = chrome.i18n.getMessage('withdrawConsentSuccess');
+            await initConsentWithdrawal(); // UI refresh
+        } catch (e) {
+            console.error('[Dashboard] Failed to withdraw consent:', e);
+        }
+    });
+}
+
 (async () => {
   console.log('[Dashboard] Starting initialization...');
 
@@ -2325,7 +2356,21 @@ function setHtmlLangDir(): void {
 
   try { await loadGeneralSettings(); } catch (e) { console.error('[Dashboard] loadGeneralSettings error:', e); }
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
+  try { await initConsentWithdrawal(); } catch (e) { console.error('[Dashboard] initConsentWithdrawal error:', e); }
   try { await loadTrustSettings(); } catch (e) { console.error('[Dashboard] loadTrustSettings error:', e); }
+
+  // Data erasure button (GDPR Art.17)
+  document.getElementById('btnDeleteAllData')?.addEventListener('click', async () => {
+    if (!confirm(chrome.i18n.getMessage('deleteAllDataConfirm'))) return;
+    try {
+      await chrome.storage.local.clear();
+      const statusEl = document.getElementById('deleteAllDataStatus');
+      if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataSuccess');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (e) {
+      console.error('[Dashboard] Failed to delete all data:', e);
+    }
+  });
 
   setupAIProviderChangeListener(aiProviderElements);
 
@@ -2364,7 +2409,7 @@ function setHtmlLangDir(): void {
     }
     await modelsDevDialog.show();
   });
-  setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput);
+  setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput);
 
   // 保存ボタン（テストなし）
   saveBtn?.addEventListener('click', async () => {

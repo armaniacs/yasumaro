@@ -1,7 +1,10 @@
 /**
  * cspValidator.ts
- * CSP Validator - 条件付きCSPの実装（URL検証による代替）
- * 設定したAIプロバイダーのみCSPに含めるためのURL検証
+ * 実行時 CSP 検証（二層セキュリティモデルの第二層）
+ *
+ * 設計: manifest.json connect-src（第一層）は接続可能ドメインの上限。
+ * このバリデーターはユーザー設定済みプロバイダーのみ許可する（第二層）。
+ * 詳細: docs/ADR/0002-csp-layered-security.md
  */
 
 import { logWarn, ErrorCode } from './logger.js';
@@ -93,6 +96,19 @@ export class CSPValidator {
           ErrorCode.UNKNOWN_AI_PROVIDER,
           'cspValidator'
         );
+      }
+    }
+
+    // OpenAI互換プロバイダーのBase URLドメインを直接追加（PROVIDER_BASE_URL）
+    const providerBaseUrl = settings.provider_base_url as string | undefined;
+    if (providerBaseUrl) {
+      try {
+        const domain = new URL(providerBaseUrl).hostname;
+        if (domain) {
+          CSPValidator.allowedDomains.add(domain);
+        }
+      } catch {
+        // 無効なURLは無視
       }
     }
 
