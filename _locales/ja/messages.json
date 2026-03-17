@@ -1840,5 +1840,38 @@
   },
   "dataManagementDesc": {
     "message": "拡張機能に保存されているすべてのデータを削除する権利があります（GDPR 第17条 / CCPA）。"
+  },
+  "diagProtocol": {
+    "message": "プロトコル"
+  },
+  "diagPort": {
+    "message": "ポート"
+  },
+  "diagRestUrl": {
+    "message": "REST API URL"
+  },
+  "diagDailyPath": {
+    "message": "デイリーノートのパス"
+  },
+  "diagApiKey": {
+    "message": "API キー"
+  },
+  "diagProvider": {
+    "message": "プロバイダー"
+  },
+  "diagModel": {
+    "message": "モデル"
+  },
+  "diagBaseUrl": {
+    "message": "ベース URL"
+  },
+  "defaultValue": {
+    "message": "(デフォルト)"
+  },
+  "notSet": {
+    "message": "(未設定)"
+  },
+  "configured": {
+    "message": "(設定済み)"
   }
 }

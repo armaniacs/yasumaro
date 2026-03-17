@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added (2026-03-17)
 
+- **GitHub Actions CI/CD**
+  - `.github/workflows/validate.yml`で自動検証ワークフローを追加
+  - PR作成時およびmainブランチへのプッシュ時に自動実行
+  - 検証内容: Type Check + Test
+  - 結果をPRコメントとして自動通知
+
 - **GDPR/CCPA コンプライアンス機能**
   - プライバシー同意撤回機能（GDPR Art.7）を実装
     - `withdrawPrivacyConsent()`で同意を撤回、履歴を記録
@@ -20,6 +26,18 @@ All notable changes to this project will be documented in this file.
   - manifest.json connect-src（第一層）とCSPValidator（第二層）の役割を明確化
 
 ### Fixed / Changes (2026-03-17)
+
+- **TrustChecker初期化競合状態の修正**
+  - `TrustChecker`クラスに初期化フラグと`ensureInitialized()`を追加
+  - コンストラクタからの非同期初期化を待機し、初期化未完了時は警告を出力
+  - `getAlertConfig()`と`shouldSaveAbortedPages()`を非同期メソッドに変更
+  - テスト更新: async呼び出しに対応
+
+- **Edge/Mobile対応強化**
+  - セッションチェック間隔: 1分 → 5分に延長（バッテリー効率化）
+  - APIリトライ機能: `fetchWithRetry()`追加（指数バックオフ、最大3回再試行）
+  - OpenAIProvider/GeminiProviderでリトライ機能を適用
+  - ネットワークエラーや5xxサーバーエラー時に自動リトライ
 
 - **セキュリティ修正**
   - DOMAIN_REGEX: 末尾の`\.?`を削除し、不正ドメイン（`a.`等）を拒否するように修正

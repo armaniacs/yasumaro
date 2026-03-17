@@ -1,12 +1,12 @@
-// fetchWithTimeoutをモック
+// fetchWithRetryをモック
 jest.mock('../../utils/fetch.js', () => ({
-  fetchWithTimeout: jest.fn(),
+  fetchWithRetry: jest.fn(),
   validateUrlForAIRequests: jest.fn(),
 }));
 
 import { GeminiProvider, OpenAIProvider } from '../ai/providers/index.js';
 import * as logger from '../../utils/logger.js';
-import { fetchWithTimeout } from '../../utils/fetch.js';
+import { fetchWithRetry } from '../../utils/fetch.js';
 import { StorageKeys } from '../../utils/storage.js';
 
 jest.mock('../../utils/logger.js');
@@ -29,10 +29,10 @@ describe('AI Provider timeout', () => {
     jest.clearAllMocks();
   });
 
-  test('GeminiProvider：fetchWithTimeoutに適切なタイムアウトを渡す', async () => {
+  test('GeminiProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockResolvedValue({
+    fetchWithRetry.mockResolvedValue({
       ok: true,
       json: async () => ({
         candidates: [{
@@ -51,20 +51,20 @@ describe('AI Provider timeout', () => {
     const result = await provider.generateSummary('test content');
 
     expect(result).toBe('テスト要約');
-    expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
 
-    // 第3引数が30000であることを確認
+    // 第2引数のoptionsにtimeoutMsが含まれていることを確認
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    const callArgs = fetchWithTimeout.mock.calls[0];
-    expect(callArgs[2]).toBe(30000);
+    const callArgs = fetchWithRetry.mock.calls[0];
+    expect(callArgs[1].timeoutMs).toBe(30000);
     expect(callArgs[1].method).toBe('POST');
   });
 
   test('GeminiProvider：タイムアウトエラーを適切に処理', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockRejectedValue(new Error('Request timed out after 30000ms'));
+    fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
 
     const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
@@ -76,10 +76,10 @@ describe('AI Provider timeout', () => {
     expect(result).toMatch(/timed out/);
   });
 
-  test('OpenAIProvider：fetchWithTimeoutに適切なタイムアウトを渡す', async () => {
+  test('OpenAIProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockResolvedValue({
+    fetchWithRetry.mockResolvedValue({
       ok: true,
       json: async () => ({
         choices: [{
@@ -97,17 +97,19 @@ describe('AI Provider timeout', () => {
     const result = await provider.generateSummary('test');
 
     expect(result).toBe('OpenAI要約');
-    expect(fetchWithTimeout).toHaveBeenCalledWith(
+    expect(fetchWithRetry).toHaveBeenCalledWith(
       expect.stringContaining('/chat/completions'),
-      expect.any(Object),
-      30000
+      expect.objectContaining({
+        timeoutMs: 30000
+      }),
+      expect.any(Object)
     );
   });
 
   test('OpenAIProvider：タイムアウトエラーを適切に処理', async () => {
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockRejectedValue(new Error('Request timed out after 30000ms'));
+    fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
 
     const settings: any = {
       [StorageKeys.OPENAI_BASE_URL]: 'https://api.openai.com/v1',

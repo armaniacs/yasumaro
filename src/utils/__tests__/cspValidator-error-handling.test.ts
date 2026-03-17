@@ -8,7 +8,8 @@
  * - エラー発生時に適切なログ記録が必要
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeAll, jest } from '@jest/globals';
+import { CSPValidator } from '../cspValidator.js';
 
 // Mock chrome API
 global.chrome = {
@@ -51,24 +52,22 @@ jest.mock('../logger.js', () => ({
 }));
 
 describe('CSP Validator - Error Handling', () => {
-  let cspValidator: any;
   let logger: any;
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
-
+  beforeAll(async () => {
     // Import logger
     const loggerModule = await import('../logger.js');
     logger = loggerModule;
+  });
 
-    // Import cspValidator
-    const cspValidatorModule = await import('../cspValidator.js');
-    cspValidator = cspValidatorModule;
-
-    // Reset mock calls
+  beforeEach(() => {
+    jest.clearAllMocks();
     mockLogError.mockClear();
     mockLogWarn.mockClear();
     mockLogInfo.mockClear();
+
+    // Reset CSPValidator state before each test
+    CSPValidator.reset();
   });
 
   describe('isUrlAllowed - Error Handling', () => {
@@ -76,15 +75,14 @@ describe('CSP Validator - Error Handling', () => {
       const invalidUrl = 'not-a-url';
 
       // This should not throw an error
-      const result = cspValidator.isUrlAllowed(invalidUrl);
+      const result = CSPValidator.isUrlAllowed(invalidUrl);
 
-      // Should return a result (may be false)
-      expect(typeof result).toBe('boolean');
+      // Should return false for invalid URL
+      expect(result).toBe(false);
 
-      // Check if error was logged (should be, according to recommendation)
-      // Currently: may not log errors
-      const errorLogged = mockLogError.mock.calls.some(call =>
-        call[0].includes('URL validation') || call[0].includes('CSP')
+      // Check if error was logged
+      const errorLogged = mockLogWarn.mock.calls.some(call =>
+        call[0].includes('CSP validation failed')
       );
       console.log('Error logged for invalid URL:', errorLogged);
     });
@@ -93,7 +91,7 @@ describe('CSP Validator - Error Handling', () => {
       const malformedUrl = 'https://example<script>.com/api';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(malformedUrl);
+      const result = CSPValidator.isUrlAllowed(malformedUrl);
 
       expect(typeof result).toBe('boolean');
       console.log('Result for malformed URL:', result);
@@ -103,20 +101,23 @@ describe('CSP Validator - Error Handling', () => {
       const invalidProtocolUrl = 'javascript:alert(1)';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(invalidProtocolUrl);
+      const result = CSPValidator.isUrlAllowed(invalidProtocolUrl);
 
       expect(typeof result).toBe('boolean');
+      expect(result).toBe(false);
       console.log('Result for invalid protocol:', result);
     });
 
     test('should handle null or undefined URL', async () => {
       // Should not throw error for null
-      const result1 = cspValidator.isUrlAllowed(null as any);
+      const result1 = CSPValidator.isUrlAllowed(null as any);
       expect(typeof result1).toBe('boolean');
+      expect(result1).toBe(false);
 
       // Should not throw error for undefined
-      const result2 = cspValidator.isUrlAllowed(undefined as any);
+      const result2 = CSPValidator.isUrlAllowed(undefined as any);
       expect(typeof result2).toBe('boolean');
+      expect(result2).toBe(false);
     });
   });
 
@@ -125,13 +126,13 @@ describe('CSP Validator - Error Handling', () => {
       const invalidUrl = 'not-a-url';
 
       // Should not throw error
-      const result = cspValidator.isAProviderUrl(invalidUrl);
+      const result = CSPValidator.isAProviderUrl(invalidUrl);
 
       expect(typeof result).toBe('boolean');
 
       // Check if error was logged
-      const errorLogged = mockLogError.mock.calls.some(call =>
-        call[0].includes('provider URL') || call[0].includes('CSP')
+      const errorLogged = mockLogWarn.mock.calls.some(call =>
+        call[0].includes('CSP provider URL validation failed')
       );
       console.log('Error logged for invalid provider URL:', errorLogged);
     });
@@ -140,19 +141,21 @@ describe('CSP Validator - Error Handling', () => {
       const url = 'https://unknown-provider.com/api';
 
       // Should not throw error
-      const result = cspValidator.isAProviderUrl(url);
+      const result = CSPValidator.isAProviderUrl(url);
 
       expect(typeof result).toBe('boolean');
+      expect(result).toBe(false);
       console.log('Result for unknown provider:', result);
     });
 
-    test('should handle null provider name', async () => {
+    test('should handle valid provider URL', async () => {
       const url = 'https://api.openai.com/v1/models';
 
       // Should not throw error
-      const result = cspValidator.isAProviderUrl(url);
+      const result = CSPValidator.isAProviderUrl(url);
 
       expect(typeof result).toBe('boolean');
+      expect(result).toBe(true);
     });
   });
 
@@ -162,24 +165,24 @@ describe('CSP Validator - Error Handling', () => {
       const invalidUrl = 'the-reliable-url';
 
       // Call validator
-      cspValidator.isUrlAllowed(invalidUrl);
+      CSPValidator.isUrlAllowed(invalidUrl);
 
-      // Check if error was logged (should be, according to recommendation)
-      const hasErrorLog = mockLogError.mock.calls.some(call =>
-        call[0].includes('CSP') && call[1] !== undefined
+      // Check if error was logged
+      const hasErrorLog = mockLogWarn.mock.calls.some(call =>
+        call[0].includes('CSP validation failed')
       );
 
       console.log('Error logging status:', hasErrorLog);
-      console.log('Error log calls:', mockLogError.mock.calls);
+      console.log('Error log calls:', mockLogWarn.mock.calls);
     });
 
     test('RECOMMENDED: Should not log sensitive data (URLs)', async () => {
       const url = 'https://private-token@api.openai.com/v1/models';
 
-      cspValidator.isUrlAllowed(url);
+      CSPValidator.isUrlAllowed(url);
 
       // Check that URLs are not logged in error messages
-      const errorLogs = mockLogError.mock.calls || [];
+      const errorLogs = mockLogWarn.mock.calls || [];
       errorLogs.forEach((call: any) => {
         const [message, details] = call;
         if (details && typeof details === 'object') {
@@ -195,10 +198,10 @@ describe('CSP Validator - Error Handling', () => {
     test('RECOMMENDED: Should use structured logging', async () => {
       const url = 'https://api.openai.com/v1/models';
 
-      cspValidator.isUrlAllowed(url);
+      CSPValidator.isUrlAllowed(url);
 
       // If errors are logged, they should use structured logging
-      const errorLogs = mockLogError.mock.calls || [];
+      const errorLogs = mockLogWarn.mock.calls || [];
       if (errorLogs.length > 0) {
         const [message, details] = errorLogs[0];
         expect(typeof message).toBe('string');
@@ -214,7 +217,7 @@ describe('CSP Validator - Error Handling', () => {
       const url = 'https://日本語.example.com/api';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(url);
+      const result = CSPValidator.isUrlAllowed(url);
 
       expect(typeof result).toBe('boolean');
       console.log('Result for international URL:', result);
@@ -224,7 +227,7 @@ describe('CSP Validator - Error Handling', () => {
       const url = 'https://api.openai.com:443/v1/models';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(url);
+      const result = CSPValidator.isUrlAllowed(url);
 
       expect(typeof result).toBe('boolean');
     });
@@ -233,7 +236,7 @@ describe('CSP Validator - Error Handling', () => {
       const url = 'https://api.openai.com/v1/models?param=value&other=test';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(url);
+      const result = CSPValidator.isUrlAllowed(url);
 
       expect(typeof result).toBe('boolean');
     });
@@ -242,7 +245,7 @@ describe('CSP Validator - Error Handling', () => {
       const url = 'https://api.openai.com/v1/models#section';
 
       // Should not throw error
-      const result = cspValidator.isUrlAllowed(url);
+      const result = CSPValidator.isUrlAllowed(url);
 
       expect(typeof result).toBe('boolean');
     });

@@ -95,7 +95,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    const config = checker.getAlertConfig();
+    const config = await checker.getAlertConfig();
     expect(config.alertFinance).toBe(DEFAULT_ALERT_CONFIG.alertFinance);
     expect(config.alertSensitive).toBe(DEFAULT_ALERT_CONFIG.alertSensitive);
     expect(config.alertUnverified).toBe(DEFAULT_ALERT_CONFIG.alertUnverified);
@@ -109,7 +109,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
 
     await checker.saveAlertSettings({ alertUnverified: true, saveAbortedPages: true });
 
-    const config = checker.getAlertConfig();
+    const config = await checker.getAlertConfig();
     expect(config.alertUnverified).toBe(true);
     expect(config.saveAbortedPages).toBe(true);
     // 変更しなかった値は変わらない
@@ -134,9 +134,9 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    expect(checker.shouldSaveAbortedPages()).toBe(false);
+    expect(await checker.shouldSaveAbortedPages()).toBe(false);
 
     await checker.saveAlertSettings({ saveAbortedPages: true });
-    expect(checker.shouldSaveAbortedPages()).toBe(true);
+    expect(await checker.shouldSaveAbortedPages()).toBe(true);
   });
 });

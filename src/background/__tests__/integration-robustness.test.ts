@@ -2,7 +2,7 @@
 import { ObsidianClient } from '../obsidianClient.js';
 import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
-import { fetchWithTimeout } from '../../utils/fetch.js';
+import { fetchWithRetry } from '../../utils/fetch.js';
 
 jest.mock('../../utils/fetch.js');
 jest.mock('../../utils/logger.js');
@@ -77,18 +77,18 @@ describe('Integration: Robustness improvements', () => {
     expect(mutex.queue.size).toBe(0);
   });
 
-  test('fetchWithTimeoutが正常に動作', async () => {
+  test('fetchWithRetryが正常に動作', async () => {
     const mockResponse = { ok: true, json: async () => ({ data: 'test' }) };
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockResolvedValue(mockResponse);
+    fetchWithRetry.mockResolvedValue(mockResponse);
 
-    const response = await fetchWithTimeout('https://example.com', {}, 1000);
+    const response = await fetchWithRetry('https://example.com', {}, {});
     expect(response.ok).toBe(true);
   });
 
-  test('GeminiProviderがfetchWithTimeoutを使用', async () => {
-    // fetchWithTimeoutが呼ばれることを確認
+  test('GeminiProviderがfetchWithRetryを使用', async () => {
+    // fetchWithRetryが呼ばれることを確認
     const mockResponse = {
       ok: true,
       json: async () => ({
@@ -101,7 +101,7 @@ describe('Integration: Robustness improvements', () => {
     };
     // @ts-expect-error - jest.fn() type narrowing issue
 
-    fetchWithTimeout.mockResolvedValue(mockResponse);
+    fetchWithRetry.mockResolvedValue(mockResponse);
 
     const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
@@ -112,10 +112,12 @@ describe('Integration: Robustness improvements', () => {
     const result = await provider.generateSummary('test content');
 
     expect(result).toBe('テスト要約');
-    expect(fetchWithTimeout).toHaveBeenCalledWith(
+    expect(fetchWithRetry).toHaveBeenCalledWith(
       expect.stringContaining('generativelanguage.googleapis.com'),
-      expect.any(Object),
-      30000 // 30秒のタイムアウト
+      expect.objectContaining({
+        timeoutMs: 30000 // 30秒のタイムアウト
+      }),
+      expect.any(Object)
     );
   });
 });

@@ -50,10 +50,12 @@ export interface TrustCheckResult {
  */
 export class TrustChecker {
   private alertConfig: AlertConfig = DEFAULT_ALERT_CONFIG;
+  private alertConfigInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
     // 初期化時にAlert Settingsを読み込む
-    this.loadAlertSettings();
+    this.initializationPromise = this.loadAlertSettings();
   }
 
   /**
@@ -75,9 +77,21 @@ export class TrustChecker {
         saveAbortedPages: (settings[StorageKeys.SAVE_ABORTED_PAGES] as boolean) ?? DEFAULT_ALERT_CONFIG.saveAbortedPages
       };
 
+      this.alertConfigInitialized = true;
       logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
     } catch (error) {
       logWarn('TrustChecker', { error: error instanceof Error ? error.message : String(error) }, undefined, 'Failed to load alert settings');
+      // エラーの場合も初期化済みフラグを立てて、デフォルト値を使用する
+      this.alertConfigInitialized = true;
+    }
+  }
+
+  /**
+   * 初期化が完了するまで待機
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
     }
   }
 
@@ -113,7 +127,19 @@ export class TrustChecker {
   /**
    * 現在のAlert Settingsを取得
    */
-  getAlertConfig(): AlertConfig {
+  async getAlertConfig(): Promise<AlertConfig> {
+    await this.ensureInitialized();
+    return { ...this.alertConfig };
+  }
+
+  /**
+   * 現在のAlert Settingsを取得（同期的、初期化済みの場合のみ）
+   * 注: 非推奨メソッド。使用箇所を確認し、async getAlertConfig() に移行することを推奨
+   */
+  getAlertConfigSync(): AlertConfig {
+    if (!this.alertConfigInitialized) {
+      logWarn('TrustChecker', {}, undefined, 'getAlertConfigSync called before initialization - using default values');
+    }
     return { ...this.alertConfig };
   }
 
@@ -121,6 +147,8 @@ export class TrustChecker {
    * ドメインのTrustチェックを実行
    */
   async checkDomain(url: string): Promise<TrustCheckResult> {
+    await this.ensureInitialized();
+
     const db = getTrustDb();
     await db.initialize();
 
@@ -278,7 +306,18 @@ export class TrustChecker {
   /**
    * 保存された中断ページを履歴に残すか
    */
-  shouldSaveAbortedPages(): boolean {
+  async shouldSaveAbortedPages(): Promise<boolean> {
+    await this.ensureInitialized();
+    return this.alertConfig.saveAbortedPages;
+  }
+
+  /**
+   * 保存された中断ページを履歴に残すか（同期的、初期化済みの場合のみ）
+   */
+  shouldSaveAbortedPagesSync(): boolean {
+    if (!this.alertConfigInitialized) {
+      logWarn('TrustChecker', {}, undefined, 'shouldSaveAbortedPagesSync called before initialization - using default value');
+    }
     return this.alertConfig.saveAbortedPages;
   }
 }

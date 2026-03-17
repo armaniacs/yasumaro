@@ -9,6 +9,7 @@ import { StorageKeys } from '../utils/storage.js';
 
 // 定数
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
+const SESSION_CHECK_INTERVAL_MINUTES = 5; // セッションチェック間隔（バッテリー効率化）
 const ALARM_NAME_CHECK_SESSION = 'check_session_timeout';
 const STORAGE_KEY_LAST_ACTIVITY = 'session_last_activity';
 
@@ -39,9 +40,9 @@ export async function startTimeoutChecker(): Promise<void> {
         // 既存のアラームをクリア
         await chrome.alarms.clear(ALARM_NAME_CHECK_SESSION);
 
-        // 1分間隔でアラーム作成
+        // SESSION_CHECK_INTERVAL_MINUTES 間隔でアラーム作成（バッテリー効率化）
         await chrome.alarms.create(ALARM_NAME_CHECK_SESSION, {
-            periodInMinutes: 1
+            periodInMinutes: SESSION_CHECK_INTERVAL_MINUTES
         });
 
         // アラームリスナーを設定（内部で重複チェックあり）

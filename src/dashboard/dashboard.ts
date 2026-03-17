@@ -2117,11 +2117,29 @@ async function initDiagnosticsPanel(): Promise<void> {
       const apiKey = (settings[StorageKeys.OBSIDIAN_API_KEY] as string) || '';
       const dailyPath = (settings[StorageKeys.OBSIDIAN_DAILY_PATH] as string) || '';
 
-      obsidianSettingsEl.appendChild(makeStatRow('Protocol', protocol));
-      obsidianSettingsEl.appendChild(makeStatRow('Port', port));
-      obsidianSettingsEl.appendChild(makeStatRow('REST API URL', `${protocol}://127.0.0.1:${port}`));
-      obsidianSettingsEl.appendChild(makeStatRow('Daily Note Path', dailyPath || '(デフォルト)'));
-      obsidianSettingsEl.appendChild(makeStatRow('API Key', apiKey ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !apiKey));
+      obsidianSettingsEl.appendChild(makeStatRow(
+        getMessage('diagProtocol') || 'Protocol',
+        protocol
+      ));
+      obsidianSettingsEl.appendChild(makeStatRow(
+        getMessage('diagPort') || 'Port',
+        port
+      ));
+      obsidianSettingsEl.appendChild(makeStatRow(
+        getMessage('diagRestUrl') || 'REST API URL',
+        `${protocol}://127.0.0.1:${port}`
+      ));
+      obsidianSettingsEl.appendChild(makeStatRow(
+        getMessage('diagDailyPath') || 'Daily Note Path',
+        dailyPath || (getMessage('defaultValue') || '(default)')
+      ));
+      const configuredLabel = getMessage('configured') || '(configured)';
+      const notSetLabel = getMessage('notSet') || '(not set)';
+      obsidianSettingsEl.appendChild(makeStatRow(
+        getMessage('diagApiKey') || 'API Key',
+        apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel,
+        !apiKey
+      ));
     }
 
     if (aiSettingsEl) {
@@ -2131,31 +2149,64 @@ async function initDiagnosticsPanel(): Promise<void> {
         openai: 'OpenAI Compatible',
         openai2: 'OpenAI Compatible 2',
       };
-      aiSettingsEl.appendChild(makeStatRow('Provider', providerLabels[provider] || provider));
+      aiSettingsEl.appendChild(makeStatRow(
+        getMessage('diagProvider') || 'Provider',
+        providerLabels[provider] || provider
+      ));
+
+      const configuredLabel = getMessage('configured') || '(configured)';
+      const notSetLabel = getMessage('notSet') || '(not set)';
 
       if (provider === 'gemini') {
         const model = (settings[StorageKeys.GEMINI_MODEL] as string) || '';
         const key = (settings[StorageKeys.GEMINI_API_KEY] as string) || '';
-        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
-        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagModel') || 'Model',
+          model || notSetLabel
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagApiKey') || 'API Key',
+          key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel,
+          !key
+        ));
       } else if (provider === 'openai') {
         const baseUrl = (settings[StorageKeys.OPENAI_BASE_URL] as string) || '';
         const model = (settings[StorageKeys.OPENAI_MODEL] as string) || '';
         const key = (settings[StorageKeys.OPENAI_API_KEY] as string) || '';
-        aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
-        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
-        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagBaseUrl') || 'Base URL',
+          baseUrl || notSetLabel
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagModel') || 'Model',
+          model || notSetLabel
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagApiKey') || 'API Key',
+          key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel,
+          !key
+        ));
       } else if (provider === 'openai2') {
         const baseUrl = (settings[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
         const model = (settings[StorageKeys.OPENAI_2_MODEL] as string) || '';
         const key = (settings[StorageKeys.OPENAI_2_API_KEY] as string) || '';
-        aiSettingsEl.appendChild(makeStatRow('Base URL', baseUrl || '(未設定)'));
-        aiSettingsEl.appendChild(makeStatRow('Model', model || '(未設定)'));
-        aiSettingsEl.appendChild(makeStatRow('API Key', key ? `${'•'.repeat(8)} (設定済み)` : '(未設定)', !key));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagBaseUrl') || 'Base URL',
+          baseUrl || notSetLabel
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagModel') || 'Model',
+          model || notSetLabel
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagApiKey') || 'API Key',
+          key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel,
+          !key
+        ));
       }
     }
   } catch {
-    obsidianSettingsEl && (obsidianSettingsEl.textContent = '設定の読み込みに失敗しました。');
+    obsidianSettingsEl && (obsidianSettingsEl.textContent = getMessage('diagLoadError') || '設定の読み込みに失敗しました。');
   }
 
   // Storage stats

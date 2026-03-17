@@ -4,7 +4,7 @@
  */
 
 import { AIProviderStrategy, AIProviderConnectionResult } from './ProviderStrategy.js';
-import { fetchWithTimeout, validateUrlForAIRequests } from '../../../utils/fetch.js';
+import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
@@ -110,12 +110,18 @@ export class OpenAIProvider extends AIProviderStrategy {
         try {
             const allowedUrls = await this._getAllowedUrls();
 
-            const response = await fetchWithTimeout(url, {
+            const response = await fetchWithRetry(url, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload),
-                allowedUrls
-            }, this.timeoutMs);
+                allowedUrls,
+                timeoutMs: this.timeoutMs
+            }, {
+                maxRetryCount: 3,
+                initialDelayMs: 1000,
+                backoffMultiplier: 2,
+                maxDelayMs: 60000
+            });
 
             if (!response.ok) {
                 return "Error: Failed to generate summary. Please check your API settings.";
@@ -147,11 +153,17 @@ export class OpenAIProvider extends AIProviderStrategy {
         try {
             const allowedUrls = await this._getAllowedUrls();
 
-            const response = await fetchWithTimeout(url, {
+            const response = await fetchWithRetry(url, {
                 method: 'GET',
                 headers,
-                allowedUrls
-            }, this.timeoutMs);
+                allowedUrls,
+                timeoutMs: this.timeoutMs
+            }, {
+                maxRetryCount: 1, // テスト接続はリトライ少なめ（早く失敗させる）
+                initialDelayMs: 500,
+                backoffMultiplier: 2,
+                maxDelayMs: 3000
+            });
 
             if (response.ok) {
                 return { success: true, message: 'Connected to AI API.' };

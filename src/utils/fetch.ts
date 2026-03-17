@@ -11,6 +11,7 @@
 import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { getSettings, StorageKeys } from './storage.js';
+import { logDebug, logWarn } from './logger.js';
 
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
@@ -35,6 +36,7 @@ interface FetchOptions extends RequestInit {
   blockLocalhost?: boolean;
   allowedUrls?: Set<string> | null;
   skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
+  timeoutMs?: number; // リクエストタイムアウト時間（ミリ秒）
 }
 
 /**
@@ -316,4 +318,120 @@ export function validateUrlForAIRequests(url: string): void {
   //   'groq.com',
   //   // ユーザー定義のbaseUrlも許可（カスタムAIプロバイダー対応）
   // ];
+}
+
+/**
+ * リトライ設定
+ */
+export interface RetryOptions {
+  /** リトライ回数（デフォルト: 3） */
+  maxRetryCount?: number;
+  /** 初期遅延時間（ミリ秒、デフォルト: 1000） */
+  initialDelayMs?: number;
+  /** バックオフ倍率（デフォルト: 2） */
+  backoffMultiplier?: number;
+  /** 最大遅延時間（ミリ秒、デフォルト: 60000） */
+  maxDelayMs?: number;
+  /** リトライすべきエラー条件 */
+  shouldRetry?: (error: Error, attempt: number, response: Response | null) => boolean;
+}
+
+/**
+ * デフォルトのリトライ条件判定
+ * ネットワークエラー、5xxサーバーエラー、429 Too Many Requestsの場合はリトライ
+ */
+function defaultShouldRetry(error: Error, attempt: number, response: Response | null): boolean {
+  // ネットワークエラー（タイムアウト、接続失敗等）
+  if (error.name === 'AbortError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
+    return true;
+  }
+
+  // 5xxサーバーエラーまたは429 Too Many Requests
+  if (response && (response.status >= 500 || response.status === 429)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * 指数バックオフ付きリトライ機能付きフェッチ
+ * ネットワークエラーや5xxエラー時に自動リトライ
+ *
+ * **タイムアウト動作:**
+ * - 各リトライ試行は `timeoutMs` でタイムアウト
+ * - 全リトライ失敗時の最大待機時間: `(maxRetryCount + 1) * timeoutMs + totalBackoff`
+ * - 例: maxRetryCount=3, timeoutMs=30000, initialDelayMs=1000, backoffMultiplier=2 の場合
+ *   - 最大待機時間: 4 * 30000 + (1000 + 2000 + 4000) = 127000ms (約2分)
+ *
+ * @param {string} url - リクエストURL
+ * @param {RequestInit} options - fetchオプション
+ * @param {RetryOptions} retryOptions - リトライ設定
+ * @returns {Promise<Response>} fetchレスポンス
+ * @throws {Error} 全リトライ失敗時
+ */
+export async function fetchWithRetry(
+  url: string,
+  options: FetchOptions = {},
+  retryOptions: RetryOptions = {}
+): Promise<Response> {
+  const {
+    maxRetryCount = 3,
+    initialDelayMs = 1000,
+    backoffMultiplier = 2,
+    maxDelayMs = 60000,
+    shouldRetry = defaultShouldRetry
+  } = retryOptions;
+
+  let lastError: Error | null = null;
+  let lastResponse: Response | null = null;
+
+  for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options, options.timeoutMs || 30000);
+      lastResponse = response;
+
+      // レスポンスが正常な場合は返却
+      if (response.ok) {
+        // 成功時のログ（リトライがあった場合のみ）
+        if (attempt > 0) {
+          logDebug(`Request succeeded after ${attempt} retries`, { url, attempt, maxRetryCount }, 'fetchWithRetry');
+        }
+        return response;
+      }
+
+      // エラーレスポンスの場合、リトライ条件をチェック
+      const attemptError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response)) {
+        // リトライ
+        lastError = attemptError;
+        logWarn(`HTTP error, retrying...`, { url, attempt: attempt + 1, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
+      } else {
+        // リトライなしまたは全リトライ失敗
+        logWarn(`HTTP error, no more retries`, { url, attempt, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
+        throw attemptError;
+      }
+    } catch (error: any) {
+      lastResponse = null;
+      lastError = error;
+
+      // リトライ条件チェック
+      if (attempt < maxRetryCount && shouldRetry(error, attempt + 1, null)) {
+        // リトライ遅延（指数バックオフ）
+        const delay = Math.min(
+          initialDelayMs * Math.pow(backoffMultiplier, attempt),
+          maxDelayMs
+        );
+        logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: error.message }, undefined, 'fetchWithRetry');
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // リトライなしまたは全リトライ失敗
+        logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: error.message }, undefined, 'fetchWithRetry');
+        throw error;
+      }
+    }
+  }
+
+  // ここには到達しないはず（全リトライ失敗時は上でthrowされている）
+  throw lastError || new Error('Request failed after retry');
 }

@@ -742,7 +742,9 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3,      // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
     // Conditional CSP Settings (P1)
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,       // 条件付きCSP有効フラグ（デフォルト: 有効）
-    [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: []        // 追加するAIプロバイダーIDリスト（デフォルト: 空）
+    [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],        // 追加するAIプロバイダーIDリスト（デフォルト: 空）
+    // AI Limits Settings
+    [StorageKeys.MAX_TOKENS_PER_PROMPT]: 1000          // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
 };
 
 /**

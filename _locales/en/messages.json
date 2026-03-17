@@ -1840,5 +1840,38 @@
   },
   "dataManagementDesc": {
     "message": "You have the right to delete all data stored by this extension (GDPR Art. 17 / CCPA)."
+  },
+  "diagProtocol": {
+    "message": "Protocol"
+  },
+  "diagPort": {
+    "message": "Port"
+  },
+  "diagRestUrl": {
+    "message": "REST API URL"
+  },
+  "diagDailyPath": {
+    "message": "Daily Note Path"
+  },
+  "diagApiKey": {
+    "message": "API Key"
+  },
+  "diagProvider": {
+    "message": "Provider"
+  },
+  "diagModel": {
+    "message": "Model"
+  },
+  "diagBaseUrl": {
+    "message": "Base URL"
+  },
+  "defaultValue": {
+    "message": "(default)"
+  },
+  "notSet": {
+    "message": "(not set)"
+  },
+  "configured": {
+    "message": "(configured)"
   }
 }

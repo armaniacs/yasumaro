@@ -88,6 +88,16 @@ export function createBloomFilter(options: {
 }): TrustBloomFilter {
   const { expectedDomainCount, falsePositiveRate = 0.01 } = options;
 
+  // Handle empty bloom filter case (initial state)
+  if (expectedDomainCount === 0) {
+    return new TrustBloomFilter({
+      bloomFilter: new BloomFilter(1, 1), // Minimal valid bloom filter
+      hashCount: 1,
+      bitCount: 1,
+      expectedDomainCount: 0
+    });
+  }
+
   const size = -Math.floor((expectedDomainCount * Math.log(falsePositiveRate)) / Math.pow(Math.LN2, 2));
   const hashCount = Math.floor(size / expectedDomainCount * Math.LN2);
 

@@ -200,6 +200,9 @@ function renderSensitiveList(domains: string[], isWhitelist = false): void {
   });
 }
 
+// Export for testing (also update the previous export)
+export { renderJpAnchorList, renderSensitiveList };
+
 async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
   const db = getTrustDb();
   await db.initialize();
@@ -352,7 +355,8 @@ async function saveTrustSettings(): Promise<void> {
 
   // Note: Trust Database changes are already saved immediately when modified
   showStatus((getMessage('settingsSaved') || 'Settings saved'));
-  logInfo('TrustSettings', { alertConfig: checker.getAlertConfig() }, 'Trust settings saved');
+  const alertConfig = await checker.getAlertConfig();
+  logInfo('TrustSettings', { alertConfig }, 'Trust settings saved');
 }
 
 // ============================================================================
@@ -398,8 +402,7 @@ export async function loadTrustSettings(): Promise<void> {
 
   // Alert Settings をTrustCheckerから読み込む
   const checker = getTrustChecker();
-  await checker.loadAlertSettings();
-  const alertConfig = checker.getAlertConfig();
+  const alertConfig = await checker.getAlertConfig();
 
   if (alertFinanceCheckbox) {
     alertFinanceCheckbox.checked = alertConfig.alertFinance;

@@ -34,7 +34,7 @@
             </div>
 
             <!-- Loading state -->
-            <div id="dialog-loading" class="loading-state">
+            <div id="dialog-loading" class="loading-state" aria-live="polite" aria-busy="true">
                 <div class="spinner"></div>
                 <span data-i18n="loadingProviders">Loading providers...</span>
             </div>
@@ -59,11 +59,11 @@
             <!-- API Key Input -->
             <div class="api-key-section">
                 <label for="api-key-input" data-i18n="apiKey">API Key:</label>
-                <input type="password" id="api-key-input" placeholder="Enter your API key..." data-i18n-placeholder="apiKeyPlaceholder">
+                <input type="password" id="api-key-input" placeholder="Enter your API key..." data-i18n-placeholder="apiKeyPlaceholder" aria-required="true">
             </div>
 
             <!-- Error message -->
-            <div id="dialog-error" class="error-message hidden"></div>
+            <div id="dialog-error" class="error-message hidden" aria-live="polite"></div>
 
             <!-- Footer -->
             <div class="modal-footer">

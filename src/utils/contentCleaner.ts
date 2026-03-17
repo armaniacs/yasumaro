@@ -111,7 +111,7 @@ export function stripHardStripElements(element: Element): number {
     const elementsToRemove: Element[] = [];
 
     // タグセレクタをCSSセレクタ文字列に変換
-    const tagSelector = Array.from(HARD_STRIP_TAGS).join(',');
+    const tagSelector = [...HARD_STRIP_TAGS].join(',');
 
     // タグに一致する要素を取得
     if (tagSelector) {
@@ -237,7 +237,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
 
     if (hardStripEnabled) {
         // タグセレクタをCSSセレクタ文字列に変換
-        const tagSelector = Array.from(HARD_STRIP_TAGS).join(',');
+        const tagSelector = [...HARD_STRIP_TAGS].join(',');
 
         // タグに一致する要素をカウント
         if (tagSelector) {

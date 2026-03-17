@@ -350,11 +350,7 @@ class TrustDb {
    * プリセットから Bloom Filter データを作成
    */
   private createBloomFilterFromPresets(): Promise<BloomFilterData> {
-    const allSensitiveDomains: string[] = [
-      ...SENSITIVE_DOMAINS_PRESETS.finance,
-      ...SENSITIVE_DOMAINS_PRESETS.gaming,
-      ...SENSITIVE_DOMAINS_PRESETS.sns
-    ];
+    const allSensitiveDomains: string[] = Object.values(SENSITIVE_DOMAINS_PRESETS).flat();
 
     const bloom = bloomFilterFromDomains(allSensitiveDomains, 0.01);
     return Promise.resolve(bloom.toData());

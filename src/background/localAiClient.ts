@@ -5,6 +5,7 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
+import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'src/offscreen/offscreen.html';
 const MESSAGE_TIMEOUT_MS = 30000; // 30秒
@@ -108,10 +109,19 @@ export class LocalAIClient {
             return { success: false, error: 'Invalid content' };
         }
 
+        // Sanitize content to prevent prompt injection (match OpenAIProvider/GeminiProvider behavior)
+        const sanitizeResult = sanitizePromptContent(content);
+        if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
+            addLog(LogType.WARN, 'Content blocked due to high danger level', { warnings: sanitizeResult.warnings, source: 'LocalAI' });
+            return { success: false, error: 'Content contains potentially dangerous patterns' };
+        }
+
+        const sanitizedContent = sanitizeResult.sanitized;
+
         let timeoutId: NodeJS.Timeout | undefined;
         try {
             const response = await Promise.race([
-                this.msgOffscreen('SUMMARIZE', { content }),
+                this.msgOffscreen('SUMMARIZE', { content: sanitizedContent }),
                 new Promise<OffscreenResponse>((_, reject) => {
                     timeoutId = setTimeout(() => {
                         reject(new Error('Error: Local AI request timed out. Please try again.'));
