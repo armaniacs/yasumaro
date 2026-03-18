@@ -975,7 +975,7 @@ async function initHistoryPanel(): Promise<void> {
 
     historyList.innerHTML = '';
     pageItems.forEach(entry => {
-      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, originalBytes, cleansedBytes } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -1005,6 +1005,81 @@ async function initHistoryPanel(): Promise<void> {
 
       info.appendChild(topRow);
       info.appendChild(timeEl);
+
+      // AI要約を表示
+      if (aiSummary && aiSummary.trim().length > 0) {
+        const aiSummaryEl = document.createElement('div');
+        aiSummaryEl.className = 'history-entry-ai-summary';
+        const aiSummaryLabel = getMessage('historyAiSummary') || 'AI要約';
+        aiSummaryEl.textContent = `${aiSummaryLabel}: ${aiSummary}`;
+        info.appendChild(aiSummaryEl);
+      }
+
+      // トークン数を表示
+      if (sentTokens !== undefined || receivedTokens !== undefined || originalTokens !== undefined || cleansedTokens !== undefined) {
+        const tokensEl = document.createElement('div');
+        tokensEl.className = 'history-entry-tokens';
+        const tokenParts: string[] = [];
+        const sentLabel = getMessage('historySentTokens') || '送信';
+        const receivedLabel = getMessage('historyReceivedTokens') || '受信';
+        if (sentTokens !== undefined) {
+          tokenParts.push(`${sentLabel}: ${sentTokens}`);
+        }
+        if (receivedTokens !== undefined) {
+          tokenParts.push(`${receivedLabel}: ${receivedTokens}`);
+        }
+        const tokensLabel = getMessage('historyTokens') || 'トークン数';
+        tokensEl.textContent = `${tokensLabel}: ${tokenParts.join(', ')}`;
+        info.appendChild(tokensEl);
+      }
+
+      // 元のトークン数とクレンジング後のトークン数を表示
+      if (originalTokens !== undefined || cleansedTokens !== undefined) {
+        const tokenReductionEl = document.createElement('div');
+        tokenReductionEl.className = 'history-entry-token-reduction';
+        const reductionParts: string[] = [];
+        const originalLabel = getMessage('historyOriginalTokens') || '元のトークン数';
+        const cleansedLabel = getMessage('historyCleansedTokens') || 'クレンジング後';
+        if (originalTokens !== undefined) {
+          reductionParts.push(`${originalLabel}: ${originalTokens}`);
+        }
+        if (cleansedTokens !== undefined) {
+          reductionParts.push(`${cleansedLabel}: ${cleansedTokens}`);
+        }
+        // 削減量を計算して表示
+        if (originalTokens !== undefined && cleansedTokens !== undefined && originalTokens > cleansedTokens) {
+          const reduction = originalTokens - cleansedTokens;
+          const reductionPercent = ((reduction / originalTokens) * 100).toFixed(1);
+          const reductionLabel = getMessage('historyTokenReduction') || '削減';
+          reductionParts.push(`${reductionLabel}: ${reduction} (${reductionPercent}%)`);
+        }
+        tokenReductionEl.textContent = reductionParts.join(', ');
+        info.appendChild(tokenReductionEl);
+      }
+
+      // 元のバイト数とクレンジング後のバイト数を表示
+      if (originalBytes !== undefined || cleansedBytes !== undefined) {
+        const byteReductionEl = document.createElement('div');
+        byteReductionEl.className = 'history-entry-byte-reduction';
+        const byteParts: string[] = [];
+        const originalBytesLabel = getMessage('historyOriginalBytes') || '元のバイト数';
+        const cleansedBytesLabel = getMessage('historyCleansedBytes') || 'クレンジング後';
+        if (originalBytes !== undefined) {
+          byteParts.push(`${originalBytesLabel}: ${originalBytes}`);
+        }
+        if (cleansedBytes !== undefined) {
+          byteParts.push(`${cleansedBytesLabel}: ${cleansedBytes}`);
+        }
+        // 削減量を計算して表示
+        if (originalBytes !== undefined && cleansedBytes !== undefined && originalBytes > cleansedBytes) {
+          const reduction = originalBytes - cleansedBytes;
+          const reductionPercent = ((reduction / originalBytes) * 100).toFixed(1);
+          const reductionLabel = getMessage('historyByteReduction') || '削減';
+          byteParts.push(`${reductionLabel}: ${reduction} (${reductionPercent}%)`);
+        }
+        byteReductionEl.textContent = byteParts.join(', ');
+        info.appendChild(byteReductionEl);
+      }
 
       // タグバッジを追加
       const tagBadges = makeTagBadges(tags, url);

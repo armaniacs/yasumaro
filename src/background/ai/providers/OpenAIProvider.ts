@@ -3,7 +3,7 @@
  * OpenAI互換APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult } from './ProviderStrategy.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
@@ -57,9 +57,9 @@ export class OpenAIProvider extends AIProviderStrategy {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<string> {
+    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.baseUrl) {
-            return "Error: Base URL is missing. Please check your settings.";
+            return { summary: "Error: Base URL is missing. Please check your settings." };
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
@@ -77,7 +77,7 @@ export class OpenAIProvider extends AIProviderStrategy {
             if (newDangerLevel === 'high') {
                 const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
                 addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked: ${cause}`);
-                return `Error: Content blocked due to potential security risk. (原因: ${cause})`;
+                return { summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
             }
             // サニタイズ後が安全/低リスクの場合は続行（警告のみ）
             addLog(LogType.WARN, `[${this.providerName}] Content sanitized and proceeding with AI request`);
@@ -124,16 +124,16 @@ export class OpenAIProvider extends AIProviderStrategy {
             });
 
             if (!response.ok) {
-                return "Error: Failed to generate summary. Please check your API settings.";
+                return { summary: "Error: Failed to generate summary. Please check your API settings." };
             }
 
             const data = await response.json();
             return this._extractSummary(data);
         } catch (error: any) {
             if (error.message.includes('timed out')) {
-                return "Error: AI request timed out. Please check your connection.";
+                return { summary: "Error: AI request timed out. Please check your connection." };
             }
-            return "Error: Failed to generate summary. Please try again or check your settings.";
+            return { summary: "Error: Failed to generate summary. Please try again or check your settings." };
         }
     }
 
@@ -195,10 +195,13 @@ export class OpenAIProvider extends AIProviderStrategy {
         return getAllowedUrls();
     }
 
-    private _extractSummary(data: any): string {
+    private _extractSummary(data: any): AISummaryResult {
         if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-            return data.choices[0].message.content;
+            const summary = data.choices[0].message.content;
+            const sentTokens = data.usage?.prompt_tokens;
+            const receivedTokens = data.usage?.completion_tokens;
+            return { summary, sentTokens, receivedTokens };
         }
-        return "No summary generated.";
+        return { summary: "No summary generated." };
     }
 }

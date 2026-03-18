@@ -1873,5 +1873,35 @@
   },
   "configured": {
     "message": "(設定済み)"
+  },
+  "historyAiSummary": {
+    "message": "AI要約"
+  },
+  "historyTokens": {
+    "message": "トークン数"
+  },
+  "historySentTokens": {
+    "message": "送信"
+  },
+  "historyReceivedTokens": {
+    "message": "受信"
+  },
+  "historyOriginalTokens": {
+    "message": "Content Cleansing (トークン): 前"
+  },
+  "historyCleansedTokens": {
+    "message": "後"
+  },
+  "historyTokenReduction": {
+    "message": "削減"
+  },
+  "historyOriginalBytes": {
+    "message": "Content Cleansing (バイト数): 前"
+  },
+  "historyCleansedBytes": {
+    "message": "後"
+  },
+  "historyByteReduction": {
+    "message": "削減"
   }
 }

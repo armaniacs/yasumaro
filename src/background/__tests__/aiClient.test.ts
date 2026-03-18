@@ -54,9 +54,9 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // 修正: 内部プロバイダー名 'unknown_provider' がエラーメッセージに含まれないことを確認
-      expect(result).toContain('Error:');
-      expect(result).not.toContain('unknown_provider'); // 内部情報が漏洩していない
-      expect(result).toContain('AI provider configuration is missing'); // ユーザーに分かりやすいメッセージ
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).not.toContain('unknown_provider'); // 内部情報が漏洩していない
+      expect(result.summary).toContain('AI provider configuration is missing'); // ユーザーに分かりやすいメッセージ
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
@@ -67,8 +67,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // 修正: ユーザーに分かりやすいエラーメッセージが表示される
-      expect(result).toContain('Error:');
-      expect(result).toContain('check your settings'); // ユーザーへの指示が含まれる
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).toContain('check your settings'); // ユーザーへの指示が含まれる
     });
   });
 
@@ -81,9 +81,9 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // 修正: 内部プロバイダー名 'Gemini' がエラーメッセージに含まれないことを確認
-      expect(result).toContain('Error:');
-      expect(result).not.toContain('Gemini'); // 内部情報が漏洩していない
-      expect(result).toContain('API key is missing'); // ユーザーに分かりやすいメッセージ
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).not.toContain('Gemini'); // 内部情報が漏洩していない
+      expect(result.summary).toContain('API key is missing'); // ユーザーに分かりやすいメッセージ
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
@@ -94,8 +94,8 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // 修正: ユーザーに分かりやすいエラーメッセージが表示される
-      expect(result).toContain('Error:');
-      expect(result).toContain('check your settings'); // ユーザーへの指示が含まれる
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).toContain('check your settings'); // ユーザーへの指示が含まれる
     });
   });
 
@@ -131,9 +131,9 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // Strategyパターン導入後のエラーメッセージ: Modelチェックが行われる
-      expect(result).toContain('Error:');
-      expect(result).not.toContain('404'); // HTTPステータスコードが含まれない
-      expect(result).not.toContain('Not found'); // APIからのエラー詳細が含まれない
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).not.toContain('404'); // HTTPステータスコードが含まれない
+      expect(result.summary).not.toContain('Not found'); // APIからのエラー詳細が含まれない
     });
 
     it('Gemini API 一般エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
@@ -158,10 +158,10 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // Strategyパターン導入後のエラーメッセージ: 汎用エラーメッセージ
-      expect(result).toContain('Error:');
-      expect(result).not.toContain('400'); // HTTPステータスコードが含まれない
-      expect(result).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
-      expect(result).not.toContain('Invalid request'); // API エラーメッセージが含まれない
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).not.toContain('400'); // HTTPステータスコードが含まれない
+      expect(result.summary).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
+      expect(result.summary).not.toContain('Invalid request'); // API エラーメッセージが含まれない
     });
 
     it('OpenAI API エラー時、エラーレスポンスの生データが含まれないこと（修正後）', async () => {
@@ -187,10 +187,10 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // Strategyパターン導入後のエラーメッセージ: 汎用エラーメッセージ
-      expect(result).toContain('Error:');
-      expect(result).not.toContain('401'); // HTTPステータスコードが含まれない
-      expect(result).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
-      expect(result).not.toContain('OpenAI'); // プロバイダー名が含まれない
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).not.toContain('401'); // HTTPステータスコードが含まれない
+      expect(result.summary).not.toContain('Detailed error message'); // APIからのエラー詳細が含まれない
+      expect(result.summary).not.toContain('OpenAI'); // プロバイダー名が含まれない
     });
   });
 
@@ -221,11 +221,11 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.generateSummary('Test content');
 
       // Strategyパターン導入後のエラーメッセージ: リトライの提案
-      expect(result).toContain('Error:');
-      expect(result).toContain('try again'); // 一般的なエラーメッセージ
-      expect(result).not.toContain('Failed to fetch'); // 内部エラー詳細が含まれない
-      expect(result).not.toContain('Network request'); // 内部エラー詳細が含まれない
-      expect(result).not.toContain('@'); // ソースコードの詳細が含まれない
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).toContain('try again'); // 一般的なエラーメッセージ
+      expect(result.summary).not.toContain('Failed to fetch'); // 内部エラー詳細が含まれない
+      expect(result.summary).not.toContain('Network request'); // 内部エラー詳細が含まれない
+      expect(result.summary).not.toContain('@'); // ソースコードの詳細が含まれない
     });
   });
 

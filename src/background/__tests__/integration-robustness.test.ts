@@ -96,7 +96,11 @@ describe('Integration: Robustness improvements', () => {
           content: {
             parts: [{ text: 'テスト要約' }]
           }
-        }]
+        }],
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 50
+        }
       })
     };
     // @ts-expect-error - jest.fn() type narrowing issue
@@ -111,7 +115,9 @@ describe('Integration: Robustness improvements', () => {
     const provider = new GeminiProvider(settings);
     const result = await provider.generateSummary('test content');
 
-    expect(result).toBe('テスト要約');
+    expect(result.summary).toBe('テスト要約');
+    expect(result.sentTokens).toBe(100);
+    expect(result.receivedTokens).toBe(50);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       expect.stringContaining('generativelanguage.googleapis.com'),
       expect.objectContaining({

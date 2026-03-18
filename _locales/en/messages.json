@@ -1873,5 +1873,35 @@
   },
   "configured": {
     "message": "(configured)"
+  },
+  "historyAiSummary": {
+    "message": "AI Summary"
+  },
+  "historyTokens": {
+    "message": "Tokens"
+  },
+  "historySentTokens": {
+    "message": "Sent"
+  },
+  "historyReceivedTokens": {
+    "message": "Received"
+  },
+  "historyOriginalTokens": {
+    "message": "Content Cleansing (Tokens): Before"
+  },
+  "historyCleansedTokens": {
+    "message": "After"
+  },
+  "historyTokenReduction": {
+    "message": "Reduced"
+  },
+  "historyOriginalBytes": {
+    "message": "Content Cleansing (Bytes): Before"
+  },
+  "historyCleansedBytes": {
+    "message": "After"
+  },
+  "historyByteReduction": {
+    "message": "Reduced"
   }
 }

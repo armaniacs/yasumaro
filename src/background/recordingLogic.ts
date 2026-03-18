@@ -5,7 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlOriginalBytes, setUrlCleansedBytes } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -107,6 +107,8 @@ export interface RecordingData {
   recordType?: RecordType;
   maskedCount?: number;
   skipAi?: boolean;
+  originalBytes?: number;  // クレンジング前のバイト数
+  cleansedBytes?: number;  // クレンジング後のバイト数
 }
 
 export interface RecordingResult {
@@ -345,7 +347,7 @@ export class RecordingLogic {
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false, originalBytes, cleansedBytes } = data;
 
     try {
       // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -609,6 +611,40 @@ export class RecordingLogic {
       if (pipelineResult.tags && pipelineResult.tags.length > 0) {
         await setUrlTags(url, pipelineResult.tags);
         addLog(LogType.INFO, 'Tags saved', { url, tags: pipelineResult.tags });
+      }
+      // AI要約を保存
+      if (pipelineResult.summary) {
+        await setUrlAiSummary(url, pipelineResult.summary);
+        addLog(LogType.INFO, 'AI summary saved', { url });
+      }
+      // トークン数を保存
+      if (pipelineResult.sentTokens !== undefined) {
+        await setUrlSentTokens(url, pipelineResult.sentTokens);
+        addLog(LogType.INFO, 'Sent tokens saved', { url, sentTokens: pipelineResult.sentTokens });
+      }
+      if (pipelineResult.receivedTokens !== undefined) {
+        await setUrlReceivedTokens(url, pipelineResult.receivedTokens);
+        addLog(LogType.INFO, 'Received tokens saved', { url, receivedTokens: pipelineResult.receivedTokens });
+      }
+      // 元のトークン数を保存
+      if (pipelineResult.originalTokens !== undefined) {
+        await setUrlOriginalTokens(url, pipelineResult.originalTokens);
+        addLog(LogType.INFO, 'Original tokens saved', { url, originalTokens: pipelineResult.originalTokens });
+      }
+      // クレンジング後のトークン数を保存
+      if (pipelineResult.cleansedTokens !== undefined) {
+        await setUrlCleansedTokens(url, pipelineResult.cleansedTokens);
+        addLog(LogType.INFO, 'Cleansed tokens saved', { url, cleansedTokens: pipelineResult.cleansedTokens });
+      }
+      // 元のバイト数を保存（Content Cleansingの前後）
+      if (originalBytes !== undefined) {
+        await setUrlOriginalBytes(url, originalBytes);
+        addLog(LogType.INFO, 'Original bytes saved', { url, originalBytes });
+      }
+      // クレンジング後のバイト数を保存（Content Cleansingの前後）
+      if (cleansedBytes !== undefined) {
+        await setUrlCleansedBytes(url, cleansedBytes);
+        addLog(LogType.INFO, 'Cleansed bytes saved', { url, cleansedBytes });
       }
       // Problem #7: URLキャッシュを無効化
       RecordingLogic.invalidateUrlCache();

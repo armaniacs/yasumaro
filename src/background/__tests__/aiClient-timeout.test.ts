@@ -39,7 +39,11 @@ describe('AI Provider timeout', () => {
           content: {
             parts: [{ text: 'テスト要約' }]
           }
-        }]
+        }],
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 50
+        }
       })
     });
 
@@ -50,7 +54,9 @@ describe('AI Provider timeout', () => {
     const provider = new GeminiProvider(settings);
     const result = await provider.generateSummary('test content');
 
-    expect(result).toBe('テスト要約');
+    expect(result.summary).toBe('テスト要約');
+    expect(result.sentTokens).toBe(100);
+    expect(result.receivedTokens).toBe(50);
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
 
     // 第2引数のoptionsにtimeoutMsが含まれていることを確認
@@ -73,7 +79,7 @@ describe('AI Provider timeout', () => {
     const provider = new GeminiProvider(settings);
     const result = await provider.generateSummary('test content');
 
-    expect(result).toMatch(/timed out/);
+    expect(result.summary).toMatch(/timed out/);
   });
 
   test('OpenAIProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
@@ -84,7 +90,11 @@ describe('AI Provider timeout', () => {
       json: async () => ({
         choices: [{
           message: { content: 'OpenAI要約' }
-        }]
+        }],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 50
+        }
       })
     });
 
@@ -96,7 +106,9 @@ describe('AI Provider timeout', () => {
     const provider = new OpenAIProvider(settings, 'openai');
     const result = await provider.generateSummary('test');
 
-    expect(result).toBe('OpenAI要約');
+    expect(result.summary).toBe('OpenAI要約');
+    expect(result.sentTokens).toBe(100);
+    expect(result.receivedTokens).toBe(50);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       expect.stringContaining('/chat/completions'),
       expect.objectContaining({
@@ -119,6 +131,6 @@ describe('AI Provider timeout', () => {
     const provider = new OpenAIProvider(settings, 'openai');
     const result = await provider.generateSummary('test');
 
-    expect(result).toMatch(/timed out/);
+    expect(result.summary).toMatch(/timed out/);
   });
 });

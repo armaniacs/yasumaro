@@ -333,6 +333,8 @@ export interface ExtractResult {
     hardStripRemoved?: number;
     keywordStripRemoved?: number;
     totalRemoved?: number;
+    originalBytes?: number;  // クレンジング前のバイト数
+    cleansedBytes?: number;  // クレンジング後のバイト数
 }
 
 /**
@@ -377,6 +379,8 @@ export function extractMainContent(
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
     let totalRemoved = 0;
+    let originalBytes = 0;  // クレンジング前のバイト数
+    let cleansedBytes = 0;  // クレンジング後のバイト数
 
     try {
         const candidates = findMainContentCandidates();
@@ -390,12 +394,18 @@ export function extractMainContent(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const clone = candidates[0].cloneNode(true) as Element;
 
+                // クレンジング前のバイト数を計算
+                originalBytes = new Blob([extractTextFromElement(candidates[0])]).size;
+
                 // クローンに対してクレンジングを実行
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
                     hardStripEnabled,
                     keywordStripEnabled,
                     keywords
                 });
+
+                // クレンジング後のバイト数を計算
+                cleansedBytes = new Blob([extractTextFromElement(clone)]).size;
 
                 if (cleanseResult.totalRemoved > 0) {
                     // クレンジング理由を決定
@@ -461,11 +471,19 @@ export function extractMainContent(
             // 候補がない場合、body全体をクレンジング対象としてフォールバック
             if (cleanseEnabled && document.body) {
                 const clone = document.body.cloneNode(true) as Element;
+
+                // クレンジング前のバイト数を計算
+                originalBytes = new Blob([extractTextFromElement(document.body)]).size;
+
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
                     hardStripEnabled,
                     keywordStripEnabled,
                     keywords
                 });
+
+                // クレンジング後のバイト数を計算
+                cleansedBytes = new Blob([extractTextFromElement(clone)]).size;
+
                 if (cleanseResult.totalRemoved > 0) {
                     if (hardStripEnabled && keywordStripEnabled) {
                         cleansedReason = 'both';
@@ -521,7 +539,7 @@ export function extractMainContent(
                 }
             }
         }
-        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved };
+        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, originalBytes, cleansedBytes };
     }
 
     return content;

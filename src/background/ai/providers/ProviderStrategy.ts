@@ -11,6 +11,12 @@ export interface AIProviderConnectionResult {
     message: string;
 }
 
+export interface AISummaryResult {
+    summary: string;
+    sentTokens?: number;
+    receivedTokens?: number;
+}
+
 export abstract class AIProviderStrategy {
     protected settings: Settings;
 
@@ -23,7 +29,7 @@ export abstract class AIProviderStrategy {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    abstract generateSummary(content: string, tagSummaryMode?: boolean): Promise<string>;
+    abstract generateSummary(content: string, tagSummaryMode?: boolean): Promise<AISummaryResult>;
 
     /**
      * 接続テストを実行する

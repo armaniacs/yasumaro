@@ -14,6 +14,8 @@ export interface LocalAISummaryResult {
     success: boolean;
     summary?: string;
     error?: string;
+    sentTokens?: number;
+    receivedTokens?: number;
 }
 
 export type LocalAIAvailability = 'readily' | 'after-download' | 'no' | 'unsupported';
@@ -135,7 +137,10 @@ export class LocalAIClient {
             }
 
             if (response.success) {
-                return { success: true, summary: response.summary };
+                // ローカルAIはトークン数を提供しないので、文字数を使用
+                const sentTokens = sanitizedContent.length;
+                const receivedTokens = response.summary ? response.summary.length : 0;
+                return { success: true, summary: response.summary, sentTokens, receivedTokens };
             } else {
                 return { success: false, error: response.error };
             }

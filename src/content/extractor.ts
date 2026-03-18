@@ -41,6 +41,11 @@ export let lastCleanseStats: { hardStripRemoved: number; keywordStripRemoved: nu
     keywordStripRemoved: 0,
     totalRemoved: 0
 };
+// 【バイト数情報】: 直近の抽出で適用されたバイト数情報を保持
+export let lastByteStats: { originalBytes: number; cleansedBytes: number } = {
+    originalBytes: 0,
+    cleansedBytes: 0
+};
 
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
@@ -75,6 +80,11 @@ function extractPageContent(): string {
             hardStripRemoved: result.hardStripRemoved ?? 0,
             keywordStripRemoved: result.keywordStripRemoved ?? 0,
             totalRemoved: result.totalRemoved ?? 0
+        };
+        // バイト数情報を保存
+        lastByteStats = {
+            originalBytes: result.originalBytes ?? 0,
+            cleansedBytes: result.cleansedBytes ?? 0
         };
     }
     return typeof result === 'string' ? result : result.content;
@@ -230,7 +240,9 @@ async function reportValidVisit(): Promise<void> {
         const response: any = await messageSender.sendMessageWithRetry({
             type: 'VALID_VISIT',
             payload: {
-                content: content
+                content: content,
+                originalBytes: lastByteStats.originalBytes,
+                cleansedBytes: lastByteStats.cleansedBytes
             }
         });
         console.log('[OWeave] VALID_VISIT response:', JSON.stringify(response));

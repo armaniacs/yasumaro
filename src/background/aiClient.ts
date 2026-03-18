@@ -1,6 +1,6 @@
 import { getSettings, StorageKeys, Settings } from '../utils/storage.js';
 import { LocalAIClient, LocalAIAvailability, LocalAISummaryResult } from './localAiClient.js';
-import { GeminiProvider, OpenAIProvider, AIProviderStrategy } from './ai/providers/index.js';
+import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
 
 export interface AIProviderFactory {
@@ -51,7 +51,7 @@ export class AIClient {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<string> {
+    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         const settings = await getSettings();
         // Settings型は StorageKeys でアクセス可能
         const providerName = settings[StorageKeys.AI_PROVIDER] || 'gemini';
@@ -59,7 +59,7 @@ export class AIClient {
         const factory = this.providers.get(providerName);
         if (!factory) {
             addLog(LogType.ERROR, `Unknown AI Provider: ${providerName}`);
-            return "Error: AI provider configuration is missing. Please check your settings.";
+            return { summary: "Error: AI provider configuration is missing. Please check your settings." };
         }
 
         try {
@@ -67,7 +67,7 @@ export class AIClient {
             return await providerInstance.generateSummary(content, tagSummaryMode);
         } catch (error: any) {
             addLog(LogType.ERROR, `Generate summary failed: ${error.message}`);
-            return "Error: Failed to generate summary. Please try again.";
+            return { summary: "Error: Failed to generate summary. Please try again." };
         }
     }
 

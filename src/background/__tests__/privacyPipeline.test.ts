@@ -19,7 +19,11 @@ describe('PrivacyPipeline', () => {
     }),
     // @ts-expect-error - jest.fn() type narrowing issue
   
-    generateSummary: jest.fn().mockResolvedValue('Cloud summary')
+    generateSummary: jest.fn().mockResolvedValue({
+      summary: 'Cloud summary',
+      sentTokens: 100,
+      receivedTokens: 50
+    })
   };
 
   const mockSanitizers = {

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] 
+
+### Added
+
+- **AIトークン追跡機能**
+  - AIプロバイダーとの通信で送信・受信トークン数を追跡
+  - `AISummaryResult`インターフェースに`sentTokens`と`receivedTokens`フィールドを追加
+  - `PrivacyPipelineResult`インターフェースに`originalTokens`と`cleansedTokens`フィールドを追加
+  - `estimateTokens()`関数で日本語・英語のトークン数を推定
+  - `SavedUrlEntry`インターフェースにトークンフィールドを追加
+  - `storageUrls.ts`にトークン保存関数を追加（`setUrlAiSummary`, `setUrlSentTokens`, `setUrlReceivedTokens`, `setUrlOriginalTokens`, `setUrlCleansedTokens`）
+  - ダッシュボードの履歴パネルでAI要約とトークン情報を表示
+  - i18n対応: 日本語・英語メッセージを追加（`historyAiSummary`, `historySentTokens`, `historyReceivedTokens`, `historyOriginalTokens`, `historyCleansedTokens`, `historyTokenReduction`）
+  - CSSクラス`.history-entry-token-reduction`を追加
+
+- **バイト数追跡機能**
+  - コンテンツ・クレンジング（Hard Strip/Keyword Strip）前後のバイト数を追跡
+  - `ExtractResult`インターフェースに`originalBytes`と`cleansedBytes`フィールドを追加
+  - `SavedUrlEntry`インターフェースにバイト数フィールドを追加
+  - `storageUrls.ts`にバイト数保存関数を追加（`setUrlOriginalBytes`, `setUrlCleansedBytes`）
+  - `contentExtractor.ts`の`extractMainContent`メソッドでバイト数を計算（`new Blob([content]).size`）
+  - `recordingLogic.ts`でバイト数を保存
+  - ダッシュボードの履歴パネルでバイト数情報を表示（元のバイト数、クレンジング後、削減量と削減率）
+  - i18n対応: 日本語・英語メッセージを追加（`historyOriginalBytes`, `historyCleansedBytes`, `historyByteReduction`）
+  - CSSクラス`.history-entry-byte-reduction`を追加
+
 ## [4.10.5] - 2026-03-17
 
 ### Added (2026-03-17)

@@ -172,7 +172,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     url: sender.tab.url || '',
                     content: message.payload?.content || '',
                     skipDuplicateCheck: false,
-                    recordType: 'auto'
+                    recordType: 'auto',
+                    originalBytes: message.payload?.originalBytes,
+                    cleansedBytes: message.payload?.cleansedBytes
                 });
 
                 // 【パフォーマンス改善】: 直接キャッシュを更新

@@ -1099,6 +1099,58 @@ button#changeMasterPassword:hover {
   margin-top: 2px;
 }
 
+.history-entry-ai-summary {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--color-primary-bg);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.history-entry-tokens {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+}
+
+.history-entry-tokens span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-entry-tokens .token-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.history-entry-tokens .token-value {
+  font-family: monospace;
+  color: var(--color-primary);
+}
+
+.history-entry-token-reduction {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+}
+
+.history-entry-byte-reduction {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+}
+
 .history-entry-delete {
   background: none;
   border: none;
