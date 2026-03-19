@@ -13,7 +13,7 @@
  * Service Worker 宛てのリクエストメッセージ型
  */
 export type ServiceWorkerRequest =
-  | { type: 'VALID_VISIT'; payload: { content: string } }
+  | { type: 'VALID_VISIT'; payload: { content: string; pageBytes?: number; candidateBytes?: number; originalBytes?: number; cleansedBytes?: number; aiSummaryOriginalBytes?: number; aiSummaryCleansedBytes?: number; aiSummaryCleansedElements?: number; aiSummaryCleansedReason?: string } }
   | { type: 'CHECK_DOMAIN'; payload: never }
   | { type: 'GET_CONTENT'; payload: never }
   | { type: 'FETCH_URL'; payload: { url: string } }
@@ -223,10 +223,11 @@ export async function sendFromPopup<T extends ServiceWorkerRequest['type']>(
   type: T,
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const response = await chrome.runtime.sendMessage({
-    type,
-    payload: payload ?? {}
-  } as unknown);
+  const response = await chrome.runtime.sendMessage(
+    payload !== undefined
+      ? { type, payload } as unknown
+      : { type } as unknown
+  );
 
   if (isErrorResponse(response)) {
     throw new Error(response.error);

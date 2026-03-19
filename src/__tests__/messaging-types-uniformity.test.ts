@@ -86,6 +86,35 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(payload.content).toBe('test');
   });
 
+  test('VALID_VISIT payload accepts byte tracking fields (system-architect指摘修正)', () => {
+    type Payload = PayloadForType<'VALID_VISIT'>;
+    const payloadWithBytes: Payload = {
+      content: 'test',
+      pageBytes: 1024,
+      candidateBytes: 512,
+      originalBytes: 400,
+      cleansedBytes: 350,
+      aiSummaryOriginalBytes: 300,
+      aiSummaryCleansedBytes: 250,
+      aiSummaryCleansedElements: 3,
+      aiSummaryCleansedReason: 'keyword_match'
+    };
+    expect(payloadWithBytes.content).toBe('test');
+    expect(payloadWithBytes.pageBytes).toBe(1024);
+    expect(payloadWithBytes.cleansedBytes).toBe(350);
+  });
+
+  test('sendFromPopup with no-payload type should not include payload field (legacy-bridge指摘修正)', () => {
+    // sendFromPopup はno-payloadタイプで payload: {} を付与するバグを修正済み
+    // isServiceWorkerRequest は no-payload タイプで msg.payload === undefined を必須とするため
+    // payload: {} があるとバリデーション失敗する
+    const noPayloadMessage = { type: 'TEST_CONNECTIONS' };
+    expect(isServiceWorkerRequest(noPayloadMessage)).toBe(true);
+
+    const withEmptyPayload = { type: 'TEST_CONNECTIONS', payload: {} } as any;
+    expect(isServiceWorkerRequest(withEmptyPayload)).toBe(false);
+  });
+
   test('MANUAL_RECORD payload type should include required fields', () => {
     type Payload = PayloadForType<'MANUAL_RECORD'>;
     const payload: Payload = {
