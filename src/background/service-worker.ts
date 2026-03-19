@@ -119,7 +119,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             // Content Cleansing executed notification (Content Script only)
-            if (message.type === 'CONTENT_CLEANSING_EXECUTED' && sender.tab && sender.tab.id) {
+            if (message.type === 'CONTENT_CLEANSING_EXECUTED' && sender.tab && sender.tab?.id) {
                 const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
                 const tabId = sender.tab.id;
 
@@ -137,7 +137,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }, 3000);
 
                 // 記録履歴にクレンジング理由を保存
-                if (sender.tab.url && totalRemoved > 0) {
+                if (sender.tab?.url && totalRemoved > 0) {
                     // クレンジング理由を決定
                     const hardEnabled = hardStripRemoved > 0;
                     const keywordEnabled = keywordStripRemoved > 0;

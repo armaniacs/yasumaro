@@ -12,7 +12,7 @@ import type {
 } from './trustDbSchema.js';
 import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from './bloomFilter.js';
-import { logDebug, logInfo, logError, ErrorCode } from '../logger.js';
+import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 
 // ===== 定数 =====
@@ -176,6 +176,7 @@ interface TrustDbState {
 }
 
 class TrustDb {
+  private static initPromise: Promise<void> | null = null;
   private state: TrustDbState = {
     database: null,
     bloomFilter: null,
@@ -192,6 +193,48 @@ class TrustDb {
       return;
     }
 
+    // 既に初期化中の場合はそのPromiseを返す
+    if (TrustDb.initPromise) {
+      return TrustDb.initPromise;
+    }
+
+    TrustDb.initPromise = this.doInitializeWithRetry(3);
+    try {
+      await TrustDb.initPromise;
+    } finally {
+      TrustDb.initPromise = null;
+    }
+  }
+
+  /**
+   * 初期化を指数関数的バックオフでリトライ
+   */
+  private async doInitializeWithRetry(maxRetries: number): Promise<void> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await this.doInitialize();
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        logWarn('TrustDb initialization failed, retrying', { attempt: attempt + 1, maxRetries, error: lastError?.message });
+        if (attempt < maxRetries - 1) {
+          // 指数関数的バックオフ: 100ms → 200ms → 400ms
+          const delay = Math.pow(2, attempt) * 100;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    logError('TrustDb', { error: lastError }, ErrorCode.TRUST_DB_INIT_FAILED);
+    throw lastError;
+  }
+
+  /**
+   * 初期化の実際の処理
+   */
+  private async doInitialize(): Promise<void> {
     try {
       // ストレージからデータをロード
       const [savedDb, savedBloom] = await Promise.all([

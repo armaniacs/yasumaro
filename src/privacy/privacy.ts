@@ -118,9 +118,21 @@ function renderMarkdown(md: string): string {
 }
 
 function renderInline(text: string): string {
-    // Links [text](url)
+    // Links [text](url) - only allow HTTPS and anchor links
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) => {
-        const safeUrl = u.startsWith('#') ? u : '#';
+        let safeUrl = u;
+        if (u.startsWith('#')) {
+            safeUrl = u;
+        } else if (u.startsWith('https://')) {
+            try {
+                new URL(u); // 畸形URLの場合はエラー
+                safeUrl = u;
+            } catch {
+                safeUrl = '#';
+            }
+        } else {
+            safeUrl = '#';
+        }
         return `<a href="${escapeHtml(safeUrl)}">${escapeHtml(t)}</a>`;
     });
     // Bold

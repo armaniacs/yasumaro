@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.7] - 2026-03-19
+
+### Fixed
+
+- **Content Cleansing通知のnull安全性改善** ([src/background/service-worker.ts](src/background/service-worker.ts))
+  - `sender.tab?.id` と `sender.tab?.url` にオプションチェーンンを追加
+  - null参照によるエラー発生を防止
+
+### Security
+
+- **MarkdownレンダリングのURL検証強化** ([src/privacy/privacy.ts](src/privacy/privacy.ts))
+  - Markdown内のリンクでHTTPS URLのみ許可（HTTPSとアンカーリンクのみ）
+  - 畸形URL（不正なURL形式）の検証を追加し、不正な場合は `#` に変換
+  - XSS攻撃リスクを軽減
+
+### Added
+
+- **TrustDb初期化リトライロジック** ([src/utils/trustDb/trustDb.ts](src/utils/trustDb/trustDb.ts))
+  - TrustDbの初期化失敗時に指数バックオフでリトライ（最大3回）
+  - リトライ間隔: 100ms → 200ms → 400ms
+  - 初期化中の競合状態を防止するための `initPromise` 静的プロパティを追加
+  - 初期化失敗時のログ出力を強化（`logWarn` を使用）
+
 ## [4.10.6] - 2026-03-19
 
 ### Added
