@@ -5,7 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlOriginalBytes, setUrlCleansedBytes } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/storageUrls.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -107,8 +107,14 @@ export interface RecordingData {
   recordType?: RecordType;
   maskedCount?: number;
   skipAi?: boolean;
-  originalBytes?: number;  // クレンジング前のバイト数
-  cleansedBytes?: number;  // クレンジング後のバイト数
+  pageBytes?: number;       // findMainContentCandidates() 前のバイト数
+  candidateBytes?: number;  // findMainContentCandidates() 後のバイト数
+  originalBytes?: number;   // クレンジング前のバイト数
+  cleansedBytes?: number;   // クレンジング後のバイト数
+  aiSummaryOriginalBytes?: number;  // AI要約クレンジング前のバイト数
+  aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
+  aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数
+  aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
 }
 
 export interface RecordingResult {
@@ -347,7 +353,7 @@ export class RecordingLogic {
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false, originalBytes, cleansedBytes } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason } = data;
 
     try {
       // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -636,6 +642,14 @@ export class RecordingLogic {
         await setUrlCleansedTokens(url, pipelineResult.cleansedTokens);
         addLog(LogType.INFO, 'Cleansed tokens saved', { url, cleansedTokens: pipelineResult.cleansedTokens });
       }
+      // ページ全体のバイト数を保存（findMainContentCandidates() 前）
+      if (pageBytes !== undefined) {
+        await setUrlPageBytes(url, pageBytes);
+      }
+      // 候補要素のバイト数を保存（findMainContentCandidates() 後）
+      if (candidateBytes !== undefined) {
+        await setUrlCandidateBytes(url, candidateBytes);
+      }
       // 元のバイト数を保存（Content Cleansingの前後）
       if (originalBytes !== undefined) {
         await setUrlOriginalBytes(url, originalBytes);
@@ -645,6 +659,26 @@ export class RecordingLogic {
       if (cleansedBytes !== undefined) {
         await setUrlCleansedBytes(url, cleansedBytes);
         addLog(LogType.INFO, 'Cleansed bytes saved', { url, cleansedBytes });
+      }
+      // AI要約クレンジング前のバイト数を保存
+      if (aiSummaryOriginalBytes !== undefined) {
+        await setUrlAiSummaryOriginalBytes(url, aiSummaryOriginalBytes);
+        addLog(LogType.INFO, 'AI summary original bytes saved', { url, aiSummaryOriginalBytes });
+      }
+      // AI要約クレンジング後のバイト数を保存
+      if (aiSummaryCleansedBytes !== undefined) {
+        await setUrlAiSummaryCleansedBytes(url, aiSummaryCleansedBytes);
+        addLog(LogType.INFO, 'AI summary cleansed bytes saved', { url, aiSummaryCleansedBytes });
+      }
+      // AI要約クレンジングで削除した要素数を保存
+      if (aiSummaryCleansedElements !== undefined) {
+        await setUrlAiSummaryCleansedElements(url, aiSummaryCleansedElements);
+        addLog(LogType.INFO, 'AI summary cleansed elements saved', { url, aiSummaryCleansedElements });
+      }
+      // AI要約クレンジング実行理由を保存
+      if (aiSummaryCleansedReason !== undefined) {
+        await setUrlAiSummaryCleansedReason(url, aiSummaryCleansedReason);
+        addLog(LogType.INFO, 'AI summary cleansed reason saved', { url, aiSummaryCleansedReason });
       }
       // Problem #7: URLキャッシュを無効化
       RecordingLogic.invalidateUrlCache();

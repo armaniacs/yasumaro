@@ -1469,6 +1469,60 @@
   "contentStripSave": {
     "message": "Save"
   },
+  "aiSummaryCleansingTab": {
+    "message": "AI Summary Cleansing"
+  },
+  "aiSummaryCleansingTabPanelTitle": {
+    "message": "AI Summary Cleansing"
+  },
+  "aiSummaryCleansingTabPanelDescription": {
+    "message": "Remove unnecessary information (image alt attributes, metadata, ads, navigation, social widgets) before AI summarization."
+  },
+  "aiSummaryCleansingEnabled": {
+    "message": "Enable AI Summary Cleansing"
+  },
+  "aiSummaryCleansingEnabledDesc": {
+    "message": "Remove unnecessary information before AI summarization."
+  },
+  "aiSummaryCleansingAltEnabled": {
+    "message": "Remove Image Alt Attributes"
+  },
+  "aiSummaryCleansingAltEnabledDesc": {
+    "message": "Remove alt attributes from images."
+  },
+  "aiSummaryCleansingMetadataEnabled": {
+    "message": "Remove Metadata"
+  },
+  "aiSummaryCleansingMetadataEnabledDesc": {
+    "message": "Remove metadata (meta, link, style, etc.)."
+  },
+  "aiSummaryCleansingAdsEnabled": {
+    "message": "Remove Ad-related Elements"
+  },
+  "aiSummaryCleansingAdsEnabledDesc": {
+    "message": "Remove ad-related elements (ad, advertisement, banner, etc.)."
+  },
+  "aiSummaryCleansingNavEnabled": {
+    "message": "Remove Navigation and Footer"
+  },
+  "aiSummaryCleansingNavEnabledDesc": {
+    "message": "Remove navigation and footer (nav, footer, header, etc.)."
+  },
+  "aiSummaryCleansingSocialEnabled": {
+    "message": "Remove Comments and Social Widgets"
+  },
+  "aiSummaryCleansingSocialEnabledDesc": {
+    "message": "Remove comments and social widgets (comments, social, share, etc.)."
+  },
+  "aiSummaryCleansingDeepEnabled": {
+    "message": "Deep Cleansing (Experimental)"
+  },
+  "aiSummaryCleansingDeepEnabledDesc": {
+    "message": "Remove aside/figure/form/dialog/button/input/select/details, ARIA roles (banner/complementary, etc.), hidden elements (hidden/aria-hidden), empty elements, and elements matching cookie/popup/modal/author-info/legal/BEM-style class patterns."
+  },
+  "aiSummaryCleansingSave": {
+    "message": "Save"
+  },
   "cspTab": {
     "message": "CSP"
   },
@@ -1903,5 +1957,38 @@
   },
   "historyByteReduction": {
     "message": "Reduced"
+  },
+  "historyAiSummaryCleansedBytes": {
+    "message": "AI Summary Cleansing (Bytes): After"
+  },
+  "historyAiSummaryCleansedElements": {
+    "message": "AI Summary Cleansing: {count} elements removed"
+  },
+  "historyAiSummaryCleansedReason": {
+    "message": "AI Summary Cleansing Reason"
+  },
+  "historyAiSummaryCleansedReasonAlt": {
+    "message": "Image alt attributes"
+  },
+  "historyAiSummaryCleansedReasonMetadata": {
+    "message": "Metadata"
+  },
+  "historyAiSummaryCleansedReasonAds": {
+    "message": "Ads"
+  },
+  "historyAiSummaryCleansedReasonNav": {
+    "message": "Navigation"
+  },
+  "historyAiSummaryCleansedReasonSocial": {
+    "message": "Social"
+  },
+  "historyAiSummaryCleansedReasonDeep": {
+    "message": "Deep"
+  },
+  "historyAiSummaryCleansedReasonMultiple": {
+    "message": "Multiple"
+  },
+  "historyAiSummaryCleansedReasonNone": {
+    "message": "None"
   }
 }

@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] 
+## [Unreleased]
+
+## [4.10.6] - 2026-03-19
 
 ### Added
 
@@ -27,6 +29,20 @@ All notable changes to this project will be documented in this file.
   - ダッシュボードの履歴パネルでバイト数情報を表示（元のバイト数、クレンジング後、削減量と削減率）
   - i18n対応: 日本語・英語メッセージを追加（`historyOriginalBytes`, `historyCleansedBytes`, `historyByteReduction`）
   - CSSクラス`.history-entry-byte-reduction`を追加
+
+- **AI Summary Cleansing: ディープクレンジング（Deep Cleansing）**
+  - 「積極的クレンジング（Aggressive Cleansing）」を「ディープクレンジング（Deep Cleansing）」に改名
+  - `StorageKeys.AI_SUMMARY_CLEANSING_DEEP`（旧: `AI_SUMMARY_CLEANSING_AGGRESSIVE`）に変更
+  - 削除対象タグを追加: `button`, `input`, `select`, `details`
+  - 非表示要素を削除: `[hidden]`, `[aria-hidden="true"]`, `[style*="display:none"]`, `[style*="display: none"]`
+  - 空要素を削除: テキストコンテンツが空の `div`, `span`, `p`
+  - リンク密度フィルタ: リンク密度70%超の `ul/ol` をナビゲーションと判定して削除
+  - クラス/IDパターンを大幅拡張（法的情報・ナビゲーション強化・ソーシャル/コミュニティ・著者メタ情報・マーケティング・日本語BEM系）
+  - `AiSummaryCleansedReason`に`'deep'`を追加（旧: `'aggressive'`）
+
+- **Keyword Stripデフォルトキーワードを拡張**
+  - 追加: `password`, `payment`, `transaction`, `billing`, `invoice`, `receipt`, `rireki`, `torihiki`, `zandaka`, `hoken`, `address`
+  - 対象ファイル: `contentCleaner.ts`, `contentExtractor.ts`, `extractor.ts`, `storage.ts`, `storageSettings.ts`, `contentSettings.ts`
 
 ## [4.10.5] - 2026-03-17
 

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "short_name": "__MSG_extensionShortName__",
-  "version": "4.10.5",
+  "version": "4.10.6",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://*.openai.com https://api.anthropic.com https://api.groq.com https://mistral.ai https://deepseek.com https://perplexity.ai https://jina.ai https://voyageai.com https://api-inference.huggingface.co https://openrouter.ai https://api.openrouter.ai https://deepinfra.com https://cerebras.ai https://api.venice.ai https://api.scaleway.ai https://nano-gpt.com https://api.poe.com https://llm.chutes.ai https://api.sarvam.ai https://nebius.com https://sambanova.ai https://nscale.com https://featherless.ai https://galadriel.com https://recraft.ai https://volcengine.com https://z.ai https://wandb.ai https://ai-gateway.helicone.ai https://api.publicai.co https://api.synthetic.new https://api.stima.tech https://api.abliteration.ai https://api.llamagate.dev https://api.gmi-serving.com https://xiaomimimo.com https://api.ai.sakura.ad.jp https://raw.githubusercontent.com https://gitlab.com https://tranco-list.eu https://easylist.to https://pgl.yoyo.org https://nsfw.oisd.nl http://localhost:27123 https://localhost:27123 http://localhost:27124 https://localhost:27124 http://localhost:11434 https://localhost:11434 http://127.0.0.1:27123 https://127.0.0.1:27123 http://127.0.0.1:27124 https://127.0.0.1:27124 http://127.0.0.1:11434 https://127.0.0.1:11434; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';"
@@ -2110,6 +2110,7 @@
         "utils/contentCleaner.js",
         "utils/logger.js",
         "utils/piiSanitizer.js",
+        "utils/aiSummaryCleaner.js",
         "icons/icon48.png",
         "data/models-dev-openai-compatible.json",
         "PRIVACY.md",

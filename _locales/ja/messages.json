@@ -1469,6 +1469,60 @@
   "contentStripSave": {
     "message": "保存"
   },
+  "aiSummaryCleansingTab": {
+    "message": "AI要約クレンジング"
+  },
+  "aiSummaryCleansingTabPanelTitle": {
+    "message": "AI要約クレンジング"
+  },
+  "aiSummaryCleansingTabPanelDescription": {
+    "message": "AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。"
+  },
+  "aiSummaryCleansingEnabled": {
+    "message": "AI要約クレンジングを有効にする"
+  },
+  "aiSummaryCleansingEnabledDesc": {
+    "message": "AI要約前に不要な情報を削除します。"
+  },
+  "aiSummaryCleansingAltEnabled": {
+    "message": "画像alt属性を削除"
+  },
+  "aiSummaryCleansingAltEnabledDesc": {
+    "message": "画像のalt属性を削除します。"
+  },
+  "aiSummaryCleansingMetadataEnabled": {
+    "message": "メタデータを削除"
+  },
+  "aiSummaryCleansingMetadataEnabledDesc": {
+    "message": "メタデータ（meta、link、style等）を削除します。"
+  },
+  "aiSummaryCleansingAdsEnabled": {
+    "message": "広告関連要素を削除"
+  },
+  "aiSummaryCleansingAdsEnabledDesc": {
+    "message": "広告関連要素（ad、advertisement、banner等）を削除します。"
+  },
+  "aiSummaryCleansingNavEnabled": {
+    "message": "ナビゲーション・フッターを削除"
+  },
+  "aiSummaryCleansingNavEnabledDesc": {
+    "message": "ナビゲーション・フッター（nav、footer、header等）を削除します。"
+  },
+  "aiSummaryCleansingSocialEnabled": {
+    "message": "コメント・ソーシャルウィジェットを削除"
+  },
+  "aiSummaryCleansingSocialEnabledDesc": {
+    "message": "コメント・ソーシャルウィジェット（comments、social、share等）を削除します。"
+  },
+  "aiSummaryCleansingDeepEnabled": {
+    "message": "ディープクレンジング（実験的）"
+  },
+  "aiSummaryCleansingDeepEnabledDesc": {
+    "message": "aside/figure/form/dialog/button/input/select/details、ARIA role（banner/complementary等）、非表示要素（hidden/aria-hidden）、空要素、cookie/popup/modal/著者情報/法的情報/BEM系等のクラスを持つ要素を削除します。"
+  },
+  "aiSummaryCleansingSave": {
+    "message": "保存"
+  },
   "cspTab": {
     "message": "CSP"
   },
@@ -1903,5 +1957,38 @@
   },
   "historyByteReduction": {
     "message": "削減"
+  },
+  "historyAiSummaryCleansedBytes": {
+    "message": "AI要約クレンジング (バイト数): 後"
+  },
+  "historyAiSummaryCleansedElements": {
+    "message": "AI要約クレンジング: {count}要素削除"
+  },
+  "historyAiSummaryCleansedReason": {
+    "message": "AI要約クレンジング理由"
+  },
+  "historyAiSummaryCleansedReasonAlt": {
+    "message": "画像alt属性"
+  },
+  "historyAiSummaryCleansedReasonMetadata": {
+    "message": "メタデータ"
+  },
+  "historyAiSummaryCleansedReasonAds": {
+    "message": "広告"
+  },
+  "historyAiSummaryCleansedReasonNav": {
+    "message": "ナビゲーション"
+  },
+  "historyAiSummaryCleansedReasonSocial": {
+    "message": "ソーシャル"
+  },
+  "historyAiSummaryCleansedReasonDeep": {
+    "message": "ディープ"
+  },
+  "historyAiSummaryCleansedReasonMultiple": {
+    "message": "複数"
+  },
+  "historyAiSummaryCleansedReasonNone": {
+    "message": "なし"
   }
 }

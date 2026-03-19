@@ -55,6 +55,12 @@
           </svg>
           <span data-i18n="contentTab">Content</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-ai-summary-cleansing">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span data-i18n="aiSummaryCleansingTab">AI Summary Cleansing</span>
+        </button>
         <button class="sidebar-nav-btn" data-panel="panel-trust">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -493,6 +499,80 @@
         <div class="form-group">
           <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">保存</button>
           <div id="contentSettingsStatus" class="status-message" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- AI Summary Cleansing Settings Panel -->
+      <section id="panel-ai-summary-cleansing" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI要約クレンジング</h2>
+        <p class="panel-description" data-i18n="aiSummaryCleansingTabPanelDescription">AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。</p>
+
+        <!-- AI要約クレンジング有効化 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-enabled" aria-describedby="aiSummaryCleansingEnabledDesc">
+            <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">AI要約前に不要な情報を削除します。</label>
+          </div>
+        </div>
+
+        <!-- 画像alt属性削除 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingAltEnabled">画像alt属性を削除</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-alt" aria-describedby="aiSummaryCleansingAltEnabledDesc">
+            <label for="ai-summary-cleansing-alt" class="inline-label" data-i18n="aiSummaryCleansingAltEnabledDesc">画像のalt属性を削除します。</label>
+          </div>
+        </div>
+
+        <!-- メタデータ削除 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingMetadataEnabled">メタデータを削除</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-metadata" aria-describedby="aiSummaryCleansingMetadataEnabledDesc">
+            <label for="ai-summary-cleansing-metadata" class="inline-label" data-i18n="aiSummaryCleansingMetadataEnabledDesc">メタデータ（meta、link、style等）を削除します。</label>
+          </div>
+        </div>
+
+        <!-- 広告関連要素削除 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingAdsEnabled">広告関連要素を削除</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-ads" aria-describedby="aiSummaryCleansingAdsEnabledDesc">
+            <label for="ai-summary-cleansing-ads" class="inline-label" data-i18n="aiSummaryCleansingAdsEnabledDesc">広告関連要素（ad、advertisement、banner等）を削除します。</label>
+          </div>
+        </div>
+
+        <!-- ナビゲーション・フッター削除 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingNavEnabled">ナビゲーション・フッターを削除</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-nav" aria-describedby="aiSummaryCleansingNavEnabledDesc">
+            <label for="ai-summary-cleansing-nav" class="inline-label" data-i18n="aiSummaryCleansingNavEnabledDesc">ナビゲーション・フッター（nav、footer、header等）を削除します。</label>
+          </div>
+        </div>
+
+        <!-- コメント・ソーシャルウィジェット削除 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingSocialEnabled">コメント・ソーシャルウィジェットを削除</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-social" aria-describedby="aiSummaryCleansingSocialEnabledDesc">
+            <label for="ai-summary-cleansing-social" class="inline-label" data-i18n="aiSummaryCleansingSocialEnabledDesc">コメント・ソーシャルウィジェット（comments、social、share等）を削除します。</label>
+          </div>
+        </div>
+
+        <!-- ディープクレンジング -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingDeepEnabled">ディープクレンジング（実験的）</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-deep" aria-describedby="aiSummaryCleansingDeepEnabledDesc">
+            <label for="ai-summary-cleansing-deep" class="inline-label" data-i18n="aiSummaryCleansingDeepEnabledDesc">aside/figure/form/dialog/button/input/select/details、ARIA role（banner/complementary等）、非表示要素、空要素、cookie/popup/modal/著者情報/法的情報/BEM系等のクラスを持つ要素を削除します。</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">保存</button>
+          <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
 

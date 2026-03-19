@@ -112,7 +112,7 @@ export const DEFAULT_SETTINGS: Settings = {
     pii_confirmation_ui: true,
     pii_sanitize_logs: true,
     content_strip_hard_enabled: true,
-    content_strip_keywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'],
+    content_strip_keywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
     content_strip_keyword_enabled: true,
     ublock_rules: {
         blockDomains: [],

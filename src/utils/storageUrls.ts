@@ -26,6 +26,11 @@ export type RecordType = 'auto' | 'manual';
 export type CleansedReason = 'hard' | 'keyword' | 'both' | 'none';
 
 /**
+ * AI要約クレンジング実行理由
+ */
+export type AiSummaryCleansedReason = 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+
+/**
  * 保存されたURLエントリ
  */
 export interface SavedUrlEntry {
@@ -41,8 +46,14 @@ export interface SavedUrlEntry {
     receivedTokens?: number;  // 受信トークン数（オプション）
     originalTokens?: number;  // 元のトークン数（オプション）
     cleansedTokens?: number;  // クレンジング後のトークン数（オプション）
-    originalBytes?: number;  // 元のバイト数（オプション）
-    cleansedBytes?: number;  // クレンジング後のバイト数（オプション）
+    pageBytes?: number;       // findMainContentCandidates() 前のバイト数（オプション）
+    candidateBytes?: number;  // findMainContentCandidates() 後のバイト数（オプション）
+    originalBytes?: number;   // 元のバイト数（オプション）
+    cleansedBytes?: number;   // クレンジング後のバイト数（オプション）
+    aiSummaryOriginalBytes?: number;  // AI要約クレンジング前のバイト数（オプション）
+    aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数（オプション）
+    aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
+    aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
 }
 
 /**
@@ -103,7 +114,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount / tags / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
@@ -123,6 +134,10 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.cleansedTokens !== undefined) entry.cleansedTokens = existing.cleansedTokens;
             if (existing?.originalBytes !== undefined) entry.originalBytes = existing.originalBytes;
             if (existing?.cleansedBytes !== undefined) entry.cleansedBytes = existing.cleansedBytes;
+            if (existing?.aiSummaryOriginalBytes !== undefined) entry.aiSummaryOriginalBytes = existing.aiSummaryOriginalBytes;
+            if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
+            if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
+            if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
             entries.push(entry);
         }
         return entries;
@@ -159,7 +174,7 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         const existing = entries.find(entry => entry.url === url);
         entries = entries.filter(entry => entry.url !== url);
 
-        // 新しいエントリを追加（既存の tags / maskedCount / cleansedReason / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes を引き継ぐ）
+        // 新しいエントリを追加（既存の tags / maskedCount / cleansedReason / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を引き継ぐ）
         const entry: SavedUrlEntry = { url, timestamp: Date.now() };
         if (recordType) entry.recordType = recordType;
         if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
@@ -172,6 +187,10 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         if (existing?.cleansedTokens !== undefined) entry.cleansedTokens = existing.cleansedTokens;
         if (existing?.originalBytes !== undefined) entry.originalBytes = existing.originalBytes;
         if (existing?.cleansedBytes !== undefined) entry.cleansedBytes = existing.cleansedBytes;
+        if (existing?.aiSummaryOriginalBytes !== undefined) entry.aiSummaryOriginalBytes = existing.aiSummaryOriginalBytes;
+        if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
+        if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
+        if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
         entries.push(entry);
 
         // 7日より古いエントリを削除（日数ベース）
@@ -612,6 +631,38 @@ export async function setUrlCleansedTokens(url: string, cleansedTokens: number):
 }
 
 /**
+ * URLのページ全体バイト数を設定する（findMainContentCandidates() 前）
+ */
+export async function setUrlPageBytes(url: string, pageBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], pageBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLの候補要素バイト数を設定する（findMainContentCandidates() 後）
+ */
+export async function setUrlCandidateBytes(url: string, candidateBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], candidateBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
  * URLの元のバイト数を設定する
  * 【楽観的ロックを使用して安全に更新】
  * @param {string} url - 設定するURL
@@ -645,6 +696,86 @@ export async function setUrlCleansedBytes(url: string, cleansedBytes: number): P
         if (idx >= 0) {
             const updatedEntries = [...entries];
             updatedEntries[idx] = { ...updatedEntries[idx], cleansedBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLのAI要約クレンジング前のバイト数を設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {number} aiSummaryOriginalBytes - AI要約クレンジング前のバイト数
+ * @returns {Promise<void>}
+ */
+export async function setUrlAiSummaryOriginalBytes(url: string, aiSummaryOriginalBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryOriginalBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLのAI要約クレンジング後のバイト数を設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {number} aiSummaryCleansedBytes - AI要約クレンジング後のバイト数
+ * @returns {Promise<void>}
+ */
+export async function setUrlAiSummaryCleansedBytes(url: string, aiSummaryCleansedBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryCleansedBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLのAI要約クレンジングで削除した要素数を設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {number} aiSummaryCleansedElements - AI要約クレンジングで削除した要素数
+ * @returns {Promise<void>}
+ */
+export async function setUrlAiSummaryCleansedElements(url: string, aiSummaryCleansedElements: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryCleansedElements };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLのAI要約クレンジング実行理由を設定する
+ * 【楽観的ロックを使用して安全に更新】
+ * @param {string} url - 設定するURL
+ * @param {AiSummaryCleansedReason} aiSummaryCleansedReason - AI要約クレンジング実行理由
+ * @returns {Promise<void>}
+ */
+export async function setUrlAiSummaryCleansedReason(url: string, aiSummaryCleansedReason: AiSummaryCleansedReason): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryCleansedReason };
             return updatedEntries;
         }
         return entries;

@@ -173,8 +173,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     content: message.payload?.content || '',
                     skipDuplicateCheck: false,
                     recordType: 'auto',
+                    pageBytes: message.payload?.pageBytes,
+                    candidateBytes: message.payload?.candidateBytes,
                     originalBytes: message.payload?.originalBytes,
-                    cleansedBytes: message.payload?.cleansedBytes
+                    cleansedBytes: message.payload?.cleansedBytes,
+                    aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
+                    aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
+                    aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
+                    aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason
                 });
 
                 // 【パフォーマンス改善】: 直接キャッシュを更新

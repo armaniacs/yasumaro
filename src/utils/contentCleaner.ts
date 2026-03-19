@@ -229,7 +229,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku']
+        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address']
     } = options;
 
     let hardStripCount = 0;
@@ -291,7 +291,7 @@ export function cleanseContent(element: Element, options: CleanseOptions = {}): 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku']
+        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address']
     } = options;
 
     let hardStripRemoved = 0;

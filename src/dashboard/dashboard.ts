@@ -13,6 +13,7 @@ import { initCustomPromptManager } from '../popup/customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from '../popup/settingsUiHelper.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
+import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners } from '../popup/aiSummaryCleansingSettings.js';
 import {
   exportSettings,
   importSettings,
@@ -975,7 +976,7 @@ async function initHistoryPanel(): Promise<void> {
 
     historyList.innerHTML = '';
     pageItems.forEach(entry => {
-      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, originalBytes, cleansedBytes } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -1033,52 +1034,79 @@ async function initHistoryPanel(): Promise<void> {
         info.appendChild(tokensEl);
       }
 
-      // 元のトークン数とクレンジング後のトークン数を表示
-      if (originalTokens !== undefined || cleansedTokens !== undefined) {
-        const tokenReductionEl = document.createElement('div');
-        tokenReductionEl.className = 'history-entry-token-reduction';
-        const reductionParts: string[] = [];
-        const originalLabel = getMessage('historyOriginalTokens') || '元のトークン数';
-        const cleansedLabel = getMessage('historyCleansedTokens') || 'クレンジング後';
-        if (originalTokens !== undefined) {
-          reductionParts.push(`${originalLabel}: ${originalTokens}`);
-        }
-        if (cleansedTokens !== undefined) {
-          reductionParts.push(`${cleansedLabel}: ${cleansedTokens}`);
-        }
-        // 削減量を計算して表示
-        if (originalTokens !== undefined && cleansedTokens !== undefined && originalTokens > cleansedTokens) {
-          const reduction = originalTokens - cleansedTokens;
-          const reductionPercent = ((reduction / originalTokens) * 100).toFixed(1);
-          const reductionLabel = getMessage('historyTokenReduction') || '削減';
-          reductionParts.push(`${reductionLabel}: ${reduction} (${reductionPercent}%)`);
-        }
-        tokenReductionEl.textContent = reductionParts.join(', ');
-        info.appendChild(tokenReductionEl);
+      // ページ絞り込みバイト数を表示（pageBytes → candidateBytes）
+      if (pageBytes !== undefined && candidateBytes !== undefined && pageBytes > candidateBytes) {
+        const extractEl = document.createElement('div');
+        extractEl.className = 'history-entry-token-reduction';
+        const reduction = pageBytes - candidateBytes;
+        const reductionPercent = ((reduction / pageBytes) * 100).toFixed(1);
+        extractEl.textContent = `コンテンツ抽出 — バイト: ${pageBytes} → ${candidateBytes} (削減 ${reduction} / ${reductionPercent}%)`;
+        info.appendChild(extractEl);
       }
 
-      // 元のバイト数とクレンジング後のバイト数を表示
-      if (originalBytes !== undefined || cleansedBytes !== undefined) {
-        const byteReductionEl = document.createElement('div');
-        byteReductionEl.className = 'history-entry-byte-reduction';
-        const byteParts: string[] = [];
-        const originalBytesLabel = getMessage('historyOriginalBytes') || '元のバイト数';
-        const cleansedBytesLabel = getMessage('historyCleansedBytes') || 'クレンジング後';
-        if (originalBytes !== undefined) {
-          byteParts.push(`${originalBytesLabel}: ${originalBytes}`);
+      // Content Cleansing 統計情報をまとめて1行で表示
+      if (originalTokens !== undefined || cleansedTokens !== undefined || originalBytes !== undefined || cleansedBytes !== undefined) {
+        const cleansingEl = document.createElement('div');
+        cleansingEl.className = 'history-entry-token-reduction';
+        const parts: string[] = [];
+
+        // トークン削減があった場合のみ表示
+        if (originalTokens !== undefined && cleansedTokens !== undefined && originalTokens !== cleansedTokens) {
+          parts.push(`トークン: ${originalTokens} → ${cleansedTokens}`);
         }
-        if (cleansedBytes !== undefined) {
-          byteParts.push(`${cleansedBytesLabel}: ${cleansedBytes}`);
-        }
-        // 削減量を計算して表示
+
+        // バイト削減があった場合のみ表示
         if (originalBytes !== undefined && cleansedBytes !== undefined && originalBytes > cleansedBytes) {
           const reduction = originalBytes - cleansedBytes;
           const reductionPercent = ((reduction / originalBytes) * 100).toFixed(1);
-          const reductionLabel = getMessage('historyByteReduction') || '削減';
-          byteParts.push(`${reductionLabel}: ${reduction} (${reductionPercent}%)`);
+          parts.push(`バイト: ${originalBytes} → ${cleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
         }
-        byteReductionEl.textContent = byteParts.join(', ');
-        info.appendChild(byteReductionEl);
+
+        if (parts.length > 0) {
+          cleansingEl.textContent = `Content Cleansing — ${parts.join(', ')}`;
+          info.appendChild(cleansingEl);
+        }
+      }
+
+      // AI要約クレンジングの統計情報を1行で表示
+      if (aiSummaryOriginalBytes !== undefined || aiSummaryCleansedBytes !== undefined || aiSummaryCleansedElements !== undefined || aiSummaryCleansedReason !== undefined) {
+        const aiSummaryCleansingEl = document.createElement('div');
+        aiSummaryCleansingEl.className = 'history-entry-ai-summary-cleansing';
+        const cleansingParts: string[] = [];
+
+        // バイト削減があった場合のみ表示
+        if (aiSummaryOriginalBytes !== undefined && aiSummaryCleansedBytes !== undefined && aiSummaryOriginalBytes > aiSummaryCleansedBytes) {
+          const reduction = aiSummaryOriginalBytes - aiSummaryCleansedBytes;
+          const reductionPercent = ((reduction / aiSummaryOriginalBytes) * 100).toFixed(1);
+          cleansingParts.push(`バイト: ${aiSummaryOriginalBytes} → ${aiSummaryCleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
+        }
+
+        // N要素削除
+        if (aiSummaryCleansedElements !== undefined && aiSummaryCleansedElements > 0) {
+          cleansingParts.push(`${aiSummaryCleansedElements}要素削除`);
+        }
+
+        // 理由
+        if (aiSummaryCleansedReason !== undefined && aiSummaryCleansedReason !== 'none') {
+          let reasonText = '';
+          switch (aiSummaryCleansedReason) {
+            case 'alt':      reasonText = getMessage('historyAiSummaryCleansedReasonAlt') || '画像alt属性'; break;
+            case 'metadata': reasonText = getMessage('historyAiSummaryCleansedReasonMetadata') || 'メタデータ'; break;
+            case 'ads':      reasonText = getMessage('historyAiSummaryCleansedReasonAds') || '広告'; break;
+            case 'nav':      reasonText = getMessage('historyAiSummaryCleansedReasonNav') || 'ナビゲーション'; break;
+            case 'social':      reasonText = getMessage('historyAiSummaryCleansedReasonSocial') || 'ソーシャル'; break;
+            case 'deep':        reasonText = getMessage('historyAiSummaryCleansedReasonDeep') || 'ディープ'; break;
+            case 'multiple':    reasonText = getMessage('historyAiSummaryCleansedReasonMultiple') || '複数'; break;
+            default:         reasonText = aiSummaryCleansedReason;
+          }
+          cleansingParts.push(`理由: ${reasonText}`);
+        }
+
+        if (cleansingParts.length > 0) {
+          aiSummaryCleansingEl.textContent = `AI要約クレンジング — ${cleansingParts.join(', ')}`;
+
+          info.appendChild(aiSummaryCleansingEl);
+        }
       }
 
       // タグバッジを追加
@@ -2474,6 +2502,11 @@ async function initConsentWithdrawal(): Promise<void> {
   try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
   try { initTrustSettings(); } catch (e) { console.error('[Dashboard] initTrustSettings error:', e); }
   try { await CSPSettings.loadCSPSettings(); } catch (e) { console.error('[Dashboard] loadCSPSettings error:', e); }
+  try {
+    const aiSummaryCleansingSettings = await getAiSummaryCleansingSettings();
+    applyAiSummaryCleansingSettingsToUI(aiSummaryCleansingSettings);
+    setupAiSummaryCleansingEventListeners();
+  } catch (e) { console.error('[Dashboard] initAiSummaryCleansingSettings error:', e); }
 
   try {
     const settings = await getSettings();

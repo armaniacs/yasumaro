@@ -8,7 +8,7 @@ import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 
 // デフォルトキーワードリスト
-const DEFAULT_KEYWORDS = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'];
+const DEFAULT_KEYWORDS = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'];
 
 const saveBtn = document.getElementById('saveContentSettings');
 const hardEnabledCheckbox = document.getElementById('contentStripHardEnabled') as HTMLInputElement | null;

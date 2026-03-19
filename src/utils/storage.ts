@@ -124,7 +124,15 @@ export const StorageKeys = {
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled', // 条件付きCSP有効フラグ（デフォルト: true）
     CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers', // 追加するAIプロバイダーIDリスト（デフォルト: []）
     // AI Limits Settings
-    MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt' // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    // AI Summary Cleansing Settings
+    AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled', // AI要約用クレンジング有効フラグ（デフォルト: true）
+    AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt', // 画像alt属性削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_METADATA: 'ai_summary_cleansing_metadata', // メタデータ削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_ADS: 'ai_summary_cleansing_ads', // 広告関連要素削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_NAV: 'ai_summary_cleansing_nav', // ナビゲーション・フッター削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_SOCIAL: 'ai_summary_cleansing_social', // コメント・ソーシャルウィジェット削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_DEEP: 'ai_summary_cleansing_deep' // 積極的クレンジング（デフォルト: false）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -203,6 +211,14 @@ export interface StorageKeyValues {
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
     // AI Limits Settings
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
+    // AI Summary Cleansing Settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_METADATA]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_ADS]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: boolean;
 }
 
 // 厳格な Settings 型
@@ -695,7 +711,7 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
     // Content cleansing defaults (Phase 0)
     [StorageKeys.CONTENT_STRIP_HARD_ENABLED]: true,
-    [StorageKeys.CONTENT_STRIP_KEYWORDS]: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku'],
+    [StorageKeys.CONTENT_STRIP_KEYWORDS]: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
     [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED]: true,
     // uBlock format defaults（軽量化版: ドメイン配列のみ）
     [StorageKeys.UBLOCK_RULES]: {
@@ -744,7 +760,15 @@ const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,       // 条件付きCSP有効フラグ（デフォルト: 有効）
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],        // 追加するAIプロバイダーIDリスト（デフォルト: 空）
     // AI Limits Settings
-    [StorageKeys.MAX_TOKENS_PER_PROMPT]: 1000          // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    [StorageKeys.MAX_TOKENS_PER_PROMPT]: 1000,         // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    // AI Summary Cleansing Settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: true,  // AI要約用クレンジング有効フラグ（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: true,      // 画像alt属性削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_METADATA]: true, // メタデータ削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_ADS]: true,      // 広告関連要素削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: true,      // ナビゲーション・フッター削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,       // コメント・ソーシャルウィジェット削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false   // 積極的クレンジング（デフォルト: 無効）
 };
 
 /**
