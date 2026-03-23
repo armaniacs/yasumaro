@@ -78,9 +78,9 @@ export class TrustChecker {
       };
 
       this.alertConfigInitialized = true;
-      logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
+      await logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
     } catch (error) {
-      logWarn('TrustChecker', { error: error instanceof Error ? error.message : String(error) }, undefined, 'Failed to load alert settings');
+      await logWarn('TrustChecker', { error: error instanceof Error ? error.message : String(error) }, undefined, 'Failed to load alert settings');
       // エラーの場合も初期化済みフラグを立てて、デフォルト値を使用する
       this.alertConfigInitialized = true;
     }
@@ -138,7 +138,7 @@ export class TrustChecker {
    */
   getAlertConfigSync(): AlertConfig {
     if (!this.alertConfigInitialized) {
-      logWarn('TrustChecker', {}, undefined, 'getAlertConfigSync called before initialization - using default values');
+      console.warn('TrustChecker', {}, undefined, 'getAlertConfigSync called before initialization - using default values');
     }
     return { ...this.alertConfig };
   }
@@ -316,7 +316,7 @@ export class TrustChecker {
    */
   shouldSaveAbortedPagesSync(): boolean {
     if (!this.alertConfigInitialized) {
-      logWarn('TrustChecker', {}, undefined, 'shouldSaveAbortedPagesSync called before initialization - using default value');
+      console.warn('TrustChecker', {}, undefined, 'shouldSaveAbortedPagesSync called before initialization - using default value');
     }
     return this.alertConfig.saveAbortedPages;
   }

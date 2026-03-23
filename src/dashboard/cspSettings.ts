@@ -53,14 +53,26 @@ export class CSPSettings {
     if (!container) return;
 
     const availableProviders = CSPValidator.getAvailableProviders();
+
+    // 選択済みプロバイダーを先頭に、残りはアルファベット順
+    const sortedProviders = [...availableProviders].sort((a, b) => {
+      const aSelected = selectedProviders.includes(a);
+      const bSelected = selectedProviders.includes(b);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return a.localeCompare(b);
+    });
+
     container.innerHTML = '';
 
-    for (const provider of availableProviders) {
+    for (const provider of sortedProviders) {
       const domain = CSPValidator.getProviderDomain(provider);
       if (!domain) continue;
 
+      const isSelected = selectedProviders.includes(provider);
+
       const row = document.createElement('div');
-      row.className = 'csp-provider-row';
+      row.className = 'csp-provider-row' + (isSelected ? ' csp-provider-row--active' : '');
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
@@ -210,6 +222,82 @@ export class CSPSettings {
       setTimeout(() => {
         message.style.display = 'none';
       }, 3000);
+    }
+  }
+
+  /**
+   * AIプロバイダー権限リクエスト
+   * @param provider - プロバイダーID
+   * @returns 権限付与成功かどうか
+   */
+  static async requestProviderPermission(provider: string): Promise<boolean> {
+    try {
+      const domain = CSPValidator.getProviderDomain(provider);
+      if (!domain) {
+        console.warn(`Unknown provider: ${provider}`);
+        return false;
+      }
+
+      const granted = await chrome.permissions.request({
+        origins: [`https://${domain}/*`]
+      });
+
+      return granted === true;
+    } catch (error) {
+      console.error(`Failed to request permission for ${provider}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Essential機能の権限リクエスト
+   * @param type - 機能種別 ('github-raw', 'tranco')
+   * @returns 権限付与成功かどうか
+   */
+  static async requestEssentialPermission(type: string): Promise<boolean> {
+    try {
+      let origins: string[];
+
+      switch (type) {
+        case 'github-raw':
+          origins = ['https://raw.githubusercontent.com/*'];
+          break;
+        case 'tranco':
+          origins = ['https://tranco-list.eu/*'];
+          break;
+        default:
+          console.warn(`Unknown essential permission type: ${type}`);
+          return false;
+      }
+
+      const granted = await chrome.permissions.request({ origins });
+      return granted === true;
+    } catch (error) {
+      console.error(`Failed to request ${type} permission:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * プロバイダー権限が付与されているか確認
+   * @param provider - プロバイダーID
+   * @returns 権限が付与されているか
+   */
+  static async hasPermission(provider: string): Promise<boolean> {
+    try {
+      const domain = CSPValidator.getProviderDomain(provider);
+      if (!domain) {
+        return false;
+      }
+
+      const hasPermission = await chrome.permissions.contains({
+        origins: [`https://${domain}/*`]
+      });
+
+      return hasPermission === true;
+    } catch (error) {
+      console.error(`Failed to check permission for ${provider}:`, error);
+      return false;
     }
   }
 }

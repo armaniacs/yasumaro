@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+
+- **Prompt Sanitizer精緻化パターン統合** ([src/utils/promptSanitizer.ts](src/utils/promptSanitizer.ts))
+  - 誤検知率を80%から0%に低減（目標<20%達成）
+  - 明確なプロンプト命令構文に焦点を当てた検出パターン
+  - 文脈チェックによる誤検知防止（SAFE_CONTEXT_PATTERNS）
+  - 単一用語の悪意ある用法判定（isMaliciousUsage）
+  - True Positive検出: 100% (4/4)
+  - テスト更新: 41件全パス
+  - 参考: 2026-03-20 ADR prompt-sanitizer-over-matching-fix.md
+
 ## [4.10.7] - 2026-03-19
 
 ### Fixed

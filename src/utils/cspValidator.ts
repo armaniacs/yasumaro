@@ -67,6 +67,16 @@ const OPTIONAL_DOMAINS = [
 ];
 
 /**
+ * キュー内のリクエスト情報
+ */
+interface QueuedRequest {
+  url: string;
+  options?: RequestInit;
+  resolve: (value: Response) => void;
+  reject: (reason?: unknown) => void;
+}
+
+/**
  * CSP Validator クラス
  * 設定したAIプロバイダーのみCSPに含めるためのURL検証
  */
@@ -74,6 +84,26 @@ export class CSPValidator {
   private static allowedDomains: Set<string> = new Set(DEFAULT_ALLOWED_DOMAINS);
   private static optionalDomains: Set<string> = new Set(OPTIONAL_DOMAINS);
   private static initialized = false;
+
+  // 初期化Promiseとリクエストキュー（レースコンディション修正用）
+  private static initPromise: Promise<void> | null = null;
+  private static resolveInit: (() => void) | null = null;
+  private static requestQueue: QueuedRequest[] = [];
+  public static readonly REQUEST_QUEUE_LIMIT = 100; // キュー上限（テスト用に公開）
+  private static initializing = false; // 初期化中フラグ
+
+  /**
+   * 初期化の準備（非同期初期化用）
+   * このメソッドを呼ぶと、それ以降のsafeFetchはキューイングされる
+   */
+  static prepareInitialization(): void {
+    if (!CSPValidator.initPromise && !CSPValidator.initialized) {
+      CSPValidator.initializing = true;
+      CSPValidator.initPromise = new Promise<void>((resolve) => {
+        CSPValidator.resolveInit = resolve;
+      });
+    }
+  }
 
   /**
    * 設定ファイルから許可ドメインを初期化
@@ -113,6 +143,58 @@ export class CSPValidator {
     }
 
     CSPValidator.initialized = true; // 初回ロードフラグ（fetch.ts内での重複初期化抑制用）
+    CSPValidator.initializing = false;
+
+    // 初期化完了を通知し、キュー内のリクエストを処理
+    CSPValidator.completeInitialization();
+  }
+
+  /**
+   * 初期化完了を通知し、キュー内のリクエストを処理
+   */
+  private static completeInitialization(): void {
+    if (CSPValidator.resolveInit) {
+      CSPValidator.resolveInit();
+      CSPValidator.resolveInit = null;
+    }
+    CSPValidator.processQueue();
+  }
+
+  /**
+   * キュー内のリクエストを処理
+   */
+  private static processQueue(): void {
+    const queue = [...CSPValidator.requestQueue];
+    CSPValidator.requestQueue = [];
+
+    for (const { url, options, resolve, reject } of queue) {
+      // 許可チェック後に直接fetchを実行（再帰的なsafeFetch呼び出しを回避）
+      if (CSPValidator.isUrlAllowed(url)) {
+        fetch(url, options).then(resolve).catch(reject);
+      } else {
+        const error = new Error(`URL blocked by CSP policy: ${url}`);
+        (error as any).code = 'CSP_BLOCKED';
+        reject(error);
+      }
+    }
+  }
+
+  /**
+   * リクエストをキューに追加（キュー上限チェック含む）
+   * @param url - リクエストURL
+   * @param options - Fetchオプション
+   * @returnsPromise<Response> - リクエストPromise or エラー
+   */
+  private static enqueueQueuedRequest(url: string, options?: RequestInit): Promise<Response> {
+    if (CSPValidator.requestQueue.length >= CSPValidator.REQUEST_QUEUE_LIMIT) {
+      const error = new Error(`Request queue full: ${url}`);
+      (error as any).code = 'CSP_QUEUE_FULL';
+      throw error;
+    }
+
+    return new Promise((resolve, reject) => {
+      CSPValidator.requestQueue.push({ url, options, resolve, reject });
+    });
   }
 
   /**
@@ -240,6 +322,10 @@ export class CSPValidator {
   static reset(): void {
     CSPValidator.allowedDomains = new Set(DEFAULT_ALLOWED_DOMAINS);
     CSPValidator.initialized = false;
+    CSPValidator.initializing = false;
+    CSPValidator.initPromise = null;
+    CSPValidator.resolveInit = null;
+    CSPValidator.requestQueue = [];
   }
 
   /**
@@ -248,6 +334,30 @@ export class CSPValidator {
    */
   static isInitialized(): boolean {
     return CSPValidator.initialized;
+  }
+
+  /**
+   * 初期化中かどうかを取得
+   * @returns 初期化中かどうか
+   */
+  static isInitializing(): boolean {
+    return CSPValidator.initializing;
+  }
+
+  /**
+   * 初期化Promiseを取得（テスト用）
+   * @returns 初期化Promise
+   */
+  static getInitPromise(): Promise<void> | null {
+    return CSPValidator.initPromise;
+  }
+
+  /**
+   * キュー内のリクエスト数を取得（テスト用）
+   * @returns キュー内のリクエスト数
+   */
+  static getQueueSize(): number {
+    return CSPValidator.requestQueue.length;
   }
 }
 
@@ -259,16 +369,12 @@ export class CSPValidator {
  * @throws 未許可URLの場合エラー
  */
 export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
-  // 初期化前はデフォルトドメインのみ許可（Service Worker再起動後のセキュリティ対策）
-  if (!CSPValidator.isInitialized()) {
-    if (CSPValidator.isUrlAllowed(url)) {
-      return fetch(url, options);
-    }
-    const error = new Error(`URL blocked: CSP not initialized for ${url}`);
-    (error as any).code = 'CSP_NOT_INITIALIZED';
-    throw error;
+  // 初期化中はリクエストをキューイング
+  if (CSPValidator.isInitializing()) {
+    return (CSPValidator as any).enqueueQueuedRequest(url, options);
   }
-  
+
+  // 初期化済みの通常処理
   if (!CSPValidator.isUrlAllowed(url)) {
     const error = new Error(`URL blocked by CSP policy: ${url}`);
     (error as any).code = 'CSP_BLOCKED';

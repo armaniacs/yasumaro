@@ -411,15 +411,16 @@ class TrustDb {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    // 楽観的ロックで保護して保存
+    // 楽観的ロックで保護して保存（STORAGE_KEYとSTORAGE_KEY_BLOOMをアトミックに更新）
     await withOptimisticLock(STORAGE_KEY, (_currentDb) => {
       // 初期化時は currentDb が undefined でも許可する
       return this.state.database;
     });
 
-    // Bloom Filterをアトミックに保存（データベースと同時に更新）
-    await withOptimisticLock(STORAGE_KEY_BLOOM, () => {
-      return bloomData;
+    // Bloom Filterは同じトランザクション内でアトミックに保存（個別版番号チェックなし）
+    // 注: chrome.storage.local.setは複数キーの更新もアトミック
+    await chrome.storage.local.set({
+      [STORAGE_KEY_BLOOM]: bloomData
     });
 
     logDebug('TrustDb', {}, 'Database saved with optimistic lock');

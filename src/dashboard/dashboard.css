@@ -2738,6 +2738,15 @@ details[open] .advanced-details-summary {
   background: var(--color-bg-hover);
 }
 
+.csp-provider-row--active {
+  border-color: var(--color-success);
+  background: var(--color-bg-secondary);
+}
+
+.csp-provider-row--active .csp-provider-label {
+  font-weight: 600;
+}
+
 .csp-provider-checkbox {
   width: 18px;
   height: 18px;

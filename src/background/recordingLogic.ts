@@ -18,6 +18,9 @@ import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 // P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
 import { getPermissionManager } from '../utils/permissionManager.js';
 
+// Trust domain checker（3段階警告）
+import { TrustChecker } from '../utils/trustChecker.js';
+
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -395,6 +398,24 @@ export class RecordingLogic {
         await permissionManager.recordDeniedVisit(domain);
         addLog(LogType.WARN, 'Permission required for recording', { url, domain });
         return { success: false, error: 'PERMISSION_REQUIRED' };
+      }
+
+      // Trust domainチェック（3段階警告: Finance/Sensitive/Unverified）
+      const trustChecker = new TrustChecker();
+      const trustCheck = await trustChecker.checkDomain(url);
+      if (!trustCheck.canProceed && !force) {
+        // 信頼されていないドメイン → 記録ブロック
+        addLog(LogType.WARN, 'Domain not trusted, recording blocked', {
+          url,
+          reason: trustCheck.reason,
+          trustLevel: trustCheck.trustResult.level
+        });
+        if (trustCheck.showAlert) {
+          NotificationHelper.notifyError(
+            `Recording Blocked: ${trustCheck.reason || 'Domain not trusted for recording'}`
+          );
+        }
+        return { success: false, error: 'DOMAIN_NOT_TRUSTED' };
       }
 
       // ホワイトリスト判定と設定の事前取得
