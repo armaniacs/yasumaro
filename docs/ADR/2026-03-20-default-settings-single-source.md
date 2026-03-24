@@ -68,11 +68,15 @@ const DEFAULT_SETTINGS: Settings = {
 - [x] デフォルト値不一致の調査完了
   - storage.ts: HTTPS, port 27124
   - storageSettings.ts: HTTP, port 27123
-- [ ] **リスク評価と移行計画** (重要)
+- [x] **リスク評価と移行計画** (重要)
   - 既存ユーザーのポート設定 (27123) を事前に調べる
   - ポート変更による接続断の影響範囲を調査
   - 新デフォルト (27124) へのマイグレーション時期を決定
-- [ ] storageSettings.tsのDEFAULT_SETTINGS削除
+  - 結論: 既存設定優先によりリスクは限定的
+- [x] storage.ts DEFAULT_SETTINGS export
+- [x] storageSettings.ts: DEFAULT_SETTINGS削除 + 再エクスポート
+- [x] 型定義一貫性確認 (TypeScript type-check OK)
+- [x] テスト確認 (98件全パス)
 - [ ] マイグレーション実装（旧設定 → StorageKeys）
 - [ ] テスト追加（マイグレーション検証）
 - [ ] Linkage: `storageSettings.ts`使用コード修正
@@ -84,8 +88,33 @@ const DEFAULT_SETTINGS: Settings = {
 
 - **Proposed**: 2026-03-20
 - **Approved**: 2026-03-20
-- **Implemented**: Phase 1（ADR + 調査）/ Phase 2（実装 - 待機中）
+- **Implemented**: Phase 2（単一ソース化 - 完了） / Phase 3（マイグレーション強化 - 待機中）
 - **Superseded By** -
+
+## Implementation Summary
+
+### Phase 2: 単一ソース化（完了）
+
+**変更内容:**
+1. `storage.ts`: `DEFAULT_SETTINGS` を `export const` に変更
+2. `storageSettings.ts`:
+   - `storage.ts` から `DEFAULT_SETTINGS` と `Settings` 型をインポート
+   - 自身の `DEFAULT_SETTINGS` 定義を削除
+   - `STORAGE_DEFAULT_SETTINGS` を `DEFAULT_SETTINGS` として再エクスポート
+
+**リスク評価結果:**
+- 既存設定優先: ユーザーが既に設定している場合、新しいデフォルト値は適用されない
+- ポート変更の影響: 既存ユーザーは接続設定が維持されるため、接続断のリスクは限定的
+- 型安全性: TypeScript type-check パス（型定義の一貫性確認）
+
+**テスト結果:**
+- storage テスト: 98件全パス
+- TypeScript 型チェック: エラーなし
+
+**推奨事項:**
+- 既存ユーザーへの事前通知（ポート変更の可能性）
+- v4.11リリース時にドキュメント更新
+- 次期リリースでマイグレーション強化（Phase 3）
 
 ## Risk Assessment
 

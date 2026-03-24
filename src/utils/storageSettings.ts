@@ -6,6 +6,7 @@
 
 import { encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
 import { withOptimisticLock } from './optimisticLock.js';
+import { DEFAULT_SETTINGS as STORAGE_DEFAULT_SETTINGS, type Settings as StorageSettings } from './storage.js';
 import type {
     UblockRules,
     Source,
@@ -74,70 +75,9 @@ export type Settings = SettingsValue & {
     [key: string]: unknown;
 };
 
-/**
- * デフォルト設定
- */
-export const DEFAULT_SETTINGS: Settings = {
-    obsidian_api_key: '',
-    obsidian_protocol: 'http',
-    obsidian_port: '27123',
-    min_visit_duration: 5,
-    min_scroll_depth: 50,
-    gemini_api_key: '',
-    gemini_model: 'gemini-1.5-flash',
-    obsidian_daily_path: '092.Daily',
-    ai_provider: 'openai',
-    openai_base_url: 'https://api.groq.com/openai/v1',
-    openai_api_key: '',
-    openai_model: 'openai/gpt-oss-20b',
-    openai_2_base_url: 'http://127.0.0.1:11434/v1',
-    openai_2_api_key: '',
-    openai_2_model: 'llama3',
-    domain_whitelist: [],
-    domain_blacklist: [
-        'amazon.co.jp',
-        'amazon.com',
-        'yahoo.co.jp',
-        'yahoo.com',
-        'facebook.com',
-        'twitter.com',
-        'x.com',
-        'instagram.com',
-        'youtube.com',
-        'google.com',
-        'google.co.jp'
-    ],
-    domain_filter_mode: 'blacklist',
-    privacy_mode: 'masked_cloud',
-    pii_confirmation_ui: true,
-    pii_sanitize_logs: true,
-    content_strip_hard_enabled: true,
-    content_strip_keywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
-    content_strip_keyword_enabled: true,
-    ublock_rules: {
-        blockDomains: [],
-        exceptionDomains: [],
-        metadata: {
-            importedAt: 0,
-            ruleCount: 0
-        }
-    },
-    ublock_sources: [],
-    ublock_format_enabled: false,
-    simple_format_enabled: true,
-    allowed_urls: [],
-    allowed_urls_hash: '',
-    custom_prompts: [],
-    tag_categories: [],        // タグカテゴリリスト（空=デフォルトカテゴリを使用）
-    tag_summary_mode: false,    // タグ付き要約モード（デフォルト: 無効）
-    // AI Limits Settings
-    max_tokens_per_prompt: 1000, // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
-    // マスターパスワード保護オプション
-    mp_protection_enabled: false,
-    mp_encrypt_api_keys: true,
-    mp_encrypt_on_export: true,
-    mp_require_on_import: true
-};
+// デフォルト設定は storage.ts から再エクスポート（単一ソース化）
+// 参考: 2026-03-20 ADR default-settings-single-source.md
+export const DEFAULT_SETTINGS = STORAGE_DEFAULT_SETTINGS;
 
 /**
  * 暗号化キーがストレージキーかどうかを判定する

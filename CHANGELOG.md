@@ -13,9 +13,33 @@ All notable changes to this project will be documented in this file.
   - 単一用語の悪意ある用法判定（isMaliciousUsage）
   - True Positive検出: 100% (4/4)
   - テスト更新: 41件全パス
+  - CI Gate統合: 誤検知率<20%閾値チェック
+  - スクリプト追加: `test:false-positive-rate`, `test:gate:false-positive`
   - 参考: 2026-03-20 ADR prompt-sanitizer-over-matching-fix.md
 
-## [4.10.7] - 2026-03-19
+- **DEFAULT_SETTINGS単一ソース化** ([src/utils/storageSettings.ts](src/utils/storageSettings.ts), [src/utils/storage.ts](src/utils/storage.ts))
+  - DEFAULT_SETTINGSをstorage.tsに統一
+  - storageSettings.tsから重複定義を削除し、再エクスポート
+  - 既存設定優先により既存ユーザーへの影響を最小化
+  - TypeScript型定義の一貫性を確保
+  - 参考: 2026-03-20 ADR default-settings-single-source.md
+
+### Documentation
+
+- **ADR追加（ADRのみ、一部実装済み）**:
+  - 2026-03-24 Tranco リスト更新の通知・同意機構追加（実装延期）
+  - 2026-03-24 マスターパスワード設定撤回時のデータクリーンアップ（Phase 1実装済み）
+  - 2026-03-24 Models.dev Dialog のアクセシビリティ改善（既実装済み確認）
+  - 2026-03-24 PermissionManager TrustDb 責務分離（完了済み確認）
+
+### Security
+
+- **マスターパスワード無効化時のデータクリーンアップ** ([src/popup/popup.ts](src/popup/popup.ts))
+  - マスターパスワード無効化時に暗号化APIキーを空文字列で上書き
+  - データ残存によるセキュリティリスクを排除
+  - 参考: 2026-03-24 ADR master-password-data-cleanup.md
+
+## Unreleased
 
 ### Fixed
 

@@ -696,14 +696,26 @@ if (masterPasswordEnabled && masterPasswordOptions) {
             masterPasswordEnabled.checked = true;
             // 認証成功後にのみマスターパスワードを削除
             showPasswordAuthModal('export', async () => {
+                // Remove master password storage
                 await chrome.storage.local.remove([
                     'master_password_enabled',
                     'master_password_salt',
                     'master_password_hash'
                 ]);
+
+                // Reset API keys to default (empty) values to clear encrypted data
+                const settings = await getSettings();
+                const apiKeysToRemove = ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key'];
+                for (const key of apiKeysToRemove) {
+                    if (key in settings) {
+                        settings[key as keyof Settings] = '';
+                    }
+                }
+                await saveSettingsWithAllowedUrls(settings);
+
                 masterPasswordEnabled.checked = false;
                 masterPasswordOptions.classList.add('hidden');
-                showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+                showStatus('status', getMessage('passwordRemoved') || 'Master password and encrypted data removed.', 'success');
             });
         }
     });

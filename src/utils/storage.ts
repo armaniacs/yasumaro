@@ -667,7 +667,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
     return secret;
 }
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.OBSIDIAN_API_KEY]: '', // APIキー（ユーザーが設定）
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'https', // Default HTTPS for Local REST API (port 27124)
     [StorageKeys.OBSIDIAN_PORT]: '27124',

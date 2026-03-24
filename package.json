@@ -14,6 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "test:false-positive-rate": "jest --testPathPattern=promptSanitizer-false-positives --verbose",
+    "test:gate:false-positive": "jest --testPathPattern=promptSanitizer-false-positives --json --outputFile=/tmp/false-positive-rate.json && node scripts/test-gate-false-positive.mjs",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
     "type-check:test": "tsc --project tsconfig.test.json --noEmit",
