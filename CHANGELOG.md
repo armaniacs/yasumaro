@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Content Cleansing通知のnull安全性改善** ([src/background/service-worker.ts](src/background/service-worker.ts))
+  - `sender.tab?.id` と `sender.tab?.url` にオプションチェーンを追加
+  - null参照によるエラー発生を防止
+
 ### Security
 
 - **Prompt Sanitizer精緻化パターン統合** ([src/utils/promptSanitizer.ts](src/utils/promptSanitizer.ts))
@@ -24,35 +30,22 @@ All notable changes to this project will be documented in this file.
   - TypeScript型定義の一貫性を確保
   - 参考: 2026-03-20 ADR default-settings-single-source.md
 
-### Documentation
-
-- **ADR追加（ADRのみ、一部実装済み）**:
-  - 2026-03-24 Tranco リスト更新の通知・同意機構追加（実装延期）
-  - 2026-03-24 マスターパスワード設定撤回時のデータクリーンアップ（Phase 1実装済み）
-  - 2026-03-24 Models.dev Dialog のアクセシビリティ改善（既実装済み確認）
-  - 2026-03-24 PermissionManager TrustDb 責務分離（完了済み確認）
-
-### Security
-
 - **マスターパスワード無効化時のデータクリーンアップ** ([src/popup/popup.ts](src/popup/popup.ts))
   - マスターパスワード無効化時に暗号化APIキーを空文字列で上書き
   - データ残存によるセキュリティリスクを排除
   - 参考: 2026-03-24 ADR master-password-data-cleanup.md
 
-## Unreleased
-
-### Fixed
-
-- **Content Cleansing通知のnull安全性改善** ([src/background/service-worker.ts](src/background/service-worker.ts))
-  - `sender.tab?.id` と `sender.tab?.url` にオプションチェーンンを追加
-  - null参照によるエラー発生を防止
-
-### Security
-
 - **MarkdownレンダリングのURL検証強化** ([src/privacy/privacy.ts](src/privacy/privacy.ts))
   - Markdown内のリンクでHTTPS URLのみ許可（HTTPSとアンカーリンクのみ）
   - 畸形URL（不正なURL形式）の検証を追加し、不正な場合は `#` に変換
   - XSS攻撃リスクを軽減
+
+- **RecordingResult.maskedItems 型硬化** ([src/messaging/types.ts](src/messaging/types.ts), [src/background/recordingLogic.ts](src/background/recordingLogic.ts))
+  - `any[]` を `(string | MaskedItem)[]` に置換し、型安全性を向上
+  - MaskedItem インターフェースを messaging/types.ts に定義
+  - RecordingResult を messaging/types.ts に集約
+  - recordingLogic.ts の重複型定義を削除・インポートに変更
+  - 参考: 2026-03-25 ADR recordingResult-maskedItems-type-fix.md
 
 ### Added
 
@@ -61,6 +54,14 @@ All notable changes to this project will be documented in this file.
   - リトライ間隔: 100ms → 200ms → 400ms
   - 初期化中の競合状態を防止するための `initPromise` 静的プロパティを追加
   - 初期化失敗時のログ出力を強化（`logWarn` を使用）
+
+### Documentation
+
+- **ADR追加（ADRのみ、一部実装済み）**:
+  - 2026-03-24 Tranco リスト更新の通知・同意機構追加（実装延期）
+  - 2026-03-24 マスターパスワード設定撤回時のデータクリーンアップ（Phase 1実装済み）
+  - 2026-03-24 Models.dev Dialog のアクセシビリティ改善（既実装済み確認）
+  - 2026-03-24 PermissionManager TrustDb 責務分離（完了済み確認）
 
 ## [4.10.6] - 2026-03-19
 
