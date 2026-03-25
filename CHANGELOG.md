@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.10.7] - 2026-03-26
 
 ### Fixed
 
@@ -62,6 +62,8 @@ All notable changes to this project will be documented in this file.
   - 2026-03-24 マスターパスワード設定撤回時のデータクリーンアップ（Phase 1実装済み）
   - 2026-03-24 Models.dev Dialog のアクセシビリティ改善（既実装済み確認）
   - 2026-03-24 PermissionManager TrustDb 責務分離（完了済み確認）
+
+## [Unreleased]
 
 ## [4.10.6] - 2026-03-19
 
