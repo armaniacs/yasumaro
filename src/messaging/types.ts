@@ -6,6 +6,44 @@
  */
 
 // ============================================================================
+// RecordingResult、MaskedItem 型定義
+// ============================================================================
+/**
+ * PIIマスキングされた項目の型
+ * 参考: src/background/recordingLogic.ts
+ */
+export interface MaskedItem {
+  type: string;       // マスク項目の種類（例: "card-number"）
+  position?: string;  // 位置情報（例: "header", "body"）
+  original?: string; // 元の値（デバッグ用、本番環境では使用しない）
+}
+
+/**
+ * 記録処理の結果型
+ * 参考: src/background/recordingLogic.ts:123-140
+ */
+export interface RecordingResult {
+  success: boolean;
+  error?: string;
+  skipped?: boolean;
+  reason?: string;
+  summary?: string;
+  title?: string;
+  url?: string;
+  preview?: boolean;
+  processedContent?: string;
+  mode?: string;
+  maskedCount?: number;
+  maskedItems?: (string | MaskedItem)[]; // マスクされたPII項目のリスト
+  /** AI処理時間 (ミリ秒) */
+  aiDuration?: number;
+  confirmationRequired?: boolean;
+  headerValue?: string;
+  message?: string;  // 後方互換性用
+  timestamp?: number;  // 後方互換性用
+}
+
+// ============================================================================
 // Request メッセージ型定義
 // ============================================================================
 
@@ -179,16 +217,6 @@ export type ResponseForType<T extends ServiceWorkerRequest['type']> =
   T extends 'MANUAL_RECORD' ? RecordingResult :
   T extends 'PREVIEW_RECORD' ? RecordingResult :
   SuccessResponse;
-
-/**
- * 記録処理の結果型
- */
-export interface RecordingResult {
-  success: boolean;
-  message: string;
-  url?: string;
-  timestamp?: number;
-}
 
 /**
  * メッセージ送信の型安全ラッパー

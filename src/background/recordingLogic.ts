@@ -21,6 +21,9 @@ import { getPermissionManager } from '../utils/permissionManager.js';
 // Trust domain checker（3段階警告）
 import { TrustChecker } from '../utils/trustChecker.js';
 
+// RecordingResult, MaskedItem 型 - messaging/types.tsからインポート
+import type { RecordingResult, MaskedItem } from '../messaging/types.js';
+
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -120,24 +123,8 @@ export interface RecordingData {
   aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
 }
 
-export interface RecordingResult {
-  success: boolean;
-  error?: string;
-  skipped?: boolean;
-  reason?: string;
-  summary?: string;
-  title?: string;
-  url?: string;
-  preview?: boolean;
-  processedContent?: string;
-  mode?: string;
-  maskedCount?: number;
-  maskedItems?: any[];
-  /** AI処理時間 (ミリ秒) */
-  aiDuration?: number;
-  confirmationRequired?: boolean;
-  headerValue?: string;
-}
+// RecordingResult は ../messaging/types.ts からインポート済み
+// MaskedItem は ../messaging/types.ts からインポート済み
 
 export class RecordingLogic {
   // キャッシュ状態永続化（SERVICE-WORKER再起動間で保持）
