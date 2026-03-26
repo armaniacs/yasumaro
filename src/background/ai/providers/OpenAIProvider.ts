@@ -9,6 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
+import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 export class OpenAIProvider extends AIProviderStrategy {
     private providerName: string;
@@ -60,6 +61,12 @@ export class OpenAIProvider extends AIProviderStrategy {
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.baseUrl) {
             return { summary: "Error: Base URL is missing. Please check your settings." };
+        }
+
+        // レート制限チェック
+        const rateLimit = await checkRateLimit();
+        if (!rateLimit.allowed) {
+            return { summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');

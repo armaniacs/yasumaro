@@ -47,7 +47,7 @@ const SENSITIVE_DOMAINS_PRESETS = {
     'ufj.co.jp',
     'sumitomo.co.jp',
     'orix.co.jp',
-    'credit Saison.co.jp',
+    'saison.co.jp',
     'aeon.co.jp',
     'sevenbank.co.jp',
     'japanpost.jp',

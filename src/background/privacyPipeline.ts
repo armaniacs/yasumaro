@@ -145,7 +145,7 @@ export class PrivacyPipeline {
 
         // 危険度が高い場合はログに記録
         if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
-          addLog(LogType.WARNING, 'AI summary sanitized - high danger content detected', {
+          addLog(LogType.WARN, 'AI summary sanitized - high danger content detected', {
             warnings: sanitizeResult.warnings
           });
         }

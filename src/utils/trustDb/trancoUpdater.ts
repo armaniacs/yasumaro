@@ -88,7 +88,7 @@ export class TrancoUpdater {
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logWarn('TrancoUpdater', { error: errorMessage, attempt, maxRetries }, `Tranco update failed, retrying...`);
+        logWarn('Tranco update failed, retrying...', { error: errorMessage, attempt, maxRetries }, undefined, 'TrancoUpdater');
 
         // 最終試行でエラー
         if (attempt === maxRetries) {

@@ -240,6 +240,13 @@ export interface StorageKeyValues {
     [StorageKeys.TRANCO_CONSENT_GRANTED]: string | null; // 同意が与えられたバージョン
     [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: string | null; // 同意拒否の理由
     [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: number | null; // 同意拒否タイムスタンプ
+    // AI Usage Tracking
+    [StorageKeys.AI_USAGE_MONTH]: string; // 現在の月（YYYY-MM形式）
+    [StorageKeys.AI_USAGE_TOKENS_SENT]: number; // 当月送信トークン数
+    [StorageKeys.AI_USAGE_TOKENS_RECEIVED]: number; // 当月受信トークン数
+    [StorageKeys.AI_USAGE_REQUEST_COUNT]: number; // 当月リクエスト数
+    [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: number; // レート制限ウィンドウ開始時刻
+    [StorageKeys.AI_RATE_LIMIT_COUNT]: number; // 現在のウィンドウ内リクエスト数
 }
 
 // 厳格な Settings 型
@@ -796,7 +803,14 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: null, // 通知が表示されたバージョン（初期値: null）
     [StorageKeys.TRANCO_CONSENT_GRANTED]: null, // 同意が与えられたバージョン（初期値: null）
     [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null, // 同意拒否の理由（初期値: null）
-    [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null // 同意拒否タイムスタンプ（初期値: null）
+    [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null, // 同意拒否タイムスタンプ（初期値: null）
+    // AI Usage Tracking
+    [StorageKeys.AI_USAGE_MONTH]: '', // 現在の月（初期値: 空）
+    [StorageKeys.AI_USAGE_TOKENS_SENT]: 0, // 当月送信トークン数（初期値: 0）
+    [StorageKeys.AI_USAGE_TOKENS_RECEIVED]: 0, // 当月受信トークン数（初期値: 0）
+    [StorageKeys.AI_USAGE_REQUEST_COUNT]: 0, // 当月リクエスト数（初期値: 0）
+    [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: 0, // レート制限ウィンドウ開始時刻（初期値: 0）
+    [StorageKeys.AI_RATE_LIMIT_COUNT]: 0 // 現在のウィンドウ内リクエスト数（初期値: 0）
 };
 
 /**

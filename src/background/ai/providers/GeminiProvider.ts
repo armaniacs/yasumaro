@@ -9,6 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
+import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 export class GeminiProvider extends AIProviderStrategy {
     private apiKey: string;
@@ -35,6 +36,12 @@ export class GeminiProvider extends AIProviderStrategy {
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.apiKey) {
             return { summary: "Error: API key is missing. Please check your settings." };
+        }
+
+        // レート制限チェック
+        const rateLimit = await checkRateLimit();
+        if (!rateLimit.allowed) {
+            return { summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
         }
 
         const cleanModelName = this.model.replace(/^models\//, '');
@@ -91,7 +98,7 @@ export class GeminiProvider extends AIProviderStrategy {
             }
 
             const data = await response.json();
-            return this._extractSummary(data);
+            return await this._extractSummary(data);
         } catch (error: any) {
             if (error.message.includes('timed out')) {
                 return { summary: "Error: AI request timed out. Please check your connection." };
@@ -168,11 +175,15 @@ export class GeminiProvider extends AIProviderStrategy {
         return { summary: "Error: Failed to generate summary. Please check your API settings." };
     }
 
-    private _extractSummary(data: any): AISummaryResult {
+    private async _extractSummary(data: any): Promise<AISummaryResult> {
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const summary = data.candidates[0].content.parts[0].text;
-            const sentTokens = data.usageMetadata?.promptTokenCount;
-            const receivedTokens = data.usageMetadata?.candidatesTokenCount;
+            const sentTokens = data.usageMetadata?.promptTokenCount || 0;
+            const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
+
+            // トークン使用量を記録
+            await recordUsage(sentTokens, receivedTokens);
+
             return { summary, sentTokens, receivedTokens };
         }
         return { summary: "No summary generated." };
