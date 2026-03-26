@@ -60,39 +60,62 @@ export class TrancoUpdater {
     this.updateInProgress = true;
     const startTime = performance.now();
 
-    try {
-      logInfo('TrancoUpdater', { tier }, `Starting Tranco update for tier: ${tier}`);
+    // 指数バックオフでリトライ（最大3回）
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1秒
 
-      // 1. API から取得
-      const domains = await this.fetchTrancoList(tier);
-      logInfo('TrancoUpdater', { count: domains.length }, `Fetched ${domains.length} domains from Tranco`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logInfo('TrancoUpdater', { tier, attempt, maxRetries }, `Starting Tranco update for tier: ${tier}`);
 
-      // 2. データベースを更新
-      const db = getTrustDb();
-      await db.initialize();
-      await db.updateTranco(domains, tier);
+        // 1. API から取得
+        const domains = await this.fetchTrancoList(tier);
+        logInfo('TrancoUpdater', { count: domains.length }, `Fetched ${domains.length} domains from Tranco`);
 
-      const duration = performance.now() - startTime;
-      logInfo('TrancoUpdater', { tier, count: domains.length, duration: duration.toFixed(0) }, `Tranco update completed in ${duration.toFixed(0)}ms`);
+        // 2. データベースを更新
+        const db = getTrustDb();
+        await db.initialize();
+        await db.updateTranco(domains, tier);
 
-      return {
-        success: true,
-        domainsCount: domains.length,
-        sizeBytes: domains.join('\n').length,
-        duration
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logError('TrancoUpdater', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
-      return {
-        success: false,
-        domainsCount: 0,
-        sizeBytes: 0,
-        error: errorMessage
-      };
-    } finally {
-      this.updateInProgress = false;
+        const duration = performance.now() - startTime;
+        logInfo('TrancoUpdater', { tier, count: domains.length, duration: duration.toFixed(0) }, `Tranco update completed in ${duration.toFixed(0)}ms`);
+
+        return {
+          success: true,
+          domainsCount: domains.length,
+          sizeBytes: domains.join('\n').length,
+          duration
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logWarn('TrancoUpdater', { error: errorMessage, attempt, maxRetries }, `Tranco update failed, retrying...`);
+
+        // 最終試行でエラー
+        if (attempt === maxRetries) {
+          logError('TrancoUpdater', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
+          return {
+            success: false,
+            domainsCount: 0,
+            sizeBytes: 0,
+            error: errorMessage
+          };
+        }
+
+        // 指数バックオフで待機（1秒 → 2秒 → 4秒）
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
+
+    this.updateInProgress = false;
+
+    // 通常到達しないが、型安全性のため
+    return {
+      success: false,
+      domainsCount: 0,
+      sizeBytes: 0,
+      error: 'Unexpected error'
+    };
   }
 
   /**

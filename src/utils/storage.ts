@@ -139,7 +139,14 @@ export const StorageKeys = {
     TRANCO_NOTIFICATION_SHOWN: 'tranco_notification_shown', // 通知が表示されたバージョン（7日抑制制御用）
     TRANCO_CONSENT_GRANTED: 'tranco_consent_granted', // 同意が与えられたバージョン
     TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason', // 同意拒否の理由
-    TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp' // 同意拒否タイムスタンプ（30日再確認用）
+    TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp', // 同意拒否タイムスタンプ（30日再確認用）
+    // AI Usage Tracking (FinOps)
+    AI_USAGE_MONTH: 'ai_usage_month', // 現在の月（YYYY-MM形式）
+    AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent', // 当月送信トークン数
+    AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received', // 当月受信トークン数
+    AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count', // 当月リクエスト数
+    AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start', // レート制限ウィンドウ開始時刻
+    AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count' // 現在のウィンドウ内リクエスト数
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];

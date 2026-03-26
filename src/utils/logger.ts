@@ -191,6 +191,17 @@ function scheduleFlush(): void {
 }
 
 /**
+ * 【Service Worker対策】サスペンド前にログを即時フラッシュ
+ * ChromeがService Workerを停止する前に保留中のログを保存
+ */
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
+    chrome.runtime.onSuspend.addListener(() => {
+        console.log('[Logger] Service Worker suspending - flushing pending logs');
+        void flushLogs(true); // 即時フラッシュ
+    });
+}
+
+/**
  * 【パフォーマンス改善】保留中のログの数を取得（テスト用）
  */
 export function getPendingLogCount(): number {

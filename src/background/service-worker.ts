@@ -500,6 +500,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
     tabCache.remove(tabId);
     autoSavedBadgeTabs.delete(tabId);
+    // skipAiRateLimiterからも削除（メモリリーク防止）
+    skipAiRateLimiter.delete(tabId.toString());
 });
 
 // Handle Tab Activation - Update badge to reflect privacy status of new active tab
