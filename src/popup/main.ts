@@ -596,19 +596,33 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
         throw new Error(chrome.runtime.lastError.message);
       }
     } catch (e: any) {
-      if (force) {
-        // force=true の場合は executeScript でコンテンツを直接取得
-        try {
-          const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => document.body?.innerText || ''
-          });
-          contentResponse = { content: results?.[0]?.result || '' };
-        } catch {
-          contentResponse = { content: '' };
+      // Content Script が応答しない場合（CSP制限等でinjectionに失敗した場合を含む）、
+      // executeScript でコンテンツを直接取得（ページのCSPに依存しない）
+      // executeScript には <all_urls> の host_permissions が必要なため、権限を確認・要求する
+      let hasPermission = false;
+      try {
+        hasPermission = await chrome.permissions.contains({ origins: ['<all_urls>'] });
+        if (!hasPermission) {
+          hasPermission = await chrome.permissions.request({ origins: ['<all_urls>'] });
         }
-      } else {
+      } catch { /* パーミッション要求失敗 */ }
+
+      if (!hasPermission) {
         throw new Error(getMessage('errorContentScriptNotAvailable'));
+      }
+
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => document.body?.innerText || ''
+        });
+        contentResponse = { content: results?.[0]?.result || '' };
+      } catch (e2: any) {
+        if (force) {
+          contentResponse = { content: '' };
+        } else {
+          throw new Error(getMessage('errorContentScriptNotAvailable'));
+        }
       }
     }
 

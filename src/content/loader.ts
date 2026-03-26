@@ -186,7 +186,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
         }
         // 許可 → extractor を inject
         const src = chrome.runtime.getURL('content/extractor.js');
-        await import(src);
+        try { await import(src); } catch { /* CSP等でdynamic importがブロックされた場合は無視 */ }
         return;
     }
 
@@ -198,7 +198,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
 
     // ビルド後のパスを指定（distディレクトリ内）
     const src = chrome.runtime.getURL('content/extractor.js');
-    await import(src);
+    try { await import(src); } catch { /* CSP等でdynamic importがブロックされた場合は無視 */ }
 })();
 
 // TypeScriptの`isolatedModules`設定を満たすためのダミーexport

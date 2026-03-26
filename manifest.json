@@ -25,6 +25,7 @@
     "alarms"
   ],
   "optional_host_permissions": [
+    "<all_urls>",
     "https://api-inference.huggingface.co/*",
     "https://api.openrouter.ai/*",
     "https://deepinfra.com/*",
