@@ -14,12 +14,20 @@ import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';
+import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 
 // ===== 定数 =====
 
 const DB_VERSION = '1.0.0';
 const STORAGE_KEY = 'trust_db:json';
 const STORAGE_KEY_BLOOM = 'trust_db:bloom';
+
+// Tranco バージョン追跡（Phase 1）
+const STORAGE_KEY_TRANCO_VERSION = 'tranco_version';
+const STORAGE_KEY_TRANCO_DOMAINS = 'tranco_domains';
+
+// 30日（ミリ秒）- 同意拒否後の再確認間隔
+const CONSENT_RETRY_DAYS = 30;
 
 // JP-Anchor プリセット TLD
 const JP_ANCHOR_TLDS_PRESET = ['.go.jp', '.ac.jp', '.lg.jp'] as const;
@@ -411,16 +419,15 @@ class TrustDb {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    // 楽観的ロックで保護して保存（STORAGE_KEYとSTORAGE_KEY_BLOOMをアトミックに更新）
-    await withOptimisticLock(STORAGE_KEY, (_currentDb) => {
+    // 楽観的ロックで保護して保存（JSONとBloomFilter両方を同時に更新）
+    await withOptimisticLock(STORAGE_KEY, async (_currentDb) => {
+      // chrome.storage.local.setは複数キーの更新もアトミック
+      await chrome.storage.local.set({
+        [STORAGE_KEY]: this.state.database,
+        [STORAGE_KEY_BLOOM]: bloomData
+      });
       // 初期化時は currentDb が undefined でも許可する
       return this.state.database;
-    });
-
-    // Bloom Filterは同じトランザクション内でアトミックに保存（個別版番号チェックなし）
-    // 注: chrome.storage.local.setは複数キーの更新もアトミック
-    await chrome.storage.local.set({
-      [STORAGE_KEY_BLOOM]: bloomData
     });
 
     logDebug('TrustDb', {}, 'Database saved with optimistic lock');
@@ -869,6 +876,80 @@ class TrustDb {
     }
 
     return { success: false, error: 'Domain not found' };
+  }
+
+  // ===== Tranco バージョン追跡（Phase 1） =====
+
+  /**
+   * 現在の Tranco バージョンを取得
+   */
+  getCurrentTrancoVersion(): string {
+    return CURRENT_TRANCO_VERSION;
+  }
+
+  /**
+   * 保存されている Tranco バージョンを取得
+   */
+  async getSavedTrancoVersion(): Promise<string | null> {
+    const result = await chrome.storage.local.get(STORAGE_KEY_TRANCO_VERSION);
+    return result[STORAGE_KEY_TRANCO_VERSION] as string || null;
+  }
+
+  /**
+   * Tranco バージョンを更新
+   */
+  async updateTrancoVersion(version: string, domains: string[]): Promise<void> {
+    await chrome.storage.local.set({
+      [STORAGE_KEY_TRANCO_VERSION]: version,
+      [STORAGE_KEY_TRANCO_DOMAINS]: domains
+    });
+    logInfo('TrustDb', { version, domainCount: domains.length }, 'Tranco version updated');
+  }
+
+  /**
+   * Tranco バージョン更新を検知した場合の結果を取得
+   */
+  async checkTrancoUpdate(): Promise<{ hasUpdate: boolean; oldVersion: string | null; newVersion: string }> {
+    const savedVersion = await this.getSavedTrancoVersion();
+    const currentVersion = this.getCurrentTrancoVersion();
+
+    if (savedVersion !== currentVersion) {
+      logInfo('TrustDb', { savedVersion, currentVersion }, 'Tranco version update detected');
+      return {
+        hasUpdate: true,
+        oldVersion: savedVersion,
+        newVersion: currentVersion
+      };
+    }
+
+    return {
+      hasUpdate: false,
+      oldVersion: savedVersion,
+      newVersion: currentVersion
+    };
+  }
+
+  /**
+   * 保存された Tranco ドメインリストを取得（旧リスト保持用）
+   */
+  async getSavedTrancoDomains(): Promise<string[]> {
+    const result = await chrome.storage.local.get(STORAGE_KEY_TRANCO_DOMAINS);
+    return result[STORAGE_KEY_TRANCO_DOMAINS] as string[] || [];
+  }
+
+  /**
+   * 訪問ドメインが Tranco ドメインかを判定
+   */
+  isTrancoDomain(domain: string): boolean {
+    let normalized = domain.toLowerCase().trim();
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      try {
+        normalized = new URL(normalized).hostname;
+      } catch {
+        // パース失敗はそのまま使用
+      }
+    }
+    return this.state.trancoSet.has(normalized);
   }
 }
 

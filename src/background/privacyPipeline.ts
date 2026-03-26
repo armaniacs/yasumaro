@@ -2,6 +2,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { Settings, StorageKeys } from '../utils/storage.js';
 import { parseTagsFromSummary } from '../utils/tagUtils.js';
+import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
 
 /**
@@ -135,17 +136,27 @@ export class PrivacyPipeline {
     if (sanitizedSettings.useCloudAi) {
       const aiResult = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
 
-      // タグを抽出（タグ付き要約モード、またはカスタムプロンプトが #タグ | 要約 形式を返した場合）
+      // AI要約結果をサニタイズ（プロンプトインジェクション対策）
+      let sanitizedSummary = aiResult.summary;
       let tags: string[] | undefined;
       if (aiResult.summary) {
-        const parsed = parseTagsFromSummary(aiResult.summary);
-        if (parsed.tags.length > 0) {
-          tags = parsed.tags;
+        const sanitizeResult = sanitizePromptContent(aiResult.summary);
+        sanitizedSummary = sanitizeResult.sanitized;
+
+        // 危険度が高い場合はログに記録
+        if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
+          addLog(LogType.WARNING, 'AI summary sanitized - high danger content detected', {
+            warnings: sanitizeResult.warnings
+          });
         }
+
+        // タグを抽出（タグ付き要約モード、またはカスタムプロンプトが #タグ | 要約 形式を返した場合）
+        const parsed = parseTagsFromSummary(sanitizedSummary);
+        tags = parsed.tags.length > 0 ? parsed.tags : undefined;
       }
 
       return {
-        summary: aiResult.summary,
+        summary: sanitizedSummary,
         maskedCount,
         tags,
         sentTokens: aiResult.sentTokens,

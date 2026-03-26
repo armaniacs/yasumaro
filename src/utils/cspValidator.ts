@@ -376,7 +376,7 @@ export async function safeFetch(url: string, options?: RequestInit): Promise<Res
 
   // 初期化済みの通常処理
   if (!CSPValidator.isUrlAllowed(url)) {
-    const error = new Error(`URL blocked by CSP policy: ${url}`);
+    const error = new Error('URL blocked by CSP policy');
     (error as any).code = 'CSP_BLOCKED';
     throw error;
   }

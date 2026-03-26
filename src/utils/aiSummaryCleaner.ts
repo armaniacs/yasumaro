@@ -8,21 +8,7 @@
  * 🟢
  */
 
-/**
- * CSSセレクタで使用する文字列をエスケープする
- * CSS.escape()が利用可能な場合はそれを使用し、そうでない場合はフォールバック実装を使用
- * @param str - エスケープ対象の文字列
- * @returns エスケープされた文字列
- */
-function escapeCssSelector(str: string): string {
-    // CSS.escape()が利用可能な場合はそれを使用（モダンブラウザ）
-    if (typeof CSS !== 'undefined' && CSS.escape) {
-        return CSS.escape(str);
-    }
-    
-    // フォールバック: CSS識別子のルールに従ってエスケープ
-    return str.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
-}
+import { escapeCssSelector } from './cssUtils.js';
 
 /**
  * AI要約クレンジングオプション

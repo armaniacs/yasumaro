@@ -303,6 +303,15 @@ export class CSPSettings {
 }
 
 /**
+ * 正規表現特殊文字をエスケープする
+ * @param str - エスケープ対象の文字列
+ * @returns エスケープされた文字列
+ */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * i18nヘルパー関数
  * @param key - i18nキー
  * @param placeholders - プレースホルダー置換
@@ -312,7 +321,9 @@ function i18n(key: string, placeholders?: Record<string, string>): string {
   let message = chrome.i18n.getMessage(key);
   if (placeholders) {
     for (const [placeholder, value] of Object.entries(placeholders)) {
-      message = message.replace(new RegExp(`\\$\\{${placeholder}\\}`, 'g'), value);
+      // プレースホルダーをエスケープして正規表現インジェクションを防止
+      const escapedPlaceholder = escapeRegExp(placeholder);
+      message = message.replace(new RegExp(`\\$\\{${escapedPlaceholder}\\}`, 'g'), value);
     }
   }
   return message;

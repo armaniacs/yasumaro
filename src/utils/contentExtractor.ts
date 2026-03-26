@@ -14,6 +14,15 @@ import { logSanitize } from './logger.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from './aiSummaryCleaner.js';
 
 /**
+ * 文字列のUTF-8バイト数を計算（Blob生成を避けて効率化）
+ * @param str - バイト数を計算する文字列
+ * @returns UTF-8バイト数
+ */
+function getByteSize(str: string): number {
+  return new TextEncoder().encode(str).length;
+}
+
+/**
  * 除外するセクメンタルコンテンツのロール属性
  * HTMLテキスト抽出の際、ナビゲーションやバナー等の補助的UI要素を除外するために使用
  */

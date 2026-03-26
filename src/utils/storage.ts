@@ -4,7 +4,7 @@
  */
 
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
-import { migrateUblockSettings } from './migration.js';
+import { migrateUblockSettings, initializeTrancoVersion } from './migration.js';
 import type { EncryptedData } from './typesCrypto.js';
 import { calculatePasswordStrength } from './masterPassword.js';
 import {
@@ -132,7 +132,14 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_ADS: 'ai_summary_cleansing_ads', // 広告関連要素削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_NAV: 'ai_summary_cleansing_nav', // ナビゲーション・フッター削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_SOCIAL: 'ai_summary_cleansing_social', // コメント・ソーシャルウィジェット削除（デフォルト: true）
-    AI_SUMMARY_CLEANSING_DEEP: 'ai_summary_cleansing_deep' // 積極的クレンジング（デフォルト: false）
+    AI_SUMMARY_CLEANSING_DEEP: 'ai_summary_cleansing_deep', // 積極的クレンジング（デフォルト: false）
+    // Tranco List Update Notification (Phase 1)
+    TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
+    TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
+    TRANCO_NOTIFICATION_SHOWN: 'tranco_notification_shown', // 通知が表示されたバージョン（7日抑制制御用）
+    TRANCO_CONSENT_GRANTED: 'tranco_consent_granted', // 同意が与えられたバージョン
+    TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason', // 同意拒否の理由
+    TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp' // 同意拒否タイムスタンプ（30日再確認用）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -219,6 +226,13 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: boolean;
+    // Tranco List Update Notification (Phase 1)
+    [StorageKeys.TRANCO_VERSION]: string; // ISO 8601形式
+    [StorageKeys.TRANCO_DOMAINS]: string[]; // 保存された Tranco ドメインリスト
+    [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: string | null; // 通知が表示されたバージョン
+    [StorageKeys.TRANCO_CONSENT_GRANTED]: string | null; // 同意が与えられたバージョン
+    [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: string | null; // 同意拒否の理由
+    [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: number | null; // 同意拒否タイムスタンプ
 }
 
 // 厳格な Settings 型
@@ -768,7 +782,14 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_ADS]: true,      // 広告関連要素削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: true,      // ナビゲーション・フッター削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,       // コメント・ソーシャルウィジェット削除（デフォルト: 有効）
-    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false   // 積極的クレンジング（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false,   // 積極的クレンジング（デフォルト: 無効）
+    // Tranco List Update Notification (Phase 1)
+    [StorageKeys.TRANCO_VERSION]: '', // 初期値は空.migration.ts で presetDomains.ts の TRANCO_VERSION を設定
+    [StorageKeys.TRANCO_DOMAINS]: [], // 保存された Tranco ドメインリスト（初期値: 空）
+    [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: null, // 通知が表示されたバージョン（初期値: null）
+    [StorageKeys.TRANCO_CONSENT_GRANTED]: null, // 同意が与えられたバージョン（初期値: null）
+    [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null, // 同意拒否の理由（初期値: null）
+    [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null // 同意拒否タイムスタンプ（初期値: null）
 };
 
 /**
@@ -916,6 +937,14 @@ export async function getSettings(): Promise<Settings> {
         settings = { ...settings, ...afterMigration }; // マイグレーション後の値をマージ
         // addLog(LogType.DEBUG, 'Settings migration completed', { migrated, keysUpdated: Object.keys(afterMigration) });
     }
+
+    // Tranco バージョン初期化（Phase 1）
+    try {
+        await initializeTrancoVersion();
+    } catch (e) {
+        // テスト環境などで関数がロードできない場合に備えて保護
+        logDebug('storage', { error: e }, 'Failed to initialize Tranco version');
+    }
     const merged = { ...DEFAULT_SETTINGS, ...settings };
 
     // 暗号化されたAPIキーを復号
@@ -1024,6 +1053,8 @@ export interface SavedUrlEntry {
     recordType?: string;
     maskedCount?: number;
     tags?: string[];
+    /** Tranco信頼ドメインが使用されたか（Phase 1) */
+    isTrancoDomain?: boolean;
 }
 
 /**

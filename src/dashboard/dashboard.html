@@ -618,6 +618,34 @@
           </div>
         </div>
 
+        <!-- Tranco Version & Consent Settings -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="trancoSectionTitle">Tranco信頼ドメイン</h3>
+
+          <!-- Current Version Info -->
+          <div class="tranco-info">
+            <div class="info-row">
+              <label data-i18n="trancoCurrentVersion">現在のバージョン</label>
+              <div id="trancoCurrentVersion" class="info-value">-</div>
+            </div>
+            <div class="info-row">
+              <label data-i18n="trancoCurrentDomains">現在のドメイン数</label>
+              <div id="trancoDomainCount" class="info-value">-</div>
+            </div>
+          </div>
+
+          <!-- Consent Status -->
+          <div class="consent-status">
+            <label data-i18n="trancoConsentStatus">同意状態</label>
+            <div id="trancoConsentStatus" class="status-badge status-pending" aria-live="polite">-</div>
+            <div id="trancoConsentRetryInfo" class="help-text" hidden></div>
+          </div>
+
+          <!-- Consent Actions -->
+          <div id="trancoConsentActions" class="button-group mt-8" hidden></div>
+          <div id="trancoUpdateStatus" class="status-message mt-4" aria-live="polite"></div>
+        </div>
+
         <!-- JP-Anchor List 設定 -->
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="jpAnchorSection">JP-Anchor List（日本公式ドメイン）</h3>

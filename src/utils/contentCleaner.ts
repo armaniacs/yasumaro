@@ -8,23 +8,7 @@
  * 🟢
  */
 
-/**
- * CSSセレクタで使用する文字列をエスケープする
- * CSS.escape()が利用可能な場合はそれを使用し、そうでない場合はフォールバック実装を使用
- * @param str - エスケープ対象の文字列
- * @returns エスケープされた文字列
- */
-function escapeCssSelector(str: string): string {
-    // CSS.escape()が利用可能な場合はそれを使用（モダンブラウザ）
-    if (typeof CSS !== 'undefined' && CSS.escape) {
-        return CSS.escape(str);
-    }
-    
-    // フォールバック: CSS識別子のルールに従ってエスケープ
-    // CSS識別子は [a-zA-Z0-9] と ISO 10646 U+00A0 以上、ハイフン(-)、アンダースコア(_) のみを含むことができる
-    // それ以外の文字はバックスラッシュでエスケープする必要がある
-    return str.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
-}
+import { escapeCssSelector } from './cssUtils.js';
 
 /**
  * Hard Strip 用タグセレクタ

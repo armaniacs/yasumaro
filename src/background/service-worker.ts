@@ -872,17 +872,29 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 });
 
 /**
+ * 既にキャッシュが初期化済みかチェック
+ */
+let isCacheInitialized = false;
+
+/**
  * Service Worker アクティベート時のキャッシュ再水和
  * Chrome が Service Worker を再起動した場合、キャッシュを再初期化
  */
 chrome.runtime.onStartup.addListener(async () => {
     logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
 
+    // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
+    if (isCacheInitialized) {
+        logDebug('Cache already initialized, skipping startup rehydration', {}, 'service-worker');
+        return;
+    }
+
     try {
         // 関連キャッシュを無効化して再読み込みを強制
         RecordingLogic.invalidateSettingsCache();
         const settings = await getSettings();
         await updateDomainFilterCache(settings);
+        isCacheInitialized = true;
 
         logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
     } catch (error) {

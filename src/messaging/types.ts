@@ -34,7 +34,7 @@ export interface RecordingResult {
   processedContent?: string;
   mode?: string;
   maskedCount?: number;
-  maskedItems?: (string | MaskedItem)[]; // マスクされたPII項目のリスト
+  maskedItems?: MaskedItem[]; // マスクされたPII項目のリスト
   /** AI処理時間 (ミリ秒) */
   aiDuration?: number;
   confirmationRequired?: boolean;

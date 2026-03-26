@@ -1990,5 +1990,83 @@
   },
   "historyAiSummaryCleansedReasonNone": {
     "message": "なし"
+  },
+  "trancoUpdateNotificationTitle": {
+    "message": "Tranco信頼ドメインリストの更新"
+  },
+  "trancoUpdateNotificationDescription": {
+    "message": "Tranco Top 1000 リストが更新されました。信頼ドメインの変更を確認してください。"
+  },
+  "trancoUpdateModalTitle": {
+    "message": "Tranco信頼ドメインリストの更新"
+  },
+  "trancoUpdateModalCurrentVersion": {
+    "message": "現在のバージョン"
+  },
+  "trancoUpdateModalNewVersion": {
+    "message": "新しいバージョン"
+  },
+  "trancoUpdateModalExcludedDomains": {
+    "message": "除外された信頼ドメイン"
+  },
+  "trancoUpdateModalAddedDomains": {
+    "message": "追加された信頼ドメイン"
+  },
+  "trancoUpdateModalConfirmLabel": {
+    "message": "新しいリストを使用します"
+  },
+  "trancoUpdateModalConfirmDescription": {
+    "message": "新しいTrancoリストを使用して、信頼ドメイン判定を更新します"
+  },
+  "trancoUpdateModalDenyLabel": {
+    "message": "古いリストを継続使用"
+  },
+  "trancoUpdateModalDenyDescription": {
+    "message": "古いTrancoリストを引き続き使用します。30日後に再確認を求められます。"
+  },
+  "trancoUpdateModalRetryLaterLabel": {
+    "message": "あとで確認"
+  },
+  "trancoUpdateModalRetryLaterDescription": {
+    "message": "現在のまま古いリストを使用し、30日後に再確認を求めます。"
+  },
+  "trancoSectionTitle": {
+    "message": "Tranco信頼ドメイン"
+  },
+  "trancoSectionDescription": {
+    "message": "Tranco Top 1000 ドメインリストに基づいた信頼ドメイン管理"
+  },
+  "trancoCurrentVersion": {
+    "message": "現在のバージョン"
+  },
+  "trancoCurrentDomains": {
+    "message": "現在Trancoにあるドメイン"
+  },
+  "trancoConsentStatus": {
+    "message": "同意状態"
+  },
+  "trancoConsentStatusGranted": {
+    "message": "同意済み"
+  },
+  "trancoConsentStatusDenied": {
+    "message": "拒否中"
+  },
+  "trancoConsentStatusPending": {
+    "message": "未確認"
+  },
+  "trancoConsentRetryDaysRemaining": {
+    "message": "再確認まで{days}日"
+  },
+  "trancoDropdownHeader": {
+    "message": "Tranco"
+  },
+  "trancoDropdownSettings": {
+    "message": "Tranco設定"
+  },
+  "trancoUpdateConfirm": {
+    "message": "同意"
+  },
+  "trancoUpdateDeny": {
+    "message": "拒否"
   }
 }

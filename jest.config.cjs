@@ -25,9 +25,9 @@ module.exports = {
   // テスト環境: jsdom（ブラウザAPIを必要とするテスト用）
   testEnvironment: 'jsdom',
 
-  // 並列実行を無効化（Worker 関連の問題回避）
-  maxWorkers: 1,
-  workerThreads: false,
+  // 並列実行設定（Worker関連の問題を解決し再有効化）
+  maxWorkers: '50%',
+  workerThreads: true,
 
   // JavaScript/TypeScript transformation
   transform: {

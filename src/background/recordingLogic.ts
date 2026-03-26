@@ -48,14 +48,20 @@ const MAX_RECORD_SIZE = 64 * 1024; // 64KB
 // @returns {string} 切り詰められたコンテンツ（元のサイズ以下の場合はそのまま）
 // @see PII_FEATURE_GUIDE.md - コンテンツサイズ制限の詳細
 export function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
-  // 【効率化】lengthプロパティによる高速なサイズチェック 🟢
-  // 【安全性】substringによる範囲外アクセスを防止
-  if (content.length <= maxSize) {
+  // 【修正】TextEncoderを使用して正確なUTF-8バイト数を計算
+  const encoder = new TextEncoder();
+  const encoded = encoder.encode(content);
+
+  // バイト数が制限以内ならそのまま返す
+  if (encoded.length <= maxSize) {
     return content;
   }
-  // 【処理】先頭からmaxSizeまでの文字列を抽出 🟢
-  // 【計算量】O(maxSize) - 固定時間処理
-  return content.substring(0, maxSize);
+
+  // 【処理】バイト単位で切り詰め、文字列にデコード
+  // 【注意】マルチバイト文字の途中で切らないよう、TextDecoderで処理
+  const truncated = encoded.slice(0, maxSize);
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  return decoder.decode(truncated);
 }
 
 /**

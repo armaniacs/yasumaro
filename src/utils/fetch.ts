@@ -379,7 +379,7 @@ export async function fetchWithRetry(
     maxRetryCount = 3,
     initialDelayMs = 1000,
     backoffMultiplier = 2,
-    maxDelayMs = 60000,
+    maxDelayMs = 10000,
     shouldRetry = defaultShouldRetry
   } = retryOptions;
 

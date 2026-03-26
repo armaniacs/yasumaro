@@ -193,3 +193,39 @@ export async function migrateUblockSettings(): Promise<boolean> {
     throw error;
   }
 }
+
+/**
+ * Tranco バージョン初期化（Phase 1）
+ * presetDomains.ts の TRANCO_VERSION を chrome.storage.local に設定
+ */
+export async function initializeTrancoVersion(): Promise<void> {
+  const TRANCO_VERSION_KEY = 'tranco_version';
+  const TRANCO_DOMAINS_KEY = 'tranco_domains';
+
+  // dynamic import to avoid service worker context issues
+  const { TRANCO_VERSION, TRANCO_TOP_1000_DOMAINS } = await import('./trustDb/presetDomains.js');
+
+  const result = await chrome.storage.local.get([TRANCO_VERSION_KEY, TRANCO_DOMAINS_KEY]);
+  const currentVersion = result[TRANCO_VERSION_KEY] as string;
+  const savedDomains = result[TRANCO_DOMAINS_KEY] as string[] | undefined;
+
+  // 既にバージョンが設定済みの場合は、ドメインリストの整合性を確認
+  if (currentVersion === TRANCO_VERSION) {
+    // ドメインリストが空または存在しない場合は更新
+    if (!savedDomains || savedDomains.length === 0) {
+      await chrome.storage.local.set({
+        [TRANCO_DOMAINS_KEY]: TRANCO_TOP_1000_DOMAINS
+      });
+      console.log('[Migration] Tranco domains list updated for existing version:', TRANCO_VERSION);
+    }
+    return;
+  }
+
+  // バージョンが異なる場合または未設定の場合は、バージョンとドメインリストを保存
+  await chrome.storage.local.set({
+    [TRANCO_VERSION_KEY]: TRANCO_VERSION,
+    [TRANCO_DOMAINS_KEY]: TRANCO_TOP_1000_DOMAINS
+  });
+
+  console.log('[Migration] Tranco version initialized:', TRANCO_VERSION);
+}

@@ -7,6 +7,9 @@
  * 手動編集しないでください。
  */
 
+/** Tranco リストのバージョン（ISO 8601形式） */
+export const TRANCO_VERSION = '2026-03-14T23:48:30.010Z';
+
 export const TRANCO_TOP_1000_DOMAINS: string[] = [
   "google.com",
   "gtld-servers.net",

@@ -1990,5 +1990,83 @@
   },
   "historyAiSummaryCleansedReasonNone": {
     "message": "None"
+  },
+  "trancoUpdateNotificationTitle": {
+    "message": "Tranco Trusted Domains Update"
+  },
+  "trancoUpdateNotificationDescription": {
+    "message": "The Tranco Top 1000 list has been updated. Please verify the changes to trusted domains."
+  },
+  "trancoUpdateModalTitle": {
+    "message": "Tranco Trusted Domains Update"
+  },
+  "trancoUpdateModalCurrentVersion": {
+    "message": "Current Version"
+  },
+  "trancoUpdateModalNewVersion": {
+    "message": "New Version"
+  },
+  "trancoUpdateModalExcludedDomains": {
+    "message": "Excluded Trusted Domains"
+  },
+  "trancoUpdateModalAddedDomains": {
+    "message": "Added Trusted Domains"
+  },
+  "trancoUpdateModalConfirmLabel": {
+    "message": "Use New List"
+  },
+  "trancoUpdateModalConfirmDescription": {
+    "message": "Update trusted domain checking with the new Tranco list"
+  },
+  "trancoUpdateModalDenyLabel": {
+    "message": "Keep Old List"
+  },
+  "trancoUpdateModalDenyDescription": {
+    "message": "Continue using the old Tranco list. You will be prompted for confirmation in 30 days."
+  },
+  "trancoUpdateModalRetryLaterLabel": {
+    "message": "Review Later"
+  },
+  "trancoUpdateModalRetryLaterDescription": {
+    "message": "Keep using the old list for now. You will be prompted for confirmation in 30 days."
+  },
+  "trancoSectionTitle": {
+    "message": "Tranco Trusted Domains"
+  },
+  "trancoSectionDescription": {
+    "message": "Trusted domain management based on Tranco Top 1000 list"
+  },
+  "trancoCurrentVersion": {
+    "message": "Current Version"
+  },
+  "trancoCurrentDomains": {
+    "message": "Current Tranco Domains"
+  },
+  "trancoConsentStatus": {
+    "message": "Consent Status"
+  },
+  "trancoConsentStatusGranted": {
+    "message": "Granted"
+  },
+  "trancoConsentStatusDenied": {
+    "message": "Denied"
+  },
+  "trancoConsentStatusPending": {
+    "message": "Pending"
+  },
+  "trancoConsentRetryDaysRemaining": {
+    "message": "{days} days until retry"
+  },
+  "trancoDropdownHeader": {
+    "message": "Tranco"
+  },
+  "trancoDropdownSettings": {
+    "message": "Tranco Settings"
+  },
+  "trancoUpdateConfirm": {
+    "message": "Accept"
+  },
+  "trancoUpdateDeny": {
+    "message": "Deny"
   }
 }

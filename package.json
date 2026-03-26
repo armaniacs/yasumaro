@@ -52,6 +52,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "bloomfilter": "^1.1.0"
+    "bloomfilter": "1.1.0"
   }
 }
