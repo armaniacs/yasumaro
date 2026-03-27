@@ -41,6 +41,59 @@ export interface RecordingResult {
   headerValue?: string;
   message?: string;  // 後方互換性用
   timestamp?: number;  // 後方互換性用
+  tags?: string[];  // AI要約タグ
+  sentTokens?: number;
+  receivedTokens?: number;
+  originalTokens?: number;
+  cleansedTokens?: number;
+}
+
+/**
+ * 記録方式
+ * - auto: 自動記録
+ * - manual: 手動記録
+ */
+export type RecordType = 'auto' | 'manual';
+
+/**
+ * AI要約クレンジング実行理由
+ */
+export type AiSummaryCleansedReason = 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+
+/**
+ * PIIマスキング結果
+ */
+export interface MaskingResult {
+  content: string;
+  maskedCount: number;
+  items: MaskedItem[];
+}
+
+/**
+ * 記録データ型
+ * Pipeline処理用の入力データ
+ */
+export interface RecordingData {
+  title: string;
+  url: string;
+  content: string;
+  force?: boolean;
+  skipDuplicateCheck?: boolean;
+  alreadyProcessed?: boolean;
+  previewOnly?: boolean;
+  requireConfirmation?: boolean;
+  headerValue?: string;
+  recordType?: RecordType;
+  maskedCount?: number;
+  skipAi?: boolean;
+  pageBytes?: number;
+  candidateBytes?: number;
+  originalBytes?: number;
+  cleansedBytes?: number;
+  aiSummaryOriginalBytes?: number;
+  aiSummaryCleansedBytes?: number;
+  aiSummaryCleansedElements?: number;
+  aiSummaryCleansedReason?: AiSummaryCleansedReason;
 }
 
 // ============================================================================

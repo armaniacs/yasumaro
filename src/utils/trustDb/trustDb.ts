@@ -20,7 +20,6 @@ import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 
 const DB_VERSION = '1.0.0';
 const STORAGE_KEY = 'trust_db:json';
-const STORAGE_KEY_BLOOM = 'trust_db:bloom';
 
 // Tranco バージョン追跡（Phase 1）
 const STORAGE_KEY_TRANCO_VERSION = 'tranco_version';
@@ -180,6 +179,7 @@ interface TrustDbState {
   database: TrustDatabase | null;
   bloomFilter: TrustBloomFilter | null;
   trancoSet: Set<string>;
+  trancoRankMap: Map<string, number>;
   initialized: boolean;
 }
 
@@ -189,6 +189,7 @@ class TrustDb {
     database: null,
     bloomFilter: null,
     trancoSet: new Set(),
+    trancoRankMap: new Map(),
     initialized: false
   };
 
@@ -244,16 +245,14 @@ class TrustDb {
    */
   private async doInitialize(): Promise<void> {
     try {
-      // ストレージからデータをロード
-      const [savedDb, savedBloom] = await Promise.all([
-        chrome.storage.local.get(STORAGE_KEY).then(result => result[STORAGE_KEY]),
-        chrome.storage.local.get(STORAGE_KEY_BLOOM).then(result => result[STORAGE_KEY_BLOOM])
-      ]);
+      // ストレージからデータをロード（単一キーで統合）
+      const result = await chrome.storage.local.get(STORAGE_KEY);
+      const savedDb = result[STORAGE_KEY] as TrustDatabase | undefined;
 
-      if (savedDb && savedBloom) {
+      if (savedDb && savedDb.bloomFilter) {
         // 既存データをロード
-        this.state.database = savedDb as TrustDatabase;
-        this.state.bloomFilter = bloomFilterFromData(savedBloom as BloomFilterData);
+        this.state.database = savedDb;
+        this.state.bloomFilter = bloomFilterFromData(savedDb.bloomFilter);
 
         // バージョンを確認・マイグレーション
         if (this.state.database.version !== DB_VERSION) {
@@ -262,6 +261,10 @@ class TrustDb {
 
         // trancoSet を再構築（サービスワーカー再起動後もキャッシュを有効化）
         this.state.trancoSet = new Set(this.state.database.tranco.domains);
+
+        // trancoRankMap を構築 (O(1) ランク検索用)
+        this.state.trancoRankMap = new Map(this.state.database.tranco.domains.map((domain, index) => [domain, index]));
+
         logInfo('TrustDb', {
           version: this.state.database.version,
           domainCount: this.state.database.tranco.count
@@ -393,6 +396,9 @@ class TrustDb {
     this.state.database = db;
     this.state.bloomFilter = bloomFilterFromData(db.bloomFilter);
 
+    // trancoRankMap を初期化
+    this.state.trancoRankMap = new Map();
+
     await this.save();
     logInfo('TrustDb', {}, 'Created default database');
   }
@@ -419,12 +425,10 @@ class TrustDb {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    // 楽観的ロックで保護して保存（JSONとBloomFilter両方を同時に更新）
+    // 楽観的ロックで保護して保存（bloomFilterもdatabase内に統合済み）
     await withOptimisticLock(STORAGE_KEY, async (_currentDb) => {
-      // chrome.storage.local.setは複数キーの更新もアトミック
       await chrome.storage.local.set({
-        [STORAGE_KEY]: this.state.database,
-        [STORAGE_KEY_BLOOM]: bloomData
+        [STORAGE_KEY]: this.state.database
       });
       // 初期化時は currentDb が undefined でも許可する
       return this.state.database;
@@ -580,10 +584,16 @@ class TrustDb {
     }
 
     // サブドメインを除いた候補リストを生成 (例: edition.cnn.com → [edition.cnn.com, cnn.com])
+    // 【修正】2部ドメインでも正しくサブドメイン除去を行えるようループ条件を修正
     const candidates: string[] = [domain];
     const parts = domain.split('.');
-    for (let i = 1; i < parts.length - 1; i++) {
-      candidates.push(parts.slice(i).join('.'));
+    // 少なくとも1ラベル（TLDは除く）残すようにする
+    for (let i = 1; i < parts.length; i++) {
+      const candidate = parts.slice(i).join('.');
+      // TLDのみにならないようにチェック（ドットを含むことを確認）
+      if (candidate.includes('.')) {
+        candidates.push(candidate);
+      }
     }
 
     // キャッシュされたSetを使用 (O(1) 検索)
@@ -597,8 +607,8 @@ class TrustDb {
 
       // 精密照合 (Set.has は O(1))
       if (trancoSet.has(candidate)) {
-        // インデックスを取得 (rank 報告用)
-        const index = db.tranco.domains.indexOf(candidate);
+        // インデックスを取得 (rank 報告用) - O(1) マップ検索
+        const index = this.state.trancoRankMap.get(candidate)!;
         return {
           level: DomainTrustLevel.TRUSTED,
           source: 'tranco',
@@ -638,6 +648,10 @@ class TrustDb {
 
     this.state.bloomFilter = bloom;
     this.state.trancoSet = new Set(domains); // Setをキャッシュ
+
+    // trancoRankMap を構築 (O(1) ランク検索用)
+    this.state.trancoRankMap = new Map(domains.map((domain, index) => [domain, index]));
+
     await this.save();
 
     logInfo('TrustDb', { tier, count: domains.length }, `Updated Tranco list: ${domains.length} domains`);

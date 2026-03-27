@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **AI要約が常に "Summary not available." になる問題を修正** ([src/background/pipeline/](src/background/pipeline/))
+  - `RecordingPipeline` に渡された `aiClient` が `processPrivacyPipelineStep` 内で `null` のまま `PrivacyPipeline` に渡されていた
+  - `RecordingContext` に `aiClient` フィールドを追加し、コンストラクタ → コンテキスト → ステップへの伝達経路を確立
+  - `previewOnly` モードで `privacyPipeline` ステップ完了後に早期リターンするよう修正（確認モーダルのテキストエリアにマスク済みコンテンツが表示されない問題も解消）
+  - `RecordingLogic` クラス外に誤配置されていたメソッド群をクラス内に移動（ビルドエラー修正）
+
+### Tests
+
+- **`RecordingPipeline` / `processPrivacyPipelineStep` のテストを新規追加** ([src/background/pipeline/](src/background/pipeline/))
+  - `aiClient` 伝達の回帰テスト（`null` 問題）を含む 15 件追加
+  - `previewOnly` モードの `processedContent` / `maskedItems` の検証
+  - ドメインブロック・Obsidian 保存・エラーハンドリングのカバレッジ追加
+
 ## [4.10.7] - 2026-03-26
 
 ### Fixed

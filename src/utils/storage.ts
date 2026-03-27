@@ -4,7 +4,7 @@
  */
 
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
-import { migrateUblockSettings, initializeTrancoVersion } from './migration.js';
+import { migrateUblockSettings } from './migration.js';
 import type { EncryptedData } from './typesCrypto.js';
 import { calculatePasswordStrength } from './masterPassword.js';
 import {
@@ -961,7 +961,9 @@ export async function getSettings(): Promise<Settings> {
 
     // Tranco バージョン初期化（Phase 1）
     try {
-        await initializeTrancoVersion();
+        const { getTrustDb } = await import('./trustDb/trustDb.js');
+        const db = getTrustDb();
+        await db.initialize();
     } catch (e) {
         // テスト環境などで関数がロードできない場合に備えて保護
         logDebug('storage', { error: e }, 'Failed to initialize Tranco version');

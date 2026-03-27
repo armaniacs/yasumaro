@@ -58,6 +58,9 @@ const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient);
 
+// Import RecordingPipeline
+import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+
 // TabCache for storing tab data
 const tabCache = new TabCache();
 
@@ -423,7 +426,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
                 }
 
-                const result = await recordingLogic.record({
+                // Use RecordingPipeline for manual recording
+                const pipeline = new RecordingPipeline(
+                    recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
+                    obsidian,
+                    aiClient
+                );
+
+                const result = await pipeline.execute({
                     title: message.payload.title,
                     url: message.payload.url,
                     content,
@@ -445,7 +455,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Save Confirmed Record (Post-Preview)
             if (message.type === 'SAVE_RECORD') {
-                const result = await recordingLogic.record({
+                // Use RecordingPipeline for saving confirmed record
+                const pipeline = new RecordingPipeline(
+                    recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
+                    obsidian,
+                    aiClient
+                );
+
+                const result = await pipeline.execute({
                     title: message.payload.title,
                     url: message.payload.url,
                     content: message.payload.content,

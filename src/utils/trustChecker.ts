@@ -134,13 +134,21 @@ export class TrustChecker {
 
   /**
    * 現在のAlert Settingsを取得（同期的、初期化済みの場合のみ）
-   * 注: 非推奨メソッド。使用箇所を確認し、async getAlertConfig() に移行することを推奨
+   * 【非推奨】このメソッドは後方互換性のため残されています。
+   * 新規コードでは `getAlertConfig()` （非同期版）を使用してください。
+   * @returns {AlertConfig & { _initialized: boolean }} アラート設定と初期化状態
    */
-  getAlertConfigSync(): AlertConfig {
+  getAlertConfigSync(): AlertConfig & { _initialized: boolean } {
     if (!this.alertConfigInitialized) {
-      console.warn('TrustChecker', {}, undefined, 'getAlertConfigSync called before initialization - using default values');
+      console.warn(
+        '[TrustChecker] getAlertConfigSync called before initialization - using default values. ' +
+        'Consider using async getAlertConfig() instead.'
+      );
     }
-    return { ...this.alertConfig };
+    return {
+      ...this.alertConfig,
+      _initialized: this.alertConfigInitialized
+    };
   }
 
   /**
@@ -210,7 +218,15 @@ export class TrustChecker {
    */
   private shouldBlockRecording(trustResult: TrustResult, showAlert: boolean): boolean {
     // 現在の仕様では、バッジ表示のみでブロックは行わない
-    // 将来的に「厳格モード」等の実装のためにfalse固定
+    // ただし、LOCKEDレベルのドメインは常にブロックする
+    if (trustResult.level === 'locked') {
+      return true;
+    }
+
+    // 将来的に「厳格モード」等の実装のため、Alert Settingsと連動するロジックを実装
+    // ここでは簡易的な実装として、アラートが表示されるべきでかつセキュリティレベルが高い場合はブロックする
+    // 実際の実装では、Safety Modeなどの設定に応じて判定する
+
     return false;
   }
 

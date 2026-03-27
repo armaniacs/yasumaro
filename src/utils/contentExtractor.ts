@@ -411,14 +411,14 @@ export function extractMainContent(
     try {
         // findMainContentCandidates() 前のbody全体のバイト数を計測
         if (document.body) {
-            pageBytes = new Blob([document.body.outerHTML || '']).size;
+            pageBytes = getByteSize(document.body.outerHTML || '');
         }
 
         const candidates = findMainContentCandidates();
 
         // findMainContentCandidates() 後の候補要素のバイト数を計測
         if (candidates.length > 0) {
-            candidateBytes = new Blob([candidates[0].outerHTML || '']).size;
+            candidateBytes = getByteSize(candidates[0].outerHTML || '');
         }
 
         if (candidates.length > 0) {
@@ -431,7 +431,7 @@ export function extractMainContent(
                 const clone = candidates[0].cloneNode(true) as Element;
 
                 // クレンジング前のバイト数を計算
-                originalBytes = new Blob([extractTextFromElement(candidates[0])]).size;
+                originalBytes = getByteSize(extractTextFromElement(candidates[0]));
 
                 if (cleanseEnabled) {
                     // クローンに対してコンテンツクレンジングを実行
@@ -442,7 +442,7 @@ export function extractMainContent(
                     });
 
                     // クレンジング後のバイト数を計算
-                    cleansedBytes = new Blob([extractTextFromElement(clone)]).size;
+                    cleansedBytes = getByteSize(extractTextFromElement(clone));
 
                     if (cleanseResult.totalRemoved > 0) {
                         // クレンジング理由を決定（実際に要素が削除された場合のみ）
@@ -501,7 +501,7 @@ export function extractMainContent(
                 console.log('[ContentExtractor] AI Summary Cleansing check:', { aiSummaryCleanseEnabled, altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled });
                 if (aiSummaryCleanseEnabled) {
                     // AI要約クレンジング前のバイト数を保存（outerHTMLベース）
-                    aiSummaryOriginalBytes = new Blob([clone.outerHTML || '']).size;
+                    aiSummaryOriginalBytes = getByteSize(clone.outerHTML || '');
                     console.log('[ContentExtractor] Executing AI Summary Cleansing...');
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
                         altEnabled,
@@ -515,7 +515,7 @@ export function extractMainContent(
                     console.log('[ContentExtractor] AI Summary Cleansing result:', aiSummaryCleanseResult);
 
                     // AI要約クレンジング後のバイト数を計算（outerHTMLで削除されたDOM要素のサイズ変化を正確に反映）
-                    aiSummaryCleansedBytes = new Blob([clone.outerHTML || '']).size;
+                    aiSummaryCleansedBytes = getByteSize(clone.outerHTML || '');
                     console.log('[ContentExtractor] AI Summary Cleansed bytes:', aiSummaryCleansedBytes);
 
                     if (aiSummaryCleanseResult.totalRemoved > 0) {
@@ -546,7 +546,7 @@ export function extractMainContent(
             } else {
                 targetElement = candidates[0];
                 // バイト数を計算（クレンジングなし）
-                originalBytes = new Blob([extractTextFromElement(targetElement)]).size;
+                originalBytes = getByteSize(extractTextFromElement(targetElement));
                 cleansedBytes = originalBytes;
                 aiSummaryOriginalBytes = originalBytes;
                 aiSummaryCleansedBytes = originalBytes;
@@ -559,7 +559,7 @@ export function extractMainContent(
             if (content.trim().length < 100) {
                 content = document.body?.innerText || '';
                 // フォールバック後のバイト数を再計算
-                originalBytes = new Blob([content]).size;
+                originalBytes = getByteSize(content);
                 cleansedBytes = originalBytes; // クレンジングなしなので同じ値
                 aiSummaryOriginalBytes = cleansedBytes;
                 aiSummaryCleansedBytes = originalBytes;
@@ -570,7 +570,7 @@ export function extractMainContent(
                 const clone = document.body.cloneNode(true) as Element;
 
                 // クレンジング前のバイト数を計算
-                originalBytes = new Blob([extractTextFromElement(document.body)]).size;
+                originalBytes = getByteSize(extractTextFromElement(document.body));
 
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
                     hardStripEnabled,
@@ -579,7 +579,7 @@ export function extractMainContent(
                 });
 
                 // クレンジング後のバイト数を計算
-                cleansedBytes = new Blob([extractTextFromElement(clone)]).size;
+                cleansedBytes = getByteSize(extractTextFromElement(clone));
 
                 if (cleanseResult.totalRemoved > 0) {
                     // クレンジング理由を決定（実際に要素が削除された場合のみ）
@@ -598,7 +598,7 @@ export function extractMainContent(
                 // AI要約クレンジングを実行
                 if (aiSummaryCleanseEnabled) {
                     // AI要約クレンジング前のバイト数を保存（outerHTMLベース）
-                    aiSummaryOriginalBytes = new Blob([clone.outerHTML || '']).size;
+                    aiSummaryOriginalBytes = getByteSize(clone.outerHTML || '');
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
                         altEnabled,
                         metadataEnabled,
@@ -609,7 +609,7 @@ export function extractMainContent(
                     });
 
                     // AI要約クレンジング後のバイト数を計算（outerHTMLベース）
-                    aiSummaryCleansedBytes = new Blob([clone.outerHTML || '']).size;
+                    aiSummaryCleansedBytes = getByteSize(clone.outerHTML || '');
 
                     if (aiSummaryCleanseResult.totalRemoved > 0) {
                         // AI要約クレンジング理由を決定
@@ -638,7 +638,7 @@ export function extractMainContent(
             } else {
                 content = document.body?.innerText || '';
                 // バイト数を計算（クレンジングなし）
-                originalBytes = new Blob([content]).size;
+                originalBytes = getByteSize(content);
                 cleansedBytes = originalBytes;
                 aiSummaryOriginalBytes = cleansedBytes;
                 aiSummaryCleansedBytes = originalBytes;
