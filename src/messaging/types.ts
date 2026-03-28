@@ -14,8 +14,9 @@
  */
 export interface MaskedItem {
   type: string;       // マスク項目の種類（例: "card-number"）
-  position?: string;  // 位置情報（例: "header", "body"）
+  position?: string;  // コンテンツ内の一般的な位置（例: "header", "body"）
   original?: string; // 元の値（デバッグ用、本番環境では使用しない）
+  index?: number;     // マスク項目の出現順序インデックス
 }
 
 /**

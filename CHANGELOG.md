@@ -14,6 +14,15 @@ All notable changes to this project will be documented in this file.
   - `logger.ts` および `popup/main.ts` で string | MaskedItem 型を適切に処理するように修正
   - ADRドキュメントを実際の実装に合わせて更新
 
+### Fixed
+
+- **MaskedItem インターフェースの position フィールド復元** ([src/messaging/types.ts](src/messaging/types.ts))
+  - `position` フィールドが誤って削除されていたため、再度追加
+- **MaskedItem インターフェースのコメント改善** ([src/messaging/types.ts](src/messaging/types.ts))
+  - `position` と `index` フィールドの目的を明確化するコメントを追加
+- **sanitizePreview.ts での MaskedItem インターフェースのシャドーイングを修正** ([src/popup/sanitizePreview.ts](src/popup/sanitizePreview.ts))
+  - ローカルの `MaskedItem` インターフェース定義を削除し、`messaging/types.ts` からインポートするように修正
+
 ## [4.10.8] - 2026-03-28
 
 ### Fixed

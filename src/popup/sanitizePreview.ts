@@ -10,11 +10,9 @@
 
 import { getMessage } from './i18n.js';
 import { focusTrapManager } from './utils/focusTrap.js';
+import type { MaskedItem } from '../messaging/types.js';
 
-interface MaskedItem {
-  type: string;
-  [key: string]: any;
-}
+
 
 interface MaskedPosition {
   start: number;
