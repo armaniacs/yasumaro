@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.8] - 2026-03-28
+
 ### Fixed
 
 - **50%/5秒条件を満たしても保存されない問題を修正** ([src/background/recordingLogic.ts](src/background/recordingLogic.ts), [src/content/extractor.ts](src/content/extractor.ts))
