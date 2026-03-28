@@ -24,6 +24,9 @@ import { TrustChecker } from '../utils/trustChecker.js';
 // RecordingResult, MaskedItem 型 - messaging/types.tsからインポート
 import type { RecordingResult, MaskedItem } from '../messaging/types.js';
 
+// RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
+import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -665,7 +668,6 @@ export class RecordingLogic {
 
   async record(data: RecordingData): Promise<RecordingResult> {
     // Delegate to RecordingPipeline
-    const { RecordingPipeline } = await import('./pipeline/RecordingPipeline.js');
     const pipeline = new RecordingPipeline(
       this.getPrivacyInfoWithCache.bind(this),
       this.obsidian,

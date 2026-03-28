@@ -114,6 +114,7 @@
         "utils/logger.js",
         "utils/piiSanitizer.js",
         "utils/aiSummaryCleaner.js",
+        "utils/cssUtils.js",
         "icons/icon48.png",
         "data/models-dev-openai-compatible.json",
         "PRIVACY.md",

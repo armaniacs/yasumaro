@@ -144,7 +144,10 @@ function extractPageContent(): string {
  */
 function loadSettings(): Promise<void> {
     return new Promise((resolve) => {
+        // 新方式（settings オブジェクト）と旧方式（フラットキー）の両方を取得
         chrome.storage.local.get([
+            'settings',
+            'settings_migrated',
             'min_visit_duration',
             'min_scroll_depth',
             CONTENT_STRIP_HARD_ENABLED,
@@ -158,45 +161,52 @@ function loadSettings(): Promise<void> {
             AI_SUMMARY_CLEANSING_SOCIAL,
             AI_SUMMARY_CLEANSING_DEEP
         ], (result: { [key: string]: any }) => {
-            if (result.min_visit_duration !== undefined) {
-                minVisitDuration = parseInt(String(result.min_visit_duration), 10);
+            // 新方式: settings オブジェクトが存在する場合はそちらを優先
+            const s: { [key: string]: any } = (result.settings_migrated && result.settings)
+                ? { ...result.settings, ...result }
+                : result;
+
+            if (s.min_visit_duration !== undefined) {
+                minVisitDuration = parseInt(String(s.min_visit_duration), 10);
             }
-            if (result.min_scroll_depth !== undefined) {
-                minScrollDepth = parseInt(String(result.min_scroll_depth), 10);
+            if (s.min_scroll_depth !== undefined) {
+                minScrollDepth = parseInt(String(s.min_scroll_depth), 10);
             }
             // クレンジング設定を取得
-            if (result[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
-                contentStripHardEnabled = result[CONTENT_STRIP_HARD_ENABLED];
+            if (s[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
+                contentStripHardEnabled = s[CONTENT_STRIP_HARD_ENABLED];
             }
-            if (result[CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
-                contentStripKeywordEnabled = result[CONTENT_STRIP_KEYWORD_ENABLED];
+            if (s[CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
+                contentStripKeywordEnabled = s[CONTENT_STRIP_KEYWORD_ENABLED];
             }
-            if (result[CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(result[CONTENT_STRIP_KEYWORDS])) {
-                contentStripKeywords = result[CONTENT_STRIP_KEYWORDS];
+            if (s[CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(s[CONTENT_STRIP_KEYWORDS])) {
+                contentStripKeywords = s[CONTENT_STRIP_KEYWORDS];
             }
             // AI要約クレンジング設定を取得
-            if (result[AI_SUMMARY_CLEANSING_ENABLED] !== undefined) {
-                aiSummaryCleansingEnabled = result[AI_SUMMARY_CLEANSING_ENABLED];
+            if (s[AI_SUMMARY_CLEANSING_ENABLED] !== undefined) {
+                aiSummaryCleansingEnabled = s[AI_SUMMARY_CLEANSING_ENABLED];
             }
-            if (result[AI_SUMMARY_CLEANSING_ALT] !== undefined) {
-                aiSummaryCleansingAlt = result[AI_SUMMARY_CLEANSING_ALT];
+            if (s[AI_SUMMARY_CLEANSING_ALT] !== undefined) {
+                aiSummaryCleansingAlt = s[AI_SUMMARY_CLEANSING_ALT];
             }
-            if (result[AI_SUMMARY_CLEANSING_METADATA] !== undefined) {
-                aiSummaryCleansingMetadata = result[AI_SUMMARY_CLEANSING_METADATA];
+            if (s[AI_SUMMARY_CLEANSING_METADATA] !== undefined) {
+                aiSummaryCleansingMetadata = s[AI_SUMMARY_CLEANSING_METADATA];
             }
-            if (result[AI_SUMMARY_CLEANSING_ADS] !== undefined) {
-                aiSummaryCleansingAds = result[AI_SUMMARY_CLEANSING_ADS];
+            if (s[AI_SUMMARY_CLEANSING_ADS] !== undefined) {
+                aiSummaryCleansingAds = s[AI_SUMMARY_CLEANSING_ADS];
             }
-            if (result[AI_SUMMARY_CLEANSING_NAV] !== undefined) {
-                aiSummaryCleansingNav = result[AI_SUMMARY_CLEANSING_NAV];
+            if (s[AI_SUMMARY_CLEANSING_NAV] !== undefined) {
+                aiSummaryCleansingNav = s[AI_SUMMARY_CLEANSING_NAV];
             }
-            if (result[AI_SUMMARY_CLEANSING_SOCIAL] !== undefined) {
-                aiSummaryCleansingSocial = result[AI_SUMMARY_CLEANSING_SOCIAL];
+            if (s[AI_SUMMARY_CLEANSING_SOCIAL] !== undefined) {
+                aiSummaryCleansingSocial = s[AI_SUMMARY_CLEANSING_SOCIAL];
             }
-            if (result[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
-                aiSummaryCleansingDeep = result[AI_SUMMARY_CLEANSING_DEEP];
+            if (s[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
+                aiSummaryCleansingDeep = s[AI_SUMMARY_CLEANSING_DEEP];
             }
             console.log('[OWeave] Settings loaded:', {
+                minVisitDuration,
+                minScrollDepth,
                 aiSummaryCleansingEnabled,
                 aiSummaryCleansingAlt,
                 aiSummaryCleansingMetadata,

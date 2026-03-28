@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **50%/5秒条件を満たしても保存されない問題を修正** ([src/background/recordingLogic.ts](src/background/recordingLogic.ts), [src/content/extractor.ts](src/content/extractor.ts))
+  - `recordingLogic.record()` 内の `await import()` 動的インポートが Service Worker で仕様上禁止されており `TypeError` が発生していた → 静的インポートに変更
+  - ストレージマイグレーション後、設定が `settings` オブジェクト配下に移動されるが `extractor.ts` はフラットキーしか読んでいなかった → 新旧両方式に対応
+  - `utils/cssUtils.js` が `web_accessible_resources` 未登録のため CSP エラーが発生していた → `manifest.json` に追加
+
 - **AI要約が常に "Summary not available." になる問題を修正** ([src/background/pipeline/](src/background/pipeline/))
   - `RecordingPipeline` に渡された `aiClient` が `processPrivacyPipelineStep` 内で `null` のまま `PrivacyPipeline` に渡されていた
   - `RecordingContext` に `aiClient` フィールドを追加し、コンストラクタ → コンテキスト → ステップへの伝達経路を確立
