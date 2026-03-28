@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.12] - 2026-03-28
+
+### Fixed
+
+- **Service Worker メッセージハンドラでの設定読み込み改善** ([src/background/service-worker.ts](src/background/service-worker.ts))
+  - `MANUAL_RECORD` / `PREVIEW_RECORD` / `SAVE_RECORD` メッセージハンドラで `getSettings()` を明示的に呼び出し、設定が確実に読み込まれるように修正
+  - 設定未読み込みの状態で処理が実行される可能性を排除し、安定性を向上
+
 ## [4.10.11] - 2026-03-28
 
 ### Added

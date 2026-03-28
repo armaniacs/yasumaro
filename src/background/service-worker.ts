@@ -320,6 +320,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
                 let content = message.payload.content;
                 const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
+                const settings = await getSettings();
 
                 // URLバリデーション - http/httpsのみ許可
                 if (!isSecureUrl(message.payload.url)) {
@@ -454,6 +455,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Save Confirmed Record (Post-Preview)
             if (message.type === 'SAVE_RECORD') {
+                const settings = await getSettings();
                 // Use RecordingPipeline for saving confirmed record
                 const pipeline = new RecordingPipeline(
                     recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
