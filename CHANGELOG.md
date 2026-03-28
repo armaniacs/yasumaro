@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
   - `MANUAL_RECORD` / `PREVIEW_RECORD` / `SAVE_RECORD` メッセージハンドラで `getSettings()` を明示的に呼び出し、設定が確実に読み込まれるように修正
   - 設定未読み込みの状態で処理が実行される可能性を排除し、安定性を向上
 
+- **ADRドキュメントの例外的な型定義に関する記述追加** ([docs/ADR/2026-03-25-recordingResult-maskedItems-type-fix.md](docs/ADR/2026-03-25-recordingResult-maskedItems-type-fix.md))
+  - `src/utils/retryHelper.ts` における `any[]` 型の使用が意図的な設計判断であることを明記
+  - 汎用メッセージングヘルパーとしての役割と循環依存回避のための設計を説明
+
 ## [4.10.11] - 2026-03-28
 
 ### Added
