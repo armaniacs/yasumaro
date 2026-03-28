@@ -54,6 +54,7 @@ export interface SavedUrlEntry {
     aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数（オプション）
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
+    isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）
 }
 
 /**
