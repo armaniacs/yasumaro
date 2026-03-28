@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.9] - 2026-03-28
+
+### Added
+
+- **RecordingResult.maskedItems 型安全性の強化** ([src/messaging/types.ts](src/messaging/types.ts), [src/background/privacyPipeline.ts](src/background/privacyPipeline.ts))
+  - `RecordingResult` インターフェースの `maskedItems` フィールドの型を `MaskedItem[]` から `(string | MaskedItem)[]` に変更
+  - `PrivacyPipeline` および関連する型定義で `any[]` 型を適切な型に置換
+  - `logger.ts` および `popup/main.ts` で string | MaskedItem 型を適切に処理するように修正
+  - ADRドキュメントを実際の実装に合わせて更新
+
 ## [4.10.8] - 2026-03-28
 
 ### Fixed

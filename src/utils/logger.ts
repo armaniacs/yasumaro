@@ -279,7 +279,7 @@ async function sanitizeLogDetails(
             const result = await sanitizeRegex(value);
             if (result.maskedItems.length > 0) {
                 sanitized[key] = result.text;
-                sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m: any) => m.type);
+                sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m) => typeof m === 'string' ? m : m.type);
             } else {
                 sanitized[key] = value;
             }

@@ -198,7 +198,7 @@ function updateCleansingInfo(
  */
 export function showPreview(
   content: string,
-  maskedItems: MaskedItem[] | null = null,
+  maskedItems: (string | MaskedItem)[] | null = null,
   maskedCount: number = 0,
   cleansedReason?: 'hard' | 'keyword' | 'both' | 'none',
   cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }
@@ -320,7 +320,7 @@ function handleAction(confirmed: boolean): void {
 /**
  * マスク種別ごとの件数をまとめたステータステキストを生成する
  */
-function buildMaskStatusText(maskedItems: MaskedItem[] | null, maskedCount: number): string {
+function buildMaskStatusText(maskedItems: (string | MaskedItem)[] | null, maskedCount: number): string {
   if (!Array.isArray(maskedItems) || maskedItems.length === 0) {
     return getMessage('maskStatusCount', { count: maskedCount });
   }
@@ -328,8 +328,9 @@ function buildMaskStatusText(maskedItems: MaskedItem[] | null, maskedCount: numb
   // 種別ごとに件数を集計
   const typeCounts: Record<string, number> = {};
   for (const item of maskedItems) {
-    const labelFunction = PII_TYPE_LABELS[item.type];
-    const label = labelFunction ? labelFunction() : item.type;
+    const type = typeof item === 'string' ? item : item.type;
+    const labelFunction = PII_TYPE_LABELS[type];
+    const label = labelFunction ? labelFunction() : type;
     typeCounts[label] = (typeCounts[label] || 0) + 1;
   }
 

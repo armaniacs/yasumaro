@@ -12,6 +12,7 @@ import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js'
 import type { PendingPage } from '../utils/pendingStorage.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
+import type { MaskedItem } from '../messaging/types.js';
 
 // Export functions for testing
 export { getCurrentTab };
@@ -32,7 +33,7 @@ interface PreviewResponse {
   reason?: string;
   headerValue?: string;
   processedContent: string;
-  maskedItems?: any[];
+  maskedItems?: (string | MaskedItem)[];
   maskedCount?: number;
 }
 

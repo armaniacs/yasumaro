@@ -4,6 +4,7 @@ import { Settings, StorageKeys } from '../utils/storage.js';
 import { parseTagsFromSummary } from '../utils/tagUtils.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
+import type { MaskedItem } from '../messaging/types.js';
 
 /**
  * 文字数からトークン数を近似計算する
@@ -35,7 +36,7 @@ interface IAIClient {
 }
 
 interface ISanitizers {
-  sanitizeRegex(text: string): Promise<{ text: string; maskedItems: any[] }>;
+  sanitizeRegex(text: string): Promise<{ text: string; maskedItems: MaskedItem[] }>;
 }
 
 export interface PrivacyPipelineOptions {
@@ -51,7 +52,7 @@ export interface PrivacyPipelineResult {
   processedContent?: string;
   mode?: string;
   maskedCount?: number;
-  maskedItems?: any[];
+  maskedItems?: (string | MaskedItem)[];
   tags?: string[];  // タグリスト（タグ付き要約モード時）
   sentTokens?: number;  // 送信トークン数
   receivedTokens?: number;  // 受信トークン数
@@ -87,7 +88,7 @@ export class PrivacyPipeline {
 
     let processingText = content;
     let maskedCount = 0;
-    let maskedItems: any[] = [];
+    let maskedItems: (string | MaskedItem)[] = [];
 
     // 元のトークン数を計算
     const originalTokens = estimateTokens(content);
@@ -169,12 +170,12 @@ export class PrivacyPipeline {
     return { summary: 'Summary not available.', originalTokens, cleansedTokens };
   }
 
-  private _logMasking(sanitizeResult: { maskedItems: any[] }): void {
+  private _logMasking(sanitizeResult: { maskedItems: (string | MaskedItem)[] }): void {
     if (this.settings[StorageKeys.PII_SANITIZE_LOGS] !== false) {
       const count = sanitizeResult.maskedItems.length;
       if (count > 0) {
         addLog(LogType.SANITIZE, `Masked ${count} PII items`, {
-          items: sanitizeResult.maskedItems.map(i => i.type)
+          items: sanitizeResult.maskedItems.map(i => typeof i === 'string' ? i : i.type)
         });
       }
     }
