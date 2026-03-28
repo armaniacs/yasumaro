@@ -361,7 +361,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
 
                 // 【プライバシー（v4.2.1）】コンテンツフェッチ設定のチェック
-                const settings = await getSettings();
                 const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
                 const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
 
@@ -442,7 +441,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     previewOnly: message.type === 'PREVIEW_RECORD',
                     recordType: 'manual',
                     skipAi
-                });
+                }, settings);
 
                 // コンテンツを記録履歴に保存（成功時のみ）
                 if (result.success) {
@@ -471,7 +470,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     force: message.payload.force,
                     recordType: 'manual',
                     maskedCount: message.payload.maskedCount
-                });
+                }, settings);
 
                 // コンテンツを記録履歴に保存（成功時のみ）
                 if (result.success && message.payload.content) {

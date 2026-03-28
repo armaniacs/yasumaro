@@ -20,7 +20,7 @@ jest.mock('../../../utils/trustChecker.js', () => ({
       showAlert: false,
       reason: undefined,
       trustResult: { level: 'trusted' },
-    }),
+    } as any),
   })),
 }));
 jest.mock('../../privacyPipeline.js');
@@ -30,7 +30,7 @@ jest.mock('../../../utils/logger.js', () => ({
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
 jest.mock('../../../utils/piiSanitizer.js', () => ({
-  sanitizeRegex: jest.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
+  sanitizeRegex: jest.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] } as any),
 }));
 
 import * as storage from '../../../utils/storage.js';
@@ -43,6 +43,13 @@ import { RecordingPipeline } from '../RecordingPipeline.js';
 const MockedObsidianClient = ObsidianClient as jest.MockedClass<typeof ObsidianClient>;
 
 const MockedPrivacyPipeline = PrivacyPipeline as jest.MockedClass<typeof PrivacyPipeline>;
+
+const mockSettings = {
+  PRIVACY_MODE: 'full_pipeline',
+  PII_SANITIZE_LOGS: true,
+  TAG_SUMMARY_MODE: false,
+  AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
+};
 
 function makeAiClient() {
   return {
@@ -70,13 +77,6 @@ beforeEach(() => {
   jest.clearAllMocks();
 
   // @ts-expect-error - mock
-  storage.getSettings.mockResolvedValue({
-    PRIVACY_MODE: 'full_pipeline',
-    PII_SANITIZE_LOGS: true,
-    TAG_SUMMARY_MODE: false,
-    AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-  });
-  // @ts-expect-error - mock
   storage.StorageKeys = {
     PRIVACY_MODE: 'PRIVACY_MODE',
     PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
@@ -97,10 +97,6 @@ beforeEach(() => {
   // @ts-expect-error - mock
   domainUtils.extractDomain.mockReturnValue('example.com');
 
-  // ObsidianClient のデフォルトモック
-  MockedObsidianClient.mockImplementation(() => ({
-    appendToDailyNote: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
-  }) as any);
 
   // @ts-expect-error - mock
   permissionManager.getPermissionManager.mockReturnValue({
@@ -129,7 +125,7 @@ describe('RecordingPipeline', () => {
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      });
+      }, mockSettings);
 
       // PrivacyPipeline が aiClient を受け取っていること
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
@@ -156,7 +152,7 @@ describe('RecordingPipeline', () => {
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      });
+      }, mockSettings);
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
         expect.any(Object),
@@ -188,7 +184,7 @@ describe('RecordingPipeline', () => {
         url: 'https://example.com',
         content: 'Content with user@example.com',
         previewOnly: true,
-      });
+      }, mockSettings);
 
       expect(result.success).toBe(true);
       expect(result.preview).toBe(true);
@@ -223,7 +219,7 @@ describe('RecordingPipeline', () => {
         url: 'https://example.com',
         content: 'Content',
         previewOnly: true,
-      });
+      }, mockSettings);
 
       expect(mockAppend).not.toHaveBeenCalled();
     });
@@ -232,9 +228,8 @@ describe('RecordingPipeline', () => {
   describe('通常記録フロー', () => {
     it('AI要約が Obsidian に保存される', async () => {
       const mockAppend = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(() => ({
-        appendToDailyNote: mockAppend,
-      }) as any);
+      const mockObsidian = makeObsidian();
+      mockObsidian.appendToDailyNote = mockAppend;
       MockedPrivacyPipeline.mockImplementation(() => ({
         process: jest.fn<() => Promise<any>>().mockResolvedValue({
           summary: 'Generated AI summary',
@@ -244,7 +239,7 @@ describe('RecordingPipeline', () => {
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
-        makeObsidian() as any,
+        mockObsidian as any,
         makeAiClient() as any
       );
 
@@ -252,11 +247,11 @@ describe('RecordingPipeline', () => {
         title: 'Test Page',
         url: 'https://example.com',
         content: 'Page content',
-      });
+      }, mockSettings);
 
       expect(result.success).toBe(true);
       expect(mockAppend).toHaveBeenCalled();
-      const callArg: string = mockAppend.mock.calls[0][0] as string;
+      const callArg: string = mockAppend.mock.calls[0]?.[0] || '';
       expect(callArg).toContain('Generated AI summary');
     });
 
@@ -274,7 +269,7 @@ describe('RecordingPipeline', () => {
         title: 'Test',
         url: 'https://blocked.example.com',
         content: 'Content',
-      });
+      }, mockSettings);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('DOMAIN_BLOCKED');

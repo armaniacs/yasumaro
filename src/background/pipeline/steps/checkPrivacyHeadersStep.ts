@@ -24,6 +24,13 @@ export class PrivacyHeadersChecker {
     const { data, settings, force } = context;
     const { url, title, headerValue, requireConfirmation } = data;
 
+    // force=true の場合はプライバシーチェックをスキップして記録を許可する
+    // （「それでも記録」ボタンや手動記録操作など、ユーザーが明示的に記録を指示した場合）
+    if (force) {
+      addLog(LogType.WARN, 'Force recording - bypassing privacy check', { url });
+      return context;
+    }
+
     // Check whitelist first
     const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
     let shouldSkipPrivacyCheck = false;
@@ -87,15 +94,8 @@ export class PrivacyHeadersChecker {
       });
     }
 
-    // 'save' - continue with force warning
-    if (force) {
-      addLog(LogType.WARN, 'Force recording private page', {
-        url,
-        reason: privacyInfo.reason
-      });
-    } else {
-      addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url });
-    }
+    // 'save' - continue
+    addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url });
 
     return context;
   }
@@ -121,12 +121,16 @@ export class PrivacyHeadersChecker {
       ? (reason as ValidReason)
       : 'cache-control';
 
+    // Truncate headerValue to prevent storage abuse (same as in recordingLogic.ts)
+    const MAX_HEADER_VALUE_LENGTH = 1024;
+    const validatedHeaderValue = (headerValue || '').substring(0, MAX_HEADER_VALUE_LENGTH);
+
     const pendingPage = {
       url,
       title,
       timestamp: Date.now(),
       reason: validReason,
-      headerValue,
+      headerValue: validatedHeaderValue,
       expiry: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
     };
     await addPendingPage(pendingPage);

@@ -4,7 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [4.10.9] - 2026-03-28
+## [4.10.11] - 2026-03-28
+
+### Added
+
+- **isMaskedItem 型ガード関数の追加** ([src/messaging/types.ts](src/messaging/types.ts))
+  - `unknown` 型から `MaskedItem` 型かどうかを判定する型ガード関数を追加
+  - `RecordingResult.maskedItems` の `(string | MaskedItem)[]` 型を安全に処理するための基盤
+  - `type` フィールドが有効な MaskedItem タイプのいずれかであることを検証
+
+### Tests
+
+- **MaskedItem インターフェースのテスト強化** ([src/__tests__/maskedItem-interface.test.ts](src/__tests__/maskedItem-interface.test.ts))
+  - `RecordingResult` で `string` と `MaskedItem` の両方が使用できることを検証
+  - `isMaskedItem` 型ガードの動作を詳細にテスト（文字列、配列、空オブジェクト、type プロパティなし）
+  - `isMaskedItem` 関数の `type` フィールド検証ロジックをテスト
+  - テスト数: 6 → 11 件に増加
+
+### Changed
+
+- **プライバシーヘッダーのコメント改善** ([src/background/pipeline/steps/checkPrivacyHeadersStep.ts](src/background/pipeline/steps/checkPrivacyHeadersStep.ts))
+  - `force=true` の場合の挙動について、手動記録操作を明確に記述
+
+
+## [4.10.10] - 2026-03-28
 
 ### Added
 
@@ -22,8 +45,6 @@ All notable changes to this project will be documented in this file.
   - `position` と `index` フィールドの目的を明確化するコメントを追加
 - **sanitizePreview.ts での MaskedItem インターフェースのシャドーイングを修正** ([src/popup/sanitizePreview.ts](src/popup/sanitizePreview.ts))
   - ローカルの `MaskedItem` インターフェース定義を削除し、`messaging/types.ts` からインポートするように修正
-- **MaskedItem インターフェースのテストを追加** ([src/__tests__/maskedItem-interface.test.ts](src/__tests__/maskedItem-interface.test.ts))
-  - MaskedItem インターフェースの各フィールドの型安全性を検証するテストを追加
 
 ## [4.10.8] - 2026-03-28
 

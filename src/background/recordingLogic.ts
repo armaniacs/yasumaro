@@ -674,7 +674,10 @@ export class RecordingLogic {
       this.aiClient
     );
 
-    return await pipeline.execute(data);
+    // Get settings with cache
+    const settings = await this.getSettingsWithCache();
+
+    return await pipeline.execute(data, settings);
   }
 
   private async _recordImpl(data: RecordingData): Promise<RecordingResult> {

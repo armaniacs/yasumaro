@@ -4,7 +4,6 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
-import { getSettings } from '../../utils/storage.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
 import {
   truncateContentStep,
@@ -95,7 +94,7 @@ export class RecordingPipeline {
         name: 'saveObsidian',
         errorStrategy: ErrorStrategy.RETRY,
         maxRetries: 3,
-        execute: saveToObsidianStep
+        execute: this.createSaveToObsidianStep()
       },
       {
         name: 'saveMetadata',
@@ -114,12 +113,16 @@ export class RecordingPipeline {
   }
 
   /**
+   * Create save to Obsidian step with injected dependency
+   */
+  private createSaveToObsidianStep() {
+    return (context: RecordingContext) => saveToObsidianStep(context, this.obsidian);
+  }
+
+  /**
    * Execute the pipeline with initial data
    */
-  async execute(data: RecordingData): Promise<RecordingResult> {
-    // Load settings
-    const settings = await getSettings();
-
+  async execute(data: RecordingData, settings: any): Promise<RecordingResult> {
     // Create initial context
     let context: RecordingContext = {
       data,
@@ -155,7 +158,7 @@ export class RecordingPipeline {
         }
 
         // Handle error based on strategy
-        if (step.errorStrategy === ErrorStrategy.FATAL) {
+        if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
           return this.buildErrorResult(context, error as Error, step.name);
         }
 
@@ -230,6 +233,15 @@ export class RecordingPipeline {
     addLog(LogType.ERROR, `Pipeline failed at step ${stepName}`, {
       error: error.message,
       url: context.data.url
+    });
+
+    // Create error notification
+    const { title } = context.data;
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'Recording Failed',
+      message: `Failed to record ${title}: ${error.message}`
     });
 
     return {

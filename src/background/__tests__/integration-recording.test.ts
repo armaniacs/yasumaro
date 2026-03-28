@@ -2,10 +2,12 @@
 import { RecordingLogic } from '../recordingLogic.js';
 
 import * as storage from '../../utils/storage.js';
+import * as storageUrls from '../../utils/storageUrls.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
 
 jest.mock('../../utils/storage.js');
+jest.mock('../../utils/storageUrls.js');
 jest.mock('../../utils/domainUtils.js');
 jest.mock('../privacyPipeline.js');
 
@@ -29,13 +31,21 @@ beforeEach(() => {
   
   storage.setSavedUrlsWithTimestamps.mockResolvedValue();
 
+  // storageUrlsのデフォルトモック
+  // @ts-expect-error - jest.fn() type narrowing issue
+  storageUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+  // @ts-expect-error - jest.fn() type narrowing issue
+  storageUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
+
   // Problem #7: URLキャッシュを初期化
   RecordingLogic.cacheState = {
     settingsCache: null,
     cacheTimestamp: null,
     cacheVersion: 0,
     urlCache: null,
-    urlCacheTimestamp: null
+    urlCacheTimestamp: null,
+    privacyCache: null,
+    privacyCacheTimestamp: null
   };
 
   storage.StorageKeys = {
@@ -101,7 +111,7 @@ describe('Recording Integration Test', () => {
 
     expect(result.success).toBe(true);
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
-    expect(storage.setSavedUrlsWithTimestamps).toHaveBeenCalled();
+    expect(storageUrls.setSavedUrlsWithTimestamps).toHaveBeenCalled();
     expect(chrome.notifications.create).toHaveBeenCalled();
   });
 
@@ -145,6 +155,7 @@ describe('Recording Integration Test', () => {
       content: 'Test content'
     });
 
+    console.log('Result:', result);
     expect(result.success).toBe(false);
     expect(result.error).toContain('Connection failed');
     expect(chrome.notifications.create).toHaveBeenCalled();

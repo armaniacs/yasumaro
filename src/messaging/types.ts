@@ -13,10 +13,53 @@
  * 参考: src/background/recordingLogic.ts
  */
 export interface MaskedItem {
-  type: string;       // マスク項目の種類（例: "card-number"）
+  type: string;       // マスク項目の種類（例: "email", "creditCard", "phoneJp", "myNumber", "bankAccount"）
   position?: string;  // コンテンツ内の一般的な位置（例: "header", "body"）
-  original?: string; // 元の値（デバッグ用、本番環境では使用しない）
+  original?: string; // 元の値（デバッグ用、本産環境では使用しない）
   index?: number;     // マスク項目の出現順序インデックス
+}
+
+/**
+ * MaskedItem 型ガード関数
+ * unknown 型から MaskedItem 型かどうかを判定する
+ * @param item - 判定対象のアイテム
+ * @returns MaskedItem 型の場合は true
+ */
+export function isMaskedItem(item: unknown): item is MaskedItem {
+  if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+    return false;
+  }
+  
+  // Cast to Record<string, unknown> to safely access object properties
+  const maskedItem: Record<string, unknown> = item as Record<string, unknown>;
+  
+  // Required type property - must be a string and one of the known types
+  if (!('type' in maskedItem) || typeof maskedItem.type !== 'string') {
+    return false;
+  }
+  
+  // Validate type is one of the known MaskedItem types
+  const validTypes = ['email', 'creditCard', 'phoneJp', 'myNumber', 'bankAccount', 'price'];
+  if (!validTypes.includes(maskedItem.type)) {
+    return false;
+  }
+  
+  // Optional position property
+  if ('position' in maskedItem && maskedItem.position !== undefined && typeof maskedItem.position !== 'string') {
+    return false;
+  }
+  
+  // Optional original property
+  if ('original' in maskedItem && maskedItem.original !== undefined && typeof maskedItem.original !== 'string') {
+    return false;
+  }
+  
+  // Optional index property
+  if ('index' in maskedItem && maskedItem.index !== undefined && typeof maskedItem.index !== 'number') {
+    return false;
+  }
+  
+  return true;
 }
 
 /**
