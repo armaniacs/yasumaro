@@ -22,6 +22,8 @@ All notable changes to this project will be documented in this file.
   - `position` と `index` フィールドの目的を明確化するコメントを追加
 - **sanitizePreview.ts での MaskedItem インターフェースのシャドーイングを修正** ([src/popup/sanitizePreview.ts](src/popup/sanitizePreview.ts))
   - ローカルの `MaskedItem` インターフェース定義を削除し、`messaging/types.ts` からインポートするように修正
+- **MaskedItem インターフェースのテストを追加** ([src/__tests__/maskedItem-interface.test.ts](src/__tests__/maskedItem-interface.test.ts))
+  - MaskedItem インターフェースの各フィールドの型安全性を検証するテストを追加
 
 ## [4.10.8] - 2026-03-28
 
