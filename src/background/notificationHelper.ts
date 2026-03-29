@@ -18,10 +18,11 @@ export class NotificationHelper {
   }
 
   static notifyError(error: any): void {
+    const title = chrome.i18n.getMessage('obsidianSyncFailed') || 'Obsidian Sync Failed';
     chrome.notifications.create({
       type: 'basic',
       iconUrl: this.getIconUrl(),
-      title: 'Obsidian Sync Failed',
+      title,
       message: `Error: ${error}`
     });
   }

@@ -4,8 +4,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
-import type { RecordType } from '../../../messaging/types.js';
-import type { AiSummaryCleansedReason } from '../../../utils/storageUrls.js';
+import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import {
   setSavedUrlsWithTimestamps,
   setUrlRecordType,

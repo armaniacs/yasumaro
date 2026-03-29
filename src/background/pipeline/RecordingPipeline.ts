@@ -3,7 +3,7 @@
  * Orchestrates the recording process through a series of pipeline steps
  */
 
-import { addLog, LogType } from '../../utils/logger.js';
+import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
 import {
   truncateContentStep,
@@ -20,6 +20,7 @@ import {
   saveMetadataStep
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
+import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
 
@@ -139,6 +140,10 @@ export class RecordingPipeline {
 
         // previewOnly: privacyPipeline ステップ完了後に早期リターン
         if (data.previewOnly && context.result && step.name === 'privacyPipeline') {
+          // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+          if (context.result.maskedItems && Array.isArray(context.result.maskedItems)) {
+            context.result.maskedItems = stripPiiFromMaskedItems(context.result.maskedItems);
+          }
           return context.result;
         }
       } catch (error) {
@@ -198,7 +203,7 @@ export class RecordingPipeline {
       } catch (error) {
         if (step.errorStrategy === ErrorStrategy.RETRY && retries < (step.maxRetries || 0)) {
           retries++;
-          const delayMs = Math.pow(2, retries) * 1000; // Exponential backoff
+          const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000); // Exponential backoff with 5s cap
           addLog(LogType.INFO, `Retrying step ${step.name} (attempt ${retries}/${step.maxRetries})`, {
             delayMs,
             url: context.data.url
@@ -230,17 +235,18 @@ export class RecordingPipeline {
    * Build error result
    */
   private buildErrorResult(context: RecordingContext, error: Error, stepName: string): RecordingResult {
-    addLog(LogType.ERROR, `Pipeline failed at step ${stepName}`, {
+    logError(`Pipeline failed at step ${stepName}`, {
       error: error.message,
       url: context.data.url
-    });
+    }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
 
     // Create error notification
     const { title } = context.data;
+    const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon128.png',
-      title: 'Recording Failed',
+      title: notificationTitle,
       message: `Failed to record ${title}: ${error.message}`
     });
 
