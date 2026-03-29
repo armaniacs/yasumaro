@@ -28,11 +28,19 @@ jest.mock('../privacyPipeline.js');
 jest.mock('../notificationHelper.js');
 jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
+  logError: jest.fn(),
+  logWarn: jest.fn(),
+  logInfo: jest.fn(),
+  logDebug: jest.fn(),
   LogType: {
     DEBUG: 'DEBUG',
     INFO: 'INFO',
     WARN: 'WARN',
     ERROR: 'ERROR'
+  },
+  ErrorCode: {
+    INTERNAL_ERROR: 'INT_001',
+    UNKNOWN_ERROR: 'UNK_001'
   }
 }));
 jest.mock('../../utils/domainUtils.js', () => ({
