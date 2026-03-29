@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Tests
+
+- **テストカバレッジ大幅改善** (Functions: 61.86% → 68.55%, Statements: 60.07% → 64.62%)
+  - 16個の新規テストファイルを追加、6個の既存テストファイルを拡充
+  - テストスイート: 129 → 131 passed (0 failed), テスト数: 2071 → 2293 passed
+  - 主要改善: aiClient (54%→83%), privacyConsent (43%→84%), trustChecker (53%→66%),
+    OpenAIProvider (53%→92%), contentCleaner (54%→78%), storageUrls (19%→51%),
+    contentExtractor (33%→46%), aiUsageTracker (57%→100%), notificationHelper (50%→100%),
+    settingsUiHelper (7%→100%), tagUtils (17%→96%), GeminiProvider (52%→95%),
+    localAiClient (51%→96%), trancoUpdater (8%→95%), masterPassword (17%→99%),
+    customPromptUtils (29%→94%), storageSettings (6%→92%), aiSummaryCleaner (2%→85%),
+    settingsExportImport (28%→81%), focusTrap (37%→77%)
+  - 失敗テスト修正: piiSanitizer, notificationHelper, aiUsageTracker, fieldValidation, tagUtils
+
 ## [4.10.14] - 2026-03-29
 
 ### Fixed
