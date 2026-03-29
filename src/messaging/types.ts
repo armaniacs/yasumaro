@@ -11,11 +11,15 @@
 /**
  * PIIマスキングされた項目の型
  * 参考: src/background/recordingLogic.ts
+ * @internal
+ * WARNING: original フィールドには生のPIIデータが含まれる可能性があります。
+ * このフィールドはデバッグ目的のみで使用し、本番環境では絶対に使用しないでください。
+ * ストレージ保存やログ出力前に必ず stripPiiFromMaskedItem/Items 関数で削除してください。
  */
 export interface MaskedItem {
   type: string;       // マスク項目の種類（例: "email", "creditCard", "phoneJp", "myNumber", "bankAccount"）
   position?: string;  // コンテンツ内の一般的な位置（例: "header", "body"）
-  original?: string; // 元の値（デバッグ用、本産環境では使用しない）
+  original?: string; // 元の値（デバッグ用、本番環境では使用しない）@internal
   index?: number;     // マスク項目の出現順序インデックス
 }
 
@@ -92,17 +96,7 @@ export interface RecordingResult {
   cleansedTokens?: number;
 }
 
-/**
- * 記録方式
- * - auto: 自動記録
- * - manual: 手動記録
- */
-export type RecordType = 'auto' | 'manual';
-
-/**
- * AI要約クレンジング実行理由
- */
-export type AiSummaryCleansedReason = 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
 
 /**
  * PIIマスキング結果

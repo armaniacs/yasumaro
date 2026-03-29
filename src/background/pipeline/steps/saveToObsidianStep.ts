@@ -11,6 +11,12 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 /**
  * Save formatted markdown to Obsidian daily note
  * This step uses RETRY error strategy - retry on failure
+ *
+ * @param context - The current recording pipeline context
+ * @param obsidian - The Obsidian client instance.
+ *   In production, this is injected by RecordingPipeline via dependency injection (DI).
+ *   The parameter is typed as optional only to allow test overrides;
+ *   omitting it in production falls back to constructing a new ObsidianClient instance.
  */
 export const saveToObsidianStep = async (
   context: RecordingContext,
@@ -19,25 +25,22 @@ export const saveToObsidianStep = async (
   const { data, markdown } = context;
   const { url, title } = data;
 
-  console.log('saveToObsidianStep: Called with', { title, url, hasMarkdown: !!markdown });
-
   if (!markdown) {
     addLog(LogType.WARN, 'No markdown to save to Obsidian', { url });
     return context;
   }
 
-  // Use provided Obsidian client or create new one
+  // Use provided Obsidian client (injected via DI in production) or create new one
   const obsidianClient = obsidian || new ObsidianClient();
 
   try {
-    console.log('saveToObsidianStep: Attempting to save to Obsidian', { title, url });
     await obsidianClient.appendToDailyNote(markdown);
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url });
     
     // Create notification after successful save
-    NotificationHelper.notifySuccess('Saved to Obsidian', `Saved: ${title}`);
+    const notificationTitle = chrome.i18n.getMessage('saveToObsidian') || 'Saved to Obsidian';
+    NotificationHelper.notifySuccess(notificationTitle, `Saved: ${title}`);
   } catch (error: any) {
-    console.log('saveToObsidianStep: Failed to save to Obsidian', { error: error.message, title, url });
     // Throw error to trigger retry
     addLog(LogType.ERROR, 'Failed to save to Obsidian', {
       error: error.message,

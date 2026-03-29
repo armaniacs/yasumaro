@@ -924,9 +924,8 @@ describe('RecordingLogic', () => {
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
-      // 1024文字を超える長いheaderValueを作成
+      // 1024文字を超える長いheaderValueを作成（authorizationはREDACTEDになるためlengthは無関係）
       const longHeaderValue = 'x'.repeat(2000);
-      const expectedHeaderValue = 'x'.repeat(1024);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
@@ -937,16 +936,102 @@ describe('RecordingLogic', () => {
         requireConfirmation: true
       });
 
-      // 1024文字に切り詰められていることを確認
+      // authorizationヘッダーはマスクされて[REDACTED]になることを確認
       expect(pendingStorage.addPendingPage).toHaveBeenCalledWith({
         url,
         title: 'Private Page',
         timestamp: expect.any(Number),
         reason: 'authorization',
-        headerValue: expectedHeaderValue,
+        headerValue: '[REDACTED]',
         expiry: expect.any(Number)
       });
       expect(result.confirmationRequired).toBe(true);
+    });
+
+    test('authorization reason の場合は headerValue が [REDACTED] でマスクされる', async () => {
+      const url = 'https://api.example.com/data';
+      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+        isPrivate: true,
+        reason: 'authorization' as const,
+        timestamp: Date.now()
+      }]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const logic = new RecordingLogic(mockObsidian, {} as any);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      await logic.record({
+        title: 'Auth Page',
+        url,
+        content: 'content',
+        headerValue: 'Bearer secret-token-abc123',
+        requireConfirmation: true
+      });
+
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: 'authorization',
+          headerValue: '[REDACTED]',
+        })
+      );
+    });
+
+    test('cache-control reason の場合は headerValue がそのまま保存される', async () => {
+      const url = 'https://example.com/private';
+      const cacheControlValue = 'private, no-store';
+      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+        isPrivate: true,
+        reason: 'cache-control' as const,
+        timestamp: Date.now()
+      }]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const logic = new RecordingLogic(mockObsidian, {} as any);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      await logic.record({
+        title: 'Cache Page',
+        url,
+        content: 'content',
+        headerValue: cacheControlValue,
+        requireConfirmation: true
+      });
+
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: 'cache-control',
+          headerValue: cacheControlValue,
+        })
+      );
+    });
+
+    test('set-cookie reason の場合は headerValue がそのまま保存される', async () => {
+      const url = 'https://example.com/cookie';
+      const cookieValue = 'session=abc; HttpOnly; Secure';
+      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+        isPrivate: true,
+        reason: 'set-cookie' as const,
+        timestamp: Date.now()
+      }]]);
+
+      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const logic = new RecordingLogic(mockObsidian, {} as any);
+
+      // @ts-expect-error - requireConfirmation is part of RecordingData extension
+      await logic.record({
+        title: 'Cookie Page',
+        url,
+        content: 'content',
+        headerValue: cookieValue,
+        requireConfirmation: true
+      });
+
+      expect(pendingStorage.addPendingPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: 'set-cookie',
+          headerValue: cookieValue,
+        })
+      );
     });
   });
 });

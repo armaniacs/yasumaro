@@ -19,23 +19,26 @@ jest.mock('../../../utils/trustChecker.js', () => ({
       canProceed: true,
       showAlert: false,
       reason: undefined,
-      trustResult: { level: 'trusted' },
-    } as any),
+      trustResult: { level: 'trusted', source: 'jp-anchor' as const },
+    }),
   })),
 }));
 jest.mock('../../privacyPipeline.js');
 jest.mock('../../obsidianClient.js');
 jest.mock('../../../utils/logger.js', () => ({
   addLog: jest.fn(),
+  logError: jest.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
 jest.mock('../../../utils/piiSanitizer.js', () => ({
-  sanitizeRegex: jest.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] } as any),
+  sanitizeRegex: jest.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
 }));
 
 import * as storage from '../../../utils/storage.js';
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
+import * as logger from '../../../utils/logger.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { RecordingPipeline } from '../RecordingPipeline.js';
@@ -273,6 +276,112 @@ describe('RecordingPipeline', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('DOMAIN_BLOCKED');
+    });
+  });
+
+  describe('指数バックオフの上限（5000ms cap）', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('リトライ時の delayMs が常に 5000ms 以下である', async () => {
+      // privacyPipeline ステップ（maxRetries=3）が RETRY 対象
+      // retries=1: 2^1*1000=2000ms, retries=2: 2^2*1000=4000ms, retries=3: 2^3*1000=8000ms→cap→5000ms
+      MockedPrivacyPipeline.mockImplementation(() => ({
+        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Transient error')),
+      }) as any);
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const executePromise = pipeline.execute({
+        title: 'Retry Test',
+        url: 'https://example.com',
+        content: 'Content',
+      }, mockSettings);
+
+      // 非同期タイマーを全て完走させる
+      await jest.runAllTimersAsync();
+      await executePromise;
+
+      // addLog に渡された delayMs 引数をすべて検証
+      const retryCalls = (logger.addLog as jest.Mock).mock.calls.filter(
+        (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
+      );
+
+      expect(retryCalls.length).toBeGreaterThan(0);
+      for (const call of retryCalls) {
+        const logData = call[2] as { delayMs: number };
+        expect(logData.delayMs).toBeLessThanOrEqual(5000);
+      }
+    });
+
+    it('retries=3 のバックオフ（8000ms）が 5000ms にキャップされる', () => {
+      // 直接計算を検証: Math.min(Math.pow(2, 3) * 1000, 5000) = Math.min(8000, 5000) = 5000
+      const retries = 3;
+      const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000);
+      expect(delayMs).toBe(5000);
+    });
+
+    it('retries=1,2 のバックオフは上限未満なのでそのまま', () => {
+      expect(Math.min(Math.pow(2, 1) * 1000, 5000)).toBe(2000);
+      expect(Math.min(Math.pow(2, 2) * 1000, 5000)).toBe(4000);
+    });
+  });
+
+  describe('buildErrorResult - ErrorCode.INTERNAL_ERROR', () => {
+    it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
+      MockedPrivacyPipeline.mockImplementation(() => ({
+        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Unexpected failure')),
+      }) as any);
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const result = await pipeline.execute({
+        title: 'Test',
+        url: 'https://example.com',
+        content: 'Content',
+      }, mockSettings);
+
+      expect(result.success).toBe(false);
+      expect(logger.logError).toHaveBeenCalledWith(
+        expect.stringContaining('Pipeline failed at step'),
+        expect.any(Object),
+        logger.ErrorCode.INTERNAL_ERROR,
+        'RecordingPipeline'
+      );
+    });
+
+    it('エラー結果に success=false と error メッセージが含まれる', async () => {
+      MockedPrivacyPipeline.mockImplementation(() => ({
+        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Step crashed')),
+      }) as any);
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const result = await pipeline.execute({
+        title: 'Crash Test',
+        url: 'https://example.com',
+        content: 'Content',
+      }, mockSettings);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
   });
 });

@@ -434,6 +434,15 @@
     "message": "記録に失敗しました",
     "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
   },
+  "recordingFailed": {
+    "message": "記録に失敗しました"
+  },
+  "obsidianSyncFailed": {
+    "message": "Obsidian同期に失敗しました"
+  },
+  "saveToObsidian": {
+    "message": "Obsidianに保存"
+  },
   "clipboardCopyFailed": {
     "message": "クリップボードへのコピーに失敗しました"
   },

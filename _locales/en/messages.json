@@ -434,6 +434,15 @@
     "message": "Failed to record",
     "description": "Error message shown when manual recording fails in dashboard"
   },
+  "recordingFailed": {
+    "message": "Recording Failed"
+  },
+  "obsidianSyncFailed": {
+    "message": "Obsidian Sync Failed"
+  },
+  "saveToObsidian": {
+    "message": "Saved to Obsidian"
+  },
   "clipboardCopyFailed": {
     "message": "Failed to copy to clipboard"
   },

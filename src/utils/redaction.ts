@@ -71,6 +71,24 @@ export function redactSensitiveData(data: unknown, depth = 0): unknown {
 }
 
 /**
+ * Reasons that indicate sensitive header values requiring redaction.
+ * Add new reasons here to extend masking coverage.
+ */
+export const SENSITIVE_HEADER_REASONS = ['authorization'] as const;
+export type SensitiveHeaderReason = typeof SENSITIVE_HEADER_REASONS[number];
+
+/**
+ * Redact header values for sensitive privacy reasons (e.g., Authorization).
+ * Returns '[REDACTED]' if the reason is sensitive, otherwise returns the original value.
+ */
+export function redactHeaderValue(headerValue: string, reason: string): string {
+  if ((SENSITIVE_HEADER_REASONS as readonly string[]).includes(reason)) {
+    return '[REDACTED]';
+  }
+  return headerValue;
+}
+
+/**
  * セキュアなエラーログを出力する
  */
 export function consoleSecureError(message: string, data?: unknown): void {

@@ -6,7 +6,7 @@ import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainU
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
 import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason } from '../utils/storageUrls.js';
-import type { RecordType } from '../utils/storageUrls.js';
+import type { RecordType } from '../utils/commonTypes.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
@@ -23,6 +23,7 @@ import { TrustChecker } from '../utils/trustChecker.js';
 
 // RecordingResult, MaskedItem 型 - messaging/types.tsからインポート
 import type { RecordingResult, MaskedItem } from '../messaging/types.js';
+import { redactHeaderValue } from '../utils/redaction.js';
 
 // RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
 import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
@@ -274,8 +275,7 @@ export class RecordingLogic {
             success: false,
             error: 'PRIVATE_PAGE_DETECTED',
             reason: privacyInfo.reason,
-            confirmationRequired: true,
-            headerValue: autoHeaderValue
+            confirmationRequired: true
           }
         };
       }
@@ -649,9 +649,11 @@ export class RecordingLogic {
    * 保留中ページを保存するヘルパーメソッド
    */
   private async _savePendingPage(url: string, title: string, reason: 'cache-control' | 'set-cookie' | 'authorization', headerValue: string): Promise<void> {
+    // Mask sensitive header values (e.g., Authorization tokens)
+    const maskedHeaderValue = redactHeaderValue(headerValue || '', reason);
     // Validate headerValue length to prevent storage abuse
     const MAX_HEADER_VALUE_LENGTH = 1024;
-    const validatedHeaderValue = (headerValue || '').substring(0, MAX_HEADER_VALUE_LENGTH);
+    const validatedHeaderValue = maskedHeaderValue.substring(0, MAX_HEADER_VALUE_LENGTH);
 
     const pendingPage: PendingPage = {
       url,

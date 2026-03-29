@@ -13,22 +13,12 @@ export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
 export const URL_RETENTION_DAYS = 7;
 
-/**
- * 記録方式
- * - auto: 自動記録（訪問条件を満たして自動的に記録）
- * - manual: 手動記録（「今すぐ記録」ボタンで記録）
- */
-export type RecordType = 'auto' | 'manual';
+import type { RecordType, AiSummaryCleansedReason } from './commonTypes.js';
 
 /**
  * クレンジング実行理由
  */
 export type CleansedReason = 'hard' | 'keyword' | 'both' | 'none';
-
-/**
- * AI要約クレンジング実行理由
- */
-export type AiSummaryCleansedReason = 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
 
 /**
  * 保存されたURLエントリ
@@ -139,6 +129,8 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
             if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
             if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+            if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
+            if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
             entries.push(entry);
         }
         return entries;
@@ -151,9 +143,16 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
         const currentSet = new Set(currentUrls || []);
         const newSet = new Set(urlArray);
 
-        // Set ネイティブ操作で比較（O(n) より効率的）
-        if (currentSet.size !== newSet.size || ![...currentSet].every(x => newSet.has(x))) {
+        // サイズが異なる場合は即座に更新
+        if (currentSet.size !== newSet.size) {
             return Array.from(newSet);
+        }
+
+        // for...ofループで比較（O(n)配列アロケーションなし）
+        for (const x of currentSet) {
+            if (!newSet.has(x)) {
+                return Array.from(newSet);
+            }
         }
 
         return currentUrls; // 変更なしの場合は元の値を返す
@@ -192,6 +191,8 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
         if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
         if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+        if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
+        if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
         entries.push(entry);
 
         // 7日より古いエントリを削除（日数ベース）

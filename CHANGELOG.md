@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.14] - 2026-03-29
+
+### Fixed
+
+- **`MaskedItem.original` フィールドのパイプライン漏洩を修正** ([src/background/pipeline/RecordingPipeline.ts](src/background/pipeline/RecordingPipeline.ts), [src/utils/piiStripper.ts](src/utils/piiStripper.ts))
+  - `previewOnly` 早期リターン時に `maskedItems` から `original` フィールドを削除するよう修正（PII保護）
+  - `stripPiiFromMaskedItems()` ユーティリティを追加
+
+### Changed
+
+- **指数バックオフに5000ms上限を追加** ([src/background/pipeline/RecordingPipeline.ts](src/background/pipeline/RecordingPipeline.ts))
+  - リトライ時の遅延が無制限に伸びないよう `Math.min(..., 5000)` でキャップ
+- **パイプラインエラー処理の改善** ([src/background/pipeline/RecordingPipeline.ts](src/background/pipeline/RecordingPipeline.ts))
+  - `buildErrorResult` で `logError` + `ErrorCode.INTERNAL_ERROR` を使用
+  - 録音失敗通知タイトルをi18nメッセージ (`recordingFailed`) に対応
+
+### Tests
+
+- **RecordingPipeline**: 指数バックオフ上限・previewOnly PII保護のテスト追加
+- **checkPrivacyHeadersStep**: プライバシーヘッダーチェックステップのテスト追加
+- **recordingLogic**: `MaskedItem` 処理に関するテスト追加
+- **saveToObsidianStep**: Obsidian保存ステップのテスト追加 (`saveToObsidianStep.test.ts`)
+
 ## [4.10.13] - 2026-03-28
 
 ### Changed

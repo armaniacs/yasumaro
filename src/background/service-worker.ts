@@ -31,6 +31,7 @@ import {
 } from '../utils/crypto.js';
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
+import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
 
 // マイグレーション処理を実行
 (async () => {
@@ -218,6 +219,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encodedUrl;
                         NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
                     }
+                }
+
+                // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+                if (result.maskedItems && Array.isArray(result.maskedItems)) {
+                    result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
                 }
 
                 sendResponse(result);
@@ -449,6 +455,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     await setUrlContent(message.payload.url, content);
                 }
 
+                // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+                if (result.maskedItems && Array.isArray(result.maskedItems)) {
+                    result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
+                }
+
                 sendResponse(result);
                 return;
             }
@@ -477,6 +488,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // コンテンツを記録履歴に保存（成功時のみ）
                 if (result.success && message.payload.content) {
                     await setUrlContent(message.payload.url, message.payload.content);
+                }
+
+                // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+                if (result.maskedItems && Array.isArray(result.maskedItems)) {
+                    result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
                 }
 
                 sendResponse(result);
