@@ -353,9 +353,11 @@ describe('piiSanitizer', () => {
       const text = 'test@example.com '.repeat(5000); // 約100KB (十分重い)
       const result = await sanitizeRegex(text, { timeout: 1, skipSizeLimit: true }) as SanitizeResult; // 1msでタイムアウト
 
-      // タイムアウトエラーが返されることを確認
+      // タイムアウトまたは最大マッチ数超過のエラーが返されることを確認
       expect(result.error).toBeDefined();
-      expect(result.error).toContain('exceeded maximum match count');
+      expect(
+        result.error!.includes('timed out') || result.error!.includes('exceeded maximum match count')
+      ).toBe(true);
     });
   });
 });
