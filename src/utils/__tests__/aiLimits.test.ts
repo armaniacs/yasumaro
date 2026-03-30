@@ -3,7 +3,7 @@
  * AIトークン制限ユーティリティの単体テスト
  */
 
-import { validateMaxTokens, PROVIDER_MAX_TOKENS, MIN_TOKENS, GLOBAL_MAX_TOKENS } from '../aiLimits.js';
+import { validateMaxTokens, getProviderMaxTokens, getGlobalMaxTokens, PROVIDER_MAX_TOKENS, MIN_TOKENS, GLOBAL_MAX_TOKENS } from '../aiLimits.js';
 
 // Mock global.crypto for @peculiar/webcrypto
 Object.defineProperty(global, 'crypto', {
@@ -164,5 +164,26 @@ describe('CONSTANTS', () => {
         expect(PROVIDER_MAX_TOKENS.get('claude')).toBe(100000);
         expect(PROVIDER_MAX_TOKENS.get('localai')).toBe(16384);
         expect(PROVIDER_MAX_TOKENS.get('ollama')).toBe(32000);
+    });
+});
+
+describe('getProviderMaxTokens', () => {
+    it('既知のプロバイダーの最大トークン数を返す', () => {
+        expect(getProviderMaxTokens('openai')).toBe(16384);
+        expect(getProviderMaxTokens('gemini')).toBe(8192);
+        expect(getProviderMaxTokens('anthropic')).toBe(100000);
+        expect(getProviderMaxTokens('ollama')).toBe(32000);
+    });
+
+    it('未知のプロバイダーの場合はグローバル上限を返す', () => {
+        expect(getProviderMaxTokens('unknown_provider')).toBe(GLOBAL_MAX_TOKENS);
+        expect(getProviderMaxTokens('')).toBe(GLOBAL_MAX_TOKENS);
+    });
+});
+
+describe('getGlobalMaxTokens', () => {
+    it('グローバル最大トークン数を返す', () => {
+        expect(getGlobalMaxTokens()).toBe(16000);
+        expect(getGlobalMaxTokens()).toBe(GLOBAL_MAX_TOKENS);
     });
 });
