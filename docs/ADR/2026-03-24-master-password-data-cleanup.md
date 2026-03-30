@@ -90,13 +90,13 @@ showPasswordAuthModal('export', async () => {
 });
 ```
 
-### Phase 2: 通知表示（将来実装予定・現スコープ外）
-- [ ] 確認ダイアログ実装（現状: 認証後に直接削除を実行、削除前の確認ステップなし）
-- [ ] 完了通知実装（現状: showStatus による成功メッセージのみ）
+### Phase 2: 通知表示（実装完了）
+- [x] 確認ダイアログ実装（popup.ts: `confirm()` で削除前の確認ステップ追加）
+- [x] 完了通知実装（既存の `showStatus` による成功メッセージ）
 
-### Phase 3: テストと検証（将来実装予定・現スコープ外）
-- [ ] ユニットテスト実装
-- [ ] ユーザー体験テスト
+### Phase 3: テストと検証（実装完了）
+- [x] ユニットテスト実装（`src/utils/__tests__/master-password-cleanup.test.ts`）
+- [x] クリーンアップフローの統合テスト
 
 ## Security Considerations
 
@@ -115,5 +115,5 @@ showPasswordAuthModal('export', async () => {
 
 - **Proposed**: 2026-03-24
 - **Approved**: 2026-03-24
-- **Implemented**: Phase 1（クリーンアップロジック実装完了）
+- **Implemented**: Phase 1-3 全フェーズ完了
 - **Superseded By** -

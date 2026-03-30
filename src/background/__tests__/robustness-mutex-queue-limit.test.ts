@@ -1,25 +1,12 @@
 /**
- * robustness-mutex-queue-limit.test.js
- * Mutexキューサイズ制限とタイムアウトのテスト
+ * robustness-mutex-queue-limit.test.ts
+ * Mutexキューサイズ制限とロックタイムアウトのテスト
  * ブルーチーム報告 P0: Mutexにキュー上限を追加
  */
 
-import { ObsidianClient } from '../obsidianClient.js';
-import * as storage from '../../utils/storage.js';
-import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
-import { NoteSectionEditor } from '../noteSectionEditor.js';
+import { Mutex } from '../Mutex.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
-jest.mock('../../utils/storage.js');
-jest.mock('../../utils/dailyNotePathBuilder.js', () => ({
-  buildDailyNotePath: jest.fn((pathRaw) => '2026-02-07')
-}));
-jest.mock('../noteSectionEditor.js', () => ({
-  NoteSectionEditor: {
-    DEFAULT_SECTION_HEADER: '## History',
-    insertIntoSection: jest.fn((existingContent, sectionHeader, content) => `${sectionHeader}\n${content}`)
-  }
-}));
 jest.mock('../../utils/logger.js', () => ({
   addLog: jest.fn(),
   LogType: {
@@ -30,191 +17,267 @@ jest.mock('../../utils/logger.js', () => ({
   }
 }));
 
-describe('ObsidianClient: Mutexキューサイズ制限（P0）', () => {
-  let obsidianClient;
+describe('Mutex: キューサイズ制限とロックタイムアウト', () => {
+  let mutex: Mutex;
 
   beforeEach(() => {
-    obsidianClient = new ObsidianClient();
     jest.clearAllMocks();
-    jest.useFakeTimers();
-
-    // storageのデフォルトモック
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-    storage.getSettings.mockResolvedValue({
-      OBSIDIAN_API_KEY: 'test_key',
-      OBSIDIAN_PROTOCOL: 'https',
-      OBSIDIAN_PORT: '27123',
-      OBSIDIAN_DAILY_PATH: ''
-    });
-    storage.StorageKeys = {
-      OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
-      OBSIDIAN_PORT: 'OBSIDIAN_PORT',
-      OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
-      OBSIDIAN_DAILY_PATH: 'OBSIDIAN_DAILY_PATH'
-    };
-
-    // fetchのデフォルトモック
-    global.fetch = jest.fn()
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        text: () => Promise.resolve('Not found')
-      })
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-      .mockResolvedValueOnce({
-        ok: true
-      });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-    global.fetch.mockRestore();
-  });
+  describe('キューサイズ制限', () => {
+    it('デフォルトのmaxQueueSize=50でキューが制限される', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 120000 });
 
-  describe('現在の実装の確認', () => {
-    it('キューにMAX_QUEUE_SIZE制限（50）があること - シリアルテスト', async () => {
-      // 注: 現在の実装ではMAX_QUEUE_SIZE=50が設定されている
+      // ロックを取得（解放しない）
+      await mutex.acquire();
+      expect(mutex.isLocked()).toBe(true);
 
-      // シリアルにテスト（キューリミットを回避）
+      // 50個のタスクをキューに入れる（maxQueueSize = 50）
       for (let i = 0; i < 50; i++) {
-        global.fetch = jest.fn()
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-          .mockResolvedValueOnce({
-            ok: false,
-            status: 404,
-            text: () => Promise.resolve('Not found')
-          })
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-          .mockResolvedValueOnce({
-            ok: true
-          });
-        await expect(obsidianClient.appendToDailyNote(`Content ${i}`)).resolves.toBeUndefined();
+        mutex.acquire().catch(() => {}); // タイムアウトは無視
+      }
+      expect(mutex.getQueueSize()).toBe(50);
+
+      // 51個目はエラーをスローするはず（即座にスロー）
+      await expect(mutex.acquire()).rejects.toThrow('Mutex queue is full');
+
+      // ログが出力されること
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.ERROR,
+        'Mutex: Queue is full, rejecting request',
+        expect.objectContaining({
+          queueLength: 50,
+          maxSize: 50
+        })
+      );
+
+      // クリーンアップ
+      for (let i = 0; i < 50; i++) {
+        mutex.release();
+      }
+    });
+
+    it('カスタムmaxQueueSizeでキューが制限される', async () => {
+      mutex = new Mutex({ maxQueueSize: 3, timeoutMs: 120000 });
+
+      await mutex.acquire();
+
+      // 3個のタスクをキューに入れる
+      for (let i = 0; i < 3; i++) {
+        mutex.acquire().catch(() => {});
+      }
+      expect(mutex.getQueueSize()).toBe(3);
+
+      // 4個目はエラー
+      await expect(mutex.acquire()).rejects.toThrow('Mutex queue is full (max 3)');
+
+      // クリーンアップ
+      for (let i = 0; i < 3; i++) {
+        mutex.release();
+      }
+    });
+
+    it('キューリミット到達時に適切なエラーメッセージが含まれる', async () => {
+      mutex = new Mutex({ maxQueueSize: 2, timeoutMs: 120000 });
+
+      await mutex.acquire();
+
+      for (let i = 0; i < 2; i++) {
+        mutex.acquire().catch(() => {});
       }
 
-      expect(true).toBe(true);
+      await expect(mutex.acquire()).rejects.toThrow('Mutex queue is full');
+
+      // クリーンアップ
+      for (let i = 0; i < 2; i++) {
+        mutex.release();
+      }
     });
 
-    it('ロックタイムアウト（MUTEX_TIMEOUT_MS=30000ms）が設定されていること', async () => {
-      // 注: 現在の実装ではMUTEX_TIMEOUT_MS=30000msが設定されている
-      // テストが複雑になるため、定数が設定されていることを確認する
-      expect(true).toBe(true);
-    });
-  });
+    it('キューリミット到達時にログが出力される', async () => {
+      mutex = new Mutex({ maxQueueSize: 1, timeoutMs: 120000 });
 
-  describe('キューサイズ制限のテスト（実装後）', () => {
-    it('キューが上限を超えた場合にエラーをスローすべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // キューサイズ制限: 100
-      // 101個目のリクエストはエラーをスローすべき
-      expect(true).toBe(true);
-    });
+      await mutex.acquire();
+      mutex.acquire().catch(() => {});
 
-    it('キューリミット到達時に適切なエラーメッセージを表示すべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // エラーメッセージ: 'Queue limit exceeded. Please try again later.'
-      expect(true).toBe(true);
-    });
+      try {
+        await mutex.acquire();
+      } catch {
+        // noop
+      }
 
-    it('キューリミット到達時にログが出力されるべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // addLogを使用して警告ログを出力すべき
-      expect(true).toBe(true);
-    });
-  });
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.ERROR,
+        'Mutex: Queue is full, rejecting request',
+        expect.any(Object)
+      );
 
-  describe('ロックタイムアウトのテスト（実装後）', () => {
-    it('ロックが30秒以上保持されている場合にタイムアウトすべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // ロックタイムアウト: 30秒
-      // 30秒以上ロックが保持されている場合、ロックを解放すべき
-      jest.useRealTimers();
-
-      // 注: 現在の実装ではロックタイムアウトがないため、
-      // ロックが解放されないとdeadlockが発生する可能性がある
-      expect(true).toBe(true);
-    });
-
-    it('タイムアウト時にキューにある次のタスクを実行すべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // タイムアウト後に次のタスクが実行されることを確認すべき
-      expect(true).toBe(true);
-    });
-
-    it('タイムアウト時に適切なログが出力されるべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // addLogを使用して警告ログを出力すべき
-      expect(true).toBe(true);
+      // クリーンアップ
+      mutex.release();
     });
   });
 
-  describe('デッドロック検出', () => {
-    it('現在の実装ではdeadlock検出機能がないことを確認', async () => {
-      // 注: 現在の実装ではdeadlock検出機能がないため、
-      // 異常な状況でdeadlockが発生する可能性がある
+  describe('ロックタイムアウト', () => {
+    it('ロックがタイムアウト時間後に解放される', async () => {
+      // タイムアウトを短くして高速テスト
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 100 });
 
-      // テスト: ロックを解放せずにタイムアウトを待つ
-      const neverResolvingPromise = new Promise(() => {});
-      global.fetch.mockReturnValue(neverResolvingPromise);
+      // ロックを取得（解放しない = デッドロックシミュレート）
+      await mutex.acquire();
+      expect(mutex.isLocked()).toBe(true);
 
-      const lockPromise = obsidianClient.appendToDailyNote('Test content');
+      // acquire() はロックが保持されているので待機状態になる
+      const acquirePromise = mutex.acquire();
 
-      // 注: 現在の実装ではdeadlock検出がないため、
-      // ロックが解放されないと無期限に待機する可能性がある
-      // jest.useRealTimers();
-      // await expect(lockPromise).rejects.toThrow('Lock timeout');
+      // タイムアウト（100ms）を待つ
+      await expect(acquirePromise).rejects.toThrow(
+        'Mutex acquisition timeout after 100ms'
+      );
+    }, 10000);
 
-      // 現在はskip
-      expect(true).toBe(true);
+    it('カスタムタイムアウト時間が適用される', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 50 });
+
+      await mutex.acquire();
+
+      const acquirePromise = mutex.acquire();
+
+      // タイムアウト（50ms）を待つ
+      await expect(acquirePromise).rejects.toThrow(
+        'Mutex acquisition timeout after 50ms'
+      );
+    }, 10000);
+
+    it('タイムアウト時にキューからタスクが削除される', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 50 });
+
+      await mutex.acquire();
+
+      // 2つのタスクをキューに入れる
+      const task1 = mutex.acquire();
+      const task2 = mutex.acquire();
+      expect(mutex.getQueueSize()).toBe(2);
+
+      // 両方のタスクがタイムアウトするのを待つ
+      await Promise.allSettled([task1, task2]);
+
+      // キューサイズが0に減少
+      expect(mutex.getQueueSize()).toBe(0);
+    }, 10000);
+  });
+
+  describe('ロックの基本動作', () => {
+    it('ロック取得と解放が正常に動作する', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
+
+      expect(mutex.isLocked()).toBe(false);
+
+      await mutex.acquire();
+      expect(mutex.isLocked()).toBe(true);
+
+      mutex.release();
+      expect(mutex.isLocked()).toBe(false);
     });
 
-    it('ロック期間が長すぎる場合に警告ログを出力すべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // ロック期間が設定時間（例: 10秒）以上の場合、警告ログを出力すべき
-      expect(true).toBe(true);
+    it('解放時に次のタスクにロックが渡される', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
+
+      await mutex.acquire();
+
+      const task2Resolved = jest.fn();
+      const task2 = mutex.acquire().then(task2Resolved);
+
+      // この時点ではtask2はまだ待機中
+      expect(task2Resolved).not.toHaveBeenCalled();
+
+      // ロックを解放 → task2にロックが渡される
+      mutex.release();
+
+      // タスクが完了するまで待機
+      await task2;
+      expect(task2Resolved).toHaveBeenCalled();
+      expect(mutex.isLocked()).toBe(true);
+
+      mutex.release();
+    });
+
+    it('ロックされていないMutexのreleaseはwarnログを出力', () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
+
+      mutex.release();
+
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        'Mutex: Attempting to release unlocked mutex'
+      );
+    });
+
+    it('ロック期間を取得できる', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
+
+      expect(mutex.getLockDuration()).toBe(0);
+
+      await mutex.acquire();
+
+      // ロック期間は >= 0
+      expect(mutex.getLockDuration()).toBeGreaterThanOrEqual(0);
+
+      mutex.release();
+      expect(mutex.getLockDuration()).toBe(0);
     });
   });
 
   describe('メモリ管理', () => {
-    it('キューサイズ制限によりメモリ消費を適切に管理すべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // キューサイズ制限により、メモリ消費を制限すべき
-      expect(true).toBe(true);
+    it('キューサイズ制限によりメモリ消費を制限する', async () => {
+      mutex = new Mutex({ maxQueueSize: 10, timeoutMs: 120000 });
+
+      await mutex.acquire();
+
+      // 最大10個まで入る
+      for (let i = 0; i < 10; i++) {
+        mutex.acquire().catch(() => {});
+      }
+
+      expect(mutex.getQueueSize()).toBe(10);
+
+      // 11個目はエラー
+      await expect(mutex.acquire()).rejects.toThrow('Mutex queue is full');
+
+      // キューサイズは10のまま
+      expect(mutex.getQueueSize()).toBe(10);
+
+      // クリーンアップ: すべて解放
+      for (let i = 0; i < 10; i++) {
+        mutex.release();
+      }
+
+      // キューが空になった
+      expect(mutex.getQueueSize()).toBe(0);
     });
 
-    it('キューが空になった際に不要なリソースを解放すべき', async () => {
-      // TODO: 実装後にこのテストを有効化
-      // キューが空になった際に、不要なリソースを解放すべき
-      expect(true).toBe(true);
+    it('キューが空になった際にリソースが解放される', async () => {
+      mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
+
+      await mutex.acquire();
+
+      const task1 = mutex.acquire();
+      const task2 = mutex.acquire();
+
+      expect(mutex.getQueueSize()).toBe(2);
+
+      // ロック解放 → task1に渡す
+      mutex.release();
+      await task1;
+
+      // ロック解放 → task2に渡す
+      mutex.release();
+      await task2;
+
+      expect(mutex.getQueueSize()).toBe(0);
+      expect(mutex.isLocked()).toBe(true);
+
+      mutex.release();
+      expect(mutex.isLocked()).toBe(false);
     });
   });
 });
-
-/**
- * 実装推奨事項:
- *
- * 1.キューサイズ制限の実装
- *    - 最大キューサイズ: 100
- *    - キューサイズが上限を超えた場合、エラーをスロー
- *    - 適切なエラーメッセージを表示
- *    - addLogを使用して警告ログを出力
- *
- * 2. ロックタイムアウトの実装
- *    - 最大ロック時間: 30秒
- *    - 30秒以上ロックが保持されている場合、ロックを解放
- *    - タイムアウト時に次のタスクを実行
- *    - addLogを使用して警告ログを出力
- *
- * 3. デッドロック検出の実装（オプション）
- *    - ロック期間が長すぎる場合に警告ログを出力
- *    - ロック期間を監視し、異常な状況を検出
- *
- * 4. メモリ管理の強化
- *    - キューサイズ制限によりメモリ消費を制限
- *    - キューが空になった際に不要なリソースを解放
- */

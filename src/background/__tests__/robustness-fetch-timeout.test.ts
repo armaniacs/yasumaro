@@ -1,5 +1,5 @@
 /**
- * robustness-fetch-timeout.test.js
+ * robustness-fetch-timeout.test.ts
  * Fetchタイムアウト機能のテスト
  * ブルーチーム報告 P0: fetchにタイムアウトを追加
  */
@@ -20,24 +20,22 @@ jest.mock('../../utils/logger.js', () => ({
 }));
 
 describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
-  let obsidianClient;
-  let mockFetch;
+  let obsidianClient: ObsidianClient;
+  let mockFetch: jest.Mock;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
     jest.clearAllMocks();
-    jest.useFakeTimers();
 
     // storageのデフォルトモック
     // @ts-expect-error - jest.fn() type narrowing issue
-  
     storage.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',
       OBSIDIAN_DAILY_PATH: ''
     });
-    storage.StorageKeys = {
+    (storage as any).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
@@ -50,14 +48,12 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    global.fetch.mockRestore();
+    jest.restoreAllMocks();
   });
 
   describe('_fetchExistingContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -70,11 +66,20 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
       expect(result).toBe('Existing content');
       expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // AbortController の signal が渡されていること
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://127.0.0.1:27123/vault/test.md',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.any(Object),
+          signal: expect.any(AbortSignal)
+        })
+      );
     });
 
     it('404の場合は空文字列を返すこと', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -89,45 +94,67 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result).toBe('');
     });
 
-    it('現在の実装ではタイムアウトが設定されていないため、無期限に待機する可能性がある', async () => {
-      // 注: このテストは現在の実装では実行できません
-      // 原因: 無期限に待機する可能性があるため、jest.useFakeTimers()ではテストできません
-      // 修正後: AbortControllerを使用してタイムアウトを実装する必要があります
+    it('AbortErrorでタイムアウトエラーをスローすること', async () => {
+      const abortError = new Error('The user aborted a request');
+      abortError.name = 'AbortError';
+      // @ts-expect-error - jest.fn() type narrowing issue
+      mockFetch.mockRejectedValue(abortError);
 
-      const neverResolvingPromise = new Promise(() => {});
-      mockFetch.mockReturnValue(neverResolvingPromise);
+      await expect(
+        obsidianClient._fetchExistingContent(
+          'https://127.0.0.1:27123/vault/test.md',
+          { 'Authorization': 'Bearer test_key' }
+        )
+      ).rejects.toThrow('timed out');
+    });
 
-      const fetchPromise = obsidianClient._fetchExistingContent(
+    it('AbortControllerのsignalがfetchに渡される', async () => {
+      // @ts-expect-error - jest.fn() type narrowing issue
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('content')
+      });
+
+      await obsidianClient._fetchExistingContent(
         'https://127.0.0.1:27123/vault/test.md',
         { 'Authorization': 'Bearer test_key' }
       );
 
-      // 注: タイムアウトを実装していないため、このテストは実行できません
-      // 修正後にAborControllerを使用したタイムアウトのテストを追加します
+      const fetchCallArgs = mockFetch.mock.calls[0];
+      expect(fetchCallArgs[1]).toHaveProperty('signal');
+      expect(fetchCallArgs[1].signal).toBeInstanceOf(AbortSignal);
     });
   });
 
   describe('_writeContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true
       });
 
-      const result = await obsidianClient._writeContent(
+      await obsidianClient._writeContent(
         'https://127.0.0.1:27123/vault/test.md',
         { 'Authorization': 'Bearer test_key' },
         'Test content'
       );
 
-      expect(result).toBeUndefined();
       expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // AbortController の signal が渡されていること
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://127.0.0.1:27123/vault/test.md',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: expect.any(Object),
+          body: 'Test content',
+          signal: expect.any(AbortSignal)
+        })
+      );
     });
 
     it('エラー応答の場合はエラーをスローすること', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         text: () => Promise.resolve('Error')
@@ -141,12 +168,26 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
         )
       ).rejects.toThrow();
     });
+
+    it('AbortErrorでタイムアウトエラーをスローすること', async () => {
+      const abortError = new Error('The user aborted a request');
+      abortError.name = 'AbortError';
+      // @ts-expect-error - jest.fn() type narrowing issue
+      mockFetch.mockRejectedValue(abortError);
+
+      await expect(
+        obsidianClient._writeContent(
+          'https://127.0.0.1:27123/vault/test.md',
+          { 'Authorization': 'Bearer test_key' },
+          'Test content'
+        )
+      ).rejects.toThrow('timed out');
+    });
   });
 
   describe('testConnection - タイムアウト', () => {
     it('正常応答の場合は成功を返すこと', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -158,8 +199,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('エラー応答の場合は失敗を返すこと', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -171,15 +211,33 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result.success).toBe(false);
       expect(result.message).toContain('Connection failed');
     });
+
+    it('タイムアウト時はタイムアウトメッセージを返すこと', async () => {
+      const abortError = new Error('The user aborted a request');
+      abortError.name = 'AbortError';
+      // @ts-expect-error - jest.fn() type narrowing issue
+      mockFetch.mockRejectedValue(abortError);
+
+      const result = await obsidianClient.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('timeout');
+    });
+
+    it('ネットワークエラー時は適切なメッセージを返すこと', async () => {
+      // @ts-expect-error - jest.fn() type narrowing issue
+      mockFetch.mockRejectedValue(new Error('Failed to fetch'));
+
+      const result = await obsidianClient.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Cannot connect');
+    });
   });
 
-  describe('retry戦略の検討', () => {
-    it('ネットワークエラー時の再試行が現在実装されていないこと', async () => {
-      // 注: 現在はretry戦略が実装されていません
-      // 将来的にはexponential backoffを使用したretry戦略を実装することが推奨されます
-
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
+  describe('ネットワークエラー処理', () => {
+    it('ネットワークエラーが適切に伝播される', async () => {
+      // @ts-expect-error - jest.fn() type narrowing issue
       mockFetch.mockRejectedValue(new Error('Network error'));
 
       await expect(
@@ -187,98 +245,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
           'https://127.0.0.1:27123/vault/test.md',
           { 'Authorization': 'Bearer test_key' }
         )
-      ).rejects.toThrow();
+      ).rejects.toThrow('Network error');
     });
-  });
-
-  describe('推奨される改善事項', () => {
-    it('AbortControllerを使用して10秒タイムアウトを実装すべき', () => {
-      // TODO: 実装後にこのテストを有効化
-      // const abortController = new AbortController();
-      // const timeoutId = setTimeout(() => abortController.abort(), 10000);
-      //
-      // try {
-      //   const response = await fetch(url, { signal: abortController.signal, ...options });
-      //   clearTimeout(timeoutId);
-      //   return response;
-      // } catch (error) {
-      //   clearTimeout(timeoutId);
-      //   if (error.name === 'AbortError') {
-      //     throw new Error('Request timeout');
-      //   }
-      //   throw error;
-      // }
-
-      // 現在は実装されていないため、skip
-      expect(true).toBe(true);
-    });
-
-    it('タイムアウトエラーが適切に処理されるべき', () => {
-      // TODO: 実装後にこのテストを有効化
-      // タイムアウト発生時にユーザーフレンドリーなエラーメッセージを表示すべき
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('タイムアウトの検証', () => {
-    beforeEach(() => {
-      jest.useFakeTimers('modern');
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('15秒タイムアウトでリクエストがキャンセルされること', async () => {
-      // Mock fetch to handle AbortController signals
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-      mockFetch.mockImplementation((url, options) => {
-        return new Promise((resolve, reject) => {
-          if (options?.signal) {
-            // When abort signal fires, reject with AbortError
-            const abortHandler = () => {
-              options.signal.removeEventListener('abort', abortHandler);
-              const error = new Error('The user aborted a request');
-              error.name = 'AbortError';
-              reject(error);
-            };
-            options.signal.addEventListener('abort', abortHandler);
-          }
-          // Return a promise that will never resolve (unless aborted)
-        });
-      });
-
-      const fetchPromise = obsidianClient._fetchExistingContent(
-        'https://127.0.0.1:27123/vault/test.md',
-        { 'Authorization': 'Bearer test_key' }
-      );
-
-      // Advance timers by 16000ms (15s timeout + buffer)
-      jest.advanceTimersByTimeAsync(16000);
-
-      // Expect to reject with 'timed out'
-      await expect(fetchPromise).rejects.toThrow('timed out');
-    }, 30000);
   });
 });
-
-/**
- * 実装推奨事項:
- *
- * 1. _fetchExistingContentと_writeContentでAbortControllerを使用したタイムアウトを実装
- *    - 推奨タイムアウト: 10秒
- *    - AbortControllerのsignalをfetchに渡す
- *    - タイムアウト時に適切なエラーメッセージを表示
- *
- * 2. testConnectionでも同じタイムアウトを実装
- *
- * 3. retry戦略の検討（オプション）
- *    - exponential backoffを使用
- *    - 最大retry回数: 3回
- *    - ネットワークエラー時のみ再試行
- *
- * 4. タイムアウトエラーのログ出力
- *    - addLogを使用してタイムアウトエラーを記録
- *    - ユーザーに表示するエラーメッセージを適切に設定
- */

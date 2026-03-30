@@ -57,6 +57,24 @@ export interface ObsidianClientOptions {
 }
 
 /**
+ * HTTP → HTTPS 強制変換
+ * Obsidian Local REST API への安全な接続を保証する
+ * @param {string} url - リクエストURL
+ * @returns {string} HTTPS URL
+ */
+function enforceHttps(url: string): string {
+    if (url.startsWith('http://')) {
+        const httpsUrl = url.replace(/^http:\/\//, 'https://');
+        addLog(LogType.WARN, 'HTTP detected, upgrading to HTTPS for secure connection', {
+            original: url,
+            upgraded: httpsUrl
+        });
+        return httpsUrl;
+    }
+    return url;
+}
+
+/**
  * Problem #1: タイムアウト付きfetchのラッパー関数
  * @param {string} url - リクエストURL
  * @param {object} options - fetchオプション
@@ -64,14 +82,15 @@ export interface ObsidianClientOptions {
  * @throws {Error} タイムアウト時にエラーをスロー
  */
 async function _fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+    const secureUrl = enforceHttps(url);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-        addLog(LogType.ERROR, `Obsidian request timed out after ${FETCH_TIMEOUT_MS}ms`, { url });
+        addLog(LogType.ERROR, `Obsidian request timed out after ${FETCH_TIMEOUT_MS}ms`, { url: secureUrl });
     }, FETCH_TIMEOUT_MS);
 
     try {
-        const response = await fetch(url, { ...options, signal: controller.signal });
+        const response = await fetch(secureUrl, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
         return response;
     } catch (error: any) {
