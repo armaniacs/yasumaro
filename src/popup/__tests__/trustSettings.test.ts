@@ -1,0 +1,585 @@
+/**
+ * trustSettings.test.ts
+ * Tests for src/popup/trustSettings.ts
+ * Covers init, loadTrustSettings, renderPermissionSuggestList,
+ * renderJpAnchorList, renderSensitiveList
+ */
+
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+
+// Mock dependencies - all at top level
+jest.mock('../../utils/trustDb/trustDbSchema.js', () => ({}));
+
+jest.mock('../../utils/storage.js', () => ({
+  StorageKeys: {
+    PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold',
+  },
+}));
+
+const mockInitialize = jest.fn(() => Promise.resolve());
+const mockGetDatabase = jest.fn(() => ({
+  tranco: { tier: 'top10k', count: 10000, lastUpdated: '2025-01-01' },
+  lastUpdated: '2025-01-01',
+}));
+const mockGetJpAnchorTlds = jest.fn(() => ['.jp', '.co.jp']);
+const mockGetSensitiveDomains = jest.fn((cat: string) => {
+  if (cat === 'finance') return ['bank.com'];
+  if (cat === 'gaming') return ['game.com'];
+  return ['social.com'];
+});
+const mockGetWhitelist = jest.fn(() => ['trusted.com']);
+const mockAddJpAnchorTld = jest.fn(() => Promise.resolve({ success: true }));
+const mockRemoveJpAnchorTld = jest.fn(() => Promise.resolve());
+const mockAddSensitiveDomain = jest.fn(() => Promise.resolve({ success: true }));
+const mockRemoveSensitiveDomain = jest.fn(() => Promise.resolve());
+const mockAddToWhitelist = jest.fn(() => Promise.resolve({ success: true }));
+const mockRemoveFromWhitelist = jest.fn(() => Promise.resolve());
+
+jest.mock('../../utils/trustDb/trustDb.js', () => ({
+  getTrustDb: jest.fn(() => ({
+    initialize: mockInitialize,
+    getDatabase: mockGetDatabase,
+    getJpAnchorTlds: mockGetJpAnchorTlds,
+    getSensitiveDomains: mockGetSensitiveDomains,
+    getWhitelist: mockGetWhitelist,
+    addJpAnchorTld: mockAddJpAnchorTld,
+    removeJpAnchorTld: mockRemoveJpAnchorTld,
+    addSensitiveDomain: mockAddSensitiveDomain,
+    removeSensitiveDomain: mockRemoveSensitiveDomain,
+    addToWhitelist: mockAddToWhitelist,
+    removeFromWhitelist: mockRemoveFromWhitelist,
+  })),
+}));
+
+const mockIsUpdateInProgress = jest.fn(() => false);
+const mockUpdateTrancoList = jest.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
+
+jest.mock('../../utils/trustDb/trancoUpdater.js', () => ({
+  getTrancoUpdater: jest.fn(() => ({
+    isUpdateInProgress: mockIsUpdateInProgress,
+    updateTrancoList: mockUpdateTrancoList,
+  })),
+}));
+
+const mockLogInfo = jest.fn();
+const mockLogWarn = jest.fn();
+const mockLogError = jest.fn();
+
+jest.mock('../../utils/logger.js', () => ({
+  logInfo: mockLogInfo,
+  logWarn: mockLogWarn,
+  logError: mockLogError,
+  ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+}));
+
+jest.mock('../i18n.js', () => ({
+  getMessage: jest.fn((key: string) => {
+    const msgs: Record<string, string> = {
+      trancoUpdating: 'Updating...',
+      trancoNotUpdated: 'Not updated',
+      trancoTierTop1k: 'Top 1,000',
+      trancoTierTop10k: 'Top 10,000',
+      trancoTierTop100k: 'Top 100,000',
+      trancoStatusFormat: 'Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}',
+      jpAnchorAdded: 'TLD added',
+      sensitiveAdded: 'Domain added',
+      whitelistAdded: 'Domain added',
+      trancoUpdateInProgress: 'Update already in progress',
+      trancoUpdateSuccess: 'Tranco list updated successfully',
+      safetyModeChanged: 'Safety mode changed',
+      settingsSaved: 'Settings saved',
+      permissionSuggestCount: ' visits',
+      permissionSuggestAdd: 'Allow',
+      permissionSuggestDismiss: 'Dismiss',
+    };
+    return msgs[key] || key;
+  }),
+}));
+
+const mockGetAlertConfig = jest.fn(() => Promise.resolve({
+  alertFinance: false,
+  alertSensitive: false,
+  alertUnverified: false,
+}));
+const mockSaveAlertSettings = jest.fn(() => Promise.resolve());
+
+jest.mock('../../utils/trustChecker.js', () => ({
+  getTrustChecker: jest.fn(() => ({
+    getAlertConfig: mockGetAlertConfig,
+    saveAlertSettings: mockSaveAlertSettings,
+  })),
+}));
+
+const mockGetFrequentDeniedDomains = jest.fn(() => Promise.resolve([]));
+const mockRequestPermission = jest.fn(() => Promise.resolve(true));
+const mockRemoveDeniedDomain = jest.fn(() => Promise.resolve());
+const mockRecordDomainDismissal = jest.fn(() => Promise.resolve());
+const mockIsHostPermitted = jest.fn(() => Promise.resolve(false));
+
+jest.mock('../../utils/permissionManager.js', () => ({
+  getFrequentDeniedDomains: mockGetFrequentDeniedDomains,
+  requestPermission: mockRequestPermission,
+  removeDeniedDomain: mockRemoveDeniedDomain,
+  recordDomainDismissal: mockRecordDomainDismissal,
+  isHostPermitted: mockIsHostPermitted,
+}), { virtual: true });
+
+function setupFullDOM() {
+  document.body.innerHTML = `
+    <select id="safetyMode"><option value="strict">Strict</option><option value="balanced">Balanced</option><option value="relaxed">Relaxed</option></select>
+    <select id="trancoTier"><option value="top1k">1k</option><option value="top10k">10k</option><option value="top100k">100k</option></select>
+    <div id="trancoStatus"></div>
+    <button id="updateTrancoBtn"></button>
+    <div id="jpAnchorList"></div>
+    <input id="jpAnchorAdd" />
+    <button id="jpAnchorAddBtn"></button>
+    <div id="sensitiveList"></div>
+    <select id="sensitiveCategory"><option value="finance">Finance</option></select>
+    <input id="sensitiveAdd" />
+    <button id="sensitiveAddBtn"></button>
+    <div id="whitelist"></div>
+    <input id="whitelistAdd" />
+    <button id="whitelistAddBtn"></button>
+    <input type="checkbox" id="alertFinance" />
+    <input type="checkbox" id="alertSensitive" />
+    <input type="checkbox" id="alertUnverified" />
+    <button id="saveTrustSettings"></button>
+    <div id="trustSettingsStatus"></div>
+    <input id="permissionThreshold" value="3" />
+    <div id="permissionSuggestSection"></div>
+    <div id="permissionSuggestList"></div>
+    <button class="category-tab active" data-category="finance"></button>
+    <button class="category-tab" data-category="gaming"></button>
+    <button class="category-tab" data-category="sns"></button>
+  `;
+}
+
+describe('trustSettings.ts', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+    document.body.innerHTML = '';
+  });
+
+  // =========================================================================
+  // init()
+  // =========================================================================
+  describe('init()', () => {
+    test('should initialize without errors', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      expect(() => init()).not.toThrow();
+    });
+
+    test('should handle missing elements gracefully', async () => {
+      document.body.innerHTML = '<div id="jpAnchorList"></div>';
+      const { init } = await import('../trustSettings.js');
+      expect(() => init()).not.toThrow();
+    });
+
+    test('should sync safety mode to tranco tier on change', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const safetyModeSelect = document.getElementById('safetyMode') as HTMLSelectElement;
+      safetyModeSelect.value = 'strict';
+      safetyModeSelect.dispatchEvent(new Event('change'));
+
+      const trancoTierSelect = document.getElementById('trancoTier') as HTMLSelectElement;
+      expect(trancoTierSelect.value).toBe('top1k');
+    });
+
+    test('should sync tranco tier to safety mode on change', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const trancoTierSelect = document.getElementById('trancoTier') as HTMLSelectElement;
+      trancoTierSelect.value = 'top100k';
+      trancoTierSelect.dispatchEvent(new Event('change'));
+
+      const safetyModeSelect = document.getElementById('safetyMode') as HTMLSelectElement;
+      expect(safetyModeSelect.value).toBe('relaxed');
+    });
+
+    test('should handle update tranco button click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      document.getElementById('updateTrancoBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockUpdateTrancoList).toHaveBeenCalledWith(expect.stringMatching(/top\d+k/));
+    });
+
+    test('should handle jp anchor add button click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('jpAnchorAdd') as HTMLInputElement;
+      input.value = '.org';
+      document.getElementById('jpAnchorAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.org');
+    });
+
+    test('should handle jp anchor Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('jpAnchorAdd') as HTMLInputElement;
+      input.value = '.net';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.net');
+    });
+
+    test('should not trigger add on non-Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('jpAnchorAdd') as HTMLInputElement;
+      input.value = '.org';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Tab', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddJpAnchorTld).not.toHaveBeenCalled();
+    });
+
+    test('should handle save settings button click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      document.getElementById('saveTrustSettings')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockSaveAlertSettings).toHaveBeenCalled();
+    });
+
+    test('should save threshold on valid change', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
+      thresholdInput.value = '5';
+      thresholdInput.dispatchEvent(new Event('change'));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({ permission_notify_threshold: 5 })
+      );
+    });
+
+    test('should ignore threshold below 1', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
+      thresholdInput.value = '0';
+      thresholdInput.dispatchEvent(new Event('change'));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    test('should ignore threshold above 50', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
+      thresholdInput.value = '51';
+      thresholdInput.dispatchEvent(new Event('change'));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    test('should handle category tab click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const gamingTab = document.querySelector('[data-category="gaming"]') as HTMLButtonElement;
+      gamingTab.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(gamingTab.classList.contains('active')).toBe(true);
+      expect(
+        (document.querySelector('[data-category="finance"]') as HTMLButtonElement).classList.contains('active')
+      ).toBe(false);
+    });
+  });
+
+  // =========================================================================
+  // loadTrustSettings()
+  // =========================================================================
+  describe('loadTrustSettings()', () => {
+    test('should load settings and populate UI', async () => {
+      setupFullDOM();
+      const { loadTrustSettings } = await import('../trustSettings.js');
+      await loadTrustSettings();
+
+      expect((document.getElementById('safetyMode') as HTMLSelectElement).value).toBe('balanced');
+      expect((document.getElementById('trancoTier') as HTMLSelectElement).value).toBe('top10k');
+    });
+
+    test('should handle null database gracefully', async () => {
+      mockGetDatabase.mockReturnValueOnce(null as any);
+
+      setupFullDOM();
+      const { loadTrustSettings } = await import('../trustSettings.js');
+      await expect(loadTrustSettings()).resolves.not.toThrow();
+    });
+
+    test('should load alert settings from trust checker', async () => {
+      mockGetAlertConfig.mockResolvedValueOnce({
+        alertFinance: true,
+        alertSensitive: true,
+        alertUnverified: false,
+      });
+
+      setupFullDOM();
+      const { loadTrustSettings } = await import('../trustSettings.js');
+      await loadTrustSettings();
+
+      expect((document.getElementById('alertFinance') as HTMLInputElement).checked).toBe(true);
+      expect((document.getElementById('alertSensitive') as HTMLInputElement).checked).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // renderJpAnchorList()
+  // =========================================================================
+  describe('renderJpAnchorList()', () => {
+    test('should render TLD tags with textContent', async () => {
+      setupFullDOM();
+      const { renderJpAnchorList } = await import('../trustSettings.js');
+      renderJpAnchorList(['.jp', '.co.jp']);
+
+      const tags = document.getElementById('jpAnchorList')!.querySelectorAll('.domain-tag');
+      expect(tags.length).toBe(2);
+      expect(tags[0].querySelector('span')!.textContent).toBe('.jp');
+      expect(tags[1].querySelector('span')!.textContent).toBe('.co.jp');
+    });
+
+    test('should create remove buttons with aria-labels', async () => {
+      setupFullDOM();
+      const { renderJpAnchorList } = await import('../trustSettings.js');
+      renderJpAnchorList(['.jp']);
+
+      const btn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
+      expect(btn.getAttribute('aria-label')).toBe('Remove .jp');
+    });
+
+    test('should handle empty list', async () => {
+      setupFullDOM();
+      const { renderJpAnchorList } = await import('../trustSettings.js');
+      renderJpAnchorList([]);
+
+      expect(document.getElementById('jpAnchorList')!.children.length).toBe(0);
+    });
+
+    test('should handle missing jpAnchorList container', async () => {
+      document.body.innerHTML = '';
+      const { renderJpAnchorList } = await import('../trustSettings.js');
+      expect(() => renderJpAnchorList(['.jp'])).not.toThrow();
+    });
+  });
+
+  // =========================================================================
+  // renderSensitiveList()
+  // =========================================================================
+  describe('renderSensitiveList()', () => {
+    test('should render domain tags in sensitive list', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList(['bank.com', 'finance.com']);
+
+      const tags = document.getElementById('sensitiveList')!.querySelectorAll('.domain-tag');
+      expect(tags.length).toBe(2);
+      expect(tags[0].querySelector('span')!.textContent).toBe('bank.com');
+    });
+
+    test('should render domain tags in whitelist when isWhitelist=true', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList(['safe.com'], true);
+
+      const tags = document.getElementById('whitelist')!.querySelectorAll('.domain-tag');
+      expect(tags.length).toBe(1);
+      expect(tags[0].querySelector('span')!.textContent).toBe('safe.com');
+    });
+
+    test('should create remove buttons with aria-labels', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList(['bank.com']);
+
+      const btn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
+      expect(btn.getAttribute('aria-label')).toBe('Remove bank.com');
+    });
+
+    test('should handle empty domain list', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList([]);
+
+      expect(document.getElementById('sensitiveList')!.children.length).toBe(0);
+    });
+
+    test('should handle missing sensitiveList container', async () => {
+      document.body.innerHTML = '';
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      expect(() => renderSensitiveList(['test.com'])).not.toThrow();
+    });
+
+    test('should handle missing whitelist container', async () => {
+      document.body.innerHTML = '';
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      expect(() => renderSensitiveList(['test.com'], true)).not.toThrow();
+    });
+  });
+
+  // =========================================================================
+  // renderPermissionSuggestList()
+  // =========================================================================
+  describe('renderPermissionSuggestList()', () => {
+    test('should return empty array when section is missing', async () => {
+      document.body.innerHTML = '';
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      const result = await renderPermissionSuggestList();
+      expect(result).toEqual([]);
+    });
+
+    test('should return empty array when no denied domains', async () => {
+      mockGetFrequentDeniedDomains.mockResolvedValueOnce([]);
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      const result = await renderPermissionSuggestList();
+      expect(result).toEqual([]);
+    });
+
+    test('should render denied domains with allow/dismiss buttons', async () => {
+      mockGetFrequentDeniedDomains.mockResolvedValueOnce([
+        { domain: 'blocked.com', count: 5 },
+      ]);
+      mockIsHostPermitted.mockResolvedValueOnce(false);
+
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      const result = await renderPermissionSuggestList();
+
+      expect(result.length).toBe(1);
+      expect(result[0].domain).toBe('blocked.com');
+      expect(result[0].count).toBe(5);
+
+      const section = document.getElementById('permissionSuggestSection')!;
+      expect(section.classList.contains('hidden')).toBe(false);
+
+      const list = document.getElementById('permissionSuggestList')!;
+      expect(list.querySelector('.permission-suggest-allow')).toBeDefined();
+      expect(list.querySelector('.permission-suggest-dismiss')).toBeDefined();
+    });
+
+    test('should hide section when no denied domains', async () => {
+      mockGetFrequentDeniedDomains.mockResolvedValueOnce([]);
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      await renderPermissionSuggestList();
+
+      const section = document.getElementById('permissionSuggestSection')!;
+      expect(section.classList.contains('hidden')).toBe(true);
+    });
+
+    test('should remove domain when already permitted', async () => {
+      mockGetFrequentDeniedDomains.mockResolvedValueOnce([
+        { domain: 'allowed.com', count: 3 },
+      ]);
+      mockIsHostPermitted.mockResolvedValueOnce(true);
+
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      await renderPermissionSuggestList();
+
+      expect(mockRemoveDeniedDomain).toHaveBeenCalledWith('allowed.com');
+    });
+  });
+
+  // =========================================================================
+  // Tranco update edge cases
+  // =========================================================================
+  describe('tranco update', () => {
+    test('should show error when update already in progress', async () => {
+      mockIsUpdateInProgress.mockReturnValueOnce(true);
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      document.getElementById('updateTrancoBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      const statusDiv = document.getElementById('trustSettingsStatus')!;
+      expect(statusDiv.textContent).toContain('already in progress');
+    });
+
+    test('should handle tranco update failure', async () => {
+      mockUpdateTrancoList.mockResolvedValueOnce({ success: false, error: 'Network error' });
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      document.getElementById('updateTrancoBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockLogError).toHaveBeenCalled();
+    });
+
+    test('should handle tranco update exception', async () => {
+      mockUpdateTrancoList.mockRejectedValueOnce(new Error('Timeout'));
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      document.getElementById('updateTrancoBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockLogError).toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // JP Anchor error handling
+  // =========================================================================
+  describe('JP Anchor error handling', () => {
+    test('should show error message when jp anchor add fails', async () => {
+      mockAddJpAnchorTld.mockResolvedValueOnce({ success: false, error: 'Already exists' });
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('jpAnchorAdd') as HTMLInputElement;
+      input.value = '.jp';
+      document.getElementById('jpAnchorAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+
+      const statusDiv = document.getElementById('trustSettingsStatus')!;
+      expect(statusDiv.textContent).toBe('Already exists');
+    });
+  });
+});
