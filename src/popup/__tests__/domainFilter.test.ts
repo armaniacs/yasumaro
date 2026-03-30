@@ -1,101 +1,57 @@
 /**
- * domainFilter.test.js
- * Domain Filter UI Component Tests
+ * domainFilter.test.ts
+ * Tests for src/popup/domainFilter.ts
+ * Focus on increasing coverage beyond the existing 33.75%
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 
-// Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.js', () => {
-  const mockGetSettings = jest.fn();
-  const mockSaveSettings = jest.fn(() => Promise.resolve());
+// Mock dependencies - all at top level
+const mockGetSettings = jest.fn(() => Promise.resolve({
+  domain_filter_mode: 'disabled',
+  domain_whitelist: [],
+  domain_blacklist: [],
+  simple_format_enabled: true,
+  ublock_format_enabled: false,
+}));
+const mockSaveSettings = jest.fn(() => Promise.resolve());
 
-  // Set default mock implementation
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-  mockGetSettings.mockResolvedValue({
-    domain_filter_mode: 'disabled',
-    domain_whitelist: [],
-    domain_blacklist: [],
-    simple_format_enabled: true,
-    ublock_format_enabled: false,
-    obsidian_api_key: '',
-    obsidian_port: '27123',
-    obsidian_protocol: 'http',
-    gemini_api_key: '',
-    min_visit_duration: 5,
-    min_scroll_depth: 50,
-    gemini_model: 'gemini-1.5-flash',
-    obsidian_daily_path: '092.Daily',
-    ai_provider: 'openai',
-    openai_base_url: 'https://api.groq.com/openai/v1',
-    openai_api_key: '',
-    openai_model: 'openai/gpt-oss-20b',
-    openai_2_base_url: 'http://127.0.0.1:11434/v1',
-    openai_2_api_key: '',
-    openai_2_model: 'llama3',
-    privacy_mode: 'masked_cloud',
-    pii_confirmation_ui: true,
-    pii_sanitize_logs: true,
-    ublock_rules: {
-      blockDomains: [],
-      exceptionDomains: [],
-      metadata: { importedAt: 0, ruleCount: 0 }
-    },
-    ublock_sources: [],
-  });
+jest.mock('../../utils/storage.js', () => ({
+  StorageKeys: {
+    DOMAIN_FILTER_MODE: 'domain_filter_mode',
+    DOMAIN_WHITELIST: 'domain_whitelist',
+    DOMAIN_BLACKLIST: 'domain_blacklist',
+    SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+    UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+  },
+  getSettings: mockGetSettings,
+  saveSettings: mockSaveSettings,
+}));
 
-  return {
-    StorageKeys: {
-      DOMAIN_FILTER_MODE: 'domain_filter_mode',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-      DOMAIN_BLACKLIST: 'domain_blacklist',
-      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
-      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
-      UBLOCK_RULES: 'ublock_rules',
-      UBLOCK_SOURCES: 'ublock_sources',
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      GEMINI_API_KEY: 'gemini_api_key',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      GEMINI_MODEL: 'gemini_model',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      AI_PROVIDER: 'ai_provider',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      PRIVACY_MODE: 'privacy_mode',
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      PII_SANITIZE_LOGS: 'pii_sanitize_logs',
-    },
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-  };
-});
+const mockParseDomainList = jest.fn((text: string) =>
+  text.split('\n').map((s: string) => s.trim()).filter(Boolean)
+);
+const mockValidateDomainList = jest.fn(() => [] as string[]);
 
 jest.mock('../../utils/domainUtils.js', () => ({
   extractDomain: jest.fn(),
-  parseDomainList: jest.fn(),
-  validateDomainList: jest.fn(),
-  isDomainAllowed: jest.fn(),
-  isDomainInList: jest.fn(),
-  isValidDomain: jest.fn(),
-  matchesPattern: jest.fn(),
+  parseDomainList: mockParseDomainList,
+  validateDomainList: mockValidateDomainList,
 }));
+
+const mockInitUblock = jest.fn();
+const mockHandleSaveUblockSettings = jest.fn(() => Promise.resolve());
 
 jest.mock('../ublockImport.js', () => ({
-  init: jest.fn(),
-  saveUblockSettings: jest.fn(),
+  init: mockInitUblock,
+  handleSaveUblockSettings: mockHandleSaveUblockSettings,
 }));
 
+const mockAddLog = jest.fn();
+
 jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', SANITIZE: 'SANITIZE' },
+  addLog: mockAddLog,
+  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
 }));
 
 jest.mock('../tabUtils.js', () => ({
@@ -103,144 +59,571 @@ jest.mock('../tabUtils.js', () => ({
   isRecordable: jest.fn(),
 }));
 
+const mockShowStatus = jest.fn();
+
 jest.mock('../settingsUiHelper.js', () => ({
-  showStatus: jest.fn(),
+  showStatus: mockShowStatus,
 }));
 
 jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key, substitutions) => {
-    const messages = {
-      'domainList': 'Domain List (1 domain per line)',
-      'domainFilterSaved': 'Domain filter settings saved',
-      'filterModeRequired': 'Please select a filter mode',
-      'domainListError': 'Domain list errors:',
-      'saveError': 'Save error',
+  getMessage: jest.fn((key: string) => {
+    const msgs: Record<string, string> = {
+      whitelistLabel: 'Whitelist (1 domain per line)',
+      blacklistLabel: 'Blacklist (1 domain per line)',
+      domainFilterSaved: 'Domain filter settings saved',
+      filterModeRequired: 'Please select a filter mode',
+      domainListError: 'Domain list errors:',
+      saveError: 'Save error',
     };
-    let message = messages[key] || key;
-    if (substitutions && typeof substitutions === 'object') {
-      Object.keys(substitutions).forEach((placeholder) => {
-        message = message.replace(`{${placeholder}}`, substitutions[placeholder]);
-      });
-    }
-    return message;
+    return msgs[key] || key;
   }),
 }));
 
-describe('domainFilter', () => {
-  describe('Import test - verify module can be loaded', () => {
-    it('should be able to import domainFilter module', async () => {
-      const { init, handleSaveDomainSettings } = await import('../domainFilter.js');
-      expect(init).toBeDefined();
-      expect(handleSaveDomainSettings).toBeDefined();
+function setupFullDOM() {
+  document.body.innerHTML = `
+    <button id="generalTab" role="tab"></button>
+    <button id="domainTab" role="tab"></button>
+    <button id="promptTab" role="tab"></button>
+    <button id="privacyTab" role="tab"></button>
+    <div id="generalPanel" role="tabpanel"><button id="genBtn">Btn</button></div>
+    <div id="domainPanel" role="tabpanel"></div>
+    <div id="promptPanel" role="tabpanel"></div>
+    <div id="privacyPanel" role="tabpanel"></div>
+    <input type="radio" name="domainFilter" id="filterDisabled" value="disabled" checked />
+    <input type="radio" name="domainFilter" id="filterWhitelist" value="whitelist" />
+    <input type="radio" name="domainFilter" id="filterBlacklist" value="blacklist" />
+    <div id="domainListSection"></div>
+    <div id="domainListLabel"></div>
+    <textarea id="domainList"></textarea>
+    <textarea id="whitelistTextarea"></textarea>
+    <textarea id="blacklistTextarea"></textarea>
+    <button id="saveDomainSettings"></button>
+    <input type="checkbox" id="simpleFormatEnabled" checked />
+    <input type="checkbox" id="ublockFormatEnabled" />
+    <div id="simpleFormatUI"></div>
+    <div id="uBlockFormatUI"></div>
+    <div id="tabList" role="tablist">
+      <button role="tab" id="tab1"></button>
+      <button role="tab" id="tab2"></button>
+    </div>
+    <div id="domainStatus"></div>
+  `;
+}
+
+describe('domainFilter.ts (improved coverage)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+    document.body.innerHTML = '';
+    // Reset mock defaults
+    mockGetSettings.mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      simple_format_enabled: true,
+      ublock_format_enabled: false,
     });
+    mockHandleSaveUblockSettings.mockResolvedValue(undefined);
+    mockSaveSettings.mockResolvedValue(undefined);
+    mockValidateDomainList.mockReturnValue([]);
   });
 
-  // ==============================================================================
-  // DOM-001: Initialize domain filter UI with event listeners
-  // ==============================================================================
-  describe('DOM-001: Initialize domain filter UI', () => {
-    it('INIT correctly runs without errors', async () => {
-      // Create minimal required DOM elements
-      const generalTab = document.createElement('button');
-      generalTab.id = 'generalTab';
-      document.body.appendChild(generalTab);
-
-      const domainTab = document.createElement('button');
-      domainTab.id = 'domainTab';
-      document.body.appendChild(domainTab);
-
-      const generalPanel = document.createElement('div');
-      generalPanel.id = 'generalPanel';
-      document.body.appendChild(generalPanel);
-
-      const domainPanel = document.createElement('div');
-      domainPanel.id = 'domainPanel';
-      document.body.appendChild(domainPanel);
-
+  // =========================================================================
+  // init()
+  // =========================================================================
+  describe('init()', () => {
+    test('should initialize with full DOM', async () => {
+      setupFullDOM();
       const { init } = await import('../domainFilter.js');
-
-      // Should not throw
       expect(() => init()).not.toThrow();
     });
+
+    test('should call loadDomainSettings on init', async () => {
+      setupFullDOM();
+      mockGetSettings.mockClear();
+
+      const { init } = await import('../domainFilter.js');
+      init();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockGetSettings).toHaveBeenCalled();
+    });
+
+    test('should call initUblockImport on init', async () => {
+      setupFullDOM();
+      mockInitUblock.mockClear();
+
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      expect(mockInitUblock).toHaveBeenCalled();
+    });
+
+    test('should handle domain tab click and reload settings', async () => {
+      setupFullDOM();
+      mockGetSettings.mockClear();
+
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('domainTab')!.dispatchEvent(new Event('click'));
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockGetSettings).toHaveBeenCalled();
+    });
+
+    test('should show whitelist label when whitelist radio selected', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const whitelistRadio = document.getElementById('filterWhitelist') as HTMLInputElement;
+      whitelistRadio.checked = true;
+      whitelistRadio.dispatchEvent(new Event('change'));
+
+      const section = document.getElementById('domainListSection')!;
+      expect(section.style.display).toBe('block');
+
+      const label = document.getElementById('domainListLabel')!;
+      expect(label.textContent).toContain('Whitelist');
+    });
+
+    test('should hide section on disabled filter mode', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const disabledRadio = document.getElementById('filterDisabled') as HTMLInputElement;
+      disabledRadio.checked = true;
+      disabledRadio.dispatchEvent(new Event('change'));
+
+      const section = document.getElementById('domainListSection')!;
+      expect(section.style.display).toBe('none');
+    });
+
+    test('should show blacklist label when blacklist radio selected', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const blacklistRadio = document.getElementById('filterBlacklist') as HTMLInputElement;
+      blacklistRadio.checked = true;
+      blacklistRadio.dispatchEvent(new Event('change'));
+
+      const section = document.getElementById('domainListSection')!;
+      expect(section.style.display).toBe('block');
+
+      const label = document.getElementById('domainListLabel')!;
+      expect(label.textContent).toContain('Blacklist');
+    });
   });
 
-  // ==============================================================================
-  // DOM-002: Load domain settings (whitelist, blacklist) - NOT FULLY TESTABLE
-  // ==============================================================================
-  // NOTE: This function is NOT FULLY TESTABLE in the current test architecture
-  // because domainFilter.js caches DOM element references at the module level.
-  // When the test runs beforeEach and creates new DOM elements, the module
-  // still holds references to the old (or undefined) elements from initial import.
-  //
-  // To properly test this function, the architecture would need to be refactored
-  // to either:
-  // 1. Not cache DOM elements at the module level, or
-  // 2. Use a dependency injection pattern for DOM elements.
-  //
-  // For now, we can only verify that the module imports correctly and the function exists.
-  // =============================================================================
-  describe('DOM-002: Load domain settings (whitelist, blacklist) - NOT FULLY TESTABLE', () => {
-    it('should verify loadDomainSettings function exists', async () => {
-      const { loadDomainSettings } = await import('../domainFilter.js');
-      expect(loadDomainSettings).toBeDefined();
-      expect(typeof loadDomainSettings).toBe('function');
-    });
-
-    it('should verify loadDomainSettings can be called (may not work correctly due to DOM caching)', async () => {
-      const { loadDomainSettings } = await import('../domainFilter.js');
-      // This will likely not work correctly because of DOM caching,
-      // but it should at least not throw.
-      try {
-        await loadDomainSettings();
-      } catch (e) {
-        // Expected to possibly fail due to DOM caching issue
-        // The important thing is the function exists and is callable
-      }
-    });
-  });
-
-  // ==============================================================================
-  // DOM-004 through DOM-005: NOT TESTABLE - Functions not exported
-  // ==============================================================================
-  describe('DOM-004 & DOM-005: Functions not exported', () => {
-    it('addCurrentDomain function is not exported', async () => {
-      const module = await import('../domainFilter.js');
-      expect(module.addCurrentDomain).toBeUndefined();
-    });
-
-    it('updateDomainListVisibility function is not exported', async () => {
-      const module = await import('../domainFilter.js');
-      expect(module.updateDomainListVisibility).toBeUndefined();
-    });
-  });
-
-  // ==============================================================================
-  // DOM-006: Toggle format UI (simple vs uBlock) - NOT FULLY TESTABLE
-  // ==============================================================================
-  // NOTE: This function is NOT FULLY TESTABLE in the current test architecture
-  // because domainFilter.js caches DOM element references at the module level.
-  // When the test runs beforeEach and creates new DOM elements, the module
-  // still holds references to the old (or undefined) elements from initial import.
-  //
-  // To properly test this function, the architecture would need to be refactored
-  // to either:
-  // 1. Not cache DOM elements at the module level, or
-  // 2. Use a dependency injection pattern for DOM elements.
-  //
-  // For now, we can only verify that the module imports correctly and the function exists.
-  // =============================================================================
-  describe('DOM-006: Toggle format UI (simple vs uBlock) - NOT FULLY TESTABLE', () => {
-    it('should verify toggleFormatUI function exists', async () => {
+  // =========================================================================
+  // toggleFormatUI()
+  // =========================================================================
+  describe('toggleFormatUI()', () => {
+    test('should show simple format UI when checked', async () => {
+      setupFullDOM();
       const { toggleFormatUI } = await import('../domainFilter.js');
-      expect(toggleFormatUI).toBeDefined();
-      expect(typeof toggleFormatUI).toBe('function');
+      toggleFormatUI();
+
+      expect(document.getElementById('simpleFormatUI')!.style.display).toBe('block');
     });
 
-    it('should verify toggleFormatUI can be called (may not work correctly due to DOM caching)', async () => {
+    test('should hide simple format UI when unchecked', async () => {
+      setupFullDOM();
+      (document.getElementById('simpleFormatEnabled') as HTMLInputElement).checked = false;
+
       const { toggleFormatUI } = await import('../domainFilter.js');
-      // This will likely not work correctly because of DOM caching,
-      // but it should at least not throw.
-      expect(() => toggleFormatUI()).not.toThrow();
+      toggleFormatUI();
+
+      expect(document.getElementById('simpleFormatUI')!.style.display).toBe('none');
+    });
+
+    test('should show uBlock format UI when checked', async () => {
+      setupFullDOM();
+      (document.getElementById('ublockFormatEnabled') as HTMLInputElement).checked = true;
+
+      const { toggleFormatUI } = await import('../domainFilter.js');
+      toggleFormatUI();
+
+      expect(document.getElementById('uBlockFormatUI')!.style.display).toBe('block');
+    });
+
+    test('should hide uBlock format UI when unchecked', async () => {
+      setupFullDOM();
+      const { toggleFormatUI } = await import('../domainFilter.js');
+      toggleFormatUI();
+
+      expect(document.getElementById('uBlockFormatUI')!.style.display).toBe('none');
+    });
+  });
+
+  // =========================================================================
+  // loadDomainSettings()
+  // =========================================================================
+  describe('loadDomainSettings()', () => {
+    test('should load whitelist mode settings', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'whitelist',
+        domain_whitelist: ['example.com', 'test.org'],
+        domain_blacklist: ['ads.com'],
+        simple_format_enabled: true,
+        ublock_format_enabled: false,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('filterWhitelist') as HTMLInputElement).checked).toBe(true);
+      expect((document.getElementById('domainList') as HTMLTextAreaElement).value).toContain('example.com');
+    });
+
+    test('should load blacklist mode settings', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'blacklist',
+        domain_whitelist: [],
+        domain_blacklist: ['spam.com'],
+        simple_format_enabled: true,
+        ublock_format_enabled: false,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('filterBlacklist') as HTMLInputElement).checked).toBe(true);
+      expect((document.getElementById('domainList') as HTMLTextAreaElement).value).toContain('spam.com');
+    });
+
+    test('should reject invalid filter mode (CSS injection prevention)', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'bad-mode][value="',
+        domain_whitelist: [],
+        domain_blacklist: [],
+        simple_format_enabled: true,
+        ublock_format_enabled: false,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('filterDisabled') as HTMLInputElement).checked).toBe(true);
+    });
+
+    test('should store lists in hidden textareas', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'disabled',
+        domain_whitelist: ['a.com', 'b.com'],
+        domain_blacklist: ['c.com'],
+        simple_format_enabled: true,
+        ublock_format_enabled: false,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('whitelistTextarea') as HTMLTextAreaElement).value).toBe('a.com\nb.com');
+      expect((document.getElementById('blacklistTextarea') as HTMLTextAreaElement).value).toBe('c.com');
+    });
+
+    test('should load simple_format_enabled=false', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'disabled',
+        domain_whitelist: [],
+        domain_blacklist: [],
+        simple_format_enabled: false,
+        ublock_format_enabled: false,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('simpleFormatEnabled') as HTMLInputElement).checked).toBe(false);
+    });
+
+    test('should load ublock_format_enabled=true', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValueOnce({
+        domain_filter_mode: 'disabled',
+        domain_whitelist: [],
+        domain_blacklist: [],
+        simple_format_enabled: true,
+        ublock_format_enabled: true,
+      });
+
+      const { loadDomainSettings } = await import('../domainFilter.js');
+      await loadDomainSettings();
+
+      expect((document.getElementById('ublockFormatEnabled') as HTMLInputElement).checked).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // handleSaveDomainSettings()
+  // =========================================================================
+  describe('handleSaveDomainSettings()', () => {
+    test('should save whitelist settings', async () => {
+      setupFullDOM();
+      (document.getElementById('filterWhitelist') as HTMLInputElement).checked = true;
+      (document.getElementById('domainList') as HTMLTextAreaElement).value = 'example.com\ntest.org';
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockSaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          domain_filter_mode: 'whitelist',
+          domain_whitelist: ['example.com', 'test.org'],
+        }),
+        true
+      );
+    });
+
+    test('should save blacklist settings', async () => {
+      setupFullDOM();
+      (document.getElementById('filterBlacklist') as HTMLInputElement).checked = true;
+      (document.getElementById('domainList') as HTMLTextAreaElement).value = 'ads.com\nspam.net';
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockSaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          domain_filter_mode: 'blacklist',
+          domain_blacklist: ['ads.com', 'spam.net'],
+        }),
+        true
+      );
+    });
+
+    test('should call handleSaveUblockSettings', async () => {
+      setupFullDOM();
+      (document.getElementById('filterDisabled') as HTMLInputElement).checked = true;
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockHandleSaveUblockSettings).toHaveBeenCalled();
+    });
+
+    test('should handle save error gracefully', async () => {
+      setupFullDOM();
+      (document.getElementById('filterDisabled') as HTMLInputElement).checked = true;
+      mockHandleSaveUblockSettings.mockRejectedValueOnce(new Error('Save failed'));
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockAddLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('Error saving domain settings'),
+        expect.objectContaining({ error: 'Save failed' })
+      );
+    });
+
+    test('should show error when no filter mode selected', async () => {
+      setupFullDOM();
+      document.querySelectorAll('input[name="domainFilter"]').forEach((el) => {
+        (el as HTMLInputElement).checked = false;
+      });
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockShowStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'error');
+    });
+
+    test('should validate domain list before saving', async () => {
+      setupFullDOM();
+      mockValidateDomainList.mockReturnValueOnce(['Invalid domain: bad..domain']);
+      (document.getElementById('filterWhitelist') as HTMLInputElement).checked = true;
+      (document.getElementById('domainList') as HTMLTextAreaElement).value = 'bad..domain';
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockShowStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Invalid domain'), 'error');
+    });
+
+    test('should handle storage saveSettings throwing', async () => {
+      setupFullDOM();
+      (document.getElementById('filterDisabled') as HTMLInputElement).checked = true;
+      mockSaveSettings.mockRejectedValueOnce(new Error('Storage full'));
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockAddLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('Error saving'),
+        expect.objectContaining({ error: 'Storage full' })
+      );
+    });
+  });
+
+  // =========================================================================
+  // Tab switching
+  // =========================================================================
+  describe('tab switching via init', () => {
+    test('should activate general tab on click', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('generalTab')!.dispatchEvent(new Event('click'));
+
+      expect(document.getElementById('generalTab')!.classList.contains('active')).toBe(true);
+      expect(document.getElementById('generalTab')!.getAttribute('aria-selected')).toBe('true');
+      expect(document.getElementById('domainTab')!.classList.contains('active')).toBe(false);
+    });
+
+    test('should activate prompt tab on click', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('promptTab')!.dispatchEvent(new Event('click'));
+
+      expect(document.getElementById('promptTab')!.classList.contains('active')).toBe(true);
+      expect(document.getElementById('promptPanel')!.classList.contains('active')).toBe(true);
+      expect(document.getElementById('promptPanel')!.getAttribute('aria-hidden')).toBe('false');
+    });
+
+    test('should activate privacy tab on click', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('privacyTab')!.dispatchEvent(new Event('click'));
+
+      expect(document.getElementById('privacyTab')!.classList.contains('active')).toBe(true);
+    });
+
+    test('should focus first focusable element in panel', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('generalTab')!.dispatchEvent(new Event('click'));
+
+      expect(document.activeElement).toBe(document.getElementById('genBtn'));
+    });
+  });
+
+  // =========================================================================
+  // Keyboard navigation
+  // =========================================================================
+  describe('tab keyboard navigation', () => {
+    test('should handle ArrowRight', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const tab1 = document.getElementById('tab1')!;
+      tab1.focus();
+      tab1.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+      expect(document.activeElement).toBe(document.getElementById('tab2'));
+    });
+
+    test('should handle ArrowLeft', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const tab2 = document.getElementById('tab2')!;
+      tab2.focus();
+      tab2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+
+      expect(document.activeElement).toBe(document.getElementById('tab1'));
+    });
+
+    test('should handle Home key', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('tab2')!.focus();
+      document.getElementById('tab2')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+      expect(document.activeElement).toBe(document.getElementById('tab1'));
+    });
+
+    test('should handle End key', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      document.getElementById('tab1')!.focus();
+      document.getElementById('tab1')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+
+      expect(document.activeElement).toBe(document.getElementById('tab2'));
+    });
+
+    test('should handle Enter key to click active tab', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const tab1 = document.getElementById('tab1')!;
+      const clickSpy = jest.spyOn(tab1, 'click');
+      tab1.focus();
+      tab1.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+
+    test('should handle Space key to click active tab', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const tab1 = document.getElementById('tab1')!;
+      const clickSpy = jest.spyOn(tab1, 'click');
+      tab1.focus();
+      tab1.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // Edge cases
+  // =========================================================================
+  describe('edge cases', () => {
+    test('should handle missing optional DOM elements in init', async () => {
+      document.body.innerHTML = '';
+      const { init } = await import('../domainFilter.js');
+      expect(() => init()).not.toThrow();
+    });
+
+    test('simple format checkbox change triggers toggleFormatUI', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const simpleCheckbox = document.getElementById('simpleFormatEnabled') as HTMLInputElement;
+      simpleCheckbox.checked = false;
+      simpleCheckbox.dispatchEvent(new Event('change'));
+
+      expect(document.getElementById('simpleFormatUI')!.style.display).toBe('none');
+    });
+
+    test('ublock checkbox change triggers toggleFormatUI', async () => {
+      setupFullDOM();
+      const { init } = await import('../domainFilter.js');
+      init();
+
+      const ublockCheckbox = document.getElementById('ublockFormatEnabled') as HTMLInputElement;
+      ublockCheckbox.checked = true;
+      ublockCheckbox.dispatchEvent(new Event('change'));
+
+      expect(document.getElementById('uBlockFormatUI')!.style.display).toBe('block');
     });
   });
 });
