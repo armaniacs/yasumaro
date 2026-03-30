@@ -696,6 +696,16 @@ if (masterPasswordEnabled && masterPasswordOptions) {
             masterPasswordEnabled.checked = true;
             // 認証成功後にのみマスターパスワードを削除
             showPasswordAuthModal('export', async () => {
+                // Phase 2: 確認ダイアログを表示してから削除を実行
+                const confirmed = confirm(
+                    getMessage('passwordRemoveConfirm') ||
+                    'Disabling the master password will remove all encrypted API keys. This action cannot be undone. Continue?'
+                );
+                if (!confirmed) {
+                    masterPasswordEnabled.checked = true;
+                    return;
+                }
+
                 // Remove master password storage
                 await chrome.storage.local.remove([
                     'master_password_enabled',
