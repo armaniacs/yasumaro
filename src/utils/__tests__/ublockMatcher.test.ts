@@ -38,7 +38,7 @@ describe('isUrlBlocked', () => {
     expect(allowed).toBe(false);
   });
 
-  test('3p option matches only third‑party requests', async () => {
+  test('3p option matches only third-party requests', async () => {
     const ublockRules = rulesFromText('||adnetwork.com^$3p');
     const thirdParty = await isUrlBlocked('https://adnetwork.com/ad.js', ublockRules, { isThirdParty: true });
     const firstParty = await isUrlBlocked('https://adnetwork.com/ad.js', ublockRules, { isThirdParty: false });
@@ -59,38 +59,161 @@ describe('isUrlBlocked', () => {
   });
 
   test('match-case option enables case-sensitive matching', async () => {
-    // This is a simplified test - in a real implementation, we would need to modify
-    // the matching logic to support case-sensitive comparisons
     const ublockRules = rulesFromText('||EXAMPLE.COM^$match-case');
-    // For now, we just verify the option is parsed correctly
     expect(ublockRules.blockRules[0].options.matchCase).toBe(true);
   });
 
   test('~match-case option enables case-insensitive matching', async () => {
-    // This is a simplified test - in a real implementation, we would need to modify
-    // the matching logic to support case-insensitive comparisons
     const ublockRules = rulesFromText('||example.com^$~match-case');
-    // For now, we just verify the option is parsed correctly
     expect(ublockRules.blockRules[0].options.matchCase).toBe(false);
   });
 
-  // 【UF-302追加テスト】ルールインデックス機能のパフォーマンス改善を検証
-  test('ルールインデックス機能により大量ルールのマッチングが高速化されること', async () => {
-    // 【テスト目的】: ルールインデックス機能により大量ルールのマッチングが高速化されることを確認
-    // 【テスト内容】: 10,000件のルールを持つリストに対してマッチングを行い、パフォーマンスを検証
-    // 【期待される動作】: 10,000件のルールに対して100回のマッチングが1秒以内に完了すること
-    // 🟢 信頼性レベル: UF-302 パフォーマンス最適化要件
+  // Edge cases for isUrlBlocked guard clauses (lines 176-177, 180-182)
+  test('empty string URL returns false', async () => {
+    const ublockRules = rulesFromText('||ads.google.com^');
+    const result = await isUrlBlocked('', ublockRules);
+    expect(result).toBe(false);
+  });
 
-    // 【テストデータ準備】: 10,000件のブロックルールと100件の例外ルールを生成
+  test('non-string URL returns false', async () => {
+    const ublockRules = rulesFromText('||ads.google.com^');
+    const result = await isUrlBlocked(null as any, ublockRules);
+    expect(result).toBe(false);
+  });
+
+  test('URL with no extractable domain returns false', async () => {
+    const ublockRules = rulesFromText('||ads.google.com^');
+    const result = await isUrlBlocked('not-a-url', ublockRules);
+    expect(result).toBe(false);
+  });
+
+  // blockDomains (new lightweight format) - lines 67-74
+  test('blockDomains lightweight format blocks matching URL', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['ads.example.com'],
+      exceptionDomains: [],
+    };
+    const result = await isUrlBlocked('https://ads.example.com/track', ublockRules);
+    expect(result).toBe(true);
+  });
+
+  test('blockDomains wildcard pattern blocks subdomain', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['*.tracker.net'],
+      exceptionDomains: [],
+    };
+    const result = await isUrlBlocked('https://sub.tracker.net/pixel', ublockRules);
+    expect(result).toBe(true);
+  });
+
+  test('blockDomains does not block non-matching URL', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['ads.example.com'],
+      exceptionDomains: [],
+    };
+    const result = await isUrlBlocked('https://safe.example.com/page', ublockRules);
+    expect(result).toBe(false);
+  });
+
+  // exceptionDomains (new lightweight format) - lines 105-112
+  test('exceptionDomains lightweight format overrides block', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['ads.example.com'],
+      exceptionDomains: ['ads.example.com'],
+    };
+    const result = await isUrlBlocked('https://ads.example.com/allowed', ublockRules);
+    expect(result).toBe(false);
+  });
+
+  test('exceptionDomains wildcard pattern overrides block for subdomain', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['*.tracker.net'],
+      exceptionDomains: ['*.tracker.net'],
+    };
+    const result = await isUrlBlocked('https://sub.tracker.net/pixel', ublockRules);
+    expect(result).toBe(false);
+  });
+
+  // wildcard exception rules (old format) - lines 93, 132-134
+  test('wildcard exception rule overrides wildcard block rule', async () => {
+    const ublockRules = rulesFromText(`||*.ads.net^\n@@||*.ads.net^`);
+    const result = await isUrlBlocked('https://sub.ads.net/image.gif', ublockRules);
+    expect(result).toBe(false);
+  });
+
+  // 1p option (firstParty) - line 252
+  test('1p option matches only first-party requests', async () => {
+    const ublockRules = rulesFromText('||analytics.com^$1p');
+    const firstParty = await isUrlBlocked('https://analytics.com/track', ublockRules, { isThirdParty: false });
+    const thirdParty = await isUrlBlocked('https://analytics.com/track', ublockRules, { isThirdParty: true });
+    expect(firstParty).toBe(true);
+    expect(thirdParty).toBe(false);
+  });
+
+  // Rule index caching (WeakMap) - reuse same rules object
+  test('rule index is cached across calls with same rules object', async () => {
+    const ublockRules = rulesFromText('||cached.example.com^');
+    const result1 = await isUrlBlocked('https://cached.example.com/page', ublockRules);
+    const result2 = await isUrlBlocked('https://cached.example.com/page2', ublockRules);
+    expect(result1).toBe(true);
+    expect(result2).toBe(true);
+  });
+
+  // blockDomains with multiple entries
+  test('blockDomains with multiple domains blocks all of them', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['ads.example.com', 'tracker.example.com'],
+      exceptionDomains: [],
+    };
+    expect(await isUrlBlocked('https://ads.example.com/track', ublockRules)).toBe(true);
+    expect(await isUrlBlocked('https://tracker.example.com/pixel', ublockRules)).toBe(true);
+    expect(await isUrlBlocked('https://safe.example.com/page', ublockRules)).toBe(false);
+  });
+
+  // exceptionDomains with multiple entries
+  test('exceptionDomains with multiple domains exempts all of them', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['*.example.com'],
+      exceptionDomains: ['safe.example.com', 'trusted.example.com'],
+    };
+    expect(await isUrlBlocked('https://safe.example.com/page', ublockRules)).toBe(false);
+    expect(await isUrlBlocked('https://trusted.example.com/page', ublockRules)).toBe(false);
+    expect(await isUrlBlocked('https://other.example.com/page', ublockRules)).toBe(true);
+  });
+
+  // blockDomains takes priority over blockRules (old format)
+  test('blockDomains takes priority over blockRules when both present', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['new.example.com'],
+      exceptionDomains: [],
+      blockRules: [{ domain: 'old.example.com', options: {} }],
+    };
+    // blockDomains should be used, blockRules should be skipped
+    expect(await isUrlBlocked('https://new.example.com/page', ublockRules)).toBe(true);
+    expect(await isUrlBlocked('https://old.example.com/page', ublockRules)).toBe(false);
+  });
+
+  // exceptionDomains takes priority over exceptionRules (old format)
+  test('exceptionDomains takes priority over exceptionRules when both present', async () => {
+    const ublockRules: UblockRules = {
+      blockDomains: ['*.example.com'],
+      exceptionDomains: ['new-exception.example.com'],
+      exceptionRules: [{ domain: 'old-exception.example.com', options: {} }],
+    };
+    expect(await isUrlBlocked('https://new-exception.example.com/page', ublockRules)).toBe(false);
+    // old-exception rule should be skipped
+    expect(await isUrlBlocked('https://old-exception.example.com/page', ublockRules)).toBe(true);
+  });
+
+  // UF-302 performance test
+  test('ルールインデックス機能により大量ルールのマッチングが高速化されること', async () => {
     const blockLines = Array.from({ length: 10000 }, (_, i) => `||domain${i}.com^`);
     const exceptionLines = Array.from({ length: 100 }, (_, i) => `@@||exception${i}.com^`);
     const allLines = [...blockLines, ...exceptionLines];
     const ublockRules = rulesFromText(allLines.join('\n'));
 
-    // 【実際の処理実行】: 100回のマッチング処理時間を計測
     const startTime = performance.now();
     for (let i = 0; i < 100; i++) {
-      // マッチするURLとマッチしないURLを交互にテスト
       if (i % 2 === 0) {
         await isUrlBlocked(`https://domain${i}.com/test.js`, ublockRules);
       } else {
@@ -99,7 +222,6 @@ describe('isUrlBlocked', () => {
     }
     const endTime = performance.now();
 
-    // 【結果検証】: 100回のマッチングが1秒以内に完了することを確認
-    expect(endTime - startTime).toBeLessThan(1000); // 【確認内容】: 100回のマッチングが1秒未満であること 🟢
+    expect(endTime - startTime).toBeLessThan(1000);
   });
 });
