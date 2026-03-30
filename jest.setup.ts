@@ -216,6 +216,48 @@ const chromeRuntimeMock: ChromeRuntimeMock = {
   permissions: {
     contains: jest.fn<Promise<boolean>, any[]>(() => Promise.resolve(true)),
     request: jest.fn<Promise<boolean>, any[]>(() => Promise.resolve(true)),
+    remove: jest.fn<Promise<boolean>, any[]>(() => Promise.resolve(true)),
+  },
+  alarms: {
+    create: jest.fn((name: string, alarmInfo: any, callback?: () => void) => {
+      if (callback) callback();
+    }),
+    clear: jest.fn((name: string, callback?: (wasCleared: boolean) => void) => {
+      if (callback) callback(true);
+    }),
+    clearAll: jest.fn((callback?: (wasCleared: boolean) => void) => {
+      if (callback) callback(true);
+    }),
+    get: jest.fn((name: string, callback?: (alarm: any) => void) => {
+      if (callback) callback(undefined);
+    }),
+    getAll: jest.fn((callback?: (alarms: any[]) => void) => {
+      if (callback) callback([]);
+    }),
+    onAlarm: {
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      hasListener: jest.fn(() => false),
+    },
+  },
+  scripting: {
+    executeScript: jest.fn(() => Promise.resolve([{ result: null }])),
+    insertCSS: jest.fn(() => Promise.resolve()),
+    removeCSS: jest.fn(() => Promise.resolve()),
+  },
+  action: {
+    setBadgeText: jest.fn((details: any, callback?: () => void) => {
+      if (callback) callback();
+    }),
+    setBadgeBackgroundColor: jest.fn((details: any, callback?: () => void) => {
+      if (callback) callback();
+    }),
+    setTitle: jest.fn((details: any, callback?: () => void) => {
+      if (callback) callback();
+    }),
+    setIcon: jest.fn((details: any, callback?: () => void) => {
+      if (callback) callback();
+    }),
   },
   i18n: {
     getMessage: jest.fn((key: string, substitutions?: Record<string, string>) => {
