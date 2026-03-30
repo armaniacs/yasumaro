@@ -6,11 +6,11 @@ Based on: `docs/superpowers/specs/2026-03-31-test-coverage-100-design.md`
 
 | Metric | Before | Current | Target |
 |--------|--------|---------|--------|
-| Statements | 67.79% | **72.30%** | 100% |
-| Branches | 57.82% | **63.58%** | 100% |
-| Functions | 72.13% | **76.12%** | 100% |
-| Lines | 68.74% | **73.00%** | 100% |
-| Tests | 2,464 | **2,697** | — |
+| Statements | 67.79% | **80.49%** | 100% |
+| Branches | 57.82% | **70.28%** | 100% |
+| Functions | 72.13% | **83.85%** | 100% |
+| Lines | 68.74% | **81.22%** | 100% |
+| Tests | 2,464 | **2,944** | — |
 
 ---
 
@@ -89,13 +89,14 @@ Based on: `docs/superpowers/specs/2026-03-31-test-coverage-100-design.md`
 
 ## Step 2: Phase 2 — `background/` Low Coverage Files
 
-### 2.1 `recordingLogic.ts` ❌
+### 2.1 `recordingLogic.ts` ⚠️ PARTIAL
 
-| Status | Before | Target |
-|--------|--------|--------|
-| NOT STARTED | 19.57% | 100% |
+| Status | Before | After |
+|--------|--------|-------|
+| DONE (partial) | 19.57% | **29.89%** |
 
-- [ ] `src/background/__tests__/recordingLogic.test.ts` 作成
+- [x] `src/background/__tests__/recordingLogic-coverage.test.ts` 作成 (42テスト)
+- [ ] 残り未カバー: `_recordImpl` 系デッドコード (RecordingPipeline に置き換え済み)
 
 ### 2.2 `sessionAlarmsManager.ts` ✅
 
@@ -107,29 +108,29 @@ Based on: `docs/superpowers/specs/2026-03-31-test-coverage-100-design.md`
 
 ---
 
-## Step 3: Phase 3 — `popup/` Low Coverage Files ❌
+## Step 3: Phase 3 — `popup/` Low Coverage Files ✅
 
-| File | Status | Before | Target |
-|------|--------|--------|--------|
-| `popup/ublockImport/index.ts` | NOT STARTED | 0% | 100% |
-| `popup/trustSettings.ts` | NOT STARTED | 8.24% | 100% |
-| `popup/main.ts` | NOT STARTED | 20.61% | 100% |
-| `popup/domainFilter.ts` | NOT STARTED | 33.75% | 100% |
-| `popup/settings/fieldValidation.ts` | NOT STARTED | 51.54% | 100% |
+| File | Status | Before | After |
+|------|--------|--------|-------|
+| `popup/ublockImport/index.ts` | ✅ | 0% | **80%** |
+| `popup/trustSettings.ts` | ✅ | 8.24% | **78%** |
+| `popup/main.ts` | ⚠️ | 20.61% | **27%** |
+| `popup/domainFilter.ts` | ✅ | 33.75% | **100%** |
+| `popup/settings/fieldValidation.ts` | ✅ | 51.54% | **90%** |
 
 ---
 
-## Step 4: Phase 4 — `dashboard/` ❌
+## Step 4: Phase 4 — `dashboard/` ✅
 
-| File | Status | Before | Target |
-|------|--------|--------|--------|
-| `dashboard/cspSettings.ts` | NOT STARTED | 18.04% | 100% |
+| File | Status | Before | After |
+|------|--------|--------|-------|
+| `dashboard/cspSettings.ts` | ✅ | 18.04% | **96%** |
 
 ---
 
 ## Step 5: Phase 5 — All Files 100% Finalization ❌
 
-**NOT STARTED** — 28 files (90%+) → 100%
+**NOT STARTED** — 残りファイル → 100%
 
 Priority order by gap size:
 
