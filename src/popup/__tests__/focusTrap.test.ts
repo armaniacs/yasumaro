@@ -115,16 +115,89 @@ describe('focusTrap', () => {
             });
         });
 
-        describe('generateId', () => {
-            test('一意のIDを生成する', () => {
-                const id1 = manager.generateId();
-                const id2 = manager.generateId();
+    describe('generateId', () => {
+        test('一意のIDを生成する', () => {
+            const id1 = manager.generateId();
+            const id2 = manager.generateId();
 
-                expect(id1).toMatch(/^focusTrap_\d+_[a-z0-9]+$/);
-                expect(id1).not.toBe(id2);
-            });
+            expect(id1).toMatch(/^focusTrap_\d+_[a-z0-9]+$/);
+            expect(id1).not.toBe(id2);
         });
     });
+
+    describe('keyboard handler', () => {
+        test('ESCキーでcloseCallbackが呼ばれる', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const closeCallback = jest.fn();
+            manager.trap(modal, closeCallback);
+
+            const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            modal.dispatchEvent(event);
+
+            expect(closeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        test('ESCキーでcloseCallbackがない場合は何もしない', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            manager.trap(modal);
+
+            const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            expect(() => modal.dispatchEvent(event)).not.toThrow();
+        });
+
+        test('最後の要素でTabキーを押すと最初の要素にフォーカスが移動する', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const btn2 = document.getElementById('btn2') as HTMLElement;
+            manager.trap(modal);
+
+            btn2.focus();
+            expect(document.activeElement).toBe(btn2);
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            modal.dispatchEvent(event);
+
+            expect(document.activeElement).toBe(document.getElementById('btn1'));
+        });
+
+        test('最初の要素でShift+Tabを押すと最後の要素にフォーカスが移動する', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const btn1 = document.getElementById('btn1') as HTMLElement;
+            manager.trap(modal);
+
+            btn1.focus();
+            expect(document.activeElement).toBe(btn1);
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+            modal.dispatchEvent(event);
+
+            expect(document.activeElement).toBe(document.getElementById('btn2'));
+        });
+
+        test('中間要素でTabキーを押してもフォーカスは移動しない', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const input1 = document.getElementById('input1') as HTMLElement;
+            manager.trap(modal);
+
+            input1.focus();
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            modal.dispatchEvent(event);
+
+            // 中間要素なのでpreventDefaultは呼ばれない
+            expect(document.activeElement).toBe(input1);
+        });
+
+        test('Tab以外のキーは何もしない', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const closeCallback = jest.fn();
+            manager.trap(modal, closeCallback);
+
+            const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+            expect(() => modal.dispatchEvent(event)).not.toThrow();
+            expect(closeCallback).not.toHaveBeenCalled();
+        });
+    });
+});
 
     describe('focusTrapManager シングルトン', () => {
         test('FocusTrapManager のインスタンス', () => {
