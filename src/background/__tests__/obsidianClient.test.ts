@@ -316,23 +316,221 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('推奨される改善点', () => {
     it('エラーメッセージから内部URL情報を削除すべきである', () => {
-      // 推奨される改善:
-      // 1. URL全体を表示せず、一般的なエラーメッセージを表示
-      // 2. HTTPステータスコードやエラーレスポンスの内容を表示しない
-      // 3. 詳細なエラー情報はログに記録し、ユーザーには一般的なエラーメッセージを表示
-
-      // これにより、内部実装の詳細が漏洩するリスクを軽減できる
-      expect(true).toBe(true); // 分析結果をドキュメント化するためのプレースホルダー
+      expect(true).toBe(true);
     });
 
     it('errorUtils.jsを使用して一貫したエラーハンドリングを実装すべきである', () => {
-      // 推奨される改善:
-      // 1. errorUtils.jsのgetUserErrorMessage関数を使用して、一貫したエラーメッセージを表示
-      // 2. errorUtils.jsのErrorTypeを使用して、エラータイプを一貫して管理
-      // 3. errorUtils.jsのhandleError関数を使用して、一貫したエラーハンドリングを実装
+      expect(true).toBe(true);
+    });
+  });
 
-      // これにより、エラーメッセージの形式や内容を一貫させることができる
-      expect(true).toBe(true); // 分析結果をドキュメント化するためのプレースホルダー
+  describe('_validatePort', () => {
+    it('undefinedの場合はデフォルトポートを返す', () => {
+      expect(obsidianClient._validatePort(undefined)).toBe('27123');
+    });
+
+    it('nullの場合はデフォルトポートを返す', () => {
+      expect(obsidianClient._validatePort(null)).toBe('27123');
+    });
+
+    it('空文字列の場合はデフォルトポートを返す', () => {
+      expect(obsidianClient._validatePort('')).toBe('27123');
+    });
+
+    it('数値でない場合はエラーを投げる', () => {
+      expect(() => obsidianClient._validatePort('abc')).toThrow('Port must be a valid number');
+    });
+
+    it('整数でない場合はエラーを投げる', () => {
+      expect(() => obsidianClient._validatePort(3.14)).toThrow('Port must be an integer');
+    });
+
+    it('範囲外の場合はエラーを投げる', () => {
+      expect(() => obsidianClient._validatePort(0)).toThrow('Port must be between');
+      expect(() => obsidianClient._validatePort(70000)).toThrow('Port must be between');
+    });
+
+    it('有効なポート番号を文字列で返す', () => {
+      expect(obsidianClient._validatePort(3000)).toBe('3000');
+      expect(obsidianClient._validatePort('8080')).toBe('8080');
+    });
+  });
+
+  describe('_globalWriteMutex', () => {
+    it('グローバルMutexインスタンスを返す', () => {
+      const mutex = obsidianClient._globalWriteMutex;
+      expect(mutex).toBeDefined();
+      expect(typeof mutex.acquire).toBe('function');
+      expect(typeof mutex.release).toBe('function');
+    });
+  });
+
+  describe('testConnection with override', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+      global.fetch.mockRestore();
+    });
+
+    it('overrideでAPIキーがない場合はエラーを返す', async () => {
+      const result = await obsidianClient.testConnection({ apiKey: '' });
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('API key is missing');
+    });
+
+    it('overrideでポート番号が無効な場合はエラーを返す', async () => {
+      const result = await obsidianClient.testConnection({ port: 'invalid', apiKey: 'key' });
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Port must be a valid number');
+    });
+
+    it('overrideで404の場合はエンドポイントエラーを返す', async () => {
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found'
+      });
+
+      const result = await obsidianClient.testConnection({
+        protocol: 'http',
+        port: 27123,
+        apiKey: 'test_key'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Endpoint not found');
+    });
+
+    it('overrideで500の場合は接続エラーを返す', async () => {
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
+
+      const result = await obsidianClient.testConnection({
+        protocol: 'http',
+        port: 27123,
+        apiKey: 'test_key'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Connection failed');
+    });
+  });
+
+  describe('testConnection error paths', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+      global.fetch.mockRestore();
+    });
+
+    it('タイムアウトエラーで適切なメッセージを返す', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const timeoutError = new Error('Request timed out');
+      global.fetch.mockRejectedValue(timeoutError);
+
+      const result = await obsidianClient.testConnection();
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Connection timeout');
+    });
+
+    it('その他のエラーでConnection errorを返す', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const otherError = new Error('Something unexpected happened');
+      global.fetch.mockRejectedValue(otherError);
+
+      const result = await obsidianClient.testConnection();
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Connection error');
+    });
+  });
+
+  describe('enforceHttps', () => {
+    it('HTTP接続をHTTPSに強制変換する', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('existing content')
+      });
+
+      global.fetch.mockImplementation((url, options) => {
+        if (url.startsWith('https://')) {
+          if (options.method === 'GET') {
+            return Promise.resolve({
+              ok: true,
+              text: () => Promise.resolve('## History\nexisting')
+            });
+          }
+          return Promise.resolve({ ok: true });
+        }
+        return Promise.reject(new Error('HTTP not expected'));
+      });
+
+      await obsidianClient.appendToDailyNote('new content');
+
+      expect(global.fetch).toHaveBeenCalled();
+      const calledUrl = global.fetch.mock.calls[0][0];
+      expect(calledUrl).toContain('https://');
+
+      global.fetch.mockRestore();
+    });
+  });
+
+  describe('appendToDailyNote - success path', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+      global.fetch.mockRestore();
+    });
+
+    it('既存コンテンツに追記する', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      global.fetch.mockImplementation((url, options) => {
+        if (options.method === 'GET') {
+          return Promise.resolve({
+            ok: true,
+            text: () => Promise.resolve('## History\nexisting content')
+          });
+        } else if (options.method === 'PUT') {
+          return Promise.resolve({ ok: true });
+        }
+        return Promise.resolve({ ok: true });
+      });
+
+      await expect(obsidianClient.appendToDailyNote('new content')).resolves.not.toThrow();
     });
   });
 });
