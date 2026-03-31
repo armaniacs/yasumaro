@@ -123,6 +123,17 @@ describe('savePrivacyConsent', () => {
         const saved = storageMock['privacy_consent'] as any;
         expect(saved.consentDate).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
+
+    it('ストレージ書き込みエラー時にthrowする', async () => {
+        const originalSet = (global as any).chrome.storage.local.set;
+        (global as any).chrome.storage.local.set = jest.fn(async () => {
+            throw new Error('Storage write error');
+        });
+
+        await expect(savePrivacyConsent()).rejects.toThrow('Storage write error');
+
+        (global as any).chrome.storage.local.set = originalSet;
+    });
 });
 
 describe('hasPrivacyConsent', () => {
@@ -193,6 +204,18 @@ describe('migrateLegacyPrivacyConsent', () => {
         const result = await migrateLegacyPrivacyConsent();
         expect(result).toBe(true);
     });
+
+    it('ストレージエラー時にfalseを返す', async () => {
+        const originalGet = (global as any).chrome.storage.local.get;
+        (global as any).chrome.storage.local.get = jest.fn(async () => {
+            throw new Error('Storage read error');
+        });
+
+        const result = await migrateLegacyPrivacyConsent();
+        expect(result).toBe(false);
+
+        (global as any).chrome.storage.local.get = originalGet;
+    });
 });
 
 describe('withdrawPrivacyConsent', () => {
@@ -222,6 +245,19 @@ describe('withdrawPrivacyConsent', () => {
         const withdrawal = await withdrawPrivacyConsent();
 
         expect(withdrawal.previousConsentDate).toBe(stateBefore.consentDate);
+    });
+
+    it('ストレージ書き込みエラー時にthrowする', async () => {
+        await savePrivacyConsent();
+
+        const originalSet = (global as any).chrome.storage.local.set;
+        (global as any).chrome.storage.local.set = jest.fn(async () => {
+            throw new Error('Storage write error');
+        });
+
+        await expect(withdrawPrivacyConsent()).rejects.toThrow('Storage write error');
+
+        (global as any).chrome.storage.local.set = originalSet;
     });
 });
 
