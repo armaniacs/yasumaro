@@ -77,6 +77,22 @@ describe('markdownSanitizer', () => {
             const expected = '\\[text\\]\\(anything\\)';
             expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
         });
+
+        it('should return empty string for empty input', () => {
+            expect(sanitizeAllMarkdownLinks('')).toBe('');
+        });
+
+        it('should handle null input', () => {
+            expect(sanitizeAllMarkdownLinks(null as any)).toBeNull();
+        });
+
+        it('should handle undefined input', () => {
+            expect(sanitizeAllMarkdownLinks(undefined as any)).toBeUndefined();
+        });
+
+        it('should handle non-string input', () => {
+            expect(sanitizeAllMarkdownLinks(42 as any)).toBe(42);
+        });
     });
 
     describe('sanitizeForObsidian', () => {
@@ -95,6 +111,22 @@ describe('markdownSanitizer', () => {
         it('should preserve legitimate content', () => {
             const input = 'This is a legitimate summary without any links.';
             expect(sanitizeForObsidian(input)).toBe(input);
+        });
+
+        it('should return empty string for empty input', () => {
+            expect(sanitizeForObsidian('')).toBe('');
+        });
+
+        it('should handle null input', () => {
+            expect(sanitizeForObsidian(null as any)).toBeNull();
+        });
+
+        it('should handle undefined input', () => {
+            expect(sanitizeForObsidian(undefined as any)).toBeUndefined();
+        });
+
+        it('should handle non-string input', () => {
+            expect(sanitizeForObsidian(99 as any)).toBe(99);
         });
     });
 });
