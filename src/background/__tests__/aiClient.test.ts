@@ -356,4 +356,39 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       expect(typeof result.summary).toBe('string');
     });
   });
+
+  describe('generateSummary - プロバイダー例外ハンドリング', () => {
+    it('プロバイダーがthrowした場合に汎用エラーメッセージを返す', async () => {
+      const client = new AIClient();
+      client.registerProvider('throwing', () => ({
+        generateSummary: () => { throw new Error('Provider internal error'); },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' })
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'throwing' });
+
+      const result = await client.generateSummary('content');
+
+      expect(result.summary).toContain('Error:');
+      expect(result.summary).toContain('Failed to generate summary');
+      expect(result.summary).not.toContain('Provider internal error');
+    });
+  });
+
+  describe('testConnection - プロバイダー例外ハンドリング', () => {
+    it('プロバイダーがthrowした場合にエラー結果を返す', async () => {
+      const client = new AIClient();
+      client.registerProvider('throwing', () => ({
+        generateSummary: () => Promise.resolve({ summary: 'ok' }),
+        testConnection: () => { throw new Error('Connection test internal error'); }
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'throwing' });
+
+      const result = await client.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Connection test internal error');
+    });
+  });
 });
