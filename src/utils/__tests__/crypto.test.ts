@@ -22,7 +22,11 @@ import {
     computeHMAC,
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
-    constantTimeCompare
+    constantTimeCompare,
+    generateHmacSignature,
+    verifyHmacSignature,
+    hashUrl,
+    getNotificationHmacKey
 } from '../crypto.js';
 
 // Web Crypto APIのセットアップ
@@ -490,5 +494,212 @@ describe('crypto', () => {
             const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
             expect(ratio).toBeLessThan(5);
         });
+    });
+});
+
+describe('generateHmacSignature', () => {
+    test('URL-safe base64 HMAC署名を生成できる', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const signature = await generateHmacSignature('test-data', key);
+        expect(typeof signature).toBe('string');
+        expect(signature.length).toBeGreaterThan(0);
+        // URL-safe base64 は + / = を含まない
+        expect(signature).not.toContain('+');
+        expect(signature).not.toContain('/');
+        expect(signature).not.toContain('=');
+    });
+
+    test('同じデータと鍵で同じ署名を生成する', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const sig1 = await generateHmacSignature('same-data', key);
+        const sig2 = await generateHmacSignature('same-data', key);
+        expect(sig1).toBe(sig2);
+    });
+
+    test('異なるデータで異なる署名を生成する', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const sig1 = await generateHmacSignature('data-a', key);
+        const sig2 = await generateHmacSignature('data-b', key);
+        expect(sig1).not.toBe(sig2);
+    });
+});
+
+describe('verifyHmacSignature', () => {
+    test('有効な署名を検証できる', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const signature = await generateHmacSignature('test-data', key);
+        const isValid = await verifyHmacSignature('test-data', signature, key);
+        expect(isValid).toBe(true);
+    });
+
+    test('不正な署名は false を返す', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const isValid = await verifyHmacSignature('test-data', 'invalid-signature', key);
+        expect(isValid).toBe(false);
+    });
+
+    test('異なるデータの署名は false を返す', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const signature = await generateHmacSignature('data-a', key);
+        const isValid = await verifyHmacSignature('data-b', signature, key);
+        expect(isValid).toBe(false);
+    });
+
+    test('長さが異なる署名は false を返す', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const isValid = await verifyHmacSignature('test', 'short', key);
+        expect(isValid).toBe(false);
+    });
+});
+
+describe('hashUrl', () => {
+    test('URLのSHA-256ハッシュプレフィックスを返す', async () => {
+        const hash = await hashUrl('https://example.com');
+        expect(hash).toMatch(/^\[hash:[0-9a-f]{8}\]$/);
+    });
+
+    test('同じURLで同じハッシュを返す', async () => {
+        const hash1 = await hashUrl('https://example.com');
+        const hash2 = await hashUrl('https://example.com');
+        expect(hash1).toBe(hash2);
+    });
+
+    test('異なるURLで異なるハッシュを返す', async () => {
+        const hash1 = await hashUrl('https://example.com');
+        const hash2 = await hashUrl('https://other.com');
+        expect(hash1).not.toBe(hash2);
+    });
+});
+
+describe('getNotificationHmacKey', () => {
+    test('新規HMAC鍵を生成して保存する', async () => {
+        const key = await getNotificationHmacKey();
+        expect(key).toBeDefined();
+        expect(key.type).toBe('secret');
+        expect(key.algorithm).toHaveProperty('name', 'HMAC');
+    });
+
+    test('保存済みのHMAC鍵を読み込める', async () => {
+        // 最初の呼び出しで鍵を生成・保存
+        const key1 = await getNotificationHmacKey();
+        // 2回目の呼び出しで保存済み鍵を読み込み
+        const key2 = await getNotificationHmacKey();
+        expect(key1).toBeDefined();
+        expect(key2).toBeDefined();
+    });
+
+    test('破損したストレージデータから新規鍵を生成する', async () => {
+        // isEncrypted()がtrueを返すが、復号化に失敗するデータを設定
+        await chrome.storage.local.set({
+            'notification-signature-key': {
+                ciphertext: '!!!invalid-base64!!!',
+                iv: '!!!invalid-base64!!!'
+            }
+        });
+
+        // console.warnが呼ばれ、新規鍵が生成されるべき
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const key = await getNotificationHmacKey();
+        expect(key).toBeDefined();
+        expect(key.type).toBe('secret');
+        consoleWarnSpy.mockRestore();
+    });
+});
+
+describe('verifyHmacSignature edge cases', () => {
+    test('空のデータでfalseを返す', async () => {
+        const webcrypto = new Crypto();
+        const key = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        // Empty signature should fail
+        const isValid = await verifyHmacSignature('test', '', key);
+        expect(isValid).toBe(false);
+    });
+
+    test('不正な鍵で生成された署名は検証に失敗する', async () => {
+        const webcrypto = new Crypto();
+        const key1 = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+        const key2 = await webcrypto.subtle.generateKey(
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+
+        const signature = await generateHmacSignature('test-data', key1);
+        const isValid = await verifyHmacSignature('test-data', signature, key2);
+        expect(isValid).toBe(false);
+    });
+});
+
+describe('deriveKeyWithExtensionId', () => {
+    test('拡張IDを含むキー導出ができる', async () => {
+        const { deriveKeyWithExtensionId } = await import('../crypto.js');
+        const salt = generateSalt();
+        const key = await deriveKeyWithExtensionId('secret', salt, 'test-extension-id');
+        expect(key).toBeInstanceOf(CryptoKey);
+        expect(key.type).toBe('secret');
+    });
+
+    test('異なる拡張IDで異なるキーを導出する', async () => {
+        const { deriveKeyWithExtensionId } = await import('../crypto.js');
+        const salt = generateSalt();
+        const key1 = await deriveKeyWithExtensionId('secret', salt, 'ext-id-1');
+        const key2 = await deriveKeyWithExtensionId('secret', salt, 'ext-id-2');
+
+        // Different extension IDs should produce different keys
+        const plaintext = 'test';
+        const enc1 = await encrypt(plaintext, key1);
+        const enc2 = await encrypt(plaintext, key2);
+        expect(enc1.ciphertext).not.toBe(enc2.ciphertext);
     });
 });
