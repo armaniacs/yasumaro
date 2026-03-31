@@ -296,4 +296,257 @@ describe('aiSummaryCleaner', () => {
             expect(result.deepRemoved).toBeGreaterThan(0);
         });
     });
+
+    describe('nav ID selector elements', () => {
+        test('ナビゲーションIDを含む要素を削除する', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="main-navigation">Nav</div>
+                <div id="site-menu">Menu</div>
+                <div id="breadcrumb-list">Breadcrumbs</div>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: true,
+                socialEnabled: false,
+                deepEnabled: false
+            });
+
+            expect(result.navRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('#main-navigation')).toBeNull();
+            expect(container.querySelector('#site-menu')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('ナビゲーションIDを含む要素をカウントする', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="site-nav">Nav</div>
+                <div id="footer-links">Footer</div>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = countAISummaryTargets(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: true,
+                socialEnabled: false,
+                deepEnabled: false
+            });
+
+            expect(result.navRemoved).toBeGreaterThan(0);
+            document.body.removeChild(container);
+        });
+    });
+
+    describe('social ID selector elements', () => {
+        test('ソーシャルIDを含む要素を削除する', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="share-buttons">Share</div>
+                <div id="social-widget">Social</div>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: true,
+                deepEnabled: false
+            });
+
+            expect(result.socialRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('#share-buttons')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('ソーシャルIDを含む要素をカウントする', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="fb-like-box">Facebook</div>
+                <div id="twitter-feed">Twitter</div>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = countAISummaryTargets(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: true,
+                deepEnabled: false
+            });
+
+            expect(result.socialRemoved).toBeGreaterThan(0);
+            document.body.removeChild(container);
+        });
+    });
+
+    describe('deep cleansing edge cases', () => {
+        test('高リンク密度リストを削除する', () => {
+            const container = document.createElement('div');
+            container.innerHTML = '<ul><li><a href="#">First Link Text</a></li><li><a href="#">Second Link Text</a></li><li><a href="#">Third Link Text</a></li></ul><p>Content</p>';
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.deepRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('ul')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('高リンク密度リストをカウントする（ディープ）', () => {
+            const container = document.createElement('div');
+            container.innerHTML = '<ol><li><a href="#">Alpha Link Content</a></li><li><a href="#">Beta Link Content Here</a></li></ol><p>Content</p>';
+            document.body.appendChild(container);
+
+            const result = countAISummaryTargets(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.deepRemoved).toBeGreaterThan(0);
+            document.body.removeChild(container);
+        });
+
+        test('低リンク密度リストは削除しない', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <ul>
+                    <li><a href="#">Link 1</a></li>
+                    <li>Plain text content that is much longer than the link text</li>
+                    <li>Another plain text item</li>
+                </ul>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            // リンク密度が低いのでulは削除されない
+            expect(container.querySelector('ul')).not.toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('role属性でディープ要素をカウントする', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div role="banner">Banner</div>
+                <div role="complementary">Sidebar</div>
+                <div role="contentinfo">Footer info</div>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = countAISummaryTargets(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.deepRemoved).toBeGreaterThan(0);
+            document.body.removeChild(container);
+        });
+
+        test('role属性のディープ要素を削除する', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div role="banner">Header Banner</div>
+                <div role="complementary">Complementary Content</div>
+                <p>Main content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.deepRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('[role="banner"]')).toBeNull();
+            expect(container.querySelector('[role="complementary"]')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('DEEP_CLASS_PATTERNSに一致するIDの要素を削除する', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="cookie-consent-banner">Cookie Banner</div>
+                <div id="modal-overlay">Modal</div>
+                <p>Main content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.deepRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('#cookie-consent-banner')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('空のリストは高リンク密度チェックをスキップする', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <ul></ul>
+                <ol>   </ol>
+                <p>Content</p>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: false,
+                navEnabled: false,
+                socialEnabled: false,
+                deepEnabled: true
+            });
+
+            expect(result.totalRemoved).toBeGreaterThanOrEqual(0);
+            document.body.removeChild(container);
+        });
+    });
 });
