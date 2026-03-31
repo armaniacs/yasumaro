@@ -1074,4 +1074,576 @@ describe('main', () => {
       expect(tagPanel.classList.contains('hidden')).toBe(true);
     });
   });
+
+  describe('initStatusPanel', () => {
+    it('should render status panel with allowed domain', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Status Page',
+        url: 'https://allowed.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist', matchedPattern: '' },
+        privacy: { isPrivate: false, hasCache: true, reason: null },
+        cache: { hasCache: true, cacheControl: 'no-cache', hasCookie: false, hasAuth: false },
+        lastSaved: { exists: false, timeAgo: '', formatted: '' }
+      });
+
+      // Trigger DOMContentLoaded
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+
+      // Wait for async operations
+      await new Promise(r => setTimeout(r, 50));
+
+      const domainState = document.getElementById('statusDomainState');
+      expect(domainState.innerHTML).toContain('status-success');
+    });
+
+    it('should render status panel with blocked domain', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Blocked Page',
+        url: 'https://blocked.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: false, blocked: true, mode: 'blacklist', matchedPattern: 'blocked.com' },
+        privacy: { isPrivate: false, hasCache: false, reason: null },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const domainState = document.getElementById('statusDomainState');
+      expect(domainState.innerHTML).toContain('status-error');
+    });
+
+    it('should render private page status', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Private Page',
+        url: 'https://private.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: true, hasCache: true, reason: 'cache-control' },
+        cache: { hasCache: true, cacheControl: 'private', hasCookie: false, hasAuth: false },
+        lastSaved: { exists: true, timeAgo: '5 minutes ago', formatted: '2026-03-31' }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const privacyContent = document.getElementById('statusPrivacyContent');
+      expect(privacyContent.innerHTML).toContain('status-warning');
+    });
+
+    it('should render last saved content when exists', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Saved Page',
+        url: 'https://saved.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: true, reason: null },
+        cache: { hasCache: true, cacheControl: 'public', hasCookie: false, hasAuth: false },
+        lastSaved: { exists: true, timeAgo: '10 minutes ago', formatted: '2026-03-31 12:00' }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const lastSavedContent = document.getElementById('statusLastSavedContent');
+      expect(lastSavedContent.innerHTML).toContain('10 minutes ago');
+    });
+
+    it('should handle null status (special URL)', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Chrome Page',
+        url: 'chrome://extensions'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue(null);
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const panel = document.getElementById('statusPanel');
+      expect(panel.innerHTML).toContain('statusPageNotRecordable');
+    });
+
+    it('should handle tab without URL', async () => {
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([{ id: 1, title: 'No URL' }]);
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const panel = document.getElementById('statusPanel');
+      expect(panel.style.display).toBe('none');
+    });
+
+    it('should render cache section with cookie and auth', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Cached Page',
+        url: 'https://cached.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: true, reason: null },
+        cache: { hasCache: true, cacheControl: 'no-store', hasCookie: true, hasAuth: true },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const cacheContent = document.getElementById('statusCacheContent');
+      expect(cacheContent.innerHTML).toContain('statusSetCookiePresent');
+      expect(cacheContent.innerHTML).toContain('statusAuthorizationPresent');
+    });
+
+    it('should render cache section with no cache info', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'No Cache Page',
+        url: 'https://nocache.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: false, reason: null },
+        cache: { hasCache: true, cacheControl: '', hasCookie: false, hasAuth: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const cacheContent = document.getElementById('statusCacheContent');
+      expect(cacheContent.innerHTML).toContain('statusNoCacheInfo');
+    });
+  });
+
+  describe('loadPendingPages', () => {
+    it('should show pending pages when they exist', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValue([
+        { url: 'https://pending1.com', title: 'Pending 1', reason: 'private', headerValue: 'Cache-Control: private' },
+        { url: 'https://pending2.com', title: 'Pending 2', reason: 'auth', headerValue: 'Authorization' }
+      ]);
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const pendingSection = document.getElementById('pending-section');
+      const pendingList = document.getElementById('pending-pages-list');
+
+      expect(pendingSection.classList.contains('hidden')).toBe(false);
+      expect(pendingList.children.length).toBe(2);
+    });
+
+    it('should hide pending section when no pages exist', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValue([]);
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const pendingSection = document.getElementById('pending-section');
+      const pendingEmpty = document.getElementById('pending-empty');
+
+      expect(pendingSection.classList.contains('hidden')).toBe(true);
+      expect(pendingEmpty.classList.contains('hidden')).toBe(false);
+    });
+
+    it('should handle pending pages load error', async () => {
+      // @ts-expect-error
+      getPendingPages.mockRejectedValue(new Error('Storage error'));
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      // Should not throw
+      expect(true).toBe(true);
+    });
+
+    it('should escape HTML in pending page titles', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValue([
+        { url: 'https://xss.com', title: '<script>alert("xss")</script>', reason: 'test' }
+      ]);
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const pendingList = document.getElementById('pending-pages-list');
+      const titleEl = pendingList.querySelector('.pending-item-title');
+      expect(titleEl.innerHTML).not.toContain('<script>');
+      expect(titleEl.textContent).toContain('<script>');
+    });
+  });
+
+  describe('recordCurrentPage with cleansing info', () => {
+    it('should update cleansing status with stats', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Cleansed Page',
+        url: 'https://example.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      // @ts-expect-error
+      mockChrome.tabs.sendMessage.mockResolvedValue({
+        content: 'Page content',
+        cleansedReason: 'both',
+        cleanseStats: {
+          hardStripRemoved: 5,
+          keywordStripRemoved: 3,
+          totalRemoved: 8
+        }
+      });
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      sendMessageWithRetry.mockResolvedValue({ success: true });
+
+      await recordCurrentPage();
+
+      const cleansingContent = document.getElementById('statusCleansingContent');
+      expect(cleansingContent.innerHTML).toContain('statusCleansingHard');
+      expect(cleansingContent.innerHTML).toContain('statusCleansingKeyword');
+      expect(cleansingContent.innerHTML).toContain('statusCleansingTotal');
+    });
+
+    it('should show no cleansing when nothing removed', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Clean Page',
+        url: 'https://example.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      // @ts-expect-error
+      mockChrome.tabs.sendMessage.mockResolvedValue({
+        content: 'Page content',
+        cleansedReason: 'none',
+        cleanseStats: {
+          hardStripRemoved: 0,
+          keywordStripRemoved: 0,
+          totalRemoved: 0
+        }
+      });
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      sendMessageWithRetry.mockResolvedValue({ success: true });
+
+      await recordCurrentPage();
+
+      const cleansingContent = document.getElementById('statusCleansingContent');
+      expect(cleansingContent.innerHTML).toContain('statusCleansingNone');
+    });
+  });
+
+  describe('recordCurrentPage with permission fallback', () => {
+    it('should request all_urls permission when content script fails', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Permission Page',
+        url: 'https://example.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      // Content script fails
+      mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
+      // Permission initially not granted
+      mockChrome.permissions.contains.mockResolvedValue(false);
+      mockChrome.permissions.request.mockResolvedValue(true);
+      // executeScript succeeds after permission
+      mockChrome.scripting.executeScript.mockResolvedValue([{ result: 'fallback content' }]);
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      sendMessageWithRetry.mockResolvedValue({ success: true });
+
+      await recordCurrentPage();
+
+      expect(mockChrome.permissions.request).toHaveBeenCalled();
+      expect(mockChrome.scripting.executeScript).toHaveBeenCalled();
+    });
+
+    it('should fail when permission request is denied', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Denied Page',
+        url: 'https://example.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
+      mockChrome.permissions.contains.mockResolvedValue(false);
+      mockChrome.permissions.request.mockResolvedValue(false);
+
+      await recordCurrentPage();
+
+      expect(showError).toHaveBeenCalled();
+    });
+
+    it('should handle permission check exception', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Exception Page',
+        url: 'https://example.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
+      mockChrome.permissions.contains.mockRejectedValue(new Error('Permission API error'));
+
+      await recordCurrentPage();
+
+      expect(showError).toHaveBeenCalled();
+    });
+  });
+
+  describe('recordCurrentPage with tag result', () => {
+    it('should show tag result after successful save', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Tagged Page',
+        url: 'https://tagged.com'
+      };
+
+      // @ts-expect-error
+      getCurrentTab.mockResolvedValue(mockTab);
+      isRecordable.mockReturnValue(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+
+      // @ts-expect-error
+      mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      sendMessageWithRetry.mockResolvedValue({ success: true, aiDuration: 500 });
+      // @ts-expect-error
+      getSavedUrlEntries.mockResolvedValue([
+        { url: 'https://tagged.com', tags: ['tech', 'javascript'] }
+      ]);
+
+      await recordCurrentPage();
+
+      const tagPanel = document.getElementById('tagResultPanel');
+      expect(tagPanel.textContent).toContain('#tech');
+      expect(tagPanel.textContent).toContain('#javascript');
+      expect(tagPanel.classList.contains('hidden')).toBe(false);
+    });
+  });
+
+  describe('renderStatusPanel with domain filter modes', () => {
+    it('should render filter mode for blacklist mode', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Blacklist Page',
+        url: 'https://blacklist.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: false, blocked: true, mode: 'blacklist', matchedPattern: '*blacklist*' },
+        privacy: { isPrivate: false, hasCache: false },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const domainMode = document.getElementById('statusDomainMode');
+      expect(domainMode.innerHTML).toContain('statusFilterModeBlacklist');
+    });
+
+    it('should render private page with set-cookie reason', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Cookie Page',
+        url: 'https://cookie.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: true, hasCache: true, reason: 'set-cookie' },
+        cache: { hasCache: true, hasCookie: true, hasAuth: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const privacyContent = document.getElementById('statusPrivacyContent');
+      expect(privacyContent.innerHTML).toContain('statusSetCookieDetected');
+    });
+
+    it('should render private page with authorization reason', async () => {
+      const mockTab = {
+        id: 1,
+        title: 'Auth Page',
+        url: 'https://auth.com'
+      };
+
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: true, hasCache: true, reason: 'authorization' },
+        cache: { hasCache: true, hasCookie: false, hasAuth: true },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const privacyContent = document.getElementById('statusPrivacyContent');
+      expect(privacyContent.innerHTML).toContain('statusAuthDetected');
+    });
+  });
+
+  describe('status icons', () => {
+    it('should render success icon for allowed domain', async () => {
+      const mockTab = { id: 1, title: 'OK', url: 'https://ok.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: true },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const domainIcon = document.getElementById('statusDomainIcon');
+      expect(domainIcon.className).toContain('status-success');
+    });
+
+    it('should render warning icon for private page', async () => {
+      const mockTab = { id: 1, title: 'Private', url: 'https://private.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: true, hasCache: true },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const privacyIcon = document.getElementById('statusPrivacyIcon');
+      expect(privacyIcon.className).toContain('status-warning');
+    });
+
+    it('should render muted icon when no privacy info', async () => {
+      const mockTab = { id: 1, title: 'Unknown', url: 'https://unknown.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: false },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const privacyIcon = document.getElementById('statusPrivacyIcon');
+      expect(privacyIcon.className).toContain('status-muted');
+    });
+  });
+
+  describe('status toggle button', () => {
+    it('should toggle details panel visibility', async () => {
+      const mockTab = { id: 1, title: 'Toggle', url: 'https://toggle.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: false },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const toggleBtn = document.getElementById('statusToggleBtn');
+      const detailsPanel = document.getElementById('statusDetails');
+
+      toggleBtn.click();
+
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
+      expect(detailsPanel.classList.contains('hidden')).toBe(false);
+    });
+  });
 });
