@@ -332,6 +332,136 @@ describe('settingsExportImport', () => {
             const result = await importSettings(JSON.stringify({ ...data, signature: sig }));
             expect(result).toBeNull();
         });
+
+        test('署名検証失敗時にconfirmで承認するとフォースインポートする', async () => {
+            (global as any).confirm = jest.fn(() => true);
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                apiKeyExcluded: true,
+                settings: {
+                    obsidian_protocol: 'http',
+                    obsidian_port: '27123',
+                    min_visit_duration: 10,
+                    min_scroll_depth: 25,
+                    gemini_model: 'gemini-pro',
+                    obsidian_daily_path: 'Daily',
+                    ai_provider: 'gemini',
+                    openai_base_url: '',
+                    openai_model: '',
+                    openai_2_base_url: '',
+                    openai_2_model: '',
+                    domain_whitelist: [],
+                    domain_blacklist: [],
+                    domain_filter_mode: 'whitelist',
+                    privacy_mode: 'off',
+                    pii_confirmation_ui: false,
+                    pii_sanitize_logs: false,
+                    ublock_rules: {},
+                    ublock_sources: [],
+                    ublock_format_enabled: false,
+                    simple_format_enabled: false
+                }
+            };
+
+            const signedData = { ...exportData, signature: 'wrong_signature' };
+            const result = await importSettings(JSON.stringify(signedData));
+
+            expect(result).not.toBeNull();
+            expect(global.confirm).toHaveBeenCalled();
+
+            (global as any).confirm = jest.fn(() => true);
+        });
+
+        test('署名検証失敗時にconfirmで拒否するとnullを返す', async () => {
+            (global as any).confirm = jest.fn(() => false);
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                apiKeyExcluded: true,
+                settings: {
+                    obsidian_protocol: 'http',
+                    obsidian_port: '27123',
+                    min_visit_duration: 10,
+                    min_scroll_depth: 25,
+                    gemini_model: 'gemini-pro',
+                    obsidian_daily_path: 'Daily',
+                    ai_provider: 'gemini',
+                    openai_base_url: '',
+                    openai_model: '',
+                    openai_2_base_url: '',
+                    openai_2_model: '',
+                    domain_whitelist: [],
+                    domain_blacklist: [],
+                    domain_filter_mode: 'whitelist',
+                    privacy_mode: 'off',
+                    pii_confirmation_ui: false,
+                    pii_sanitize_logs: false,
+                    ublock_rules: {},
+                    ublock_sources: [],
+                    ublock_format_enabled: false,
+                    simple_format_enabled: false
+                }
+            };
+
+            const signedData = { ...exportData, signature: 'wrong_signature' };
+            const result = await importSettings(JSON.stringify(signedData));
+
+            expect(result).toBeNull();
+            expect(global.confirm).toHaveBeenCalled();
+
+            (global as any).confirm = jest.fn(() => true);
+        });
+
+        test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
+            const { computeHMAC } = require('../crypto.js');
+            const { saveSettings } = require('../storage.js');
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                apiKeyExcluded: false,
+                settings: {
+                    obsidian_protocol: 'http',
+                    obsidian_port: '27123',
+                    min_visit_duration: 10,
+                    min_scroll_depth: 25,
+                    gemini_model: 'gemini-pro',
+                    obsidian_daily_path: 'Daily',
+                    ai_provider: 'gemini',
+                    openai_base_url: '',
+                    openai_model: '',
+                    openai_2_base_url: '',
+                    openai_2_model: '',
+                    domain_whitelist: [],
+                    domain_blacklist: [],
+                    domain_filter_mode: 'whitelist',
+                    privacy_mode: 'off',
+                    pii_confirmation_ui: false,
+                    pii_sanitize_logs: false,
+                    ublock_rules: {},
+                    ublock_sources: [],
+                    ublock_format_enabled: false,
+                    simple_format_enabled: false,
+                    obsidian_api_key: 'key1',
+                    gemini_api_key: 'key2',
+                    openai_api_key: 'key3',
+                    openai_2_api_key: 'key4'
+                }
+            };
+
+            const { signature, ...dataForSig } = exportData as any;
+            const dataJson = JSON.stringify(dataForSig, null, 2);
+            const computedSig = await computeHMAC('test_hmac_secret', dataJson);
+
+            const signedData = { ...exportData, signature: computedSig };
+            const result = await importSettings(JSON.stringify(signedData));
+
+            expect(result).not.toBeNull();
+            expect(saveSettings).toHaveBeenCalled();
+        });
     });
 
     describe('exportEncryptedSettings', () => {
@@ -347,6 +477,18 @@ describe('settingsExportImport', () => {
             expect(result.encryptedData?.hmac).toBeDefined();
             expect(result.encryptedData?.salt).toBeDefined();
         });
+
+        test('エラー発生時にsuccess=falseとエラーメッセージを返す', async () => {
+            const { getSettings } = require('../storage.js');
+            getSettings.mockRejectedValueOnce(new Error('Storage error'));
+
+            const result = await exportEncryptedSettings('master_password');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Storage error');
+
+            getSettings.mockResolvedValue(getSettings.getMockImplementation()!());
+        });
     });
 
     describe('importEncryptedSettings', () => {
@@ -359,6 +501,200 @@ describe('settingsExportImport', () => {
         test('無効なJSONで null を返す', async () => {
             const result = await importEncryptedSettings('invalid', 'password');
             expect(result).toBeNull();
+        });
+
+        test('有効な暗号化データを復号してインポートできる', async () => {
+            const { getSettings, saveSettings, getOrCreateHmacSecret } = require('../storage.js');
+            const { computeHMAC, decryptData, deriveKey } = require('../crypto.js');
+
+            const settings = await getSettings();
+            const sanitizedSettings = { ...settings };
+            delete sanitizedSettings.obsidian_api_key;
+            delete sanitizedSettings.gemini_api_key;
+            delete sanitizedSettings.openai_api_key;
+            delete sanitizedSettings.openai_2_api_key;
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                settings: sanitizedSettings,
+                apiKeyExcluded: true,
+            };
+            const json = JSON.stringify(exportData, null, 2);
+
+            const hmacSecret = await getOrCreateHmacSecret();
+            const hmac = await computeHMAC(hmacSecret, json);
+
+            const encryptedData = {
+                encrypted: true,
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                ciphertext: 'enc_' + Buffer.from(json).toString('base64'),
+                iv: 'test_iv',
+                hmac: hmac,
+                salt: Buffer.from(new Uint8Array(16).fill(42)).toString('base64'),
+            };
+
+            const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            expect(result).not.toBeNull();
+            expect(saveSettings).toHaveBeenCalled();
+        });
+
+        test('HMAC検証失敗時にconfirmで拒否するとnullを返す', async () => {
+            (global as any).confirm = jest.fn(() => false);
+
+            const encryptedData = {
+                encrypted: true,
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                ciphertext: 'enc_' + Buffer.from(JSON.stringify({
+                    version: '1.0.0',
+                    exportedAt: new Date().toISOString(),
+                    settings: {},
+                    apiKeyExcluded: true
+                })).toString('base64'),
+                iv: 'test_iv',
+                hmac: 'wrong_hmac',
+                salt: Buffer.from(new Uint8Array(16).fill(42)).toString('base64'),
+            };
+
+            const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            expect(result).toBeNull();
+            expect(global.confirm).toHaveBeenCalled();
+
+            (global as any).confirm = jest.fn(() => true);
+        });
+
+        test('HMAC検証失敗時にconfirmで承認するとフォースインポートする', async () => {
+            (global as any).confirm = jest.fn(() => true);
+            const { saveSettings } = require('../storage.js');
+
+            const settings = {
+                obsidian_protocol: 'http',
+                obsidian_port: '27123',
+                min_visit_duration: 10,
+                min_scroll_depth: 25,
+                gemini_model: 'gemini-pro',
+                obsidian_daily_path: 'Daily',
+                ai_provider: 'gemini',
+                openai_base_url: '',
+                openai_model: '',
+                openai_2_base_url: '',
+                openai_2_model: '',
+                domain_whitelist: [],
+                domain_blacklist: [],
+                domain_filter_mode: 'whitelist',
+                privacy_mode: 'off',
+                pii_confirmation_ui: false,
+                pii_sanitize_logs: false,
+                ublock_rules: {},
+                ublock_sources: [],
+                ublock_format_enabled: false,
+                simple_format_enabled: false
+            };
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                settings,
+                apiKeyExcluded: true,
+            };
+            const json = JSON.stringify(exportData, null, 2);
+
+            const encryptedData = {
+                encrypted: true,
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                ciphertext: 'enc_' + Buffer.from(json).toString('base64'),
+                iv: 'test_iv',
+                hmac: 'wrong_hmac',
+                salt: Buffer.from(new Uint8Array(16).fill(42)).toString('base64'),
+            };
+
+            const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            expect(result).not.toBeNull();
+            expect(global.confirm).toHaveBeenCalled();
+            expect(saveSettings).toHaveBeenCalled();
+        });
+
+        test('復号データの構造検証失敗時にnullを返す', async () => {
+            const invalidExportData = { invalid: 'data' };
+            const json = JSON.stringify(invalidExportData);
+
+            const { getOrCreateHmacSecret } = require('../storage.js');
+            const { computeHMAC } = require('../crypto.js');
+            const hmacSecret = await getOrCreateHmacSecret();
+            const hmac = await computeHMAC(hmacSecret, json);
+
+            const encryptedData = {
+                encrypted: true,
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                ciphertext: 'enc_' + Buffer.from(json).toString('base64'),
+                iv: 'test_iv',
+                hmac: hmac,
+                salt: Buffer.from(new Uint8Array(16).fill(42)).toString('base64'),
+            };
+
+            const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            expect(result).toBeNull();
+        });
+
+        test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
+            const settings = {
+                obsidian_protocol: 'http',
+                obsidian_port: '27123',
+                min_visit_duration: 10,
+                min_scroll_depth: 25,
+                gemini_model: 'gemini-pro',
+                obsidian_daily_path: 'Daily',
+                ai_provider: 'gemini',
+                openai_base_url: '',
+                openai_model: '',
+                openai_2_base_url: '',
+                openai_2_model: '',
+                domain_whitelist: [],
+                domain_blacklist: [],
+                domain_filter_mode: 'whitelist',
+                privacy_mode: 'off',
+                pii_confirmation_ui: false,
+                pii_sanitize_logs: false,
+                ublock_rules: {},
+                ublock_sources: [],
+                ublock_format_enabled: false,
+                simple_format_enabled: false,
+                obsidian_api_key: 'key1',
+                gemini_api_key: 'key2',
+                openai_api_key: 'key3',
+                openai_2_api_key: 'key4'
+            };
+
+            const exportData = {
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                settings,
+                apiKeyExcluded: false,
+            };
+            const json = JSON.stringify(exportData, null, 2);
+
+            const { getOrCreateHmacSecret } = require('../storage.js');
+            const { computeHMAC } = require('../crypto.js');
+            const hmacSecret = await getOrCreateHmacSecret();
+            const hmac = await computeHMAC(hmacSecret, json);
+
+            const encryptedData = {
+                encrypted: true,
+                version: '1.0.0',
+                exportedAt: new Date().toISOString(),
+                ciphertext: 'enc_' + Buffer.from(json).toString('base64'),
+                iv: 'test_iv',
+                hmac: hmac,
+                salt: Buffer.from(new Uint8Array(16).fill(42)).toString('base64'),
+            };
+
+            const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            expect(result).not.toBeNull();
+            expect(result?.obsidian_api_key).toBe('key1');
         });
     });
 
