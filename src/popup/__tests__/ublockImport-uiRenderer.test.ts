@@ -10,7 +10,8 @@ import {
   hidePreview,
   clearInput,
   exportSimpleFormat,
-  buildUblockFormat
+  buildUblockFormat,
+  copyToClipboard
 } from '../ublockImport/uiRenderer.js';
 
 describe('ublockImport - UIRenderer Module', () => {
@@ -105,6 +106,38 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(urlElement.textContent).toBe('<script>alert("XSS")</script>');
       expect(urlElement.innerHTML).not.toContain('<script>');
     });
+
+    test('削除ボタンクリックでdeleteCallbackが呼ばれる', () => {
+      const sources = [
+        { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
+      ];
+      const deleteCallback = jest.fn();
+      const reloadCallback = jest.fn();
+
+      renderSourceList(sources, deleteCallback, reloadCallback);
+
+      const container = document.getElementById('uBlockSourceItems');
+      const deleteBtn = container.querySelector('.delete-btn') as HTMLElement;
+      deleteBtn.click();
+
+      expect(deleteCallback).toHaveBeenCalledWith(0);
+    });
+
+    test('再読込ボタンクリックでreloadCallbackが呼ばれる', () => {
+      const sources = [
+        { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
+      ];
+      const deleteCallback = jest.fn();
+      const reloadCallback = jest.fn();
+
+      renderSourceList(sources, deleteCallback, reloadCallback);
+
+      const container = document.getElementById('uBlockSourceItems');
+      const reloadBtn = container.querySelector('.reload-btn') as HTMLElement;
+      reloadBtn.click();
+
+      expect(reloadCallback).toHaveBeenCalledWith(0);
+    });
   });
 
   // ============================================================================
@@ -181,6 +214,51 @@ describe('ublockImport - UIRenderer Module', () => {
       updatePreviewUI(result);
 
       expect(document.getElementById('uBlockErrorDetails').textContent).toBe('Error message 1');
+    });
+
+    test('errorDetailsが文字列の場合も処理', () => {
+      const result = {
+        blockCount: 0,
+        exceptionCount: 0,
+        errorCount: 1,
+        errorDetails: 'Some string error' as any
+      };
+
+      updatePreviewUI(result);
+
+      expect(document.getElementById('uBlockErrorDetails').textContent).toBe('Some string error');
+    });
+
+    test('ラベルspanのdata-i18n-argsが更新される', () => {
+      document.body.innerHTML = `
+        <div id="uBlockPreview"></div>
+        <div>
+          <span data-i18n="ruleCount">Rules</span>
+          <div id="uBlockRuleCount">0</div>
+        </div>
+        <div>
+          <span data-i18n="exceptionCount">Exceptions</span>
+          <div id="uBlockExceptionCount">0</div>
+        </div>
+        <div>
+          <span data-i18n="errorCount">Errors</span>
+          <div id="uBlockErrorCount">0</div>
+        </div>
+        <div id="uBlockErrorDetails"></div>
+      `;
+
+      const result = {
+        blockCount: 5,
+        exceptionCount: 2,
+        errorCount: 1,
+        errorDetails: []
+      };
+
+      updatePreviewUI(result);
+
+      const ruleLabel = document.querySelector('[data-i18n="ruleCount"]');
+      expect(ruleLabel).not.toBeNull();
+      expect(ruleLabel.getAttribute('data-i18n-args')).toBe(JSON.stringify({ count: 5 }));
     });
   });
 
@@ -379,6 +457,35 @@ describe('ublockImport - UIRenderer Module', () => {
 
       const result = buildUblockFormat(sources);
       expect(() => buildUblockFormat(sources)).not.toThrow();
+    });
+  });
+
+  // ============================================================================
+  // copyToClipboard
+  // ============================================================================
+
+  describe('copyToClipboard', () => {
+    test('クリップボードにテキストをコピーしてtrueを返す', async () => {
+      const writeTextMock = jest.fn(() => Promise.resolve());
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: writeTextMock },
+        configurable: true,
+      });
+
+      const result = await copyToClipboard('test text');
+
+      expect(result).toBe(true);
+      expect(writeTextMock).toHaveBeenCalledWith('test text');
+    });
+
+    test('クリップボード失敗時にエラーを投げる', async () => {
+      const writeTextMock = jest.fn(() => Promise.reject(new Error('denied')));
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: writeTextMock },
+        configurable: true,
+      });
+
+      await expect(copyToClipboard('test')).rejects.toThrow();
     });
   });
 });
