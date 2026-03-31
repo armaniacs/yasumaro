@@ -360,4 +360,28 @@ describe('piiSanitizer', () => {
       ).toBe(true);
     });
   });
+
+  describe('sanitizeRegex - 入力バリデーション詳細', () => {
+    test('空文字列で早期リターンする', async () => {
+      const result = await sanitizeRegex('') as SanitizeResult;
+      expect(result.text).toBe('');
+      expect(result.maskedItems).toEqual([]);
+      expect(result.error).toBeUndefined();
+    });
+
+    test('カスタムタイムアウトで処理完了する', async () => {
+      const text = 'no pii here';
+      const result = await sanitizeRegex(text, { timeout: 10000 }) as SanitizeResult;
+      expect(result.text).toBe(text);
+      expect(result.maskedItems).toEqual([]);
+      expect(result.error).toBeUndefined();
+    });
+
+    test('skipSizeLimit=falseでサイズ制限を適用する', async () => {
+      const text = 'user@example.com';
+      const result = await sanitizeRegex(text, { skipSizeLimit: false }) as SanitizeResult;
+      expect(result.text).toBe('[MASKED:email]');
+      expect(result.maskedItems).toHaveLength(1);
+    });
+  });
 });
