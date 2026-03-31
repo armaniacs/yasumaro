@@ -244,6 +244,26 @@ describe('localeUtils', () => {
       const result = formatDateTime(date, { hour: '2-digit', minute: '2-digit' });
       expect(result).toBeTruthy();
     });
+
+    it('無効な日付に対して現在日時を使用する', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      const result = formatDateTime('invalid-date' as any);
+      expect(result).toBeTruthy();
+    });
+
+    it('文字列形式の日付を受け付ける', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      const dateString = '2026-02-11T12:00:00Z';
+      const result = formatDateTime(dateString);
+      expect(result).toBeTruthy();
+    });
+
+    it('数値（タイムスタンプ）を受け付ける', () => {
+      mockGetUILanguage.mockReturnValue('ja-JP');
+      const timestamp = Date.now();
+      const result = formatDateTime(timestamp);
+      expect(result).toBeTruthy();
+    });
   });
 
   describe('getDateSeparator', () => {
@@ -277,6 +297,74 @@ describe('localeUtils', () => {
       expect(formatted).toContain('2026');
       // 区切り文字
       expect(getDateSeparator()).toBe('-');
+    });
+  });
+
+  describe('Intl.DateTimeFormat フォールバック', () => {
+    const originalIntl = global.Intl;
+
+    afterEach(() => {
+      global.Intl = originalIntl;
+    });
+
+    it('formatDate: Intl未対応時にISO文字列の日付部分を返す', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      global.Intl = {
+        ...originalIntl,
+        DateTimeFormat: class {
+          constructor() {
+            throw new Error('Intl not supported');
+          }
+        } as any
+      };
+
+      const date = new Date('2026-03-15T10:30:00Z');
+      const result = formatDate(date);
+      expect(result).toBe('2026-03-15');
+    });
+
+    it('formatDateTime: Intl未対応時にISO文字列を返す', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      global.Intl = {
+        ...originalIntl,
+        DateTimeFormat: class {
+          constructor() {
+            throw new Error('Intl not supported');
+          }
+        } as any
+      };
+
+      const date = new Date('2026-03-15T10:30:00.000Z');
+      const result = formatDateTime(date);
+      expect(result).toBe(date.toISOString());
+    });
+
+    it('formatDate: toLocaleDateString失敗時にISOStringを返す', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      const originalToLocaleDateString = Date.prototype.toLocaleDateString;
+      Date.prototype.toLocaleDateString = function () {
+        throw new Error('format error');
+      };
+
+      const date = new Date('2026-03-15T10:30:00Z');
+      const result = formatDate(date);
+      expect(result).toBe(date.toISOString());
+
+      Date.prototype.toLocaleDateString = originalToLocaleDateString;
+    });
+
+    it('formatDateTime: toLocaleString失敗時にISOStringを返す', () => {
+      mockGetUILanguage.mockReturnValue('en-US');
+      const originalToLocaleString = Date.prototype.toLocaleString;
+      Date.prototype.toLocaleString = function () {
+        throw new Error('format error');
+      };
+
+      const date = new Date('2026-03-15T10:30:00Z');
+      const result = formatDateTime(date);
+      expect(result).toBe(date.toISOString());
+
+      Date.prototype.toLocaleString = originalToLocaleString;
     });
   });
 });
