@@ -175,6 +175,44 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toContain('1...'); // 【確認内容】: 1に更新されたこと
   });
 
+  test('カウントダウン完了時に「自動閉じる」メッセージが表示される', () => {
+    const statusDiv = document.getElementById('mainStatus');
+    showCountdown(statusDiv);
+
+    // 3→2→1→完了まで進める
+    jest.advanceTimersByTime(1000); // 2
+    jest.advanceTimersByTime(1000); // 1
+    jest.advanceTimersByTime(1000); // 0 → autoClosing
+
+    expect(statusDiv.textContent).toBe('自動閉じる...');
+  });
+
+  test('カウントダウン完了後はintervalがクリアされる', () => {
+    const statusDiv = document.getElementById('mainStatus');
+    showCountdown(statusDiv);
+
+    jest.advanceTimersByTime(3000); // reach 0
+    expect(statusDiv.textContent).toBe('自動閉じる...');
+
+    // さらに進めてもテキストが変わらない（intervalが停止している）
+    jest.advanceTimersByTime(2000);
+    expect(statusDiv.textContent).toBe('自動閉じる...');
+  });
+
+  test('カウントダウン中にclearAutoCloseTimerでキャンセルされる', () => {
+    const statusDiv = document.getElementById('mainStatus');
+    showCountdown(statusDiv);
+
+    jest.advanceTimersByTime(1000); // 2
+    expect(statusDiv.textContent).toContain('2...');
+
+    clearAutoCloseTimer();
+
+    // intervalがクリアされたので、進一步しても変化しない
+    jest.advanceTimersByTime(2000);
+    expect(statusDiv.textContent).toContain('2...');
+  });
+
   test('設定画面では自動クローズタイマーが起動しない', () => {
     // 【テスト目的】: 画面条件による自動クローズ制御の確認
     // 【テスト内容】: 設定画面でstartAutoCloseTimerを呼び出してもタイマーが動作しない
