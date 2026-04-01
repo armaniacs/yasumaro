@@ -11,6 +11,7 @@
 import { createSender } from '../utils/retryHelper.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
+import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 
 // StorageKeys（content script で使用するもののみ）
 const CONTENT_STRIP_HARD_ENABLED = 'content_strip_hard_enabled';
@@ -204,7 +205,7 @@ function loadSettings(): Promise<void> {
             if (s[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
                 aiSummaryCleansingDeep = s[AI_SUMMARY_CLEANSING_DEEP];
             }
-            console.log('[OWeave] Settings loaded:', {
+            logInfo('Settings loaded', {
                 minVisitDuration,
                 minScrollDepth,
                 aiSummaryCleansingEnabled,
@@ -213,7 +214,7 @@ function loadSettings(): Promise<void> {
                 aiSummaryCleansingAds,
                 aiSummaryCleansingNav,
                 aiSummaryCleansingSocial
-            });
+            }, 'extractor').catch(() => { /* non-critical logging failure */ });
             resolve();
         });
     });
@@ -235,8 +236,8 @@ function checkVisitConditions(): void {
 
     const duration = (Date.now() - startTime) / 1000;
 
-    // DEBUG LOG: 状態のデバッグログ
-    console.log(`[OWeave] Status: Duration=${duration.toFixed(1)}s, MaxScroll=${maxScrollPercentage.toFixed(1)}%, threshold=${minVisitDuration}s/${minScrollDepth}%`);
+    // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
+    void logDebug('Visit status', { duration, maxScrollPercentage, minVisitDuration, minScrollDepth }, 'extractor');
 
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
     if (duration >= minVisitDuration && maxScrollPercentage >= minScrollDepth) {
@@ -326,7 +327,7 @@ function updateMaxScroll(): void {
  */
 async function reportValidVisit(): Promise<void> {
     isValidVisitReported = true;
-    console.log('[OWeave] reportValidVisit: sending VALID_VISIT');
+    void logInfo('Sending VALID_VISIT', {}, 'extractor');
 
     const content = extractPageContent();
 
@@ -345,7 +346,7 @@ async function reportValidVisit(): Promise<void> {
                 aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason
             }
         });
-        console.log('[OWeave] VALID_VISIT response:', JSON.stringify(response));
+        void logDebug('VALID_VISIT response', { response }, 'extractor');
 
         // レスポンスの成功フラグをチェック
         if (response && !response.success) {
@@ -381,13 +382,13 @@ async function reportValidVisit(): Promise<void> {
                             }
                         });
                     } catch (retryError: any) {
-                        console.error("Failed to force save private page:", retryError.message);
+                        await logError('Failed to force save private page', { error: retryError.message }, ErrorCode.INTERNAL_ERROR, 'extractor');
                     }
                 }
                 return;
             }
 
-            console.error("Background Worker Error:", response.error);
+            await logError('Background worker error', { error: response.error }, ErrorCode.INTERNAL_ERROR, 'extractor');
         }
     } catch (error: any) {
         // 全てのリトライが失敗した場合
@@ -397,9 +398,9 @@ async function reportValidVisit(): Promise<void> {
                 clearInterval(checkIntervalId);
                 checkIntervalId = null;
             }
-            console.info("Extension was reloaded. Please refresh this page to resume history recording.");
+            await logInfo('Extension reloaded - page refresh needed', {}, 'extractor');
         } else {
-            console.warn("Failed to report valid visit:", error.message);
+            await logWarn('Failed to report valid visit', { error: error.message }, ErrorCode.API_REQUEST_FAILURE, 'extractor');
         }
     }
 }
