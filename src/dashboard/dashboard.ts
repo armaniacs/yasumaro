@@ -975,7 +975,8 @@ async function initHistoryPanel(): Promise<void> {
     const pageItems = filtered.slice(start, start + HISTORY_PAGE_SIZE);
 
     historyList.innerHTML = '';
-    pageItems.forEach(entry => {
+    pageItems.forEach((entry, index) => {
+      const contentId = `content-entry-${start + index}`;
       const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
@@ -1130,7 +1131,7 @@ async function initHistoryPanel(): Promise<void> {
         contentToggle.className = 'content-toggle-btn';
         contentToggle.textContent = '📄 ';
         contentToggle.setAttribute('aria-expanded', 'false');
-        contentToggle.setAttribute('aria-controls', `content-${extractDomain(url)}`);
+        contentToggle.setAttribute('aria-controls', contentId);
 
         const contentLabel = document.createElement('span');
         contentLabel.textContent = 'コンテンツを表示';
@@ -1138,7 +1139,7 @@ async function initHistoryPanel(): Promise<void> {
 
         const contentArea = document.createElement('div');
         contentArea.className = 'content-preview hidden';
-        contentArea.id = `content-${extractDomain(url)}`;
+        contentArea.id = contentId;
         contentArea.textContent = content;
 
         contentToggle.addEventListener('click', () => {

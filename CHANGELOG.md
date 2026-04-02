@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.16] - 2026-04-03
+
+### Fixed
+
+- **`[object Object]` エラーログを修正** ([src/content/loader.ts](src/content/loader.ts))
+  - catch ブロックで非 Error オブジェクトを文字列化しようとして `[object Object]` が表示されていた問題を修正
+  - `e instanceof Error ? e.message : String(e)` で安全に出力するように変更
+
+- **ドメイン許可チェック失敗時のログ出力を追加** ([src/content/loader.ts](src/content/loader.ts))
+  - Service Worker からの応答がない場合、警告ログが出力されるようにした
+  - これにより、デバッグ時に問題の根本原因を特定しやすくした
+
 ## [4.10.15] - 2026-04-02
 
 ### Tests

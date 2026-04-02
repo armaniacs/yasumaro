@@ -12,6 +12,8 @@ import type { Source } from './types.js';
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
 export const URL_RETENTION_DAYS = 7;
+// contentフィールドを保持するエントリ数（最新N件のみ保持してストレージを節約）
+export const MAX_CONTENT_ENTRIES = 10;
 
 import type { RecordType, AiSummaryCleansedReason } from './commonTypes.js';
 
@@ -105,7 +107,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount / tags / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags / content / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
@@ -118,6 +120,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.recordType !== undefined) entry.recordType = existing.recordType;
             if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
             if (existing?.tags !== undefined) entry.tags = existing.tags;
+            if (existing?.content !== undefined) entry.content = existing.content;
             if (existing?.aiSummary !== undefined) entry.aiSummary = existing.aiSummary;
             if (existing?.sentTokens !== undefined) entry.sentTokens = existing.sentTokens;
             if (existing?.receivedTokens !== undefined) entry.receivedTokens = existing.receivedTokens;
@@ -133,6 +136,9 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
             entries.push(entry);
         }
+        // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
+        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
         return entries;
     });
 
@@ -174,11 +180,12 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         const existing = entries.find(entry => entry.url === url);
         entries = entries.filter(entry => entry.url !== url);
 
-        // 新しいエントリを追加（既存の tags / maskedCount / cleansedReason / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を引き継ぐ）
+        // 新しいエントリを追加（既存の tags / maskedCount / content / cleansedReason / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を引き継ぐ）
         const entry: SavedUrlEntry = { url, timestamp: Date.now() };
         if (recordType) entry.recordType = recordType;
         if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
         if (existing?.tags !== undefined) entry.tags = existing.tags;
+        if (existing?.content !== undefined) entry.content = existing.content;
         if (existing?.cleansedReason !== undefined) entry.cleansedReason = existing.cleansedReason;
         if (existing?.aiSummary !== undefined) entry.aiSummary = existing.aiSummary;
         if (existing?.sentTokens !== undefined) entry.sentTokens = existing.sentTokens;
@@ -204,6 +211,10 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
             entries.sort((a, b) => a.timestamp - b.timestamp);
             entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
         }
+
+        // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
+        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
 
         return entries;
     });
