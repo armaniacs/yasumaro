@@ -10,7 +10,7 @@
 | Branches | 57.82% | **63.58%** | 100% |
 | Functions | 72.13% | **76.12%** | 100% |
 | Lines | 68.74% | **73.00%** | 100% |
-| Tests | 2,464 | **2,697** | — |
+| Tests | 2,464 | **3,372** | — |
 
 **Architecture:** Extend existing hand-written Chrome API mocks (jest-chrome は Jest 26/27 のみ対応のため不採用), then systematically add tests in dependency order: utils/ → background/ → popup/ → dashboard/ → finalization.
 
@@ -25,9 +25,11 @@
 - [x] `src/utils/trustDb/__tests__/trustDb.test.ts` ✅
 - [x] `src/utils/__tests__/cssUtils.test.ts` ✅
 
+### New Files (Created — 追加)
+- [x] `src/background/__tests__/recordingLogic-impl.test.ts` ✅ (77 tests)
+
 ### New Files (Pending)
-- [ ] `src/background/__tests__/recordingLogic.test.ts` ❌
-- [ ] `src/popup/ublockImport/__tests__/index.test.ts` ❌
+- [ ] `src/popup/ublockImport/__tests__/index.test.ts` ❌ (DOM handlers — 残差小)
 - [ ] `src/popup/__tests__/trustSettings.test.ts` ❌
 - [ ] `src/popup/__tests__/main.test.ts` ❌
 - [ ] `src/popup/__tests__/domainFilter.test.ts` ❌
@@ -39,6 +41,7 @@
 - [x] `src/utils/__tests__/storageUrls.test.ts` (67% → 99%) ✅
 - [x] `src/utils/__tests__/ublockMatcher.test.ts` (71% → 94%) ✅
 - [x] `src/background/__tests__/sessionAlarmsManager.test.ts` (57% → 95%) ✅
+- [x] `src/background/__tests__/recordingLogic-impl.test.ts` — 新規 (recordingLogic 29.89% → 96.44%) ✅
 
 ### Modified Files
 - [x] `jest.setup.ts` — chrome.alarms, chrome.scripting, chrome.action, chrome.permissions.remove を追加 ✅
@@ -1186,7 +1189,34 @@ git commit -m "test(coverage): storageUrls.ts 67% → 100%"
 
 ---
 
-## Task 8: recordingLogic.ts ❌ NOT STARTED (19.57% → 100%)
+## Task 8: recordingLogic.ts ✅ DONE (29.89% → 96.44%)
+
+**Coverage:** 96.44% Stmts | 88.46% Branch | 100% Funcs | 96.44% Lines
+**Tests:** 177 (175 passed, 2 skipped)
+**Source change:** `isValidFetchUrl` を export に変更 (`recordingLogic.ts:77`)
+
+<details>
+<summary>Details</summary>
+
+- [x] `isValidFetchUrl` — 全プロトコル・localhost・private IP・.local/.internal ブランチ (13 tests)
+- [x] `_truncateContentIfNeeded` — 64KB境界・空文字・falsy 値 (4 tests)
+- [x] `_checkDomainFilter` — 許可/ブロック (2 tests)
+- [x] `_checkPermission` — 許可/拒否/ドメイン抽出失敗 (3 tests)
+- [x] `_checkTrustDomain` (1 test)
+- [x] `_formatMarkdown` — フォーマット・タイムスタンプ (2 tests)
+- [x] `_saveToObsidian` (1 test)
+- [x] `_saveMetadata` — 全条件分岐: recordType, maskedCount, content, tags, summary, tokens, bytes (19 tests)
+- [x] `_recordImpl` — DOMAIN_BLOCKED, PERMISSION_REQUIRED, DOMAIN_NOT_TRUSTED, PRIVATE_PAGE_DETECTED (skip/confirm/save), whitelist bypass, duplicate check, URL size limit, previewOnly, pipeline errors, full flow, alreadyProcessed, requireConfirmation, force (25 tests)
+- [x] `_savePendingPage` — header masking, truncation (2 tests)
+- [x] Cache methods — getSavedUrlsWithCache, invalidateUrlCache, invalidateInstanceCache, normalizeUrlForCache, getPrivacyInfoWithCache (session storage fallback含む)
+
+**残り未カバー:** Lines 260-261, 271-272 (`_checkPrivacyHeaders` 内部 — テストでは直接モック), 737-750 (whitelist check 内部)
+
+**ファイル:**
+- Create: `src/background/__tests__/recordingLogic-impl.test.ts`
+- Modify: `src/background/recordingLogic.ts` (`isValidFetchUrl` を export)
+
+</details>
 
 ---
 
@@ -1208,27 +1238,103 @@ git commit -m "test(coverage): storageUrls.ts 67% → 100%"
 
 ---
 
-## Task 10: popup/ublockImport/index.ts ❌ NOT STARTED (0% → 100%)
+## Task 10: popup/ublockImport/index.ts ⚠️ PARTIAL (80% — 残り DOM ハンドラ)
+
+**Coverage:** 80% Stmts | 68.49% Branch | 81.81% Funcs | 81.09% Lines
+**未カバー:** Lines 89-101 (`handleFileSelect`), 234-281 (`handleDeleteSource`/`handleReloadSource`)
+**理由:** 非 export の DOM ハンドラ。テスト容易性が低く工数対効果が小さい。
 
 ---
 
-## Task 11: popup/trustSettings.ts ❌ NOT STARTED (8.24% → 100%)
+## Task 11: popup/trustSettings.ts ✅ DONE (78% → 98.28%)
+
+**Coverage:** 98.28% Stmts | 72.51% Branch | 100% Funcs | 100% Lines
+**Tests:** 51 (+5)
+**残り未カバー:** Branch only (null チェック分岐: DOM要素不存在ケース)
+
+**変更内容:**
+- sensitive domain add/remove テスト追加 (button click, Enter key, error path, remove)
+- whitelist add/remove テスト追加 (button click, Enter key, error path, remove)
+- removeJpAnchorTld ボタンクリックテスト追加
+- showStatus setTimeout コールバックテスト追加 (fake timers)
+- dismissAllPermissions, permission allow/dismiss ハンドラテスト追加
+- `jest.resetModules()` は必須（モジュールがDOM要素参照をトップレベルでキャッシュ）
 
 ---
 
-## Task 12: popup/main.ts ❌ NOT STARTED (20.61% → 100%)
+## Task 12: popup/main.ts ⚠️ PARTIAL (67.25% → 71.19%)
+
+**Coverage:** 71.19% Stmts | 54.02% Branch | 41.79% Funcs | 73.1% Lines
+**Tests:** 69 (+17)
+**変更内容:**
+- `getCleansedReasonText` を export に変更、5テスト追加 (全分岐: none/undefined/hard/keyword/both)
+- `loadPendingPages` を export、4テスト追加 (空/ページあり/タイトルクリック/エラー)
+- `saveSelectedPages` を export、3テスト追加 (空選択/保存/ホワイトリスト追加)
+- `renderSpecialUrlStatus` を export、1テスト追加
+- `loadPendingPages` タイトルクリックで `chrome.tabs.create` 呼び出しテスト
+- DOMContentLoaded 経由での cleansing status / permission banner テスト追加
+
+**残り未カバー:** Dialog button handlers (lines 236-282) はモジュールトップレベルでDOM読み込み前にイベント登録されるためテスト不可（コード変更が必要）。`forceRecord`/`setRecordAnywayButton` (456-533) は複雑な PRIVATE_PAGE_DETECTED フロー。`initAllUrlsPermissionBanner` (879-887) は動的 import。
 
 ---
 
-## Task 13: popup/domainFilter.ts ❌ NOT STARTED (33.75% → 100%)
+## Task 13: popup/domainFilter.ts ✅ PARTIAL (100% Stmts, 87.78% Branch)
+
+**Coverage:** 100% Stmts | 87.78% Branch | 100% Funcs | 100% Lines
+**残り分岐:** null チェック分岐（`if (btn)`, `if (panel)` 等）— DOM 要素不存在ケース
 
 ---
 
-## Task 14: popup/settings/fieldValidation.ts ❌ NOT STARTED (51.54% → 100%)
+## Task 14: popup/settings/fieldValidation.ts ✅ DONE (90.72% → 100%)
+
+**Coverage:** 100% Stmts | 97.67% Branch | 100% Funcs | 100% Lines
+**Tests:** 77 passed
+**変更内容:**
+- `jest.mock('../../../utils/storage.js')` を追加 (dynamic import 用)
+- `validateBaseUrl` ホワイトリスト通過/拒否テスト追加 (2 tests)
 
 ---
 
-## Task 15: dashboard/cspSettings.ts ❌ NOT STARTED (18.04% → 100%)
+## Task 15: dashboard/cspSettings.ts ✅ DONE (96.99% → 100%)
+
+**Coverage:** 100% Stmts | 85.1% Branch | 100% Funcs | 100% Lines
+**Tests:** 47 passed
+**変更内容:**
+- `escapeRegExp` を export に変更
+- `i18n` を export に変更
+- `escapeRegExp` テスト追加 (3 tests)
+- `i18n` プレースホルダーテスト追加 (3 tests)
+
+---
+
+## Task 17: sanitizePreview.ts テスト修復 ✅ DONE (34 failures → 0)
+
+**Date:** 2026-04-01
+**原因:** `showPreview()` がPromiseを作成するが、confirm/cancelボタンのクリックハンドラが `initializeModalEvents()` 経由でのみアタッチされるため、テストがボタンをクリックしても `handleAction` が呼ばれずPromiseがresolveされない（→ 15s タイムアウト）
+**影響テスト数:** 34 failures, 480s 実行時間 → 0 failures, 0.8s
+
+**変更内容:**
+- `src/popup/sanitizePreview.ts`: `showPreview()` 先頭で `initializeModalEvents()` を呼び出し、イベントリスナーを確実に設定
+- `src/popup/__tests__/sanitizePreview.test.ts`: counter "0/2" → "1/2", "0/3" → "1/3" に修正（auto-jump後の初期値に合わせる）
+
+**結果:** Test Suites: 154 passed (0 failed), Tests: 3,311 passed (0 failed)
+
+---
+
+## Task 18: Phase 5 — 個別ファイル改善 ⚠️ IN PROGRESS
+
+**Date:** 2026-04-01/02
+
+| ファイル | Before | After | 変更内容 |
+|---------|--------|-------|---------|
+| `popup/ublockExport.ts` | 55.55% | **100%** | handleExport/handleCopy/init テスト追加 (5→15 tests) |
+| `background/headerDetector.ts` | 77.33% | **94.66%** | initialize/normalizeUrl/cachePrivacyInfo/evictOldestEntry テスト追加 (5→17 tests) |
+| `popup/i18n.ts` | 77.46% | **94.36%** | translateOptions/translateButtonLabels/translateHelpText/IMG翻訳テスト追加 (27→31 tests) |
+| `utils/ublockParser/cache.ts` | 77.77% | **100%** | LRU eviction + cleanupCache 時間経過テスト追加 (23→25 tests) |
+| `utils/contentCleaner.ts` | 84.44% | **85.55%** | autocomplete属性+非form要素テスト追加 (39→41 tests)。残り58-83は未使用関数 |
+| `popup/statusChecker.ts` | 90.36% | **96.38%** | blacklist mode + privacy cache error + main error テスト追加 (15→18 tests) |
+
+**結果:** Test Suites: 154 passed (0 failed), Tests: 3,372 passed (0 failed)
 
 ---
 
@@ -1246,11 +1352,11 @@ Remaining 28 files (90%+) → 100%. See `docs/superpowers/specs/2026-03-31-test-
 |-----------------|---------------|
 | jest-chrome infrastructure | Task 0 ✅ (changed to mock extension) |
 | utils/ low coverage files | Tasks 1-7 ✅ |
-| background/ low coverage files | Task 8 ❌, Task 9 ✅ |
-| popup/ low coverage files | Tasks 10-14 ❌ |
-| dashboard/ low coverage | Task 15 ❌ |
-| All files 100% finalization | Task 16 ❌ |
-| All tests pass | ✅ 2,697 tests passing |
+| background/ low coverage files | Task 8 ✅ (96.44%), Task 9 ✅ |
+| popup/ low coverage files | Task 10 ⚠️ (80%), Task 11 ✅ (98.28%), Task 12 ⚠️ (71.19%), Task 13 ✅ (100% Stmts), Task 14 ✅ (100%) |
+| dashboard/ low coverage | Task 15 ✅ (100%) |
+| All files 100% finalization | Task 16 ❌, Task 18 ⚠️ (個別改善中) |
+| All tests pass | ✅ 3,372 tests passing (ublockExport 100%, headerDetector 94.66%, i18n 94.36%, cache 100%, contentCleaner 85.55%, statusChecker 96.38%) |
 | Type check passes | ✅ |
 
 ### 2. Placeholder Scan

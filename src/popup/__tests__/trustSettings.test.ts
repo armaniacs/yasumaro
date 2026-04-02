@@ -582,4 +582,267 @@ describe('trustSettings.ts', () => {
       expect(statusDiv.textContent).toBe('Already exists');
     });
   });
+
+  // =========================================================================
+  // JP Anchor remove
+  // =========================================================================
+  describe('JP Anchor remove', () => {
+    test('should call removeJpAnchorTld when remove button is clicked', async () => {
+      setupFullDOM();
+      const { renderJpAnchorList } = await import('../trustSettings.js');
+      renderJpAnchorList(['.jp', '.co.jp']);
+
+      const removeBtn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
+      removeBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRemoveJpAnchorTld).toHaveBeenCalledWith('.jp');
+    });
+  });
+
+  // =========================================================================
+  // Sensitive domain add/remove
+  // =========================================================================
+  describe('sensitive domain add/remove', () => {
+    test('should add sensitive domain on button click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('sensitiveAdd') as HTMLInputElement;
+      input.value = 'bank.com';
+      document.getElementById('sensitiveAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddSensitiveDomain).toHaveBeenCalledWith('bank.com', 'finance');
+    });
+
+    test('should add sensitive domain on Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('sensitiveAdd') as HTMLInputElement;
+      input.value = 'invest.com';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddSensitiveDomain).toHaveBeenCalledWith('invest.com', 'finance');
+    });
+
+    test('should not add sensitive domain on non-Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('sensitiveAdd') as HTMLInputElement;
+      input.value = 'test.com';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Tab', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddSensitiveDomain).not.toHaveBeenCalled();
+    });
+
+    test('should show error when sensitive domain add fails', async () => {
+      mockAddSensitiveDomain.mockResolvedValueOnce({ success: false, error: 'Invalid domain' });
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('sensitiveAdd') as HTMLInputElement;
+      input.value = 'bad';
+      document.getElementById('sensitiveAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      const statusDiv = document.getElementById('trustSettingsStatus')!;
+      expect(statusDiv.textContent).toBe('Invalid domain');
+    });
+
+    test('should remove sensitive domain when remove button is clicked', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList(['bank.com', 'finance.com']);
+
+      const removeBtn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
+      removeBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRemoveSensitiveDomain).toHaveBeenCalledWith('bank.com');
+    });
+  });
+
+  // =========================================================================
+  // Whitelist add/remove
+  // =========================================================================
+  describe('whitelist add/remove', () => {
+    test('should add whitelist domain on button click', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('whitelistAdd') as HTMLInputElement;
+      input.value = 'safe.com';
+      document.getElementById('whitelistAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddToWhitelist).toHaveBeenCalledWith('safe.com');
+    });
+
+    test('should add whitelist domain on Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('whitelistAdd') as HTMLInputElement;
+      input.value = 'trusted.org';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddToWhitelist).toHaveBeenCalledWith('trusted.org');
+    });
+
+    test('should not add whitelist domain on non-Enter key', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('whitelistAdd') as HTMLInputElement;
+      input.value = 'test.com';
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Space', bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockAddToWhitelist).not.toHaveBeenCalled();
+    });
+
+    test('should show error when whitelist add fails', async () => {
+      mockAddToWhitelist.mockResolvedValueOnce({ success: false, error: 'Duplicate' });
+
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      const input = document.getElementById('whitelistAdd') as HTMLInputElement;
+      input.value = 'dup.com';
+      document.getElementById('whitelistAddBtn')!.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      const statusDiv = document.getElementById('trustSettingsStatus')!;
+      expect(statusDiv.textContent).toBe('Duplicate');
+    });
+
+    test('should remove whitelist domain when remove button is clicked', async () => {
+      setupFullDOM();
+      const { renderSensitiveList } = await import('../trustSettings.js');
+      renderSensitiveList(['safe.com'], true);
+
+      const removeBtn = document.querySelector('#whitelist .domain-tag-remove') as HTMLButtonElement;
+      removeBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRemoveFromWhitelist).toHaveBeenCalledWith('safe.com');
+    });
+  });
+
+  // =========================================================================
+  // Permission dismiss handlers
+  // =========================================================================
+  describe('permission dismiss handlers', () => {
+    test('should handle dismissAllPermissions click', async () => {
+      mockGetFrequentDeniedDomains
+        .mockResolvedValueOnce([{ domain: 'a.com', count: 5 }])
+        .mockResolvedValueOnce([]);
+
+      setupFullDOM();
+      const dismissBtn = document.createElement('button');
+      dismissBtn.id = 'dismissAllPermissions';
+      document.body.appendChild(dismissBtn);
+
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      dismissBtn.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(mockRecordDomainDismissal).toHaveBeenCalledWith('a.com');
+    });
+
+    test('should handle permission allow button click', async () => {
+      mockGetFrequentDeniedDomains
+        .mockResolvedValueOnce([{ domain: 'blocked.com', count: 5 }])
+        .mockResolvedValueOnce([]);
+      mockIsHostPermitted.mockResolvedValueOnce(false);
+
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      await renderPermissionSuggestList();
+
+      const allowBtn = document.querySelector('.permission-suggest-allow') as HTMLButtonElement;
+      expect(allowBtn).toBeTruthy();
+      allowBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRequestPermission).toHaveBeenCalledWith('https://blocked.com');
+    });
+
+    test('should handle permission dismiss button click', async () => {
+      mockGetFrequentDeniedDomains
+        .mockResolvedValueOnce([{ domain: 'ignore.com', count: 3 }])
+        .mockResolvedValueOnce([]);
+      mockIsHostPermitted.mockResolvedValueOnce(false);
+
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      await renderPermissionSuggestList();
+
+      const dismissBtn = document.querySelector('.permission-suggest-dismiss') as HTMLButtonElement;
+      expect(dismissBtn).toBeTruthy();
+      dismissBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRecordDomainDismissal).toHaveBeenCalledWith('ignore.com');
+    });
+
+    test('should not re-render when permission grant fails', async () => {
+      mockGetFrequentDeniedDomains
+        .mockResolvedValueOnce([{ domain: 'fail.com', count: 5 }]);
+      mockIsHostPermitted.mockResolvedValueOnce(false);
+      mockRequestPermission.mockResolvedValueOnce(false);
+
+      setupFullDOM();
+      const { renderPermissionSuggestList } = await import('../trustSettings.js');
+      await renderPermissionSuggestList();
+
+      const allowBtn = document.querySelector('.permission-suggest-allow') as HTMLButtonElement;
+      allowBtn.click();
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockRemoveDeniedDomain).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // showStatus timeout
+  // =========================================================================
+  describe('showStatus timeout', () => {
+    test('should clear status message after 3s timeout', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      jest.useFakeTimers();
+
+      document.getElementById('saveTrustSettings')!.click();
+      await Promise.resolve();
+
+      const statusDiv = document.getElementById('trustSettingsStatus')!;
+      expect(statusDiv.textContent).toBe('Settings saved');
+
+      jest.advanceTimersByTime(3000);
+      expect(statusDiv.textContent).toBe('');
+      expect(statusDiv.className).toBe('status-message');
+
+      jest.useRealTimers();
+    });
+  });
 });

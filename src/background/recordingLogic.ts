@@ -74,7 +74,7 @@ export function truncateContentSize(content: string, maxSize: number = MAX_RECOR
  * @param {string} url - 検証するURL
  * @returns {boolean} 安全なURLの場合はtrue
  */
-function isValidFetchUrl(url: string): boolean {
+export function isValidFetchUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
 

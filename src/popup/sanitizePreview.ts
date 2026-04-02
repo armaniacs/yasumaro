@@ -205,6 +205,9 @@ export function showPreview(
   const previewContent = getPreviewContent();
   const modalBody = modal?.querySelector('.modal-body');
 
+  // イベントリスナーを確実に設定（テスト環境・本番環境どちらでも動作させる）
+  initializeModalEvents();
+
   if (!modal) {
     console.error('Confirmation modal not found in DOM');
     return Promise.resolve({ confirmed: true, content });

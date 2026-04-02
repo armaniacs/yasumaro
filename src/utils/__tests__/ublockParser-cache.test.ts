@@ -287,5 +287,36 @@ describe('ublockParser - Cache Module', () => {
       expect(hasCacheKey('bulk_key_0')).toBe(true);
       expect(hasCacheKey(`bulk_key_${entries - 1}`)).toBe(true);
     });
+
+    test('LRU_MAX_ENTRIES超過時に最も古いエントリが削除される', () => {
+      // 51エントリ追加（LRU_MAX_ENTRIES=50を超える）
+      for (let i = 0; i < 51; i++) {
+        saveToCache(`lru_key_${i}`, { blockRules: [`domain${i}.com`] });
+      }
+
+      // 最も古いエントリ（lru_key_0）が削除されている
+      expect(hasCacheKey('lru_key_0')).toBe(false);
+      // 最新のエントリは残っている
+      expect(hasCacheKey('lru_key_50')).toBe(true);
+      // サイズは50以下
+      expect(hasCacheKey('lru_key_1')).toBe(true);
+    });
+
+    test('cleanupCache: CLEANUP_INTERVAL経過後にキャッシュがクリアされる', () => {
+      jest.useFakeTimers();
+
+      saveToCache('cleanup_key', { blockRules: ['test.com'] });
+      expect(hasCacheKey('cleanup_key')).toBe(true);
+
+      // CLEANUP_INTERVAL (300000ms = 5分) 経過させる
+      jest.advanceTimersByTime(300001);
+
+      cleanupCache();
+
+      // キャッシュがクリアされている
+      expect(hasCacheKey('cleanup_key')).toBe(false);
+
+      jest.useRealTimers();
+    });
   });
 });

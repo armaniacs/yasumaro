@@ -366,4 +366,43 @@ describe('checkPageStatus', () => {
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.cache.cacheControl).toBe('no-store, no-cache, must-revalidate, proxy-revalidate');
   });
+
+  it('should detect blacklisted domain', async () => {
+    const url = 'https://blocked.com/page';
+    (storage.getSettings as jest.Mock).mockResolvedValue({
+      domain_filter_mode: 'blacklist',
+      domain_whitelist: [],
+      domain_blacklist: ['blocked.com'],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+
+    expect(result.domainFilter.allowed).toBe(false);
+    expect(result.domainFilter.mode).toBe('blacklist');
+    expect(result.domainFilter.matched).toBe(true);
+    expect(result.domainFilter.matchedPattern).toBe('blocked.com');
+  });
+
+  it('should handle privacy cache sendMessage error gracefully', async () => {
+    const url = 'https://example.com/page';
+    mockChromeRuntime.sendMessage.mockRejectedValue(new Error('No listener'));
+
+    const result = await checkPageStatus(url);
+
+    expect(result).not.toBeNull();
+    expect(result.privacy.isPrivate).toBe(false);
+  });
+
+  it('should handle main error and return default status', async () => {
+    const url = 'https://example.com/page';
+    // Make getSettings throw to trigger main catch block
+    (storage.getSettings as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
+
+    const result = await checkPageStatus(url);
+
+    expect(result).not.toBeNull();
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.mode).toBe('disabled');
+  });
 });

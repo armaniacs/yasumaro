@@ -463,6 +463,89 @@ describe('PermissionManager - P0 - removeDeniedDomain', () => {
   });
 });
 
+describe('PermissionManager - P0 - cleanupDismissedEntries', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockStorage.clear();
+  });
+
+  it('should remove entries dismissed more than 7 days ago without subsequent denial', async () => {
+    const oldDismissal = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000)).toISOString();
+    const oldDenied = new Date(Date.now() - (15 * 24 * 60 * 60 * 1000)).toISOString();
+
+    mockStorage.set('denied_domains', {
+      'old-dismissed.com': {
+        count: 3,
+        lastDenied: oldDenied,
+        lastDismissed: oldDismissal
+      }
+    });
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.cleanupDismissedEntries(7);
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['old-dismissed.com']).toBeUndefined();
+  });
+
+  it('should keep entries dismissed within 7 days', async () => {
+    const recentDismissal = new Date(Date.now() - (3 * 24 * 60 * 60 * 1000)).toISOString();
+
+    mockStorage.set('denied_domains', {
+      'recent-dismissed.com': {
+        count: 3,
+        lastDenied: new Date().toISOString(),
+        lastDismissed: recentDismissal
+      }
+    });
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.cleanupDismissedEntries(7);
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['recent-dismissed.com']).toBeDefined();
+  });
+
+  it('should keep entries without lastDismissed', async () => {
+    mockStorage.set('denied_domains', {
+      'no-dismiss.com': {
+        count: 3,
+        lastDenied: new Date().toISOString(),
+        lastDismissed: undefined
+      }
+    });
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.cleanupDismissedEntries(7);
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['no-dismiss.com']).toBeDefined();
+  });
+
+  it('should keep entries where re-denial occurred after dismissal', async () => {
+    const oldDismissal = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000)).toISOString();
+    const recentDenied = new Date(Date.now() - (1 * 24 * 60 * 60 * 1000)).toISOString();
+
+    mockStorage.set('denied_domains', {
+      're-denied.com': {
+        count: 5,
+        lastDenied: recentDenied,
+        lastDismissed: oldDismissal
+      }
+    });
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.cleanupDismissedEntries(7);
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['re-denied.com']).toBeDefined();
+  });
+});
+
 describe('PermissionManager - P0 - Utility Functions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -480,6 +563,14 @@ describe('PermissionManager - P0 - Utility Functions', () => {
     });
   });
 
+  it('isAllUrlsPermitted should return false on error', async () => {
+    (chrome.permissions.contains as jest.Mock).mockRejectedValue(new Error('Permission error'));
+    const { isAllUrlsPermitted } = await import('../permissionManager.js');
+
+    const result = await isAllUrlsPermitted();
+    expect(result).toBe(false);
+  });
+
   it('requestAllUrls should request <all_urls> permission', async () => {
     (chrome.permissions.request as jest.Mock).mockResolvedValue(true);
     const { requestAllUrls } = await import('../permissionManager.js');
@@ -489,5 +580,59 @@ describe('PermissionManager - P0 - Utility Functions', () => {
     expect(chrome.permissions.request).toHaveBeenCalledWith({
       origins: ['<all_urls>']
     });
+  });
+
+  it('requestAllUrls should return false on error', async () => {
+    (chrome.permissions.request as jest.Mock).mockRejectedValue(new Error('Request error'));
+    const { requestAllUrls } = await import('../permissionManager.js');
+
+    const result = await requestAllUrls();
+    expect(result).toBe(false);
+  });
+
+  it('requestPermission should request permission for valid URL', async () => {
+    (chrome.permissions.request as jest.Mock).mockResolvedValue(true);
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const result = await manager.requestPermission('https://example.com/path');
+    expect(result).toBe(true);
+    expect(chrome.permissions.request).toHaveBeenCalledWith({
+      origins: ['*://example.com/*']
+    });
+  });
+
+  it('requestPermission should return false for invalid URL', async () => {
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const result = await manager.requestPermission('not-a-valid-url');
+    expect(result).toBe(false);
+  });
+
+  it('requestPermission should return false on error', async () => {
+    (chrome.permissions.request as jest.Mock).mockRejectedValue(new Error('Request error'));
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const result = await manager.requestPermission('https://example.com');
+    expect(result).toBe(false);
+  });
+
+  it('recordDeniedVisit should increment count for existing domain', async () => {
+    mockStorage.set('denied_domains', {
+      'example.com': {
+        count: 3,
+        lastDenied: new Date(Date.now() - 86400000).toISOString(),
+        lastDismissed: undefined
+      }
+    });
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.recordDeniedVisit('example.com');
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['example.com'].count).toBe(4);
   });
 });

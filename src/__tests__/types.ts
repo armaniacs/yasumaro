@@ -126,4 +126,10 @@ declare global {
       mockRejectedValueOnce(value: any): this;
     }
   }
+
+  // Chrome API error simulation helpers (defined in jest.setup.ts)
+  var simulateSendMessageError: (message: string) => void;
+  var resetSendMessageError: () => void;
+  var configureSendMessageReject: (message: string) => void;
+  var resetSendMessageMock: () => void;
 }

@@ -141,13 +141,54 @@ const chromeStorageMock: ChromeStorageMock = {
 const chromeRuntimeMock: ChromeRuntimeMock = {
   getURL: jest.fn<string, [string]>((path) => path),
   sendMessage: jest.fn<void | Promise<any>, any[]>((_message, callback) => {
+    const lastError = (global as any).chrome.runtime?.lastError;
     if (callback && typeof callback === 'function') {
-      callback();
+      if (lastError) {
+        callback();
+      } else {
+        callback({ success: true });
+      }
     }
   }),
   onMessage: {
     addListener: jest.fn(),
   },
+};
+
+// ============================================================================
+// Chrome API Error Simulation Helpers
+// ============================================================================
+
+/**
+ * Simulate a chrome.runtime.lastError for the next sendMessage call
+ * Usage in tests: simulateSendMessageError('Could not establish connection');
+ */
+(global as any).simulateSendMessageError = (message: string) => {
+  (global as any).chrome.runtime.lastError = { message };
+};
+
+/**
+ * Reset chrome.runtime.lastError to null
+ * Usage in tests: resetSendMessageError();
+ */
+(global as any).resetSendMessageError = () => {
+  (global as any).chrome.runtime.lastError = null;
+};
+
+/**
+ * Configure sendMessage mock to reject with a specific error (Promise-based)
+ * Usage in tests: configureSendMessageReject('Extension context invalidated');
+ */
+(global as any).configureSendMessageReject = (message: string) => {
+  (global as any).chrome.runtime.sendMessage = jest.fn(() => Promise.reject(new Error(message)));
+};
+
+/**
+ * Reset sendMessage mock to default behavior
+ * Usage in tests: resetSendMessageMock();
+ */
+(global as any).resetSendMessageMock = () => {
+  (global as any).chrome.runtime.sendMessage = chromeRuntimeMock.sendMessage;
 };
 
 // Global chrome object
@@ -457,6 +498,8 @@ beforeEach(() => {
   // Chrome APIの状態をリセット
   if ((global as any).chrome && (global as any).chrome.runtime) {
     (global as any).chrome.runtime.lastError = null;
+    // Reset sendMessage mock to default
+    (global as any).chrome.runtime.sendMessage = chromeRuntimeMock.sendMessage;
   }
   // ストレージのクリア
   Object.keys(localStorage).forEach((key) => delete localStorage[key]);

@@ -2,6 +2,39 @@ import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { HeaderDetector } from '../headerDetector.js';
 import { RecordingLogic } from '../recordingLogic.js';
 
+jest.mock('../../utils/privacyChecker.js', () => ({
+  checkPrivacy: jest.fn((headers: any[]) => {
+    const hasPrivate = headers?.some((h: any) =>
+      h.name?.toLowerCase() === 'cache-control' && h.value?.includes('private')
+    );
+    return {
+      isPrivate: !!hasPrivate,
+      reason: hasPrivate ? 'cache-control' : undefined,
+      timestamp: Date.now(),
+      headers: {},
+    };
+  }),
+}));
+
+jest.mock('../../utils/crypto.js', () => ({
+  hashUrl: jest.fn((url: string) => Promise.resolve(url)),
+}));
+
+jest.mock('../../utils/logger.js', () => ({
+  addLog: jest.fn(),
+  logInfo: jest.fn(() => Promise.resolve()),
+  logDebug: jest.fn(() => Promise.resolve()),
+  logError: jest.fn(() => Promise.resolve()),
+  logWarn: jest.fn(() => Promise.resolve()),
+  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+  ErrorCode: {
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
+  },
+}));
+
+import { logError } from '../../utils/logger.js';
+
 describe('HeaderDetector', () => {
   beforeEach(() => {
     RecordingLogic.invalidatePrivacyCache();
@@ -95,6 +128,124 @@ describe('HeaderDetector', () => {
       HeaderDetector['onHeadersReceived'](details);
 
       expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/image.png')).toBeFalsy();
+    });
+
+    test('Content-Typeがない場合もスキップする', () => {
+      const details = {
+        url: 'https://example.com/noct',
+        type: 'main_frame' as chrome.webRequest.ResourceType,
+        responseHeaders: []
+      } as chrome.webRequest.WebResponseHeadersDetails;
+
+      HeaderDetector['onHeadersReceived'](details);
+
+      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/noct')).toBeFalsy();
+    });
+  });
+
+  describe('normalizeUrl', () => {
+    test('末尾スラッシュを削除する', () => {
+      expect(HeaderDetector.normalizeUrl('https://example.com/page/')).toBe('https://example.com/page');
+    });
+
+    test('ルートパスの末尾スラッシュは削除しない', () => {
+      expect(HeaderDetector.normalizeUrl('https://example.com/')).toBe('https://example.com/');
+    });
+
+    test('フラグメントを削除する', () => {
+      expect(HeaderDetector.normalizeUrl('https://example.com/page#section')).toBe('https://example.com/page');
+    });
+
+    test('不正なURLはそのまま返す', () => {
+      expect(HeaderDetector.normalizeUrl('not-a-url')).toBe('not-a-url');
+    });
+  });
+
+  describe('cachePrivacyInfo', () => {
+    test('tabIdが0以上でプライベート検出時にバッジを設定する', async () => {
+      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
+      chrome.action.setBadgeBackgroundColor = jest.fn(() => Promise.resolve());
+
+      await HeaderDetector['cachePrivacyInfo']('https://badge.com', {
+        isPrivate: true,
+        reason: 'set-cookie',
+        timestamp: Date.now()
+      }, 42);
+
+      expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 42 });
+      expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalled();
+    });
+
+    test('tabIdが-1の場合はバッジをスキップする', async () => {
+      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
+
+      await HeaderDetector['cachePrivacyInfo']('https://bg.com', {
+        isPrivate: true,
+        reason: 'cache-control',
+        timestamp: Date.now()
+      }, -1);
+
+      expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+    });
+
+    test('非プライベートではバッジを設定しない', async () => {
+      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
+
+      await HeaderDetector['cachePrivacyInfo']('https://pub.com', {
+        isPrivate: false,
+        timestamp: Date.now()
+      }, 1);
+
+      expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+    });
+
+    test('バッジ設定エラーをログに記録する', async () => {
+      chrome.action.setBadgeText = jest.fn(() => Promise.reject(new Error('Badge error')));
+      chrome.action.setBadgeBackgroundColor = jest.fn(() => Promise.resolve());
+
+      await HeaderDetector['cachePrivacyInfo']('https://err.com', {
+        isPrivate: true,
+        reason: 'auth',
+        timestamp: Date.now()
+      }, 1);
+
+      expect(logError).toHaveBeenCalled();
+    });
+  });
+
+  describe('evictOldestEntry', () => {
+    test('キャッシュが空の場合は何もしない', async () => {
+      RecordingLogic.invalidatePrivacyCache();
+      await HeaderDetector['evictOldestEntry']();
+      // エラーなく完了
+    });
+  });
+
+  describe('initialize', () => {
+    test('chrome.webRequestが未定義の場合はエラーログを出力してreturnする', async () => {
+      const origWebRequest = chrome.webRequest;
+      // @ts-expect-error
+      delete chrome.webRequest;
+
+      await HeaderDetector.initialize();
+
+      expect(logError).toHaveBeenCalled();
+      chrome.webRequest = origWebRequest;
+    });
+
+    test('リスナー登録に失敗した場合はエラーログを出力する', async () => {
+      chrome.webRequest = {
+        onHeadersReceived: {
+          addListener: jest.fn(() => { throw new Error('Permission denied'); }),
+          removeListener: jest.fn(),
+          hasListener: jest.fn(),
+          hasListeners: jest.fn(),
+        }
+      } as any;
+
+      await HeaderDetector.initialize();
+
+      expect(logError).toHaveBeenCalled();
     });
   });
 });

@@ -307,7 +307,7 @@ export class CSPSettings {
  * @param str - エスケープ対象の文字列
  * @returns エスケープされた文字列
  */
-function escapeRegExp(str: string): string {
+export function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -317,7 +317,7 @@ function escapeRegExp(str: string): string {
  * @param placeholders - プレースホルダー置換
  * @returns ローカルライズされた文字列
  */
-function i18n(key: string, placeholders?: Record<string, string>): string {
+export function i18n(key: string, placeholders?: Record<string, string>): string {
   let message = chrome.i18n.getMessage(key);
   if (placeholders) {
     for (const [placeholder, value] of Object.entries(placeholders)) {

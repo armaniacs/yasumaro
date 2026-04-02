@@ -5,6 +5,20 @@
 
 import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages } from '../pendingStorage';
 
+jest.mock('../logger.js', () => ({
+    logInfo: jest.fn().mockResolvedValue(undefined),
+    logDebug: jest.fn().mockResolvedValue(undefined),
+    logError: jest.fn().mockResolvedValue(undefined),
+    ErrorCode: {
+        STORAGE_READ_FAILURE: 'STRG_RD_001',
+        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
+    },
+}));
+
+jest.mock('../crypto.js', () => ({
+    hashUrl: jest.fn().mockResolvedValue('mocked-hash'),
+}));
+
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};
 
@@ -237,6 +251,133 @@ describe('pendingStorage', () => {
 
             const result = mockStorage['osh_pending_pages'] as unknown[];
             expect(result).toEqual(pages);
+        });
+    });
+
+    describe('error handling', () => {
+        it('addPendingPage should handle getPendingPagesList failure gracefully', async () => {
+            const { logInfo } = await import('../logger.js');
+            mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage read error'));
+
+            const now = Date.now();
+            const page = {
+                url: 'https://example.com/page',
+                title: 'Test Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 86400000
+            };
+
+            await addPendingPage(page);
+
+            expect(logInfo).toHaveBeenCalled();
+            expect(mockChrome.storage.local.set).toHaveBeenCalled();
+        });
+
+        it('addPendingPage should handle outer catch when set fails', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
+
+            const now = Date.now();
+            const page = {
+                url: 'https://example.com/page',
+                title: 'Test Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 86400000
+            };
+
+            await expect(addPendingPage(page)).rejects.toThrow('Storage write error');
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to add pending page',
+                expect.objectContaining({ source: 'pendingStorage' }),
+                expect.any(String)
+            );
+        });
+
+        it('getPendingPages should return empty array when internal storage read fails', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage read error'));
+
+            const result = await getPendingPages();
+
+            expect(result).toEqual([]);
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to get pending pages list',
+                expect.objectContaining({ source: 'pendingStorage', error: 'Storage read error' }),
+                expect.any(String)
+            );
+        });
+
+        it('removePendingPages should handle storage set failure gracefully', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
+
+            const now = Date.now();
+            mockStorage['osh_pending_pages'] = [
+                { url: 'https://example.com/page1', title: 'Page 1', timestamp: now, reason: 'cache-control' as const, expiry: now + 86400000 }
+            ];
+
+            await removePendingPages(['https://example.com/page1']);
+
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to remove pending pages',
+                expect.objectContaining({ source: 'pendingStorage' }),
+                expect.any(String)
+            );
+        });
+
+        it('clearExpiredPages should handle storage set failure gracefully', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
+
+            const now = Date.now();
+            mockStorage['osh_pending_pages'] = [
+                { url: 'https://example.com/expired', title: 'Expired', timestamp: now, reason: 'cache-control' as const, expiry: now - 1000 }
+            ];
+
+            await clearExpiredPages();
+
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to clear expired pages',
+                expect.objectContaining({ source: 'pendingStorage' }),
+                expect.any(String)
+            );
+        });
+
+        it('addPendingPage should log error with non-Error exception in outer catch', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.set.mockRejectedValueOnce('string error');
+
+            const now = Date.now();
+            const page = {
+                url: 'https://example.com/page',
+                title: 'Test Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 86400000
+            };
+
+            await expect(addPendingPage(page)).rejects.toBeDefined();
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to add pending page',
+                expect.objectContaining({ error: 'string error' }),
+                expect.any(String)
+            );
+        });
+
+        it('getPendingPages should handle non-Error exception in internal storage', async () => {
+            const { logError } = await import('../logger.js');
+            mockChrome.storage.local.get.mockRejectedValueOnce('string error');
+
+            const result = await getPendingPages();
+
+            expect(result).toEqual([]);
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to get pending pages list',
+                expect.objectContaining({ error: 'string error' }),
+                expect.any(String)
+            );
         });
     });
 });

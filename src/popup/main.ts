@@ -15,7 +15,7 @@ import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import type { MaskedItem } from '../messaging/types.js';
 
 // Export functions for testing
-export { getCurrentTab };
+export { getCurrentTab, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus };
 
 interface ContentResponse {
   content: string;

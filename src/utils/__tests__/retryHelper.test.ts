@@ -421,7 +421,7 @@ describe('chrome.runtime.lastError patterns', () => {
         let callCount = 0;
         const mockResponse = { success: true };
     // @ts-expect-error - jest.fn() type narrowing issue
-  
+
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
             if (callCount <= 2) {
@@ -439,5 +439,213 @@ describe('chrome.runtime.lastError patterns', () => {
 
         expect(result.success).toBe(true);
         expect(callCount).toBe(3);
+    });
+
+    it('The message port closed before a response was receivedでリトライ', async () => {
+        let callCount = 0;
+        const mockResponse = { success: true };
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            if (callCount === 1) {
+                global.chrome.runtime.lastError = { message: 'The message port closed before a response was received' };
+                callback();
+            } else {
+                global.chrome.runtime.lastError = null;
+                callback(mockResponse as any);
+            }
+        });
+
+        const result = await sendMessageWithRetry(
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+            { initialDelay: 0 }
+        );
+
+        expect(result).toEqual(mockResponse);
+        expect(callCount).toBe(2);
+    });
+
+    it('The extension context has been invalidでリトライ', async () => {
+        let callCount = 0;
+        const mockResponse = { success: true };
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            if (callCount === 1) {
+                global.chrome.runtime.lastError = { message: 'The extension context has been invalid' };
+                callback();
+            } else {
+                global.chrome.runtime.lastError = null;
+                callback(mockResponse as any);
+            }
+        });
+
+        const result = await sendMessageWithRetry(
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+            { initialDelay: 0 }
+        );
+
+        expect(result).toEqual(mockResponse);
+        expect(callCount).toBe(2);
+    });
+});
+
+describe('exponential backoff timing', () => {
+    let sender: ChromeMessageSender;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.chrome.runtime.lastError = null;
+        jest.useFakeTimers();
+        sender = new ChromeMessageSender();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('指数バックオフの遅延時間が正しく計算される', async () => {
+        let callCount = 0;
+        const mockResponse = { success: true };
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            if (callCount <= 3) {
+                global.chrome.runtime.lastError = { message: 'Could not establish connection' };
+                callback();
+            } else {
+                global.chrome.runtime.lastError = null;
+                callback(mockResponse as any);
+            }
+        });
+
+        const promise = sender.sendMessageWithRetry(
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+            { initialDelay: 100, backoffMultiplier: 2, maxRetries: 5 }
+        );
+
+        // Fast-forward through all retries
+        await jest.advanceTimersByTimeAsync(100);  // 1st retry delay: 100ms
+        await jest.advanceTimersByTimeAsync(200);  // 2nd retry delay: 200ms
+        await jest.advanceTimersByTimeAsync(400);  // 3rd retry delay: 400ms
+
+        const result = await promise;
+        expect(result).toEqual(mockResponse);
+        expect(callCount).toBe(4); // initial + 3 retries
+    });
+
+    it('maxDelayで遅延時間がキャップされる', async () => {
+        jest.useRealTimers();
+
+        const delays: number[] = [];
+        const originalSetTimeout = global.setTimeout;
+        // Track actual delay values passed to setTimeout
+        global.setTimeout = jest.fn((fn: Function, ms?: number) => {
+            if (ms !== undefined && ms > 0) {
+                delays.push(ms);
+            }
+            return originalSetTimeout(fn, 0); // Execute immediately
+        }) as any;
+
+        let callCount = 0;
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            global.chrome.runtime.lastError = { message: 'Could not establish connection' };
+            callback();
+        });
+
+        try {
+            await sender.sendMessageWithRetry(
+                { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+                { initialDelay: 1000, backoffMultiplier: 3, maxDelay: 2000, maxRetries: 3 }
+            );
+        } catch (e) {
+            // Expected: max retries exceeded
+        }
+
+        global.setTimeout = originalSetTimeout;
+        jest.useFakeTimers();
+
+        expect(callCount).toBe(4); // initial + 3 retries
+        // Delays: min(1000*3^0, 2000)=1000, min(1000*3^1, 2000)=2000, min(1000*3^2, 2000)=2000
+        expect(delays).toEqual([1000, 2000, 2000]);
+    });
+});
+
+describe('edge cases', () => {
+    let sender: ChromeMessageSender;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.chrome.runtime.lastError = null;
+        sender = new ChromeMessageSender();
+    });
+
+    it('sendMessageが直接例外をスローした場合もリトライする', async () => {
+        let callCount = 0;
+        const mockResponse = { success: true };
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            if (callCount === 1) {
+                throw new Error('Could not establish connection');
+            }
+            callback(mockResponse as any);
+        });
+
+        const result = await sender.sendMessageWithRetry(
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+            { initialDelay: 0 }
+        );
+
+        expect(result).toEqual(mockResponse);
+        expect(callCount).toBe(2);
+    });
+
+    it('リトライ中にエラーパターンが変わってもリトライ継続', async () => {
+        let callCount = 0;
+        const mockResponse = { success: true };
+        const errors = [
+            'Could not establish connection',
+            'Message port closed',
+            'Receiving end does not exist'
+        ];
+    // @ts-expect-error - jest.fn() type narrowing issue
+
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            callCount++;
+            if (callCount <= 3) {
+                global.chrome.runtime.lastError = { message: errors[callCount - 1] };
+                callback();
+            } else {
+                global.chrome.runtime.lastError = null;
+                callback(mockResponse as any);
+            }
+        });
+
+        const result = await sender.sendMessageWithRetry(
+            { type: 'TEST', payload: {} } as MessagePayload<unknown>,
+            { initialDelay: 0 }
+        );
+
+        expect(result).toEqual(mockResponse);
+        expect(callCount).toBe(4);
+    });
+
+    it('chrome.runtime.sendMessageが利用不可の場合は即座にエラー', async () => {
+        const originalSendMessage = chrome.runtime.sendMessage;
+        (chrome.runtime as any).sendMessage = undefined;
+
+        await expect(
+            sender.sendMessageWithRetry({ type: 'TEST', payload: {} } as MessagePayload<unknown>)
+        ).rejects.toThrow('Extension context invalidated');
+
+        chrome.runtime.sendMessage = originalSendMessage;
     });
 });

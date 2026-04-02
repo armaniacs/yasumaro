@@ -172,7 +172,11 @@ export class RecordingPipeline {
           step: step.name,
           error: error as Error,
           strategy: step.errorStrategy,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          context: {
+            url: context.data.url,
+            tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
+          }
         };
 
         context.errors.push(pipelineError);
@@ -237,7 +241,8 @@ export class RecordingPipeline {
   private buildErrorResult(context: RecordingContext, error: Error, stepName: string): RecordingResult {
     logError(`Pipeline failed at step ${stepName}`, {
       error: error.message,
-      url: context.data.url
+      url: context.data.url,
+      tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
     }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
 
     // Create error notification

@@ -133,7 +133,7 @@ import { startAutoCloseTimer } from 'src/popup/autoClose.js';
 import { getCurrentTab, isRecordable } from 'src/popup/tabUtils.js';
 import { getSettings, StorageKeys } from 'src/utils/storage.js';
 import { checkPageStatus } from 'src/popup/statusChecker.js';
-import { loadCurrentTab, recordCurrentPage } from 'src/popup/main.js';
+import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus } from 'src/popup/main.js';
 import { showError, isConnectionError, isDomainBlockedError, formatSuccessMessage } from 'src/popup/errorUtils.js';
 import { getPendingPages, removePendingPages } from 'src/utils/pendingStorage.js';
 import { getSavedUrlEntries } from 'src/utils/storageUrls.js';
@@ -1644,6 +1644,224 @@ describe('main', () => {
 
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
       expect(detailsPanel.classList.contains('hidden')).toBe(false);
+    });
+  });
+
+  // =========================================================================
+  // getCleansedReasonText
+  // =========================================================================
+  describe('getCleansedReasonText', () => {
+    it('should return empty string for none', () => {
+      expect(getCleansedReasonText('none')).toBe('');
+    });
+
+    it('should return empty string for undefined', () => {
+      expect(getCleansedReasonText(undefined)).toBe('');
+    });
+
+    it('should return Hard text for hard', () => {
+      expect(getCleansedReasonText('hard')).toContain('Hard');
+    });
+
+    it('should return Keyword text for keyword', () => {
+      expect(getCleansedReasonText('keyword')).toContain('Keyword');
+    });
+
+    it('should return Both text for both', () => {
+      expect(getCleansedReasonText('both')).toContain('Both');
+    });
+  });
+
+  // =========================================================================
+  // loadPendingPages
+  // =========================================================================
+  describe('loadPendingPages', () => {
+    it('should hide section when no pending pages', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValueOnce([]);
+
+      await loadPendingPages();
+
+      const section = document.getElementById('pending-section');
+      const empty = document.getElementById('pending-empty');
+      expect(section.classList.contains('hidden')).toBe(true);
+      expect(empty.classList.contains('hidden')).toBe(false);
+    });
+
+    it('should render pending pages', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValueOnce([
+        { url: 'https://example.com', title: 'Example', reason: 'private' },
+        { url: 'https://test.com', title: 'Test', reason: 'auth', headerValue: 'Authorization' },
+      ]);
+
+      await loadPendingPages();
+
+      const section = document.getElementById('pending-section');
+      const list = document.getElementById('pending-pages-list');
+      expect(section.classList.contains('hidden')).toBe(false);
+      expect(list.children.length).toBe(2);
+      expect(list.querySelector('.pending-item-title').textContent).toBe('Example');
+    });
+
+    it('should create clickable title that opens new tab', async () => {
+      // @ts-expect-error
+      getPendingPages.mockResolvedValueOnce([
+        { url: 'https://click.com', title: 'Click Me', reason: 'private' },
+      ]);
+
+      await loadPendingPages();
+
+      const titleEl = document.querySelector('.pending-item-title') as HTMLElement;
+      titleEl.click();
+
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({ url: 'https://click.com' });
+    });
+
+    it('should handle getPendingPages error gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      // @ts-expect-error
+      getPendingPages.mockRejectedValueOnce(new Error('Storage error'));
+
+      await expect(loadPendingPages()).resolves.not.toThrow();
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // =========================================================================
+  // saveSelectedPages
+  // =========================================================================
+  describe('saveSelectedPages', () => {
+    it('should do nothing when no checkboxes checked', async () => {
+      document.querySelectorAll('.pending-checkbox').forEach(cb => cb.remove());
+
+      await saveSelectedPages();
+
+      expect(mockChrome.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('should save selected pages and reload', async () => {
+      const list = document.getElementById('pending-pages-list')!;
+      list.innerHTML = `
+        <input type="checkbox" class="pending-checkbox" value="https://a.com" checked>
+        <input type="checkbox" class="pending-checkbox" value="https://b.com">
+      `;
+
+      // @ts-expect-error
+      getPendingPages.mockResolvedValue([
+        { url: 'https://a.com', title: 'A', content: 'content a' },
+      ]);
+
+      await saveSelectedPages();
+
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'record',
+          data: expect.objectContaining({ url: 'https://a.com', force: true })
+        })
+      );
+      expect(removePendingPages).toHaveBeenCalledWith(['https://a.com']);
+    });
+
+    it('should add domains to whitelist when type is domain', async () => {
+      mockChrome.storage.local.get.mockResolvedValueOnce({ domainWhitelist: [] });
+
+      const list = document.getElementById('pending-pages-list')!;
+      list.innerHTML = `<input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>`;
+
+      // @ts-expect-error
+      getPendingPages.mockResolvedValue([
+        { url: 'https://example.com/page', title: 'Page', content: '' },
+      ]);
+
+      await saveSelectedPages('domain');
+
+      expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({ domainWhitelist: expect.arrayContaining(['example.com']) })
+      );
+    });
+  });
+
+  // =========================================================================
+  // renderSpecialUrlStatus
+  // =========================================================================
+  describe('renderSpecialUrlStatus', () => {
+    it('should render error message in panel', () => {
+      renderSpecialUrlStatus();
+
+      const panel = document.getElementById('statusPanel');
+      expect(panel.innerHTML).toContain('status-error');
+    });
+  });
+
+  // =========================================================================
+  // Private page dialog DOM elements
+  // =========================================================================
+  describe('private page dialog DOM', () => {
+    it('should have all dialog button elements', () => {
+      const cancelBtn = document.getElementById('dialog-cancel');
+      const saveOnceBtn = document.getElementById('dialog-save-once');
+      const saveDomainBtn = document.getElementById('dialog-save-domain');
+      const savePathBtn = document.getElementById('dialog-save-path');
+
+      expect(cancelBtn).toBeTruthy();
+      expect(saveOnceBtn).toBeTruthy();
+      expect(saveDomainBtn).toBeTruthy();
+      expect(savePathBtn).toBeTruthy();
+    });
+
+    it('should have dialog-message element', () => {
+      const msgEl = document.getElementById('dialog-message');
+      expect(msgEl).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // Cleansing status display
+  // =========================================================================
+  describe('cleansing status display', () => {
+    it('should show no-info when no cleanse stats', async () => {
+      const mockTab = { id: 1, title: 'Clean', url: 'https://clean.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: false },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const cleansingContent = document.getElementById('statusCleansingContent');
+      expect(cleansingContent.innerHTML).toContain('status-muted');
+    });
+  });
+
+  // =========================================================================
+  // Permission banner
+  // =========================================================================
+  describe('permission banner', () => {
+    it('should hide banner when all URLs permitted', async () => {
+      const mockTab = { id: 1, title: 'Test', url: 'https://test.com' };
+      // @ts-expect-error
+      mockChrome.tabs.query.mockResolvedValue([mockTab]);
+      // @ts-expect-error
+      checkPageStatus.mockResolvedValue({
+        domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
+        privacy: { isPrivate: false, hasCache: false },
+        cache: { hasCache: false },
+        lastSaved: { exists: false }
+      });
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(r => setTimeout(r, 50));
+
+      const banner = document.getElementById('allUrlsPermissionBanner');
+      expect(banner.classList.contains('hidden')).toBe(true);
     });
   });
 });

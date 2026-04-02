@@ -152,6 +152,64 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Test Message');
     });
 
+    it('data-i18n属性を持つIMG要素のtitleを翻訳する', () => {
+      const img = document.createElement('img');
+      img.setAttribute('data-i18n', 'testKey');
+      document.body.appendChild(img);
+
+      applyI18n();
+
+      expect(img.title).toBe('Test Message');
+    });
+
+    it('select内のoption[data-i18n-opt]を翻訳する', () => {
+      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+        if (key === 'optionLabel') return 'Translated Option';
+        return '';
+      });
+
+      const select = document.createElement('select');
+      const option = document.createElement('option');
+      option.setAttribute('data-i18n-opt', 'optionLabel');
+      select.appendChild(option);
+      document.body.appendChild(select);
+
+      applyI18n();
+
+      expect(option.text).toBe('Translated Option');
+    });
+
+    it('[data-i18n-label]ボタンのtextContentを翻訳する', () => {
+      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+        if (key === 'btnLabel') return 'Click Me';
+        return '';
+      });
+
+      const btn = document.createElement('button');
+      btn.setAttribute('data-i18n-label', 'btnLabel');
+      document.body.appendChild(btn);
+
+      applyI18n();
+
+      expect(btn.textContent).toBe('Click Me');
+    });
+
+    it('.help-text[data-i18n]を翻訳する', () => {
+      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+        if (key === 'helpMsg') return 'Help text here';
+        return '';
+      });
+
+      const help = document.createElement('div');
+      help.className = 'help-text';
+      help.setAttribute('data-i18n', 'helpMsg');
+      document.body.appendChild(help);
+
+      applyI18n();
+
+      expect(help.textContent).toBe('Help text here');
+    });
+
     it('data-i18n属性を持つ要素が存在しない場合にエラーを投げない', () => {
       expect(() => applyI18n()).not.toThrow();
     });

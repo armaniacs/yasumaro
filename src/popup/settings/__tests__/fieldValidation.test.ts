@@ -16,6 +16,12 @@ jest.mock('../../i18n.js', () => ({
     getMessage: jest.fn((key: string) => key)
 }));
 
+// storage モック (validateBaseUrl の dynamic import 用)
+jest.mock('../../../utils/storage.js', () => ({
+    isDomainInWhitelist: jest.fn(() => true),
+    ALLOWED_AI_PROVIDER_DOMAINS: ['api.openai.com', 'api.anthropic.com'],
+}));
+
 import {
     setFieldError,
     clearFieldError,
@@ -415,6 +421,32 @@ describe('fieldValidation', () => {
 
             // 空文字トリム後は空文字 → true
             expect(result).toBe(true);
+        });
+
+        test('ホワイトリストに含まれるURLで true を返す', async () => {
+            const { isDomainInWhitelist } = require('../../../utils/storage.js');
+            isDomainInWhitelist.mockReturnValue(true);
+
+            const input = document.getElementById('baseUrl') as HTMLInputElement;
+            input.value = 'https://api.openai.com/v1';
+
+            const result = await validateBaseUrl(input);
+
+            expect(result).toBe(true);
+            expect(input.getAttribute('aria-invalid')).not.toBe('true');
+        });
+
+        test('ホワイトリストに含まれないURLで false を返す', async () => {
+            const { isDomainInWhitelist } = require('../../../utils/storage.js');
+            isDomainInWhitelist.mockReturnValue(false);
+
+            const input = document.getElementById('baseUrl') as HTMLInputElement;
+            input.value = 'https://unknown-provider.com/v1';
+
+            const result = await validateBaseUrl(input);
+
+            expect(result).toBe(false);
+            expect(input.getAttribute('aria-invalid')).toBe('true');
         });
     });
 

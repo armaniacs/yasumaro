@@ -3,13 +3,25 @@
  * uBlockエクスポートUIロジックのテスト
  */
 
-import { exportToText, downloadAsFile, copyToClipboard } from '../ublockExport.js';
 import { jest } from '@jest/globals';
 
-// DOMのモック
-document.body.innerHTML = `
-  <div id="domainStatus"></div>
-`;
+jest.mock('../../utils/storage.js', () => ({
+  getSettings: jest.fn(() => Promise.resolve({})),
+  StorageKeys: { UBLOCK_RULES: 'ublock_rules' },
+}));
+
+jest.mock('../../utils/logger.js', () => ({
+  addLog: jest.fn(),
+  LogType: { ERROR: 'error' },
+}));
+
+jest.mock('../settingsUiHelper.js', () => ({
+  showStatus: jest.fn(),
+}));
+
+import { exportToText, downloadAsFile, copyToClipboard, init } from '../ublockExport.js';
+import { getSettings } from '../../utils/storage.js';
+import { showStatus } from '../settingsUiHelper.js';
 
 // モックデータ
 const mockRules = {
@@ -160,32 +172,117 @@ describe('ublockExport', () => {
 
   describe('UIイベント', () => {
     beforeEach(() => {
-      // DOMのセットアップ
       document.body.innerHTML = `
         <div id="domainStatus"></div>
         <button id="uBlockExportBtn"></button>
         <button id="uBlockCopyBtn"></button>
       `;
+      jest.clearAllMocks();
     });
 
-    test('エクスポートボタンクリック', async () => {
-      // エクスポートボタンクリック時の処理
-      const exportBtn = document.getElementById('uBlockExportBtn');
-      expect(exportBtn).toBeDefined();
+    test('エクスポートボタンクリックでルールをエクスポート', async () => {
+      init();
 
-      // イベントハンドラが正しく設定されていることを確認
-      // 実際のクリックイベントのテストはintegration testで実施すべき
-      expect(true).toBe(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValueOnce({
+        ublock_rules: { blockRules: [{ rawLine: '||a.com^' }], exceptionRules: [] },
+      });
+
+      global.URL.createObjectURL = jest.fn(() => 'blob:test');
+      global.URL.revokeObjectURL = jest.fn();
+      document.body.appendChild = jest.fn();
+      document.body.removeChild = jest.fn();
+
+      document.getElementById('uBlockExportBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'success');
     });
 
-    test('コピーボタンクリック', async () => {
-      // コピーボタンクリック時の処理
-      const copyBtn = document.getElementById('uBlockCopyBtn');
-      expect(copyBtn).toBeDefined();
+    test('エクスポートボタンクリックでルールなし', async () => {
+      init();
 
-      // イベントハンドラが正しく設定されていることを確認
-      // 実際のクリックイベントのテストはintegration testで実施すべき
-      expect(true).toBe(true);
+      // @ts-expect-error
+      getSettings.mockResolvedValueOnce({});
+
+      document.getElementById('uBlockExportBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'error');
+    });
+
+    test('エクスポートボタンクリックでエラー', async () => {
+      init();
+
+      // @ts-expect-error
+      getSettings.mockRejectedValueOnce(new Error('Storage fail'));
+
+      document.getElementById('uBlockExportBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Storage fail'), 'error');
+    });
+
+    test('コピーボタンクリックでルールをコピー', async () => {
+      init();
+
+      // @ts-expect-error
+      getSettings.mockResolvedValueOnce({
+        ublock_rules: { blockRules: [{ rawLine: '||a.com^' }], exceptionRules: [] },
+      });
+
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        writable: true,
+      });
+
+      document.getElementById('uBlockCopyBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'success');
+    });
+
+    test('コピーボタンクリックでルールなし', async () => {
+      init();
+
+      // @ts-expect-error
+      getSettings.mockResolvedValueOnce({});
+
+      document.getElementById('uBlockCopyBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'error');
+    });
+
+    test('コピーボタンクリックでコピーエラー', async () => {
+      init();
+
+      // @ts-expect-error
+      getSettings.mockResolvedValueOnce({
+        ublock_rules: { blockRules: [{ rawLine: '||a.com^' }], exceptionRules: [] },
+      });
+
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: jest.fn().mockRejectedValue(new Error('Clipboard error')) },
+        writable: true,
+      });
+
+      document.getElementById('uBlockCopyBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'error');
+    });
+
+    test('コピーボタンクリックでgetSettingsエラー', async () => {
+      init();
+
+      // @ts-expect-error
+      getSettings.mockRejectedValueOnce(new Error('Storage fail'));
+
+      document.getElementById('uBlockCopyBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Storage fail'), 'error');
     });
   });
 
@@ -200,7 +297,6 @@ describe('ublockExport', () => {
 
     test('ボタン要素が存在しない場合でもエラーを投げない', () => {
       document.body.innerHTML = '';
-      const { init } = require('../ublockExport.js');
       expect(() => init()).not.toThrow();
     });
   });

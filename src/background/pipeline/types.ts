@@ -33,6 +33,10 @@ export interface PipelineError {
   error: Error;
   strategy: ErrorStrategy;
   timestamp: number;
+  context?: {
+    url: string;
+    tabId?: number;
+  };
 }
 
 /**

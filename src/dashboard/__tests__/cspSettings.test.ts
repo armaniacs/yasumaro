@@ -566,3 +566,52 @@ describe('CSPSettings', () => {
     });
   });
 });
+
+describe('escapeRegExp', () => {
+  // Import directly for unit testing
+  let escapeRegExp: (s: string) => string;
+
+  beforeAll(async () => {
+    // Dynamic import to get the exported function
+    const mod = await import('../cspSettings.js');
+    escapeRegExp = mod.escapeRegExp;
+  });
+
+  test('escapes regex special characters', () => {
+    expect(escapeRegExp('a.b*c+d?e^f$g{h}i(j)k|l[m]n\\o')).toBe('a\\.b\\*c\\+d\\?e\\^f\\$g\\{h\\}i\\(j\\)k\\|l\\[m\\]n\\\\o');
+  });
+
+  test('returns string unchanged when no special characters', () => {
+    expect(escapeRegExp('hello-world_123')).toBe('hello-world_123');
+  });
+
+  test('handles empty string', () => {
+    expect(escapeRegExp('')).toBe('');
+  });
+});
+
+describe('i18n with placeholders', () => {
+  let i18n: (key: string, placeholders?: Record<string, string>) => string;
+
+  beforeAll(async () => {
+    const mod = await import('../cspSettings.js');
+    i18n = mod.i18n;
+  });
+
+  test('returns message without placeholders', () => {
+    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Simple message');
+    expect(i18n('testKey')).toBe('Simple message');
+  });
+
+  test('replaces placeholders in message', () => {
+    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Hello ${name}, you have ${count} items');
+    const result = i18n('greeting', { name: 'Alice', count: '5' });
+    expect(result).toBe('Hello Alice, you have 5 items');
+  });
+
+  test('handles placeholder with regex special characters', () => {
+    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Price: ${price}');
+    const result = i18n('price', { price: '$100.00' });
+    expect(result).toBe('Price: $100.00');
+  });
+});

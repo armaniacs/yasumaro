@@ -368,6 +368,145 @@ describe('contentCleaner', () => {
         });
     });
 
+    describe('countCleanseTargets', () => {
+        it('should count hard strip targets without removing them', () => {
+            const container = document.getElementById('test-container')!;
+            const originalHTML = container.innerHTML;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: true,
+                keywordStripEnabled: false
+            });
+
+            expect(result.hardStripRemoved).toBeGreaterThan(0);
+            expect(result.keywordStripRemoved).toBe(0);
+            expect(result.totalRemoved).toBe(result.hardStripRemoved);
+            // DOM should not be modified
+            expect(container.innerHTML).toBe(originalHTML);
+        });
+
+        it('should count keyword strip targets without removing them', () => {
+            const container = document.getElementById('test-container')!;
+            const originalHTML = container.innerHTML;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: true,
+                keywords: ['balance', 'meisai']
+            });
+
+            expect(result.hardStripRemoved).toBe(0);
+            expect(result.keywordStripRemoved).toBeGreaterThan(0);
+            expect(result.totalRemoved).toBe(result.keywordStripRemoved);
+            // DOM should not be modified
+            expect(container.innerHTML).toBe(originalHTML);
+        });
+
+        it('should count both hard strip and keyword strip targets', () => {
+            const container = document.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: true,
+                keywordStripEnabled: true,
+                keywords: ['balance', 'login']
+            });
+
+            expect(result.hardStripRemoved).toBeGreaterThan(0);
+            expect(result.keywordStripRemoved).toBeGreaterThan(0);
+            expect(result.totalRemoved).toBe(result.hardStripRemoved + result.keywordStripRemoved);
+        });
+
+        it('should use default keywords when not specified', () => {
+            const container = document.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: true
+            });
+
+            expect(result.keywordStripRemoved).toBeGreaterThan(0);
+        });
+
+        it('should return zero when both disabled', () => {
+            const container = document.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: false
+            });
+
+            expect(result.totalRemoved).toBe(0);
+            expect(result.hardStripRemoved).toBe(0);
+            expect(result.keywordStripRemoved).toBe(0);
+        });
+
+        it('should count with default options', () => {
+            const container = document.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container);
+
+            expect(result.totalRemoved).toBeGreaterThan(0);
+        });
+
+        it('should not double-count elements matched by multiple keywords', () => {
+            const testDom = new JSDOM(`
+                <html><body>
+                    <div id="test-container">
+                        <div id="balance-login-info">info</div>
+                    </div>
+                </body></html>
+            `);
+            const testDocument = testDom.window.document;
+            const container = testDocument.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: true,
+                keywords: ['balance', 'login']
+            });
+
+            // Same element matches both keywords, but should only be counted once
+            expect(result.keywordStripRemoved).toBe(1);
+
+            testDom.window.close();
+        });
+
+        it('should count keyword targets in both id and class attributes', () => {
+            const testDom = new JSDOM(`
+                <html><body>
+                    <div id="test-container">
+                        <div id="secret-info">id match</div>
+                        <div class="secret-class">class match</div>
+                    </div>
+                </body></html>
+            `);
+            const testDocument = testDom.window.document;
+            const container = testDocument.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: true,
+                keywords: ['secret']
+            });
+
+            expect(result.keywordStripRemoved).toBe(2);
+
+            testDom.window.close();
+        });
+
+        it('should handle empty keywords array', () => {
+            const container = document.getElementById('test-container')!;
+
+            const result = countCleanseTargets(container, {
+                hardStripEnabled: false,
+                keywordStripEnabled: true,
+                keywords: []
+            });
+
+            expect(result.keywordStripRemoved).toBe(0);
+        });
+    });
+
     describe('Performance with many keywords', () => {
         it('should handle 20+ keywords efficiently', () => {
             // 20個のキーワードを生成
@@ -467,11 +606,47 @@ describe('contentCleaner', () => {
             testDom.window.close();
         });
     });
+
+    describe('attribute-based strip deduplication', () => {
+        it('should not duplicate removal when element matches both tag and attribute', () => {
+            // input[type=password] matches both tag (input) and attribute (type=password)
+            const testDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <input type="password" id="pw">
+                    </div>
+                </body></html>
+            `);
+            const container = testDom.window.document.getElementById('container')!;
+            const removed = stripHardStripElements(container);
+            // Should remove the element only once
+            expect(removed).toBe(1);
+            expect(container.querySelector('input')).toBeNull();
+            testDom.window.close();
+        });
+
+        it('should remove autocomplete attribute on non-form element', () => {
+            // autocomplete on a div (not matched by tag selector) triggers line 112
+            const testDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <div autocomplete="on">Not a form</div>
+                    </div>
+                </body></html>
+            `);
+            const container = testDom.window.document.getElementById('container')!;
+            const removed = stripHardStripElements(container);
+            expect(removed).toBe(1);
+            expect(container.querySelector('[autocomplete]')).toBeNull();
+            testDom.window.close();
+        });
+    });
 });
 
 // contentCleaner 関数をインポート
 import {
     stripHardStripElements,
     stripKeywordElements,
-    cleanseContent
+    cleanseContent,
+    countCleanseTargets
 } from '../contentCleaner';

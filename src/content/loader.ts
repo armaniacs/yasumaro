@@ -59,6 +59,7 @@ function extractDomain(url: string): string | null {
         }
         return hostname;
     } catch (e) {
+        console.warn('[OWeave] Failed to extract domain', url, (e as Error).message);
         return null;
     }
 }
@@ -186,7 +187,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
         }
         // 許可 → extractor を inject
         const src = chrome.runtime.getURL('content/extractor.js');
-        try { await import(src); } catch { /* CSP等でdynamic importがブロックされた場合は無視 */ }
+        try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, (e as Error).message); }
         return;
     }
 
@@ -198,7 +199,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
 
     // ビルド後のパスを指定（distディレクトリ内）
     const src = chrome.runtime.getURL('content/extractor.js');
-    try { await import(src); } catch { /* CSP等でdynamic importがブロックされた場合は無視 */ }
+    try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, (e as Error).message); }
 })();
 
 // TypeScriptの`isolatedModules`設定を満たすためのダミーexport

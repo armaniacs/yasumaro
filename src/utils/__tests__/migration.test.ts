@@ -5,7 +5,7 @@
  */
 
 import { test, expect, jest, beforeEach } from '@jest/globals';
-import { migrateToLightweightFormat, migrateUblockSettings } from '../migration.js';
+import { migrateToLightweightFormat, migrateUblockSettings, computeChecksum } from '../migration.js';
 
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア
@@ -314,5 +314,163 @@ describe('migration rollback integrity', () => {
 
     const { restoreFromMigrationBackup } = await import('../migration');
     await expect(restoreFromMigrationBackup('test_key')).rejects.toThrow('data integrity check failed');
+  });
+});
+
+describe('cleanupOldBackups (via migrateUblockSettings)', () => {
+  test('古いバックアップを削除する', async () => {
+    // 【テスト目的】: 保持期間を超えたバックアップがクリーンアップされることを確認
+    // 【テスト内容】: 8日前のバックアップが存在する状態でmigrateUblockSettingsを実行
+    // 【期待される動作】: cleanupOldBackupsがremoveを呼び、その後マイグレーションが実行される
+
+    const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+
+    const oldRules = {
+      blockRules: [{ domain: 'example.com' }],
+      exceptionRules: [],
+      metadata: { importedAt: 1000000 }
+    };
+
+    // get の呼び出しをキーに応じて分岐
+    (global as any).chrome.storage.local.get.mockImplementation((keys: string[]) => {
+      if (keys.includes('migration_backup')) {
+        return Promise.resolve({
+          migration_backup: {
+            timestamp: eightDaysAgo,
+            originalData: oldRules,
+            checksum: 'old-checksum'
+          }
+        });
+      }
+      return Promise.resolve({ ublock_rules: oldRules });
+    });
+    (global as any).chrome.storage.local.set.mockResolvedValue(undefined);
+    (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
+
+    const result = await migrateUblockSettings();
+
+    expect(result).toBe(true);
+    // 古いバックアップのremoveが呼ばれること
+    expect((global as any).chrome.storage.local.remove).toHaveBeenCalledWith(['migration_backup']);
+  });
+});
+
+describe('migrateUblockSettings error handling', () => {
+  test('マイグレーション失敗時にロールバックを実行して元のエラーを再スロー', async () => {
+    // 【テスト目的】: マイグレーション中のエラー時にロールバックが実行されることを確認
+    // 【テスト内容】: storage.setが2回目の呼び出し（マイグレーション保存時）で失敗
+    // 【期待される動作】: restoreFromMigrationBackupが呼ばれ、元のエラーが再スローされる
+
+    const oldRules = {
+      blockRules: [{ domain: 'example.com' }],
+      exceptionRules: [],
+      metadata: { importedAt: 1000000 }
+    };
+
+    // get呼び出し順序:
+    // 1. cleanupOldBackups: get(['migration_backup']) → バックアップなし
+    // 2. migrateUblockSettings: get(['ublock_rules']) → oldRules
+    // 3. createMigrationBackup: get(['ublock_rules']) → oldRules
+    // 4. restoreFromMigrationBackup: get(['migration_backup']) → バックアップあり
+    let getCallCount = 0;
+    (global as any).chrome.storage.local.get.mockImplementation((keys: string[]) => {
+      getCallCount++;
+      if (getCallCount === 1) {
+        return Promise.resolve({});
+      }
+      if (getCallCount <= 3) {
+        return Promise.resolve({ ublock_rules: oldRules });
+      }
+      // restoreFromMigrationBackup用: バックアップデータを返す
+      return Promise.resolve({
+        migration_backup: {
+          timestamp: Date.now(),
+          originalData: oldRules,
+          checksum: computeChecksum(oldRules)
+        }
+      });
+    });
+
+    let setCallCount = 0;
+    (global as any).chrome.storage.local.set.mockImplementation(() => {
+      setCallCount++;
+      if (setCallCount >= 2) {
+        return Promise.reject(new Error('Storage write failed'));
+      }
+      return Promise.resolve();
+    });
+    (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
+
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(migrateUblockSettings()).rejects.toThrow('Storage write failed');
+
+    // ロールバックが試行されたことを確認
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Migration failed'),
+      expect.any(Error)
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  test('マイグレーション失敗かつロールバックも失敗した場合に複合エラーをスロー', async () => {
+    // 【テスト目的】: マイグレーションとロールバック両方が失敗した場合の動作を確認
+    // 【テスト内容】: storage.setが失敗し、restoreFromMigrationBackupもバックアップ不在で失敗
+    // 【期待される動作】: 両方のエラーを含む新しいエラーがスローされる
+
+    const oldRules = {
+      blockRules: [{ domain: 'example.com' }],
+      exceptionRules: [],
+      metadata: { importedAt: 1000000 }
+    };
+
+    let getCallCount = 0;
+    (global as any).chrome.storage.local.get.mockImplementation(() => {
+      getCallCount++;
+      // 1回目: cleanupOldBackups用 (バックアップなし)
+      // 2回目: ublock_rules取得用
+      // 3回目: restoreFromMigrationBackup用 (バックアップなし)
+      if (getCallCount === 1 || getCallCount === 3) {
+        return Promise.resolve({});
+      }
+      return Promise.resolve({ ublock_rules: oldRules });
+    });
+    (global as any).chrome.storage.local.set.mockRejectedValue(new Error('Storage write failed'));
+    (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
+
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(migrateUblockSettings()).rejects.toThrow(
+      'Migration failed and rollback also failed'
+    );
+
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('initializeTrancoVersion', () => {
+  test('非推奨警告を出力してTrustDb.initializeを委譲呼び出し', async () => {
+    // 【テスト目的】: 非推奨関数がTrustDbに委譲することを確認
+    // 【テスト内容】: initializeTrancoVersionがgetTrustDb().initialize()を呼び出す
+    // 【期待される動作】: 警告ログ出力後、TrustDbのinitializeメソッドが実行される
+
+    const mockInitialize = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+
+    jest.mock('../trustDb/trustDb.js', () => ({
+      getTrustDb: () => ({ initialize: mockInitialize })
+    }), { virtual: true });
+
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { initializeTrancoVersion } = await import('../migration');
+    await initializeTrancoVersion();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('deprecated')
+    );
+    expect(mockInitialize).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
   });
 });
