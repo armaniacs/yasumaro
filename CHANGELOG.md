@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.10.15] - 2026-04-02
+
 ### Tests
 
 - **テストカバレッジ大幅改善** (Functions: 61.86% → 68.55%, Statements: 60.07% → 64.62%)
