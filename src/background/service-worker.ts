@@ -32,6 +32,7 @@ import {
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
+import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from './messageTypes.js';
 
 // マイグレーション処理を実行
 (async () => {
@@ -70,15 +71,6 @@ const autoSavedBadgeTabs = new Set<number>();
 
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
-
-// Message type whitelist for security validation
-export const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED'];
-
-// Content Script only message types (sender must have tab context)
-export const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN'];
-
-// Message types that do not require a payload
-export const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
 
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
