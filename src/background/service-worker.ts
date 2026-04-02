@@ -72,7 +72,14 @@ const autoSavedBadgeTabs = new Set<number>();
 HeaderDetector.initialize();
 
 // Message type whitelist for security validation
-const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED'];
+export const VALID_MESSAGE_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL', 'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED'];
+
+// Content Script only message types (sender must have tab context)
+export const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN'];
+
+// Message types that do not require a payload
+export const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
+
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -98,7 +105,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 return;
             }
             // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE、SESSION_LOCK_REQUEST は payload 不要
-            const NO_PAYLOAD_TYPES = ['CHECK_DOMAIN', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST'];
             if (!NO_PAYLOAD_TYPES.includes(message.type)) {
                 if (message.payload === undefined || typeof message.payload !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
@@ -107,7 +113,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             // Sender validation: Content Script only message types
-            const CONTENT_SCRIPT_ONLY_TYPES = ['VALID_VISIT', 'CHECK_DOMAIN'];
             if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type)) {
                 if (!sender.tab || !sender.tab.id || !sender.tab.url) {
                     sendResponse(INVALID_SENDER_ERROR);

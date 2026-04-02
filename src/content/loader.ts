@@ -21,7 +21,7 @@ const StorageKeys = {
 };
 
 // 内部スキームの早期リターン定数
-const SKIPPED_PROTOCOLS = [
+export const SKIPPED_PROTOCOLS = [
     'chrome://',
     'chrome-extension://',
     'moz-extension://',
@@ -40,7 +40,7 @@ const CACHE_TTL = 5 * 60 * 1000;
  * @param url - 判定対象 URL
  * @returns true でスキップ対象
  */
-function shouldSkipUrl(url: string): boolean {
+export function shouldSkipUrl(url: string): boolean {
     if (!url) return true;
     return SKIPPED_PROTOCOLS.some(protocol => url.startsWith(protocol));
 }

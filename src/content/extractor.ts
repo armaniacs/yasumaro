@@ -221,6 +221,16 @@ function loadSettings(): Promise<void> {
 }
 
 /**
+ * 有効な訪問の条件を判定する（テスト可能な純粋関数）
+ * @param duration - 訪問時間（秒）
+ * @param scrollPercent - 最大スクロール深度（%）
+ * @returns 条件を満たす場合true
+ */
+export function shouldRecordVisit(duration: number, scrollPercent: number): boolean {
+    return duration >= minVisitDuration && scrollPercent >= minScrollDepth;
+}
+
+/**
  * 有効な訪問条件をチェックする
  * 【機能概要】: 現在の訪問が条件を満たしているかを確認し、条件を満たした場合は記録を実行
  * 【判定条件】:
@@ -239,9 +249,25 @@ function checkVisitConditions(): void {
     // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
     void logDebug('Visit status', { duration, maxScrollPercentage, minVisitDuration, minScrollDepth }, 'extractor');
 
+    // E2Eテスト用フック: __OW_E2E_TEST フラグが設定されている場合のみ有効
+    if (typeof (window as any).__OW_E2E_TEST !== 'undefined') {
+        (window as any).__OW_TEST_STATE = {
+            maxScrollPercentage,
+            isValidVisitReported,
+            startTime,
+            minVisitDuration,
+            minScrollDepth,
+            duration,
+        };
+    }
+
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
-    if (duration >= minVisitDuration && maxScrollPercentage >= minScrollDepth) {
+    if (shouldRecordVisit(duration, maxScrollPercentage)) {
         reportValidVisit();
+        // E2Eテスト用フック: 報告後に状態を更新
+        if (typeof (window as any).__OW_E2E_TEST !== 'undefined') {
+            (window as any).__OW_TEST_STATE.isValidVisitReported = true;
+        }
         // 【パフォーマンス向上】: 条件満了後に定期実行を停止
         if (checkIntervalId) {
             clearInterval(checkIntervalId);
