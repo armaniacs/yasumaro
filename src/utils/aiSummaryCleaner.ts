@@ -1,9 +1,10 @@
 /**
- * aiSummaryCleaner.ts
+ * AI要約クリーニング
  * 【機能概要】: AI要約に不要な情報を含む要素を削除する
  * 【設計方針】:
  *   - AI要約（generateSummary）に渡す前に適用
  *   - 画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェットを削除
+ *   - JSON-LD構造化データ、遅延読み込みコンテンツ、スキップリンク等的削除
  *   - 外部ライブラリ不使用（バンドルサイズ抑止）
  * 🟢
  */
@@ -17,9 +18,13 @@ export interface AiSummaryCleanseOptions {
     altEnabled?: boolean;           // 画像alt属性削除
     metadataEnabled?: boolean;      // メタデータ削除
     adsEnabled?: boolean;           // 広告関連要素削除
-    navEnabled?: boolean;           // ナビゲーション・フッター削除
-    socialEnabled?: boolean;        // コメント・ソーシャルウィジェット削除
-    deepEnabled?: boolean;          // ディープクレンジング（aside/form/cookie/関連記事等）
+    navEnabled?: boolean;          // ナビゲーション・フッター削除
+    socialEnabled?: boolean;       // コメント・ソーシャルウィジェット削除
+    deepEnabled?: boolean;         // ディープクレンジング（aside/form/cookie/関連記事等）
+    jsonLdEnabled?: boolean;       // JSON-LD構造化データ削除
+    lazyLoadEnabled?: boolean;     // 遅延読み込みコンテンツ削除
+    skipLinkEnabled?: boolean;     // スキップリンク削除
+    cardEnabled?: boolean;         // 記事カード・リストアイテム削除
 }
 
 /**
@@ -32,6 +37,10 @@ export interface AiSummaryCleanseResult {
     navRemoved: number;             // ナビゲーション・フッター削除数
     socialRemoved: number;          // ソーシャルウィジェット削除数
     deepRemoved: number;            // ディープクレンジング削除数
+    jsonLdRemoved?: number;         // JSON-LD構造化データ削除数
+    lazyLoadRemoved?: number;       // 遅延読み込みコンテンツ削除数
+    skipLinkRemoved?: number;       // スキップリンク削除数
+    cardRemoved?: number;          // 記事カード・リストアイテム削除数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数
@@ -88,7 +97,24 @@ const NAV_CLASS_PATTERNS = [
     'header',
     'sidebar',
     'topbar',
-    'bottombar'
+    'bottombar',
+    // 法的・著作権テキスト（deepEnabled不要でデフォルト削除）
+    'copyright',
+    'legal',
+    'disclaimer',
+    'terms',
+    'license',
+    'site-info',
+    'common-footer',
+    // 汎用フッターパターン
+    'l-footer',
+    'entry-footer',
+    'post-footer',
+    'article-footer',
+    // 日本語サイト
+    'corp-info',
+    'site-footer',
+    'global-footer',
 ];
 
 /**
@@ -213,6 +239,27 @@ function stripNavElements(element: Element): number {
     // role="navigation"
     const roleNavElements = element.querySelectorAll('[role="navigation"]');
     roleNavElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
+    // role="contentinfo" (フッターのARIA role — Qiita等CSS-in-JS対策)
+    const contentInfoElements = element.querySelectorAll('[role="contentinfo"]');
+    contentInfoElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // SPA属性パターン (data-testid / aria-label)
+    const spaNavElements = element.querySelectorAll(
+        '[data-testid*="footer"], [data-testid*="nav"], ' +
+        '[aria-label*="advertisement"], [aria-label*="navigation"], [aria-label*="footer"]'
+    );
+    spaNavElements.forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -364,6 +411,174 @@ const DEEP_ROLES = [
 ];
 
 /**
+ * JSON-LD構造化データパターンを削除する
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除したスクリプトの数
+ */
+function stripJsonLdScripts(element: Element): number {
+    let removedCount = 0;
+    const scripts = element.querySelectorAll('script[type="application/ld+json"]');
+    
+    scripts.forEach(script => {
+        script.remove();
+        removedCount++;
+    });
+    
+    return removedCount;
+}
+
+/**
+ * 遅延読み込みコンテンツパターンを削除
+ * loading="lazy" や data-src を持つ画像、iframe 等を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripLazyLoadElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+    
+    // loading="lazy" を持つ要素
+    const lazyElements = element.querySelectorAll('[loading="lazy"]');
+    lazyElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
+    // data-src を持つ画像/iframe（遅延読み込みの実装）
+    const dataSrcElements = element.querySelectorAll('img[data-src], iframe[data-src], video[data-src]');
+    dataSrcElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
+    // class に lazy, skeleton, placeholder を含む要素
+    const lazyPatterns = ['lazy', 'skeleton', 'placeholder', 'loading'];
+    for (const pattern of lazyPatterns) {
+        const kw = escapeCssSelector(pattern);
+        const lazyClassElements = element.querySelectorAll(`[class*="${kw}"]`);
+        lazyClassElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+            }
+        });
+    }
+    
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    
+    return removedCount;
+}
+
+/**
+ * スキップリンク・アクセシビリティリンクを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripSkipLinks(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+    
+    // href="#..." や href="javascript:..." のリンク
+    const skipLinks = element.querySelectorAll('a[href^="#"], a[href^="javascript:"]');
+    skipLinks.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
+    // role="button" のリンク（CTAボタン等）
+    const roleButtonLinks = element.querySelectorAll('a[role="button"]');
+    roleButtonLinks.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
+    // class に skip, sr-only, visually-hidden を含む要素（スクリーンリーダー用）
+    const srPatterns = ['skip', 'sr-only', 'visually-hidden', 'screen-reader'];
+    for (const pattern of srPatterns) {
+        const kw = escapeCssSelector(pattern);
+        const srElements = element.querySelectorAll(`[class*="${kw}"]`);
+        srElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+            }
+        });
+    }
+    
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    
+    return removedCount;
+}
+
+/**
+ * 記事カード・リストアイテムを削除
+ * 関連記事、 популярные статьи、おすすめ記事等のリストアイテムを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripCardElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+    
+    // カード・リストアイテムのパターン
+    const cardPatterns = [
+        'card', 'article-card', 'post-card', 'entry-card',
+        'item-card', 'product-card', 'recipe-card',
+        'list-item', 'entry-item', 'post-item',
+        'ranking-item', 'popular-item', 'trending-item',
+        'recommend-item', 'pickup-item', 'feature-item',
+        'related-item', 'sns-post', 'timeline-item',
+        // 日本語
+        'kiji', 'article-list__item', 'post-list__item',
+        'recommend-list', 'pickup-list', 'ranking-list'
+    ];
+    
+    for (const pattern of cardPatterns) {
+        const kw = escapeCssSelector(pattern.toLowerCase());
+        
+        const classElements = element.querySelectorAll(`[class*="${kw}"]`);
+        classElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+            }
+        });
+        
+        const idElements = element.querySelectorAll(`[id*="${kw}"]`);
+        idElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+            }
+        });
+    }
+    
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    
+    return removedCount;
+}
+
+/**
  * ディープクレンジング — aside/form/script等のタグ、role属性、クッキー/ポップアップ/関連記事等を削除
  * @param element - クレンジング対象のルート要素
  * @returns 削除した要素の数
@@ -472,10 +687,13 @@ export function cleanseAISummaryContent(
         adsEnabled = true,
         navEnabled = true,
         socialEnabled = true,
-        deepEnabled = false
+        deepEnabled = false,
+        jsonLdEnabled = false,
+        lazyLoadEnabled = false,
+        skipLinkEnabled = false,
+        cardEnabled = false
     } = options;
 
-    // クレンジング前のバイト数を計算（outerHTMLで削除されたDOM要素のサイズ変化を正確に反映）
     const bytesBefore = new Blob([element.outerHTML || '']).size;
 
     let altRemoved = 0;
@@ -484,39 +702,56 @@ export function cleanseAISummaryContent(
     let navRemoved = 0;
     let socialRemoved = 0;
     let deepRemoved = 0;
+    let jsonLdRemoved = 0;
+    let lazyLoadRemoved = 0;
+    let skipLinkRemoved = 0;
+    let cardRemoved = 0;
 
-    // 画像alt属性削除
     if (altEnabled) {
         altRemoved = stripAltAttributes(element);
     }
 
-    // メタデータ削除
     if (metadataEnabled) {
         metadataRemoved = stripMetadataElements(element);
     }
 
-    // 広告関連要素削除
     if (adsEnabled) {
         adsRemoved = stripAdElements(element);
     }
 
-    // ナビゲーション・フッター削除
     if (navEnabled) {
         navRemoved = stripNavElements(element);
     }
 
-    // ソーシャルウィジェット削除
     if (socialEnabled) {
         socialRemoved = stripSocialElements(element);
     }
 
-    // ディープクレンジング
     if (deepEnabled) {
         deepRemoved = stripDeepElements(element);
     }
 
-    // クレンジング後のバイト数を計算（outerHTMLで削除されたDOM要素のサイズ変化を正確に反映）
+    if (jsonLdEnabled) {
+        jsonLdRemoved = stripJsonLdScripts(element);
+    }
+
+    if (lazyLoadEnabled) {
+        lazyLoadRemoved = stripLazyLoadElements(element);
+    }
+
+    if (skipLinkEnabled) {
+        skipLinkRemoved = stripSkipLinks(element);
+    }
+
+    if (cardEnabled) {
+        cardRemoved = stripCardElements(element);
+    }
+
     const bytesAfter = new Blob([element.outerHTML || '']).size;
+
+    const total = altRemoved + metadataRemoved + adsRemoved + navRemoved + 
+        socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved + 
+        skipLinkRemoved + cardRemoved;
 
     return {
         altRemoved,
@@ -525,7 +760,11 @@ export function cleanseAISummaryContent(
         navRemoved,
         socialRemoved,
         deepRemoved,
-        totalRemoved: altRemoved + metadataRemoved + adsRemoved + navRemoved + socialRemoved + deepRemoved,
+        jsonLdRemoved,
+        lazyLoadRemoved,
+        skipLinkRemoved,
+        cardRemoved,
+        totalRemoved: total,
         bytesBefore,
         bytesAfter
     };
@@ -547,7 +786,11 @@ export function countAISummaryTargets(
         adsEnabled = true,
         navEnabled = true,
         socialEnabled = true,
-        deepEnabled = false
+        deepEnabled = false,
+        jsonLdEnabled = false,
+        lazyLoadEnabled = false,
+        skipLinkEnabled = false,
+        cardEnabled = false
     } = options;
 
     let altCount = 0;
@@ -556,6 +799,10 @@ export function countAISummaryTargets(
     let navCount = 0;
     let socialCount = 0;
     let deepCount = 0;
+    let jsonLdCount = 0;
+    let lazyLoadCount = 0;
+    let skipLinkCount = 0;
+    let cardCount = 0;
     
     // 画像alt属性カウント
     if (altEnabled) {
@@ -617,6 +864,24 @@ export function countAISummaryTargets(
         
         const roleNavElements = element.querySelectorAll('[role="navigation"]');
         roleNavElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                navCount++;
+                counted.add(elem);
+            }
+        });
+        
+        const contentInfoElements = element.querySelectorAll('[role="contentinfo"]');
+        contentInfoElements.forEach(elem => {
+            if (!counted.has(elem)) {
+                navCount++;
+                counted.add(elem);
+            }
+        });
+
+        element.querySelectorAll(
+            '[data-testid*="footer"], [data-testid*="nav"], ' +
+            '[aria-label*="advertisement"], [aria-label*="navigation"], [aria-label*="footer"]'
+        ).forEach(elem => {
             if (!counted.has(elem)) {
                 navCount++;
                 counted.add(elem);
@@ -716,13 +981,80 @@ export function countAISummaryTargets(
             if (!counted.has(elem)) { deepCount++; counted.add(elem); }
         });
 
-        // 空要素のカウント（テキストコンテンツが空のdiv/span/p）
+        // 空要素のカount（テキストコンテンツが空のdiv/span/p）
         element.querySelectorAll('div, span, p').forEach(elem => {
             if (!counted.has(elem) && (elem.textContent || '').trim() === '') {
                 deepCount++; counted.add(elem);
             }
         });
     }
+
+    if (jsonLdEnabled) {
+        jsonLdCount = element.querySelectorAll('script[type="application/ld+json"]').length;
+    }
+
+    if (lazyLoadEnabled) {
+        const counted = new Set<Element>();
+        
+        element.querySelectorAll('[loading="lazy"]').forEach(elem => {
+            if (!counted.has(elem)) { lazyLoadCount++; counted.add(elem); }
+        });
+        element.querySelectorAll('img[data-src], iframe[data-src], video[data-src]').forEach(elem => {
+            if (!counted.has(elem)) { lazyLoadCount++; counted.add(elem); }
+        });
+        const lazyPatterns = ['lazy', 'skeleton', 'placeholder', 'loading'];
+        for (const pattern of lazyPatterns) {
+            const kw = escapeCssSelector(pattern);
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { lazyLoadCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (skipLinkEnabled) {
+        const counted = new Set<Element>();
+        
+        element.querySelectorAll('a[href^="#"], a[href^="javascript:"]').forEach(elem => {
+            if (!counted.has(elem)) { skipLinkCount++; counted.add(elem); }
+        });
+        element.querySelectorAll('a[role="button"]').forEach(elem => {
+            if (!counted.has(elem)) { skipLinkCount++; counted.add(elem); }
+        });
+        const srPatterns = ['skip', 'sr-only', 'visually-hidden', 'screen-reader'];
+        for (const pattern of srPatterns) {
+            const kw = escapeCssSelector(pattern);
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { skipLinkCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (cardEnabled) {
+        const counted = new Set<Element>();
+        
+        const cardPatterns = [
+            'card', 'article-card', 'post-card', 'entry-card',
+            'item-card', 'product-card', 'recipe-card',
+            'list-item', 'entry-item', 'post-item',
+            'ranking-item', 'popular-item', 'trending-item',
+            'recommend-item', 'pickup-item', 'feature-item',
+            'related-item', 'sns-post', 'timeline-item',
+            'kiji', 'article-list__item', 'post-list__item',
+            'recommend-list', 'pickup-list', 'ranking-list'
+        ];
+        for (const pattern of cardPatterns) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { cardCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { cardCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    const total = altCount + metadataCount + adsCount + navCount + socialCount + 
+        deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount;
 
     return {
         altRemoved: altCount,
@@ -731,7 +1063,11 @@ export function countAISummaryTargets(
         navRemoved: navCount,
         socialRemoved: socialCount,
         deepRemoved: deepCount,
-        totalRemoved: altCount + metadataCount + adsCount + navCount + socialCount + deepCount,
+        jsonLdRemoved: jsonLdCount,
+        lazyLoadRemoved: lazyLoadCount,
+        skipLinkRemoved: skipLinkCount,
+        cardRemoved: cardCount,
+        totalRemoved: total,
         bytesBefore: 0,
         bytesAfter: 0
     };

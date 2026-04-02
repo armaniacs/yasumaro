@@ -195,6 +195,45 @@ describe('aiSummaryCleaner', () => {
 
             expect(result.totalRemoved).toBe(0);
         });
+
+        test('NAV拡張: copyright/legal クラス要素を削除する', () => {
+            const dom2 = new JSDOM(`<html><body><div id="root">
+                <p class="footer__copyright-text">© 2026 CNN</p>
+                <div class="legal-notice">Terms of Service</div>
+                <div class="common-footer">Site footer</div>
+                <div class="l-footer">Layout footer</div>
+                <p class="main-content">Important article text here.</p>
+            </div></body></html>`, { url: 'http://localhost' });
+            const el = dom2.window.document.getElementById('root')!;
+            (global as any).document = dom2.window.document;
+            const result = cleanseAISummaryContent(el, {
+                navEnabled: true, altEnabled: false, metadataEnabled: false,
+                adsEnabled: false, socialEnabled: false, deepEnabled: false
+            });
+            expect(result.navRemoved).toBeGreaterThanOrEqual(4);
+            expect(el.querySelector('.footer__copyright-text')).toBeNull();
+            expect(el.querySelector('.legal-notice')).toBeNull();
+            expect(el.querySelector('.common-footer')).toBeNull();
+            expect(el.querySelector('.l-footer')).toBeNull();
+            expect(el.querySelector('.main-content')).not.toBeNull();
+            dom2.window.close();
+        });
+
+        test('NAV拡張: role="contentinfo" 要素を削除する', () => {
+            const dom2 = new JSDOM(`<html><body><div id="root">
+                <div role="contentinfo">Site footer region</div>
+                <p class="article-body">Article text here.</p>
+            </div></body></html>`, { url: 'http://localhost' });
+            const el = dom2.window.document.getElementById('root')!;
+            (global as any).document = dom2.window.document;
+            const result = cleanseAISummaryContent(el, {
+                navEnabled: true, altEnabled: false, metadataEnabled: false,
+                adsEnabled: false, socialEnabled: false, deepEnabled: false
+            });
+            expect(result.navRemoved).toBeGreaterThanOrEqual(1);
+            expect(el.querySelector('[role="contentinfo"]')).toBeNull();
+            dom2.window.close();
+        });
     });
 
     describe('countAISummaryTargets', () => {
