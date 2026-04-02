@@ -20,8 +20,9 @@ const StorageKeys = {
     UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled'
 };
 
-// 内部スキームの早期リターン定数
-export const SKIPPED_PROTOCOLS = [
+// 内部スキームの早期リターン定数（※ loader.ts は Content Script エントリポイントのため静的 import/export 不可）
+// テスト可能な正本は urlSkipper.ts を参照
+const SKIPPED_PROTOCOLS = [
     'chrome://',
     'chrome-extension://',
     'moz-extension://',
@@ -40,7 +41,7 @@ const CACHE_TTL = 5 * 60 * 1000;
  * @param url - 判定対象 URL
  * @returns true でスキップ対象
  */
-export function shouldSkipUrl(url: string): boolean {
+function shouldSkipUrl(url: string): boolean {
     if (!url) return true;
     return SKIPPED_PROTOCOLS.some(protocol => url.startsWith(protocol));
 }
@@ -59,7 +60,7 @@ function extractDomain(url: string): string | null {
         }
         return hostname;
     } catch (e) {
-        console.warn('[OWeave] Failed to extract domain', url, (e as Error).message);
+        console.warn('[OWeave] Failed to extract domain', url, e instanceof Error ? e.message : String(e));
         return null;
     }
 }
@@ -187,19 +188,34 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
         }
         // 許可 → extractor を inject
         const src = chrome.runtime.getURL('content/extractor.js');
-        try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, (e as Error).message); }
+        try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, e instanceof Error ? e.message : String(e)); }
         return;
     }
 
     // キャッシュがない場合のみ、バックグラウンドメッセージでドメインチェック
-    const response = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN' });
+    // Service Worker がまだ起動していない場合に備えリトライ付き
+    let response: { success?: boolean; allowed?: boolean } | undefined;
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            response = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN' });
+            if (response) break;
+        } catch (e) {
+            lastError = e;
+            // Service Worker 未起動 → 少し待ってリトライ
+            await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+        }
+    }
     if (!response || !response.allowed) {
+        if (!response) {
+            console.warn('[OWeave] Domain check failed: no response from service worker', url, lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown'));
+        }
         return;
     }
 
     // ビルド後のパスを指定（distディレクトリ内）
     const src = chrome.runtime.getURL('content/extractor.js');
-    try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, (e as Error).message); }
+    try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, e instanceof Error ? e.message : String(e)); }
 })();
 
 // TypeScriptの`isolatedModules`設定を満たすためのダミーexport

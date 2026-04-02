@@ -249,9 +249,10 @@ function checkVisitConditions(): void {
     // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
     void logDebug('Visit status', { duration, maxScrollPercentage, minVisitDuration, minScrollDepth }, 'extractor');
 
-    // E2Eテスト用フック: __OW_E2E_TEST フラグが設定されている場合のみ有効
-    if (typeof (window as any).__OW_E2E_TEST !== 'undefined') {
-        (window as any).__OW_TEST_STATE = {
+    // E2Eテスト用フック: data-ow-e2e-test 属性が設定されている場合のみ有効
+    // （ページスクリプトと Content Script は別 JS コンテキストのため DOM 経由で通信）
+    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
+        const state = {
             maxScrollPercentage,
             isValidVisitReported,
             startTime,
@@ -259,14 +260,18 @@ function checkVisitConditions(): void {
             minScrollDepth,
             duration,
         };
+        (window as any).__OW_TEST_STATE = state;
+        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
     }
 
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
     if (shouldRecordVisit(duration, maxScrollPercentage)) {
         reportValidVisit();
         // E2Eテスト用フック: 報告後に状態を更新
-        if (typeof (window as any).__OW_E2E_TEST !== 'undefined') {
+        if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
             (window as any).__OW_TEST_STATE.isValidVisitReported = true;
+            document.documentElement.setAttribute('data-ow-test-state',
+                JSON.stringify((window as any).__OW_TEST_STATE));
         }
         // 【パフォーマンス向上】: 条件満了後に定期実行を停止
         if (checkIntervalId) {

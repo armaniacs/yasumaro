@@ -7,7 +7,7 @@ clean:
 	npm run clean
 
 test:
-	npm test
+	npm run validate && npm run test:e2e
 
 test-watch:
 	npm run test:watch
@@ -23,3 +23,5 @@ type-check:
 
 validate:
 	npm run validate
+
+test-and-build: test build
