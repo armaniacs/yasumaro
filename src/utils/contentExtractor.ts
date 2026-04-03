@@ -394,7 +394,7 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false } = aiSummaryCleanseOptions;
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -509,7 +509,11 @@ export function extractMainContent(
                         adsEnabled,
                         navEnabled,
                         socialEnabled,
-                        deepEnabled
+                        deepEnabled,
+                        jsonLdEnabled,
+                        lazyLoadEnabled,
+                        skipLinkEnabled,
+                        cardEnabled
                     });
 
                     console.log('[ContentExtractor] AI Summary Cleansing result:', aiSummaryCleanseResult);
@@ -605,7 +609,11 @@ export function extractMainContent(
                         adsEnabled,
                         navEnabled,
                         socialEnabled,
-                        deepEnabled
+                        deepEnabled,
+                        jsonLdEnabled,
+                        lazyLoadEnabled,
+                        skipLinkEnabled,
+                        cardEnabled
                     });
 
                     // AI要約クレンジング後のバイト数を計算（outerHTMLベース）
@@ -649,9 +657,10 @@ export function extractMainContent(
         content = document.body?.innerText || '';
     }
 
-    // 空白文字の正規化
+    // 空白文字の正規化（改行圧縮 → スペース統一 → トリム）
     content = content
-        .replace(/\s+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')   // 3行以上の連続空白行を2行に圧縮
+        .replace(/\s+/g, ' ')          // 残りの空白を単一スペースに
         .trim();
 
     // 最大文字数で切り詰め

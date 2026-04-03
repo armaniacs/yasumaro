@@ -1529,6 +1529,12 @@
   "aiSummaryCleansingDeepEnabledDesc": {
     "message": "aside/figure/form/dialog/button/input/select/details、ARIA role（banner/complementary等）、非表示要素（hidden/aria-hidden）、空要素、cookie/popup/modal/著者情報/法的情報/BEM系等のクラスを持つ要素を削除します。"
   },
+  "aiSummaryCleansingLinkDensityEnabled": {
+    "message": "リンク密度フィルタ（実験的）"
+  },
+  "aiSummaryCleansingLinkDensityEnabledDesc": {
+    "message": "リンクが密集した関連記事リスト・ナビゲーションブロックを削除します（リンク比率70%以上・100文字以上の要素）。"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },

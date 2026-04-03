@@ -1529,6 +1529,12 @@
   "aiSummaryCleansingDeepEnabledDesc": {
     "message": "Remove aside/figure/form/dialog/button/input/select/details, ARIA roles (banner/complementary, etc.), hidden elements (hidden/aria-hidden), empty elements, and elements matching cookie/popup/modal/author-info/legal/BEM-style class patterns."
   },
+  "aiSummaryCleansingLinkDensityEnabled": {
+    "message": "Link Density Filter (Experimental)"
+  },
+  "aiSummaryCleansingLinkDensityEnabledDesc": {
+    "message": "Removes link-dense blocks like related article lists and navigation groups (elements with 70%+ link text ratio and 100+ characters)."
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },

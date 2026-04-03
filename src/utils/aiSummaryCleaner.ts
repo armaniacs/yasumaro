@@ -25,6 +25,7 @@ export interface AiSummaryCleanseOptions {
     lazyLoadEnabled?: boolean;     // 遅延読み込みコンテンツ削除
     skipLinkEnabled?: boolean;     // スキップリンク削除
     cardEnabled?: boolean;         // 記事カード・リストアイテム削除
+    linkDensityEnabled?: boolean;  // リンク密度の高いブロック削除（デフォルト: false）
 }
 
 /**
@@ -41,6 +42,7 @@ export interface AiSummaryCleanseResult {
     lazyLoadRemoved?: number;       // 遅延読み込みコンテンツ削除数
     skipLinkRemoved?: number;       // スキップリンク削除数
     cardRemoved?: number;          // 記事カード・リストアイテム削除数
+    linkDensityRemoved?: number;    // リンク密度ブロック削除数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数
@@ -174,6 +176,18 @@ function stripAdElements(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
     
+    // 広告データ属性で検索
+    const adDataAttrElements = element.querySelectorAll(
+        '[data-ad], [data-ad-slot], [data-ad-client], [data-dfp], [data-gpt-ad], ' +
+        'ins.adsbygoogle, [class*="sponsored-content"], [class*="native-ad"]'
+    );
+    adDataAttrElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+    
     // クラス名パターンで検索
     for (const pattern of AD_CLASS_PATTERNS) {
         const kw = escapeCssSelector(pattern.toLowerCase());
@@ -297,6 +311,94 @@ function stripNavElements(element: Element): number {
         removedCount++;
     }
     
+    return removedCount;
+}
+
+/**
+ * 法的テキストパターン（著作権・免責事項等）
+ * テキストコンテンツベースで要素を削除する（クラス名に依存しない）
+ */
+const LEGAL_TEXT_PATTERNS: RegExp[] = [
+    /©\s*\d{4}/,
+    /copyright\s+\d{4}/i,
+    /all rights reserved/i,
+    /無断転載禁止/,
+    /著作権.*株式会社/,
+    /著作権.*有限会社/,
+];
+
+/**
+ * 法的テキストを含む要素を削除（クラス名に依存しないテキストベース削除）
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripLegalTextNodes(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    // p, div, span, small, footer, section を対象（500文字以下のみ）
+    const candidates = element.querySelectorAll('p, div, span, small, footer, section');
+    candidates.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = (elem.textContent || '').trim();
+        // 500文字超は本文の可能性が高いためスキップ
+        if (text.length > 500) return;
+        // 子に p/article/section が複数あればコンテナなのでスキップ
+        const contentChildren = elem.querySelectorAll('p, article, section');
+        if (contentChildren.length >= 2) return;
+        // テキストパターンマッチ
+        for (const pattern of LEGAL_TEXT_PATTERNS) {
+            if (pattern.test(text)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+                break;
+            }
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * リンク密度の高いブロックを削除（関連記事リスト・もっと見るリンク群等）
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripHighLinkDensityElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    // ul, ol, div, section を対象
+    const candidates = element.querySelectorAll('ul, ol, div, section');
+    candidates.forEach(elem => {
+        if (counted.has(elem)) return;
+        const totalText = (elem.textContent || '').length;
+        // 100文字未満は除外（空・短すぎる要素）
+        if (totalText < 100) return;
+        // 直接の親が p/article/section なら本文内コンテンツとして保護
+        const parent = elem.parentElement;
+        if (parent && ['p', 'article', 'section'].includes(parent.tagName.toLowerCase())) return;
+        // リンク密度計算
+        let linkText = 0;
+        elem.querySelectorAll('a').forEach(a => {
+            linkText += (a.textContent || '').length;
+        });
+        if (totalText > 0 && linkText / totalText >= 0.7) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
     return removedCount;
 }
 
@@ -691,7 +793,8 @@ export function cleanseAISummaryContent(
         jsonLdEnabled = false,
         lazyLoadEnabled = false,
         skipLinkEnabled = false,
-        cardEnabled = false
+        cardEnabled = false,
+        linkDensityEnabled = false,
     } = options;
 
     const bytesBefore = new Blob([element.outerHTML || '']).size;
@@ -706,6 +809,7 @@ export function cleanseAISummaryContent(
     let lazyLoadRemoved = 0;
     let skipLinkRemoved = 0;
     let cardRemoved = 0;
+    let linkDensityRemoved = 0;
 
     if (altEnabled) {
         altRemoved = stripAltAttributes(element);
@@ -721,6 +825,7 @@ export function cleanseAISummaryContent(
 
     if (navEnabled) {
         navRemoved = stripNavElements(element);
+        navRemoved += stripLegalTextNodes(element);
     }
 
     if (socialEnabled) {
@@ -747,11 +852,15 @@ export function cleanseAISummaryContent(
         cardRemoved = stripCardElements(element);
     }
 
+    if (linkDensityEnabled) {
+        linkDensityRemoved = stripHighLinkDensityElements(element);
+    }
+
     const bytesAfter = new Blob([element.outerHTML || '']).size;
 
-    const total = altRemoved + metadataRemoved + adsRemoved + navRemoved + 
-        socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved + 
-        skipLinkRemoved + cardRemoved;
+    const total = altRemoved + metadataRemoved + adsRemoved + navRemoved +
+        socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved +
+        skipLinkRemoved + cardRemoved + linkDensityRemoved;
 
     return {
         altRemoved,
@@ -764,6 +873,7 @@ export function cleanseAISummaryContent(
         lazyLoadRemoved,
         skipLinkRemoved,
         cardRemoved,
+        linkDensityRemoved,
         totalRemoved: total,
         bytesBefore,
         bytesAfter
@@ -790,7 +900,8 @@ export function countAISummaryTargets(
         jsonLdEnabled = false,
         lazyLoadEnabled = false,
         skipLinkEnabled = false,
-        cardEnabled = false
+        cardEnabled = false,
+        linkDensityEnabled = false,
     } = options;
 
     let altCount = 0;
@@ -803,6 +914,7 @@ export function countAISummaryTargets(
     let lazyLoadCount = 0;
     let skipLinkCount = 0;
     let cardCount = 0;
+    let linkDensityCount = 0;
     
     // 画像alt属性カウント
     if (altEnabled) {
@@ -1053,8 +1165,25 @@ export function countAISummaryTargets(
         }
     }
 
-    const total = altCount + metadataCount + adsCount + navCount + socialCount + 
-        deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount;
+    if (linkDensityEnabled) {
+        const counted = new Set<Element>();
+        element.querySelectorAll('ul, ol, div, section').forEach(elem => {
+            if (counted.has(elem)) return;
+            const totalText = (elem.textContent || '').trim().length;
+            if (totalText < 100) return;
+            const parent = elem.parentElement;
+            if (parent && ['p', 'article', 'section'].includes(parent.tagName.toLowerCase())) return;
+            let linkText = 0;
+            elem.querySelectorAll('a').forEach(a => { linkText += (a.textContent || '').trim().length; });
+            if (totalText > 0 && linkText / totalText >= 0.7) {
+                linkDensityCount++;
+                counted.add(elem);
+            }
+        });
+    }
+
+    const total = altCount + metadataCount + adsCount + navCount + socialCount +
+        deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount + linkDensityCount;
 
     return {
         altRemoved: altCount,
@@ -1067,6 +1196,7 @@ export function countAISummaryTargets(
         lazyLoadRemoved: lazyLoadCount,
         skipLinkRemoved: skipLinkCount,
         cardRemoved: cardCount,
+        linkDensityRemoved: linkDensityCount,
         totalRemoved: total,
         bytesBefore: 0,
         bytesAfter: 0

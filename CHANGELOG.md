@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- AI要約クレンジング: `NAV_CLASS_PATTERNS` に `copyright`, `legal`, `disclaimer`, `terms`, `l-footer` 等を追加
+- AI要約クレンジング: `role="contentinfo"` 要素の削除を `navEnabled` に追加（CSS-in-JS サイト対策）
+- AI要約クレンジング: 広告データ属性 (`data-ad`, `data-gpt-ad`, `ins.adsbygoogle`) の削除を追加
+- AI要約クレンジング: `stripLegalTextNodes()` — クラス名に依存しないテキストベース著作権テキスト削除（`navEnabled` で動作）
+- AI要約クレンジング: `linkDensityEnabled` オプション — リンク密度の高いブロック（関連記事リスト等）の削除（デフォルト無効）
+
+### Changed
+
+- コンテンツ抽出: クレンジング後の3行以上の連続空白行を2行に圧縮してトークン効率を改善
+
 ## [4.10.16] - 2026-04-03
 
 ### Fixed

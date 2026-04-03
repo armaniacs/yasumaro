@@ -234,6 +234,67 @@ describe('aiSummaryCleaner', () => {
             expect(el.querySelector('[role="contentinfo"]')).toBeNull();
             dom2.window.close();
         });
+
+        test('広告拡張: data-ad/data-gpt/ins.adsbygoogle を削除する', () => {
+            const dom2 = new JSDOM(`<html><body><div id="root">
+                <div data-ad="banner">Ad content</div>
+                <div data-gpt-ad="slot1">GPT ad</div>
+                <ins class="adsbygoogle" data-ad-client="ca-pub-123">Google Ad</ins>
+                <div class="sponsored-content">Sponsored</div>
+                <div class="native-ad">Native ad</div>
+                <p class="article-text">Real content here.</p>
+            </div></body></html>`, { url: 'http://localhost' });
+            const el = dom2.window.document.getElementById('root')!;
+            (global as any).document = dom2.window.document;
+            const result = cleanseAISummaryContent(el, {
+                adsEnabled: true, altEnabled: false, metadataEnabled: false,
+                navEnabled: false, socialEnabled: false, deepEnabled: false
+            });
+            expect(result.adsRemoved).toBeGreaterThanOrEqual(5);
+            expect(el.querySelector('[data-ad]')).toBeNull();
+            expect(el.querySelector('[data-gpt-ad]')).toBeNull();
+            expect(el.querySelector('ins.adsbygoogle')).toBeNull();
+            expect(el.querySelector('.article-text')).not.toBeNull();
+            dom2.window.close();
+        });
+
+        test('stripLegalTextNodes: © 年号パターンを含む短い要素を削除する', () => {
+            const dom2 = new JSDOM(`<html><body><div id="root">
+                <p>© 2026 Cable News Network. All Rights Reserved.</p>
+                <p>Copyright 2026 togetter.com. All Rights Reserved.</p>
+                <div>無断転載禁止</div>
+                <p>著作権は株式会社読売新聞社に帰属します。</p>
+                <p class="article-body">This is a long article paragraph with lots of real content about important topics that should definitely not be removed by legal text stripping because it is clearly article content and not a copyright notice.</p>
+            </div></body></html>`, { url: 'http://localhost' });
+            const el = dom2.window.document.getElementById('root')!;
+            (global as any).document = dom2.window.document;
+            const result = cleanseAISummaryContent(el, {
+                navEnabled: true, altEnabled: false, metadataEnabled: false,
+                adsEnabled: false, socialEnabled: false, deepEnabled: false
+            });
+            expect(result.navRemoved).toBeGreaterThanOrEqual(4);
+            const remaining = el.textContent || '';
+            expect(remaining).not.toContain('© 2026 Cable News Network');
+            expect(remaining).not.toContain('Copyright 2026 togetter.com');
+            expect(remaining).not.toContain('無断転載禁止');
+            expect(remaining).toContain('long article paragraph');
+            dom2.window.close();
+        });
+
+        test('stripHighLinkDensityElements: リンク密度0.7以上のブロックを削除する', () => {
+            const dom2 = new JSDOM(`<html><body><div id="root"><ul class="related-links"><li><a href="/a">Related article one long title</a></li><li><a href="/b">Related article two long title</a></li><li><a href="/c">Related article three long title</a></li><li><a href="/d">Related article four long title</a></li></ul><div class="article-content"><p>This is the main article content. It has lots of <a href="/x">one link</a> among regular text that makes up the majority of the text content here so link density stays low.</p></div></div></body></html>`, { url: 'http://localhost' });
+            const el = dom2.window.document.getElementById('root')!;
+            (global as any).document = dom2.window.document;
+            const result = cleanseAISummaryContent(el, {
+                navEnabled: false, altEnabled: false, metadataEnabled: false,
+                adsEnabled: false, socialEnabled: false, deepEnabled: false,
+                linkDensityEnabled: true
+            });
+            expect(result.linkDensityRemoved).toBeGreaterThanOrEqual(1);
+            expect(el.querySelector('.related-links')).toBeNull();
+            expect(el.querySelector('.article-content')).not.toBeNull();
+            dom2.window.close();
+        });
     });
 
     describe('countAISummaryTargets', () => {

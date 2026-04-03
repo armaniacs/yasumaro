@@ -577,6 +577,15 @@
           </div>
         </div>
 
+        <!-- リンク密度フィルタ -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingLinkDensityEnabled">リンク密度フィルタ（実験的）</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-link-density" aria-describedby="aiSummaryCleansingLinkDensityEnabledDesc">
+            <label for="ai-summary-cleansing-link-density" class="inline-label" data-i18n="aiSummaryCleansingLinkDensityEnabledDesc">リンクが密集した関連記事リスト・ナビゲーションブロックを削除します（リンク比率70%以上・100文字以上の要素）。</label>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">保存</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>
