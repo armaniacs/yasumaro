@@ -49,6 +49,21 @@ function escapeHtml(text: string): string {
 // ==============================================================================
 
 /**
+ * Create common circle element for SVG icons
+ */
+function createStatusCircle(svg: SVGSVGElement): SVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const circle = document.createElementNS(ns, 'circle');
+  circle.setAttribute('cx', '12');
+  circle.setAttribute('cy', '12');
+  circle.setAttribute('r', '10');
+  circle.setAttribute('fill', 'none');
+  circle.setAttribute('stroke-width', '2');
+  svg.appendChild(circle);
+  return circle;
+}
+
+/**
  * Update SVG status icon content based on status type
  */
 function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'error' | 'warning' | 'muted'): void {
@@ -57,25 +72,15 @@ function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'erro
   const svg = container.querySelector('.status-svg') as SVGSVGElement | null;
   if (!svg) return;
 
-  // Clear existing content
   while (svg.firstChild) {
     svg.removeChild(svg.firstChild);
   }
 
-  // Create based on type
   const ns = 'http://www.w3.org/2000/svg';
 
   switch (type) {
     case 'success': {
-      // Checkmark
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', '10');
-      circle.setAttribute('fill', 'none');
-      circle.setAttribute('stroke-width', '2');
-      svg.appendChild(circle);
-
+      createStatusCircle(svg);
       const path = document.createElementNS(ns, 'path');
       path.setAttribute('d', 'M8 12l3 3 6-6');
       path.setAttribute('stroke-width', '2.5');
@@ -86,44 +91,23 @@ function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'erro
       break;
     }
     case 'error': {
-      // X mark
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', '10');
-      circle.setAttribute('fill', 'none');
-      circle.setAttribute('stroke-width', '2');
-      svg.appendChild(circle);
-
-      const line1 = document.createElementNS(ns, 'line');
-      line1.setAttribute('x1', '9');
-      line1.setAttribute('y1', '9');
-      line1.setAttribute('x2', '15');
-      line1.setAttribute('y2', '15');
-      line1.setAttribute('stroke-width', '2.5');
-      line1.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(line1);
-
-      const line2 = document.createElementNS(ns, 'line');
-      line2.setAttribute('x1', '9');
-      line2.setAttribute('y1', '15');
-      line2.setAttribute('x2', '15');
-      line2.setAttribute('y2', '9');
-      line2.setAttribute('stroke-width', '2.5');
-      line2.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(line2);
+      createStatusCircle(svg);
+      const createLine = (x1: string, y1: string, x2: string, y2: string) => {
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke-width', '2.5');
+        line.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(line);
+      };
+      createLine('9', '9', '15', '15');
+      createLine('9', '15', '15', '9');
       break;
     }
     case 'warning': {
-      // Exclamation
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', '10');
-      circle.setAttribute('fill', 'none');
-      circle.setAttribute('stroke-width', '2');
-      svg.appendChild(circle);
-
+      createStatusCircle(svg);
       const line = document.createElementNS(ns, 'line');
       line.setAttribute('x1', '12');
       line.setAttribute('y1', '8');
@@ -144,15 +128,7 @@ function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'erro
       break;
     }
     case 'muted': {
-      // Question mark
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', '10');
-      circle.setAttribute('fill', 'none');
-      circle.setAttribute('stroke-width', '2');
-      svg.appendChild(circle);
-
+      createStatusCircle(svg);
       const path = document.createElementNS(ns, 'path');
       path.setAttribute('d', 'M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3');
       path.setAttribute('stroke-width', '2');
@@ -331,28 +307,31 @@ async function loadPendingPages(): Promise<void> {
   }
 }
 
-// Whitelist operations namespace
-namespace WhitelistOperations {
-  export async function addDomainsOrPaths(urls: string[], type: 'domain' | 'path'): Promise<void> {
-    const { domainWhitelist = [] } = await chrome.storage.local.get('domainWhitelist') as { domainWhitelist?: string[] };
+function escapeRegex(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-    const newEntries = urls.map(url => {
-      if (type === 'domain') {
-        const domain = new URL(url).hostname;
-        return domain;
-      } else {
-        const urlObj = new URL(url);
-        return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
-      }
-    });
+function buildPrivatePageErrorMessage(reason?: string): string {
+  const reasonKey = `privatePageReason_${reason?.replace('-', '') || 'cacheControl'}`;
+  const reasonText = getMessage(reasonKey) || reason || 'unknown';
+  return `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reasonText})`;
+}
 
-    const updatedList = [...domainWhitelist, ...newEntries];
-    await chrome.storage.local.set({ domainWhitelist: updatedList });
-  }
+async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'path'): Promise<void> {
+  const { domainWhitelist = [] } = await chrome.storage.local.get('domainWhitelist') as { domainWhitelist?: string[] };
 
-  function escapeRegex(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
+  const newEntries = urls.map(url => {
+    if (type === 'domain') {
+      const domain = new URL(url).hostname;
+      return domain;
+    } else {
+      const urlObj = new URL(url);
+      return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
+    }
+  });
+
+  const updatedList = [...domainWhitelist, ...newEntries];
+  await chrome.storage.local.set({ domainWhitelist: updatedList });
 }
 
 // Save selected pending pages
@@ -363,7 +342,7 @@ async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<voi
   if (urls.length === 0) return;
 
   if (whitelistType) {
-    await WhitelistOperations.addDomainsOrPaths(urls, whitelistType);
+    await addDomainsOrPathsToWhitelist(urls, whitelistType);
   }
 
   // Re-record each page from pending list
@@ -668,11 +647,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       // PRIVATE_PAGE_DETECTED エラーを previewフェーズで検出
       if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
         hideSpinner();
-
-        const reasonKey = `privatePageReason_${previewResponse.reason?.replace('-', '') || 'cacheControl'}`;
-        const reason = getMessage(reasonKey) || previewResponse.reason || 'unknown';
-
-        statusDiv.textContent = `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reason})`;
+        statusDiv.textContent = buildPrivatePageErrorMessage(previewResponse.reason);
         statusDiv.className = 'error';
 
         if (recordBtn) {
@@ -741,11 +716,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     // PRIVATE_PAGE_DETECTED エラーを saveフェーズで検出（usePreview=false の場合）
     if (result && result.error === 'PRIVATE_PAGE_DETECTED') {
       hideSpinner();
-
-      const reasonKey = `privatePageReason_${result.reason?.replace('-', '') || 'cacheControl'}`;
-      const reason = getMessage(reasonKey) || result.reason || 'unknown';
-
-      statusDiv.textContent = `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reason})`;
+      statusDiv.textContent = buildPrivatePageErrorMessage(result.reason);
       statusDiv.className = 'error';
 
       if (recordBtn) {
