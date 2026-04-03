@@ -24,6 +24,11 @@ const AI_SUMMARY_CLEANSING_ADS = 'ai_summary_cleansing_ads';
 const AI_SUMMARY_CLEANSING_NAV = 'ai_summary_cleansing_nav';
 const AI_SUMMARY_CLEANSING_SOCIAL = 'ai_summary_cleansing_social';
 const AI_SUMMARY_CLEANSING_DEEP = 'ai_summary_cleansing_deep';
+const AI_SUMMARY_CLEANSING_JSON_LD = 'ai_summary_cleansing_json_ld';
+const AI_SUMMARY_CLEANSING_LAZY_LOAD = 'ai_summary_cleansing_lazy_load';
+const AI_SUMMARY_CLEANSING_SKIP_LINK = 'ai_summary_cleansing_skip_link';
+const AI_SUMMARY_CLEANSING_CARD = 'ai_summary_cleansing_card';
+const AI_SUMMARY_CLEANSING_LINK_DENSITY = 'ai_summary_cleansing_link_density';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -50,6 +55,11 @@ let aiSummaryCleansingAds = true;
 let aiSummaryCleansingNav = true;
 let aiSummaryCleansingSocial = true;
 let aiSummaryCleansingDeep = false;
+let aiSummaryCleansingJsonLd = false;
+let aiSummaryCleansingLazyLoad = false;
+let aiSummaryCleansingSkipLink = false;
+let aiSummaryCleansingCard = false;
+let aiSummaryCleansingLinkDensity = false;
 
 // 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
 export let lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
@@ -106,7 +116,12 @@ function extractPageContent(): string {
         adsEnabled: aiSummaryCleansingAds,
         navEnabled: aiSummaryCleansingNav,
         socialEnabled: aiSummaryCleansingSocial,
-        deepEnabled: aiSummaryCleansingDeep
+        deepEnabled: aiSummaryCleansingDeep,
+        jsonLdEnabled: aiSummaryCleansingJsonLd,
+        lazyLoadEnabled: aiSummaryCleansingLazyLoad,
+        skipLinkEnabled: aiSummaryCleansingSkipLink,
+        cardEnabled: aiSummaryCleansingCard,
+        linkDensityEnabled: aiSummaryCleansingLinkDensity
     };
     const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions);
     // クレンジング情報を保存
@@ -160,7 +175,12 @@ function loadSettings(): Promise<void> {
             AI_SUMMARY_CLEANSING_ADS,
             AI_SUMMARY_CLEANSING_NAV,
             AI_SUMMARY_CLEANSING_SOCIAL,
-            AI_SUMMARY_CLEANSING_DEEP
+            AI_SUMMARY_CLEANSING_DEEP,
+            AI_SUMMARY_CLEANSING_JSON_LD,
+            AI_SUMMARY_CLEANSING_LAZY_LOAD,
+            AI_SUMMARY_CLEANSING_SKIP_LINK,
+            AI_SUMMARY_CLEANSING_CARD,
+            AI_SUMMARY_CLEANSING_LINK_DENSITY
         ], (result: { [key: string]: any }) => {
             // 新方式: settings オブジェクトが存在する場合はそちらを優先
             const s: { [key: string]: any } = (result.settings_migrated && result.settings)
@@ -204,6 +224,21 @@ function loadSettings(): Promise<void> {
             }
             if (s[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
                 aiSummaryCleansingDeep = s[AI_SUMMARY_CLEANSING_DEEP];
+            }
+            if (s[AI_SUMMARY_CLEANSING_JSON_LD] !== undefined) {
+                aiSummaryCleansingJsonLd = s[AI_SUMMARY_CLEANSING_JSON_LD];
+            }
+            if (s[AI_SUMMARY_CLEANSING_LAZY_LOAD] !== undefined) {
+                aiSummaryCleansingLazyLoad = s[AI_SUMMARY_CLEANSING_LAZY_LOAD];
+            }
+            if (s[AI_SUMMARY_CLEANSING_SKIP_LINK] !== undefined) {
+                aiSummaryCleansingSkipLink = s[AI_SUMMARY_CLEANSING_SKIP_LINK];
+            }
+            if (s[AI_SUMMARY_CLEANSING_CARD] !== undefined) {
+                aiSummaryCleansingCard = s[AI_SUMMARY_CLEANSING_CARD];
+            }
+            if (s[AI_SUMMARY_CLEANSING_LINK_DENSITY] !== undefined) {
+                aiSummaryCleansingLinkDensity = s[AI_SUMMARY_CLEANSING_LINK_DENSITY];
             }
             logInfo('Settings loaded', {
                 minVisitDuration,

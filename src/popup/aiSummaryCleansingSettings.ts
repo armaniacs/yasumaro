@@ -16,6 +16,7 @@ export interface AiSummaryCleansingSettings {
     navEnabled: boolean;
     socialEnabled: boolean;
     deepEnabled: boolean;
+    linkDensityEnabled: boolean;
 }
 
 /**
@@ -31,7 +32,8 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         adsEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_ADS] ?? true,
         navEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_NAV] ?? true,
         socialEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL] ?? true,
-        deepEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] ?? false
+        deepEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] ?? false,
+        linkDensityEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] ?? false
     };
 }
 
@@ -48,6 +50,7 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_NAV] = settings.navEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL] = settings.socialEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] = settings.deepEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] = settings.linkDensityEnabled;
     await saveSettings(currentSettings);
 }
 
@@ -63,6 +66,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const navCheckbox = document.getElementById('ai-summary-cleansing-nav') as HTMLInputElement;
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
+    const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -71,6 +75,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (navCheckbox) navCheckbox.checked = settings.navEnabled;
     if (socialCheckbox) socialCheckbox.checked = settings.socialEnabled;
     if (deepCheckbox) deepCheckbox.checked = settings.deepEnabled;
+    if (linkDensityCheckbox) linkDensityCheckbox.checked = settings.linkDensityEnabled;
 
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
@@ -88,6 +93,7 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
     const navCheckbox = document.getElementById('ai-summary-cleansing-nav') as HTMLInputElement;
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
+    const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
 
     return {
         enabled: enabledCheckbox?.checked ?? true,
@@ -96,7 +102,8 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         adsEnabled: adsCheckbox?.checked ?? true,
         navEnabled: navCheckbox?.checked ?? true,
         socialEnabled: socialCheckbox?.checked ?? true,
-        deepEnabled: deepCheckbox?.checked ?? false
+        deepEnabled: deepCheckbox?.checked ?? false,
+        linkDensityEnabled: linkDensityCheckbox?.checked ?? false
     };
 }
 
@@ -111,6 +118,7 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const navCheckbox = document.getElementById('ai-summary-cleansing-nav') as HTMLInputElement;
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
+    const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
 
     if (altCheckbox) altCheckbox.disabled = !enabled;
     if (metadataCheckbox) metadataCheckbox.disabled = !enabled;
@@ -118,6 +126,7 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (navCheckbox) navCheckbox.disabled = !enabled;
     if (socialCheckbox) socialCheckbox.disabled = !enabled;
     if (deepCheckbox) deepCheckbox.disabled = !enabled;
+    if (linkDensityCheckbox) linkDensityCheckbox.disabled = !enabled;
 }
 
 /**
@@ -141,7 +150,8 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-ads',
         'ai-summary-cleansing-nav',
         'ai-summary-cleansing-social',
-        'ai-summary-cleansing-deep'
+        'ai-summary-cleansing-deep',
+        'ai-summary-cleansing-link-density'
     ];
 
     for (const id of checkboxes) {
