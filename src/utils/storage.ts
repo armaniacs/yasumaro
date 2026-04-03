@@ -134,6 +134,10 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_SOCIAL: 'ai_summary_cleansing_social', // コメント・ソーシャルウィジェット削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_DEEP: 'ai_summary_cleansing_deep', // 積極的クレンジング（デフォルト: false）
     AI_SUMMARY_CLEANSING_LINK_DENSITY: 'ai_summary_cleansing_link_density', // リンク密度フィルタ（デフォルト: false）
+    AI_SUMMARY_CLEANSING_JSON_LD: 'ai_summary_cleansing_json_ld', // JSON-LD構造化データ削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_LAZY_LOAD: 'ai_summary_cleansing_lazy_load', // 遅延読み込み要素削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_SKIP_LINK: 'ai_summary_cleansing_skip_link', // スキップリンク削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_CARD: 'ai_summary_cleansing_card', // カード型要素削除（デフォルト: false）
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -235,6 +239,10 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_CARD]: boolean;
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: string; // ISO 8601形式
     [StorageKeys.TRANCO_DOMAINS]: string[]; // 保存された Tranco ドメインリスト
@@ -800,6 +808,10 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,       // コメント・ソーシャルウィジェット削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false,         // 積極的クレンジング（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: false, // リンク密度フィルタ（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]: false, // JSON-LD構造化データ削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: false, // 遅延読み込み要素削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: false, // スキップリンク削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_CARD]: false, // カード型要素削除（デフォルト: 無効）
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: '', // 初期値は空.migration.ts で presetDomains.ts の TRANCO_VERSION を設定
     [StorageKeys.TRANCO_DOMAINS]: [], // 保存された Tranco ドメインリスト（初期値: 空）

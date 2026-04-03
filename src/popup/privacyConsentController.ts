@@ -6,6 +6,7 @@
 import { focusTrapManager } from './utils/focusTrap.js';
 import { getMessage } from './i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent } from './privacyConsent.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 
 // DOM Elements
 const privacyConsentModal = document.getElementById('privacyConsentModal') as HTMLElement;
@@ -34,7 +35,7 @@ export async function initPrivacyConsent(): Promise<void> {
             showPrivacyConsentModal();
         }
     } catch (error) {
-        console.error('[PrivacyConsent] Error in initialization:', error);
+        logError('[PrivacyConsent] Error in initialization', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
 
@@ -43,7 +44,7 @@ export async function initPrivacyConsent(): Promise<void> {
  */
 function showPrivacyConsentModal(): void {
     if (!privacyConsentModal) {
-        console.error('[PrivacyConsent] Modal element not found');
+        logError('[PrivacyConsent] Modal element not found', {}, ErrorCode.INTERNAL_ERROR);
         return;
     }
 
@@ -114,7 +115,7 @@ async function handleAcceptConsent(): Promise<void> {
             onConsentCallback = null;
         }
     } catch (error) {
-        console.error('[PrivacyConsent] Failed to save consent:', error);
+        logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
 
         // エラー表示
         if (acceptConsentBtn) {

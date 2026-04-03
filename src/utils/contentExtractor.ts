@@ -10,7 +10,7 @@
  */
 
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from './contentCleaner.js';
-import { logSanitize } from './logger.js';
+import { logSanitize, logDebug } from './logger.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from './aiSummaryCleaner.js';
 
 /**
@@ -394,7 +394,7 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false } = aiSummaryCleanseOptions;
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -498,11 +498,10 @@ export function extractMainContent(
                 targetElement = clone;
 
                 // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
-                console.log('[ContentExtractor] AI Summary Cleansing check:', { aiSummaryCleanseEnabled, altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled });
+                logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled });
                 if (aiSummaryCleanseEnabled) {
                     // AI要約クレンジング前のバイト数を保存（outerHTMLベース）
                     aiSummaryOriginalBytes = getByteSize(clone.outerHTML || '');
-                    console.log('[ContentExtractor] Executing AI Summary Cleansing...');
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
                         altEnabled,
                         metadataEnabled,
@@ -513,14 +512,14 @@ export function extractMainContent(
                         jsonLdEnabled,
                         lazyLoadEnabled,
                         skipLinkEnabled,
-                        cardEnabled
+                        cardEnabled,
+                        linkDensityEnabled
                     });
 
-                    console.log('[ContentExtractor] AI Summary Cleansing result:', aiSummaryCleanseResult);
+                    logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
 
                     // AI要約クレンジング後のバイト数を計算（outerHTMLで削除されたDOM要素のサイズ変化を正確に反映）
                     aiSummaryCleansedBytes = getByteSize(clone.outerHTML || '');
-                    console.log('[ContentExtractor] AI Summary Cleansed bytes:', aiSummaryCleansedBytes);
 
                     if (aiSummaryCleanseResult.totalRemoved > 0) {
                         // AI要約クレンジング理由を決定
@@ -539,9 +538,6 @@ export function extractMainContent(
                         }
 
                         aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
-
-                        console.log(`[ContentExtractor] AI Summary Cleansed ${aiSummaryCleanseResult.totalRemoved} elements `
-                            + `(Alt: ${aiSummaryCleanseResult.altRemoved}, Metadata: ${aiSummaryCleanseResult.metadataRemoved}, Ads: ${aiSummaryCleanseResult.adsRemoved}, Nav: ${aiSummaryCleanseResult.navRemoved}, Social: ${aiSummaryCleanseResult.socialRemoved})`);
                     }
                 } else {
                     aiSummaryOriginalBytes = cleansedBytes;
@@ -613,8 +609,11 @@ export function extractMainContent(
                         jsonLdEnabled,
                         lazyLoadEnabled,
                         skipLinkEnabled,
-                        cardEnabled
+                        cardEnabled,
+                        linkDensityEnabled
                     });
+
+                    logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
 
                     // AI要約クレンジング後のバイト数を計算（outerHTMLベース）
                     aiSummaryCleansedBytes = getByteSize(clone.outerHTML || '');
@@ -636,9 +635,6 @@ export function extractMainContent(
                         }
 
                         aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
-
-                        console.log(`[ContentExtractor] AI Summary Cleansed ${aiSummaryCleanseResult.totalRemoved} elements `
-                            + `(Alt: ${aiSummaryCleanseResult.altRemoved}, Metadata: ${aiSummaryCleanseResult.metadataRemoved}, Ads: ${aiSummaryCleanseResult.adsRemoved}, Nav: ${aiSummaryCleanseResult.navRemoved}, Social: ${aiSummaryCleanseResult.socialRemoved})`);
                     }
                 }
 
@@ -702,7 +698,12 @@ export function extractMainContent(
                 adsEnabled,
                 navEnabled,
                 socialEnabled,
-                deepEnabled
+                deepEnabled,
+                jsonLdEnabled,
+                lazyLoadEnabled,
+                skipLinkEnabled,
+                cardEnabled,
+                linkDensityEnabled
             });
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
             if (aiSummaryCountResult.totalRemoved > 0) {

@@ -649,4 +649,79 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
     });
+
+    describe('DOM query optimization', () => {
+        let originalQuerySelectorAll: typeof Element.prototype.querySelectorAll;
+        let queryCallCount: number;
+
+        beforeEach(() => {
+            originalQuerySelectorAll = Element.prototype.querySelectorAll;
+            queryCallCount = 0;
+            Element.prototype.querySelectorAll = function(selector: string) {
+                queryCallCount++;
+                return originalQuerySelectorAll.call(this, selector);
+            };
+        });
+
+        afterEach(() => {
+            Element.prototype.querySelectorAll = originalQuerySelectorAll;
+        });
+
+        test('最適化後も同じ要素が削除される', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div class="advertisement">ad1</div>
+                <div id="ad-container">ad2</div>
+                <nav class="navbar">nav1</nav>
+                <div id="navigation">nav2</div>
+                <a class="social-share">social1</a>
+                <div class="twitter-follow">social2</div>
+            `;
+            document.body.appendChild(container);
+
+            const result = cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: true,
+                navEnabled: true,
+                socialEnabled: true,
+                deepEnabled: false
+            });
+
+            expect(result.totalRemoved).toBeGreaterThan(0);
+            expect(container.querySelector('.advertisement')).toBeNull();
+            expect(container.querySelector('#ad-container')).toBeNull();
+            expect(container.querySelector('.social-share')).toBeNull();
+            document.body.removeChild(container);
+        });
+
+        test('querySelectorAllの呼び出しが20回未満になる', () => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div class="advertisement">ad1</div>
+                <div id="ad-container">ad2</div>
+                <nav class="navbar">nav1</nav>
+                <div id="navigation">nav2</div>
+                <a class="social-share">social1</a>
+                <div class="twitter-follow">social2</div>
+                <div class="metadata">meta1</div>
+                <span class="skip-link">skip1</span>
+            `;
+            document.body.appendChild(container);
+
+            queryCallCount = 0;
+            cleanseAISummaryContent(container, {
+                altEnabled: false,
+                metadataEnabled: false,
+                adsEnabled: true,
+                navEnabled: true,
+                socialEnabled: true,
+                deepEnabled: false
+            });
+
+            // 最適化後は20回以下に削減されるはず
+            expect(queryCallCount).toBeLessThan(20);
+            document.body.removeChild(container);
+        });
+    });
 });

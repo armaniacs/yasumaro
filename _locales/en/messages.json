@@ -1535,6 +1535,30 @@
   "aiSummaryCleansingLinkDensityEnabledDesc": {
     "message": "Removes link-dense blocks like related article lists and navigation groups (elements with 70%+ link text ratio and 100+ characters)."
   },
+  "aiSummaryCleansingJsonLdLabel": {
+    "message": "Remove JSON-LD structured data"
+  },
+  "aiSummaryCleansingJsonLdTitle": {
+    "message": "Remove JSON-LD script tags from the page (advanced)"
+  },
+  "aiSummaryCleansingLazyLoadLabel": {
+    "message": "Remove lazy-loaded elements"
+  },
+  "aiSummaryCleansingLazyLoadTitle": {
+    "message": "Remove elements with lazy-load attributes such as data-src (advanced)"
+  },
+  "aiSummaryCleansingSkipLinkLabel": {
+    "message": "Remove skip links"
+  },
+  "aiSummaryCleansingSkipLinkTitle": {
+    "message": "Remove accessibility skip links (advanced)"
+  },
+  "aiSummaryCleansingCardLabel": {
+    "message": "Remove card elements"
+  },
+  "aiSummaryCleansingCardTitle": {
+    "message": "Remove elements with card class (advanced)"
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },

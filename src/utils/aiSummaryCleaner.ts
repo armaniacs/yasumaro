@@ -10,6 +10,17 @@
  */
 
 import { escapeCssSelector } from './cssUtils.js';
+import { logDebug } from './logger.js';
+
+/**
+ * パターン配列から [class*="..."], [id*="..."] を結合したCSSセレクター文字列を生成する
+ */
+function buildClassIdSelectors(patterns: string[]): string {
+    return patterns.map(p => {
+        const kw = escapeCssSelector(p.toLowerCase());
+        return `[class*="${kw}"], [id*="${kw}"]`;
+    }).join(', ');
+}
 
 /**
  * AI要約クレンジングオプション
@@ -188,37 +199,20 @@ function stripAdElements(element: Element): number {
         }
     });
     
-    // クラス名パターンで検索
-    for (const pattern of AD_CLASS_PATTERNS) {
-        const kw = escapeCssSelector(pattern.toLowerCase());
-        
-        // クラスにパターンを含む要素
-        const classSelector = `[class*="${kw}"]`;
-        const classElements = element.querySelectorAll(classSelector);
-        classElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-        
-        // IDにパターンを含む要素
-        const idSelector = `[id*="${kw}"]`;
-        const idElements = element.querySelectorAll(idSelector);
-        idElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
-    
+    // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
+    element.querySelectorAll(buildClassIdSelectors(AD_CLASS_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
     // 削除実行
     for (const elem of elementsToRemove) {
         elem.remove();
         removedCount++;
     }
-    
+
     return removedCount;
 }
 
@@ -280,37 +274,20 @@ function stripNavElements(element: Element): number {
         }
     });
     
-    // クラス名パターンで検索
-    for (const pattern of NAV_CLASS_PATTERNS) {
-        const kw = escapeCssSelector(pattern.toLowerCase());
-        
-        // クラスにパターンを含む要素
-        const classSelector = `[class*="${kw}"]`;
-        const classElements = element.querySelectorAll(classSelector);
-        classElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-        
-        // IDにパターンを含む要素
-        const idSelector = `[id*="${kw}"]`;
-        const idElements = element.querySelectorAll(idSelector);
-        idElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
-    
+    // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
+    element.querySelectorAll(buildClassIdSelectors(NAV_CLASS_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
     // 削除実行
     for (const elem of elementsToRemove) {
         elem.remove();
         removedCount++;
     }
-    
+
     return removedCount;
 }
 
@@ -421,31 +398,15 @@ function stripSocialElements(element: Element): number {
         }
     });
     
-    // クラス名パターンで検索
-    for (const pattern of SOCIAL_CLASS_PATTERNS) {
-        const kw = escapeCssSelector(pattern.toLowerCase());
-        
-        // クラスにパターンを含む要素
-        const classSelector = `[class*="${kw}"]`;
-        const classElements = element.querySelectorAll(classSelector);
-        classElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-        
-        // IDにパターンを含む要素
-        const idSelector = `[id*="${kw}"]`;
-        const idElements = element.querySelectorAll(idSelector);
-        idElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
-    
+    // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
+    element.querySelectorAll(buildClassIdSelectors(SOCIAL_CLASS_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+
     // 削除実行
     for (const elem of elementsToRemove) {
         elem.remove();
@@ -558,18 +519,15 @@ function stripLazyLoadElements(element: Element): number {
         }
     });
     
-    // class に lazy, skeleton, placeholder を含む要素
-    const lazyPatterns = ['lazy', 'skeleton', 'placeholder', 'loading'];
-    for (const pattern of lazyPatterns) {
-        const kw = escapeCssSelector(pattern);
-        const lazyClassElements = element.querySelectorAll(`[class*="${kw}"]`);
-        lazyClassElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
+    // class に lazy, skeleton, placeholder を含む要素（全パターンを結合して1回のクエリーに）
+    const lazyClassSelectors = ['lazy', 'skeleton', 'placeholder', 'loading']
+        .map(p => `[class*="${escapeCssSelector(p)}"]`).join(', ');
+    element.querySelectorAll(lazyClassSelectors).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
     
     for (const elem of elementsToRemove) {
         elem.remove();
@@ -607,18 +565,15 @@ function stripSkipLinks(element: Element): number {
         }
     });
     
-    // class に skip, sr-only, visually-hidden を含む要素（スクリーンリーダー用）
-    const srPatterns = ['skip', 'sr-only', 'visually-hidden', 'screen-reader'];
-    for (const pattern of srPatterns) {
-        const kw = escapeCssSelector(pattern);
-        const srElements = element.querySelectorAll(`[class*="${kw}"]`);
-        srElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
+    // class に skip, sr-only, visually-hidden を含む要素（全パターンを結合して1回のクエリーに）
+    const srClassSelectors = ['skip', 'sr-only', 'visually-hidden', 'screen-reader']
+        .map(p => `[class*="${escapeCssSelector(p)}"]`).join(', ');
+    element.querySelectorAll(srClassSelectors).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
     
     for (const elem of elementsToRemove) {
         elem.remove();
@@ -652,31 +607,19 @@ function stripCardElements(element: Element): number {
         'recommend-list', 'pickup-list', 'ranking-list'
     ];
     
-    for (const pattern of cardPatterns) {
-        const kw = escapeCssSelector(pattern.toLowerCase());
-        
-        const classElements = element.querySelectorAll(`[class*="${kw}"]`);
-        classElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-        
-        const idElements = element.querySelectorAll(`[id*="${kw}"]`);
-        idElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
-    
+    // 全パターンを結合して1回のクエリーに
+    element.querySelectorAll(buildClassIdSelectors(cardPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
     for (const elem of elementsToRemove) {
         elem.remove();
         removedCount++;
     }
-    
+
     return removedCount;
 }
 
@@ -710,26 +653,13 @@ function stripDeepElements(element: Element): number {
         });
     }
 
-    // クラス/IDパターンで削除
-    for (const pattern of DEEP_CLASS_PATTERNS) {
-        const kw = escapeCssSelector(pattern.toLowerCase());
-
-        const classElements = element.querySelectorAll(`[class*="${kw}"]`);
-        classElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-
-        const idElements = element.querySelectorAll(`[id*="${kw}"]`);
-        idElements.forEach(elem => {
-            if (!counted.has(elem)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            }
-        });
-    }
+    // クラス/IDパターンで削除（全パターンを結合して1回のクエリーに）
+    element.querySelectorAll(buildClassIdSelectors(DEEP_CLASS_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
 
     // リンク密度の高いリスト（ul/ol内のテキストの80%以上がリンク）
     const lists = element.querySelectorAll('ul, ol');
@@ -861,6 +791,28 @@ export function cleanseAISummaryContent(
     const total = altRemoved + metadataRemoved + adsRemoved + navRemoved +
         socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved +
         skipLinkRemoved + cardRemoved + linkDensityRemoved;
+
+    logDebug('AI Summary Cleansing executed', {
+        totalRemoved: total,
+        bytesBefore,
+        bytesAfter,
+        compressionRatio: bytesBefore > 0
+            ? ((bytesBefore - bytesAfter) / bytesBefore * 100).toFixed(1) + '%'
+            : '0%',
+        breakdown: {
+            alt: altRemoved,
+            metadata: metadataRemoved,
+            ads: adsRemoved,
+            nav: navRemoved,
+            social: socialRemoved,
+            deep: deepRemoved,
+            jsonLd: jsonLdRemoved,
+            lazyLoad: lazyLoadRemoved,
+            skipLink: skipLinkRemoved,
+            card: cardRemoved,
+            linkDensity: linkDensityRemoved,
+        }
+    }, 'aiSummaryCleaner');
 
     return {
         altRemoved,

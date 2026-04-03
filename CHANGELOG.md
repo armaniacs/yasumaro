@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- AI要約クレンジング: `jsonLdEnabled` オプション — JSON-LD構造化データの削除（デフォルト無効）
+- AI要約クレンジング: `lazyLoadEnabled` オプション — 遅延読み込み要素の削除（デフォルト無効）
+- AI要約クレンジング: `skipLinkEnabled` オプション — スキップリンクの削除（デフォルト無効）
+- AI要約クレンジング: `cardEnabled` オプション — カード型要素の削除（デフォルト無効）
 - AI要約クレンジング: `NAV_CLASS_PATTERNS` に `copyright`, `legal`, `disclaimer`, `terms`, `l-footer` 等を追加
 - AI要約クレンジング: `role="contentinfo"` 要素の削除を `navEnabled` に追加（CSS-in-JS サイト対策）
 - AI要約クレンジング: 広告データ属性 (`data-ad`, `data-gpt-ad`, `ins.adsbygoogle`) の削除を追加
@@ -14,7 +18,15 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- AI要約クレンジング: パフォーマンス最適化 — 複数の querySelectorAll 呼び出しを単一のクエリに統合（20回未満に削減）
 - コンテンツ抽出: クレンジング後の3行以上の連続空白行を2行に圧縮してトークン効率を改善
+- エラーログ記録: `console.error` を `logError` + `ErrorCode` に統一
+
+### Fixed
+
+- AI要約クレンジング設定: サブグループの表示/非表示切り替えを追加（有効チェックボックス連動）
+- テスト修正: sanitizePreview.test.ts の ES module import モックを修正
+- i18n: Tranco関連メッセージの日本語翻訳を補完
 
 ## [4.10.16] - 2026-04-03
 

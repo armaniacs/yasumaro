@@ -518,16 +518,17 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-enabled" aria-describedby="aiSummaryCleansingEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-enabled" aria-controls="aiSummaryCleansingSubGroup">
             <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">AI要約前に不要な情報を削除します。</label>
           </div>
         </div>
 
+        <div id="aiSummaryCleansingSubGroup" aria-live="polite">
         <!-- 画像alt属性削除 -->
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingAltEnabled">画像alt属性を削除</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-alt" aria-describedby="aiSummaryCleansingAltEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-alt">
             <label for="ai-summary-cleansing-alt" class="inline-label" data-i18n="aiSummaryCleansingAltEnabledDesc">画像のalt属性を削除します。</label>
           </div>
         </div>
@@ -536,7 +537,7 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingMetadataEnabled">メタデータを削除</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-metadata" aria-describedby="aiSummaryCleansingMetadataEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-metadata">
             <label for="ai-summary-cleansing-metadata" class="inline-label" data-i18n="aiSummaryCleansingMetadataEnabledDesc">メタデータ（meta、link、style等）を削除します。</label>
           </div>
         </div>
@@ -545,7 +546,7 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingAdsEnabled">広告関連要素を削除</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-ads" aria-describedby="aiSummaryCleansingAdsEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-ads">
             <label for="ai-summary-cleansing-ads" class="inline-label" data-i18n="aiSummaryCleansingAdsEnabledDesc">広告関連要素（ad、advertisement、banner等）を削除します。</label>
           </div>
         </div>
@@ -554,7 +555,7 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingNavEnabled">ナビゲーション・フッターを削除</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-nav" aria-describedby="aiSummaryCleansingNavEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-nav">
             <label for="ai-summary-cleansing-nav" class="inline-label" data-i18n="aiSummaryCleansingNavEnabledDesc">ナビゲーション・フッター（nav、footer、header等）を削除します。</label>
           </div>
         </div>
@@ -563,7 +564,7 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingSocialEnabled">コメント・ソーシャルウィジェットを削除</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-social" aria-describedby="aiSummaryCleansingSocialEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-social">
             <label for="ai-summary-cleansing-social" class="inline-label" data-i18n="aiSummaryCleansingSocialEnabledDesc">コメント・ソーシャルウィジェット（comments、social、share等）を削除します。</label>
           </div>
         </div>
@@ -572,7 +573,7 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingDeepEnabled">ディープクレンジング（実験的）</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-deep" aria-describedby="aiSummaryCleansingDeepEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-deep">
             <label for="ai-summary-cleansing-deep" class="inline-label" data-i18n="aiSummaryCleansingDeepEnabledDesc">aside/figure/form/dialog/button/input/select/details、ARIA role（banner/complementary等）、非表示要素、空要素、cookie/popup/modal/著者情報/法的情報/BEM系等のクラスを持つ要素を削除します。</label>
           </div>
         </div>
@@ -581,9 +582,46 @@
         <div class="form-group">
           <label data-i18n="aiSummaryCleansingLinkDensityEnabled">リンク密度フィルタ（実験的）</label>
           <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-link-density" aria-describedby="aiSummaryCleansingLinkDensityEnabledDesc">
+            <input type="checkbox" id="ai-summary-cleansing-link-density">
             <label for="ai-summary-cleansing-link-density" class="inline-label" data-i18n="aiSummaryCleansingLinkDensityEnabledDesc">リンクが密集した関連記事リスト・ナビゲーションブロックを削除します（リンク比率70%以上・100文字以上の要素）。</label>
           </div>
+        </div>
+
+        <!-- JSON-LD 構造化データ -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingJsonLdLabel">JSON-LD 構造化データを除去</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-json-ld">
+            <label for="ai-summary-cleansing-json-ld" class="inline-label" data-i18n="aiSummaryCleansingJsonLdTitle">ページの JSON-LD スクリプトタグを除去します（高度）</label>
+          </div>
+        </div>
+
+        <!-- 遅延読み込み要素 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingLazyLoadLabel">遅延読み込み要素を除去</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-lazy-load">
+            <label for="ai-summary-cleansing-lazy-load" class="inline-label" data-i18n="aiSummaryCleansingLazyLoadTitle">data-src 等の遅延読み込み属性を持つ要素を除去します（高度）</label>
+          </div>
+        </div>
+
+        <!-- スキップリンク -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingSkipLinkLabel">スキップリンクを除去</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-skip-link">
+            <label for="ai-summary-cleansing-skip-link" class="inline-label" data-i18n="aiSummaryCleansingSkipLinkTitle">アクセシビリティ用スキップリンクを除去します（高度）</label>
+          </div>
+        </div>
+
+        <!-- カード型要素 -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingCardLabel">カード型要素を除去</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-card">
+            <label for="ai-summary-cleansing-card" class="inline-label" data-i18n="aiSummaryCleansingCardTitle">card クラスを持つ要素を除去します（高度）</label>
+          </div>
+        </div>
         </div>
 
         <div class="form-group">

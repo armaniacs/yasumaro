@@ -100,13 +100,18 @@ describe('sanitizePreview', () => {
   describe('showPreview', () => {
     test('モーダルが存在しない場合、confirmed=trueで即座にresolveする', async () => {
       document.body.innerHTML = '';
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerModule = await import('../../utils/logger.js');
+      const logErrorSpy = jest.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
 
       const result = await showPreview('test content');
 
       expect(result).toEqual({ confirmed: true, content: 'test content' });
-      expect(consoleSpy).toHaveBeenCalledWith('Confirmation modal not found in DOM');
-      consoleSpy.mockRestore();
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        'Confirmation modal not found in DOM',
+        {},
+        expect.any(String)
+      );
+      logErrorSpy.mockRestore();
     });
 
     test('モーダルを表示し、プレビューコンテンツを設定する', async () => {

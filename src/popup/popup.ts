@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, saveSettingsWithAllowedUrls, getSettings, Settings } from '../utils/storage.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 import { init as initNavigation } from './navigation.js';
 import { init as initDomainFilter, loadDomainSettings } from './domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
@@ -243,7 +244,7 @@ exportSettingsBtn?.addEventListener('click', async () => {
             showStatus('status', getMessage('settingsExported'), 'success');
         }
     } catch (error: any) {
-        console.error('Export error:', error);
+        logError('Export error', { cause: error }, ErrorCode.SETTINGS_EXPORT_FAILURE);
         const message = error instanceof Error ? error.message : String(error);
         showStatus('status', `${getMessage('exportError')}: ${message}`, 'error');
     }
@@ -329,7 +330,7 @@ importFileInput?.addEventListener('change', async (e: Event) => {
         }
 
     } catch (error: any) {
-        console.error('Import error:', error);
+        logError('Import error', { cause: error }, ErrorCode.SETTINGS_IMPORT_FAILURE);
         const message = error instanceof Error ? error.message : String(error);
         showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
     }
@@ -380,7 +381,7 @@ confirmImportBtn?.addEventListener('click', async () => {
             showStatus('status', `${getMessage('importError')}: Failed to apply settings`, 'error');
         }
     } catch (error: any) {
-        console.error('Import error:', error);
+        logError('Import error', { cause: error }, ErrorCode.SETTINGS_IMPORT_FAILURE);
         const message = error instanceof Error ? error.message : String(error);
         showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
     }
@@ -878,31 +879,31 @@ function setHtmlLangDir(): void {
 try {
     setHtmlLangDir();
 } catch (error) {
-    console.error('[Popup] Error setting HTML lang/dir:', error);
+    logError('[Popup] Error setting HTML lang/dir', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 try {
     initNavigation();
 } catch (error) {
-    console.error('[Popup] Error in initNavigation:', error);
+    logError('[Popup] Error in initNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 try {
     initTabNavigation();
 } catch (error) {
-    console.error('[Popup] Error in initTabNavigation:', error);
+    logError('[Popup] Error in initTabNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 try {
     initDomainFilter();
 } catch (error) {
-    console.error('[Popup] Error in initDomainFilter:', error);
+    logError('[Popup] Error in initDomainFilter', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 try {
     initPrivacySettings();
 } catch (error) {
-    console.error('[Popup] Error in initPrivacySettings:', error);
+    logError('[Popup] Error in initPrivacySettings', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 // Load settings and initialize custom prompt manager after other modules
@@ -911,7 +912,7 @@ async function initCustomPromptFeature(): Promise<void> {
         const settings = await getSettings();
         initCustomPromptManager(settings);
     } catch (error) {
-        console.error('[Popup] Error in initCustomPromptManager:', error);
+        logError('[Popup] Error in initCustomPromptManager', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
 initCustomPromptFeature();
@@ -919,7 +920,7 @@ initCustomPromptFeature();
 try {
     load();
 } catch (error) {
-    console.error('[Popup] Error in load:', error);
+    logError('[Popup] Error in load', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 // Setup AI provider change listener
@@ -957,13 +958,13 @@ import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConse
 try {
     initPrivacyConsent();
 } catch (error) {
-    console.error('[Popup] Error in initPrivacyConsent:', error);
+    logError('[Popup] Error in initPrivacyConsent', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 try {
     setupPrivacyConsentListeners();
 } catch (error) {
-    console.error('[Popup] Error in setupPrivacyConsentListeners:', error);
+    logError('[Popup] Error in setupPrivacyConsentListeners', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 // ============================================================================
@@ -1034,7 +1035,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
 
         console.log('[Popup] Tranco update notification shown');
     } catch (error) {
-        console.error('[Popup] Error initializing Tranco update notification:', error);
+        logError('[Popup] Error initializing Tranco update notification', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
 
@@ -1056,7 +1057,7 @@ async function handleTrancoGrant(version: string): Promise<void> {
 
         console.log('[Popup] Tranco consent granted');
     } catch (error) {
-        console.error('[Popup] Error granting Tranco consent:', error);
+        logError('[Popup] Error granting Tranco consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
 
@@ -1078,14 +1079,14 @@ async function handleTrancoDeny(): Promise<void> {
 
         console.log('[Popup] Tranco consent denied');
     } catch (error) {
-        console.error('[Popup] Error denying Tranco consent:', error);
+        logError('[Popup] Error denying Tranco consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
 
 try {
     initTrancoUpdateNotification();
 } catch (error) {
-    console.error('[Popup] Error in initTrancoUpdateNotification:', error);
+    logError('[Popup] Error in initTrancoUpdateNotification', { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
 ;

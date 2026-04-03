@@ -1535,6 +1535,30 @@
   "aiSummaryCleansingLinkDensityEnabledDesc": {
     "message": "リンクが密集した関連記事リスト・ナビゲーションブロックを削除します（リンク比率70%以上・100文字以上の要素）。"
   },
+  "aiSummaryCleansingJsonLdLabel": {
+    "message": "JSON-LD 構造化データを除去"
+  },
+  "aiSummaryCleansingJsonLdTitle": {
+    "message": "ページの JSON-LD スクリプトタグを除去します（高度）"
+  },
+  "aiSummaryCleansingLazyLoadLabel": {
+    "message": "遅延読み込み要素を除去"
+  },
+  "aiSummaryCleansingLazyLoadTitle": {
+    "message": "data-src 等の遅延読み込み属性を持つ要素を除去します（高度）"
+  },
+  "aiSummaryCleansingSkipLinkLabel": {
+    "message": "スキップリンクを除去"
+  },
+  "aiSummaryCleansingSkipLinkTitle": {
+    "message": "アクセシビリティ用スキップリンクを除去します（高度）"
+  },
+  "aiSummaryCleansingCardLabel": {
+    "message": "カード型要素を除去"
+  },
+  "aiSummaryCleansingCardTitle": {
+    "message": "card クラスを持つ要素を除去します（高度）"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },
@@ -1569,7 +1593,7 @@
     "message": "Strictではより厳格なドメインのみを信頼します。Relaxedでは多くのドメインを信頼します。"
   },
   "safetyModeChanged": {
-    "message": "Safety mode changed"
+    "message": "セーフティモードが変更されました"
   },
   "trancoSection": {
     "message": "Tranco List（信頼済みドメイン）"
@@ -1593,19 +1617,19 @@
     "message": "Safety Modeと連動しています。手動で変更することもできます。"
   },
   "trancoUpdating": {
-    "message": "Updating..."
+    "message": "更新中..."
   },
   "trancoNotUpdated": {
-    "message": "Not updated"
+    "message": "更新されていません"
   },
   "trancoStatusFormat": {
     "message": "ドメイン数: {count} | Tier: {tier} | 最終更新: {lastUpdated}"
   },
   "trancoUpdateInProgress": {
-    "message": "Update already in progress"
+    "message": "更新はすでに進行中です"
   },
   "trancoUpdateSuccess": {
-    "message": "Tranco list updated successfully"
+    "message": "Trancoリストが正常に更新されました"
   },
   "updateTrancoBtn": {
     "message": "Tranco Listを更新"
@@ -1623,13 +1647,13 @@
     "message": "先頭のドット（.）を含めて入力してください"
   },
   "jpAnchorInvalidFormat": {
-    "message": "Invalid TLD format. Must start with dot (.)"
+    "message": "無効なTLD形式です。ドット（.）で始まる必要があります"
   },
   "jpAnchorDuplicate": {
-    "message": "TLD already exists"
+    "message": "このTLDはすでに存在します"
   },
   "jpAnchorAdded": {
-    "message": "TLD added"
+    "message": "TLDが追加されました"
   },
   "sensitiveSection": {
     "message": "Sensitive List（警戒ドメイン）"

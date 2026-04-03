@@ -6,6 +6,7 @@
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 
 // デフォルトキーワードリスト
 const DEFAULT_KEYWORDS = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'];
@@ -67,7 +68,7 @@ async function saveContentSettings(): Promise<void> {
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');
     } catch (error: any) {
-        console.error('[ContentSettings] Save error:', error);
+        logError('[ContentSettings] Save error', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
         showStatus('contentSettingsStatus', getMessage('settingsSaveError') || '設定の保存に失敗しました', 'error');
     }
 }

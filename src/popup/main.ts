@@ -13,6 +13,7 @@ import type { PendingPage } from '../utils/pendingStorage.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import type { MaskedItem } from '../messaging/types.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 
 // Export functions for testing
 export { getCurrentTab, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus };
@@ -303,7 +304,7 @@ async function loadPendingPages(): Promise<void> {
       });
     }
   } catch (error) {
-    console.error('Failed to load pending pages:', error);
+    logError('Failed to load pending pages', { cause: error }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
   }
 }
 
@@ -640,7 +641,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       if (!previewResponse) {
         const errorMsg = 'No response from background worker';
-        console.error('PREVIEW_RECORD failed: No response');
+        logError('PREVIEW_RECORD failed: No response', {}, ErrorCode.CONTENT_EXTRACTION_FAILURE);
         throw new Error(errorMsg);
       }
 
@@ -659,7 +660,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       if (!previewResponse.success) {
         const errorMsg = previewResponse.error || 'Processing failed';
-        console.error('PREVIEW_RECORD failed:', JSON.stringify(previewResponse, null, 2));
+        logError('PREVIEW_RECORD failed', { response: previewResponse }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
         throw new Error(errorMsg);
       }
 
@@ -809,10 +810,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeModalEvents();
   loadPendingPages();
   loadCurrentTabAndInitStatus().catch((error) => {
-    console.error('[Initialize] Failed to load current tab or init status panel:', error);
+    logError('[Initialize] Failed to load current tab or init status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
   });
   initAllUrlsPermissionBanner().catch((error) => {
-    console.error('[Initialize] Failed to init all-urls permission banner:', error);
+    logError('[Initialize] Failed to init all-urls permission banner', { cause: error }, ErrorCode.INTERNAL_ERROR);
   });
   // ポップアップを開いたタイミングでバッジをクリア
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -921,7 +922,7 @@ async function initStatusPanel(): Promise<void> {
       }
     });
   } catch (error) {
-    console.error('Error initializing status panel:', error);
+    logError('Error initializing status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
     // エラー時はパネルを非表示
     const panel = document.getElementById('statusPanel');
     if (panel) panel.style.display = 'none';

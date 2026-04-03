@@ -11,6 +11,7 @@
 import { getMessage } from './i18n.js';
 import { focusTrapManager } from './utils/focusTrap.js';
 import type { MaskedItem } from '../messaging/types.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 
 
 
@@ -209,7 +210,7 @@ export function showPreview(
   initializeModalEvents();
 
   if (!modal) {
-    console.error('Confirmation modal not found in DOM');
+    logError('Confirmation modal not found in DOM', {}, ErrorCode.INTERNAL_ERROR);
     return Promise.resolve({ confirmed: true, content });
   }
 
@@ -294,7 +295,7 @@ function handleAction(confirmed: boolean): void {
 
   // DOM検証
   if (!modal || !previewContent) {
-    console.error('Modal or preview content not found in DOM');
+    logError('Modal or preview content not found in DOM', {}, ErrorCode.INTERNAL_ERROR);
     resolvePromise = null;
     return;
   }

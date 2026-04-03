@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 
 /**
  * AI要約クレンジング設定
@@ -17,6 +18,10 @@ export interface AiSummaryCleansingSettings {
     socialEnabled: boolean;
     deepEnabled: boolean;
     linkDensityEnabled: boolean;
+    jsonLdEnabled: boolean;
+    lazyLoadEnabled: boolean;
+    skipLinkEnabled: boolean;
+    cardEnabled: boolean;
 }
 
 /**
@@ -33,7 +38,11 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         navEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_NAV] ?? true,
         socialEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL] ?? true,
         deepEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] ?? false,
-        linkDensityEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] ?? false
+        linkDensityEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] ?? false,
+        jsonLdEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD] ?? false,
+        lazyLoadEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD] ?? false,
+        skipLinkEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK] ?? false,
+        cardEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_CARD] ?? false
     };
 }
 
@@ -51,6 +60,10 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL] = settings.socialEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] = settings.deepEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] = settings.linkDensityEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD] = settings.jsonLdEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD] = settings.lazyLoadEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK] = settings.skipLinkEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_CARD] = settings.cardEnabled;
     await saveSettings(currentSettings);
 }
 
@@ -67,6 +80,10 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
     const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
+    const jsonLdCheckbox = document.getElementById('ai-summary-cleansing-json-ld') as HTMLInputElement;
+    const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
+    const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
+    const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -76,9 +93,19 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (socialCheckbox) socialCheckbox.checked = settings.socialEnabled;
     if (deepCheckbox) deepCheckbox.checked = settings.deepEnabled;
     if (linkDensityCheckbox) linkDensityCheckbox.checked = settings.linkDensityEnabled;
+    if (jsonLdCheckbox) jsonLdCheckbox.checked = settings.jsonLdEnabled;
+    if (lazyLoadCheckbox) lazyLoadCheckbox.checked = settings.lazyLoadEnabled;
+    if (skipLinkCheckbox) skipLinkCheckbox.checked = settings.skipLinkEnabled;
+    if (cardCheckbox) cardCheckbox.checked = settings.cardEnabled;
 
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
+
+    // サブグループの表示/非表示を初期化
+    const subGroup = document.getElementById('aiSummaryCleansingSubGroup') as HTMLElement;
+    if (subGroup) {
+        subGroup.style.display = settings.enabled ? 'block' : 'none';
+    }
 }
 
 /**
@@ -94,6 +121,10 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
     const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
+    const jsonLdCheckbox = document.getElementById('ai-summary-cleansing-json-ld') as HTMLInputElement;
+    const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
+    const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
+    const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
 
     return {
         enabled: enabledCheckbox?.checked ?? true,
@@ -103,7 +134,11 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         navEnabled: navCheckbox?.checked ?? true,
         socialEnabled: socialCheckbox?.checked ?? true,
         deepEnabled: deepCheckbox?.checked ?? false,
-        linkDensityEnabled: linkDensityCheckbox?.checked ?? false
+        linkDensityEnabled: linkDensityCheckbox?.checked ?? false,
+        jsonLdEnabled: jsonLdCheckbox?.checked ?? false,
+        lazyLoadEnabled: lazyLoadCheckbox?.checked ?? false,
+        skipLinkEnabled: skipLinkCheckbox?.checked ?? false,
+        cardEnabled: cardCheckbox?.checked ?? false
     };
 }
 
@@ -119,6 +154,10 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const socialCheckbox = document.getElementById('ai-summary-cleansing-social') as HTMLInputElement;
     const deepCheckbox = document.getElementById('ai-summary-cleansing-deep') as HTMLInputElement;
     const linkDensityCheckbox = document.getElementById('ai-summary-cleansing-link-density') as HTMLInputElement;
+    const jsonLdCheckbox = document.getElementById('ai-summary-cleansing-json-ld') as HTMLInputElement;
+    const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
+    const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
+    const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
 
     if (altCheckbox) altCheckbox.disabled = !enabled;
     if (metadataCheckbox) metadataCheckbox.disabled = !enabled;
@@ -127,6 +166,10 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (socialCheckbox) socialCheckbox.disabled = !enabled;
     if (deepCheckbox) deepCheckbox.disabled = !enabled;
     if (linkDensityCheckbox) linkDensityCheckbox.disabled = !enabled;
+    if (jsonLdCheckbox) jsonLdCheckbox.disabled = !enabled;
+    if (lazyLoadCheckbox) lazyLoadCheckbox.disabled = !enabled;
+    if (skipLinkCheckbox) skipLinkCheckbox.disabled = !enabled;
+    if (cardCheckbox) cardCheckbox.disabled = !enabled;
 }
 
 /**
@@ -134,10 +177,19 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
  */
 export function setupAiSummaryCleansingEventListeners(): void {
     const enabledCheckbox = document.getElementById('ai-summary-cleansing-enabled') as HTMLInputElement;
+    const subGroup = document.getElementById('aiSummaryCleansingSubGroup') as HTMLElement;
+    
+    const updateSubGroupVisibility = (enabled: boolean) => {
+        if (subGroup) {
+            subGroup.style.display = enabled ? 'block' : 'none';
+        }
+    };
+    
     if (enabledCheckbox) {
         enabledCheckbox.addEventListener('change', async (e) => {
             const enabled = (e.target as HTMLInputElement).checked;
             updateAiSummaryCleansingCheckboxStates(enabled);
+            updateSubGroupVisibility(enabled);
             const settings = await getAiSummaryCleansingSettings();
             settings.enabled = enabled;
             await saveAiSummaryCleansingSettings(settings);
@@ -151,7 +203,11 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-nav',
         'ai-summary-cleansing-social',
         'ai-summary-cleansing-deep',
-        'ai-summary-cleansing-link-density'
+        'ai-summary-cleansing-link-density',
+        'ai-summary-cleansing-json-ld',
+        'ai-summary-cleansing-lazy-load',
+        'ai-summary-cleansing-skip-link',
+        'ai-summary-cleansing-card'
     ];
 
     for (const id of checkboxes) {
@@ -183,7 +239,7 @@ export function setupAiSummaryCleansingEventListeners(): void {
                     }, 3000);
                 }
             } catch (error) {
-                console.error('Failed to save AI summary cleansing settings:', error);
+                logError('Failed to save AI summary cleansing settings', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
                 if (statusElement) {
                     statusElement.textContent = chrome.i18n.getMessage('settingsSaveError') || '設定の保存に失敗しました';
                     statusElement.className = 'status-message error';
