@@ -1,4 +1,6 @@
-import { test, expect } from './fixtures/popup.fixture.js';
+import { test as staticTest, testInteraction, expect } from './fixtures/popup.fixture.js';
+
+const test = staticTest;
 
 /**
  * E2E Tests for Obsidian Weave Chrome Extension - Popup UI
@@ -159,14 +161,14 @@ test.describe('Popup - Private Page Dialog @ui', () => {
 });
 
 test.describe('Popup - Navigation Interaction @interaction', () => {
-  test.fixme(true, 'Requires Chrome extension context for JS execution');
+  testInteraction.fixme(true, 'Requires Chrome extension context for JS execution');
 
-  test('should navigate to settings screen', async ({ popupPage: page }) => {
+  testInteraction('should navigate to settings screen', async ({ popupPage: page }) => {
     await page.locator('#menuBtn').click();
     await expect(page.locator('#settingsScreen')).toBeVisible();
   });
 
-  test('should switch between tabs', async ({ popupPage: page }) => {
+  testInteraction('should switch between tabs', async ({ popupPage: page }) => {
     await page.locator('#menuBtn').click();
 
     const generalTab = page.locator('#generalTab');
@@ -175,7 +177,7 @@ test.describe('Popup - Navigation Interaction @interaction', () => {
     await expect(page.locator('#generalPanel')).toBeVisible();
   });
 
-  test('should handle form input', async ({ popupPage: page }) => {
+  testInteraction('should handle form input', async ({ popupPage: page }) => {
     await page.locator('#menuBtn').click();
     await page.locator('#generalTab').click();
 
@@ -186,35 +188,35 @@ test.describe('Popup - Navigation Interaction @interaction', () => {
 });
 
 test.describe('Popup - Private Page Interaction @interaction', () => {
-  test.fixme(true, 'Requires Chrome extension context (chrome.runtime, chrome.storage mocks)');
+  // testInteraction.fixme(true, 'Requires Chrome extension context (chrome.runtime, chrome.storage mocks)');
 
-  test('should handle dialog cancel action', async ({ popupPage: page }) => {
+  testInteraction('should handle dialog cancel action', async ({ popupPage: page }) => {
     const dialog = page.locator('#private-page-dialog');
     await page.locator('#dialog-cancel').click();
     await expect(dialog).not.toBeVisible();
   });
 
-  test('should handle save once action', async ({ popupPage: page }) => {
+  testInteraction('should handle save once action', async ({ popupPage: page }) => {
     await page.locator('#dialog-save-once').click();
     await expect(page.locator('#private-page-dialog')).not.toBeVisible();
   });
 
-  test('should handle save domain action', async ({ popupPage: page }) => {
+  testInteraction('should handle save domain action', async ({ popupPage: page }) => {
     await page.locator('#dialog-save-domain').click();
     await expect(page.locator('#private-page-dialog')).not.toBeVisible();
   });
 
-  test('should handle save path action', async ({ popupPage: page }) => {
+  testInteraction('should handle save path action', async ({ popupPage: page }) => {
     await page.locator('#dialog-save-path').click();
     await expect(page.locator('#private-page-dialog')).not.toBeVisible();
   });
 
-  test('should display pending pages when available', async ({ popupPage: page }) => {
+  testInteraction('should display pending pages when available', async ({ popupPage: page }) => {
     await expect(page.locator('#pending-section')).not.toHaveClass(/hidden/);
     await expect(page.locator('.pending-item').first()).toBeVisible();
   });
 
-  test('should toggle select all checkboxes', async ({ popupPage: page }) => {
+  testInteraction('should toggle select all checkboxes', async ({ popupPage: page }) => {
     const selectAllBtn = page.locator('#btn-select-all');
     const checkboxes = page.locator('.pending-checkbox');
 

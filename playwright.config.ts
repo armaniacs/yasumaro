@@ -39,7 +39,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      grep: /^(?!.*@extension)/,
+      grep: /^(?!.*@interaction)/,
       use: { ...devices['Desktop Chrome'] },
     },
 
@@ -52,7 +52,10 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 2 : 0,
       workers: 1,
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+      },
     },
   ],
 
