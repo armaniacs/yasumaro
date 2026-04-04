@@ -394,7 +394,7 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false } = aiSummaryCleanseOptions;
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -513,7 +513,14 @@ export function extractMainContent(
                         lazyLoadEnabled,
                         skipLinkEnabled,
                         cardEnabled,
-                        linkDensityEnabled
+                        linkDensityEnabled,
+                        // NEW
+                        fixedEnabled,
+                        recommendEnabled,
+                        paginationEnabled,
+                        snsPromoEnabled,
+                        popupEnabled,
+                        platformEnabled
                     });
 
                     logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
@@ -610,7 +617,14 @@ export function extractMainContent(
                         lazyLoadEnabled,
                         skipLinkEnabled,
                         cardEnabled,
-                        linkDensityEnabled
+                        linkDensityEnabled,
+                        // NEW
+                        fixedEnabled,
+                        recommendEnabled,
+                        paginationEnabled,
+                        snsPromoEnabled,
+                        popupEnabled,
+                        platformEnabled
                     });
 
                     logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
@@ -703,7 +717,14 @@ export function extractMainContent(
                 lazyLoadEnabled,
                 skipLinkEnabled,
                 cardEnabled,
-                linkDensityEnabled
+                linkDensityEnabled,
+                // NEW
+                fixedEnabled,
+                recommendEnabled,
+                paginationEnabled,
+                snsPromoEnabled,
+                popupEnabled,
+                platformEnabled
             });
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
             if (aiSummaryCountResult.totalRemoved > 0) {

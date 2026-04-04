@@ -37,6 +37,13 @@ export interface AiSummaryCleanseOptions {
     skipLinkEnabled?: boolean;     // スキップリンク削除
     cardEnabled?: boolean;         // 記事カード・リストアイテム削除
     linkDensityEnabled?: boolean;  // リンク密度の高いブロック削除（デフォルト: false）
+    // NEW
+    fixedEnabled?: boolean;        // 固定要素削除（デフォルト: false）
+    recommendEnabled?: boolean;   // 推荐セクション削除（デフォルト: true）
+    paginationEnabled?: boolean;  // ページネーション削除（デフォルト: false）
+    snsPromoEnabled?: boolean;    // SNSプロモ削除（デフォルト: false）
+    popupEnabled?: boolean;       // ポップアップ削除（デフォルト: true）
+    platformEnabled?: boolean;    // プラットフォーム噪声削除（デフォルト: false）
 }
 
 /**
@@ -54,6 +61,13 @@ export interface AiSummaryCleanseResult {
     skipLinkRemoved?: number;       // スキップリンク削除数
     cardRemoved?: number;          // 記事カード・リストアイテム削除数
     linkDensityRemoved?: number;    // リンク密度ブロック削除数
+    // NEW
+    fixedRemoved?: number;         // 固定要素削除数
+    recommendRemoved?: number;     // 推荐セクション削除数
+    paginationRemoved?: number;     // ページネーション削除数
+    snsPromoRemoved?: number;       // SNSプロモ削除数
+    popupRemoved?: number;          // ポップアップ削除数
+    platformRemoved?: number;       // プラットフォーム噪声削除数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数
@@ -704,6 +718,226 @@ function stripDeepElements(element: Element): number {
 }
 
 /**
+ * 固定要素を削除（position:fixed/sticky）
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripFixedElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const fixedElements = element.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+    fixedElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    const stickyElements = element.querySelectorAll('[style*="position: sticky"], [style*="position:sticky"]');
+    stickyElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    const fixedPlayerElements = element.querySelectorAll('[class*="fixed-video"], [class*="sticky-player"]');
+    fixedPlayerElements.forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * 推荐セクションを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripRecommendSections(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const recommendPatterns = [
+        'carousel', 'slider', 'recommend-item', 'product-carousel',
+        'pickup', 'feature', 'ranking', 'trending',
+        'for-you', 'personalized', 'recommendation-box',
+        'ichiran', 'yoyaku', 'osusume', 'kanren'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(recommendPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * ページネーション要素を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripPaginationElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const paginationPatterns = [
+        'next', 'prev', 'pager', 'page-nav', 'page-numbers',
+        'pagination-numbers', 'pagination', 'load-more',
+        'infinite-scroll-trigger'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(paginationPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * SNS/Amazonプロモコンテンツを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripSnsPromoElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const snsPromoPatterns = [
+        'promoted', 'sponsored', 'sp-cc', 'trend-item',
+        'a-carousel', 'sp-RELATED'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(snsPromoPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    element.querySelectorAll('[data-testid="promotedIndicator"]').forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    element.querySelectorAll('[aria-label="Trending now"]').forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * ポップアップ/モーダル/トーストを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripPopupElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const popupPatterns = [
+        'popup', 'modal', 'overlay', 'lightbox', 'dialog',
+        'toast', 'notification', 'snackbar', 'ribbon', 'alert',
+        'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(popupPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * プラットフォーム固有の噪声を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripPlatformNoise(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const platformPatterns = [
+        'be-', 'mona', 'since', '2chmate',
+        'ytp-', 'ytd-companion', 'video-ads',
+        'tver-overlay', 'player-overlay',
+        'nico-external-banner', 'ndm-ads',
+        'yahoo-ad', 'weather', 'ranking'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(platformPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    element.querySelectorAll('#comments, #related, .ytd-watch-flexy .secondary').forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
  * DOMからAI要約に不要な要素を削除する
  * @param element - クレンジング対象のルート要素
  * @param options - クレンジングオプション
@@ -725,6 +959,13 @@ export function cleanseAISummaryContent(
         skipLinkEnabled = false,
         cardEnabled = false,
         linkDensityEnabled = false,
+        // NEW
+        fixedEnabled = false,
+        recommendEnabled = true,
+        paginationEnabled = false,
+        snsPromoEnabled = false,
+        popupEnabled = true,
+        platformEnabled = false,
     } = options;
 
     const bytesBefore = new Blob([element.outerHTML || '']).size;
@@ -740,6 +981,13 @@ export function cleanseAISummaryContent(
     let skipLinkRemoved = 0;
     let cardRemoved = 0;
     let linkDensityRemoved = 0;
+    // NEW
+    let fixedRemoved = 0;
+    let recommendRemoved = 0;
+    let paginationRemoved = 0;
+    let snsPromoRemoved = 0;
+    let popupRemoved = 0;
+    let platformRemoved = 0;
 
     if (altEnabled) {
         altRemoved = stripAltAttributes(element);
@@ -786,11 +1034,38 @@ export function cleanseAISummaryContent(
         linkDensityRemoved = stripHighLinkDensityElements(element);
     }
 
+    // NEW: 6つの新しいクレンジングオプション
+    if (fixedEnabled) {
+        fixedRemoved = stripFixedElements(element);
+    }
+
+    if (recommendEnabled) {
+        recommendRemoved = stripRecommendSections(element);
+    }
+
+    if (paginationEnabled) {
+        paginationRemoved = stripPaginationElements(element);
+    }
+
+    if (snsPromoEnabled) {
+        snsPromoRemoved = stripSnsPromoElements(element);
+    }
+
+    if (popupEnabled) {
+        popupRemoved = stripPopupElements(element);
+    }
+
+    if (platformEnabled) {
+        platformRemoved = stripPlatformNoise(element);
+    }
+
     const bytesAfter = new Blob([element.outerHTML || '']).size;
 
     const total = altRemoved + metadataRemoved + adsRemoved + navRemoved +
         socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved +
-        skipLinkRemoved + cardRemoved + linkDensityRemoved;
+        skipLinkRemoved + cardRemoved + linkDensityRemoved +
+        fixedRemoved + recommendRemoved + paginationRemoved +
+        snsPromoRemoved + popupRemoved + platformRemoved;
 
     logDebug('AI Summary Cleansing executed', {
         totalRemoved: total,
@@ -811,6 +1086,13 @@ export function cleanseAISummaryContent(
             skipLink: skipLinkRemoved,
             card: cardRemoved,
             linkDensity: linkDensityRemoved,
+            // NEW
+            fixed: fixedRemoved,
+            recommend: recommendRemoved,
+            pagination: paginationRemoved,
+            snsPromo: snsPromoRemoved,
+            popup: popupRemoved,
+            platform: platformRemoved,
         }
     }, 'aiSummaryCleaner');
 
@@ -826,6 +1108,13 @@ export function cleanseAISummaryContent(
         skipLinkRemoved,
         cardRemoved,
         linkDensityRemoved,
+        // NEW
+        fixedRemoved,
+        recommendRemoved,
+        paginationRemoved,
+        snsPromoRemoved,
+        popupRemoved,
+        platformRemoved,
         totalRemoved: total,
         bytesBefore,
         bytesAfter
