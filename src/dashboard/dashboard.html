@@ -622,6 +622,35 @@
             <label for="ai-summary-cleansing-card" class="inline-label" data-i18n="aiSummaryCleansingCardTitle">card クラスを持つ要素を除去します（高度）</label>
           </div>
         </div>
+
+        <!-- 高度クレンジングオプション（NEW） -->
+        <div class="form-group">
+          <label data-i18n="aiSummaryCleansingAdvancedLabel">高度クレンジングオプション</label>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-fixed">
+            <label for="ai-summary-cleansing-fixed" class="inline-label" data-i18n="aiSummaryCleansingFixedDesc">position:fixed/sticky の固定要素を削除します（Yahoo!、Game8等の追従バナー）。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-recommend" checked>
+            <label for="ai-summary-cleansing-recommend" class="inline-label" data-i18n="aiSummaryCleansingRecommendDesc">おすすめ・相關記事・おすすめ商品等の推荐セクションを削除します。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-pagination">
+            <label for="ai-summary-cleansing-pagination" class="inline-label" data-i18n="aiSummaryCleansingPaginationDesc">ページネーション（次へ/前のボタン等）を削除します。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-sns-promo">
+            <label for="ai-summary-cleansing-sns-promo" class="inline-label" data-i18n="aiSummaryCleansingSnsPromoDesc">SNS/Amazonのスポンサー製品・トレンド等のプロモコンテンツを削除します。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-popup" checked>
+            <label for="ai-summary-cleansing-popup" class="inline-label" data-i18n="aiSummaryCleansingPopupDesc">ポップアップ・モーダル・トースト通知を削除します。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-platform">
+            <label for="ai-summary-cleansing-platform" class="inline-label" data-i18n="aiSummaryCleansingPlatformDesc">プラットフォーム固有の噪声（5ch/be画像 YouTubeコメント欄等）を削除します。</label>
+          </div>
+        </div>
         </div>
 
         <div class="form-group">
