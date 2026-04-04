@@ -167,9 +167,13 @@ describe('aiSummaryCleaner', () => {
             expect(result.adsRemoved).toBeGreaterThan(0);
             expect(result.navRemoved).toBeGreaterThan(0);
             expect(result.socialRemoved).toBeGreaterThan(0);
+            // NEW: recommendEnabled=true, popupEnabled=true are default
+            expect(result.recommendRemoved).toBeGreaterThanOrEqual(0);
+            expect(result.popupRemoved).toBeGreaterThanOrEqual(0);
             expect(result.totalRemoved).toBe(
                 result.altRemoved + result.metadataRemoved + result.adsRemoved +
-                result.navRemoved + result.socialRemoved + result.deepRemoved
+                result.navRemoved + result.socialRemoved + result.deepRemoved +
+                result.recommendRemoved + result.popupRemoved
             );
         });
 
@@ -190,7 +194,14 @@ describe('aiSummaryCleaner', () => {
                 adsEnabled: false,
                 navEnabled: false,
                 socialEnabled: false,
-                deepEnabled: false
+                deepEnabled: false,
+                // NEW: 6つの新しいクレンジングオプション
+                fixedEnabled: false,
+                recommendEnabled: false,
+                paginationEnabled: false,
+                snsPromoEnabled: false,
+                popupEnabled: false,
+                platformEnabled: false
             });
 
             expect(result.totalRemoved).toBe(0);

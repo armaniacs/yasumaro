@@ -751,12 +751,37 @@ function stripFixedElements(element: Element): number {
         }
     });
 
+    // Yahoo! News 固定ヘッダー
+    element.querySelectorAll('[class*="yahoo-news"], [id*="headerWrap"], [class*="Topics"], [class*="IssueTop"]').forEach(elem => {
+        if (!counted.has(elem) && isFixedOrSticky(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // Game8 固定メニュー
+    element.querySelectorAll('[class*="game8"], [class*="headerMenu"], [class*="SideBar"], [id*="SideBar"]').forEach(elem => {
+        if (!counted.has(elem) && isFixedOrSticky(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
     for (const elem of elementsToRemove) {
         elem.remove();
         removedCount++;
     }
 
     return removedCount;
+}
+
+/**
+ * 要素がposition: fixed/stickyかを判定
+ */
+function isFixedOrSticky(elem: Element): boolean {
+    const style = elem.getAttribute('style') || '';
+    return style.includes('position: fixed') || style.includes('position:fixed') ||
+           style.includes('position: sticky') || style.includes('position:sticky');
 }
 
 /**
@@ -770,13 +795,37 @@ function stripRecommendSections(element: Element): number {
     const counted = new Set<Element>();
 
     const recommendPatterns = [
+        // 英語パターン
         'carousel', 'slider', 'recommend-item', 'product-carousel',
         'pickup', 'feature', 'ranking', 'trending',
         'for-you', 'personalized', 'recommendation-box',
-        'ichiran', 'yoyaku', 'osusume', 'kanren'
+        // 日本語パターン
+        'ichiran', 'yoyaku', 'osusume', 'kanren', 'kiji-related',
+        'kaiwa-related', 'yahoo-relation', 'lazuda', 'rakuten-scrap',
+        // Amazon
+        'sp-RELATED', 'sp-centered', 'a-carousel-container',
+        // 聆
+        'contents--contents-recommend', 'pickup-content',
+        'recommend -list'
     ];
 
     element.querySelectorAll(buildClassIdSelectors(recommendPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // Yahoo! 関連知見・ドック
+    element.querySelectorAll('[data-cs="viewRelation"], [data-ual="relation"], .relation-module, .topics-module').forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // Game8 ランキング
+    element.querySelectorAll('[class*="rankingList"], [class*="RankingBox"], [id*="Ranking"]').forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -833,8 +882,15 @@ function stripSnsPromoElements(element: Element): number {
     const counted = new Set<Element>();
 
     const snsPromoPatterns = [
+        // 英語
         'promoted', 'sponsored', 'sp-cc', 'trend-item',
-        'a-carousel', 'sp-RELATED'
+        'a-carousel', 'sp-RELATED', 'ad-slot', 'ad-container',
+        // Amazon スポンサープロダクト
+        'sp-ads', 'sp-ad', 'sponseredContent', 'adPokemon',
+        // Google/Twitter
+        'tweet-promoted', 'promoted-trend', 'ads-results',
+        // 日本語
+        'koukoku', 'kouka', 'ad-area'
     ];
 
     element.querySelectorAll(buildClassIdSelectors(snsPromoPatterns)).forEach(elem => {
@@ -858,32 +914,9 @@ function stripSnsPromoElements(element: Element): number {
         }
     });
 
-    for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
-    }
-
-    return removedCount;
-}
-
-/**
- * ポップアップ/モーダル/トーストを削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-function stripPopupElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    const popupPatterns = [
-        'popup', 'modal', 'overlay', 'lightbox', 'dialog',
-        'toast', 'notification', 'snackbar', 'ribbon', 'alert',
-        'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(popupPatterns)).forEach(elem => {
-        if (!counted.has(elem)) {
+    // Amazon スポンサー製品リンク
+    element.querySelectorAll('[data-a-divination], [class*="AdHolder"], [id*="ad"]').forEach(elem => {
+        if (!counted.has(elem) && isLikelyAd(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
         }
@@ -895,6 +928,87 @@ function stripPopupElements(element: Element): number {
     }
 
     return removedCount;
+}
+
+/**
+ * 要素が広告かどうかを判定
+ */
+function isLikelyAd(elem: Element): boolean {
+    const className = (elem.className || '').toLowerCase();
+    const id = (elem.id || '').toLowerCase();
+    const text = (elem.textContent || '').toLowerCase();
+    return className.includes('ad') || id.includes('ad') ||
+           text.includes('sponsored') || text.includes('promoted') ||
+           text.includes('Advertise');
+}
+
+/**
+ * ポップアップ/モーダル/通知-estを削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripPopupElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const popupPatterns = [
+        // 英語
+        'popup', 'modal', 'overlay', 'lightbox', 'dialog',
+        'toast', 'notification', 'snackbar', 'ribbon', 'alert',
+        'consent', 'cookie-banner', 'gdpr', 'age-gate', 'paywall',
+        // 日本語
+        'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup',
+        'popup-cookie', 'consent-banner', 'login-prompt',
+        // Amazon
+        'a-popover', 'a-modal', 'snssignup',
+        // Game8
+        'game8-popup', 'loginbox', 'messagebox'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(popupPatterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // dialog要素
+    element.querySelectorAll('dialog[open]').forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // cookie consent banner
+    element.querySelectorAll('[id*="cookie"], [class*="cookie"], [id*="consent"], [class*="consent"]').forEach(elem => {
+        if (!counted.has(elem) && isLikelyPopup(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+
+    return removedCount;
+}
+
+/**
+ * 要素がポップアップかどうかを判定
+ */
+function isLikelyPopup(elem: Element): boolean {
+    const className = (elem.className || '').toLowerCase();
+    const id = (elem.id || '').toLowerCase();
+    const style = elem.getAttribute('style') || '';
+    return className.includes('popup') || className.includes('modal') ||
+           className.includes('overlay') || className.includes('cookie') ||
+           className.includes('consent') || className.includes('banner') ||
+           id.includes('popup') || id.includes('modal') ||
+           (style.includes('position: fixed') && className.length < 50);
 }
 
 /**
@@ -908,11 +1022,22 @@ function stripPlatformNoise(element: Element): number {
     const counted = new Set<Element>();
 
     const platformPatterns = [
-        'be-', 'mona', 'since', '2chmate',
-        'ytp-', 'ytd-companion', 'video-ads',
+        // 5ch/be
+        'be-', 'mona', 'since', '2chmate', '2ch-sc', 'matome-hatune',
+        // YouTube
+        'ytp-', 'ytd-companion', 'video-ads', 'ytd-promoted-video',
+        // TVer
         'tver-overlay', 'player-overlay',
-        'nico-external-banner', 'ndm-ads',
-        'yahoo-ad', 'weather', 'ranking'
+        // ニコニコ動画
+        'nico-external-banner', 'ndm-ads', 'nicolive',
+        // Yahoo!
+        'yahoo-ad', 'weather', 'ranking',
+        // Amazon
+        'aws-iv', 'a-carousel', 'sp-ads',
+        // Game8
+        'game8-ad', 'adiene',
+        //  Twitter/X 
+        'promoted-trend', 'tweet'
     ];
 
     element.querySelectorAll(buildClassIdSelectors(platformPatterns)).forEach(elem => {
@@ -922,8 +1047,17 @@ function stripPlatformNoise(element: Element): number {
         }
     });
 
-    element.querySelectorAll('#comments, #related, .ytd-watch-flexy .secondary').forEach(elem => {
+    // YouTube コメント欄
+    element.querySelectorAll('#comments, #related, .ytd-watch-flexy .secondary, #secondary').forEach(elem => {
         if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    // 5ch mate板的レス番とID
+    element.querySelectorAll('[class*="number"], [class*="postnum"], [class*="id"], [class*="beid"]').forEach(elem => {
+        if (!counted.has(elem) && isPlatformNoise(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
         }
@@ -935,6 +1069,17 @@ function stripPlatformNoise(element: Element): number {
     }
 
     return removedCount;
+}
+
+/**
+ * 要素がプラットフォーム噪かどうかを判定
+ */
+function isPlatformNoise(elem: Element): boolean {
+    const className = (elem.className || '').toLowerCase();
+    const id = (elem.id || '').toLowerCase();
+    return className.includes('ad') || id.includes('ad') ||
+           className.includes('comment') && className.includes('youtube') ||
+           id.includes('comment') || id.includes('related');
 }
 
 /**
