@@ -138,6 +138,13 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_LAZY_LOAD: 'ai_summary_cleansing_lazy_load', // 遅延読み込み要素削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_SKIP_LINK: 'ai_summary_cleansing_skip_link', // スキップリンク削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_CARD: 'ai_summary_cleansing_card', // カード型要素削除（デフォルト: false）
+    // NEW: Advanced cleansing options
+    AI_SUMMARY_CLEANSING_FIXED: 'ai_summary_cleansing_fixed', // 固定要素削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_RECOMMEND: 'ai_summary_cleansing_recommend', // 推荐セクション削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_PAGINATION: 'ai_summary_cleansing_pagination', // ページネーション削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_SNS_PROMO: 'ai_summary_cleansing_sns_promo', // SNSプロモ削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_POPUP: 'ai_summary_cleansing_popup', // ポップアップ削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_PLATFORM: 'ai_summary_cleansing_platform', // プラットフォーム噪声削除（デフォルト: false）
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -243,6 +250,13 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_CARD]: boolean;
+    // NEW: Advanced cleansing options
+    [StorageKeys.AI_SUMMARY_CLEANSING_FIXED]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: boolean;
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: string; // ISO 8601形式
     [StorageKeys.TRANCO_DOMAINS]: string[]; // 保存された Tranco ドメインリスト

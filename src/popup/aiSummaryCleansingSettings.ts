@@ -22,6 +22,13 @@ export interface AiSummaryCleansingSettings {
     lazyLoadEnabled: boolean;
     skipLinkEnabled: boolean;
     cardEnabled: boolean;
+    // NEW
+    fixedEnabled: boolean;        // 固定要素削除（デフォルト: false）
+    recommendEnabled: boolean;   // 推荐セクション削除（デフォルト: true）
+    paginationEnabled: boolean;  // ページネーション削除（デフォルト: false）
+    snsPromoEnabled: boolean;    // SNSプロモ削除（デフォルト: false）
+    popupEnabled: boolean;       // ポップアップ削除（デフォルト: true）
+    platformEnabled: boolean;    // プラットフォーム噪声削除（デフォルト: false）
 }
 
 /**
@@ -42,7 +49,14 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         jsonLdEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD] ?? false,
         lazyLoadEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD] ?? false,
         skipLinkEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK] ?? false,
-        cardEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_CARD] ?? false
+        cardEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_CARD] ?? false,
+        // NEW
+        fixedEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_FIXED] ?? false,
+        recommendEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND] ?? true,
+        paginationEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION] ?? false,
+        snsPromoEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO] ?? false,
+        popupEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_POPUP] ?? true,
+        platformEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] ?? false
     };
 }
 
@@ -64,6 +78,13 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD] = settings.lazyLoadEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK] = settings.skipLinkEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_CARD] = settings.cardEnabled;
+    // NEW
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FIXED] = settings.fixedEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND] = settings.recommendEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION] = settings.paginationEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO] = settings.snsPromoEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_POPUP] = settings.popupEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] = settings.platformEnabled;
     await saveSettings(currentSettings);
 }
 
@@ -84,6 +105,13 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
     const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
     const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
+    // NEW
+    const fixedCheckbox = document.getElementById('ai-summary-cleansing-fixed') as HTMLInputElement;
+    const recommendCheckbox = document.getElementById('ai-summary-cleansing-recommend') as HTMLInputElement;
+    const paginationCheckbox = document.getElementById('ai-summary-cleansing-pagination') as HTMLInputElement;
+    const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
+    const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
+    const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -97,6 +125,13 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (lazyLoadCheckbox) lazyLoadCheckbox.checked = settings.lazyLoadEnabled;
     if (skipLinkCheckbox) skipLinkCheckbox.checked = settings.skipLinkEnabled;
     if (cardCheckbox) cardCheckbox.checked = settings.cardEnabled;
+    // NEW
+    if (fixedCheckbox) fixedCheckbox.checked = settings.fixedEnabled;
+    if (recommendCheckbox) recommendCheckbox.checked = settings.recommendEnabled;
+    if (paginationCheckbox) paginationCheckbox.checked = settings.paginationEnabled;
+    if (snsPromoCheckbox) snsPromoCheckbox.checked = settings.snsPromoEnabled;
+    if (popupCheckbox) popupCheckbox.checked = settings.popupEnabled;
+    if (platformCheckbox) platformCheckbox.checked = settings.platformEnabled;
 
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
@@ -125,6 +160,13 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
     const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
     const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
     const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
+    // NEW
+    const fixedCheckbox = document.getElementById('ai-summary-cleansing-fixed') as HTMLInputElement;
+    const recommendCheckbox = document.getElementById('ai-summary-cleansing-recommend') as HTMLInputElement;
+    const paginationCheckbox = document.getElementById('ai-summary-cleansing-pagination') as HTMLInputElement;
+    const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
+    const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
+    const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
 
     return {
         enabled: enabledCheckbox?.checked ?? true,
@@ -138,7 +180,14 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         jsonLdEnabled: jsonLdCheckbox?.checked ?? false,
         lazyLoadEnabled: lazyLoadCheckbox?.checked ?? false,
         skipLinkEnabled: skipLinkCheckbox?.checked ?? false,
-        cardEnabled: cardCheckbox?.checked ?? false
+        cardEnabled: cardCheckbox?.checked ?? false,
+        // NEW
+        fixedEnabled: fixedCheckbox?.checked ?? false,
+        recommendEnabled: recommendCheckbox?.checked ?? true,
+        paginationEnabled: paginationCheckbox?.checked ?? false,
+        snsPromoEnabled: snsPromoCheckbox?.checked ?? false,
+        popupEnabled: popupCheckbox?.checked ?? true,
+        platformEnabled: platformCheckbox?.checked ?? false
     };
 }
 
@@ -158,6 +207,13 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
     const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
     const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
+    // NEW
+    const fixedCheckbox = document.getElementById('ai-summary-cleansing-fixed') as HTMLInputElement;
+    const recommendCheckbox = document.getElementById('ai-summary-cleansing-recommend') as HTMLInputElement;
+    const paginationCheckbox = document.getElementById('ai-summary-cleansing-pagination') as HTMLInputElement;
+    const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
+    const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
+    const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
 
     if (altCheckbox) altCheckbox.disabled = !enabled;
     if (metadataCheckbox) metadataCheckbox.disabled = !enabled;
@@ -170,6 +226,13 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (lazyLoadCheckbox) lazyLoadCheckbox.disabled = !enabled;
     if (skipLinkCheckbox) skipLinkCheckbox.disabled = !enabled;
     if (cardCheckbox) cardCheckbox.disabled = !enabled;
+    // NEW
+    if (fixedCheckbox) fixedCheckbox.disabled = !enabled;
+    if (recommendCheckbox) recommendCheckbox.disabled = !enabled;
+    if (paginationCheckbox) paginationCheckbox.disabled = !enabled;
+    if (snsPromoCheckbox) snsPromoCheckbox.disabled = !enabled;
+    if (popupCheckbox) popupCheckbox.disabled = !enabled;
+    if (platformCheckbox) platformCheckbox.disabled = !enabled;
 }
 
 /**
@@ -207,7 +270,14 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-json-ld',
         'ai-summary-cleansing-lazy-load',
         'ai-summary-cleansing-skip-link',
-        'ai-summary-cleansing-card'
+        'ai-summary-cleansing-card',
+        // NEW
+        'ai-summary-cleansing-fixed',
+        'ai-summary-cleansing-recommend',
+        'ai-summary-cleansing-pagination',
+        'ai-summary-cleansing-sns-promo',
+        'ai-summary-cleansing-popup',
+        'ai-summary-cleansing-platform'
     ];
 
     for (const id of checkboxes) {
