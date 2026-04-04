@@ -1559,6 +1559,27 @@
   "aiSummaryCleansingCardTitle": {
     "message": "card クラスを持つ要素を除去します（高度）"
   },
+  "aiSummaryCleansingAdvancedLabel": {
+    "message": "高度クレンジングオプション"
+  },
+  "aiSummaryCleansingFixedDesc": {
+    "message": "position:fixed/sticky の固定要素を削除します（Yahoo!、Game8等の追従バナー）。"
+  },
+  "aiSummaryCleansingRecommendDesc": {
+    "message": "おすすめ・相關記事・おすすめ商品等の推荐セクションを削除します。"
+  },
+  "aiSummaryCleansingPaginationDesc": {
+    "message": "ページネーション（次へ/前のボタン等）を削除します。"
+  },
+  "aiSummaryCleansingSnsPromoDesc": {
+    "message": "SNS/Amazonのスポンサー製品・トレンド等のプロモコンテンツを削除します。"
+  },
+  "aiSummaryCleansingPopupDesc": {
+    "message": "ポップアップ・モーダル・トースト通知を削除します。"
+  },
+  "aiSummaryCleansingPlatformDesc": {
+    "message": "プラットフォーム固有の噪声（5ch/be画像 YouTubeコメント欄等）を削除します。"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },

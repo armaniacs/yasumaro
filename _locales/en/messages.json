@@ -1559,6 +1559,27 @@
   "aiSummaryCleansingCardTitle": {
     "message": "Remove elements with card class (advanced)"
   },
+  "aiSummaryCleansingAdvancedLabel": {
+    "message": "Advanced Cleansing Options"
+  },
+  "aiSummaryCleansingFixedDesc": {
+    "message": "Remove fixed position elements (position:fixed/sticky) - sticky banners on Yahoo!, Game8, etc."
+  },
+  "aiSummaryCleansingRecommendDesc": {
+    "message": "Remove recommendation sections - related articles, recommended products, etc."
+  },
+  "aiSummaryCleansingPaginationDesc": {
+    "message": "Remove pagination elements (Next/Previous buttons, etc.)."
+  },
+  "aiSummaryCleansingSnsPromoDesc": {
+    "message": "Remove SNS/Amazon promotional content - sponsored products, trends, etc."
+  },
+  "aiSummaryCleansingPopupDesc": {
+    "message": "Remove popups, modals, and toast notifications."
+  },
+  "aiSummaryCleansingPlatformDesc": {
+    "message": "Remove platform-specific noise (5ch/be images, YouTube comments, etc.)."
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },
