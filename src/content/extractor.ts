@@ -29,6 +29,13 @@ const AI_SUMMARY_CLEANSING_LAZY_LOAD = 'ai_summary_cleansing_lazy_load';
 const AI_SUMMARY_CLEANSING_SKIP_LINK = 'ai_summary_cleansing_skip_link';
 const AI_SUMMARY_CLEANSING_CARD = 'ai_summary_cleansing_card';
 const AI_SUMMARY_CLEANSING_LINK_DENSITY = 'ai_summary_cleansing_link_density';
+// NEW: 6つの新しいストレージキー
+const AI_SUMMARY_CLEANSING_FIXED = 'ai_summary_cleansing_fixed';
+const AI_SUMMARY_CLEANSING_RECOMMEND = 'ai_summary_cleansing_recommend';
+const AI_SUMMARY_CLEANSING_PAGINATION = 'ai_summary_cleansing_pagination';
+const AI_SUMMARY_CLEANSING_SNS_PROMO = 'ai_summary_cleansing_sns_promo';
+const AI_SUMMARY_CLEANSING_POPUP = 'ai_summary_cleansing_popup';
+const AI_SUMMARY_CLEANSING_PLATFORM = 'ai_summary_cleansing_platform';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -60,6 +67,13 @@ let aiSummaryCleansingLazyLoad = false;
 let aiSummaryCleansingSkipLink = false;
 let aiSummaryCleansingCard = false;
 let aiSummaryCleansingLinkDensity = false;
+// NEW: 6つの新しいクレンジングオプション
+let aiSummaryCleansingFixed = false;
+let aiSummaryCleansingRecommend = true;
+let aiSummaryCleansingPagination = false;
+let aiSummaryCleansingSnsPromo = false;
+let aiSummaryCleansingPopup = true;
+let aiSummaryCleansingPlatform = false;
 
 // 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
 export let lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
@@ -121,7 +135,14 @@ function extractPageContent(): string {
         lazyLoadEnabled: aiSummaryCleansingLazyLoad,
         skipLinkEnabled: aiSummaryCleansingSkipLink,
         cardEnabled: aiSummaryCleansingCard,
-        linkDensityEnabled: aiSummaryCleansingLinkDensity
+        linkDensityEnabled: aiSummaryCleansingLinkDensity,
+        // NEW: 6つの新しいクレンジングオプション
+        fixedEnabled: aiSummaryCleansingFixed,
+        recommendEnabled: aiSummaryCleansingRecommend,
+        paginationEnabled: aiSummaryCleansingPagination,
+        snsPromoEnabled: aiSummaryCleansingSnsPromo,
+        popupEnabled: aiSummaryCleansingPopup,
+        platformEnabled: aiSummaryCleansingPlatform
     };
     const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions);
     // クレンジング情報を保存
@@ -239,6 +260,25 @@ function loadSettings(): Promise<void> {
             }
             if (s[AI_SUMMARY_CLEANSING_LINK_DENSITY] !== undefined) {
                 aiSummaryCleansingLinkDensity = s[AI_SUMMARY_CLEANSING_LINK_DENSITY];
+            }
+            // NEW: 6つの新しいクレンジングオプション
+            if (s[AI_SUMMARY_CLEANSING_FIXED] !== undefined) {
+                aiSummaryCleansingFixed = s[AI_SUMMARY_CLEANSING_FIXED];
+            }
+            if (s[AI_SUMMARY_CLEANSING_RECOMMEND] !== undefined) {
+                aiSummaryCleansingRecommend = s[AI_SUMMARY_CLEANSING_RECOMMEND];
+            }
+            if (s[AI_SUMMARY_CLEANSING_PAGINATION] !== undefined) {
+                aiSummaryCleansingPagination = s[AI_SUMMARY_CLEANSING_PAGINATION];
+            }
+            if (s[AI_SUMMARY_CLEANSING_SNS_PROMO] !== undefined) {
+                aiSummaryCleansingSnsPromo = s[AI_SUMMARY_CLEANSING_SNS_PROMO];
+            }
+            if (s[AI_SUMMARY_CLEANSING_POPUP] !== undefined) {
+                aiSummaryCleansingPopup = s[AI_SUMMARY_CLEANSING_POPUP];
+            }
+            if (s[AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
+                aiSummaryCleansingPlatform = s[AI_SUMMARY_CLEANSING_PLATFORM];
             }
             logInfo('Settings loaded', {
                 minVisitDuration,

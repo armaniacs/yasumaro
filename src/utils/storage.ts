@@ -826,6 +826,13 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: false, // 遅延読み込み要素削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: false, // スキップリンク削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_CARD]: false, // カード型要素削除（デフォルト: 無効）
+    // NEW: 6つの新しいクレンジングオプション
+    [StorageKeys.AI_SUMMARY_CLEANSING_FIXED]: false,       // 固定要素削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND]: true,   // 推荐セクション削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]: false, // ページネーション削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: false,  // SNSプロモ削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: true,       // ポップアップ削除（デフォルト: 有効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: false,   // プラットフォーム噪声削除（デフォルト: 無効）
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: '', // 初期値は空.migration.ts で presetDomains.ts の TRANCO_VERSION を設定
     [StorageKeys.TRANCO_DOMAINS]: [], // 保存された Tranco ドメインリスト（初期値: 空）
