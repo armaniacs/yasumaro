@@ -102,7 +102,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('markdown 形式', () => {
-    it('正しい markdown 形式で出力される', async () => {
+    it('正しい markdown 形式で出力される（タグなし）', async () => {
       const context = makeContext({
         data: { title: 'My Page', url: 'https://example.com/page', content: '' },
         sanitizedSummary: 'Summary text',
@@ -112,7 +112,26 @@ describe('formatMarkdownStep', () => {
 
       // タイムスタンプ形式: - HH:MM [Title](url) or - HH:MM AM/PM [Title](url)
       expect(result.markdown).toMatch(/^- \d{1,2}:\d{2}\s*(AM|PM)?\s*\[My Page\]\(https:\/\/example\.com\/page\)/);
-      expect(result.markdown).toContain('- AI要約: Summary text');
+      // AI要約: プレフィックスなし
+      expect(result.markdown).not.toContain('AI要約:');
+      expect(result.markdown).toContain('Summary text');
+    });
+
+    it('タグがある場合、タグプレフィックス付きで出力される', async () => {
+      const context = makeContext({
+        data: { title: 'My Page', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: 'Summary text',
+        privacyResult: {
+          summary: 'Summary text',
+          maskedCount: 0,
+          tags: ['IT・プログラミング', 'インフラ・ネットワーク'],
+        } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdown).toContain('#IT・プログラミング #インフラ・ネットワーク Summary text');
+      expect(result.markdown).not.toContain('AI要約:');
     });
 
     it('url がそのまま含まれる', async () => {

@@ -291,8 +291,27 @@ export function isUrlAllowed(url: string, allowedUrls: Set<string> | null): bool
 }
 
 /**
+ * ローカルAI用ホスト名かどうか判定（127.x.x.x / ::1）
+ * Ollama、LM Studio等のローカルLLMサーバー向け
+ */
+function isLocalhostAddress(hostname: string): boolean {
+  // 127.x.x.x (ループバックIPv4)
+  const ipv4Match = hostname.match(/^(\d{1,3})\./);
+  if (ipv4Match && Number(ipv4Match[1]) === 127) return true;
+
+  // ::1 (IPv6ループバック)
+  if (hostname.toLowerCase() === '::1') return true;
+
+  // ::ffff:127.x.x.x (IPv4マップ)
+  if (hostname.toLowerCase().startsWith('::ffff:127.')) return true;
+
+  return false;
+}
+
+/**
  * AIリクエスト用URLの検証（SSRF対策）
  * 内部ネットワークアドレスへのアクセスを防止
+ * ただし、ローカルAI（Ollama、LM Studio等）用の 127.x.x.x / ::1 は許可
  * @param {string} url - 検証するURL
  * @throws {Error} URLが無効またはプライベートネットワークの場合
  */
@@ -305,7 +324,12 @@ export function validateUrlForAIRequests(url: string): void {
 
   const parsedUrl = new URL(url);
 
-  // プライベートIPチェック
+  // ローカルAI用アドレス（127.x.x.x / ::1）は許可
+  if (isLocalhostAddress(parsedUrl.hostname)) {
+    return;
+  }
+
+  // その他のプライベートIPチェック（10.x.x.x / 172.16-31.x.x / 192.168.x.x 等）
   if (isPrivateIpAddress(parsedUrl.hostname)) {
     throw new Error(`Access to private network address is not allowed: ${parsedUrl.hostname}`);
   }

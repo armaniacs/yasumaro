@@ -613,6 +613,32 @@ button#saveDomainSettings:focus {
   outline-offset: 2px;
 }
 
+/* 小サイズボタン */
+.small-btn {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 12px;
+  width: auto;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  margin-left: 8px;
+}
+
+.small-btn:hover {
+  background: var(--color-bg-code);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.small-btn:active {
+  transform: scale(0.98);
+}
+
 /* アイコンボタン（モーダルの×ボタン等） */
 .icon-btn {
   width: 28px;

@@ -114,6 +114,8 @@ jest.mock('../../utils/storageUrls.js', () => ({
   setUrlAiSummaryCleansedBytes: jest.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedElements: jest.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedReason: jest.fn().mockResolvedValue(undefined),
+  setUrlAiProvider: jest.fn().mockResolvedValue(undefined),
+  setUrlAiModel: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
@@ -330,7 +332,7 @@ describe('RecordingLogic - _formatMarkdown', () => {
     expect(result).toContain('Test Title');
     expect(result).toContain('https://example.com');
     expect(result).toContain('Test summary');
-    expect(result).toContain('AI要約:');
+    expect(result).not.toContain('AI要約:');
   });
 
   test('includes timestamp', () => {
@@ -341,6 +343,68 @@ describe('RecordingLogic - _formatMarkdown', () => {
     );
     // Timestamp format: HH:MM
     expect(result).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  test('LLMが返す \\n\\n をスペースに変換する（Obsidianで改行しない）', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '#タグ1 | 一行目\n\n詳細説明\n\n#タグ2 | 二行目'
+    );
+    // 箇条書き行（"    - " 以降）に改行が含まれないこと
+    const bulletLine = result.split('    - ')[1];
+    expect(bulletLine).not.toContain('\n');
+  });
+
+  test('単独の \\n もスペースに変換する', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '一行目\n二行目'
+    );
+    expect(result).toContain('一行目 二行目');
+    expect(result.split('    - ')[1]).not.toContain('\n');
+  });
+
+  test('連続スペースは1つにまとめる', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '一行目\n\n二行目'
+    );
+    expect(result).toContain('一行目 二行目');
+    expect(result.split('    - ')[1]).not.toContain('  ');
+  });
+
+  test('tags を渡すと "#タグ1 #タグ2 要約文" 形式で箇条書き行に出力される', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '要約文',
+      ['IT・プログラミング', 'インフラ・ネットワーク']
+    );
+    const bulletLine = result.split('    - ')[1];
+    expect(bulletLine).toBe('#IT・プログラミング #インフラ・ネットワーク 要約文');
+  });
+
+  test('tags が空配列の場合はタグを追加しない', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '要約文',
+      []
+    );
+    expect(result).not.toMatch(/#\S+/);
+  });
+
+  test('tags が undefined の場合はタグを追加しない', () => {
+    const result = (logic as any)._formatMarkdown(
+      'Title',
+      'https://example.com',
+      '要約文',
+      undefined
+    );
+    expect(result).not.toMatch(/#\S+/);
   });
 });
 
@@ -1220,5 +1284,52 @@ describe('RecordingLogic - _savePendingPage', () => {
         headerValue: expect.stringMatching(/^.{1024}$/),
       })
     );
+  });
+});
+
+describe('_saveMetadata: AI provider and model', () => {
+  let logic: RecordingLogic;
+
+  beforeEach(() => {
+    resetCacheState();
+    logic = makeLogic();
+    jest.clearAllMocks();
+  });
+
+  test('pipelineResultにaiProviderがある場合setUrlAiProviderを呼ぶ', async () => {
+    const data = {
+      title: 'Test', url: 'https://example.com', content: 'body',
+      recordType: 'auto' as const,
+    };
+    const pipelineResult = { summary: 'ok', maskedCount: 0, aiProvider: 'lm-studio' };
+
+    await (logic as any)._saveMetadata(data, pipelineResult);
+
+    expect(storageUrls.setUrlAiProvider).toHaveBeenCalledWith('https://example.com', 'lm-studio');
+  });
+
+  test('pipelineResultにaiModelがある場合setUrlAiModelを呼ぶ', async () => {
+    const data = {
+      title: 'Test', url: 'https://example.com', content: 'body',
+      recordType: 'auto' as const,
+    };
+    const pipelineResult = { summary: 'ok', maskedCount: 0, aiModel: 'gemma-4-e4b-it' };
+
+    await (logic as any)._saveMetadata(data, pipelineResult);
+
+    expect(storageUrls.setUrlAiModel).toHaveBeenCalledWith('https://example.com', 'gemma-4-e4b-it');
+  });
+
+  test('aiProviderもaiModelもない場合はsetUrlAiProvider/setUrlAiModelを呼ばない', async () => {
+    const data = {
+      title: 'Test', url: 'https://example.com', content: 'body',
+      recordType: 'auto' as const,
+    };
+    const pipelineResult = { summary: 'ok', maskedCount: 0 };
+
+    await (logic as any)._saveMetadata(data, pipelineResult);
+
+    expect(storageUrls.setUrlAiProvider).not.toHaveBeenCalled();
+    expect(storageUrls.setUrlAiModel).not.toHaveBeenCalled();
   });
 });

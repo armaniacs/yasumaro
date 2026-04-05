@@ -177,6 +177,7 @@
               <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
               <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
               <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+              <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
               <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
             </select>
           </div>
@@ -230,6 +231,19 @@
             </div>
           </div>
 
+          <!-- LM Studio Settings -->
+          <div id="lm-studioSettings" class="openai-settings">
+            <div class="form-group">
+              <label for="lmStudioBaseUrl" data-i18n="baseUrl">Base URL</label>
+              <input type="text" id="lmStudioBaseUrl" data-i18n-input-placeholder="lmStudioBaseUrlPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="lmStudioModel" data-i18n="modelName">Model Name</label>
+              <input type="text" id="lmStudioModel" data-i18n-input-placeholder="lmStudioModelPlaceholder">
+            </div>
+          </div>
+
           <!-- OpenAI-Compatible (Models.dev) Settings -->
           <div id="openai-compatibleSettings" class="openai-settings">
             <div class="form-group">
@@ -240,6 +254,12 @@
             <div id="selectedProviderInfo" class="selected-provider-info hidden">
               <label data-i18n="selectedProviderInfo">Selected Provider:</label>
               <div id="providerInfoDisplay" class="provider-display"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="providerBaseUrl" data-i18n="baseUrl">Base URL</label>
+              <input type="text" id="providerBaseUrl" data-i18n-input-placeholder="providerBaseUrlPlaceholder">
+              <button type="button" id="lmStudioPresetBtn" class="small-btn" data-i18n="lmStudioPreset">LM Studio</button>
             </div>
 
             <div class="form-group">
@@ -278,6 +298,13 @@
               aria-describedby="maxTokensError maxTokensNote">
             <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
             <div id="maxTokensError" class="field-error" role="alert"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="aiTimeoutSeconds" data-i18n="label_ai_timeout">AIタイムアウト（秒）</label>
+            <input type="number" id="aiTimeoutSeconds" min="10" max="600" step="10" aria-invalid="false"
+              aria-describedby="aiTimeoutNote">
+            <p class="help-text" id="aiTimeoutNote" data-i18n="note_ai_timeout"></p>
           </div>
         </div>
 
@@ -444,6 +471,7 @@
               <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
               <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible</option>
               <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2</option>
+              <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
             </select>
           </div>
 

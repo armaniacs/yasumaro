@@ -47,6 +47,8 @@ export interface SavedUrlEntry {
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
     isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）
+    aiProvider?: string;  // 使用したAIプロバイダー名（オプション）
+    aiModel?: string;     // 使用したAIモデル名（オプション）
 }
 
 /**
@@ -789,6 +791,42 @@ export async function setUrlAiSummaryCleansedReason(url: string, aiSummaryCleans
         if (idx >= 0) {
             const updatedEntries = [...entries];
             updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryCleansedReason };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLに使用したAIプロバイダー名を設定する
+ * @param {string} url - 設定するURL
+ * @param {string} aiProvider - AIプロバイダー名
+ */
+export async function setUrlAiProvider(url: string, aiProvider: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiProvider };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLに使用したAIモデル名を設定する
+ * @param {string} url - 設定するURL
+ * @param {string} aiModel - AIモデル名
+ */
+export async function setUrlAiModel(url: string, aiModel: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiModel };
             return updatedEntries;
         }
         return entries;

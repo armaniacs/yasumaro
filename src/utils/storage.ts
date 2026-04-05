@@ -57,6 +57,9 @@ export const StorageKeys = {
     OPENAI_2_BASE_URL: 'openai_2_base_url',
     OPENAI_2_API_KEY: 'openai_2_api_key',
     OPENAI_2_MODEL: 'openai_2_model',
+    // LM Studio settings
+    LM_STUDIO_BASE_URL: 'lm_studio_base_url',
+    LM_STUDIO_MODEL: 'lm_studio_model',
     // OpenAI-compatible provider settings (dynamic)
     PROVIDER_TYPE: 'provider_type',       // 'openrouter' | 'perplexity' | 'groq' | ...
     PROVIDER_BASE_URL: 'provider_base_url', // Dynamic API URL
@@ -125,6 +128,7 @@ export const StorageKeys = {
     CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers', // 追加するAIプロバイダーIDリスト（デフォルト: []）
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
     // AI Summary Cleansing Settings
     AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled', // AI要約用クレンジング有効フラグ（デフォルト: true）
     AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt', // 画像alt属性削除（デフォルト: true）
@@ -180,6 +184,8 @@ export interface StorageKeyValues {
     [StorageKeys.OPENAI_2_BASE_URL]: string;
     [StorageKeys.OPENAI_2_API_KEY]: string | EncryptedData;
     [StorageKeys.OPENAI_2_MODEL]: string;
+    [StorageKeys.LM_STUDIO_BASE_URL]: string;
+    [StorageKeys.LM_STUDIO_MODEL]: string;
     [StorageKeys.PROVIDER_TYPE]: string;
     [StorageKeys.PROVIDER_BASE_URL]: string;
     [StorageKeys.PROVIDER_API_KEY]: string | EncryptedData;
@@ -237,6 +243,7 @@ export interface StorageKeyValues {
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
     // AI Limits Settings
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
+    [StorageKeys.AI_TIMEOUT_MS]: number;
     // AI Summary Cleansing Settings
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: boolean;
@@ -735,6 +742,9 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1',
     [StorageKeys.OPENAI_2_API_KEY]: '', // APIキー（ユーザーが設定）
     [StorageKeys.OPENAI_2_MODEL]: 'llama3',
+    // LM Studio defaults
+    [StorageKeys.LM_STUDIO_BASE_URL]: 'http://127.0.0.1:1234/v1',
+    [StorageKeys.LM_STUDIO_MODEL]: '',
     // OpenAI-compatible provider defaults
     [StorageKeys.PROVIDER_TYPE]: '',
     [StorageKeys.PROVIDER_BASE_URL]: '',
@@ -813,6 +823,7 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],        // 追加するAIプロバイダーIDリスト（デフォルト: 空）
     // AI Limits Settings
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: 1000,         // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
+    [StorageKeys.AI_TIMEOUT_MS]: 0,                    // AIタイムアウト（0=自動: ローカル120秒/クラウド30秒）
     // AI Summary Cleansing Settings
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: true,  // AI要約用クレンジング有効フラグ（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: true,      // 画像alt属性削除（デフォルト: 有効）

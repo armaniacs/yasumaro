@@ -188,6 +188,46 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toBe('No summary generated.');
         });
 
+        test('ローカルURLの場合、コンテンツを4000文字に切り詰める', async () => {
+            (fetchWithRetry as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] })
+            });
+
+            const lmStudioSettings = {
+                lm_studio_base_url: 'http://127.0.0.1:1234/v1',
+                lm_studio_model: 'test-model'
+            };
+            const p = new OpenAIProvider(lmStudioSettings, 'lm-studio');
+
+            // 10000文字のコンテンツを送る
+            const longContent = 'あ'.repeat(10000);
+            await p.generateSummary(longContent);
+
+            const body = JSON.parse((fetchWithRetry as jest.Mock).mock.calls[0][1].body);
+            const userPrompt = body.messages[1].content as string;
+            // 4000文字を超えたコンテンツは送られない
+            expect(userPrompt.length).toBeLessThanOrEqual(4200); // プロンプトテンプレート分の余裕を含む
+        });
+
+        test('クラウドURLの場合、コンテンツを30000文字に切り詰める', async () => {
+            (fetchWithRetry as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] })
+            });
+
+            const p = new OpenAIProvider(baseSettings);
+
+            // 35000文字のコンテンツを送る
+            const longContent = 'a'.repeat(35000);
+            await p.generateSummary(longContent);
+
+            const body = JSON.parse((fetchWithRetry as jest.Mock).mock.calls[0][1].body);
+            const userPrompt = body.messages[1].content as string;
+            // 30000文字を超えたコンテンツは送られない
+            expect(userPrompt.length).toBeLessThanOrEqual(30200);
+        });
+
         test('baseUrl 末尾スラッシュを除去', async () => {
             (fetchWithRetry as jest.Mock).mockResolvedValue({
                 ok: true,

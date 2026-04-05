@@ -117,8 +117,8 @@ export const PRESET_PROMPTS: PresetPrompt[] = [
 カテゴリ候補:
 [IT・プログラミング, インフラ・ネットワーク, サイエンス・アカデミック, ビジネス・経済, ライフスタイル・雑記, フード・レシピ, トラベル・アウトドア, エンタメ・ゲーム, クリエイティブ・アート, ヘルス・ウェルネス]
 
-出力形式:
-#カテゴリ1 #カテゴリ2 | 要約文（改行なし）
+Output format (one line only, no explanation):
+#タグ1 #タグ2 | 要約
 
 Content:
 {{content}}`,
@@ -185,8 +185,8 @@ export function buildTaggedSummaryPrompt(settings: Settings, content: string): s
 カテゴリ候補:
 [${categoryList}]
 
-出力形式:
-#カテゴリ1 #カテゴリ2 | 要約文（改行なし）
+Output format (one line only, no explanation):
+#タグ1 #タグ2 | 要約
 
 Content:
 ${content}`;

@@ -29,8 +29,12 @@ export const formatMarkdownStep: PipelineStepFunction = async (
     minute: '2-digit'
   });
 
+  // タグプレフィックス（タグがある場合のみ）
+  const tags = privacyResult?.tags;
+  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${t}`).join(' ') + ' ' : '';
+
   // Create markdown
-  const markdown = `- ${timestamp} [${sanitizedTitle}](${url})\n    - AI要約: ${finalSanitizedSummary}`;
+  const markdown = `- ${timestamp} [${sanitizedTitle}](${url})\n    - ${tagPrefix}${finalSanitizedSummary}`;
 
   return {
     ...context,

@@ -15,6 +15,8 @@ export interface AISummaryResult {
     summary: string;
     sentTokens?: number;
     receivedTokens?: number;
+    providerName?: string;  // 使用したAIプロバイダー名
+    model?: string;         // 使用したAIモデル名
 }
 
 export abstract class AIProviderStrategy {

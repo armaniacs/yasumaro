@@ -195,6 +195,25 @@ describe('customPromptUtils', () => {
             expect(result).toContain('Science');
             expect(result).toContain('Business');
         });
+
+        test('プロンプトに "#カテゴリ1" "#カテゴリ2" というリテラルが含まれない', () => {
+            // instruction leakage 対策: LLMがこの文字列をオウム返しするのを防ぐ
+            const result = buildTaggedSummaryPrompt({}, 'content');
+            expect(result).not.toContain('#カテゴリ1');
+            expect(result).not.toContain('#カテゴリ2');
+        });
+
+        test('プロンプトに "要約文（改行なし）" というリテラルが含まれない', () => {
+            // instruction leakage 対策
+            const result = buildTaggedSummaryPrompt({}, 'content');
+            expect(result).not.toContain('要約文（改行なし）');
+        });
+
+        test('出力形式の指示が1行のみであることを明示する', () => {
+            const result = buildTaggedSummaryPrompt({}, 'content');
+            // 1行出力の指示が含まれる
+            expect(result.toLowerCase()).toMatch(/one line|1行|1 line/i);
+        });
     });
 
     describe('replaceContentPlaceholder', () => {

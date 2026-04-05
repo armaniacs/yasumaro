@@ -58,6 +58,8 @@ export interface PrivacyPipelineResult {
   receivedTokens?: number;  // 受信トークン数
   originalTokens?: number;  // 元のトークン数
   cleansedTokens?: number;  // クレンジング後のトークン数
+  aiProvider?: string;  // 使用したAIプロバイダー名
+  aiModel?: string;     // 使用したAIモデル名
 }
 
 export class PrivacyPipeline {
@@ -152,8 +154,14 @@ export class PrivacyPipeline {
         }
 
         // タグを抽出（タグ付き要約モード、またはカスタムプロンプトが #タグ | 要約 形式を返した場合）
+        // parsed.summary はタグ行・例示行を除去したクリーニング済みテキスト
         const parsed = parseTagsFromSummary(sanitizedSummary);
         tags = parsed.tags.length > 0 ? parsed.tags : undefined;
+        // タグあり・なしに関わらず parsed.summary を使用（例示行除去済み）
+        sanitizedSummary = parsed.summary;
+
+        // \n をスペースに正規化（Obsidian保存・ダッシュボード表示の両方で改行を防ぐ）
+        sanitizedSummary = sanitizedSummary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
       }
 
       return {
@@ -163,7 +171,9 @@ export class PrivacyPipeline {
         sentTokens: aiResult.sentTokens,
         receivedTokens: aiResult.receivedTokens,
         originalTokens,
-        cleansedTokens
+        cleansedTokens,
+        aiProvider: aiResult.providerName,
+        aiModel: aiResult.model
       };
     }
 
