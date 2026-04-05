@@ -13,6 +13,7 @@ export interface AIProviderElements {
     openai2Settings: HTMLElement;
     openaiCompatibleSettings?: HTMLElement;
     lmStudioSettings?: HTMLElement;
+    ollamaSettings?: HTMLElement;
 }
 
 /**
@@ -31,6 +32,9 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
     if (elements.lmStudioSettings) {
         elements.lmStudioSettings.style.display = 'none';
     }
+    if (elements.ollamaSettings) {
+        elements.ollamaSettings.style.display = 'none';
+    }
 
     if (provider === 'gemini') {
         elements.geminiSettings.style.display = 'block';
@@ -40,6 +44,8 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
         elements.openai2Settings.style.display = 'block';
     } else if (provider === 'lm-studio' && elements.lmStudioSettings) {
         elements.lmStudioSettings.style.display = 'block';
+    } else if (provider === 'ollama' && elements.ollamaSettings) {
+        elements.ollamaSettings.style.display = 'block';
     } else if (provider === 'openai-compatible' && elements.openaiCompatibleSettings) {
         elements.openaiCompatibleSettings.style.display = 'block';
     }

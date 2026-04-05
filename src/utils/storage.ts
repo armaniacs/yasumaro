@@ -60,6 +60,9 @@ export const StorageKeys = {
     // LM Studio settings
     LM_STUDIO_BASE_URL: 'lm_studio_base_url',
     LM_STUDIO_MODEL: 'lm_studio_model',
+    // Ollama settings
+    OLLAMA_BASE_URL: 'ollama_base_url',
+    OLLAMA_MODEL: 'ollama_model',
     // OpenAI-compatible provider settings (dynamic)
     PROVIDER_TYPE: 'provider_type',       // 'openrouter' | 'perplexity' | 'groq' | ...
     PROVIDER_BASE_URL: 'provider_base_url', // Dynamic API URL
@@ -186,6 +189,8 @@ export interface StorageKeyValues {
     [StorageKeys.OPENAI_2_MODEL]: string;
     [StorageKeys.LM_STUDIO_BASE_URL]: string;
     [StorageKeys.LM_STUDIO_MODEL]: string;
+    [StorageKeys.OLLAMA_BASE_URL]: string;
+    [StorageKeys.OLLAMA_MODEL]: string;
     [StorageKeys.PROVIDER_TYPE]: string;
     [StorageKeys.PROVIDER_BASE_URL]: string;
     [StorageKeys.PROVIDER_API_KEY]: string | EncryptedData;
@@ -745,6 +750,9 @@ export const DEFAULT_SETTINGS: Settings = {
     // LM Studio defaults
     [StorageKeys.LM_STUDIO_BASE_URL]: 'http://127.0.0.1:1234/v1',
     [StorageKeys.LM_STUDIO_MODEL]: '',
+    // Ollama defaults
+    [StorageKeys.OLLAMA_BASE_URL]: 'http://localhost:11434/v1',
+    [StorageKeys.OLLAMA_MODEL]: '',
     // OpenAI-compatible provider defaults
     [StorageKeys.PROVIDER_TYPE]: '',
     [StorageKeys.PROVIDER_BASE_URL]: '',

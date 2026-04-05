@@ -37,6 +37,7 @@ export class AIClient {
         this.registerProvider('openai', (settings: Settings) => new OpenAIProvider(settings, 'openai'));
         this.registerProvider('openai2', (settings: Settings) => new OpenAIProvider(settings, 'openai2'));
         this.registerProvider('lm-studio', (settings: Settings) => new OpenAIProvider(settings, 'lm-studio'));
+        this.registerProvider('ollama', (settings: Settings) => new OpenAIProvider(settings, 'ollama'));
         this.registerProvider('openai-compatible', (settings: Settings) => new OpenAIProvider(settings, 'openai-compatible'));
     }
 

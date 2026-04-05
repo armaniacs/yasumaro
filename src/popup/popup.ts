@@ -84,6 +84,13 @@ const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const statusDiv = document.getElementById('status') as HTMLElement;
 
+// Ollama preset button
+const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
+ollamaPresetBtn?.addEventListener('click', () => {
+    openai2BaseUrlInput.value = 'http://localhost:11434/v1';
+    showStatus('status', getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)', 'success');
+});
+
 // Mapping of StorageKeys to DOM elements
 const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement> = {
     [StorageKeys.OBSIDIAN_API_KEY]: apiKeyInput,

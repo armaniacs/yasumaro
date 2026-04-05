@@ -101,6 +101,15 @@
   "lmStudioModelPlaceholder": {
     "message": "Model name (optional, uses currently loaded model)"
   },
+  "ollama": {
+    "message": "Ollama"
+  },
+  "ollamaBaseUrlPlaceholder": {
+    "message": "http://localhost:11434/v1"
+  },
+  "ollamaModelPlaceholder": {
+    "message": "Model name (e.g. llama3.2, mistral)"
+  },
   "geminiApiKey": {
     "message": "Gemini API Key"
   },
@@ -1447,6 +1456,12 @@
   },
   "lmStudioPreset": {
     "message": "LM Studio"
+  },
+  "ollamaPreset": {
+    "message": "Ollama"
+  },
+  "ollamaPresetApplied": {
+    "message": "Ollama preset applied (http://localhost:11434/v1)"
   },
   "providerApiKeyPlaceholder": {
     "message": "Enter your API key..."
