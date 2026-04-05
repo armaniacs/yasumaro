@@ -85,6 +85,7 @@ const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElem
 const geminiSettingsDiv = document.getElementById('geminiSettings') as HTMLElement;
 const openaiSettingsDiv = document.getElementById('openaiSettings') as HTMLElement;
 const openai2SettingsDiv = document.getElementById('openai2Settings') as HTMLElement;
+const lmStudioSettingsDiv = document.getElementById('lm-studioSettings') as HTMLElement;
 const openaiCompatibleSettingsDiv = document.getElementById('openai-compatibleSettings') as HTMLElement;
 
 const geminiApiKeyInput = document.getElementById('geminiApiKey') as HTMLInputElement;
@@ -98,12 +99,18 @@ const openai2BaseUrlInput = document.getElementById('openai2BaseUrl') as HTMLInp
 const openai2ApiKeyInput = document.getElementById('openai2ApiKey') as HTMLInputElement;
 const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputElement;
 
+const lmStudioBaseUrlInput = document.getElementById('lmStudioBaseUrl') as HTMLInputElement;
+const lmStudioModelInput = document.getElementById('lmStudioModel') as HTMLInputElement;
+
+const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
+
 const providerApiKeyInput = document.getElementById('providerApiKey') as HTMLInputElement;
 const providerModelInput = document.getElementById('providerModel') as HTMLInputElement;
 
 const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
 const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
 const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+const aiTimeoutSecondsInput = document.getElementById('aiTimeoutSeconds') as HTMLInputElement;
 const saveBtn = document.getElementById('save') as HTMLButtonElement;
 const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
 const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
@@ -123,8 +130,10 @@ const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement | nul
   [StorageKeys.OPENAI_2_BASE_URL]: openai2BaseUrlInput,
   [StorageKeys.OPENAI_2_API_KEY]: openai2ApiKeyInput,
   [StorageKeys.OPENAI_2_MODEL]: openai2ModelInput,
+  [StorageKeys.LM_STUDIO_BASE_URL]: lmStudioBaseUrlInput,
+  [StorageKeys.LM_STUDIO_MODEL]: lmStudioModelInput,
   [StorageKeys.PROVIDER_TYPE]: null,
-  [StorageKeys.PROVIDER_BASE_URL]: null,
+  [StorageKeys.PROVIDER_BASE_URL]: providerBaseUrlInput,
   [StorageKeys.PROVIDER_API_KEY]: providerApiKeyInput,
   [StorageKeys.PROVIDER_MODEL]: providerModelInput,
   [StorageKeys.MIN_VISIT_DURATION]: minVisitDurationInput,
@@ -137,6 +146,7 @@ const aiProviderElements: AIProviderElements = {
   geminiSettings: geminiSettingsDiv,
   openaiSettings: openaiSettingsDiv,
   openai2Settings: openai2SettingsDiv,
+  lmStudioSettings: lmStudioSettingsDiv,
   openaiCompatibleSettings: openaiCompatibleSettingsDiv
 };
 
@@ -144,6 +154,10 @@ async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, settingsMapping);
   updateAIProviderVisibility(aiProviderElements);
+
+  // AIタイムアウト読み込み（0=自動のため空欄表示）
+  const storedTimeoutMs = settings[StorageKeys.AI_TIMEOUT_MS] as number ?? 0;
+  aiTimeoutSecondsInput.value = storedTimeoutMs > 0 ? String(storedTimeoutMs / 1000) : '';
 
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
@@ -180,6 +194,11 @@ async function handleSaveOnly(): Promise<void> {
   }
 
   const newSettings = extractSettingsFromInputs(settingsMapping);
+
+  // AIタイムアウト: 秒→ミリ秒変換（空欄=0=自動）
+  const timeoutSec = parseFloat(aiTimeoutSecondsInput.value);
+  newSettings[StorageKeys.AI_TIMEOUT_MS] = (!isNaN(timeoutSec) && timeoutSec >= 10) ? timeoutSec * 1000 : 0;
+
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
   await saveSettingsWithAllowedUrls(mergedSettings);
@@ -977,7 +996,7 @@ async function initHistoryPanel(): Promise<void> {
     historyList.innerHTML = '';
     pageItems.forEach((entry, index) => {
       const contentId = `content-entry-${start + index}`;
-      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiProvider, aiModel } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -1033,6 +1052,16 @@ async function initHistoryPanel(): Promise<void> {
         const tokensLabel = getMessage('historyTokens') || 'トークン数';
         tokensEl.textContent = `${tokensLabel}: ${tokenParts.join(', ')}`;
         info.appendChild(tokensEl);
+      }
+
+      // AIプロバイダー/モデルを表示
+      if (aiProvider !== undefined) {
+        const aiProviderEl = document.createElement('div');
+        aiProviderEl.className = 'history-entry-tokens';
+        const parts = [aiProvider];
+        if (aiModel) parts.push(aiModel);
+        aiProviderEl.textContent = `AI: ${parts.join(' / ')}`;
+        info.appendChild(aiProviderEl);
       }
 
       // ページ絞り込みバイト数を表示（pageBytes → candidateBytes）
@@ -2568,6 +2597,13 @@ async function initConsentWithdrawal(): Promise<void> {
       });
     }
     await modelsDevDialog.show();
+  });
+  // LM Studio preset button
+  const lmStudioPresetBtn = document.getElementById('lmStudioPresetBtn') as HTMLButtonElement;
+  lmStudioPresetBtn?.addEventListener('click', () => {
+    providerBaseUrlInput.value = 'http://localhost:1234/v1';
+    statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
+    statusDiv.className = 'status-success';
   });
   setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput);
 

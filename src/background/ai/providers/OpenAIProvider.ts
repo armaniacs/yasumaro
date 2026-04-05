@@ -21,7 +21,6 @@ export class OpenAIProvider extends AIProviderStrategy {
     constructor(settings: Settings, providerName: string = 'openai') {
         super(settings);
         this.providerName = providerName;
-        this.timeoutMs = 30000;
 
         const s = settings as any;
 
@@ -30,6 +29,11 @@ export class OpenAIProvider extends AIProviderStrategy {
             this.baseUrl = s[StorageKeys.PROVIDER_BASE_URL] || '';
             this.apiKey = s[StorageKeys.PROVIDER_API_KEY];
             this.model = s[StorageKeys.PROVIDER_MODEL] || '';
+        } else if (providerName === 'lm-studio') {
+            // LM Studio専用キー（APIキー不要）
+            this.baseUrl = s[StorageKeys.LM_STUDIO_BASE_URL] || 'http://127.0.0.1:1234/v1';
+            this.apiKey = undefined;
+            this.model = s[StorageKeys.LM_STUDIO_MODEL] || '';
         } else {
             // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
             const normalizedName = providerName.replace('2', '_2').toLowerCase();
@@ -47,6 +51,29 @@ export class OpenAIProvider extends AIProviderStrategy {
                 throw new Error(`Invalid baseUrl: ${error.message}`);
             }
         }
+
+        // タイムアウト設定: 0=自動（ローカル=120秒、クラウド=30秒）
+        const storedTimeout = s[StorageKeys.AI_TIMEOUT_MS] ?? 0;
+        if (storedTimeout > 0) {
+            this.timeoutMs = storedTimeout;
+        } else {
+            // ローカルホスト（127.x.x.x / localhost）かどうかで自動判定
+            const isLocal = this.baseUrl ? OpenAIProvider.isLocalUrl(this.baseUrl) : false;
+            this.timeoutMs = isLocal ? 120000 : 30000;
+        }
+    }
+
+    private static isLocalUrl(url: string): boolean {
+        try {
+            const { hostname } = new URL(url);
+            if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
+            const firstOctet = Number(hostname.split('.')[0]);
+            if (firstOctet === 127) return true;
+            if (hostname.toLowerCase() === '::1') return true;
+        } catch {
+            // 無効なURLは非ローカル扱い
+        }
+        return false;
     }
 
     getName(): string {
@@ -71,7 +98,11 @@ export class OpenAIProvider extends AIProviderStrategy {
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
         const url = `${trimmedBaseUrl}/chat/completions`;
-        const truncatedContent = content.substring(0, 30000);
+        // ローカルLLMは context size が小さい（4096トークン程度）ため、送信コンテンツを絞る
+        // 日本語 1トークン≈2文字 として 4096トークン×2 = ~8192文字が理論上限
+        // system prompt・プロンプトテンプレートの分を引き、安全マージンを取り4000文字に制限
+        const contentLimit = OpenAIProvider.isLocalUrl(this.baseUrl) ? 4000 : 30000;
+        const truncatedContent = content.substring(0, contentLimit);
 
         // プロンプトインジェクション対策 - コンテンツのサニタイズ
         const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
@@ -201,7 +232,7 @@ export class OpenAIProvider extends AIProviderStrategy {
             const summary = data.choices[0].message.content;
             const sentTokens = data.usage?.prompt_tokens;
             const receivedTokens = data.usage?.completion_tokens;
-            return { summary, sentTokens, receivedTokens };
+            return { summary, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
         }
         return { summary: "No summary generated." };
     }

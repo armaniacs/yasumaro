@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **LM Studio対応**: ダッシュボードに「LM Studio」プリセットボタンを追加 — クリックするだけで Base URL `http://localhost:1234/v1` が自動入力される
+- **ローカルLLMコンテンツサイズ制限**: `localhost` / `127.0.0.1` / プライベートIPを含む Base URL の場合、送信コンテンツを自動的に4,000文字に制限（クラウドAPIは30,000文字のまま）
+- **AIタイムアウト設定UI**: ダッシュボードのAI設定パネルにタイムアウト秒数の設定項目を追加
+- **Obsidianデイリーノートへのタグ書き込み**: タグ付き要約モード時、AIが付けたタグをデイリーノートの記録行に `#タグ名` 形式で書き込むように変更
+- **ダッシュボード履歴にAIプロバイダー・モデル表示**: 各記録エントリに使用したAIプロバイダーとモデル名を表示
+- **LM Studio統合 ADR**: `docs/ADR/2026-04-04-lm-studio-integration.md` を追加
+
+### Changed
+
+- **Obsidianデイリーノートのフォーマット変更**: `AI要約: 要約文` → `#タグ1 #タグ2 要約文`（`AI要約:` プレフィックスを削除）
+- **LLM出力後処理の改善** (`tagUtils.ts`): `\n\n要約[文]?[：:]` 以降の詳細本文を優先採用する `selectBestBlock` を実装 — LLMが1行目に短い見出し的要約、2段落目以降に詳細本文を返すパターンに対応
+
+### Fixed
+
+- **`formatMarkdownStep.ts` が常に `AI要約:` プレフィックスを出力していた問題を修正** — `recordingLogic.ts` の `_formatMarkdown` ではなく Pipeline の `formatMarkdownStep` が実際に使用されていたため、タグ書き込みと `AI要約:` 削除が反映されていなかった
+
 - AI要約クレンジング: `jsonLdEnabled` オプション — JSON-LD構造化データの削除（デフォルト無効）
 - AI要約クレンジング: `lazyLoadEnabled` オプション — 遅延読み込み要素の削除（デフォルト無効）
 - AI要約クレンジング: `skipLinkEnabled` オプション — スキップリンクの削除（デフォルト無効）

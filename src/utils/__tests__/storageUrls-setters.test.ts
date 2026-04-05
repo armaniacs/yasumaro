@@ -431,6 +431,60 @@ describe('storageUrls setter functions', () => {
     });
   });
 
+  describe('setUrlAiProvider', () => {
+    it('既存エントリのaiProviderを設定する', async () => {
+      const { setUrlAiProvider } = await import('../storageUrls.js');
+
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+
+      await setUrlAiProvider('https://example.com', 'lm-studio');
+
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      const entry = updated.find(e => e.url === 'https://example.com');
+      expect(entry?.aiProvider).toBe('lm-studio');
+    });
+
+    it('存在しないURLの場合は変更しない', async () => {
+      const { setUrlAiProvider } = await import('../storageUrls.js');
+
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+
+      await setUrlAiProvider('https://other.com', 'gemini');
+
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated[0].aiProvider).toBeUndefined();
+    });
+  });
+
+  describe('setUrlAiModel', () => {
+    it('既存エントリのaiModelを設定する', async () => {
+      const { setUrlAiModel } = await import('../storageUrls.js');
+
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+
+      await setUrlAiModel('https://example.com', 'gemma-4-e4b-it');
+
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      const entry = updated.find(e => e.url === 'https://example.com');
+      expect(entry?.aiModel).toBe('gemma-4-e4b-it');
+    });
+
+    it('存在しないURLの場合は変更しない', async () => {
+      const { setUrlAiModel } = await import('../storageUrls.js');
+
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+
+      await setUrlAiModel('https://other.com', 'gpt-4');
+
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated[0].aiModel).toBeUndefined();
+    });
+  });
+
   describe('computeUrlsHash', () => {
     it('URLのハッシュを計算する', async () => {
       const { computeUrlsHash } = await import('../storageUrls.js');

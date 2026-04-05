@@ -92,6 +92,15 @@
   "openaiCompatible2": {
     "message": "OpenAI互換 2 (Local, etc.)"
   },
+  "lmStudio": {
+    "message": "LM Studio"
+  },
+  "lmStudioBaseUrlPlaceholder": {
+    "message": "http://127.0.0.1:1234/v1"
+  },
+  "lmStudioModelPlaceholder": {
+    "message": "モデル名（省略可、ロード済みモデルを自動使用）"
+  },
   "geminiApiKey": {
     "message": "Gemini API Key"
   },
@@ -117,7 +126,7 @@
     "message": "gpt-3.5-turbo"
   },
   "openai2BaseUrlPlaceholder": {
-    "message": "http://127.0.0.1:11434/v1"
+    "message": "http://127.0.0.1:11434/v1 (Ollama) / http://127.0.0.1:1234/v1 (LM Studio)"
   },
   "openai2ApiKeyPlaceholder": {
     "message": "一部のローカルLLMでは省略可能"
@@ -249,7 +258,7 @@
     "message": "Mode A: Local Only"
   },
   "modeADesc": {
-    "message": "ページ内容を外部送信せず、ローカルAIのみで要約します。\n現在、多くのブラウザで動作しません。"
+    "message": "ページ内容を外部送信せず、ブラウザ内蔵AIのみで要約します。\n現在、多くのブラウザで動作しません。"
   },
   "modeADetail": {
     "message": "（開発中）"
@@ -258,7 +267,7 @@
     "message": "Mode B: Full Pipeline"
   },
   "modeBDesc": {
-    "message": "ローカルAIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
+    "message": "ブラウザ内蔵AIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
   },
   "modeBCurrently": {
     "message": "（開発中）"
@@ -267,7 +276,7 @@
     "message": "Mode C: Masked Cloud"
   },
   "modeCDesc": {
-    "message": "PIIのみマスクしてクラウドAIへ送信。\nローカルAIが使えない環境向け。"
+    "message": "PIIのみマスクしてクラウドAI（LM StudioやOllamaも含む）へ送信。\nブラウザ内蔵AIが使えない環境向け。"
   },
   "modeCRecommended": {
     "message": "（推奨）"
@@ -324,7 +333,7 @@
     "message": "コンテンツ取得中..."
   },
   "localAiProcessing": {
-    "message": "ローカルAI処理中..."
+    "message": "ブラウザ内蔵AI処理中..."
   },
   "saving": {
     "message": "保存中..."
@@ -1433,6 +1442,12 @@
   "selectedProviderInfo": {
     "message": "選択されたプロバイダー:"
   },
+  "providerBaseUrlPlaceholder": {
+    "message": "https://api.openai.com/v1"
+  },
+  "lmStudioPreset": {
+    "message": "LM Studio"
+  },
   "providerApiKeyPlaceholder": {
     "message": "APIキーを入力..."
   },
@@ -1903,6 +1918,12 @@
   },
   "note_max_tokens_cost_control": {
     "message": "これはAIへのデータ送信量を制限し、APIコストを抑制するための設定です。"
+  },
+  "label_ai_timeout": {
+    "message": "AIタイムアウト（秒）"
+  },
+  "note_ai_timeout": {
+    "message": "空欄で自動設定（ローカルLLM: 120秒 / クラウドAI: 30秒）。LM StudioやOllamaなど推論が遅いモデルには大きな値を設定してください。"
   },
   "error_max_tokens_range": {
     "message": "トークン数は 10 〜 16,000 の範囲で入力してください"

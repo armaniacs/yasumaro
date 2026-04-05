@@ -5,7 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason, setUrlAiProvider, setUrlAiModel } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/commonTypes.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -350,12 +350,16 @@ export class RecordingLogic {
   /**
    * Markdownをフォーマットする
    */
-  private _formatMarkdown(title: string, url: string, summary: string): string {
+  private _formatMarkdown(title: string, url: string, summary: string, tags?: string[]): string {
     // P1: XSS対策 - summaryをサニタイズ（Markdownリンクのエスケープ）
-    const sanitizedSummary = sanitizeForObsidian(summary);
+    // LLMが返す改行（\n）をすべてスペースに変換し、連続スペースを1つにまとめる
+    // Obsidianの箇条書きリスト内で改行が表示されることを防ぐ
+    const normalizedSummary = summary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+    const sanitizedSummary = sanitizeForObsidian(normalizedSummary);
     const sanitizedTitle = sanitizeForObsidian(title);
     const timestamp = new Date().toLocaleTimeString(getUserLocale(), { hour: '2-digit', minute: '2-digit' });
-    return `- ${timestamp} [${sanitizedTitle}](${url})\n    - AI要約: ${sanitizedSummary}`;
+    const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${t}`).join(' ') + ' ' : '';
+    return `- ${timestamp} [${sanitizedTitle}](${url})\n    - ${tagPrefix}${sanitizedSummary}`;
   }
 
   /**
@@ -470,6 +474,16 @@ export class RecordingLogic {
     if (aiSummaryCleansedReason !== undefined) {
       await setUrlAiSummaryCleansedReason(url, aiSummaryCleansedReason);
       addLog(LogType.INFO, 'AI summary cleansed reason saved', { url, aiSummaryCleansedReason });
+    }
+
+    // 使用したAIプロバイダー名を保存
+    if (pipelineResult.aiProvider !== undefined) {
+      await setUrlAiProvider(url, pipelineResult.aiProvider);
+    }
+
+    // 使用したAIモデル名を保存
+    if (pipelineResult.aiModel !== undefined) {
+      await setUrlAiModel(url, pipelineResult.aiModel);
     }
 
     // Problem #7: URLキャッシュを無効化
@@ -830,7 +844,7 @@ export class RecordingLogic {
       const summary = pipelineResult.summary || 'Summary not available.';
 
       // 4. Format Markdown
-      const markdown = this._formatMarkdown(data.title, data.url, summary);
+      const markdown = this._formatMarkdown(data.title, data.url, summary, pipelineResult.tags);
 
       // 5. Save to Obsidian
       await this._saveToObsidian(markdown, data.title, data.url);

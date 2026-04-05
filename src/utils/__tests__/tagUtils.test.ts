@@ -151,5 +151,101 @@ describe('tagUtils', () => {
             expect(result.tags).toEqual([]);
             expect(result.summary).toBe('');
         });
+
+        test('タグなし出力でも "要約文（改行なし）" 例示テキストを除去する', () => {
+            // LLMがタグなしで例示テキストを混入するケース
+            const llmOutput = 'ローカルLLMを利用した実験結果\n\n要約文（改行なし）\nLLMを用いた精度検証';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toEqual([]);
+            expect(result.summary).not.toContain('要約文（改行なし）');
+            expect(result.summary).toContain('ローカルLLMを利用した実験結果');
+        });
+
+        test('LLMがプロンプト例示行を末尾に繰り返した場合、除去する', () => {
+            const llmOutput = '#IT・プログラミング | 要約文本文\n\n#カテゴリ1 #カテゴリ2 | 要約文（改行なし）';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.summary).not.toContain('#カテゴリ1');
+            expect(result.summary).not.toContain('要約文（改行なし）');
+            expect(result.summary).toContain('要約文本文');
+        });
+
+        test('LLMが複数行にまたがる要約を返した場合、改行を含まずパースする', () => {
+            const llmOutput = '#IT・プログラミング | 一行目要約\n詳細説明\n追加情報';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            expect(result.summary).toContain('一行目要約');
+        });
+
+        test('summaryPart に "要約文：" 見出し行がある場合、見出し行のみ除去して本文は保持する', () => {
+            // LLMが "要約文：\n詳細本文" を summaryPart に含めるケース
+            const llmOutput = '#IT・プログラミング #インフラ・ネットワーク | 1行目要約\n\n要約文：\n詳細な本文がここに続く';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            // 「要約文：」見出し行が summary に含まれない
+            expect(result.summary).not.toContain('要約文：');
+            // 詳細本文が含まれる
+            expect(result.summary).toContain('詳細な本文がここに続く');
+        });
+
+        test('1行目と詳細本文が実質同じ内容（重複）の場合、重複を除去する', () => {
+            // 実際に観測されたケース: LLMが1行目と同じ内容を "要約文：\n" の後に繰り返す
+            const repeated = 'Artemis IIミッション中のOrionカプセルの問題について記述されている。';
+            const llmOutput = `#IT・プログラミング #インフラ・ネットワーク | ${repeated}\n\n要約文：\n${repeated}`;
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            // 重複せず1回だけ含まれる
+            const occurrences = (result.summary.match(new RegExp(repeated.substring(0, 20), 'g')) || []).length;
+            expect(occurrences).toBe(1);
+        });
+
+        test('「要約文：」以降の詳細本文を優先して採用する', () => {
+            // 実際に観測されたケース: 1行目=短いタイトル的要約、「要約文：」以降=詳細な本文
+            // 設計方針: 「\n\n要約文：\n」以降が存在する場合はそちらを採用（情報量が多い）
+            const llmOutput = '#IT・プログラミング #インフラ・ネットワーク | 宇宙業界における小型ロケット開発と衛星輸送ビジネスの分析\n\n要約文：\nインターステラテクノロジズ社を中心とした宇宙ビジネスにおいて、大型ロケットと小型ロケットの輸送手段としての役割の違いが説明されている。';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            expect(result.tags).toContain('インフラ・ネットワーク');
+            // 「要約文：」以降の詳細本文を採用
+            expect(result.summary).toContain('インターステラテクノロジズ');
+            // 1行目の短い説明は採用しない
+            expect(result.summary).not.toContain('宇宙業界における小型ロケット開発');
+        });
+
+        test('「要約：」（「文」なし・インライン）形式も詳細本文として採用する', () => {
+            // 実際に観測されたケース: 「要約文：」でなく「要約：本文」がインラインで続く
+            const llmOutput = '#インフラ・ネットワーク #ビジネス・経済 | イランでの米軍関係とエネルギー施設への攻撃について報じている。\n\n要約：イランでのF-15戦闘機の撃墜と米軍関係の救出作戦、さらにはホルムズ海峡の再開が記述されている。';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('インフラ・ネットワーク');
+            expect(result.tags).toContain('ビジネス・経済');
+            // 「要約：」以降のインライン本文を採用
+            expect(result.summary).toContain('ホルムズ海峡');
+            // 1行目の短い説明は採用しない
+            expect(result.summary).not.toContain('イランでの米軍関係とエネルギー施設への攻撃について報じている');
+        });
+
+        test('「要約文：」がない場合は最初のブロックを採用する', () => {
+            // 「要約文：」見出しがなく直接要約が返る正常ケース
+            const llmOutput = '#IT・プログラミング #インフラ・ネットワーク | 天体の自転周期や地球の回転周期といった物理現象を定義し計算する内容である。';
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            expect(result.summary).toBe('天体の自転周期や地球の回転周期といった物理現象を定義し計算する内容である。');
+        });
+
+        test('「要約文：」がなく複数ブロックある場合、最初のブロックを採用しプロンプト例示行は除去する', () => {
+            // 「要約文：」見出しなし・複数ブロックのケース → 最初のブロック採用
+            const llmOutput = [
+                '#IT・プログラミング #インフラ・ネットワーク | 短い説明',
+                '',
+                '詳細な本文1。重要な情報が含まれる。',
+                '',
+                '#カテゴリ1 #カテゴリ2 | 要約文（改行なし）'
+            ].join('\n');
+            const result = parseTagsFromSummary(llmOutput);
+            expect(result.tags).toContain('IT・プログラミング');
+            // 「要約文：」がないので最初のブロック採用
+            expect(result.summary).toBe('短い説明');
+            expect(result.summary).not.toContain('要約文（改行なし）');
+            expect(result.summary).not.toContain('#カテゴリ1');
+        });
     });
 });

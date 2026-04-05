@@ -336,6 +336,22 @@ describe('validateUrlForAIRequests', () => {
     expect(() => validateUrlForAIRequests('http://localhost:11434/api'))
       .not.toThrow();
   });
+
+  test('127.x.x.x を許可する（Ollama / LM Studio等のローカルAI用）', () => {
+    expect(() => validateUrlForAIRequests('http://127.0.0.1:11434/api'))
+      .not.toThrow();
+    expect(() => validateUrlForAIRequests('http://127.0.0.1:1234/v1/chat/completions'))
+      .not.toThrow();
+  });
+
+  test('内部ネットワーク（10.x.x.x / 172.16-31.x.x / 192.168.x.x）は引き続きブロック', () => {
+    expect(() => validateUrlForAIRequests('http://10.0.0.1/api'))
+      .toThrow('Access to private network address is not allowed');
+    expect(() => validateUrlForAIRequests('https://172.16.0.1/v1/chat'))
+      .toThrow('Access to private network address is not allowed');
+    expect(() => validateUrlForAIRequests('http://192.168.1.1/api'))
+      .toThrow('Access to private network address is not allowed');
+  });
 });
 
 describe('fetchWithRetry', () => {

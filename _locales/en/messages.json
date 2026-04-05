@@ -92,6 +92,15 @@
   "openaiCompatible2": {
     "message": "OpenAI Compatible 2 (Local, etc.)"
   },
+  "lmStudio": {
+    "message": "LM Studio"
+  },
+  "lmStudioBaseUrlPlaceholder": {
+    "message": "http://127.0.0.1:1234/v1"
+  },
+  "lmStudioModelPlaceholder": {
+    "message": "Model name (optional, uses currently loaded model)"
+  },
   "geminiApiKey": {
     "message": "Gemini API Key"
   },
@@ -117,7 +126,7 @@
     "message": "gpt-3.5-turbo"
   },
   "openai2BaseUrlPlaceholder": {
-    "message": "http://127.0.0.1:11434/v1"
+    "message": "http://127.0.0.1:11434/v1 (Ollama) / http://127.0.0.1:1234/v1 (LM Studio)"
   },
   "openai2ApiKeyPlaceholder": {
     "message": "Optional for some local LLMs"
@@ -249,7 +258,7 @@
     "message": "Mode A: Local Only"
   },
   "modeADesc": {
-    "message": "Summarize page content using only local AI, without sending data externally.\nCurrently not supported on most browsers."
+    "message": "Summarize page content using only the browser's built-in AI, without sending data externally.\nCurrently not supported on most browsers."
   },
   "modeADetail": {
     "message": "(Under development)"
@@ -258,7 +267,7 @@
     "message": "Mode B: Full Pipeline"
   },
   "modeBDesc": {
-    "message": "Local AI summary → PII masking → Cloud AI refinement.\nCurrently not supported on most browsers."
+    "message": "Browser built-in AI summary → PII masking → Cloud AI refinement.\nCurrently not supported on most browsers."
   },
   "modeBCurrently": {
     "message": "(Under development)"
@@ -267,7 +276,7 @@
     "message": "Mode C: Masked Cloud"
   },
   "modeCDesc": {
-    "message": "Send only masked data to cloud AI.\nFor environments where local AI is not available."
+    "message": "Send only masked data to cloud AI (including LM Studio and Ollama).\nFor environments where browser built-in AI is not available."
   },
   "modeCRecommended": {
     "message": "(Recommended)"
@@ -324,7 +333,7 @@
     "message": "Fetching content..."
   },
   "localAiProcessing": {
-    "message": "Local AI processing..."
+    "message": "Browser built-in AI processing..."
   },
   "saving": {
     "message": "Saving..."
@@ -1433,6 +1442,12 @@
   "selectedProviderInfo": {
     "message": "Selected Provider:"
   },
+  "providerBaseUrlPlaceholder": {
+    "message": "https://api.openai.com/v1"
+  },
+  "lmStudioPreset": {
+    "message": "LM Studio"
+  },
   "providerApiKeyPlaceholder": {
     "message": "Enter your API key..."
   },
@@ -1903,6 +1918,12 @@
   },
   "note_max_tokens_cost_control": {
     "message": "This setting limits the amount of data sent to AI, helping to control API costs."
+  },
+  "label_ai_timeout": {
+    "message": "AI Timeout (seconds)"
+  },
+  "note_ai_timeout": {
+    "message": "Leave blank for auto (local LLM: 120s / cloud AI: 30s). Set a higher value for slow models like LM Studio or Ollama."
   },
   "error_max_tokens_range": {
     "message": "Please enter a value between 10 and 16,000 tokens"

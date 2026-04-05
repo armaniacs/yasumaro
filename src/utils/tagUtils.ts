@@ -66,6 +66,48 @@ export function isValidCategory(category: string, settings: Settings): boolean {
  * @param {string} summary - AI要約結果
  * @returns {{ tags: string[]; summary: string }} タグ配列と要約文
  */
+/**
+ * LLMが混入するノイズ行を除去する
+ * 除去対象:
+ *   - プロンプトのプレースホルダーリテラルを含む行 ("#カテゴリ1", "#カテゴリ2", "要約文（改行なし）")
+ *   - "要約文：" / "要約文:" のような見出し語のみの行（本文の前置き）
+ * ※ 実際のタグ名（"#トラベル・アウトドア" 等）や本文は除去しない
+ */
+function removeNoiseLines(text: string): string {
+    return text
+        .split('\n')
+        .filter(line => !line.includes('#カテゴリ1') && !line.includes('#カテゴリ2'))
+        .filter(line => !line.includes('要約文（改行なし）'))
+        .filter(line => !/^\s*要約文[：:]\s*$/.test(line))
+        .join('\n')
+        .trim();
+}
+
+/**
+ * summaryPart から最適なブロックを選択する
+ * 優先順位:
+ *   1. 「要約文：」または「要約文:」見出し行の直後のブロック（詳細本文）
+ *   2. 最初のブロック（見出しがない場合）
+ * LLMは1行目に短いタイトル的要約、「要約文：」以降に詳細本文を返すことが多い
+ */
+function selectBestBlock(text: string): string {
+    // 「\n\n要約[文]?[：:][本文またはインライン]」パターンを探す
+    // ケース1: "\n\n要約文：\n本文" — 見出し行の次行に本文
+    // ケース2: "\n\n要約：インライン本文" — 見出しと本文が同じ行
+    const detailMatch = text.match(/\n\n要約文?[：:]\n?([\s\S]+)/);
+    if (detailMatch) {
+        const detailText = detailMatch[1].trim();
+        if (detailText.length > 0) {
+            // 詳細本文の最初のブロックを返す
+            const blocks = detailText.split('\n\n').map(b => b.trim()).filter(b => b.length > 0);
+            return blocks[0] ?? '';
+        }
+    }
+    // 「要約」パターンがない場合は最初のブロックを返す
+    const blocks = text.split('\n\n').map(b => b.trim()).filter(b => b.length > 0);
+    return blocks[0] ?? '';
+}
+
 export function parseTagsFromSummary(summary: string): { tags: string[]; summary: string } {
     // 出力形式: `#カテゴリ1 #カテゴリ2 | 要約文` のパターン
     // 最初の `|` でタグ部分と要約部分を分離
@@ -73,7 +115,7 @@ export function parseTagsFromSummary(summary: string): { tags: string[]; summary
 
     if (!pipeMatch) {
         // パターンに一致しない場合はタグなしとみなす
-        return { tags: [], summary };
+        return { tags: [], summary: removeNoiseLines(selectBestBlock(summary)) };
     }
 
     const tagPart = pipeMatch[1].trim();
@@ -92,10 +134,11 @@ export function parseTagsFromSummary(summary: string): { tags: string[]; summary
         }
     }
 
-    // タグが1つも見つからない場合はタグなしとみなす（全文を要約として使用）
+    // タグが1つも見つからない場合はタグなしとみなす
     if (tags.length === 0) {
-        return { tags: [], summary };
+        return { tags: [], summary: removeNoiseLines(selectBestBlock(summary)) };
     }
 
-    return { tags, summary: summaryPart };
+    // summaryPart から最適なブロックを選択し、ノイズ行を除去して返す
+    return { tags, summary: removeNoiseLines(selectBestBlock(summaryPart)) };
 }
