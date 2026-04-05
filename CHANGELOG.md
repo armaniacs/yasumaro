@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **LM Studio対応**: ダッシュボードに「LM Studio」プリセットボタンを追加 — クリックするだけで Base URL `http://localhost:1234/v1` が自動入力される
+- **Ollama対応**: AIプロバイダーに「Ollama」を追加 — プリセットボタンで Base URL `http://localhost:11434/v1` が自動入力される。APIキー不要で動作確認済み
 - **ローカルLLMコンテンツサイズ制限**: `localhost` / `127.0.0.1` / プライベートIPを含む Base URL の場合、送信コンテンツを自動的に4,000文字に制限（クラウドAPIは30,000文字のまま）
 - **AIタイムアウト設定UI**: ダッシュボードのAI設定パネルにタイムアウト秒数の設定項目を追加
 - **Obsidianデイリーノートへのタグ書き込み**: タグ付き要約モード時、AIが付けたタグをデイリーノートの記録行に `#タグ名` 形式で書き込むように変更

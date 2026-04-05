@@ -34,6 +34,11 @@ export class OpenAIProvider extends AIProviderStrategy {
             this.baseUrl = s[StorageKeys.LM_STUDIO_BASE_URL] || 'http://127.0.0.1:1234/v1';
             this.apiKey = undefined;
             this.model = s[StorageKeys.LM_STUDIO_MODEL] || '';
+        } else if (providerName === 'ollama') {
+            // Ollama専用キー（APIキー不要）
+            this.baseUrl = s[StorageKeys.OLLAMA_BASE_URL] || 'http://localhost:11434/v1';
+            this.apiKey = undefined;
+            this.model = s[StorageKeys.OLLAMA_MODEL] || '';
         } else {
             // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
             const normalizedName = providerName.replace('2', '_2').toLowerCase();

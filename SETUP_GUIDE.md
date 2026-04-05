@@ -111,6 +111,38 @@
 
 設定を入力したら、**「Save & Test Connection」**をクリックして接続を確認してください。
 
+#### 💡 ローカルLLM (LM Studio / Ollama) の設定
+
+ローカルLLMを使用する場合、AIプロバイダーには「OpenAI Compatible 2」を選択してください。
+
+**LM Studio の場合:**
+*   **Base URL**: `http://localhost:1234/v1`
+*   **API Key**: 不要（空欄）
+*   **Model Name**: LM StudioのModelsタブで確認（例: `llama3.2`）
+*   サーバーを起動後、ダッシュボードの「LM Studio」プリセットボタンをクリックで自動入力可能
+
+**Ollama の場合:**
+*   **Base URL**: `http://localhost:11434/v1`
+*   **API Key**: 不要（空欄）
+*   **Model Name**: `ollama list` で確認（例: `llama3.2`, `mistral`）
+*   サーバーを起動: `ollama serve`
+*   ダッシュボードの「Ollama」プリセットボタンをクリックで自動入力可能
+
+詳しいセットアップ手順:
+```bash
+# Ollama インストール（macOS）
+brew install ollama
+
+# サーバー起動
+ollama serve
+
+# モデルの取得と確認
+ollama pull llama3.2
+ollama list
+```
+
+---
+
 #### 3. ドメインフィルター設定
 「ドメインフィルター」タブで、記録するドメインを制御できます。
 
@@ -238,6 +270,36 @@ Select your preferred provider from the dropdown.
     *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.
 *   **Google Gemini**: Enter API Key and Model (e.g., `gemini-1.5-flash`).
 *   **OpenAI Compatible 2**: Use this for a secondary provider like a local LLM (`http://localhost:11434/v1`).
+
+#### 💡 Local LLM (LM Studio / Ollama) Setup
+
+To use a local LLM, select "OpenAI Compatible 2" as your AI provider.
+
+**LM Studio:**
+*   **Base URL**: `http://localhost:1234/v1`
+*   **API Key**: Not required (leave empty)
+*   **Model Name**: Check in LM Studio's Models tab (e.g., `llama3.2`)
+*   After starting the server, click the "LM Studio" preset button in the dashboard for auto-fill
+
+**Ollama:**
+*   **Base URL**: `http://localhost:11434/v1`
+*   **API Key**: Not required (leave empty)
+*   **Model Name**: Check with `ollama list` (e.g., `llama3.2`, `mistral`)
+*   Start server: `ollama serve`
+*   Click the "Ollama" preset button in the dashboard for auto-fill
+
+Setup instructions:
+```bash
+# Install Ollama (macOS)
+brew install ollama
+
+# Start server
+ollama serve
+
+# Pull and list models
+ollama pull llama3.2
+ollama list
+```
 
 ---
 

@@ -102,6 +102,10 @@ const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputEl
 const lmStudioBaseUrlInput = document.getElementById('lmStudioBaseUrl') as HTMLInputElement;
 const lmStudioModelInput = document.getElementById('lmStudioModel') as HTMLInputElement;
 
+const ollamaSettingsDiv = document.getElementById('ollamaSettings') as HTMLElement;
+const ollamaBaseUrlInput = document.getElementById('ollamaBaseUrl') as HTMLInputElement;
+const ollamaModelInput = document.getElementById('ollamaModel') as HTMLInputElement;
+
 const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
 
 const providerApiKeyInput = document.getElementById('providerApiKey') as HTMLInputElement;
@@ -132,6 +136,8 @@ const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement | nul
   [StorageKeys.OPENAI_2_MODEL]: openai2ModelInput,
   [StorageKeys.LM_STUDIO_BASE_URL]: lmStudioBaseUrlInput,
   [StorageKeys.LM_STUDIO_MODEL]: lmStudioModelInput,
+  [StorageKeys.OLLAMA_BASE_URL]: ollamaBaseUrlInput,
+  [StorageKeys.OLLAMA_MODEL]: ollamaModelInput,
   [StorageKeys.PROVIDER_TYPE]: null,
   [StorageKeys.PROVIDER_BASE_URL]: providerBaseUrlInput,
   [StorageKeys.PROVIDER_API_KEY]: providerApiKeyInput,
@@ -147,6 +153,7 @@ const aiProviderElements: AIProviderElements = {
   openaiSettings: openaiSettingsDiv,
   openai2Settings: openai2SettingsDiv,
   lmStudioSettings: lmStudioSettingsDiv,
+  ollamaSettings: ollamaSettingsDiv,
   openaiCompatibleSettings: openaiCompatibleSettingsDiv
 };
 
@@ -2603,6 +2610,13 @@ async function initConsentWithdrawal(): Promise<void> {
   lmStudioPresetBtn?.addEventListener('click', () => {
     providerBaseUrlInput.value = 'http://localhost:1234/v1';
     statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
+    statusDiv.className = 'status-success';
+  });
+  // Ollama preset button
+  const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
+  ollamaPresetBtn?.addEventListener('click', () => {
+    providerBaseUrlInput.value = 'http://localhost:11434/v1';
+    statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
     statusDiv.className = 'status-success';
   });
   setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput);

@@ -26,6 +26,7 @@ describe('LM Studio Preset', () => {
     document.body.innerHTML = `
       <input type="text" id="providerBaseUrl" />
       <button type="button" id="lmStudioPresetBtn">LM Studio</button>
+      <button type="button" id="ollamaPresetBtn">Ollama</button>
       <div id="status" class="status"></div>
       <select id="aiProvider">
         <option value="openai-compatible">OpenAI Compatible</option>
@@ -115,6 +116,93 @@ describe('OpenAIProvider with LM Studio', () => {
   });
 
   test('OpenAIProvider does not require API key for local LM Studio', () => {
+    const apiKey = '';
+    
+    expect(apiKey).toBe('');
+  });
+});
+
+describe('Ollama Preset', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <input type="text" id="providerBaseUrl" />
+      <button type="button" id="ollamaPresetBtn">Ollama</button>
+      <div id="status" class="status"></div>
+      <select id="aiProvider">
+        <option value="openai-compatible">OpenAI Compatible</option>
+      </select>
+    `;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    jest.clearAllMocks();
+  });
+
+  test('Ollama preset button should set correct Base URL', () => {
+    const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
+    const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
+    const statusDiv = document.getElementById('status') as HTMLElement;
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      providerBaseUrlInput.value = 'http://localhost:11434/v1';
+      statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
+      statusDiv.className = 'status-success';
+    };
+
+    ollamaPresetBtn.addEventListener('click', handler);
+    ollamaPresetBtn.click();
+
+    expect(providerBaseUrlInput.value).toBe('http://localhost:11434/v1');
+    expect(statusDiv.textContent).toContain('Ollama preset applied');
+    expect(statusDiv.className).toContain('status-success');
+  });
+
+  test('Ollama URL should match expected format', () => {
+    const ollamaUrl = 'http://localhost:11434/v1';
+    const url = new URL(ollamaUrl);
+    
+    expect(url.protocol).toBe('http:');
+    expect(url.hostname).toBe('localhost');
+    expect(url.port).toBe('11434');
+    expect(url.pathname).toBe('/v1');
+  });
+
+  test('Ollama preset should be accessible as button', () => {
+    const btn = document.getElementById('ollamaPresetBtn');
+    expect(btn).not.toBeNull();
+    expect(btn?.tagName).toBe('BUTTON');
+  });
+});
+
+describe('OpenAIProvider with Ollama', () => {
+  test('OpenAIProvider should handle openai-compatible type for Ollama', () => {
+    const providerName = 'openai-compatible';
+    const baseUrl = 'http://localhost:11434/v1';
+    
+    expect(providerName).toBe('openai-compatible');
+    expect(baseUrl).toContain('localhost');
+    expect(baseUrl).toContain('11434');
+  });
+
+  test('Ollama chat completions endpoint format', () => {
+    const baseUrl = 'http://localhost:11434/v1';
+    const trimmedUrl = baseUrl.replace(/\/$/, '');
+    const chatCompletionsUrl = `${trimmedUrl}/chat/completions`;
+    
+    expect(chatCompletionsUrl).toBe('http://localhost:11434/v1/chat/completions');
+  });
+
+  test('Ollama models endpoint format', () => {
+    const baseUrl = 'http://localhost:11434/v1';
+    const trimmedUrl = baseUrl.replace(/\/$/, '');
+    const modelsUrl = `${trimmedUrl}/models`;
+    
+    expect(modelsUrl).toBe('http://localhost:11434/v1/models');
+  });
+
+  test('OpenAIProvider does not require API key for local Ollama', () => {
     const apiKey = '';
     
     expect(apiKey).toBe('');

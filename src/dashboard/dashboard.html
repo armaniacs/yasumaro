@@ -178,6 +178,7 @@
               <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
               <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
               <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+              <option value="ollama" data-i18n-opt="ollama">Ollama</option>
               <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
             </select>
           </div>
@@ -244,6 +245,19 @@
             </div>
           </div>
 
+          <!-- Ollama Settings -->
+          <div id="ollamaSettings" class="openai-settings">
+            <div class="form-group">
+              <label for="ollamaBaseUrl" data-i18n="baseUrl">Base URL</label>
+              <input type="text" id="ollamaBaseUrl" data-i18n-input-placeholder="ollamaBaseUrlPlaceholder">
+            </div>
+
+            <div class="form-group">
+              <label for="ollamaModel" data-i18n="modelName">Model Name</label>
+              <input type="text" id="ollamaModel" data-i18n-input-placeholder="ollamaModelPlaceholder">
+            </div>
+          </div>
+
           <!-- OpenAI-Compatible (Models.dev) Settings -->
           <div id="openai-compatibleSettings" class="openai-settings">
             <div class="form-group">
@@ -260,6 +274,7 @@
               <label for="providerBaseUrl" data-i18n="baseUrl">Base URL</label>
               <input type="text" id="providerBaseUrl" data-i18n-input-placeholder="providerBaseUrlPlaceholder">
               <button type="button" id="lmStudioPresetBtn" class="small-btn" data-i18n="lmStudioPreset">LM Studio</button>
+              <button type="button" id="ollamaPresetBtn" class="small-btn" data-i18n="ollamaPreset">Ollama</button>
             </div>
 
             <div class="form-group">
@@ -472,6 +487,7 @@
               <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible</option>
               <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2</option>
               <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+              <option value="ollama" data-i18n-opt="ollama">Ollama</option>
             </select>
           </div>
 

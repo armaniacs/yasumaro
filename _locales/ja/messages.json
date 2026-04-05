@@ -101,6 +101,15 @@
   "lmStudioModelPlaceholder": {
     "message": "モデル名（省略可、ロード済みモデルを自動使用）"
   },
+  "ollama": {
+    "message": "Ollama"
+  },
+  "ollamaBaseUrlPlaceholder": {
+    "message": "http://localhost:11434/v1"
+  },
+  "ollamaModelPlaceholder": {
+    "message": "モデル名（例: llama3.2、mistral）"
+  },
   "geminiApiKey": {
     "message": "Gemini API Key"
   },
@@ -1447,6 +1456,12 @@
   },
   "lmStudioPreset": {
     "message": "LM Studio"
+  },
+  "ollamaPreset": {
+    "message": "Ollama"
+  },
+  "ollamaPresetApplied": {
+    "message": "Ollamaプリセット適用 (http://localhost:11434/v1)"
   },
   "providerApiKeyPlaceholder": {
     "message": "APIキーを入力..."
