@@ -196,6 +196,7 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
  * @param enabled AI要約クレンジングが有効かどうか
  */
 export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
+    const fieldset = document.getElementById('aiSummaryCleansingFieldset') as HTMLFieldSetElement;
     const altCheckbox = document.getElementById('ai-summary-cleansing-alt') as HTMLInputElement;
     const metadataCheckbox = document.getElementById('ai-summary-cleansing-metadata') as HTMLInputElement;
     const adsCheckbox = document.getElementById('ai-summary-cleansing-ads') as HTMLInputElement;
@@ -207,13 +208,16 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const lazyLoadCheckbox = document.getElementById('ai-summary-cleansing-lazy-load') as HTMLInputElement;
     const skipLinkCheckbox = document.getElementById('ai-summary-cleansing-skip-link') as HTMLInputElement;
     const cardCheckbox = document.getElementById('ai-summary-cleansing-card') as HTMLInputElement;
-    // NEW
     const fixedCheckbox = document.getElementById('ai-summary-cleansing-fixed') as HTMLInputElement;
     const recommendCheckbox = document.getElementById('ai-summary-cleansing-recommend') as HTMLInputElement;
     const paginationCheckbox = document.getElementById('ai-summary-cleansing-pagination') as HTMLInputElement;
     const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
     const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
     const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
+
+    if (fieldset) {
+        fieldset.disabled = !enabled;
+    }
 
     if (altCheckbox) altCheckbox.disabled = !enabled;
     if (metadataCheckbox) metadataCheckbox.disabled = !enabled;
@@ -226,7 +230,6 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (lazyLoadCheckbox) lazyLoadCheckbox.disabled = !enabled;
     if (skipLinkCheckbox) skipLinkCheckbox.disabled = !enabled;
     if (cardCheckbox) cardCheckbox.disabled = !enabled;
-    // NEW
     if (fixedCheckbox) fixedCheckbox.disabled = !enabled;
     if (recommendCheckbox) recommendCheckbox.disabled = !enabled;
     if (paginationCheckbox) paginationCheckbox.disabled = !enabled;

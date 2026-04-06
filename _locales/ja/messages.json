@@ -1523,6 +1523,9 @@
   "aiSummaryCleansingEnabledDesc": {
     "message": "AI要約前に不要な情報を削除します。"
   },
+  "aiSummaryCleansingLegend": {
+    "message": "AI要約クレンジング設定"
+  },
   "aiSummaryCleansingAltEnabled": {
     "message": "画像alt属性を削除"
   },

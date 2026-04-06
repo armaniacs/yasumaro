@@ -396,6 +396,13 @@ function throttle<T extends (...args: any[]) => void>(fn: T): T {
             }
         });
     }) as T;
+
+    window.addEventListener('beforeunload', () => {
+        if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+    });
 }
 
 /**

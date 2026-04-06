@@ -560,11 +560,14 @@
 
         <!-- AI要約クレンジング有効化 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
-          <div class="mb-8">
-            <input type="checkbox" id="ai-summary-cleansing-enabled" aria-controls="aiSummaryCleansingSubGroup">
-            <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">AI要約前に不要な情報を削除します。</label>
-          </div>
+          <fieldset id="aiSummaryCleansingFieldset" style="border: none; padding: 0; margin: 0;">
+            <legend class="visually-hidden" data-i18n="aiSummaryCleansingLegend">AI要約クレンジング設定</legend>
+            <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
+            <div class="mb-8">
+              <input type="checkbox" id="ai-summary-cleansing-enabled" aria-describedby="aiSummaryCleansingEnabledDesc">
+              <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">AI要約前に不要な情報を削除します。</label>
+            </div>
+          </fieldset>
         </div>
 
         <div id="aiSummaryCleansingSubGroup" aria-live="polite">

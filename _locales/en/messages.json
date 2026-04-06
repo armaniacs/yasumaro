@@ -1523,6 +1523,9 @@
   "aiSummaryCleansingEnabledDesc": {
     "message": "Remove unnecessary information before AI summarization."
   },
+  "aiSummaryCleansingLegend": {
+    "message": "AI Summary Cleansing Settings"
+  },
   "aiSummaryCleansingAltEnabled": {
     "message": "Remove Image Alt Attributes"
   },
