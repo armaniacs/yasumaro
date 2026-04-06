@@ -132,6 +132,7 @@ export interface RecordingData {
   aiSummaryCleansedBytes?: number;
   aiSummaryCleansedElements?: number;
   aiSummaryCleansedReason?: AiSummaryCleansedReason;
+  aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
 }
 
 // ============================================================================
@@ -142,7 +143,7 @@ export interface RecordingData {
  * Service Worker 宛てのリクエストメッセージ型
  */
 export type ServiceWorkerRequest =
-  | { type: 'VALID_VISIT'; payload: { content: string; pageBytes?: number; candidateBytes?: number; originalBytes?: number; cleansedBytes?: number; aiSummaryOriginalBytes?: number; aiSummaryCleansedBytes?: number; aiSummaryCleansedElements?: number; aiSummaryCleansedReason?: string } }
+  | { type: 'VALID_VISIT'; payload: { content: string; pageBytes?: number; candidateBytes?: number; originalBytes?: number; cleansedBytes?: number; aiSummaryOriginalBytes?: number; aiSummaryCleansedBytes?: number; aiSummaryCleansedElements?: number; aiSummaryCleansedReason?: string; aiSummaryCleansedReasons?: string[] } }
   | { type: 'CHECK_DOMAIN'; payload: never }
   | { type: 'GET_CONTENT'; payload: never }
   | { type: 'FETCH_URL'; payload: { url: string } }

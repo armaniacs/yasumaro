@@ -181,7 +181,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
                     aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
                     aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
-                    aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason
+                    aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
+                    aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons
                 });
 
                 // 【パフォーマンス改善】: 直接キャッシュを更新
@@ -444,7 +445,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     skipDuplicateCheck: true,
                     previewOnly: message.type === 'PREVIEW_RECORD',
                     recordType: 'manual',
-                    skipAi
+                    skipAi,
+                    pageBytes: message.payload.pageBytes,
+                    candidateBytes: message.payload.candidateBytes,
+                    originalBytes: message.payload.originalBytes,
+                    cleansedBytes: message.payload.cleansedBytes,
+                    aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+                    aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+                    aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+                    aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+                    aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
                 }, settings);
 
                 // コンテンツを記録履歴に保存（成功時のみ）
@@ -479,7 +489,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     alreadyProcessed: true,
                     force: message.payload.force,
                     recordType: 'manual',
-                    maskedCount: message.payload.maskedCount
+                    maskedCount: message.payload.maskedCount,
+                    pageBytes: message.payload.pageBytes,
+                    candidateBytes: message.payload.candidateBytes,
+                    originalBytes: message.payload.originalBytes,
+                    cleansedBytes: message.payload.cleansedBytes,
+                    aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+                    aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+                    aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+                    aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+                    aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
                 }, settings);
 
                 // コンテンツを記録履歴に保存（成功時のみ）

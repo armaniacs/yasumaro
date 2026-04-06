@@ -45,6 +45,21 @@ All notable changes to this project will be documented in this file.
 - テスト修正: sanitizePreview.test.ts の ES module import モックを修正
 - i18n: Tranco関連メッセージの日本語翻訳を補完
 
+## [4.11.1] - 2026-04-06
+
+### Added
+
+- **ダッシュボード履歴: AI処理時間・プロバイダー/モデル表示** — トークン数行に `処理時間 X.X秒 (AI: provider / model)` を統合表示
+- **ダッシュボード履歴: AI要約クレンジング理由の詳細表示** — 複数種類が削除された場合、上位3件の理由を日本語で表示（例: `ナビゲーション, 広告, ソーシャル`）
+- **手動記録のバイト統計・クレンジング統計対応** — 自動記録と同等の統計情報（pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes 等）を手動記録（MANUAL_RECORD/SAVE_RECORD）でも収集・表示するよう対応
+
+### Fixed
+
+- **AI要約クレンジング理由「multiple」が常に表示される問題を修正** ([src/utils/contentExtractor.ts](src/utils/contentExtractor.ts))
+  - `aiSummaryCleansedElements === 0` 時のカウントのみパスで `aiSummaryCleansedReason = 'multiple'` が設定されるにもかかわらず `aiSummaryCleansedReasons`（詳細リスト）が設定されていなかった
+- **`storageUrls.ts`: エントリ再構築時に `aiSummaryCleansedReasons` が消失する問題を修正** ([src/utils/storageUrls.ts](src/utils/storageUrls.ts))
+  - `setSavedUrlsWithTimestamps` / `updateUrlTimestamp` の既存エントリ保持ロジックに `aiSummaryCleansedReasons` フィールドが含まれておらず、タイムスタンプ更新のたびに詳細理由が失われていた
+
 ## [4.10.16] - 2026-04-03
 
 ### Fixed

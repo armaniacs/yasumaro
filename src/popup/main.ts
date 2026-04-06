@@ -26,6 +26,19 @@ interface ContentResponse {
     keywordStripRemoved: number;
     totalRemoved: number;
   };
+  byteStats?: {
+    pageBytes: number;
+    candidateBytes: number;
+    originalBytes: number;
+    cleansedBytes: number;
+  };
+  aiSummaryCleansedStats?: {
+    aiSummaryOriginalBytes: number;
+    aiSummaryCleansedBytes: number;
+    aiSummaryCleansedElements: number;
+    aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+    aiSummaryCleansedReasons?: string[];
+  };
 }
 
 interface PreviewResponse {
@@ -697,7 +710,16 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           url: tab.url,
           content: finalContent,
           force: force,
-          maskedCount: previewResponse.maskedCount
+          maskedCount: previewResponse.maskedCount,
+          pageBytes: contentResponse.byteStats?.pageBytes,
+          candidateBytes: contentResponse.byteStats?.candidateBytes,
+          originalBytes: contentResponse.byteStats?.originalBytes,
+          cleansedBytes: contentResponse.byteStats?.cleansedBytes,
+          aiSummaryOriginalBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+          aiSummaryCleansedBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+          aiSummaryCleansedElements: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedElements,
+          aiSummaryCleansedReason: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReason,
+          aiSummaryCleansedReasons: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReasons
         }
       });
 
@@ -709,7 +731,16 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           title: tab.title,
           url: tab.url,
           content: contentResponse.content,
-          force: force
+          force: force,
+          pageBytes: contentResponse.byteStats?.pageBytes,
+          candidateBytes: contentResponse.byteStats?.candidateBytes,
+          originalBytes: contentResponse.byteStats?.originalBytes,
+          cleansedBytes: contentResponse.byteStats?.cleansedBytes,
+          aiSummaryOriginalBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+          aiSummaryCleansedBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+          aiSummaryCleansedElements: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedElements,
+          aiSummaryCleansedReason: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReason,
+          aiSummaryCleansedReasons: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReasons
         }
       });
     }

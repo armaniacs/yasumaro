@@ -24,6 +24,11 @@ import {
   setUrlAiSummaryCleansedBytes,
   setUrlAiSummaryCleansedElements,
   setUrlAiSummaryCleansedReason,
+  setUrlAiSummaryCleansedReasons,
+  setUrlAiProvider,
+  setUrlAiModel,
+  setUrlAiDuration,
+  setUrlObsidianDuration,
   getSavedUrlsWithTimestamps
 } from '../../../utils/storageUrls.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
@@ -35,7 +40,7 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 export const saveMetadataStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, privacyResult } = context;
+  const { data, privacyResult, aiDuration, obsidianDuration } = context;
   const {
     url,
     content,
@@ -48,7 +53,8 @@ export const saveMetadataStep: PipelineStepFunction = async (
     aiSummaryOriginalBytes,
     aiSummaryCleansedBytes,
     aiSummaryCleansedElements,
-    aiSummaryCleansedReason
+    aiSummaryCleansedReason,
+    aiSummaryCleansedReasons
   } = data;
 
   const results: { success: string[]; failed: string[] } = { success: [], failed: [] };
@@ -134,6 +140,27 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
   if (aiSummaryCleansedReason !== undefined) {
     await save('aiSummaryCleansedReason', setUrlAiSummaryCleansedReason(url, aiSummaryCleansedReason as AiSummaryCleansedReason));
+  }
+  if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
+    await save('aiSummaryCleansedReasons', setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons));
+  }
+
+  // Save AI provider and model
+  if (privacyResult?.aiProvider !== undefined) {
+    await save('aiProvider', setUrlAiProvider(url, privacyResult.aiProvider));
+  }
+  if (privacyResult?.aiModel !== undefined) {
+    await save('aiModel', setUrlAiModel(url, privacyResult.aiModel));
+  }
+
+  // Save AI processing duration
+  if (aiDuration !== undefined) {
+    await save('aiDuration', setUrlAiDuration(url, aiDuration));
+  }
+
+  // Save Obsidian save duration
+  if (obsidianDuration !== undefined) {
+    await save('obsidianDuration', setUrlObsidianDuration(url, obsidianDuration));
   }
 
   // Log summary

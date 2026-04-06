@@ -90,7 +90,7 @@ export let lastByteStats: { pageBytes: number; candidateBytes: number; originalB
     cleansedBytes: 0
 };
 // 【AI要約クレンジング情報】: 直近の抽出で適用されたAI要約クレンジング情報を保持
-export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none' } = {
+export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
     aiSummaryOriginalBytes: 0,
     aiSummaryCleansedBytes: 0,
     aiSummaryCleansedElements: 0,
@@ -165,7 +165,8 @@ function extractPageContent(): string {
             aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
             aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
             aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
-            aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none'
+            aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
+            aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
         };
     }
     return typeof result === 'string' ? result : result.content;
@@ -449,7 +450,8 @@ async function reportValidVisit(): Promise<void> {
                 aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes,
                 aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes,
                 aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason
+                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason,
+                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
             }
         });
         void logDebug('VALID_VISIT response', { response }, 'extractor');
