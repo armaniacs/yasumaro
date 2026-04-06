@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-04-06
+
+### Added
+
+- **Ollama / LM Studio サポート**: 新しいAIプロバイダーとしてOllamaとLM Studioを追加。ダッシュボードにプリセットボタンがあり、クリックだけで自動設定可能
+- **ローカルLLM対応**: `localhost`/`127.0.0.1` を使用したBase URLの場合、コンテンツを4,000文字に自動制限
+- **AI処理時間トラッキング**: ダッシュボード履歴にAI処理時間を表示
+- **AI要約クレンジング設定**: ナビゲーション、遅延読み込み、リンク密度など詳細なクレンジングオプション
+- **タグ書き込み機能**: AIが付けたタグを `#タグ名` 形式でデイリーノートに書き込み
+
+### Changed
+
+- **デイリーノートフォーマット変更**: `AI要約:` プレフィックスを削除し、タグ放在形式 (`#タグ1 #タグ2 要約文`) に変更
+- **selectBestBlock実装**: LLMが短いい概要と詳細本文を返すパターンに対応
+- **パフォーマンス最適化**: コンテンツ抽出・クレンジングのパフomances向上
+
+### Fixed
+
+- **formatMarkdownStepのバグ修正**: タグ書き込みとプレフィックス削除が正しく反映されるように修正
+- **Various bug fixes and test updates**
+
 ## [4.11.2] - 2026-04-06
 
 ### Added
