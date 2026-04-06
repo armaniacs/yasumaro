@@ -80,6 +80,7 @@ export interface RecordingContext {
 
   // Timings
   aiDuration?: number;
+  obsidianDuration?: number;
 
   // Output
   result?: RecordingResult;

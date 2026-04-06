@@ -351,6 +351,7 @@ export interface ExtractResult {
     aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数
     aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
+    aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
 }
 
 /**
@@ -407,6 +408,7 @@ export function extractMainContent(
     let aiSummaryCleansedBytes = 0;  // AI要約クレンジング後のバイト数
     let aiSummaryCleansedElements = 0;  // AI要約クレンジングで削除した要素数
     let aiSummaryCleansedReason: ExtractResult['aiSummaryCleansedReason'] = 'none';  // AI要約クレンジング実行理由
+    let aiSummaryCleansedReasons: string[] | undefined;  // 複数理由の詳細リスト
 
     try {
         // findMainContentCandidates() 前のbody全体のバイト数を計測
@@ -542,6 +544,7 @@ export function extractMainContent(
                             aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
                         } else if (removedTypes.length > 1) {
                             aiSummaryCleansedReason = 'multiple';
+                            aiSummaryCleansedReasons = removedTypes;
                         }
 
                         aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
@@ -646,6 +649,7 @@ export function extractMainContent(
                             aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
                         } else if (removedTypes.length > 1) {
                             aiSummaryCleansedReason = 'multiple';
+                            aiSummaryCleansedReasons = removedTypes;
                         }
 
                         aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
@@ -741,11 +745,12 @@ export function extractMainContent(
                     aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
                 } else if (removedTypes.length > 1) {
                     aiSummaryCleansedReason = 'multiple';
+                    aiSummaryCleansedReasons = removedTypes;
                 }
             }
         }
 
-        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason };
+        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons };
     }
 
     return content;

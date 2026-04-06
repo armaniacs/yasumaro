@@ -46,9 +46,12 @@ export interface SavedUrlEntry {
     aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数（オプション）
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
+    aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時、オプション）
     isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）
     aiProvider?: string;  // 使用したAIプロバイダー名（オプション）
     aiModel?: string;     // 使用したAIモデル名（オプション）
+    aiDuration?: number;        // AI処理にかかった時間（ミリ秒、オプション）
+    obsidianDuration?: number;  // Obsidian保存にかかった時間（ミリ秒、オプション）
 }
 
 /**
@@ -134,8 +137,13 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
             if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
             if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+            if (existing?.aiSummaryCleansedReasons !== undefined) entry.aiSummaryCleansedReasons = existing.aiSummaryCleansedReasons;
             if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
             if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
+            if (existing?.aiProvider !== undefined) entry.aiProvider = existing.aiProvider;
+            if (existing?.aiModel !== undefined) entry.aiModel = existing.aiModel;
+            if (existing?.aiDuration !== undefined) entry.aiDuration = existing.aiDuration;
+            if (existing?.obsidianDuration !== undefined) entry.obsidianDuration = existing.obsidianDuration;
             entries.push(entry);
         }
         // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
@@ -200,8 +208,13 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
         if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
         if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+        if (existing?.aiSummaryCleansedReasons !== undefined) entry.aiSummaryCleansedReasons = existing.aiSummaryCleansedReasons;
         if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
         if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
+        if (existing?.aiProvider !== undefined) entry.aiProvider = existing.aiProvider;
+        if (existing?.aiModel !== undefined) entry.aiModel = existing.aiModel;
+        if (existing?.aiDuration !== undefined) entry.aiDuration = existing.aiDuration;
+        if (existing?.obsidianDuration !== undefined) entry.obsidianDuration = existing.obsidianDuration;
         entries.push(entry);
 
         // 7日より古いエントリを削除（日数ベース）
@@ -798,6 +811,22 @@ export async function setUrlAiSummaryCleansedReason(url: string, aiSummaryCleans
 }
 
 /**
+ * URLエントリのAI要約クレンジング複数理由リストを設定する
+ */
+export async function setUrlAiSummaryCleansedReasons(url: string, aiSummaryCleansedReasons: string[]): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiSummaryCleansedReasons };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
  * URLに使用したAIプロバイダー名を設定する
  * @param {string} url - 設定するURL
  * @param {string} aiProvider - AIプロバイダー名
@@ -827,6 +856,38 @@ export async function setUrlAiModel(url: string, aiModel: string): Promise<void>
         if (idx >= 0) {
             const updatedEntries = [...entries];
             updatedEntries[idx] = { ...updatedEntries[idx], aiModel };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLエントリのAI処理時間を設定する
+ */
+export async function setUrlAiDuration(url: string, aiDuration: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], aiDuration };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLエントリのObsidian保存時間を設定する
+ */
+export async function setUrlObsidianDuration(url: string, obsidianDuration: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], obsidianDuration };
             return updatedEntries;
         }
         return entries;

@@ -5,7 +5,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason, setUrlAiProvider, setUrlAiModel } from '../utils/storageUrls.js';
+import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason, setUrlAiSummaryCleansedReasons, setUrlAiProvider, setUrlAiModel, setUrlAiDuration, setUrlObsidianDuration } from '../utils/storageUrls.js';
 import type { RecordType } from '../utils/commonTypes.js';
 import { getUserLocale } from '../utils/localeUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -131,6 +131,7 @@ export interface RecordingData {
   aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
   aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数
   aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
+  aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
   precomputedMaskedCount?: number;  // alreadyProcessed時に呼び元から渡されるマスク件数
 }
 
@@ -377,7 +378,7 @@ export class RecordingLogic {
     const {
       title, url, content, recordType, precomputedMaskedCount,
       pageBytes, candidateBytes, originalBytes, cleansedBytes,
-      aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason
+      aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons
     } = data;
 
     // 記録方式をエントリに保存
@@ -474,6 +475,9 @@ export class RecordingLogic {
     if (aiSummaryCleansedReason !== undefined) {
       await setUrlAiSummaryCleansedReason(url, aiSummaryCleansedReason);
       addLog(LogType.INFO, 'AI summary cleansed reason saved', { url, aiSummaryCleansedReason });
+    }
+    if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
+      await setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons);
     }
 
     // 使用したAIプロバイダー名を保存
@@ -697,7 +701,7 @@ export class RecordingLogic {
   }
 
   private async _recordImpl(data: RecordingData): Promise<RecordingResult> {
-    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason } = data;
+    let { title, url, content, force = false, skipDuplicateCheck = false, alreadyProcessed = false, previewOnly = false, requireConfirmation = false, headerValue = '', recordType, maskedCount: precomputedMaskedCount, skipAi = false, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons } = data;
 
     try {
       // 0. Content Truncation (Problem: Large pages can hang the pipeline)
@@ -847,7 +851,9 @@ export class RecordingLogic {
       const markdown = this._formatMarkdown(data.title, data.url, summary, pipelineResult.tags);
 
       // 5. Save to Obsidian
+      const obsidianStart = Date.now();
       await this._saveToObsidian(markdown, data.title, data.url);
+      const obsidianDuration = Date.now() - obsidianStart;
 
       // 6. Update saved list (日付ベース: Map<URL, timestamp>で管理)
       if (urlMap) {
@@ -857,6 +863,10 @@ export class RecordingLogic {
 
       // メタデータを保存
       await this._saveMetadata(data, pipelineResult, urlMap);
+      await setUrlObsidianDuration(data.url, obsidianDuration);
+      if (aiDuration !== undefined) {
+        await setUrlAiDuration(data.url, Math.round(aiDuration));
+      }
 
       // 7. Notification
       NotificationHelper.notifySuccess('Saved to Obsidian', `Saved: ${data.title}`);

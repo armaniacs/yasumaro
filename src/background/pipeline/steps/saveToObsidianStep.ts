@@ -33,13 +33,17 @@ export const saveToObsidianStep = async (
   // Use provided Obsidian client (injected via DI in production) or create new one
   const obsidianClient = obsidian || new ObsidianClient();
 
+  const obsidianStart = Date.now();
   try {
     await obsidianClient.appendToDailyNote(markdown);
+    const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url });
-    
+
     // Create notification after successful save
     const notificationTitle = chrome.i18n.getMessage('saveToObsidian') || 'Saved to Obsidian';
     NotificationHelper.notifySuccess(notificationTitle, `Saved: ${title}`);
+
+    return { ...context, obsidianDuration };
   } catch (error: any) {
     // Throw error to trigger retry
     addLog(LogType.ERROR, 'Failed to save to Obsidian', {
@@ -49,6 +53,4 @@ export const saveToObsidianStep = async (
     });
     throw error;
   }
-
-  return context;
 };

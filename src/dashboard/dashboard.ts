@@ -1003,7 +1003,7 @@ async function initHistoryPanel(): Promise<void> {
     historyList.innerHTML = '';
     pageItems.forEach((entry, index) => {
       const contentId = `content-entry-${start + index}`;
-      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiProvider, aiModel } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, aiProvider, aiModel, aiDuration } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -1044,7 +1044,7 @@ async function initHistoryPanel(): Promise<void> {
       }
 
       // トークン数を表示
-      if (sentTokens !== undefined || receivedTokens !== undefined || originalTokens !== undefined || cleansedTokens !== undefined) {
+      if (sentTokens !== undefined || receivedTokens !== undefined) {
         const tokensEl = document.createElement('div');
         tokensEl.className = 'history-entry-tokens';
         const tokenParts: string[] = [];
@@ -1057,17 +1057,27 @@ async function initHistoryPanel(): Promise<void> {
           tokenParts.push(`${receivedLabel}: ${receivedTokens}`);
         }
         const tokensLabel = getMessage('historyTokens') || 'トークン数';
-        tokensEl.textContent = `${tokensLabel}: ${tokenParts.join(', ')}`;
+        let tokensText = `${tokensLabel}: ${tokenParts.join(', ')}`;
+        if (aiDuration !== undefined) {
+          tokensText += `, 処理時間 ${(aiDuration / 1000).toFixed(1)}秒`;
+        }
+        if (aiProvider !== undefined) {
+          const aiParts = [aiProvider];
+          if (aiModel) aiParts.push(aiModel);
+          tokensText += ` (AI: ${aiParts.join(' / ')})`;
+        }
+        tokensEl.textContent = tokensText;
         info.appendChild(tokensEl);
-      }
-
-      // AIプロバイダー/モデルを表示
-      if (aiProvider !== undefined) {
+      } else if (aiProvider !== undefined) {
         const aiProviderEl = document.createElement('div');
         aiProviderEl.className = 'history-entry-tokens';
         const parts = [aiProvider];
         if (aiModel) parts.push(aiModel);
-        aiProviderEl.textContent = `AI: ${parts.join(' / ')}`;
+        let providerText = `AI: ${parts.join(' / ')}`;
+        if (aiDuration !== undefined) {
+          providerText += `, 処理時間 ${(aiDuration / 1000).toFixed(1)}秒`;
+        }
+        aiProviderEl.textContent = providerText;
         info.appendChild(aiProviderEl);
       }
 
@@ -1125,16 +1135,23 @@ async function initHistoryPanel(): Promise<void> {
 
         // 理由
         if (aiSummaryCleansedReason !== undefined && aiSummaryCleansedReason !== 'none') {
+          const labelMap: Record<string, string> = {
+            alt:      getMessage('historyAiSummaryCleansedReasonAlt') || '画像alt属性',
+            metadata: getMessage('historyAiSummaryCleansedReasonMetadata') || 'メタデータ',
+            ads:      getMessage('historyAiSummaryCleansedReasonAds') || '広告',
+            nav:      getMessage('historyAiSummaryCleansedReasonNav') || 'ナビゲーション',
+            social:   getMessage('historyAiSummaryCleansedReasonSocial') || 'ソーシャル',
+            deep:     getMessage('historyAiSummaryCleansedReasonDeep') || 'ディープ',
+          };
           let reasonText = '';
-          switch (aiSummaryCleansedReason) {
-            case 'alt':      reasonText = getMessage('historyAiSummaryCleansedReasonAlt') || '画像alt属性'; break;
-            case 'metadata': reasonText = getMessage('historyAiSummaryCleansedReasonMetadata') || 'メタデータ'; break;
-            case 'ads':      reasonText = getMessage('historyAiSummaryCleansedReasonAds') || '広告'; break;
-            case 'nav':      reasonText = getMessage('historyAiSummaryCleansedReasonNav') || 'ナビゲーション'; break;
-            case 'social':      reasonText = getMessage('historyAiSummaryCleansedReasonSocial') || 'ソーシャル'; break;
-            case 'deep':        reasonText = getMessage('historyAiSummaryCleansedReasonDeep') || 'ディープ'; break;
-            case 'multiple':    reasonText = getMessage('historyAiSummaryCleansedReasonMultiple') || '複数'; break;
-            default:         reasonText = aiSummaryCleansedReason;
+          if (aiSummaryCleansedReason === 'multiple') {
+            if (aiSummaryCleansedReasons && aiSummaryCleansedReasons.length > 0) {
+              reasonText = aiSummaryCleansedReasons.slice(0, 3).map(r => labelMap[r] || r).join(', ');
+            } else {
+              reasonText = '複数';
+            }
+          } else {
+            reasonText = labelMap[aiSummaryCleansedReason] || aiSummaryCleansedReason;
           }
           cleansingParts.push(`理由: ${reasonText}`);
         }
