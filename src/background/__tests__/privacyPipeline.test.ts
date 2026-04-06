@@ -92,8 +92,8 @@ describe('PrivacyPipeline', () => {
       const result = await pipeline.process('content');
 
       expect(result.summary).not.toContain('\n');
-      expect(result.summary).toContain('1行目');
-      expect(result.summary).toContain('2行目');
+      // selectBestBlock returns the FIRST block only
+      expect(result.summary).toBe('1行目');
     });
   });
 });

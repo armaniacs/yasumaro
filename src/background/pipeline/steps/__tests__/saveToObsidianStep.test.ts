@@ -96,7 +96,9 @@ describe('saveToObsidianStep', () => {
 
       const result = await saveToObsidianStep(context, mockObsidian as any);
 
-      expect(result).toBe(context);
+      expect(result).toMatchObject(context);
+      expect(result.obsidianDuration).toBeDefined();
+      expect(typeof result.obsidianDuration).toBe('number');
     });
   });
 

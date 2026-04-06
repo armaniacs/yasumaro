@@ -372,9 +372,10 @@ function throttle<T extends (...args: any[]) => void>(fn: T): T {
         lastArgs = args;
         const now = performance.now();
 
-        // 既にRAFがスケジュールされている場合は引数だけ更新
+        // Cancel existing RAF before scheduling a new one to prevent memory leak
         if (rafId !== null) {
-            return;
+            cancelAnimationFrame(rafId);
+            rafId = null;
         }
 
         // 前回の呼び出しから十分時間が経過しているか確認
