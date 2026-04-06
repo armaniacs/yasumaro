@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.11.2] - 2026-04-06
+
 ### Added
 
 - **LM Studio対応**: ダッシュボードに「LM Studio」プリセットボタンを追加 — クリックするだけで Base URL `http://localhost:1234/v1` が自動入力される
@@ -44,6 +46,8 @@ All notable changes to this project will be documented in this file.
 - AI要約クレンジング設定: サブグループの表示/非表示切り替えを追加（有効チェックボックス連動）
 - テスト修正: sanitizePreview.test.ts の ES module import モックを修正
 - i18n: Tranco関連メッセージの日本語翻訳を補完
+
+
 
 ## [4.11.1] - 2026-04-06
 
