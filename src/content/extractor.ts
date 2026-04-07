@@ -698,6 +698,18 @@ async function init(): Promise<void> {
             startPeriodicCheck();
         }
     });
+
+    // E2Eテスト用: 初期化完了を data-ow-test-state 属性で通知
+    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
+        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify({
+            maxScrollPercentage,
+            isValidVisitReported,
+            startTime,
+            minVisitDuration,
+            minScrollDepth,
+            duration: 0,
+        }));
+    }
 }
 
 // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答

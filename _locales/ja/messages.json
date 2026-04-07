@@ -1599,7 +1599,7 @@
     "message": "position:fixed/sticky の固定要素を削除します（Yahoo!、Game8等の追従バナー）。"
   },
   "aiSummaryCleansingRecommendDesc": {
-    "message": "おすすめ・相關記事・おすすめ商品等の推荐セクションを削除します。"
+    "message": "おすすめ・関連記事・おすすめ商品等のおすすめセクションを削除します。"
   },
   "aiSummaryCleansingPaginationDesc": {
     "message": "ページネーション（次へ/前のボタン等）を削除します。"
@@ -1611,7 +1611,7 @@
     "message": "ポップアップ・モーダル・トースト通知を削除します。"
   },
   "aiSummaryCleansingPlatformDesc": {
-    "message": "プラットフォーム固有の噪声（5ch/be画像 YouTubeコメント欄等）を削除します。"
+    "message": "プラットフォーム固有のノイズ（5ch/be画像 YouTubeコメント欄等）を削除します。"
   },
   "aiSummaryCleansingSave": {
     "message": "保存"

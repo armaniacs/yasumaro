@@ -221,6 +221,33 @@ describe('contentCleaner', () => {
             expect(balanceDiv).toBeNull();
         });
 
+        it('should remove elements with ID containing "credit-card"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div id="credit-card">1234-5678-9012-3456</div>';
+            const removed = stripKeywordElements(container, ['credit-card']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('credit-card');
+        });
+
+        it('should remove elements with class containing "passport"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div class="passport">AB1234567</div>';
+            const removed = stripKeywordElements(container, ['passport']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('passport');
+        });
+
+        it('should remove elements with ID containing "my-number"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div id="my-number-field">123456789012</div>';
+            const removed = stripKeywordElements(container, ['my-number']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('my-number');
+        });
+
         it('should remove elements with class containing "meisai"', () => {
             const container = document.getElementById('test-container')!;
             const removed = stripKeywordElements(container, ['meisai']);
@@ -355,6 +382,64 @@ describe('contentCleaner', () => {
 
             // デフォルトキーワードに含まれるものが削除される
             expect(result.keywordStripRemoved).toBeGreaterThan(0);
+        });
+
+        test('new keywords are correctly stripped', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div id="credit-card">1234-5678-9012-3456</div>
+                <div class="passport">AB1234567</div>
+                <div id="my-number">123456789012</div>
+            `;
+
+            const result = cleanseContent(div);
+            expect(result.totalRemoved).toBe(3);
+            expect(div.innerHTML).not.toContain('credit-card');
+        });
+
+        test('data-* attributes are correctly scanned and stripped', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div data-credit-card="1234">Test 1</div>
+                <div data-user-passport="AB1234567">Test 2</div>
+                <div data-my-number="123456">Test 3</div>
+                <div data-normal-attribute="normal">Test 4</div>
+            `;
+
+            const result = cleanseContent(div);
+            expect(result.totalRemoved).toBe(3);
+            expect(div.innerHTML).toContain('Test 4');
+            expect(div.innerHTML).not.toContain('Test 1');
+            expect(div.innerHTML).not.toContain('Test 2');
+            expect(div.innerHTML).not.toContain('Test 3');
+        });
+
+        test('countCleanseTargets correctly counts data-* attributes', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div data-credit-card="1234">Test 1</div>
+                <div data-user-passport="AB1234567">Test 2</div>
+                <div data-normal="normal">Test 3</div>
+            `;
+
+            const original = div.innerHTML;
+            const result = countCleanseTargets(div);
+            
+            // DOMが変更されていないことを確認
+            expect(div.innerHTML).toBe(original);
+            expect(result.keywordStripRemoved).toBe(2);
+        });
+
+        test('context validation - strip elements with sensitive content', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div id="password-field">My password is secret123</div>
+                <div id="account-balance">Balance: $1000</div>
+            `;
+
+            const result = cleanseContent(div);
+            // 機密コンテンツを含む要素は削除
+            expect(div.innerHTML).not.toContain('secret123');
         });
 
         it('should return zero when both disabled', () => {

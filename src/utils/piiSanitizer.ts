@@ -5,6 +5,8 @@
  * パフォーマンス改善: 1回のスキャンで全パターンを検出
  */
 
+import { validateLuhn } from './luhn.js';
+
 // 定数設定
 export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
 const MAX_OUTPUT_SIZE = 128 * 1024; // 128KB (入力の2倍を許容)
@@ -23,7 +25,7 @@ const PII_PATTERNS: PiiPattern[] = [
         type: 'email',
         pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
     },
-    // クレジットカード: 16桁または15桁のカード番号（マイナンバーより前）
+    // クレジットカード: 16桁または15桁のカード番号（Luhn検証あるので先に検出）
     {
         type: 'creditCard',
         pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/ // 16桁（4-4-4-4）
@@ -32,20 +34,41 @@ const PII_PATTERNS: PiiPattern[] = [
         type: 'creditCard',
         pattern: /\b\d{4}[-\s]?\d{6}[-\s]?\d{5}\b/ // 15桁（区切り2つ）
     },
-    // マイナンバー: 12桁（4桁-4桁-4桁）
+    // マイナンバー: 12桁（4桁-4桁-4桁、区切り必須）- 連続12桁はdriverLicenseに委譲
     {
         type: 'myNumber',
-        pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/
+        pattern: /\b\d{4}[-\s]\d{4}[-\s]\d{4}\b/
     },
     // 電話番号: 0 + 1-4桁 + 1-4桁 + 4桁
     {
         type: 'phoneJp',
         pattern: /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}\b/
     },
-    // 銀行口座: 7桁数字
+    // 銀行口座: 7桁数字（注: 7桁のみ。driverLicenseの12桁と重複しない）
     {
         type: 'bankAccount',
         pattern: /\b\d{7}\b/
+    },
+    // 運転免許番号（日本）: 連続12桁（myNumberはハイフン区切り必須なので衝突しない）
+    {
+        type: 'driverLicense',
+        pattern: /\b\d{12}\b/
+    },
+    // パスポート番号（日本）: 2文字 + 7桁
+    {
+        type: 'jpPassport',
+        pattern: /\b[A-Z]{2}\d{7}\b/
+    },
+    // IPv4アドレス（プライベートレンジのみ: 10.x.x.x / 172.16-31.x.x / 192.168.x.x）
+    // プレフィックス長が異なるため3パターンに分割しバックトラッキングを排除
+    {
+        type: 'ipv4',
+        pattern: /\b(?:10\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|172\.(?:1[6-9]|2\d|3[01])\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|192\.168\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?))\b/
+    },
+    // IPv6アドレス（簡易版）
+    {
+        type: 'ipv6',
+        pattern: /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b/
     }
 ];
 
@@ -195,6 +218,11 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                         break;
                     }
                 }
+            }
+
+            // Luhn検証で偽陽性のクレジットカード番号を除外
+            if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
+                continue;
             }
 
             replacements.push({
