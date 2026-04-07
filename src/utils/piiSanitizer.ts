@@ -44,12 +44,12 @@ const PII_PATTERNS: PiiPattern[] = [
         type: 'phoneJp',
         pattern: /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}\b/
     },
-    // 銀行口座: 7桁数字
+    // 銀行口座: 7桁数字（注: 7桁のみ。driverLicenseの12桁と重複しない）
     {
         type: 'bankAccount',
         pattern: /\b\d{7}\b/
     },
-    // 運転免許番号（日本）: 12桁
+    // 運転免許番号（日本）: 連続12桁（myNumberはハイフン区切り必須なので衝突しない）
     {
         type: 'driverLicense',
         pattern: /\b\d{12}\b/
@@ -59,10 +59,11 @@ const PII_PATTERNS: PiiPattern[] = [
         type: 'jpPassport',
         pattern: /\b[A-Z]{2}\d{7}\b/
     },
-    // IPv4アドレス（プライベートレンジのみ: 10.x, 172.16-31.x, 192.168.x）
+    // IPv4アドレス（プライベートレンジのみ: 10.x.x.x / 172.16-31.x.x / 192.168.x.x）
+    // プレフィックス長が異なるため3パターンに分割しバックトラッキングを排除
     {
         type: 'ipv4',
-        pattern: /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b/
+        pattern: /\b(?:10\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|172\.(?:1[6-9]|2\d|3[01])\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|192\.168\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?))\b/
     },
     // IPv6アドレス（簡易版）
     {
@@ -219,12 +220,9 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 }
             }
 
-            // クレジットカードの場合はLuhn検証を実行
-            if (matchedType === 'creditCard') {
-                // Luhn検証に失敗した場合はスキップ
-                if (!validateLuhn(matchedValue)) {
-                    continue;
-                }
+            // Luhn検証で偽陽性のクレジットカード番号を除外
+            if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
+                continue;
             }
 
             replacements.push({
