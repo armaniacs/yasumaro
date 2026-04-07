@@ -547,6 +547,44 @@
           </div>
         </div>
 
+        <!-- テキスト品質設定セクション -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">テキスト品質設定</h3>
+
+          <!-- 冗長除去 -->
+          <div class="form-group">
+            <label>入力の冗長センテンスを除去</label>
+            <div class="mb-8">
+              <input type="checkbox" id="content-dedup-enabled" checked>
+              <label for="content-dedup-enabled" class="inline-label">
+                Jaccard類似度で重複センテンスを検出し除去します（MMR的Redundancy Reduction）。
+              </label>
+            </div>
+            <div id="contentDedupThresholdGroup" class="mb-8">
+              <label for="content-dedup-threshold">
+                類似度閾値: <span id="contentDedupThresholdValue">0.7</span>
+              </label>
+              <input type="range" id="content-dedup-threshold"
+                min="0.5" max="0.95" step="0.05" value="0.7"
+                aria-describedby="contentDedupThresholdDesc">
+              <div class="help-text" id="contentDedupThresholdDesc">
+                低い値ほど多く除去（0.5=緩い）、高い値ほど少なく除去（0.95=厳しい）。デフォルト: 0.7
+              </div>
+            </div>
+          </div>
+
+          <!-- 文末正規化 -->
+          <div class="form-group">
+            <label>日本語要約の文末をである調に統一</label>
+            <div class="mb-8">
+              <input type="checkbox" id="summary-normalize-enabled" checked>
+              <label for="summary-normalize-enabled" class="inline-label">
+                「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">保存</button>
           <div id="contentSettingsStatus" class="status-message" aria-live="polite"></div>

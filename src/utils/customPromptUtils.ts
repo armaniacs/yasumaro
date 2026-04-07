@@ -49,8 +49,8 @@ export function getDefaultUserPrompt(locale: string = 'ja'): string {
 /**
  * デフォルトのシステムプロンプト（OpenAI用）
  */
-export const DEFAULT_SYSTEM_PROMPT_JA = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.';
-export const DEFAULT_SYSTEM_PROMPT_EN = 'You are a helpful assistant that summarizes web pages effectively and concisely in English.';
+export const DEFAULT_SYSTEM_PROMPT_JA = 'You are a helpful assistant that summarizes web pages effectively and concisely in Japanese. Only use information explicitly stated in the provided content. Do not add facts, context, or details not present in the source text.';
+export const DEFAULT_SYSTEM_PROMPT_EN = 'You are a helpful assistant that summarizes web pages effectively and concisely in English. Only use information explicitly stated in the provided content. Do not add facts, context, or details not present in the source text.';
 
 /**
  * デフォルトのシステムプロンプト（言語自動選択）
