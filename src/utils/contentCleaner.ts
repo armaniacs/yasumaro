@@ -153,7 +153,7 @@ export function stripKeywordElements(element: Element, keywords: string[]): numb
     let removedCount = 0;
     const elementsToRemove: Element[] = [];
 
-    // キーワードごとにIDとクラスをチェック
+    // キーワードごとにID、クラス、data-*属性をチェック
     for (const keyword of keywords) {
         const kw = escapeCssSelector(keyword.toLowerCase());
 
@@ -172,6 +172,24 @@ export function stripKeywordElements(element: Element, keywords: string[]): numb
         classElements.forEach(elem => {
             if (!elementsToRemove.includes(elem)) {
                 elementsToRemove.push(elem);
+            }
+        });
+
+        // すべてのdata-*属性を走査してキーワードが含まれるか確認
+        const allElements = element.querySelectorAll('*');
+        allElements.forEach(elem => {
+            if (elementsToRemove.includes(elem)) return;
+            
+            // 要素の属性をすべて走査
+            for (let i = 0; i < elem.attributes.length; i++) {
+                const attr = elem.attributes[i];
+                // data-で始まる属性のみチェック
+                if (attr.name.startsWith('data-')) {
+                    if (attr.name.toLowerCase().includes(keyword.toLowerCase())) {
+                        elementsToRemove.push(elem);
+                        break;
+                    }
+                }
             }
         });
     }
@@ -251,7 +269,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     if (keywordStripEnabled && keywords.length > 0) {
         const counted = new Set<Element>();
 
-        // キーワードごとにIDとクラスをチェック
+        // キーワードごとにID、クラス、data-*属性をチェック
         for (const keyword of keywords) {
             const kw = escapeCssSelector(keyword.toLowerCase());
 
@@ -272,6 +290,25 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
                 if (!counted.has(elem)) {
                     keywordStripCount++;
                     counted.add(elem);
+                }
+            });
+
+            // すべてのdata-*属性を走査してキーワードが含まれるか確認
+            const allElements = element.querySelectorAll('*');
+            allElements.forEach(elem => {
+                if (counted.has(elem)) return;
+                
+                // 要素の属性をすべて走査
+                for (let i = 0; i < elem.attributes.length; i++) {
+                    const attr = elem.attributes[i];
+                    // data-で始まる属性のみチェック
+                    if (attr.name.startsWith('data-')) {
+                        if (attr.name.toLowerCase().includes(keyword.toLowerCase())) {
+                            keywordStripCount++;
+                            counted.add(elem);
+                            break;
+                        }
+                    }
                 }
             });
         }

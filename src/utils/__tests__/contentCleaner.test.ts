@@ -397,6 +397,39 @@ describe('contentCleaner', () => {
             expect(div.innerHTML).not.toContain('credit-card');
         });
 
+        test('data-* attributes are correctly scanned and stripped', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div data-credit-card="1234">Test 1</div>
+                <div data-user-passport="AB1234567">Test 2</div>
+                <div data-my-number="123456">Test 3</div>
+                <div data-normal-attribute="normal">Test 4</div>
+            `;
+
+            const result = cleanseContent(div);
+            expect(result.totalRemoved).toBe(3);
+            expect(div.innerHTML).toContain('Test 4');
+            expect(div.innerHTML).not.toContain('Test 1');
+            expect(div.innerHTML).not.toContain('Test 2');
+            expect(div.innerHTML).not.toContain('Test 3');
+        });
+
+        test('countCleanseTargets correctly counts data-* attributes', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div data-credit-card="1234">Test 1</div>
+                <div data-user-passport="AB1234567">Test 2</div>
+                <div data-normal="normal">Test 3</div>
+            `;
+
+            const original = div.innerHTML;
+            const result = countCleanseTargets(div);
+            
+            // DOMが変更されていないことを確認
+            expect(div.innerHTML).toBe(original);
+            expect(result.keywordStripRemoved).toBe(2);
+        });
+
         it('should return zero when both disabled', () => {
             const container = document.getElementById('test-container')!;
             const result = cleanseContent(container, {
