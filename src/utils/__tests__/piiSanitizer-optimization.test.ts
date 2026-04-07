@@ -50,11 +50,11 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         });
 
         it('クレジットカード番号を正しく検出・置換できる', async () => {
-            const text = 'カード番号: 1234-5678-9012-3456';
+            const text = 'カード番号: 4111-1111-1111-1111';
             const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:creditCard]');
-            expect(result.text).not.toContain('1234-5678-9012-3456');
+            expect(result.text).not.toContain('4111-1111-1111-1111');
             expect(result.maskedItems.some(item => item.type === 'creditCard')).toBe(true);
         });
 

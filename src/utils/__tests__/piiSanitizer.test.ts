@@ -32,8 +32,8 @@ describe('piiSanitizer', () => {
       // 【期待される動作】: 正規表現でマッチし、[MASKED:creditCard]に置換
       // 🟢 信頼性レベル: 既存実装（piiSanitizer.js 9行目）を直接参照
 
-      // 【テストデータ準備】: 一般的なクレジットカード番号の表記形式を用意
-      const text = 'カード番号は 1234-5678-9012-3456 です';
+      // 【テストデータ準備】: 一般的なクレジットカード番号の表記形式を用意（Luhn有効な番号）
+      const text = 'カード番号は 4111-1111-1111-1111 です';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       // 【処理内容】: PII_PATTERNSの各正規表現でマッチングし、マスク文字列に置換
@@ -43,7 +43,7 @@ describe('piiSanitizer', () => {
       expect(result.text).toBe('カード番号は [MASKED:creditCard] です'); // 【確認内容】: クレジットカード番号がマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟢
       expect(result.maskedItems[0].type).toBe('creditCard'); // 【確認内容】: PIIタイプがcreditCardであることを確認 🟢
-      expect(result.maskedItems[0].original).toBe('1234-5678-9012-3456'); // 【確認内容】: 元の値が記録されることを確認 🟢
+      expect(result.maskedItems[0].original).toBe('4111-1111-1111-1111'); // 【確認内容】: 元の値が記録されることを確認 🟢
     });
 
     test('12桁のマイナンバーを検出してマスクできる', async () => {
@@ -106,8 +106,8 @@ describe('piiSanitizer', () => {
       // 【期待される動作】: for...ofループですべてのパターンを適用し、すべてマスク
       // 🟢 信頼性レベル: 既存実装（piiSanitizer.js 41-46行目）を直接参照
 
-      // 【テストデータ準備】: 実際のフォーム送信データを想定した複数PII含有テキストを用意
-      const text = '連絡先: user@example.com, 電話: 090-1234-5678, カード: 1234-5678-9012-3456';
+      // 【テストデータ準備】: 実際のフォーム送信データを想定した複数PII含有テキストを用意（Luhn有効なカード番号）
+      const text = '連絡先: user@example.com, 電話: 090-1234-5678, カード: 4111-1111-1111-1111';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       const result = await sanitizeRegex(text) as SanitizeResult;
@@ -221,8 +221,8 @@ describe('piiSanitizer', () => {
       // 【期待される動作】: スペース区切りでも正しくマッチ
       // 🟢 信頼性レベル: 既存実装（piiSanitizer.js 9行目の`[-\\s]?`）を直接参照
 
-      // 【テストデータ準備】: ユーザーがフォームに手入力する際のスペース区切りを用意
-      const text = 'カード: 1234 5678 9012 3456';
+      // 【テストデータ準備】: ユーザーがフォームに手入力する際のスペース区切りを用意（Luhn有効な番号）
+      const text = 'カード: 4111 1111 1111 1111';
 
       // 【実際の処理実行】: sanitizeRegex関数を呼び出し
       const result = await sanitizeRegex(text) as SanitizeResult;
@@ -382,6 +382,63 @@ describe('piiSanitizer', () => {
       const result = await sanitizeRegex(text, { skipSizeLimit: false }) as SanitizeResult;
       expect(result.text).toBe('[MASKED:email]');
       expect(result.maskedItems).toHaveLength(1);
+    });
+  });
+
+  describe('sanitizeRegex - 追加PIIパターン', () => {
+    test('運転免許番号（日本）- 連続12桁を検出してマスクできる', async () => {
+      const text = '運転免許番号: 123456789012';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('運転免許番号: [MASKED:driverLicense]');
+      expect(result.maskedItems[0].type).toBe('driverLicense');
+    });
+
+    test('マイナンバー - ハイフン区切り12桁を検出してマスクできる', async () => {
+      const text = 'マイナンバー: 1234-5678-9012';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
+      expect(result.maskedItems[0].type).toBe('myNumber');
+    });
+
+    test('パスポート番号（日本）- 2文字+7桁を検出してマスクできる', async () => {
+      const text = 'パスポート番号: AB1234567';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('パスポート番号: [MASKED:jpPassport]');
+      expect(result.maskedItems[0].type).toBe('jpPassport');
+    });
+
+    test('プライベートIPv4アドレス（192.168.x.x）を検出してマスクできる', async () => {
+      const text = 'サーバーIP: 192.168.1.1';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('サーバーIP: [MASKED:ipv4]');
+      expect(result.maskedItems[0].type).toBe('ipv4');
+    });
+
+    test('プライベートIPv4アドレス（10.x.x.x）を検出してマスクできる', async () => {
+      const text = 'ネットワーク: 10.0.0.1';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('ネットワーク: [MASKED:ipv4]');
+      expect(result.maskedItems[0].type).toBe('ipv4');
+    });
+
+    test('パブリックIPv4アドレスはマスクしない', async () => {
+      const text = 'DNSサーバー: 8.8.8.8';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('DNSサーバー: 8.8.8.8');
+      expect(result.maskedItems).toHaveLength(0);
+    });
+
+    test('IPv6アドレスを検出してマスクできる', async () => {
+      const text = 'IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IPv6: [MASKED:ipv6]');
+      expect(result.maskedItems[0].type).toBe('ipv6');
+    });
+
+    test('Luhn検証 - 不正なクレジットカード番号はマスクしない', async () => {
+      const text = 'カード番号: 1234-5678-9012-3457'; // 末尾1桁変更でLuhn失敗
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.maskedItems).toHaveLength(0);
     });
   });
 });

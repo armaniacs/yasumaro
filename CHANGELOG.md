@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-04-08
+
+### Fixed
+
+- **i18n日本語メッセージの中国語混入を修正**: `_locales/ja/messages.json` および `CLEANSING_ORDER.md` に混入していた中国語（`推荐`→`おすすめ`、`相關`→`関連`、`噪声`→`ノイズ`）を正しい日本語に修正
+- **Luhn検証エラーを修正**: `dist/utils/luhn.js` が `web_accessible_resources` に含まれていなかった問題を修正
+- **contentCleanerパフォーマンス改善**: キーワード要素削除のロジックをリファクタリングし、重複排除にSetを使用することで処理効率を向上
+
+### Added
+
+- **E2Eテスト対応**: Playwright拡張機能テスト用の特殊属性 (`data-ow-e2e-test`) によるドメインフィルタバイパス機能を追加
+
 ## [5.0.0] - 2026-04-06
 
 ### Added
