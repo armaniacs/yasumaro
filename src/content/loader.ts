@@ -178,6 +178,15 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
 
     const url = window.location.href;
 
+    // 【E2Eテスト用バイパス】Playwright拡張機能テスト用の特殊属性
+    // data-ow-e2e-test 属性がある場合はドメインフィルタをスキップし、
+    // 動的インポートでコンテンツスクリプトを直接読み込む
+    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
+        const src = chrome.runtime.getURL('content/extractor.js');
+        try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked (e2e)', url, e instanceof Error ? e.message : String(e)); }
+        return;
+    }
+
     // 【Task #19 最適化】キャッシュベースのドメインチェック
     const cacheCheck = await checkDomainAllowedFromCache(url);
 

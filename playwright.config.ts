@@ -39,7 +39,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      grep: /^(?!.*@interaction)/,
+      grep: /^(?!.*@(?:interaction|extension))/,
       use: { ...devices['Desktop Chrome'] },
     },
 

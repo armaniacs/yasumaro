@@ -11,6 +11,25 @@
 import { escapeCssSelector } from './cssUtils.js';
 
 /**
+ * デフォルトのキーワードリスト（countCleanseTargets / cleanseContent 共通）
+ * モジュールスコープで一元管理し、重複定義によるデグレを防ぐ
+ */
+const DEFAULT_KEYWORDS: readonly string[] = [
+    'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
+    'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
+    'rireki', 'torihiki', 'zandaka', 'hoken', 'address',
+    'credit-card', 'cc-number', 'card-expiry', 'cvv', 'cvc', 'security-code',
+    'bank-account', 'routing-number', 'iban', 'swift', 'bic',
+    'mynumber', 'my-number', 'personal-number', 'social-security', 'ssn',
+    'passport', 'driver-license', 'license-number',
+    'email', 'phone', 'tel-number', 'mobile',
+    'birth-date', 'birthday', 'age', 'gender',
+    'postal-code', 'zip-code', 'prefecture', 'city',
+    'medical', 'patient-id', 'insurance',
+    'crypto', 'wallet', 'private-key', 'seed-phrase'
+];
+
+/**
  * Hard Strip 用タグセレクタ
  * これらのタグに一致する要素をすべて削除
  */
@@ -145,62 +164,50 @@ function buildAttributeSelector(attr: AttributeSelector): string {
  * @param keywords - 削除対象のキーワードリスト
  * @returns 削除された要素の数
  */
-export function stripKeywordElements(element: Element, keywords: string[]): number {
+export function stripKeywordElements(element: Element, keywords: readonly string[]): number {
     if (!keywords || keywords.length === 0) {
         return 0;
     }
 
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
+    const elementsToRemove = collectKeywordElements(element, keywords);
 
-    // キーワードごとにID、クラス、data-*属性をチェック
-    for (const keyword of keywords) {
-        const kw = escapeCssSelector(keyword.toLowerCase());
-
-        // IDにキーワードを含む要素を取得
-        const idSelector = `[id*="${kw}"]`;
-        const idElements = element.querySelectorAll(idSelector);
-        idElements.forEach(elem => {
-            if (!elementsToRemove.includes(elem)) {
-                elementsToRemove.push(elem);
-            }
-        });
-
-        // クラスにキーワードを含む要素を取得
-        const classSelector = `[class*="${kw}"]`;
-        const classElements = element.querySelectorAll(classSelector);
-        classElements.forEach(elem => {
-            if (!elementsToRemove.includes(elem)) {
-                elementsToRemove.push(elem);
-            }
-        });
-
-        // すべてのdata-*属性を走査してキーワードが含まれるか確認
-        const allElements = element.querySelectorAll('*');
-        allElements.forEach(elem => {
-            if (elementsToRemove.includes(elem)) return;
-            
-            // 要素の属性をすべて走査
-            for (let i = 0; i < elem.attributes.length; i++) {
-                const attr = elem.attributes[i];
-                // data-で始まる属性のみチェック
-                if (attr.name.startsWith('data-')) {
-                    if (attr.name.toLowerCase().includes(keyword.toLowerCase())) {
-                        elementsToRemove.push(elem);
-                        break;
-                    }
-                }
-            }
-        });
-    }
-
-    // 削除実行
     for (const elem of elementsToRemove) {
         elem.remove();
-        removedCount++;
     }
 
-    return removedCount;
+    return elementsToRemove.size;
+}
+
+/**
+ * キーワードにマッチする要素を収集する（ID / class / data-* 属性を対象）
+ * stripKeywordElements と countCleanseTargets の共通ロジック
+ */
+function collectKeywordElements(element: Element, keywords: readonly string[]): Set<Element> {
+    const matched = new Set<Element>();
+    // data-*スキャン用に全子要素を1回だけ取得（キーワードループ外で O(N) → O(K×N) を回避）
+    const allElements = element.querySelectorAll('*');
+
+    for (const keyword of keywords) {
+        const kwLower = keyword.toLowerCase();
+        const kw = escapeCssSelector(kwLower);
+
+        element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => matched.add(elem));
+        element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => matched.add(elem));
+
+        for (const elem of allElements) {
+            if (matched.has(elem)) continue;
+            for (let i = 0; i < elem.attributes.length; i++) {
+                const attr = elem.attributes[i];
+                const attrNameLower = attr.name.toLowerCase();
+                if (attrNameLower.startsWith('data-') && attrNameLower.includes(kwLower)) {
+                    matched.add(elem);
+                    break;
+                }
+            }
+        }
+    }
+
+    return matched;
 }
 
 /**
@@ -231,20 +238,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = [
-            'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
-            'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
-            'rireki', 'torihiki', 'zandaka', 'hoken', 'address',
-            'credit-card', 'cc-number', 'card-expiry', 'cvv', 'cvc', 'security-code',
-            'bank-account', 'routing-number', 'iban', 'swift', 'bic',
-            'mynumber', 'my-number', 'personal-number', 'social-security', 'ssn',
-            'passport', 'driver-license', 'license-number',
-            'email', 'phone', 'tel-number', 'mobile',
-            'birth-date', 'birthday', 'age', 'gender',
-            'postal-code', 'zip-code', 'prefecture', 'city',
-            'medical', 'patient-id', 'insurance',
-            'crypto', 'wallet', 'private-key', 'seed-phrase'
-        ]
+        keywords = DEFAULT_KEYWORDS
     } = options;
 
     let hardStripCount = 0;
@@ -267,51 +261,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     }
 
     if (keywordStripEnabled && keywords.length > 0) {
-        const counted = new Set<Element>();
-
-        // キーワードごとにID、クラス、data-*属性をチェック
-        for (const keyword of keywords) {
-            const kw = escapeCssSelector(keyword.toLowerCase());
-
-            // IDにキーワードを含む要素をカウント
-            const idSelector = `[id*="${kw}"]`;
-            const idElements = element.querySelectorAll(idSelector);
-            idElements.forEach(elem => {
-                if (!counted.has(elem)) {
-                    keywordStripCount++;
-                    counted.add(elem);
-                }
-            });
-
-            // クラスにキーワードを含む要素をカウント
-            const classSelector = `[class*="${kw}"]`;
-            const classElements = element.querySelectorAll(classSelector);
-            classElements.forEach(elem => {
-                if (!counted.has(elem)) {
-                    keywordStripCount++;
-                    counted.add(elem);
-                }
-            });
-
-            // すべてのdata-*属性を走査してキーワードが含まれるか確認
-            const allElements = element.querySelectorAll('*');
-            allElements.forEach(elem => {
-                if (counted.has(elem)) return;
-                
-                // 要素の属性をすべて走査
-                for (let i = 0; i < elem.attributes.length; i++) {
-                    const attr = elem.attributes[i];
-                    // data-で始まる属性のみチェック
-                    if (attr.name.startsWith('data-')) {
-                        if (attr.name.toLowerCase().includes(keyword.toLowerCase())) {
-                            keywordStripCount++;
-                            counted.add(elem);
-                            break;
-                        }
-                    }
-                }
-            });
-        }
+        keywordStripCount = collectKeywordElements(element, keywords).size;
     }
 
     return {
@@ -325,20 +275,7 @@ export function cleanseContent(element: Element, options: CleanseOptions = {}): 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = [
-            'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
-            'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
-            'rireki', 'torihiki', 'zandaka', 'hoken', 'address',
-            'credit-card', 'cc-number', 'card-expiry', 'cvv', 'cvc', 'security-code',
-            'bank-account', 'routing-number', 'iban', 'swift', 'bic',
-            'mynumber', 'my-number', 'personal-number', 'social-security', 'ssn',
-            'passport', 'driver-license', 'license-number',
-            'email', 'phone', 'tel-number', 'mobile',
-            'birth-date', 'birthday', 'age', 'gender',
-            'postal-code', 'zip-code', 'prefecture', 'city',
-            'medical', 'patient-id', 'insurance',
-            'crypto', 'wallet', 'private-key', 'seed-phrase'
-        ]
+        keywords = DEFAULT_KEYWORDS
     } = options;
 
     let hardStripRemoved = 0;
