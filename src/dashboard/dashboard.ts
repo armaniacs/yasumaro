@@ -44,6 +44,7 @@ import { extractDomain, isDomainAllowed } from '../utils/domainUtils.js';
 import { DEFAULT_CATEGORIES, getAllCategories } from '../utils/tagUtils.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
+import { computeCleansingStats, renderStatsSummary, renderFunnelChart, makeCleansingProgressBar } from './cleansingStatsView.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -68,6 +69,27 @@ function initSidebarNav(): void {
           panel.classList.remove('active');
         }
       });
+
+      // AI Summary Cleansingパネル表示時にCanvas再描画（display:none時はwidth=0になるため）
+      if (targetPanelId === 'panel-ai-summary-cleansing') {
+        requestAnimationFrame(() => {
+          getSavedUrlEntries().then(panelEntries => {
+            const summaryEl = document.getElementById('cleansingStatsSummary') as HTMLElement | null;
+            const chartEl = document.getElementById('cleansingFunnelChart') as HTMLCanvasElement | null;
+            if (!summaryEl) return;
+            const stats = computeCleansingStats(panelEntries);
+            renderStatsSummary(summaryEl, stats);
+            if (chartEl) {
+              if (stats.count === 0) {
+                chartEl.style.display = 'none';
+              } else {
+                chartEl.style.display = 'block';
+                renderFunnelChart(chartEl, stats);
+              }
+            }
+          }).catch(() => { /* ignore */ });
+        });
+      }
     });
   });
 }
@@ -1163,6 +1185,12 @@ async function initHistoryPanel(): Promise<void> {
         }
       }
 
+      // プログレスバー追加（案C）— 既存テキスト行の下に追加
+      const progressBar = makeCleansingProgressBar(entry);
+      if (progressBar) {
+        info.appendChild(progressBar);
+      }
+
       // タグバッジを追加
       const tagBadges = makeTagBadges(tags, url);
       if (tagBadges) {
@@ -1376,7 +1404,25 @@ async function initHistoryPanel(): Promise<void> {
     }
   }
 
+  // AI Summary Cleansingパネルの統計サマリー・ファネルチャートを更新
+  function updateCleansingStatsPanel(panelEntries: import('../utils/storageUrls.js').SavedUrlEntry[]): void {
+    const summaryEl = document.getElementById('cleansingStatsSummary') as HTMLElement | null;
+    const chartEl = document.getElementById('cleansingFunnelChart') as HTMLCanvasElement | null;
+    if (!summaryEl) return;
+    const stats = computeCleansingStats(panelEntries);
+    renderStatsSummary(summaryEl, stats);
+    if (chartEl) {
+      if (stats.count === 0) {
+        chartEl.style.display = 'none';
+      } else {
+        chartEl.style.display = 'block';
+        renderFunnelChart(chartEl, stats);
+      }
+    }
+  }
+
   applyFilters();
+  updateCleansingStatsPanel(entries);
 
   // タグパネルからのナビゲーションイベントを受信
   document.addEventListener('navigate-to-tag', (e: Event) => {

@@ -556,11 +556,22 @@
       <!-- AI Summary Cleansing Settings Panel -->
       <section id="panel-ai-summary-cleansing" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI要約クレンジング</h2>
+
+        <!-- 削減率統計サマリー（案A） -->
+        <div id="cleansingStatsSummary" class="cleansing-stats-summary" aria-live="polite">
+          <!-- JS で動的に描画 -->
+        </div>
+
+        <!-- ファネルチャート（案B） -->
+        <canvas id="cleansingFunnelChart" class="cleansing-funnel-chart" width="480" height="200" aria-label="クレンジング段階別バイト削減チャート" role="img">
+          クレンジング段階別バイト削減の視覚的表示
+        </canvas>
+
         <p class="panel-description" data-i18n="aiSummaryCleansingTabPanelDescription">AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。</p>
 
         <!-- AI要約クレンジング有効化 -->
         <div class="form-group">
-          <fieldset id="aiSummaryCleansingFieldset" style="border: none; padding: 0; margin: 0;">
+          <fieldset id="aiSummaryCleansingFieldset">
             <legend class="visually-hidden" data-i18n="aiSummaryCleansingLegend">AI要約クレンジング設定</legend>
             <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
             <div class="mb-8">
