@@ -221,6 +221,33 @@ describe('contentCleaner', () => {
             expect(balanceDiv).toBeNull();
         });
 
+        it('should remove elements with ID containing "credit-card"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div id="credit-card">1234-5678-9012-3456</div>';
+            const removed = stripKeywordElements(container, ['credit-card']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('credit-card');
+        });
+
+        it('should remove elements with class containing "passport"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div class="passport">AB1234567</div>';
+            const removed = stripKeywordElements(container, ['passport']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('passport');
+        });
+
+        it('should remove elements with ID containing "my-number"', () => {
+            const container = document.getElementById('test-container')!;
+            container.innerHTML = '<div id="my-number-field">123456789012</div>';
+            const removed = stripKeywordElements(container, ['my-number']);
+
+            expect(removed).toBe(1);
+            expect(container.innerHTML).not.toContain('my-number');
+        });
+
         it('should remove elements with class containing "meisai"', () => {
             const container = document.getElementById('test-container')!;
             const removed = stripKeywordElements(container, ['meisai']);
@@ -355,6 +382,19 @@ describe('contentCleaner', () => {
 
             // デフォルトキーワードに含まれるものが削除される
             expect(result.keywordStripRemoved).toBeGreaterThan(0);
+        });
+
+        test('new keywords are correctly stripped', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div id="credit-card">1234-5678-9012-3456</div>
+                <div class="passport">AB1234567</div>
+                <div id="my-number">123456789012</div>
+            `;
+
+            const result = cleanseContent(div);
+            expect(result.totalRemoved).toBe(3);
+            expect(div.innerHTML).not.toContain('credit-card');
         });
 
         it('should return zero when both disabled', () => {
