@@ -430,6 +430,18 @@ describe('contentCleaner', () => {
             expect(result.keywordStripRemoved).toBe(2);
         });
 
+        test('context validation - strip elements with sensitive content', () => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div id="password-field">My password is secret123</div>
+                <div id="account-balance">Balance: $1000</div>
+            `;
+
+            const result = cleanseContent(div);
+            // 機密コンテンツを含む要素は削除
+            expect(div.innerHTML).not.toContain('secret123');
+        });
+
         it('should return zero when both disabled', () => {
             const container = document.getElementById('test-container')!;
             const result = cleanseContent(container, {
