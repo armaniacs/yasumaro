@@ -213,7 +213,20 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address']
+        keywords = [
+            'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
+            'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
+            'rireki', 'torihiki', 'zandaka', 'hoken', 'address',
+            'credit-card', 'cc-number', 'card-expiry', 'cvv', 'cvc', 'security-code',
+            'bank-account', 'routing-number', 'iban', 'swift', 'bic',
+            'mynumber', 'my-number', 'personal-number', 'social-security', 'ssn',
+            'passport', 'driver-license', 'license-number',
+            'email', 'phone', 'tel-number', 'mobile',
+            'birth-date', 'birthday', 'age', 'gender',
+            'postal-code', 'zip-code', 'prefecture', 'city',
+            'medical', 'patient-id', 'insurance',
+            'crypto', 'wallet', 'private-key', 'seed-phrase'
+        ]
     } = options;
 
     let hardStripCount = 0;
@@ -275,7 +288,20 @@ export function cleanseContent(element: Element, options: CleanseOptions = {}): 
     const {
         hardStripEnabled = true,
         keywordStripEnabled = true,
-        keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address']
+        keywords = [
+            'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
+            'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
+            'rireki', 'torihiki', 'zandaka', 'hoken', 'address',
+            'credit-card', 'cc-number', 'card-expiry', 'cvv', 'cvc', 'security-code',
+            'bank-account', 'routing-number', 'iban', 'swift', 'bic',
+            'mynumber', 'my-number', 'personal-number', 'social-security', 'ssn',
+            'passport', 'driver-license', 'license-number',
+            'email', 'phone', 'tel-number', 'mobile',
+            'birth-date', 'birthday', 'age', 'gender',
+            'postal-code', 'zip-code', 'prefecture', 'city',
+            'medical', 'patient-id', 'insurance',
+            'crypto', 'wallet', 'private-key', 'seed-phrase'
+        ]
     } = options;
 
     let hardStripRemoved = 0;
