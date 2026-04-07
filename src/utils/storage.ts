@@ -165,7 +165,11 @@ export const StorageKeys = {
     AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received', // 当月受信トークン数
     AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count', // 当月リクエスト数
     AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start', // レート制限ウィンドウ開始時刻
-    AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count' // 現在のウィンドウ内リクエスト数
+    AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count', // 現在のウィンドウ内リクエスト数
+    // Text Quality
+    CONTENT_DEDUP_ENABLED: 'content_dedup_enabled',     // センテンス冗長除去（デフォルト: true）
+    CONTENT_DEDUP_THRESHOLD: 'content_dedup_threshold', // Jaccard類似度閾値（デフォルト: 0.7）
+    SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled' // 日本語文末正規化（デフォルト: true）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -283,6 +287,10 @@ export interface StorageKeyValues {
     [StorageKeys.AI_USAGE_REQUEST_COUNT]: number; // 当月リクエスト数
     [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: number; // レート制限ウィンドウ開始時刻
     [StorageKeys.AI_RATE_LIMIT_COUNT]: number; // 現在のウィンドウ内リクエスト数
+    // Text Quality
+    [StorageKeys.CONTENT_DEDUP_ENABLED]: boolean;
+    [StorageKeys.CONTENT_DEDUP_THRESHOLD]: number;
+    [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型
@@ -840,7 +848,7 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: true,      // ナビゲーション・フッター削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,       // コメント・ソーシャルウィジェット削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false,         // 積極的クレンジング（デフォルト: 無効）
-    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: false, // リンク密度フィルタ（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: true,  // リンク密度フィルタ（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]: false, // JSON-LD構造化データ削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: false, // 遅延読み込み要素削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: false, // スキップリンク削除（デフォルト: 無効）
@@ -865,7 +873,11 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_USAGE_TOKENS_RECEIVED]: 0, // 当月受信トークン数（初期値: 0）
     [StorageKeys.AI_USAGE_REQUEST_COUNT]: 0, // 当月リクエスト数（初期値: 0）
     [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: 0, // レート制限ウィンドウ開始時刻（初期値: 0）
-    [StorageKeys.AI_RATE_LIMIT_COUNT]: 0 // 現在のウィンドウ内リクエスト数（初期値: 0）
+    [StorageKeys.AI_RATE_LIMIT_COUNT]: 0, // 現在のウィンドウ内リクエスト数（初期値: 0）
+    // Text Quality
+    [StorageKeys.CONTENT_DEDUP_ENABLED]: true,    // センテンス冗長除去（デフォルト: 有効）
+    [StorageKeys.CONTENT_DEDUP_THRESHOLD]: 0.7,   // Jaccard類似度閾値（デフォルト: 0.7）
+    [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: true  // 日本語文末正規化（デフォルト: 有効）
 };
 
 /**

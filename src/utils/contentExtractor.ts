@@ -12,6 +12,7 @@
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from './contentCleaner.js';
 import { logSanitize, logDebug } from './logger.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from './aiSummaryCleaner.js';
+import { deduplicateContent } from './contentDeduplicator.js';
 
 /**
  * 文字列のUTF-8バイト数を計算（Blob生成を避けて効率化）
@@ -391,7 +392,8 @@ export interface ExtractResult {
 export function extractMainContent(
     maxChars: number = 10000,
     cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean; returnInfo?: boolean } = { cleanseEnabled: false },
-    aiSummaryCleanseOptions: AiSummaryCleanseOptions & { aiSummaryCleanseEnabled?: boolean } = { aiSummaryCleanseEnabled: false }
+    aiSummaryCleanseOptions: AiSummaryCleanseOptions & { aiSummaryCleanseEnabled?: boolean } = { aiSummaryCleanseEnabled: false },
+    dedupOptions: { dedupEnabled?: boolean; dedupThreshold?: number } = {}
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
@@ -676,6 +678,12 @@ export function extractMainContent(
         .replace(/\n{3,}/g, '\n\n')   // 3行以上の連続空白行を2行に圧縮
         .replace(/\s+/g, ' ')          // 残りの空白を単一スペースに
         .trim();
+
+    // センテンスレベル冗長除去（MMR的Redundancy Reduction）
+    const { dedupEnabled = false, dedupThreshold = 0.7 } = dedupOptions;
+    if (dedupEnabled) {
+        content = deduplicateContent(content, { threshold: dedupThreshold });
+    }
 
     // 最大文字数で切り詰め
     if (content.length > maxChars) {

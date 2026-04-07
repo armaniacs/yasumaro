@@ -17,6 +17,12 @@ const keywordEnabledCheckbox = document.getElementById('contentStripKeywordEnabl
 const keywordsTextarea = document.getElementById('contentStripKeywords') as HTMLTextAreaElement | null;
 const resetBtn = document.getElementById('contentStripResetKeywords');
 
+// テキスト品質設定
+const dedupEnabledCheckbox = document.getElementById('content-dedup-enabled') as HTMLInputElement | null;
+const dedupThresholdSlider = document.getElementById('content-dedup-threshold') as HTMLInputElement | null;
+const dedupThresholdValue = document.getElementById('contentDedupThresholdValue');
+const normalizeEnabledCheckbox = document.getElementById('summary-normalize-enabled') as HTMLInputElement | null;
+
 export async function loadContentSettings(): Promise<void> {
     const settings = await getSettings();
 
@@ -34,6 +40,19 @@ export async function loadContentSettings(): Promise<void> {
     if (keywordsTextarea) {
         const keywords = settings[StorageKeys.CONTENT_STRIP_KEYWORDS] || DEFAULT_KEYWORDS;
         keywordsTextarea.value = keywords.join('\n');
+    }
+
+    // テキスト品質設定
+    if (dedupEnabledCheckbox) {
+        dedupEnabledCheckbox.checked = settings[StorageKeys.CONTENT_DEDUP_ENABLED] ?? true;
+    }
+    if (dedupThresholdSlider) {
+        const threshold = String(settings[StorageKeys.CONTENT_DEDUP_THRESHOLD] ?? 0.7);
+        dedupThresholdSlider.value = threshold;
+        if (dedupThresholdValue) dedupThresholdValue.textContent = threshold;
+    }
+    if (normalizeEnabledCheckbox) {
+        normalizeEnabledCheckbox.checked = settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] ?? true;
     }
 }
 
@@ -61,6 +80,11 @@ async function saveContentSettings(): Promise<void> {
 
             settings[StorageKeys.CONTENT_STRIP_KEYWORDS] = keywords.length > 0 ? keywords : DEFAULT_KEYWORDS;
         }
+
+        // テキスト品質設定
+        settings[StorageKeys.CONTENT_DEDUP_ENABLED] = dedupEnabledCheckbox?.checked ?? true;
+        settings[StorageKeys.CONTENT_DEDUP_THRESHOLD] = parseFloat(dedupThresholdSlider?.value ?? '0.7');
+        settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = normalizeEnabledCheckbox?.checked ?? true;
 
         // 設定を保存
         await saveSettings(settings);
@@ -93,6 +117,13 @@ export function init(): void {
                 keywordsTextarea.value = DEFAULT_KEYWORDS.join('\n');
             }
             showStatus('contentSettingsStatus', getMessage('contentStripResetKeywords') || 'デフォルトに戻しました', 'success');
+        });
+    }
+
+    // スライダーのリアルタイム表示
+    if (dedupThresholdSlider && dedupThresholdValue) {
+        dedupThresholdSlider.addEventListener('input', () => {
+            dedupThresholdValue.textContent = dedupThresholdSlider.value;
         });
     }
 

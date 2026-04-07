@@ -14,6 +14,7 @@ import { isPrivateIpAddress } from '../utils/fetch.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+import { normalizeJapaneseSummary } from '../utils/summaryNormalizer.js';
 import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 // P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
 import { getPermissionManager } from '../utils/permissionManager.js';
@@ -845,7 +846,9 @@ export class RecordingLogic {
         };
       }
 
-      const summary = pipelineResult.summary || 'Summary not available.';
+      const rawSummary = pipelineResult.summary || 'Summary not available.';
+      const summaryNormalizeEnabled = settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] ?? true;
+      const summary = summaryNormalizeEnabled ? normalizeJapaneseSummary(rawSummary) : rawSummary;
 
       // 4. Format Markdown
       const markdown = this._formatMarkdown(data.title, data.url, summary, pipelineResult.tags);
