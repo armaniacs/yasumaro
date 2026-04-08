@@ -1613,6 +1613,51 @@
   "aiSummaryCleansingPlatformDesc": {
     "message": "プラットフォーム固有のノイズ（5ch/be画像 YouTubeコメント欄等）を削除します。"
   },
+  "aggressiveModeTitle": {
+    "message": "Aggressive モード（数値ベース）"
+  },
+  "aiSummaryCleansingTextDensityDesc": {
+    "message": "テキスト密度フィルタリング（リンク文字が70%以上の要素を削除）。"
+  },
+  "aiSummaryCleansingLinkRatioThreshold": {
+    "message": "リンク密度閾値"
+  },
+  "aiSummaryCleansingShortSeqDesc": {
+    "message": "短文要素の連続削除（30文字以下の要素が5つ以上連続した場合）。"
+  },
+  "aiSummaryCleansingShortTextThreshold": {
+    "message": "短文閾値"
+  },
+  "aiSummaryCleansingShortSeqCount": {
+    "message": "連続数閾値"
+  },
+  "aiSummaryCleansingSymbolLineDesc": {
+    "message": "短文要素の連続削除（30文字以下の要素が5つ以上連続した場合）。"
+  },
+  "aiSummaryCleansingSymbolLineDesc": {
+    "message": "特殊記号行の削除（| » ◀ ▶ 等のみの行）。"
+  },
+  "aiSummaryCleansingLinkParaDesc": {
+    "message": "リンクのみ段落の削除（50文字以下のリンクのみ段落）。"
+  },
+  "aiSummaryCleansingEnhancedHiddenDesc": {
+    "message": "非表示要素強化削除（visibility:hidden、opacity:0、template、slot等）。"
+  },
+  "aiSummaryCleansingEmptyElemDesc": {
+    "message": "空要素の削除（テキスト、子要素共にないdiv/span/p/section/article）。"
+  },
+  "jpSpecificTitle": {
+    "message": "日本ウェブサイト特有"
+  },
+  "aiSummaryCleansingJpLayoutDesc": {
+    "message": "JP BEM系レイアウトパターン（l-footer、p-entry__footer、c-button等）。"
+  },
+  "aiSummaryCleansingJpNavigationDesc": {
+    "message": "JP ナビ頻出語（global-nav、gnav、breadcrumb等）。"
+  },
+  "aiSummaryCleansingAuthorDesc": {
+    "message": "執筆者・メタ情報（author-profile、post-date、tag-list等）。"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },

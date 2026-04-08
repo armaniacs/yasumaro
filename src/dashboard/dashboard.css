@@ -3050,6 +3050,35 @@ details[open] .advanced-details-summary {
   border-radius: 8px;
 }
 
+.cleansing-group-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+  margin: 16px 0 8px 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-primary-border);
+}
+
+.threshold-slider {
+  margin: 8px 0 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.threshold-slider .slider {
+  flex: 1;
+  max-width: 150px;
+  height: 4px;
+  cursor: pointer;
+}
+
+.threshold-slider label {
+  min-width: 140px;
+}
+
 .cleansing-stats-summary.no-data {
   display: block;
   text-align: center;

@@ -746,6 +746,61 @@
             <input type="checkbox" id="ai-summary-cleansing-platform">
             <label for="ai-summary-cleansing-platform" class="inline-label" data-i18n="aiSummaryCleansingPlatformDesc">プラットフォーム固有の噪声（5ch/be画像 YouTubeコメント欄等）を削除します。</label>
           </div>
+          <!-- NEW: 9 additional cleansing options -->
+          <div class="cleansing-group-title" data-i18n="aggressiveModeTitle">Aggressive モード（数値ベース）</div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-text-density">
+            <label for="ai-summary-cleansing-text-density" class="inline-label" data-i18n="aiSummaryCleansingTextDensityDesc">テキスト密度フィルタリング（リンク文字が70%以上の要素を削除）。</label>
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-link-ratio-threshold">リンク密度閾値: <span id="link-ratio-threshold-value">70</span>%</label>
+              <input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="50" max="100" value="70" class="slider">
+            </div>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-short-seq">
+            <label for="ai-summary-cleansing-short-seq" class="inline-label" data-i18n="aiSummaryCleansingShortSeqDesc">短文要素の連続削除（30文字以下の要素が5つ以上連続した場合）。</label>
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-short-text-threshold">短文閾値: <span id="short-text-threshold-value">30</span>文字</label>
+              <input type="range" id="ai-summary-cleansing-short-text-threshold" min="10" max="100" value="30" class="slider">
+            </div>
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-short-seq-count">連続数閾値: <span id="short-seq-count-value">5</span>つ</label>
+              <input type="range" id="ai-summary-cleansing-short-seq-count" min="2" max="20" value="5" class="slider">
+            </div>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-symbol-line">
+            <label for="ai-summary-cleansing-symbol-line" class="inline-label" data-i18n="aiSummaryCleansingSymbolLineDesc">特殊記号行の削除（| » ◀ ▶ 等のみの行）。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-link-para">
+            <label for="ai-summary-cleansing-link-para" class="inline-label" data-i18n="aiSummaryCleansingLinkParaDesc">リンクのみ段落の削除（50文字以下のリンクのみ段落）。</label>
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-link-para-threshold">段落長閾値: <span id="link-para-threshold-value">50</span>文字</label>
+              <input type="range" id="ai-summary-cleansing-link-para-threshold" min="20" max="100" value="50" class="slider">
+            </div>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-enhanced-hidden" checked>
+            <label for="ai-summary-cleansing-enhanced-hidden" class="inline-label" data-i18n="aiSummaryCleansingEnhancedHiddenDesc">非表示要素強化削除（visibility:hidden、opacity:0、template、slot等）。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-empty-elem" checked>
+            <label for="ai-summary-cleansing-empty-elem" class="inline-label" data-i18n="aiSummaryCleansingEmptyElemDesc">空要素の削除（テキスト、子要素共にないdiv/span/p/section/article）。</label>
+          </div>
+          <div class="cleansing-group-title" data-i18n="jpSpecificTitle">日本ウェブサイト特有</div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-jp-layout">
+            <label for="ai-summary-cleansing-jp-layout" class="inline-label" data-i18n="aiSummaryCleansingJpLayoutDesc">JP BEM系レイアウトパターン（l-footer、p-entry__footer、c-button等）。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-jp-navigation">
+            <label for="ai-summary-cleansing-jp-navigation" class="inline-label" data-i18n="aiSummaryCleansingJpNavigationDesc">JP ナビ頻出語（global-nav、gnav、breadcrumb等）。</label>
+          </div>
+          <div class="mb-8">
+            <input type="checkbox" id="ai-summary-cleansing-author">
+            <label for="ai-summary-cleansing-author" class="inline-label" data-i18n="aiSummaryCleansingAuthorDesc">執筆者・メタ情報（author-profile、post-date、tag-list等）。</label>
+          </div>
         </div>
 
         <div class="form-group">

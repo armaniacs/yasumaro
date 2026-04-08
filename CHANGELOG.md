@@ -2,9 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-## [5.1.0] - 2026-04-08
+## [5.1.0] - 2026-04-09
 
 ### Fixed
 
@@ -13,9 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **クレンジング削減率の可視化（案A）**: AI Summary Cleansingパネルに集計サマリーカードを追加。平均削減率・累計削減量・集計対象件数を3枚のカードで一覧表示。データなし時は「削減率データがありません」と案内
-- **ファネルチャート（案B）**: 4段階のバイト削減（DOM全体→候補絞込→Content Cleansing→AI要約クレンジング）をCanvas APIで横型バーチャートとして描画。最終段を緑色で強調。データなし時はCanvas要素ごと非表示
-- **インラインプログレスバー（案C）**: 履歴リストの各エントリに削減率プログレスバーを追加。既存テキスト行はそのまま残し、その下に `[██████░░░░] XX% 削減` 形式のバーを表示
+- クレンジング削減率の可視化
 - **パネル切り替え時の再描画**: サイドバーで「AI Summary Cleansing」パネルに切り替えるたびに最新データを取得してCanvas再描画（`display:none` 時の幅ゼロ問題を `requestAnimationFrame` で回避）
 
 ## [5.0.1] - 2026-04-08

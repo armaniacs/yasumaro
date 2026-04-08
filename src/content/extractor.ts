@@ -36,6 +36,23 @@ const AI_SUMMARY_CLEANSING_PAGINATION = 'ai_summary_cleansing_pagination';
 const AI_SUMMARY_CLEANSING_SNS_PROMO = 'ai_summary_cleansing_sns_promo';
 const AI_SUMMARY_CLEANSING_POPUP = 'ai_summary_cleansing_popup';
 const AI_SUMMARY_CLEANSING_PLATFORM = 'ai_summary_cleansing_platform';
+// NEW: 9つの追加ストレージキー
+const AI_SUMMARY_CLEANSING_TEXT_DENSITY = 'ai_summary_cleansing_text_density';
+const AI_SUMMARY_CLEANSING_SHORT_SEQ = 'ai_summary_cleansing_short_seq';
+const AI_SUMMARY_CLEANSING_SYMBOL_LINE = 'ai_summary_cleansing_symbol_line';
+const AI_SUMMARY_CLEANSING_LINK_PARA = 'ai_summary_cleansing_link_para';
+const AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN = 'ai_summary_cleansing_enhanced_hidden';
+const AI_SUMMARY_CLEANSING_EMPTY_ELEM = 'ai_summary_cleansing_empty_elem';
+const AI_SUMMARY_CLEANSING_JP_LAYOUT = 'ai_summary_cleansing_jp_layout';
+const AI_SUMMARY_CLEANSING_JP_NAVIGATION = 'ai_summary_cleansing_jp_navigation';
+const AI_SUMMARY_CLEANSING_AUTHOR = 'ai_summary_cleansing_author';
+// Threshold settings
+const AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD = 'ai_summary_cleansing_link_ratio_threshold';
+const AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD = 'ai_summary_cleansing_short_text_threshold';
+const AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT = 'ai_summary_cleansing_short_seq_count';
+const AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD = 'ai_summary_cleansing_link_para_threshold';
+// Custom patterns
+const AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS = 'ai_summary_cleansing_custom_patterns';
 const CONTENT_DEDUP_ENABLED = 'content_dedup_enabled';
 const CONTENT_DEDUP_THRESHOLD = 'content_dedup_threshold';
 
@@ -76,6 +93,23 @@ let aiSummaryCleansingPagination = false;
 let aiSummaryCleansingSnsPromo = false;
 let aiSummaryCleansingPopup = true;
 let aiSummaryCleansingPlatform = false;
+// NEW: 9つの追加クレンジングオプション
+let aiSummaryCleansingTextDensity = false;
+let aiSummaryCleansingShortSeq = false;
+let aiSummaryCleansingSymbolLine = false;
+let aiSummaryCleansingLinkPara = false;
+let aiSummaryCleansingEnhancedHidden = false;
+let aiSummaryCleansingEmptyElem = false;
+let aiSummaryCleansingJpLayout = false;
+let aiSummaryCleansingJpNavigation = false;
+let aiSummaryCleansingAuthor = false;
+// Threshold settings
+let aiSummaryCleansingLinkRatioThreshold = 70;
+let aiSummaryCleansingShortTextThreshold = 30;
+let aiSummaryCleansingShortSeqCount = 5;
+let aiSummaryCleansingLinkParaThreshold = 50;
+// Custom patterns
+let aiSummaryCleansingCustomPatterns: string[] = [];
 
 // 【テキスト品質設定】: 冗長除去の有効化状態
 let contentDedupEnabled = true;
@@ -96,8 +130,7 @@ export let lastByteStats: { pageBytes: number; candidateBytes: number; originalB
     cleansedBytes: 0
 };
 // 【AI要約クレンジング情報】: 直近の抽出で適用されたAI要約クレンジング情報を保持
-export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
-    aiSummaryOriginalBytes: 0,
+export let lastAiSummaryCleansedStats: { aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
     aiSummaryCleansedBytes: 0,
     aiSummaryCleansedElements: 0,
     aiSummaryCleansedReason: 'none'
@@ -148,7 +181,24 @@ function extractPageContent(): string {
         paginationEnabled: aiSummaryCleansingPagination,
         snsPromoEnabled: aiSummaryCleansingSnsPromo,
         popupEnabled: aiSummaryCleansingPopup,
-        platformEnabled: aiSummaryCleansingPlatform
+        platformEnabled: aiSummaryCleansingPlatform,
+        // NEW: 9つの追加クレンジングオプション
+        textDensityEnabled: aiSummaryCleansingTextDensity,
+        shortSeqEnabled: aiSummaryCleansingShortSeq,
+        symbolLineEnabled: aiSummaryCleansingSymbolLine,
+        linkParaEnabled: aiSummaryCleansingLinkPara,
+        enhancedHiddenEnabled: aiSummaryCleansingEnhancedHidden,
+        emptyElemEnabled: aiSummaryCleansingEmptyElem,
+        jpLayoutEnabled: aiSummaryCleansingJpLayout,
+        jpNavigationEnabled: aiSummaryCleansingJpNavigation,
+        authorEnabled: aiSummaryCleansingAuthor,
+        // Threshold settings
+        linkRatioThreshold: aiSummaryCleansingLinkRatioThreshold,
+        shortTextThreshold: aiSummaryCleansingShortTextThreshold,
+        shortSeqCount: aiSummaryCleansingShortSeqCount,
+        linkParaThreshold: aiSummaryCleansingLinkParaThreshold,
+        // Custom patterns
+        customPatterns: aiSummaryCleansingCustomPatterns
     };
     // テキスト品質設定（冗長除去）
     const dedupOptions = {
@@ -173,7 +223,6 @@ function extractPageContent(): string {
         };
         // AI要約クレンジング情報を保存
         lastAiSummaryCleansedStats = {
-            aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
             aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
             aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
             aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
@@ -293,6 +342,53 @@ function loadSettings(): Promise<void> {
             }
             if (s[AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
                 aiSummaryCleansingPlatform = s[AI_SUMMARY_CLEANSING_PLATFORM];
+            }
+            // NEW: 9つの追加クレンジングオプション
+            if (s[AI_SUMMARY_CLEANSING_TEXT_DENSITY] !== undefined) {
+                aiSummaryCleansingTextDensity = s[AI_SUMMARY_CLEANSING_TEXT_DENSITY];
+            }
+            if (s[AI_SUMMARY_CLEANSING_SHORT_SEQ] !== undefined) {
+                aiSummaryCleansingShortSeq = s[AI_SUMMARY_CLEANSING_SHORT_SEQ];
+            }
+            if (s[AI_SUMMARY_CLEANSING_SYMBOL_LINE] !== undefined) {
+                aiSummaryCleansingSymbolLine = s[AI_SUMMARY_CLEANSING_SYMBOL_LINE];
+            }
+            if (s[AI_SUMMARY_CLEANSING_LINK_PARA] !== undefined) {
+                aiSummaryCleansingLinkPara = s[AI_SUMMARY_CLEANSING_LINK_PARA];
+            }
+            if (s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] !== undefined) {
+                aiSummaryCleansingEnhancedHidden = s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN];
+            }
+            if (s[AI_SUMMARY_CLEANSING_EMPTY_ELEM] !== undefined) {
+                aiSummaryCleansingEmptyElem = s[AI_SUMMARY_CLEANSING_EMPTY_ELEM];
+            }
+            if (s[AI_SUMMARY_CLEANSING_JP_LAYOUT] !== undefined) {
+                aiSummaryCleansingJpLayout = s[AI_SUMMARY_CLEANSING_JP_LAYOUT];
+            }
+            if (s[AI_SUMMARY_CLEANSING_JP_NAVIGATION] !== undefined) {
+                aiSummaryCleansingJpNavigation = s[AI_SUMMARY_CLEANSING_JP_NAVIGATION];
+            }
+            if (s[AI_SUMMARY_CLEANSING_AUTHOR] !== undefined) {
+                aiSummaryCleansingAuthor = s[AI_SUMMARY_CLEANSING_AUTHOR];
+            }
+            // Threshold settings (with bounds validation)
+            if (s[AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
+                aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
+            }
+            if (s[AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] !== undefined) {
+                aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
+            }
+            if (s[AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] !== undefined) {
+                aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
+            }
+            if (s[AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
+                aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
+            }
+            // Custom patterns
+            if (s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] !== undefined) {
+                aiSummaryCleansingCustomPatterns = Array.isArray(s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]) 
+                    ? s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] as string[] 
+                    : [];
             }
             // テキスト品質設定を取得
             if (s[CONTENT_DEDUP_ENABLED] !== undefined) {
@@ -471,14 +567,13 @@ async function reportValidVisit(): Promise<void> {
             type: 'VALID_VISIT',
             payload: {
                 content: content,
-                pageBytes: lastByteStats.pageBytes,
-                candidateBytes: lastByteStats.candidateBytes,
-                originalBytes: lastByteStats.originalBytes,
-                cleansedBytes: lastByteStats.cleansedBytes,
-                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes,
-                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes,
-                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason,
+                pageBytes: lastByteStats.pageBytes || undefined,
+                candidateBytes: lastByteStats.candidateBytes || undefined,
+                originalBytes: lastByteStats.originalBytes || undefined,
+                cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
                 aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
             }
         });

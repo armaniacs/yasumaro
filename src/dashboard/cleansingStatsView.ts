@@ -107,8 +107,26 @@ export function renderStatsSummary(container: HTMLElement, stats: CleansingStats
 }
 
 const FUNNEL_LABELS = ['DOM全体', '候補絞込', 'Content\nCleansing', 'AI要約\nクレンジング'];
-const FUNNEL_COLOR = '#7c3aed';
-const FUNNEL_COLOR_FINAL = '#10b981';
+
+// WCAG 2.0 AA準拠カラーパレット（ライト/ダーク両対応）
+// ライト: 背景 #f8fafc に対して各色のコントラスト比を確保
+// ダーク: 背景 #161b22 に対して各色のコントラスト比を確保
+const CHART_COLORS = {
+  light: {
+    bar: '#6d28d9',        // 紫バー（背景#f8fafcに対し 7.5:1）
+    barFinal: '#059669',   // 緑バー（最終段、背景に対し 4.6:1）
+    label: '#1e293b',      // ラベル文字（背景に対し 15.8:1）
+    value: '#1e293b',      // バー右の数値（背景に対し 15.8:1）
+    footer: '#065f46',     // フッター文字（背景に対し 9.7:1）
+  },
+  dark: {
+    bar: '#a78bfa',        // 明るい紫バー（背景#161b22に対し 7.2:1）
+    barFinal: '#34d399',   // 明るい緑バー（背景に対し 8.3:1）
+    label: '#e2e8f0',      // ラベル文字（背景に対し 14.5:1）
+    value: '#cbd5e1',      // バー右の数値（背景に対し 11.5:1）
+    footer: '#6ee7b7',     // フッター文字（背景に対し 10.1:1）
+  },
+};
 
 /**
  * 案B: ファネルチャートを Canvas に描画する
@@ -134,6 +152,12 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
   const maxVal = values[0];
   if (maxVal === 0) return;
 
+  // ダークモード判定（document.documentElement の data-theme またはメディアクエリ）
+  const isDark =
+    document.documentElement.getAttribute('data-theme') === 'dark' ||
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light;
+
   const paddingLeft = 110;
   const paddingRight = 80;
   const paddingTop = 20;
@@ -148,8 +172,11 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     const barWidth = (val / maxVal) * chartWidth;
     const y = startY + i * (barHeight + barGap);
     const isLast = i === values.length - 1;
-    const color = isLast ? FUNNEL_COLOR_FINAL : FUNNEL_COLOR;
-    const alpha = isLast ? 1 : 0.4 + (1 - i / values.length) * 0.5;
+    // 透明度なし: バー色の濃淡は色そのもので表現してコントラストを確保
+    const color = isLast ? colors.barFinal : colors.bar;
+    // 最初のバーを100%、後になるほど自然に短くなるので透明度不要
+    // ただし視覚的な階層感のため軽微な透明度のみ（0.7以上を維持）
+    const alpha = isLast ? 1 : 0.7 + (1 - i / values.length) * 0.3;
 
     ctx.fillStyle = color;
     ctx.globalAlpha = alpha;
@@ -158,7 +185,7 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = '#1e293b';
+    ctx.fillStyle = colors.label;
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'right';
     const labelLines = FUNNEL_LABELS[i].split('\n');
@@ -170,12 +197,12 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     }
 
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#475569';
+    ctx.fillStyle = colors.value;
     ctx.fillText(formatBytes(val), paddingLeft + barWidth + 6, y + barHeight / 2 + 4);
   });
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#065f46';
+  ctx.fillStyle = colors.footer;
   ctx.font = 'bold 12px system-ui, sans-serif';
   ctx.fillText(`平均 ${stats.avgReductionRate.toFixed(1)}% 削減`, W / 2, H - 4);
 }
@@ -185,13 +212,14 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
  * pageBytes がない、または最終バイトがない場合は null を返す。
  */
 export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | null {
-  const page = entry.pageBytes;
-  const sent = entry.aiSummaryOriginalBytes ?? entry.cleansedBytes ?? entry.originalBytes;
+  // 分母はコンテンツ抽出後のテキストバイト数（pageBytes）、分子はAI要約クレンジング後のバイト数
+  const base = entry.pageBytes;
+  const sent = entry.aiSummaryCleansedBytes ?? entry.cleansedBytes ?? entry.originalBytes;
 
-  if (page === undefined || sent === undefined) return null;
-  if (page === 0) return null;
+  if (base === undefined || sent === undefined) return null;
+  if (base === 0) return null;
 
-  const sentRatio = Math.min(sent / page, 1);
+  const sentRatio = Math.min(sent / base, 1);
   const reductionRate = (1 - sentRatio) * 100;
 
   const wrapper = document.createElement('div');

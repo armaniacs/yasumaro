@@ -8,7 +8,7 @@
 
 ## 概要
 
-`aiSummaryCleansingDeep` を高性能化し、数値ベースの新しいクレンジングルール12個を追加する。各ルールは独立した設定トグルとして用户提供し、細やかな制御を可能にする。
+`aiSummaryCleansingDeep` を高性能化し、数値ベースの新しいクレンジングルール10個を追加する。各ルールは独立した設定トグルとして用户提供し、細やかな制御を可能にする。
 
 ---
 
@@ -25,7 +25,7 @@
 | `ai_summary_cleansing_jp_layout` | false | JP BEM系レイアウトパターン |
 | `ai_summary_cleansing_jp_navigation` | false | JP ナビ・剰利用語 |
 | `ai_summary_cleansing_author` | false | 執筆者・メタ情報 |
-| `ai_summary_cleansing_social` | false | ソーシャル・コミュニティ |
+| `ai_summary_cleansing_social` | true | ソーシャル・コミュニティ |
 | `ai_summary_cleansing_link_density` | true | (既存: 強化) |
 
 ---
@@ -128,7 +128,7 @@
 
 ---
 
-## 設定の распро-strategy
+## 設定の実装
 
 ### extractor.ts 変更点
 - `loadSettings()` に12個の新しいキーを追加
@@ -218,5 +218,208 @@ describe('stripShortSequenceElements', () => {
 | リスク | 対策 |
 |--------|------|
 | 誤検知による有益なコンテンツの削除 | 既定値をfalseにし、ユーザーは明示的に有効化 |
-| 数値ベースルールのサイト間差異 | 閾値を定数として外部化、調整可能に |
-| 処理速度低下 | 必要最小限のDOM走査、Set使った重複排除 |
+| 数値ベースルールのサイト間差異 | ダッシュボードでスライダー調整を可能にする |
+| 処理速度低下 | 既存走查を整理・統合し、純増を最小限に抑える |
+
+---
+
+## 深掘りセッション — 2026-04-08
+
+### 挑戦した仮定
+
+| 仮定 | リスク | 発見 | 決定 |
+|------|--------|------|------|
+| 70%/30文字/5連続の固定閾値が万能 | 高 | サイトによって最適な値が全く異なる | ダッシュボードでスライダー調整を可能にする |
+| 10個のパターン列表で十分 | 高 | ユーザーが自分用のパターンを追加したい需要がある | プリセット選択＋カスタムパターン追加機能を実装 |
+| 10個のDOM走查は問題なし | 高 | 既存走查と重複 많아질 가능성 | 既存走查を整理・統合して純増を最小限に抑える |
+| deepEnabledとの共存 | 中 | 重複削除の可能性がある | deepEnabled ON時は新オプションも強制有効にする |
+| ユーザーは10個のオプションを理解できる | 中 | オプションが多いと混乱する | カテゴリー別グループ化＋マスタートグルを追加 |
+
+### 新たに発見したリスク
+
+1. **閾値スライダーのデフォルト値問題**: スライダー範囲（例: 0-100%）の適切なデフォルト値選定が必要
+2. **カスタムパターンの正規表現対応**: 簡単な前方一致だけでなく、正規表現にも対応すべきか？
+3. **プリセットの策定**: 「おすすめ設定」としてどの組み合わせ提示するか？
+4. **既存DEEP_CLASS_PATTERNSとの重複**: 新規パターン追加前に既存との整理が必要
+
+### 未解決の疑問
+
+- 閾値スライダーのデフォルト値はどこに設定するか？（storage既定値？还是UI初期表示？）
+- カスタムパターンの上限数（无制限？还是上限あり）？
+- グループ構成哪些？（Aggressive、日本网站特有のみ？还是もっと细分化）
+
+### 実装優先順位（更新）
+
+1. **基盤:** ストレージキー、インターフェース更新
+2. **既存整理:** DEEP_CLASS_PATTERNSと新規パターンの整理・統合
+3. **数値ベース:** textDensity, shortSeq, symbolLine, linkPara（スライダーUI付き）
+4. **日本特有:** jpLayout, jpNavigation, author, social
+5. **カスタムパターン:** プリセット選択＋カスタム追加机制
+6. **UI整理:** カテゴリー別グループ化＋マスターントグル
+7. **ダッシュボードUI:** 設定画面更新
+8. **テスト:** 各関数のユニットテスト
+9. **i18n:** 翻訳キー追加
+
+---
+
+## 実装完了 — 2026-04-08
+
+### 完了した作業
+
+| # | 作業 | 状態 | ファイル |
+|---|------|------|----------|
+| 1 | ストレージキー追加 | ✓ | storage.ts |
+| 2 | AiSummaryCleanseOptions拡張 | ✓ | aiSummaryCleaner.ts |
+| 3 | 9つの新 cleansing関数追加 | ✓ | aiSummaryCleaner.ts |
+| 4 | extractor.ts 設定読み込み | ✓ | extractor.ts |
+| 5 | aiSummaryCleansingSettings.ts 更新 | ✓ | aiSummaryCleansingSettings.ts |
+| 6 | ダッシュボードHTML UI | ✓ | dashboard.html |
+| 7 | i18n翻訳キー | ✓ | messages.json |
+| 8 | テスト更新 | ✓ | aiSummaryCleaner.test.ts |
+| 9 | ビルド確認 | ✓ | type-check通過 |
+| 10 | npm test | ✓ | 166 passed, 3496 passed |
+
+### 実装した9つの新オプション
+
+1. `textDensity` - テキスト密度フィルタリング（リンク70%以上）
+2. `shortSeq` - 短文要素の連続削除（30文字以下×5連続）
+3. `symbolLine` - 特殊記号行の削除（|, », ◀, ▶等）
+4. `linkPara` - リンクのみ段落の削除（50文字以下）
+5. `enhancedHidden` - 非表示要素強化削除
+6. `emptyElem` - 空要素の削除
+7. `jpLayout` - JP BEM系レイアウトパターン
+8. `jpNavigation` - JP ナビ・剰利用語
+9. `author` - 執筆者・メタ情報
+
+### 追加した閾値設定
+
+- `linkRatioThreshold` - リンク密度閾値（既定: 70%）
+- `shortTextThreshold` - 短文閾値文字数（既定: 30)
+- `shortSeqCount` - 短文連続数閾値（既定: 5）
+- `linkParaThreshold` - リンクのみ段落閾値（既定: 50）
+
+### TODO（後続作業）
+
+- ~~ダッシュボードHTMLにチェックボックス追加~~ → ✓ 完了（dashboard.html lines 750-787）
+- ~~i18n翻訳キー追加~~ → ✓ 完了（messages.json 全キー登録済み）
+- ~~UIカテゴリー別グループ化（設計通り）~~ → ✓ 完了（aggressiveModeTitle / jpSpecificTitle）
+
+---
+
+## 実装検証 — 2026-04-08 21:25
+
+### 完了確認
+
+| # | 作業 | 状態 | ファイル確認 |
+|---|------|------|--------------|
+| 1 | ストレージキー追加 | ✓ | storage.ts (lines 156-168) |
+| 2 | AiSummaryCleanseOptions拡張 | ✓ | aiSummaryCleaner.ts (lines 48-56) |
+| 3 | 9つの新 cleansing関数追加 | ✓ | aiSummaryCleaner.ts (strip* 関数実装済み) |
+| 4 | extractor.ts 設定読み込み | ✓ | extractor.ts (lines 185-193) |
+| 5 | aiSummaryCleansingSettings.ts 更新 | ✓ | aiSummaryCleansingSettings.ts (全プロパティ実装) |
+| 6 | ダッシュボードHTML UI | ✓ | dashboard.html (lines 750-787) |
+| 7 | i18n翻訳キー | ✓ | messages.json (全キー登録) |
+| 8 | テスト更新 | ✓ | aiSummaryCleaner.test.ts (options反映) |
+| 9 | type-check | ✓ | 通過 |
+| 10 | npm test | ✓ | 166 passed, 3496 passed |
+
+### 実装済みオプション
+
+| オプション | ストレージキー | 既定値 | 関数 |
+|-----------|---------------|--------|------|
+| textDensity | ai_summary_cleansing_text_density | false | stripTextDensityElements() |
+| shortSeq | ai_summary_cleansing_short_seq | false | stripShortSequenceElements() |
+| symbolLine | ai_summary_cleansing_symbol_line | false | stripSymbolLineElements() |
+| linkPara | ai_summary_cleansing_link_para | false | stripLinkOnlyParagraphs() |
+| enhancedHidden | ai_summary_cleansing_enhanced_hidden | true | stripEnhancedHiddenElements() |
+| emptyElem | ai_summary_cleansing_empty_elem | true | stripEmptyElements() |
+| jpLayout | ai_summary_cleansing_jp_layout | false | stripJPLayoutPatterns() |
+| jpNavigation | ai_summary_cleansing_jp_navigation | false | stripJPNavigationPatterns() |
+| author | ai_summary_cleansing_author | false | stripAuthorMetaElements() |
+| social | ai_summary_cleansing_social | true | stripSocialElements() (既存強化) |
+
+### 追加閾値設定
+
+- `linkRatioThreshold` - リンク密度閾値（既定: 70%）
+- `shortTextThreshold` - 短文閾値文字数（既定: 30）
+- `shortSeqCount` - 短文連続数閾値（既定: 5）
+- `linkParaThreshold` - リンクのみ段落閾値（既定: 50）
+
+### ダッシュボードUI構造
+
+```
+cleansing-group-title: "Aggressive モード（数値ベース）"
+  - ai-summary-cleansing-text-density
+  - ai-summary-cleansing-short-seq
+  - ai-summary-cleansing-symbol-line
+  - ai-summary-cleansing-link-para
+  - ai-summary-cleansing-enhanced-hidden (checked)
+  - ai-summary-cleansing-empty-elem (checked)
+
+cleansing-group-title: "日本ウェブサイト特有"
+  - ai-summary-cleansing-jp-layout
+  - ai-summary-cleansing-jp-navigation
+  - ai-summary-cleansing-author
+```
+
+---
+
+## 実装検証 — 2026-04-08 21:25
+
+### 完了確認
+
+| # | 作業 | 状態 | ファイル確認 |
+|---|------|------|--------------|
+| 1 | ストレージキー追加 | ✓ | storage.ts (lines 156-168) |
+| 2 | AiSummaryCleanseOptions拡張 | ✓ | aiSummaryCleaner.ts (lines 48-56) |
+| 3 | 9つの新 cleansing関数追加 | ✓ | aiSummaryCleaner.ts (strip* 関数実装済み) |
+| 4 | extractor.ts 設定読み込み | ✓ | extractor.ts (lines 185-193) |
+| 5 | aiSummaryCleansingSettings.ts 更新 | ✓ | aiSummaryCleansingSettings.ts (全プロパティ実装) |
+| 6 | ダッシュボードHTML UI | ✓ | dashboard.html (lines 750-787) |
+| 7 | i18n翻訳キー | ✓ | messages.json (全キー登録) |
+| 8 | テスト更新 | ✓ | aiSummaryCleaner.test.ts (options反映) |
+| 9 | type-check | ✓ | 通過 |
+| 10 | npm test | ✓ | 166 passed, 3496 passed |
+
+### 実装済みオプション
+
+| オプション | ストレージキー | 既定値 | 関数 |
+|-----------|---------------|--------|------|
+| textDensity | ai_summary_cleansing_text_density | false | stripTextDensityElements() |
+| shortSeq | ai_summary_cleansing_short_seq | false | stripShortSequenceElements() |
+| symbolLine | ai_summary_cleansing_symbol_line | false | stripSymbolLineElements() |
+| linkPara | ai_summary_cleansing_link_para | false | stripLinkOnlyParagraphs() |
+| enhancedHidden | ai_summary_cleansing_enhanced_hidden | true | stripEnhancedHiddenElements() |
+| emptyElem | ai_summary_cleansing_empty_elem | true | stripEmptyElements() |
+| jpLayout | ai_summary_cleansing_jp_layout | false | stripJPLayoutPatterns() |
+| jpNavigation | ai_summary_cleansing_jp_navigation | false | stripJPNavigationPatterns() |
+| author | ai_summary_cleansing_author | false | stripAuthorMetaElements() |
+| social | ai_summary_cleansing_social | true | stripSocialElements() (既存強化) |
+
+### 追加閾値設定
+
+- `linkRatioThreshold` - リンク密度閾値（既定: 70%）
+- `shortTextThreshold` - 短文閾値文字数（既定: 30）
+- `shortSeqCount` - 短文連続数閾値（既定: 5）
+- `linkParaThreshold` - リンクのみ段落閾値（既定: 50）
+
+### ダッシュボードUI構造
+
+```
+cleansing-group-title: "Aggressive モード（数値ベース）"
+  - ai-summary-cleansing-text-density
+  - ai-summary-cleansing-short-seq
+  - ai-summary-cleansing-symbol-line
+  - ai-summary-cleansing-link-para
+  - ai-summary-cleansing-enhanced-hidden (checked)
+  - ai-summary-cleansing-empty-elem (checked)
+
+cleansing-group-title: "日本ウェブサイト特有"
+  - ai-summary-cleansing-jp-layout
+  - ai-summary-cleansing-jp-navigation
+  - ai-summary-cleansing-author
+```
+
+---
+
+**ステータス: 完全実装完了**

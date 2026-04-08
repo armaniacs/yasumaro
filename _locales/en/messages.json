@@ -1613,6 +1613,51 @@
   "aiSummaryCleansingPlatformDesc": {
     "message": "Remove platform-specific noise (5ch/be images, YouTube comments, etc.)."
   },
+  "aggressiveModeTitle": {
+    "message": "Aggressive Mode (Numeric)"
+  },
+  "aiSummaryCleansingTextDensityDesc": {
+    "message": "Text density filtering (remove elements where link text is 70%+)."
+  },
+  "aiSummaryCleansingLinkRatioThreshold": {
+    "message": "Link density threshold"
+  },
+  "aiSummaryCleansingShortSeqDesc": {
+    "message": "Short sequence removal (remove when 5+ elements with ≤30 chars consecutive)."
+  },
+  "aiSummaryCleansingShortTextThreshold": {
+    "message": "Short text threshold"
+  },
+  "aiSummaryCleansingShortSeqCount": {
+    "message": "Consecutive count threshold"
+  },
+  "aiSummaryCleansingSymbolLineDesc": {
+    "message": "Short sequence removal (remove when 5+ elements with ≤30 chars consecutive)."
+  },
+  "aiSummaryCleansingSymbolLineDesc": {
+    "message": "Symbol-only line removal (lines with only | » ◀ ▶ etc.)."
+  },
+  "aiSummaryCleansingLinkParaDesc": {
+    "message": "Link-only paragraph removal (paragraphs ≤50 chars with only links)."
+  },
+  "aiSummaryCleansingEnhancedHiddenDesc": {
+    "message": "Enhanced hidden element removal (visibility:hidden, opacity:0, template, slot)."
+  },
+  "aiSummaryCleansingEmptyElemDesc": {
+    "message": "Empty element removal (div/span/p/section/article with no text or children)."
+  },
+  "jpSpecificTitle": {
+    "message": "Japanese Website Specific"
+  },
+  "aiSummaryCleansingJpLayoutDesc": {
+    "message": "JP BEM layout patterns (l-footer, p-entry__footer, c-button, etc.)."
+  },
+  "aiSummaryCleansingJpNavigationDesc": {
+    "message": "JP navigation patterns (global-nav, gnav, breadcrumb, etc.)."
+  },
+  "aiSummaryCleansingAuthorDesc": {
+    "message": "Author and meta info (author-profile, post-date, tag-list, etc.)."
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },
