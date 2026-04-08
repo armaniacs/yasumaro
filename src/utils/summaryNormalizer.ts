@@ -26,18 +26,27 @@ export function normalizeJapaneseSummary(summary: string): string {
   if (!summary.trim()) return summary;
   if (!isJapanese(summary)) return summary;
 
-  // 安全な5パターンのみ変換（ます/ました/ましょう系は誤変換リスクがあるため除外）
-  // 長い形を先に処理してオーバーマッチを防ぐ
-  return summary
+return summary
+    .replace(/ておりました。/g, 'ておる。')
+    .replace(/ておりました$/g, 'ておる')
     .replace(/ていました。/g, 'ていた。')
     .replace(/ていました$/g, 'ていた')
-    .replace(/ています。/g, 'ている。')
-    .replace(/ています$/g, 'ている')
+    .replace(/んでした。/g, 'んでいた。')
+    .replace(/んでした$/g, 'んでいた')
+    .replace(/んでいました。/g, 'んでとしていた。')
+    .replace(/んでいました$/g, 'んでとしていた')
+    .replace(/んでいます。/g, 'んでいる。')
+    .replace(/んでいます$/g, 'んでいる')
+    .replace(/てみます。/g, 'てみる。')
+    .replace(/てみます$/g, 'てみる')
+    .replace(/てしまいます。/g, 'てしまう。')
+    .replace(/てしまいます$/g, 'てしまう')
+    .replace(/て来过ます。/g, 'て来る。')
+    .replace(/て来过ます$/g, 'て来る')
     .replace(/でした。/g, 'だった。')
     .replace(/でした$/g, 'だった')
     .replace(/でしょう。/g, 'だろう。')
     .replace(/でしょう$/g, 'だろう')
     .replace(/です。/g, 'だ。')
     .replace(/です$/g, 'だ');
-  // 注意: ます。→ る。/ ました。→ た。/ ましょう。→ よう。は除外（語幹によっては不自然になるため）
 }

@@ -19,21 +19,61 @@ export interface DeduplicateOptions {
  * テキストをセンテンス単位に分割する。
  * 日本語（。！？）と英語（. ! ?）の句点で分割し、空文字列を除去する。
  */
-function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[。！？.!?])\s*/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+function splitSentences(text: string): { sentence: string; delimiter: string }[] {
+  const result: { sentence: string; delimiter: string }[] = [];
+  const regex = /([。！？.!?])\s*/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      result.push({
+        sentence: text.slice(lastIndex, match.index + match[1].length),
+        delimiter: match[0].slice(match[1].length),
+      });
+    }
+    lastIndex = match.index + match[1].length;
+  }
+
+  if (lastIndex < text.length) {
+    result.push({ sentence: text.slice(lastIndex), delimiter: '' });
+  }
+
+  return result;
+}
+
+/**
+ * Check if text contains Japanese characters
+ */
+function containsJapanese(text: string): boolean {
+  return /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]/.test(text);
+}
+
+/**
+ * Get character bigrams from text (useful for Japanese similarity)
+ */
+function getBigrams(text: string): string[] {
+  const bigrams: string[] = [];
+  for (let i = 0; i < text.length - 1; i++) {
+    bigrams.push(text[i] + text[i + 1]);
+  }
+  return bigrams;
 }
 
 /**
  * センテンスを単語（2文字以上のトークン）の Set に変換する。
  */
 function toWordSet(sentence: string): Set<string> {
-  const words = sentence
+  const cleaned = sentence.replace(/[。！？.!?]$/, '');
+  const words = cleaned
     .toLowerCase()
     .split(/[\s\u3000\u3001\u3002\uff0c\uff0e\uff01\uff1f、。，．！？,.!?\-_:;()\[\]{}""''\u300c\u300d]+/)
     .filter(w => w.length >= 2);
+
+  if (containsJapanese(cleaned)) {
+    words.push(...getBigrams(cleaned));
+  }
+
   return new Set(words);
 }
 
@@ -52,36 +92,28 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   return intersection / union;
 }
 
-/**
- * テキストのセンテンスレベル冗長除去を行う。
- * 既出センテンスとの類似度が threshold 以上のセンテンスを除去する。
- *
- * @param text - 入力テキスト
- * @param options - オプション
- * @returns 冗長除去後のテキスト
- */
 export function deduplicateContent(text: string, options: DeduplicateOptions = {}): string {
   const { threshold = 0.7, minLength = 10 } = options;
 
   if (!text.trim()) return text;
 
-  const sentences = splitSentences(text);
-  if (sentences.length <= 1) return text;
+  if (threshold === 0) return text;
 
-  const kept: string[] = [];
+  const sentenceParts = splitSentences(text);
+  if (sentenceParts.length <= 1) return text;
+
+  const kept: { sentence: string; delimiter: string }[] = [];
   const keptSets: Set<string>[] = [];
 
-  for (const sentence of sentences) {
-    // 短すぎるセンテンスは無条件で保持
-    if (sentence.length < minLength) {
-      kept.push(sentence);
-      keptSets.push(toWordSet(sentence));
+  for (const part of sentenceParts) {
+    if (part.sentence.length < minLength) {
+      kept.push(part);
+      keptSets.push(toWordSet(part.sentence));
       continue;
     }
 
-    const wordSet = toWordSet(sentence);
+    const wordSet = toWordSet(part.sentence);
 
-    // 既出センテンスとの類似度を確認
     let isDuplicate = false;
     for (const existingSet of keptSets) {
       if (jaccardSimilarity(wordSet, existingSet) >= threshold) {
@@ -91,10 +123,10 @@ export function deduplicateContent(text: string, options: DeduplicateOptions = {
     }
 
     if (!isDuplicate) {
-      kept.push(sentence);
+      kept.push(part);
       keptSets.push(wordSet);
     }
   }
 
-  return kept.join(' ');
+  return kept.map(k => k.sentence + k.delimiter).join('');
 }

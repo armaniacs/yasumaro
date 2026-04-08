@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [5.1.0] - 2026-04-08
 
+### Fixed
+
+- **contentDeduplicator改善**: 文区切りの保持、日本語テキストのbigram類似度追加、threshold=0の特別処理
+- **summaryNormalizer改善**: 正規表現パターンを`ています`→`ている`から`んでいます`→`さんに変更`
+
 ### Added
 
 - **クレンジング削減率の可視化（案A）**: AI Summary Cleansingパネルに集計サマリーカードを追加。平均削減率・累計削減量・集計対象件数を3枚のカードで一覧表示。データなし時は「削減率データがありません」と案内

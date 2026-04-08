@@ -12,7 +12,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 describe('Manifest - Host Permissions Minimization', () => {
@@ -111,6 +111,95 @@ describe('Manifest - Host Permissions Minimization', () => {
         const hasDomain = optionalPermissions.some((perm: string) => perm.includes(domain));
         expect(hasDomain).toBe(true);
       }
+    });
+  });
+
+  describe('web_accessible_resources', () => {
+    /**
+     * content/extractor.js から始まる import チェーンを再帰的に解決し、
+     * utils/*.js の全依存ファイルが web_accessible_resources に登録されているかを検証する。
+     *
+     * このテストは「contentDeduplicator.js を web_accessible_resources に追加し忘れた」
+     * ようなミスを防ぐためのリグレッションテスト。
+     */
+    function collectImports(filePath: string, visited = new Set<string>()): Set<string> {
+      if (visited.has(filePath)) return visited;
+      if (!existsSync(filePath)) return visited;
+
+      visited.add(filePath);
+      const content = readFileSync(filePath, 'utf8');
+
+      // import { ... } from './foo.js' または import { ... } from '../utils/foo.js' の形式を解析
+      const importRegex = /^import\s+.*?\s+from\s+['"]([^'"]+)['"]/gm;
+      let match;
+      while ((match = importRegex.exec(content)) !== null) {
+        const importPath = match[1];
+        // 相対パスのみ追跡
+        if (!importPath.startsWith('.')) continue;
+
+        const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+        const resolved = join(dir, importPath).replace(/\\/g, '/');
+        collectImports(resolved, visited);
+      }
+      return visited;
+    }
+
+    function getWebAccessibleResources(manifest: any): string[] {
+      const resources: string[] = [];
+      for (const entry of manifest.web_accessible_resources ?? []) {
+        resources.push(...(entry.resources ?? []));
+      }
+      return resources;
+    }
+
+    it('content/extractor.js の全 import チェーンが web_accessible_resources に登録されている', () => {
+      const distDir = join(process.cwd(), 'dist');
+      const entryPoint = join(distDir, 'content/extractor.js');
+
+      if (!existsSync(entryPoint)) {
+        // dist/ がない場合（CI初回など）はスキップ
+        console.warn('dist/content/extractor.js not found — run npm run build first');
+        return;
+      }
+
+      const allFiles = collectImports(entryPoint);
+      const accessible = getWebAccessibleResources(manifest);
+
+      // dist/ 以下の相対パスに変換して検証
+      const missing: string[] = [];
+      for (const absPath of allFiles) {
+        if (!absPath.startsWith(distDir)) continue;
+        const rel = absPath.replace(distDir + '/', '');
+        // content/ エントリ自体は対象外（extractor.js 自身は登録済み確認済み）
+        // utils/*.js のみ検証対象
+        if (!rel.startsWith('utils/')) continue;
+        if (!accessible.includes(rel)) {
+          missing.push(rel);
+        }
+      }
+
+      expect(missing).toEqual([]);
+    });
+
+    it('web_accessible_resources に登録された utils/*.js が dist/ に実際に存在する', () => {
+      const distDir = join(process.cwd(), 'dist');
+      if (!existsSync(distDir)) {
+        console.warn('dist/ not found — run npm run build first');
+        return;
+      }
+
+      const accessible = getWebAccessibleResources(manifest);
+      const utilsResources = accessible.filter((r: string) => r.startsWith('utils/') && r.endsWith('.js'));
+
+      const missing: string[] = [];
+      for (const rel of utilsResources) {
+        const absPath = join(distDir, rel);
+        if (!existsSync(absPath)) {
+          missing.push(rel);
+        }
+      }
+
+      expect(missing).toEqual([]);
     });
   });
 
