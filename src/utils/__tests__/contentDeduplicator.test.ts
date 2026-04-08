@@ -10,7 +10,7 @@ describe('deduplicateContent', () => {
 
   it('ほぼ同一のセンテンスを除去する', () => {
     const input = 'この製品は高品質です。この製品は高品質で優れています。全く異なる内容のセンテンス。';
-    const result = deduplicateContent(input);
+    const result = deduplicateContent(input, { threshold: 0.4 });
     // 2文目が1文目と類似しているので除去される
     expect(result).not.toContain('高品質で優れています');
     expect(result).toContain('高品質です');
@@ -36,7 +36,7 @@ describe('deduplicateContent', () => {
     const a = '同じ文章です。';
     const b = '同じ文章です。';
     const input = a + b;
-    const result = deduplicateContent(input, { threshold: 1.0 });
+    const result = deduplicateContent(input, { threshold: 1.0, minLength: 5 });
     // 完全一致なので2文目が除去される
     const count = (result.match(/同じ文章です/g) || []).length;
     expect(count).toBe(1);

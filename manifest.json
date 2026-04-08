@@ -114,6 +114,7 @@
         "utils/retryHelper.js",
         "utils/privacyStatusCodes.js",
         "utils/contentExtractor.js",
+        "utils/contentDeduplicator.js",
         "utils/contentCleaner.js",
         "utils/logger.js",
         "utils/piiSanitizer.js",
