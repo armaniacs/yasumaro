@@ -22,13 +22,24 @@ export interface AiSummaryCleansingSettings {
     lazyLoadEnabled: boolean;
     skipLinkEnabled: boolean;
     cardEnabled: boolean;
-    // NEW
+    // NEW: 6つの新しいオプション
     fixedEnabled: boolean;        // 固定要素削除（デフォルト: false）
     recommendEnabled: boolean;   // 推荐セクション削除（デフォルト: true）
     paginationEnabled: boolean;  // ページネーション削除（デフォルト: false）
     snsPromoEnabled: boolean;    // SNSプロモ削除（デフォルト: false）
     popupEnabled: boolean;       // ポップアップ削除（デフォルト: true）
     platformEnabled: boolean;    // プラットフォーム噪声削除（デフォルト: false）
+    // NEW: 9つの追加オプション
+    textDensityEnabled: boolean;      // テキスト密度フィルタリング（デフォルト: false）
+    shortSeqEnabled: boolean;        // 短文要素の連続削除（デフォルト: false）
+    symbolLineEnabled: boolean;      // 特殊記号行の削除（デフォルト: false）
+    linkParaEnabled: boolean;        // リンクのみ段落の削除（デフォルト: false）
+    linkParaThreshold: number;        // リンクのみ段落閾値（デフォルト: 50）
+    enhancedHiddenEnabled: boolean;  // 非表示要素強化削除（デフォルト: true）
+    emptyElemEnabled: boolean;       // 空要素の削除（デフォルト: true）
+    jpLayoutEnabled: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
+    jpNavigationEnabled: boolean;     // JP ナビ頻出語（デフォルト: false）
+    authorEnabled: boolean;         // 執筆者・メタ情報（デフォルト: false）
 }
 
 /**
@@ -56,7 +67,18 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         paginationEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION] ?? false,
         snsPromoEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO] ?? false,
         popupEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_POPUP] ?? true,
-        platformEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] ?? false
+        platformEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] ?? false,
+        // NEW: 9つの追加オプション
+        textDensityEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY] ?? false,
+        shortSeqEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ] ?? false,
+        symbolLineEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE] ?? false,
+        linkParaEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA] ?? false,
+        linkParaThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] ?? 50,
+        enhancedHiddenEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] ?? true,
+        emptyElemEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] ?? true,
+        jpLayoutEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] ?? false,
+        jpNavigationEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] ?? false,
+        authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false
     };
 }
 
@@ -85,6 +107,17 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO] = settings.snsPromoEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_POPUP] = settings.popupEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] = settings.platformEnabled;
+    // NEW: 9つの追加オプション
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY] = settings.textDensityEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ] = settings.shortSeqEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE] = settings.symbolLineEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA] = settings.linkParaEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] = settings.linkParaThreshold;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] = settings.enhancedHiddenEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] = settings.emptyElemEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] = settings.jpLayoutEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] = settings.jpNavigationEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] = settings.authorEnabled;
     await saveSettings(currentSettings);
 }
 
@@ -112,6 +145,16 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
     const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
     const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
+    // NEW: 9 additional options
+    const textDensityCheckbox = document.getElementById('ai-summary-cleansing-text-density') as HTMLInputElement;
+    const shortSeqCheckbox = document.getElementById('ai-summary-cleansing-short-seq') as HTMLInputElement;
+    const symbolLineCheckbox = document.getElementById('ai-summary-cleansing-symbol-line') as HTMLInputElement;
+    const linkParaCheckbox = document.getElementById('ai-summary-cleansing-link-para') as HTMLInputElement;
+    const enhancedHiddenCheckbox = document.getElementById('ai-summary-cleansing-enhanced-hidden') as HTMLInputElement;
+    const emptyElemCheckbox = document.getElementById('ai-summary-cleansing-empty-elem') as HTMLInputElement;
+    const jpLayoutCheckbox = document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement;
+    const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
+    const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -125,13 +168,23 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (lazyLoadCheckbox) lazyLoadCheckbox.checked = settings.lazyLoadEnabled;
     if (skipLinkCheckbox) skipLinkCheckbox.checked = settings.skipLinkEnabled;
     if (cardCheckbox) cardCheckbox.checked = settings.cardEnabled;
-    // NEW
+    // NEW: 6 options
     if (fixedCheckbox) fixedCheckbox.checked = settings.fixedEnabled;
     if (recommendCheckbox) recommendCheckbox.checked = settings.recommendEnabled;
     if (paginationCheckbox) paginationCheckbox.checked = settings.paginationEnabled;
     if (snsPromoCheckbox) snsPromoCheckbox.checked = settings.snsPromoEnabled;
     if (popupCheckbox) popupCheckbox.checked = settings.popupEnabled;
     if (platformCheckbox) platformCheckbox.checked = settings.platformEnabled;
+    // NEW: 9 additional options
+    if (textDensityCheckbox) textDensityCheckbox.checked = settings.textDensityEnabled;
+    if (shortSeqCheckbox) shortSeqCheckbox.checked = settings.shortSeqEnabled;
+    if (symbolLineCheckbox) symbolLineCheckbox.checked = settings.symbolLineEnabled;
+    if (linkParaCheckbox) linkParaCheckbox.checked = settings.linkParaEnabled;
+    if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.checked = settings.enhancedHiddenEnabled;
+    if (emptyElemCheckbox) emptyElemCheckbox.checked = settings.emptyElemEnabled;
+    if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
+    if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
+    if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
 
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
@@ -187,7 +240,18 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         paginationEnabled: paginationCheckbox?.checked ?? false,
         snsPromoEnabled: snsPromoCheckbox?.checked ?? false,
         popupEnabled: popupCheckbox?.checked ?? true,
-        platformEnabled: platformCheckbox?.checked ?? false
+        platformEnabled: platformCheckbox?.checked ?? false,
+        // NEW: 9つの追加オプション
+        textDensityEnabled: (document.getElementById('ai-summary-cleansing-text-density') as HTMLInputElement)?.checked ?? false,
+        shortSeqEnabled: (document.getElementById('ai-summary-cleansing-short-seq') as HTMLInputElement)?.checked ?? false,
+        symbolLineEnabled: (document.getElementById('ai-summary-cleansing-symbol-line') as HTMLInputElement)?.checked ?? false,
+        linkParaEnabled: (document.getElementById('ai-summary-cleansing-link-para') as HTMLInputElement)?.checked ?? false,
+        linkParaThreshold: parseInt((document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement)?.value || '50', 10),
+        enhancedHiddenEnabled: (document.getElementById('ai-summary-cleansing-enhanced-hidden') as HTMLInputElement)?.checked ?? true,
+        emptyElemEnabled: (document.getElementById('ai-summary-cleansing-empty-elem') as HTMLInputElement)?.checked ?? true,
+        jpLayoutEnabled: (document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement)?.checked ?? false,
+        jpNavigationEnabled: (document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement)?.checked ?? false,
+        authorEnabled: (document.getElementById('ai-summary-cleansing-author') as HTMLInputElement)?.checked ?? false
     };
 }
 
@@ -214,6 +278,16 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const snsPromoCheckbox = document.getElementById('ai-summary-cleansing-sns-promo') as HTMLInputElement;
     const popupCheckbox = document.getElementById('ai-summary-cleansing-popup') as HTMLInputElement;
     const platformCheckbox = document.getElementById('ai-summary-cleansing-platform') as HTMLInputElement;
+    // NEW: 9 additional options
+    const textDensityCheckbox = document.getElementById('ai-summary-cleansing-text-density') as HTMLInputElement;
+    const shortSeqCheckbox = document.getElementById('ai-summary-cleansing-short-seq') as HTMLInputElement;
+    const symbolLineCheckbox = document.getElementById('ai-summary-cleansing-symbol-line') as HTMLInputElement;
+    const linkParaCheckbox = document.getElementById('ai-summary-cleansing-link-para') as HTMLInputElement;
+    const enhancedHiddenCheckbox = document.getElementById('ai-summary-cleansing-enhanced-hidden') as HTMLInputElement;
+    const emptyElemCheckbox = document.getElementById('ai-summary-cleansing-empty-elem') as HTMLInputElement;
+    const jpLayoutCheckbox = document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement;
+    const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
+    const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
 
     if (fieldset) {
         fieldset.disabled = !enabled;
@@ -236,6 +310,15 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (snsPromoCheckbox) snsPromoCheckbox.disabled = !enabled;
     if (popupCheckbox) popupCheckbox.disabled = !enabled;
     if (platformCheckbox) platformCheckbox.disabled = !enabled;
+    if (textDensityCheckbox) textDensityCheckbox.disabled = !enabled;
+    if (shortSeqCheckbox) shortSeqCheckbox.disabled = !enabled;
+    if (symbolLineCheckbox) symbolLineCheckbox.disabled = !enabled;
+    if (linkParaCheckbox) linkParaCheckbox.disabled = !enabled;
+    if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.disabled = !enabled;
+    if (emptyElemCheckbox) emptyElemCheckbox.disabled = !enabled;
+    if (jpLayoutCheckbox) jpLayoutCheckbox.disabled = !enabled;
+    if (jpNavigationCheckbox) jpNavigationCheckbox.disabled = !enabled;
+    if (authorCheckbox) authorCheckbox.disabled = !enabled;
 }
 
 /**
@@ -274,13 +357,23 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-lazy-load',
         'ai-summary-cleansing-skip-link',
         'ai-summary-cleansing-card',
-        // NEW
+        // NEW: 6 options
         'ai-summary-cleansing-fixed',
         'ai-summary-cleansing-recommend',
         'ai-summary-cleansing-pagination',
         'ai-summary-cleansing-sns-promo',
         'ai-summary-cleansing-popup',
-        'ai-summary-cleansing-platform'
+        'ai-summary-cleansing-platform',
+        // NEW: 9 additional options
+        'ai-summary-cleansing-text-density',
+        'ai-summary-cleansing-short-seq',
+        'ai-summary-cleansing-symbol-line',
+        'ai-summary-cleansing-link-para',
+        'ai-summary-cleansing-enhanced-hidden',
+        'ai-summary-cleansing-empty-elem',
+        'ai-summary-cleansing-jp-layout',
+        'ai-summary-cleansing-jp-navigation',
+        'ai-summary-cleansing-author'
     ];
 
     for (const id of checkboxes) {

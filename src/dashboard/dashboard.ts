@@ -1104,7 +1104,7 @@ async function initHistoryPanel(): Promise<void> {
       }
 
       // ページ絞り込みバイト数を表示（pageBytes → candidateBytes）
-      if (pageBytes !== undefined && candidateBytes !== undefined && pageBytes > candidateBytes) {
+      if (pageBytes !== undefined && candidateBytes !== undefined) {
         const extractEl = document.createElement('div');
         extractEl.className = 'history-entry-token-reduction';
         const reduction = pageBytes - candidateBytes;
@@ -1119,15 +1119,15 @@ async function initHistoryPanel(): Promise<void> {
         cleansingEl.className = 'history-entry-token-reduction';
         const parts: string[] = [];
 
-        // トークン削減があった場合のみ表示
-        if (originalTokens !== undefined && cleansedTokens !== undefined && originalTokens !== cleansedTokens) {
+        // トークン情報があれば表示
+        if (originalTokens !== undefined && cleansedTokens !== undefined) {
           parts.push(`トークン: ${originalTokens} → ${cleansedTokens}`);
         }
 
-        // バイト削減があった場合のみ表示
-        if (originalBytes !== undefined && cleansedBytes !== undefined && originalBytes > cleansedBytes) {
+        // バイト情報があれば表示
+        if (originalBytes !== undefined && cleansedBytes !== undefined) {
           const reduction = originalBytes - cleansedBytes;
-          const reductionPercent = ((reduction / originalBytes) * 100).toFixed(1);
+          const reductionPercent = originalBytes > 0 ? ((reduction / originalBytes) * 100).toFixed(1) : '0.0';
           parts.push(`バイト: ${originalBytes} → ${cleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
         }
 
@@ -1138,16 +1138,17 @@ async function initHistoryPanel(): Promise<void> {
       }
 
       // AI要約クレンジングの統計情報を1行で表示
-      if (aiSummaryOriginalBytes !== undefined || aiSummaryCleansedBytes !== undefined || aiSummaryCleansedElements !== undefined || aiSummaryCleansedReason !== undefined) {
+      if (aiSummaryCleansedBytes !== undefined || aiSummaryCleansedElements !== undefined || aiSummaryCleansedReason !== undefined) {
         const aiSummaryCleansingEl = document.createElement('div');
         aiSummaryCleansingEl.className = 'history-entry-ai-summary-cleansing';
         const cleansingParts: string[] = [];
 
-        // バイト削減があった場合のみ表示
-        if (aiSummaryOriginalBytes !== undefined && aiSummaryCleansedBytes !== undefined && aiSummaryOriginalBytes > aiSummaryCleansedBytes) {
-          const reduction = aiSummaryOriginalBytes - aiSummaryCleansedBytes;
-          const reductionPercent = ((reduction / aiSummaryOriginalBytes) * 100).toFixed(1);
-          cleansingParts.push(`バイト: ${aiSummaryOriginalBytes} → ${aiSummaryCleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
+        // バイト情報があれば表示（左辺はcleansedBytes、なければoriginalBytes）
+        const aiBase = cleansedBytes ?? originalBytes ?? aiSummaryOriginalBytes;
+        if (aiBase !== undefined && aiSummaryCleansedBytes !== undefined) {
+          const reduction = aiBase - aiSummaryCleansedBytes;
+          const reductionPercent = aiBase > 0 ? ((reduction / aiBase) * 100).toFixed(1) : '0.0';
+          cleansingParts.push(`バイト: ${aiBase} → ${aiSummaryCleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
         }
 
         // N要素削除

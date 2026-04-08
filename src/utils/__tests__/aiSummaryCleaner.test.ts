@@ -170,10 +170,14 @@ describe('aiSummaryCleaner', () => {
             // NEW: recommendEnabled=true, popupEnabled=true are default
             expect(result.recommendRemoved).toBeGreaterThanOrEqual(0);
             expect(result.popupRemoved).toBeGreaterThanOrEqual(0);
+            // NEW: enhancedHiddenEnabled=true, emptyElemEnabled=true are default
+            expect(result.enhancedHiddenRemoved).toBeGreaterThanOrEqual(0);
+            expect(result.emptyElemRemoved).toBeGreaterThanOrEqual(0);
             expect(result.totalRemoved).toBe(
                 result.altRemoved + result.metadataRemoved + result.adsRemoved +
                 result.navRemoved + result.socialRemoved + result.deepRemoved +
-                result.recommendRemoved + result.popupRemoved
+                result.recommendRemoved + result.popupRemoved +
+                result.enhancedHiddenRemoved + result.emptyElemRemoved
             );
         });
 
@@ -201,7 +205,17 @@ describe('aiSummaryCleaner', () => {
                 paginationEnabled: false,
                 snsPromoEnabled: false,
                 popupEnabled: false,
-                platformEnabled: false
+                platformEnabled: false,
+                // NEW: 9つの追加オプション
+                textDensityEnabled: false,
+                shortSeqEnabled: false,
+                symbolLineEnabled: false,
+                linkParaEnabled: false,
+                enhancedHiddenEnabled: false,
+                emptyElemEnabled: false,
+                jpLayoutEnabled: false,
+                jpNavigationEnabled: false,
+                authorEnabled: false
             });
 
             expect(result.totalRemoved).toBe(0);

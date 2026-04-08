@@ -152,6 +152,23 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_SNS_PROMO: 'ai_summary_cleansing_sns_promo', // SNSプロモ削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_POPUP: 'ai_summary_cleansing_popup', // ポップアップ削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_PLATFORM: 'ai_summary_cleansing_platform', // プラットフォーム噪声削除（デフォルト: false）
+    // NEW: 9 additional cleansing options
+    AI_SUMMARY_CLEANSING_TEXT_DENSITY: 'ai_summary_cleansing_text_density', // テキスト密度フィルタリング（デフォルト: false）
+    AI_SUMMARY_CLEANSING_SHORT_SEQ: 'ai_summary_cleansing_short_seq', // 短文要素の連続削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_SYMBOL_LINE: 'ai_summary_cleansing_symbol_line', // 特殊記号行の削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_LINK_PARA: 'ai_summary_cleansing_link_para', // リンクのみ段落の削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN: 'ai_summary_cleansing_enhanced_hidden', // 非表示要素強化削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_EMPTY_ELEM: 'ai_summary_cleansing_empty_elem', // 空要素の削除（デフォルト: false）
+    AI_SUMMARY_CLEANSING_JP_LAYOUT: 'ai_summary_cleansing_jp_layout', // JP BEM系レイアウトパターン（デフォルト: false）
+    AI_SUMMARY_CLEANSING_JP_NAVIGATION: 'ai_summary_cleansing_jp_navigation', // JP ナビ・剰利用語（デフォルト: false）
+    AI_SUMMARY_CLEANSING_AUTHOR: 'ai_summary_cleansing_author', // 執筆者・メタ情報（デフォルト: false）
+    // Threshold settings for numeric cleansing
+    AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD: 'ai_summary_cleansing_link_ratio_threshold', // リンク密度閾値（デフォルト: 70）
+    AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD: 'ai_summary_cleansing_short_text_threshold', // 短文閾値文字数（デフォルト: 30）
+    AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT: 'ai_summary_cleansing_short_seq_count', // 短文連続数閾値（デフォルト: 5）
+    AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD: 'ai_summary_cleansing_link_para_threshold', // リンクのみ段落閾値（デフォルト: 50）
+    // Custom pattern settings
+    AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -273,6 +290,23 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: boolean;
+    // NEW: 9 additional cleansing options
+    [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: boolean;
+    // Threshold settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: number;
+    // Custom pattern settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: string; // ISO 8601形式
     [StorageKeys.TRANCO_DOMAINS]: string[]; // 保存された Tranco ドメインリスト
@@ -860,6 +894,23 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: false,  // SNSプロモ削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: true,       // ポップアップ削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: false,   // プラットフォーム噪声削除（デフォルト: 無効）
+    // NEW: 9 additional cleansing options
+    [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]: false,       // テキスト密度フィルタリング（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]: false,         // 短文要素の連続削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE]: false,      // 特殊記号行の削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA]: false,        // リンクのみ段落の削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]: false,    // 非表示要素強化削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM]: false,         // 空要素の削除（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: false,        // JP BEM系レイアウトパターン（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: false,     // JP ナビ・剰利用語（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: false,            // 執筆者・メタ情報（デフォルト: 無効）
+    // Threshold settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 70,  // リンク密度閾値（デフォルト: 70%）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30, // 短文閾値文字数（デフォルト: 30）
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,      // 短文連続数閾値（デフォルト: 5）
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: 50, // リンクのみ段落閾値（デフォルト: 50）
+    // Custom pattern settings
+    [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: [],      // カスタムパターン列表
     // Tranco List Update Notification (Phase 1)
     [StorageKeys.TRANCO_VERSION]: '', // 初期値は空.migration.ts で presetDomains.ts の TRANCO_VERSION を設定
     [StorageKeys.TRANCO_DOMAINS]: [], // 保存された Tranco ドメインリスト（初期値: 空）

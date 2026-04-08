@@ -3,7 +3,7 @@
  * 【機能概要】: AI要約に不要な情報を含む要素を削除する
  * 【設計方針】:
  *   - AI要約（generateSummary）に渡す前に適用
- *   - 画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェットを削除
+ *   - 画像alt属性、メタデータ、广告、ナビゲーション、ソーシャルウィジェットを削除
  *   - JSON-LD構造化データ、遅延読み込みコンテンツ、スキップリンク等的削除
  *   - 外部ライブラリ不使用（バンドルサイズ抑止）
  * 🟢
@@ -28,7 +28,7 @@ function buildClassIdSelectors(patterns: string[]): string {
 export interface AiSummaryCleanseOptions {
     altEnabled?: boolean;           // 画像alt属性削除
     metadataEnabled?: boolean;      // メタデータ削除
-    adsEnabled?: boolean;           // 広告関連要素削除
+    adsEnabled?: boolean;           // 广告関連要素削除
     navEnabled?: boolean;          // ナビゲーション・フッター削除
     socialEnabled?: boolean;       // コメント・ソーシャルウィジェット削除
     deepEnabled?: boolean;         // ディープクレンジング（aside/form/cookie/関連記事等）
@@ -37,13 +37,30 @@ export interface AiSummaryCleanseOptions {
     skipLinkEnabled?: boolean;     // スキップリンク削除
     cardEnabled?: boolean;         // 記事カード・リストアイテム削除
     linkDensityEnabled?: boolean;  // リンク密度の高いブロック削除（デフォルト: false）
-    // NEW
+    // NEW: 6つの新しいオプション
     fixedEnabled?: boolean;        // 固定要素削除（デフォルト: false）
     recommendEnabled?: boolean;   // 推荐セクション削除（デフォルト: true）
     paginationEnabled?: boolean;  // ページネーション削除（デフォルト: false）
     snsPromoEnabled?: boolean;    // SNSプロモ削除（デフォルト: false）
     popupEnabled?: boolean;       // ポップアップ削除（デフォルト: true）
     platformEnabled?: boolean;    // プラットフォーム噪声削除（デフォルト: false）
+    // NEW: 9つの追加オプション
+    textDensityEnabled?: boolean;      // テキスト密度フィルタリング（デフォルト: false）
+    shortSeqEnabled?: boolean;        // 短文要素の連続削除（デフォルト: false）
+    symbolLineEnabled?: boolean;      // 特殊記号行の削除（デフォルト: false）
+    linkParaEnabled?: boolean;        // リンクのみ段落の削除（デフォルト: false）
+    linkParaThreshold?: number;       // リンクのみ段落閾値（デフォルト: 50）
+    enhancedHiddenEnabled?: boolean;  // 非表示要素強化削除（デフォルト: true）
+    emptyElemEnabled?: boolean;       // 空要素の削除（デフォルト: true）
+    jpLayoutEnabled?: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
+    jpNavigationEnabled?: boolean;     // JP ナビ頻出語（デフォルト: false）
+    authorEnabled?: boolean;         // 執筆者・メタ情報（デフォルト: false）
+    // Threshold settings
+    linkRatioThreshold?: number;      // リンク密度閾値（デフォルト: 70）
+    shortTextThreshold?: number;       // 短文閾値文字数（デフォルト: 30）
+    shortSeqCount?: number;           // 短文連続数閾値（デフォルト: 5）
+    // Custom patterns
+    customPatterns?: string[];        // カスタムパターン列表
 }
 
 /**
@@ -52,7 +69,7 @@ export interface AiSummaryCleanseOptions {
 export interface AiSummaryCleanseResult {
     altRemoved: number;             // 画像alt属性削除数
     metadataRemoved: number;        // メタデータ削除数
-    adsRemoved: number;             // 広告関連要素削除数
+    adsRemoved: number;             // 广告関連要素削除数
     navRemoved: number;             // ナビゲーション・フッター削除数
     socialRemoved: number;          // ソーシャルウィジェット削除数
     deepRemoved: number;            // ディープクレンジング削除数
@@ -61,13 +78,24 @@ export interface AiSummaryCleanseResult {
     skipLinkRemoved?: number;       // スキップリンク削除数
     cardRemoved?: number;          // 記事カード・リストアイテム削除数
     linkDensityRemoved?: number;    // リンク密度ブロック削除数
-    // NEW
+    // NEW: 6つの新しいオプション
     fixedRemoved?: number;         // 固定要素削除数
     recommendRemoved?: number;     // 推荐セクション削除数
     paginationRemoved?: number;     // ページネーション削除数
     snsPromoRemoved?: number;       // SNSプロモ削除数
     popupRemoved?: number;          // ポップアップ削除数
     platformRemoved?: number;       // プラットフォーム噪声削除数
+    // NEW: 9つの追加オプション
+    textDensityRemoved?: number;        // テキスト密度削除数
+    shortSeqRemoved?: number;            // 短文連続削除数
+    symbolLineRemoved?: number;          // 特殊記号行削除数
+    linkParaRemoved?: number;            // リンクのみ段落削除数
+    linkParaThreshold?: number;          // リンクのみ段落閾値
+    enhancedHiddenRemoved?: number;     // 非表示要素強化削除数
+    emptyElemRemoved?: number;           // 空要素削除数
+    jpLayoutRemoved?: number;            // JP BEMレイアウト削除数
+    jpNavigationRemoved?: number;       // JP ナビ削除数
+    authorRemoved?: number;              // 執筆者・メタ削除数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数
@@ -1082,6 +1110,399 @@ function isPlatformNoise(elem: Element): boolean {
            id.includes('comment') || id.includes('related');
 }
 
+// ============================================================================
+// 9つの新しいクレンジング関数
+// ============================================================================
+
+/**
+ * テキスト密度が高い要素を削除（リンク文字が70%以上の要素）
+ * @param element - クレンジング対象のルート要素
+ * @param threshold - リンク密度閾値（デフォルト: 70%）
+ * @returns 削除した要素の数
+ */
+function stripTextDensityElements(element: Element, threshold: number = 70): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+    const ratio = threshold / 100;
+
+    const targets = element.querySelectorAll('ul, ol, div, nav');
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = elem.textContent || '';
+        const totalText = text.length;
+        if (totalText < 50) return;
+
+        let linkText = 0;
+        elem.querySelectorAll('a').forEach(a => {
+            linkText += (a.textContent || '').length;
+        });
+
+        if (totalText > 0 && linkText / totalText >= ratio) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * 短文要素の連続を削除
+ * @param element - クレンジング対象のルート要素
+ * @param shortThreshold - 短文閾値文字数（デフォルト: 30）
+ * @param seqCount - 連続数閾値（デフォルト: 5）
+ * @returns 削除した要素の数
+ */
+function stripShortSequenceElements(element: Element, shortThreshold: number = 30, seqCount: number = 5): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const targets = element.querySelectorAll('p, span, li, div');
+    const shortElements: Element[] = [];
+
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = (elem.textContent || '').trim();
+        if (text.length > 0 && text.length <= shortThreshold) {
+            shortElements.push(elem);
+        }
+    });
+
+    let consecutive = 0;
+    let lastParent: Element | null = null;
+
+    for (const elem of shortElements) {
+        const parent = elem.parentElement;
+        if (parent === lastParent) {
+            consecutive++;
+        } else {
+            consecutive = 1;
+            lastParent = parent;
+        }
+
+        if (consecutive >= seqCount) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    }
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * 特殊記号行を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripSymbolLineElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+    const symbolPattern = /^[|\►◀▶«»•·]+$/;
+
+    const targets = element.querySelectorAll('p, span, div, li');
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = (elem.textContent || '').trim();
+        if (text.length > 0 && symbolPattern.test(text)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * リンクのみ段落を削除（50文字以下のリンクのみ段落）
+ * @param element - クレンジング対象のルート要素
+ * @param maxLength - 最大文字数閾値（デフォルト: 50）
+ * @returns 削除した要素の数
+ */
+function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const paragraphs = element.querySelectorAll('p');
+    paragraphs.forEach(p => {
+        if (counted.has(p)) return;
+        const text = (p.textContent || '').trim();
+        if (text.length > maxLength) return;
+
+        const children = p.children;
+        let hasOnlyLinks = true;
+        let hasNonLinkText = false;
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (child.tagName.toLowerCase() === 'a') {
+                continue;
+            }
+            if (child.tagName.toLowerCase() === 'br') {
+                continue;
+            }
+            hasOnlyLinks = false;
+            break;
+        }
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (child.tagName.toLowerCase() !== 'a' && child.tagName.toLowerCase() !== 'br') {
+                const childText = child.textContent || '';
+                if (childText.trim().length > 0) {
+                    hasNonLinkText = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasOnlyLinks && !hasNonLinkText && text.length > 0) {
+            elementsToRemove.push(p);
+            counted.add(p);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * 非表示要素を強化削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripEnhancedHiddenElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const selectors = [
+        '[hidden]',
+        '[aria-hidden="true"]',
+        '[style*="display: none"]',
+        '[style*="display:none"]',
+        '[style*="visibility: hidden"]',
+        '[style*="visibility:hidden"]',
+        '[style*="opacity: 0"]',
+        'template',
+        'slot'
+    ];
+
+    for (const sel of selectors) {
+        element.querySelectorAll(sel).forEach(elem => {
+            if (!counted.has(elem)) {
+                if (sel.includes('opacity: 0')) {
+                    const style = elem.getAttribute('style') || '';
+                    if (style.includes('position: fixed') || style.includes('position:fixed') ||
+                        style.includes('position: sticky') || style.includes('position:sticky')) {
+                        elementsToRemove.push(elem);
+                        counted.add(elem);
+                    }
+                } else {
+                    elementsToRemove.push(elem);
+                    counted.add(elem);
+                }
+            }
+        });
+    }
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * 空要素を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripEmptyElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const targets = element.querySelectorAll('div, span, p, section, article');
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const hasText = (elem.textContent || '').trim().length > 0;
+        const hasChildren = elem.children.length > 0;
+        const hasImages = elem.querySelectorAll('img').length > 0;
+
+        if (!hasText && !hasImages) {
+            if (!hasChildren) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+            } else {
+                let allEmpty = true;
+                for (const child of Array.from(elem.children)) {
+                    const childText = (child.textContent || '').trim();
+                    const childHasContent = childText.length > 0 || child.querySelectorAll('img').length > 0;
+                    if (childHasContent) {
+                        allEmpty = false;
+                        break;
+                    }
+                }
+                if (allEmpty) {
+                    elementsToRemove.push(elem);
+                    counted.add(elem);
+                }
+            }
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * JP BEM系レイアウトパターンを削除
+ * @param element - クレンジング対象のルート要素
+ * @param customPatterns - カスタムパターン列表
+ * @returns 削除した要素の数
+ */
+function stripJPLayoutPatterns(element: Element, customPatterns: string[] = []): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const patterns = [
+        'l-footer', 'l-header', 'l-sidebar', 'l-wrapper',
+        'p-entry__footer', 'p-entry__header', 'p-entry__body',
+        'c-button', 'c-label', 'c-card',
+        'common-footer', 'common-header', 'sub-column',
+        'ly-', 'el-',
+        ...customPatterns
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * JP ナビ頻出語を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripJPNavigationPatterns(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const patterns = [
+        'global-nav', 'gnav', 'g-nav', 'primary-nav',
+        'footer-nav', 'fnav',
+        'topic-path', 'topicpath', 'breadcrumb',
+        'site-search', 'search-form', 'ss-search',
+        'utility-nav', 'sub-nav', 'local-nav'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    const keywords = [' Site Menu', 'このサイトのメニュー', 'ページメニュー'];
+    const targets = element.querySelectorAll('p, div, span, li');
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = elem.textContent || '';
+        for (const kw of keywords) {
+            if (text.includes(kw)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+                break;
+            }
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
+/**
+ * 執筆者・メタ情報を削除
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+function stripAuthorMetaElements(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    const patterns = [
+        'author-profile', 'writer-bio', 'profile-card',
+        'post-date', 'update-date', 'post-meta', 'entry-meta',
+        'article-tag', 'post-tag', 'tag-list',
+        'entry-footer', 'article-footer'
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    const keywords = ['この記事書いた人', 'プロフィール', '投稿', '更新日', '著者'];
+    const targets = element.querySelectorAll('p, div, span');
+    targets.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = elem.textContent || '';
+        if (text.length > 200) return;
+        for (const kw of keywords) {
+            if (text.includes(kw)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+                break;
+            }
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        elem.remove();
+        removedCount++;
+    }
+    return removedCount;
+}
+
 /**
  * DOMからAI要約に不要な要素を削除する
  * @param element - クレンジング対象のルート要素
@@ -1104,13 +1525,30 @@ export function cleanseAISummaryContent(
         skipLinkEnabled = false,
         cardEnabled = false,
         linkDensityEnabled = false,
-        // NEW
+        // NEW: 6つの新しいオプション
         fixedEnabled = false,
         recommendEnabled = true,
         paginationEnabled = false,
         snsPromoEnabled = false,
         popupEnabled = true,
         platformEnabled = false,
+        // NEW: 9つの追加オプション
+        textDensityEnabled = false,
+        shortSeqEnabled = false,
+        symbolLineEnabled = false,
+        linkParaEnabled = false,
+        enhancedHiddenEnabled = false,
+        emptyElemEnabled = false,
+        jpLayoutEnabled = false,
+        jpNavigationEnabled = false,
+        authorEnabled = false,
+        // Threshold settings
+        linkRatioThreshold = 70,
+        shortTextThreshold = 30,
+        shortSeqCount = 5,
+        linkParaThreshold = 50,
+        // Custom patterns
+        customPatterns = [],
     } = options;
 
     const bytesBefore = new Blob([element.outerHTML || '']).size;
@@ -1126,13 +1564,23 @@ export function cleanseAISummaryContent(
     let skipLinkRemoved = 0;
     let cardRemoved = 0;
     let linkDensityRemoved = 0;
-    // NEW
+    // NEW: 6つの新しいオプション
     let fixedRemoved = 0;
     let recommendRemoved = 0;
     let paginationRemoved = 0;
     let snsPromoRemoved = 0;
     let popupRemoved = 0;
     let platformRemoved = 0;
+    // NEW: 9つの追加オプション
+    let textDensityRemoved = 0;
+    let shortSeqRemoved = 0;
+    let symbolLineRemoved = 0;
+    let linkParaRemoved = 0;
+    let enhancedHiddenRemoved = 0;
+    let emptyElemRemoved = 0;
+    let jpLayoutRemoved = 0;
+    let jpNavigationRemoved = 0;
+    let authorRemoved = 0;
 
     if (altEnabled) {
         altRemoved = stripAltAttributes(element);
@@ -1204,13 +1652,53 @@ export function cleanseAISummaryContent(
         platformRemoved = stripPlatformNoise(element);
     }
 
+    // NEW: 9つの追加クレンジングオプション
+    if (textDensityEnabled) {
+        textDensityRemoved = stripTextDensityElements(element, linkRatioThreshold);
+    }
+
+    if (shortSeqEnabled) {
+        shortSeqRemoved = stripShortSequenceElements(element, shortTextThreshold, shortSeqCount);
+    }
+
+    if (symbolLineEnabled) {
+        symbolLineRemoved = stripSymbolLineElements(element);
+    }
+
+    if (linkParaEnabled) {
+        linkParaRemoved = stripLinkOnlyParagraphs(element, linkParaThreshold);
+    }
+
+    if (enhancedHiddenEnabled) {
+        enhancedHiddenRemoved = stripEnhancedHiddenElements(element);
+    }
+
+    if (emptyElemEnabled) {
+        emptyElemRemoved = stripEmptyElements(element);
+    }
+
+    if (jpLayoutEnabled) {
+        jpLayoutRemoved = stripJPLayoutPatterns(element, customPatterns);
+    }
+
+    if (jpNavigationEnabled) {
+        jpNavigationRemoved = stripJPNavigationPatterns(element);
+    }
+
+    if (authorEnabled) {
+        authorRemoved = stripAuthorMetaElements(element);
+    }
+
     const bytesAfter = new Blob([element.outerHTML || '']).size;
 
     const total = altRemoved + metadataRemoved + adsRemoved + navRemoved +
         socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved +
         skipLinkRemoved + cardRemoved + linkDensityRemoved +
         fixedRemoved + recommendRemoved + paginationRemoved +
-        snsPromoRemoved + popupRemoved + platformRemoved;
+        snsPromoRemoved + popupRemoved + platformRemoved +
+        textDensityRemoved + shortSeqRemoved + symbolLineRemoved +
+        linkParaRemoved + enhancedHiddenRemoved + emptyElemRemoved +
+        jpLayoutRemoved + jpNavigationRemoved + authorRemoved;
 
     logDebug('AI Summary Cleansing executed', {
         totalRemoved: total,
@@ -1231,13 +1719,23 @@ export function cleanseAISummaryContent(
             skipLink: skipLinkRemoved,
             card: cardRemoved,
             linkDensity: linkDensityRemoved,
-            // NEW
+            // NEW: 6 options
             fixed: fixedRemoved,
             recommend: recommendRemoved,
             pagination: paginationRemoved,
             snsPromo: snsPromoRemoved,
             popup: popupRemoved,
             platform: platformRemoved,
+            // NEW: 9 options
+            textDensity: textDensityRemoved,
+            shortSeq: shortSeqRemoved,
+            symbolLine: symbolLineRemoved,
+            linkPara: linkParaRemoved,
+            enhancedHidden: enhancedHiddenRemoved,
+            emptyElem: emptyElemRemoved,
+            jpLayout: jpLayoutRemoved,
+            jpNavigation: jpNavigationRemoved,
+            author: authorRemoved,
         }
     }, 'aiSummaryCleaner');
 
@@ -1253,13 +1751,23 @@ export function cleanseAISummaryContent(
         skipLinkRemoved,
         cardRemoved,
         linkDensityRemoved,
-        // NEW
+        // NEW: 6 options
         fixedRemoved,
         recommendRemoved,
         paginationRemoved,
         snsPromoRemoved,
         popupRemoved,
         platformRemoved,
+        // NEW: 9 options
+        textDensityRemoved,
+        shortSeqRemoved,
+        symbolLineRemoved,
+        linkParaRemoved,
+        enhancedHiddenRemoved,
+        emptyElemRemoved,
+        jpLayoutRemoved,
+        jpNavigationRemoved,
+        authorRemoved,
         totalRemoved: total,
         bytesBefore,
         bytesAfter
