@@ -99,12 +99,12 @@ describe('makeCleansingProgressBar', () => {
     expect(makeCleansingProgressBar(entry)).toBeNull();
   });
 
-  it('pageBytes と aiSummaryCleansedBytes がある場合 HTMLElement を返す', () => {
+  it('pageBytes と aiSummaryOriginalBytes がある場合 HTMLElement を返す', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
       pageBytes: 10000,
-      aiSummaryCleansedBytes: 4000,
+      aiSummaryOriginalBytes: 4000,
     };
     const el = makeCleansingProgressBar(entry);
     expect(el).not.toBeNull();

@@ -8,6 +8,14 @@ describe('deduplicateContent', () => {
     expect(result).toBe(input);
   });
 
+  it('日本語センテンスのbigarm類似度で重複除去', () => {
+    const input = '人工智能が急速に発展しています。人工智能の発展は非常に急速です。';
+    const result = deduplicateContent(input, { threshold: 0.5 });
+    // "人工智能"と"人工智能"のbigram類似度が高いので除去
+    expect(result).not.toContain('発展是非常');
+    expect(result).toContain('発展しています');
+  });
+
   it('ほぼ同一のセンテンスを除去する', () => {
     const input = 'この製品は高品質です。この製品は高品質で優れています。全く異なる内容のセンテンス。';
     const result = deduplicateContent(input, { threshold: 0.4 });

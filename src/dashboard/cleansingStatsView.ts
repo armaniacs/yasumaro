@@ -1,5 +1,22 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 
+/**
+ * バイト数を4桁有効数字で KB / MB / GB に自動変換する
+ */
+function formatBytes(bytes: number): string {
+  const GB = 1024 * 1024 * 1024;
+  const MB = 1024 * 1024;
+  const KB = 1024;
+
+  if (bytes >= GB) {
+    return `${parseFloat((bytes / GB).toPrecision(4))} GB`;
+  } else if (bytes >= MB) {
+    return `${parseFloat((bytes / MB).toPrecision(4))} MB`;
+  } else {
+    return `${parseFloat((bytes / KB).toPrecision(4))} KB`;
+  }
+}
+
 export interface CleansingStats {
   count: number;
   avgPageBytes: number;
@@ -75,11 +92,9 @@ export function renderStatsSummary(container: HTMLElement, stats: CleansingStats
 
   container.className = 'cleansing-stats-summary';
 
-  const totalSavedKB = (stats.totalSavedBytes / 1024).toFixed(1);
-
   const cards = [
     { value: `${stats.avgReductionRate.toFixed(1)}%`, label: '平均削減率' },
-    { value: `${totalSavedKB} KB`, label: '累計削減量' },
+    { value: formatBytes(stats.totalSavedBytes), label: '累計削減量' },
     { value: `${stats.count}件`, label: '集計対象' },
   ];
 
@@ -156,8 +171,7 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#475569';
-    const kb = (val / 1024).toFixed(1);
-    ctx.fillText(`${kb} KB`, paddingLeft + barWidth + 6, y + barHeight / 2 + 4);
+    ctx.fillText(formatBytes(val), paddingLeft + barWidth + 6, y + barHeight / 2 + 4);
   });
 
   ctx.textAlign = 'center';
@@ -172,13 +186,13 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
  */
 export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | null {
   const page = entry.pageBytes;
-  const final = entry.aiSummaryCleansedBytes ?? entry.cleansedBytes;
+  const sent = entry.aiSummaryOriginalBytes ?? entry.cleansedBytes ?? entry.originalBytes;
 
-  if (page === undefined || final === undefined) return null;
+  if (page === undefined || sent === undefined) return null;
   if (page === 0) return null;
 
-  const finalRatio = final / page;
-  const reductionRate = (1 - finalRatio) * 100;
+  const sentRatio = Math.min(sent / page, 1);
+  const reductionRate = (1 - sentRatio) * 100;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'cleansing-progress-wrapper';
@@ -188,7 +202,7 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
 
   const bar = document.createElement('div');
   bar.className = 'cleansing-progress-bar';
-  bar.style.width = `${(finalRatio * 100).toFixed(1)}%`;
+  bar.style.width = `${(sentRatio * 100).toFixed(1)}%`;
 
   track.appendChild(bar);
 

@@ -36,6 +36,8 @@ const AI_SUMMARY_CLEANSING_PAGINATION = 'ai_summary_cleansing_pagination';
 const AI_SUMMARY_CLEANSING_SNS_PROMO = 'ai_summary_cleansing_sns_promo';
 const AI_SUMMARY_CLEANSING_POPUP = 'ai_summary_cleansing_popup';
 const AI_SUMMARY_CLEANSING_PLATFORM = 'ai_summary_cleansing_platform';
+const CONTENT_DEDUP_ENABLED = 'content_dedup_enabled';
+const CONTENT_DEDUP_THRESHOLD = 'content_dedup_threshold';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -74,6 +76,10 @@ let aiSummaryCleansingPagination = false;
 let aiSummaryCleansingSnsPromo = false;
 let aiSummaryCleansingPopup = true;
 let aiSummaryCleansingPlatform = false;
+
+// 【テキスト品質設定】: 冗長除去の有効化状態
+let contentDedupEnabled = true;
+let contentDedupThreshold = 0.7;
 
 // 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
 export let lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
@@ -144,7 +150,12 @@ function extractPageContent(): string {
         popupEnabled: aiSummaryCleansingPopup,
         platformEnabled: aiSummaryCleansingPlatform
     };
-    const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions);
+    // テキスト品質設定（冗長除去）
+    const dedupOptions = {
+        dedupEnabled: contentDedupEnabled,
+        dedupThreshold: contentDedupThreshold
+    };
+    const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
     // クレンジング情報を保存
     if (typeof result === 'object' && 'cleansedReason' in result) {
         lastCleansedReason = result.cleansedReason || 'none';
@@ -202,7 +213,9 @@ function loadSettings(): Promise<void> {
             AI_SUMMARY_CLEANSING_LAZY_LOAD,
             AI_SUMMARY_CLEANSING_SKIP_LINK,
             AI_SUMMARY_CLEANSING_CARD,
-            AI_SUMMARY_CLEANSING_LINK_DENSITY
+            AI_SUMMARY_CLEANSING_LINK_DENSITY,
+            CONTENT_DEDUP_ENABLED,
+            CONTENT_DEDUP_THRESHOLD
         ], (result: { [key: string]: any }) => {
             // 新方式: settings オブジェクトが存在する場合はそちらを優先
             const s: { [key: string]: any } = (result.settings_migrated && result.settings)
@@ -280,6 +293,13 @@ function loadSettings(): Promise<void> {
             }
             if (s[AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
                 aiSummaryCleansingPlatform = s[AI_SUMMARY_CLEANSING_PLATFORM];
+            }
+            // テキスト品質設定を取得
+            if (s[CONTENT_DEDUP_ENABLED] !== undefined) {
+                contentDedupEnabled = s[CONTENT_DEDUP_ENABLED];
+            }
+            if (s[CONTENT_DEDUP_THRESHOLD] !== undefined) {
+                contentDedupThreshold = parseFloat(String(s[CONTENT_DEDUP_THRESHOLD]));
             }
             logInfo('Settings loaded', {
                 minVisitDuration,
