@@ -104,6 +104,12 @@ export const StorageKeys = {
     // タグ機能設定
     TAG_CATEGORIES: 'tag_categories',                  // ユーザー追加カテゴリ + デフォルト管理
     TAG_SUMMARY_MODE: 'tag_summary_mode',              // タグ付き要約を使用するか
+    // L0 Extractive Compression Settings
+    L0_EXTRACTIVE_ENABLED: 'l0_extractive_enabled',   // L0抽出を有効化するか（デフォルト: true）
+    L0_EXTRACTIVE_TOP_K: 'l0_extractive_top_k',       // 抽出する文数（デフォルト: 10）
+    L0_EXTRACTIVE_MIN_LENGTH: 'l0_extractive_min_length', // 最小文長（デフォルト: 20）
+    L0_EXTRACTIVE_SIMILARITY_THRESHOLD: 'l0_extractive_similarity_threshold', // 類似度閾値（デフォルト: 0.3）
+    L0_EXTRACTIVE_PERFORMANCE_THRESHOLD: 'l0_extractive_performance_threshold', // パフォーマンス閾値ms（デフォルト: 1000）
     MP_ENCRYPT_ON_EXPORT: 'mp_encrypt_on_export',       // エクスポート時暗号化フラグ
     MP_REQUIRE_ON_IMPORT: 'mp_require_on_import',       // イポート時パスワード要求フラグ
     // Custom prompts
@@ -249,6 +255,12 @@ export interface StorageKeyValues {
     // タグ機能
     [StorageKeys.TAG_CATEGORIES]: TagCategory[];  // タグカテゴリリスト
     [StorageKeys.TAG_SUMMARY_MODE]: boolean;      // タグ付き要約モード
+    // L0 Extractive Compression Settings
+    [StorageKeys.L0_EXTRACTIVE_ENABLED]: boolean;
+    [StorageKeys.L0_EXTRACTIVE_TOP_K]: number;
+    [StorageKeys.L0_EXTRACTIVE_MIN_LENGTH]: number;
+    [StorageKeys.L0_EXTRACTIVE_SIMILARITY_THRESHOLD]: number;
+    [StorageKeys.L0_EXTRACTIVE_PERFORMANCE_THRESHOLD]: number;
     // プライバシーポリシー同意（オブジェクトまたはブール値）
     [StorageKeys.PRIVACY_CONSENT]: { hasConsented: boolean; consentDate?: string; consentVersion?: string } | boolean;
     // 自動コンテンツフェッチ設定（v4.2.1）
@@ -853,6 +865,12 @@ export const DEFAULT_SETTINGS: Settings = {
     // Tag feature defaults
     [StorageKeys.TAG_CATEGORIES]: [],       // タグカテゴリリスト（空=デフォルトカテゴリを使用）
     [StorageKeys.TAG_SUMMARY_MODE]: false,   // タグ付き要約モード（デフォルト: 無効）
+    // L0 Extractive Compression Defaults
+    [StorageKeys.L0_EXTRACTIVE_ENABLED]: true,   // L0抽出（デフォルト: 有効）
+    [StorageKeys.L0_EXTRACTIVE_TOP_K]: 10,       // 抽出する文数（デフォルト: 10）
+    [StorageKeys.L0_EXTRACTIVE_MIN_LENGTH]: 20, // 最小文長（デフォルト: 20文字）
+    [StorageKeys.L0_EXTRACTIVE_SIMILARITY_THRESHOLD]: 0.3, // 類似度閾値（デフォルト: 0.3）
+    [StorageKeys.L0_EXTRACTIVE_PERFORMANCE_THRESHOLD]: 1000, // パフォーマンス閾値ms（デフォルト: 1000ms）
     // Privacy consent default
     [StorageKeys.PRIVACY_CONSENT]: false,    // プライバシーポリシー同意状態（デフォルト: 未同意）
     // Auto content fetch default (v4.2.1) - 明示的同意を要求するためデフォルトで無効
@@ -881,7 +899,7 @@ export const DEFAULT_SETTINGS: Settings = {
     [StorageKeys.AI_SUMMARY_CLEANSING_ADS]: true,      // 広告関連要素削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: true,      // ナビゲーション・フッター削除（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,       // コメント・ソーシャルウィジェット削除（デフォルト: 有効）
-    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: false,         // 積極的クレンジング（デフォルト: 無効）
+    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: true,         // 積極的クレンジング（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: true,  // リンク密度フィルタ（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]: false, // JSON-LD構造化データ削除（デフォルト: 無効）
     [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: false, // 遅延読み込み要素削除（デフォルト: 無効）

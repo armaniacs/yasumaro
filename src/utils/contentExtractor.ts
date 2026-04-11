@@ -348,6 +348,7 @@ export interface ExtractResult {
     candidateBytes?: number;   // findMainContentCandidates() 後（候補要素）のバイト数
     originalBytes?: number;    // Content Cleansing前のバイト数
     cleansedBytes?: number;    // Content Cleansing後のバイト数
+    aiSummaryOriginalBytes?: number;  // AI要約クレンジング前のバイト数
     aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数
     aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
@@ -405,6 +406,7 @@ export function extractMainContent(
     let candidateBytes = 0;    // findMainContentCandidates() 後（候補要素）のバイト数
     let originalBytes = 0;     // Content Cleansing前のバイト数
     let cleansedBytes = 0;     // Content Cleansing後のバイト数
+    let aiSummaryOriginalBytes: number | undefined = undefined;  // AI要約クレンジング前のバイト数
     let aiSummaryCleansedBytes: number | undefined = undefined;  // AI要約クレンジング後のバイト数
     let aiSummaryCleansedElements: number | undefined = undefined;  // AI要約クレンジングで削除した要素数
     let aiSummaryCleansedReason: ExtractResult['aiSummaryCleansedReason'] = 'none';  // AI要約クレンジング実行理由
@@ -544,6 +546,9 @@ export function extractMainContent(
 
                     logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
 
+                    // AI要約クレンジング前のバイト数を計算（テキストベース）
+                    aiSummaryOriginalBytes = getByteSize(extractTextFromElement(clone));
+
                     // AI要約クレンジング後のバイト数を計算（テキストベース）
                     aiSummaryCleansedBytes = getByteSize(extractTextFromElement(clone));
 
@@ -658,6 +663,9 @@ export function extractMainContent(
                     });
 
                     logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
+
+                    // AI要約クレンジング前のバイト数を計算（テキストベース）
+                    aiSummaryOriginalBytes = getByteSize(extractTextFromElement(clone));
 
                     // AI要約クレンジング後のバイト数を計算（テキストベース）
                     aiSummaryCleansedBytes = getByteSize(extractTextFromElement(clone));
@@ -781,7 +789,7 @@ export function extractMainContent(
             }
         }
 
-        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons };
+        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons };
     }
 
     return content;

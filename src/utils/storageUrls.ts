@@ -47,6 +47,8 @@ export interface SavedUrlEntry {
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時、オプション）
+    extractedSentencesBytes?: number;  // L0抽出後のバイト数（オプション）
+    extractedSentencesOriginalBytes?: number;  // L0抽出前のバイト数（オプション）
     isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）
     aiProvider?: string;  // 使用したAIプロバイダー名（オプション）
     aiModel?: string;     // 使用したAIモデル名（オプション）
@@ -888,6 +890,38 @@ export async function setUrlObsidianDuration(url: string, obsidianDuration: numb
         if (idx >= 0) {
             const updatedEntries = [...entries];
             updatedEntries[idx] = { ...updatedEntries[idx], obsidianDuration };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLエントリのL0抽出後のバイト数を設定する
+ */
+export async function setUrlExtractedSentencesBytes(url: string, extractedSentencesBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], extractedSentencesBytes };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * URLエントリのL0抽出前のバイト数を設定する
+ */
+export async function setUrlExtractedSentencesOriginalBytes(url: string, extractedSentencesOriginalBytes: number): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], extractedSentencesOriginalBytes };
             return updatedEntries;
         }
         return entries;
