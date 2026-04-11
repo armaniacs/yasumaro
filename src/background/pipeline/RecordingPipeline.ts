@@ -15,6 +15,7 @@ import {
   checkDuplicateStep,
   DuplicateError,
   processPrivacyPipelineStep,
+  extractSentencesStep,
   formatMarkdownStep,
   saveToObsidianStep,
   saveMetadataStep
@@ -85,6 +86,12 @@ export class RecordingPipeline {
         errorStrategy: ErrorStrategy.RETRY,
         maxRetries: 3,
         execute: processPrivacyPipelineStep
+      },
+      {
+        name: 'extractSentences',
+        errorStrategy: ErrorStrategy.RETRY,
+        maxRetries: 3,
+        execute: extractSentencesStep
       },
       {
         name: 'formatMarkdown',

@@ -29,6 +29,8 @@ import {
   setUrlAiModel,
   setUrlAiDuration,
   setUrlObsidianDuration,
+  setUrlExtractedSentencesBytes,
+  setUrlExtractedSentencesOriginalBytes,
   getSavedUrlsWithTimestamps
 } from '../../../utils/storageUrls.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
@@ -40,7 +42,7 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 export const saveMetadataStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, privacyResult, aiDuration, obsidianDuration } = context;
+  const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
   const {
     url,
     content,
@@ -143,6 +145,14 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
   if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
     await save('aiSummaryCleansedReasons', setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons));
+  }
+
+  // Save L0 extracted sentences bytes (if L0 extraction was used)
+  if (extractedSentencesBytes !== undefined) {
+    await save('extractedSentencesBytes', setUrlExtractedSentencesBytes(url, extractedSentencesBytes));
+  }
+  if (extractedSentencesOriginalBytes !== undefined) {
+    await save('extractedSentencesOriginalBytes', setUrlExtractedSentencesOriginalBytes(url, extractedSentencesOriginalBytes));
   }
 
   // Save AI provider and model

@@ -49,6 +49,35 @@ beforeEach(() => {
 
 describe('formatMarkdownStep', () => {
   describe('summary の優先順位', () => {
+    it('extractedSentences (L0) が最優先で使われる', async () => {
+      const context = makeContext({
+        extractedSentences: ['L0 extracted sentence 1', 'L0 extracted sentence 2'],
+        sanitizedSummary: 'AI summary from privacy pipeline',
+        privacyResult: { summary: 'AI summary', maskedCount: 0 } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      // L0 extracted sentences should be used
+      expect(result.markdown).toContain('L0 extracted sentence 1');
+      expect(result.markdown).toContain('L0 extracted sentence 2');
+      // AI summary should NOT be used
+      expect(result.markdown).not.toContain('AI summary from privacy pipeline');
+    });
+
+    it('extractedSentences がない場合 sanitizedSummary が使われる', async () => {
+      const context = makeContext({
+        extractedSentences: undefined,
+        sanitizedSummary: 'Prioritized summary',
+        privacyResult: { summary: 'AI summary', maskedCount: 0 } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdown).toContain('Prioritized summary');
+      expect(mockSanitize).toHaveBeenCalledWith('Prioritized summary');
+    });
+
     it('sanitizedSummary が最優先で使われる', async () => {
       const context = makeContext({
         sanitizedSummary: 'Prioritized summary',

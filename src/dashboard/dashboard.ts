@@ -1025,7 +1025,7 @@ async function initHistoryPanel(): Promise<void> {
     historyList.innerHTML = '';
     pageItems.forEach((entry, index) => {
       const contentId = `content-entry-${start + index}`;
-      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, aiProvider, aiModel, aiDuration } = entry;
+      const { url, timestamp, recordType, maskedCount, tags, content, cleansedReason, aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, extractedSentencesBytes, extractedSentencesOriginalBytes, aiProvider, aiModel, aiDuration } = entry;
       const row = document.createElement('div');
       row.className = 'history-entry';
 
@@ -1207,7 +1207,7 @@ async function initHistoryPanel(): Promise<void> {
         info.appendChild(noTagRow);
       }
 
-      // コンテンツ表示エリア（展開可能）
+      // AIへ送信したデータ（展開可能）
       if (content && content.trim().length > 0) {
         const contentToggle = document.createElement('button');
         contentToggle.className = 'content-toggle-btn';
@@ -1216,7 +1216,7 @@ async function initHistoryPanel(): Promise<void> {
         contentToggle.setAttribute('aria-controls', contentId);
 
         const contentLabel = document.createElement('span');
-        contentLabel.textContent = 'コンテンツを表示';
+        contentLabel.textContent = 'AIへ送信したデータ';
         contentToggle.appendChild(contentLabel);
 
         const contentArea = document.createElement('div');
@@ -1227,11 +1227,39 @@ async function initHistoryPanel(): Promise<void> {
         contentToggle.addEventListener('click', () => {
           const isHidden = contentArea.classList.toggle('hidden');
           contentToggle.setAttribute('aria-expanded', (!isHidden).toString());
-          contentLabel.textContent = isHidden ? 'コンテンツを表示' : 'コンテンツを非表示';
+          contentLabel.textContent = isHidden ? 'AIへ送信したデータ' : 'データを非表示';
         });
 
         info.appendChild(contentToggle);
         info.appendChild(contentArea);
+      }
+
+      // AIから受信したデータ（展開可能）
+      if (aiSummary && aiSummary.trim().length > 0) {
+        const summaryId = `summary-entry-${start + index}`;
+        const summaryToggle = document.createElement('button');
+        summaryToggle.className = 'content-toggle-btn';
+        summaryToggle.textContent = '📝 ';
+        summaryToggle.setAttribute('aria-expanded', 'false');
+        summaryToggle.setAttribute('aria-controls', summaryId);
+
+        const summaryLabel = document.createElement('span');
+        summaryLabel.textContent = 'AIから受信したデータ';
+        summaryToggle.appendChild(summaryLabel);
+
+        const summaryArea = document.createElement('div');
+        summaryArea.className = 'content-preview hidden';
+        summaryArea.id = summaryId;
+        summaryArea.textContent = aiSummary;
+
+        summaryToggle.addEventListener('click', () => {
+          const isHidden = summaryArea.classList.toggle('hidden');
+          summaryToggle.setAttribute('aria-expanded', (!isHidden).toString());
+          summaryLabel.textContent = isHidden ? 'AIから受信したデータ' : 'データを非表示';
+        });
+
+        info.appendChild(summaryToggle);
+        info.appendChild(summaryArea);
       }
 
       const deleteBtn = document.createElement('button');

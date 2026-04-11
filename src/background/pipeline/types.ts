@@ -78,6 +78,12 @@ export interface RecordingContext {
   sanitizedSummary?: string;
   markdown?: string;
 
+  // L0 Extractive Compression (Phase 1)
+  extractedSentences?: string[];  // Extracted important sentences (L0)
+  extractedSentencesBytes?: number;  // Byte count of extracted sentences
+  extractedSentencesOriginalBytes?: number;  // Byte count before extraction (source text)
+  extractionDuration?: number;  // Time taken for extraction (ms)
+
   // Timings
   aiDuration?: number;
   obsidianDuration?: number;
