@@ -289,9 +289,7 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
 
-    if (fieldset) {
-        fieldset.disabled = !enabled;
-    }
+    // fieldset.disabled = !enabled; // Do not disable fieldset as it contains the main toggle checkbox
 
     if (altCheckbox) altCheckbox.disabled = !enabled;
     if (metadataCheckbox) metadataCheckbox.disabled = !enabled;
