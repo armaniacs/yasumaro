@@ -960,12 +960,15 @@ function stripSnsPromoElements(element: Element): number {
 
 /**
  * 要素が広告かどうかを判定
+ * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
  */
 function isLikelyAd(elem: Element): boolean {
     const className = (elem.className || '').toLowerCase();
     const id = (elem.id || '').toLowerCase();
     const text = (elem.textContent || '').toLowerCase();
-    return className.includes('ad') || id.includes('ad') ||
+    // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
+    const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;
+    return AD_WORD_RE.test(className) || AD_WORD_RE.test(id) ||
            text.includes('sponsored') || text.includes('promoted') ||
            text.includes('Advertise');
 }
@@ -1100,12 +1103,15 @@ function stripPlatformNoise(element: Element): number {
 }
 
 /**
- * 要素がプラットフォーム噪かどうかを判定
+ * 要素がプラットフォームノイズかどうかを判定
+ * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
  */
 function isPlatformNoise(elem: Element): boolean {
     const className = (elem.className || '').toLowerCase();
     const id = (elem.id || '').toLowerCase();
-    return className.includes('ad') || id.includes('ad') ||
+    // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
+    const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;
+    return AD_WORD_RE.test(className) || AD_WORD_RE.test(id) ||
            className.includes('comment') && className.includes('youtube') ||
            id.includes('comment') || id.includes('related');
 }
