@@ -1139,8 +1139,18 @@ async function initHistoryPanel(): Promise<void> {
         }
       }
 
+      // フォールバックが発動した場合の表示
+      if (entry.fallbackTriggered) {
+        const fallbackEl = document.createElement('div');
+        fallbackEl.className = 'history-entry-ai-summary-cleansing';
+        fallbackEl.style.color = '#d97706'; // 警告色
+        fallbackEl.style.fontWeight = 'bold';
+        fallbackEl.innerHTML = '⚠️ フォールバック発動: クレンジング後のテキストが短すぎたため、処理を破棄して元のテキストを利用しました';
+        info.appendChild(fallbackEl);
+      }
+
       // AI要約クレンジングの統計情報を1行で表示
-      if (aiSummaryCleansedBytes !== undefined || aiSummaryCleansedElements !== undefined || aiSummaryCleansedReason !== undefined) {
+      if (!entry.fallbackTriggered && (aiSummaryCleansedBytes !== undefined || aiSummaryCleansedElements !== undefined || aiSummaryCleansedReason !== undefined)) {
         const aiSummaryCleansingEl = document.createElement('div');
         aiSummaryCleansingEl.className = 'history-entry-ai-summary-cleansing';
         const cleansingParts: string[] = [];

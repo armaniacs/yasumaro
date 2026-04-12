@@ -47,6 +47,7 @@ export interface SavedUrlEntry {
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数（オプション）
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時、オプション）
+    fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
     extractedSentencesBytes?: number;  // L0抽出後のバイト数（オプション）
     extractedSentencesOriginalBytes?: number;  // L0抽出前のバイト数（オプション）
     isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）
@@ -926,4 +927,17 @@ export async function setUrlExtractedSentencesOriginalBytes(url: string, extract
         }
         return entries;
     });
+}
+
+export async function setUrlFallbackTriggered(url: string, fallbackTriggered: boolean): Promise<void> {
+    // Strip hash inline (no getUrlWithoutHash util available)
+    const validUrl = url.split('#')[0];
+    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+    const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+    
+    const entry = entries.find(e => e.url === validUrl);
+    if (entry) {
+        entry.fallbackTriggered = fallbackTriggered;
+        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    }
 }

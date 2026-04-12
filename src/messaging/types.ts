@@ -133,6 +133,7 @@ export interface RecordingData {
   aiSummaryCleansedElements?: number;
   aiSummaryCleansedReason?: AiSummaryCleansedReason;
   aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
+  fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
 }
 
 // ============================================================================

@@ -236,7 +236,7 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
 
   const label = document.createElement('span');
   label.className = 'cleansing-progress-label';
-  label.textContent = `${reductionRate.toFixed(1)}% 削減`;
+  label.textContent = `トータル: ${reductionRate.toFixed(1)}% 削減`;
 
   wrapper.appendChild(track);
   wrapper.appendChild(label);
