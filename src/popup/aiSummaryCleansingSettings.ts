@@ -189,11 +189,16 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (shortSeqCheckbox) shortSeqCheckbox.checked = settings.shortSeqEnabled;
     if (symbolLineCheckbox) symbolLineCheckbox.checked = settings.symbolLineEnabled;
     if (linkParaCheckbox) linkParaCheckbox.checked = settings.linkParaEnabled;
-    if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.checked = settings.enhancedHiddenEnabled;
-    if (emptyElemCheckbox) emptyElemCheckbox.checked = settings.emptyElemEnabled;
-    if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
-    if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
-    if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
+if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.checked = settings.enhancedHiddenEnabled;
+     else console.warn('Missing UI element: ai-summary-cleansing-enhanced-hidden checkbox');
+     if (emptyElemCheckbox) emptyElemCheckbox.checked = settings.emptyElemEnabled;
+     else console.warn('Missing UI element: ai-summary-cleansing-empty-elem checkbox');
+     if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
+     else console.warn('Missing UI element: ai-summary-cleansing-jp-layout checkbox');
+     if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
+     else console.warn('Missing UI element: ai-summary-cleansing-jp-navigation checkbox');
+     if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
+     else console.warn('Missing UI element: ai-summary-cleansing-author checkbox');
 
     const linkRatioThresholdInput = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     const shortTextThresholdInput = document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement;

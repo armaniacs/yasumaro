@@ -26,24 +26,24 @@ function buildClassIdSelectors(patterns: string[]): string {
  * AI要約クレンジングオプション
  */
 export interface AiSummaryCleanseOptions {
-    altEnabled?: boolean;           // 画像alt属性削除
-    metadataEnabled?: boolean;      // メタデータ削除
-    adsEnabled?: boolean;           // 广告関連要素削除
-    navEnabled?: boolean;          // ナビゲーション・フッター削除
-    socialEnabled?: boolean;       // コメント・ソーシャルウィジェット削除
-    deepEnabled?: boolean;         // ディープクレンジング（aside/form/cookie/関連記事等）
-    jsonLdEnabled?: boolean;       // JSON-LD構造化データ削除
-    lazyLoadEnabled?: boolean;     // 遅延読み込みコンテンツ削除
-    skipLinkEnabled?: boolean;     // スキップリンク削除
-    cardEnabled?: boolean;         // 記事カード・リストアイテム削除
+    altEnabled?: boolean;           // 画像alt属性削除（デフォルト: true）
+    metadataEnabled?: boolean;      // メタデータ削除（デフォルト: true）
+    adsEnabled?: boolean;           // 广告関連要素削除（デフォルト: true）
+    navEnabled?: boolean;          // ナビゲーション・フッター削除（デフォルト: true）
+    socialEnabled?: boolean;       // コメント・ソーシャルウィジェット削除（デフォルト: true）
+    deepEnabled?: boolean;         // ディープクレンジング（aside/form/cookie/関連記事等）（デフォルト: false）
+    jsonLdEnabled?: boolean;       // JSON-LD構造化データ削除（デフォルト: false）
+    lazyLoadEnabled?: boolean;     // 遅延読み込みコンテンツ削除（デフォルト: false）
+    skipLinkEnabled?: boolean;     // スキップリンク削除（デフォルト: false）
+    cardEnabled?: boolean;         // 記事カード・リストアイテム削除（デフォルト: false）
     linkDensityEnabled?: boolean;  // リンク密度の高いブロック削除（デフォルト: false）
     // NEW: 6つの新しいオプション
     fixedEnabled?: boolean;        // 固定要素削除（デフォルト: false）
-    recommendEnabled?: boolean;   // 推荐セクション削除（デフォルト: true）
-    paginationEnabled?: boolean;  // ページネーション削除（デフォルト: false）
-    snsPromoEnabled?: boolean;    // SNSプロモ削除（デフォルト: false）
-    popupEnabled?: boolean;       // ポップアップ削除（デフォルト: true）
-    platformEnabled?: boolean;    // プラットフォーム噪声削除（デフォルト: false）
+    recommendEnabled?: boolean;    // 推荐セクション削除（デフォルト: true）
+    paginationEnabled?: boolean;   // ページネーション削除（デフォルト: false）
+    snsPromoEnabled?: boolean;     // SNSプロモ削除（デフォルト: false）
+    popupEnabled?: boolean;        // ポップアップ削除（デフォルト: true）
+    platformEnabled?: boolean;     // プラットフォーム噪声削除（デフォルト: false）
     // NEW: 9つの追加オプション
     textDensityEnabled?: boolean;      // テキスト密度フィルタリング（デフォルト: false）
     shortSeqEnabled?: boolean;        // 短文要素の連続削除（デフォルト: false）

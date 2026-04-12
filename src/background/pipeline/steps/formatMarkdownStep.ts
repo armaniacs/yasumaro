@@ -31,7 +31,9 @@ export const formatMarkdownStep: PipelineStepFunction = async (
 
   // Sanitize for Obsidian (XSS protection)
   const sanitizedTitle = sanitizeForObsidian(title);
-  const finalSanitizedSummary = sanitizeForObsidian(summary);
+  // Normalize newlines and extra spaces - Obsidian list format breaks with newlines
+  const normalizedSummary = summary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+  const finalSanitizedSummary = sanitizeForObsidian(normalizedSummary);
 
   // Format timestamp
   const timestamp = new Date().toLocaleTimeString(getUserLocale(), {

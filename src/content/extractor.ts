@@ -209,7 +209,7 @@ function extractPageContent(): string {
         dedupEnabled: contentDedupEnabled,
         dedupThreshold: contentDedupThreshold
     };
-    const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
+    const result = extractMainContent(10000, { ...cleanseOptions, cleanseEnabled: true }, { ...aiSummaryCleanseOptions, aiSummaryCleanseEnabled: true }, dedupOptions);
     // クレンジング情報を保存
     if (typeof result === 'object' && 'cleansedReason' in result) {
         lastCleansedReason = result.cleansedReason || 'none';

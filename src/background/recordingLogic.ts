@@ -126,8 +126,8 @@ export interface RecordingData {
   skipAi?: boolean;
   pageBytes?: number;       // findMainContentCandidates() 前のバイト数
   candidateBytes?: number;  // findMainContentCandidates() 後のバイト数
-  originalBytes?: number;   // クレンジング前のバイト数
-  cleansedBytes?: number;   // クレンジング後のバイト数
+  originalBytes?: number;   // Content Cleansing前のバイト数
+  cleansedBytes?: number;   // Content Cleansing後のバイト数
   aiSummaryOriginalBytes?: number;  // AI要約クレンジング前のバイト数
   aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
   aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数

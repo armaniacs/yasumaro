@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.1.2] - 2026-04-12
+## [5.1.2] - 2026-04-13
 
 ### Fixed
 
@@ -16,6 +16,11 @@ All notable changes to this project will be documented in this file.
   - バーの最小幅を 0.2% に設定し、極端に小さい値でもバーが見えるよう改善
 - **`fallbackTriggered` フラグの追跡**: フォールバック発動状態をコンテンツ抽出 → メッセージパッシング → ストレージ保存まで一貫して伝播するよう実装（`contentExtractor.ts` / `extractor.ts` / `storageUrls.ts` / `recordingLogic.ts`）
 - **広告マッチングの精度向上**: `includes('ad')` による誤判定（`header`, `loaded` 等）を防ぐため、単語境界を考慮した正規表現判定に変更
+- **AI要約文の改行除去**: `formatMarkdownStep` でAIからの戻り値の改行をスペースに変換し、Obsidianの箇条書きリスト内での表示崩れを防止
+- **コード品質改善**:
+  - `fallbackTriggered` プロパティを optional に修正し型安全性を向上
+  - 欠落UI要素に対する防御的チェックを追加
+  - デフォルト値のコメントを明確化
 
 ## [5.1.1] - 2026-04-12
 
