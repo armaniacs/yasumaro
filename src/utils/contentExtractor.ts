@@ -584,8 +584,13 @@ export function extractMainContent(
             // 要素からテキストを抽出
             content = extractTextFromElement(targetElement);
 
-            // 抽出テキストが短すぎる場合、body全体でフォールバック
-            if (content.trim().length < 100) {
+            // 抽出テキストが短すぎる場合、または過剰削減された場合、body全体でフォールバック
+            const _contentBytes2 = getByteSize(content);
+            const _overCleansed2 = aiSummaryOriginalBytes !== undefined
+                && aiSummaryOriginalBytes > 0
+                && (_contentBytes2 / aiSummaryOriginalBytes) < 0.10
+                && _contentBytes2 < 2000;
+            if (content.trim().length < 100 || _overCleansed2) {
                 fallbackTriggered = true;
                 content = document.body?.innerText || '';
                 // フォールバック後のバイト数を再計算
@@ -707,8 +712,13 @@ export function extractMainContent(
 
                 content = extractTextFromElement(clone);
 
-                // 抽出テキストが短すぎる場合、body全体でフォールバック
-                if (content.trim().length < 100) {
+                // 抽出テキストが短すぎる場合、または過剰削減された場合、body全体でフォールバック
+                const _contentBytes = getByteSize(content);
+                const _overCleansed = aiSummaryOriginalBytes !== undefined
+                    && aiSummaryOriginalBytes > 0
+                    && (_contentBytes / aiSummaryOriginalBytes) < 0.10
+                    && _contentBytes < 2000;
+                if (content.trim().length < 100 || _overCleansed) {
                     fallbackTriggered = true;
                     content = document.body?.innerText || '';
                     originalBytes = getByteSize(content);
