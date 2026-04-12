@@ -212,15 +212,28 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
  * pageBytes がない、または最終バイトがない場合は null を返す。
  */
 export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | null {
-  // 分母はコンテンツ抽出後のテキストバイト数（pageBytes）、分子はAI要約クレンジング後のバイト数
+  // base: ページの元のDOMサイズ（コンテンツ抽出開始点）
   const base = entry.pageBytes;
-  const sent = entry.aiSummaryCleansedBytes ?? entry.cleansedBytes ?? entry.originalBytes;
 
-  if (base === undefined || sent === undefined) return null;
+  // sentToAI: AIに実際に送られたバイト数
+  // フォールバック発動時は aiSummaryCleansedBytes は無効 → cleansedBytes / originalBytes を使う
+  const sentToAI = entry.fallbackTriggered
+    ? (entry.cleansedBytes ?? entry.originalBytes)
+    : (entry.aiSummaryCleansedBytes ?? entry.cleansedBytes ?? entry.originalBytes);
+
+  if (base === undefined || sentToAI === undefined) return null;
   if (base === 0) return null;
 
-  const sentRatio = Math.min(sent / base, 1);
-  const reductionRate = (1 - sentRatio) * 100;
+  const sentRatio = Math.min(sentToAI / base, 1);
+  // 100.0%（完全削減に見える）は誤解を招くため99.9%でキャップ
+  const reductionRate = Math.min((1 - sentRatio) * 100, 99.9);
+
+  // 人間が読みやすいバイト表示
+  const formatBytes = (b: number): string => {
+    if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+    if (b >= 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${b} B`;
+  };
 
   const wrapper = document.createElement('div');
   wrapper.className = 'cleansing-progress-wrapper';
@@ -230,13 +243,14 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
 
   const bar = document.createElement('div');
   bar.className = 'cleansing-progress-bar';
-  bar.style.width = `${(sentRatio * 100).toFixed(1)}%`;
+  bar.style.width = `${Math.max(sentRatio * 100, 0.2).toFixed(1)}%`; // 最小0.2%でバーを見えるように
 
   track.appendChild(bar);
 
   const label = document.createElement('span');
   label.className = 'cleansing-progress-label';
-  label.textContent = `トータル: ${reductionRate.toFixed(1)}% 削減`;
+  // "1.76 MB → 16 KB (99.1% 削減)" のような表示
+  label.textContent = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% 削減)`;
 
   wrapper.appendChild(track);
   wrapper.appendChild(label);
