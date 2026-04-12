@@ -34,6 +34,9 @@ export interface AiSummaryCleansingSettings {
     shortSeqEnabled: boolean;        // 短文要素の連続削除（デフォルト: false）
     symbolLineEnabled: boolean;      // 特殊記号行の削除（デフォルト: false）
     linkParaEnabled: boolean;        // リンクのみ段落の削除（デフォルト: false）
+    linkRatioThreshold: number;       // リンク密度閾値（デフォルト: 70）
+    shortTextThreshold: number;       // 短文閾値文字数（デフォルト: 30）
+    shortSeqCount: number;            // 短文連続数閾値（デフォルト: 5）
     linkParaThreshold: number;        // リンクのみ段落閾値（デフォルト: 50）
     enhancedHiddenEnabled: boolean;  // 非表示要素強化削除（デフォルト: true）
     emptyElemEnabled: boolean;       // 空要素の削除（デフォルト: true）
@@ -73,6 +76,9 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         shortSeqEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ] ?? false,
         symbolLineEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE] ?? false,
         linkParaEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA] ?? false,
+        linkRatioThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] ?? 70,
+        shortTextThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] ?? 30,
+        shortSeqCount: settings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] ?? 5,
         linkParaThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] ?? 50,
         enhancedHiddenEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] ?? true,
         emptyElemEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] ?? true,
@@ -112,6 +118,9 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ] = settings.shortSeqEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE] = settings.symbolLineEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA] = settings.linkParaEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] = settings.shortSeqCount;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] = settings.linkParaThreshold;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] = settings.enhancedHiddenEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] = settings.emptyElemEnabled;
@@ -186,6 +195,32 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
     if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
 
+    const linkRatioThresholdInput = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
+    const shortTextThresholdInput = document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement;
+    const shortSeqCountInput = document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement;
+    const linkParaThresholdInput = document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement;
+
+    if (linkRatioThresholdInput) {
+        linkRatioThresholdInput.value = settings.linkRatioThreshold.toString();
+        const valElem = document.getElementById('link-ratio-threshold-value');
+        if (valElem) valElem.textContent = settings.linkRatioThreshold.toString();
+    }
+    if (shortTextThresholdInput) {
+        shortTextThresholdInput.value = settings.shortTextThreshold.toString();
+        const valElem = document.getElementById('short-text-threshold-value');
+        if (valElem) valElem.textContent = settings.shortTextThreshold.toString();
+    }
+    if (shortSeqCountInput) {
+        shortSeqCountInput.value = settings.shortSeqCount.toString();
+        const valElem = document.getElementById('short-seq-count-value');
+        if (valElem) valElem.textContent = settings.shortSeqCount.toString();
+    }
+    if (linkParaThresholdInput) {
+        linkParaThresholdInput.value = settings.linkParaThreshold.toString();
+        const valElem = document.getElementById('link-para-threshold-value');
+        if (valElem) valElem.textContent = settings.linkParaThreshold.toString();
+    }
+
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
 
@@ -246,6 +281,9 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         shortSeqEnabled: (document.getElementById('ai-summary-cleansing-short-seq') as HTMLInputElement)?.checked ?? false,
         symbolLineEnabled: (document.getElementById('ai-summary-cleansing-symbol-line') as HTMLInputElement)?.checked ?? false,
         linkParaEnabled: (document.getElementById('ai-summary-cleansing-link-para') as HTMLInputElement)?.checked ?? false,
+        linkRatioThreshold: parseInt((document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement)?.value || '70', 10),
+        shortTextThreshold: parseInt((document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement)?.value || '30', 10),
+        shortSeqCount: parseInt((document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement)?.value || '5', 10),
         linkParaThreshold: parseInt((document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement)?.value || '50', 10),
         enhancedHiddenEnabled: (document.getElementById('ai-summary-cleansing-enhanced-hidden') as HTMLInputElement)?.checked ?? true,
         emptyElemEnabled: (document.getElementById('ai-summary-cleansing-empty-elem') as HTMLInputElement)?.checked ?? true,
@@ -378,6 +416,29 @@ export function setupAiSummaryCleansingEventListeners(): void {
         const checkbox = document.getElementById(id) as HTMLInputElement;
         if (checkbox) {
             checkbox.addEventListener('change', async () => {
+                const settings = getAiSummaryCleansingSettingsFromUI();
+                await saveAiSummaryCleansingSettings(settings);
+            });
+        }
+    }
+
+    const rangeConfigs = [
+        { id: 'ai-summary-cleansing-link-ratio-threshold', valId: 'link-ratio-threshold-value' },
+        { id: 'ai-summary-cleansing-short-text-threshold', valId: 'short-text-threshold-value' },
+        { id: 'ai-summary-cleansing-short-seq-count', valId: 'short-seq-count-value' },
+        { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value' }
+    ];
+
+    for (const conf of rangeConfigs) {
+        const input = document.getElementById(conf.id) as HTMLInputElement;
+        const valElem = document.getElementById(conf.valId);
+        if (input) {
+            if (valElem) {
+                input.addEventListener('input', () => {
+                    valElem.textContent = input.value;
+                });
+            }
+            input.addEventListener('change', async () => {
                 const settings = getAiSummaryCleansingSettingsFromUI();
                 await saveAiSummaryCleansingSettings(settings);
             });

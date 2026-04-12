@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### Fixed
+
+- **AI要約クレンジング設定のUIバグを修正**: Aggressive モード（数値ベース）のスライダーを動かしても連動する数値が反映されず、設定値が保存されていなかった問題を修正
+
 ## [5.1.1] - 2026-04-12
 
 ### Fixed
