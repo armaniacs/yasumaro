@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [5.1.2] - 2026-04-12
 
 ### Fixed
 
@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
   - 数学的に正確でも誤解を招く `100.0%` を `99.9%` 上限でキャップ
   - バーの最小幅を 0.2% に設定し、極端に小さい値でもバーが見えるよう改善
 - **`fallbackTriggered` フラグの追跡**: フォールバック発動状態をコンテンツ抽出 → メッセージパッシング → ストレージ保存まで一貫して伝播するよう実装（`contentExtractor.ts` / `extractor.ts` / `storageUrls.ts` / `recordingLogic.ts`）
+- **広告マッチングの精度向上**: `includes('ad')` による誤判定（`header`, `loaded` 等）を防ぐため、単語境界を考慮した正規表現判定に変更
 
 ## [5.1.1] - 2026-04-12
 
