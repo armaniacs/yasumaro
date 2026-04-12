@@ -1124,11 +1124,13 @@ async function initHistoryPanel(): Promise<void> {
           parts.push(`トークン: ${originalTokens} → ${cleansedTokens}`);
         }
 
-        // バイト情報があれば表示
-        if (originalBytes !== undefined && cleansedBytes !== undefined) {
-          const reduction = originalBytes - cleansedBytes;
-          const reductionPercent = originalBytes > 0 ? ((reduction / originalBytes) * 100).toFixed(1) : '0.0';
-          parts.push(`バイト: ${originalBytes} → ${cleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);
+        // バイト情報があれば表示（0は無効値として扱い、candidateBytesをフォールバックとして使用）
+        const contentOriginalB = originalBytes || candidateBytes;
+        const contentCleansedB = cleansedBytes || originalBytes || candidateBytes;
+        if (contentOriginalB !== undefined && contentCleansedB !== undefined) {
+          const reduction = contentOriginalB - contentCleansedB;
+          const reductionPercent = contentOriginalB > 0 ? ((reduction / contentOriginalB) * 100).toFixed(1) : '0.0';
+          parts.push(`バイト: ${contentOriginalB} → ${contentCleansedB} (削減 ${reduction} / ${reductionPercent}%)`);
         }
 
         if (parts.length > 0) {
@@ -1143,9 +1145,9 @@ async function initHistoryPanel(): Promise<void> {
         aiSummaryCleansingEl.className = 'history-entry-ai-summary-cleansing';
         const cleansingParts: string[] = [];
 
-        // バイト情報があれば表示（左辺はcleansedBytes、なければoriginalBytes）
-        const aiBase = cleansedBytes ?? originalBytes ?? aiSummaryOriginalBytes;
-        if (aiBase !== undefined && aiSummaryCleansedBytes !== undefined) {
+        // バイト情報があれば表示（AI要約クレンジング前のバイト数を優先、0は無効値として扱い candidateBytesを最終フォールバック）
+        const aiBase = aiSummaryOriginalBytes || cleansedBytes || originalBytes || candidateBytes;
+        if (aiBase && aiSummaryCleansedBytes !== undefined) {
           const reduction = aiBase - aiSummaryCleansedBytes;
           const reductionPercent = aiBase > 0 ? ((reduction / aiBase) * 100).toFixed(1) : '0.0';
           cleansingParts.push(`バイト: ${aiBase} → ${aiSummaryCleansedBytes} (削減 ${reduction} / ${reductionPercent}%)`);

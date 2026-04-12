@@ -130,7 +130,8 @@ export let lastByteStats: { pageBytes: number; candidateBytes: number; originalB
     cleansedBytes: 0
 };
 // 【AI要約クレンジング情報】: 直近の抽出で適用されたAI要約クレンジング情報を保持
-export let lastAiSummaryCleansedStats: { aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
+export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
+    aiSummaryOriginalBytes: 0,
     aiSummaryCleansedBytes: 0,
     aiSummaryCleansedElements: 0,
     aiSummaryCleansedReason: 'none'
@@ -223,6 +224,7 @@ function extractPageContent(): string {
         };
         // AI要約クレンジング情報を保存
         lastAiSummaryCleansedStats = {
+            aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
             aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
             aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
             aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
@@ -571,6 +573,7 @@ async function reportValidVisit(): Promise<void> {
                 candidateBytes: lastByteStats.candidateBytes || undefined,
                 originalBytes: lastByteStats.originalBytes || undefined,
                 cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
                 aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
                 aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
                 aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
@@ -831,12 +834,23 @@ async function init(): Promise<void> {
 chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
     if (message.type === 'GET_CONTENT') {
         const content = extractPageContent();
-        sendResponse({ 
-            content, 
-            cleansedReason: lastCleansedReason, 
+        sendResponse({
+            content,
+            cleansedReason: lastCleansedReason,
             cleanseStats: lastCleanseStats,
-            byteStats: lastByteStats,
-            aiSummaryCleansedStats: lastAiSummaryCleansedStats
+            byteStats: {
+                pageBytes: lastByteStats.pageBytes || undefined,
+                candidateBytes: lastByteStats.candidateBytes || undefined,
+                originalBytes: lastByteStats.originalBytes || undefined,
+                cleansedBytes: lastByteStats.cleansedBytes || undefined,
+            },
+            aiSummaryCleansedStats: {
+                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+            }
         });
     }
     return true;

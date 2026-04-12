@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.1] - 2026-04-12
+
+### Fixed
+
+- **AI要約クレンジング バイト数表示の修正**: バイト計算を `extractTextFromElement`（除外クラスフィルタあり）から `textContent` ベースに統一。`lead`/`read`/`headline` 等のクラス名が `'ad'` を部分文字列として含むため除外され、計算結果が 0 になっていた問題を修正
+- **手動記録でのバイト数 `0` 保存バグを修正**: `GET_CONTENT` レスポンスが `byteStats` を生の数値（0 含む）で返しており、手動記録時に 0 がストレージに保存されダッシュボードで `0 → 0` 表示されていた問題を修正。`|| undefined` フィルタを適用し未計測値を保存しないよう変更
+- **Content Cleansing / AI要約クレンジング バイト表示の改善**: `candidateBytes` を最終フォールバックとして使用することで、旧記録エントリでもバイト数が表示されるよう改善
+- **`aiSummaryCleansedElements === 0` 条件バグを修正**: `aiSummaryCleansedElements` が `undefined` で初期化されるため `undefined === 0` が `false` となり、body全体スキャンのカウントパスが実行されなかった問題を修正
+- **L0 抽出圧縮ステップの追加**: TextRank ベースの文抽出による L0 抽出圧縮パイプラインステップ
+
 ## [5.1.0] - 2026-04-09
 
 ### Fixed
