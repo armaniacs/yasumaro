@@ -137,6 +137,9 @@ export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSumma
     aiSummaryCleansedReason: 'none'
 };
 
+// 【フォールバック情報】: 直近の抽出でフォールバックが発動したかを保持
+export let lastFallbackTriggered = false;
+
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
 
@@ -230,6 +233,8 @@ function extractPageContent(): string {
             aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
             aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
         };
+        // フォールバック情報を保存
+        lastFallbackTriggered = result.fallbackTriggered ?? false;
     }
     return typeof result === 'string' ? result : result.content;
 }
@@ -577,7 +582,8 @@ async function reportValidVisit(): Promise<void> {
                 aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
                 aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
                 aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons,
+                fallbackTriggered: lastFallbackTriggered
             }
         });
         void logDebug('VALID_VISIT response', { response }, 'extractor');
@@ -850,7 +856,8 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
                 aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
                 aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
                 aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
-            }
+            },
+            fallbackTriggered: lastFallbackTriggered
         });
     }
     return true;

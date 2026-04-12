@@ -1,0 +1,19 @@
+@@ -379,7 +379,7 @@
+     const {
+       title, url, content, recordType, precomputedMaskedCount,
+       pageBytes, candidateBytes, originalBytes, cleansedBytes,
+-      aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons
++      aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, fallbackTriggered
+     } = data;
+ 
+     // 記録方式をエントリに保存
+@@ -479,6 +479,9 @@
+     if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
+       await setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons);
+     }
++    if (fallbackTriggered) {
++      await setUrlFallbackTriggered(url, true);
++    }
+ 
+     // 使用したAIプロバイダー名を保存
+     if (pipelineResult.aiProvider !== undefined) {
