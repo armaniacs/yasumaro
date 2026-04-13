@@ -214,11 +214,14 @@ function getMsgWithCache(key: keyof MessagesCache | string, substitutions?: stri
 
 /**
  * エラーがコネクションエラーかどうかを判定
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @returns {boolean} コネクションエラーの場合true
  */
-export function isConnectionError(error: any): boolean {
-  return error?.message ? error.message.includes('Receiving end does not exist') : false;
+export function isConnectionError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes('Receiving end does not exist');
+  }
+  return false;
 }
 
 /**
@@ -229,11 +232,14 @@ export const DOMAIN_BLOCKED_ERROR_CODE = 'DOMAIN_BLOCKED';
 
 /**
  * エラーがドメインブロックエラーかどうかを判定
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @returns {boolean} ドメインブロックエラーの場合true
  */
-export function isDomainBlockedError(error: any): boolean {
-  return error?.message === DOMAIN_BLOCKED_ERROR_CODE;
+export function isDomainBlockedError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message === DOMAIN_BLOCKED_ERROR_CODE;
+  }
+  return false;
 }
 
 /**
@@ -286,7 +292,9 @@ export function getUserErrorMessage(error: unknown): string {
     case ErrorType.DOMAIN_BLOCKED:
       return ErrorMessages.DOMAIN_BLOCKED;
     default:
-      const message = sanitizeErrorMessage(typeof (error as any)?.message === 'string' ? (error as any).message : '');
+      const message = error instanceof Error 
+        ? sanitizeErrorMessage(error.message) 
+        : '';
       const result = message || ErrorMessages.UNKNOWN_ERROR;
       return `${ErrorMessages.ERROR_PREFIX} ${result}`;
   }
@@ -347,9 +355,9 @@ function createForceRecordButton(parentElement: HTMLElement, onClick: () => void
 }
 
 interface ErrorHandlers {
-  onConnectionError?: (error: any) => void;
-  onDomainBlocked?: (error: any) => void;
-  onGeneralError?: (error: any) => void;
+  onConnectionError?: (error: unknown) => void;
+  onDomainBlocked?: (error: unknown) => void;
+  onGeneralError?: (error: unknown) => void;
 }
 
 /**
