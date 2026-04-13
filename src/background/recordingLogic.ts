@@ -768,11 +768,12 @@ export class RecordingLogic {
             shouldSkipPrivacyCheck = true;
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // URLパースエラー等が発生した場合、安全側に倒す - プライバシーチェックにフォールバック
         settings = await this.getSettingsWithCache();
+        const errorMessage = error instanceof Error ? error.message : String(error);
         addLog(LogType.ERROR, 'Whitelist check failed, falling back to privacy check', {
-          error: error.message,
+          error: errorMessage,
           url: data.url
         });
         // shouldSkipPrivacyCheck は false のまま（プライバシーチェックを実行）
