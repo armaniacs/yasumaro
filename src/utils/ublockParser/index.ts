@@ -172,12 +172,13 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
                     message: '無効なルール形式です'
                 });
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             // 【エラー収集】: パースエラーを収集 🟢
+            const errorMessage = error instanceof Error ? error.message : String(error);
             errors.push({
                 lineNumber: i + 1,
                 line: line,
-                message: error.message
+                message: errorMessage
             });
         }
     }

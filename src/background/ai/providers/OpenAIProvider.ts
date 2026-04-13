@@ -51,9 +51,10 @@ export class OpenAIProvider extends AIProviderStrategy {
         if (this.baseUrl) {
             try {
                 validateUrlForAIRequests(this.baseUrl);
-            } catch (error: any) {
-                addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${error.message}`);
-                throw new Error(`Invalid baseUrl: ${error.message}`);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage}`);
+                throw new Error(`Invalid baseUrl: ${errorMessage}`);
             }
         }
 
@@ -166,8 +167,9 @@ export class OpenAIProvider extends AIProviderStrategy {
 
             const data = await response.json();
             return this._extractSummary(data);
-        } catch (error: any) {
-            if (error.message.includes('timed out')) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('timed out')) {
                 return { summary: "Error: AI request timed out. Please check your connection." };
             }
             return { summary: "Error: Failed to generate summary. Please try again or check your settings." };
@@ -216,14 +218,16 @@ export class OpenAIProvider extends AIProviderStrategy {
             } else {
                 return { success: false, message: `AI API Error: ${response.status} ${response.statusText}` };
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             // より具体的なエラーメッセージ
-            if (e.message.includes('timeout')) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            const errorName = e instanceof Error ? e.name : 'Error';
+            if (errorMessage.includes('timeout')) {
                 return { success: false, message: 'Connection timeout. Check your network or Base URL.' };
-            } else if (e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+            } else if (errorMessage.includes('Failed to fetch') || errorName === 'TypeError') {
                 return { success: false, message: 'Cannot connect. Check your Base URL and network.' };
             } else {
-                return { success: false, message: `Connection error: ${e.message}` };
+                return { success: false, message: `Connection error: ${errorMessage}` };
             }
         }
     }

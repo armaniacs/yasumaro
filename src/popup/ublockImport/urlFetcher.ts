@@ -45,10 +45,11 @@ export async function fetchFromUrl(url: string): Promise<string> {
     }
 
     return text as string;
-  } catch (error: any) {
-    if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch') || error.message.includes('TypeError')) {
-      throw new Error(`ネットワークエラーまたはアクセス拒否が発生しました (${error.message})。URLが正しいか、またはインターネット接続を確認してください。CSP制限の可能性もあります。`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch') || errorMessage.includes('TypeError')) {
+      throw new Error(`ネットワークエラーまたはアクセス拒否が発生しました (${errorMessage})。URLが正しいか、またはインターネット接続を確認してください。CSP制限の可能性もあります。`);
     }
-    throw new Error(`URL読み込みエラー: ${error.message}`);
+    throw new Error(`URL読み込みエラー: ${errorMessage}`);
   }
 }

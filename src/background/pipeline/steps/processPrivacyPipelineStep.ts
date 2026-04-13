@@ -58,9 +58,10 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       aiDuration,
       sanitizedSummary: pipelineResult.summary || 'Summary not available.'
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     addLog(LogType.ERROR, 'Privacy pipeline failed', {
-      error: error.message,
+      error: errorMessage,
       url: data.url,
       previewOnly
     });
@@ -70,13 +71,13 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
         ...context,
         result: {
           success: false,
-          error: error.message,
+          error: errorMessage,
           title: data.title,
           url: data.url
         }
       };
     }
 
-    throw error;
+    throw error instanceof Error ? error : new Error(errorMessage);
   }
 };

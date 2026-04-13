@@ -84,7 +84,8 @@ export function previewUblockFilter(text: string): PreviewResult {
       errorCount: result.errors.length,
       errorDetails: result.errors
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       blockCount: 0,
       exceptionCount: 0,
@@ -92,7 +93,7 @@ export function previewUblockFilter(text: string): PreviewResult {
       errorDetails: [{
         lineNumber: 0,
         line: '',
-        message: error.message
+        message: errorMessage
       }]
     };
   }

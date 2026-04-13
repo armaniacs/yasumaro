@@ -292,13 +292,14 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         }
 
         return { text: processedText, maskedItems: resultItems };
-    } catch (error: any) {
+    } catch (error: unknown) {
         // タイムアウトまたはその他のエラー
         // 【セキュリティ改善】エラー時に生テキストを返さず、安全なプレースホルダーを返す
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return {
             text: '[SANITIZATION_FAILED]',
             maskedItems: [],
-            error: error.message
+            error: errorMessage
         };
     }
 }

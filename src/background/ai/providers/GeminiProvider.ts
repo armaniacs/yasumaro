@@ -99,8 +99,9 @@ export class GeminiProvider extends AIProviderStrategy {
 
             const data = await response.json();
             return await this._extractSummary(data);
-        } catch (error: any) {
-            if (error.message.includes('timed out')) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('timed out')) {
                 return { summary: "Error: AI request timed out. Please check your connection." };
             }
             return { summary: "Error: Failed to generate summary. Please try again or check your settings." };
@@ -117,9 +118,10 @@ export class GeminiProvider extends AIProviderStrategy {
         // BaseUrl SSRF対策 - テストURLの検証
         try {
             validateUrlForAIRequests(testUrl);
-        } catch (error: any) {
-            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${error.message}`);
-            return { success: false, message: `Invalid test URL: ${error.message}` };
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage}`);
+            return { success: false, message: `Invalid test URL: ${errorMessage}` };
         }
 
         try {
@@ -153,12 +155,13 @@ export class GeminiProvider extends AIProviderStrategy {
             } else {
                 return { success: false, message: `Gemini API Error: ${response.status} ${response.statusText}` };
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             // より具体的なエラーメッセージ
-            if (e.message.includes('timeout')) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            if (errorMessage.includes('timeout')) {
                 return { success: false, message: 'Connection timeout. Check your network connection.' };
             } else {
-                return { success: false, message: `Connection error: ${e.message}` };
+                return { success: false, message: `Connection error: ${errorMessage}` };
             }
         }
     }

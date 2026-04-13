@@ -44,13 +44,14 @@ export const saveToObsidianStep = async (
     NotificationHelper.notifySuccess(notificationTitle, `Saved: ${title}`);
 
     return { ...context, obsidianDuration };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Throw error to trigger retry
+    const errorMessage = error instanceof Error ? error.message : String(error);
     addLog(LogType.ERROR, 'Failed to save to Obsidian', {
-      error: error.message,
+      error: errorMessage,
       url,
       title
     });
-    throw error;
+    throw error instanceof Error ? error : new Error(errorMessage);
   }
 };

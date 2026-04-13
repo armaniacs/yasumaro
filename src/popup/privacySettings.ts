@@ -63,9 +63,10 @@ async function savePrivacySettings(): Promise<void> {
         await saveSettings(newSettings);
         showStatus('privacyStatus', getMessage('privacySaved'), 'success');
 
-    } catch (error: any) {
-        addLog(LogType.ERROR, 'Error saving privacy settings', { error: error.message });
-        showStatus('privacyStatus', `${getMessage('saveError')}: ${error.message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        addLog(LogType.ERROR, 'Error saving privacy settings', { error: errorMessage });
+        showStatus('privacyStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
     }
 }
 

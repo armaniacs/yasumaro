@@ -66,9 +66,10 @@ export const saveMetadataStep: PipelineStepFunction = async (
     try {
       await promise;
       results.success.push(name);
-    } catch (error: any) {
+    } catch (error: unknown) {
       results.failed.push(name);
-      addLog(LogType.WARN, `Failed to save ${name}`, { error: error.message, url });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage, url });
     }
   };
 
