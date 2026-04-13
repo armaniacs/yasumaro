@@ -4,6 +4,7 @@ import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
+import { BADGE_COLORS } from '../constants/appConstants.js';
 import {
     getAllowedUrls,
     getSettings,
@@ -127,7 +128,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // Badge にクレンジング情報を表示（C + 削除数）
                 const badgeText = `C${totalRemoved || 0}`;
                 chrome.action.setBadgeText({ text: badgeText, tabId });
-                chrome.action.setBadgeBackgroundColor({ color: '#10B981', tabId: tabId }); // Green
+                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId: tabId }); // Green
 
                 // 3秒後に Badge をクリア
                 setTimeout(() => {
@@ -201,7 +202,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const savedTabId = sender.tab.id;
                     autoSavedBadgeTabs.add(savedTabId);
                     chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
-                    chrome.action.setBadgeBackgroundColor({ color: '#3B82F6', tabId: savedTabId });
+                    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
                 }
 
                 // 自動保存モード confirm: ボタン付き通知で保存確認を促す
@@ -561,7 +562,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         // 自動保存バッジ表示中のタブは ◎ を維持
         if (autoSavedBadgeTabs.has(activeInfo.tabId)) {
             chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
-            chrome.action.setBadgeBackgroundColor({ color: '#3B82F6', tabId: activeInfo.tabId });
+            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: activeInfo.tabId });
             return;
         }
         if (!tab.url) {
@@ -572,7 +573,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
         if (privacyInfo?.isPrivate) {
             chrome.action.setBadgeText({ text: '!' });
-            chrome.action.setBadgeBackgroundColor({ color: '#F97316' });
+            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
         } else {
             chrome.action.setBadgeText({ text: '' });
         }
@@ -594,7 +595,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
     if (privacyInfo?.isPrivate) {
         chrome.action.setBadgeText({ text: '!', tabId });
-        chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
+        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
     } else {
         chrome.action.setBadgeText({ text: '', tabId });
     }

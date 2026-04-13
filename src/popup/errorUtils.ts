@@ -3,6 +3,70 @@
  * エラーハンドリング共通モジュール
  */
 
+// エラータイプの定義
+type ErrorWithDetails = Error & {
+  message: string;
+  code?: string;
+  status?: number;
+  details?: Record<string, unknown>;
+};
+
+type ObsidianError = ErrorWithDetails & {
+  source: 'obsidian';
+  endpoint?: string;
+};
+
+type AiError = ErrorWithDetails & {
+  source: 'ai';
+  provider?: string;
+  request?: unknown;
+  response?: unknown;
+};
+
+type NetworkError = ErrorWithDetails & {
+  source: 'network';
+  url?: string;
+  status?: number;
+  response?: unknown;
+};
+
+type UserError = ErrorWithDetails & {
+  source: 'user';
+  input?: string;
+};
+
+type SystemError = ErrorWithDetails & {
+  source: 'system';
+  module?: string;
+};
+
+type KnownError = ObsidianError | AiError | NetworkError | UserError | SystemError;
+
+// 型ガード関数
+function isObsidianError(error: unknown): error is ObsidianError {
+  return (error as any)?.source === 'obsidian';
+}
+
+function isAiError(error: unknown): error is AiError {
+  return (error as any)?.source === 'ai';
+}
+
+function isNetworkError(error: unknown): error is NetworkError {
+  return (error as any)?.source === 'network';
+}
+
+function isUserError(error: unknown): error is UserError {
+  return (error as any)?.source === 'user';
+}
+
+function isSystemError(error: unknown): error is SystemError {
+  return (error as any)?.source === 'system';
+}
+
+function isKnownError(error: unknown): error is KnownError {
+  return isObsidianError(error) || isAiError(error) || isNetworkError(error) || isUserError(error) || isSystemError(error);
+}
+
 /**
  * エラーメッセージ定数（Problem #5: キャッシュ追加でパフォーマンス改善）
  */
@@ -174,10 +238,10 @@ export function isDomainBlockedError(error: any): boolean {
 
 /**
  * エラータイプを判定
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @returns {ErrorType} エラータイプ
  */
-export function getErrorType(error: any): ErrorTypeValues {
+export function getErrorType(error: unknown): ErrorTypeValues {
   if (isConnectionError(error)) {
     return ErrorType.CONNECTION;
   }
@@ -210,10 +274,10 @@ export function sanitizeErrorMessage(message: string): string {
 
 /**
  * ユーザー向けエラーメッセージを取得
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @returns {string} ユーザー向けエラーメッセージ
  */
-export function getUserErrorMessage(error: any): string {
+export function getUserErrorMessage(error: unknown): string {
   const type = getErrorType(error);
 
   switch (type) {
@@ -222,7 +286,7 @@ export function getUserErrorMessage(error: any): string {
     case ErrorType.DOMAIN_BLOCKED:
       return ErrorMessages.DOMAIN_BLOCKED;
     default:
-      const message = sanitizeErrorMessage(error?.message || '');
+      const message = sanitizeErrorMessage(typeof (error as any)?.message === 'string' ? (error as any).message : '');
       const result = message || ErrorMessages.UNKNOWN_ERROR;
       return `${ErrorMessages.ERROR_PREFIX} ${result}`;
   }
@@ -231,10 +295,10 @@ export function getUserErrorMessage(error: any): string {
 /**
  * エラーをステータス要素に表示
  * @param {HTMLElement} statusElement - ステータス要素
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @param {Function} onForceRecord - 強制記録コールバック
  */
-export function showError(statusElement: HTMLElement, error: any, onForceRecord: (() => void) | null = null): void {
+export function showError(statusElement: HTMLElement, error: unknown, onForceRecord: (() => void) | null = null): void {
   // エラークラスを設定
   statusElement.className = 'error';
 
@@ -290,13 +354,13 @@ interface ErrorHandlers {
 
 /**
  * エラーハンドリング共通処理
- * @param {Error} error - エラーオブジェクト
+ * @param {unknown} error - エラーオブジェクト
  * @param {Object} handlers - ハンドラー設定
  * @param {Function} handlers.onConnectionError - コネクションエラーハンドラー
  * @param {Function} handlers.onDomainBlocked - ドメインブロックエラーハンドラー
  * @param {Function} handlers.onGeneralError - 一般エラーハンドラー
  */
-export function handleError(error: any, handlers: ErrorHandlers): void {
+export function handleError(error: unknown, handlers: ErrorHandlers): void {
   const type = getErrorType(error);
 
   switch (type) {

@@ -585,7 +585,13 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     showSpinner(getMessage('fetchingContent'));
     let contentResponse: ContentResponse;
     try {
-      contentResponse = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' }) as ContentResponse;
+      // 【タイムアウト対策】: Content Scriptが応答しない場合のタイムアウト処理を追加
+      contentResponse = await Promise.race([
+        chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' }) as Promise<ContentResponse>,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Content script response timeout')), 5000);
+        })
+      ]);
       if (chrome.runtime.lastError) {
         throw new Error(chrome.runtime.lastError.message);
       }

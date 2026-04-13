@@ -2,6 +2,7 @@ import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { logInfo, logDebug, logError, logWarn, ErrorCode } from '../utils/logger.js';
 import { hashUrl } from '../utils/crypto.js';
+import { BADGE_COLORS } from '../constants/appConstants.js';
 
 const MAX_CACHE_SIZE = 100;
 
@@ -160,7 +161,7 @@ export class HeaderDetector {
     if (tabId !== undefined && tabId >= 0 && info.isPrivate) {
       try {
         await chrome.action.setBadgeText({ text: '!', tabId });
-        await chrome.action.setBadgeBackgroundColor({ color: '#F97316', tabId });
+        await chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
       } catch (error) {
         logError('Failed to set privacy badge', {
           tabId,
