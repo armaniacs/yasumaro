@@ -216,11 +216,12 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
   // base: ページの元のDOMサイズ（コンテンツ抽出開始点）
   const base = entry.pageBytes;
 
-// sentToAI: AIに実際に送られたバイト数
-// フォールバック発動時は aiSummaryCleansedBytes は無効 → cleansedBytes / originalBytes を使う
-const sentToAI = (entry.fallbackTriggered ?? false)
-  ? (entry.cleansedBytes ?? entry.originalBytes)
-  : (entry.aiSummaryCleansedBytes ?? entry.cleansedBytes ?? entry.originalBytes);
+  // sentToAI: AIに実際に送られたバイト数
+  // フォールバック発動時は aiSummaryCleansedBytes は無効 → cleansedBytes / originalBytes を使う
+  // aiSummaryOriginalBytes がある場合は、AI要約クレンジング前のバイト数を最終バイト数として使用
+  const sentToAI = (entry.fallbackTriggered ?? false)
+    ? (entry.cleansedBytes ?? entry.originalBytes)
+    : (entry.aiSummaryCleansedBytes ?? entry.aiSummaryOriginalBytes ?? entry.cleansedBytes ?? entry.originalBytes);
 
   if (base === undefined || sentToAI === undefined) return null;
   if (base === 0) return null;

@@ -579,6 +579,78 @@ export function extractMainContent(
                 // バイト数を計算（クレンジングなし、textContentベースで統一）
                 originalBytes = getByteSize(targetElement.textContent || '');
                 cleansedBytes = originalBytes;
+
+                // AI要約クレンジングのみ有効な場合（cleanseEnabled=false, aiSummaryCleanseEnabled=true）
+                // クローンを作成してAI要約クレンジングを実行
+                if (aiSummaryCleanseEnabled) {
+                    // DOMを直接操作しないようにクローンを作成
+                    const clone = candidates[0].cloneNode(true) as Element;
+
+                    // AI要約クレンジング**前**のバイト数を計算
+                    aiSummaryOriginalBytes = cleansedBytes;
+
+                    // AI要約クレンジングを実行
+                    const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
+                        altEnabled,
+                        metadataEnabled,
+                        adsEnabled,
+                        navEnabled,
+                        socialEnabled,
+                        deepEnabled,
+                        jsonLdEnabled,
+                        lazyLoadEnabled,
+                        skipLinkEnabled,
+                        cardEnabled,
+                        linkDensityEnabled,
+                        fixedEnabled,
+                        recommendEnabled,
+                        paginationEnabled,
+                        snsPromoEnabled,
+                        popupEnabled,
+                        platformEnabled,
+                        textDensityEnabled,
+                        shortSeqEnabled,
+                        symbolLineEnabled,
+                        linkParaEnabled,
+                        enhancedHiddenEnabled,
+                        emptyElemEnabled,
+                        jpLayoutEnabled,
+                        jpNavigationEnabled,
+                        authorEnabled,
+                        linkRatioThreshold,
+                        shortTextThreshold,
+                        shortSeqCount,
+                        linkParaThreshold,
+                        customPatterns,
+                    });
+
+                    logDebug('AI Summary Cleansing result (cleanseEnabled=false)', aiSummaryCleanseResult);
+
+                    // AI要約クレンジング**後**のバイト数を計算
+                    aiSummaryCleansedBytes = getByteSize(clone.textContent || '');
+
+                    if (aiSummaryCleanseResult.totalRemoved > 0) {
+                        const removedTypes: string[] = [];
+                        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
+                        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
+                        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
+                        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
+                        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
+                        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
+
+                        if (removedTypes.length === 1) {
+                            aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
+                        } else if (removedTypes.length > 1) {
+                            aiSummaryCleansedReason = 'multiple';
+                            aiSummaryCleansedReasons = removedTypes;
+                        }
+
+                        aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
+                    }
+
+                    // クレンジング後のクローンからテキストを抽出
+                    targetElement = clone;
+                }
             }
 
             // 要素からテキストを抽出
