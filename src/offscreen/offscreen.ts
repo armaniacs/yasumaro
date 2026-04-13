@@ -88,9 +88,10 @@ async function ensureSession(): Promise<boolean | { success: false; error: strin
         });
         console.log("Offscreen: Session created successfully.");
         return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Offscreen: Failed to create session', error);
-        return { success: false, error: `Session creation failed: ${error.message}` };
+        return { success: false, error: `Session creation failed: ${errorMessage}` };
     }
 }
 

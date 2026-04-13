@@ -250,10 +250,10 @@ exportSettingsBtn?.addEventListener('click', async () => {
             await exportSettings();
             showStatus('status', getMessage('settingsExported'), 'success');
         }
-    } catch (error: any) {
-        logError('Export error', { cause: error }, ErrorCode.SETTINGS_EXPORT_FAILURE);
-        const message = error instanceof Error ? error.message : String(error);
-        showStatus('status', `${getMessage('exportError')}: ${message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError('Export error', { cause: errorMessage }, ErrorCode.SETTINGS_EXPORT_FAILURE);
+        showStatus('status', `${getMessage('exportError')}: ${errorMessage}`, 'error');
     }
 });
 
@@ -336,10 +336,10 @@ importFileInput?.addEventListener('change', async (e: Event) => {
             importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
         }
 
-    } catch (error: any) {
-        logError('Import error', { cause: error }, ErrorCode.SETTINGS_IMPORT_FAILURE);
-        const message = error instanceof Error ? error.message : String(error);
-        showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError('Import error', { cause: errorMessage }, ErrorCode.SETTINGS_IMPORT_FAILURE);
+        showStatus('status', `${getMessage('importError')}: ${errorMessage}`, 'error');
     }
 });
 
@@ -387,10 +387,10 @@ confirmImportBtn?.addEventListener('click', async () => {
         } else {
             showStatus('status', `${getMessage('importError')}: Failed to apply settings`, 'error');
         }
-    } catch (error: any) {
-        logError('Import error', { cause: error }, ErrorCode.SETTINGS_IMPORT_FAILURE);
-        const message = error instanceof Error ? error.message : String(error);
-        showStatus('status', `${getMessage('importError')}: ${message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError('Import error', { cause: errorMessage }, ErrorCode.SETTINGS_IMPORT_FAILURE);
+        showStatus('status', `${getMessage('importError')}: ${errorMessage}`, 'error');
     }
 
     closeImportModal();

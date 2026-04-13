@@ -93,12 +93,12 @@ async function _fetchWithTimeout(url: string, options: RequestInit = {}): Promis
         const response = await fetch(secureUrl, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
         return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
             throw new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
-        throw error;
+        throw error instanceof Error ? error : new Error(String(error));
     }
 }
 
@@ -211,8 +211,8 @@ export class ObsidianClient {
                 );
 
                 await this._writeContent(targetUrl, headers, newContent);
-            } catch (error: any) {
-                throw this._handleError(error, targetUrl);
+            } catch (error: unknown) {
+                throw this._handleError(error instanceof Error ? error : new Error(String(error)), targetUrl);
             }
         } finally {
             // 確実にロックを解放
@@ -306,18 +306,20 @@ export class ObsidianClient {
                     return { success: false, message: `Connection failed: ${errorMsg}` };
                 }
             }
-        } catch (e: any) {
-            addLog(LogType.ERROR, `Connection test failed: ${e.message}`);
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            const errorName = e instanceof Error ? e.name : 'Error';
+            addLog(LogType.ERROR, `Connection test failed: ${errorMessage}`);
 
             // より具体的なエラーメッセージ
-            if (e.message.includes('timed out')) {
+            if (errorMessage.includes('timed out')) {
                 return { success: false, message: 'Connection timeout. Is Obsidian running?' };
-            } else if (e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+            } else if (errorMessage.includes('Failed to fetch') || errorName === 'TypeError') {
                 return { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' };
-            } else if (e.message.includes('API key is missing')) {
+            } else if (errorMessage.includes('API key is missing')) {
                 return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
             } else {
-                return { success: false, message: `Connection error: ${e.message}` };
+                return { success: false, message: `Connection error: ${errorMessage}` };
             }
         }
     }

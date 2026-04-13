@@ -162,9 +162,10 @@ export function sanitizePathForUrl(pathRaw: string): string {
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // サニタイズエラーの場合は安全なデフォルト値を返す
-    console.warn('Path sanitization failed:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn('Path sanitization failed:', errorMessage);
     return '';
   }
 }

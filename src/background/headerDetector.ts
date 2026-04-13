@@ -27,8 +27,9 @@ export class HeaderDetector {
       );
 
       await logInfo('Successfully initialized webRequest listener', { source: 'headerDetector' });
-    } catch (error: any) {
-      await logError('HeaderDetector initialization failed', { error: error.message, source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await logError('HeaderDetector initialization failed', { error: errorMessage, source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
     }
   }
 
@@ -114,12 +115,13 @@ export class HeaderDetector {
         const urlHash = await hashUrl(details.url);
         await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
       })();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // エラーは握りつぶしてログのみ記録
+      const errorMessage = error instanceof Error ? error.message : String(error);
       (async () => {
         const urlHash = await hashUrl(details.url);
         await logError('HeaderDetector error', {
-          error: error.message,
+          error: errorMessage,
           urlHash,
           source: 'headerDetector'
         }, ErrorCode.UNKNOWN_ERROR);

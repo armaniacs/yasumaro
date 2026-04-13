@@ -123,12 +123,12 @@ export class ChromeMessageSender {
                 }
 
                 return response;
-            } catch (error: any) {
-                lastError = error;
+            } catch (error: unknown) {
+                lastError = error instanceof Error ? error : new Error(String(error));
                 attempt++;
 
                 // リトライ可能かどうか判定
-                if (attempt <= options.maxRetries && this.#isRetryableError(error)) {
+                if (attempt <= options.maxRetries && this.#isRetryableError(lastError)) {
                     const delay = this.#calculateDelay(attempt, options);
                     await this.#delay(delay);
                 } else {

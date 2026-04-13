@@ -278,9 +278,11 @@ export async function handleSaveDomainSettings(): Promise<void> {
         // uBlock形式の保存
         await handleSaveUblockSettings();
 
-    } catch (error: any) {
-        addLog(LogType.ERROR, 'Error saving domain settings', { error: error.message, stack: error.stack });
-        showStatus('domainStatus', `${getMessage('saveError')}: ${error.message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        addLog(LogType.ERROR, 'Error saving domain settings', { error: errorMessage, stack: errorStack });
+        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
     }
 }
 
@@ -335,9 +337,10 @@ async function saveSimpleFormatSettings(): Promise<void> {
     try {
         await saveSettings(newSettings, true);
         showStatus('domainStatus', getMessage('domainFilterSaved'), 'success');
-    } catch (error: any) {
-        addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: error.message });
-        showStatus('domainStatus', `${getMessage('saveError')}: ${error.message}`, 'error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: errorMessage });
+        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
     }
 }
 

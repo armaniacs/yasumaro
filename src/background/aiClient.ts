@@ -67,8 +67,9 @@ export class AIClient {
         try {
             const providerInstance = factory(settings);
             return await providerInstance.generateSummary(content, tagSummaryMode);
-        } catch (error: any) {
-            addLog(LogType.ERROR, `Generate summary failed: ${error.message}`);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            addLog(LogType.ERROR, `Generate summary failed: ${errorMessage}`);
             return { summary: "Error: Failed to generate summary. Please try again." };
         }
     }
@@ -89,9 +90,10 @@ export class AIClient {
         try {
             const providerInstance = factory(settings);
             return await providerInstance.testConnection();
-        } catch (error: any) {
-            addLog(LogType.ERROR, `Connection test failed: ${error.message}`);
-            return { success: false, message: error.message };
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            addLog(LogType.ERROR, `Connection test failed: ${errorMessage}`);
+            return { success: false, message: errorMessage };
         }
     }
 

@@ -437,23 +437,23 @@ export async function fetchWithRetry(
         logWarn(`HTTP error, no more retries`, { url, attempt, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
         throw attemptError;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastResponse = null;
-      lastError = error;
+      lastError = error instanceof Error ? error : new Error(String(error));
 
       // リトライ条件チェック
-      if (attempt < maxRetryCount && shouldRetry(error, attempt + 1, null)) {
+      if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null)) {
         // リトライ遅延（指数バックオフ）
         const delay = Math.min(
           initialDelayMs * Math.pow(backoffMultiplier, attempt),
           maxDelayMs
         );
-        logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: error.message }, undefined, 'fetchWithRetry');
+        logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message }, undefined, 'fetchWithRetry');
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         // リトライなしまたは全リトライ失敗
-        logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: error.message }, undefined, 'fetchWithRetry');
-        throw error;
+        logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: lastError.message }, undefined, 'fetchWithRetry');
+        throw lastError;
       }
     }
   }

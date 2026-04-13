@@ -91,8 +91,9 @@ async function saveContentSettings(): Promise<void> {
 
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');
-    } catch (error: any) {
-        logError('[ContentSettings] Save error', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError('[ContentSettings] Save error', { cause: errorMessage }, ErrorCode.STORAGE_WRITE_FAILURE);
         showStatus('contentSettingsStatus', getMessage('settingsSaveError') || '設定の保存に失敗しました', 'error');
     }
 }

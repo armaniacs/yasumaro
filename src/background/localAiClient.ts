@@ -88,8 +88,9 @@ export class LocalAIClient {
         try {
             const response = await this.msgOffscreen('CHECK_AVAILABILITY');
             return response?.status || 'unsupported';
-        } catch (e: any) {
-            addLog(LogType.ERROR, 'LocalAIClient: Failed to check availability via offscreen', { error: e.message });
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            addLog(LogType.ERROR, 'LocalAIClient: Failed to check availability via offscreen', { error: errorMessage });
             return 'unsupported';
         }
     }
@@ -144,18 +145,28 @@ export class LocalAIClient {
             } else {
                 return { success: false, error: response.error };
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             // タイムアウトやその他のエラー時にクリアする
             if (timeoutId) {
                 clearTimeout(timeoutId);
             }
 
-            if (error.message.includes('timed')) {
+            // chrome.runtime.lastErrorはErrorインスタンスではないため専用処理
+            let errorMessage: string;
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (error && typeof error === 'object' && 'message' in error) {
+                errorMessage = String((error as { message: unknown }).message);
+            } else {
+                errorMessage = String(error);
+            }
+
+            if (errorMessage.includes('timed')) {
                 addLog(LogType.ERROR, 'LocalAIClient: Summarization timed out', { timeout: MESSAGE_TIMEOUT_MS });
             } else {
-                addLog(LogType.ERROR, 'LocalAIClient: Summarization failed', { error: error.message });
+                addLog(LogType.ERROR, 'LocalAIClient: Summarization failed', { error: errorMessage });
             }
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage };
         }
     }
 }
