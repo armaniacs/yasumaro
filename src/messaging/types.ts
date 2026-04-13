@@ -255,14 +255,22 @@ export function isServiceWorkerRequest(message: unknown): message is ServiceWork
  * レスポンスが成功レスポンスか判定する
  */
 export function isSuccessResponse(response: unknown): response is SuccessResponse {
-  return !!response && typeof response === 'object' && 'success' in response && (response as any).success === true;
+  if (!response || typeof response !== 'object') {
+    return false;
+  }
+  const obj = response as Record<string, unknown>;
+  return 'success' in obj && obj.success === true;
 }
 
 /**
  * レスポンスがエラーレスポンスか判定する
  */
 export function isErrorResponse(response: unknown): response is ErrorResponse {
-  return !!response && typeof response === 'object' && 'success' in response && (response as any).success === false;
+  if (!response || typeof response !== 'object') {
+    return false;
+  }
+  const obj = response as Record<string, unknown>;
+  return 'success' in obj && obj.success === false;
 }
 
 // ============================================================================

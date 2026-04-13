@@ -223,7 +223,7 @@ export async function decrypt(ciphertext: string, iv: string, key: CryptoKey): P
 
         const decoder = new TextDecoder();
         return decoder.decode(plaintextBuffer);
-    } catch (error) {
+    } catch (error: unknown) {
         throw new Error('Decryption failed: Invalid key or corrupted data');
     }
 }
@@ -406,9 +406,9 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
                 ['sign', 'verify']
             );
         }
-    } catch (error) {
+    } catch (error: unknown) {
         // If loading fails, we'll generate a new key
-        console.warn('Failed to load HMAC key, generating new one:', error);
+        console.warn('Failed to load HMAC key, generating new one:', error instanceof Error ? error.message : String(error));
     }
 
     // Generate new key
@@ -495,7 +495,7 @@ export async function verifyHmacSignature(data: string, signature: string, key: 
             result |= sig8[i] ^ comp8[i];
         }
         return result === 0;
-    } catch {
+    } catch (error: unknown) {
         return false;
     }
 }

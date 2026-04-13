@@ -306,28 +306,30 @@ export async function saveEncryptedExportToFile(
  * @param {unknown} data - data to validate
  * @returns {boolean} true if data is valid
  */
-export function validateExportData(data: any): boolean {
+export function validateExportData(data: unknown): boolean {
   if (typeof data !== 'object' || data === null) {
     return false;
   }
 
+  const obj = data as Record<string, unknown>;
+
   // Check required fields
-  if (typeof data.version !== 'string') {
+  if (typeof obj.version !== 'string') {
     return false;
   }
 
-  if (typeof data.exportedAt !== 'string') {
+  if (typeof obj.exportedAt !== 'string') {
     return false;
   }
 
-  if (typeof data.settings !== 'object' || data.settings === null) {
+  if (typeof obj.settings !== 'object' || obj.settings === null) {
     return false;
   }
 
-  const settings = data.settings;
+  const settings = obj.settings as Record<string, unknown>;
 
   // APIキーが除外されている場合、APIキーフィールドのチェックをスキップ
-  const apiKeyExcluded = data.apiKeyExcluded === true;
+  const apiKeyExcluded = obj.apiKeyExcluded === true;
 
   const requiredKeys = [
     'obsidian_protocol', 'obsidian_port',
