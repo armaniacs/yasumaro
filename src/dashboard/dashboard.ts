@@ -14,7 +14,7 @@ import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from '../
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
 import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners } from '../popup/aiSummaryCleansingSettings.js';
-import { STATUS_COLORS, UI_COLORS } from '../constants/appConstants.js';
+import { STATUS_COLORS, UI_COLORS, TIMEOUTS } from '../constants/appConstants.js';
 import {
   exportSettings,
   importSettings,
@@ -762,8 +762,8 @@ function showRecordError(info: HTMLElement, error: unknown): void {
   errorEl.className = 'record-error-message';
   errorEl.textContent = errorMsg;
   info.appendChild(errorEl);
-  // 5秒後にエラーメッセージを自動消去
-  setTimeout(() => { errorEl.remove(); }, 5000);
+  // エラーメッセージ表示時間後に自動消去
+  setTimeout(() => { errorEl.remove(); }, TIMEOUTS.ERROR_MESSAGE_DISPLAY);
 }
 
 async function initHistoryPanel(): Promise<void> {

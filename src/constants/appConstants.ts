@@ -104,6 +104,24 @@ export const TIMEOUTS = {
   RATE_LIMIT_WINDOW: 60 * 1000,
   /** セッションタイムアウト: 24時間 */
   SESSION_TIMEOUT: 24 * 60 * 60 * 1000,
+  /** エラーメッセージ表示時間: 5秒 */
+  ERROR_MESSAGE_DISPLAY: 5000,
+  /** ローカルAIタイムアウト: 2分（120秒） */
+  LOCAL_AI: 120000,
+  /** Trancoリスト取得タイムアウト: 60秒 */
+  TRANCO_FETCH: 60000,
+  /** バッチログフラッシュ遅延: 5秒 */
+  BATCH_LOG_FLUSH: 5000,
+  /** ステータスメッセージ表示時間（成功時）: 3秒 */
+  STATUS_MESSAGE_SUCCESS: 3000,
+  /** ステータスメッセージ表示時間（エラー時）: 5秒 */
+  STATUS_MESSAGE_ERROR: 5000,
+} as const;
+
+/** 分単位の時間定数 */
+export const TIMEOUTS_MINUTES = {
+  /** アラームチェック間隔: 1分 */
+  ALARM_CHECK_INTERVAL: 1,
 } as const;
 
 // =============================================================================
