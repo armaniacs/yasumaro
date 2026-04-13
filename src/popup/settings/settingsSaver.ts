@@ -7,6 +7,7 @@ import { saveSettingsWithAllowedUrls, getSettings, Settings } from '../../utils/
 import { extractSettingsFromInputs } from '../settingsUiHelper.js';
 import { getMessage } from '../i18n.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from './fieldValidation.js';
+import { STATUS_COLORS } from '../../constants/appConstants.js';
 
 interface ConnectionTestResult {
     obsidianSuccess: boolean;
@@ -81,10 +82,10 @@ function displayConnectionResult(statusDiv: HTMLElement, result: ConnectionTestR
     const obsidianResult = document.createElement('span');
     if (obsidianSuccess) {
         obsidianResult.textContent = '✅ ' + getMessage('connectionSuccess');
-        obsidianResult.style.color = '#2E7D32';
+        obsidianResult.style.color = STATUS_COLORS.SUCCESS;
     } else {
         obsidianResult.textContent = '❌ ' + obsidianMessage;
-        obsidianResult.style.color = '#D32F2F';
+        obsidianResult.style.color = STATUS_COLORS.ERROR;
     }
     obsidianStatus.appendChild(obsidianResult);
     statusDiv.appendChild(obsidianStatus);
@@ -104,10 +105,10 @@ function displayConnectionResult(statusDiv: HTMLElement, result: ConnectionTestR
     const aiResult = document.createElement('span');
     if (aiSuccess) {
         aiResult.textContent = '✅ ' + getMessage('connectionSuccess');
-        aiResult.style.color = '#2E7D32';
+        aiResult.style.color = STATUS_COLORS.SUCCESS;
     } else {
         aiResult.textContent = '❌ ' + aiMessage;
-        aiResult.style.color = '#D32F2F';
+        aiResult.style.color = STATUS_COLORS.ERROR;
     }
     aiStatus.appendChild(aiResult);
     statusDiv.appendChild(aiStatus);

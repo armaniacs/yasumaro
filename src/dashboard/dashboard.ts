@@ -14,6 +14,7 @@ import { loadSettingsToInputs, extractSettingsFromInputs, showStatus } from '../
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
 import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners } from '../popup/aiSummaryCleansingSettings.js';
+import { STATUS_COLORS, UI_COLORS } from '../constants/appConstants.js';
 import {
   exportSettings,
   importSettings,
@@ -269,10 +270,10 @@ async function handleTestObsidian(): Promise<void> {
     const obsidianSpan = document.createElement('span');
     if (obsidianResult.success) {
       obsidianSpan.textContent = getMessage('connectionSuccess') || '接続成功';
-      obsidianSpan.style.color = '#2E7D32';
+      obsidianSpan.style.color = STATUS_COLORS.SUCCESS;
     } else {
       obsidianSpan.textContent = obsidianResult.message;
-      obsidianSpan.style.color = '#D32F2F';
+      obsidianSpan.style.color = STATUS_COLORS.ERROR;
     }
     obsidianStatus.appendChild(obsidianSpan);
     statusDiv.appendChild(obsidianStatus);
@@ -325,10 +326,10 @@ async function handleTestAi(): Promise<void> {
     const aiSpan = document.createElement('span');
     if (aiResult.success) {
       aiSpan.textContent = getMessage('connectionSuccess') || '接続成功';
-      aiSpan.style.color = '#2E7D32';
+      aiSpan.style.color = STATUS_COLORS.SUCCESS;
     } else {
       aiSpan.textContent = aiResult.message;
-      aiSpan.style.color = '#D32F2F';
+      aiSpan.style.color = STATUS_COLORS.ERROR;
     }
     aiStatus.appendChild(aiSpan);
     statusDiv.appendChild(aiStatus);
@@ -1143,7 +1144,7 @@ async function initHistoryPanel(): Promise<void> {
       if (entry.fallbackTriggered) {
         const fallbackEl = document.createElement('div');
         fallbackEl.className = 'history-entry-ai-summary-cleansing';
-        fallbackEl.style.color = '#d97706'; // 警告色
+        fallbackEl.style.color = STATUS_COLORS.WARNING; // 警告色
         fallbackEl.style.fontWeight = 'bold';
         fallbackEl.innerHTML = '⚠️ フォールバック発動: クレンジング後のテキストが短すぎたため、処理を破棄して元のテキストを利用しました';
         info.appendChild(fallbackEl);
@@ -2508,10 +2509,10 @@ async function initDiagnosticsPanel(): Promise<void> {
       connectionResult.textContent = obsidian
         ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
         : getMessage('testComplete') || 'Test complete.';
-      connectionResult.style.color = obsidian?.success ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)';
+      connectionResult.style.color = obsidian?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } catch (e) {
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
-      connectionResult.style.color = 'var(--color-danger, #ef4444)';
+      connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagTestObsidianBtn.disabled = false;
     }
@@ -2534,10 +2535,10 @@ async function initDiagnosticsPanel(): Promise<void> {
       connectionResult.textContent = ai
         ? `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`
         : getMessage('testComplete') || 'Test complete.';
-      connectionResult.style.color = ai?.success ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)';
+      connectionResult.style.color = ai?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } catch (e) {
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
-      connectionResult.style.color = 'var(--color-danger, #ef4444)';
+      connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagTestAiBtn.disabled = false;
     }

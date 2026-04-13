@@ -1,4 +1,5 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
+import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
 
 /**
  * バイト数を4桁有効数字で KB / MB / GB に自動変換する
@@ -113,18 +114,18 @@ const FUNNEL_LABELS = ['DOM全体', '候補絞込', 'Content\nCleansing', 'AI要
 // ダーク: 背景 #161b22 に対して各色のコントラスト比を確保
 const CHART_COLORS = {
   light: {
-    bar: '#6d28d9',        // 紫バー（背景#f8fafcに対し 7.5:1）
-    barFinal: '#059669',   // 緑バー（最終段、背景に対し 4.6:1）
-    label: '#1e293b',      // ラベル文字（背景に対し 15.8:1）
-    value: '#1e293b',      // バー右の数値（背景に対し 15.8:1）
-    footer: '#065f46',     // フッター文字（背景に対し 9.7:1）
+    bar: CLEANSING_GRAPH_COLORS_LIGHT.BAR,
+    barFinal: CLEANSING_GRAPH_COLORS_LIGHT.BAR_FINAL,
+    label: CLEANSING_GRAPH_COLORS_LIGHT.LABEL,
+    value: CLEANSING_GRAPH_COLORS_LIGHT.VALUE,
+    footer: CLEANSING_GRAPH_COLORS_LIGHT.FOOTER,
   },
   dark: {
-    bar: '#a78bfa',        // 明るい紫バー（背景#161b22に対し 7.2:1）
-    barFinal: '#34d399',   // 明るい緑バー（背景に対し 8.3:1）
-    label: '#e2e8f0',      // ラベル文字（背景に対し 14.5:1）
-    value: '#cbd5e1',      // バー右の数値（背景に対し 11.5:1）
-    footer: '#6ee7b7',     // フッター文字（背景に対し 10.1:1）
+    bar: CLEANSING_GRAPH_COLORS_DARK.BAR,
+    barFinal: CLEANSING_GRAPH_COLORS_DARK.BAR_FINAL,
+    label: CLEANSING_GRAPH_COLORS_DARK.LABEL,
+    value: CLEANSING_GRAPH_COLORS_DARK.VALUE,
+    footer: CLEANSING_GRAPH_COLORS_DARK.FOOTER,
   },
 };
 

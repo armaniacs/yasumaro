@@ -68,6 +68,26 @@ export const CLEANSING_GRAPH_COLORS_DARK = {
   FOOTER: '#6ee7b7',
 } as const;
 
+/** UIコンポーネント用の色 */
+export const UI_COLORS = {
+  /** ボタン背景（ライトグレー） */
+  BUTTON_BG: '#f5f5f5',
+  /** ボタン枠線 */
+  BUTTON_BORDER: '#ccc',
+  /** 接続成功時の緑 */
+  CONNECTION_SUCCESS: '#2E7D32',
+  /** 接続エラー時の赤 */
+  CONNECTION_ERROR: '#D32F2F',
+  /** フォールバック警告のオレンジ */
+  FALLBACK_WARNING: '#d97706',
+  /** CSS変数フォールバック成功色 */
+  CSS_SUCCESS_FALLBACK: '#22c55e',
+  /** CSS変数フォールバックエラー色 */
+  CSS_ERROR_FALLBACK: '#ef4444',
+  /** スピナー/ローディング色 */
+  SPINNER_COLOR: '#4CAF50',
+} as const;
+
 // =============================================================================
 // タイムアウト・時間関連定数
 // =============================================================================
