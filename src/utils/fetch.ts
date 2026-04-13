@@ -52,8 +52,9 @@ function validateUrl(url: string, options: ValidateUrlOptions = {}): void {
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(url);
-  } catch (e: any) {
-    throw new Error(`Invalid URL: ${e.message}`);
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    throw new Error(`Invalid URL: ${errorMessage}`);
   }
 
   // プロトコル検証（オプション）
@@ -156,9 +157,9 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
     clearTimeout(timeoutId);
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       // 技術的な詳細を除外して一般的なエラーメッセージを返す
       throw new Error('Error: Request timed out. Please check your connection and try again.');
     }
