@@ -12,6 +12,7 @@ import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { getSettings, StorageKeys } from './storage.js';
 import { logDebug, logWarn } from './logger.js';
+import { TIMEOUTS } from '../constants/appConstants.js';
 
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
