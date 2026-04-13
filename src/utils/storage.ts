@@ -138,6 +138,9 @@ export const StorageKeys = {
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
+    // Rate Limit Settings (Configurable)
+    SKIP_AI_RATE_LIMIT_MAX: 'skip_ai_rate_limit_max', // skipAI操作の最大回数（デフォルト: 5）
+    SKIP_AI_RATE_LIMIT_WINDOW_MS: 'skip_ai_rate_limit_window_ms', // skipAIレートリミットウィンドウ（デフォルト: 60000ms）
     // AI Summary Cleansing Settings
     AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled', // AI要約用クレンジング有効フラグ（デフォルト: true）
     AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt', // 画像alt属性削除（デフォルト: true）
@@ -282,6 +285,9 @@ export interface StorageKeyValues {
     // AI Limits Settings
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
     [StorageKeys.AI_TIMEOUT_MS]: number;
+    // Rate Limit Settings
+    [StorageKeys.SKIP_AI_RATE_LIMIT_MAX]: number;
+    [StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS]: number;
     // AI Summary Cleansing Settings
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: boolean;
@@ -892,6 +898,9 @@ export const DEFAULT_SETTINGS: Settings = {
     // AI Limits Settings
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: 1000,         // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     [StorageKeys.AI_TIMEOUT_MS]: 0,                    // AIタイムアウト（0=自動: ローカル120秒/クラウド30秒）
+    // Rate Limit Settings
+    [StorageKeys.SKIP_AI_RATE_LIMIT_MAX]: 5,           // skipAI操作の最大回数（デフォルト: 5）
+    [StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS]: 60000,  // skipAIレートリミットウィンドウ（デフォルト: 60000ms）
     // AI Summary Cleansing Settings
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: true,  // AI要約用クレンジング有効フラグ（デフォルト: 有効）
     [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: true,      // 画像alt属性削除（デフォルト: 有効）

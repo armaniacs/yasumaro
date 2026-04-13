@@ -4,7 +4,7 @@ import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { BADGE_COLORS } from '../constants/appConstants.js';
+import { BADGE_COLORS, RATE_LIMITS } from '../constants/appConstants.js';
 import {
     getAllowedUrls,
     getSettings,
@@ -76,9 +76,7 @@ HeaderDetector.initialize();
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
-// Rate limit configuration for skipAi operations
-const SKIP_AI_RATE_LIMIT_MAX = 5; // Max 5 operations per window
-const SKIP_AI_RATE_LIMIT_WINDOW_MS = 60000; // 1 minute window
+// Rate limit configuration for skipAi operations (defaults from constants, can be overridden via settings)
 const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>();
 
 // Listen for messages from Content Script and Popup
@@ -344,15 +342,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const now = Date.now();
                     const senderKey = sender.tab?.id?.toString() || 'unknown';
                     const limiterState = skipAiRateLimiter.get(senderKey);
+                    const rateLimitMax = settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number ?? RATE_LIMITS.SKIP_AI_MAX;
+                    const rateLimitWindow = settings[StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS] as number ?? RATE_LIMITS.SKIP_AI_WINDOW_MS;
 
                     if (limiterState) {
                         // ウィンドウが期限切れならリセット
                         if (now > limiterState.resetTime) {
-                            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + SKIP_AI_RATE_LIMIT_WINDOW_MS });
-                        } else if (limiterState.count >= SKIP_AI_RATE_LIMIT_MAX) {
+                            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
+                        } else if (limiterState.count >= rateLimitMax) {
                             await logWarn(
                                 'Rate limit exceeded for skipAi operation',
-                                { sender: senderKey, limit: SKIP_AI_RATE_LIMIT_MAX },
+                                { sender: senderKey, limit: rateLimitMax },
                                 undefined,
                                 'service-worker'
                             );
@@ -362,7 +362,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             limiterState.count++;
                         }
                     } else {
-                        skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + SKIP_AI_RATE_LIMIT_WINDOW_MS });
+                        skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
                     }
                 }
 
