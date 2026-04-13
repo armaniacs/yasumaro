@@ -21,6 +21,7 @@ import { getPermissionManager } from '../utils/permissionManager.js';
 
 // Trust domain checker（3段階警告）
 import { TrustChecker } from '../utils/trustChecker.js';
+import type { TrustCheckResult } from '../utils/trustChecker.js';
 
 // RecordingResult, MaskedItem 型 - messaging/types.tsからインポート
 import type { RecordingResult, MaskedItem } from '../messaging/types.js';
@@ -52,6 +53,47 @@ const MAX_RECORD_SIZE = 64 * 1024; // 64KB
 // @param {number} maxSize - 最大サイズのバイト数（デフォルト: MAX_RECORD_SIZE）
 // @returns {string} 切り詰められたコンテンツ（元のサイズ以下の場合はそのまま）
 // @see PII_FEATURE_GUIDE.md - コンテンツサイズ制限の詳細
+
+/**
+ * プライバシーチェック結果の型
+ * Note: Uses same shape as RecordingResult for compatibility
+ */
+interface PrivacyCheckResult {
+  success: boolean;
+  error?: string;
+  reason?: string;
+  confirmationRequired?: boolean;
+  skipped?: boolean;
+  summary?: string;
+  title?: string;
+  url?: string;
+}
+
+/**
+ * 重複チェック結果の型
+ */
+interface DuplicateCheckResult {
+  success: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+}
+
+/**
+ * Trustチェック結果の型（trustChecker.tsのTrustCheckResult互換）
+ */
+interface TrustDomainCheckResult {
+  canProceed: boolean;
+  trustResult: {
+    level: string;
+    source?: string;
+    reason?: string;
+    category?: string;
+  };
+  showAlert: boolean;
+  reason?: string;
+}
+
 export function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
   // 【修正】TextEncoderを使用して正確なUTF-8バイト数を計算
   const encoder = new TextEncoder();
@@ -217,7 +259,7 @@ export class RecordingLogic {
   /**
    * Trustドメインをチェックする
    */
-  private async _checkTrustDomain(url: string, force: boolean): Promise<any> {
+  private async _checkTrustDomain(url: string, force: boolean): Promise<TrustDomainCheckResult> {
     const trustChecker = new TrustChecker();
     const trustCheck = await trustChecker.checkDomain(url);
     return trustCheck;
@@ -226,7 +268,7 @@ export class RecordingLogic {
   /**
    * プライバシーヘッダーをチェックする
    */
-  private async _checkPrivacyHeaders(url: string, force: boolean, requireConfirmation: boolean, settings: Settings, headerValue: string): Promise<{ canProceed: boolean; result?: any } | null> {
+  private async _checkPrivacyHeaders(url: string, force: boolean, requireConfirmation: boolean, settings: Settings, headerValue: string): Promise<{ canProceed: boolean; result?: PrivacyCheckResult } | null> {
     const privacyInfo = await this.getPrivacyInfoWithCache(url);
     if (privacyInfo?.isPrivate && !force) {
       addLog(LogType.WARN, 'Private page detected', {
@@ -301,7 +343,7 @@ export class RecordingLogic {
   /**
    * 重複をチェックする
    */
-  private async _checkDuplicates(url: string, skipDuplicateCheck: boolean): Promise<{ canProceed: boolean; result?: any; urlMap?: Map<string, number> } | null> {
+  private async _checkDuplicates(url: string, skipDuplicateCheck: boolean): Promise<{ canProceed: boolean; result?: DuplicateCheckResult; urlMap?: Map<string, number> } | null> {
     // 日付ベース重複チェック: Map<URL, timestamp> を取得
     const urlMap = await this.getSavedUrlsWithCache();
 
@@ -782,8 +824,8 @@ export class RecordingLogic {
       // 1.5b. Check privacy headers (ホワイトリスト該当時はスキップ)
       if (!shouldSkipPrivacyCheck) {
         const privacyCheckResult = await this._checkPrivacyHeaders(data.url, data.force || false, data.requireConfirmation || false, settings, data.headerValue || '');
-        if (privacyCheckResult && !privacyCheckResult.canProceed) {
-          return privacyCheckResult.result;
+        if (privacyCheckResult && !privacyCheckResult.canProceed && privacyCheckResult.result) {
+          return privacyCheckResult.result as RecordingResult;
         }
       }
 
@@ -794,8 +836,8 @@ export class RecordingLogic {
       this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
 
       const duplicateCheckResult = await this._checkDuplicates(data.url, data.skipDuplicateCheck || false);
-      if (duplicateCheckResult && !duplicateCheckResult.canProceed) {
-        return duplicateCheckResult.result;
+      if (duplicateCheckResult && !duplicateCheckResult.canProceed && duplicateCheckResult.result) {
+        return duplicateCheckResult.result as RecordingResult;
       }
 
       const urlMap = duplicateCheckResult?.urlMap;
@@ -823,9 +865,10 @@ export class RecordingLogic {
         if (!data.alreadyProcessed) {
           aiDuration = aiEndTime - aiStartTime;
         }
-      } catch (pipelineError: any) {
+      } catch (pipelineError: unknown) {
+        const errorMessage = pipelineError instanceof Error ? pipelineError.message : 'Privacy pipeline failed';
         addLog(LogType.ERROR, 'Privacy pipeline failed', {
-          error: pipelineError.message,
+          error: errorMessage,
           url: data.url,
           previewOnly: data.previewOnly,
           mode: this.mode
@@ -834,7 +877,7 @@ export class RecordingLogic {
         if (data.previewOnly) {
           return {
             success: false,
-            error: pipelineError.message,
+            error: errorMessage,
             title: data.title,
             url: data.url
           };
@@ -882,11 +925,12 @@ export class RecordingLogic {
 
       return { success: true, aiDuration };
 
-    } catch (e: any) {
-      addLog(LogType.ERROR, 'Failed to process recording', { error: e.message, url });
-      NotificationHelper.notifyError(e.message);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Recording failed';
+      addLog(LogType.ERROR, 'Failed to process recording', { error: errorMessage, url });
+      NotificationHelper.notifyError(errorMessage);
 
-      return { success: false, error: e.message };
+      return { success: false, error: errorMessage };
     }
   }
 
