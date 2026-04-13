@@ -5,6 +5,7 @@
  */
 
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
+import type { TagCategory } from '../utils/types.js';
 import { init as initDomainFilter, loadDomainSettings } from '../popup/domainFilter.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../popup/privacySettings.js';
 import { init as initContentSettings, loadContentSettings } from '../popup/contentSettings.js';
@@ -381,7 +382,7 @@ exportSettingsBtn?.addEventListener('click', async () => {
       await exportSettings();
       showStatus('exportImportStatus', getMessage('settingsExported'), 'success');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     showStatus('exportImportStatus', `${getMessage('exportError')}: ${message}`, 'error');
   }
@@ -449,7 +450,7 @@ importFileInput?.addEventListener('change', async (e: Event) => {
       importConfirmModal.setAttribute('aria-hidden', 'false');
       importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     showStatus('exportImportStatus', `${getMessage('importError')}: ${message}`, 'error');
   }
@@ -488,7 +489,7 @@ confirmImportBtn?.addEventListener('click', async () => {
     } else {
       showStatus('exportImportStatus', `${getMessage('importError')}: Failed to apply settings`, 'error');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     showStatus('exportImportStatus', `${getMessage('importError')}: ${message}`, 'error');
   }
@@ -501,16 +502,26 @@ importConfirmModal?.addEventListener('click', (e: MouseEvent) => {
 
 function showImportPreview(data: SettingsExportData): void {
   if (!importPreview) return;
-  const summary: any = {
+  interface ImportPreviewSummary {
+    version: string;
+    exportedAt: string;
+    obsidian_protocol?: string;
+    obsidian_port?: string;
+    ai_provider?: string;
+    domain_filter_mode?: string;
+    privacy_mode?: string;
+    domain_count?: string;
+  }
+  const summary: ImportPreviewSummary = {
     version: data.version,
     exportedAt: new Date(data.exportedAt).toLocaleString(),
   };
   const s = data.settings;
-  summary.obsidian_protocol = s.obsidian_protocol;
-  summary.obsidian_port = s.obsidian_port;
-  summary.ai_provider = s.ai_provider;
-  summary.domain_filter_mode = s.domain_filter_mode;
-  summary.privacy_mode = s.privacy_mode;
+  summary.obsidian_protocol = s.obsidian_protocol as string;
+  summary.obsidian_port = s.obsidian_port as string;
+  summary.ai_provider = s.ai_provider as string;
+  summary.domain_filter_mode = s.domain_filter_mode as string;
+  summary.privacy_mode = s.privacy_mode as string;
   summary.domain_count = String((s.domain_whitelist?.length || 0) + (s.domain_blacklist?.length || 0));
   const summaryMsg = chrome.i18n.getMessage('importPreviewSummary') || 'Summary:';
   const noteMsg = chrome.i18n.getMessage('importPreviewNote') || 'API keys and lists are included.';
@@ -2203,7 +2214,7 @@ async function initTagsPanel(): Promise<void> {
     }
 
     // ユーザーカテゴリ
-    const savedUserCategories = settings[StorageKeys.TAG_CATEGORIES] as any[] || [];
+    const savedUserCategories = (settings[StorageKeys.TAG_CATEGORIES] as TagCategory[] | undefined) || [];
     userCategories = savedUserCategories.filter(c => !c.isDefault).map(c => c.name);
     renderUserCategories();
   }
