@@ -13,6 +13,7 @@ import type { PendingPage } from '../utils/pendingStorage.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import type { MaskedItem } from '../messaging/types.js';
+import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 
 // Export functions for testing
@@ -172,7 +173,7 @@ interface PendingSave {
   url: string;
   title: string;
   content: string;
-  privacyData: any;
+  privacyData: PrivacyInfo | null;
 }
 
 let currentPendingSave: PendingSave | null = null;
@@ -514,7 +515,7 @@ async function forceRecord(
       statusDiv.className = 'error';
       resetRecordButtonAndClearFlag(recordBtn);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     hideSpinner();
     showError(statusDiv, error, () => void forceRecord(recordBtn, tab, content));
     resetRecordButtonAndClearFlag(recordBtn);
@@ -595,7 +596,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       if (chrome.runtime.lastError) {
         throw new Error(chrome.runtime.lastError.message);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Content Script が応答しない場合（CSP制限等でinjectionに失敗した場合を含む）、
       // executeScript でコンテンツを直接取得（ページのCSPに依存しない）
       // executeScript には <all_urls> の host_permissions が必要なため、権限を確認・要求する
@@ -617,7 +618,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           func: () => document.body?.innerText || ''
         });
         contentResponse = { content: results?.[0]?.result || '' };
-      } catch (e2: any) {
+      } catch (e2: unknown) {
         if (force) {
           contentResponse = { content: '' };
         } else {
@@ -784,7 +785,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     } else {
       throw new Error(result.error || 'Save failed');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     hideSpinner();
     showError(statusDiv, error, () => recordCurrentPage(true));
   } finally {
