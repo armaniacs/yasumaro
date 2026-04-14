@@ -8,7 +8,8 @@ import { getMessage } from '../popup/i18n.js';
 import { extractDomain, isDomainAllowed } from '../utils/domainUtils.js';
 import { DEFAULT_CATEGORIES, getAllCategories } from '../utils/tagUtils.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
-import { TIMEOUTS, UI_COLORS } from '../constants/appConstants.js';
+import { STATUS_COLORS, TIMEOUTS, UI_COLORS } from '../constants/appConstants.js';
+import { getSettings } from '../utils/storage.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart, makeCleansingProgressBar } from './cleansingStatsView.js';
 import type { TagCategory } from '../utils/types.js';
 
