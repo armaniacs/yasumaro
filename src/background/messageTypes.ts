@@ -20,6 +20,7 @@ export const VALID_MESSAGE_TYPES = [
     'ACTIVITY_UPDATE',
     'SESSION_LOCK_REQUEST',
     'CONTENT_CLEANSING_EXECUTED',
+    'PING', // Service Worker health check
 ] as const;
 
 export const CONTENT_SCRIPT_ONLY_TYPES = [
@@ -32,4 +33,5 @@ export const NO_PAYLOAD_TYPES = [
     'GET_PRIVACY_CACHE',
     'ACTIVITY_UPDATE',
     'SESSION_LOCK_REQUEST',
+    'PING',
 ] as const;

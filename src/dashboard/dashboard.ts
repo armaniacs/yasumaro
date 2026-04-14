@@ -777,6 +777,20 @@ function showRecordError(info: HTMLElement, error: unknown): void {
   setTimeout(() => { errorEl.remove(); }, TIMEOUTS.ERROR_MESSAGE_DISPLAY);
 }
 
+/**
+ * Check if Service Worker is alive
+ * @returns Promise<boolean> - true if Service Worker responds
+ */
+async function checkServiceWorkerAlive(): Promise<boolean> {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'PING' });
+    return response?.success === true;
+  } catch (error) {
+    console.error('[Dashboard] Service Worker not responding:', error);
+    return false;
+  }
+}
+
 async function initHistoryPanel(): Promise<void> {
   const historySearchInput = document.getElementById('historySearch') as HTMLInputElement | null;
   const historyList = document.getElementById('historyList') as HTMLElement | null;
@@ -1404,11 +1418,24 @@ async function initHistoryPanel(): Promise<void> {
         btn.textContent = getMessage('processing') || '処理中...';
         let errorEl = row.querySelector('.record-error-message') as HTMLElement;
         if (errorEl) errorEl.remove();
-        try {
-          const result = await chrome.runtime.sendMessage({
+        
+        // タイムアウト付きでメッセージを送信
+        const sendMessageWithTimeout = async (): Promise<any> => {
+          const timeoutMs = 20000; // 20秒のタイムアウト（Service Workerの30秒制限を回避）
+          const messagePromise = chrome.runtime.sendMessage({
             type: 'MANUAL_RECORD',
             payload: { title: page.title, url: page.url, content: '', force: true, skipAi }
           });
+          
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Request timed out after 20 seconds. The page may be taking too long to load or process.')), timeoutMs);
+          });
+          
+          return Promise.race([messagePromise, timeoutPromise]);
+        };
+        
+        try {
+          const result = await sendMessageWithTimeout();
           if (result?.success) {
             await removePendingPages([page.url]);
             const pIdx = pendingPages.findIndex(p => p.url === page.url);
@@ -1427,7 +1454,14 @@ async function initHistoryPanel(): Promise<void> {
               : (getMessage('recordNow') || '📝 今すぐ記録');
           }
         } catch (error) {
-          showRecordError(info, error);
+          // Check if Service Worker is alive
+          const swAlive = await checkServiceWorkerAlive();
+          if (!swAlive) {
+            const swError = new Error(getMessage('serviceWorkerNotResponding') || 'Service Workerが応答しません。拡張機能を再読み込みしてください。');
+            showRecordError(info, swError);
+          } else {
+            showRecordError(info, error);
+          }
           btn.disabled = false;
           btn.textContent = skipAi
             ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')
@@ -1573,11 +1607,24 @@ async function initHistoryPanel(): Promise<void> {
         btn.textContent = getMessage('processing') || '処理中...';
         let errorEl = row.querySelector('.record-error-message') as HTMLElement;
         if (errorEl) errorEl.remove();
-        try {
-          const result = await chrome.runtime.sendMessage({
+        
+        // タイムアウト付きでメッセージを送信
+        const sendMessageWithTimeout = async (): Promise<any> => {
+          const timeoutMs = 20000; // 20秒のタイムアウト（Service Workerの30秒制限を回避）
+          const messagePromise = chrome.runtime.sendMessage({
             type: 'MANUAL_RECORD',
             payload: { title: page.title, url: page.url, content: '', force: true, skipAi }
           });
+          
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Request timed out after 20 seconds. The page may be taking too long to load or process.')), timeoutMs);
+          });
+          
+          return Promise.race([messagePromise, timeoutPromise]);
+        };
+        
+        try {
+          const result = await sendMessageWithTimeout();
           if (result?.success) {
             await removePendingPages([page.url]);
             const pIdx = pendingPages.findIndex(p => p.url === page.url);
@@ -1600,7 +1647,14 @@ async function initHistoryPanel(): Promise<void> {
               : (getMessage('recordNow') || '📝 今すぐ記録');
           }
         } catch (error) {
-          showRecordError(info, error);
+          // Check if Service Worker is alive
+          const swAlive = await checkServiceWorkerAlive();
+          if (!swAlive) {
+            const swError = new Error(getMessage('serviceWorkerNotResponding') || 'Service Workerが応答しません。拡張機能を再読み込みしてください。');
+            showRecordError(info, swError);
+          } else {
+            showRecordError(info, error);
+          }
           btn.disabled = false;
           btn.textContent = skipAi
             ? (getMessage('recordWithoutAi') || '📝 AI要約なしで記録')

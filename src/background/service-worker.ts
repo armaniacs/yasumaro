@@ -371,62 +371,71 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
 
                 // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
+                // Google Sitesなどの特殊的なサイトではコンテンツが取得できない場合がある
+                const isGoogleSites = message.payload.url.includes('sites.google.com');
                 if (!content && !skipAi) {
-                    if (!autoContentFetchEnabled && !message.payload.force) {
-                        // 通常フローではコンテンツフェッチ無効を通知して終了
-                        await logDebug(
-                            'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
-                            { url: sanitizedUrl },
-                            'service-worker'
-                        );
-                        sendResponse({
-                            success: true,
-                            warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
-                        });
-                        return;
-                    }
-
-                    let createdTabId: number | undefined;
-                    try {
-                        // 既存タブを探す
-                        const allTabs = await chrome.tabs.query({});
-                        const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
-                        let targetTabId: number | undefined = existingTab?.id;
-
-                        // タブが開いていなければバックグラウンドで開く
-                        if (!targetTabId) {
-                            const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
-                            createdTabId = newTab.id;
-                            targetTabId = newTab.id;
-
-                            // ページが読み込まれるまで待機（最大15秒）
-                            await new Promise<void>((resolve) => {
-                                const timeout = setTimeout(resolve, 15000);
-                                const listener = (tabId: number, info: { status?: string }): void => {
-                                    if (tabId === targetTabId && info.status === 'complete') {
-                                        clearTimeout(timeout);
-                                        chrome.tabs.onUpdated.removeListener(listener);
-                                        resolve();
-                                    }
-                                };
-                                chrome.tabs.onUpdated.addListener(listener);
+                    // Google SitesではCSPの問題でコンテンツが取得できない場合がある
+                    // force=true の場合はスキップして続行
+                    if (isGoogleSites && message.payload.force) {
+                        await logDebug('Google Sites detected with force flag, skipping content fetch', { url: sanitizedUrl }, 'service-worker');
+                        // 空のコンテンツで続行
+                    } else {
+                        if (!autoContentFetchEnabled && !message.payload.force) {
+                            // 通常フローではコンテンツフェッチ無効を通知して終了
+                            await logDebug(
+                                'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
+                                { url: sanitizedUrl },
+                                'service-worker'
+                            );
+                            sendResponse({
+                                success: true,
+                                warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
                             });
+                            return;
                         }
 
-                        // scripting.executeScriptでページ本文を取得（Content Script不要）
-                        if (targetTabId) {
-                            const results = await chrome.scripting.executeScript({
-                                target: { tabId: targetTabId },
-                                func: () => document.body?.innerText || ''
-                            });
-                            content = results?.[0]?.result?.trim().substring(0, 10000) || '';
-                        }
-                    } catch (err: any) {
-                        await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err.message }, undefined, 'service-worker');
-                    } finally {
-                        // 新規作成したタブを閉じる
-                        if (createdTabId !== undefined) {
-                            chrome.tabs.remove(createdTabId).catch(() => {});
+                        let createdTabId: number | undefined;
+                        try {
+                            // 既存タブを探す
+                            const allTabs = await chrome.tabs.query({});
+                            const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
+                            let targetTabId: number | undefined = existingTab?.id;
+
+                            // タブが開いていなければバックグラウンドで開く
+                            if (!targetTabId) {
+                                const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
+                                createdTabId = newTab.id;
+                                targetTabId = newTab.id;
+
+                                // ページが読み込まれるまで待機（最大10秒に短縮）
+                                await new Promise<void>((resolve) => {
+                                    const timeout = setTimeout(resolve, 10000);
+                                    const listener = (tabId: number, info: { status?: string }): void => {
+                                        if (tabId === targetTabId && info.status === 'complete') {
+                                            clearTimeout(timeout);
+                                            chrome.tabs.onUpdated.removeListener(listener);
+                                            resolve();
+                                        }
+                                    };
+                                    chrome.tabs.onUpdated.addListener(listener);
+                                });
+                            }
+
+                            // scripting.executeScriptでページ本文を取得（Content Script不要）
+                            if (targetTabId) {
+                                const results = await chrome.scripting.executeScript({
+                                    target: { tabId: targetTabId },
+                                    func: () => document.body?.innerText || ''
+                                });
+                                content = results?.[0]?.result?.trim().substring(0, 10000) || '';
+                            }
+                        } catch (err: any) {
+                            await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err.message }, undefined, 'service-worker');
+                        } finally {
+                            // 新規作成したタブを閉じる
+                            if (createdTabId !== undefined) {
+                                chrome.tabs.remove(createdTabId).catch(() => {});
+                            }
                         }
                     }
                 }
