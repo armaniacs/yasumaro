@@ -57,18 +57,14 @@ describe('RecordingLogic - TrustChecker Integration', () => {
   });
 
   describe('Blocking Behavior - Pipeline Implementation', () => {
-    it('verifies DOMAIN_NOT_TRUSTED error exists in pipeline', async () => {
-      // Check the pipeline step files instead
-      const pipelineSource = await import('fs').then(fs => {
-        try {
-          return fs.readFileSync('src/background/pipeline/RecordingPipeline.js', 'utf8');
-        } catch {
-          return fs.readFileSync('src/background/pipeline/RecordingPipeline.ts', 'utf8');
-        }
+    it('verifies trust check step handles untrusted domains', async () => {
+      // Check the pipeline step file
+      const stepSource = await import('fs').then(fs => {
+        return fs.readFileSync('src/background/pipeline/steps/checkTrustDomainStep.ts', 'utf8');
       });
 
-      // After refactoring, trust errors are handled in pipeline steps
-      const hasError = pipelineSource.includes('DOMAIN_NOT_TRUSTED');
+      // After refactoring, trust errors are handled in checkTrustDomainStep
+      const hasError = stepSource.includes('DOMAIN_NOT_TRUSTED');
       expect(hasError).toBe(true);
     });
 
