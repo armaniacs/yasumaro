@@ -465,6 +465,7 @@ function checkVisitConditions(): void {
 
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
     if (shouldRecordVisit(duration, maxScrollPercentage)) {
+        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${maxScrollPercentage.toFixed(0)}%`);
         reportValidVisit();
         // E2Eテスト用フック: 報告後に状態を更新
         if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
@@ -566,6 +567,7 @@ function updateMaxScroll(): void {
 async function reportValidVisit(): Promise<void> {
     isValidVisitReported = true;
     void logInfo('Sending VALID_VISIT', {}, 'extractor');
+    console.info('[OWeave] VALID_VISIT 送信開始');
 
     const content = extractPageContent();
 
@@ -587,6 +589,7 @@ async function reportValidVisit(): Promise<void> {
             }
         });
         void logDebug('VALID_VISIT response', { response }, 'extractor');
+        console.info('[OWeave] VALID_VISIT レスポンス:', JSON.stringify(response));
 
         // レスポンスの成功フラグをチェック
         if (response && !response.success) {
