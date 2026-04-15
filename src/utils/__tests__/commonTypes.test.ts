@@ -49,13 +49,10 @@ describe('commonTypes: AiSummaryCleansedReason', () => {
 });
 
 describe('commonTypes: 単一定義元の回帰防止', () => {
-    it('storageUrls.ts または urlEntry.ts は commonTypes から RecordType を import している', async () => {
-        // storageUrls.ts はバレルファイル（分割後のエクスポート集約）として機能
-        // RecordTypeはurlEntry.tsから再エクスポートされる
+    it('urlEntry.ts は commonTypes から RecordType を import している', async () => {
+        // urlEntry.ts が commonTypes をインポートしていることを確認
         const fs = await import('fs');
         const path = await import('path');
-
-        // urlEntry.ts が commonTypes をインポートしていることを確認
         const urlEntryPath = path.resolve(
             process.cwd(),
             'src/utils/urlEntry.ts'
@@ -63,8 +60,13 @@ describe('commonTypes: 単一定義元の回帰防止', () => {
         const urlEntrySource = fs.readFileSync(urlEntryPath, 'utf-8');
         expect(urlEntrySource).toMatch(/from ['"].*commonTypes\.js['"]/);
         expect(urlEntrySource).toContain('RecordType');
+    });
 
-        // storageUrls.ts が urlEntry.js から SavedUrlEntry をエクスポートしていることを確認
+    it('storageUrls.ts は urlEntry.js から SavedUrlEntry を re-export している', async () => {
+        // storageUrls.ts はバレルファイル（分割後のエクスポート集約）として機能
+        // RecordTypeはurlEntry.tsから再エクスポートされる
+        const fs = await import('fs');
+        const path = await import('path');
         const storageUrlsPath = path.resolve(
             process.cwd(),
             'src/utils/storageUrls.ts'

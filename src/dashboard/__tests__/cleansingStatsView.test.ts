@@ -110,7 +110,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el).not.toBeNull();
     expect(el!.querySelector('.cleansing-progress-bar')).not.toBeNull();
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
-    expect(bar.style.width).toBe('40.0%');
+    expect(bar.style.width).toBe('40%');
     expect(el!.textContent).toContain('60.0% 削減');
   });
 
@@ -124,7 +124,7 @@ describe('makeCleansingProgressBar', () => {
     const el = makeCleansingProgressBar(entry);
     expect(el).not.toBeNull();
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
-    expect(bar.style.width).toBe('25.0%');
+    expect(bar.style.width).toBe('25%');
     expect(el!.textContent).toContain('75.0% 削減');
   });
 });

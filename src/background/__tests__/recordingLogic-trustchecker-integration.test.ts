@@ -1,29 +1,12 @@
 /**
- * @jest-environment jsdom
- */
-
-/**
  * recordingLogic-trustchecker-integration.test.ts
  * Unit tests for TrustChecker integration into recordingLogic
  * TDD Green phase: Verifies domain trust check is properly integrated
  */
 
-import { jest } from '@jest/globals';
-
-// Mock chrome
-global.chrome = {
-  storage: {
-    local: {
-      get: jest.fn(),
-      set: jest.fn()
-    }
-  },
-  runtime: { id: 'test-id' },
-  permissions: {
-    request: jest.fn(),
-    contains: jest.fn()
-  }
-} as any;
+import { describe, it, expect } from '@jest/globals';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('RecordingLogic - TrustChecker Integration', () => {
   describe('TDD Green Phase - Pipeline Integration Verified', () => {
@@ -58,28 +41,33 @@ describe('RecordingLogic - TrustChecker Integration', () => {
 
   describe('Blocking Behavior - Pipeline Implementation', () => {
     it('verifies trust check step handles untrusted domains', async () => {
-      // Check the pipeline step file
+      // Check the checkTrustDomainStep file for trust check integration
       const stepSource = await import('fs').then(fs => {
         return fs.readFileSync('src/background/pipeline/steps/checkTrustDomainStep.ts', 'utf8');
       });
 
-      // After refactoring, trust errors are handled in checkTrustDomainStep
+      // Trust check is in checkTrustDomainStep
+      const hasTrustCheck = stepSource.includes('trustChecker.checkDomain');
+      expect(hasTrustCheck).toBe(true);
+
+      // Check for blocking logic
+      const hasBlocking = stepSource.includes('canProceed');
+      expect(hasBlocking).toBe(true);
+
+      // DOMAIN_NOT_TRUSTED error
       const hasError = stepSource.includes('DOMAIN_NOT_TRUSTED');
       expect(hasError).toBe(true);
     });
 
     it('verifies notification is shown on blocked domain', async () => {
-      // The notification should be in the pipeline or step files
-      const pipelineFiles = await import('fs').then(fs => {
-        try {
-          return fs.readdirSync('src/background/pipeline/steps');
-        } catch {
-          return [];
-        }
+      // Check the checkTrustDomainStep for notification helper usage
+      const stepSource = await import('fs').then(fs => {
+        return fs.readFileSync('src/background/pipeline/steps/checkTrustDomainStep.ts', 'utf8');
       });
 
-      // At least the pipeline directory should exist
-      expect(pipelineFiles.length).toBeGreaterThanOrEqual(0);
+      // Using notifyError for blocked domains
+      const hasNotification = stepSource.includes('NotificationHelper.notifyError');
+      expect(hasNotification).toBe(true);
     });
   });
 });

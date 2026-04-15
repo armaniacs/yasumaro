@@ -25,18 +25,41 @@ module.exports = {
   // テスト環境: jsdom（ブラウザAPIを必要とするテスト用）
   testEnvironment: 'jsdom',
 
-  // 並列実行設定（Worker関連の問題を解決し再有効化）
+  // 並列実行設定
+  // workerThreads は Node 24 + Jest 30 の組み合わせで module resolution に問題が発生するため無効化
   maxWorkers: '50%',
-  workerThreads: true,
 
   // JavaScript/TypeScript transformation
+  // babel-jest から ts-jest に切り替え（Node 24 + Jest 30 の互換性のため）
+  // module: commonjs を明示して CJS 出力に強制
   transform: {
-    '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }],
-    '^.+\\.mjs$': ['babel-jest', { configFile: './babel.config.cjs' }]
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        module: 'commonjs',
+        moduleResolution: 'node',
+        esModuleInterop: true,
+        target: 'ESNext',
+        allowJs: true,
+        skipLibCheck: true,
+        strict: true,
+        types: ['chrome', 'jest', 'node'],
+      },
+      diagnostics: false,
+    }],
+    // bloomfilter.mjs も ts-jest で処理（babel-jest 廃止）
+    '^.+\\.mjs$': ['ts-jest', {
+      tsconfig: {
+        module: 'commonjs',
+        target: 'ESNext',
+        allowJs: true,
+        skipLibCheck: true,
+      },
+      diagnostics: false,
+    }],
   },
 
   transformIgnorePatterns: [
-    '/node_modules/(?!(bloomfilter|jest|@jest)/)'
+    '/node_modules/(?!(bloomfilter)/)'
   ],
 
   // Test file patterns (exclude e2e and docs.spec.ts which is a standalone script)
@@ -47,6 +70,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/e2e/',
+    '/.kilo/',
     'video-'
   ],
 
@@ -68,7 +92,7 @@ module.exports = {
   resolver: path.resolve(__dirname, 'jest.resolver.cjs'),
 
   // Setup files (TypeScript)
-  setupFilesAfterEnv: ['./jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 
   // File extensions - Jestが解決すべき拡張子のリスト（順序が重要）
   moduleFileExtensions: ['ts', 'tsx', 'js', 'mjs', 'jsx', 'json', 'node'],
