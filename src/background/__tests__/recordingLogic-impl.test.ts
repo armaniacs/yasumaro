@@ -13,6 +13,14 @@ jest.mock('../../utils/storage.js', () => {
     getSavedUrlsWithTimestamps: jest.fn(),
     setSavedUrlsWithTimestamps: jest.fn(),
     saveSettings: jest.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
   };
 });
 
@@ -281,21 +289,11 @@ describe('RecordingPipeline', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // @ts-expect-error - mock
-    storage.StorageKeys = {
-      PRIVACY_MODE: 'PRIVACY_MODE',
-      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
-      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
-      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
-    };
+    // StorageKeys, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD はモックモジュール内で定義済み
     // @ts-expect-error - mock
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - mock
     storage.setSavedUrlsWithTimestamps.mockResolvedValue(undefined);
-    // @ts-expect-error - mock
-    storage.MAX_URL_SET_SIZE = 10000;
-    // @ts-expect-error - mock
-    storage.URL_WARNING_THRESHOLD = 9000;
 
     // @ts-expect-error - mock
     domainUtils.isDomainAllowed.mockResolvedValue(true);

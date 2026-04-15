@@ -20,6 +20,13 @@ module.exports = function resolver(modulePath, options) {
     const resolved = defaultResolver(modulePath, rest);
     return resolved;
   } catch (e) {
+    // node_modules 内の相対パス解決は .ts 変換しない
+    // (fromFile が node_modules 配下の場合はスキップ)
+    const fromFile = options.basedir || '';
+    if (fromFile.includes('node_modules')) {
+      throw e;
+    }
+
     // デフォルト解決に失敗した場合、.js -> .ts の変換を試みる
     if (modulePath.endsWith('.js')) {
       // .js を .ts に変換
