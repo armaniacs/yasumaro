@@ -7,16 +7,16 @@
  * Unit tests for TrancoConsentManager (Phase 3)
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import { TrancoConsentManager, ConsentResult } from '../trancoConsentManager.js';
 import { StorageKeys } from '../../storage.js';
 
 beforeAll(() => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
 });
 
 afterAll(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 // Mock chrome.storage.local
@@ -24,7 +24,7 @@ const mockStorage = new Map<string, any>();
 
 const mockChromeStorage = {
   local: {
-    get: jest.fn().mockImplementation((keys) => {
+    get: vi.fn().mockImplementation((keys) => {
       const result: Record<string, any> = {};
       for (const key of keys) {
         if (mockStorage.has(key)) {
@@ -33,13 +33,13 @@ const mockChromeStorage = {
       }
       return Promise.resolve(result);
     }),
-    set: jest.fn().mockImplementation((items) => {
+    set: vi.fn().mockImplementation((items) => {
       for (const [key, value] of Object.entries(items)) {
         mockStorage.set(key, value);
       }
       return Promise.resolve();
     }),
-    remove: jest.fn().mockImplementation((keys) => {
+    remove: vi.fn().mockImplementation((keys) => {
       for (const key of keys) {
         mockStorage.delete(key);
       }
@@ -57,10 +57,10 @@ Object.defineProperty(global, 'chrome', {
 
 describe('TrancoConsentManager', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.clearAllTimers();
+    vi.clearAllMocks();
+    vi.clearAllTimers();
     mockStorage.clear();
-    jest.setSystemTime(new Date('2026-03-26'));
+    vi.setSystemTime(new Date('2026-03-26'));
 
     // Mock chrome.storage.local.get to handle array keys correctly
     mockChromeStorage.local.get.mockImplementation(async (keys) => {

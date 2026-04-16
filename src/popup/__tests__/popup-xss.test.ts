@@ -9,13 +9,14 @@
  * - 説明: Line 129 uses innerHTML with user-controlled data (portInput.value)
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+
 
 // Mock chrome API
+import { vi } from 'vitest';
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         const mockSettings = {
           obsidian_api_key: 'test-key',
           obsidian_protocol: 'https',
@@ -24,17 +25,17 @@ global.chrome = {
         if (callback) callback(mockSettings);
         return Promise.resolve(mockSettings);
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve();
       })
     },
     sync: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve();
       })
@@ -42,20 +43,20 @@ global.chrome = {
   },
   runtime: {
     lastError: null,
-    sendMessage: jest.fn(),
+    sendMessage: vi.fn(),
     onMessage: {
-      addListener: jest.fn()
+      addListener: vi.fn()
     }
   },
   tabs: {
-    query: jest.fn(),
-    sendMessage: jest.fn(),
+    query: vi.fn(),
+    sendMessage: vi.fn(),
     onUpdated: {
-      addListener: jest.fn()
+      addListener: vi.fn()
     }
   },
   i18n: {
-    getMessage: jest.fn((key, substitutions) => {
+    getMessage: vi.fn((key, substitutions) => {
       const messages = {
         'testingConnection': 'Testing connection...',
         'successConnected': 'Success! Connected to Obsidian. Settings Saved.',
@@ -77,7 +78,7 @@ global.chrome = {
 
       return message;
     }),
-    getUILanguage: jest.fn(() => 'en'),
+    getUILanguage: vi.fn(() => 'en'),
   }
 };
 
@@ -301,7 +302,7 @@ function simulateSecureCode(portInputValue, protocolValue = 'https') {
 
 describe('popup.js - XSS Vulnerability Tests (SECURITY-001)', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     createTestPopupDOM();
   });
 
@@ -490,7 +491,7 @@ describe('popup.js - XSS Vulnerability Tests (SECURITY-001)', () => {
 
 describe('popup.js - XSS Protection Fix Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     createTestPopupDOM();
   });
 
@@ -601,7 +602,7 @@ describe('popup.js - XSS Protection Fix Tests', () => {
 
 describe('popup.js - Port Validation Edge Cases', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     createTestPopupDOM();
   });
 

@@ -4,71 +4,71 @@
  * Covers init(), setupDragAndDrop(), and re-exported public API
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock all sub-modules
-jest.mock('../fileReader.js', () => ({
-  readFile: jest.fn(() => Promise.resolve('file content')),
+vi.mock('../fileReader.js', () => ({
+  readFile: vi.fn(() => Promise.resolve('file content')),
 }));
 
-jest.mock('../urlFetcher.js', () => ({
-  fetchFromUrl: jest.fn(() => Promise.resolve('||example.com^')),
+vi.mock('../urlFetcher.js', () => ({
+  fetchFromUrl: vi.fn(() => Promise.resolve('||example.com^')),
 }));
 
-jest.mock('../validation.js', () => ({
-  isValidUrl: jest.fn((url: string) => url.startsWith('https://')),
+vi.mock('../validation.js', () => ({
+  isValidUrl: vi.fn((url: string) => url.startsWith('https://')),
 }));
 
-jest.mock('../rulesBuilder.js', () => ({
-  rebuildRulesFromSources: jest.fn(() => ({
+vi.mock('../rulesBuilder.js', () => ({
+  rebuildRulesFromSources: vi.fn(() => ({
     blockDomains: ['example.com'],
     exceptionDomains: [],
     metadata: { ruleCount: 1 },
   })),
-  previewUblockFilter: jest.fn(() => ({
+  previewUblockFilter: vi.fn(() => ({
     blockDomains: ['example.com'],
     exceptionDomains: [],
     errorDomains: [],
   })),
 }));
 
-jest.mock('../sourceManager.js', () => ({
-  loadAndDisplaySources: jest.fn((cb: Function) => {
+vi.mock('../sourceManager.js', () => ({
+  loadAndDisplaySources: vi.fn((cb: Function) => {
     cb([]);
     return Promise.resolve();
   }),
-  deleteSource: jest.fn(() => Promise.resolve()),
-  reloadSource: jest.fn(() => Promise.resolve({ sources: [], ruleCount: 0 })),
-  saveUblockSettings: jest.fn(() => Promise.resolve({ sources: [], action: 'created', ruleCount: 1 })),
+  deleteSource: vi.fn(() => Promise.resolve()),
+  reloadSource: vi.fn(() => Promise.resolve({ sources: [], ruleCount: 0 })),
+  saveUblockSettings: vi.fn(() => Promise.resolve({ sources: [], action: 'created', ruleCount: 1 })),
 }));
 
-jest.mock('../uiRenderer.js', () => ({
-  renderSourceList: jest.fn(),
-  updatePreviewUI: jest.fn(),
-  hidePreview: jest.fn(),
-  clearInput: jest.fn(),
-  exportSimpleFormat: jest.fn(() => 'example.com'),
-  copyToClipboard: jest.fn(() => Promise.resolve()),
-  buildUblockFormat: jest.fn(() => '||example.com^'),
+vi.mock('../uiRenderer.js', () => ({
+  renderSourceList: vi.fn(),
+  updatePreviewUI: vi.fn(),
+  hidePreview: vi.fn(),
+  clearInput: vi.fn(),
+  exportSimpleFormat: vi.fn(() => 'example.com'),
+  copyToClipboard: vi.fn(() => Promise.resolve()),
+  buildUblockFormat: vi.fn(() => '||example.com^'),
 }));
 
-jest.mock('../../settingsUiHelper.js', () => ({
-  showStatus: jest.fn(),
+vi.mock('../../settingsUiHelper.js', () => ({
+  showStatus: vi.fn(),
 }));
 
-jest.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-  addLog: jest.fn(),
+  addLog: vi.fn(),
 }));
 
-jest.mock('../../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-  getSettings: jest.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-  saveSettings: jest.fn(() => Promise.resolve()),
+  getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+  saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
-jest.mock('../../i18n.js', () => ({
-  getMessage: jest.fn((key: string, subs?: Record<string, string>) => {
+vi.mock('../../i18n.js', () => ({
+  getMessage: vi.fn((key: string, subs?: Record<string, string>) => {
     const msgs: Record<string, string> = {
       fileLoaded: 'Loaded "{filename}"',
       fileReadError: 'File read error',
@@ -113,8 +113,8 @@ function setupUblockDOM() {
 
 describe('ublockImport/index.ts', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
+    vi.clearAllMocks();
+    vi.resetModules();
     document.body.innerHTML = '';
   });
 
@@ -299,7 +299,7 @@ describe('ublockImport/index.ts', () => {
         value: { files: [] },
       });
       Object.defineProperty(dropEvent, 'preventDefault', {
-        value: jest.fn(),
+        value: vi.fn(),
       });
       dropZone.dispatchEvent(dropEvent);
 
@@ -325,7 +325,7 @@ describe('ublockImport/index.ts', () => {
         value: { files: [file] },
       });
       Object.defineProperty(dropEvent, 'preventDefault', {
-        value: jest.fn(),
+        value: vi.fn(),
       });
       dropZone.dispatchEvent(dropEvent);
 
@@ -339,7 +339,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle file read error on drop', async () => {
       const { readFile } = await import('../fileReader.js');
-      (readFile as jest.Mock).mockRejectedValueOnce(new Error('Read error'));
+      (readFile as vi.Mock).mockRejectedValueOnce(new Error('Read error'));
 
       setupUblockDOM();
       const { setupDragAndDrop } = await import('../index.js');
@@ -353,7 +353,7 @@ describe('ublockImport/index.ts', () => {
         value: { files: [file] },
       });
       Object.defineProperty(dropEvent, 'preventDefault', {
-        value: jest.fn(),
+        value: vi.fn(),
       });
       dropZone.dispatchEvent(dropEvent);
 
@@ -390,7 +390,7 @@ describe('ublockImport/index.ts', () => {
     test('should click file input when file button is clicked', async () => {
       setupUblockDOM();
       const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
-      const clickSpy = jest.spyOn(fileInput, 'click').mockImplementation(() => {});
+      const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
 
       const { init } = await import('../index.js');
       await init();
@@ -465,7 +465,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle URL import error', async () => {
       const { fetchFromUrl } = await import('../urlFetcher.js');
-      (fetchFromUrl as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (fetchFromUrl as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
 
       setupUblockDOM();
       const urlInput = document.getElementById('uBlockUrlInput') as HTMLInputElement;
@@ -559,11 +559,11 @@ describe('ublockImport/index.ts', () => {
     test('should export sources when available', async () => {
       setupUblockDOM();
       // Mock URL methods for blob handling
-      global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-      global.URL.revokeObjectURL = jest.fn();
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+      global.URL.revokeObjectURL = vi.fn();
 
       const { getSettings } = await import('../../../utils/storage.js');
-      (getSettings as jest.Mock).mockImplementation(() => Promise.resolve({
+      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [{ url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }],
         ublock_format_enabled: false,
       }));
@@ -586,7 +586,7 @@ describe('ublockImport/index.ts', () => {
     test('should handle export error', async () => {
       setupUblockDOM();
       const { getSettings } = await import('../../../utils/storage.js');
-      (getSettings as jest.Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
+      (getSettings as vi.Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
 
       const { init } = await import('../index.js');
       await init();
@@ -602,7 +602,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle copy error', async () => {
       const { copyToClipboard } = await import('../uiRenderer.js');
-      (copyToClipboard as jest.Mock).mockRejectedValueOnce(new Error('Clipboard error'));
+      (copyToClipboard as vi.Mock).mockRejectedValueOnce(new Error('Clipboard error'));
 
       setupUblockDOM();
       const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement;
@@ -667,7 +667,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle saveUblockSettings error', async () => {
       const { saveUblockSettings } = await import('../sourceManager.js');
-      (saveUblockSettings as jest.Mock).mockRejectedValueOnce(new Error('Save error'));
+      (saveUblockSettings as vi.Mock).mockRejectedValueOnce(new Error('Save error'));
 
       document.body.innerHTML = `
         <input type="checkbox" id="ublockFormatEnabled" checked />

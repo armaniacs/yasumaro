@@ -6,7 +6,7 @@
  * TDD Redフェーズ: まだ実装されていない関数を呼び出す失敗するテスト
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import {
   parseUblockFilterLine,
   parseUblockFilterList,
@@ -21,7 +21,7 @@ describe('ublockParser', () => {
   // 【テスト前準備】: 各テスト実行前にテスト環境を初期化し、一貫したテスト条件を保証
   // 【環境初期化】: 前のテストの影響を受けないよう、モックの呼び出し履歴をリセット
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('parseUblockFilterLine - 正常系', () => {

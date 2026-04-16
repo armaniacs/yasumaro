@@ -7,9 +7,9 @@ import { rebuildRulesFromSources } from '../ublockImport.js';
 import { StorageKeys } from '../../utils/storage.js';
 
 // モックの設定
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 global.chrome = {
-  storage: { local: { get: jest.fn(), set: jest.fn() } },
+  storage: { local: { get: vi.fn(), set: vi.fn() } },
   runtime: { lastError: null }
 };
 
@@ -20,11 +20,11 @@ describe('フローワーク: URLからインポートしてソースを再読�
 `;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('URLからフィルターを取得してパース', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.fetch.mockResolvedValueOnce({
       ok: true,

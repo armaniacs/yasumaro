@@ -7,24 +7,24 @@
  * Unit tests for CSPSettings class
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock dependencies before importing CSPSettings
-jest.mock('../../utils/storage.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
     CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
   },
-  getSettings: jest.fn(),
-  saveSettings: jest.fn(),
+  getSettings: vi.fn(),
+  saveSettings: vi.fn(),
 }));
 
-jest.mock('../../utils/cspValidator.js', () => ({
+vi.mock('../../utils/cspValidator.js', () => ({
   CSPValidator: {
-    initializeFromSettings: jest.fn(),
-    getAvailableProviders: jest.fn(),
-    getProviderDomain: jest.fn(),
-    reset: jest.fn(),
+    initializeFromSettings: vi.fn(),
+    getAvailableProviders: vi.fn(),
+    getProviderDomain: vi.fn(),
+    reset: vi.fn(),
   },
 }));
 
@@ -32,8 +32,8 @@ import { CSPSettings } from '../cspSettings.js';
 import { getSettings, saveSettings, StorageKeys } from '../../utils/storage.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
 
-const mockGetSettings = getSettings as jest.MockedFunction<typeof getSettings>;
-const mockSaveSettings = saveSettings as jest.MockedFunction<typeof saveSettings>;
+const mockGetSettings = getSettings as vi.MockedFunction<typeof getSettings>;
+const mockSaveSettings = saveSettings as vi.MockedFunction<typeof saveSettings>;
 
 function setupDOM() {
   document.body.innerHTML = `
@@ -50,11 +50,11 @@ function setupDOM() {
 describe('CSPSettings', () => {
   beforeEach(() => {
     setupDOM();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('loadCSPSettings', () => {
@@ -64,7 +64,7 @@ describe('CSPSettings', () => {
         conditional_csp_providers: ['huggingface'],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.loadCSPSettings();
 
@@ -79,7 +79,7 @@ describe('CSPSettings', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.loadCSPSettings();
 
@@ -93,7 +93,7 @@ describe('CSPSettings', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.loadCSPSettings();
 
@@ -107,8 +107,8 @@ describe('CSPSettings', () => {
         conditional_csp_providers: ['huggingface'],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         if (p === 'openrouter') return 'api.openrouter.ai';
         return null;
@@ -121,7 +121,7 @@ describe('CSPSettings', () => {
     });
 
     test('should log error on load failure', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockGetSettings.mockRejectedValue(new Error('Storage error'));
 
       await CSPSettings.loadCSPSettings();
@@ -137,7 +137,7 @@ describe('CSPSettings', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       // Should not throw
       await CSPSettings.loadCSPSettings();
@@ -147,8 +147,8 @@ describe('CSPSettings', () => {
 
   describe('renderProviderList', () => {
     test('should render sorted providers with selected ones first', async () => {
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['openrouter', 'huggingface', 'deepinfra']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['openrouter', 'huggingface', 'deepinfra']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
         const domains: Record<string, string> = {
           'openrouter': 'api.openrouter.ai',
           'huggingface': 'api-inference.huggingface.co',
@@ -168,8 +168,8 @@ describe('CSPSettings', () => {
     });
 
     test('should skip providers with no domain', async () => {
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['huggingface', 'unknown']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'unknown']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         return null;
       });
@@ -181,8 +181,8 @@ describe('CSPSettings', () => {
     });
 
     test('should apply active class to selected providers', async () => {
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['huggingface']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue('api-inference.huggingface.co');
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
 
       await CSPSettings.renderProviderList(['huggingface']);
 
@@ -202,8 +202,8 @@ describe('CSPSettings', () => {
     });
 
     test('should sort unselected providers alphabetically', async () => {
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['deepinfra', 'huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['deepinfra', 'huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
         const domains: Record<string, string> = {
           'deepinfra': 'deepinfra.com',
           'huggingface': 'api-inference.huggingface.co',
@@ -241,7 +241,7 @@ describe('CSPSettings', () => {
       `;
 
       mockSaveSettings.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.saveCSPSettings();
 
@@ -260,7 +260,7 @@ describe('CSPSettings', () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSaveSettings.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.saveCSPSettings();
 
@@ -269,18 +269,18 @@ describe('CSPSettings', () => {
     });
 
     test('should auto-hide success message after 3 seconds', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSaveSettings.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
       expect(message?.style.display).toBe('block');
 
-      jest.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(3000);
       expect(message?.style.display).toBe('none');
     });
 
@@ -288,7 +288,7 @@ describe('CSPSettings', () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSaveSettings.mockRejectedValue(new Error('Save error'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       await CSPSettings.saveCSPSettings();
 
@@ -300,7 +300,7 @@ describe('CSPSettings', () => {
     test('should default enabled to true when checkbox element missing', async () => {
       document.getElementById('conditionalCspEnabled')?.remove();
       mockSaveSettings.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await CSPSettings.saveCSPSettings();
 
@@ -319,8 +319,8 @@ describe('CSPSettings', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue(['huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as jest.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         if (p === 'openrouter') return 'api.openrouter.ai';
         return null;
@@ -343,7 +343,7 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       // Should not throw
       await CSPSettings.loadCSPSettings();
@@ -356,7 +356,7 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
 
       await CSPSettings.loadCSPSettings();
@@ -375,9 +375,9 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
-      (global.confirm as jest.Mock).mockReturnValue(true);
+      (global.confirm as vi.Mock).mockReturnValue(true);
 
       await CSPSettings.loadCSPSettings();
 
@@ -396,9 +396,9 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockClear();
-      (global.confirm as jest.Mock).mockReturnValue(false);
+      (global.confirm as vi.Mock).mockReturnValue(false);
 
       await CSPSettings.loadCSPSettings();
 
@@ -414,9 +414,9 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
-      (global.confirm as jest.Mock).mockReturnValue(true);
+      (global.confirm as vi.Mock).mockReturnValue(true);
 
       await CSPSettings.loadCSPSettings();
 
@@ -431,14 +431,14 @@ describe('CSPSettings', () => {
     });
 
     test('should auto-hide reset message after 3 seconds', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       mockGetSettings.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
-      (global.confirm as jest.Mock).mockReturnValue(true);
+      (global.confirm as vi.Mock).mockReturnValue(true);
 
       await CSPSettings.loadCSPSettings();
 
@@ -453,7 +453,7 @@ describe('CSPSettings', () => {
       const message = document.getElementById('cspResetMessage');
       expect(message?.style.display).toBe('block');
 
-      jest.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(3000);
       expect(message?.style.display).toBe('none');
     });
 
@@ -462,10 +462,10 @@ describe('CSPSettings', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as jest.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockRejectedValue(new Error('Reset error'));
-      (global.confirm as jest.Mock).mockReturnValue(true);
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (global.confirm as vi.Mock).mockReturnValue(true);
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       await CSPSettings.loadCSPSettings();
 
@@ -482,8 +482,8 @@ describe('CSPSettings', () => {
 
   describe('requestProviderPermission', () => {
     test('should return false for unknown provider', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue(null);
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await CSPSettings.requestProviderPermission('nonexistent');
 
@@ -493,9 +493,9 @@ describe('CSPSettings', () => {
     });
 
     test('should handle permission request error', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.request as jest.Mock).mockRejectedValue(new Error('Permission denied'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CSPSettings.requestProviderPermission('huggingface');
 
@@ -504,8 +504,8 @@ describe('CSPSettings', () => {
     });
 
     test('should handle non-true grant value', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.request as jest.Mock).mockResolvedValue(undefined);
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.request as vi.Mock).mockResolvedValue(undefined);
 
       const result = await CSPSettings.requestProviderPermission('huggingface');
 
@@ -515,8 +515,8 @@ describe('CSPSettings', () => {
 
   describe('requestEssentialPermission', () => {
     test('should handle permission request error', async () => {
-      (chrome.permissions.request as jest.Mock).mockRejectedValue(new Error('Permission denied'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CSPSettings.requestEssentialPermission('github-raw');
 
@@ -525,7 +525,7 @@ describe('CSPSettings', () => {
     });
 
     test('should return false for unknown essential type', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await CSPSettings.requestEssentialPermission('unknown-type');
 
@@ -537,7 +537,7 @@ describe('CSPSettings', () => {
 
   describe('hasPermission', () => {
     test('should return false for unknown provider', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue(null);
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
 
       const result = await CSPSettings.hasPermission('unknown');
 
@@ -546,9 +546,9 @@ describe('CSPSettings', () => {
     });
 
     test('should return false when permission check throws', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.contains as jest.Mock).mockRejectedValue(new Error('Check failed'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.contains as vi.Mock).mockRejectedValue(new Error('Check failed'));
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CSPSettings.hasPermission('huggingface');
 
@@ -557,8 +557,8 @@ describe('CSPSettings', () => {
     });
 
     test('should return false when contains returns non-true', async () => {
-      (CSPValidator.getProviderDomain as jest.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.contains as jest.Mock).mockResolvedValue(undefined);
+      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.contains as vi.Mock).mockResolvedValue(undefined);
 
       const result = await CSPSettings.hasPermission('huggingface');
 
@@ -599,18 +599,18 @@ describe('i18n with placeholders', () => {
   });
 
   test('returns message without placeholders', () => {
-    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Simple message');
+    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Simple message');
     expect(i18n('testKey')).toBe('Simple message');
   });
 
   test('replaces placeholders in message', () => {
-    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Hello ${name}, you have ${count} items');
+    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Hello ${name}, you have ${count} items');
     const result = i18n('greeting', { name: 'Alice', count: '5' });
     expect(result).toBe('Hello Alice, you have 5 items');
   });
 
   test('handles placeholder with regex special characters', () => {
-    (chrome.i18n.getMessage as jest.Mock).mockReturnValue('Price: ${price}');
+    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Price: ${price}');
     const result = i18n('price', { price: '$100.00' });
     expect(result).toBe('Price: $100.00');
   });

@@ -9,24 +9,24 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-jest.mock('../logger.js', () => ({
-    addLog: jest.fn(),
+vi.mock('../logger.js', () => ({
+    addLog: vi.fn(),
     LogType: { INFO: 'info', WARN: 'warn', ERROR: 'error', DEBUG: 'debug' }
 }));
 
 // promptSanitizer モック
-jest.mock('../promptSanitizer.js', () => ({
-    sanitizePromptContent: jest.fn(() => ({ dangerLevel: 'low', warnings: [] })),
+vi.mock('../promptSanitizer.js', () => ({
+    sanitizePromptContent: vi.fn(() => ({ dangerLevel: 'low', warnings: [] })),
     DangerLevel: { LOW: 'low', MEDIUM: 'medium', HIGH: 'high' }
 }));
 
 // tagUtils モック
-jest.mock('../tagUtils.js', () => ({
-    getAllCategories: jest.fn(() => ['IT', 'Science', 'Business'])
+vi.mock('../tagUtils.js', () => ({
+    getAllCategories: vi.fn(() => ['IT', 'Science', 'Business'])
 }));
 
 // storage モック
-jest.mock('../storage.js', () => ({
+vi.mock('../storage.js', () => ({
     StorageKeys: {
         CUSTOM_PROMPTS: 'custom_prompts'
     }

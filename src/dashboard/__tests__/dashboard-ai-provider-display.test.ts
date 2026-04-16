@@ -8,7 +8,7 @@
  * - aiProvider がない場合は表示しない
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+
 
 /**
  * 履歴エントリのAIプロバイダー表示ロジックを抽出した純粋関数

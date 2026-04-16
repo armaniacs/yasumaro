@@ -3,11 +3,11 @@ import { buildDailyNotePath } from '../dailyNotePathBuilder.js';
 
 describe('buildDailyNotePath', () => {
   beforeEach(() => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-02-04T12:00:00Z'));
+    vi.useFakeTimers().setSystemTime(new Date('2026-02-04T12:00:00Z'));
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('should build path with YYYY placeholders', () => {

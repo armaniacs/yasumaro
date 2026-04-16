@@ -6,7 +6,7 @@
  * 注: chrome storage モックは jest.setup.ts で設定済み
  */
 
-import { describe, test, expect, jest } from '@jest/globals';
+import { describe, test, expect, vi } from 'vitest';
 
 /**
  * デバッグログ本番無効化機能のテストスイート
@@ -19,7 +19,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
      *
      * Redフェーズ目的: 環境判定関数が存在しないため失敗することを確認
      */
-    test('本番環境判定ロジックが存在する', () => {
+    test('本番環境判定ロジックが存在する', async () => {
         // 【テスト目的】: 環境判定用の関数が存在することを確認
         // 【テスト内容】：logger.tsに環境判定用のシンボルがエクスポートされていることを確認
         // 【期待される動作】: isDevelopment または同等の関数が存在する
@@ -27,7 +27,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
 
         // 【実際の処理実行】logger.tsをインポートして環境判定を確認
         // TODO: 実装後に以下の関数がエクスポートされることを期待
-        const logger = require('../logger.js');
+        const logger = await import('../logger.ts');
 
         // 【結果検証】実装前の状態では環境判定ロジックは存在しない
         // 現在のlogger.tsにはisDevelopment関数が存在しないため、このアサーションで失敗するはず

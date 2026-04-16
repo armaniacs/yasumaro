@@ -7,7 +7,7 @@
  * - decodeUrlFromNotificationId(notificationId: string): string | null
  */
 
-import { describe, it, expect } from '@jest/globals';
+
 import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 
 /**

@@ -7,7 +7,7 @@ describe('Mutex Map improvement', () => {
 
   beforeEach(() => {
     client = new ObsidianClient();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('acquireとreleaseが正しく動作する', async () => {
@@ -92,7 +92,7 @@ describe('Mutex Map improvement', () => {
 
   test('タイムアウト時にMapからエントリが削除される', async () => {
     // タイムアウト値を一時的に短く設定してテスト
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     const mutex = new Mutex();
 
@@ -103,7 +103,7 @@ describe('Mutex Map improvement', () => {
     expect(mutex.queue.size).toBe(1);
 
     // タイムアウトシミュレーション
-    jest.advanceTimersByTime(30000);
+    vi.advanceTimersByTime(30000);
 
     // タイムアウトエラーが発生することを確認
     await expect(p1).rejects.toThrow(/timeout/);
@@ -111,6 +111,6 @@ describe('Mutex Map improvement', () => {
     // Mapからエントリが削除されていることを確認
     expect(mutex.queue.size).toBe(0);
 
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 });

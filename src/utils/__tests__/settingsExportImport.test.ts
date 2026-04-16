@@ -12,35 +12,35 @@ Object.defineProperty(global, 'crypto', {
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn(async () => ({})),
-            set: jest.fn(async () => {})
+            get: vi.fn(async () => ({})),
+            set: vi.fn(async () => {})
         }
     },
     i18n: {
-        getMessage: jest.fn((key: string) => key)
+        getMessage: vi.fn((key: string) => key)
     }
 };
 (global as any).chrome = mockChrome;
 
 // confirm / alert モック
-(global as any).confirm = jest.fn(() => true);
-(global as any).alert = jest.fn();
+(global as any).confirm = vi.fn(() => true);
+(global as any).alert = vi.fn();
 
 // URL モック
 Object.defineProperty(global, 'URL', {
     value: {
-        createObjectURL: jest.fn(() => 'blob:http://localhost/fake'),
-        revokeObjectURL: jest.fn()
+        createObjectURL: vi.fn(() => 'blob:http://localhost/fake'),
+        revokeObjectURL: vi.fn()
     },
     writable: true,
     configurable: true
 });
 
 // logger モック
-jest.mock('../logger.js', () => ({
-    logError: jest.fn(async () => {}),
-    logWarn: jest.fn(async () => {}),
-    logInfo: jest.fn(async () => {}),
+vi.mock('../logger.js', () => ({
+    logError: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logInfo: vi.fn(async () => {}),
     ErrorCode: {
         SETTINGS_IMPORT_FAILURE: 'SETTINGS_IMPORT_FAILURE',
         SETTINGS_SIGNATURE_FAILURE: 'SETTINGS_SIGNATURE_FAILURE'
@@ -48,8 +48,8 @@ jest.mock('../logger.js', () => ({
 }));
 
 // storage モック
-jest.mock('../storage.js', () => ({
-    getSettings: jest.fn(async () => ({
+vi.mock('../storage.js', () => ({
+    getSettings: vi.fn(async () => ({
         ai_provider: 'gemini',
         obsidian_protocol: 'http',
         obsidian_port: '27123',
@@ -76,32 +76,32 @@ jest.mock('../storage.js', () => ({
         openai_api_key: 'oai_key',
         openai_2_api_key: 'oai2_key'
     })),
-    saveSettings: jest.fn(async () => {}),
-    getOrCreateHmacSecret: jest.fn(async () => 'test_hmac_secret'),
+    saveSettings: vi.fn(async () => {}),
+    getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
     Settings: {}
 }));
 
 // crypto モック
-jest.mock('../crypto.js', () => ({
-    computeHMAC: jest.fn(async (_secret: string, data: string) => 'hmac_' + Buffer.from(data).toString('base64').substring(0, 20)),
-    encrypt: jest.fn(async (plaintext: string) => ({
+vi.mock('../crypto.js', () => ({
+    computeHMAC: vi.fn(async (_secret: string, data: string) => 'hmac_' + Buffer.from(data).toString('base64').substring(0, 20)),
+    encrypt: vi.fn(async (plaintext: string) => ({
         ciphertext: 'enc_' + Buffer.from(plaintext).toString('base64'),
         iv: 'test_iv'
     })),
-    decryptData: jest.fn(async (data: any) => {
+    decryptData: vi.fn(async (data: any) => {
         if (data.ciphertext.startsWith('enc_')) {
             return Buffer.from(data.ciphertext.substring(4), 'base64').toString();
         }
         throw new Error('Decryption failed');
     }),
-    deriveKey: jest.fn(async () => 'mock_key'),
-    hashPasswordWithPBKDF2: jest.fn(async () => 'hashed'),
-    verifyPasswordWithPBKDF2: jest.fn(async () => true),
-    generateSalt: jest.fn(() => new Uint8Array(16).fill(42))
+    deriveKey: vi.fn(async () => 'mock_key'),
+    hashPasswordWithPBKDF2: vi.fn(async () => 'hashed'),
+    verifyPasswordWithPBKDF2: vi.fn(async () => true),
+    generateSalt: vi.fn(() => new Uint8Array(16).fill(42))
 }));
 
 // storageSettings モック
-jest.mock('../storageSettings.js', () => ({
+vi.mock('../storageSettings.js', () => ({
     API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key']
 }));
 
@@ -115,6 +115,12 @@ import {
     importEncryptedSettings,
     saveEncryptedExportToFile
 } from '../settingsExportImport.js';
+
+import * as cryptoModule from '../crypto.js';
+import * as storageModule from '../storage.js';
+
+const { computeHMAC, decryptData, deriveKey } = vi.mocked(cryptoModule);
+const { getSettings, saveSettings, getOrCreateHmacSecret } = vi.mocked(storageModule);
 
 describe('settingsExportImport', () => {
 
@@ -245,11 +251,11 @@ describe('settingsExportImport', () => {
                 href: '',
                 download: '',
                 style: { display: '' },
-                click: jest.fn()
+                click: vi.fn()
             };
-            const createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
-            const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
-            const removeChildSpy = jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
+            const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+            const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
+            const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
 
             await exportSettings();
 
@@ -278,7 +284,6 @@ describe('settingsExportImport', () => {
         });
 
         test('有効な署名付きファイルをインポートできる', async () => {
-            const { computeHMAC } = require('../crypto.js');
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -325,7 +330,6 @@ describe('settingsExportImport', () => {
         });
 
         test('構造検証に失敗した場合は null を返す', async () => {
-            const { computeHMAC } = require('../crypto.js');
             const data = { version: '1.0.0', exportedAt: 'now', settings: {} };
             const sig = await computeHMAC('test_hmac_secret', JSON.stringify(data, null, 2));
 
@@ -334,7 +338,7 @@ describe('settingsExportImport', () => {
         });
 
         test('署名検証失敗時にconfirmで承認するとフォースインポートする', async () => {
-            (global as any).confirm = jest.fn(() => true);
+            (global as any).confirm = vi.fn(() => true);
 
             const exportData = {
                 version: '1.0.0',
@@ -371,11 +375,11 @@ describe('settingsExportImport', () => {
             expect(result).not.toBeNull();
             expect(global.confirm).toHaveBeenCalled();
 
-            (global as any).confirm = jest.fn(() => true);
+            (global as any).confirm = vi.fn(() => true);
         });
 
         test('署名検証失敗時にconfirmで拒否するとnullを返す', async () => {
-            (global as any).confirm = jest.fn(() => false);
+            (global as any).confirm = vi.fn(() => false);
 
             const exportData = {
                 version: '1.0.0',
@@ -412,13 +416,10 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
             expect(global.confirm).toHaveBeenCalled();
 
-            (global as any).confirm = jest.fn(() => true);
+            (global as any).confirm = vi.fn(() => true);
         });
 
         test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
-            const { computeHMAC } = require('../crypto.js');
-            const { saveSettings } = require('../storage.js');
-
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -479,7 +480,6 @@ describe('settingsExportImport', () => {
         });
 
         test('エラー発生時にsuccess=falseとエラーメッセージを返す', async () => {
-            const { getSettings } = require('../storage.js');
             getSettings.mockRejectedValueOnce(new Error('Storage error'));
 
             const result = await exportEncryptedSettings('master_password');
@@ -504,9 +504,6 @@ describe('settingsExportImport', () => {
         });
 
         test('有効な暗号化データを復号してインポートできる', async () => {
-            const { getSettings, saveSettings, getOrCreateHmacSecret } = require('../storage.js');
-            const { computeHMAC, decryptData, deriveKey } = require('../crypto.js');
-
             const settings = await getSettings();
             const sanitizedSettings = { ...settings };
             delete sanitizedSettings.obsidian_api_key;
@@ -541,7 +538,7 @@ describe('settingsExportImport', () => {
         });
 
         test('HMAC検証失敗時にconfirmで拒否するとnullを返す', async () => {
-            (global as any).confirm = jest.fn(() => false);
+            (global as any).confirm = vi.fn(() => false);
 
             const encryptedData = {
                 encrypted: true,
@@ -562,12 +559,11 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
             expect(global.confirm).toHaveBeenCalled();
 
-            (global as any).confirm = jest.fn(() => true);
+            (global as any).confirm = vi.fn(() => true);
         });
 
         test('HMAC検証失敗時にconfirmで承認するとフォースインポートする', async () => {
-            (global as any).confirm = jest.fn(() => true);
-            const { saveSettings } = require('../storage.js');
+            (global as any).confirm = vi.fn(() => true);
 
             const settings = {
                 obsidian_protocol: 'http',
@@ -621,8 +617,6 @@ describe('settingsExportImport', () => {
             const invalidExportData = { invalid: 'data' };
             const json = JSON.stringify(invalidExportData);
 
-            const { getOrCreateHmacSecret } = require('../storage.js');
-            const { computeHMAC } = require('../crypto.js');
             const hmacSecret = await getOrCreateHmacSecret();
             const hmac = await computeHMAC(hmacSecret, json);
 
@@ -677,8 +671,6 @@ describe('settingsExportImport', () => {
             };
             const json = JSON.stringify(exportData, null, 2);
 
-            const { getOrCreateHmacSecret } = require('../storage.js');
-            const { computeHMAC } = require('../crypto.js');
             const hmacSecret = await getOrCreateHmacSecret();
             const hmac = await computeHMAC(hmacSecret, json);
 
@@ -704,11 +696,11 @@ describe('settingsExportImport', () => {
                 href: '',
                 download: '',
                 style: { display: '' },
-                click: jest.fn()
+                click: vi.fn()
             };
-            const createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
-            const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
-            const removeChildSpy = jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
+            const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+            const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
+            const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
 
             await saveEncryptedExportToFile({
                 encrypted: true,

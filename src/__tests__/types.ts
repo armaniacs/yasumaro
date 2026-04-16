@@ -1,19 +1,19 @@
 /**
  * テスト共通型定義
- * Jest + Chrome Extension テストに必要な型を集約
+ * Vitest + Chrome Extension テストに必要な型を集約
  */
 
-import type { Mock } from 'jest-mock';
+import type { Mock, MockedFunction } from 'vitest';
 
 // ============================================================================
-// Jest Mock 拡張型
+// Vitest Mock 拡張型
 // ============================================================================
 
-/** Jest Mock 関数の汎用型 */
-export type JestMock<T extends (...args: any[]) => any> = jest.MockedFunction<T>;
+/** Vitest Mock 関数の汎用型 */
+export type JestMock<T extends (...args: any[]) => any> = MockedFunction<T>;
 
-/** 非同期Jest Mock */
-export type JestAsyncMock<T extends (...args: any[]) => Promise<any>> = jest.MockedFunction<T>;
+/** 非同期Vitest Mock */
+export type JestAsyncMock<T extends (...args: any[]) => Promise<any>> = MockedFunction<T>;
 
 // ============================================================================
 // Chrome API モック型
@@ -21,32 +21,32 @@ export type JestAsyncMock<T extends (...args: any[]) => Promise<any>> = jest.Moc
 
 export interface ChromeStorageMock {
   local: {
-    get: jest.Mock<Promise<Record<string, any>>, [keys?: string | string[] | null]>;
-    set: jest.Mock<Promise<void>, [items: Record<string, any>]>;
-    remove: jest.Mock<Promise<void>, [keys: string | string[]]>;
-    clear: jest.Mock<Promise<void>, []>;
-    getBytesInUse: jest.Mock<Promise<number>, []>;
+    get: Mock<Promise<Record<string, any>>, [keys?: string | string[] | null]>;
+    set: Mock<Promise<void>, [items: Record<string, any>]>;
+    remove: Mock<Promise<void>, [keys: string | string[]]>;
+    clear: Mock<Promise<void>, []>;
+    getBytesInUse: Mock<Promise<number>, []>;
   };
 }
 
 export interface ChromeRuntimeMock {
-  getURL: jest.Mock<string, [path: string]>;
-  sendMessage: jest.Mock<void | Promise<any>, [message: any, callback?: (response: any) => void]>;
+  getURL: Mock<string, [path: string]>;
+  sendMessage: Mock<void | Promise<any>, [message: any, callback?: (response: any) => void]>;
   onMessage: {
-    addListener: jest.Mock;
+    addListener: Mock;
   };
 }
 
 export interface ChromeNotificationsMock {
-  create: jest.Mock<void, [options: any]>;
-  getAll: jest.Mock;
-  update: jest.Mock;
-  clear: jest.Mock;
+  create: Mock<void, [options: any]>;
+  getAll: Mock;
+  update: Mock;
+  clear: Mock;
 }
 
 export interface ChromeOffscreenMock {
-  createDocument: jest.Mock<Promise<void>, [options: any]>;
-  closeDocument: jest.Mock<Promise<void>, []>;
+  createDocument: Mock<Promise<void>, [options: any]>;
+  closeDocument: Mock<Promise<void>, []>;
 }
 
 // ============================================================================
@@ -86,14 +86,14 @@ export const DEFAULT_TEST_SETTINGS: TestSettings = {
 // モック作成ヘルパー型
 // ============================================================================
 
-/** jest.fn()で作成された関数の型 */
-export type AsyncMockFunction<T extends any[] = any[], R = any> = jest.Mock<
+/** vi.fn()で作成された関数の型 */
+export type AsyncMockFunction<T extends any[] = any[], R = any> = Mock<
   Promise<R>,
   T
 >;
 
 /** 非Promise関数のMock */
-export type SyncMockFunction<T extends any[] = any[], R = any> = jest.Mock<R, T>;
+export type SyncMockFunction<T extends any[] = any[], R = any> = Mock<R, T>;
 
 // ============================================================================
 // DOM テスト型
@@ -106,30 +106,14 @@ export type MaybeElement = HTMLElement | null;
 export type QueryResult<T extends HTMLElement = HTMLElement> = T | null;
 
 // ============================================================================
-// Jest グローバル型の拡張
+// Vitest グローバル型の拡張
 // ============================================================================
 
-declare global {
-  namespace jest {
-    interface Mock<T = any, P extends any[] = any[]> {
-      mockResolvedValue(value: T extends (...args: any) => infer R
-        ? R extends Promise<infer U>
-          ? U
-          : R
-        : T): this;
-      mockResolvedValueOnce(value: T extends (...args: any) => infer R
-        ? R extends Promise<infer U>
-          ? U
-          : R
-        : T): this;
-      mockRejectedValue(value: any): this;
-      mockRejectedValueOnce(value: any): this;
-    }
-  }
+// Vitest provides mockResolvedValue and mockRejectedValue on Mock instances by default
+// No need to extend namespace like in Jest
 
-  // Chrome API error simulation helpers (defined in jest.setup.ts)
-  var simulateSendMessageError: (message: string) => void;
-  var resetSendMessageError: () => void;
-  var configureSendMessageReject: (message: string) => void;
-  var resetSendMessageMock: () => void;
-}
+// Chrome API error simulation helpers (defined in vitest.setup.ts)
+var simulateSendMessageError: (message: string) => void;
+var resetSendMessageError: () => void;
+var configureSendMessageReject: (message: string) => void;
+var resetSendMessageMock: () => void;

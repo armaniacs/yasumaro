@@ -8,28 +8,28 @@
  * - innerHTMLを使用したドメイン名レンダリング
  */
 
-import { describe, test, expect, jest } from '@jest/globals';
+import { describe, test, expect, jest } from 'vitest';
 import { renderJpAnchorList, renderSensitiveList } from '../trustSettings.js';
 
 // Mock chrome API
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve();
       })
     },
     sync: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve({});
       })
@@ -37,21 +37,21 @@ global.chrome = {
   },
   runtime: {
     lastError: null,
-    sendMessage: jest.fn(),
+    sendMessage: vi.fn(),
     onMessage: {
-      addListener: jest.fn()
+      addListener: vi.fn()
     }
   },
   tabs: {
-    query: jest.fn(),
-    sendMessage: jest.fn()
+    query: vi.fn(),
+    sendMessage: vi.fn()
   }
 } as any;
 
 // Mock internationalization
 global.chrome.i18n = {
-  getMessage: jest.fn((key: string) => `Message for ${key}`),
-  getUILanguage: jest.fn(() => 'ja')
+  getMessage: vi.fn((key: string) => `Message for ${key}`),
+  getUILanguage: vi.fn(() => 'ja')
 } as any;
 
 describe('trustSettings.ts - XSS Protection', () => {
@@ -59,12 +59,12 @@ describe('trustSettings.ts - XSS Protection', () => {
 
   beforeEach(() => {
     // Spy on console.error
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('JP-Anchor TLD rendering - XSS Protection', () => {

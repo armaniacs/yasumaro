@@ -8,18 +8,18 @@ describe('PrivacyPipeline', () => {
   };
 
   const mockAiClient = {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    getLocalAvailability: jest.fn().mockResolvedValue('readily'),
-    // @ts-expect-error - jest.fn() type narrowing issue
+    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    summarizeLocally: jest.fn().mockResolvedValue({
+    summarizeLocally: vi.fn().mockResolvedValue({
       success: true,
       summary: 'Local summary'
     }),
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    generateSummary: jest.fn().mockResolvedValue({
+    generateSummary: vi.fn().mockResolvedValue({
       summary: 'Cloud summary',
       sentTokens: 100,
       receivedTokens: 50
@@ -27,7 +27,7 @@ describe('PrivacyPipeline', () => {
   };
 
   const mockSanitizers = {
-    sanitizeRegex: jest.fn().mockReturnValue({
+    sanitizeRegex: vi.fn().mockReturnValue({
       text: 'Sanitized text',
       maskedItems: [{ type: 'email' }]
     })
@@ -56,11 +56,11 @@ describe('PrivacyPipeline', () => {
       const llmSummary = '#IT・プログラミング #インフラ | 1行目要約\n\n詳細説明\n\n#カテゴリ1 #カテゴリ2 | 要約文（改行なし）';
       const mockAiWithTags = {
         // @ts-expect-error
-        getLocalAvailability: jest.fn().mockResolvedValue('no'),
+        getLocalAvailability: vi.fn().mockResolvedValue('no'),
         // @ts-expect-error
-        summarizeLocally: jest.fn(),
+        summarizeLocally: vi.fn(),
         // @ts-expect-error
-        generateSummary: jest.fn().mockResolvedValue({ summary: llmSummary })
+        generateSummary: vi.fn().mockResolvedValue({ summary: llmSummary })
       };
       const settingsNoLocal = { PRIVACY_MODE: 'masked_cloud', PII_SANITIZE_LOGS: false };
       const pipeline = new PrivacyPipeline(settingsNoLocal, mockAiWithTags, mockSanitizers);
@@ -80,11 +80,11 @@ describe('PrivacyPipeline', () => {
       const llmSummary = '1行目\n\n2行目\n3行目';
       const mockAiNoLocal = {
         // @ts-expect-error
-        getLocalAvailability: jest.fn().mockResolvedValue('no'),
+        getLocalAvailability: vi.fn().mockResolvedValue('no'),
         // @ts-expect-error
-        summarizeLocally: jest.fn(),
+        summarizeLocally: vi.fn(),
         // @ts-expect-error
-        generateSummary: jest.fn().mockResolvedValue({ summary: llmSummary })
+        generateSummary: vi.fn().mockResolvedValue({ summary: llmSummary })
       };
       const settingsNoLocal = { PRIVACY_MODE: 'masked_cloud', PII_SANITIZE_LOGS: false };
       const pipeline = new PrivacyPipeline(settingsNoLocal, mockAiNoLocal, mockSanitizers);

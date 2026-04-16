@@ -6,15 +6,15 @@
  * 注: chrome storage モックと Web Crypto API は jest.setup.ts で設定済み
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 /**
  * 【テスト前準備】alert モックの設定
  */
 beforeEach(() => {
     // 【モック設定】alert
-    global.alert = jest.fn(() => {});
-    global.confirm = jest.fn(() => false);
+    global.alert = vi.fn(() => {});
+    global.confirm = vi.fn(() => false);
     // chrome.storage.localをクリア
     chrome.storage.local.clear();
 });
@@ -129,7 +129,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【モック設定】computeHMACが同じ署名を返す
         const cryptoModule = await import('../../utils/crypto.js');
-        jest.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
+        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -185,7 +185,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【モック設定】computeHMACが元の署名と異なる値を返す
         const cryptoModule = await import('../../utils/crypto.js');
-        jest.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('original-signature');
+        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('original-signature');
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -243,7 +243,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【モック設定】computeHMACが改ざん後のデータから異なる署名を返す
         const cryptoModule = await import('../../utils/crypto.js');
-        jest.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('tampered-data-signature');
+        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('tampered-data-signature');
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -382,7 +382,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【モック設定】computeHMACが同じ署名を返す
         const cryptoModule = await import('../../utils/crypto.js');
-        jest.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
+        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -440,7 +440,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         // 【モック設定】computeHMACが一貫して同じ署名を返す
         let callCount = 0;
         const cryptoModule = await import('../../utils/crypto.js');
-        jest.spyOn(cryptoModule, 'computeHMAC').mockImplementation(async () => {
+        vi.spyOn(cryptoModule, 'computeHMAC').mockImplementation(async () => {
             callCount++;
             return expectedSignature;
         });

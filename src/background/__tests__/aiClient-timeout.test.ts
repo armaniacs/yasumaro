@@ -1,23 +1,24 @@
 // fetchWithRetryをモック
-jest.mock('../../utils/fetch.js', () => ({
-  fetchWithRetry: jest.fn(),
-  validateUrlForAIRequests: jest.fn(),
+vi.mock('../../utils/fetch.js', () => ({
+  fetchWithRetry: vi.fn(),
+  validateUrlForAIRequests: vi.fn(),
 }));
 
 import { GeminiProvider, OpenAIProvider } from '../ai/providers/index.js';
+import { vi } from 'vitest';
 import * as logger from '../../utils/logger.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 import { StorageKeys } from '../../utils/storage.js';
 
-jest.mock('../../utils/logger.js');
-jest.mock('../../utils/customPromptUtils.js', () => ({
-  applyCustomPrompt: jest.fn((settings, provider, content) => ({
+vi.mock('../../utils/logger.js');
+vi.mock('../../utils/customPromptUtils.js', () => ({
+  applyCustomPrompt: vi.fn((settings, provider, content) => ({
     userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。1文または2文で、重要なポイントをまとめてください。改行しないこと。\n\nContent:\n${content}`,
     systemPrompt: "You are a helpful assistant that summarizes web pages effectively and concisely in Japanese."
   }))
 }));
-jest.mock('../../utils/promptSanitizer.js', () => ({
-  sanitizePromptContent: jest.fn((content) => ({
+vi.mock('../../utils/promptSanitizer.js', () => ({
+  sanitizePromptContent: vi.fn((content) => ({
     sanitized: content,
     warnings: [],
     dangerLevel: 'low' as const
@@ -26,11 +27,11 @@ jest.mock('../../utils/promptSanitizer.js', () => ({
 
 describe('AI Provider timeout', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('GeminiProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue({
       ok: true,
@@ -60,7 +61,7 @@ describe('AI Provider timeout', () => {
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
 
     // 第2引数のoptionsにtimeoutMsが含まれていることを確認
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     const callArgs = fetchWithRetry.mock.calls[0];
     expect(callArgs[1].timeoutMs).toBe(30000);
@@ -68,7 +69,7 @@ describe('AI Provider timeout', () => {
   });
 
   test('GeminiProvider：タイムアウトエラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
 
@@ -83,7 +84,7 @@ describe('AI Provider timeout', () => {
   });
 
   test('OpenAIProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue({
       ok: true,
@@ -119,7 +120,7 @@ describe('AI Provider timeout', () => {
   });
 
   test('OpenAIProvider：タイムアウトエラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
 

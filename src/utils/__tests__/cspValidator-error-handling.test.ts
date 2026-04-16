@@ -8,28 +8,28 @@
  * - エラー発生時に適切なログ記録が必要
  */
 
-import { describe, test, expect, beforeAll, jest } from '@jest/globals';
+import { describe, test, expect, beforeAll, jest } from 'vitest';
 import { CSPValidator } from '../cspValidator.js';
 
 // Mock chrome API
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve({});
       })
     },
     sync: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve({});
       })
@@ -41,14 +41,14 @@ global.chrome = {
 } as any;
 
 // Mock logger
-const mockLogError = jest.fn();
-const mockLogWarn = jest.fn();
-const mockLogInfo = jest.fn();
+const mockLogError = vi.fn();
+const mockLogWarn = vi.fn();
+const mockLogInfo = vi.fn();
 
-jest.mock('../logger.js', () => ({
-  logError: jest.fn((...args) => mockLogError(...args)),
-  logWarn: jest.fn((...args) => mockLogWarn(...args)),
-  logInfo: jest.fn((...args) => mockLogInfo(...args))
+vi.mock('../logger.js', () => ({
+  logError: vi.fn((...args) => mockLogError(...args)),
+  logWarn: vi.fn((...args) => mockLogWarn(...args)),
+  logInfo: vi.fn((...args) => mockLogInfo(...args))
 }));
 
 describe('CSP Validator - Error Handling', () => {
@@ -61,7 +61,7 @@ describe('CSP Validator - Error Handling', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockLogError.mockClear();
     mockLogWarn.mockClear();
     mockLogInfo.mockClear();

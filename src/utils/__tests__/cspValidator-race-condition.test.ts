@@ -1,19 +1,17 @@
 /**
- * @jest-environment jsdom
- */
-
-/**
  * cspValidator-race-condition.test.ts
  * Unit tests for CSP Validator Race Condition Fix
  * TDD Red phase: Tests for request queuing during initialization
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
+import * as cspValidatorModule from '../cspValidator.js';
+
+const { CSPValidator } = cspValidatorModule;
 
 describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
@@ -22,7 +20,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
       // 重いモックfetch（初期化中にリクエストが即時実行されないことを確認）
-      global.fetch = jest.fn().mockImplementation(() =>
+      global.fetch = vi.fn().mockImplementation(() =>
         new Promise(resolve =>
           setTimeout(() => resolve({ ok: true, json: async () => ({}) }), 1000)
         )
@@ -49,7 +47,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
     it('should queue multiple requests before initialization and execute after', async () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({})
       });
@@ -81,7 +79,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
     it('should execute queued requests with CSP settings applied', async () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({})
       });
@@ -121,7 +119,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
     it('should execute requests immediately after initialization', async () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({})
       });
@@ -137,7 +135,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
     it('should not queue requests after initialization', async () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({})
       });
@@ -161,7 +159,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
     it('should limit queue size and reject overflow requests', async () => {
       const { safeFetch, CSPValidator } = await import('../cspValidator.js');
 
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({})
       });

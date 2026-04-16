@@ -7,12 +7,12 @@
  * - フラグによる重複防止の検証
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, jest } from 'vitest';
 import type * as ModelsDevApi from '../../utils/modelsDevApi.js';
 
 // Mock the modules
-jest.mock('../../utils/modelsDevApi.js');
-jest.mock('../../utils/storage.js');
+vi.mock('../../utils/modelsDevApi.js');
+vi.mock('../../utils/storage.js');
 
 class MockModelsDevDialog {
   private dialog: HTMLElement | null = null;
@@ -28,10 +28,10 @@ class MockModelsDevDialog {
   constructor() {
     if (typeof document === 'undefined') {
       (global as any).document = {
-        createElement: jest.fn(),
-        getElementById: jest.fn(),
-        querySelectorAll: jest.fn(),
-        body: { appendChild: jest.fn() }
+        createElement: vi.fn(),
+        getElementById: vi.fn(),
+        querySelectorAll: vi.fn(),
+        body: { appendChild: vi.fn() }
       };
     }
   }
@@ -90,19 +90,19 @@ class MockModelsDevDialog {
   private createDialog(): void {
     const overlay = {
       id: 'models-dev-dialog',
-      classList: { contains: jest.fn().mockReturnValue(false), add: jest.fn(), remove: jest.fn() },
-      addEventListener: jest.fn(),
-      remove: jest.fn()
+      classList: { contains: vi.fn().mockReturnValue(false), add: vi.fn(), remove: vi.fn() },
+      addEventListener: vi.fn(),
+      remove: vi.fn()
     } as unknown as HTMLElement;
     this.dialog = overlay;
 
     // Create DOM elements
     const mockElement = {
-      addEventListener: jest.fn(),
-      querySelectorAll: jest.fn().mockReturnValue([])
+      addEventListener: vi.fn(),
+      querySelectorAll: vi.fn().mockReturnValue([])
     };
 
-    (global.document.getElementById as jest.Mock).mockImplementation((id: string) => {
+    (global.document.getElementById as vi.Mock).mockImplementation((id: string) => {
       return mockElement;
     });
   }

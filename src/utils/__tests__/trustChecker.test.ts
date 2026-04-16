@@ -8,7 +8,7 @@
  * Alert settings and Trust check logic
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock chrome.storage.local - re-set in beforeEach to survive clearAllMocks
 const mockStorage = new Map();
@@ -17,7 +17,7 @@ function setupChromeMocks() {
   (global as any).chrome = {
     storage: {
       local: {
-        get: jest.fn().mockImplementation((keys: any, callback?: any) => {
+        get: vi.fn().mockImplementation((keys: any, callback?: any) => {
           const result: Record<string, unknown> = {};
           if (keys === undefined || keys === null) {
             return Promise.resolve(Object.fromEntries(mockStorage));
@@ -39,7 +39,7 @@ function setupChromeMocks() {
           }
           return Promise.resolve(result);
         }),
-        set: jest.fn().mockImplementation((items: any, callback?: any) => {
+        set: vi.fn().mockImplementation((items: any, callback?: any) => {
           Object.entries(items as Record<string, unknown>).forEach(([key, value]) => {
             mockStorage.set(key, value);
           });
@@ -54,11 +54,11 @@ function setupChromeMocks() {
 }
 
 // Mock logger to prevent real storage calls from logWarn/logDebug
-jest.mock('../logger.js', () => ({
-  logInfo: jest.fn().mockResolvedValue(undefined),
-  logDebug: jest.fn().mockResolvedValue(undefined),
-  logWarn: jest.fn().mockResolvedValue(undefined),
-  logError: jest.fn().mockResolvedValue(undefined),
+vi.mock('../logger.js', () => ({
+  logInfo: vi.fn().mockResolvedValue(undefined),
+  logDebug: vi.fn().mockResolvedValue(undefined),
+  logWarn: vi.fn().mockResolvedValue(undefined),
+  logError: vi.fn().mockResolvedValue(undefined),
   ErrorCode: {
     INTERNAL_ERROR: 'INTERNAL_ERROR',
     TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED',
@@ -68,11 +68,11 @@ jest.mock('../logger.js', () => ({
 }));
 
 // Mock for trustDb
-const mockDbInitialize = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
-const mockIsDomainTrusted = jest.fn();
+const mockDbInitialize = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+const mockIsDomainTrusted = vi.fn();
 
-jest.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: jest.fn(() => ({
+vi.mock('../trustDb/trustDb.js', () => ({
+  getTrustDb: vi.fn(() => ({
     initialize: mockDbInitialize,
     isDomainTrusted: mockIsDomainTrusted,
   })),
@@ -83,7 +83,7 @@ setupChromeMocks();
 
 describe('TrustChecker - Phase 2 - Module Loading', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
   });
@@ -117,7 +117,7 @@ describe('TrustChecker - Phase 2 - Default Alert Config', () => {
 
 describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
   });
@@ -201,9 +201,9 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    const setCallsBefore = (chrome.storage.local.set as jest.Mock).mock.calls.length;
+    const setCallsBefore = (chrome.storage.local.set as vi.Mock).mock.calls.length;
     await checker.saveAlertSettings({});
-    const setCallsAfter = (chrome.storage.local.set as jest.Mock).mock.calls.length;
+    const setCallsAfter = (chrome.storage.local.set as vi.Mock).mock.calls.length;
 
     expect(setCallsAfter).toBe(setCallsBefore);
   });
@@ -213,7 +213,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
 
     // Override storage.get to throw for this test
-    (chrome.storage.local.get as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
+    (chrome.storage.local.get as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     await checker.loadAlertSettings();
 
@@ -227,7 +227,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
 
 describe('TrustChecker - Phase 2 - Safety Mode', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
   });
@@ -302,14 +302,14 @@ describe('TrustChecker - Phase 2 - Singleton', () => {
 
 describe('TrustChecker - Phase 2 - getAlertConfigSync', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
   });
 
   it('should warn when called before initialization', async () => {
     const { TrustChecker } = await import('../trustChecker.js');
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const checker = new TrustChecker();
     (checker as any).alertConfigInitialized = false;
@@ -333,7 +333,7 @@ describe('TrustChecker - Phase 2 - getAlertConfigSync', () => {
 
   it('shouldSaveAbortedPagesSync should warn before initialization', async () => {
     const { TrustChecker } = await import('../trustChecker.js');
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const checker = new TrustChecker();
     (checker as any).alertConfigInitialized = false;
@@ -348,7 +348,7 @@ describe('TrustChecker - Phase 2 - getAlertConfigSync', () => {
 
 describe('TrustChecker - Phase 2 - checkDomain', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
     mockDbInitialize.mockClear();
@@ -535,7 +535,7 @@ describe('TrustChecker - Phase 2 - checkDomain', () => {
 
 describe('TrustChecker - Phase 2 - getTrustLevelDisplay', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
     mockDbInitialize.mockClear();
@@ -622,7 +622,7 @@ describe('TrustChecker - Phase 2 - getTrustLevelDisplay', () => {
 
 describe('TrustChecker - Phase 2 - Convenience Functions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
     mockDbInitialize.mockClear();

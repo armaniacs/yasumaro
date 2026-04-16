@@ -3,9 +3,9 @@
  * Tests for src/popup/aiSummaryCleansingSettings.ts
  */
 
-import { describe, test, expect, jest, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 
-jest.mock('../../utils/storage.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
     StorageKeys: {
         AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled',
         AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt',
@@ -20,8 +20,9 @@ jest.mock('../../utils/storage.js', () => ({
         AI_SUMMARY_CLEANSING_SKIP_LINK: 'ai_summary_cleansing_skip_link',
         AI_SUMMARY_CLEANSING_CARD: 'ai_summary_cleansing_card',
     },
-    getSettings: jest.fn(),
-    saveSettings: jest.fn(() => Promise.resolve()),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
 import * as storage from '../../utils/storage.js';
@@ -31,8 +32,8 @@ import {
     type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettings.js';
 
-const mockGetSettings = jest.mocked(storage.getSettings);
-const mockSaveSettings = jest.mocked(storage.saveSettings);
+const mockGetSettings = vi.mocked(storage.getSettings);
+const mockSaveSettings = vi.mocked(storage.saveSettings);
 
 const baseStorageValues = {
     ai_summary_cleansing_enabled: true,
@@ -46,7 +47,7 @@ const baseStorageValues = {
 };
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSaveSettings.mockResolvedValue(undefined as any);
 });

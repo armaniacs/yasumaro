@@ -22,7 +22,7 @@ const storageData: Record<string, any> = { settings_migrated: true };
 (global as any).chrome = {
     storage: {
         local: {
-            get: jest.fn((keys, callback) => {
+            get: vi.fn((keys, callback) => {
                 const result: Record<string, any> = {};
                 if (keys === null) {
                     Object.assign(result, storageData);
@@ -42,14 +42,14 @@ const storageData: Record<string, any> = { settings_migrated: true };
                 }
                 return Promise.resolve(result);
             }),
-            set: jest.fn((data: Record<string, any>, callback) => {
+            set: vi.fn((data: Record<string, any>, callback) => {
                 Object.assign(storageData, data);
                 if (callback) {
                     callback();
                 }
                 return Promise.resolve();
             }),
-            remove: jest.fn((keys: string | string[], callback) => {
+            remove: vi.fn((keys: string | string[], callback) => {
                 if (Array.isArray(keys)) {
                     keys.forEach((key: string) => {
                         delete storageData[key];
@@ -62,7 +62,7 @@ const storageData: Record<string, any> = { settings_migrated: true };
                 }
                 return Promise.resolve();
             }),
-            clear: jest.fn((callback) => {
+            clear: vi.fn((callback) => {
                 for (const key in storageData) {
                     delete storageData[key];
                 }
@@ -74,14 +74,14 @@ const storageData: Record<string, any> = { settings_migrated: true };
         },
             runtime: {
                 id: 'test-extension-id',
-                getURL: jest.fn(() => 'chrome-extension://test-extension-id/'),
-                reconnect: jest.fn(),
-                sendMessage: jest.fn(() => Promise.resolve())
+                getURL: vi.fn(() => 'chrome-extension://test-extension-id/'),
+                reconnect: vi.fn(),
+                sendMessage: vi.fn(() => Promise.resolve())
             }
     }
 };
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+
 import { Crypto } from '@peculiar/webcrypto';
 import {
     setMasterPassword,
@@ -105,7 +105,7 @@ describe('Master Password Security', () => {
         (global as any).chrome = {
             storage: {
                 local: {
-                    get: jest.fn((keys, callback) => {
+                    get: vi.fn((keys, callback) => {
                         const result: Record<string, any> = {};
                         if (keys === null) {
                             Object.assign(result, storageData);
@@ -125,14 +125,14 @@ describe('Master Password Security', () => {
                         }
                         return Promise.resolve(result);
                     }),
-                    set: jest.fn((data: Record<string, any>, callback) => {
+                    set: vi.fn((data: Record<string, any>, callback) => {
                         Object.assign(storageData, data);
                         if (callback) {
                             callback();
                         }
                         return Promise.resolve();
                     }),
-                    remove: jest.fn((keys: string | string[], callback) => {
+                    remove: vi.fn((keys: string | string[], callback) => {
                         if (Array.isArray(keys)) {
                             keys.forEach((key: string) => {
                                 delete storageData[key];
@@ -145,7 +145,7 @@ describe('Master Password Security', () => {
                         }
                         return Promise.resolve();
                     }),
-                    clear: jest.fn((callback) => {
+                    clear: vi.fn((callback) => {
                         for (const key in storageData) {
                             delete storageData[key];
                         }
@@ -158,9 +158,9 @@ describe('Master Password Security', () => {
             },
             runtime: {
                 id: 'test-extension-id',
-                getURL: jest.fn(() => 'chrome-extension://test-extension-id/'),
-                reconnect: jest.fn(),
-                sendMessage: jest.fn(() => Promise.resolve())
+                getURL: vi.fn(() => 'chrome-extension://test-extension-id/'),
+                reconnect: vi.fn(),
+                sendMessage: vi.fn(() => Promise.resolve())
             }
         };
 
@@ -175,7 +175,7 @@ describe('Master Password Security', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('setMasterPassword', () => {

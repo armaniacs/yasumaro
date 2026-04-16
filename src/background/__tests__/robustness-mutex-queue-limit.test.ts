@@ -7,8 +7,8 @@
 import { Mutex } from '../Mutex.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
   LogType: {
     DEBUG: 'DEBUG',
     INFO: 'INFO',
@@ -21,7 +21,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
   let mutex: Mutex;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('キューサイズ制限', () => {
@@ -184,7 +184,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
 
       await mutex.acquire();
 
-      const task2Resolved = jest.fn();
+      const task2Resolved = vi.fn();
       const task2 = mutex.acquire().then(task2Resolved);
 
       // この時点ではtask2はまだ待機中

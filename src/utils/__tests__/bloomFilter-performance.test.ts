@@ -7,11 +7,12 @@
  * - chunk-basedエンコーディングによる修正の検証
  */
 
-import { describe, test, expect } from '@jest/globals';
+
 
 import {
   bloomFilterFromDomains,
   bloomFilterFromData,
+  bloomFilterFromBase64,
   createBloomFilter
 } from '../trustDb/bloomFilter.js';
 
@@ -118,8 +119,6 @@ describe('BloomFilter Performance Tests', () => {
   });
 
   test('bloomFilterFromBase64 throws on invalid base64 data', () => {
-    const { bloomFilterFromBase64 } = require('../trustDb/bloomFilter.js');
-
     expect(() => {
       bloomFilterFromBase64('!!!not-valid-base64!!!', {
         hashCount: 3,
@@ -130,8 +129,6 @@ describe('BloomFilter Performance Tests', () => {
   });
 
   test('bloomFilterFromBase64 handles valid base64 and params', () => {
-    const { bloomFilterFromBase64 } = require('../trustDb/bloomFilter.js');
-
     // Create a valid bloom filter and export its data
     const domains = ['test.com', 'example.org'];
     const bloom = bloomFilterFromDomains(domains, 0.01);

@@ -5,132 +5,132 @@
 //          normalizeUrlForCache, getPrivacyInfoWithCache (session storage),
 //          _recordImpl branches, recordWithPreview
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 
 // ─── Mocks (must be before imports) ─────────────────────────────────────────
-jest.mock('../../utils/storage.js', () => {
-  const actual = jest.requireActual('../../utils/storage.js') as any;
+vi.mock('../../utils/storage.ts', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('../../utils/storage.ts');
   return {
     ...actual,
-    getSettings: jest.fn(),
-    getSavedUrlsWithTimestamps: jest.fn(),
-    setSavedUrlsWithTimestamps: jest.fn(),
-    saveSettings: jest.fn(),
+    getSettings: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
   };
 });
 
-jest.mock('../../utils/domainUtils.js', () => ({
-  isDomainAllowed: jest.fn(),
-  isDomainInList: jest.fn(),
-  extractDomain: jest.fn(),
+vi.mock('../../utils/domainUtils.ts', () => ({
+  isDomainAllowed: vi.fn(),
+  isDomainInList: vi.fn(),
+  extractDomain: vi.fn(),
 }));
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.ts', () => ({
+  addLog: vi.fn(),
   LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-  logError: jest.fn(),
+  logError: vi.fn(),
 }));
 
-jest.mock('../../utils/piiSanitizer.js', () => ({
-  sanitizeRegex: jest.fn(),
+vi.mock('../../utils/piiSanitizer.ts', () => ({
+  sanitizeRegex: vi.fn(),
 }));
 
-jest.mock('../../utils/markdownSanitizer.js', () => ({
-  sanitizeForObsidian: jest.fn((s: string) => s),
+vi.mock('../../utils/markdownSanitizer.ts', () => ({
+  sanitizeForObsidian: vi.fn((s: string) => s),
 }));
 
-jest.mock('../../utils/localeUtils.js', () => ({
-  getUserLocale: jest.fn(() => 'en'),
+vi.mock('../../utils/localeUtils.ts', () => ({
+  getUserLocale: vi.fn(() => 'en'),
 }));
 
-jest.mock('../../utils/urlUtils.js', () => ({
-  sanitizeUrlForLogging: jest.fn((url: string) => url),
+vi.mock('../../utils/urlUtils.ts', () => ({
+  sanitizeUrlForLogging: vi.fn((url: string) => url),
 }));
 
-jest.mock('../../utils/fetch.js', () => ({
-  isPrivateIpAddress: jest.fn(() => false),
+vi.mock('../../utils/fetch.ts', () => ({
+  isPrivateIpAddress: vi.fn(() => false),
 }));
 
-jest.mock('../../utils/pendingStorage.js', () => ({
-  addPendingPage: jest.fn(),
+vi.mock('../../utils/pendingStorage.ts', () => ({
+  addPendingPage: vi.fn(),
 }));
 
-jest.mock('../../utils/redaction.js', () => ({
-  redactHeaderValue: jest.fn((v: string) => v),
+vi.mock('../../utils/redaction.ts', () => ({
+  redactHeaderValue: vi.fn((v: string) => v),
 }));
 
-jest.mock('../../utils/permissionManager.js', () => ({
-  getPermissionManager: jest.fn(() => ({
-    isHostPermitted: jest.fn().mockResolvedValue(true),
-    recordDeniedVisit: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../utils/permissionManager.ts', () => ({
+  getPermissionManager: vi.fn(() => ({
+    isHostPermitted: vi.fn().mockResolvedValue(true),
+    recordDeniedVisit: vi.fn().mockResolvedValue(undefined),
   })),
 }));
 
-jest.mock('../../utils/trustChecker.js', () => ({
-  TrustChecker: jest.fn().mockImplementation(() => ({
-    checkDomain: jest.fn().mockResolvedValue({
+vi.mock('../../utils/trustChecker.ts', () => ({
+  TrustChecker: vi.fn().mockImplementation(function(this: any) {
+    this.checkDomain = vi.fn().mockResolvedValue({
       canProceed: true,
       trustResult: { level: 'safe' },
-    }),
-  })),
+    });
+  }),
 }));
 
-jest.mock('../privacyPipeline.js', () => ({
-  PrivacyPipeline: jest.fn().mockImplementation(() => ({
-    process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 }),
-  })),
+vi.mock('../privacyPipeline.ts', () => ({
+  PrivacyPipeline: vi.fn().mockImplementation(function(this: any) {
+    this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+  }),
 }));
 
-jest.mock('../notificationHelper.js', () => ({
+vi.mock('../notificationHelper.ts', () => ({
   NotificationHelper: {
-    notifySuccess: jest.fn(),
-    notifyError: jest.fn(),
+    notifySuccess: vi.fn(),
+    notifyError: vi.fn(),
   },
 }));
 
-jest.mock('../obsidianClient.js', () => ({
-  ObsidianClient: jest.fn(),
+vi.mock('../obsidianClient.ts', () => ({
+  ObsidianClient: vi.fn(),
 }));
 
-jest.mock('../aiClient.js', () => ({
-  AIClient: jest.fn(),
+vi.mock('../aiClient.ts', () => ({
+  AIClient: vi.fn(),
 }));
 
-jest.mock('../../utils/storageUrls.js', () => ({
-  setUrlRecordType: jest.fn().mockResolvedValue(undefined),
-  setUrlMaskedCount: jest.fn().mockResolvedValue(undefined),
-  setUrlContent: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummary: jest.fn().mockResolvedValue(undefined),
-  setUrlTags: jest.fn().mockResolvedValue(undefined),
-  setUrlSentTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlReceivedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlPageBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCandidateBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedElements: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedReason: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../utils/storageUrls.ts', () => ({
+  setUrlRecordType: vi.fn().mockResolvedValue(undefined),
+  setUrlMaskedCount: vi.fn().mockResolvedValue(undefined),
+  setUrlContent: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummary: vi.fn().mockResolvedValue(undefined),
+  setUrlTags: vi.fn().mockResolvedValue(undefined),
+  setUrlSentTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlReceivedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlPageBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCandidateBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedElements: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedReason: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Pipeline steps mock
-jest.mock('../pipeline/RecordingPipeline.js', () => ({
-  RecordingPipeline: jest.fn().mockImplementation(() => ({
-    execute: jest.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' }),
-  })),
+vi.mock('../pipeline/RecordingPipeline.ts', () => ({
+  RecordingPipeline: vi.fn().mockImplementation(function(this: any) {
+    this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
+  }),
 }));
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
-import { RecordingLogic, truncateContentSize } from '../recordingLogic.js';
-import * as storage from '../../utils/storage.js';
-import * as domainUtils from '../../utils/domainUtils.js';
-import { PrivacyPipeline } from '../privacyPipeline.js';
-import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import { NotificationHelper } from '../notificationHelper.js';
+import { RecordingLogic, truncateContentSize } from '../recordingLogic.ts';
+import * as storage from '../../utils/storage.ts';
+import * as domainUtils from '../../utils/domainUtils.ts';
+import { PrivacyPipeline } from '../privacyPipeline.ts';
+import { RecordingPipeline } from '../pipeline/RecordingPipeline.ts';
+import { NotificationHelper } from '../notificationHelper.ts';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
@@ -146,14 +146,14 @@ function resetCacheState() {
 }
 
 function makeMockObsidian() {
-  return { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+  return { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
 }
 
 function makeMockAiClient() {
   return {
-    getLocalAvailability: jest.fn().mockResolvedValue('readily'),
-    summarizeLocally: jest.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    generateSummary: jest.fn().mockResolvedValue('Cloud summary'),
+    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
+    generateSummary: vi.fn().mockResolvedValue('Cloud summary'),
   } as any;
 }
 
@@ -225,17 +225,17 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
   beforeEach(() => {
     resetCacheState();
     logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({});
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
   });
 
   test('fetches from storage on first call (cache miss)', async () => {
     const urlMap = new Map([['https://example.com', Date.now()]]);
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
     const result = await logic.getSavedUrlsWithCache();
@@ -246,11 +246,11 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
 
   test('returns cached data on second call within TTL', async () => {
     const urlMap = new Map([['https://example.com', Date.now()]]);
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
     await logic.getSavedUrlsWithCache();
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockClear();
 
     const result = await logic.getSavedUrlsWithCache();
@@ -261,7 +261,7 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
   });
 
   test('refetches from storage after TTL expires', async () => {
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://first.com', 1]]));
     await logic.getSavedUrlsWithCache();
 
@@ -269,9 +269,9 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
     RecordingLogic.cacheState.urlCacheTimestamp = Date.now() - 61 * 1000; // 61 seconds ago
 
     const newMap = new Map([['https://second.com', 2]]);
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(newMap);
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockClear();
 
     const result = await logic.getSavedUrlsWithCache();
@@ -282,11 +282,11 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
 
   test('getSavedUrlsWithCache returns equivalent data on cache hit', async () => {
     const originalMap = new Map([['https://a.com', 1], ['https://b.com', 2]]);
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(originalMap);
 
     const first = await logic.getSavedUrlsWithCache();
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockClear();
 
     const second = await logic.getSavedUrlsWithCache();
@@ -410,13 +410,13 @@ describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', ()
 
     // Make session.get throw
     const originalGet = chrome.storage.session.get;
-    (chrome.storage.session.get as jest.Mock).mockRejectedValueOnce(new Error('Session error'));
+    (chrome.storage.session.get as vi.Mock).mockRejectedValueOnce(new Error('Session error'));
 
     const result = await logic.getPrivacyInfoWithCache('https://example.com/page');
     expect(result).toBeNull();
 
     // Restore
-    (chrome.storage.session.get as jest.Mock).mockImplementation(originalGet as any);
+    (chrome.storage.session.get as vi.Mock).mockImplementation(originalGet as any);
   });
 
   test('skips session storage fallback when in-memory cache has valid entry', async () => {
@@ -453,24 +453,24 @@ describe('RecordingLogic - invalidatePrivacyCache', () => {
 
 describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
   let logic: RecordingLogic;
-  let mockExecute: jest.Mock;
+  let mockExecute: vi.Mock;
 
   beforeEach(() => {
     resetCacheState();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
-    mockExecute = jest.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
-    // @ts-expect-error - jest.fn() type narrowing
-    RecordingPipeline.mockImplementation(() => ({
-      execute: mockExecute,
-    }));
+    mockExecute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
+    // @ts-expect-error - vi.fn() type narrowing
+    RecordingPipeline.mockImplementation(function(this: any) {
+      this.execute = mockExecute;
+    });
 
     logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -489,7 +489,7 @@ describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
 
   test('passes settings to pipeline.execute', async () => {
     const settings = { PRIVACY_MODE: 'full_pipeline' };
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue(settings);
 
     await logic.record({
@@ -554,28 +554,28 @@ describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
 
 describe('RecordingLogic - recordWithPreview', () => {
   let logic: RecordingLogic;
-  let mockExecute: jest.Mock;
+  let mockExecute: vi.Mock;
 
   beforeEach(() => {
     resetCacheState();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
-    mockExecute = jest.fn().mockResolvedValue({
+    mockExecute = vi.fn().mockResolvedValue({
       success: true,
       summary: 'Preview summary',
       processedContent: 'masked content',
     });
-    // @ts-expect-error - jest.fn() type narrowing
-    RecordingPipeline.mockImplementation(() => ({
-      execute: mockExecute,
-    }));
+    // @ts-expect-error - vi.fn() type narrowing
+    RecordingPipeline.mockImplementation(function(this: any) {
+      this.execute = mockExecute;
+    });
 
     logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -648,19 +648,19 @@ describe('RecordingLogic - settings cache interaction with record', () => {
 
   beforeEach(() => {
     resetCacheState();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
-    // @ts-expect-error - jest.fn() type narrowing
-    RecordingPipeline.mockImplementation(() => ({
-      execute: jest.fn().mockResolvedValue({ success: true }),
-    }));
+    // @ts-expect-error - vi.fn() type narrowing
+    RecordingPipeline.mockImplementation(function(this: any) {
+      this.execute = vi.fn().mockResolvedValue({ success: true });
+    });
 
     logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -685,7 +685,7 @@ describe('RecordingLogic - settings cache interaction with record', () => {
       content: 'content',
     });
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockClear();
 
     await logic.record({
@@ -703,7 +703,7 @@ describe('RecordingLogic - static cache state', () => {
   test('cacheState is shared across instances', async () => {
     resetCacheState();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'test' });
 
     const logic1 = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
@@ -738,11 +738,11 @@ describe('RecordingLogic - edge cases', () => {
 
   beforeEach(() => {
     resetCacheState();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({});
-    // @ts-expect-error - jest.fn() type narrowing
+    // @ts-expect-error - vi.fn() type narrowing
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
   });
 

@@ -5,7 +5,7 @@
  */
 
 // @ts-ignore — vendor JS file bundled from bloomfilter npm package
-import { BloomFilter } from './bloomfilter.mjs';
+import { BloomFilter } from './bloomfilter-vendor.mjs';
 import type { BloomFilterData } from './trustDbSchema.js';
 
 /**

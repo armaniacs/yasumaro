@@ -33,7 +33,7 @@
         },
         "types": [
             "chrome",
-            "jest",
+            "vitest",
             "node"
         ]
     },
@@ -44,6 +44,7 @@
         "node_modules",
         "dist",
         "src/**/__tests__",
+        "vitest.setup.ts",
         "jest.setup.js",
         "jest.setup.ts",
         "jest.config.cjs",

@@ -11,8 +11,8 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
 
   beforeEach(() => {
     // chrome.i18n.getMessageのモック
-    mockGetMsg = jest.fn();
-    // @ts-expect-error - jest.fn() type narrowing issue
+    mockGetMsg = vi.fn();
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockGetMsg.mockImplementation((key) => {
       const messages = {
@@ -290,7 +290,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
     // chrome.i18n.getMessageのモックを設定
     if (!global.chrome) global.chrome = {};
     global.chrome.i18n = {
-      getMessage: jest.fn((key) => {
+      getMessage: vi.fn((key) => {
         const messages = {
           'errorPrefix': 'Error:',
           'connectionError': 'Connection failed',

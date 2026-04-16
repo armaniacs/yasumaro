@@ -9,26 +9,26 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-jest.mock('../../logger.js', () => ({
-    logInfo: jest.fn(),
-    logError: jest.fn(),
-    logWarn: jest.fn(),
+vi.mock('../../logger.js', () => ({
+    logInfo: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
     ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
 }));
 
 // fetch モック
-jest.mock('../../fetch.js', () => ({
-    fetchWithTimeout: jest.fn()
+vi.mock('../../fetch.js', () => ({
+    fetchWithTimeout: vi.fn()
 }));
 
 // trustDb モック
 const mockDb = {
-    initialize: jest.fn(async () => {}),
-    updateTranco: jest.fn(async () => {}),
-    getStatus: jest.fn(() => ({ initialized: true, lastUpdated: new Date().toISOString() }))
+    initialize: vi.fn(async () => {}),
+    updateTranco: vi.fn(async () => {}),
+    getStatus: vi.fn(() => ({ initialized: true, lastUpdated: new Date().toISOString() }))
 };
-jest.mock('../trustDb.js', () => ({
-    getTrustDb: jest.fn(() => mockDb)
+vi.mock('../trustDb.js', () => ({
+    getTrustDb: vi.fn(() => mockDb)
 }));
 
 import {
@@ -42,12 +42,12 @@ import { fetchWithTimeout } from '../../fetch.js';
 describe('trancoUpdater', () => {
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.useFakeTimers();
+        vi.clearAllMocks();
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
     describe('定数マッピング', () => {
@@ -106,7 +106,7 @@ describe('trancoUpdater', () => {
 
             test('成功時にドメイン数とサイズを返す', async () => {
                 const csvText = '1,google.com\n2,youtube.com\n3,facebook.com';
-                (fetchWithTimeout as jest.Mock).mockResolvedValue({
+                (fetchWithTimeout as vi.Mock).mockResolvedValue({
                     ok: true,
                     status: 200,
                     json: async () => ({ list_id: 'test-list-id' }),
@@ -121,7 +121,7 @@ describe('trancoUpdater', () => {
             });
 
             test('API失敗時にリトライして最終的にエラーを返す', async () => {
-                (fetchWithTimeout as jest.Mock).mockResolvedValue({
+                (fetchWithTimeout as vi.Mock).mockResolvedValue({
                     ok: false,
                     status: 500,
                     statusText: 'Internal Server Error'
@@ -130,9 +130,9 @@ describe('trancoUpdater', () => {
                 const promise = updater.updateTrancoList('top1k');
 
                 // タイマーを進めてリトライを実行
-                await jest.advanceTimersByTimeAsync(1000);
-                await jest.advanceTimersByTimeAsync(2000);
-                await jest.advanceTimersByTimeAsync(4000);
+                await vi.advanceTimersByTimeAsync(1000);
+                await vi.advanceTimersByTimeAsync(2000);
+                await vi.advanceTimersByTimeAsync(4000);
 
                 const result = await promise;
 
@@ -141,7 +141,7 @@ describe('trancoUpdater', () => {
             });
 
             test('list_id がない場合にエラーを返す', async () => {
-                (fetchWithTimeout as jest.Mock).mockResolvedValue({
+                (fetchWithTimeout as vi.Mock).mockResolvedValue({
                     ok: true,
                     status: 200,
                     json: async () => ({})
@@ -149,9 +149,9 @@ describe('trancoUpdater', () => {
 
                 const promise = updater.updateTrancoList('top1k');
 
-                await jest.advanceTimersByTimeAsync(1000);
-                await jest.advanceTimersByTimeAsync(2000);
-                await jest.advanceTimersByTimeAsync(4000);
+                await vi.advanceTimersByTimeAsync(1000);
+                await vi.advanceTimersByTimeAsync(2000);
+                await vi.advanceTimersByTimeAsync(4000);
 
                 const result = await promise;
 
