@@ -2,17 +2,18 @@
 // Tests for recordingLogic.ts internal methods and _recordImpl path
 // Covers: isValidFetchUrl, private helpers, _recordImpl branches, _saveMetadata branches
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // ─── Mocks (must be before imports) ─────────────────────────────────────────
-jest.mock('../../utils/storage.js', () => {
-  const actual = jest.requireActual('../../utils/storage.js') as any;
+vi.mock('../../utils/storage.js', async () => {
+  const actual = await vi.importActual('../../utils/storage.js') as any;
   return {
     ...actual,
-    getSettings: jest.fn(),
-    getSavedUrlsWithTimestamps: jest.fn(),
-    setSavedUrlsWithTimestamps: jest.fn(),
-    saveSettings: jest.fn(),
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
     StorageKeys: {
       PRIVACY_MODE: 'PRIVACY_MODE',
       PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
@@ -24,118 +25,127 @@ jest.mock('../../utils/storage.js', () => {
   };
 });
 
-jest.mock('../../utils/domainUtils.js', () => ({
-  isDomainAllowed: jest.fn(),
-  isDomainInList: jest.fn(),
-  extractDomain: jest.fn(),
+vi.mock('../../utils/domainUtils.js', () => ({
+  isDomainAllowed: vi.fn(),
+  isDomainInList: vi.fn(),
+  extractDomain: vi.fn(),
 }));
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
   LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-  logError: jest.fn(),
+  logError: vi.fn(),
 }));
 
-jest.mock('../../utils/piiSanitizer.js', () => ({
-  sanitizeRegex: jest.fn(),
+vi.mock('../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: vi.fn(),
 }));
 
-jest.mock('../../utils/markdownSanitizer.js', () => ({
-  sanitizeForObsidian: jest.fn((s: string) => s),
+vi.mock('../../utils/markdownSanitizer.js', () => ({
+  sanitizeForObsidian: vi.fn((s: string) => s),
 }));
 
-jest.mock('../../utils/localeUtils.js', () => ({
-  getUserLocale: jest.fn(() => 'en'),
+vi.mock('../../utils/localeUtils.js', () => ({
+  getUserLocale: vi.fn(() => 'en'),
 }));
 
-jest.mock('../../utils/urlUtils.js', () => ({
-  sanitizeUrlForLogging: jest.fn((url: string) => url),
+vi.mock('../../utils/urlUtils.js', () => ({
+  sanitizeUrlForLogging: vi.fn((url: string) => url),
 }));
 
-jest.mock('../../utils/fetch.js', () => ({
-  isPrivateIpAddress: jest.fn(() => false),
+vi.mock('../../utils/fetch.js', () => ({
+  isPrivateIpAddress: vi.fn(() => false),
 }));
 
-jest.mock('../../utils/pendingStorage.js', () => ({
-  addPendingPage: jest.fn(),
+vi.mock('../../utils/pendingStorage.js', () => ({
+  addPendingPage: vi.fn(),
 }));
 
-jest.mock('../../utils/redaction.js', () => ({
-  redactHeaderValue: jest.fn((v: string) => v),
+vi.mock('../../utils/redaction.js', () => ({
+  redactHeaderValue: vi.fn((v: string) => v),
 }));
 
 const mockPermissionManager = {
-  isHostPermitted: jest.fn().mockResolvedValue(true),
-  recordDeniedVisit: jest.fn().mockResolvedValue(undefined),
+  isHostPermitted: vi.fn().mockResolvedValue(true),
+  recordDeniedVisit: vi.fn().mockResolvedValue(undefined),
 };
-jest.mock('../../utils/permissionManager.js', () => ({
-  getPermissionManager: jest.fn(() => mockPermissionManager),
+vi.mock('../../utils/permissionManager.js', () => ({
+  getPermissionManager: vi.fn(() => mockPermissionManager),
 }));
 
 const mockTrustCheckResult = {
   canProceed: true,
   trustResult: { level: 'safe' },
 };
-jest.mock('../../utils/trustChecker.js', () => ({
-  TrustChecker: jest.fn().mockImplementation(() => ({
-    checkDomain: jest.fn().mockResolvedValue(mockTrustCheckResult),
-  })),
+vi.mock('../../utils/trustChecker.js', () => ({
+  TrustChecker: vi.fn().mockImplementation(function () {
+    return {
+      checkDomain: vi.fn().mockResolvedValue(mockTrustCheckResult),
+    };
+  }),
 }));
 
-jest.mock('../privacyPipeline.js', () => ({
-  PrivacyPipeline: jest.fn().mockImplementation(() => ({
-    process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 }),
-  })),
+vi.mock('../privacyPipeline.js', () => ({
+  PrivacyPipeline: vi.fn().mockImplementation(function () {
+    return {
+      process: vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 }),
+    };
+  }),
 }));
 
-jest.mock('../notificationHelper.js', () => ({
+vi.mock('../notificationHelper.js', () => ({
   NotificationHelper: {
-    notifySuccess: jest.fn(),
-    notifyError: jest.fn(),
+    notifySuccess: vi.fn(),
+    notifyError: vi.fn(),
   },
 }));
 
-jest.mock('../obsidianClient.js', () => ({
-  ObsidianClient: jest.fn(),
+vi.mock('../obsidianClient.js', () => ({
+  ObsidianClient: vi.fn(),
 }));
 
-jest.mock('../aiClient.js', () => ({
-  AIClient: jest.fn(),
+vi.mock('../aiClient.js', () => ({
+  AIClient: vi.fn(),
 }));
 
-jest.mock('../../utils/storageUrls.js', () => ({
-  setUrlRecordType: jest.fn().mockResolvedValue(undefined),
-  setUrlMaskedCount: jest.fn().mockResolvedValue(undefined),
-  setUrlContent: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummary: jest.fn().mockResolvedValue(undefined),
-  setUrlTags: jest.fn().mockResolvedValue(undefined),
-  setUrlSentTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlReceivedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlPageBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCandidateBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedElements: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedReason: jest.fn().mockResolvedValue(undefined),
-  setUrlAiProvider: jest.fn().mockResolvedValue(undefined),
-  setUrlAiModel: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../utils/storageUrls.js', () => ({
+  setUrlRecordType: vi.fn().mockResolvedValue(undefined),
+  setUrlMaskedCount: vi.fn().mockResolvedValue(undefined),
+  setUrlContent: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummary: vi.fn().mockResolvedValue(undefined),
+  setUrlTags: vi.fn().mockResolvedValue(undefined),
+  setUrlSentTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlReceivedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlPageBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCandidateBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedElements: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedReason: vi.fn().mockResolvedValue(undefined),
+  setUrlAiProvider: vi.fn().mockResolvedValue(undefined),
+  setUrlAiModel: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { RecordingLogic, isValidFetchUrl, truncateContentSize } from '../recordingLogic.js';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import { PrivacyPipeline } from '../privacyPipeline.js';
 import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as storageUrls from '../../utils/storageUrls.js';
+import * as loggerModule from '../../utils/logger.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { getPermissionManager } from '../../utils/permissionManager.js';
 import { isPrivateIpAddress } from '../../utils/fetch.js';
+
+const MockedPrivacyPipeline = PrivacyPipeline as vi.Mock;
+const mockLogger = vi.mocked(loggerModule);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
@@ -151,14 +161,14 @@ function resetCacheState() {
 }
 
 function makeMockObsidian() {
-  return { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+  return { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
 }
 
 function makeMockAiClient() {
   return {
-    getLocalAvailability: jest.fn().mockResolvedValue('readily'),
-    summarizeLocally: jest.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    generateSummary: jest.fn().mockResolvedValue('Cloud summary'),
+    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
+    generateSummary: vi.fn().mockResolvedValue('Cloud summary'),
   } as any;
 }
 
@@ -203,7 +213,7 @@ describe('isValidFetchUrl', () => {
 
   test('rejects private IP addresses', () => {
     // isPrivateIpAddress mock returns false by default, need to override
-    (isPrivateIpAddress as jest.Mock).mockReturnValueOnce(true);
+    (isPrivateIpAddress as vi.Mock).mockReturnValueOnce(true);
     expect(isValidFetchUrl('http://192.168.1.1')).toBe(false);
   });
 
@@ -265,9 +275,9 @@ const mockSettings = {
 
 function makeAiClient() {
   return {
-    getLocalAvailability: jest.fn<() => Promise<string>>().mockResolvedValue('unavailable'),
-    summarizeLocally: jest.fn(),
-    generateSummary: jest.fn<() => Promise<any>>().mockResolvedValue({
+    getLocalAvailability: vi.fn<() => Promise<string>>().mockResolvedValue('unavailable'),
+    summarizeLocally: vi.fn(),
+    generateSummary: vi.fn<() => Promise<any>>().mockResolvedValue({
       summary: 'AI summary',
       sentTokens: 100,
       receivedTokens: 50,
@@ -277,17 +287,17 @@ function makeAiClient() {
 
 function makeObsidian() {
   return {
-    appendToDailyNote: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    appendToDailyNote: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   };
 }
 
 function makeGetPrivacyInfo() {
-  return jest.fn<() => Promise<any>>().mockResolvedValue({ isPrivate: false });
+  return vi.fn<() => Promise<any>>().mockResolvedValue({ isPrivate: false });
 }
 
 describe('RecordingPipeline', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // StorageKeys, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD はモックモジュール内で定義済み
     // @ts-expect-error - mock
@@ -301,20 +311,21 @@ describe('RecordingPipeline', () => {
     domainUtils.extractDomain.mockReturnValue('example.com');
 
     // @ts-expect-error - mock
-    (getPermissionManager as jest.Mock).mockReturnValue({
-      isHostPermitted: jest.fn<() => Promise<boolean>>().mockResolvedValue(true),
-      recordDeniedVisit: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    (getPermissionManager as vi.Mock).mockReturnValue({
+      isHostPermitted: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+      recordDeniedVisit: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     });
   });
 
   describe('aiClient の伝達（回帰テスト: null問題）', () => {
     it('コンストラクタに渡した aiClient が PrivacyPipeline コンストラクタに届く', async () => {
-      const mockProcess = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
       });
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({ process: mockProcess }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return { process: mockProcess };
+      });
 
       const aiClient = makeAiClient();
       const pipeline = new RecordingPipeline(
@@ -338,12 +349,13 @@ describe('RecordingPipeline', () => {
     });
 
     it('aiClient なし（null）で構築すると PrivacyPipeline に null が渡される', async () => {
-      const mockProcess = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         summary: 'Summary not available.',
         maskedCount: 0,
       });
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({ process: mockProcess }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return { process: mockProcess };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -367,15 +379,16 @@ describe('RecordingPipeline', () => {
 
   describe('previewOnly モード', () => {
     it('processedContent と maskedItems を返す', async () => {
-      const mockProcess = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         success: true,
         preview: true,
         processedContent: 'Content with [MASKED:email]',
         maskedCount: 1,
         maskedItems: [{ type: 'email' }],
       });
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({ process: mockProcess }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return { process: mockProcess };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -398,19 +411,20 @@ describe('RecordingPipeline', () => {
     });
 
     it('previewOnly 時は Obsidian に保存しない', async () => {
-      const mockAppend = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       const mockObsidian = makeObsidian();
       mockObsidian.appendToDailyNote = mockAppend;
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({
-        process: jest.fn<() => Promise<any>>().mockResolvedValue({
-          success: true,
-          preview: true,
-          processedContent: 'Processed',
-          maskedCount: 0,
-          maskedItems: [],
-        }),
-      }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return {
+          process: vi.fn<() => Promise<any>>().mockResolvedValue({
+            success: true,
+            preview: true,
+            processedContent: 'Processed',
+            maskedCount: 0,
+            maskedItems: [],
+          }),
+        };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -431,16 +445,17 @@ describe('RecordingPipeline', () => {
 
   describe('通常記録フロー', () => {
     it('AI要約が Obsidian に保存される', async () => {
-      const mockAppend = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       const mockObsidian = makeObsidian();
       mockObsidian.appendToDailyNote = mockAppend;
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({
-        process: jest.fn<() => Promise<any>>().mockResolvedValue({
-          summary: 'Generated AI summary',
-          maskedCount: 0,
-        }),
-      }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return {
+          process: vi.fn<() => Promise<any>>().mockResolvedValue({
+            summary: 'Generated AI summary',
+            maskedCount: 0,
+          }),
+        };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -483,20 +498,21 @@ describe('RecordingPipeline', () => {
 
   describe('指数バックオフの上限（5000ms cap）', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('リトライ時の delayMs が常に 5000ms 以下である', async () => {
       // privacyPipeline ステップ（maxRetries=3）が RETRY 対象
       // retries=1: 2^1*1000=2000ms, retries=2: 2^2*1000=4000ms, retries=3: 2^3*1000=8000ms→cap→5000ms
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({
-        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Transient error')),
-      }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return {
+          process: vi.fn<() => Promise<any>>().mockRejectedValue(new Error('Transient error')),
+        };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -511,12 +527,11 @@ describe('RecordingPipeline', () => {
       }, mockSettings);
 
       // 非同期タイマーを全て完走させる
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const logger = jest.requireMock('../../utils/logger.js');
-      const retryCalls = (logger as any).addLog.mock.calls.filter(
+      const retryCalls = mockLogger.addLog.mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 
@@ -542,10 +557,11 @@ describe('RecordingPipeline', () => {
 
   describe('buildErrorResult - ErrorCode.INTERNAL_ERROR', () => {
     it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({
-        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Unexpected failure')),
-      }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return {
+          process: vi.fn<() => Promise<any>>().mockRejectedValue(new Error('Unexpected failure')),
+        };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),
@@ -560,20 +576,20 @@ describe('RecordingPipeline', () => {
       }, mockSettings);
 
       expect(result.success).toBe(false);
-      const logger2 = jest.requireMock('../../utils/logger.js');
-      expect(logger2.logError).toHaveBeenCalledWith(
+      expect(mockLogger.logError).toHaveBeenCalledWith(
         expect.stringContaining('Pipeline failed at step'),
         expect.any(Object),
-        logger2.ErrorCode.INTERNAL_ERROR,
+        mockLogger.ErrorCode.INTERNAL_ERROR,
         'RecordingPipeline'
       );
     });
 
     it('エラー結果に success=false と error メッセージが含まれる', async () => {
-      const { PrivacyPipeline } = require('../privacyPipeline.js');
-      (PrivacyPipeline as jest.Mock).mockImplementation(() => ({
-        process: jest.fn<() => Promise<any>>().mockRejectedValue(new Error('Step crashed')),
-      }));
+      MockedPrivacyPipeline.mockImplementation(function () {
+        return {
+          process: vi.fn<() => Promise<any>>().mockRejectedValue(new Error('Step crashed')),
+        };
+      });
 
       const pipeline = new RecordingPipeline(
         makeGetPrivacyInfo(),

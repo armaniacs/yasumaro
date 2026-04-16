@@ -8,14 +8,14 @@
  * TDD Red phase: Tests verify atomic writes across multiple storage keys
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock chrome
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn(),
-      set: jest.fn()
+      get: vi.fn(),
+      set: vi.fn()
     }
   },
   runtime: { id: 'test-id' }

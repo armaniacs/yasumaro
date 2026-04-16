@@ -1,9 +1,10 @@
 // src/background/__tests__/notificationHelper.test.ts
 import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
+import { vi } from 'vitest';
 
 // chrome API モック
-const mockCreate = jest.fn();
-const mockGetMessage = jest.fn((key: string) => {
+const mockCreate = vi.fn();
+const mockGetMessage = vi.fn((key: string) => {
     const msgs: Record<string, string> = {
         'obsidianSyncFailed': 'Obsidian Sync Failed',
         'notifyPrivacyConfirmSave': 'Save',
@@ -14,13 +15,13 @@ const mockGetMessage = jest.fn((key: string) => {
     return msgs[key] || '';
 });
 (global as any).chrome = {
-    runtime: { getURL: jest.fn((path: string) => `chrome-extension://mock-id/${path}`) },
+    runtime: { getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`) },
     notifications: { create: mockCreate },
     i18n: { getMessage: mockGetMessage }
 };
 
 describe('NotificationHelper', () => {
-    beforeEach(() => { jest.clearAllMocks(); });
+    beforeEach(() => { vi.clearAllMocks(); });
 
     describe('PRIVACY_CONFIRM_NOTIFICATION_PREFIX', () => {
         test('正しいプレフィックス', () => {

@@ -9,34 +9,34 @@
  * - 全 setter が呼ばれるケース
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-jest.mock('../../../../utils/storageUrls.js', () => ({
-  setSavedUrlsWithTimestamps: jest.fn().mockResolvedValue(undefined),
-  setUrlRecordType: jest.fn().mockResolvedValue(undefined),
-  setUrlMaskedCount: jest.fn().mockResolvedValue(undefined),
-  setUrlTags: jest.fn().mockResolvedValue(undefined),
-  setUrlContent: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummary: jest.fn().mockResolvedValue(undefined),
-  setUrlSentTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlReceivedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedTokens: jest.fn().mockResolvedValue(undefined),
-  setUrlPageBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCandidateBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryOriginalBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedBytes: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedElements: jest.fn().mockResolvedValue(undefined),
-  setUrlAiSummaryCleansedReason: jest.fn().mockResolvedValue(undefined),
-  getSavedUrlsWithTimestamps: jest.fn().mockResolvedValue(new Map()),
+vi.mock('../../../../utils/storageUrls.js', () => ({
+  setSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(undefined),
+  setUrlRecordType: vi.fn().mockResolvedValue(undefined),
+  setUrlMaskedCount: vi.fn().mockResolvedValue(undefined),
+  setUrlTags: vi.fn().mockResolvedValue(undefined),
+  setUrlContent: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummary: vi.fn().mockResolvedValue(undefined),
+  setUrlSentTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlReceivedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedTokens: vi.fn().mockResolvedValue(undefined),
+  setUrlPageBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCandidateBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedElements: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedReason: vi.fn().mockResolvedValue(undefined),
+  getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
 }));
 
 import { saveMetadataStep } from '../saveMetadataStep.js';
@@ -70,7 +70,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('saveMetadataStep', () => {
@@ -182,7 +182,7 @@ describe('saveMetadataStep', () => {
   describe('best-effort パターン', () => {
     it('一部 setter が失敗しても他は保存される', async () => {
       // setUrlMaskedCount を失敗させる
-      (storageUrls.setUrlMaskedCount as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (storageUrls.setUrlMaskedCount as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -199,7 +199,7 @@ describe('saveMetadataStep', () => {
     });
 
     it('失敗した場合 WARN ログが出力される', async () => {
-      (storageUrls.setUrlMaskedCount as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (storageUrls.setUrlMaskedCount as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -209,7 +209,7 @@ describe('saveMetadataStep', () => {
       await saveMetadataStep(context);
 
       // WARN ログで「Some metadata failed to save」が出力される
-      const warnCalls = (logger.addLog as jest.Mock).mock.calls.filter(
+      const warnCalls = (logger.addLog as vi.Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(warnCalls.length).toBeGreaterThan(0);
@@ -223,7 +223,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const failCalls = (logger.addLog as jest.Mock).mock.calls.filter(
+      const failCalls = (logger.addLog as vi.Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(failCalls.length).toBe(0);

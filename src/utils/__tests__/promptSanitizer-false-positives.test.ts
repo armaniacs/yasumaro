@@ -8,7 +8,7 @@
  * Verifies that legitimate content is not incorrectly flagged
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 describe('PromptSanitizer - False Positive Detection', () => {
   beforeAll(() => {

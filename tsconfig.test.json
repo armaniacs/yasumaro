@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["jest", "node", "chrome"]
+    "types": ["vitest", "node", "chrome"]
   },
   "include": [
     "src/**/__tests__/**/*",

@@ -3,7 +3,7 @@
  * 【セキュリティ】logger.ts の深度制限と循環参照検出のテスト
  */
 
-import { describe, test, expect } from '@jest/globals';
+
 import { addLog, getLogs, clearLogs, flushLogs } from '../logger';
 
 describe('Logger - 深度制限と循環参照検出', () => {

@@ -3,7 +3,7 @@
  * URL管理関連機能のテスト
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from 'vitest';
 import {
     getSavedUrls,
     getSavedUrlsWithTimestamps,
@@ -258,7 +258,7 @@ describe('setUrlTags', () => {
     });
 
     it('warns when URL not found', async () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         await setUrlTags('https://nonexistent.com', ['tag']);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('URL not found'));
         warnSpy.mockRestore();
@@ -532,7 +532,7 @@ describe('buildAllowedUrls', () => {
     });
 
     it('warns and skips OpenAI base URL when not whitelisted', () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_base_url: 'https://evil.com/v1' }, rejectFn);
         expect(urls.has('https://evil.com/v1')).toBe(false);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not in whitelist'));
@@ -540,7 +540,7 @@ describe('buildAllowedUrls', () => {
     });
 
     it('warns on invalid OpenAI base URL', () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_base_url: 'not-a-url' }, whitelistFn);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI Base URL'));
         warnSpy.mockRestore();
@@ -552,7 +552,7 @@ describe('buildAllowedUrls', () => {
     });
 
     it('warns and skips OpenAI 2 base URL when not whitelisted', () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_2_base_url: 'https://evil.com/v1' }, rejectFn);
         expect(urls.has('https://evil.com/v1')).toBe(false);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('OpenAI 2 Base URL not in whitelist'));
@@ -560,7 +560,7 @@ describe('buildAllowedUrls', () => {
     });
 
     it('warns on invalid OpenAI 2 base URL', () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_2_base_url: '://bad' }, whitelistFn);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI 2 Base URL'));
         warnSpy.mockRestore();
@@ -605,7 +605,7 @@ describe('buildAllowedUrls', () => {
     });
 
     it('warns on invalid Obsidian 127.0.0.1 URL', () => {
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         // Pass an invalid port that makes URL construction fail
         // normalizeUrl throws for invalid URLs, which the try/catch should catch
         // The URL constructor accepts most inputs, so this path is hard to trigger naturally.
@@ -642,7 +642,7 @@ describe('computeUrlsHash', () => {
 
 describe('saveSettingsWithAllowedUrls', () => {
     it('calls saveSettingsFunc with provided settings', async () => {
-        const mockSave = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+        const mockSave = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
         const settings = { obsidian_protocol: 'https' } as any;
         await saveSettingsWithAllowedUrls(settings, mockSave as any);
         expect(mockSave).toHaveBeenCalledWith(settings);

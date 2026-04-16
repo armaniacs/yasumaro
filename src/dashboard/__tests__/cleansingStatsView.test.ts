@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+
 import { computeCleansingStats, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 

@@ -4,27 +4,30 @@
  * 【テスト対象】: src/popup/ublockImport.js - fetchFromUrl function
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+
 import { fetchFromUrl, isValidUrl } from '../ublockImport.js';
+import * as loggerModule from '../../utils/logger.js';
+
+const { addLog, LogType } = vi.mocked(loggerModule);
 
 // Mock the logger module
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
 }));
 
 describe('fetchFromUrl - Error Handling', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     global.chrome = {
       runtime: {
-        sendMessage: jest.fn()
+        sendMessage: vi.fn()
       }
     };
   });
 
   test('HTTPエラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: false,
@@ -35,7 +38,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('空のレスポンスを検出', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -67,7 +70,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('有効なURLとContent-Type for text/plain', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -80,7 +83,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('有効なURLとContent-Type for text/html', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -93,7 +96,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('有効なURLとContent-Type for application/octet-stream', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -106,9 +109,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('非テキストContent-Typeで警告ログを出力', async () => {
-    const { addLog, LogType } = require('../../utils/logger.js');
-
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -126,7 +127,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('Content-Typeがnullの場合でも警告を出さない', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: true,
@@ -139,7 +140,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('HTTP 500エラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: false,
@@ -150,7 +151,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('HTTP 403エラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: false,
@@ -161,7 +162,7 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('ネットワークエラーを適切に処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
       success: false,

@@ -7,18 +7,18 @@
  *   context.aiClient を使用するよう修正済み。
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // PrivacyPipeline をモック化
-jest.mock('../../../privacyPipeline.js');
-jest.mock('../../../../utils/piiSanitizer.js');
-jest.mock('../../../../utils/storage.js');
+vi.mock('../../../privacyPipeline.js');
+vi.mock('../../../../utils/piiSanitizer.js');
+vi.mock('../../../../utils/storage.js');
 
 import { PrivacyPipeline } from '../../../privacyPipeline.js';
 import { processPrivacyPipelineStep } from '../processPrivacyPipelineStep.js';
 import type { RecordingContext } from '../../types.js';
 
-const MockedPrivacyPipeline = PrivacyPipeline as jest.MockedClass<typeof PrivacyPipeline>;
+const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -39,22 +39,22 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 describe('processPrivacyPipelineStep', () => {
-  let mockProcess: jest.MockedFunction<any>;
+  let mockProcess: vi.MockedFunction<any>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockProcess = jest.fn();
-    MockedPrivacyPipeline.mockImplementation(() => ({
-      process: mockProcess,
-    }) as any);
+    vi.clearAllMocks();
+    mockProcess = vi.fn();
+    MockedPrivacyPipeline.mockImplementation(function() {
+      this.process = mockProcess;
+    });
   });
 
   describe('aiClient の受け渡し（回帰テスト: null問題）', () => {
     it('context.aiClient を PrivacyPipeline コンストラクタに渡す', async () => {
       const mockAiClient = {
-        getLocalAvailability: jest.fn(),
-        summarizeLocally: jest.fn(),
-        generateSummary: jest.fn(),
+        getLocalAvailability: vi.fn(),
+        summarizeLocally: vi.fn(),
+        generateSummary: vi.fn(),
       };
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 
@@ -102,7 +102,7 @@ describe('processPrivacyPipelineStep', () => {
         summary: 'Generated summary',
         maskedCount: 2,
       });
-      const mockAiClient = { generateSummary: jest.fn() };
+      const mockAiClient = { generateSummary: vi.fn() };
 
       const context = makeContext({ aiClient: mockAiClient as any });
       const result = await processPrivacyPipelineStep(context);
@@ -130,7 +130,7 @@ describe('processPrivacyPipelineStep', () => {
         maskedCount: 1,
         maskedItems: [{ type: 'email' }],
       });
-      const mockAiClient = { generateSummary: jest.fn() };
+      const mockAiClient = { generateSummary: vi.fn() };
 
       const context = makeContext({
         aiClient: mockAiClient as any,

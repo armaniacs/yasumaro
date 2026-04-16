@@ -3,13 +3,13 @@
  * PII Sanitization Preview UI Logic の単体テスト
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 // モジュールモック - jest.mock はファイル先頭にホイストされる
-// ファクトリ内で直接 jest.fn() を作成し、globalThis 経由で後からアクセスする
+// ファクトリ内で直接 vi.fn() を作成し、globalThis 経由で後からアクセスする
 
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key: string, substitutions?: Record<string, unknown>) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key: string, substitutions?: Record<string, unknown>) => {
     const messages: Record<string, string> = {
       piiCreditCard: 'Credit Card Number',
       piiMyNumber: 'My Number',
@@ -36,9 +36,9 @@ jest.mock('../i18n.js', () => ({
   }),
 }));
 
-jest.mock('../utils/focusTrap.js', () => {
-  const trapFn = jest.fn(() => 'mock-trap-id');
-  const releaseFn = jest.fn();
+vi.mock('../utils/focusTrap.js', () => {
+  const trapFn = vi.fn(() => 'mock-trap-id');
+  const releaseFn = vi.fn();
   (globalThis as any).__spMockTrap = trapFn;
   (globalThis as any).__spMockRelease = releaseFn;
   return {
@@ -57,10 +57,10 @@ import {
   jumpToPrevMasked,
 } from '../sanitizePreview.js';
 
-function getMockTrap(): jest.Mock {
+function getMockTrap(): vi.Mock {
   return (globalThis as any).__spMockTrap;
 }
-function getMockRelease(): jest.Mock {
+function getMockRelease(): vi.Mock {
   return (globalThis as any).__spMockRelease;
 }
 
@@ -101,7 +101,7 @@ describe('sanitizePreview', () => {
     test('モーダルが存在しない場合、confirmed=trueで即座にresolveする', async () => {
       document.body.innerHTML = '';
       const loggerModule = await import('../../utils/logger.js');
-      const logErrorSpy = jest.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
+      const logErrorSpy = vi.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
 
       const result = await showPreview('test content');
 
@@ -329,7 +329,7 @@ describe('sanitizePreview', () => {
 
     test('MASKEDトークンがない場合、textareaにフォーカスする', async () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
-      const focusSpy = jest.spyOn(textarea, 'focus');
+      const focusSpy = vi.spyOn(textarea, 'focus');
 
       const promise = showPreview('No masked content here');
 
@@ -493,14 +493,16 @@ describe('sanitizePreview', () => {
 
     test('ResizeObserverが利用可能な場合、textareaを監視する', () => {
       const previewContent = document.getElementById('previewContent') as HTMLTextAreaElement;
-      const observeSpy = jest.fn();
-      const disconnectSpy = jest.fn();
+      const observeSpy = vi.fn();
+      const disconnectSpy = vi.fn();
 
-      global.ResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: observeSpy,
-        disconnect: disconnectSpy,
-        unobserve: jest.fn(),
-      }));
+      global.ResizeObserver = vi.fn().mockImplementation(function () {
+        return {
+          observe: observeSpy,
+          disconnect: disconnectSpy,
+          unobserve: vi.fn(),
+        };
+      });
 
       initializeModalEvents();
 
@@ -508,13 +510,15 @@ describe('sanitizePreview', () => {
     });
 
     test('2回呼び出すと、前のResizeObserverをdisconnectする', () => {
-      const disconnectSpy = jest.fn();
+      const disconnectSpy = vi.fn();
 
-      global.ResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: jest.fn(),
-        disconnect: disconnectSpy,
-        unobserve: jest.fn(),
-      }));
+      global.ResizeObserver = vi.fn().mockImplementation(function () {
+        return {
+          observe: vi.fn(),
+          disconnect: disconnectSpy,
+          unobserve: vi.fn(),
+        };
+      });
 
       initializeModalEvents();
       initializeModalEvents();
@@ -523,7 +527,7 @@ describe('sanitizePreview', () => {
     });
 
     test('イベントリスナーの二重登録を防止する', () => {
-      const addEventListenerSpy = jest.spyOn(
+      const addEventListenerSpy = vi.spyOn(
         document.getElementById('closeModalBtn')!,
         'addEventListener'
       );
@@ -562,12 +566,14 @@ describe('sanitizePreview', () => {
     test('previewContentが存在しない場合でもResizeObserverを設定しない', () => {
       document.body.innerHTML = '<div id="confirmationModal"></div>';
 
-      const observeSpy = jest.fn();
-      global.ResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: observeSpy,
-        disconnect: jest.fn(),
-        unobserve: jest.fn(),
-      }));
+      const observeSpy = vi.fn();
+      global.ResizeObserver = vi.fn().mockImplementation(function () {
+        return {
+          observe: observeSpy,
+          disconnect: vi.fn(),
+          unobserve: vi.fn(),
+        };
+      });
 
       initializeModalEvents();
 
@@ -577,13 +583,15 @@ describe('sanitizePreview', () => {
 
   describe('cleanupModalEvents', () => {
     test('ResizeObserverをdisconnectする', () => {
-      const disconnectSpy = jest.fn();
+      const disconnectSpy = vi.fn();
 
-      global.ResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: jest.fn(),
-        disconnect: disconnectSpy,
-        unobserve: jest.fn(),
-      }));
+      global.ResizeObserver = vi.fn().mockImplementation(function () {
+        return {
+          observe: vi.fn(),
+          disconnect: disconnectSpy,
+          unobserve: vi.fn(),
+        };
+      });
 
       initializeModalEvents();
       cleanupModalEvents();

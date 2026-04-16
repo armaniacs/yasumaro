@@ -1,18 +1,21 @@
 import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
 import { normalizeUrl } from '../urlUtils.js';
+import * as cspValidatorModule from '../cspValidator.js';
+import * as storageModule from '../storage.js';
+import * as loggerModule from '../logger.js';
 
 // Mock dependencies
-jest.mock('../cspValidator.js', () => ({
+vi.mock('../cspValidator.js', () => ({
   CSPValidator: {
-    isInitialized: jest.fn(() => false),
-    initializeFromSettings: jest.fn(),
-    isUrlAllowed: jest.fn(() => true),
+    isInitialized: vi.fn(() => false),
+    initializeFromSettings: vi.fn(),
+    isUrlAllowed: vi.fn(() => true),
   },
-  getCspErrorMessage: jest.fn(() => null),
+  getCspErrorMessage: vi.fn(() => null),
 }));
 
-jest.mock('../storage.js', () => ({
-  getSettings: jest.fn(async () => ({
+vi.mock('../storage.js', () => ({
+  getSettings: vi.fn(async () => ({
     conditional_csp_enabled: true,
   })),
   StorageKeys: {
@@ -20,15 +23,20 @@ jest.mock('../storage.js', () => ({
   },
 }));
 
-jest.mock('../logger.js', () => ({
-  logDebug: jest.fn(),
-  logWarn: jest.fn(),
+vi.mock('../logger.js', () => ({
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
 }));
+
+// Access mocked modules
+const { CSPValidator, getCspErrorMessage } = vi.mocked(cspValidatorModule);
+const { getSettings } = vi.mocked(storageModule);
+const { logDebug } = vi.mocked(loggerModule);
 
 describe('fetchWithTimeout', () => {
   test('正常レスポンスを返す', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000);
     expect(response.ok).toBe(true);
@@ -38,13 +46,13 @@ describe('fetchWithTimeout', () => {
     let clearTimeoutCalled = false;
     const originalClearTimeout = global.clearTimeout;
 
-    global.clearTimeout = jest.fn(() => {
+    global.clearTimeout = vi.fn(() => {
       clearTimeoutCalled = true;
     });
 
     try {
       const mockResponse = { ok: true } as Response;
-      global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+      global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
       const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000);
       expect(response.ok).toBe(true);
@@ -56,7 +64,7 @@ describe('fetchWithTimeout', () => {
 
   test('fetchエラーをスローする', async () => {
     const testError = new Error('Network error');
-    global.fetch = jest.fn(() => Promise.reject(testError));
+    global.fetch = vi.fn(() => Promise.reject(testError));
 
     await expect(fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000))
       .rejects.toBe(testError);
@@ -64,12 +72,12 @@ describe('fetchWithTimeout', () => {
 
   test('デフォルトのタイムアウトは30000ms', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     let actualTimeout = 0;
     const originalSetTimeout = global.setTimeout;
 
-    global.setTimeout = jest.fn((callback, ms) => {
+    global.setTimeout = vi.fn((callback, ms) => {
       actualTimeout = ms;
       return 999 as unknown as NodeJS.Timeout;
     });
@@ -84,12 +92,12 @@ describe('fetchWithTimeout', () => {
 
   test('カスタムタイムアウトを設定できる', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     let actualTimeout = 0;
     const originalSetTimeout = global.setTimeout;
 
-    global.setTimeout = jest.fn((callback, ms) => {
+    global.setTimeout = vi.fn((callback, ms) => {
       actualTimeout = ms;
       return 999 as unknown as NodeJS.Timeout;
     });
@@ -363,7 +371,7 @@ describe('fetchWithRetry', () => {
 
   test('初回成功でレスポンスを返す', async () => {
     const mockResponse = { ok: true, status: 200, statusText: 'OK' } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     const response = await fetchWithRetry('https://example.com/api', { skipCspValidation: true });
     expect(response.ok).toBe(true);
@@ -372,7 +380,7 @@ describe('fetchWithRetry', () => {
 
   test('HTTPエラーでリトライして最終的にthrowする', async () => {
     const mockResponse = { ok: false, status: 500, statusText: 'Internal Server Error' } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     await expect(
       fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
@@ -385,7 +393,7 @@ describe('fetchWithRetry', () => {
 
   test('ネットワークエラーでリトライして最終的にthrowする', async () => {
     const testError = new Error('Network failure');
-    global.fetch = jest.fn(() => Promise.reject(testError));
+    global.fetch = vi.fn(() => Promise.reject(testError));
 
     await expect(
       fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
@@ -398,7 +406,7 @@ describe('fetchWithRetry', () => {
 
   test('リトライ後に成功する', async () => {
     let callCount = 0;
-    global.fetch = jest.fn(() => {
+    global.fetch = vi.fn(() => {
       callCount++;
       if (callCount < 2) {
         return Promise.reject(new Error('Temporary failure'));
@@ -419,7 +427,7 @@ describe('fetchWithRetry', () => {
 
   test('shouldRetry=false でリトライしない', async () => {
     const testError = new Error('Fatal error');
-    global.fetch = jest.fn(() => Promise.reject(testError));
+    global.fetch = vi.fn(() => Promise.reject(testError));
 
     await expect(
       fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
@@ -435,7 +443,7 @@ describe('fetchWithRetry', () => {
 
   test('maxRetryCount=0 でリトライしない', async () => {
     const mockResponse = { ok: false, status: 404, statusText: 'Not Found' } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     await expect(
       fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
@@ -448,7 +456,7 @@ describe('fetchWithRetry', () => {
 
   test('429 Too Many Requestsでリトライする', async () => {
     const mockResponse = { ok: false, status: 429, statusText: 'Too Many Requests' } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     await expect(
       fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
@@ -463,15 +471,13 @@ describe('fetchWithRetry', () => {
 
   test('リトライ成功時にデバッグログが出力される', async () => {
     let callCount = 0;
-    global.fetch = jest.fn(() => {
+    global.fetch = vi.fn(() => {
       callCount++;
       if (callCount < 2) {
         return Promise.reject(new Error('Temporary failure'));
       }
       return Promise.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
     });
-
-    const { logDebug } = require('../logger.js');
 
     const response = await fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
       maxRetryCount: 3,
@@ -500,7 +506,7 @@ describe('fetchWithTimeout - validateUrl edge cases', () => {
 
   test('httpプロトコルを許可する', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     const response = await fetchWithTimeout('http://example.com', { skipCspValidation: true }, 1000);
     expect(response.ok).toBe(true);
@@ -536,7 +542,7 @@ describe('fetchWithTimeout - validateTimeout', () => {
 describe('fetchWithTimeout - AbortError', () => {
   test('AbortErrorでユーザーフレンドリーなエラーメッセージを返す', async () => {
     const abortError = new DOMException('The operation was aborted.', 'AbortError');
-    global.fetch = jest.fn(() => Promise.reject(abortError));
+    global.fetch = vi.fn(() => Promise.reject(abortError));
 
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000)
@@ -546,9 +552,6 @@ describe('fetchWithTimeout - AbortError', () => {
 
 describe('fetchWithTimeout - CSP validation', () => {
   test('CSP検証が有効な場合にURLを検証する', async () => {
-    const { CSPValidator, getCspErrorMessage } = require('../cspValidator.js');
-    const { getSettings } = require('../storage.js');
-
     getSettings.mockResolvedValueOnce({ conditional_csp_enabled: true });
     CSPValidator.isInitialized.mockReturnValueOnce(false);
     CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
@@ -560,9 +563,6 @@ describe('fetchWithTimeout - CSP validation', () => {
   });
 
   test('CSPエラーメッセージがない場合は汎用エラーを返す', async () => {
-    const { CSPValidator, getCspErrorMessage } = require('../cspValidator.js');
-    const { getSettings } = require('../storage.js');
-
     getSettings.mockResolvedValueOnce({ conditional_csp_enabled: true });
     CSPValidator.isInitialized.mockReturnValueOnce(true);
     CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
@@ -575,7 +575,7 @@ describe('fetchWithTimeout - CSP validation', () => {
 
   test('allowedUrlsで許可されていないURLを拒否する', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     await expect(
       fetchWithTimeout('https://other.com/api', {
@@ -587,7 +587,7 @@ describe('fetchWithTimeout - CSP validation', () => {
 
   test('allowedUrlsがnullの場合は検証をスキップする', async () => {
     const mockResponse = { ok: true } as Response;
-    global.fetch = jest.fn(() => Promise.resolve(mockResponse));
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
     const response = await fetchWithTimeout('https://example.com', {
       skipCspValidation: true,

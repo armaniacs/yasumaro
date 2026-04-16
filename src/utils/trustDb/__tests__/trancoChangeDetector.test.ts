@@ -7,7 +7,7 @@
  * Unit tests for TrancoChangeDetector (Phase 2)
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import { TrancoChangeDetector } from '../trancoChangeDetector.js';
 
 // Mock chrome.storage.local
@@ -15,7 +15,7 @@ const mockStorage = new Map<string, any>();
 
 const mockChromeStorage = {
   local: {
-    get: jest.fn().mockImplementation((keys) => {
+    get: vi.fn().mockImplementation((keys) => {
       const result: Record<string, any> = {};
       const keyArray = Array.isArray(keys) ? keys : [keys];
       for (const key of keyArray) {
@@ -25,13 +25,13 @@ const mockChromeStorage = {
       }
       return Promise.resolve(result);
     }),
-    set: jest.fn().mockImplementation((items) => {
+    set: vi.fn().mockImplementation((items) => {
       for (const [key, value] of Object.entries(items)) {
         mockStorage.set(key, value);
       }
       return Promise.resolve();
     }),
-    remove: jest.fn().mockImplementation((keys) => {
+    remove: vi.fn().mockImplementation((keys) => {
       for (const key of keys) {
         mockStorage.delete(key);
       }
@@ -49,7 +49,7 @@ Object.defineProperty(global, 'chrome', {
 
 describe('TrancoChangeDetector', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockStorage.clear();
   });
 

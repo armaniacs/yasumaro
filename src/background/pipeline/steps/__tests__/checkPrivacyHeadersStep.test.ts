@@ -7,11 +7,11 @@
  *   ユーザーが「それでも記録」を選択した際に記録できない問題を修正済み。
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js');
-jest.mock('../../../../utils/storage.js');
-jest.mock('../../../../utils/pendingStorage.js');
+vi.mock('../../../../utils/logger.js');
+vi.mock('../../../../utils/storage.js');
+vi.mock('../../../../utils/pendingStorage.js');
 
 import { PrivacyHeadersChecker } from '../checkPrivacyHeadersStep.js';
 import { StorageKeys } from '../../../../utils/storage.js';
@@ -39,7 +39,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 describe('PrivacyHeadersChecker', () => {
   describe('force=true の場合', () => {
     it('AUTO_SAVE_PRIVACY_BEHAVIOR=skip でもプライバシーチェックをスキップして記録を許可する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
         headers: { cacheControl: 'private, no-store' },
@@ -64,7 +64,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('AUTO_SAVE_PRIVACY_BEHAVIOR=confirm でもプライバシーチェックをスキップして記録を許可する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
         headers: { cacheControl: 'private' },
@@ -89,7 +89,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('force=true かつ isPrivate=false の場合も正常に通過する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: false,
       });
       const checker = new PrivacyHeadersChecker(getPrivacyInfo);
@@ -102,7 +102,7 @@ describe('PrivacyHeadersChecker', () => {
 
   describe('force=false の場合', () => {
     it('AUTO_SAVE_PRIVACY_BEHAVIOR=skip で PRIVATE_PAGE_DETECTED を throw する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
         headers: { cacheControl: 'private, no-store' },
@@ -121,7 +121,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('AUTO_SAVE_PRIVACY_BEHAVIOR=save で正常に通過する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
         headers: { cacheControl: 'private' },
@@ -140,7 +140,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('isPrivate=false の場合は正常に通過する', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: false,
       });
       const checker = new PrivacyHeadersChecker(getPrivacyInfo);
@@ -153,7 +153,7 @@ describe('PrivacyHeadersChecker', () => {
 
   describe('ホワイトリスト', () => {
     it('ホワイトリストに含まれるドメインはプライバシーチェックをスキップする', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
       });
@@ -178,13 +178,13 @@ describe('PrivacyHeadersChecker', () => {
 
   describe('headerValue のマスク処理', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
-      // @ts-expect-error - jest.fn() type narrowing
-      (pendingStorage.addPendingPage as jest.Mock).mockResolvedValue(undefined);
+      vi.clearAllMocks();
+      // @ts-expect-error - vi.fn() type narrowing
+      (pendingStorage.addPendingPage as vi.Mock).mockResolvedValue(undefined);
     });
 
     it('authorization reason の場合は headerValue が [REDACTED] で保存される', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'authorization',
       });
@@ -214,7 +214,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('cache-control reason の場合は headerValue がそのまま保存される', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
         headers: { cacheControl: 'private, no-store' },
@@ -245,7 +245,7 @@ describe('PrivacyHeadersChecker', () => {
     });
 
     it('requireConfirmation=true + authorization の場合も [REDACTED] で保存される', async () => {
-      const getPrivacyInfo = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'authorization',
       });

@@ -1,19 +1,20 @@
 // src/background/__tests__/integration-robustness.test.js
 import { ObsidianClient } from '../obsidianClient.js';
+import { vi } from 'vitest';
 import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 
-jest.mock('../../utils/fetch.js');
-jest.mock('../../utils/logger.js');
-jest.mock('../../utils/customPromptUtils.js', () => ({
-  applyCustomPrompt: jest.fn((settings, provider, content) => ({
+vi.mock('../../utils/fetch.js');
+vi.mock('../../utils/logger.js');
+vi.mock('../../utils/customPromptUtils.js', () => ({
+  applyCustomPrompt: vi.fn((settings, provider, content) => ({
     userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。1文または2文で、重要なポイントをまとめてください。改行しないこと。\n\nContent:\n${content}`,
     systemPrompt: ""
   }))
 }));
-jest.mock('../../utils/promptSanitizer.js', () => ({
-  sanitizePromptContent: jest.fn((content) => ({
+vi.mock('../../utils/promptSanitizer.js', () => ({
+  sanitizePromptContent: vi.fn((content) => ({
     sanitized: content,
     warnings: [],
     dangerLevel: 'low' as const
@@ -22,7 +23,7 @@ jest.mock('../../utils/promptSanitizer.js', () => ({
 
 describe('Integration: Robustness improvements', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // ストレージのクリアはjest.setup.jsのbeforeEachで行われています
   });
 
@@ -79,7 +80,7 @@ describe('Integration: Robustness improvements', () => {
 
   test('fetchWithRetryが正常に動作', async () => {
     const mockResponse = { ok: true, json: async () => ({ data: 'test' }) };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue(mockResponse);
 
@@ -103,7 +104,7 @@ describe('Integration: Robustness improvements', () => {
         }
       })
     };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue(mockResponse);
 

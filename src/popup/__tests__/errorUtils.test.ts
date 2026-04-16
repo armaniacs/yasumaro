@@ -173,9 +173,9 @@ describe('showError', () => {
     statusElement = {
       className: '',
       textContent: '',
-      appendChild: jest.fn()
+      appendChild: vi.fn()
     };
-    mockForceRecordCallback = jest.fn();
+    mockForceRecordCallback = vi.fn();
     mockButton = {
       disabled: false,
       textContent: 'Force Record',
@@ -185,11 +185,11 @@ describe('showError', () => {
 
     // jsdom環境でdocument.createElementをspy
     if (typeof document !== 'undefined') {
-      createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockButton);
+      createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockButton);
     } else {
       // documentが存在しない場合はダミーを設定
       global.document = {
-        createElement: jest.fn().mockReturnValue(mockButton)
+        createElement: vi.fn().mockReturnValue(mockButton)
       };
       createElementSpy = global.document.createElement;
     }
@@ -199,7 +199,7 @@ describe('showError', () => {
     if (typeof document !== 'undefined') {
       createElementSpy?.mockRestore();
     }
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     global.document = undefined;
   });
 
@@ -263,7 +263,7 @@ describe('handleError', () => {
   test('コネクションエラーハンドラーを呼び出す', () => {
     const error = new Error('Receiving end does not exist');
     const handlers = {
-      onConnectionError: jest.fn()
+      onConnectionError: vi.fn()
     };
 
     handleError(error, handlers);
@@ -274,7 +274,7 @@ describe('handleError', () => {
   test('ドメインブロックエラーハンドラーを呼び出す', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
     const handlers = {
-      onDomainBlocked: jest.fn()
+      onDomainBlocked: vi.fn()
     };
 
     handleError(error, handlers);
@@ -285,7 +285,7 @@ describe('handleError', () => {
   test('一般エラーハンドラーを呼び出す', () => {
     const error = new Error('Some other error');
     const handlers = {
-      onGeneralError: jest.fn()
+      onGeneralError: vi.fn()
     };
 
     handleError(error, handlers);

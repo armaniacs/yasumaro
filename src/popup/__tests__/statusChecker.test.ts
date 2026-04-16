@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
 import { RecordingLogic } from '../../background/recordingLogic.js';
 import * as storage from '../../utils/storage.js';
 
 // Mock chrome runtime for privacy cache
 const mockChromeRuntime = {
-  sendMessage: jest.fn()
+  sendMessage: vi.fn()
 };
 // Mock chrome.i18n for formatTimeAgo
 const mockChromeI18n = {
-  getMessage: jest.fn((key: string) => {
+  getMessage: vi.fn((key: string) => {
     // Default fallback values
     const fallbacks: Record<string, string> = {
       'timeJustNow': 'たった今',
@@ -27,8 +27,8 @@ global.chrome = {
 } as any;
 
 // Mock i18n.js to properly handle substitutions
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key: string, substitutions?: any) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key: string, substitutions?: any) => {
     switch (key) {
       case 'timeJustNow':
         return 'たった今';
@@ -56,9 +56,9 @@ jest.mock('../i18n.js', () => ({
 }));
 
 // Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.js', () => {
-  const mockGetSettings = jest.fn();
-  const mockGetSavedUrlsWithTimestamps = jest.fn();
+vi.mock('../../utils/storage.js', () => {
+  const mockGetSettings = vi.fn();
+  const mockGetSavedUrlsWithTimestamps = vi.fn();
 
   // Set default mock implementation
   mockGetSettings.mockResolvedValue({
@@ -79,6 +79,7 @@ jest.mock('../../utils/storage.js', () => {
       UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
       UBLOCK_RULES: 'ublock_rules',
     },
+    DEFAULT_SETTINGS: {},
     getSettings: mockGetSettings,
     getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps,
   };
@@ -89,11 +90,11 @@ describe('formatTimeAgo', () => {
 
   beforeEach(() => {
     originalNow = Date.now();
-    jest.spyOn(Date, 'now').mockReturnValue(originalNow);
+    vi.spyOn(Date, 'now').mockReturnValue(originalNow);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should return "たった今" for timestamps within 1 minute', () => {
@@ -156,17 +157,17 @@ describe('checkPageStatus', () => {
     });
 
     // Mock storage
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
       ublock_sources: []
     });
-    (storage.getSavedUrlsWithTimestamps as jest.Mock).mockResolvedValue(new Map());
+    (storage.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return basic status for normal URL', async () => {
@@ -181,7 +182,7 @@ describe('checkPageStatus', () => {
 
   it('should detect whitelisted domain', async () => {
     const url = 'https://example.com/page';
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'whitelist',
       domain_whitelist: ['example.com'],
       domain_blacklist: [],
@@ -216,7 +217,7 @@ describe('checkPageStatus', () => {
       cache: [[normalizedUrl, privacyInfo]]
     });
 
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -237,9 +238,9 @@ describe('checkPageStatus', () => {
     const url = 'https://example.com/page';
     const savedTimestamp = Date.now() - 5 * 60 * 1000; // 5分前
     const savedUrls = new Map([[url, savedTimestamp]]);
-    (storage.getSavedUrlsWithTimestamps as jest.Mock).mockResolvedValue(savedUrls);
+    (storage.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(savedUrls);
 
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -283,7 +284,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutSlash, privacyInfo]]
     });
 
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -319,7 +320,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutFragment, privacyInfo]]
     });
 
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -353,7 +354,7 @@ describe('checkPageStatus', () => {
       cache: [[rootUrl, privacyInfo]]
     });
 
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -369,7 +370,7 @@ describe('checkPageStatus', () => {
 
   it('should detect blacklisted domain', async () => {
     const url = 'https://blocked.com/page';
-    (storage.getSettings as jest.Mock).mockResolvedValue({
+    (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'blacklist',
       domain_whitelist: [],
       domain_blacklist: ['blocked.com'],
@@ -397,7 +398,7 @@ describe('checkPageStatus', () => {
   it('should handle main error and return default status', async () => {
     const url = 'https://example.com/page';
     // Make getSettings throw to trigger main catch block
-    (storage.getSettings as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
+    (storage.getSettings as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     const result = await checkPageStatus(url);
 

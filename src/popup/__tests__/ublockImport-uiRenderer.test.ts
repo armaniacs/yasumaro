@@ -35,8 +35,8 @@ describe('ublockImport - UIRenderer Module', () => {
 
     test('空ソースリストで「ソースなし」メッセージを表示', () => {
       const sources = [];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -51,8 +51,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 10, blockDomains: ['example.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -68,8 +68,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: 'manual', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -82,8 +82,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -96,8 +96,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: '<script>alert("XSS")</script>', importedAt: Date.now(), ruleCount: 1, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -111,8 +111,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -127,8 +127,8 @@ describe('ublockImport - UIRenderer Module', () => {
       const sources = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       renderSourceList(sources, deleteCallback, reloadCallback);
 
@@ -466,7 +466,7 @@ describe('ublockImport - UIRenderer Module', () => {
 
   describe('copyToClipboard', () => {
     test('クリップボードにテキストをコピーしてtrueを返す', async () => {
-      const writeTextMock = jest.fn(() => Promise.resolve());
+      const writeTextMock = vi.fn(() => Promise.resolve());
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: writeTextMock },
         configurable: true,
@@ -479,7 +479,7 @@ describe('ublockImport - UIRenderer Module', () => {
     });
 
     test('クリップボード失敗時にエラーを投げる', async () => {
-      const writeTextMock = jest.fn(() => Promise.reject(new Error('denied')));
+      const writeTextMock = vi.fn(() => Promise.reject(new Error('denied')));
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: writeTextMock },
         configurable: true,

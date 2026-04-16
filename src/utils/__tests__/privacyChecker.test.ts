@@ -1,4 +1,4 @@
-import { describe, test, expect } from '@jest/globals';
+
 import { checkPrivacy } from '../privacyChecker.js';
 
 describe('privacyChecker', () => {

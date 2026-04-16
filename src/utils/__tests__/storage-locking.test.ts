@@ -3,7 +3,7 @@
  * saveSettingsの楽観的ロック機能に関するテスト
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { saveSettings, getSettings, StorageKeys, clearEncryptionKeyCache } from '../storage.js';
 import { withOptimisticLock, resetConflictStats } from '../optimisticLock.js';
 
@@ -13,7 +13,7 @@ const mockStorage: Record<string, unknown> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn((keys: string | string[] | null) => {
+            get: vi.fn((keys: string | string[] | null) => {
                 if (keys === null) {
                     return Promise.resolve({ ...mockStorage });
                 }
@@ -31,12 +31,12 @@ const mockChrome = {
                 }
                 return Promise.resolve({});
             }),
-            set: jest.fn((items: Record<string, unknown>) => {
+            set: vi.fn((items: Record<string, unknown>) => {
                 Object.assign(mockStorage, items);
                 // 楽観的ロックの動作をシミュレートするため、非同期遅延を追加
                 return Promise.resolve();
             }),
-            remove: jest.fn((keys: string | string[]) => {
+            remove: vi.fn((keys: string | string[]) => {
                 if (Array.isArray(keys)) {
                     for (const key of keys) {
                         delete mockStorage[key];
@@ -46,7 +46,7 @@ const mockChrome = {
                 }
                 return Promise.resolve();
             }),
-            getBytesInUse: jest.fn(() => Promise.resolve(1024))
+            getBytesInUse: vi.fn(() => Promise.resolve(1024))
         }
     },
     runtime: {
@@ -56,19 +56,19 @@ const mockChrome = {
 
 // Mock chrome.crypto
 global.crypto = {
-    getRandomValues: jest.fn((arr: Uint8Array) => {
+    getRandomValues: vi.fn((arr: Uint8Array) => {
         for (let i = 0; i < arr.length; i++) {
             arr[i] = Math.floor(Math.random() * 256);
         }
         return arr;
     }),
     subtle: {
-        generateKey: jest.fn(),
-        deriveKey: jest.fn(),
-        encrypt: jest.fn(),
-        decrypt: jest.fn(),
-        importKey: jest.fn(),
-        exportKey: jest.fn()
+        generateKey: vi.fn(),
+        deriveKey: vi.fn(),
+        encrypt: vi.fn(),
+        decrypt: vi.fn(),
+        importKey: vi.fn(),
+        exportKey: vi.fn()
     }
 } as unknown as Crypto;
 
@@ -89,7 +89,7 @@ describe('saveSettings - 楽観的ロック', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('単一の設定を正常に保存できる', async () => {
@@ -191,7 +191,7 @@ describe('migrateToSingleSettingsObject', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('個別キーから単一settingsオブジェクトにマイグレーションできる', async () => {

@@ -2,7 +2,7 @@
  * privacyConsent.test.ts
  * テスト: プライバシーポリシー同意管理
  */
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach } from 'vitest';
 import {
     getPrivacyConsent,
     savePrivacyConsent,
@@ -21,10 +21,10 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-jest.mock('../../utils/logger.js', () => ({
-    logInfo: jest.fn(async () => {}),
-    logWarn: jest.fn(async () => {}),
-    logError: jest.fn(async () => {}),
+vi.mock('../../utils/logger.js', () => ({
+    logInfo: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logError: vi.fn(async () => {}),
     ErrorCode: {
         STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE',
         STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE'
@@ -37,11 +37,11 @@ const storageMock: Record<string, unknown> = {};
 (global as any).chrome = {
     storage: {
         local: {
-            get: jest.fn(async (keys: string | string[]) => {
+            get: vi.fn(async (keys: string | string[]) => {
                 const ks = Array.isArray(keys) ? keys : [keys];
                 return Object.fromEntries(ks.map(k => [k, storageMock[k]]));
             }),
-            set: jest.fn(async (data: Record<string, unknown>) => {
+            set: vi.fn(async (data: Record<string, unknown>) => {
                 Object.assign(storageMock, data);
             })
         }
@@ -50,7 +50,7 @@ const storageMock: Record<string, unknown> = {};
 
 beforeEach(() => {
     Object.keys(storageMock).forEach(k => delete storageMock[k]);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('getPrivacyConsent', () => {
@@ -90,13 +90,13 @@ describe('getPrivacyConsent', () => {
     });
 
     it('ストレージエラー時は false を返す', async () => {
-        (global as any).chrome.storage.local.get = jest.fn(async () => {
+        (global as any).chrome.storage.local.get = vi.fn(async () => {
             throw new Error('Storage error');
         });
         const state = await getPrivacyConsent();
         expect(state.hasConsented).toBe(false);
         // 元に戻す
-        (global as any).chrome.storage.local.get = jest.fn(async (keys: string | string[]) => {
+        (global as any).chrome.storage.local.get = vi.fn(async (keys: string | string[]) => {
             const ks = Array.isArray(keys) ? keys : [keys];
             return Object.fromEntries(ks.map(k => [k, storageMock[k]]));
         });
@@ -126,7 +126,7 @@ describe('savePrivacyConsent', () => {
 
     it('ストレージ書き込みエラー時にthrowする', async () => {
         const originalSet = (global as any).chrome.storage.local.set;
-        (global as any).chrome.storage.local.set = jest.fn(async () => {
+        (global as any).chrome.storage.local.set = vi.fn(async () => {
             throw new Error('Storage write error');
         });
 
@@ -207,7 +207,7 @@ describe('migrateLegacyPrivacyConsent', () => {
 
     it('ストレージエラー時にfalseを返す', async () => {
         const originalGet = (global as any).chrome.storage.local.get;
-        (global as any).chrome.storage.local.get = jest.fn(async () => {
+        (global as any).chrome.storage.local.get = vi.fn(async () => {
             throw new Error('Storage read error');
         });
 
@@ -251,7 +251,7 @@ describe('withdrawPrivacyConsent', () => {
         await savePrivacyConsent();
 
         const originalSet = (global as any).chrome.storage.local.set;
-        (global as any).chrome.storage.local.set = jest.fn(async () => {
+        (global as any).chrome.storage.local.set = vi.fn(async () => {
             throw new Error('Storage write error');
         });
 

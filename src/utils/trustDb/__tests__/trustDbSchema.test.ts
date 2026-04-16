@@ -3,7 +3,7 @@
  * trustDbSchema.tsのテスト
  * 【テスト対象】: src/utils/trustDb/trustDbSchema.ts
  */
-import { describe, test, expect } from '@jest/globals';
+
 import { DomainTrustLevel, type TrustResult, type TrustDatabase, type SafetyConfig } from '../trustDbSchema.js';
 
 describe('trustDbSchema', () => {
