@@ -4,13 +4,13 @@
  * RED Phase: Tests that should fail until implementation is added
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import type { RecordingContext } from '../types.js';
 
 // Mock the sentenceExtractor module
-jest.mock('../../../utils/sentenceExtractor.js', () => ({
-  extractSentences: jest.fn(),
-  getCompressionStats: jest.fn(),
+vi.mock('../../../utils/sentenceExtractor.js', () => ({
+  extractSentences: vi.fn(),
+  getCompressionStats: vi.fn(),
 }));
 
 import { extractSentences, getCompressionStats } from '../../../utils/sentenceExtractor.js';
@@ -31,9 +31,9 @@ describe('extractSentencesStep', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (extractSentences as jest.Mock).mockReset();
-    (getCompressionStats as jest.Mock).mockReset();
+    vi.clearAllMocks();
+    (extractSentences as vi.Mock).mockReset();
+    (getCompressionStats as vi.Mock).mockReset();
   });
 
   it('should extract sentences from truncated content', async () => {
@@ -60,8 +60,8 @@ describe('extractSentencesStep', () => {
       'Third sentence.',
     ];
 
-    (extractSentences as jest.Mock).mockReturnValue(mockSentences);
-    (getCompressionStats as jest.Mock).mockReturnValue({
+    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
+    (getCompressionStats as vi.Mock).mockReturnValue({
       originalLength: 500,
       extractedLength: 150,
       compressionRatio: 3.33,
@@ -120,7 +120,7 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['AI generated summary from privacy pipeline'];
 
-    (extractSentences as jest.Mock).mockReturnValue(mockSentences);
+    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
 
     const result = await extractSentencesStep(mockContext);
 
@@ -144,7 +144,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: '',
     };
 
-    (extractSentences as jest.Mock).mockReturnValue([]);
+    (extractSentences as vi.Mock).mockReturnValue([]);
 
     const result = await extractSentencesStep(mockContext);
 
@@ -168,7 +168,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: 'Content to extract from',
     };
 
-    (extractSentences as jest.Mock).mockImplementation(() => {
+    (extractSentences as vi.Mock).mockImplementation(() => {
       throw new Error('Extraction failed');
     });
 
@@ -197,8 +197,8 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['Extracted sentence 1', 'Extracted sentence 2'];
 
-    (extractSentences as jest.Mock).mockReturnValue(mockSentences);
-    (getCompressionStats as jest.Mock).mockReturnValue({
+    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
+    (getCompressionStats as vi.Mock).mockReturnValue({
       originalLength: 1000,
       extractedLength: 50,
       compressionRatio: 20,

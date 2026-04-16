@@ -9,19 +9,19 @@
  * - showAlert=false 時は通知しない
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-jest.mock('../../../../utils/trustChecker.js', () => ({
-  TrustChecker: jest.fn(),
+vi.mock('../../../../utils/trustChecker.js', () => ({
+  TrustChecker: vi.fn(),
 }));
-jest.mock('../../../notificationHelper.js', () => ({
-  NotificationHelper: { notifyError: jest.fn() },
+vi.mock('../../../notificationHelper.js', () => ({
+  NotificationHelper: { notifyError: vi.fn() },
 }));
 
 import { checkTrustDomainStep } from '../checkTrustDomainStep.js';
@@ -29,7 +29,7 @@ import { TrustChecker } from '../../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../../notificationHelper.js';
 import type { RecordingContext } from '../../types.js';
 
-const MockedTrustChecker = TrustChecker as jest.MockedClass<typeof TrustChecker>;
+const MockedTrustChecker = TrustChecker as vi.MockedClass<typeof TrustChecker>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -51,16 +51,17 @@ function setupTrustChecker(mockResult: {
   reason?: string;
   trustResult: { level: string; source: string };
 }) {
-  const mockCheckDomain = jest.fn<() => Promise<any>>().mockResolvedValue(mockResult);
-  MockedTrustChecker.mockImplementation(() => ({
-    checkDomain: mockCheckDomain,
-    loadAlertSettings: jest.fn(),
-  }) as any);
+  const mockCheckDomain = vi.fn<() => Promise<any>>().mockResolvedValue(mockResult);
+  // Use function() instead of arrow function because TrustChecker is instantiated with 'new'
+  MockedTrustChecker.mockImplementation(function(this: any) {
+    this.checkDomain = mockCheckDomain;
+    this.loadAlertSettings = vi.fn();
+  });
   return mockCheckDomain;
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('checkTrustDomainStep', () => {

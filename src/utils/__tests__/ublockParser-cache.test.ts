@@ -303,20 +303,20 @@ describe('ublockParser - Cache Module', () => {
     });
 
     test('cleanupCache: CLEANUP_INTERVAL経過後にキャッシュがクリアされる', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       saveToCache('cleanup_key', { blockRules: ['test.com'] });
       expect(hasCacheKey('cleanup_key')).toBe(true);
 
       // CLEANUP_INTERVAL (300000ms = 5分) 経過させる
-      jest.advanceTimersByTime(300001);
+      vi.advanceTimersByTime(300001);
 
       cleanupCache();
 
       // キャッシュがクリアされている
       expect(hasCacheKey('cleanup_key')).toBe(false);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
 });

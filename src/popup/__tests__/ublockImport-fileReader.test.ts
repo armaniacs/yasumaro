@@ -25,82 +25,58 @@ describe('ublockImport - FileReader Module', () => {
       expect(result).toBeInstanceOf(Promise);
     });
 
-    test('正常なファイルを非同期で読み込める', (done) => {
+    test('正常なファイルを非同期で読み込める', async () => {
       const content = '||example.com^\n||test.com^';
       const mockFile = new File([content], 'test.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          expect(text).toBe(content);
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      expect(text).toBe(content);
     });
 
-    test('空のファイルを読み込める', (done) => {
+    test('空のファイルを読み込める', async () => {
       const mockFile = new File([''], 'empty.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          expect(text).toBe('');
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      expect(text).toBe('');
     });
 
-    test('BOM付きファイルのBOMが除去される', (done) => {
+    test('BOM付きファイルのBOMが除去される', async () => {
       const bomText = '\uFEFF||example.com^';
       const mockFile = new File([bomText], 'with-bom.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          // BOMが除去されていることを確認
-          expect(text).not.toBe(bomText);
-          expect(text).toBe('||example.com^');
-          expect(text.charCodeAt(0)).not.toBe(0xFEFF);
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      // BOMが除去されていることを確認
+      expect(text).not.toBe(bomText);
+      expect(text).toBe('||example.com^');
+      expect(text.charCodeAt(0)).not.toBe(0xFEFF);
     });
 
-    test('大きなファイルを読み込める', (done) => {
+    test('大きなファイルを読み込める', async () => {
       const largeContent = Array(1000).fill(0).map((_, i) => `||domain${i}.com^`).join('\n');
       const mockFile = new File([largeContent], 'large.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          expect(text).toBe(largeContent);
-          expect(text.split('\n').length).toBe(1000);
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      expect(text).toBe(largeContent);
+      expect(text.split('\n').length).toBe(1000);
     });
 
-    test('日本語を含むファイルをUTF-8で読み込める', (done) => {
+    test('日本語を含むファイルをUTF-8で読み込める', async () => {
       const content = '||日本語ドメイン^\nテスト';
       const mockFile = new File([content], 'utf8.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          expect(text).toBe(content);
-          expect(text).toContain('日本語');
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      expect(text).toBe(content);
+      expect(text).toContain('日本語');
     });
 
-    test('特殊文字を含むドメインを読み込める', (done) => {
+    test('特殊文字を含むドメインを読み込める', async () => {
       const content = '||*.example.com^\n||sub.example.co.jp^';
       const mockFile = new File([content], 'special.txt', { type: 'text/plain' });
 
-      readFile(mockFile)
-        .then((text) => {
-          expect(text).toBe(content);
-          expect(text).toContain('*.example.com');
-          expect(text).toContain('sub.example.co.jp');
-          done();
-        })
-        .catch(done);
+      const text = await readFile(mockFile);
+      expect(text).toBe(content);
+      expect(text).toContain('*.example.com');
+      expect(text).toContain('sub.example.co.jp');
     });
   });
 });

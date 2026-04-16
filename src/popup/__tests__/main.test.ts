@@ -3,44 +3,44 @@
  * Main Screen Functionality Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock all dependencies (must be defined before imports)
-jest.mock('src/popup/sanitizePreview.js', () => ({
-  showPreview: jest.fn(),
-  initializeModalEvents: jest.fn()
+vi.mock('../sanitizePreview.js', () => ({
+  showPreview: vi.fn(),
+  initializeModalEvents: vi.fn()
 }));
 
-jest.mock('src/popup/spinner.js', () => ({
-  showSpinner: jest.fn(),
-  hideSpinner: jest.fn()
+vi.mock('../spinner.js', () => ({
+  showSpinner: vi.fn(),
+  hideSpinner: vi.fn()
 }));
 
-jest.mock('src/popup/autoClose.js', () => ({
-  startAutoCloseTimer: jest.fn()
+vi.mock('../autoClose.js', () => ({
+  startAutoCloseTimer: vi.fn()
 }));
 
-jest.mock('src/popup/tabUtils.js', () => ({
-  getCurrentTab: jest.fn(() => Promise.resolve(null)),
-  isRecordable: jest.fn(() => true)
+vi.mock('../tabUtils.js', () => ({
+  getCurrentTab: vi.fn(() => Promise.resolve(null)),
+  isRecordable: vi.fn(() => true)
 }));
 
-jest.mock('src/utils/storage.js', () => ({
-  getSettings: jest.fn(() => Promise.resolve({})),
-  saveSettings: jest.fn(() => Promise.resolve()),
+vi.mock('../../utils/storage.js', () => ({
+  getSettings: vi.fn(() => Promise.resolve({})),
+  saveSettings: vi.fn(() => Promise.resolve()),
   StorageKeys: {
     PII_CONFIRMATION_UI: 'pii_confirmation_ui',
     DOMAIN_WHITELIST: 'domainWhitelist'
   }
 }));
 
-jest.mock('src/popup/statusChecker.js', () => ({
-  checkPageStatus: jest.fn()
+vi.mock('../statusChecker.js', () => ({
+  checkPageStatus: vi.fn()
 }));
 
-jest.mock('src/popup/errorUtils.js', () => ({
-  showError: jest.fn(),
-  showSuccess: jest.fn(),
+vi.mock('../errorUtils.js', () => ({
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
   ErrorMessages: {
     CONNECTION_ERROR: 'Please refresh the page and try again',
     DOMAIN_BLOCKED: 'This domain is not allowed to be recorded. Do you want to record it anyway?',
@@ -49,24 +49,24 @@ jest.mock('src/popup/errorUtils.js', () => ({
     CANCELLED: 'Cancelled',
     UNKNOWN_ERROR: 'Unknown error'
   },
-  isDomainBlockedError: jest.fn(),
-  isConnectionError: jest.fn(),
-  formatSuccessMessage: jest.fn((_totalDuration: number, _aiDuration?: number) => '✓ Saved to Obsidian')
+  isDomainBlockedError: vi.fn(),
+  isConnectionError: vi.fn(),
+  formatSuccessMessage: vi.fn((_totalDuration: number, _aiDuration?: number) => '✓ Saved to Obsidian')
 }));
 
-jest.mock('src/utils/retryHelper.js', () => ({
-  sendMessageWithRetry: jest.fn((message) => Promise.resolve({ success: true })),
+vi.mock('../../utils/retryHelper.js', () => ({
+  sendMessageWithRetry: vi.fn((message) => Promise.resolve({ success: true })),
   ChromeMessageSender: class {
     constructor() {}
     sendMessageWithRetry() { return Promise.resolve({ success: true }); }
   },
-  createSender: jest.fn(() => ({
-    sendMessageWithRetry: jest.fn(() => Promise.resolve({ success: true }))
+  createSender: vi.fn(() => ({
+    sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true }))
   }))
 }));
 
-jest.mock('src/popup/i18n.js', () => ({
-  getMessage: jest.fn((key: string, substitutions?: any) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key: string, substitutions?: any) => {
     const messages: Record<string, string> = {
       cannotRecordPage: 'Cannot record this page',
       noTitle: 'No title',
@@ -98,86 +98,86 @@ jest.mock('src/popup/i18n.js', () => ({
   })
 }));
 
-jest.mock('src/utils/pendingStorage.js', () => ({
-  getPendingPages: jest.fn(() => Promise.resolve([])),
-  removePendingPages: jest.fn(() => Promise.resolve())
+vi.mock('../../utils/pendingStorage.js', () => ({
+  getPendingPages: vi.fn(() => Promise.resolve([])),
+  removePendingPages: vi.fn(() => Promise.resolve())
 }));
 
-jest.mock('src/utils/domainUtils.js', () => ({
-  extractDomain: jest.fn((url: string) => {
+vi.mock('../../utils/domainUtils.js', () => ({
+  extractDomain: vi.fn((url: string) => {
     try { return new URL(url).hostname; } catch { return ''; }
   })
 }));
 
-jest.mock('src/utils/storageUrls.js', () => ({
-  getSavedUrlEntries: jest.fn(() => Promise.resolve([]))
+vi.mock('../../utils/storageUrls.js', () => ({
+  getSavedUrlEntries: vi.fn(() => Promise.resolve([]))
 }));
 
-jest.mock('src/utils/permissionManager.js', () => ({
-  isAllUrlsPermitted: jest.fn(() => Promise.resolve(true)),
-  isHostPermitted: jest.fn(() => Promise.resolve(true)),
-  requestPermission: jest.fn(() => Promise.resolve(true)),
-  requestAllUrls: jest.fn(() => Promise.resolve(true)),
-  recordDeniedVisit: jest.fn(() => Promise.resolve())
+vi.mock('../../utils/permissionManager.js', () => ({
+  isAllUrlsPermitted: vi.fn(() => Promise.resolve(true)),
+  isHostPermitted: vi.fn(() => Promise.resolve(true)),
+  requestPermission: vi.fn(() => Promise.resolve(true)),
+  requestAllUrls: vi.fn(() => Promise.resolve(true)),
+  recordDeniedVisit: vi.fn(() => Promise.resolve())
 }), { virtual: true });
 
-jest.mock('src/utils/trustChecker.js', () => ({
-  getTrustLevelDisplay: jest.fn(() => Promise.resolve({ level: 'Trusted' })),
-  checkDomainTrust: jest.fn(() => Promise.resolve({ showAlert: false, trustResult: {} }))
+vi.mock('../../utils/trustChecker.js', () => ({
+  getTrustLevelDisplay: vi.fn(() => Promise.resolve({ level: 'Trusted' })),
+  checkDomainTrust: vi.fn(() => Promise.resolve({ showAlert: false, trustResult: {} }))
 }), { virtual: true });
 
-// Import mocked functions after jest.mock declarations
-import { showPreview } from 'src/popup/sanitizePreview.js';
-import { sendMessageWithRetry } from 'src/utils/retryHelper.js';
-import { startAutoCloseTimer } from 'src/popup/autoClose.js';
-import { getCurrentTab, isRecordable } from 'src/popup/tabUtils.js';
-import { getSettings, StorageKeys } from 'src/utils/storage.js';
-import { checkPageStatus } from 'src/popup/statusChecker.js';
-import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus } from 'src/popup/main.js';
-import { showError, isConnectionError, isDomainBlockedError, formatSuccessMessage } from 'src/popup/errorUtils.js';
-import { getPendingPages, removePendingPages } from 'src/utils/pendingStorage.js';
-import { getSavedUrlEntries } from 'src/utils/storageUrls.js';
+// Import mocked functions after vi.mock declarations
+import { showPreview } from '../sanitizePreview.js';
+import { sendMessageWithRetry } from '../../utils/retryHelper.js';
+import { startAutoCloseTimer } from '../autoClose.js';
+import { getCurrentTab, isRecordable } from '../tabUtils.js';
+import { getSettings, StorageKeys } from '../../utils/storage.js';
+import { checkPageStatus } from '../statusChecker.js';
+import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus } from '../main.js';
+import { showError, isConnectionError, isDomainBlockedError, formatSuccessMessage } from '../errorUtils.js';
+import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
+import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 
 // Mock chrome API with i18n support
 const mockChrome = {
   storage: {
     local: {
-      get: jest.fn(),
-      set: jest.fn()
+      get: vi.fn(),
+      set: vi.fn()
     },
     sync: {
-      get: jest.fn(),
-      set: jest.fn()
+      get: vi.fn(),
+      set: vi.fn()
     }
   },
   tabs: {
-    query: jest.fn(),
-    sendMessage: jest.fn(),
-    create: jest.fn(),
+    query: vi.fn(),
+    sendMessage: vi.fn(),
+    create: vi.fn(),
     onUpdated: {
-      addListener: jest.fn()
+      addListener: vi.fn()
     }
   },
   runtime: {
     lastError: null as any,
-    sendMessage: jest.fn(),
-    getURL: jest.fn((path: string) => `chrome-extension://test-extension-id${path}`),
+    sendMessage: vi.fn(),
+    getURL: vi.fn((path: string) => `chrome-extension://test-extension-id${path}`),
     onMessage: {
-      addListener: jest.fn()
+      addListener: vi.fn()
     }
   },
   permissions: {
-    contains: jest.fn(() => Promise.resolve(true)),
-    request: jest.fn(() => Promise.resolve(true))
+    contains: vi.fn(() => Promise.resolve(true)),
+    request: vi.fn(() => Promise.resolve(true))
   },
   scripting: {
-    executeScript: jest.fn(() => Promise.resolve([{ result: 'scripted content' }]))
+    executeScript: vi.fn(() => Promise.resolve([{ result: 'scripted content' }]))
   },
   action: {
-    setBadgeText: jest.fn()
+    setBadgeText: vi.fn()
   },
   i18n: {
-    getMessage: jest.fn((key: string, substitutions?: any) => {
+    getMessage: vi.fn((key: string, substitutions?: any) => {
       const messages: Record<string, string> = {
         cannotRecordPage: 'Cannot record this page',
         errorPrefix: '✗ Error:',
@@ -195,7 +195,7 @@ const mockChrome = {
       }
       return message;
     }),
-    getUILanguage: jest.fn(() => 'en'),
+    getUILanguage: vi.fn(() => 'en'),
   }
 };
 
@@ -204,7 +204,7 @@ global.chrome = mockChrome as any;
 describe('main', () => {
   beforeEach(() => {
     // Clear all mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock chrome.tabs.query to return empty array by default
     mockChrome.tabs.query.mockResolvedValue([]);
@@ -375,10 +375,10 @@ describe('main', () => {
         url: 'https://example.com'
       };
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
 
       await loadCurrentTab();
@@ -1719,7 +1719,7 @@ describe('main', () => {
     });
 
     it('should handle getPendingPages error gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       // @ts-expect-error
       getPendingPages.mockRejectedValueOnce(new Error('Storage error'));
 

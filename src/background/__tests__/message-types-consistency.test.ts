@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+
 import type { ServiceWorkerRequest } from '../../messaging/types.js';
 import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from '../messageTypes.js';
 

@@ -19,8 +19,8 @@ import {
 import { normalizeUrl } from '../urlUtils.js';
 import { isEncrypted, encrypt, decrypt } from '../crypto.js';
 
-jest.mock('../migration.js', () => ({
-    migrateUblockSettings: jest.fn(() => Promise.resolve(false))
+vi.mock('../migration.js', () => ({
+    migrateUblockSettings: vi.fn(() => Promise.resolve(false))
 }));
 
 // 【パフォーマンス改善】テスト間でキャッシュをクリア

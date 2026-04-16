@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/crypto.ts
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import { Crypto } from '@peculiar/webcrypto';
 import type { EncryptedData } from '../typesCrypto.js';
 import {
@@ -640,7 +640,7 @@ describe('getNotificationHmacKey', () => {
         });
 
         // console.warnが呼ばれ、新規鍵が生成されるべき
-        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const key = await getNotificationHmacKey();
         expect(key).toBeDefined();
         expect(key.type).toBe('secret');

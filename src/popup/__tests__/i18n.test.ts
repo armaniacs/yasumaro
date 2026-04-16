@@ -4,6 +4,7 @@
  * i18nヘルパーのテスト
  */
 
+import { vi } from 'vitest';
 import {
   getMessage,
   applyI18n,
@@ -15,11 +16,10 @@ import {
 
 describe('i18n', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Chrome i18n APIのモック
+    vi.clearAllMocks();
     global.chrome = {
       i18n: {
-        getMessage: jest.fn((key) => {
+        getMessage: vi.fn((key) => {
           const messages = {
             'testKey': 'Test Message',
             'testWithArgs': 'Hello {name}',
@@ -27,7 +27,7 @@ describe('i18n', () => {
           };
           return messages[key] || '';
         }),
-        getUILanguage: jest.fn(() => 'ja-JP')
+        getUILanguage: vi.fn(() => 'ja-JP')
       },
       runtime: {
         lastError: null

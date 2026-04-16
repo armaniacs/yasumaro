@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+
 import { shouldSkipUrl, SKIPPED_PROTOCOLS } from '../urlSkipper.js';
 
 describe('shouldSkipUrl', () => {

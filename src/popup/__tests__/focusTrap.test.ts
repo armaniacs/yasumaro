@@ -128,7 +128,7 @@ describe('focusTrap', () => {
     describe('keyboard handler', () => {
         test('ESCキーでcloseCallbackが呼ばれる', () => {
             const modal = document.getElementById('modal') as HTMLElement;
-            const closeCallback = jest.fn();
+            const closeCallback = vi.fn();
             manager.trap(modal, closeCallback);
 
             const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
@@ -189,7 +189,7 @@ describe('focusTrap', () => {
 
         test('Tab以外のキーは何もしない', () => {
             const modal = document.getElementById('modal') as HTMLElement;
-            const closeCallback = jest.fn();
+            const closeCallback = vi.fn();
             manager.trap(modal, closeCallback);
 
             const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });

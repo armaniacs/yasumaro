@@ -159,9 +159,9 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     return response;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      // 技術的な詳細を除外して一般的なエラーメッセージを返す
-      throw new Error('Error: Request timed out. Please check your connection and try again.');
+    const isAbortError = error instanceof DOMException && error.message === 'The operation was aborted.';
+    if (isAbortError) {
+      throw new Error('Request timed out. Please check your connection and try again.');
     }
     throw error;
   }

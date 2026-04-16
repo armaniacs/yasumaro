@@ -3,13 +3,15 @@
  * 許可URLリスト構築のテスト
  */
 
+import { buildAllowedUrls, StorageKeys, computeUrlsHash, isDomainInWhitelist } from '../../utils/storage.js';
+
 // Mock chrome API
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn(),
-            set: jest.fn(),
-            remove: jest.fn()
+            get: vi.fn(),
+            set: vi.fn(),
+            remove: vi.fn()
         }
     },
     runtime: {
@@ -21,17 +23,17 @@ const mockChrome = {
 
 // Mock crypto
 const mockCrypto = {
-    getRandomValues: jest.fn((arr: Uint8Array) => {
+    getRandomValues: vi.fn((arr: Uint8Array) => {
         for (let i = 0; i < arr.length; i++) {
             arr[i] = Math.floor(Math.random() * 256);
         }
         return arr;
     }),
     subtle: {
-        importKey: jest.fn(),
-        deriveKey: jest.fn(),
-        encrypt: jest.fn(),
-        decrypt: jest.fn()
+        importKey: vi.fn(),
+        deriveKey: vi.fn(),
+        encrypt: vi.fn(),
+        decrypt: vi.fn()
     }
 };
 
@@ -39,14 +41,12 @@ const mockCrypto = {
 
 describe('storage - buildAllowedUrls', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.resetModules();
+        vi.clearAllMocks();
+        vi.resetModules();
     });
 
     describe('buildAllowedUrls', () => {
         it('should add Obsidian local URLs to allowed list', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OBSIDIAN_PROTOCOL]: 'http',
                 [StorageKeys.OBSIDIAN_PORT]: '27123'
@@ -59,8 +59,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add HTTPS Obsidian local URLs', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
                 [StorageKeys.OBSIDIAN_PORT]: '27123'
@@ -73,8 +71,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add Gemini API URL', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {};
             
             const allowedUrls = buildAllowedUrls(settings);
@@ -83,8 +79,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add whitelist domain for OpenAI base URL', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OPENAI_BASE_URL]: 'https://api.openai.com/v1'
             };
@@ -95,8 +89,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add whitelist domain for Groq', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1'
             };
@@ -107,8 +99,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add whitelist domain for openai2 (Ollama)', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1'
             };
@@ -120,8 +110,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should not add non-whitelisted domains', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.OPENAI_BASE_URL]: 'https://evil.example.com/v1'
             };
@@ -132,8 +120,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add fixed filter list domains', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {};
             
             const allowedUrls = buildAllowedUrls(settings);
@@ -145,8 +131,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should add uBlock sources origins', () => {
-            const { buildAllowedUrls, StorageKeys } = require('../../utils/storage');
-            
             const settings = {
                 [StorageKeys.UBLOCK_SOURCES]: [
                     { url: 'https://raw.githubusercontent.com/user/repo/main/filters.txt' },
@@ -160,8 +144,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should handle empty settings', () => {
-            const { buildAllowedUrls } = require('../../utils/storage');
-            
             const allowedUrls = buildAllowedUrls({});
             
             // Should still have default URLs
@@ -171,8 +153,6 @@ describe('storage - buildAllowedUrls', () => {
 
     describe('computeUrlsHash', () => {
         it('should compute hash for sorted URLs', () => {
-            const { computeUrlsHash } = require('../../utils/storage');
-            
             const urls = new Set(['https://b.com', 'https://a.com', 'https://c.com']);
             const hash = computeUrlsHash(urls);
             
@@ -180,8 +160,6 @@ describe('storage - buildAllowedUrls', () => {
         });
 
         it('should handle empty set', () => {
-            const { computeUrlsHash } = require('../../utils/storage');
-            
             const urls = new Set<string>();
             const hash = computeUrlsHash(urls);
             
@@ -191,30 +169,22 @@ describe('storage - buildAllowedUrls', () => {
 
     describe('isDomainInWhitelist', () => {
         it('should return true for whitelisted domains', () => {
-            const { isDomainInWhitelist } = require('../../utils/storage');
-            
             expect(isDomainInWhitelist('https://api.openai.com')).toBe(true);
             expect(isDomainInWhitelist('https://api.groq.com')).toBe(true);
             expect(isDomainInWhitelist('https://generativelanguage.googleapis.com')).toBe(true);
         });
 
         it('should return true for localhost', () => {
-            const { isDomainInWhitelist } = require('../../utils/storage');
-            
             expect(isDomainInWhitelist('http://localhost:11434')).toBe(true);
             expect(isDomainInWhitelist('http://127.0.0.1:11434')).toBe(true);
         });
 
         it('should return false for non-whitelisted domains', () => {
-            const { isDomainInWhitelist } = require('../../utils/storage');
-            
             expect(isDomainInWhitelist('https://evil.example.com')).toBe(false);
             expect(isDomainInWhitelist('https://malicious-site.com')).toBe(false);
         });
 
         it('should handle invalid URLs', () => {
-            const { isDomainInWhitelist } = require('../../utils/storage');
-            
             expect(isDomainInWhitelist('not-a-url')).toBe(false);
             expect(isDomainInWhitelist('')).toBe(false);
         });

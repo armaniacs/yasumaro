@@ -4,19 +4,19 @@
  * Focus on increasing coverage beyond the existing 33.75%
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock dependencies - all at top level
-const mockGetSettings = jest.fn(() => Promise.resolve({
+const mockGetSettings = vi.fn(() => Promise.resolve({
   domain_filter_mode: 'disabled',
   domain_whitelist: [],
   domain_blacklist: [],
   simple_format_enabled: true,
   ublock_format_enabled: false,
 }));
-const mockSaveSettings = jest.fn(() => Promise.resolve());
+const mockSaveSettings = vi.fn(() => Promise.resolve());
 
-jest.mock('../../utils/storage.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     DOMAIN_FILTER_MODE: 'domain_filter_mode',
     DOMAIN_WHITELIST: 'domain_whitelist',
@@ -28,45 +28,45 @@ jest.mock('../../utils/storage.js', () => ({
   saveSettings: mockSaveSettings,
 }));
 
-const mockParseDomainList = jest.fn((text: string) =>
+const mockParseDomainList = vi.fn((text: string) =>
   text.split('\n').map((s: string) => s.trim()).filter(Boolean)
 );
-const mockValidateDomainList = jest.fn(() => [] as string[]);
+const mockValidateDomainList = vi.fn(() => [] as string[]);
 
-jest.mock('../../utils/domainUtils.js', () => ({
-  extractDomain: jest.fn(),
+vi.mock('../../utils/domainUtils.js', () => ({
+  extractDomain: vi.fn(),
   parseDomainList: mockParseDomainList,
   validateDomainList: mockValidateDomainList,
 }));
 
-const mockInitUblock = jest.fn();
-const mockHandleSaveUblockSettings = jest.fn(() => Promise.resolve());
+const mockInitUblock = vi.fn();
+const mockHandleSaveUblockSettings = vi.fn(() => Promise.resolve());
 
-jest.mock('../ublockImport.js', () => ({
+vi.mock('../ublockImport.js', () => ({
   init: mockInitUblock,
   handleSaveUblockSettings: mockHandleSaveUblockSettings,
 }));
 
-const mockAddLog = jest.fn();
+const mockAddLog = vi.fn();
 
-jest.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   addLog: mockAddLog,
   LogType: { ERROR: 'ERROR', INFO: 'INFO' },
 }));
 
-jest.mock('../tabUtils.js', () => ({
-  getCurrentTab: jest.fn(),
-  isRecordable: jest.fn(),
+vi.mock('../tabUtils.js', () => ({
+  getCurrentTab: vi.fn(),
+  isRecordable: vi.fn(),
 }));
 
-const mockShowStatus = jest.fn();
+const mockShowStatus = vi.fn();
 
-jest.mock('../settingsUiHelper.js', () => ({
+vi.mock('../settingsUiHelper.js', () => ({
   showStatus: mockShowStatus,
 }));
 
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key: string) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       whitelistLabel: 'Whitelist (1 domain per line)',
       blacklistLabel: 'Blacklist (1 domain per line)',
@@ -112,8 +112,8 @@ function setupFullDOM() {
 
 describe('domainFilter.ts (improved coverage)', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
+    vi.clearAllMocks();
+    vi.resetModules();
     document.body.innerHTML = '';
     // Reset mock defaults
     mockGetSettings.mockResolvedValue({
@@ -571,7 +571,7 @@ describe('domainFilter.ts (improved coverage)', () => {
       init();
 
       const tab1 = document.getElementById('tab1')!;
-      const clickSpy = jest.spyOn(tab1, 'click');
+      const clickSpy = vi.spyOn(tab1, 'click');
       tab1.focus();
       tab1.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
@@ -584,7 +584,7 @@ describe('domainFilter.ts (improved coverage)', () => {
       init();
 
       const tab1 = document.getElementById('tab1')!;
-      const clickSpy = jest.spyOn(tab1, 'click');
+      const clickSpy = vi.spyOn(tab1, 'click');
       tab1.focus();
       tab1.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+
 import { shouldRecordVisit } from '../extractor.js';
 
 describe('Visit Conditions Logic', () => {

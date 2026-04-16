@@ -8,7 +8,7 @@
  * - RFC準拠のドメイン名正規表現を使用していない
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock chrome API
 const mockStorage: Record<string, any> = {};
@@ -16,7 +16,7 @@ const mockStorage: Record<string, any> = {};
 global.chrome = {
   storage: {
     local: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         const result: Record<string, any> = {};
         if (typeof keys === 'string') {
           result[keys] = mockStorage[keys];
@@ -33,12 +33,12 @@ global.chrome = {
         if (callback) callback(result);
         return Promise.resolve(result);
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         Object.assign(mockStorage, items);
         if (callback) callback();
         return Promise.resolve({});
       }),
-      remove: jest.fn((keys, callback) => {
+      remove: vi.fn((keys, callback) => {
         const keysArray = Array.isArray(keys) ? keys : [keys];
         keysArray.forEach(key => delete mockStorage[key]);
         if (callback) callback();
@@ -46,11 +46,11 @@ global.chrome = {
       })
     },
     sync: {
-      get: jest.fn((keys, callback) => {
+      get: vi.fn((keys, callback) => {
         if (callback) callback({});
         return Promise.resolve({});
       }),
-      set: jest.fn((items, callback) => {
+      set: vi.fn((items, callback) => {
         if (callback) callback();
         return Promise.resolve({});
       })
@@ -65,11 +65,11 @@ describe('Trust Database - Domain/TLD Validation', () => {
   let trustDb: any;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Clear mock storage before each test
     Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
     // Clear module cache to get fresh TrustDb instance
-    jest.clearModuleRegistry?.() || jest.resetModules();
+    vi.resetModules();
     // Clear the module cache to get fresh import
     const trustDbModule = await import('../trustDb/trustDb.js');
     trustDb = trustDbModule.getTrustDb();

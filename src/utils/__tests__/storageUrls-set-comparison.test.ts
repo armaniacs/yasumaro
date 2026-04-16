@@ -8,22 +8,22 @@
  * - 内容が同一の場合は chrome.storage.local.set を不要に呼ばない
  */
 
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-jest.mock('../optimisticLock.js', () => {
-    const actual = jest.requireActual('../optimisticLock.js') as typeof import('../optimisticLock.js');
+vi.mock('../optimisticLock.ts', async (importOriginal) => {
+    const actual = await importOriginal() as typeof import('../optimisticLock.ts');
     return actual;
 });
-jest.mock('../logger.js', () => ({
-    addLog: jest.fn(),
-    logError: jest.fn(),
-    logWarn: jest.fn(),
-    logInfo: jest.fn(),
+vi.mock('../logger.ts', () => ({
+    addLog: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
+    logInfo: vi.fn(),
     LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
     ErrorCode: {},
 }));
 
-import { setSavedUrlsWithTimestamps } from '../storageUrls.js';
+import { setSavedUrlsWithTimestamps } from '../storageUrls.ts';
 
 // chrome.storage.local の呼び出しを記録するラッパー
 let setCallArgs: Array<Record<string, unknown>> = [];
@@ -36,7 +36,7 @@ beforeEach(() => {
     (global.chrome as any) = {
         storage: {
             local: {
-                get: jest.fn((keys: string | string[]) => {
+                get: vi.fn((keys: string | string[]) => {
                     const result: Record<string, unknown> = {};
                     const keyList = Array.isArray(keys) ? keys : [keys];
                     for (const k of keyList) {
@@ -44,7 +44,7 @@ beforeEach(() => {
                     }
                     return Promise.resolve(result);
                 }),
-                set: jest.fn((items: Record<string, unknown>) => {
+                set: vi.fn((items: Record<string, unknown>) => {
                     setCallArgs.push(items);
                     Object.assign(storedData, items);
                     return Promise.resolve();

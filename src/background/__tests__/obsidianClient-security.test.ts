@@ -6,13 +6,13 @@
  * 注: chrome storage モックは jest.setup.ts で設定済み
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 /**
  * 【テストモック設定】consoleオブジェクトのモック化
  * ログ出力の内容を検証できるようにモック
  */
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+const mockConsoleError = vi.spyOn(console, 'error').mockImplementation();
 
 /**
  * 【テスト前準備】各テスト実行前にモックをクリア

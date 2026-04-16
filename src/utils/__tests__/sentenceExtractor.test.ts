@@ -4,7 +4,7 @@
  * RED Phase: Tests that should fail until implementation is added
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+
 
 // Test imports - these will fail until implementation exists
 // Using dynamic import pattern to ensure clean test failure

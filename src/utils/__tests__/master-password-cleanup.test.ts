@@ -4,13 +4,13 @@
  * ADR: 2026-03-24-master-password-data-cleanup.md
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../utils/logger.js', () => ({
-  logInfo: jest.fn(),
-  logDebug: jest.fn(),
-  logError: jest.fn(),
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  addLog: vi.fn(),
   ErrorCode: {
     STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
   },

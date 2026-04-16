@@ -20,21 +20,21 @@ import {
 } from '../masterPassword.js';
 
 // crypto モック
-jest.mock('../crypto.js', () => ({
-    generateSalt: jest.fn(() => new Uint8Array(16).fill(1)),
-    hashPasswordWithPBKDF2: jest.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
-    verifyPasswordWithPBKDF2: jest.fn(async (password: string, hash: string, _salt: Uint8Array) => {
+vi.mock('../crypto.js', () => ({
+    generateSalt: vi.fn(() => new Uint8Array(16).fill(1)),
+    hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
+    verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {
         return password === 'correct_password' && hash === 'hashed_value';
     }),
-    encrypt: jest.fn(async (plaintext: string, _key: CryptoKey) => ({
+    encrypt: vi.fn(async (plaintext: string, _key: CryptoKey) => ({
         ciphertext: 'encrypted_' + plaintext,
         iv: 'test_iv'
     })),
-    decryptData: jest.fn(async (data: any, _key: CryptoKey) => {
+    decryptData: vi.fn(async (data: any, _key: CryptoKey) => {
         if (data.ciphertext === 'encrypted_old_secret') return 'old_secret';
         return 'decrypted_data';
     }),
-    deriveKey: jest.fn(async (_password: string, _salt: Uint8Array) => 'mock_key' as unknown as CryptoKey)
+    deriveKey: vi.fn(async (_password: string, _salt: Uint8Array) => 'mock_key' as unknown as CryptoKey)
 }));
 
 describe('masterPassword', () => {
@@ -138,7 +138,7 @@ describe('masterPassword', () => {
 
     describe('setMasterPassword', () => {
         test('有効なパスワードで成功する', async () => {
-            const mockSet = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
             const result = await setMasterPassword('validpass123', mockSet);
 
             expect(result.success).toBe(true);
@@ -150,7 +150,7 @@ describe('masterPassword', () => {
         });
 
         test('短いパスワードはエラーを返す', async () => {
-            const mockSet = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
             const result = await setMasterPassword('short', mockSet);
 
             expect(result.success).toBe(false);
@@ -159,7 +159,7 @@ describe('masterPassword', () => {
         });
 
         test('空のパスワードはエラーを返す', async () => {
-            const mockSet = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
             const result = await setMasterPassword('', mockSet);
 
             expect(result.success).toBe(false);
@@ -167,7 +167,7 @@ describe('masterPassword', () => {
         });
 
         test('ストレージエラー時にエラーを返す', async () => {
-            const mockSet = jest.fn(async () => { throw new Error('Storage failed'); });
+            const mockSet = vi.fn(async () => { throw new Error('Storage failed'); });
             const result = await setMasterPassword('validpass123', mockSet);
 
             expect(result.success).toBe(false);
@@ -178,7 +178,7 @@ describe('masterPassword', () => {
     describe('verifyMasterPassword', () => {
         test('正しいパスワードで成功する', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_salt': saltBase64,
                 'master_password_hash': 'hashed_value'
             }));
@@ -189,7 +189,7 @@ describe('masterPassword', () => {
 
         test('間違ったパスワードでエラーを返す', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_salt': saltBase64,
                 'master_password_hash': 'hashed_value'
             }));
@@ -200,7 +200,7 @@ describe('masterPassword', () => {
         });
 
         test('マスターパスワード未設定の場合はエラー', async () => {
-            const mockGet = jest.fn(async () => ({}));
+            const mockGet = vi.fn(async () => ({}));
 
             const result = await verifyMasterPassword('any_password', mockGet);
             expect(result.success).toBe(false);
@@ -208,7 +208,7 @@ describe('masterPassword', () => {
         });
 
         test('ストレージエラー時にエラーを返す', async () => {
-            const mockGet = jest.fn(async () => { throw new Error('Storage error'); });
+            const mockGet = vi.fn(async () => { throw new Error('Storage error'); });
 
             const result = await verifyMasterPassword('any', mockGet);
             expect(result.success).toBe(false);
@@ -219,7 +219,7 @@ describe('masterPassword', () => {
     describe('changeMasterPassword', () => {
         test('正しい旧パスワードで変更できる', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = jest.fn(async (keys: string[]) => {
+            const mockGet = vi.fn(async (keys: string[]) => {
                 if (keys.includes('master_password_hash')) {
                     return {
                         'master_password_salt': saltBase64,
@@ -231,8 +231,8 @@ describe('masterPassword', () => {
                 }
                 return {};
             });
-            const mockSet = jest.fn(async () => {});
-            const mockReencrypt = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
+            const mockReencrypt = vi.fn(async () => {});
 
             const result = await changeMasterPassword(
                 'correct_password',
@@ -250,12 +250,12 @@ describe('masterPassword', () => {
 
         test('間違った旧パスワードでエラーを返す', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_salt': saltBase64,
                 'master_password_hash': 'hashed_value'
             }));
-            const mockSet = jest.fn(async () => {});
-            const mockReencrypt = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
+            const mockReencrypt = vi.fn(async () => {});
 
             const result = await changeMasterPassword(
                 'wrong_password',
@@ -271,12 +271,12 @@ describe('masterPassword', () => {
 
         test('新しいパスワードが短い場合はエラーを返す', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_salt': saltBase64,
                 'master_password_hash': 'hashed_value'
             }));
-            const mockSet = jest.fn(async () => {});
-            const mockReencrypt = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
+            const mockReencrypt = vi.fn(async () => {});
 
             const result = await changeMasterPassword(
                 'correct_password',
@@ -293,7 +293,7 @@ describe('masterPassword', () => {
         test('暗号化されたAPIキーを再暗号化する', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
             const encryptedData = { ciphertext: 'encrypted_old_secret', iv: 'test_iv' };
-            const mockGet = jest.fn(async (keys: string[]) => {
+            const mockGet = vi.fn(async (keys: string[]) => {
                 if (keys.includes('master_password_hash')) {
                     return {
                         'master_password_salt': saltBase64,
@@ -310,8 +310,8 @@ describe('masterPassword', () => {
                 }
                 return {};
             });
-            const mockSet = jest.fn(async () => {});
-            const mockReencrypt = jest.fn(async () => {});
+            const mockSet = vi.fn(async () => {});
+            const mockReencrypt = vi.fn(async () => {});
 
             const result = await changeMasterPassword(
                 'correct_password',
@@ -327,7 +327,7 @@ describe('masterPassword', () => {
 
     describe('isMasterPasswordSet', () => {
         test('true の場合は true を返す', async () => {
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_enabled': true
             }));
             const result = await isMasterPasswordSet(mockGet);
@@ -335,7 +335,7 @@ describe('masterPassword', () => {
         });
 
         test('false の場合は false を返す', async () => {
-            const mockGet = jest.fn(async () => ({
+            const mockGet = vi.fn(async () => ({
                 'master_password_enabled': false
             }));
             const result = await isMasterPasswordSet(mockGet);
@@ -343,7 +343,7 @@ describe('masterPassword', () => {
         });
 
         test('未設定(undefined)の場合は false を返す', async () => {
-            const mockGet = jest.fn(async () => ({}));
+            const mockGet = vi.fn(async () => ({}));
             const result = await isMasterPasswordSet(mockGet);
             expect(result).toBe(false);
         });

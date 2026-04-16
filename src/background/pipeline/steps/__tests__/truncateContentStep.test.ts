@@ -9,11 +9,11 @@
  * - マルチバイト文字（UTF-8）の安全な切り詰め
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
@@ -37,7 +37,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('truncateContentStep', () => {

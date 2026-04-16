@@ -161,7 +161,7 @@ describe('withOptimisticLock', () => {
             // 1回目の呼び出しではtestKeyとtestKey_versionを返し、2回目では異なるバージョンを返す
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
                 callCount++;
                 if (callCount === 1) {
                     // 最初のget: testKeyと直前のバージョンを返す
@@ -184,7 +184,7 @@ describe('withOptimisticLock', () => {
             // chrome.storage.local.getをモックして競合をシミュレート
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -213,7 +213,7 @@ describe('withOptimisticLock', () => {
             // chrome.storage.local.getをモックして競合をシミュレート
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = jest.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -258,7 +258,7 @@ describe('withOptimisticLock', () => {
 
         it('chrome.storage.local.setが失敗した場合にエラーを伝播する', async () => {
             const originalSet = chrome.storage.local.set;
-            chrome.storage.local.set = jest.fn(() => Promise.reject(new Error('Storage error')));
+            chrome.storage.local.set = vi.fn(() => Promise.reject(new Error('Storage error')));
 
             await expect(
                 withOptimisticLock('testKey', (current) => current, { maxRetries: 0 })
@@ -298,7 +298,7 @@ describe('withOptimisticLock', () => {
             let testKeyState = ['initial'];
             let testKeyVersion = 0;
 
-            chrome.storage.local.set = jest.fn(async (items: any) => {
+            chrome.storage.local.set = vi.fn(async (items: any) => {
                 if (items.testKey !== undefined) testKeyState = items.testKey;
                 if (items.testKey_version !== undefined) testKeyVersion = items.testKey_version;
                 await setupOriginalSet.call(chrome.storage.local, items);
@@ -306,7 +306,7 @@ describe('withOptimisticLock', () => {
 
             // Getを追跡してリトライ回数制御
             let getCallCount = 0;
-            chrome.storage.local.get = jest.fn(async () => {
+            chrome.storage.local.get = vi.fn(async () => {
                 getCallCount++;
                 // retryCount * 2回までは競合を返す（verify checkも含む）
                 if (getCallCount <= retryCount * 2) {
@@ -341,7 +341,7 @@ describe('withOptimisticLock', () => {
             const setupOriginalGet = originalGet;
             let callCount = 0;
 
-            chrome.storage.local.get = jest.fn(async () => {
+            chrome.storage.local.get = vi.fn(async () => {
                 callCount++;
                 // 呼び出しごとにバージョンを変化させて常にバージョン不一致を起こす
                 return { testKey: ['modified'], testKey_version: callCount * 100 };
@@ -360,13 +360,13 @@ describe('withOptimisticLock', () => {
         });
 
         it('default maxRetriesでリトライが機能する', async () => {
-            jest.setTimeout(15000);
+            // Note: Using vi.useFakeTimers to control async timing if needed
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
             let callCount = 0;
 
-            chrome.storage.local.get = jest.fn(async () => {
+            chrome.storage.local.get = vi.fn(async () => {
                 callCount++;
                 // 常に競合を返す（デフォルトのmaxRetries=5回まで）
                 return { testKey: ['modified'], testKey_version: callCount * 10 };
@@ -379,7 +379,8 @@ describe('withOptimisticLock', () => {
             const stats = getConflictStats();
             expect(stats.totalAttempts).toBe(6); // 初回 + 5回リトライ
 
-            jest.setTimeout(5000);
+            // Reset storage for other tests
+            await chrome.storage.local.set({ testKey: ['initial'] });
         });
     });
 });

@@ -3,22 +3,22 @@
  * fieldValidation.ts の単体テスト
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // chrome モック
 (globalThis as any).chrome = {
-    i18n: { getMessage: jest.fn((key: string) => key) },
-    storage: { local: { get: jest.fn(), set: jest.fn() } }
+    i18n: { getMessage: vi.fn((key: string) => key) },
+    storage: { local: { get: vi.fn(), set: vi.fn() } }
 };
 
 // i18n モック
-jest.mock('../../i18n.js', () => ({
-    getMessage: jest.fn((key: string) => key)
+vi.mock('../../i18n.js', () => ({
+    getMessage: vi.fn((key: string) => key)
 }));
 
 // storage モック (validateBaseUrl の dynamic import 用)
-jest.mock('../../../utils/storage.js', () => ({
-    isDomainInWhitelist: jest.fn(() => true),
+vi.mock('../../../utils/storage.js', () => ({
+    isDomainInWhitelist: vi.fn(() => true),
     ALLOWED_AI_PROVIDER_DOMAINS: ['api.openai.com', 'api.anthropic.com'],
 }));
 
@@ -40,6 +40,9 @@ import {
     setupAllFieldValidations,
     validateAllFields
 } from '../fieldValidation.js';
+
+import * as storageModule from '../../../utils/storage.js';
+const { isDomainInWhitelist } = vi.mocked(storageModule);
 
 describe('fieldValidation', () => {
 
@@ -424,7 +427,6 @@ describe('fieldValidation', () => {
         });
 
         test('ホワイトリストに含まれるURLで true を返す', async () => {
-            const { isDomainInWhitelist } = require('../../../utils/storage.js');
             isDomainInWhitelist.mockReturnValue(true);
 
             const input = document.getElementById('baseUrl') as HTMLInputElement;
@@ -437,7 +439,6 @@ describe('fieldValidation', () => {
         });
 
         test('ホワイトリストに含まれないURLで false を返す', async () => {
-            const { isDomainInWhitelist } = require('../../../utils/storage.js');
             isDomainInWhitelist.mockReturnValue(false);
 
             const input = document.getElementById('baseUrl') as HTMLInputElement;

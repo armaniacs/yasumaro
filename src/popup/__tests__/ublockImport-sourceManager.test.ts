@@ -46,13 +46,13 @@ function createStorageMocks() {
   const chromeStorageLocal = chrome.storage.local;
 
   // Create fresh mock implementations
-  const getMock = jest.fn((keys: any, callback: any) => {
+  const getMock = vi.fn((keys: any, callback: any) => {
     const result = { ...storage };
     if (callback) callback(result);
     return Promise.resolve(result);
   });
 
-  const setMock = jest.fn((data: any, callback: any) => {
+  const setMock = vi.fn((data: any, callback: any) => {
     // 【重要】saveSettings はトップレベルに StorageKeys のキーを保存するが、
     // getSettings は settings オブジェクト内から読むため、トップレベルキーを
     // settings オブジェクト内にマージする必要がある
@@ -82,7 +82,7 @@ function createStorageMocks() {
     return Promise.resolve();
   });
 
-  const removeMock = jest.fn((keys: any, callback: any) => {
+  const removeMock = vi.fn((keys: any, callback: any) => {
     if (callback) callback();
     return Promise.resolve();
   });
@@ -140,7 +140,7 @@ function createStorageMocks() {
     get: getMock,
     set: setMock,
     remove: removeMock,
-    getBytesInUse: jest.fn(() => Promise.resolve(1024))
+    getBytesInUse: vi.fn(() => Promise.resolve(1024))
   } as any;
 
   return {
@@ -168,7 +168,7 @@ describe('ublockImport - SourceManager Module', () => {
     storageMocks.resetStorage();
 
     // console.logを抑制（一時的に解除して調査）- 削除
-    // jest.spyOn(console, 'log').mockImplementation(() => {});
+    // vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -191,7 +191,7 @@ describe('ublockImport - SourceManager Module', () => {
 
   describe('loadAndDisplaySources', () => {
     test('ソースを読み込んで表示コールバックを呼ぶ', async () => {
-      const renderCallback = jest.fn();
+      const renderCallback = vi.fn();
 
       await loadAndDisplaySources(renderCallback);
 
@@ -222,7 +222,7 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      const renderCallback = jest.fn();
+      const renderCallback = vi.fn();
       await deleteSource(0, renderCallback);
 
       expect(renderCallback).toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      const renderCallback = jest.fn();
+      const renderCallback = vi.fn();
       await deleteSource(-1, renderCallback);
 
       expect(true).toBe(true); // 何も投げないことを確認
@@ -264,9 +264,9 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const fetchFromUrlCallback = jest.fn().mockResolvedValue(`||example.com^\n||newdomain.com^`);
+      const fetchFromUrlCallback = vi.fn().mockResolvedValue(`||example.com^\n||newdomain.com^`);
 
       const result = await reloadSource(0, fetchFromUrlCallback);
 
@@ -284,7 +284,7 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      const fetchFromUrlCallback = jest.fn();
+      const fetchFromUrlCallback = vi.fn();
 
       await expect(reloadSource(100, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
     });
@@ -300,7 +300,7 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      const fetchFromUrlCallback = jest.fn();
+      const fetchFromUrlCallback = vi.fn();
 
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('手動入力のソースは更新できません');
     });
@@ -316,9 +316,9 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const fetchFromUrlCallback = jest.fn().mockResolvedValue('invalid line without caret');
+      const fetchFromUrlCallback = vi.fn().mockResolvedValue('invalid line without caret');
 
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('エラーが見つかりました');
     });
@@ -335,9 +335,9 @@ describe('ublockImport - SourceManager Module', () => {
       });
 
       // 空または無効なフィルターテキストを返す
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const fetchFromUrlCallback = jest.fn().mockResolvedValue('');
+      const fetchFromUrlCallback = vi.fn().mockResolvedValue('');
 
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('有効なルールが見つかりませんでした');
     });

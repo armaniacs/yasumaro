@@ -5,12 +5,12 @@
  * showSpinner()、hideSpinner()関数によるDOM操作を単体でテストします。
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { jest } from '@jest/globals';
+
+import { vi } from 'vitest';
 
 // Mock i18n before importing spinner.js
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key, substitutions) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
     if (key === 'autoClosing') return '自動閉じる';
@@ -44,17 +44,17 @@ describe('ローディングスピナー制御', () => {
     `;
 
     // Clear all mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // 【モックキャプチャ】: console.warnの出力をキャプチャするモックを設定
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     // 【テスト後処理】: console.warnのモックをリセット
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('showSpinner()呼び出しでスピナー要素が表示される', () => {

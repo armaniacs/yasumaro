@@ -4,31 +4,32 @@
  */
 
 import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { vi } from 'vitest';
 Object.defineProperty(global, 'crypto', { value: crypto });
 
 // chrome API モック
 const mockChrome = {
     offscreen: {
-        hasDocument: jest.fn(async () => false),
-        createDocument: jest.fn(async () => {}),
+        hasDocument: vi.fn(async () => false),
+        createDocument: vi.fn(async () => {}),
         Reason: { WORKERS: 'WORKERS' }
     },
     runtime: {
-        sendMessage: jest.fn(),
+        sendMessage: vi.fn(),
         lastError: null as any
     }
 };
 (global as any).chrome = mockChrome;
 
 // logger モック
-jest.mock('../../utils/logger.js', () => ({
-    addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+    addLog: vi.fn(),
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' }
 }));
 
 // promptSanitizer モック
-jest.mock('../../utils/promptSanitizer.js', () => ({
-    sanitizePromptContent: jest.fn((content: string) => ({
+vi.mock('../../utils/promptSanitizer.js', () => ({
+    sanitizePromptContent: vi.fn((content: string) => ({
         sanitized: content,
         warnings: [],
         dangerLevel: 'low'
@@ -37,13 +38,16 @@ jest.mock('../../utils/promptSanitizer.js', () => ({
 }));
 
 import { LocalAIClient } from '../localAiClient.js';
+import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
+
+const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('LocalAIClient', () => {
     let client: LocalAIClient;
 
     beforeEach(() => {
         client = new LocalAIClient();
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockChrome.runtime.lastError = null;
     });
 
@@ -154,7 +158,6 @@ describe('LocalAIClient', () => {
         });
 
         test('プロンプトインジェクション HIGH でブロックする', async () => {
-            const { sanitizePromptContent } = require('../../utils/promptSanitizer.js');
             sanitizePromptContent.mockReturnValueOnce({
                 sanitized: 'blocked',
                 warnings: ['injection detected'],

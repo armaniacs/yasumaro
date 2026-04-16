@@ -3,10 +3,19 @@
  * フィールドバリデーションのテスト
  */
 
+import { vi } from 'vitest';
+import {
+    validateProtocol,
+    validatePort,
+    validateMinVisitDuration,
+    validateMinScrollDepth,
+    validateAllFields
+} from '../../popup/settings/fieldValidation.js';
+
 // Mock chrome API - unique name for this file
 const mockChromeForFieldValidation = {
     i18n: {
-        getMessage: jest.fn((key: string) => {
+        getMessage: vi.fn((key: string) => {
             const messages: Record<string, string> = {
                 'errorProtocol': 'Protocol must be http or https',
                 'errorPort': 'Port must be between 1 and 65535',
@@ -26,13 +35,11 @@ describe('popup/settings/fieldValidation', () => {
     const createMockInput = (value: string = ''): HTMLInputElement => {
         const input = document.createElement('input');
         input.value = value;
-        input.setAttribute = jest.fn();
+        input.setAttribute = vi.fn();
         return input;
     };
 
     describe('validateProtocol', () => {
-        const { validateProtocol } = require('../../popup/settings/fieldValidation');
-
         it('should return true for http', () => {
             const input = createMockInput('http');
             const result = validateProtocol(input);
@@ -65,8 +72,6 @@ describe('popup/settings/fieldValidation', () => {
     });
 
     describe('validatePort', () => {
-        const { validatePort } = require('../../popup/settings/fieldValidation');
-
         it('should return true for valid port', () => {
             const input = createMockInput('27123');
             const result = validatePort(input);
@@ -93,8 +98,6 @@ describe('popup/settings/fieldValidation', () => {
     });
 
     describe('validateMinVisitDuration', () => {
-        const { validateMinVisitDuration } = require('../../popup/settings/fieldValidation');
-
         it('should return true for valid duration', () => {
             const input = createMockInput('5');
             const result = validateMinVisitDuration(input);
@@ -121,8 +124,6 @@ describe('popup/settings/fieldValidation', () => {
     });
 
     describe('validateMinScrollDepth', () => {
-        const { validateMinScrollDepth } = require('../../popup/settings/fieldValidation');
-
         it('should return true for valid scroll depth', () => {
             const input = createMockInput('50');
             const result = validateMinScrollDepth(input);
@@ -161,8 +162,6 @@ describe('popup/settings/fieldValidation', () => {
     });
 
     describe('validateAllFields', () => {
-        const { validateAllFields } = require('../../popup/settings/fieldValidation');
-
         it('should return true when all fields are valid', () => {
             const protocolInput = createMockInput('http');
             const portInput = createMockInput('27123');

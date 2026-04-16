@@ -4,13 +4,13 @@
  * カバレッジ向上: lines 1087-1249 をカバー
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // chrome.storage.local のモック
 const mockStorage: Map<string, unknown> = new Map();
 
 const mockChromeStorageLocal = {
-  get: jest.fn((keys: string | string[] | null) => {
+  get: vi.fn((keys: string | string[] | null) => {
     const result: Record<string, unknown> = {};
     if (keys === null) {
       for (const [key, value] of mockStorage) {
@@ -29,13 +29,13 @@ const mockChromeStorageLocal = {
     }
     return Promise.resolve(result);
   }),
-  set: jest.fn((items: Record<string, unknown>) => {
+  set: vi.fn((items: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(items)) {
       mockStorage.set(key, value);
     }
     return Promise.resolve();
   }),
-  getBytesInUse: jest.fn(() => Promise.resolve(0)),
+  getBytesInUse: vi.fn(() => Promise.resolve(0)),
 };
 
 (global as any).chrome = {
@@ -43,8 +43,8 @@ const mockChromeStorageLocal = {
 } as any;
 
 // optimisticLock をモック（実際の storage 関数のロジックを実行させる）
-jest.mock('../optimisticLock.js', () => ({
-  withOptimisticLock: jest.fn(async (key: string, fn: (current: any) => any) => {
+vi.mock('../optimisticLock.js', () => ({
+  withOptimisticLock: vi.fn(async (key: string, fn: (current: any) => any) => {
     const storageKey = key === 'savedUrlsWithTimestamps' ? 'savedUrlsWithTimestamps' : 'savedUrls';
     const current = mockStorage.get(storageKey) || (key === 'savedUrlsWithTimestamps' ? [] : []);
     const result = fn(current);
@@ -54,8 +54,8 @@ jest.mock('../optimisticLock.js', () => ({
 }));
 
 // migration モック
-jest.mock('../migration.js', () => ({
-  migrateUblockSettings: jest.fn(() => Promise.resolve(false)),
+vi.mock('../migration.js', () => ({
+  migrateUblockSettings: vi.fn(() => Promise.resolve(false)),
 }));
 
 import {
@@ -74,7 +74,7 @@ import {
 describe('storage.ts URL管理関数', () => {
   beforeEach(() => {
     mockStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getSavedUrls', () => {

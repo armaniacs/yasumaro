@@ -1,9 +1,9 @@
-import { describe, test, expect, jest, beforeEach } from '@jest/globals';
+import { describe, test, expect, jest, beforeEach } from 'vitest';
 import { HeaderDetector } from '../headerDetector.js';
 import { RecordingLogic } from '../recordingLogic.js';
 
-jest.mock('../../utils/privacyChecker.js', () => ({
-  checkPrivacy: jest.fn((headers: any[]) => {
+vi.mock('../../utils/privacyChecker.js', () => ({
+  checkPrivacy: vi.fn((headers: any[]) => {
     const hasPrivate = headers?.some((h: any) =>
       h.name?.toLowerCase() === 'cache-control' && h.value?.includes('private')
     );
@@ -16,16 +16,16 @@ jest.mock('../../utils/privacyChecker.js', () => ({
   }),
 }));
 
-jest.mock('../../utils/crypto.js', () => ({
-  hashUrl: jest.fn((url: string) => Promise.resolve(url)),
+vi.mock('../../utils/crypto.js', () => ({
+  hashUrl: vi.fn((url: string) => Promise.resolve(url)),
 }));
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logInfo: jest.fn(() => Promise.resolve()),
-  logDebug: jest.fn(() => Promise.resolve()),
-  logError: jest.fn(() => Promise.resolve()),
-  logWarn: jest.fn(() => Promise.resolve()),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logInfo: vi.fn(() => Promise.resolve()),
+  logDebug: vi.fn(() => Promise.resolve()),
+  logError: vi.fn(() => Promise.resolve()),
+  logWarn: vi.fn(() => Promise.resolve()),
   LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
   ErrorCode: {
     UNKNOWN_ERROR: 'UNKNOWN_ERROR',
@@ -163,8 +163,8 @@ describe('HeaderDetector', () => {
 
   describe('cachePrivacyInfo', () => {
     test('tabIdが0以上でプライベート検出時にバッジを設定する', async () => {
-      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
-      chrome.action.setBadgeBackgroundColor = jest.fn(() => Promise.resolve());
+      chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
+      chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
       await HeaderDetector['cachePrivacyInfo']('https://badge.com', {
         isPrivate: true,
@@ -177,7 +177,7 @@ describe('HeaderDetector', () => {
     });
 
     test('tabIdが-1の場合はバッジをスキップする', async () => {
-      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
+      chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
       await HeaderDetector['cachePrivacyInfo']('https://bg.com', {
         isPrivate: true,
@@ -189,7 +189,7 @@ describe('HeaderDetector', () => {
     });
 
     test('非プライベートではバッジを設定しない', async () => {
-      chrome.action.setBadgeText = jest.fn(() => Promise.resolve());
+      chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
       await HeaderDetector['cachePrivacyInfo']('https://pub.com', {
         isPrivate: false,
@@ -200,8 +200,8 @@ describe('HeaderDetector', () => {
     });
 
     test('バッジ設定エラーをログに記録する', async () => {
-      chrome.action.setBadgeText = jest.fn(() => Promise.reject(new Error('Badge error')));
-      chrome.action.setBadgeBackgroundColor = jest.fn(() => Promise.resolve());
+      chrome.action.setBadgeText = vi.fn(() => Promise.reject(new Error('Badge error')));
+      chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
       await HeaderDetector['cachePrivacyInfo']('https://err.com', {
         isPrivate: true,
@@ -236,10 +236,10 @@ describe('HeaderDetector', () => {
     test('リスナー登録に失敗した場合はエラーログを出力する', async () => {
       chrome.webRequest = {
         onHeadersReceived: {
-          addListener: jest.fn(() => { throw new Error('Permission denied'); }),
-          removeListener: jest.fn(),
-          hasListener: jest.fn(),
-          hasListeners: jest.fn(),
+          addListener: vi.fn(() => { throw new Error('Permission denied'); }),
+          removeListener: vi.fn(),
+          hasListener: vi.fn(),
+          hasListeners: vi.fn(),
         }
       } as any;
 

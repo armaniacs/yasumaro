@@ -9,20 +9,20 @@
  * - markdown 形式が正しい（タイムスタンプ + リンク + AI要約）
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/localeUtils.js', () => ({
-  getUserLocale: jest.fn().mockReturnValue('en-US'),
+vi.mock('../../../../utils/localeUtils.js', () => ({
+  getUserLocale: vi.fn().mockReturnValue('en-US'),
 }));
-jest.mock('../../../../utils/markdownSanitizer.js', () => ({
-  sanitizeForObsidian: jest.fn((text: string) => text),
+vi.mock('../../../../utils/markdownSanitizer.js', () => ({
+  sanitizeForObsidian: vi.fn((text: string) => text),
 }));
 
 import { formatMarkdownStep } from '../formatMarkdownStep.js';
 import { sanitizeForObsidian } from '../../../../utils/markdownSanitizer.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockSanitize = sanitizeForObsidian as jest.MockedFunction<typeof sanitizeForObsidian>;
+const mockSanitize = sanitizeForObsidian as vi.MockedFunction<typeof sanitizeForObsidian>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -43,7 +43,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockSanitize.mockImplementation((text: string) => text);
 });
 

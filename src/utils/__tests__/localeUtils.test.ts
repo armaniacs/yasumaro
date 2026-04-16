@@ -13,11 +13,11 @@ import {
 } from '../localeUtils.js';
 
 // Chrome APIのモック
-const mockGetUILanguage = jest.fn();
+const mockGetUILanguage = vi.fn();
 
 describe('localeUtils', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // テスト環境ではchrome APIをモック
     global.chrome = {
       i18n: {
@@ -58,7 +58,7 @@ describe('localeUtils', () => {
     });
 
     it('例外がスローされた場合はフォールバックを返す', () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetUILanguage.mockImplementation(() => {
         throw new Error('API error');

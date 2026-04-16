@@ -13,7 +13,7 @@ const mockStorage: Record<string, any> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn(async (keys: string | string[] | null) => {
+            get: vi.fn(async (keys: string | string[] | null) => {
                 if (keys === null) return { ...mockStorage };
                 if (typeof keys === 'string') return { [keys]: mockStorage[keys] };
                 const result: Record<string, any> = {};
@@ -22,10 +22,10 @@ const mockChrome = {
                 }
                 return result;
             }),
-            set: jest.fn(async (data: Record<string, any>) => {
+            set: vi.fn(async (data: Record<string, any>) => {
                 Object.assign(mockStorage, data);
             }),
-            remove: jest.fn(async (keys: string[]) => {
+            remove: vi.fn(async (keys: string[]) => {
                 for (const key of keys) delete mockStorage[key];
             })
         }
@@ -34,22 +34,22 @@ const mockChrome = {
 (global as any).chrome = mockChrome;
 
 // crypto モック
-jest.mock('../crypto.js', () => ({
-    encryptApiKey: jest.fn(async (value: string, _key: CryptoKey) => ({ ciphertext: 'enc_' + value, iv: 'iv' })),
-    decryptApiKey: jest.fn(async (data: any, _key: CryptoKey) => {
+vi.mock('../crypto.js', () => ({
+    encryptApiKey: vi.fn(async (value: string, _key: CryptoKey) => ({ ciphertext: 'enc_' + value, iv: 'iv' })),
+    decryptApiKey: vi.fn(async (data: any, _key: CryptoKey) => {
         if (typeof data === 'object' && data.ciphertext) {
             return data.ciphertext.replace('enc_', '');
         }
         return data;
     }),
-    isEncrypted: jest.fn((value: any) => {
+    isEncrypted: vi.fn((value: any) => {
         return value && typeof value === 'object' && 'ciphertext' in value;
     })
 }));
 
 // optimisticLock モック
-jest.mock('../optimisticLock.js', () => ({
-    withOptimisticLock: jest.fn(async (_key: string, fn: (current: any) => any) => {
+vi.mock('../optimisticLock.js', () => ({
+    withOptimisticLock: vi.fn(async (_key: string, fn: (current: any) => any) => {
         const result = fn(mockStorage['settings'] || {});
         Object.assign(mockStorage, { settings: result });
         return result;
@@ -57,7 +57,7 @@ jest.mock('../optimisticLock.js', () => ({
 }));
 
 // storage モック
-jest.mock('../storage.js', () => ({
+vi.mock('../storage.js', () => ({
     DEFAULT_SETTINGS: {
         ai_provider: 'gemini',
         obsidian_protocol: 'http',
@@ -79,12 +79,18 @@ import {
     DEFAULT_SETTINGS
 } from '../storageSettings.js';
 
+import * as cryptoModule from '../crypto.js';
+import * as optimisticLockModule from '../optimisticLock.js';
+
+const { encryptApiKey, decryptApiKey } = vi.mocked(cryptoModule);
+const { withOptimisticLock } = vi.mocked(optimisticLockModule);
+
 describe('storageSettings', () => {
 
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         clearSettingsCache();
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('定数', () => {
@@ -130,8 +136,8 @@ describe('storageSettings', () => {
     });
 
     describe('getSettings', () => {
-        const mockGetEncryptionKey = jest.fn(async () => 'mock_key' as unknown as CryptoKey);
-        const mockRunMigration = jest.fn(async () => false);
+        const mockGetEncryptionKey = vi.fn(async () => 'mock_key' as unknown as CryptoKey);
+        const mockRunMigration = vi.fn(async () => false);
 
         test('キャッシュが有効な場合はキャッシュを返す', async () => {
             mockStorage['settings'] = { ai_provider: 'gemini' };
@@ -164,7 +170,6 @@ describe('storageSettings', () => {
         });
 
         test('復号失敗時は空文字にフォールバックする', async () => {
-            const { decryptApiKey } = require('../crypto.js');
             decryptApiKey.mockRejectedValueOnce(new Error('Decryption failed'));
 
             const encValue = { ciphertext: 'bad_enc', iv: 'iv' };
@@ -203,14 +208,13 @@ describe('storageSettings', () => {
     });
 
     describe('saveSettings', () => {
-        const mockGetEncryptionKey = jest.fn(async () => 'mock_key' as unknown as CryptoKey);
+        const mockGetEncryptionKey = vi.fn(async () => 'mock_key' as unknown as CryptoKey);
 
         test('APIキーを暗号化して保存する', async () => {
             const settings = { ai_provider: 'gemini', obsidian_api_key: 'my_secret_key' };
 
             await saveSettings(settings, mockGetEncryptionKey);
 
-            const { encryptApiKey } = require('../crypto.js');
             expect(encryptApiKey).toHaveBeenCalledWith('my_secret_key', 'mock_key');
         });
 
@@ -219,7 +223,6 @@ describe('storageSettings', () => {
 
             await saveSettings(settings, mockGetEncryptionKey);
 
-            const { encryptApiKey } = require('../crypto.js');
             expect(encryptApiKey).not.toHaveBeenCalled();
         });
 
@@ -229,7 +232,6 @@ describe('storageSettings', () => {
             await saveSettings(settings, mockGetEncryptionKey);
 
             // withOptimisticLock が呼ばれることを確認
-            const { withOptimisticLock } = require('../optimisticLock.js');
             expect(withOptimisticLock).toHaveBeenCalled();
         });
 
@@ -239,14 +241,13 @@ describe('storageSettings', () => {
             await saveSettings(settings, mockGetEncryptionKey);
 
             // saveSettings 実行後、withOptimisticLock が呼ばれることを確認
-            const { withOptimisticLock } = require('../optimisticLock.js');
             expect(withOptimisticLock).toHaveBeenCalled();
         });
 
         test('allowedUrls 更新オプションが有効な場合', async () => {
             const settings = { ai_provider: 'gemini' };
-            const mockBuildUrls = jest.fn(() => new Set(['https://example.com']));
-            const mockComputeHash = jest.fn(() => 'hash123');
+            const mockBuildUrls = vi.fn(() => new Set(['https://example.com']));
+            const mockComputeHash = vi.fn(() => 'hash123');
 
             mockStorage['settings'] = { ai_provider: 'gemini' };
 
@@ -270,8 +271,8 @@ describe('storageSettings', () => {
             mockStorage['settings'] = { ai_provider: 'gemini' };
             mockStorage[SETTINGS_MIGRATED_KEY] = true;
 
-            const mockGetKey = jest.fn(async () => 'key' as unknown as CryptoKey);
-            const mockMigration = jest.fn(async () => false);
+            const mockGetKey = vi.fn(async () => 'key' as unknown as CryptoKey);
+            const mockMigration = vi.fn(async () => false);
 
             // 最初の取得
             await getSettings(mockGetKey, mockMigration, ['ai_provider'], 'obsidian_api_key');

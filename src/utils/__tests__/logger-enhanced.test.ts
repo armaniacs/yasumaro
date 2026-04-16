@@ -3,13 +3,13 @@
  * Additional tests for logger.ts uncovered paths
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 describe('Logger - Enhanced Coverage', () => {
     let logger: any;
 
     beforeEach(async () => {
-        jest.resetModules();
+        vi.resetModules();
         process.env.NODE_ENV = 'development';
         logger = await import('../logger.js');
         await logger.clearLogs();
@@ -288,7 +288,7 @@ describe('Logger - Enhanced Coverage', () => {
         test('エラー発生時もクラッシュしない', async () => {
             // Temporarily break chrome.storage to trigger error path
             const originalSet = chrome.storage.local.set;
-            (chrome.storage.local as any).set = jest.fn(() => Promise.reject(new Error('Storage error')));
+            (chrome.storage.local as any).set = vi.fn(() => Promise.reject(new Error('Storage error')));
 
             // Should not throw
             await logger.addLog('INFO', 'Error test', {});

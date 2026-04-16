@@ -7,23 +7,23 @@
  * - ドメイン拒否 + force=true: isDomainAllowed=false で通過
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-jest.mock('../../../../utils/domainUtils.js', () => ({
-  isDomainAllowed: jest.fn(),
+vi.mock('../../../../utils/domainUtils.js', () => ({
+  isDomainAllowed: vi.fn(),
 }));
 
 import { checkDomainFilterStep } from '../checkDomainFilterStep.js';
 import * as domainUtils from '../../../../utils/domainUtils.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockIsDomainAllowed = domainUtils.isDomainAllowed as jest.MockedFunction<typeof domainUtils.isDomainAllowed>;
+const mockIsDomainAllowed = domainUtils.isDomainAllowed as vi.MockedFunction<typeof domainUtils.isDomainAllowed>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -40,7 +40,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('checkDomainFilterStep', () => {

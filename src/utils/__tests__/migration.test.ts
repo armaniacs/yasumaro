@@ -4,14 +4,14 @@
  * 【テスト対象】: src/utils/migration.ts
  */
 
-import { test, expect, jest, beforeEach } from '@jest/globals';
+import { test, expect, jest, beforeEach } from 'vitest';
 import { migrateToLightweightFormat, migrateUblockSettings, computeChecksum } from '../migration.js';
 
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetAllMocks();
+    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('migrateToLightweightFormat', () => {
@@ -170,9 +170,9 @@ describe('migration', () => {
       global.chrome = {
         storage: {
           local: {
-            get: jest.fn(),
-            set: jest.fn(),
-            remove: jest.fn()
+            get: vi.fn(),
+            set: vi.fn(),
+            remove: vi.fn()
           }
         },
         runtime: {
@@ -202,12 +202,12 @@ describe('migration', () => {
         }
       };
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: oldUblockRules
       });
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.storage.local.set.mockResolvedValue(undefined);
 
@@ -236,7 +236,7 @@ describe('migration', () => {
         metadata: { importedAt: 1000000, ruleCount: 2 }
       };
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: newUblockRules
@@ -256,7 +256,7 @@ describe('migration', () => {
 
       const { StorageKeys } = await import('../storage');
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.storage.local.get.mockResolvedValue({
         [StorageKeys.UBLOCK_RULES]: undefined
@@ -401,7 +401,7 @@ describe('migrateUblockSettings error handling', () => {
     });
     (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
 
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(migrateUblockSettings()).rejects.toThrow('Storage write failed');
 
@@ -439,7 +439,7 @@ describe('migrateUblockSettings error handling', () => {
     (global as any).chrome.storage.local.set.mockRejectedValue(new Error('Storage write failed'));
     (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
 
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(migrateUblockSettings()).rejects.toThrow(
       'Migration failed and rollback also failed'
@@ -455,13 +455,19 @@ describe('initializeTrancoVersion', () => {
     // 【テスト内容】: initializeTrancoVersionがgetTrustDb().initialize()を呼び出す
     // 【期待される動作】: 警告ログ出力後、TrustDbのinitializeメソッドが実行される
 
-    const mockInitialize = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    // Use vi.hoisted to define mock that will be hoisted along with vi.mock
+    const { mockInitialize } = vi.hoisted(() => {
+      return {
+        mockInitialize: vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+      };
+    });
 
-    jest.mock('../trustDb/trustDb.js', () => ({
+    // Mock the trustDb module - vi.hoisted ensures mockInitialize is available
+    vi.mock('../trustDb/trustDb.js', () => ({
       getTrustDb: () => ({ initialize: mockInitialize })
     }), { virtual: true });
 
-    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const { initializeTrancoVersion } = await import('../migration');
     await initializeTrancoVersion();

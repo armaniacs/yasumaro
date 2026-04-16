@@ -8,7 +8,7 @@
  * Validates ARIA attributes for WCAG 2.1 Level AA compliance
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 describe('Models Dev Dialog - Accessibility (ARIA Attributes)', () => {
   let htmlContent: string;

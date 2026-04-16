@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+
 import { deduplicateContent } from '../contentDeduplicator.js';
 
 describe('deduplicateContent', () => {

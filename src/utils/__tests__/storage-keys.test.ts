@@ -2,11 +2,11 @@ import { getSettings, StorageKeys, saveSettings, clearSettingsCache } from '../s
 import * as migration from '../migration.js';
 
 // Mock migration module
-jest.mock('../migration', () => ({
-  migrateUblockSettings: jest.fn(() => Promise.resolve(false))
+vi.mock('../migration', () => ({
+  migrateUblockSettings: vi.fn(() => Promise.resolve(false))
 }));
 
-const mockedMigration = migration as jest.Mocked<typeof migration>;
+const mockedMigration = migration as vi.Mocked<typeof migration>;
 
 describe('getSettings key refinement', () => {
   beforeEach(() => {
