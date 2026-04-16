@@ -6,33 +6,33 @@ import * as privacy from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
-jest.mock('../../utils/storage.js');
-jest.mock('../../utils/domainUtils.js');
-jest.mock('../privacyPipeline.js');
-jest.mock('../../utils/pendingStorage.js');
+vi.mock('../../utils/storage.js');
+vi.mock('../../utils/domainUtils.js');
+vi.mock('../privacyPipeline.js');
+vi.mock('../../utils/pendingStorage.js');
 
 describe('RecordingLogic', () => {
   const mockObsidian = {
-    appendToDailyNote: jest.fn()
+    appendToDailyNote: vi.fn()
   };
 
   const mockAiClient = {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    getLocalAvailability: jest.fn().mockResolvedValue('readily'),
-    // @ts-expect-error - jest.fn() type narrowing issue
+    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    summarizeLocally: jest.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    // @ts-expect-error - jest.fn() type narrowing issue
+    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    generateSummary: jest.fn().mockResolvedValue('Cloud summary')
+    generateSummary: vi.fn().mockResolvedValue('Cloud summary')
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Chrome notifications APIが存在する場合のみモック
     if (!chrome.notifications) {
-      chrome.notifications = { create: jest.fn() };
+      chrome.notifications = { create: vi.fn() };
     }
 
     // Problem #7: URLキャッシュを初期化
@@ -47,7 +47,7 @@ describe('RecordingLogic', () => {
     };
 
     // storageのデフォルトモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     storage.getSettings.mockResolvedValue({
       PRIVACY_MODE: 'full_pipeline',
@@ -55,10 +55,10 @@ describe('RecordingLogic', () => {
       DOMAIN_WHITELIST: [],
       AUTO_SAVE_PRIVACY_BEHAVIOR: 'save'
     });
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
     storage.setSavedUrlsWithTimestamps.mockResolvedValue();
     storage.StorageKeys = {
@@ -68,23 +68,23 @@ describe('RecordingLogic', () => {
       AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR'
     };
     // domainUtilsのデフォルトモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     domainUtils.isDomainAllowed.mockResolvedValue(true);
     // PrivacyPipelineのデフォルトモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-    privacy.PrivacyPipeline.mockImplementation(() => ({
-    // @ts-expect-error - jest.fn() type narrowing issue
+    privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-    }));
+      this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+    });
   });
 
   describe('record', () => {
     it('should skip recording when domain is not allowed', async () => {
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
@@ -100,7 +100,7 @@ describe('RecordingLogic', () => {
 
     it('should skip recording when URL is already saved', async () => {
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://test.com', Date.now()]]));
 
@@ -121,13 +121,13 @@ describe('RecordingLogic', () => {
       const expectedLimit = 64 * 1024;
 
       const mockPipeline = {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
-        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+        process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
-      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+      privacy.PrivacyPipeline.mockImplementation(function() { return mockPipeline; });
 
       await logic.record({
         url: 'https://large-page.com',
@@ -148,11 +148,11 @@ describe('RecordingLogic', () => {
       const smallContent = 'a'.repeat(10 * 1024); // 10KB
 
       const mockPipeline = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+        // @ts-expect-error - vi.fn() type narrowing issue
+        process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function() { return mockPipeline; });
 
       await logic.record({
         url: 'https://small-page.com',
@@ -170,11 +170,11 @@ describe('RecordingLogic', () => {
       const exact64KB = 'a'.repeat(64 * 1024); // 正確に64KB
 
       const mockPipeline = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+        // @ts-expect-error - vi.fn() type narrowing issue
+        process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function() { return mockPipeline; });
 
       await logic.record({
         url: 'https://exact-boundary.com',
@@ -192,11 +192,11 @@ describe('RecordingLogic', () => {
       const emptyContent = '';
 
       const mockPipeline = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
+        // @ts-expect-error - vi.fn() type narrowing issue
+        process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => mockPipeline);
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function() { return mockPipeline; });
 
       await logic.record({
         url: 'https://empty.com',
@@ -286,9 +286,9 @@ describe('RecordingLogic', () => {
     beforeEach(() => {
       RecordingLogic.invalidatePrivacyCache();
       // 既存のmock setup
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: jest.fn() };
+        chrome.notifications = { create: vi.fn() };
       }
 
       RecordingLogic.cacheState = {
@@ -301,24 +301,24 @@ describe('RecordingLogic', () => {
         privacyCacheTimestamp: null
       };
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => ({
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-      }));
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        // @ts-expect-error - vi.fn() type narrowing issue
+        this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+      });
     });
 
     test('プライベートページの場合 PRIVATE_PAGE_DETECTED エラーを返す', async () => {
@@ -332,7 +332,7 @@ describe('RecordingLogic', () => {
       // キャッシュに追加
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -357,10 +357,10 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -380,10 +380,10 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map();
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -405,29 +405,29 @@ describe('RecordingLogic', () => {
       RecordingLogic.invalidateUrlCache();
 
       // 既存のmock setup
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: jest.fn() };
+        chrome.notifications = { create: vi.fn() };
       }
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => ({
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-      }));
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        // @ts-expect-error - vi.fn() type narrowing issue
+        this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+      });
     });
 
     test('プライベートページ → 警告 → キャンセル → 保存されない', async () => {
@@ -442,7 +442,7 @@ describe('RecordingLogic', () => {
         }]
       ]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -469,10 +469,10 @@ describe('RecordingLogic', () => {
         }]
       ]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -498,10 +498,10 @@ describe('RecordingLogic', () => {
         }]
       ]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -520,10 +520,10 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map();
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -546,7 +546,7 @@ describe('RecordingLogic', () => {
 
       // Chrome notifications APIが存在する場合のみモック
       if (!chrome.notifications) {
-        chrome.notifications = { create: jest.fn() };
+        chrome.notifications = { create: vi.fn() };
       }
 
       // Reset cache state
@@ -560,27 +560,27 @@ describe('RecordingLogic', () => {
         privacyCacheTimestamp: null
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => ({
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-      }));
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        // @ts-expect-error - vi.fn() type narrowing issue
+        this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+      });
+      // @ts-expect-error - vi.fn() type narrowing issue
       pendingStorage.addPendingPage.mockResolvedValue(undefined);
     });
 
@@ -595,7 +595,7 @@ describe('RecordingLogic', () => {
       // キャッシュに追加
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -644,7 +644,7 @@ describe('RecordingLogic', () => {
       // キャッシュに追加
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -683,10 +683,10 @@ describe('RecordingLogic', () => {
       // キャッシュに追加
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn().mockResolvedValue(undefined) } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - jest.fn() type narrowing issue
-        generateSummary: jest.fn().mockResolvedValue('summary')
+        // @ts-expect-error - vi.fn() type narrowing issue
+        generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -715,7 +715,7 @@ describe('RecordingLogic', () => {
       RecordingLogic.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: jest.fn() };
+        chrome.notifications = { create: vi.fn() };
       }
 
       RecordingLogic.cacheState = {
@@ -728,27 +728,27 @@ describe('RecordingLogic', () => {
         privacyCacheTimestamp: null
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => ({
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-      }));
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        // @ts-expect-error - vi.fn() type narrowing issue
+        this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+      });
+      // @ts-expect-error - vi.fn() type narrowing issue
       pendingStorage.addPendingPage.mockResolvedValue(undefined);
     });
 
@@ -768,7 +768,7 @@ describe('RecordingLogic', () => {
       // Setup privacy cache to return private page
       RecordingLogic.cacheState.privacyCache = new Map([[url, privateInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const recordingLogic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -803,7 +803,7 @@ describe('RecordingLogic', () => {
       RecordingLogic.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: jest.fn() };
+        chrome.notifications = { create: vi.fn() };
       }
 
       RecordingLogic.cacheState = {
@@ -816,27 +816,27 @@ describe('RecordingLogic', () => {
         privacyCacheTimestamp: null
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
-      // @ts-expect-error - jest.fn() type narrowing issue
-      privacy.PrivacyPipeline.mockImplementation(() => ({
-        // @ts-expect-error - jest.fn() type narrowing issue
-        process: jest.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 })
-      }));
-      // @ts-expect-error - jest.fn() type narrowing issue
+      // @ts-expect-error - vi.fn() type narrowing issue
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        // @ts-expect-error - vi.fn() type narrowing issue
+        this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
+      });
+      // @ts-expect-error - vi.fn() type narrowing issue
       pendingStorage.addPendingPage.mockResolvedValue(undefined);
     });
 
@@ -850,7 +850,7 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -885,7 +885,7 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -920,7 +920,7 @@ describe('RecordingLogic', () => {
 
       RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
       const logic = new RecordingLogic(mockObsidian, mockAiClient);
 
@@ -956,7 +956,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       }]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = new RecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
@@ -985,7 +985,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       }]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = new RecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
@@ -1014,7 +1014,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       }]]);
 
-      const mockObsidian = { appendToDailyNote: jest.fn() } as any;
+      const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = new RecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension

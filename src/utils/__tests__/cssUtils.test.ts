@@ -3,6 +3,7 @@
  * cssUtils.ts の単体テスト
  */
 
+import { vi } from 'vitest';
 import { escapeCssSelector } from '../cssUtils.js';
 
 describe('cssUtils', () => {
@@ -28,51 +29,52 @@ describe('cssUtils', () => {
             expect(result).not.toBe('test.class#id');
         });
 
-        test('CSS が undefined の場合フォールバックを使用する', () => {
+        test('CSS が undefined の場合フォールバックを使用する', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = undefined;
 
+            vi.resetModules();
+
             try {
-                let result = '';
-                jest.isolateModules(() => {
-                    const { escapeCssSelector: isolatedEscape } = require('../cssUtils.js');
-                    result = isolatedEscape('hello world');
-                });
+                // Re-import to get the fallback version
+                const mod = await import('../cssUtils.js');
+                const result = mod.escapeCssSelector('hello world');
                 expect(result).toBe('hello\\ world');
             } finally {
                 (global as any).CSS = originalCSS;
+                vi.resetModules();
             }
         });
 
-        test('CSS.escape が undefined の場合フォールバックを使用する', () => {
+        test('CSS.escape が undefined の場合フォールバックを使用する', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = {};
 
+            vi.resetModules();
+
             try {
-                let result = '';
-                jest.isolateModules(() => {
-                    const { escapeCssSelector: isolatedEscape } = require('../cssUtils.js');
-                    result = isolatedEscape('test.value');
-                });
+                const mod = await import('../cssUtils.js');
+                const result = mod.escapeCssSelector('test.value');
                 expect(result).toBe('test\\.value');
             } finally {
                 (global as any).CSS = originalCSS;
+                vi.resetModules();
             }
         });
 
-        test('フォールバックで日本語文字をエスケープする', () => {
+        test('フォールバックで日本語文字をエスケープする', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = undefined;
 
+            vi.resetModules();
+
             try {
-                let result = '';
-                jest.isolateModules(() => {
-                    const { escapeCssSelector: isolatedEscape } = require('../cssUtils.js');
-                    result = isolatedEscape('テスト');
-                });
+                const mod = await import('../cssUtils.js');
+                const result = mod.escapeCssSelector('テスト');
                 expect(result).toContain('\\');
             } finally {
                 (global as any).CSS = originalCSS;
+                vi.resetModules();
             }
         });
 

@@ -7,8 +7,8 @@
 
 // chrome API モック
 const mockChrome = {
-    storage: { local: { get: jest.fn(), set: jest.fn() } },
-    i18n: { getMessage: jest.fn((key: string) => key) }
+    storage: { local: { get: vi.fn(), set: vi.fn() } },
+    i18n: { getMessage: vi.fn((key: string) => key) }
 };
 (globalThis as any).chrome = mockChrome;
 
@@ -45,13 +45,13 @@ describe('settingsUiHelper', () => {
     });
 
     afterEach(() => {
-        jest.clearAllTimers();
-        jest.useRealTimers();
+        vi.clearAllTimers();
+        vi.useRealTimers();
     });
 
     describe('showStatus', () => {
         test('success メッセージを表示する', () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             showStatus('status-message', 'Saved!', 'success');
 
             const el = document.getElementById('status-message');
@@ -60,7 +60,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('error メッセージを表示する', () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             showStatus('status-message', 'Error!', 'error');
 
             const el = document.getElementById('status-message');
@@ -69,10 +69,10 @@ describe('settingsUiHelper', () => {
         });
 
         test('success メッセージは3秒後にクリアされる', () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             showStatus('status-message', 'Saved!', 'success');
 
-            jest.advanceTimersByTime(3000);
+            vi.advanceTimersByTime(3000);
 
             const el = document.getElementById('status-message');
             expect(el?.textContent).toBe('');
@@ -80,13 +80,13 @@ describe('settingsUiHelper', () => {
         });
 
         test('error メッセージは5秒後にクリアされる', () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             showStatus('status-message', 'Error!', 'error');
 
-            jest.advanceTimersByTime(4999);
+            vi.advanceTimersByTime(4999);
             expect(document.getElementById('status-message')?.textContent).toBe('Error!');
 
-            jest.advanceTimersByTime(1);
+            vi.advanceTimersByTime(1);
             expect(document.getElementById('status-message')?.textContent).toBe('');
             expect(document.getElementById('status-message')?.className).toBe('');
         });

@@ -1,20 +1,18 @@
 /**
- * @jest-environment jsdom
- */
-
-/**
  * cspValidator.test.ts
  * Unit tests for CSP Validator (P1)
  * Conditional CSP implementation with URL validation
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
+import * as cspValidatorModule from '../cspValidator.js';
+
+const { CSPValidator } = cspValidatorModule;
 
 describe('CSPValidator - P1 - Module Loading', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset CSPValidator state before each test
-    const { CSPValidator } = require('../cspValidator.js');
     CSPValidator.reset();
   });
 
@@ -40,8 +38,7 @@ describe('CSPValidator - P1 - Module Loading', () => {
 
 describe('CSPValidator - P1 - Default Domains', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
@@ -92,8 +89,7 @@ describe('CSPValidator - P1 - Default Domains', () => {
 
 describe('CSPValidator - P1 - User Selected Providers', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
@@ -144,8 +140,7 @@ describe('CSPValidator - P1 - User Selected Providers', () => {
 
 describe('CSPValidator - P1 - Non-AI Domains', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
@@ -175,14 +170,11 @@ describe('CSPValidator - P1 - Non-AI Domains', () => {
 
 describe('CSPValidator - P1 - isAProviderUrl', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
   it('should identify AI provider URLs', async () => {
-    const { CSPValidator } = await import('../cspValidator.js');
-
     // デフォルトプロバイダー
     expect(CSPValidator.isAProviderUrl('https://api.openai.com/v1/models')).toBe(true);
     expect(CSPValidator.isAProviderUrl('https://api.anthropic.com/v1/messages')).toBe(true);
@@ -193,8 +185,6 @@ describe('CSPValidator - P1 - isAProviderUrl', () => {
   });
 
   it('should not identify non-AI URLs as provider URLs', async () => {
-    const { CSPValidator } = await import('../cspValidator.js');
-
     expect(CSPValidator.isAProviderUrl('https://raw.githubusercontent.com/file.txt')).toBe(false);
     expect(CSPValidator.isAProviderUrl('https://tranco-list.eu/list')).toBe(false);
     expect(CSPValidator.isAProviderUrl('https://evil-api.com/v1')).toBe(false);
@@ -203,14 +193,11 @@ describe('CSPValidator - P1 - isAProviderUrl', () => {
 
 describe('CSPValidator - P1 - Helper Functions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
   it('should reflect latest settings on re-initialization', async () => {
-    const { CSPValidator } = await import('../cspValidator.js');
-
     const settings1 = {
       conditional_csp_providers: ['huggingface']
     };
@@ -255,16 +242,15 @@ describe('CSPValidator - P1 - Helper Functions', () => {
 
 describe('CSPValidator - P1 - safeFetch', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
 
   it('should call fetch for allowed URLs', async () => {
-    const { safeFetch, CSPValidator } = await import('../cspValidator.js');
+    const { safeFetch } = cspValidatorModule;
 
     // モックfetch
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({})
     });
@@ -278,7 +264,7 @@ describe('CSPValidator - P1 - safeFetch', () => {
   });
 
   it('should throw error for blocked URLs', async () => {
-    const { safeFetch, CSPValidator } = await import('../cspValidator.js');
+    const { safeFetch } = cspValidatorModule;
 
     const settings = { conditional_csp_providers: [] };
     CSPValidator.initializeFromSettings(settings);
@@ -289,7 +275,7 @@ describe('CSPValidator - P1 - safeFetch', () => {
   });
 
   it('should throw error with CSP_BLOCKED code', async () => {
-    const { safeFetch, CSPValidator } = await import('../cspValidator.js');
+    const { safeFetch } = cspValidatorModule;
 
     const settings = { conditional_csp_providers: [] };
     CSPValidator.initializeFromSettings(settings);
@@ -305,11 +291,9 @@ describe('CSPValidator - P1 - safeFetch', () => {
 
 describe('CSPValidator - P1 - getCspErrorMessage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { CSPValidator } = require('../cspValidator.js');
+    vi.clearAllMocks();
     CSPValidator.reset();
   });
-
   it('should return error message for blocked provider URLs', async () => {
     const { getCspErrorMessage, CSPValidator } = await import('../cspValidator.js');
 

@@ -8,7 +8,7 @@
  * Target: Reduce false positive rate from 80% to <20%
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock chrome
 global.chrome = {
@@ -17,10 +17,12 @@ global.chrome = {
 
 describe('PromptSanitizer - Refined Pattern False Positive Test', () => {
   let sanitize: any;
+  let DangerLevel: any;
 
   beforeAll(async () => {
     const module = await import('../promptSanitizer-refined.js');
     sanitize = module.sanitizePromptContent;
+    DangerLevel = module.DangerLevel;
   });
 
   describe('False Positive Reduction Tests', () => {
@@ -232,11 +234,10 @@ describe('PromptSanitizer - Refined Pattern False Positive Test', () => {
 
   describe('DangerLevel Enum', () => {
     it('should export all danger levels', () => {
-      const module = require('../promptSanitizer-refined.js');
-      expect(module.DangerLevel.SAFE).toBe('safe');
-      expect(module.DangerLevel.LOW).toBe('low');
-      expect(module.DangerLevel.MEDIUM).toBe('medium');
-      expect(module.DangerLevel.HIGH).toBe('high');
+      expect(DangerLevel.SAFE).toBe('safe');
+      expect(DangerLevel.LOW).toBe('low');
+      expect(DangerLevel.MEDIUM).toBe('medium');
+      expect(DangerLevel.HIGH).toBe('high');
     });
   });
 

@@ -8,7 +8,7 @@
  * TDD Green phase: Verifies immediate blocking without re-evaluation
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock all dependencies before import
 global.chrome = {

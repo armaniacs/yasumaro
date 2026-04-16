@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.3] - 2026-04-17
+
+### Changed
+
+- **テストフレームワークをJestからVitestへ移行**: テストランタイムの大幅な高速化（並列実行対応）と TypeScript ネイティブサポートを実現するため、Jest から Vitest への全面移行を実行
+  - 95+ テストファイルの Jest API を Vitest に変換（`jest.fn()` → `vi.fn()` 等）
+  - Vitest 4.x 対応設定に更新（`poolOptions` → `threads`）
+  - Chrome拡張機能用のモックセットアップ（`vitest.setup.ts`）を再実装
+  - TypeScript設定（`tsconfig.json`）の型定義を `jest` から `vitest` に更新
+  - 依存関係から Jest 関連パッケージを削除（`@jest/globals`, `jest`, `ts-jest` 等）
+
+### Test Results
+
+- テストファイル: 168件パス（1件スキップ）
+- テストケース: 3,486件パス（15件スキップ）
+- TypeScript チェック: パス
+- 検証: パス
+
 ## [5.1.2] - 2026-04-13
 
 ### Fixed

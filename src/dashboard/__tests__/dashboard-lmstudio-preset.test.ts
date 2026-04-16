@@ -7,18 +7,18 @@
  * - openai-compatibleプロバイダーでのLM Studio対応
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, jest } from 'vitest';
 
-jest.mock('../../utils/storage.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     PROVIDER_BASE_URL: 'provider_base_url',
     PROVIDER_API_KEY: 'provider_api_key',
     PROVIDER_MODEL: 'provider_model',
     AI_PROVIDER: 'ai_provider'
   },
-  getSettings: jest.fn().mockResolvedValue({}),
-  saveSettings: jest.fn().mockResolvedValue(undefined),
-  saveSettingsWithAllowedUrls: jest.fn().mockResolvedValue(undefined)
+  getSettings: vi.fn().mockResolvedValue({}),
+  saveSettings: vi.fn().mockResolvedValue(undefined),
+  saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined)
 }));
 
 describe('LM Studio Preset', () => {
@@ -36,7 +36,7 @@ describe('LM Studio Preset', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('LM Studio preset button should set correct Base URL', () => {
@@ -136,7 +136,7 @@ describe('Ollama Preset', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('Ollama preset button should set correct Base URL', () => {

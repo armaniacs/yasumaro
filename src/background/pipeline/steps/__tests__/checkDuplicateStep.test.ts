@@ -9,16 +9,16 @@
  * - 正常通過ケース
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-jest.mock('../../../../utils/storage.js', () => ({
-  getSavedUrlsWithTimestamps: jest.fn(),
+vi.mock('../../../../utils/storage.js', () => ({
+  getSavedUrlsWithTimestamps: vi.fn(),
   MAX_URL_SET_SIZE: 10000,
   URL_WARNING_THRESHOLD: 8000,
 }));
@@ -28,7 +28,7 @@ import * as storage from '../../../../utils/storage.js';
 import * as logger from '../../../../utils/logger.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockGetSavedUrls = storage.getSavedUrlsWithTimestamps as jest.MockedFunction<typeof storage.getSavedUrlsWithTimestamps>;
+const mockGetSavedUrls = storage.getSavedUrlsWithTimestamps as vi.MockedFunction<typeof storage.getSavedUrlsWithTimestamps>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -45,7 +45,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockGetSavedUrls.mockResolvedValue(new Map());
 });
 

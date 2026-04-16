@@ -7,7 +7,7 @@
  * - 一貫した型定義の検証
  */
 
-import { describe, test, expect } from '@jest/globals';
+
 
 import {
   ServiceWorkerRequest,

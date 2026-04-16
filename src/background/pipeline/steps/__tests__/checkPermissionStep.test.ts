@@ -8,25 +8,25 @@
  * - extractDomain フォールバック（www 除去）
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-jest.mock('../../../../utils/domainUtils.js', () => ({
-  extractDomain: jest.fn(),
+vi.mock('../../../../utils/domainUtils.js', () => ({
+  extractDomain: vi.fn(),
 }));
-jest.mock('../../../../utils/permissionManager.js');
+vi.mock('../../../../utils/permissionManager.js');
 
 import { checkPermissionStep } from '../checkPermissionStep.js';
 import * as domainUtils from '../../../../utils/domainUtils.js';
 import * as permissionManager from '../../../../utils/permissionManager.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockExtractDomain = domainUtils.extractDomain as jest.MockedFunction<typeof domainUtils.extractDomain>;
+const mockExtractDomain = domainUtils.extractDomain as vi.MockedFunction<typeof domainUtils.extractDomain>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -43,8 +43,8 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 function setupMocks({ permitted = true, domain = 'example.com' } = {}) {
-  const mockIsHostPermitted = jest.fn<() => Promise<boolean>>().mockResolvedValue(permitted);
-  const mockRecordDeniedVisit = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const mockIsHostPermitted = vi.fn<() => Promise<boolean>>().mockResolvedValue(permitted);
+  const mockRecordDeniedVisit = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 
   // @ts-expect-error - mock
   permissionManager.getPermissionManager.mockReturnValue({
@@ -58,7 +58,7 @@ function setupMocks({ permitted = true, domain = 'example.com' } = {}) {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('checkPermissionStep', () => {
@@ -113,8 +113,8 @@ describe('checkPermissionStep', () => {
 
   describe('不正 URL', () => {
     it('extractDomain が null かつ new URL でもパースできない場合 INVALID_URL を throw する', async () => {
-      const mockIsHostPermitted = jest.fn<() => Promise<boolean>>().mockResolvedValue(false);
-      const mockRecordDeniedVisit = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+      const mockIsHostPermitted = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
+      const mockRecordDeniedVisit = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 
       // @ts-expect-error - mock
       permissionManager.getPermissionManager.mockReturnValue({
@@ -135,12 +135,12 @@ describe('checkPermissionStep', () => {
 
   describe('extractDomain フォールバック', () => {
     it('extractDomain が null を返した場合 new URL でフォールバックする', async () => {
-      const mockIsHostPermitted = jest.fn<() => Promise<boolean>>().mockResolvedValue(true);
+      const mockIsHostPermitted = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
 
       // @ts-expect-error - mock
       permissionManager.getPermissionManager.mockReturnValue({
         isHostPermitted: mockIsHostPermitted,
-        recordDeniedVisit: jest.fn(),
+        recordDeniedVisit: vi.fn(),
       });
 
       mockExtractDomain.mockReturnValue(null);

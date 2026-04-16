@@ -6,12 +6,12 @@
  * Refactorフェーズ: screenState.js分割による循環参照解消を反映
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { jest } from '@jest/globals';
+
+import { vi } from 'vitest';
 
 // Mock i18n before importing autoClose.js
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key, substitutions) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
     if (key === 'autoClosing') return '自動閉じる...';
@@ -97,7 +97,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
     // 【環境初期化】: DOMとタイマーを初期化状態にする
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     document.body.innerHTML = `
       <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
@@ -109,15 +109,15 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     // 【モック設定】: chrome APIをモック
     global.chrome = {
       runtime: {
-        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+        getURL: vi.fn((path: string) => `chrome-extension://test/${path}`)
       },
       tabs: {
-        create: jest.fn()
+        create: vi.fn()
       }
     } as any;
 
     // 【モック設定】: window.close()をモック
-    mockWindowClose = jest.fn();
+    mockWindowClose = vi.fn();
     Object.defineProperty(window, 'close', {
       writable: true,
       value: mockWindowClose,
@@ -126,9 +126,9 @@ describe('自動クローズタイマー (autoClose.js)', () => {
 
   afterEach(() => {
     // 【テスト後処理】: タイマーとモックをリセット
-    jest.useRealTimers();
+    vi.useRealTimers();
     clearAutoCloseTimer();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('startAutoCloseTimerでタイマーが起動し、2000ms後にwindow.closeが呼ばれる', () => {
@@ -145,7 +145,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(mockWindowClose).not.toHaveBeenCalled(); // 【確認内容】: タイマー設定直後は呼ばれていないこと
 
     // 【タイマー進行】: 2000ms経過させる
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     // 【結果検証】: window.closeが1回呼ばれたこと
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: 2000ms後に1回呼ばれたこと
@@ -167,11 +167,11 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toContain('3...'); // 【確認内容】: 初期表示が3であること
 
     // 【タイマー進行】: 1秒進める
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     expect(statusDiv.textContent).toContain('2...'); // 【確認内容】: 2に更新されたこと
 
     // 【タイマー進行】: もう1秒進める
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     expect(statusDiv.textContent).toContain('1...'); // 【確認内容】: 1に更新されたこと
   });
 
@@ -180,9 +180,9 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     showCountdown(statusDiv);
 
     // 3→2→1→完了まで進める
-    jest.advanceTimersByTime(1000); // 2
-    jest.advanceTimersByTime(1000); // 1
-    jest.advanceTimersByTime(1000); // 0 → autoClosing
+    vi.advanceTimersByTime(1000); // 2
+    vi.advanceTimersByTime(1000); // 1
+    vi.advanceTimersByTime(1000); // 0 → autoClosing
 
     expect(statusDiv.textContent).toBe('自動閉じる...');
   });
@@ -191,11 +191,11 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     const statusDiv = document.getElementById('mainStatus');
     showCountdown(statusDiv);
 
-    jest.advanceTimersByTime(3000); // reach 0
+    vi.advanceTimersByTime(3000); // reach 0
     expect(statusDiv.textContent).toBe('自動閉じる...');
 
     // さらに進めてもテキストが変わらない（intervalが停止している）
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
     expect(statusDiv.textContent).toBe('自動閉じる...');
   });
 
@@ -203,13 +203,13 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     const statusDiv = document.getElementById('mainStatus');
     showCountdown(statusDiv);
 
-    jest.advanceTimersByTime(1000); // 2
+    vi.advanceTimersByTime(1000); // 2
     expect(statusDiv.textContent).toContain('2...');
 
     clearAutoCloseTimer();
 
     // intervalがクリアされたので、進一步しても変化しない
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
     expect(statusDiv.textContent).toContain('2...');
   });
 
@@ -227,7 +227,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     startAutoCloseTimer();
 
     // 【タイマー進行】: 2000ms経過させる
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     // 【結果検証】: window.closeが呼ばれていないこと
     expect(mockWindowClose).not.toHaveBeenCalled(); // 【確認内容】: 設定画面ではクローズされないこと
@@ -247,7 +247,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     clearAutoCloseTimer();
 
     // 【タイマー進行】: 2000ms経過させる
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     // 【結果検証】: window.closeが呼ばれていないこと
     expect(mockWindowClose).not.toHaveBeenCalled(); // 【確認内容】: タイマーがキャンセルされたこと
@@ -262,7 +262,7 @@ describe('連続記録時のタイマー管理', () => {
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     document.body.innerHTML = `
       <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
@@ -273,14 +273,14 @@ describe('連続記録時のタイマー管理', () => {
     // 【モック設定】: chrome APIをモック
     global.chrome = {
       runtime: {
-        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+        getURL: vi.fn((path: string) => `chrome-extension://test/${path}`)
       },
       tabs: {
-        create: jest.fn()
+        create: vi.fn()
       }
     } as any;
 
-    mockWindowClose = jest.fn();
+    mockWindowClose = vi.fn();
     Object.defineProperty(window, 'close', {
       writable: true,
       value: mockWindowClose,
@@ -288,9 +288,9 @@ describe('連続記録時のタイマー管理', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     clearAutoCloseTimer();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('連続してタイマーを設定すると前のタイマーがキャンセルされる', () => {
@@ -306,7 +306,7 @@ describe('連続記録時のタイマー管理', () => {
     startAutoCloseTimer();
 
     // 【タイマー進行】: 2000ms経過させる
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     // 【結果検証】: window.closeが1回だけ呼ばれたこと
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: 前のタイマーがキャンセルされ、1回分のみ実行されたこと
@@ -323,7 +323,7 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     document.body.innerHTML = `
       <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
@@ -334,14 +334,14 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     // 【モック設定】: chrome APIをモック
     global.chrome = {
       runtime: {
-        getURL: jest.fn((path: string) => `chrome-extension://test/${path}`)
+        getURL: vi.fn((path: string) => `chrome-extension://test/${path}`)
       },
       tabs: {
-        create: jest.fn()
+        create: vi.fn()
       }
     } as any;
 
-    mockWindowClose = jest.fn();
+    mockWindowClose = vi.fn();
     Object.defineProperty(window, 'close', {
       writable: true,
       value: mockWindowClose,
@@ -349,9 +349,9 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     clearAutoCloseTimer();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('showSettingsScreenを呼び出すと自動でタイマーがキャンセルされる', async () => {
@@ -378,7 +378,7 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: showSettingsScreen() によりポップアップが閉じられること
 
     // 【タイマー進行】: 2000ms経過させる
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     // 【結果検証】: window.close() は追加で呼ばれていないこと（タイマーがキャンセルされたこと）
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: タイマーからはクローズされず、showSettingsScreen() の1回のみであること

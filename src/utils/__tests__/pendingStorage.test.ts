@@ -5,18 +5,18 @@
 
 import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages } from '../pendingStorage';
 
-jest.mock('../logger.js', () => ({
-    logInfo: jest.fn().mockResolvedValue(undefined),
-    logDebug: jest.fn().mockResolvedValue(undefined),
-    logError: jest.fn().mockResolvedValue(undefined),
+vi.mock('../logger.js', () => ({
+    logInfo: vi.fn().mockResolvedValue(undefined),
+    logDebug: vi.fn().mockResolvedValue(undefined),
+    logError: vi.fn().mockResolvedValue(undefined),
     ErrorCode: {
         STORAGE_READ_FAILURE: 'STRG_RD_001',
         STORAGE_WRITE_FAILURE: 'STRG_WR_001',
     },
 }));
 
-jest.mock('../crypto.js', () => ({
-    hashUrl: jest.fn().mockResolvedValue('mocked-hash'),
+vi.mock('../crypto.js', () => ({
+    hashUrl: vi.fn().mockResolvedValue('mocked-hash'),
 }));
 
 // Mock chrome.storage.local
@@ -25,7 +25,7 @@ const mockStorage: Record<string, unknown> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn((keys: string | string[] | null) => {
+            get: vi.fn((keys: string | string[] | null) => {
                 if (keys === null) {
                     return Promise.resolve({ ...mockStorage });
                 }
@@ -43,11 +43,11 @@ const mockChrome = {
                 }
                 return Promise.resolve({});
             }),
-            set: jest.fn((items: Record<string, unknown>) => {
+            set: vi.fn((items: Record<string, unknown>) => {
                 Object.assign(mockStorage, items);
                 return Promise.resolve();
             }),
-            remove: jest.fn((keys: string | string[]) => {
+            remove: vi.fn((keys: string | string[]) => {
                 if (Array.isArray(keys)) {
                     for (const key of keys) {
                         delete mockStorage[key];
@@ -66,7 +66,7 @@ global.chrome = mockChrome as unknown as typeof chrome;
 describe('pendingStorage', () => {
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('addPendingPage', () => {

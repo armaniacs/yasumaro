@@ -3,20 +3,20 @@
  * uBlockエクスポートUIロジックのテスト
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
-jest.mock('../../utils/storage.js', () => ({
-  getSettings: jest.fn(() => Promise.resolve({})),
+vi.mock('../../utils/storage.js', () => ({
+  getSettings: vi.fn(() => Promise.resolve({})),
   StorageKeys: { UBLOCK_RULES: 'ublock_rules' },
 }));
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
   LogType: { ERROR: 'error' },
 }));
 
-jest.mock('../settingsUiHelper.js', () => ({
-  showStatus: jest.fn(),
+vi.mock('../settingsUiHelper.js', () => ({
+  showStatus: vi.fn(),
 }));
 
 import { exportToText, downloadAsFile, copyToClipboard, init } from '../ublockExport.js';
@@ -80,24 +80,24 @@ describe('ublockExport', () => {
       document.body.innerHTML = '<div id="domainStatus"></div>';
       
       // モックのクリーンアップ
-      global.URL.createObjectURL = jest.fn(() => 'blob:test');
-      global.URL.revokeObjectURL = jest.fn();
+      global.URL.createObjectURL = vi.fn(() => 'blob:test');
+      global.URL.revokeObjectURL = vi.fn();
       
       // createElementのモック
-      document.createElement = jest.fn((tagName) => {
+      document.createElement = vi.fn((tagName) => {
         const element = {
           tagName: tagName.toUpperCase(),
           href: '',
           download: '',
-          click: jest.fn(),
+          click: vi.fn(),
           style: {}
         };
         return element;
       });
       
       // appendChildとremoveChildのモック
-      document.body.appendChild = jest.fn();
-      document.body.removeChild = jest.fn();
+      document.body.appendChild = vi.fn();
+      document.body.removeChild = vi.fn();
     });
 
     test('ファイルダウンロード', () => {
@@ -111,8 +111,8 @@ describe('ublockExport', () => {
     });
 
     test('カスタムファイル名', () => {
-      const a = { click: jest.fn() };
-      document.createElement = jest.fn(() => a);
+      const a = { click: vi.fn() };
+      document.createElement = vi.fn(() => a);
       
       downloadAsFile(mockRules, 'custom-filters.txt');
       
@@ -129,9 +129,9 @@ describe('ublockExport', () => {
 
     test('クリップボードコピー', async () => {
       // navigator.clipboardのモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const mockWriteText = jest.fn().mockResolvedValue();
+      const mockWriteText = vi.fn().mockResolvedValue();
       Object.defineProperty(navigator, 'clipboard', {
         value: {
           writeText: mockWriteText
@@ -143,7 +143,7 @@ describe('ublockExport', () => {
       
       expect(result).toBe(true);
       expect(mockWriteText).toHaveBeenCalled();
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       const calledWith = mockWriteText.mock.calls[0][0];
       expect(calledWith).toContain('@@||trusted.com^');
@@ -153,9 +153,9 @@ describe('ublockExport', () => {
 
     test('クリップボードコピー失敗', async () => {
       // navigator.clipboardのモック（エラーをスローする）
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const mockWriteText = jest.fn().mockRejectedValue(new Error('Clipboard error'));
+      const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard error'));
       Object.defineProperty(navigator, 'clipboard', {
         value: {
           writeText: mockWriteText
@@ -177,7 +177,7 @@ describe('ublockExport', () => {
         <button id="uBlockExportBtn"></button>
         <button id="uBlockCopyBtn"></button>
       `;
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     test('エクスポートボタンクリックでルールをエクスポート', async () => {
@@ -188,10 +188,10 @@ describe('ublockExport', () => {
         ublock_rules: { blockRules: [{ rawLine: '||a.com^' }], exceptionRules: [] },
       });
 
-      global.URL.createObjectURL = jest.fn(() => 'blob:test');
-      global.URL.revokeObjectURL = jest.fn();
-      document.body.appendChild = jest.fn();
-      document.body.removeChild = jest.fn();
+      global.URL.createObjectURL = vi.fn(() => 'blob:test');
+      global.URL.revokeObjectURL = vi.fn();
+      document.body.appendChild = vi.fn();
+      document.body.removeChild = vi.fn();
 
       document.getElementById('uBlockExportBtn')!.click();
       await new Promise(r => setTimeout(r, 10));
@@ -232,7 +232,7 @@ describe('ublockExport', () => {
       });
 
       Object.defineProperty(navigator, 'clipboard', {
-        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
         writable: true,
       });
 
@@ -263,7 +263,7 @@ describe('ublockExport', () => {
       });
 
       Object.defineProperty(navigator, 'clipboard', {
-        value: { writeText: jest.fn().mockRejectedValue(new Error('Clipboard error')) },
+        value: { writeText: vi.fn().mockRejectedValue(new Error('Clipboard error')) },
         writable: true,
       });
 

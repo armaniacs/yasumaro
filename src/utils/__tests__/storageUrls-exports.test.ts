@@ -11,7 +11,7 @@ const mockStorage: Record<string, any> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn(async (keys: string | string[] | null) => {
+            get: vi.fn(async (keys: string | string[] | null) => {
                 if (keys === null) return { ...mockStorage };
                 if (typeof keys === 'string') return { [keys]: mockStorage[keys] };
                 const result: Record<string, any> = {};
@@ -20,7 +20,7 @@ const mockChrome = {
                 }
                 return result;
             }),
-            set: jest.fn(async (data: Record<string, any>) => {
+            set: vi.fn(async (data: Record<string, any>) => {
                 Object.assign(mockStorage, data);
             })
         }
@@ -29,8 +29,8 @@ const mockChrome = {
 (global as any).chrome = mockChrome;
 
 // optimisticLock モック
-jest.mock('../optimisticLock.js', () => ({
-    withOptimisticLock: jest.fn(async (key: string, fn: (current: any) => any) => {
+vi.mock('../optimisticLock.js', () => ({
+    withOptimisticLock: vi.fn(async (key: string, fn: (current: any) => any) => {
         const storageKey = key === 'savedUrlsWithTimestamps' ? 'savedUrlsWithTimestamps' : 'settings';
         const current = mockStorage[storageKey] || [];
         const result = fn(current);
@@ -40,10 +40,10 @@ jest.mock('../optimisticLock.js', () => ({
 }));
 
 // storage モック
-jest.mock('../storage.js', () => ({
-    isDomainInWhitelist: jest.fn((url: string) => url.includes('allowed.com')),
-    normalizeUrl: jest.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-    computeUrlsHash: jest.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+vi.mock('../storage.js', () => ({
+    isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+    normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+    computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
     Settings: {}
 }));
 
@@ -79,7 +79,7 @@ describe('storageUrls exports', () => {
 
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('定数', () => {

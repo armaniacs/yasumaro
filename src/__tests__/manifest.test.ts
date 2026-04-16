@@ -11,7 +11,7 @@
  * For permission request behavior tests, see cspSettings-permission-request.test.ts
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 

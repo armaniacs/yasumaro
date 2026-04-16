@@ -1,21 +1,22 @@
 /**
- * recordingLogic-cache.test.js
+ * recordingLogic-cache.test.ts
  * 設定キャッシュのテスト
  * タスク5: 設定キャッシュの実装
  */
 
-import { RecordingLogic, SETTINGS_CACHE_TTL } from '../recordingLogic.js';
-import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.js';
-import { PrivacyPipeline } from '../privacyPipeline.js';
-import { NotificationHelper } from '../notificationHelper.js';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { RecordingLogic, SETTINGS_CACHE_TTL } from '../recordingLogic.ts';
+import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.ts';
+import { PrivacyPipeline } from '../privacyPipeline.ts';
+import { NotificationHelper } from '../notificationHelper.ts';
 
-jest.mock('../../utils/storage.js', () => {
-  const actualStorage = jest.requireActual('../../utils/storage.js');
+vi.mock('../../utils/storage.ts', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('../../utils/storage.ts');
   return {
-    ...actualStorage,
-    getSettings: jest.fn(),
-    getSavedUrls: jest.fn(),
-    setSavedUrls: jest.fn(),
+    ...actual,
+    getSettings: vi.fn(),
+    getSavedUrls: vi.fn(),
+    setSavedUrls: vi.fn(),
     StorageKeys: {
       AI_PROVIDER: 'AI_PROVIDER',
       GEMINI_API_KEY: 'GEMINI_API_KEY',
@@ -24,14 +25,14 @@ jest.mock('../../utils/storage.js', () => {
     }
   };
 });
-jest.mock('../privacyPipeline.js');
-jest.mock('../notificationHelper.js');
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logError: jest.fn(),
-  logWarn: jest.fn(),
-  logInfo: jest.fn(),
-  logDebug: jest.fn(),
+vi.mock('../privacyPipeline.ts');
+vi.mock('../notificationHelper.ts');
+vi.mock('../../utils/logger.ts', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
   LogType: {
     DEBUG: 'DEBUG',
     INFO: 'INFO',
@@ -43,11 +44,11 @@ jest.mock('../../utils/logger.js', () => ({
     UNKNOWN_ERROR: 'UNK_001'
   }
 }));
-jest.mock('../../utils/domainUtils.js', () => ({
-  isDomainAllowed: jest.fn((url) => Promise.resolve(true))
+vi.mock('../../utils/domainUtils.ts', () => ({
+  isDomainAllowed: vi.fn((url) => Promise.resolve(true))
 }));
-jest.mock('../../utils/piiSanitizer.js', () => ({
-  sanitizeRegex: jest.fn()
+vi.mock('../../utils/piiSanitizer.ts', () => ({
+  sanitizeRegex: vi.fn()
 }));
 
 describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
@@ -57,7 +58,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
   beforeEach(() => {
     recordingLogic = new RecordingLogic(mockObsidianClient, mockAiClient);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Problem #3: 2重キャッシュ構造を1段階に簡素化 - urlCacheも追加
     RecordingLogic.cacheState = {
       settingsCache: null,
@@ -69,7 +70,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     RecordingLogic.invalidateUrlCache();
 
     // デフォルトモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
@@ -77,29 +78,29 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       GEMINI_MODEL: 'gemini-1.5-flash',
       PRIVACY_MODE: 'masked_cloud'
     });
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     getSavedUrls.mockResolvedValue(new Set());
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     setSavedUrls.mockResolvedValue();
     StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
 
     // PrivacyPipelineモック
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
     PrivacyPipeline.mockImplementation(() => ({
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      process: jest.fn().mockResolvedValue({
+      process: vi.fn().mockResolvedValue({
         summary: 'Test summary',
         maskedContent: 'Masked content'
       })
     }));
 
     // NotificationHelperモック
-    NotificationHelper.notifySuccess = jest.fn();
-    NotificationHelper.notifyError = jest.fn();
+    NotificationHelper.notifySuccess = vi.fn();
+    NotificationHelper.notifyError = vi.fn();
   });
 
   describe('getSettingsWithCache', () => {
@@ -131,7 +132,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
       // getSettingsをリセットして新しいモック値を設定
       getSettings.mockClear();
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockResolvedValue({
         AI_PROVIDER: 'openai',
@@ -174,7 +175,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
       const secondInstance = new RecordingLogic(mockObsidianClient, mockAiClient);
       getSettings.mockClear();
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockResolvedValue({
         AI_PROVIDER: 'updated-provider'
@@ -207,7 +208,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
       RecordingLogic.invalidateSettingsCache();
       getSettings.mockClear();
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockResolvedValue({
         AI_PROVIDER: 'new-provider'
@@ -244,9 +245,9 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
   describe('recordメソッドでのキャッシュ使用', () => {
     it('recordメソッドがキャッシュを使用する', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      mockObsidianClient.appendToDailyNote = jest.fn().mockResolvedValue();
+      mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();
 
       // 最初のrecord呼び出し
       await recordingLogic.record({
@@ -255,7 +256,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
         content: 'Test content'
       });
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       const getSettingsCallsAfterFirst = getSettings.mock.calls.length;
 
@@ -267,14 +268,14 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       });
 
       // 2回目の呼び出しでもgetSettingsは追加で呼ばれない（キャッシュ使用）
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       expect(getSettings.mock.calls.length).toBe(getSettingsCallsAfterFirst);
     });
 
     it('キャッシュ期限切れ後にrecordメソッドがstorageから再取得する', async () => {
       const mockObsidianClient = {
-        appendToDailyNote: jest.fn().mockResolvedValue()
+        appendToDailyNote: vi.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, mockAiClient);
 
@@ -307,7 +308,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   describe('並列呼び出しの処理', () => {
     it('複数のrecord呼び出しが並行であっても安全に処理する', async () => {
       const mockObsidianClient = {
-        appendToDailyNote: jest.fn().mockResolvedValue()
+        appendToDailyNote: vi.fn().mockResolvedValue()
       };
       recordingLogic = new RecordingLogic(mockObsidianClient, mockAiClient);
 
@@ -351,7 +352,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
   describe('エッジケース', () => {
     it('設定がnullの場合の処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockResolvedValue(null);
 
@@ -361,7 +362,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     });
 
     it('設定が空オブジェクトの場合の処理', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockResolvedValue({});
 
@@ -372,7 +373,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
     it('getSettingsがrejectした場合のエラー伝播', async () => {
       const error = new Error('Storage error');
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       getSettings.mockRejectedValue(error);
 
@@ -392,9 +393,9 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
   describe('パフォーマンス検証', () => {
     it('キャッシュ使用時のパフォーマンス向上を検証する', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      mockObsidianClient.appendToDailyNote = jest.fn().mockResolvedValue();
+      mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();
 
       // 初回呼び出し（キャッシュミス）
       const start1 = Date.now();

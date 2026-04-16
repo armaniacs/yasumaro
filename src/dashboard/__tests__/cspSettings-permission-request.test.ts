@@ -8,22 +8,22 @@
  * TDD Red phase: Tests for Chrome permissions.request() behavior
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock chrome.permissions API
 global.chrome = {
   permissions: {
-    request: jest.fn(),
-    getAll: jest.fn(),
-    contains: jest.fn()
+    request: vi.fn(),
+    getAll: vi.fn(),
+    contains: vi.fn()
   }
 } as any;
 
 describe('CSPSettings - Permission Request', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock success response for permission requests
-    (chrome.permissions.request as jest.Mock).mockResolvedValue(true);
+    (chrome.permissions.request as vi.Mock).mockResolvedValue(true);
   });
 
   describe('requestProviderPermission', () => {
@@ -50,7 +50,7 @@ describe('CSPSettings - Permission Request', () => {
     it('should handle permission denial', async () => {
       const { CSPSettings } = await import('../cspSettings.js');
 
-      (chrome.permissions.request as jest.Mock).mockResolvedValue(false);
+      (chrome.permissions.request as vi.Mock).mockResolvedValue(false);
 
       const granted = await CSPSettings.requestProviderPermission('huggingface');
 
@@ -60,7 +60,7 @@ describe('CSPSettings - Permission Request', () => {
     it('should handle permission request error', async () => {
       const { CSPSettings } = await import('../cspSettings.js');
 
-      (chrome.permissions.request as jest.Mock).mockRejectedValue(new Error('Permission denied'));
+      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
 
       const granted = await CSPSettings.requestProviderPermission('huggingface');
 
@@ -105,7 +105,7 @@ describe('CSPSettings - Permission Request', () => {
     it('should check if permission is granted for provider', async () => {
       const { CSPSettings } = await import('../cspSettings.js');
 
-      (chrome.permissions.contains as jest.Mock).mockResolvedValue(true);
+      (chrome.permissions.contains as vi.Mock).mockResolvedValue(true);
 
       const hasPermission = await CSPSettings.hasPermission('huggingface');
 
@@ -118,7 +118,7 @@ describe('CSPSettings - Permission Request', () => {
     it('should return false if permission not granted', async () => {
       const { CSPSettings } = await import('../cspSettings.js');
 
-      (chrome.permissions.contains as jest.Mock).mockResolvedValue(false);
+      (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
 
       const hasPermission = await CSPSettings.hasPermission('huggingface');
 

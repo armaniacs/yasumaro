@@ -7,7 +7,7 @@ import { webcrypto as crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', { value: crypto });
 
 // StorageKeys モック
-jest.mock('../storage.js', () => ({
+vi.mock('../storage.js', () => ({
     StorageKeys: {
         AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
         AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
@@ -19,8 +19,8 @@ jest.mock('../storage.js', () => ({
 }));
 
 // logger モック
-jest.mock('../logger.js', () => ({
-    addLog: jest.fn(),
+vi.mock('../logger.js', () => ({
+    addLog: vi.fn(),
     LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
 }));
 
@@ -29,14 +29,14 @@ const mockStorage: Record<string, any> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: jest.fn(async (keys: string[]) => {
+            get: vi.fn(async (keys: string[]) => {
                 const result: Record<string, any> = {};
                 for (const key of keys) {
                     if (key in mockStorage) result[key] = mockStorage[key];
                 }
                 return result;
             }),
-            set: jest.fn(async (data: Record<string, any>) => {
+            set: vi.fn(async (data: Record<string, any>) => {
                 Object.assign(mockStorage, data);
             })
         }
@@ -56,7 +56,7 @@ describe('aiUsageTracker', () => {
 
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('checkRateLimit', () => {

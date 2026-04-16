@@ -14,7 +14,7 @@ import {
 // Mock chrome.runtime.sendMessage
 global.chrome = {
     runtime: {
-        sendMessage: jest.fn(),
+        sendMessage: vi.fn(),
         lastError: null
     }
 } as any;
@@ -23,7 +23,7 @@ describe('ChromeMessageSender', () => {
     let sender: ChromeMessageSender;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
         sender = new ChromeMessageSender();
     });
@@ -59,7 +59,7 @@ describe('ChromeMessageSender', () => {
     describe('sendMessageWithRetry', () => {
         it('成功時はすぐにレスポンスを返す', async () => {
             const mockResponse = { success: true, data: 'test' };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callback(mockResponse as any);
@@ -76,7 +76,7 @@ describe('ChromeMessageSender', () => {
 
         it('ビジネスロジックエラー（success: false）でもレスポンスを返す', async () => {
             const mockResponse = { success: false, error: 'Domain blocked' };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callback(mockResponse as any);
@@ -93,7 +93,7 @@ describe('ChromeMessageSender', () => {
 
         it('リトライ可能なエラーでリトライする', async () => {
             let callCount = 0;
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callCount++;
@@ -116,7 +116,7 @@ describe('ChromeMessageSender', () => {
         });
 
         it('最大リトライ回数を超えるとエラーをスローする', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 global.chrome.runtime.lastError = { message: 'Could not establish connection' };
@@ -135,7 +135,7 @@ describe('ChromeMessageSender', () => {
         });
 
         it('非リトライ可能なエラーで即座に失敗する', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 global.chrome.runtime.lastError = { message: 'Invalid message format' };
@@ -151,7 +151,7 @@ describe('ChromeMessageSender', () => {
 
         it('レスポンス未受信エラーでリトライする', async () => {
             let callCount = 0;
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callCount++;
@@ -174,7 +174,7 @@ describe('ChromeMessageSender', () => {
         });
 
         it('No response receivedエラーが最大リトライ後に失敗する', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callback(); // Always no response - リトライ可能エラーとして扱う
@@ -192,7 +192,7 @@ describe('ChromeMessageSender', () => {
         });
 
         it('カスタムリトライオプションを上書きできる', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 global.chrome.runtime.lastError = { message: 'Could not establish connection' };
@@ -272,7 +272,7 @@ describe('ChromeMessageSender', () => {
 
             // リトライの発生自体を確認（正確な遅延時間はプライベート実装なのでテストしない）
             let callCount = 0;
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
             chrome.runtime.sendMessage.mockImplementation((message, callback) => {
                 callCount++;
@@ -313,13 +313,13 @@ describe('ChromeMessageSender', () => {
 
 describe('sendMessageWithRetry (factory)', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
     });
 
     it('ファクトリー関数が動作する', async () => {
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callback(mockResponse as any);
@@ -336,7 +336,7 @@ describe('sendMessageWithRetry (factory)', () => {
     it('ファクトリー関数にカスタムオプションを渡せる', async () => {
         const mockResponse = { success: true };
         let callCount = 0;
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -360,7 +360,7 @@ describe('sendMessageWithRetry (factory)', () => {
 
 describe('createSender (factory)', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
     });
 
@@ -372,7 +372,7 @@ describe('createSender (factory)', () => {
     it('作成したインスタンスでメッセージを送信できる', async () => {
         const customSender = createSender({ maxRetries: 2 });
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callback(mockResponse as any);
@@ -389,14 +389,14 @@ describe('createSender (factory)', () => {
 
 describe('chrome.runtime.lastError patterns', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
     });
 
     it('Receiving end does not existでリトライ', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -420,7 +420,7 @@ describe('chrome.runtime.lastError patterns', () => {
     it('Extension context invalidatedでリトライ', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -444,7 +444,7 @@ describe('chrome.runtime.lastError patterns', () => {
     it('The message port closed before a response was receivedでリトライ', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -469,7 +469,7 @@ describe('chrome.runtime.lastError patterns', () => {
     it('The extension context has been invalidでリトライ', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -496,20 +496,20 @@ describe('exponential backoff timing', () => {
     let sender: ChromeMessageSender;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
-        jest.useFakeTimers();
+        vi.useFakeTimers();
         sender = new ChromeMessageSender();
     });
 
     afterEach(() => {
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
     it('指数バックオフの遅延時間が正しく計算される', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -528,9 +528,9 @@ describe('exponential backoff timing', () => {
         );
 
         // Fast-forward through all retries
-        await jest.advanceTimersByTimeAsync(100);  // 1st retry delay: 100ms
-        await jest.advanceTimersByTimeAsync(200);  // 2nd retry delay: 200ms
-        await jest.advanceTimersByTimeAsync(400);  // 3rd retry delay: 400ms
+        await vi.advanceTimersByTimeAsync(100);  // 1st retry delay: 100ms
+        await vi.advanceTimersByTimeAsync(200);  // 2nd retry delay: 200ms
+        await vi.advanceTimersByTimeAsync(400);  // 3rd retry delay: 400ms
 
         const result = await promise;
         expect(result).toEqual(mockResponse);
@@ -538,12 +538,12 @@ describe('exponential backoff timing', () => {
     });
 
     it('maxDelayで遅延時間がキャップされる', async () => {
-        jest.useRealTimers();
+        vi.useRealTimers();
 
         const delays: number[] = [];
         const originalSetTimeout = global.setTimeout;
         // Track actual delay values passed to setTimeout
-        global.setTimeout = jest.fn((fn: Function, ms?: number) => {
+        global.setTimeout = vi.fn((fn: Function, ms?: number) => {
             if (ms !== undefined && ms > 0) {
                 delays.push(ms);
             }
@@ -551,7 +551,7 @@ describe('exponential backoff timing', () => {
         }) as any;
 
         let callCount = 0;
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -569,7 +569,7 @@ describe('exponential backoff timing', () => {
         }
 
         global.setTimeout = originalSetTimeout;
-        jest.useFakeTimers();
+        vi.useFakeTimers();
 
         expect(callCount).toBe(4); // initial + 3 retries
         // Delays: min(1000*3^0, 2000)=1000, min(1000*3^1, 2000)=2000, min(1000*3^2, 2000)=2000
@@ -581,7 +581,7 @@ describe('edge cases', () => {
     let sender: ChromeMessageSender;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         global.chrome.runtime.lastError = null;
         sender = new ChromeMessageSender();
     });
@@ -589,7 +589,7 @@ describe('edge cases', () => {
     it('sendMessageが直接例外をスローした場合もリトライする', async () => {
         let callCount = 0;
         const mockResponse = { success: true };
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;
@@ -616,7 +616,7 @@ describe('edge cases', () => {
             'Message port closed',
             'Receiving end does not exist'
         ];
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
 
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             callCount++;

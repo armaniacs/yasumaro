@@ -4,11 +4,11 @@
  * Test target: src/popup/ublockImport.js and related modules
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock dependencies (must be defined before imports)
-jest.mock('../../utils/storage.js', () => {
-  const mockGetSettings = jest.fn(() => Promise.resolve({
+vi.mock('../../utils/storage.js', () => {
+  const mockGetSettings = vi.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
     obsidian_protocol: 'http',
@@ -38,7 +38,7 @@ jest.mock('../../utils/storage.js', () => {
     ublock_sources: [],
   }));
 
-  const mockSaveSettings = jest.fn(() => Promise.resolve());
+  const mockSaveSettings = vi.fn(() => Promise.resolve());
 
   return {
     StorageKeys: {
@@ -53,38 +53,43 @@ jest.mock('../../utils/storage.js', () => {
   };
 });
 
-jest.mock('../settingsUiHelper.js', () => ({
-  showStatus: jest.fn(),
+vi.mock('../settingsUiHelper.js', () => ({
+  showStatus: vi.fn(),
 }));
 
 describe('ublockImport.js - UI Component Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     document.body.innerHTML = '';
 
     // Mock document.getElementById to return null by default
-    document.getElementById = jest.fn(() => null);
-    document.querySelector = jest.fn(() => null);
+    document.getElementById = vi.fn(() => null);
+    document.querySelector = vi.fn(() => null);
 
-    // Mock FileReader
-    global.FileReader = jest.fn();
+    // Mock FileReader - must be initialized as constructor
+    const mockReaderInstance = {
+      readAsText: vi.fn(),
+      onload: null,
+      onerror: null,
+    };
+    global.FileReader = vi.fn(() => mockReaderInstance);
 
     // Mock chrome.runtime.sendMessage
     global.chrome = {
       runtime: {
-        sendMessage: jest.fn()
+        sendMessage: vi.fn()
       }
     };
 
     // Mock URL.createObjectURL and revokeObjectURL
-    global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = jest.fn();
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    global.URL.revokeObjectURL = vi.fn();
 
     // Mock navigator.clipboard
     Object.defineProperty(global, 'navigator', {
       value: {
         clipboard: {
-          writeText: jest.fn(),
+          writeText: vi.fn(),
         },
       },
       configurable: true,
@@ -137,7 +142,7 @@ describe('ublockImport.js - UI Component Tests', () => {
   describe('UI-005: Import from URL', () => {
     test('fetchFromUrl should successfully fetch from valid URL', async () => {
       const mockText = '||example.com^\n@@||trusted.com^';
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: true,
@@ -159,7 +164,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('fetchFromUrl should throw error for HTTP errors', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: false,
@@ -185,7 +190,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
@@ -202,7 +207,7 @@ describe('ublockImport.js - UI Component Tests', () => {
 
     test('deleteSource should remove source by index', async () => {
       const { deleteSource } = await import('../ublockImport.js');
-      const renderCallback = jest.fn();
+      const renderCallback = vi.fn();
 
       await deleteSource(1, renderCallback);
 
@@ -213,7 +218,7 @@ describe('ublockImport.js - UI Component Tests', () => {
 
     test('deleteSource should handle invalid index gracefully', async () => {
       const { deleteSource } = await import('../ublockImport.js');
-      const renderCallback = jest.fn();
+      const renderCallback = vi.fn();
 
       await deleteSource(999, renderCallback);
 
@@ -234,7 +239,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
@@ -248,7 +253,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         ]
       }));
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.chrome.runtime.sendMessage.mockResolvedValue({
         success: true,
@@ -259,9 +264,9 @@ describe('ublockImport.js - UI Component Tests', () => {
 
     test('reloadSource should fetch and update source', async () => {
       const { reloadSource } = await import('../ublockImport.js');
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
-      const fetchCallback = jest.fn().mockResolvedValue('||example.com^\n||newsite.com^\n@@||trusted.com^');
+      const fetchCallback = vi.fn().mockResolvedValue('||example.com^\n||newsite.com^\n@@||trusted.com^');
 
       const result = await reloadSource(0, fetchCallback);
 
@@ -271,7 +276,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('reloadSource should throw error for manual input source', async () => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
@@ -280,14 +285,14 @@ describe('ublockImport.js - UI Component Tests', () => {
       }));
 
       const { reloadSource } = await import('../ublockImport.js');
-      const fetchCallback = jest.fn();
+      const fetchCallback = vi.fn();
 
       await expect(reloadSource(0, fetchCallback)).rejects.toThrow();
     });
 
     test('reloadSource should throw error for invalid index', async () => {
       const { reloadSource } = await import('../ublockImport.js');
-      const fetchCallback = jest.fn();
+      const fetchCallback = vi.fn();
 
       await expect(reloadSource(999, fetchCallback)).rejects.toThrow();
     });
@@ -307,7 +312,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     beforeEach(() => {
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [],
@@ -318,7 +323,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         }
       }));
 
-    // @ts-expect-error - jest.fn() type narrowing issue
+    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockShowStatus.mockImplementation(() => { });
     });
@@ -692,8 +697,8 @@ describe('ublockImport.js - UI Component Tests', () => {
 
     test('renderSourceList should handle empty sources', async () => {
       const sources = [];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       const { renderSourceList } = await import('../ublockImport.js');
       expect(() => renderSourceList(sources, deleteCallback, reloadCallback)).not.toThrow();
@@ -709,8 +714,8 @@ describe('ublockImport.js - UI Component Tests', () => {
           ruleCount: 3
         }
       ];
-      const deleteCallback = jest.fn();
-      const reloadCallback = jest.fn();
+      const deleteCallback = vi.fn();
+      const reloadCallback = vi.fn();
 
       const { renderSourceList } = await import('../ublockImport.js');
       expect(() => renderSourceList(sources, deleteCallback, reloadCallback)).not.toThrow();
@@ -764,10 +769,10 @@ describe('ublockImport.js - UI Component Tests', () => {
       // Mock document.getElementById to return the textarea
       const mockTextarea = {
         value: '',
-        addEventListener: jest.fn(),
-        classList: { add: jest.fn(), remove: jest.fn() }
+        addEventListener: vi.fn(),
+        classList: { add: vi.fn(), remove: vi.fn() }
       };
-      document.getElementById = jest.fn((id) => {
+      document.getElementById = vi.fn((id) => {
         if (id === 'uBlockFilterInput') return mockTextarea;
         if (id === 'uBlockPreview') return { style: { display: 'none' } };
         return null;
@@ -786,7 +791,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('clearInput should handle missing element gracefully', async () => {
-      document.getElementById = jest.fn(() => null);
+      document.getElementById = vi.fn(() => null);
 
       const { clearInput } = await import('../ublockImport.js');
 
@@ -806,11 +811,11 @@ describe('ublockImport.js - UI Component Tests', () => {
       };
 
       let mockReader = null;
-    // @ts-expect-error - jest.fn() type narrowing issue
-  
-      global.FileReader.mockImplementation(() => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+
+      global.FileReader.mockImplementation(function() {
         mockReader = {
-          readAsText: jest.fn(),
+          readAsText: vi.fn(),
           onload: null,
           onerror: null
         };

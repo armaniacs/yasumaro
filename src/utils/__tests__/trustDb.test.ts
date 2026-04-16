@@ -8,7 +8,7 @@
  * Basic verification that the modules can be loaded
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 describe('TrustDatabase - Phase 1 - Module Loading', () => {
   it('should trustDb module be loadable', async () => {

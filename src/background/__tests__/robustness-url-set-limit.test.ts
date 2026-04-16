@@ -10,11 +10,11 @@ import {
   URL_RETENTION_DAYS
 } from '../../utils/storage.js';
 
-jest.mock('../../utils/logger.js', () => ({
-  addLog: jest.fn(),
-  logInfo: jest.fn(),
-  logDebug: jest.fn(),
-  logError: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
   ErrorCode: {
     STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
   },

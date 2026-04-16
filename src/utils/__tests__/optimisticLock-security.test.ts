@@ -12,8 +12,8 @@ import { withOptimisticLock, getConflictStats, resetConflictStats } from '../opt
 
 // Chrome Storage API モック
 const mockStorage: Record<string, any> = {};
-let mockGet = jest.fn();
-let mockSet = jest.fn();
+let mockGet = vi.fn();
+let mockSet = vi.fn();
 
 beforeEach(() => {
   // モックをリセット

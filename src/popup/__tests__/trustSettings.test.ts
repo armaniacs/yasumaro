@@ -5,38 +5,38 @@
  * renderJpAnchorList, renderSensitiveList
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { vi } from 'vitest';;
 
 // Mock dependencies - all at top level
-jest.mock('../../utils/trustDb/trustDbSchema.js', () => ({}));
+vi.mock('../../utils/trustDb/trustDbSchema.js', () => ({}));
 
-jest.mock('../../utils/storage.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold',
   },
 }));
 
-const mockInitialize = jest.fn(() => Promise.resolve());
-const mockGetDatabase = jest.fn(() => ({
+const mockInitialize = vi.fn(() => Promise.resolve());
+const mockGetDatabase = vi.fn(() => ({
   tranco: { tier: 'top10k', count: 10000, lastUpdated: '2025-01-01' },
   lastUpdated: '2025-01-01',
 }));
-const mockGetJpAnchorTlds = jest.fn(() => ['.jp', '.co.jp']);
-const mockGetSensitiveDomains = jest.fn((cat: string) => {
+const mockGetJpAnchorTlds = vi.fn(() => ['.jp', '.co.jp']);
+const mockGetSensitiveDomains = vi.fn((cat: string) => {
   if (cat === 'finance') return ['bank.com'];
   if (cat === 'gaming') return ['game.com'];
   return ['social.com'];
 });
-const mockGetWhitelist = jest.fn(() => ['trusted.com']);
-const mockAddJpAnchorTld = jest.fn(() => Promise.resolve({ success: true }));
-const mockRemoveJpAnchorTld = jest.fn(() => Promise.resolve());
-const mockAddSensitiveDomain = jest.fn(() => Promise.resolve({ success: true }));
-const mockRemoveSensitiveDomain = jest.fn(() => Promise.resolve());
-const mockAddToWhitelist = jest.fn(() => Promise.resolve({ success: true }));
-const mockRemoveFromWhitelist = jest.fn(() => Promise.resolve());
+const mockGetWhitelist = vi.fn(() => ['trusted.com']);
+const mockAddJpAnchorTld = vi.fn(() => Promise.resolve({ success: true }));
+const mockRemoveJpAnchorTld = vi.fn(() => Promise.resolve());
+const mockAddSensitiveDomain = vi.fn(() => Promise.resolve({ success: true }));
+const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
+const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
+const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
-jest.mock('../../utils/trustDb/trustDb.js', () => ({
-  getTrustDb: jest.fn(() => ({
+vi.mock('../../utils/trustDb/trustDb.js', () => ({
+  getTrustDb: vi.fn(() => ({
     initialize: mockInitialize,
     getDatabase: mockGetDatabase,
     getJpAnchorTlds: mockGetJpAnchorTlds,
@@ -51,29 +51,29 @@ jest.mock('../../utils/trustDb/trustDb.js', () => ({
   })),
 }));
 
-const mockIsUpdateInProgress = jest.fn(() => false);
-const mockUpdateTrancoList = jest.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
+const mockIsUpdateInProgress = vi.fn(() => false);
+const mockUpdateTrancoList = vi.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
 
-jest.mock('../../utils/trustDb/trancoUpdater.js', () => ({
-  getTrancoUpdater: jest.fn(() => ({
+vi.mock('../../utils/trustDb/trancoUpdater.js', () => ({
+  getTrancoUpdater: vi.fn(() => ({
     isUpdateInProgress: mockIsUpdateInProgress,
     updateTrancoList: mockUpdateTrancoList,
   })),
 }));
 
-const mockLogInfo = jest.fn();
-const mockLogWarn = jest.fn();
-const mockLogError = jest.fn();
+const mockLogInfo = vi.fn();
+const mockLogWarn = vi.fn();
+const mockLogError = vi.fn();
 
-jest.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   logInfo: mockLogInfo,
   logWarn: mockLogWarn,
   logError: mockLogError,
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));
 
-jest.mock('../i18n.js', () => ({
-  getMessage: jest.fn((key: string) => {
+vi.mock('../i18n.js', () => ({
+  getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       trancoUpdating: 'Updating...',
       trancoNotUpdated: 'Not updated',
@@ -96,27 +96,27 @@ jest.mock('../i18n.js', () => ({
   }),
 }));
 
-const mockGetAlertConfig = jest.fn(() => Promise.resolve({
+const mockGetAlertConfig = vi.fn(() => Promise.resolve({
   alertFinance: false,
   alertSensitive: false,
   alertUnverified: false,
 }));
-const mockSaveAlertSettings = jest.fn(() => Promise.resolve());
+const mockSaveAlertSettings = vi.fn(() => Promise.resolve());
 
-jest.mock('../../utils/trustChecker.js', () => ({
-  getTrustChecker: jest.fn(() => ({
+vi.mock('../../utils/trustChecker.js', () => ({
+  getTrustChecker: vi.fn(() => ({
     getAlertConfig: mockGetAlertConfig,
     saveAlertSettings: mockSaveAlertSettings,
   })),
 }));
 
-const mockGetFrequentDeniedDomains = jest.fn(() => Promise.resolve([]));
-const mockRequestPermission = jest.fn(() => Promise.resolve(true));
-const mockRemoveDeniedDomain = jest.fn(() => Promise.resolve());
-const mockRecordDomainDismissal = jest.fn(() => Promise.resolve());
-const mockIsHostPermitted = jest.fn(() => Promise.resolve(false));
+const mockGetFrequentDeniedDomains = vi.fn(() => Promise.resolve([]));
+const mockRequestPermission = vi.fn(() => Promise.resolve(true));
+const mockRemoveDeniedDomain = vi.fn(() => Promise.resolve());
+const mockRecordDomainDismissal = vi.fn(() => Promise.resolve());
+const mockIsHostPermitted = vi.fn(() => Promise.resolve(false));
 
-jest.mock('../../utils/permissionManager.js', () => ({
+vi.mock('../../utils/permissionManager.js', () => ({
   getFrequentDeniedDomains: mockGetFrequentDeniedDomains,
   requestPermission: mockRequestPermission,
   removeDeniedDomain: mockRemoveDeniedDomain,
@@ -156,8 +156,8 @@ function setupFullDOM() {
 
 describe('trustSettings.ts', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
+    vi.clearAllMocks();
+    vi.resetModules();
     document.body.innerHTML = '';
   });
 
@@ -830,7 +830,7 @@ describe('trustSettings.ts', () => {
       const { init } = await import('../trustSettings.js');
       init();
 
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       document.getElementById('saveTrustSettings')!.click();
       await Promise.resolve();
@@ -838,11 +838,11 @@ describe('trustSettings.ts', () => {
       const statusDiv = document.getElementById('trustSettingsStatus')!;
       expect(statusDiv.textContent).toBe('Settings saved');
 
-      jest.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(3000);
       expect(statusDiv.textContent).toBe('');
       expect(statusDiv.className).toBe('status-message');
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
 });

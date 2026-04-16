@@ -4,14 +4,14 @@
  * カバレッジ向上のため、未テストの setter を網羅
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';;
 import type { SavedUrlEntry } from '../storageUrls.js';
 
 // chrome.storage.local のモック
 const mockStorage: Map<string, unknown> = new Map();
 
 const mockChromeStorageLocal = {
-  get: jest.fn((keys: string | string[] | null) => {
+  get: vi.fn((keys: string | string[] | null) => {
     const result: Record<string, unknown> = {};
     if (keys === null || Array.isArray(keys)) {
       const keysToGet = keys === null ? Array.from(mockStorage.keys()) : keys;
@@ -27,13 +27,13 @@ const mockChromeStorageLocal = {
     }
     return Promise.resolve(result);
   }),
-  set: jest.fn((items: Record<string, unknown>) => {
+  set: vi.fn((items: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(items)) {
       mockStorage.set(key, value);
     }
     return Promise.resolve();
   }),
-  getBytesInUse: jest.fn(() => Promise.resolve(0)),
+  getBytesInUse: vi.fn(() => Promise.resolve(0)),
 };
 
 global.chrome = {
@@ -52,7 +52,7 @@ function createTestEntry(url: string, overrides: Partial<SavedUrlEntry> = {}): S
 describe('storageUrls setter functions', () => {
   beforeEach(() => {
     mockStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('setUrlRecordType', () => {

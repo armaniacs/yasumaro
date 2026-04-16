@@ -4,23 +4,24 @@
  */
 
 import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { vi } from 'vitest';
 Object.defineProperty(global, 'crypto', { value: crypto });
 
 // fetch モック
-jest.mock('../../utils/fetch.js', () => ({
-    fetchWithRetry: jest.fn(),
-    validateUrlForAIRequests: jest.fn()
+vi.mock('../../utils/fetch.js', () => ({
+    fetchWithRetry: vi.fn(),
+    validateUrlForAIRequests: vi.fn()
 }));
 
 // logger モック
-jest.mock('../../utils/logger.js', () => ({
-    addLog: jest.fn(),
+vi.mock('../../utils/logger.js', () => ({
+    addLog: vi.fn(),
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info' }
 }));
 
 // storage モック
-jest.mock('../../utils/storage.js', () => ({
-    getAllowedUrls: jest.fn(async () => new Set(['https://generativelanguage.googleapis.com'])),
+vi.mock('../../utils/storage.js', () => ({
+    getAllowedUrls: vi.fn(async () => new Set(['https://generativelanguage.googleapis.com'])),
     StorageKeys: {
         MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
         CUSTOM_PROMPTS: 'custom_prompts'
@@ -29,8 +30,8 @@ jest.mock('../../utils/storage.js', () => ({
 }));
 
 // promptSanitizer モック
-jest.mock('../../utils/promptSanitizer.js', () => ({
-    sanitizePromptContent: jest.fn((content: string) => ({
+vi.mock('../../utils/promptSanitizer.js', () => ({
+    sanitizePromptContent: vi.fn((content: string) => ({
         sanitized: content,
         warnings: [],
         dangerLevel: 'low'
@@ -38,8 +39,8 @@ jest.mock('../../utils/promptSanitizer.js', () => ({
 }));
 
 // customPromptUtils モック
-jest.mock('../../utils/customPromptUtils.js', () => ({
-    applyCustomPrompt: jest.fn((_settings: any, _provider: string, content: string) => ({
+vi.mock('../../utils/customPromptUtils.js', () => ({
+    applyCustomPrompt: vi.fn((_settings: any, _provider: string, content: string) => ({
         userPrompt: `Summarize: ${content}`,
         systemPrompt: 'You are a helpful assistant.',
         isCustom: false
@@ -47,14 +48,19 @@ jest.mock('../../utils/customPromptUtils.js', () => ({
 }));
 
 // aiUsageTracker モック
-jest.mock('../../utils/aiUsageTracker.js', () => ({
-    checkRateLimit: jest.fn(async () => ({ allowed: true, remaining: 9, resetTime: 60 })),
-    recordUsage: jest.fn(async () => {}),
-    getRateLimitMessage: jest.fn((resetTime: number) => `Rate limited. Wait ${resetTime}s.`)
+vi.mock('../../utils/aiUsageTracker.js', () => ({
+    checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: 60 })),
+    recordUsage: vi.fn(async () => {}),
+    getRateLimitMessage: vi.fn((resetTime: number) => `Rate limited. Wait ${resetTime}s.`)
 }));
 
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../utils/fetch.js';
+import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
+import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
+
+const { checkRateLimit } = vi.mocked(aiUsageTrackerModule);
+const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('GeminiProvider', () => {
 
@@ -64,7 +70,7 @@ describe('GeminiProvider', () => {
     };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('constructor', () => {
@@ -100,7 +106,6 @@ describe('GeminiProvider', () => {
         });
 
         test('レート制限時はエラーメッセージ', async () => {
-            const { checkRateLimit } = require('../../utils/aiUsageTracker.js');
             checkRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0, resetTime: 30 });
 
             const provider = new GeminiProvider(baseSettings);
@@ -110,7 +115,7 @@ describe('GeminiProvider', () => {
         });
 
         test('成功時にサマリーを返す', async () => {
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'Summary result' }] } }],
@@ -127,7 +132,7 @@ describe('GeminiProvider', () => {
         });
 
         test('APIエラーレスポンスでエラーメッセージ', async () => {
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: false,
                 status: 500,
                 statusText: 'Internal Server Error'
@@ -140,7 +145,7 @@ describe('GeminiProvider', () => {
         });
 
         test('404エラーでモデル未発見メッセージ', async () => {
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: false,
                 status: 404
             });
@@ -152,7 +157,7 @@ describe('GeminiProvider', () => {
         });
 
         test('タイムアウトエラーでタイムアウトメッセージ', async () => {
-            (fetchWithRetry as jest.Mock).mockRejectedValue(new Error('Request timed out'));
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('Request timed out'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.generateSummary('content');
@@ -161,7 +166,6 @@ describe('GeminiProvider', () => {
         });
 
         test('プロンプトインジェクション HIGH でブロック', async () => {
-            const { sanitizePromptContent } = require('../../utils/promptSanitizer.js');
             sanitizePromptContent.mockReturnValueOnce({
                 sanitized: 'blocked',
                 warnings: ['injection'],
@@ -175,7 +179,7 @@ describe('GeminiProvider', () => {
         });
 
         test('candidates が空の場合はデフォルトメッセージ', async () => {
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ candidates: [] })
             });
@@ -187,7 +191,7 @@ describe('GeminiProvider', () => {
         });
 
         test('モデル名から models/ プレフィックスを除去する', async () => {
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'OK' }] } }]
@@ -200,7 +204,7 @@ describe('GeminiProvider', () => {
             });
             await provider.generateSummary('content');
 
-            const callUrl = (fetchWithRetry as jest.Mock).mock.calls[0][0];
+            const callUrl = (fetchWithRetry as vi.Mock).mock.calls[0][0];
             expect(callUrl).toContain('gemini-pro:generateContent');
             expect(callUrl).not.toContain('models/models/');
         });
@@ -216,8 +220,8 @@ describe('GeminiProvider', () => {
         });
 
         test('接続成功時', async () => {
-            (validateUrlForAIRequests as jest.Mock).mockImplementation(() => {});
-            (fetchWithRetry as jest.Mock).mockResolvedValue({ ok: true });
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockResolvedValue({ ok: true });
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -227,8 +231,8 @@ describe('GeminiProvider', () => {
         });
 
         test('401エラーで認証失敗メッセージ', async () => {
-            (validateUrlForAIRequests as jest.Mock).mockImplementation(() => {});
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: false,
                 status: 401,
                 statusText: 'Unauthorized'
@@ -242,8 +246,8 @@ describe('GeminiProvider', () => {
         });
 
         test('429エラーでレート制限メッセージ', async () => {
-            (validateUrlForAIRequests as jest.Mock).mockImplementation(() => {});
-            (fetchWithRetry as jest.Mock).mockResolvedValue({
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: false,
                 status: 429,
                 statusText: 'Too Many Requests'
@@ -257,8 +261,8 @@ describe('GeminiProvider', () => {
         });
 
         test('タイムアウトエラーでネットワークエラーメッセージ', async () => {
-            (validateUrlForAIRequests as jest.Mock).mockImplementation(() => {});
-            (fetchWithRetry as jest.Mock).mockRejectedValue(new Error('timeout'));
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('timeout'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -268,8 +272,8 @@ describe('GeminiProvider', () => {
         });
 
         test('一般的なエラーでエラーメッセージ', async () => {
-            (validateUrlForAIRequests as jest.Mock).mockImplementation(() => {});
-            (fetchWithRetry as jest.Mock).mockRejectedValue(new Error('Network error'));
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('Network error'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
