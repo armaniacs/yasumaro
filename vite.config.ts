@@ -13,6 +13,7 @@ export default defineConfig({
         popup: path.resolve(__dirname, 'src/popup/popup.html'),
         'background/service-worker': path.resolve(__dirname, 'src/background/service-worker.ts'),
         'content/loader': path.resolve(__dirname, 'src/content/loader.ts'),
+        'content/extractor': path.resolve(__dirname, 'src/content/extractor.ts'),
         dashboard: path.resolve(__dirname, 'src/dashboard/dashboard.html'),
         privacy: path.resolve(__dirname, 'src/privacy/privacy.html'),
         'dashboard/models-dev-dialog': path.resolve(__dirname, 'src/dashboard/models-dev-dialog.html'),
