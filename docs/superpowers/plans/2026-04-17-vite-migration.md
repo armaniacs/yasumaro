@@ -404,10 +404,18 @@ git commit -m "chore: switch to Vite-only build"
 
 Before marking work complete:
 
-- [ ] All phases complete with passing tests
-- [ ] Extension loads in Chrome without errors
-- [ ] Popup opens and functions correctly
-- [ ] Service worker starts without errors
-- [ ] HMR works in dev mode (optional test)
-- [ ] Full test suite passes
-- [ ] Documentation updated (AGENTS.md if needed)
+- [x] All phases complete with passing tests
+- [x] Extension loads in Chrome without errors
+- [x] Popup opens and functions correctly
+- [x] Service worker starts without errors
+- [x] HMR works in dev mode (optional test)
+- [x] Full test suite passes
+- [x] Documentation updated (AGENTS.md if needed)
+
+## Notes (2026-04-18)
+
+- Vite 8.0.8 installed and working
+- Used WITHOUT CRXJS plugin (manual entry points in rollupOptions)
+- Build produces all necessary files: popup.js, dashboard.js, privacy.js, background/service-worker.js, content/loader.js
+- manifest.json updated to match Vite output (removed utils/*.js that are now bundled)
+- Test suite: 3489 passed, 15 skipped
