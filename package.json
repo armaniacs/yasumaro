@@ -37,7 +37,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.33",
+    "@crxjs/vite-plugin": "^2.4.0",
     "@peculiar/webcrypto": "^1.5.0",
     "@playwright/test": "^1.58.2",
     "@types/chrome": "^0.1.36",
@@ -45,6 +45,7 @@
     "adm-zip": "^0.5.16",
     "jsdom": "^29.0.2",
     "typescript": "^5.9.3",
+    "vite": "^8.0.8",
     "vitest": "^4.1.4"
   },
   "dependencies": {
