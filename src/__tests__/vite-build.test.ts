@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 
 describe('Vite Build Output', () => {
-  it('should produce popup/popup.js', () => {
-    const exists = fs.existsSync(path.join(__dirname, '../../dist/popup/popup.js'));
+  it('should produce popup.js in dist root', () => {
+    const exists = fs.existsSync(path.join(__dirname, '../../dist/popup.js'));
     expect(exists).toBe(true);
   });
 
