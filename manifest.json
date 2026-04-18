@@ -104,13 +104,16 @@
       "js": [
         "content/loader.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "type": "module"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
         "content/loader.js",
+        "content/extractor.js",
+        "assets/*.js",
         "icons/icon48.png",
         "data/models-dev-openai-compatible.json",
         "PRIVACY.md",
