@@ -539,6 +539,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 return;
             }
 
+            // PING - Service Worker health check
+            if (message.type === 'PING') {
+                sendResponse({ success: true });
+                return;
+            }
+
             sendResponse(null);
         } catch (error) {
             logError(

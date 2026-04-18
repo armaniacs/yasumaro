@@ -3,9 +3,8 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { isRecordable } from './tabUtils.js';
 import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
-import { loadPendingPages, saveSelectedPages } from './pendingPages.js';
 
-export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, loadPendingPages, saveSelectedPages, renderSpecialUrlStatus, isRecordable };
+export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus, isRecordable };
 
 setRecordCurrentPageFn(recordCurrentPage);
 
@@ -16,7 +15,6 @@ async function loadCurrentTabAndInitStatus(): Promise<void> {
 
 document.addEventListener('DOMContentLoaded', () => {
   initializeModalEvents();
-  loadPendingPages();
   loadCurrentTabAndInitStatus().catch((error) => {
     logError('[Initialize] Failed to load current tab or init status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
   });

@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite';
+import { defineConfig, UserConfig } from 'vite';
 import path from 'path';
 
 // Check what to build
 const buildType = process.env.BUILD_TYPE || 'main'; // 'main', 'loader', 'extractor'
 
-const configs: Record<string, any> = {
+const configs: Record<string, UserConfig> = {
   main: {
     root: '.',
     base: './',

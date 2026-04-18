@@ -53,7 +53,7 @@ export default defineConfig({
   // モジュール解決
   resolve: {
     alias: {
-      '^src/(.*)$': path.resolve(__dirname, './src/$1'),
+      'src/': path.resolve(__dirname, './src/'),
     },
   },
 

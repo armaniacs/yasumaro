@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.5] - 2026-04-18
+
+### Added
+
+- **AIプロバイダー切替時の権限動的リクエスト**: プロバイダーを選択した際に `chrome.permissions` API で必要なホスト権限を自動リクエスト（`src/popup/settings/aiProvider.ts`）
+- **Service Worker ヘルスチェック**: `PING` メッセージへのレスポンスを追加し、SW の生存確認を可能に
+- **PII サニタイザーの絶対上限**: `skipSizeLimit` オプション使用時でも 512KB を超える入力を拒否する DoS 対策を追加
+
+### Changed
+
+- **「今すぐ記録」ボタンを削除**: ステータスパネルの未許可ドメイン向けアクションから `statusRecordOnce` ボタンを除去し、UI を簡素化
+- **保留ページUI をポップアップから削除**: `pendingPages` セクション（保留中ページ一覧・ボタン群）とその関連ロジック（`loadPendingPages` / `saveSelectedPages`）をポップアップから削除
+
+### Fixed
+
+- **`isDevelopment()` の判定ロジック改善**: Vite 環境では `import.meta.env.DEV` を参照しつつ、テスト環境（`NODE_ENV=test`）では確実に `false` を返すよう修正
+- **`crypto.randomUUID` 未定義時のガード**: `logger.ts` で `crypto` オブジェクト自体の存在確認を追加し、非ブラウザ環境でのエラーを防止
+
+### Tests
+
+- **E2E テストの実装**: 保留ページダイアログのテストケースを Playwright で実装（`chrome.storage` 注入パターンを使用）
+
 ## [5.1.4] - 2026-04-18
 
 ### Changed

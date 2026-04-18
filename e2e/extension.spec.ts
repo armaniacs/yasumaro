@@ -161,8 +161,6 @@ test.describe('Popup - Private Page Dialog @ui', () => {
 });
 
 test.describe('Popup - Navigation Interaction @interaction', () => {
-  testInteraction.fixme(true, 'Requires Chrome extension context for JS execution');
-
   testInteraction('should navigate to settings screen', async ({ popupPage: page }) => {
     await page.locator('#menuBtn').click();
     await expect(page.locator('#settingsScreen')).toBeVisible();
@@ -188,35 +186,152 @@ test.describe('Popup - Navigation Interaction @interaction', () => {
 });
 
 test.describe('Popup - Private Page Interaction @interaction', () => {
-  // testInteraction.fixme(true, 'Requires Chrome extension context (chrome.runtime, chrome.storage mocks)');
+  // These tests require Chrome extension context with proper private page state
+  // Setup chrome.storage with pending pages before each test
 
   testInteraction('should handle dialog cancel action', async ({ popupPage: page }) => {
+    // Setup: Add pending page to storage and reload
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [{
+          url: 'https://private.example.com/page1',
+          title: 'Test Private Page',
+          timestamp: Date.now(),
+          reason: 'cache-control',
+          headerValue: 'private'
+        }]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500); // Wait for UI to render
+
     const dialog = page.locator('#private-page-dialog');
+    await expect(dialog).toBeVisible();
     await page.locator('#dialog-cancel').click();
     await expect(dialog).not.toBeVisible();
   });
 
   testInteraction('should handle save once action', async ({ popupPage: page }) => {
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [{
+          url: 'https://private.example.com/page2',
+          title: 'Test Private Page 2',
+          timestamp: Date.now(),
+          reason: 'cache-control',
+          headerValue: 'private'
+        }]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+
+    const dialog = page.locator('#private-page-dialog');
+    await expect(dialog).toBeVisible();
     await page.locator('#dialog-save-once').click();
-    await expect(page.locator('#private-page-dialog')).not.toBeVisible();
+    await expect(dialog).not.toBeVisible();
   });
 
   testInteraction('should handle save domain action', async ({ popupPage: page }) => {
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [{
+          url: 'https://private.example.com/page3',
+          title: 'Test Private Page 3',
+          timestamp: Date.now(),
+          reason: 'cache-control',
+          headerValue: 'private'
+        }]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+
+    const dialog = page.locator('#private-page-dialog');
+    await expect(dialog).toBeVisible();
     await page.locator('#dialog-save-domain').click();
-    await expect(page.locator('#private-page-dialog')).not.toBeVisible();
+    await expect(dialog).not.toBeVisible();
   });
 
   testInteraction('should handle save path action', async ({ popupPage: page }) => {
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [{
+          url: 'https://private.example.com/page4',
+          title: 'Test Private Page 4',
+          timestamp: Date.now(),
+          reason: 'cache-control',
+          headerValue: 'private'
+        }]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+
+    const dialog = page.locator('#private-page-dialog');
+    await expect(dialog).toBeVisible();
     await page.locator('#dialog-save-path').click();
-    await expect(page.locator('#private-page-dialog')).not.toBeVisible();
+    await expect(dialog).not.toBeVisible();
   });
 
   testInteraction('should display pending pages when available', async ({ popupPage: page }) => {
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [
+          {
+            url: 'https://private.example.com/page5',
+            title: 'Pending Page 1',
+            timestamp: Date.now(),
+            reason: 'cache-control',
+            headerValue: 'private'
+          },
+          {
+            url: 'https://private.example.com/page6',
+            title: 'Pending Page 2',
+            timestamp: Date.now() - 1000,
+            reason: 'set-cookie',
+            headerValue: 'session=abc123'
+          }
+        ]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+
     await expect(page.locator('#pending-section')).not.toHaveClass(/hidden/);
     await expect(page.locator('.pending-item').first()).toBeVisible();
   });
 
   testInteraction('should toggle select all checkboxes', async ({ popupPage: page }) => {
+    await page.evaluate(async () => {
+      // @ts-expect-error - chrome API available in extension context
+      await chrome.storage.local.set({
+        pendingPages: [
+          {
+            url: 'https://private.example.com/page7',
+            title: 'Pending Page A',
+            timestamp: Date.now(),
+            reason: 'cache-control',
+            headerValue: 'private'
+          },
+          {
+            url: 'https://private.example.com/page8',
+            title: 'Pending Page B',
+            timestamp: Date.now(),
+            reason: 'set-cookie',
+            headerValue: 'session=xyz'
+          }
+        ]
+      });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+
     const selectAllBtn = page.locator('#btn-select-all');
     const checkboxes = page.locator('.pending-checkbox');
 
@@ -233,8 +348,6 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
 });
 
 test.describe('Extension - Content Script @interaction', () => {
-  test.fixme(true, 'Requires loaded extension with content script injection');
-
   test('should inject content script on page load', async ({ popupPage: page, context }) => {
     await page.goto('https://example.com');
     await expect(page.locator('[data-smart-history-marker]')).toHaveCount(0);
@@ -253,8 +366,6 @@ test.describe('Extension - Content Script @interaction', () => {
 });
 
 test.describe('Extension - Service Worker @interaction', () => {
-  test.fixme(true, 'Requires loaded extension with service worker');
-
   test('should handle messages from content script', async () => {
     // Placeholder: requires service worker context
   });
