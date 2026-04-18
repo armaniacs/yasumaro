@@ -263,7 +263,6 @@ function renderStatusPanel(status: StatusInfo): void {
 
         html += `
           <div class="status-actions">
-            <button class="status-action-btn primary" id="statusRecordOnce" data-i18n="saveOnce">今すぐ記録</button>
             <button class="status-action-btn" id="statusAddDomain" data-i18n="saveDomain">ドメインを許可</button>
             <button class="status-action-btn" id="statusAddPath" data-i18n="savePath">パスを許可</button>
           </div>
@@ -356,12 +355,6 @@ export function renderSpecialUrlStatus(): void {
 }
 
 function attachPrivacyActionListeners(): void {
-  const recordOnceBtn = document.getElementById('statusRecordOnce');
-  recordOnceBtn?.addEventListener('click', async () => {
-    const recordPageFn = getRecordCurrentPage();
-    await recordPageFn(true);
-  });
-
   const addDomainBtn = document.getElementById('statusAddDomain');
   addDomainBtn?.addEventListener('click', async () => {
     const tab = await getCurrentTab();

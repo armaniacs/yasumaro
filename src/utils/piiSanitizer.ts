@@ -9,6 +9,7 @@ import { validateLuhn } from './luhn.js';
 
 // 定数設定
 export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
+const MAX_SKIP_SIZE = 512 * 1024; // 512KB - maximum size even with skipSizeLimit
 const MAX_OUTPUT_SIZE = 128 * 1024; // 128KB (入力の2倍を許容)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
@@ -170,6 +171,15 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 text,
                 maskedItems: [],
                 error: sizeValidation.error
+            };
+        }
+    } else {
+        // skipSizeLimit時の絶対上限（DoS対策）
+        if (text.length > MAX_SKIP_SIZE) {
+            return {
+                text,
+                maskedItems: [],
+                error: `Input size exceeds maximum limit of ${MAX_SKIP_SIZE} characters even with skipSizeLimit (actual: ${text.length})`
             };
         }
     }

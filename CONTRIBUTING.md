@@ -41,9 +41,9 @@ npm test
 #### テストの実行
 
 ```bash
-npm test              # 全テスト実行（Jest）
-npm run test:watch    # ウォッチモードでの実行（Jest）
-npm run test:coverage # カバレッジレポート付き実行（Jest）
+npm test              # 全テスト実行（Vitest）
+npm run test:watch    # ウォッチモードでの実行（Vitest）
+npm run test:coverage # カバレッジレポート付き実行（Vitest）
 npm run test:e2e      # E2Eテスト実行（Playwright）
 npm run test:e2e:ui   # E2EテストUIモード（Playwright）
 npm run test:e2e:debug # E2Eテストデバッグモード（Playwright）

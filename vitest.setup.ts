@@ -42,6 +42,19 @@ Object.defineProperty(global, 'CryptoKey', {
 });
 
 // ============================================================================
+// Vite Environment Variables Mock
+// ============================================================================
+
+// import.meta.env mock for Vitest (used by logger.ts isDevelopment)
+vi.stubGlobal('import.meta', {
+  env: {
+    DEV: process.env.NODE_ENV === 'development',
+    PROD: process.env.NODE_ENV === 'production',
+    MODE: process.env.NODE_ENV || 'test',
+  },
+});
+
+// ============================================================================
 // Chrome Extensions API Mock
 // ============================================================================
 

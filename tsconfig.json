@@ -44,12 +44,6 @@
         "node_modules",
         "dist",
         "src/**/__tests__",
-        "vitest.setup.ts",
-        "jest.setup.js",
-        "jest.setup.ts",
-        "jest.config.cjs",
-        "jest.resolver.cjs",
-        "babel.config.cjs",
-        "build.js"
+        "vitest.setup.ts"
     ]
 }

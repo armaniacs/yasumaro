@@ -3,6 +3,9 @@
  * AIプロバイダーの選択に応じて、各プロバイダー設定パネルの表示/非表示を切り替える
  */
 
+import { PermissionManager } from '../../utils/permissionManager.js';
+import { logWarn } from '../../utils/logger.js';
+
 /**
  * AIプロバイダー項目
  */
@@ -15,6 +18,18 @@ export interface AIProviderElements {
     lmStudioSettings?: HTMLElement;
     ollamaSettings?: HTMLElement;
 }
+
+/**
+ * AIプロバイダーとそのAPI URLのマッピング
+ */
+const PROVIDER_URLS: Record<string, string> = {
+    'gemini': 'https://generativelanguage.googleapis.com/',
+    'openai': 'https://api.openai.com/',
+    'openai2': 'https://api.openai.com/',
+    'lm-studio': 'http://localhost:1234/',
+    'ollama': 'http://localhost:11434/',
+    'openai-compatible': '', // ユーザー設定による
+};
 
 /**
  * AIプロバイダー UI 表示を更新
@@ -52,11 +67,46 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
 }
 
 /**
+ * AIプロバイダーの権限を動的に要求
+ * @param {string} provider - プロバイダーID
+ * @returns {Promise<boolean>} 許可されたかどうか
+ */
+export async function requestAIProviderPermission(provider: string): Promise<boolean> {
+    const url = PROVIDER_URLS[provider];
+    if (!url) {
+        // openai-compatible の場合は手動入力を待つ
+        return true;
+    }
+
+    const permManager = new PermissionManager();
+    const isPermitted = await permManager.isHostPermitted(url);
+
+    if (isPermitted) {
+        return true;
+    }
+
+    // 権限を要求
+    const granted = await permManager.requestPermission(url);
+    if (!granted) {
+        logWarn('AIProvider', { provider, url }, undefined, 'AI provider permission denied by user');
+    }
+    return granted;
+}
+
+/**
  * AIプロバイダー選択時に表示を切り替えるイベントリスナーを設定
  * @param {AIProviderElements} elements - DOM要素
  */
 export function setupAIProviderChangeListener(elements: AIProviderElements): void {
     elements.select.addEventListener('change', () => {
         updateAIProviderVisibility(elements);
+
+        // 権限を非同期で要求（UIブロックしない）
+        const provider = elements.select.value;
+        if (provider !== 'openai-compatible') {
+            requestAIProviderPermission(provider).catch((error) => {
+                logWarn('AIProvider', { error: error instanceof Error ? error.message : String(error), provider }, undefined, 'Failed to request AI provider permission');
+            });
+        }
     });
 }
