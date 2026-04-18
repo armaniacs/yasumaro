@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.4] - 2026-04-18
+
+### Changed
+
+- **ビルドシステムをtscからViteへ移行**: 開発体験の向上（HMR対応）とビルド速度の改善のため、Vite 8.0.8を採用
+  - CRXJSプラグイン不使用: Vite 8との互換性問題により、手動エントリーポイント設定に変更
+  - コンテンツスクリプトはIIFE形式で出力（Chrome拡張機能のESモジュール非対応への対応）
+  - メインエントリ（popup, dashboard, privacy, service-worker）はESモジュール形式
+  - `scripts/vite-postbuild.mjs`で静的ファイル（HTML/CSS）をdist/にコピー
+  - `manifest.json`の`content_scripts`に`type: "module"`を追加
+  - `web_accessible_resources`に`content/extractor.js`と`assets/*.js`を追加
+
+### Fixed
+
+- **INEFFECTIVE_DYNAMIC_IMPORT警告を解消**: `src/utils/masterPassword.ts`内の動的インポートを静的インポートに統一
+- **EMPTY_IMPORT_META警告を解消**: IIFE形式ビルドで`import.meta`を空オブジェクトに置換するようdefineオプションを追加
+- **コンテンツスクリプトのESモジュールエラーを解消**: content/loader.jsとcontent/extractor.jsをIIFE形式で出力
+
+### Test Results
+
+- テストファイル: 169件パス（1件スキップ）
+- テストケース: 3,489件パス（15件スキップ）
+- TypeScript チェック: パス
+- 検証: パス
 
 ## [5.1.3] - 2026-04-17
 
