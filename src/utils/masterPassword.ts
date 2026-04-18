@@ -10,7 +10,8 @@ import {
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
     encrypt,
-    decryptData
+    decryptData,
+    deriveKey
 } from './crypto.js';
 import type { StorageKeys } from './storage.js';
 
@@ -200,7 +201,6 @@ export async function changeMasterPassword(
         const oldSaltBase64 = result['master_password_salt'] as string | undefined;
 
         // 古いパスワードでキーを取得（再暗号化用）
-        const { deriveKey } = await import('./crypto.js');
         const oldSalt = oldSaltBase64
             ? new Uint8Array(atob(oldSaltBase64).split('').map(c => c.charCodeAt(0)))
             : generateSalt();
@@ -225,8 +225,7 @@ export async function changeMasterPassword(
 
         // 古いキーで復号して新しいキーで暗号化
         for (const { key, encryptedData } of encryptedDataList) {
-            // 古いキーでパスワードを取得（再暗号化用）
-            const { decryptData } = await import('./crypto.js');
+            // 古いキーで復号
             const plaintext = await decryptData(encryptedData!, oldKey);
             const reencrypted = await encrypt(plaintext, newKey);
             await setStorageFn(key, reencrypted);

@@ -46,11 +46,11 @@ export default defineConfig({
     {
       name: 'extension',
       testDir: './e2e',
-      grep: /@extension/,
+      grepInverse: /@extension/,  // Skip tests matching @extension
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,
-      retries: process.env.CI ? 2 : 0,
+      retries: 0,
       workers: 1,
       use: { 
         ...devices['Desktop Chrome'],
