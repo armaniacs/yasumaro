@@ -2,6 +2,12 @@ CLAUDE.md
 CLAUDE.local.md
 tmp/
 *.log
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*-new.json
+*-temp.json
 
 node_modules/
 dist/

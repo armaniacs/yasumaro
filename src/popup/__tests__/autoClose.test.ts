@@ -384,7 +384,7 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: タイマーからはクローズされず、showSettingsScreen() の1回のみであること
 
     // 【結果検証】: chrome.tabs.create が呼ばれたこと
-    expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/dashboard/dashboard.html' }); // 【確認内容】: ダッシュボードが新しいタブで開かれたこと
+    expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/options.html' }); // 【確認内容】: ダッシュボードが新しいタブで開かれたこと
   });
 });
 

@@ -54,7 +54,7 @@ function showPrivacyConsentModal(): void {
 
     // プライバシーポリシーリンク設定
     if (viewPrivacyPolicyBtn) {
-        viewPrivacyPolicyBtn.href = chrome.runtime.getURL('privacy/privacy.html');
+        viewPrivacyPolicyBtn.href = chrome.runtime.getURL('permissions.html');
         viewPrivacyPolicyBtn.setAttribute(
             'aria-label',
             getMessage('viewFullPolicy') || 'View Full Privacy Policy'

@@ -182,7 +182,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
     // data-ow-e2e-test 属性がある場合はドメインフィルタをスキップし、
     // 動的インポートでコンテンツスクリプトを直接読み込む
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
-        const src = chrome.runtime.getURL('content/extractor.js');
+        const src = chrome.runtime.getURL('content-extractor.js');
         try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked (e2e)', url, e instanceof Error ? e.message : String(e)); }
         return;
     }
@@ -196,7 +196,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
             return;  // 拒否ドメイン → 早期リターン
         }
         // 許可 → extractor を inject
-        const src = chrome.runtime.getURL('content/extractor.js');
+        const src = chrome.runtime.getURL('content-extractor.js');
         try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, e instanceof Error ? e.message : String(e)); }
         return;
     }
@@ -223,7 +223,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
     }
 
     // ビルド後のパスを指定（distディレクトリ内）
-    const src = chrome.runtime.getURL('content/extractor.js');
+    const src = chrome.runtime.getURL('content-extractor.js');
     try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked', url, e instanceof Error ? e.message : String(e)); }
 })();
 

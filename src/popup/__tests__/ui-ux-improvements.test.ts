@@ -17,13 +17,13 @@ import { join } from 'path';
 
 // popup.htmlを読み込む
 const getPopupHTML = () => {
-  const htmlPath = join(__dirname, '../popup.html');
+  const htmlPath = join(__dirname, '../../../entrypoints/popup/index.html');
   return readFileSync(htmlPath, 'utf-8');
 };
 
 // styles.cssを読み込む
 const getStylesCSS = () => {
-  const cssPath = join(__dirname, '../styles.css');
+  const cssPath = join(__dirname, '../../../entrypoints/popup/styles.css');
   return readFileSync(cssPath, 'utf-8');
 };
 

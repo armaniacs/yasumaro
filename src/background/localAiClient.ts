@@ -7,7 +7,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 
-const OFFSCREEN_DOCUMENT_PATH = 'src/offscreen/offscreen.html';
+const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 const MESSAGE_TIMEOUT_MS = 30000; // 30秒
 
 export interface LocalAISummaryResult {

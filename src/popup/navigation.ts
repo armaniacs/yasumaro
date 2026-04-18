@@ -52,7 +52,7 @@ export function showSettingsScreen(): void {
   clearAutoCloseTimer();
 
   // 【ダッシュボード遷移】: 設定を新しいタブのダッシュボードページで開く
-  const dashboardUrl = chrome.runtime.getURL('dashboard/dashboard.html');
+  const dashboardUrl = chrome.runtime.getURL('options.html');
   chrome.tabs.create({ url: dashboardUrl });
 
   // ポップアップを閉じる

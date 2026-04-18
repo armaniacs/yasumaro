@@ -1,22 +1,9 @@
 import { defineConfig } from 'wxt';
 
-/**
- * WXT Configuration for Obsidian Weave
- */
 export default defineConfig({
-  // Output directory
   outDir: 'dist',
-  
-  // Browser type  
   browser: 'chromium',
-  
-  // Public assets that should be copied
-  publicDir: [
-    'src/popup/i18n.js',
-    'icons',
-  ],
-  
-  // Manifest configuration
+
   manifest: {
     manifest_version: 3,
     name: '__MSG_extensionName__',
@@ -32,7 +19,7 @@ export default defineConfig({
     permissions: [
       'tabs',
       'storage',
-      'scripting', 
+      'scripting',
       'notifications',
       'offscreen',
       'favicon',
@@ -40,7 +27,88 @@ export default defineConfig({
       'webRequest',
       'alarms',
     ],
-    optional_host_permissions: ['<all_urls>'],
-    host_permissions: ['<all_urls>'],
+    optional_host_permissions: [
+      'https://api-inference.huggingface.co/*',
+      'https://api.openrouter.ai/*',
+      'https://deepinfra.com/*',
+      'https://cerebras.ai/*',
+      'https://ai-gateway.helicone.ai/*',
+      'https://api.publicai.co/*',
+      'https://api.venice.ai/*',
+      'https://api.scaleway.ai/*',
+      'https://api.synthetic.new/*',
+      'https://api.stima.tech/*',
+      'https://nano-gpt.com/*',
+      'https://api.poe.com/*',
+      'https://llm.chutes.ai/*',
+      'https://api.abliteration.ai/*',
+      'https://api.llamagate.dev/*',
+      'https://api.gmi-serving.com/*',
+      'https://api.sarvam.ai/*',
+      'https://xiaomimimo.com/*',
+      'https://nebius.com/*',
+      'https://sambanova.ai/*',
+      'https://nscale.com/*',
+      'https://featherless.ai/*',
+      'https://galadriel.com/*',
+      'https://recraft.ai/*',
+      'https://perplexity.ai/*',
+      'https://jina.ai/*',
+      'https://raw.githubusercontent.com/*',
+      'https://gitlab.com/*',
+      'https://tranco-list.eu/*',
+      'https://easylist.to/*',
+      'https://pgl.yoyo.org/*',
+      'https://nsfw.oisd.nl/*',
+    ],
+    host_permissions: [
+      'http://127.0.0.1:27123/*',
+      'https://127.0.0.1:27123/*',
+      'http://localhost:27123/*',
+      'https://localhost:27123/*',
+      'http://127.0.0.1:27124/*',
+      'https://127.0.0.1:27124/*',
+      'http://localhost:27124/*',
+      'https://localhost:27124/*',
+      'http://127.0.0.1:11434/*',
+      'https://127.0.0.1:11434/*',
+      'http://localhost:11434/*',
+      'https://localhost:11434/*',
+      'http://127.0.0.1:1234/*',
+      'https://127.0.0.1:1234/*',
+      'http://localhost:1234/*',
+      'https://localhost:1234/*',
+      'https://generativelanguage.googleapis.com/*',
+      'https://api.openai.com/*',
+      'https://*.openai.com/*',
+      'https://api.anthropic.com/*',
+      'https://api.groq.com/*',
+      'https://mistral.ai/*',
+      'https://deepseek.com/*',
+      'https://voyageai.com/*',
+      'https://volcengine.com/*',
+      'https://z.ai/*',
+      'https://wandb.ai/*',
+      'https://api.ai.sakura.ad.jp/*',
+    ],
+    content_security_policy: {
+      extension_pages: "script-src 'self'; object-src 'none'; connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://generativelanguage.googleapis.com https://api.openai.com https://*.openai.com https://api.anthropic.com https://api.groq.com https://mistral.ai https://deepseek.com https://voyageai.com https://volcengine.com https://z.ai https://wandb.ai https://api.ai.sakura.ad.jp https://api-inference.huggingface.co https://api.openrouter.ai https://deepinfra.com https://cerebras.ai https://ai-gateway.helicone.ai https://api.publicai.co https://api.venice.ai https://api.scaleway.ai https://api.synthetic.new https://api.stima.tech https://nano-gpt.com https://api.poe.com https://llm.chutes.ai https://api.abliteration.ai https://api.llamagate.dev https://api.gmi-serving.com https://api.sarvam.ai https://xiaomimimo.com https://nebius.com https://sambanova.ai https://nscale.com https://featherless.ai https://galadriel.com https://recraft.ai https://perplexity.ai https://jina.ai https://raw.githubusercontent.com https://gitlab.com https://tranco-list.eu https://easylist.to https://pgl.yoyo.org https://nsfw.oisd.nl; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';",
+    },
+    web_accessible_resources: [
+      {
+        resources: [
+          'content-scripts/content.js',
+          'content-extractor.js',
+          'chunks/*.js',
+          'assets/*.js',
+          'icons/icon48.png',
+          'data/models-dev-openai-compatible.json',
+          'PRIVACY.md',
+          'permissions.html',
+          'assets/permissions-*.css',
+        ],
+        matches: ['<all_urls>'],
+      },
+    ],
   },
 });
