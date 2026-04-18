@@ -4,9 +4,9 @@
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {
-    "dev": "wxt dev",
-    "build": "wxt build",
-    "build:watch": "wxt dev",
+    "dev": "vite",
+    "build": "BUILD_TYPE=main vite build && BUILD_TYPE=loader vite build && BUILD_TYPE=extractor vite build && node scripts/vite-postbuild.mjs",
+    "build:watch": "vite build --watch",
     "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
     "update-tranco": "npm run update-preset && npm run update-manifest",
