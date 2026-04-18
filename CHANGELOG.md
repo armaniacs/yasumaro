@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **ビルドシステムを Vite から WXT へ移行**: Web Extension Toolbox (WXT v0.20.25) を採用し、Chrome 拡張機能のビルド・開発体験を向上
+  - `entrypoints/` ディレクトリに popup・options・permissions・background・content・offscreen の各エントリポイントを整備
+  - 静的アセット（`icons/`・`_locales/`・`data/`）を `public/` に移動（WXT publicDir）
+  - `package.json` の `build`/`dev` スクリプトを `wxt build`/`wxt` に変更
+  - `vite.config.ts`・`scripts/vite-postbuild.mjs` を削除
+  - `src/popup/popup.html`・`src/dashboard/dashboard.html`・`src/privacy/privacy.html` 等の旧 HTML/CSS を `entrypoints/` に統合し削除
+  - Node v24 対応: `htmlparser2` を v12 に override、`engines` を `>=22.0.0` に緩和
+
+- **出力パスの変更（WXT 規約に準拠）**:
+  - ビルド出力先: `dist/` → `dist/chromium-mv3/`
+  - popup: `popup/popup.html` → `popup.html`
+  - options (dashboard): `dashboard/dashboard.html` → `options.html`
+  - permissions (privacy): `privacy/privacy.html` → `permissions.html`
+  - background: `background/service-worker.js` → `background.js`
+  - content script: `content/loader.js` → `content-scripts/content.js`
+  - extractor: `content/extractor.js` → `content-extractor.js`（unlisted script）
+
+### Tests
+
+- **WXT ビルド出力検証テストを追加**: `src/__tests__/wxt-build.test.ts` で `dist/chromium-mv3/` の構造を検証
+- **旧 Vite ビルドテストを削除**: `src/__tests__/vite-build.test.ts` を削除
+- テストファイル: 169件パス（1件スキップ）
+- テストケース: 3,499件パス（16件スキップ）
+
 ## [5.1.5] - 2026-04-18
 
 ### Added
