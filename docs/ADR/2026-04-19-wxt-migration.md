@@ -1,103 +1,98 @@
-# ADR-00X: Vite Plugin crxjs から WXT への移行
+# ADR-013: Vite + crxjs から WXT への移行
 
 ## Status
 
-**Accepted**
-
-Priority: **High** (喫緊の課題)
+**Implemented** (2026-04-19)
 
 ## Context
 
-当プロジェクトは現在、`@crxjs/vite-plugin` を使用して Chrome Extension をビルドしています。このプラグインは Vite の魔法を拡張機能に持ち込んだ功労者ですが、現在の「Vite 8 / Rolldown」という新しい波を前に、その足枷が顕著になっています。
+当プロジェクトは `@crxjs/vite-plugin` を使用して Chrome Extension をビルドしていた。このプラグインは Rollup 2.79.2 にハード依存しており、Vite 8 / Rolldown への移行において根本的な互換性の問題を抱えていた。`package.json` の `overrides` で無理やり動かす綱渡りの運用が続いており、解消が急務だった。
 
 ## Decision
 
-**WXT を導入し、ビルドツールを移行する。**
+**WXT (Web Extension Toolbox) v0.20.25 を導入し、ビルドツールを全面移行する。**
+
+`vite.config.ts` と `@crxjs/vite-plugin` を廃止し、WXT の `wxt.config.ts` に置き換える。既存の `src/` コード（5000行超）は変更せず、`entrypoints/` に薄いラッパーを配置して動的インポートするパターンを採用する。
 
 ## Consequences
 
 ### Positive
 
-1. **「依存関係の呪縛」からの解放**
-   - crxjs は Rollup 2.79.2 にハード依存している
-   - Vite 6 は Rollup 4 をベースにし、Vite 8 では Rust 製の新エンジン「Rolldown」へ進化
-   - WXT は最新の Vite 8 環境で動作することを前提に設計
-   - package.json の overrides で無理やり動かす「綱渡りの運用」から解放
-
-2. **Vite 8 (Rolldown) の恩恵を最大化**
-   - Rolldown による圧倒的なビルド速度
-   - 開発・本番環境での挙動の不一致解消
-   - crxjs のレガシーな構造によるバグの温床を排除
-   - 快適なテスト環境（Vitest 4）を安定して構築可能
-
-3. **「フレームワーク」がもたらす開発効率の飛躍**
-   - **マニフェストの自動生成**: 手書きの manifest.json 管理から解放され、ファイル構成に基づいた型安全な開発
-   - **堅牢な HMR (ホットリロード)**: crxjs で発生していた「Content Scripts の更新が反映されない」問題の解消
-   - **マルチブラウザ対応**: Chrome だけでなく Firefox や Safari 向けビルドも標準サポート
+- Rolldown エンジン（Vite 8）の恩恵をそのまま享受できる
+- `manifest.json` の手書き管理が不要になり、`wxt.config.ts` で型安全に記述できる
+- `entrypoints/` 規約によりビルド対象が明確になる
+- マルチブラウザ対応（Firefox / Safari）が標準サポートされる
+- crxjs 由来の ESM / IIFE 変換の複雑さが解消される
 
 ### Negative
 
-- 移行期間中の一時的な開発生産性の低下
-- 既存ビルド設定の再調整が必要
-- チームメンバーの学習コスト
+- WXT の出力ディレクトリが `dist/chromium-mv3/` となり、旧 `dist/` と異なる
+- Chrome の「Load unpacked」で指定するパスが変わる
+- Node v24 で `htmlparser2` の ESM 解決に問題があり、`overrides` での v12 固定が必要
 
-## Impact Analysis
+## Implementation
 
-### 影響を受ける範囲
-
-| 対象 | 影響 | 対応要否 |
-|------|------|---------|
-| `vite.config.ts` | 完全置き換え | 要 |
-| `manifest.json` | WXT が自動生成 | 削除可 |
-| `src/` ディレクトリ構造 | WXT規約に準拠へ移行 | 要（部分的） |
-| npm scripts (`build`, `dev`) | WXT コマンドに変更 | 要 |
-| GitHub Actions workflows | ビルドコマンド変更 | 要 |
-
-### 移行後のディレクトリ構造（予定）
+### 採用したアーキテクチャ
 
 ```
-project-root/
-├── src/
-│   ├── entrypoints/          # WXT規約: entrypoints ディレクトリ
-│   │   ├── background.ts     # service worker
-│   │   ├── content.ts        # content script
-│   │   └── popup/
-│   │       ├── index.html
-│   │       └── index.ts
-│   └── utils/                # 既存のユーティリティ
-├── wxt.config.ts             # WXT 設定ファイル
-└── package.json              # scripts 更新
+entrypoints/
+  background/index.ts       defineBackground + dynamic import → src/background/service-worker.js
+  content/index.ts          defineContentScript → src/content/loader.js
+  content-extractor.ts      defineUnlistedScript → src/content/extractor.js
+  popup/index.html + main.ts
+  options/index.html + main.ts
+  permissions/index.html + main.ts
+  offscreen.html            WXT unlisted page → src/offscreen/offscreen.js
+
+public/
+  icons/       ← git mv icons/ public/icons/
+  _locales/    ← git mv _locales/ public/_locales/
+  data/        ← git mv data/ public/data/
+  PRIVACY.md
 ```
 
-## Risk Analysis
+### WXT 実際の出力構造
 
-| リスク | 確率 | 影響度 | 対策 |
-|--------|------|--------|------|
-| 移行期間中の機能実装遅延 | 中 | 中 | 移行を独立したブランチで実施、完了まで新機能は最小限に |
-| Content Script の動作変更 | 低 | 高 | 包括的な手動テスト、重要サイトでの動作確認 |
-| プラグイン互換性の問題 | 低 | 中 | 事前に WXT のドキュメント・Issue を調査 |
-| チームの学習コスト | 中 | 低 | ペアプロでの移行、ドキュメント整備 |
+```
+dist/chromium-mv3/
+  manifest.json
+  popup.html                ← entrypoints/popup/index.html から
+  options.html              ← entrypoints/options/index.html から
+  permissions.html          ← entrypoints/permissions/index.html から
+  offscreen.html            ← entrypoints/offscreen.html から（unlisted page）
+  background.js
+  content-extractor.js      ← entrypoints/content-extractor.ts から（unlisted script）
+  content-scripts/
+    content.js              ← entrypoints/content/index.ts から
+  chunks/
+  assets/
+  icons/
+  _locales/
+  data/
+```
 
-## Migration Path
+### 判明した WXT の挙動・制約
 
-1. **準備フェーズ**
-   - WXT ドキュメントの熟読
-   - テスト環境でのPOC実施
+| 事項 | 詳細 |
+|------|------|
+| content script パターン | `content/index.[jt]s` または `*.content.[jt]s` のみ認識。`content/loader.ts` は不可 |
+| unlisted script の出力パス | `entrypoints/foo.ts` → `dist/foo.js`（ディレクトリを挟むと無視される場合あり） |
+| HTML entrypoint のパス | `entrypoints/popup/index.html` → `popup.html`（`popup/index.html` ではない） |
+| `manifest_version` の設定 | `wxt.config.ts` の `manifest.manifest_version` は無視される（WARNが出る）。`manifestVersion` オプションで指定 |
+| `optional_host_permissions` | `<all_urls>` を `host_permissions` と両方に設定すると Chrome が redundant 警告を出す |
+| Node v24 + htmlparser2 | v10/v12 の ESM パス解決が Node v24 の `finalizeResolution` と非互換。`overrides: { htmlparser2: "^12.0.0" }` で解消 |
 
-2. **移行フェーズ**
-   - `wxt.config.ts` の作成
-   - `src/` 構造の WXT 規約への移行
-   - npm scripts の更新
+### 変更されたランタイムパス
 
-3. **検証フェーズ**
-   - 全機能の手動テスト
-   - CI/CD パイプラインの更新・検証
-
-4. **完了フェーズ**
-   - `@crxjs/vite-plugin` の削除
-   - 旧設定ファイルのクリーンアップ
+| 旧パス | 新パス |
+|--------|--------|
+| `chrome.runtime.getURL('content/extractor.js')` | `chrome.runtime.getURL('content-extractor.js')` |
+| `chrome.runtime.getURL('dashboard/dashboard.html')` | `chrome.runtime.getURL('options.html')` |
+| `chrome.runtime.getURL('privacy/privacy.html')` | `chrome.runtime.getURL('permissions.html')` |
+| `chrome.offscreen.createDocument({ url: 'src/offscreen/offscreen.html' })` | `url: 'offscreen.html'` |
 
 ## Related
 
 - [WXT Documentation](https://wxt.dev/)
-- ADR-00X: Vitest Migration (関連: テスト環境)
+- ADR-012: Vitest Migration（テスト環境）
+- [plans/2026-04-18-wtx.md](../../plans/2026-04-18-wtx.md)
