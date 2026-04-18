@@ -4,10 +4,9 @@
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "BUILD_TYPE=main vite build && BUILD_TYPE=loader vite build && BUILD_TYPE=extractor vite build && node scripts/vite-postbuild.mjs",
-    "build:watch": "vite build --watch",
-    "build:tsc": "npx tsc && cp -r manifest.json _locales icons data dist/ && cp PRIVACY.md dist/ && cp src/popup/popup.html dist/popup/ && cp src/popup/styles.css dist/popup/ && mkdir -p dist/dashboard && cp src/dashboard/dashboard.html dist/dashboard/ && cp src/dashboard/dashboard.css dist/dashboard/ && cp src/dashboard/models-dev-dialog.html dist/dashboard/ && cp src/dashboard/models-dev-dialog.css dist/dashboard/ && mkdir -p dist/privacy && cp src/privacy/privacy.html src/privacy/privacy.css dist/privacy/ && cp src/utils/trustDb/bloomfilter-vendor.mjs dist/utils/trustDb/bloomfilter-vendor.mjs && node -e \"const fs=require('fs'); const file='dist/content/loader.js'; let content=fs.readFileSync(file,'utf8'); content=content.replace(/export \\\\{\\\\};?\\\\s*$/m,''); fs.writeFileSync(file,content);\"",
+    "dev": "wxt dev",
+    "build": "wxt build",
+    "build:watch": "wxt dev",
     "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
     "update-tranco": "npm run update-preset && npm run update-manifest",
@@ -37,7 +36,6 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.4.0",
     "@peculiar/webcrypto": "^1.5.0",
     "@playwright/test": "^1.58.2",
     "@rollup/plugin-commonjs": "^29.0.2",
@@ -48,7 +46,8 @@
     "jsdom": "^29.0.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "wxt": "^0.20.25"
   },
   "dependencies": {
     "bloomfilter": "1.1.0"
