@@ -260,7 +260,7 @@ export { sanitizePromptContentRefined as sanitizePromptContent };
 
 // デバッグ用: 誤検知率統計
 if (process.env['NODE_ENV'] === 'test') {
-  (global as any).__sanitizerStats = {
+  (globalThis as Record<string, unknown>)['__sanitizerStats'] = {
     totalChecks: 0,
     falsePositives: 0,
     truePositives: 0,

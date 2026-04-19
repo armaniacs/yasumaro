@@ -429,8 +429,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 });
                                 content = results?.[0]?.result?.trim().substring(0, 10000) || '';
                             }
-                        } catch (err: any) {
-                            await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err.message }, undefined, 'service-worker');
+                        } catch (err: unknown) {
+                            await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
                         } finally {
                             // 新規作成したタブを閉じる
                             if (createdTabId !== undefined) {

@@ -53,11 +53,12 @@ const getUserMessageForType = (errorType: ErrorTypeValues): string => {
  * @param {Error} error - 発生したエラー
  * @returns {ErrorTypeValues} エラータイプ
  */
-export function classifyError(error: any): ErrorTypeValues {
+export function classifyError(error: unknown): ErrorTypeValues {
     if (!error) return ErrorType.UNKNOWN;
 
-    const message = (error.message || '').toLowerCase();
-    const name = (error.name || '').toLowerCase();
+    const err = error instanceof Error ? error : null;
+    const message = (err?.message ?? (typeof error === 'object' && error !== null && 'message' in error ? String((error as { message: unknown }).message) : '')).toLowerCase();
+    const name = (err?.name ?? (typeof error === 'object' && error !== null && 'name' in error ? String((error as { name: unknown }).name) : '')).toLowerCase();
 
     // ネットワークエラー
     if (name === 'typeerror' && message.includes('fetch')) {
@@ -103,7 +104,7 @@ export function classifyError(error: any): ErrorTypeValues {
  * @param {Error} error - 発生したエラー
  * @returns {string} ユーザー向けメッセージ
  */
-export function getUserMessage(error: any): string {
+export function getUserMessage(error: unknown): string {
     const errorType = classifyError(error);
     return getUserMessageForType(errorType);
 }
@@ -120,15 +121,16 @@ export interface ErrorResponse {
  * @param {Object} context - コンテキスト情報（ログ用）
  * @returns {ErrorResponse} レスポンスオブジェクト
  */
-export function createErrorResponse(error: any, context: Record<string, any> = {}): ErrorResponse {
+export function createErrorResponse(error: unknown, context: Record<string, unknown> = {}): ErrorResponse {
     const errorType = classifyError(error);
     const userMessage = getUserMessage(error);
 
     // ログには詳細情報を含める（ただしAPIキーなどの機密情報は除く）
+    const err = error instanceof Error ? error : null;
     console.error('[Service Worker Error]', {
         type: errorType,
-        name: error.name,
-        message: error.message,
+        name: err?.name,
+        message: err?.message,
         context: sanitizeContext(context)
     });
 

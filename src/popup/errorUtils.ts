@@ -42,25 +42,29 @@ type SystemError = ErrorWithDetails & {
 
 type KnownError = ObsidianError | AiError | NetworkError | UserError | SystemError;
 
+function hasSource(error: unknown): error is { source: string } {
+  return typeof error === 'object' && error !== null && 'source' in error;
+}
+
 // 型ガード関数
 function isObsidianError(error: unknown): error is ObsidianError {
-  return (error as any)?.source === 'obsidian';
+  return hasSource(error) && error.source === 'obsidian';
 }
 
 function isAiError(error: unknown): error is AiError {
-  return (error as any)?.source === 'ai';
+  return hasSource(error) && error.source === 'ai';
 }
 
 function isNetworkError(error: unknown): error is NetworkError {
-  return (error as any)?.source === 'network';
+  return hasSource(error) && error.source === 'network';
 }
 
 function isUserError(error: unknown): error is UserError {
-  return (error as any)?.source === 'user';
+  return hasSource(error) && error.source === 'user';
 }
 
 function isSystemError(error: unknown): error is SystemError {
-  return (error as any)?.source === 'system';
+  return hasSource(error) && error.source === 'system';
 }
 
 function isKnownError(error: unknown): error is KnownError {

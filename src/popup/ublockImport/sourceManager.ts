@@ -94,8 +94,8 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
   }
 
   // ドメインリストのみを抽出（軽量化）
-  const blockDomains = result.rules.blockRules.map((r: any) => r.domain);
-  const exceptionDomains = result.rules.exceptionRules.map((r: any) => r.domain);
+  const blockDomains = (result.rules.blockRules ?? []).map(r => r.domain);
+  const exceptionDomains = (result.rules.exceptionRules ?? []).map(r => r.domain);
 
   // ソース更新
   sources[index] = {
@@ -152,8 +152,8 @@ export async function saveUblockSettings(text: string, url: string | null = null
   const existingIndex = sources.findIndex(s => s.url === sourceUrl);
 
   // ドメインリストのみを抽出（軽量化）
-  const blockDomains = result.rules.blockRules.map((r: any) => r.domain);
-  const exceptionDomains = result.rules.exceptionRules.map((r: any) => r.domain);
+  const blockDomains = (result.rules.blockRules ?? []).map(r => r.domain);
+  const exceptionDomains = (result.rules.exceptionRules ?? []).map(r => r.domain);
 
   const newSource: Source = {
     url: sourceUrl,

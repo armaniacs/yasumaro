@@ -105,7 +105,7 @@ export function generateCacheKey(text: string): string {
  * @param {string} key - キャッシュキー
  * @returns {Object|null} - キャッシュされた値（存在しない場合はnull）
  */
-export function getFromCache(key: string): any | null {
+export function getFromCache(key: string): unknown | null {
   if (PARSER_CACHE.has(key)) {
     updateLRUTracker(key);
     return { ...PARSER_CACHE.get(key) }; // ディープコピーして返す
@@ -118,7 +118,7 @@ export function getFromCache(key: string): any | null {
  * @param {string} key - キャッシュキー
  * @param {Object} value - 保存する値
  */
-export function saveToCache(key: string, value: any) {
+export function saveToCache(key: string, value: unknown) {
   updateLRUTracker(key);
   PARSER_CACHE.set(key, value);
 }

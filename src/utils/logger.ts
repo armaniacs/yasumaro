@@ -241,10 +241,10 @@ export function clearPendingLogs(): void {
  * @returns {Record<string, any>} サニタイズ済みの詳細情報
  */
 async function sanitizeLogDetails(
-    details: Record<string, any>,
+    details: Record<string, unknown>,
     visitedObjects?: WeakSet<object>,
     depth = 0
-): Promise<Record<string, any>> {
+): Promise<Record<string, unknown>> {
     // 入力チェック
     if (details === null || details === undefined) {
         return details;
@@ -261,21 +261,21 @@ async function sanitizeLogDetails(
 
     // 深度制限チェック
     if (depth >= MAX_RECURSION_DEPTH) {
-        return SANITIZE_RESULT.TOO_DEEP as any;
+        return { __sanitized: SANITIZE_RESULT.TOO_DEEP };
     }
 
     // 循環参照検出
     if (visitedObjects && visitedObjects.has(details)) {
-        return SANITIZE_RESULT.CIRCULAR_REF as any;
+        return { __sanitized: SANITIZE_RESULT.CIRCULAR_REF };
     }
 
     // メタオブジェクトは文字列化
     if (details instanceof Date) {
-        return details.toISOString() as any;
+        return { __value: details.toISOString() };
     }
 
     if (details instanceof Error) {
-        return { message: details.message, stack: details.stack } as any;
+        return { message: details.message, stack: details.stack };
     }
 
     // WeakSetに現在のオブジェクトを追加
@@ -283,7 +283,7 @@ async function sanitizeLogDetails(
         visitedObjects.add(details);
     }
 
-    const sanitized: Record<string, any> = {};
+    const sanitized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(details)) {
         if (value === null || value === undefined) {
@@ -306,7 +306,7 @@ async function sanitizeLogDetails(
                 sanitized[key] = await sanitizeArray(value, visitedObjects, depth + 1);
             } else {
                 // オブジェクトの場合は再帰的に処理
-                sanitized[key] = await sanitizeLogDetails(value as Record<string, any>, visitedObjects, depth + 1);
+                sanitized[key] = await sanitizeLogDetails(value as Record<string, unknown>, visitedObjects, depth + 1);
             }
         } else {
             sanitized[key] = value; // primitive types
@@ -320,10 +320,10 @@ async function sanitizeLogDetails(
  * 配列を再帰的にサニタイズする（ヘルパー関数）
  */
 async function sanitizeArray(
-    arr: any[],
+    arr: unknown[],
     visitedObjects?: WeakSet<object>,
     depth = 0
-): Promise<any> {
+): Promise<unknown[] | string> {
     // 深度制限チェック
     if (depth >= MAX_RECURSION_DEPTH) {
         return SANITIZE_RESULT.TOO_DEEP;
@@ -339,7 +339,7 @@ async function sanitizeArray(
         visitedObjects.add(arr);
     }
 
-    const sanitized: any[] = [];
+    const sanitized: unknown[] = [];
 
     for (const item of arr) {
         if (item === null || item === undefined) {
@@ -364,7 +364,7 @@ async function sanitizeArray(
                 } else if (item instanceof Error) {
                     sanitized.push({ message: item.message, stack: item.stack });
                 } else {
-                    sanitized.push(await sanitizeLogDetails(item as Record<string, any>, visitedObjects, depth + 1) as any);
+                    sanitized.push(await sanitizeLogDetails(item as Record<string, unknown>, visitedObjects, depth + 1));
                 }
             }
         } else {

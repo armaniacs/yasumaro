@@ -21,6 +21,7 @@ import {
   saveMetadataStep
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
+import type { Settings } from '../../utils/storage.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
@@ -130,7 +131,7 @@ export class RecordingPipeline {
   /**
    * Execute the pipeline with initial data
    */
-  async execute(data: RecordingData, settings: any): Promise<RecordingResult> {
+  async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     // Create initial context
     let context: RecordingContext = {
       data,

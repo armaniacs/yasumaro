@@ -13,6 +13,29 @@ import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStat
 import { extractMainContent } from '../utils/contentExtractor.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 
+interface OWTestState {
+    maxScrollPercentage: number;
+    isValidVisitReported: boolean;
+    startTime: number;
+    minVisitDuration: number;
+    minScrollDepth: number;
+    duration: number;
+}
+
+interface ContentMessage {
+    type: string;
+}
+
+function asBool(value: unknown): boolean {
+    return Boolean(value);
+}
+
+declare global {
+    interface Window {
+        __OW_TEST_STATE?: OWTestState;
+    }
+}
+
 // StorageKeys（content script で使用するもののみ）
 const CONTENT_STRIP_HARD_ENABLED = 'content_strip_hard_enabled';
 const CONTENT_STRIP_KEYWORD_ENABLED = 'content_strip_keyword_enabled';
@@ -272,10 +295,10 @@ function loadSettings(): Promise<void> {
             AI_SUMMARY_CLEANSING_LINK_DENSITY,
             CONTENT_DEDUP_ENABLED,
             CONTENT_DEDUP_THRESHOLD
-        ], (result: { [key: string]: any }) => {
+        ], (result: Record<string, unknown>) => {
             // 新方式: settings オブジェクトが存在する場合はそちらを優先
-            const s: { [key: string]: any } = (result.settings_migrated && result.settings)
-                ? { ...result.settings, ...result }
+            const s: Record<string, unknown> = (result['settings_migrated'] && result['settings'])
+                ? { ...(result['settings'] as object), ...result }
                 : result;
 
             if (s.min_visit_duration !== undefined) {
@@ -286,97 +309,97 @@ function loadSettings(): Promise<void> {
             }
             // クレンジング設定を取得
             if (s[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
-                contentStripHardEnabled = s[CONTENT_STRIP_HARD_ENABLED];
+                contentStripHardEnabled = asBool(s[CONTENT_STRIP_HARD_ENABLED]);
             }
             if (s[CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
-                contentStripKeywordEnabled = s[CONTENT_STRIP_KEYWORD_ENABLED];
+                contentStripKeywordEnabled = asBool(s[CONTENT_STRIP_KEYWORD_ENABLED]);
             }
             if (s[CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(s[CONTENT_STRIP_KEYWORDS])) {
-                contentStripKeywords = s[CONTENT_STRIP_KEYWORDS];
+                contentStripKeywords = s[CONTENT_STRIP_KEYWORDS] as string[];
             }
             // AI要約クレンジング設定を取得
             if (s[AI_SUMMARY_CLEANSING_ENABLED] !== undefined) {
-                aiSummaryCleansingEnabled = s[AI_SUMMARY_CLEANSING_ENABLED];
+                aiSummaryCleansingEnabled = asBool(s[AI_SUMMARY_CLEANSING_ENABLED]);
             }
             if (s[AI_SUMMARY_CLEANSING_ALT] !== undefined) {
-                aiSummaryCleansingAlt = s[AI_SUMMARY_CLEANSING_ALT];
+                aiSummaryCleansingAlt = asBool(s[AI_SUMMARY_CLEANSING_ALT]);
             }
             if (s[AI_SUMMARY_CLEANSING_METADATA] !== undefined) {
-                aiSummaryCleansingMetadata = s[AI_SUMMARY_CLEANSING_METADATA];
+                aiSummaryCleansingMetadata = asBool(s[AI_SUMMARY_CLEANSING_METADATA]);
             }
             if (s[AI_SUMMARY_CLEANSING_ADS] !== undefined) {
-                aiSummaryCleansingAds = s[AI_SUMMARY_CLEANSING_ADS];
+                aiSummaryCleansingAds = asBool(s[AI_SUMMARY_CLEANSING_ADS]);
             }
             if (s[AI_SUMMARY_CLEANSING_NAV] !== undefined) {
-                aiSummaryCleansingNav = s[AI_SUMMARY_CLEANSING_NAV];
+                aiSummaryCleansingNav = asBool(s[AI_SUMMARY_CLEANSING_NAV]);
             }
             if (s[AI_SUMMARY_CLEANSING_SOCIAL] !== undefined) {
-                aiSummaryCleansingSocial = s[AI_SUMMARY_CLEANSING_SOCIAL];
+                aiSummaryCleansingSocial = asBool(s[AI_SUMMARY_CLEANSING_SOCIAL]);
             }
             if (s[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
-                aiSummaryCleansingDeep = s[AI_SUMMARY_CLEANSING_DEEP];
+                aiSummaryCleansingDeep = asBool(s[AI_SUMMARY_CLEANSING_DEEP]);
             }
             if (s[AI_SUMMARY_CLEANSING_JSON_LD] !== undefined) {
-                aiSummaryCleansingJsonLd = s[AI_SUMMARY_CLEANSING_JSON_LD];
+                aiSummaryCleansingJsonLd = asBool(s[AI_SUMMARY_CLEANSING_JSON_LD]);
             }
             if (s[AI_SUMMARY_CLEANSING_LAZY_LOAD] !== undefined) {
-                aiSummaryCleansingLazyLoad = s[AI_SUMMARY_CLEANSING_LAZY_LOAD];
+                aiSummaryCleansingLazyLoad = asBool(s[AI_SUMMARY_CLEANSING_LAZY_LOAD]);
             }
             if (s[AI_SUMMARY_CLEANSING_SKIP_LINK] !== undefined) {
-                aiSummaryCleansingSkipLink = s[AI_SUMMARY_CLEANSING_SKIP_LINK];
+                aiSummaryCleansingSkipLink = asBool(s[AI_SUMMARY_CLEANSING_SKIP_LINK]);
             }
             if (s[AI_SUMMARY_CLEANSING_CARD] !== undefined) {
-                aiSummaryCleansingCard = s[AI_SUMMARY_CLEANSING_CARD];
+                aiSummaryCleansingCard = asBool(s[AI_SUMMARY_CLEANSING_CARD]);
             }
             if (s[AI_SUMMARY_CLEANSING_LINK_DENSITY] !== undefined) {
-                aiSummaryCleansingLinkDensity = s[AI_SUMMARY_CLEANSING_LINK_DENSITY];
+                aiSummaryCleansingLinkDensity = asBool(s[AI_SUMMARY_CLEANSING_LINK_DENSITY]);
             }
             // NEW: 6つの新しいクレンジングオプション
             if (s[AI_SUMMARY_CLEANSING_FIXED] !== undefined) {
-                aiSummaryCleansingFixed = s[AI_SUMMARY_CLEANSING_FIXED];
+                aiSummaryCleansingFixed = asBool(s[AI_SUMMARY_CLEANSING_FIXED]);
             }
             if (s[AI_SUMMARY_CLEANSING_RECOMMEND] !== undefined) {
-                aiSummaryCleansingRecommend = s[AI_SUMMARY_CLEANSING_RECOMMEND];
+                aiSummaryCleansingRecommend = asBool(s[AI_SUMMARY_CLEANSING_RECOMMEND]);
             }
             if (s[AI_SUMMARY_CLEANSING_PAGINATION] !== undefined) {
-                aiSummaryCleansingPagination = s[AI_SUMMARY_CLEANSING_PAGINATION];
+                aiSummaryCleansingPagination = asBool(s[AI_SUMMARY_CLEANSING_PAGINATION]);
             }
             if (s[AI_SUMMARY_CLEANSING_SNS_PROMO] !== undefined) {
-                aiSummaryCleansingSnsPromo = s[AI_SUMMARY_CLEANSING_SNS_PROMO];
+                aiSummaryCleansingSnsPromo = asBool(s[AI_SUMMARY_CLEANSING_SNS_PROMO]);
             }
             if (s[AI_SUMMARY_CLEANSING_POPUP] !== undefined) {
-                aiSummaryCleansingPopup = s[AI_SUMMARY_CLEANSING_POPUP];
+                aiSummaryCleansingPopup = asBool(s[AI_SUMMARY_CLEANSING_POPUP]);
             }
             if (s[AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
-                aiSummaryCleansingPlatform = s[AI_SUMMARY_CLEANSING_PLATFORM];
+                aiSummaryCleansingPlatform = asBool(s[AI_SUMMARY_CLEANSING_PLATFORM]);
             }
             // NEW: 9つの追加クレンジングオプション
             if (s[AI_SUMMARY_CLEANSING_TEXT_DENSITY] !== undefined) {
-                aiSummaryCleansingTextDensity = s[AI_SUMMARY_CLEANSING_TEXT_DENSITY];
+                aiSummaryCleansingTextDensity = asBool(s[AI_SUMMARY_CLEANSING_TEXT_DENSITY]);
             }
             if (s[AI_SUMMARY_CLEANSING_SHORT_SEQ] !== undefined) {
-                aiSummaryCleansingShortSeq = s[AI_SUMMARY_CLEANSING_SHORT_SEQ];
+                aiSummaryCleansingShortSeq = asBool(s[AI_SUMMARY_CLEANSING_SHORT_SEQ]);
             }
             if (s[AI_SUMMARY_CLEANSING_SYMBOL_LINE] !== undefined) {
-                aiSummaryCleansingSymbolLine = s[AI_SUMMARY_CLEANSING_SYMBOL_LINE];
+                aiSummaryCleansingSymbolLine = asBool(s[AI_SUMMARY_CLEANSING_SYMBOL_LINE]);
             }
             if (s[AI_SUMMARY_CLEANSING_LINK_PARA] !== undefined) {
-                aiSummaryCleansingLinkPara = s[AI_SUMMARY_CLEANSING_LINK_PARA];
+                aiSummaryCleansingLinkPara = asBool(s[AI_SUMMARY_CLEANSING_LINK_PARA]);
             }
             if (s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] !== undefined) {
-                aiSummaryCleansingEnhancedHidden = s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN];
+                aiSummaryCleansingEnhancedHidden = asBool(s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]);
             }
             if (s[AI_SUMMARY_CLEANSING_EMPTY_ELEM] !== undefined) {
-                aiSummaryCleansingEmptyElem = s[AI_SUMMARY_CLEANSING_EMPTY_ELEM];
+                aiSummaryCleansingEmptyElem = asBool(s[AI_SUMMARY_CLEANSING_EMPTY_ELEM]);
             }
             if (s[AI_SUMMARY_CLEANSING_JP_LAYOUT] !== undefined) {
-                aiSummaryCleansingJpLayout = s[AI_SUMMARY_CLEANSING_JP_LAYOUT];
+                aiSummaryCleansingJpLayout = asBool(s[AI_SUMMARY_CLEANSING_JP_LAYOUT]);
             }
             if (s[AI_SUMMARY_CLEANSING_JP_NAVIGATION] !== undefined) {
-                aiSummaryCleansingJpNavigation = s[AI_SUMMARY_CLEANSING_JP_NAVIGATION];
+                aiSummaryCleansingJpNavigation = asBool(s[AI_SUMMARY_CLEANSING_JP_NAVIGATION]);
             }
             if (s[AI_SUMMARY_CLEANSING_AUTHOR] !== undefined) {
-                aiSummaryCleansingAuthor = s[AI_SUMMARY_CLEANSING_AUTHOR];
+                aiSummaryCleansingAuthor = asBool(s[AI_SUMMARY_CLEANSING_AUTHOR]);
             }
             // Threshold settings (with bounds validation)
             if (s[AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
@@ -399,7 +422,7 @@ function loadSettings(): Promise<void> {
             }
             // テキスト品質設定を取得
             if (s[CONTENT_DEDUP_ENABLED] !== undefined) {
-                contentDedupEnabled = s[CONTENT_DEDUP_ENABLED];
+                contentDedupEnabled = asBool(s[CONTENT_DEDUP_ENABLED]);
             }
             if (s[CONTENT_DEDUP_THRESHOLD] !== undefined) {
                 contentDedupThreshold = parseFloat(String(s[CONTENT_DEDUP_THRESHOLD]));
@@ -459,7 +482,7 @@ function checkVisitConditions(): void {
             minScrollDepth,
             duration,
         };
-        (window as any).__OW_TEST_STATE = state;
+        window.__OW_TEST_STATE = state;
         document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
     }
 
@@ -469,9 +492,11 @@ function checkVisitConditions(): void {
         reportValidVisit();
         // E2Eテスト用フック: 報告後に状態を更新
         if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
-            (window as any).__OW_TEST_STATE.isValidVisitReported = true;
+            if (window.__OW_TEST_STATE) {
+                window.__OW_TEST_STATE.isValidVisitReported = true;
+            }
             document.documentElement.setAttribute('data-ow-test-state',
-                JSON.stringify((window as any).__OW_TEST_STATE));
+                JSON.stringify(window.__OW_TEST_STATE));
         }
         // 【パフォーマンス向上】: 条件満了後に定期実行を停止
         if (checkIntervalId) {
@@ -572,7 +597,7 @@ async function reportValidVisit(): Promise<void> {
     const content = extractPageContent();
 
     try {
-        const response: any = await messageSender.sendMessageWithRetry({
+        const response = await messageSender.sendMessageWithRetry({
             type: 'VALID_VISIT',
             payload: {
                 content: content,
@@ -842,8 +867,10 @@ async function init(): Promise<void> {
 }
 
 // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
-chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-    if (message.type === 'GET_CONTENT') {
+chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
+    if (typeof message !== 'object' || message === null || !('type' in message)) return;
+    const msg = message as ContentMessage;
+    if (msg.type === 'GET_CONTENT') {
         const content = extractPageContent();
         sendResponse({
             content,

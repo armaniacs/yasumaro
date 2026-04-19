@@ -194,7 +194,7 @@ export function parseUblockFilterLine(line: string): UblockRule | null {
   if (hostsMatch) {
     const parsed = parseHostsLine(trimmedLine, hostsMatch[2]);
     // IGNOREタイプまたはnullの場合はnullを返す
-    if (!parsed || (parsed as any).type === RULE_TYPES.IGNORE) {
+    if (!parsed || ('type' in parsed && parsed.type === RULE_TYPES.IGNORE)) {
       return null;
     }
     return parsed as UblockRule;

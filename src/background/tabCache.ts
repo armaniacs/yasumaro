@@ -10,7 +10,7 @@ export interface TabData {
     lastUpdated: number;
     isValidVisit: boolean;
     content: string | null;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export class TabCache {

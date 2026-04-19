@@ -14,7 +14,7 @@ export function calculateTextScore(element: Element): number {
     let score = 0;
 
     // テキストノードの長さ
-    const text = (element as any).innerText || element.textContent || '';
+    const text = ('innerText' in element ? (element as HTMLElement).innerText : null) || element.textContent || '';
     score += text.length;
 
     // 単一DOM走覧でp, h*, ul, ol, aの要素をカウント（パフォーマンス改善）
@@ -43,7 +43,7 @@ export function calculateTextScore(element: Element): number {
             listCount++;
         } else if (tag === 'a') {
             linkCount++;
-            linkTextLength += (elem as any).innerText?.length || elem.textContent?.length || 0;
+            linkTextLength += ('innerText' in elem ? (elem as HTMLElement).innerText?.length : null) || elem.textContent?.length || 0;
         }
 
         node = walker.nextNode();

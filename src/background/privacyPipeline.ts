@@ -29,7 +29,7 @@ function estimateTokens(text: string): number {
 }
 
 // Temporary interface until AIClient is converted
-interface IAIClient {
+export interface IAIClient {
   getLocalAvailability(): Promise<string>;
   summarizeLocally(content: string): Promise<{ success: boolean; summary: string; sentTokens?: number; receivedTokens?: number }>;
   generateSummary(text: string, tagSummaryMode?: boolean): Promise<AISummaryResult>;

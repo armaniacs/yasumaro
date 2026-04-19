@@ -25,7 +25,7 @@ interface OffscreenResponse {
     success?: boolean;
     summary?: string;
     error?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export class LocalAIClient {

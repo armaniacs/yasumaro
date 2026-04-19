@@ -326,7 +326,7 @@ async function saveSimpleFormatSettings(): Promise<void> {
     }
 
     // Prepare settings object - save both lists
-    const newSettings: any = {
+    const newSettings: Record<string, unknown> = {
         [StorageKeys.DOMAIN_FILTER_MODE]: mode,
         [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox?.checked,
         [StorageKeys.DOMAIN_WHITELIST]: whitelist,

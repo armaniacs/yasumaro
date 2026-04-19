@@ -11,6 +11,11 @@ import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
+interface OpenAIApiResponse {
+    choices?: Array<{ message?: { content: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
 export class OpenAIProvider extends AIProviderStrategy {
     private providerName: string;
     private baseUrl: string;
@@ -22,29 +27,30 @@ export class OpenAIProvider extends AIProviderStrategy {
         super(settings);
         this.providerName = providerName;
 
-        const s = settings as any;
+        const s = settings as Record<string, unknown>;
+        const str = (key: string, fallback = '') => String(s[key] ?? fallback) || fallback;
 
         // For openai-compatible provider, use generic provider keys
         if (providerName === 'openai-compatible') {
-            this.baseUrl = s[StorageKeys.PROVIDER_BASE_URL] || '';
-            this.apiKey = s[StorageKeys.PROVIDER_API_KEY];
-            this.model = s[StorageKeys.PROVIDER_MODEL] || '';
+            this.baseUrl = str(StorageKeys.PROVIDER_BASE_URL);
+            this.apiKey = s[StorageKeys.PROVIDER_API_KEY] as string | undefined;
+            this.model = str(StorageKeys.PROVIDER_MODEL);
         } else if (providerName === 'lm-studio') {
             // LM Studio専用キー（APIキー不要）
-            this.baseUrl = s[StorageKeys.LM_STUDIO_BASE_URL] || 'http://127.0.0.1:1234/v1';
+            this.baseUrl = str(StorageKeys.LM_STUDIO_BASE_URL, 'http://127.0.0.1:1234/v1');
             this.apiKey = undefined;
-            this.model = s[StorageKeys.LM_STUDIO_MODEL] || '';
+            this.model = str(StorageKeys.LM_STUDIO_MODEL);
         } else if (providerName === 'ollama') {
             // Ollama専用キー（APIキー不要）
-            this.baseUrl = s[StorageKeys.OLLAMA_BASE_URL] || 'http://localhost:11434/v1';
+            this.baseUrl = str(StorageKeys.OLLAMA_BASE_URL, 'http://localhost:11434/v1');
             this.apiKey = undefined;
-            this.model = s[StorageKeys.OLLAMA_MODEL] || '';
+            this.model = str(StorageKeys.OLLAMA_MODEL);
         } else {
             // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
             const normalizedName = providerName.replace('2', '_2').toLowerCase();
-            this.baseUrl = s[`${normalizedName}_base_url`] || 'https://api.openai.com/v1';
-            this.apiKey = s[`${normalizedName}_api_key`];
-            this.model = s[`${normalizedName}_model`] || 'gpt-3.5-turbo';
+            this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
+            this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
+            this.model = str(`${normalizedName}_model`, 'gpt-3.5-turbo');
         }
 
         // BaseUrl SSRF対策
@@ -59,7 +65,7 @@ export class OpenAIProvider extends AIProviderStrategy {
         }
 
         // タイムアウト設定: 0=自動（ローカル=120秒、クラウド=30秒）
-        const storedTimeout = s[StorageKeys.AI_TIMEOUT_MS] ?? 0;
+        const storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0);
         if (storedTimeout > 0) {
             this.timeoutMs = storedTimeout;
         } else {
@@ -236,7 +242,7 @@ export class OpenAIProvider extends AIProviderStrategy {
         return getAllowedUrls();
     }
 
-    private _extractSummary(data: any): AISummaryResult {
+    private _extractSummary(data: OpenAIApiResponse): AISummaryResult {
         if (data.choices && data.choices.length > 0 && data.choices[0].message) {
             const summary = data.choices[0].message.content;
             const sentTokens = data.usage?.prompt_tokens;

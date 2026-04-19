@@ -11,16 +11,17 @@ import { isUrlBlocked } from './ublockMatcher.js';
  * @param {any} ublockRules - The uBlock rules object
  * @returns {boolean} - True if there are any rules
  */
-function hasUblockRules(ublockRules: any): boolean {
-    if (!ublockRules) return false;
+function hasUblockRules(ublockRules: unknown): boolean {
+    if (!ublockRules || typeof ublockRules !== 'object') return false;
 
+    const r = ublockRules as Record<string, unknown>;
     // New format: blockDomains/exceptionDomains (arrays)
-    const hasBlockDomains = Array.isArray(ublockRules.blockDomains) && ublockRules.blockDomains.length > 0;
-    const hasExceptionDomains = Array.isArray(ublockRules.exceptionDomains) && ublockRules.exceptionDomains.length > 0;
+    const hasBlockDomains = Array.isArray(r['blockDomains']) && (r['blockDomains'] as unknown[]).length > 0;
+    const hasExceptionDomains = Array.isArray(r['exceptionDomains']) && (r['exceptionDomains'] as unknown[]).length > 0;
 
     // Old format: blockRules/exceptionRules (object arrays)
-    const hasBlockRules = Array.isArray(ublockRules.blockRules) && ublockRules.blockRules.length > 0;
-    const hasExceptionRules = Array.isArray(ublockRules.exceptionRules) && ublockRules.exceptionRules.length > 0;
+    const hasBlockRules = Array.isArray(r['blockRules']) && (r['blockRules'] as unknown[]).length > 0;
+    const hasExceptionRules = Array.isArray(r['exceptionRules']) && (r['exceptionRules'] as unknown[]).length > 0;
 
     return hasBlockDomains || hasExceptionDomains || hasBlockRules || hasExceptionRules;
 }
@@ -86,7 +87,7 @@ export function isDomainInList(domain: string, domainList: string[] | undefined)
  * @param {any} domain - The domain to validate
  * @returns {boolean} - True if the domain format is valid
  */
-export function isValidDomain(domain: any): boolean {
+export function isValidDomain(domain: unknown): boolean {
     if (!domain || typeof domain !== 'string') {
         return false;
     }
