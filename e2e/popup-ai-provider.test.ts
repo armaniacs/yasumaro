@@ -1,4 +1,4 @@
-import { test as staticTest, testInteraction, expect } from './fixtures/popup.fixture.js';
+import { test as staticTest, testInteraction, expect } from './fixtures/popup.fixture';
 
 const test = staticTest;
 
@@ -53,6 +53,33 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
         (el) => (el as HTMLSelectElement).value
       );
       expect(selected).toBe('openai2');
+    });
+
+    await test.step('保存ボタンをクリック', async () => {
+      await page.locator('#save').click();
+      // Wait for save to complete (connection test may take time, but we only care about storage)
+      // The settings are saved quickly; we can wait for network idle or just a short delay
+      await page.waitForTimeout(200);
+    });
+
+    await test.step('ポップアップをリロード', async () => {
+      await page.reload();
+      // After reload, wait for popup to be ready
+      await expect(page.locator('#menuBtn')).toBeAttached();
+    });
+
+    await test.step('設定画面を再度開く', async () => {
+      await page.locator('#menuBtn').click();
+      await expect(page.locator('#settingsScreen')).toBeVisible();
+      await page.locator('#generalTab').click();
+      await expect(page.locator('#generalPanel')).toBeVisible();
+    });
+
+    await test.step('リロード後も選択値が保持されていることを確認', async () => {
+      const selectedAfterReload = await page.locator('#aiProvider').evaluate(
+        (el) => (el as HTMLSelectElement).value
+      );
+      expect(selectedAfterReload).toBe('openai2');
     });
   });
 });
