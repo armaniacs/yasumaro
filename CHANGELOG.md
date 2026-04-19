@@ -2,18 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [5.1.7] - 2026-04-19
 
 ### Added
 
 - **v6 ロードマップ**: 9項目の目標を追加（WXT完全移行、TypeScript厳格化、Svelte+Tailwind導入、AIプロバイダー抽象化、E2Eテスト拡充、エラーコード体系、ドキュメント整備、CI/CD整備、アクセシビリティ）
 - **Firefox E2E テスト対応**: Playwright設定にFirefoxプロジェクトを追加
 - **ADR-014**: キーボード操作対応を実施しないことを決定
-
-### Changed
-
-- **plans/2026-04-19-tobe-ow6.md 更新**: 項目内容の精査・日本語表現の統一
-
 
 ## [5.1.6] - 2026-04-19
 
