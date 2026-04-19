@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.8] - 2026-04-20
+
+### Changed
+
+- **TypeScript厳格化**: `any` 型を74箇所から完全削除
+  - `unknown` 型・型ガード・専用インターフェースへの置換
+  - `tsc --noEmit` でゼロエラー達成
+- **テスト環境整備**: `@vitest/coverage-v8` を導入しカバレッジ測定を可能に
+- **依存関係調整**: `jsdom` を 29.x から 25.x にダウングレード（`css-tree` v3 CJS 破損回避）
+
+### Development Status
+
+- DOM環境テストは35ファイルを一時除外（`node_modules` 破損のため）
+- 非DOMテスト: 119ファイル・2232テストがパス
+- カバレッジ: Statements 35%（DOMテスト復活後の目標: 80%以上）
+
 ## [5.1.7] - 2026-04-19
 
 ### Added
