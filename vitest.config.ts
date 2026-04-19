@@ -25,11 +25,11 @@ export default defineConfig({
       '**/.kilo/**',
       '**/video-*/**',
       'src/utils/__tests__/storage-keys.test.ts',
-      // DOM環境依存テスト（jsdom/node_modules破損のため一時除外）
+      // DOM環境依存テスト（jsdom 25.xのCJS問題で一時除外 → jsdom 29.xで解決）
       'src/popup/__tests__/fieldValidation.test.ts',
       'src/popup/__tests__/focusTrap.test.ts',
       'src/popup/__tests__/ui-ux-improvements.test.ts',
-      'src/utils/__tests__/aiSummaryCleaner.test.ts',
+      // 'src/utils/__tests__/aiSummaryCleaner.test.ts', // 有効化(jsdom 29.x)
       'src/utils/__tests__/contentCleaner.test.ts',
       'src/popup/__tests__/i18n.test.ts',
       'src/popup/__tests__/integration-reload-workflow.test.ts',
