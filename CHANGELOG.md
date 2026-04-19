@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **v6 ロードマップ**: 9項目の目標を追加（WXT完全移行、TypeScript厳格化、Svelte+Tailwind導入、AIプロバイダー抽象化、E2Eテスト拡充、エラーコード体系、ドキュメント整備、CI/CD整備、アクセシビリティ）
+- **Firefox E2E テスト対応**: Playwright設定にFirefoxプロジェクトを追加
+- **ADR-014**: キーボード操作対応を実施しないことを決定
+
+### Changed
+
+- **plans/2026-04-19-tobe-ow6.md 更新**: 項目内容の精査・日本語表現の統一
+
+
+## [5.1.6] - 2026-04-19
+
+### Fixed
+
+- **E2E テストのパス修正**: WXT ビルド出力 (`dist/chromium-mv3/`) に 맞춰 fixtures のパスを修正
+  - `dist/` → `dist/chromium-mv3/`
+  - `popup/popup.html` → `popup.html`
+- **欠落していたHTML要素を追加**: ポップアップの `#pending-section` セクションとバッチ操作ボタンを追加
+- **プライバシー同意モーダル対応**: E2E テストでプライバシー同意モーダルが表示される問題の回避処理を追加
+
+### Tests
+
+- E2E テスト: 60件パス（UI およびアクセシビリティテスト）
+- ユニットテスト: 3,499件パス
+
+
+
 ### Changed
 
 - **ビルドシステムを Vite から WXT へ移行**: Web Extension Toolbox (WXT v0.20.25) を採用し、Chrome 拡張機能のビルド・開発体験を向上

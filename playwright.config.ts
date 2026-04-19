@@ -44,6 +44,12 @@ export default defineConfig({
     },
 
     {
+      name: 'firefox',
+      grep: /^(?!.*@(?:interaction|extension))/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+
+    {
       name: 'extension',
       testDir: './e2e',
       grepInverse: /@extension/,  // Skip tests matching @extension

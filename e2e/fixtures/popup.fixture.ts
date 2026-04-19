@@ -5,8 +5,8 @@ import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const EXTENSION_PATH = join(__dirname, '../../dist');
-const POPUP_PATH = join(__dirname, '../../dist/popup/popup.html');
+const EXTENSION_PATH = join(__dirname, '../../dist/chromium-mv3');
+const POPUP_PATH = join(__dirname, '../../dist/chromium-mv3/popup.html');
 
 type PopupFixtures = {
   context: ChromiumBrowserContext;
@@ -50,7 +50,19 @@ export const testExt = base.extend<PopupFixtures>({
   popupPage: async ({ context, extensionId }, use) => {
     const pages = context.pages();
     const page = pages.length > 0 ? pages[0] : await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+    // Set privacy consent in storage using CDP to avoid modal blocking UI
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Runtime.evaluate', {
+      expression: `chrome.storage.local.set({ privacyConsent: { accepted: true, timestamp: Date.now() } })`
+    });
+    await cdp.detach();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    // Accept privacy consent if modal is visible
+    const consentModal = page.locator('#privacyConsentModal');
+    if (await consentModal.isVisible().catch(() => false)) {
+      await page.locator('#consentCheckbox').check();
+      await page.locator('#acceptConsentBtn').click();
+    }
     await use(page);
   },
 });
