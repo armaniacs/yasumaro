@@ -21,6 +21,11 @@ describe('Button.svelte', () => {
     
     expect(content).toContain("export let variant = 'primary'");
     expect(content).toContain("export let disabled = false");
+    expect(content).toContain("export let type = 'button'");
+    expect(content).toContain("variantClasses");
+    expect(content).toContain("primary:");
+    expect(content).toContain("secondary:");
+    expect(content).toContain("danger:");
     expect(content).toContain('<button');
     expect(content).toContain('<slot />');
   });
