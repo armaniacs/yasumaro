@@ -82,4 +82,24 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
       expect(selectedAfterReload).toBe('openai2');
     });
   });
+
+  testInteraction('port設定を保存后又正常読み込み @critical', async ({ popupPage: page }) => {
+    await page.locator('#menuBtn').click();
+    await expect(page.locator('#settingsScreen')).toBeVisible();
+    await page.locator('#generalTab').click();
+    await expect(page.locator('#generalPanel')).toBeVisible();
+
+    await page.fill('#port', '9999');
+    await page.click('#save');
+
+    await page.reload();
+    await expect(page.locator('#menuBtn')).toBeAttached();
+
+    await page.locator('#menuBtn').click();
+    await expect(page.locator('#settingsScreen')).toBeVisible();
+    await page.locator('#generalTab').click();
+    await expect(page.locator('#generalPanel')).toBeVisible();
+
+    await expect(page.locator('#port')).toHaveValue('9999');
+  });
 });
