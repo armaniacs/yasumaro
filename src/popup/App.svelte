@@ -27,7 +27,7 @@
       <div class="space-y-4">
         <h2 class="text-lg font-semibold">Settings</h2>
         
-        <ProviderSelect value={aiProvider} on:change={handleProviderChange} />
+        <ProviderSelect value={aiProvider} onchange={handleProviderChange} />
         
         <Input
           id="protocol"

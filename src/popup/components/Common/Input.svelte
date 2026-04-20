@@ -1,14 +1,25 @@
-<script>
-  export let type = 'text';
-  export let id = '';
-  export let name = '';
-  export let value = '';
-  export let placeholder = '';
-  export let disabled = false;
-  export let required = false;
-  
-  export let label = '';
-  export let error = '';
+<script lang="ts">
+  let { 
+    type = 'text',
+    id = '',
+    name = '',
+    value = '',
+    placeholder = '',
+    disabled = false,
+    required = false,
+    label = '',
+    error = ''
+  } = $props<{
+    type?: string;
+    id?: string;
+    name?: string;
+    value?: string;
+    placeholder?: string;
+    disabled?: boolean;
+    required?: boolean;
+    label?: string;
+    error?: string;
+  }>();
 </script>
 
 <div class="flex flex-col gap-1">

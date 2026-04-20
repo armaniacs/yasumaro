@@ -1,14 +1,19 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEvent } from 'svelte';
 
-  export let tabs: { id: string; label: string }[] = [];
-  export let activeTab = '';
+  let { 
+    tabs = [], 
+    activeTab = $bindable('') 
+  } = $props<{
+    tabs?: { id: string; label: string }[];
+    activeTab?: string;
+  }>();
 
-  const dispatch = createEventDispatcher();
+  const change = createEvent<{ id: string }>();
 
   function selectTab(id: string) {
     activeTab = id;
-    dispatch('change', { id });
+    change({ id });
   }
 </script>
 
@@ -20,7 +25,7 @@
       class:border-b-2={activeTab === tab.id}
       class:border-blue-600={activeTab === tab.id}
       class:text-gray-500={activeTab !== tab.id}
-      on:click={() => selectTab(tab.id)}
+      onclick={() => selectTab(tab.id)}
     >
       {tab.label}
     </button>
