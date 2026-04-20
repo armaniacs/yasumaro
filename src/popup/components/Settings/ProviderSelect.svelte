@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEvent } from 'svelte';
   
-  export let value = 'gemini';
+  let { value = 'gemini' } = $props<{
+    value?: string;
+  }>();
   
-  const dispatch = createEventDispatcher();
+  const change = createEvent<{ value: string }>();
   
   const providers = [
     { value: 'gemini', label: 'Gemini (Google AI)', baseUrl: 'https://generativelanguage.googleapis.com/' },
@@ -14,7 +16,7 @@
   function handleChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     value = target.value;
-    dispatch('change', { value });
+    change({ value });
   }
 </script>
 
@@ -24,7 +26,7 @@
   <select
     id="aiProvider"
     bind:value
-    on:change={handleChange}
+    onchange={handleChange}
     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
   >
     {#each providers as provider}

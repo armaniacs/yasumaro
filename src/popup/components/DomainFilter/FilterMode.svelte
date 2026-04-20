@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEvent } from 'svelte';
 
-  export let value: 'whitelist' | 'blacklist' | 'disabled' = 'disabled';
+  let { value = 'disabled' } = $props<{
+    value?: 'whitelist' | 'blacklist' | 'disabled';
+  }>();
 
-  const dispatch = createEventDispatcher();
+  const change = createEvent<{ value: 'whitelist' | 'blacklist' | 'disabled' }>();
 
   const modes = [
     { value: 'disabled', label: '無効 / Disabled' },
@@ -14,7 +16,7 @@
   function handleChange(event: Event) {
     const target = event.target as HTMLInputElement;
     value = target.value as typeof value;
-    dispatch('change', { value });
+    change({ value });
   }
 </script>
 
@@ -26,7 +28,7 @@
         name="filterMode"
         value={mode.value}
         checked={value === mode.value}
-        on:change={handleChange}
+        onchange={handleChange}
         class="w-4 h-4"
       />
       <span>{mode.label}</span>
