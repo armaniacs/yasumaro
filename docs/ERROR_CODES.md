@@ -150,6 +150,51 @@ await logWarn(
 - ユーティリティ: ファイル名（例: `logger.ts`, `storage.ts`）
 - 機能モジュール: 機能名（例: `aiClient`, `obsidianClient`）
 
+## エラー分類: Recoverable vs Unrecoverable
+
+### 分類定義
+
+| 分類 | 定義 | ユーザーへの影響 | 例 |
+|--------|------|----------------|------|
+| **Recoverable** | 一時的または再試行可能なエラー | 再試行で解決可能性あり | ネットワークタイムアウト、APIレート制限 |
+| **Unrecoverable** | ユーザーが対応必須のエラー | 設定や環境変更が必要 | 認証失敗、必須項目欠落 |
+
+### Recoverable エラー
+
+| エラーコード | 分類 | リカバリー方法 |
+|-------------|------|--------------|
+| `API_TIM_001` | Recoverable | 稍後再試行 |
+| `API_RL_001` | Recoverable | 等待時間後再試行 |
+| `OBS_CONN_001` | Recoverable | 接続設定確認後再試行 |
+| `STRG_RD_001` | Recoverable | 再試行 |
+
+### Unrecoverable エラー
+
+| エラーコード | 分類 | リカバリー方法 |
+|-------------|------|--------------|
+| `CRPT_DEC_001` | Unrecoverable | 設定再入力必要 |
+| `API_AUTH_001` | Unrecoverable | APIキー設定の確認・更新 |
+| `VAL_REQ_001` | Unrecoverable | 必須項目の入力 |
+| `PRIV_VIOL_001` | Unrecoverable | プライバシーモード設定の確認 |
+
+## ユーザーフレンドリーエラーメッセージ
+
+エンドユーザー向けのエラーメッセージ（ポップアップ・ダッシュボード表示用）：
+
+| エラーコード | ユーザーメッセージ（日本語） | ユーザーメッセージ（English） |
+|-------------|--------------------------|-------------------------|
+| `API_AUTH_001` | AIプロバイダーの認証に失敗しました。APIキーを確認してください。 | AI provider authentication failed. Please check your API key. |
+| `API_TIM_001` | 接続がタイムアウトしました。稍後再試行してください。 | Connection timed out. Please try again later. |
+| `API_RL_001` | APIの利用制限に達しました。しばらくお待ちください。 | API rate limit reached. Please wait a moment. |
+| `OBS_CONN_001` | Obsidianに接続できません。設定を確認してください。 | Cannot connect to Obsidian. Please check your settings. |
+| `OBS_SEND_001` | Obsidianへの送信に失敗しました。 | Failed to send to Obsidian. |
+| `STRG_RD_001` | 設定の読み込みに失敗しました。 | Failed to load settings. |
+| `STRG_WR_001` | 設定の保存に失敗しました。 | Failed to save settings. |
+| `CRPT_DEC_001` | 復号化に失敗しました。パスワードを確認してください。 | Decryption failed. Please check your password. |
+| `VAL_REQ_001` | 必須項目が入力されていません。 | Required field is missing. |
+| `INT_001` | 申し訳ありません。内部エラーが発生しました。 | An internal error occurred. Please try again. |
+
 ## 履歴
 
 - 2026-03-01: エラーコードシステムの定義と初期セット（SRE/Logging改善 #8）
+- 2026-04-21: Recoverable/Unrecoverable分類とユーザーメッセージ追加

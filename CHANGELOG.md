@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.9] - 2026-04-21
+
+### Added
+
+- **Svelte 5 + Tailwind CSS 4 UI**: POPUP UIをSvelte + Tailwindで再実装
+  - App.svelte: 全4タブ（General/Domain/Prompt/Privacy）の完全実装
+  - Svelte 5 リアクティブ: `$state()`, `$bindable()`, `$props()` 使用
+  - chrome.storage 連携: 設定のload/save実装
+  - Components: Button, Input, ProviderSelect, FilterMode, DomainList, TabList
+- **Node.js 24 LTS**: 実行環境をNode.js 24.0.0へアップグレード
+- **E2Eテスト拡充**: `popup-settings-flow.test.ts` 新規作成（17テスト追加、+57%増）
+- **ADR-015**: AIプロバイダー抽象化アーキテクチャ文書作成
+- **エラーコード体系拡張**: Recoverable/Unrecoverable分類、ユーザーメッセージ（日英）10件追加
+- **アクセシビリティ改善**: ARIA属性完備（TabList、FilterMode、Input、Button、DomainList）
+
+### Changed
+
+- **jsdom 29.x アップグレード**: `css-tree` v3 CJS問題解決
+  - DOMテスト完全復活
+  - aiSummaryCleaner.test.ts 有効化（35テスト追加）
+  - カバレッジ: 37.2%（目標80%に向けて進行中）
+
+### Development Status
+
+- Svelte popup UI 完了、Build出力済み
+- v6ロードマップ 7/9項目完了（残: #7 ドキュメント整備、#8 CI/CD整備）
+
 ## [5.1.8] - 2026-04-20
 
 ### Changed
