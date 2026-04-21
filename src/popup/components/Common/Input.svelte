@@ -3,7 +3,7 @@
     type = 'text',
     id = '',
     name = '',
-    value = '',
+    value = $bindable(''),
     placeholder = '',
     disabled = false,
     required = false,
@@ -20,6 +20,8 @@
     label?: string;
     error?: string;
   }>();
+
+  const errorId = error ? `${id}-error` : undefined;
 </script>
 
 <div class="flex flex-col gap-1">
@@ -35,10 +37,12 @@
     {placeholder}
     {disabled}
     {required}
+    aria-invalid={error ? 'true' : 'false'}
+    aria-describedby={errorId}
     class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed {error ? 'border-red-500' : 'border-gray-300'}"
   />
   
   {#if error}
-    <span class="text-sm text-red-500">{error}</span>
+    <span id={errorId} class="text-sm text-red-500" role="alert">{error}</span>
   {/if}
 </div>

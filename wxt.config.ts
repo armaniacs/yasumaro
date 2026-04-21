@@ -1,8 +1,17 @@
 import { defineConfig } from 'wxt';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   outDir: 'dist',
   browser: 'chromium',
+
+  vite: () => ({
+    plugins: [
+      tailwindcss(),
+      svelte({ compilerOptions: { runes: true } })
+    ]
+  }),
 
   manifest: {
     manifest_version: 3,

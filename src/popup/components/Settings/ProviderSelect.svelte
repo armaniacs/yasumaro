@@ -1,23 +1,13 @@
 <script lang="ts">
-  import { createEvent } from 'svelte';
-  
-  let { value = 'gemini' } = $props<{
+  let { value = $bindable('gemini') } = $props<{
     value?: string;
   }>();
-  
-  const change = createEvent<{ value: string }>();
   
   const providers = [
     { value: 'gemini', label: 'Gemini (Google AI)', baseUrl: 'https://generativelanguage.googleapis.com/' },
     { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/' },
     { value: 'openai2', label: 'OpenAI (Compatible)', baseUrl: '' }
   ];
-  
-  function handleChange(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    value = target.value;
-    change({ value });
-  }
 </script>
 
 <div class="flex flex-col gap-1">
@@ -26,7 +16,6 @@
   <select
     id="aiProvider"
     bind:value
-    onchange={handleChange}
     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
   >
     {#each providers as provider}

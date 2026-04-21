@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { createEvent } from 'svelte';
-
-  let { value = 'disabled' } = $props<{
-    value?: 'whitelist' | 'blacklist' | 'disabled';
+  let { 
+    value = $bindable<'disabled' | 'whitelist' | 'blacklist'>('disabled'),
+    onchange
+  } = $props<{
+    value?: 'disabled' | 'whitelist' | 'blacklist';
+    onchange?: (event: CustomEvent<{ value: 'disabled' | 'whitelist' | 'blacklist' }>) => void;
   }>();
-
-  const change = createEvent<{ value: 'whitelist' | 'blacklist' | 'disabled' }>();
 
   const modes = [
     { value: 'disabled', label: '無効 / Disabled' },
@@ -15,12 +15,15 @@
 
   function handleChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    value = target.value as typeof value;
-    change({ value });
+    const newValue = target.value as 'disabled' | 'whitelist' | 'blacklist';
+    value = newValue;
+    if (onchange) {
+      onchange(new CustomEvent('change', { detail: { value: newValue } }) as unknown as CustomEvent<{ value: 'disabled' | 'whitelist' | 'blacklist' }>);
+    }
   }
 </script>
 
-<div class="flex flex-col gap-2">
+<div role="radiogroup" aria-label="Domain filter mode" class="flex flex-col gap-2">
   {#each modes as mode}
     <label class="flex items-center gap-2 cursor-pointer">
       <input
