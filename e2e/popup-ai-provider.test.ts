@@ -57,14 +57,11 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
 
     await test.step('保存ボタンをクリック', async () => {
       await page.locator('#save').click();
-      // Wait for save to complete (connection test may take time, but we only care about storage)
-      // The settings are saved quickly; we can wait for network idle or just a short delay
       await page.waitForTimeout(200);
     });
 
     await test.step('ポップアップをリロード', async () => {
       await page.reload();
-      // After reload, wait for popup to be ready
       await expect(page.locator('#menuBtn')).toBeAttached();
     });
 
