@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.11] - 2026-04-23
+
+### Added
+
+- **TypeScript厳格化（第一段階）完了**:
+  - `strict: true` 完全適用、`tsc --noEmit` ゼロエラー達成
+  - `any` 型74箇所 → 0箇所（`unknown`変換）
+  - +239 新規テスト追加（6ファイル）: modelsDevApi, presets, state, storageEncrypted, contentExtractor, aiSummaryCleaner
+  - テスト数: 2847パス（+530、23%増）
+
+- **TypeScript Advanced Patterns適用**:
+  - discriminated unions: `ExtensionMessage` メッセージプロトコル（messageTypes.ts）
+  - type guards: `isErrorLike`, `isPrivacyInfo` 追加
+  - DeepReadonly utility type: `src/utils/typeUtils.ts`
+
+- **jsdom環境対応**: 4ファイルに`@vitest-environment jsdom`追加
+  - promptSanitizer-refined-test.test.ts
+  - contentExtractor.test.ts
+  - settingsExportImport.test.ts
+  - ublockImport-sourceManager.test.ts
+
+### Fixed ( Bugs found during test writing )
+
+- **promptSanitizer-refined.ts**: ダブルエスケープ問題（`\\s` → `\s`）
+- **classifier.ts**: `TRS_Editor`大文字不一致（`trs_editor`に修正）
+- **helpers.ts**: `Advertise`小文字不一致（`advertise`に修正）
+- **stripExtended.ts**: linkなし段落削除ロジック欠陥
+
+### Changed
+
+- **logger API**: `Record<string, any>` → `Record<string, unknown>`
+- **messageTypes.ts**: discriminated union型追加
+- **privacyChecker.ts**: type guard追加
+- **errorMessages.ts**: type guard追加
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: ~40%達成
+- #2 残り課題: promptSanitizerテスト2件のexpectation不一致
+- 次のアイテム: #8 CI/CD整備
+
 ## [5.1.10] - 2026-04-22
 
 ### Added
