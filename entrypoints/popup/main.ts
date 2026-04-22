@@ -1,6 +1,11 @@
-import App from '../../src/popup/App.svelte';
-import '../../src/popup/styles/app.css';
+/**
+ * Popup entrypoint for WXT
+ * Imports all original popup scripts to maintain v5.1.4+ behavior
+ */
 
-new App({
-  target: document.getElementById('app')!
-});
+import './styles.css';
+import '../../src/popup/i18n';
+import '../../src/popup/navigation';
+import '../../src/popup/main';
+import '../../src/popup/popup';
+import '../../src/popup/domainFilter';

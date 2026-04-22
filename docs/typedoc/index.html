@@ -1,0 +1,332 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Obsidian Weave API - v5.1.9</title><meta name="description" content="Documentation for Obsidian Weave API"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Obsidian Weave API - v5.1.9</a><div id="tsd-toolbar-links"><a href="https://github.com/armaniacs/obsidian-weave">GitHub</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Obsidian Weave API - v5.1.9</h1></div><div class="tsd-panel tsd-typography"><h1 id="obsidian-weave" class="tsd-anchor-link">Obsidian Weave<a href="#obsidian-weave" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p><a href="#%E6%97%A5%E6%9C%AC%E8%AA%9E">日本語</a> | <a href="#english">English</a></p>
+<hr>
+<h2 id="日本語" class="tsd-anchor-link">日本語<a href="#日本語" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="概要" class="tsd-anchor-link">概要<a href="#概要" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するChrome拡張機能です。</p>
+<h3 id="オリジナルの-obsidian-smart-history-の紹介" class="tsd-anchor-link">オリジナルの Obsidian Smart History の紹介<a href="#オリジナルの-obsidian-smart-history-の紹介" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>オリジナルは <a href="https://note.com/izuru_tcnkc/n/nd0a758483901">https://note.com/izuru_tcnkc/n/nd0a758483901</a> で紹介されている記事です。</p>
+<p>Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークして作成したものです。</p>
+<h3 id="フォークの理由" class="tsd-anchor-link">フォークの理由<a href="#フォークの理由" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>オリジナルからフォークさせた一番の理由は、OpenAI互換APIをサポートすることでした。つまり、GroqやOllama、さくらのAIエンジンなども使えるようになりました。
+多くをサポートしていますがAPIを追加したい場合は <a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> を参照してください。</p>
+<h3 id="特徴" class="tsd-anchor-link">特徴<a href="#特徴" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>🤖 <strong>AIによる要約</strong>: OpenAI互換APIまたはGemini APIを使用して、ウェブページの内容を簡潔に要約します（Groq、OpenAI、Anthropic、ローカルLLM等に対応）。</li>
+<li>📝 <strong>Obsidian連携</strong>: 閲覧履歴を直接Obsidianのデイリーノートに保存します。</li>
+<li>🎯 <strong>スマート検出</strong>: 実際に読んだページのみを保存します（滞在時間とスクロール深度に基づきます）。</li>
+<li>📂 <strong>整理された保存</strong>: デイリーノート内に専用の「ブラウザ閲覧履歴」セクションを自動作成し、管理します。</li>
+<li>⚙️ <strong>カスタマイズ可能</strong>: 最小滞在時間、スクロール深度、API設定などを自由に構成できます。</li>
+</ul>
+<p>以下は、obsidian-weaveの独自でversion2以降に追加した機能です。</p>
+<ul>
+<li>🖱️ <strong>手動記録機能</strong>: 「今すぐ記録」ボタンで現在のページを即座に記録できます。重複チェックなしで同じページを複数回記録可能です。</li>
+<li>📱 <strong>改良されたUI</strong>: メイン画面と設定画面を分離し、⚙アイコンから専用ダッシュボードへ簡単にアクセスできます。</li>
+<li>🌐 <strong>ドメインフィルター</strong>: ホワイトリスト/ブラックリストで記録するドメインを制御できます。ワイルドカードパターンに対応。</li>
+<li>🚫 <strong>uBlock Origin形式フィルター</strong>: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。</li>
+<li>✏️ <strong>AIプロンプトカスタマイズ</strong>: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。</li>
+<li>📋 <strong>AIプロンプトプリセット</strong>: 5種類の組み込みプリセット（タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。</li>
+<li>🔔 <strong>ツールバーバッジ通知</strong>: プライバシーヘッダー検出時はオレンジ <code>!</code>、自動保存完了時は青 <code>◎</code> がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。</li>
+<li>🔒 <strong>プライバシー保護</strong>: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。</li>
+<li>⚠️ <strong>プライベートページ確認</strong>: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。</li>
+<li>📋 <strong>保留ページ管理</strong>: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は <a href="media/PRIVACY.md">PRIVACY.md</a> を参照。</li>
+<li>🔐 <strong>マスターパスワード保護</strong>: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。</li>
+</ul>
+<h3 id="必要なもの" class="tsd-anchor-link">必要なもの<a href="#必要なもの" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><a href="https://obsidian.md/">Obsidian</a> と <a href="https://github.com/coddingtonbear/obsidian-local-rest-api">Local REST API プラグイン</a></li>
+<li>AIプロバイダー（以下のいずれか）
+<ul>
+<li><a href="https://console.groq.com/keys">Groq</a>（無料枠あり・推奨）</li>
+<li><a href="https://aistudio.google.com/app/apikey">Google Gemini API キー</a>（無料枠あり）</li>
+<li><a href="https://platform.openai.com/api-keys">OpenAI</a></li>
+<li><a href="https://console.anthropic.com/">Anthropic (Claude)</a></li>
+<li>Ollama などのローカルLLM（APIキー不要）</li>
+</ul>
+</li>
+</ul>
+<h3 id="インストール方法" class="tsd-anchor-link">インストール方法<a href="#インストール方法" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>ビルド済みの拡張機能をインストールするには、以下の手順に従ってください。</p>
+<ol>
+<li>
+<p>このリポジトリをクローンまたはダウンロードします:</p>
+<pre><code class="bash"><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">clone</span><span class="hl-1"> </span><span class="hl-2">https://github.com/armaniacs/obsidian-weave.git</span><br/><span class="hl-0">cd</span><span class="hl-1"> </span><span class="hl-2">obsidian-weave</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>依存パッケージをインストールします:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>拡張機能をビルドします:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Chromeを開き、<code>chrome://extensions</code> にアクセスします。</p>
+</li>
+<li>
+<p>右上の「デベロッパーモード」を有効にします。</p>
+</li>
+<li>
+<p>「パッケージ化されていない拡張機能を読み込む」をクリックし、<strong><code>dist</code> フォルダ</strong>を選択します。</p>
+</li>
+</ol>
+<h3 id="使い方" class="tsd-anchor-link">使い方<a href="#使い方" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<h4 id="自動記録" class="tsd-anchor-link">自動記録<a href="#自動記録" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<ul>
+<li>ウェブページを5秒以上閲覧し、50%以上スクロールすると自動的に記録されます</li>
+<li>重複URLは記録されません（同じページは1日1回のみ）</li>
+</ul>
+<h4 id="手動記録" class="tsd-anchor-link">手動記録<a href="#手動記録" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<ol>
+<li>ツールバーの拡張機能アイコンをクリックしてメイン画面を開きます</li>
+<li>現在のページ情報が表示されます</li>
+<li>「📝 今すぐ記録」ボタンをクリックすると、即座に現在のページが記録されます</li>
+<li>手動記録では重複チェックがないため、同じページを何度でも記録できます</li>
+</ol>
+<blockquote>
+<p><strong>📌 「それでも記録」機能について</strong>
+ドメインフィルターにブラックリストモードが設定されている場合、ブラックリストに登録されたドメインは自動記録されません。
+しかし、手動記録時に「それでも記録」ボタンが表示され、ドメインフィルターを上書きして記録することができます。</p>
+<p><strong>使用方法:</strong></p>
+<ul>
+<li>ブラックリスト登録ドメインで「📝 今すぐ記録」ボタンをクリックすると確認ダイアログが表示されます</li>
+<li>「それでも記録」ボタンを選択すると、そのドメインのページのみ記録されます</li>
+<li>引き続きそのドメインを記録したい場合は、ドメインフィルターの設定を見直してください（ホワイトリストへの追加やブラックリストからの削除）</li>
+</ul>
+</blockquote>
+<h3 id="設定" class="tsd-anchor-link">設定<a href="#設定" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ol>
+<li>ツールバーの拡張機能アイコンをクリックします。</li>
+<li>メイン画面の右上にある「⚙」アイコンをクリックしてダッシュボード（設定画面）を開きます。</li>
+<li>以下の設定を入力してください：
+<ul>
+<li><strong>Obsidian API Key</strong>: ObsidianのLocal REST API設定で取得したキー</li>
+<li><strong>Protocol/Port</strong>: Obsidian Local REST APIのプロトコルとポート（通常はhttps/27124）</li>
+<li><strong>Daily Notes Path</strong>: デイリーノートの保存先フォルダ（例: <code>092.Daily</code>）</li>
+<li><strong>AI Provider</strong>: 使用するAIサービスを選択（Gemini、OpenAI互換など）</li>
+<li><strong>各AIプロバイダーのAPIキーとモデル設定</strong></li>
+</ul>
+</li>
+<li>「Save &amp; Test Connection」をクリックし、「Test Connection」で接続を確認してください。</li>
+</ol>
+<h4 id="ドメインフィルター設定" class="tsd-anchor-link">ドメインフィルター設定<a href="#ドメインフィルター設定" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>設定画面の「ドメインフィルター」タブで、記録するドメインを制御できます：</p>
+<ul>
+<li><strong>無効</strong>: すべてのドメインを記録します</li>
+<li><strong>ホワイトリスト</strong>: 指定したドメインのみ記録します</li>
+<li><strong>ブラックリスト</strong>: 指定したドメインを除外して記録します</li>
+</ul>
+<p>ドメインリストではワイルドカードも使用できます（例: <code>*.example.com</code>）。「現在のページドメインを追加」ボタンで簡単にドメインを追加できます。</p>
+<h4 id="aiプロンプトのカスタマイズ" class="tsd-anchor-link">AIプロンプトのカスタマイズ<a href="#aiプロンプトのカスタマイズ" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>設定画面の「AIプロンプト」タブで、AI要約時のプロンプトをカスタマイズできます。プロバイダーごとに異なるプロンプトを設定したり、複数のプロンプトを保存して切り替えたりすることができます。</p>
+<p>デフォルトのプロンプト、各設定項目の説明、カスタマイズ例は <a href="media/USER-GUIDE-AI-PROMPT.md">USER-GUIDE-AI-PROMPT.md</a> を参照してください。</p>
+<h4 id="ublock-origin形式フィルターの使用" class="tsd-anchor-link">uBlock Origin形式フィルターの使用<a href="#ublock-origin形式フィルターの使用" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>設定画面の「ドメインフィルター」タブで、「フィルター形式」を「uBlock Origin 形式」に切り替えることで、uBlock Origin形式のフィルターリストを使用できます。</p>
+<p>フィルターの入力方法:</p>
+<ul>
+<li>テキストエリアに直接uBlock形式のフィルターを貼り付ける</li>
+<li>ローカルの.txtファイルから読み込む</li>
+<li>ドラッグ＆ドロップでファイルを読み込む</li>
+<li>URLからフィルターリストをダウンロードする</li>
+</ul>
+<p>詳細な使い方は <a href="media/USER-GUIDE-UBLOCK-IMPORT.md">USER-GUIDE-UBLOCK-IMPORT.md</a> を参照してください。</p>
+<h3 id="obsidianへの追加の仕組み（）" class="tsd-anchor-link">Obsidianへの追加の仕組み（<code>src/background/obsidianClient.ts</code>）<a href="#obsidianへの追加の仕組み（）" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p><strong>方式: Read-Modify-Write（読み込み → 加工 → 書き込み）</strong></p>
+<ol>
+<li>
+<p><strong>保存先の特定</strong>
+設定された「Daily Note Path」と現在の日付から、保存先ファイルパスを特定します（例: <code>092.Daily/2026-01-15.md</code>）。</p>
+</li>
+<li>
+<p><strong>既存ノートの読み込み (GET)</strong>
+Obsidian Local REST API を使用して、そのファイルの現在の内容をテキストとして取得します。</p>
+</li>
+<li>
+<p><strong>内容の追記</strong>
+ファイル内に <code># 🌐 ブラウザ閲覧履歴</code> という見出しを探します。</p>
+<ul>
+<li><strong>見出しがある場合</strong>: そのセクションの末尾（次の見出しの手前）に新しい要約を挿入します。</li>
+<li><strong>見出しがない場合</strong>: ファイルの末尾に新しい見出しを作成し、そこに追記します。</li>
+</ul>
+</li>
+<li>
+<p><strong>ノートの更新 (PUT)</strong>
+加工した全体の内容でファイルを上書き保存します。</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>注意</strong>: ファイル全体を取得して書き直す方式のため、Obsidian 側でまさにその瞬間に同じファイルを編集していると、競合により更新内容が失われるリスクがわずかにあります（通常の使用では稀です）。</p>
+</blockquote>
+<hr>
+<h2 id="english" class="tsd-anchor-link">English<a href="#english" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="overview" class="tsd-anchor-link">Overview<a href="#overview" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.</p>
+<h3 id="about-the-original-obsidian-smart-history" class="tsd-anchor-link">About the Original — Obsidian Smart History<a href="#about-the-original-obsidian-smart-history" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Obsidian Weave is a fork of Obsidian Smart History, introduced in <a href="https://note.com/izuru_tcnkc/n/nd0a758483901">this article</a>.</p>
+<h3 id="why-this-fork" class="tsd-anchor-link">Why This Fork?<a href="#why-this-fork" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>The primary motivation was to add OpenAI-compatible API support — enabling Groq, Ollama, Sakura AI Engine, and many other providers alongside the original Gemini support.
+If you'd like to add another API provider, see <a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+<h3 id="features" class="tsd-anchor-link">Features<a href="#features" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>🤖 <strong>AI-Powered Summaries</strong>: Automatically generates concise summaries of web pages using OpenAI-compatible APIs or Google's Gemini API (supports Groq, OpenAI, Anthropic, local LLMs, and more)</li>
+<li>📝 <strong>Obsidian Integration</strong>: Saves browsing history directly to your Obsidian daily notes</li>
+<li>🎯 <strong>Smart Detection</strong>: Only saves pages you actually read (based on scroll depth and time spent)</li>
+<li>📂 <strong>Organized Storage</strong>: Automatically creates and maintains a dedicated &quot;Browser History&quot; section in your daily notes</li>
+<li>⚙️ <strong>Customizable</strong>: Configure minimum visit duration, scroll depth, and API settings</li>
+</ul>
+<p>The following features were added exclusively in Obsidian Weave from version 2 onwards:</p>
+<ul>
+<li>🖱️ <strong>Manual Recording</strong>: Record any page instantly with the &quot;Record Now&quot; button. No duplicate URL restrictions - record the same page multiple times.</li>
+<li>📱 <strong>Improved UI</strong>: Separated main screen and settings with easy hamburger menu access.</li>
+<li>🌐 <strong>Domain Filtering</strong>: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported.</li>
+<li>🚫 <strong>uBlock Origin Format Filters</strong>: Import and use existing uBlock filter lists like EasyList directly.</li>
+<li>✏️ <strong>AI Prompt Customization</strong>: Edit and save custom AI summarization prompts. Configure different prompts per provider.</li>
+<li>📋 <strong>AI Prompt Presets</strong>: Choose from 5 built-in presets (With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.</li>
+<li>🔔 <strong>Toolbar Badge Notifications</strong>: An orange <code>!</code> badge appears when privacy headers are detected; a blue <code>◎</code> badge appears when auto-recording completes. Check status without opening the popup.</li>
+<li>🔒 <strong>Privacy Protection</strong>: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.</li>
+<li>⚠️ <strong>Private Page Confirmation</strong>: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.</li>
+<li>📋 <strong>Pending Pages Management</strong>: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See <a href="media/PRIVACY.md">PRIVACY.md</a> for details.</li>
+<li>🔐 <strong>Master Password Protection</strong>: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.</li>
+</ul>
+<h3 id="requirements" class="tsd-anchor-link">Requirements<a href="#requirements" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><a href="https://obsidian.md/">Obsidian</a> with <a href="https://github.com/coddingtonbear/obsidian-local-rest-api">Local REST API plugin</a></li>
+<li>An AI provider (choose one):
+<ul>
+<li><a href="https://console.groq.com/keys">Groq</a> (free tier available, recommended)</li>
+<li><a href="https://aistudio.google.com/app/apikey">Google Gemini API key</a> (free tier available)</li>
+<li><a href="https://platform.openai.com/api-keys">OpenAI</a></li>
+<li><a href="https://console.anthropic.com/">Anthropic (Claude)</a></li>
+<li>Local LLMs like Ollama (no API key required)</li>
+</ul>
+</li>
+</ul>
+<h3 id="installation" class="tsd-anchor-link">Installation<a href="#installation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>To install the extension, follow these steps:</p>
+<ol>
+<li>
+<p>Clone or download this repository:</p>
+<pre><code class="bash"><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">clone</span><span class="hl-1"> </span><span class="hl-2">https://github.com/armaniacs/obsidian-weave.git</span><br/><span class="hl-0">cd</span><span class="hl-1"> </span><span class="hl-2">obsidian-weave</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Install dependencies:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Build the extension:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Open Chrome and navigate to <code>chrome://extensions</code></p>
+</li>
+<li>
+<p>Enable &quot;Developer mode&quot; in the top right</p>
+</li>
+<li>
+<p>Click &quot;Load unpacked&quot; and select the <strong><code>dist</code> folder</strong></p>
+</li>
+</ol>
+<h3 id="usage" class="tsd-anchor-link">Usage<a href="#usage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<h4 id="automatic-recording" class="tsd-anchor-link">Automatic Recording<a href="#automatic-recording" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<ul>
+<li>Pages are automatically recorded when you browse for 5+ seconds and scroll 50%+ of the page</li>
+<li>Duplicate URLs are not recorded (same page only once per day)</li>
+</ul>
+<h4 id="manual-recording" class="tsd-anchor-link">Manual Recording<a href="#manual-recording" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<ol>
+<li>Click the extension icon to open the main screen</li>
+<li>Current page information will be displayed</li>
+<li>Click the &quot;📝 Record Now&quot; button to instantly record the current page</li>
+<li>Manual recording has no duplicate restrictions - record the same page multiple times</li>
+</ol>
+<blockquote>
+<p><strong>📌 About the &quot;Record Anyway&quot; Feature</strong>
+When domain filter blacklist mode is enabled, blacklisted domains are not automatically recorded.
+However, the &quot;Record Anyway&quot; button appears during manual recording, allowing you to override the domain filter.</p>
+<p><strong>Usage:</strong></p>
+<ul>
+<li>Click &quot;📝 Record Now&quot; on a blacklisted domain to see a confirmation dialog</li>
+<li>Select &quot;Record Anyway&quot; to record that specific page</li>
+<li>If you want to continue recording that domain, review your domain filter settings (add to whitelist or remove from blacklist)</li>
+</ul>
+</blockquote>
+<h3 id="setup" class="tsd-anchor-link">Setup<a href="#setup" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ol>
+<li>Click the extension icon in your toolbar</li>
+<li>Click the &quot;⚙&quot; icon in the top right to open the Dashboard (settings)</li>
+<li>Configure settings:
+<ul>
+<li><strong>Obsidian API Key</strong>: Key from Obsidian's Local REST API settings</li>
+<li><strong>Protocol/Port</strong>: Obsidian Local REST API protocol and port (usually https/27124)</li>
+<li><strong>Daily Notes Path</strong>: Folder path for daily notes (e.g., <code>092.Daily</code>)</li>
+<li><strong>AI Provider</strong>: Select your preferred AI service (Gemini, OpenAI Compatible, etc.)</li>
+<li><strong>API keys and model settings for each AI provider</strong></li>
+</ul>
+</li>
+<li>Click &quot;Save &amp; Test Connection&quot; to verify connectivity.</li>
+</ol>
+<h4 id="domain-filter-settings" class="tsd-anchor-link">Domain Filter Settings<a href="#domain-filter-settings" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>In the &quot;Domain Filter&quot; tab of the settings screen, you can control which domains to record:</p>
+<ul>
+<li><strong>Disabled</strong>: Record all domains</li>
+<li><strong>Whitelist</strong>: Only record specified domains</li>
+<li><strong>Blacklist</strong>: Record all domains except those specified</li>
+</ul>
+<p>You can use wildcards in the domain list (e.g., <code>*.example.com</code>). Use the &quot;Add Current Domain&quot; button to easily add domains.</p>
+<h4 id="customizing-ai-prompts" class="tsd-anchor-link">Customizing AI Prompts<a href="#customizing-ai-prompts" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>In the &quot;AI Prompt&quot; tab of the settings screen, you can customize the prompts used for AI summarization. Configure different prompts per provider or save multiple prompts to switch between them as needed.</p>
+<p>For default prompt values, field descriptions, and customization examples, see <a href="media/USER-GUIDE-AI-PROMPT.md">USER-GUIDE-AI-PROMPT.md</a>.</p>
+<h4 id="using-ublock-origin-format-filters" class="tsd-anchor-link">Using uBlock Origin Format Filters<a href="#using-ublock-origin-format-filters" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>In the &quot;Domain Filter&quot; tab of the settings screen, switch the &quot;Filter Format&quot; to &quot;uBlock Origin Format&quot; to use uBlock Origin format filter lists.</p>
+<p>Ways to input filters:</p>
+<ul>
+<li>Paste uBlock format filters directly into the text area</li>
+<li>Load from a local .txt file</li>
+<li>Drag and drop a file to load</li>
+<li>Download a filter list from a URL</li>
+</ul>
+<p>For detailed usage instructions, please refer to <a href="media/USER-GUIDE-UBLOCK-IMPORT.md">USER-GUIDE-UBLOCK-IMPORT.md</a>.</p>
+<hr>
+<h2 id="privacy-プライバシー" class="tsd-anchor-link">Privacy / プライバシー<a href="#privacy-プライバシー" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>データはすべてローカルに保存されます。詳細は <a href="media/PRIVACY.md">PRIVACY.md</a> を参照してください。</p>
+<p>All data is stored locally. See <a href="media/PRIVACY.md">PRIVACY.md</a> for details.</p>
+<h2 id="license-ライセンス" class="tsd-anchor-link">License / ライセンス<a href="#license-ライセンス" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>MIT License</p>
+<h2 id="documentation-ドキュメント" class="tsd-anchor-link">Documentation / ドキュメント<a href="#documentation-ドキュメント" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="文書一覧" class="tsd-anchor-link">文書一覧<a href="#文書一覧" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><a href="media/AGENTS.md">AGENTS.md</a> - 開発者向けエージェント設定</li>
+<li><a href="media/CHANGELOG.md">CHANGELOG.md</a> - 更新履歴</li>
+<li><a href="media/SETUP_GUIDE.md">SETUP_GUIDE.md</a> - セットアップガイド</li>
+<li><a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> - コントリビューションガイド</li>
+<li><a href="media/LICENSE.md">LICENSE.md</a> - ライセンス詳細</li>
+<li><a href="media/PRIVACY.md">PRIVACY.md</a> - プライバシーポリシー</li>
+<li><a href="media/PII_FEATURE_GUIDE.md">PII_FEATURE_GUIDE.md</a> - 個人情報保護機能ガイド</li>
+<li><a href="media/USER-GUIDE-AI-PROMPT.md">USER-GUIDE-AI-PROMPT.md</a> - AIプロンプトカスタマイズガイド</li>
+<li><a href="media/USER-GUIDE-UBLOCK-IMPORT.md">USER-GUIDE-UBLOCK-IMPORT.md</a> - uBlockフィルターインポートガイド</li>
+</ul>
+<h3 id="documentation" class="tsd-anchor-link">Documentation<a href="#documentation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><a href="media/AGENTS.md">AGENTS.md</a> - Developer Agent Configuration</li>
+<li><a href="media/CHANGELOG.md">CHANGELOG.md</a> - Changelog</li>
+<li><a href="media/SETUP_GUIDE.md">SETUP_GUIDE.md</a> - Setup Guide</li>
+<li><a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> - Contributing Guide</li>
+<li><a href="media/LICENSE.md">LICENSE.md</a> - License Details</li>
+<li><a href="media/PRIVACY.md">PRIVACY.md</a> - Privacy Policy</li>
+<li><a href="media/PII_FEATURE_GUIDE.md">PII_FEATURE_GUIDE.md</a> - PII Protection Feature Guide</li>
+<li><a href="media/USER-GUIDE-AI-PROMPT.md">USER-GUIDE-AI-PROMPT.md</a> - AI Prompt Customization Guide</li>
+<li><a href="media/USER-GUIDE-UBLOCK-IMPORT.md">USER-GUIDE-UBLOCK-IMPORT.md</a> - uBlock Filter Import Guide</li>
+</ul>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-private" name="private"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Private</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#obsidian-weave"><span>Obsidian <wbr/>Weave</span></a><ul><li><a href="#日本語"><span>日本語</span></a></li><li><ul><li><a href="#概要"><span>概要</span></a></li><li><a href="#オリジナルの-obsidian-smart-history-の紹介"><span>オリジナルの <wbr/>Obsidian <wbr/>Smart <wbr/>History の紹介</span></a></li><li><a href="#フォークの理由"><span>フォークの理由</span></a></li><li><a href="#特徴"><span>特徴</span></a></li><li><a href="#必要なもの"><span>必要なもの</span></a></li><li><a href="#インストール方法"><span>インストール方法</span></a></li><li><a href="#使い方"><span>使い方</span></a></li><li><ul><li><a href="#自動記録"><span>自動記録</span></a></li><li><a href="#手動記録"><span>手動記録</span></a></li></ul></li><li><a href="#設定"><span>設定</span></a></li><li><ul><li><a href="#ドメインフィルター設定"><span>ドメインフィルター設定</span></a></li><li><a href="#aiプロンプトのカスタマイズ"><span>AIプロンプトのカスタマイズ</span></a></li><li><a href="#ublock-origin形式フィルターの使用"><span>u<wbr/>Block <wbr/>Origin形式フィルターの使用</span></a></li></ul></li><li><a href="#obsidianへの追加の仕組み（）"><span>Obsidianへの追加の仕組み（）</span></a></li></ul></li><li><a href="#english"><span>English</span></a></li><li><ul><li><a href="#overview"><span>Overview</span></a></li><li><a href="#about-the-original-obsidian-smart-history"><span>About the <wbr/>Original — <wbr/>Obsidian <wbr/>Smart <wbr/>History</span></a></li><li><a href="#why-this-fork"><span>Why <wbr/>This <wbr/>Fork?</span></a></li><li><a href="#features"><span>Features</span></a></li><li><a href="#requirements"><span>Requirements</span></a></li><li><a href="#installation"><span>Installation</span></a></li><li><a href="#usage"><span>Usage</span></a></li><li><ul><li><a href="#automatic-recording"><span>Automatic <wbr/>Recording</span></a></li><li><a href="#manual-recording"><span>Manual <wbr/>Recording</span></a></li></ul></li><li><a href="#setup"><span>Setup</span></a></li><li><ul><li><a href="#domain-filter-settings"><span>Domain <wbr/>Filter <wbr/>Settings</span></a></li><li><a href="#customizing-ai-prompts"><span>Customizing <wbr/>AI <wbr/>Prompts</span></a></li><li><a href="#using-ublock-origin-format-filters"><span>Using u<wbr/>Block <wbr/>Origin <wbr/>Format <wbr/>Filters</span></a></li></ul></li></ul></li><li><a href="#privacy-プライバシー"><span>Privacy / プライバシー</span></a></li><li><a href="#license-ライセンス"><span>License / ライセンス</span></a></li><li><a href="#documentation-ドキュメント"><span>Documentation / ドキュメント</span></a></li><li><ul><li><a href="#文書一覧"><span>文書一覧</span></a></li><li><a href="#documentation"><span>Documentation</span></a></li></ul></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="https://github.com/armaniacs/obsidian-weave" class="tsd-nav-link">GitHub</a></nav><nav class="tsd-navigation"><a href="modules.html">Obsidian Weave API - v5.1.9</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>

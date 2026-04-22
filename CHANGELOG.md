@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.10] - 2026-04-22
+
+### Added
+
+- **Typedoc導入**: Background services APIドキュメント自動生成
+  - `typedoc.json` 設定、13クラス + 49インターフェースを網羅
+  - npm scripts追加: `npm run docs`, `npm run docs:watch`
+
+### Reverted
+
+- **Svelte 5 + Tailwind CSS 4 UI (popup)**: 元のvanilla UIに復元
+  - 経緯: Svelteで構築したpopup UI（4タブ設定画面）をChrome拡張機能で動作確認したところ、元のv5.1.4の入り組んだUI（ステータスパネル、現在ページ情報、バナー等）が完全に消失していた
+  - 原因: 元のpopupは814行の複雑なHTML。Svelte化では単純な設定フォームのみ再現し、既存機能をカバーできていなかった
+  - 対応: `entrypoints/popup/index.html` を元の `popup.html` に復元、`main.ts` を元のスクリプト呼び出しに変更
+  - 削除: `src/popup/App.svelte`、`components/`、`styles/app.css`
+
+### Development Status
+
+- popup UI: 元のvanilla UIに復元完了、Build・テスト正常
+- v6ロードマップ 7/9項目完了（残: #8 CI/CD整備）
+- Svelte+Tailwind導入はpopupでは見送り、dashboard等の新規画面で再検討
+
 ## [5.1.9] - 2026-04-21
 
 ### Added
