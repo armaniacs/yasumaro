@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ui-ux-improvements.test.js
  * UI/UX改善点のテストスイート

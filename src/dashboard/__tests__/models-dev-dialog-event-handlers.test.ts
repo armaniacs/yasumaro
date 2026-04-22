@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * models-dev-dialog-event-handlers.test.ts
  * Tests for models-dev-dialog.ts event listener deduplication

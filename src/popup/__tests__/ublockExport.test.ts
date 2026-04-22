@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * @file src/popup/__tests__/ublockExport.test.js
  * uBlockエクスポートUIロジックのテスト

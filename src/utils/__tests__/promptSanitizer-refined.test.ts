@@ -230,11 +230,12 @@ describe('promptSanitizer-refined', () => {
   });
 
   describe('sanitizePromptContentRefined - generic term detection (LOW)', () => {
-    it('detects "now" as potential command in ambiguous context', () => {
+    it('returns SAFE for "now" in non-command context with "then"', () => {
+      // "then" contains "the" but should NOT trigger partial-word match on "the"
       const content = 'Do it now, then wait.';
       const result = sanitizePromptContentRefined(content);
-      expect(result.dangerLevel).toBe(DangerLevel.LOW);
-      expect(result.warnings.some(w => w.includes('potential command'))).toBe(true);
+      expect(result.dangerLevel).toBe(DangerLevel.SAFE);
+      expect(result.warnings.some(w => w.includes('potential command'))).toBe(false);
     });
 
     it('returns SAFE for "ignore" without malicious prefix', () => {

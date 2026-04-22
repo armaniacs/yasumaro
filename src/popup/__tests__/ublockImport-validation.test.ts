@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-validation.test.js
  * uBlock Import - Validationモジュールのユニットテスト

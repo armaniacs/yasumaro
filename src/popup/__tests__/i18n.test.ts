@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * i18n.test.js
  *

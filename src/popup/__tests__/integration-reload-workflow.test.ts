@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * 統合テスト: ソースリロードワークフロー
  */

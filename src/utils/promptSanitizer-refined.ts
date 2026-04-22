@@ -129,8 +129,8 @@ function isMaliciousUsage(word: string, fullContent: string, index: number): boo
 
   // 後文に命令引数があるか
   const commandSuffixes = [
-    /\s+(?:to|for|the|your|this|all\s+of|any\s+)(?:\w|$)/i,
-    /\s+(?:instruction|system|behavior|previous|above)\s/i,
+    /^\s*(?:to|for|the|your|this|all\s+of|any\s+)(?:\w|$)/i,
+    /^\s*(?:instruction|system|behavior|previous|above)\s/i,
   ];
 
   for (const suffix of commandSuffixes) {

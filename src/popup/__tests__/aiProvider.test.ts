@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * popup/settings/aiProvider.ts のテスト
  * AIプロバイダーUI表示制御のテスト

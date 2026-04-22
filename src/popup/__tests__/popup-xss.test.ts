@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * popup-xss.test.js
  * XSS Protection Tests for popup.js Connection Error Message

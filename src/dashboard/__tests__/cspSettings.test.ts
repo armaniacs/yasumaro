@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 
 /**
  * cspSettings.test.ts

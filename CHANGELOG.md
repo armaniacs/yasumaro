@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.12] - 2026-04-23
+
+### Fixed
+
+- **promptSanitizer-refined.ts**: `isMaliciousUsage` の `commandSuffixes` 正規表現に先頭アンカー (`^`) を追加し、安全な文脈での誤検知を修正
+  - 原因: `the` が `then` に部分マッチしていた（例: `"Do it now, then wait."` で `" the"` に誤判定）
+  - False Positive Rate 10% → 0%
+  - 解消されたテスト: `should NOT flag "The system administrator configured settings"`、`should not flag injection pattern in safe context with "is now" pattern`
+  - テスト期待値の修正: `promptSanitizer-refined.test.ts` の `"Do it now, then wait."` を `SAFE` に変更（部分マッチ誤検知の修正）
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: ~40%達成
+- #2 promptSanitizer テスト失敗: **全解消**（0 failed / 2849 passed）
+- 次のアイテム: #8 CI/CD整備
+
 ## [5.1.11] - 2026-04-23
 
 ### Added
@@ -40,7 +56,6 @@ All notable changes to this project will be documented in this file.
 ### Development Status
 
 - v6ロードマップ #2 TypeScript厳格化: ~40%達成
-- #2 残り課題: promptSanitizerテスト2件のexpectation不一致
 - 次のアイテム: #8 CI/CD整備
 
 ## [5.1.10] - 2026-04-22

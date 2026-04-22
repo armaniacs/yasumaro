@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport.test.js
  * uBlock import UI component tests

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-rulesBuilder.test.js
  * uBlock Import - RulesBuilderモジュールのユニットテスト

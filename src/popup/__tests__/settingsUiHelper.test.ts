@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * settingsUiHelper.test.ts
  * settingsUiHelper.ts の単体テスト

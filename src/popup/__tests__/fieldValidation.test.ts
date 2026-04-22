@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * popup/settings/fieldValidation.ts のテスト
  * フィールドバリデーションのテスト

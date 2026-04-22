@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 
 import { computeCleansingStats, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';

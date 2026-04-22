@@ -14,7 +14,11 @@ import {
     getOrCreateEncryptionKey,
     clearEncryptionKeyCache,
     clearSettingsCache,
-    isDomainInWhitelist
+    isDomainInWhitelist,
+    getDomainFilterCacheSync,
+    isDomainFilterCacheValid,
+    matchesWildcardPattern,
+    normalizeDomainUrl,
 } from '../storage.js';
 import { normalizeUrl } from '../urlUtils.js';
 import { isEncrypted, encrypt, decrypt } from '../crypto.js';
@@ -322,5 +326,99 @@ describe('APIキー暗号化統合', () => {
             expect(settings[StorageKeys.OBSIDIAN_PORT]).toBe('9999');
             expect(settings[StorageKeys.AI_PROVIDER]).toBe('openai');
         });
+    });
+});
+
+describe('getDomainFilterCacheSync', () => {
+    it('calls callback with cache data from storage', async () => {
+        const mockCache = ['example.com', 'test.com'];
+        const mockTimestamp = Date.now();
+        const mockMode = 'whitelist';
+        (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementationOnce(
+            (_keys: string[], cb?: (result: Record<string, unknown>) => void) => {
+                const result = {
+                    domain_filter_cache: mockCache,
+                    domain_filter_cache_timestamp: mockTimestamp,
+                    domain_filter_mode: mockMode,
+                };
+                if (cb) cb(result);
+                return Promise.resolve(result);
+            }
+        );
+
+        const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }>((resolve) => {
+            getDomainFilterCacheSync(resolve);
+        });
+
+        expect(result.allowedDomains).toEqual(mockCache);
+        expect(result.mode).toBe(mockMode);
+        expect(result.cachedAt).toBe(mockTimestamp);
+    });
+
+    it('calls callback with empty defaults when cache not found', async () => {
+        (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementationOnce(
+            (_keys: string[], cb?: (result: Record<string, unknown>) => void) => {
+                const result = {};
+                if (cb) cb(result);
+                return Promise.resolve(result);
+            }
+        );
+
+        const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }>((resolve) => {
+            getDomainFilterCacheSync(resolve);
+        });
+
+        expect(result.allowedDomains).toEqual([]);
+        expect(result.blockedDomains).toEqual([]);
+        expect(result.cachedAt).toBe(0);
+        expect(result.mode).toBe('disabled');
+    });
+});
+
+describe('isDomainFilterCacheValid', () => {
+    it('returns true for recent cache', () => {
+        const recent = Date.now() - 1000;
+        expect(isDomainFilterCacheValid(recent)).toBe(true);
+    });
+
+    it('returns false for expired cache', () => {
+        const old = Date.now() - 1000 * 60 * 60 * 25;
+        expect(isDomainFilterCacheValid(old)).toBe(false);
+    });
+
+    it('returns false for zero timestamp', () => {
+        expect(isDomainFilterCacheValid(0)).toBe(false);
+    });
+});
+
+describe('matchesWildcardPattern', () => {
+    it('matches exact domain', () => {
+        expect(matchesWildcardPattern('example.com', 'example.com')).toBe(true);
+    });
+
+    it('matches wildcard prefix', () => {
+        expect(matchesWildcardPattern('sub.example.com', '*.example.com')).toBe(true);
+    });
+
+    it('does not match different domain', () => {
+        expect(matchesWildcardPattern('example.com', 'other.com')).toBe(false);
+    });
+
+    it('is case-insensitive', () => {
+        expect(matchesWildcardPattern('Example.Com', 'example.com')).toBe(true);
+    });
+});
+
+describe('normalizeDomainUrl', () => {
+    it('normalizes URL to hostname', () => {
+        expect(normalizeDomainUrl('https://example.com/path')).toBe('example.com');
+    });
+
+    it('removes www prefix', () => {
+        expect(normalizeDomainUrl('https://www.example.com')).toBe('example.com');
+    });
+
+    it('returns null for invalid URL', () => {
+        expect(normalizeDomainUrl('not-a-url')).toBeNull();
     });
 });

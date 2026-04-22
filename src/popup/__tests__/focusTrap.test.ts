@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * focusTrap.test.ts
  * focusTrap.ts の単体テスト

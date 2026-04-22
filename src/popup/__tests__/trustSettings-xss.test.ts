@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * trustSettings-xss.test.ts
  * XSS Protection Tests for trustSettings.ts

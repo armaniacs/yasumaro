@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * dashboard-lmstudio-preset.test.ts
  * Tests for LM Studio preset button functionality

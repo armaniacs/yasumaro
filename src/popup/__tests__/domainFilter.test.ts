@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * domainFilter.test.ts
  * Tests for src/popup/domainFilter.ts
