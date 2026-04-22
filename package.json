@@ -1,6 +1,6 @@
 {
   "name": "obsidian-weave",
-  "version": "5.1.8",
+  "version": "5.1.10",
   "description": "Smartly backup closed tabs to Obsidian with AI summaries and context linking.",
   "type": "module",
   "scripts": {
@@ -24,6 +24,8 @@
     "test:type-safe": "npm run type-check:test && npm test",
     "lint": "tsc --noEmit",
     "validate": "npm run type-check && npm test",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -50,6 +52,7 @@
     "jsdom": "^29.0.0",
     "svelte": "^5.55.4",
     "tailwindcss": "^4.2.2",
+    "typedoc": "^0.28.19",
     "typescript": "^5.9.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4",
