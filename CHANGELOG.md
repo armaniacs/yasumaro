@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.13] - 2026-04-23
+
+### Added
+
+- **テストカバレッジ大幅改善（除外リスト解除＋新規テスト追加）**:
+  - `vitest.config.ts` から30ファイル以上の `exclude` を解除し、除外されていたテストを全て有効化
+  - 35ファイルのDOM依存テストに `@vitest-environment jsdom` アノテーションを追加
+  - 新規テストファイル9個を追加:
+    - `aiSummaryCleaner/countTargets.test.ts` — カード検出・リンク密度カウントのカバレッジ追加
+    - `aiSummaryCleaner/stripCore.test.ts` — カード要素削除・CARD_PATTERNSのテスト
+    - `contentExtractor/index.test.ts` — 空ドキュメント・article抽出のエッジケース
+    - `background/ServiceWorkerContext.test.ts` — DIコンテキストとグローバル状態管理
+    - `dashboard/historyBadges.test.ts` — 履歴バッジ生成（recordType/mask/cleansed）
+    - `dashboard/historyUtils.test.ts` — ページネーション・エラー表示・SWヘルスチェック
+    - `dashboard/historyState.test.ts` — 初期状態作成・i18nキャッシュ
+    - `background/handlers/urlNotificationHandlers.test.ts` — URLエンコード/デコード・HMAC署名
+    - `storage.test.ts` に `getDomainFilterCacheSync`, `isDomainFilterCacheValid`, `matchesWildcardPattern`, `normalizeDomainUrl` のテストを追加
+
+### Test Results
+
+- テストファイル: 187 passed（1 skipped）
+- テストケース: 3,854 passed（16 skipped）
+- 変更前: 144ファイル・2,851テスト → 変更後: 188ファイル・3,854テスト（+43ファイル、+1,003テスト）
+- **カバレッジ改善**: Statements 45.38% → **62.01%** (+16.63%) / Functions 66.63% → 68.07%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62%達成（目標80%まであと18%）
+- 残りの大規模未カバーファイル: `service-worker.ts`, `dashboard.ts`, `popup/main.ts`, `content/extractor.ts`, `content/loader.ts`, `offscreen.ts` 等
+
 ## [5.1.12] - 2026-04-23
 
 ### Fixed
