@@ -49,6 +49,15 @@ const getUserMessageForType = (errorType: ErrorTypeValues): string => {
 };
 
 /**
+ * Type guard for error-like objects (duck-typing for external data)
+ * @param value - value to check
+ * @returns true if the value looks like an Error object
+ */
+function isErrorLike(value: unknown): value is { message?: unknown; name?: unknown } {
+    return typeof value === 'object' && value !== null && ('message' in value || 'name' in value);
+}
+
+/**
  * エラーを分類する
  * @param {Error} error - 発生したエラー
  * @returns {ErrorTypeValues} エラータイプ
@@ -57,8 +66,9 @@ export function classifyError(error: unknown): ErrorTypeValues {
     if (!error) return ErrorType.UNKNOWN;
 
     const err = error instanceof Error ? error : null;
-    const message = (err?.message ?? (typeof error === 'object' && error !== null && 'message' in error ? String((error as { message: unknown }).message) : '')).toLowerCase();
-    const name = (err?.name ?? (typeof error === 'object' && error !== null && 'name' in error ? String((error as { name: unknown }).name) : '')).toLowerCase();
+    const errorLike = !err && isErrorLike(error) ? error : null;
+    const message = (err?.message ?? (errorLike ? String(errorLike.message) : '')).toLowerCase();
+    const name = (err?.name ?? (errorLike ? String(errorLike.name) : '')).toLowerCase();
 
     // ネットワークエラー
     if (name === 'typeerror' && message.includes('fetch')) {
@@ -147,7 +157,7 @@ export function createErrorResponse(error: unknown, context: Record<string, unkn
  * @param {Object} context - 元のコンテキスト
  * @returns {Object} サニタイズされたコンテキスト
  */
-function sanitizeContext(context: Record<string, any>): Record<string, any> {
+function sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
     if (!context || typeof context !== 'object') return {};
 
     const sanitized = { ...context };

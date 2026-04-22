@@ -34,6 +34,7 @@ import { updateActivity, initialize as initializeSessionAlarms } from './session
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
 import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from './messageTypes.js';
+import type { ExtensionMessage } from './messageTypes.js';
 
 // マイグレーション処理を実行
 (async () => {
@@ -80,31 +81,35 @@ const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>();
 
 // Listen for messages from Content Script and Popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((rawMessage: unknown, sender, sendResponse) => {
     const process = async () => {
         try {
             // 【パフォーマンス改善】: メッセージハンドラ関数をインライン化
             // TabCache初期化を必要な場合のみ実行
 
             // Message payload structure validation
-            if (!message || typeof message !== 'object') {
+            if (!rawMessage || typeof rawMessage !== 'object') {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
-            if (!VALID_MESSAGE_TYPES.includes(message.type)) {
+            const msg = rawMessage as Record<string, unknown>;
+            if (typeof msg.type !== 'string' || !VALID_MESSAGE_TYPES.includes(msg.type as typeof VALID_MESSAGE_TYPES[number])) {
                 sendResponse(INVALID_MESSAGE_ERROR);
                 return;
             }
             // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE、SESSION_LOCK_REQUEST は payload 不要
-            if (!NO_PAYLOAD_TYPES.includes(message.type)) {
-                if (message.payload === undefined || typeof message.payload !== 'object') {
+            if (!NO_PAYLOAD_TYPES.includes(msg.type as typeof NO_PAYLOAD_TYPES[number])) {
+                if (msg.payload === undefined || typeof msg.payload !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
                     return;
                 }
             }
 
+            // Cast to discriminated union for type-safe narrowing in handlers
+            const message = rawMessage as ExtensionMessage;
+
             // Sender validation: Content Script only message types
-            if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type)) {
+            if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type as typeof CONTENT_SCRIPT_ONLY_TYPES[number])) {
                 if (!sender.tab || !sender.tab.id || !sender.tab.url) {
                     sendResponse(INVALID_SENDER_ERROR);
                     return;

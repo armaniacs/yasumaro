@@ -61,7 +61,7 @@ export class LocalAIClient {
     /**
      * Send a message to the offscreen document.
      */
-    async msgOffscreen(type: string, payload: Record<string, any> = {}): Promise<OffscreenResponse> {
+    async msgOffscreen(type: string, payload: Record<string, unknown> = {}): Promise<OffscreenResponse> {
         await this.ensureOffscreenDocument();
         return new Promise((resolve, reject) => {
             chrome.runtime.sendMessage({

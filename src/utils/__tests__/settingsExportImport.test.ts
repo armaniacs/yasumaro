@@ -1,6 +1,8 @@
 /**
  * settingsExportImport.test.ts
  * settingsExportImport.ts の単体テスト
+ *
+ * @vitest-environment jsdom
  */
 
 import { webcrypto as crypto } from '@peculiar/webcrypto';
