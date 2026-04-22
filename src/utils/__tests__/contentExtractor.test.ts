@@ -1,6 +1,8 @@
 /**
  * contentExtractor.test.ts
  * contentExtractor.ts の単体テスト
+ *
+ * @vitest-environment jsdom
  */
 
 import { extractMainContent, isExcludedElement, calculateTextScore, isAsianContentElement } from '../contentExtractor.js';

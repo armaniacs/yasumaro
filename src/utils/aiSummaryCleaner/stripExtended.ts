@@ -460,12 +460,14 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
         if (text.length > maxLength) return;
 
         const children = p.children;
+        let hasLinks = false;
         let hasOnlyLinks = true;
         let hasNonLinkText = false;
 
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
             if (child.tagName.toLowerCase() === 'a') {
+                hasLinks = true;
                 continue;
             }
             if (child.tagName.toLowerCase() === 'br') {
@@ -486,7 +488,17 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
             }
         }
 
-        if (hasOnlyLinks && !hasNonLinkText && text.length > 0) {
+        // Check for direct text nodes outside of links
+        if (!hasNonLinkText) {
+            for (const node of Array.from(p.childNodes)) {
+                if (node.nodeType === 3 && (node.nodeValue || '').trim().length > 0) {
+                    hasNonLinkText = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasLinks && hasOnlyLinks && !hasNonLinkText && text.length > 0) {
             elementsToRemove.push(p);
             counted.add(p);
         }

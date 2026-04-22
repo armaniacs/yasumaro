@@ -36,7 +36,7 @@ export function isLikelyAd(elem: Element): boolean {
     const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;
     return AD_WORD_RE.test(className) || AD_WORD_RE.test(id) ||
            text.includes('sponsored') || text.includes('promoted') ||
-           text.includes('Advertise');
+           text.includes('advertise');
 }
 
 /**

@@ -10,6 +10,18 @@ export interface PrivacyInfo {
 }
 
 /**
+ * Type guard for PrivacyInfo
+ * Validates that an unknown value from external storage matches the expected shape.
+ */
+export function isPrivacyInfo(value: unknown): value is PrivacyInfo {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return typeof obj.isPrivate === 'boolean' && typeof obj.timestamp === 'number';
+}
+
+/**
  * プライバシー判定ロジック
  *
  * 詳細な判定基準と技術的根拠については以下を参照:

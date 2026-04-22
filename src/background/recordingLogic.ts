@@ -14,6 +14,7 @@ import { isPrivateIpAddress } from '../utils/fetch.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+import { isPrivacyInfo } from '../utils/privacyChecker.js';
 import { normalizeJapaneseSummary } from '../utils/summaryNormalizer.js';
 import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 // P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
@@ -346,7 +347,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
       try {
         const sessionKey = 'privacyCache_' + normalizedUrl;
         const result = await chrome.storage.session.get(sessionKey);
-        const cached = result[sessionKey] as PrivacyInfo | undefined;
+        const cached = isPrivacyInfo(result[sessionKey]) ? result[sessionKey] : undefined;
         if (cached) {
           // インメモリキャッシュに復元
           if (!RecordingLogic.cacheState.privacyCache) {

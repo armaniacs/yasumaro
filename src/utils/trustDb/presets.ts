@@ -11,12 +11,13 @@ import type {
   TrancoConfig,
   TrustDatabase,
 } from './trustDbSchema.js';
+import type { DeepReadonly } from '../typeUtils.js';
 
 /**
  * JP-Anchor TLD プリセット
  * 日本の公式ドメイン接尾辞
  */
-export const JP_ANCHOR_TLDS: string[] = [
+export const JP_ANCHOR_TLDS: DeepReadonly<string[]> = [
   '.go.jp',  // Government organizations
   '.ac.jp',  // Academic institutions
   '.lg.jp',  // Local government
@@ -25,7 +26,11 @@ export const JP_ANCHOR_TLDS: string[] = [
 /**
  * Sensitive（警戒）ドメインプリセット
  */
-export const SENSITIVE_DOMAINS_PRESETS = {
+export const SENSITIVE_DOMAINS_PRESETS: DeepReadonly<{
+  finance: string[];
+  gaming: string[];
+  sns: string[];
+}> = {
   finance: [
     // 日本主要金融機関
     'rakuten.co.jp',

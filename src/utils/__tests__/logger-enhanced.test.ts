@@ -29,7 +29,7 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].details.arr).toEqual([null, undefined, 'value', null]);
+            expect((logs[0].details as Record<string, unknown>).arr).toEqual([null, undefined, 'value', null]);
         });
 
         test('配列内のDateオブジェクトをISO文字列に変換する', async () => {
@@ -41,7 +41,7 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].details.dates[0]).toBe(date.toISOString());
+            expect((logs[0].details as Record<string, unknown>).dates[0]).toBe(date.toISOString());
         });
 
         test('配列内のErrorオブジェクトを変換する', async () => {
@@ -53,8 +53,8 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].details.errors[0].message).toBe('Array error test');
-            expect(logs[0].details.errors[0].stack).toBeDefined();
+            expect(((logs[0].details as Record<string, unknown>).errors as unknown[])[0].message).toBe('Array error test');
+            expect(((logs[0].details as Record<string, unknown>).errors as unknown[])[0].stack).toBeDefined();
         });
 
         test('配列内の文字列PIIをマスクする', async () => {
@@ -66,7 +66,7 @@ describe('Logger - Enhanced Coverage', () => {
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
             // Email should be masked
-            expect(logs[0].details.contacts[0]).not.toContain('user@example.com');
+            expect((logs[0].details as Record<string, unknown>).contacts[0]).not.toContain('user@example.com');
         });
 
         test('ネストされた配列を処理する', async () => {
@@ -77,7 +77,7 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].details.matrix).toEqual([[1, 2], ['a', 'b']]);
+            expect((logs[0].details as Record<string, unknown>).matrix).toEqual([[1, 2], ['a', 'b']]);
         });
 
         test('配列内のプリミティブ型を処理する', async () => {
@@ -88,7 +88,7 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].details.values).toEqual([42, true, 'text', 3.14]);
+            expect((logs[0].details as Record<string, unknown>).values).toEqual([42, true, 'text', 3.14]);
         });
     });
 

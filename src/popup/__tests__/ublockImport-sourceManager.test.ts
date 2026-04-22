@@ -1,6 +1,8 @@
 /**
  * ublockImport-sourceManager.test.js
  * uBlock Import - SourceManagerモジュールのユニットテスト
+ *
+ * @vitest-environment jsdom
  */
 
 import { StorageKeys, clearSettingsCache, getSettings } from '../../utils/storage.js';

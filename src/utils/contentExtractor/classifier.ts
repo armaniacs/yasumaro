@@ -63,7 +63,7 @@ export const ASIA_CONTENT_CLASS_PATTERNS = [
     'text',
     // 中国語固有
     'article_main',
-    'TRS_Editor',
+    'trs_editor',
     'nr-col',
     // 韓国語固有
     'article_view',

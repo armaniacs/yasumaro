@@ -80,6 +80,15 @@ export const ErrorCode = {
 
 export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
 
+/**
+ * Template literal type documenting the structured error code pattern.
+ * Most error codes follow the format: PREFIX_SUFFIX_NUMBER (e.g., STRG_RD_001).
+ * Note: TypeScript template literal matching has limitations with multiple
+ * underscore segments, so this serves as documentation and future constraint
+ * for new error codes rather than a strict compile-time check on all existing values.
+ */
+export type ErrorCodePattern = `${string}_${string}_${number}`;
+
 const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 7;
 const MAX_LOGS = 1000; // Prevent unlimited growth
@@ -143,7 +152,7 @@ export interface LogEntry {
     type: LogTypeValues;
     message: string;
     errorCode?: ErrorCodeValues;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     source?: string; // ログ出力元モジュール
     userId?: string; // ユーザー識別子（匿名化済み）
 }
@@ -381,7 +390,7 @@ async function sanitizeArray(
  * @param {string} message - Log message
  * @param {object} [details] - Additional details (NO RAW PII)
  */
-export async function addLog(type: LogTypeValues, message: string, details: Record<string, any> = {}): Promise<void> {
+export async function addLog<T extends object = Record<string, unknown>>(type: LogTypeValues, message: string, details: T = {} as T): Promise<void> {
     try {
         // 【セキュリティ強化】本番環境ではDEBUGログを破棄
         // 【実装方針】: isDevelopment()で環境判定し、本番ならDEBUGを早期return
@@ -396,7 +405,7 @@ export async function addLog(type: LogTypeValues, message: string, details: Reco
             timestamp: Date.now(),
             type,
             message,
-            details: await sanitizeLogDetails(details)
+            details: await sanitizeLogDetails(details as Record<string, unknown>)
         };
 
         // バッファに追加（上限超過時は古いエントリを破棄）
@@ -455,15 +464,15 @@ function pruneLogs(logs: LogEntry[]): LogEntry[] {
  * 構造化されたログエントリを作成する（内部関数）
  * @param {LogTypeValues} type - ログタイプ
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {object} details - 詳細情報
  * @param {ErrorCodeValues} [errorCode] - エラーコード
  * @param {string} [source] - ログ出力元モジュール
  * @returns {LogEntry} ログエントリ
  */
-function createStructuredLog(
+function createStructuredLog<T extends object = Record<string, unknown>>(
     type: LogTypeValues,
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     errorCode?: ErrorCodeValues,
     source?: string
 ): LogEntry {
@@ -474,7 +483,7 @@ function createStructuredLog(
         message,
         errorCode,
         source,
-        details
+        details: details as Record<string, unknown>
     };
 }
 
@@ -484,9 +493,9 @@ function createStructuredLog(
  * @param {Record<string, any>} details - 詳細情報
  * @param {string} [source] - ログ出力元モジュール
  */
-export async function logInfo(
+export async function logInfo<T extends object = Record<string, unknown>>(
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     source?: string
 ): Promise<void> {
     const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
@@ -496,13 +505,13 @@ export async function logInfo(
 /**
  * 構造化されたWARNログを出力する
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {object} details - 詳細情報
  * @param {ErrorCodeValues} [errorCode] - エラーコード
  * @param {string} [source] - ログ出力元モジュール
  */
-export async function logWarn(
+export async function logWarn<T extends object = Record<string, unknown>>(
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
@@ -513,13 +522,13 @@ export async function logWarn(
 /**
  * 構造化されたERRORログを出力する
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {object} details - 詳細情報
  * @param {ErrorCodeValues} errorCode - エラーコード
  * @param {string} [source] - ログ出力元モジュール
  */
-export async function logError(
+export async function logError<T extends object = Record<string, unknown>>(
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
@@ -535,12 +544,12 @@ export async function logError(
 /**
  * 構造化されたDEBUGログを出力する
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {object} details - 詳細情報
  * @param {string} [source] - ログ出力元モジュール
  */
-export async function logDebug(
+export async function logDebug<T extends object = Record<string, unknown>>(
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     source?: string
 ): Promise<void> {
     // 本番環境ではDEBUGログを出力しない
@@ -559,13 +568,13 @@ export async function logDebug(
 /**
  * 構造化されたSANITIZEログを出力する
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {object} details - 詳細情報
  * @param {ErrorCodeValues} [errorCode] - エラーコード
  * @param {string} [source] - ログ出力元モジュール
  */
-export async function logSanitize(
+export async function logSanitize<T extends object = Record<string, unknown>>(
     message: string,
-    details: Record<string, any> = {},
+    details: T = {} as T,
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
