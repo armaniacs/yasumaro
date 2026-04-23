@@ -96,10 +96,14 @@ async function ensureSession(): Promise<boolean | { success: false; error: strin
 }
 
 // Handle messages from the service worker
-chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
-    if (typeof message !== 'object' || message === null || !('target' in message)) return;
+export function handleOffscreenMessage(
+    message: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (response: unknown) => void
+): boolean {
+    if (typeof message !== 'object' || message === null || !('target' in message)) return false;
     const msg = message as { target: string; type: string; payload?: Record<string, unknown> };
-    if (msg.target !== 'offscreen') return;
+    if (msg.target !== 'offscreen') return false;
 
     (async () => {
         try {
@@ -145,4 +149,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     })();
 
     return true; // Keep channel open for async response
-});
+}
+
+if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener(handleOffscreenMessage);
+}
