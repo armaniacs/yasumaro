@@ -104,16 +104,16 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
   await loadPendingPages();
 }
 
-document.getElementById('btn-select-all')?.addEventListener('click', () => {
-  const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
-  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-
-  checkboxes.forEach(cb => {
-    cb.checked = !allChecked;
-  });
-});
-
 export function setupEventListeners(): void {
+  document.getElementById('btn-select-all')?.addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+    checkboxes.forEach(cb => {
+      cb.checked = !allChecked;
+    });
+  });
+
   document.getElementById('btn-save-selected')?.addEventListener('click', () => {
     saveSelectedPages();
   });
