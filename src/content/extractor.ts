@@ -180,7 +180,7 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  * 🟢
  * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
  */
-function extractPageContent(): string {
+export function extractPageContent(): string {
     const cleanseOptions = {
         cleanseEnabled: contentStripHardEnabled || contentStripKeywordEnabled,
         hardStripEnabled: contentStripHardEnabled,
@@ -828,7 +828,7 @@ function stopPeriodicCheck(): void {
  * 【機能概要】: 設定の読み込みとイベントリスナーの登録
  * 🟢
  */
-async function init(): Promise<void> {
+export async function init(): Promise<void> {
     // 設定をロード（非同期で待機）
     await loadSettings();
 
@@ -866,34 +866,38 @@ async function init(): Promise<void> {
     }
 }
 
-// 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
-chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
-    if (typeof message !== 'object' || message === null || !('type' in message)) return;
-    const msg = message as ContentMessage;
-    if (msg.type === 'GET_CONTENT') {
-        const content = extractPageContent();
-        sendResponse({
-            content,
-            cleansedReason: lastCleansedReason,
-            cleanseStats: lastCleanseStats,
-            byteStats: {
-                pageBytes: lastByteStats.pageBytes || undefined,
-                candidateBytes: lastByteStats.candidateBytes || undefined,
-                originalBytes: lastByteStats.originalBytes || undefined,
-                cleansedBytes: lastByteStats.cleansedBytes || undefined,
-            },
-            aiSummaryCleansedStats: {
-                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
-            },
-            fallbackTriggered: lastFallbackTriggered
-        });
-    }
-    return true;
-});
+// Guard allows this module to be imported in test environments where
+// globalThis.chrome is undefined or chrome.runtime is not available.
+if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
+    chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
+        if (typeof message !== 'object' || message === null || !('type' in message)) return;
+        const msg = message as ContentMessage;
+        if (msg.type === 'GET_CONTENT') {
+            const content = extractPageContent();
+            sendResponse({
+                content,
+                cleansedReason: lastCleansedReason,
+                cleanseStats: lastCleanseStats,
+                byteStats: {
+                    pageBytes: lastByteStats.pageBytes || undefined,
+                    candidateBytes: lastByteStats.candidateBytes || undefined,
+                    originalBytes: lastByteStats.originalBytes || undefined,
+                    cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                },
+                aiSummaryCleansedStats: {
+                    aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                    aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                    aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                    aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                    aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+                },
+                fallbackTriggered: lastFallbackTriggered
+            });
+        }
+        return true;
+    });
 
-// 【初期化実行】
-void init();
+    // 【初期化実行】
+    void init();
+}
