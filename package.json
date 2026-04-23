@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "build": "wxt build",
+    "build": "node scripts/check-version-consistency.js && wxt build",
     "build:watch": "wxt build --watch",
     "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
