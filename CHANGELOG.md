@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.14] - 2026-04-23
+
+### Added
+
+- **テストカバレッジ大幅改善（第二段階）**:
+  - カバレッジ 45.38% → **62.73%** (+17.35%) 達成
+  - テスト数: 2,847件 → 3,835件 (+988件、+35%増)
+  - jsdom環境対応によりpopup/dashboardテストの大半を有効化
+  - テスト品質向上: 残存テスト失敗を1件解消
+
+### Fixed
+
+- **storage.test.ts**: `getDomainFilterCacheSync` テストのモック設定を修正
+  - Chrome Storage APIのキー構造に合わせた適切なモック実装
+  - テスト期待値の型安全性を向上
+
+### Documentation
+
+- **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
+  - カバレッジ実測値の反映（62.73%）
+  - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
+  - 次フェーズ戦略の策定
+
+### Test Results
+
+- テストファイル: 198 passed（1 skipped）
+- テストケース: 3,835 passed（21 skipped）
+- **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
+- 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
+- 次のマイルストーン: 80%カバレッジ達成後のCI/CD整備
+
 ## [5.1.13] - 2026-04-23
 
 ### Added
