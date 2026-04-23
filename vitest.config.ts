@@ -17,7 +17,6 @@ export default defineConfig({
       '**/e2e/**',
       '**/.kilo/**',
       '**/video-*/**',
-      '**/service-worker.test.ts',
     ],
     coverage: {
       provider: 'v8',

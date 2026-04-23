@@ -183,11 +183,11 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime) {
 }
 ```
 
-- [ ] 末尾の直接登録を `if (typeof globalThis.chrome !== 'undefined')` で囲む
-- [ ] `npm validate` でテスト全通過確認
+- [x] 末尾の直接登録を `if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved)` で囲む
+- [x] `npm test` で全テスト通過確認（3824 passed）
+- [x] `vitest.config.ts` から `'**/service-worker.test.ts'` を除外リストから削除
+- [x] `npx vitest run src/background/__tests__/service-worker.test.ts` で10件通過確認
 - [ ] Chromeにロードして実際の動作確認（guard内は実際のChrome環境では実行される）
-- [ ] `vitest.config.ts` から `'**/service-worker.test.ts'` を除外リストから削除
-- [ ] `npx vitest run src/background/__tests__/service-worker.test.ts` でテスト通過確認
 
 #### Task S1-2: createMessageHandler() 抽出（3時間） ✅ 完了済み
 - [x] `createMessageHandler()` factory関数作成（L126）
@@ -213,11 +213,10 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime) {
 
 ### Day 2: テスト容易性向上 & Chrome API抽象化（6-8時間）
 
-#### Task S2-0: service-worker.test.ts のexclude解除（NEW・最優先）
-S1-1bが完了したら即実施:
-- [ ] `vitest.config.ts` の exclude から `'**/service-worker.test.ts'` を削除
-- [ ] `npm test` で全テストパス確認
-- [ ] `npm run test:coverage` でカバレッジ改善を確認
+#### Task S2-0: service-worker.test.ts のexclude解除 ✅ 完了済み
+- [x] `vitest.config.ts` の exclude から `'**/service-worker.test.ts'` を削除
+- [x] `npm test` で全テストパス確認（3824 passed）
+- [x] カバレッジ: 62.73% → 62.99%（+10テスト）
 
 #### Task S2-1: Chrome API抽象化interface（4時間）※任意
 **方針判断:** service-worker内のChrome API使用が多数あるため、テストでモックしやすくするためinterfaceを定義するか？
@@ -371,7 +370,8 @@ S1-1bが完了したら即実施:
 - [x] `refactor/service-worker-testability` ブランチで作業中
 - [x] `npm run validate` で全テストパスを確認済み
 - [x] coverage baseline（62.73%）を記録済み
-- [ ] **次のアクション:** S1-1bの `if (typeof globalThis.chrome !== 'undefined')` guardを追加
+- [x] **S1-1b完了:** `chrome.tabs?.onRemoved` guardを追加、exclude解除、10テスト通過
+- [ ] **次のアクション:** Chromeに実際にロードして動作確認 → S1-3（ハンドラ個別関数化）へ
 
 ---
 

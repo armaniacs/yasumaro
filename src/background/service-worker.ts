@@ -1048,20 +1048,24 @@ function handleNotificationClicked(notificationId: string): void {
 
 // ============================================================================
 // Module-level initialization - register all Chrome event listeners directly
+// Guard allows this module to be imported in test environments where
+// globalThis.chrome is undefined, without causing errors.
 // ============================================================================
 
-// Message listener
-chrome.runtime.onMessage.addListener(createMessageHandler());
+if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
+    // Message listener
+    chrome.runtime.onMessage.addListener(createMessageHandler());
 
-// Tab event listeners
-chrome.tabs.onRemoved.addListener(handleTabRemoved);
-chrome.tabs.onActivated.addListener(handleTabActivated);
-chrome.tabs.onUpdated.addListener(handleTabUpdated);
+    // Tab event listeners
+    chrome.tabs.onRemoved.addListener(handleTabRemoved);
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+    chrome.tabs.onUpdated.addListener(handleTabUpdated);
 
-// Extension lifecycle listeners
-chrome.runtime.onInstalled.addListener(handleInstalled);
-chrome.runtime.onStartup.addListener(handleStartup);
+    // Extension lifecycle listeners
+    chrome.runtime.onInstalled.addListener(handleInstalled);
+    chrome.runtime.onStartup.addListener(handleStartup);
 
-// Notification listeners
-chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
-chrome.notifications.onClicked.addListener(handleNotificationClicked);
+    // Notification listeners
+    chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
+    chrome.notifications.onClicked.addListener(handleNotificationClicked);
+}
