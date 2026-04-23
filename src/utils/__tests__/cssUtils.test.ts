@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /**
  * cssUtils.test.ts
  * cssUtils.ts の単体テスト
