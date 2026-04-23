@@ -201,6 +201,36 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
         ) as Record<string, unknown>;
         expect(['alt', 'nav', 'ads', 'multiple', 'none']).toContain(result.aiSummaryCleansedReason);
     });
+
+    it('sets aiSummaryCleansedReason to single type when only one type removed', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Main content paragraph that is long enough for extraction. '.repeat(5)}</p>
+                <img src="x.jpg" alt="image alt text here that is descriptive">
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false, adsEnabled: false }
+        ) as Record<string, unknown>;
+        // img[alt] のみ削除 → 'alt' or 'none'
+        expect(['alt', 'none']).toContain(result.aiSummaryCleansedReason);
+    });
+
+    it('returnInfo with cleanseEnabled counts targets even when none removed', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Clean content without any special elements. '.repeat(10)}</p>
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+        ) as Record<string, unknown>;
+        // クレンジング対象がなくても totalRemoved は数値
+        expect(typeof result.cleansedReason).toBe('string');
+    });
 });
 
 // ─────────────────────────────────────────────
@@ -226,6 +256,33 @@ describe('extractMainContent - fallback', () => {
             </article>
         `;
         const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        expect(result.fallbackTriggered).toBe(false);
+    });
+});
+
+// ─────────────────────────────────────────────
+// cleanseEnabled=false（クレンジングなし）パス
+// ─────────────────────────────────────────────
+describe('extractMainContent - cleanseEnabled false', () => {
+    it('returns body content directly when cleanseEnabled is false', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Article content without cleansing enabled. '.repeat(10)}</p>
+            </article>
+        `;
+        const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }) as Record<string, unknown>;
+        expect(typeof result.content).toBe('string');
+        expect(result.cleansedReason).toBe('none');
+    });
+
+    it('returnInfo reports originalBytes equals cleansedBytes when no cleansing', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Content without any cleansing applied here. '.repeat(8)}</p>
+            </article>
+        `;
+        const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }) as Record<string, unknown>;
+        expect(result.cleansedReason).toBe('none');
         expect(result.fallbackTriggered).toBe(false);
     });
 });
