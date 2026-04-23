@@ -285,6 +285,24 @@ describe('extractMainContent - cleanseEnabled false', () => {
         expect(result.cleansedReason).toBe('none');
         expect(result.fallbackTriggered).toBe(false);
     });
+
+    it('applies aiSummaryCleanseEnabled=true when cleanseEnabled=false', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Content for AI summary cleansing test without content cleansing. '.repeat(6)}</p>
+                <img src="a.jpg" alt="image alt text here">
+                <img src="b.jpg" alt="another alt text">
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: false, returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true }
+        ) as Record<string, unknown>;
+        expect(typeof result.content).toBe('string');
+        expect(result.cleansedReason).toBe('none');
+        expect(result).toHaveProperty('aiSummaryOriginalBytes');
+    });
 });
 
 // ─────────────────────────────────────────────
