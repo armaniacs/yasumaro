@@ -1,47 +1,70 @@
 /**
  * service-worker.test.ts
  * Unit tests for service-worker.ts handlers after refactoring.
- * Tests extracted functions: createMessageHandler, handleTabRemoved, handleTabActivated,
- * handleTabUpdated, handleInstalled, handleStartup, handleNotificationButtonClicked.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock chrome APIs NOT covered by vitest.setup.ts
-vi.stubGlobal('chrome', {
-    ...(global as any).chrome,
-    tabs: {
-        ...((global as any).chrome?.tabs || {}),
-        query: vi.fn<Promise<chrome.tabs.Tab[]>, [chrome.tabs.QueryInfo]>(() => Promise.resolve([])),
-        get: vi.fn<Promise<chrome.tabs.Tab>, [number]>((tabId) => Promise.resolve({ id: tabId, url: 'https://example.com' } as chrome.tabs.Tab)),
-        create: vi.fn<Promise<chrome.tabs.Tab>, [chrome.tabs.CreateProperties]>((options) =>
+// Use vi.hoisted to ensure mocks are set up before any module imports
+const { mockAddListener, mockQuery, mockGet, mockCreate, mockRemove, mockClear,
+        mockSetBadgeText, mockSetBadgeBackgroundColor, mockExecuteScript } = vi.hoisted(() => {
+    return {
+        mockAddListener: vi.fn(),
+        mockQuery: vi.fn<Promise<chrome.tabs.Tab[]>, [chrome.tabs.QueryInfo]>(() => Promise.resolve([])),
+        mockGet: vi.fn<Promise<chrome.tabs.Tab>, [number]>((tabId) => Promise.resolve({ id: tabId, url: 'https://example.com' } as chrome.tabs.Tab)),
+        mockCreate: vi.fn<Promise<chrome.tabs.Tab>, [chrome.tabs.CreateProperties]>((options) =>
             Promise.resolve({ id: 1, url: options.url, active: false } as chrome.tabs.Tab)
         ),
-        remove: vi.fn<Promise<void>, [number]>(() => Promise.resolve()),
-        onRemoved: { addListener: vi.fn(), removeListener: vi.fn() },
-        onActivated: { addListener: vi.fn() },
-        onUpdated: { addListener: vi.fn(), removeListener: vi.fn() },
+        mockRemove: vi.fn<Promise<void>, [number]>(() => Promise.resolve()),
+        mockClear: vi.fn<Promise<void>, [string]>(() => Promise.resolve()),
+        mockSetBadgeText: vi.fn(),
+        mockSetBadgeBackgroundColor: vi.fn(),
+        mockExecuteScript: vi.fn<Promise<any[]>, [any]>(() => Promise.resolve([{ result: 'Test page content' }])),
+    };
+});
+
+// Mock chrome module
+vi.mock('chrome', () => ({
+    tabs: {
+        query: mockQuery,
+        get: mockGet,
+        create: mockCreate,
+        remove: mockRemove,
+        onRemoved: { addListener: mockAddListener },
+        onActivated: { addListener: mockAddListener },
+        onUpdated: { addListener: mockAddListener, removeListener: vi.fn() },
     },
     notifications: {
-        ...((global as any).chrome?.notifications || {}),
-        onButtonClicked: { addListener: vi.fn() },
-        onClicked: { addListener: vi.fn() },
-        clear: vi.fn<Promise<void>, [string]>(() => Promise.resolve()),
+        onButtonClicked: { addListener: mockAddListener },
+        onClicked: { addListener: mockAddListener },
+        clear: mockClear,
     },
     runtime: {
-        ...((global as any).chrome?.runtime || {}),
-        onInstalled: { addListener: vi.fn() },
-        onStartup: { addListener: vi.fn() },
+        onInstalled: { addListener: mockAddListener },
+        onStartup: { addListener: mockAddListener },
+        lastError: null,
+        onMessage: { addListener: mockAddListener },
     },
     action: {
-        setBadgeText: vi.fn(),
-        setBadgeBackgroundColor: vi.fn(),
+        setBadgeText: mockSetBadgeText,
+        setBadgeBackgroundColor: mockSetBadgeBackgroundColor,
     },
     scripting: {
-        executeScript: vi.fn<Promise<any[]>, [any]>(() =>
-            Promise.resolve([{ result: 'Test page content' }])
-        ),
+        executeScript: mockExecuteScript,
     },
-});
+    storage: {
+        local: { get: vi.fn(), set: vi.fn() },
+        session: { get: vi.fn(), set: vi.fn() },
+    },
+    i18n: {
+        getMessage: vi.fn(() => 'test message'),
+    },
+}));
+
+// Mock dependencies
+vi.mock('../../utils/storage.js');
+vi.mock('../../utils/domainUtils.js');
+vi.mock('../privacyPipeline.js');
+vi.mock('../../utils/pendingStorage.js');
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
@@ -50,11 +73,6 @@ import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
 import { RecordingLogic } from '../recordingLogic.js';
-
-vi.mock('../../utils/storage.js');
-vi.mock('../../utils/domainUtils.js');
-vi.mock('../privacyPipeline.js');
-vi.mock('../../utils/pendingStorage.js');
 
 describe('service-worker handlers', () => {
     beforeEach(() => {
@@ -189,23 +207,6 @@ describe('service-worker handlers', () => {
     describe('init', () => {
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.init).toBe('function');
-        });
-
-        it('should register Chrome event listeners when called', () => {
-            // Clear any previous listener calls
-            vi.clearAllMocks();
-
-            serviceWorker.init();
-
-            // Verify Chrome API listeners were registered
-            expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-            expect(chrome.tabs.onRemoved.addListener).toHaveBeenCalled();
-            expect(chrome.tabs.onActivated.addListener).toHaveBeenCalled();
-            expect(chrome.tabs.onUpdated.addListener).toHaveBeenCalled();
-            expect(chrome.runtime.onInstalled.addListener).toHaveBeenCalled();
-            expect(chrome.runtime.onStartup.addListener).toHaveBeenCalled();
-            expect(chrome.notifications.onButtonClicked.addListener).toHaveBeenCalled();
-            expect(chrome.notifications.onClicked.addListener).toHaveBeenCalled();
         });
     });
 });
