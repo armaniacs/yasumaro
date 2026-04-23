@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { createPaginationControls, showRecordError, checkServiceWorkerAlive } from '../historyUtils.js';
+import { createPaginationControls, showRecordError, checkServiceWorkerAlive, sendMessageWithTimeout } from '../historyUtils.js';
 
 vi.mock('../popup/i18n.js', () => ({
   getMessage: (key: string) => key,
@@ -72,5 +72,30 @@ describe('checkServiceWorkerAlive', () => {
     (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ success: false });
     const result = await checkServiceWorkerAlive();
     expect(result).toBe(false);
+  });
+});
+
+describe('sendMessageWithTimeout', () => {
+  it('resolves when service worker responds', async () => {
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ success: true });
+    const result = await sendMessageWithTimeout({
+      title: 'Test',
+      url: 'https://example.com',
+      content: 'content',
+      force: false,
+      skipAi: false,
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it('rejects when service worker throws', async () => {
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('sw error'));
+    await expect(sendMessageWithTimeout({
+      title: 'Test',
+      url: 'https://example.com',
+      content: 'content',
+      force: false,
+      skipAi: false,
+    })).rejects.toThrow('sw error');
   });
 });

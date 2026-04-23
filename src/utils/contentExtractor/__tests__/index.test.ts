@@ -144,6 +144,28 @@ describe('extractMainContent - cleanseEnabled', () => {
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
     });
+
+    it('calculates candidateBytes and originalBytes when cleanseEnabled', () => {
+        const content = 'This is test content for byte calculation verification.';
+        document.body.innerHTML = `<article><p>${content}</p><script>alert('remove me')</script></article>`;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+        ) as Record<string, unknown>;
+        // candidateBytes は findMainContentCandidates() 後の候補要素のバイト数
+        expect(result).toHaveProperty('candidateBytes');
+        expect(typeof result.candidateBytes).toBe('number');
+        expect(result.candidateBytes).toBeGreaterThan(0);
+        // originalBytes はクレンジング前のバイト数（クレンジング対象がある場合のみ設定）
+        expect(result).toHaveProperty('originalBytes');
+        expect(typeof result.originalBytes).toBe('number');
+        expect(result.originalBytes).toBeGreaterThan(0);
+        // cleansedBytes も設定される
+        expect(result).toHaveProperty('cleansedBytes');
+        expect(typeof result.cleansedBytes).toBe('number');
+        // クレンジングで script が削除されるので cleansedBytes < originalBytes
+        expect(result.cleansedBytes).toBeLessThanOrEqual(result.originalBytes);
+    });
 });
 
 // ─────────────────────────────────────────────
@@ -302,6 +324,8 @@ describe('extractMainContent - cleanseEnabled false', () => {
         expect(typeof result.content).toBe('string');
         expect(result.cleansedReason).toBe('none');
         expect(result).toHaveProperty('aiSummaryOriginalBytes');
+        // aiSummaryOriginalBytes は cleansedBytes と等しく、クレンジングなしの場合は originalBytes と等しい
+        expect(result.aiSummaryOriginalBytes).toBe(result.originalBytes);
     });
 });
 
