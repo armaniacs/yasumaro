@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.15] - 2026-04-23
+
+### Added
+
+- **バージョン整合性チェック**: `npm run build` で version ファイル（package.json, manifest.json, wxt.config.ts）の一貫性を自動検証
+  - バージョン不一致時はビルドが失敗し、エラーメッセージで対応ファイルを明示
+  - 継続的インテグレーションでバージョンミスを防止
+
+### Fixed
+
+- **wxt.config.ts バージョンのビルド同期**: ソース manifest.json と wxt.config.ts のバージョンを自動同期
+  - ビルド前に整合性チェックを実行し、不一致を検知した場合は即座に失敗
+  - ビルド出力の manifest.json に正しいバージョン（5.1.15）が反映されるように修正
+
+### Documentation
+
+- **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
+  - カバレッジ実測値の反映（62.73%）
+  - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
+  - 次フェーズ戦略の策定
+
+### Test Results
+
+- テストファイル: 198 passed（1 skipped）
+- テストケース: 3,835 passed（21 skipped）
+- **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
+- 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
+- 次のマイルストーン: 80%カバレッジ達成後のCI/CD整備
+
 ## [5.1.14] - 2026-04-23
 
 ### Added
