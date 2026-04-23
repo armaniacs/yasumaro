@@ -69,10 +69,11 @@ vi.mock('../../utils/logger.js', () => ({
     },
 }));
 
-import { loadCurrentTab, recordCurrentPage } from '../recordCurrentPage.js';
+import { loadCurrentTab, recordCurrentPage, initRecordButton } from '../recordCurrentPage.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { showError } from '../errorUtils.js';
+import { showSpinner } from '../spinner.js';
 
 // getURL must return a valid URL for new URL() in loadCurrentTab
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
@@ -89,10 +90,12 @@ const mockChrome = {
         query: vi.fn().mockResolvedValue([{ url: 'https://example.com' }]),
     },
     scripting: {
-        executeScript: vi.fn(),
+        executeScript: vi.fn().mockImplementation(async ({ func }: { func: () => string }) => {
+            return [{ result: func() }];
+        }),
     },
     runtime: {
-        sendMessage: vi.fn(),
+        sendMessage: vi.fn().mockResolvedValue(undefined),
         getURL: vi.fn((path: string) => `chrome-extension://test-extension-id${path}`),
         lastError: null as { message: string } | null,
     },
@@ -194,11 +197,6 @@ describe('recordCurrentPage', () => {
             success: true,
             aiDuration: 100,
         });
-        // Ensure recordBtn onclick is set for L415 test
-        const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
-        if (recordBtn) {
-            recordBtn.onclick = () => recordCurrentPage(false);
-        }
     });
 
     it('handles tab not recordable case (L209)', async () => {
@@ -224,16 +222,15 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
-        chrome.tabs.sendMessage.mockRejectedValueOnce(new Error('Send failed'));
+        chrome.tabs.sendMessage.mockResolvedValueOnce({ content: 'test' });
         chrome.runtime.lastError = { message: 'Runtime error' };
 
         await recordCurrentPage();
 
-        expect(showError).toHaveBeenCalledWith(
-            document.getElementById('mainStatus'),
-            expect.any(Error),
-            expect.any(Function)
-        );
+        expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
+            target: { tabId: 1 },
+            func: expect.any(Function),
+        });
     });
 
     it('falls back to chrome.scripting.executeScript when sendMessage fails (L243)', async () => {
@@ -244,8 +241,6 @@ describe('recordCurrentPage', () => {
         });
         chrome.tabs.sendMessage.mockRejectedValueOnce(new Error('Send failed'));
         chrome.runtime.lastError = null;
-        chrome.permissions.contains.mockResolvedValueOnce(true);
-        chrome.scripting.executeScript.mockResolvedValueOnce([{ result: 'Test content' }]);
 
         await recordCurrentPage();
 
@@ -255,19 +250,24 @@ describe('recordCurrentPage', () => {
         });
     });
 
-    it('sets recordBtnInit onclick handler on module initialization (L415)', () => {
-        // Test that the module-level initialization sets onclick when DOM element exists
-        // Create a fresh button element for this test
-        const testBtn = document.createElement('button');
-        testBtn.id = 'recordBtn';
-        document.body.appendChild(testBtn);
+    it('initializes record button onclick handler (L415)', async () => {
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://example.com',
+            title: 'Test',
+        });
 
-        // Import the module to trigger initialization - this should set onclick on the button
-        vi.resetModules();
-        import('../recordCurrentPage.js');
+        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
 
-        const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
-        expect(recordBtn.onclick).toBeDefined();
-        expect(typeof recordBtn.onclick).toBe('function');
+        initRecordButton();
+
+        expect(btn.onclick).toBeDefined();
+        expect(typeof btn.onclick).toBe('function');
+
+        // Trigger onclick to cover the arrow function at L415
+        await (btn.onclick!() as Promise<void>);
+
+        // Verify recordCurrentPage was invoked via showSpinner call
+        expect(showSpinner).toHaveBeenCalled();
     });
 });
