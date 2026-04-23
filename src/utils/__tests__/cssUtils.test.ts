@@ -9,8 +9,15 @@ import { escapeCssSelector } from '../cssUtils.js';
 describe('cssUtils', () => {
     describe('escapeCssSelector', () => {
         test('CSS.escape が利用可能な場合はそれを使用する', () => {
+            // グローバル CSS.escape が定義されている場合、それを使用する
+            const cssGlobal = (globalThis as any).CSS;
+            expect(cssGlobal).toBeDefined();
+            expect(cssGlobal.escape).toBeDefined();
+            const spy = vi.spyOn(cssGlobal, 'escape');
             const result = escapeCssSelector('hello world');
+            expect(spy).toHaveBeenCalledWith('hello world');
             expect(result).toBe('hello\\ world');
+            spy.mockRestore();
         });
 
         test('英数字のみの文字列はそのまま返す', () => {

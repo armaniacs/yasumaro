@@ -41,6 +41,18 @@ Object.defineProperty(global, 'CryptoKey', {
   configurable: true,
 });
 
+// CSS.escape polyfill for tests
+Object.defineProperty(global, 'CSS', {
+  value: {
+    escape: (str: string): string => {
+      // Basic implementation of CSS.escape
+      return str.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+    },
+  },
+  writable: true,
+  configurable: true,
+});
+
 // ============================================================================
 // Vite Environment Variables Mock
 // ============================================================================
