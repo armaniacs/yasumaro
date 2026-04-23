@@ -33,6 +33,13 @@ vi.mock('../../utils/addDomainsOrPathsToWhitelist.js', () => ({
     addDomainsOrPathsToWhitelist: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../utils/logger.js', () => ({
+    logError: vi.fn(),
+    ErrorCode: {
+        CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
+    },
+}));
+
 // Mock Chrome APIs
 const mockChrome = {
     runtime: {
@@ -63,6 +70,7 @@ global.confirm = vi.fn();
 import { loadPendingPages, saveSelectedPages, setupEventListeners } from '../pendingPages.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { showSuccess } from '../errorUtils.js';
+import { logError } from '../../utils/logger.js';
 
 // Import pendingPages.ts to set up event listeners
 import '../pendingPages.js';
@@ -101,6 +109,27 @@ describe('loadPendingPages', () => {
         const list = document.getElementById('pending-pages-list');
         expect(list!.querySelectorAll('.pending-item').length).toBe(2);
     });
+
+    it('opens tab when title is clicked', async () => {
+        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+            { url: 'https://example.com', title: 'Example', reason: 'test', headerValue: '' }
+        ]);
+        await loadPendingPages();
+        const titleEl = document.querySelector('.pending-item-title') as HTMLElement;
+        const createSpy = vi.spyOn(chrome.tabs, 'create').mockResolvedValue({});
+        titleEl.click();
+        expect(createSpy).toHaveBeenCalledWith({ url: 'https://example.com' });
+    });
+
+    it('logs error when getPendingPages throws', async () => {
+        (getPendingPages as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+        await loadPendingPages();
+        expect(logError).toHaveBeenCalledWith(
+            'Failed to load pending pages',
+            expect.any(Object),
+            'CONTENT_EXTRACTION_FAILURE'
+        );
+    });
 });
 
 describe('saveSelectedPages', () => {
@@ -126,6 +155,22 @@ describe('saveSelectedPages', () => {
         `;
         const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
         await saveSelectedPages();
+        expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+    });
+
+    it('adds path regex to whitelist when whitelistType is path', async () => {
+        document.body.innerHTML += `
+            <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
+        `;
+        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
+        ]);
+        const storageSetSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
+        const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+        await saveSelectedPages('path');
+        expect(storageSetSpy).toHaveBeenCalledWith({
+            domainWhitelist: expect.arrayContaining(['^https://example\\.com/page$'])
+        });
         expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
     });
 });
@@ -163,6 +208,34 @@ describe('DOM Event Listeners', () => {
             { url: 'https://example.com', title: 'Example', reason: 'test', headerValue: '' }
         ]);
         vi.clearAllMocks();
+    });
+
+    describe('btn-select-all click', () => {
+        it('checks all checkboxes when some are unchecked', () => {
+            document.getElementById('pending-pages-list')!.innerHTML = `
+                <input type="checkbox" class="pending-checkbox" value="https://a.com">
+                <input type="checkbox" class="pending-checkbox" value="https://b.com">
+            `;
+
+            const button = document.getElementById('btn-select-all')!;
+            button.click();
+
+            const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
+            expect(Array.from(checkboxes).every(cb => cb.checked)).toBe(true);
+        });
+
+        it('unchecks all checkboxes when all are checked', () => {
+            document.getElementById('pending-pages-list')!.innerHTML = `
+                <input type="checkbox" class="pending-checkbox" value="https://a.com" checked>
+                <input type="checkbox" class="pending-checkbox" value="https://b.com" checked>
+            `;
+
+            const button = document.getElementById('btn-select-all')!;
+            button.click();
+
+            const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
+            expect(Array.from(checkboxes).every(cb => !cb.checked)).toBe(true);
+        });
     });
 
     describe('btn-save-selected click', () => {
