@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.16] - 2026-04-23
+
+### Fixed
+
+- **service-worker.ts リスナー登録の復元**: モジュールレベルのChromeイベントリスナー登録を直接記述に修正
+  - Chrome拡張機能がcontent scriptからのメッセージに正常応答しない問題を修正
+  - `chrome.runtime.onMessage.addListener` 等がサービスワーカー起動時に正しく登録されるようにした
+
 ## [5.1.15] - 2026-04-23
 
 ### Added

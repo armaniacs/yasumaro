@@ -1045,3 +1045,23 @@ function handleNotificationClicked(notificationId: string): void {
         chrome.notifications.clear(notificationId);
     }
 }
+
+// ============================================================================
+// Module-level initialization - register all Chrome event listeners directly
+// ============================================================================
+
+// Message listener
+chrome.runtime.onMessage.addListener(createMessageHandler());
+
+// Tab event listeners
+chrome.tabs.onRemoved.addListener(handleTabRemoved);
+chrome.tabs.onActivated.addListener(handleTabActivated);
+chrome.tabs.onUpdated.addListener(handleTabUpdated);
+
+// Extension lifecycle listeners
+chrome.runtime.onInstalled.addListener(handleInstalled);
+chrome.runtime.onStartup.addListener(handleStartup);
+
+// Notification listeners
+chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
+chrome.notifications.onClicked.addListener(handleNotificationClicked);
