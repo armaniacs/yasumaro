@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * UF-404 記録成功後のポップアップ自動クローズ機能のテスト
  *

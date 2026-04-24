@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * main.test.js
  * Main Screen Functionality Tests

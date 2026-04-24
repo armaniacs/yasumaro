@@ -410,7 +410,10 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
   }
 }
 
-const recordBtnInit = document.getElementById('recordBtn') as HTMLButtonElement | null;
-if (recordBtnInit) {
-  recordBtnInit.onclick = () => recordCurrentPage(false);
+export function initRecordButton(): void {
+  const recordBtnInit = document.getElementById('recordBtn') as HTMLButtonElement | null;
+  if (recordBtnInit) {
+    recordBtnInit.onclick = () => recordCurrentPage(false);
+  }
 }
+initRecordButton();

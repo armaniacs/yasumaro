@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-uiRenderer.test.js
  * uBlock Import - UIRendererモジュールのユニットテスト

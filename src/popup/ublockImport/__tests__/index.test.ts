@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * index.test.ts
  * Tests for src/popup/ublockImport/index.ts

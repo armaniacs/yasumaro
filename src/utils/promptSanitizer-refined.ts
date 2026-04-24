@@ -57,7 +57,7 @@ const REFINED_INJECTION_PATTERNS = [
  */
 const SAFE_CONTEXT_PATTERNS = [
   /\b(?:is|are|was|were|be(?:come)?|seem|appear|remain|goes?|went|going|will|would|should|could|can|may|might)\s+(?:now|here|there|then)\b/gi,
-  /\b(?:from|in|on|at|by|since|before|after|until|over|during|while)\\s+now\b/gi,
+  /\b(?:from|in|on|at|by|since|before|after|until|over|during|while)\s+now\b/gi,
   /\bnow\b(?=\s+(?:,|\.|!|\?|\sand|\sor|\sbut|\showever|\stherefore|-|—))/gi,
 ];
 
@@ -115,9 +115,9 @@ function isMaliciousUsage(word: string, fullContent: string, index: number): boo
 
   // プロンプト命令の前兆パターンを検出
   const commandPrefixes = [
-    /^(?:please|just|you\\s+)?(?:must\\s+)?(?:not\\s+)?(?:ignore|forget|disregard)\\s+/i,
-    /^i\\s+(?:want|need)(?:\\s+you\\s+)?to\\s+/i,
-    /^(?:from\\s+)?(?:now\\s+)?on\\s+/i,
+    /^(?:please|just|you\s+)?(?:must\s+)?(?:not\s+)?(?:ignore|forget|disregard)\s+/i,
+    /^i\s+(?:want|need)(?:\s+you\s+)?to\s+/i,
+    /^(?:from\s+)?(?:now\s+)?on\s+/i,
   ];
 
   for (const prefix of commandPrefixes) {
@@ -129,8 +129,8 @@ function isMaliciousUsage(word: string, fullContent: string, index: number): boo
 
   // 後文に命令引数があるか
   const commandSuffixes = [
-    /\\s+(?:to|for|the|your|this|all\\s+of|any\\s+)(?:\\w|$)/i,
-    /\\s+(?:instruction|system|behavior|previous|above)\\s/i,
+    /^\s*(?:to|for|the|your|this|all\s+of|any\s+)(?:\w|$)/i,
+    /^\s*(?:instruction|system|behavior|previous|above)\s/i,
   ];
 
   for (const suffix of commandSuffixes) {
@@ -195,30 +195,31 @@ export function sanitizePromptContentRefined(content: string): SanitizeResult {
 
   // 高リスクパターン検出（精緻化）
   for (const pattern of REFINED_INJECTION_PATTERNS) {
-    // グローバルマッチ処理
+    const regex = new RegExp(pattern.source, pattern.flags);
+    const matchesToFilter: { fullMatch: string; index: number }[] = [];
+
     let match;
-    const regex = new RegExp(pattern.source, 'gi');
-    let lastIndex = 0;
-
     while ((match = regex.exec(sanitized)) !== null) {
-      const [fullMatch] = match;
-      const index = match.index;
+      matchesToFilter.push({ fullMatch: match[0], index: match.index });
+    }
 
+    // Sort descending by index so replacements do not shift positions of earlier matches
+    matchesToFilter.sort((a, b) => b.index - a.index);
+
+    for (const { fullMatch, index } of matchesToFilter) {
       // 安全な文脈かチェック
       if (!isInSafeContext(sanitized, fullMatch, index)) {
         warnings.push(`Detected high-risk pattern: "${fullMatch}"`);
         dangerLevel = DangerLevel.HIGH;
-        sanitized = sanitized.replace(fullMatch, '[FILTERED]');
+        sanitized = sanitized.slice(0, index) + '[FILTERED]' + sanitized.slice(index + fullMatch.length);
       }
-
-      lastIndex = index + fullMatch.length;
     }
   }
 
   // 単一用語の悪意ある用法チェック
   for (const genericPattern of GENERIC_TERM_PATTERNS) {
     let match;
-    const regex = new RegExp(genericPattern.source, 'gi');
+    const regex = new RegExp(genericPattern.source, genericPattern.flags);
 
     while ((match = regex.exec(sanitized)) !== null) {
       const [fullMatch] = match;
@@ -260,7 +261,7 @@ export { sanitizePromptContentRefined as sanitizePromptContent };
 
 // デバッグ用: 誤検知率統計
 if (process.env['NODE_ENV'] === 'test') {
-  (global as any).__sanitizerStats = {
+  (globalThis as Record<string, unknown>)['__sanitizerStats'] = {
     totalChecks: 0,
     falsePositives: 0,
     truePositives: 0,

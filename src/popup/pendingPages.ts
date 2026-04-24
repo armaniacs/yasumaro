@@ -104,37 +104,42 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
   await loadPendingPages();
 }
 
-document.getElementById('btn-select-all')?.addEventListener('click', () => {
-  const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
-  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+export function setupEventListeners(): void {
+  document.getElementById('btn-select-all')?.addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
-  checkboxes.forEach(cb => {
-    cb.checked = !allChecked;
+    checkboxes.forEach(cb => {
+      cb.checked = !allChecked;
+    });
   });
-});
 
-document.getElementById('btn-save-selected')?.addEventListener('click', () => {
-  saveSelectedPages();
-});
+  document.getElementById('btn-save-selected')?.addEventListener('click', () => {
+    saveSelectedPages();
+  });
 
-document.getElementById('btn-save-whitelist')?.addEventListener('click', () => {
-  saveSelectedPages('domain');
-});
+  document.getElementById('btn-save-whitelist')?.addEventListener('click', () => {
+    saveSelectedPages('domain');
+  });
 
-document.getElementById('btn-discard')?.addEventListener('click', async () => {
-  const checkboxes = document.querySelectorAll('.pending-checkbox:checked') as NodeListOf<HTMLInputElement>;
-  const urls = Array.from(checkboxes).map(cb => cb.value);
+  document.getElementById('btn-discard')?.addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.pending-checkbox:checked') as NodeListOf<HTMLInputElement>;
+    const urls = Array.from(checkboxes).map(cb => cb.value);
 
-  if (urls.length === 0) {
-    const statusDiv = document.getElementById('mainStatus');
-    if (statusDiv) {
-      showSuccess(statusDiv, getMessage('pendingPagesEmpty') || 'No items selected.');
+    if (urls.length === 0) {
+      const statusDiv = document.getElementById('mainStatus');
+      if (statusDiv) {
+        showSuccess(statusDiv, getMessage('pendingPagesEmpty') || 'No items selected.');
+      }
+      return;
     }
-    return;
-  }
 
-  if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {
-    await removePendingPages(urls);
-    await loadPendingPages();
-  }
-});
+    if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {
+      await removePendingPages(urls);
+      await loadPendingPages();
+    }
+  });
+}
+
+// Set up event listeners on module load
+setupEventListeners();

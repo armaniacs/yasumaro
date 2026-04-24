@@ -170,7 +170,7 @@ async function checkDomainAllowedFromCache(url: string): Promise<{ allowed: bool
 }
 
 // 即時実行関数
-(async () => {
+if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof window !== 'undefined') (async () => {
     // 【セキュリティとパフォーマンス最適化】内部スキームには早期リターン
     if (typeof window.location !== 'undefined' && shouldSkipUrl(window.location.href)) {
         return;

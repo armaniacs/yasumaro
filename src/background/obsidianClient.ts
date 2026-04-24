@@ -121,12 +121,11 @@ export class ObsidianClient {
     async _getConfig(): Promise<ObsidianConfig> {
         const settings = await getSettings();
 
-        // Casting to any for dynamic access or if explicit keys are missing in Settings interface
-        const s = settings as any;
-        const protocol = s[StorageKeys.OBSIDIAN_PROTOCOL] || 'http';
-        const rawPort = s[StorageKeys.OBSIDIAN_PORT] || DEFAULT_PORT;
+        const s = settings as Record<string, unknown>;
+        const protocol = String(s[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'http') || 'http';
+        const rawPort = (s[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT) as string | number;
         const port = this._validatePort(rawPort);
-        const apiKey = s[StorageKeys.OBSIDIAN_API_KEY];
+        const apiKey = s[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
 
         addLog(LogType.DEBUG, 'Obsidian API Key check', {
             exists: !!apiKey,

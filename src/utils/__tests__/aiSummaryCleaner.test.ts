@@ -676,20 +676,27 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('DOM query optimization', () => {
-        let originalQuerySelectorAll: typeof Element.prototype.querySelectorAll;
+        let originalQuerySelectorAll: typeof Element.prototype.querySelectorAll | undefined;
         let queryCallCount: number;
 
         beforeEach(() => {
-            originalQuerySelectorAll = Element.prototype.querySelectorAll;
-            queryCallCount = 0;
-            Element.prototype.querySelectorAll = function(selector: string) {
-                queryCallCount++;
-                return originalQuerySelectorAll.call(this, selector);
-            };
+            if (typeof Element !== 'undefined' && Element.prototype.querySelectorAll) {
+                originalQuerySelectorAll = Element.prototype.querySelectorAll;
+                queryCallCount = 0;
+                Element.prototype.querySelectorAll = function(selector: string) {
+                    queryCallCount++;
+                    return originalQuerySelectorAll!.call(this, selector);
+                };
+            } else {
+                originalQuerySelectorAll = undefined;
+                queryCallCount = 0;
+            }
         });
 
         afterEach(() => {
-            Element.prototype.querySelectorAll = originalQuerySelectorAll;
+            if (originalQuerySelectorAll && typeof Element !== 'undefined') {
+                Element.prototype.querySelectorAll = originalQuerySelectorAll;
+            }
         });
 
         test('最適化後も同じ要素が削除される', () => {

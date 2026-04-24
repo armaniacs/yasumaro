@@ -146,7 +146,7 @@ async function addJpAnchorTld(tld: string): Promise<void> {
   const result = await db.addJpAnchorTld(tld);
 
   if (!result.success) {
-    showStatus((getMessage(result.error as any) || result.error || 'Error'), true);
+    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
     return;
   }
 
@@ -210,7 +210,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
   const result = await db.addSensitiveDomain(domain, category);
 
   if (!result.success) {
-    showStatus((getMessage(result.error as any) || result.error || 'Error'), true);
+    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
     return;
   }
 
@@ -240,7 +240,7 @@ async function addWhitelistDomain(domain: string): Promise<void> {
   const result = await db.addToWhitelist(domain);
 
   if (!result.success) {
-    showStatus((getMessage(result.error as any) || result.error || 'Error'), true);
+    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
     return;
   }
 

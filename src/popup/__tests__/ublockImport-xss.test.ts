@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-xss.test.js
  * XSS protection tests for renderSourceList

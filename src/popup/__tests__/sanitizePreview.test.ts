@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * sanitizePreview.test.ts
  * PII Sanitization Preview UI Logic の単体テスト

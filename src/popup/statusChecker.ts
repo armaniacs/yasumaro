@@ -143,14 +143,15 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     await logDebug('Checking status for URL', { originalHash, normalizedHash, source: 'statusChecker' });
 
     // Service Workerからプライバシーキャッシュを取得
-    let privacyInfo: any = null;
+    type PrivacyInfo = { isPrivate?: boolean; reason?: 'cache-control' | 'set-cookie' | 'authorization'; headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } };
+    let privacyInfo: PrivacyInfo | null = null;
     try {
       const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE' });
       await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
 
       if (response && response.success && response.cache) {
-        const cacheMap = new Map(response.cache);
-        privacyInfo = cacheMap.get(normalizedUrl);
+        const cacheMap = new Map<string, PrivacyInfo>(response.cache as Array<[string, PrivacyInfo]>);
+        privacyInfo = cacheMap.get(normalizedUrl) ?? null;
         await logDebug('Found privacy info in cache', { isPrivate: privacyInfo?.isPrivate, reason: privacyInfo?.reason, source: 'statusChecker' });
       }
     } catch (error) {

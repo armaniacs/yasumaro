@@ -2,6 +2,233 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.16] - 2026-04-23
+
+### Fixed
+
+- **service-worker.ts リスナー登録の復元**: モジュールレベルのChromeイベントリスナー登録を直接記述に修正
+  - Chrome拡張機能がcontent scriptからのメッセージに正常応答しない問題を修正
+  - `chrome.runtime.onMessage.addListener` 等がサービスワーカー起動時に正しく登録されるようにした
+
+## [5.1.15] - 2026-04-23
+
+### Added
+
+- **バージョン整合性チェック**: `npm run build` で version ファイル（package.json, manifest.json, wxt.config.ts）の一貫性を自動検証
+  - バージョン不一致時はビルドが失敗し、エラーメッセージで対応ファイルを明示
+  - 継続的インテグレーションでバージョンミスを防止
+
+### Fixed
+
+- **wxt.config.ts バージョンのビルド同期**: ソース manifest.json と wxt.config.ts のバージョンを自動同期
+  - ビルド前に整合性チェックを実行し、不一致を検知した場合は即座に失敗
+  - ビルド出力の manifest.json に正しいバージョン（5.1.15）が反映されるように修正
+
+### Documentation
+
+- **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
+  - カバレッジ実測値の反映（62.73%）
+  - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
+  - 次フェーズ戦略の策定
+
+### Test Results
+
+- テストファイル: 198 passed（1 skipped）
+- テストケース: 3,835 passed（21 skipped）
+- **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
+- 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
+- 次のマイルストーン: 80%カバレッジ達成後のCI/CD整備
+
+## [5.1.14] - 2026-04-23
+
+### Added
+
+- **テストカバレッジ大幅改善（第二段階）**:
+  - カバレッジ 45.38% → **62.73%** (+17.35%) 達成
+  - テスト数: 2,847件 → 3,835件 (+988件、+35%増)
+  - jsdom環境対応によりpopup/dashboardテストの大半を有効化
+  - テスト品質向上: 残存テスト失敗を1件解消
+
+### Fixed
+
+- **storage.test.ts**: `getDomainFilterCacheSync` テストのモック設定を修正
+  - Chrome Storage APIのキー構造に合わせた適切なモック実装
+  - テスト期待値の型安全性を向上
+
+### Documentation
+
+- **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
+  - カバレッジ実測値の反映（62.73%）
+  - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
+  - 次フェーズ戦略の策定
+
+### Test Results
+
+- テストファイル: 198 passed（1 skipped）
+- テストケース: 3,835 passed（21 skipped）
+- **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
+- 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
+- 次のマイルストーン: 80%カバレッジ達成後のCI/CD整備
+
+## [5.1.13] - 2026-04-23
+
+### Added
+
+- **テストカバレッジ大幅改善（除外リスト解除＋新規テスト追加）**:
+  - `vitest.config.ts` から30ファイル以上の `exclude` を解除し、除外されていたテストを全て有効化
+  - 35ファイルのDOM依存テストに `@vitest-environment jsdom` アノテーションを追加
+  - 新規テストファイル9個を追加:
+    - `aiSummaryCleaner/countTargets.test.ts` — カード検出・リンク密度カウントのカバレッジ追加
+    - `aiSummaryCleaner/stripCore.test.ts` — カード要素削除・CARD_PATTERNSのテスト
+    - `contentExtractor/index.test.ts` — 空ドキュメント・article抽出のエッジケース
+    - `background/ServiceWorkerContext.test.ts` — DIコンテキストとグローバル状態管理
+    - `dashboard/historyBadges.test.ts` — 履歴バッジ生成（recordType/mask/cleansed）
+    - `dashboard/historyUtils.test.ts` — ページネーション・エラー表示・SWヘルスチェック
+    - `dashboard/historyState.test.ts` — 初期状態作成・i18nキャッシュ
+    - `background/handlers/urlNotificationHandlers.test.ts` — URLエンコード/デコード・HMAC署名
+    - `storage.test.ts` に `getDomainFilterCacheSync`, `isDomainFilterCacheValid`, `matchesWildcardPattern`, `normalizeDomainUrl` のテストを追加
+
+### Test Results
+
+- テストファイル: 187 passed（1 skipped）
+- テストケース: 3,854 passed（16 skipped）
+- 変更前: 144ファイル・2,851テスト → 変更後: 188ファイル・3,854テスト（+43ファイル、+1,003テスト）
+- **カバレッジ改善**: Statements 45.38% → **62.01%** (+16.63%) / Functions 66.63% → 68.07%
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: カバレッジ62%達成（目標80%まであと18%）
+- 残りの大規模未カバーファイル: `service-worker.ts`, `dashboard.ts`, `popup/main.ts`, `content/extractor.ts`, `content/loader.ts`, `offscreen.ts` 等
+
+## [5.1.12] - 2026-04-23
+
+### Fixed
+
+- **promptSanitizer-refined.ts**: `isMaliciousUsage` の `commandSuffixes` 正規表現に先頭アンカー (`^`) を追加し、安全な文脈での誤検知を修正
+  - 原因: `the` が `then` に部分マッチしていた（例: `"Do it now, then wait."` で `" the"` に誤判定）
+  - False Positive Rate 10% → 0%
+  - 解消されたテスト: `should NOT flag "The system administrator configured settings"`、`should not flag injection pattern in safe context with "is now" pattern`
+  - テスト期待値の修正: `promptSanitizer-refined.test.ts` の `"Do it now, then wait."` を `SAFE` に変更（部分マッチ誤検知の修正）
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: ~40%達成
+- #2 promptSanitizer テスト失敗: **全解消**（0 failed / 2849 passed）
+- 次のアイテム: #8 CI/CD整備
+
+## [5.1.11] - 2026-04-23
+
+### Added
+
+- **TypeScript厳格化（第一段階）完了**:
+  - `strict: true` 完全適用、`tsc --noEmit` ゼロエラー達成
+  - `any` 型74箇所 → 0箇所（`unknown`変換）
+  - +239 新規テスト追加（6ファイル）: modelsDevApi, presets, state, storageEncrypted, contentExtractor, aiSummaryCleaner
+  - テスト数: 2847パス（+530、23%増）
+
+- **TypeScript Advanced Patterns適用**:
+  - discriminated unions: `ExtensionMessage` メッセージプロトコル（messageTypes.ts）
+  - type guards: `isErrorLike`, `isPrivacyInfo` 追加
+  - DeepReadonly utility type: `src/utils/typeUtils.ts`
+
+- **jsdom環境対応**: 4ファイルに`@vitest-environment jsdom`追加
+  - promptSanitizer-refined-test.test.ts
+  - contentExtractor.test.ts
+  - settingsExportImport.test.ts
+  - ublockImport-sourceManager.test.ts
+
+### Fixed ( Bugs found during test writing )
+
+- **promptSanitizer-refined.ts**: ダブルエスケープ問題（`\\s` → `\s`）
+- **classifier.ts**: `TRS_Editor`大文字不一致（`trs_editor`に修正）
+- **helpers.ts**: `Advertise`小文字不一致（`advertise`に修正）
+- **stripExtended.ts**: linkなし段落削除ロジック欠陥
+
+### Changed
+
+- **logger API**: `Record<string, any>` → `Record<string, unknown>`
+- **messageTypes.ts**: discriminated union型追加
+- **privacyChecker.ts**: type guard追加
+- **errorMessages.ts**: type guard追加
+
+### Development Status
+
+- v6ロードマップ #2 TypeScript厳格化: ~40%達成
+- 次のアイテム: #8 CI/CD整備
+
+## [5.1.10] - 2026-04-22
+
+### Added
+
+- **Typedoc導入**: Background services APIドキュメント自動生成
+  - `typedoc.json` 設定、13クラス + 49インターフェースを網羅
+  - npm scripts追加: `npm run docs`, `npm run docs:watch`
+
+### Reverted
+
+- **Svelte 5 + Tailwind CSS 4 UI (popup)**: 元のvanilla UIに復元
+  - 経緯: Svelteで構築したpopup UI（4タブ設定画面）をChrome拡張機能で動作確認したところ、元のv5.1.4の入り組んだUI（ステータスパネル、現在ページ情報、バナー等）が完全に消失していた
+  - 原因: 元のpopupは814行の複雑なHTML。Svelte化では単純な設定フォームのみ再現し、既存機能をカバーできていなかった
+  - 対応: `entrypoints/popup/index.html` を元の `popup.html` に復元、`main.ts` を元のスクリプト呼び出しに変更
+  - 削除: `src/popup/App.svelte`、`components/`、`styles/app.css`
+
+### Development Status
+
+- popup UI: 元のvanilla UIに復元完了、Build・テスト正常
+- v6ロードマップ 7/9項目完了（残: #8 CI/CD整備）
+- Svelte+Tailwind導入はpopupでは見送り、dashboard等の新規画面で再検討
+
+## [5.1.9] - 2026-04-21
+
+### Added
+
+- **Svelte 5 + Tailwind CSS 4 UI**: POPUP UIをSvelte + Tailwindで再実装
+  - App.svelte: 全4タブ（General/Domain/Prompt/Privacy）の完全実装
+  - Svelte 5 リアクティブ: `$state()`, `$bindable()`, `$props()` 使用
+  - chrome.storage 連携: 設定のload/save実装
+  - Components: Button, Input, ProviderSelect, FilterMode, DomainList, TabList
+- **Node.js 24 LTS**: 実行環境をNode.js 24.0.0へアップグレード
+- **E2Eテスト拡充**: `popup-settings-flow.test.ts` 新規作成（17テスト追加、+57%増）
+- **ADR-015**: AIプロバイダー抽象化アーキテクチャ文書作成
+- **エラーコード体系拡張**: Recoverable/Unrecoverable分類、ユーザーメッセージ（日英）10件追加
+- **アクセシビリティ改善**: ARIA属性完備（TabList、FilterMode、Input、Button、DomainList）
+
+### Changed
+
+- **jsdom 29.x アップグレード**: `css-tree` v3 CJS問題解決
+  - DOMテスト完全復活
+  - aiSummaryCleaner.test.ts 有効化（35テスト追加）
+  - カバレッジ: 37.2%（目標80%に向けて進行中）
+
+### Development Status
+
+- Svelte popup UI 完了、Build出力済み
+- v6ロードマップ 7/9項目完了（残: #7 ドキュメント整備、#8 CI/CD整備）
+
+## [5.1.8] - 2026-04-20
+
+### Changed
+
+- **TypeScript厳格化**: `any` 型を74箇所から完全削除
+  - `unknown` 型・型ガード・専用インターフェースへの置換
+  - `tsc --noEmit` でゼロエラー達成
+- **テスト環境整備**: `@vitest/coverage-v8` を導入しカバレッジ測定を可能に
+- **依存関係調整**: `jsdom` を 29.x から 25.x にダウングレード（`css-tree` v3 CJS 破損回避）
+
+### Development Status
+
+- DOM環境テストは35ファイルを一時除外（`node_modules` 破損のため）
+- 非DOMテスト: 119ファイル・2232テストがパス
+- カバレッジ: Statements 35%（DOMテスト復活後の目標: 80%以上）
+
 ## [5.1.7] - 2026-04-19
 
 ### Added

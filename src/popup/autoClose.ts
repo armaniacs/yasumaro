@@ -123,7 +123,7 @@ export function showCountdown(statusDiv: HTMLElement): void {
 
       // End interval to prevent memory leaks
       if (countdownIntervalId !== null) {
-        clearInterval(countdownIntervalId as any);
+        clearInterval(countdownIntervalId as number);
         countdownIntervalId = null; // Reset interval ID to initial value
       }
     }

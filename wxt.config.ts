@@ -1,14 +1,23 @@
 import { defineConfig } from 'wxt';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   outDir: 'dist',
   browser: 'chromium',
 
+  vite: () => ({
+    plugins: [
+      tailwindcss(),
+      svelte()
+    ]
+  }),
+
   manifest: {
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: '5.1.7',
+    version: '5.1.16',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     icons: {

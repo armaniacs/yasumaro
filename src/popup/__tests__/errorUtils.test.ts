@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * errorUtils.test.js
  * エラーハンドリング共通モジュールのテスト

@@ -13,7 +13,7 @@ export interface MutexOptions {
 
 interface MutexTask {
     resolve: () => void;
-    reject: (reason?: any) => void;
+    reject: (reason?: unknown) => void;
     timestamp: number;
     timeoutId: NodeJS.Timeout;
 }

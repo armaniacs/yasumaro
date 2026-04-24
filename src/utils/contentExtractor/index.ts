@@ -94,7 +94,7 @@ export function extractMainContent(
             // クレンジングまたはAI要約クレンジングが有効な場合、クローンを作成してから実行
             let targetElement: Element;
 
-            if (cleanseEnabled || aiSummaryCleanseEnabled) {
+            if (cleanseEnabled) {
                 // DOMを直接操作しないようにクローンを作成
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const clone = candidates[0].cloneNode(true) as Element;
@@ -102,66 +102,62 @@ export function extractMainContent(
                 // クレンジング前のバイト数を計算（textContentベースで統一）
                 originalBytes = getByteSize(candidates[0].textContent || '');
 
-                if (cleanseEnabled) {
-                    // クローンに対してコンテンツクレンジングを実行
-                    const cleanseResult: CleanseResult = cleanseContent(clone, {
-                        hardStripEnabled,
-                        keywordStripEnabled,
-                        keywords
-                    });
+                // クローンに対してコンテンツクレンジングを実行
+                const cleanseResult: CleanseResult = cleanseContent(clone, {
+                    hardStripEnabled,
+                    keywordStripEnabled,
+                    keywords
+                });
 
-                    // クレンジング後のバイト数を計算（textContentベースで統一）
-                    cleansedBytes = getByteSize(clone.textContent || '');
+                // クレンジング後のバイト数を計算（textContentベースで統一）
+                cleansedBytes = getByteSize(clone.textContent || '');
 
-                    if (cleanseResult.totalRemoved > 0) {
-                        // クレンジング理由を決定（実際に要素が削除された場合のみ）
-                        if (cleanseResult.hardStripRemoved > 0 && cleanseResult.keywordStripRemoved > 0) {
-                            cleansedReason = 'both';
-                        } else if (cleanseResult.hardStripRemoved > 0) {
-                            cleansedReason = 'hard';
-                        } else if (cleanseResult.keywordStripRemoved > 0) {
-                            cleansedReason = 'keyword';
-                        }
-                        hardStripRemoved = cleanseResult.hardStripRemoved;
-                        keywordStripRemoved = cleanseResult.keywordStripRemoved;
-                        totalRemoved = cleanseResult.totalRemoved;
+                if (cleanseResult.totalRemoved > 0) {
+                    // クレンジング理由を決定（実際に要素が削除された場合のみ）
+                    if (cleanseResult.hardStripRemoved > 0 && cleanseResult.keywordStripRemoved > 0) {
+                        cleansedReason = 'both';
+                    } else if (cleanseResult.hardStripRemoved > 0) {
+                        cleansedReason = 'hard';
+                    } else if (cleanseResult.keywordStripRemoved > 0) {
+                        cleansedReason = 'keyword';
+                    }
+                    hardStripRemoved = cleanseResult.hardStripRemoved;
+                    keywordStripRemoved = cleanseResult.keywordStripRemoved;
+                    totalRemoved = cleanseResult.totalRemoved;
 
-                        console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
-                            + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
+                    console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
+                        + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
 
-                        // サニタイズログに記録（非同期で実行）
-                        void logSanitize(
-                            'Content cleansing executed',
-                            {
+                    // サニタイズログに記録（非同期で実行）
+                    void logSanitize(
+                        'Content cleansing executed',
+                        {
+                            hardStripRemoved: cleanseResult.hardStripRemoved,
+                            keywordStripRemoved: cleanseResult.keywordStripRemoved,
+                            totalRemoved: cleanseResult.totalRemoved,
+                            keywords: keywords.join(', '),
+                            mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword'
+                        },
+                        undefined,
+                        'contentExtractor'
+                    );
+
+                    // Chrome Extension 環境の場合のみ、Badge 通知を送信
+                    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                        console.log('[ContentExtractor] Sending CONTENT_CLEANSING_EXECUTED message');
+                        void chrome.runtime.sendMessage({
+                            type: 'CONTENT_CLEANSING_EXECUTED',
+                            payload: {
                                 hardStripRemoved: cleanseResult.hardStripRemoved,
                                 keywordStripRemoved: cleanseResult.keywordStripRemoved,
-                                totalRemoved: cleanseResult.totalRemoved,
-                                keywords: keywords.join(', '),
-                                mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword'
-                            },
-                            undefined,
-                            'contentExtractor'
-                        );
-
-                        // Chrome Extension 環境の場合のみ、Badge 通知を送信
-                        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                            console.log('[ContentExtractor] Sending CONTENT_CLEANSING_EXECUTED message');
-                            void chrome.runtime.sendMessage({
-                                type: 'CONTENT_CLEANSING_EXECUTED',
-                                payload: {
-                                    hardStripRemoved: cleanseResult.hardStripRemoved,
-                                    keywordStripRemoved: cleanseResult.keywordStripRemoved,
-                                    totalRemoved: cleanseResult.totalRemoved
-                                }
-                            }).then(() => {
-                                console.log('[ContentExtractor] CONTENT_CLEANSING_EXECUTED message sent successfully');
-                            }).catch((e) => {
-                                console.error('[ContentExtractor] Failed to send CONTENT_CLEANSING_EXECUTED message:', e);
-                            });
-                        }
+                                totalRemoved: cleanseResult.totalRemoved
+                            }
+                        }).then(() => {
+                            console.log('[ContentExtractor] CONTENT_CLEANSING_EXECUTED message sent successfully');
+                        }).catch((e) => {
+                            console.error('[ContentExtractor] Failed to send CONTENT_CLEANSING_EXECUTED message:', e);
+                        });
                     }
-                } else {
-                    cleansedBytes = originalBytes;
                 }
 
                 targetElement = clone;

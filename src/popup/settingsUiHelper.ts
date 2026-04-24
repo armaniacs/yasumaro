@@ -4,7 +4,7 @@
  */
 
 interface Settings {
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /**
@@ -76,7 +76,7 @@ export function extractSettingsFromInputs(mapping: Record<string, HTMLElement | 
     for (const [key, element] of Object.entries(mapping)) {
         if (!element) continue;
 
-        let value: any = (element as HTMLInputElement).value;
+        let value: string | number | boolean = (element as HTMLInputElement).value;
         if (element instanceof HTMLInputElement && element.type === 'number') {
             value = parseInt(value, 10);
         } else if (element instanceof HTMLInputElement && element.type === 'checkbox') {

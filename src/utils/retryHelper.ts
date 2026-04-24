@@ -51,7 +51,7 @@ const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
  */
 export interface Message {
     type: string;
-    payload?: any;
+    payload?: unknown;
     target?: string;
 }
 
@@ -71,7 +71,7 @@ export interface ServiceWorkerResponse {
     processedContent?: string;
     mode?: string;
     maskedCount?: number;
-    maskedItems?: any[];
+    maskedItems?: unknown[];
     aiDuration?: number;
     confirmationRequired?: boolean;
     headerValue?: string;

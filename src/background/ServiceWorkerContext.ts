@@ -139,7 +139,7 @@ export class ServiceWorkerContext {
      * @param {string} name - 依存オブジェクト名
      * @param {Object} value - 新しい値
      */
-    setDependency(name: keyof ServiceWorkerDependencies, value: any): void {
+    setDependency<K extends keyof ServiceWorkerDependencies>(name: K, value: ServiceWorkerDependencies[K]): void {
         this.dependencies[name] = value;
     }
 }

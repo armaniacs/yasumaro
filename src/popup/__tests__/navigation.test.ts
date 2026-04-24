@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * navigation.test.ts
  * Navigation Functionality Tests

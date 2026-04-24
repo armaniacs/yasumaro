@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-error.test.js
  * Error handling tests for fetchFromUrl function

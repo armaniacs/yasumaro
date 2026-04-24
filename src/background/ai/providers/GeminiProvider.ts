@@ -11,6 +11,11 @@ import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
+interface GeminiApiResponse {
+    candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}
+
 export class GeminiProvider extends AIProviderStrategy {
     private apiKey: string;
     private model: string;
@@ -178,7 +183,7 @@ export class GeminiProvider extends AIProviderStrategy {
         return { summary: "Error: Failed to generate summary. Please check your API settings." };
     }
 
-    private async _extractSummary(data: any): Promise<AISummaryResult> {
+    private async _extractSummary(data: GeminiApiResponse): Promise<AISummaryResult> {
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const summary = data.candidates[0].content.parts[0].text;
             const sentTokens = data.usageMetadata?.promptTokenCount || 0;

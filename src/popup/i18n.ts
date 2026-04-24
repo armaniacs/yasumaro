@@ -9,14 +9,14 @@
  * @param {Object} substitutions - 置換パラメータ（オプション）
  * @returns {string} 翻訳された文字列
  */
-export function getMessage(key: string, substitutions: any = null): string {
+export function getMessage(key: string, substitutions: string | Array<string | number> | Record<string, string | number> | null = null): string {
   const message = chrome.i18n.getMessage(key);
   if (!message) return "";
 
   if (substitutions && typeof substitutions === 'object' && !Array.isArray(substitutions)) {
     // Handle named substitutions (e.g. {count: 5})
     return message.replace(/\{(\w+)\}/g, (match, p1) => {
-      return substitutions[p1] !== undefined ? substitutions[p1] : match;
+      return substitutions[p1] !== undefined ? String(substitutions[p1]) : match;
     });
   }
 

@@ -5,7 +5,7 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { StorageKeys } from '../../../utils/storage.js';
-import { PrivacyPipeline } from '../../privacyPipeline.js';
+import { PrivacyPipeline, IAIClient } from '../../privacyPipeline.js';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
@@ -19,7 +19,7 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
   const { data, settings } = context;
   const { content, previewOnly, alreadyProcessed } = data;
 
-  const pipeline = new PrivacyPipeline(settings, context.aiClient as any, { sanitizeRegex });
+  const pipeline = new PrivacyPipeline(settings, context.aiClient as IAIClient, { sanitizeRegex });
 
   const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;
 

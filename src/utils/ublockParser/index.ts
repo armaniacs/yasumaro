@@ -118,7 +118,7 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     // 【キャッシュチェック】: キャッシュに存在する場合はキャッシュを返す 🟢
     // 【キャッシュキー生成】: 最初の100文字と長さでキャッシュキーを生成
     const cacheKey = generateCacheKey(text);
-    const cached = getFromCache(cacheKey);
+    const cached = getFromCache(cacheKey) as ParseResultWithErrors | null;
     if (cached) {
         return { ...cached, errors: cached.errors || [] };
     }
@@ -232,13 +232,11 @@ export function parseUblockFilterList(text: string): UblockRules {
     // 【キャッシュチェック】: キャッシュに存在する場合はキャッシュを返す 🟢
     // 【キャッシュキー生成】: 最初の100文字と長さでキャッシュキーを生成
     const cacheKey = generateCacheKey(text);
-    const cached = getFromCache(cacheKey);
-    if (cached && 'rules' in cached) {
-        // ParseResultWithErrors形式でキャッシュされている場合
-        return { ...cached.rules };
+    const cached = getFromCache(cacheKey) as (ParseResultWithErrors & { rules: UblockRules }) | UblockRules | null;
+    if (cached && typeof cached === 'object' && 'rules' in cached) {
+        return { ...(cached as ParseResultWithErrors & { rules: UblockRules }).rules };
     } else if (cached) {
-        // UblockRules形式でキャッシュされている場合
-        return { ...cached };
+        return { ...(cached as UblockRules) };
     }
 
     // 【行分割】: 改行区切りのテキストを配列に変換 🟢

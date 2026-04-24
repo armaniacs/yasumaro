@@ -49,15 +49,26 @@ const getUserMessageForType = (errorType: ErrorTypeValues): string => {
 };
 
 /**
+ * Type guard for error-like objects (duck-typing for external data)
+ * @param value - value to check
+ * @returns true if the value looks like an Error object
+ */
+function isErrorLike(value: unknown): value is { message?: unknown; name?: unknown } {
+    return typeof value === 'object' && value !== null && ('message' in value || 'name' in value);
+}
+
+/**
  * エラーを分類する
  * @param {Error} error - 発生したエラー
  * @returns {ErrorTypeValues} エラータイプ
  */
-export function classifyError(error: any): ErrorTypeValues {
+export function classifyError(error: unknown): ErrorTypeValues {
     if (!error) return ErrorType.UNKNOWN;
 
-    const message = (error.message || '').toLowerCase();
-    const name = (error.name || '').toLowerCase();
+    const err = error instanceof Error ? error : null;
+    const errorLike = !err && isErrorLike(error) ? error : null;
+    const message = (err?.message ?? (errorLike ? String(errorLike.message) : '')).toLowerCase();
+    const name = (err?.name ?? (errorLike ? String(errorLike.name) : '')).toLowerCase();
 
     // ネットワークエラー
     if (name === 'typeerror' && message.includes('fetch')) {
@@ -103,7 +114,7 @@ export function classifyError(error: any): ErrorTypeValues {
  * @param {Error} error - 発生したエラー
  * @returns {string} ユーザー向けメッセージ
  */
-export function getUserMessage(error: any): string {
+export function getUserMessage(error: unknown): string {
     const errorType = classifyError(error);
     return getUserMessageForType(errorType);
 }
@@ -120,15 +131,16 @@ export interface ErrorResponse {
  * @param {Object} context - コンテキスト情報（ログ用）
  * @returns {ErrorResponse} レスポンスオブジェクト
  */
-export function createErrorResponse(error: any, context: Record<string, any> = {}): ErrorResponse {
+export function createErrorResponse(error: unknown, context: Record<string, unknown> = {}): ErrorResponse {
     const errorType = classifyError(error);
     const userMessage = getUserMessage(error);
 
     // ログには詳細情報を含める（ただしAPIキーなどの機密情報は除く）
+    const err = error instanceof Error ? error : null;
     console.error('[Service Worker Error]', {
         type: errorType,
-        name: error.name,
-        message: error.message,
+        name: err?.name,
+        message: err?.message,
         context: sanitizeContext(context)
     });
 
@@ -145,7 +157,7 @@ export function createErrorResponse(error: any, context: Record<string, any> = {
  * @param {Object} context - 元のコンテキスト
  * @returns {Object} サニタイズされたコンテキスト
  */
-function sanitizeContext(context: Record<string, any>): Record<string, any> {
+function sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
     if (!context || typeof context !== 'object') return {};
 
     const sanitized = { ...context };

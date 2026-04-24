@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 
 import { computeCleansingStats, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
@@ -126,5 +127,68 @@ describe('makeCleansingProgressBar', () => {
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
     expect(bar.style.width).toBe('25%');
     expect(el!.textContent).toContain('75.0% 削減');
+  });
+
+  it('pageBytes が 0 の場合 null を返す', () => {
+    const entry: SavedUrlEntry = {
+      url: 'https://a.com',
+      timestamp: 1,
+      pageBytes: 0,
+      cleansedBytes: 0,
+    };
+    expect(makeCleansingProgressBar(entry)).toBeNull();
+  });
+
+  it('fallbackTriggered が true の場合 cleansedBytes を sentToAI として使う', () => {
+    const entry: SavedUrlEntry = {
+      url: 'https://a.com',
+      timestamp: 1,
+      pageBytes: 10000,
+      cleansedBytes: 3000,
+      aiSummaryCleansedBytes: 500,
+      fallbackTriggered: true,
+    };
+    const el = makeCleansingProgressBar(entry);
+    expect(el).not.toBeNull();
+    // fallback時は aiSummaryCleansedBytes ではなく cleansedBytes (3000) を使う
+    const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
+    expect(bar.style.width).toBe('30%');
+    expect(el!.textContent).toContain('70.0% 削減');
+  });
+
+  it('MB単位のバイト表示が正しい（>= 1MB）', () => {
+    const entry: SavedUrlEntry = {
+      url: 'https://a.com',
+      timestamp: 1,
+      pageBytes: 3 * 1024 * 1024,
+      cleansedBytes: 1 * 1024 * 1024,
+    };
+    const el = makeCleansingProgressBar(entry);
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toContain('MB');
+  });
+
+  it('KB単位のバイト表示が正しい（>= 1KB, < 1MB）', () => {
+    const entry: SavedUrlEntry = {
+      url: 'https://a.com',
+      timestamp: 1,
+      pageBytes: 5000,
+      cleansedBytes: 2000,
+    };
+    const el = makeCleansingProgressBar(entry);
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toContain('KB');
+  });
+
+  it('B単位のバイト表示が正しい（< 1KB）', () => {
+    const entry: SavedUrlEntry = {
+      url: 'https://a.com',
+      timestamp: 1,
+      pageBytes: 800,
+      cleansedBytes: 200,
+    };
+    const el = makeCleansingProgressBar(entry);
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toContain(' B');
   });
 });

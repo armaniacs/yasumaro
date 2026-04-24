@@ -225,7 +225,7 @@ function closeImportModal(): void {
 function showImportPreview(data: SettingsExportData): void {
     if (!importPreview) return;
 
-    const summary: any = {
+    const summary: Record<string, unknown> = {
         version: data.version,
         exportedAt: new Date(data.exportedAt).toLocaleString(),
     };

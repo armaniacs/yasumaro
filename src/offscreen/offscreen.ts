@@ -33,7 +33,7 @@ let session: AISession | null = null;
 
 // Helper to get the AI object
 const getAI = (): AI | null | undefined => {
-    return window.ai || globalThis.ai || (typeof self !== 'undefined' ? (self as any).ai : null);
+    return window.ai || globalThis.ai || (typeof self !== 'undefined' ? (self as unknown as { ai?: AI }).ai : null);
 };
 
 // Check availability
@@ -96,17 +96,23 @@ async function ensureSession(): Promise<boolean | { success: false; error: strin
 }
 
 // Handle messages from the service worker
-chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
-    if (message.target !== 'offscreen') return;
+export function handleOffscreenMessage(
+    message: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (response: unknown) => void
+): boolean {
+    if (typeof message !== 'object' || message === null || !('target' in message)) return false;
+    const msg = message as { target: string; type: string; payload?: Record<string, unknown> };
+    if (msg.target !== 'offscreen') return false;
 
     (async () => {
         try {
-            if (message.type === 'CHECK_AVAILABILITY') {
+            if (msg.type === 'CHECK_AVAILABILITY') {
                 const result = await checkAvailability();
                 sendResponse({ status: result });
 
-            } else if (message.type === 'SUMMARIZE') {
-                const { content } = message.payload;
+            } else if (msg.type === 'SUMMARIZE') {
+                const content = msg.payload?.['content'];
                 if (!content) {
                     sendResponse({ success: false, error: 'No content provided' });
                     return;
@@ -114,36 +120,37 @@ chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
 
                 const sessionResult = await ensureSession();
                 if (sessionResult !== true) {
-                    // ensureSession returns object with error on failure
                     const errorMsg = (sessionResult as { error: string }).error || 'Unknown session error';
                     sendResponse({ success: false, error: errorMsg });
                     return;
                 }
 
                 try {
-                    // Truncate if necessary (though the model handles some length, keeping it safe is good)
-                    const truncatedContent = content.substring(0, 10000);
+                    const truncatedContent = String(content).substring(0, 10000);
                     if (session) {
                         const result = await session.prompt(truncatedContent);
                         sendResponse({ success: true, summary: result });
                     } else {
                         throw new Error('Session is null');
                     }
-                } catch (promptError: any) {
+                } catch (promptError: unknown) {
                     console.error('Offscreen: Prompt extraction failed', promptError);
-                    // If the session is dead, clear it
                     session = null;
-                    sendResponse({ success: false, error: `Prompt failed: ${promptError.message}` });
+                    sendResponse({ success: false, error: `Prompt failed: ${promptError instanceof Error ? promptError.message : String(promptError)}` });
                 }
             } else {
-                console.warn(`Offscreen: Unknown message type ${message.type}`);
+                console.warn(`Offscreen: Unknown message type ${msg.type}`);
                 sendResponse({ success: false, error: 'Unknown message type' });
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Offscreen: Unexpected error', err);
-            sendResponse({ success: false, error: err.message });
+            sendResponse({ success: false, error: err instanceof Error ? err.message : String(err) });
         }
     })();
 
     return true; // Keep channel open for async response
-});
+}
+
+if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener(handleOffscreenMessage);
+}

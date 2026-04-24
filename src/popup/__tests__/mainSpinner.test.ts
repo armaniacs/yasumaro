@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * UF-403 ローディングスピナー機能のテスト
  *

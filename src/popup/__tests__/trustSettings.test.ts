@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * trustSettings.test.ts
  * Tests for src/popup/trustSettings.ts

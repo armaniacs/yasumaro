@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * ublockImport-fileReader.test.js
  * uBlock Import - FileReaderモジュールのユニットテスト

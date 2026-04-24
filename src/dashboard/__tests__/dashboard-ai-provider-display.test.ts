@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * dashboard-ai-provider-display.test.ts
  * Tests for AI provider/model display in history entries

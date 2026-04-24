@@ -9,6 +9,14 @@
 
 import { logWarn, ErrorCode } from './logger.js';
 
+class CspError extends Error {
+    code: string;
+    constructor(message: string, code: string) {
+        super(message);
+        this.code = code;
+    }
+}
+
 /**
  * デフォルトAIプロバイダードメイン（常に許可）
  */
@@ -172,8 +180,7 @@ export class CSPValidator {
       if (CSPValidator.isUrlAllowed(url)) {
         fetch(url, options).then(resolve).catch(reject);
       } else {
-        const error = new Error(`URL blocked by CSP policy: ${url}`);
-        (error as any).code = 'CSP_BLOCKED';
+        const error = new CspError(`URL blocked by CSP policy: ${url}`, 'CSP_BLOCKED');
         reject(error);
       }
     }
@@ -185,11 +192,9 @@ export class CSPValidator {
    * @param options - Fetchオプション
    * @returnsPromise<Response> - リクエストPromise or エラー
    */
-  private static enqueueQueuedRequest(url: string, options?: RequestInit): Promise<Response> {
+  static enqueueQueuedRequest(url: string, options?: RequestInit): Promise<Response> {
     if (CSPValidator.requestQueue.length >= CSPValidator.REQUEST_QUEUE_LIMIT) {
-      const error = new Error(`Request queue full: ${url}`);
-      (error as any).code = 'CSP_QUEUE_FULL';
-      throw error;
+      throw new CspError(`Request queue full: ${url}`, 'CSP_QUEUE_FULL');
     }
 
     return new Promise((resolve, reject) => {
@@ -371,14 +376,12 @@ export class CSPValidator {
 export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
   // 初期化中はリクエストをキューイング
   if (CSPValidator.isInitializing()) {
-    return (CSPValidator as any).enqueueQueuedRequest(url, options);
+    return CSPValidator.enqueueQueuedRequest(url, options);
   }
 
   // 初期化済みの通常処理
   if (!CSPValidator.isUrlAllowed(url)) {
-    const error = new Error('URL blocked by CSP policy');
-    (error as any).code = 'CSP_BLOCKED';
-    throw error;
+    throw new CspError('URL blocked by CSP policy', 'CSP_BLOCKED');
   }
   return fetch(url, options);
 }

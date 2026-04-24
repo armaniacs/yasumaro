@@ -1,0 +1,40 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src/background/aiClient.ts",
+    "src/background/obsidianClient.ts",
+    "src/background/privacyPipeline.ts",
+    "src/background/pipeline/RecordingPipeline.ts",
+    "src/background/pipeline/types.ts",
+    "src/background/ServiceWorkerContext.ts",
+    "src/background/localAiClient.ts",
+    "src/background/Mutex.ts",
+    "src/background/tabCache.ts",
+    "src/background/noteSectionEditor.ts",
+    "src/messaging/types.ts",
+    "src/utils/storage/types.ts",
+    "src/background/ai/providers/ProviderStrategy.ts",
+    "src/background/recordingLogic.ts",
+    "src/background/pipeline/steps/checkPrivacyHeadersStep.ts",
+    "src/utils/commonTypes.ts",
+    "src/utils/types.ts",
+    "src/utils/typesCrypto.ts",
+    "src/utils/trustDb/trustDbSchema.ts",
+    "src/privacy/privacy.ts",
+    "src/utils/privacyChecker.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "externalSymbolLinkMappings": {},
+  "out": "docs/typedoc",
+  "name": "Obsidian Weave API",
+  "includeVersion": true,
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "treatWarningsAsErrors": false,
+  "plugin": [],
+  "theme": "default",
+  "navigationLinks": {
+    "GitHub": "https://github.com/armaniacs/obsidian-weave"
+  }
+}

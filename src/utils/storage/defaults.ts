@@ -6,8 +6,9 @@
 
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
+import type { DeepReadonly } from '../typeUtils.js';
 
-export const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_API_KEY]: '',
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
     [StorageKeys.OBSIDIAN_PORT]: '27124',

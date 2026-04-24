@@ -21,9 +21,11 @@ import {
   saveMetadataStep
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
+import type { Settings } from '../../utils/storage.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
  * Delay helper for retry strategy
@@ -36,12 +38,12 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
  */
 export class RecordingPipeline {
   private steps: PipelineStep[];
-  private getPrivacyInfoWithCache: (url: string) => Promise<any>;
+  private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private obsidian: ObsidianClient;
   private aiClient: AIClient | null;
 
   constructor(
-    getPrivacyInfoWithCache: (url: string) => Promise<any>,
+    getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
     obsidian: ObsidianClient,
     aiClient: AIClient | null = null
   ) {
@@ -130,7 +132,7 @@ export class RecordingPipeline {
   /**
    * Execute the pipeline with initial data
    */
-  async execute(data: RecordingData, settings: any): Promise<RecordingResult> {
+  async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     // Create initial context
     let context: RecordingContext = {
       data,

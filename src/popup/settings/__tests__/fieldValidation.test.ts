@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * fieldValidation.test.ts
  * fieldValidation.ts の単体テスト
