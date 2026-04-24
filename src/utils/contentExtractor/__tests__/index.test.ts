@@ -166,6 +166,25 @@ describe('extractMainContent - cleanseEnabled', () => {
         // クレンジングで script が削除されるので cleansedBytes < originalBytes
         expect(result.cleansedBytes).toBeLessThanOrEqual(result.originalBytes);
     });
+
+    it('calculates candidateBytes and originalBytes when aiSummaryCleanseEnabled is true', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Content for candidateBytes test with AI summary cleansing enabled. '.repeat(5)}</p>
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true }
+        ) as Record<string, unknown>;
+        expect(result).toHaveProperty('candidateBytes');
+        expect(typeof result.candidateBytes).toBe('number');
+        expect(result.candidateBytes).toBeGreaterThan(0);
+        expect(result).toHaveProperty('originalBytes');
+        expect(typeof result.originalBytes).toBe('number');
+        expect(result.originalBytes).toBeGreaterThan(0);
+    });
 });
 
 // ─────────────────────────────────────────────
@@ -326,6 +345,51 @@ describe('extractMainContent - cleanseEnabled false', () => {
         expect(result).toHaveProperty('aiSummaryOriginalBytes');
         // aiSummaryOriginalBytes は cleansedBytes と等しく、クレンジングなしの場合は originalBytes と等しい
         expect(result.aiSummaryOriginalBytes).toBe(result.originalBytes);
+    });
+
+    it('covers aiSummary cleansing in else branch when cleanseEnabled is false with multiple removals', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Main content for else branch AI summary cleansing test. '.repeat(6)}</p>
+                <img src="a.jpg" alt="image alt text here">
+                <nav aria-label="main nav">Navigation content</nav>
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: false, returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
+        ) as Record<string, unknown>;
+        expect(typeof result.content).toBe('string');
+        expect(result.cleansedReason).toBe('none');
+        expect(result).toHaveProperty('aiSummaryOriginalBytes');
+        expect(result).toHaveProperty('aiSummaryCleansedBytes');
+        expect(result).toHaveProperty('aiSummaryCleansedElements');
+        expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
+        expect(result.aiSummaryCleansedReason).toBe('multiple');
+    });
+
+    it('covers aiSummary cleansing in first branch when both cleanseEnabled and aiSummaryCleanseEnabled are true', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Main content for combined cleansing and AI summary test. '.repeat(6)}</p>
+                <script>alert('remove me')</script>
+                <img src="a.jpg" alt="image alt text here">
+                <nav aria-label="main nav">Navigation content</nav>
+            </article>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
+        ) as Record<string, unknown>;
+        expect(typeof result.content).toBe('string');
+        expect(result.cleansedReason).toBe('hard');
+        expect(result).toHaveProperty('aiSummaryOriginalBytes');
+        expect(result).toHaveProperty('aiSummaryCleansedBytes');
+        expect(result).toHaveProperty('aiSummaryCleansedElements');
+        expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
+        expect(result.aiSummaryCleansedReason).toBe('multiple');
     });
 });
 
