@@ -856,3 +856,82 @@ describe('extractMainContent - edge cases', () => {
         expect(typeof result.fallbackTriggered).toBe('boolean');
     });
 });
+
+// ─────────────────────────────────────────────
+// Content Cleansing - cleansedReason=hard/keyword (counting only path)
+// ─────────────────────────────────────────────
+describe('extractMainContent - cleansedReason counting paths', () => {
+    it('sets cleansedReason to hard when only hard targets found in body', () => {
+        // 候補要素にはターゲットがないが、body全体にはscript要素がある
+        document.body.innerHTML = `
+            <html>
+            <head><title>Test</title></head>
+            <body>
+                <article>
+                    <p>${'Main content without targets. '.repeat(15)}</p>
+                </article>
+                <script>console.log('target');</script>
+            </body>
+            </html>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false, returnInfo: true }
+        ) as Record<string, unknown>;
+
+        // article にはターゲットがないので totalRemoved=0 になり、
+        // その後 body 全体をカウントして script を見つける
+        expect(result.cleansedReason).toBe('hard');
+        expect(result.hardStripRemoved).toBeGreaterThan(0);
+    });
+
+    it('sets cleansedReason to keyword when only keyword targets found in body', () => {
+        // 候補要素にはターゲットがないが、body全体にはkeyword要素がある
+        document.body.innerHTML = `
+            <html>
+            <head><title>Test</title></head>
+            <body>
+                <article>
+                    <p>${'Main content without targets. '.repeat(15)}</p>
+                </article>
+                <div id="balance">Account Balance Information</div>
+            </body>
+            </html>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: true, returnInfo: true }
+        ) as Record<string, unknown>;
+
+        // article にはターゲットがないので totalRemoved=0 になり、
+        // その後 body 全体をカウントして keyword 要素を見つける
+        expect(result.cleansedReason).toBe('keyword');
+        expect(result.keywordStripRemoved).toBeGreaterThan(0);
+    });
+
+    it('sets cleansedReason to both when hard and keyword targets found in body', () => {
+        // 候補要素にはターゲットがないが、body全体にはscriptとkeyword要素がある
+        document.body.innerHTML = `
+            <html>
+            <head><title>Test</title></head>
+            <body>
+                <article>
+                    <p>${'Main content without targets. '.repeat(15)}</p>
+                </article>
+                <script>console.log('target');</script>
+                <div id="balance">Account Balance Information</div>
+            </body>
+            </html>
+        `;
+        const result = extractMainContent(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+        ) as Record<string, unknown>;
+
+        // article にはターゲットがないので totalRemoved=0 になり、
+        // その後 body 全体をカウントして script と keyword 要素を見つける
+        expect(result.cleansedReason).toBe('both');
+        expect(result.hardStripRemoved).toBeGreaterThan(0);
+        expect(result.keywordStripRemoved).toBeGreaterThan(0);
+    });
+});
