@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { computeCleansingStats, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
+import { computeCleansingStats, renderStatsSummary, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 
 describe('computeCleansingStats', () => {
@@ -190,5 +190,51 @@ describe('makeCleansingProgressBar', () => {
     const el = makeCleansingProgressBar(entry);
     expect(el).not.toBeNull();
     expect(el!.textContent).toContain(' B');
+  });
+});
+
+describe('renderStatsSummary', () => {
+  it('count=0 のとき no-data クラスとメッセージを表示', () => {
+    const container = document.createElement('div');
+    const stats = computeCleansingStats([]);
+    renderStatsSummary(container, stats);
+    expect(container.className).toBe('cleansing-stats-summary no-data');
+    expect(container.textContent).toContain('削減率データがありません');
+  });
+
+  it('count>0 のとき統計カードを描画', () => {
+    const container = document.createElement('div');
+    const entries: SavedUrlEntry[] = [
+      {
+        url: 'https://a.com',
+        timestamp: 1,
+        pageBytes: 10000,
+        aiSummaryCleansedBytes: 4000,
+      }
+    ];
+    const stats = computeCleansingStats(entries);
+    renderStatsSummary(container, stats);
+    expect(container.className).toBe('cleansing-stats-summary');
+    expect(container.innerHTML).toContain('stats-card');
+    expect(container.innerHTML).toContain('平均削減率');
+    expect(container.innerHTML).toContain('累計削減量');
+    expect(container.innerHTML).toContain('集計対象');
+  });
+
+  it('統計カードの値が正しい', () => {
+    const container = document.createElement('div');
+    const entries: SavedUrlEntry[] = [
+      {
+        url: 'https://a.com',
+        timestamp: 1,
+        pageBytes: 10000,
+        aiSummaryCleansedBytes: 4000,
+      }
+    ];
+    const stats = computeCleansingStats(entries);
+    renderStatsSummary(container, stats);
+    expect(container.innerHTML).toContain('60.0%');
+    expect(container.innerHTML).toContain('5.859 KB');
+    expect(container.innerHTML).toContain('1件');
   });
 });

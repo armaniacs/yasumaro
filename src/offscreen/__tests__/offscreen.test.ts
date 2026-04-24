@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleOffscreenMessage } from '../offscreen.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { handleOffscreenMessage, getAI, checkAvailability, ensureSession, _resetSessionForTesting } from '../offscreen.js';
 
 const noop = () => {};
 
@@ -212,5 +212,98 @@ describe('handleOffscreenMessage - unknown type', () => {
         const resp = responses[0] as { success: boolean; error: string };
         expect(resp.success).toBe(false);
         expect(resp.error).toBe('Unknown message type');
+    });
+});
+
+describe('getAI', () => {
+    it('returns undefined when ai is not available anywhere', () => {
+        Object.defineProperty(window, 'ai', { value: undefined, writable: true, configurable: true });
+        (globalThis as unknown as { ai?: unknown }).ai = undefined;
+        expect(getAI()).toBeUndefined();
+    });
+
+    it('returns window.ai when available', () => {
+        const mockAI = { languageModel: {} };
+        Object.defineProperty(window, 'ai', { value: mockAI, writable: true, configurable: true });
+        expect(getAI()).toBe(mockAI);
+    });
+
+    it('falls back to globalThis.ai when window.ai is not available', () => {
+        Object.defineProperty(window, 'ai', { value: undefined, writable: true, configurable: true });
+        const mockAI = { languageModel: {} };
+        (globalThis as unknown as { ai?: unknown }).ai = mockAI;
+        expect(getAI()).toBe(mockAI);
+    });
+});
+
+describe('checkAvailability', () => {
+    it('returns unsupported when ai is not available', async () => {
+        Object.defineProperty(window, 'ai', { value: undefined, writable: true, configurable: true });
+        const result = await checkAvailability();
+        expect(result).toBe('unsupported');
+    });
+
+    it('returns unsupported when languageModel is missing', async () => {
+        Object.defineProperty(window, 'ai', { value: {}, writable: true, configurable: true });
+        const result = await checkAvailability();
+        expect(result).toBe('unsupported');
+    });
+
+    it('returns capability status when available', async () => {
+        const mockAi = {
+            languageModel: {
+                capabilities: vi.fn().mockResolvedValue({ available: 'readily' }),
+            },
+        };
+        Object.defineProperty(window, 'ai', { value: mockAi, writable: true, configurable: true });
+        const result = await checkAvailability();
+        expect(result).toBe('readily');
+    });
+
+    it('returns unsupported when capabilities throws', async () => {
+        const mockAi = {
+            languageModel: {
+                capabilities: vi.fn().mockRejectedValue(new Error('fail')),
+            },
+        };
+        Object.defineProperty(window, 'ai', { value: mockAi, writable: true, configurable: true });
+        const result = await checkAvailability();
+        expect(result).toBe('unsupported');
+    });
+});
+
+describe('ensureSession', () => {
+    beforeEach(() => {
+        _resetSessionForTesting();
+    });
+
+    it('returns error when ai is not available', async () => {
+        Object.defineProperty(window, 'ai', { value: undefined, writable: true, configurable: true });
+        const result = await ensureSession();
+        expect(result).toEqual(
+            expect.objectContaining({ success: false, error: expect.stringContaining("'ai' object not found") })
+        );
+    });
+
+    it('returns error when languageModel is missing', async () => {
+        Object.defineProperty(window, 'ai', { value: {}, writable: true, configurable: true });
+        const result = await ensureSession();
+        expect(result).toEqual(
+            expect.objectContaining({ success: false, error: expect.stringContaining('languageModel is undefined') })
+        );
+    });
+
+    it('returns error when capability status is not ready', async () => {
+        const mockAi = {
+            languageModel: {
+                capabilities: vi.fn().mockResolvedValue({ available: 'no' }),
+                create: vi.fn(),
+            },
+        };
+        Object.defineProperty(window, 'ai', { value: mockAi, writable: true, configurable: true });
+        const result = await ensureSession();
+        expect(result).toEqual(
+            expect.objectContaining({ success: false, error: expect.stringContaining("'no'") })
+        );
     });
 });

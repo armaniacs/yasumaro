@@ -36,7 +36,7 @@ import { initTrancoConsentPanel } from './trancoConsent.js';
 // Sidebar Navigation
 // ============================================================================
 
-function initSidebarNav(): void {
+export function initSidebarNav(): void {
   const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
   const panels = document.querySelectorAll<HTMLElement>('.panel');
 
@@ -165,7 +165,7 @@ const aiProviderElements: AIProviderElements = {
   openaiCompatibleSettings: openaiCompatibleSettingsDiv
 };
 
-async function loadGeneralSettings(): Promise<void> {
+export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, settingsMapping);
   updateAIProviderVisibility(aiProviderElements);
@@ -191,7 +191,7 @@ async function loadGeneralSettings(): Promise<void> {
 // Connection Test Helpers
 // ============================================================================
 
-function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, successColor: string, errorColor: string): HTMLElement {
+export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, successColor: string, errorColor: string): HTMLElement {
   const statusDiv = document.createElement('div');
   statusDiv.style.marginBottom = '8px';
 
@@ -212,7 +212,7 @@ function createConnectionStatusElement(label: string, result: { success: boolean
   return statusDiv;
 }
 
-async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
+export async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_OBSIDIAN',
     payload: apiKey
@@ -227,7 +227,7 @@ async function testObsidianConnection(apiKey: string): Promise<{ success: boolea
   return testResult?.obsidian || { success: false, message: 'No response' };
 }
 
-async function testAiConnection(): Promise<{ success: boolean; message: string }> {
+export async function testAiConnection(): Promise<{ success: boolean; message: string }> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
     payload: {}
@@ -236,7 +236,7 @@ async function testAiConnection(): Promise<{ success: boolean; message: string }
   return testResult?.ai || { success: false, message: 'No response' };
 }
 
-async function handleSaveOnly(): Promise<void> {
+export async function handleSaveOnly(): Promise<void> {
   statusDiv.textContent = '';
   statusDiv.className = '';
 
@@ -267,7 +267,7 @@ async function handleSaveOnly(): Promise<void> {
   statusDiv.className = 'success';
 }
 
-async function handleTestObsidian(): Promise<void> {
+export async function handleTestObsidian(): Promise<void> {
   if (!testObsidianBtn) return;
 
   statusDiv.innerHTML = '';
@@ -304,7 +304,7 @@ async function handleTestObsidian(): Promise<void> {
   }
 }
 
-async function handleTestAi(): Promise<void> {
+export async function handleTestAi(): Promise<void> {
   if (!testAiBtn) return;
 
   statusDiv.innerHTML = '';
@@ -377,7 +377,7 @@ breakingChangesModal?.addEventListener('click', (e: MouseEvent) => {
 // Initialization
 // ============================================================================
 
-function setHtmlLangDir(): void {
+export function setHtmlLangDir(): void {
   const locale = chrome.i18n.getUILanguage();
   const langCode = locale.split('-')[0];
   document.documentElement.lang = locale;
@@ -524,7 +524,7 @@ async function initConsentWithdrawal(): Promise<void> {
   });
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
-  try { initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
+  try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
@@ -532,4 +532,10 @@ async function initConsentWithdrawal(): Promise<void> {
 
   console.log('[Dashboard] Initialization complete');
 })();
+
+// Export for testability
+export function initDashboard(): void {
+  // This function can be called in tests to initialize the dashboard
+  // In production, the IIFE above calls this automatically
+}
 

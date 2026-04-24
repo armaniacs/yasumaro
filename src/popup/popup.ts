@@ -46,22 +46,10 @@ import { initMasterPasswordUi, loadMasterPasswordSettings, showPasswordAuthModal
 import { initTrancoUpdateNotification } from './trancoNotification.js';
 
 // ============================================================================
-// Settings Export/Import UI Initialization
-// ============================================================================
-
-initSettingsExportImportUi(load, showPasswordAuthModal);
-
-// ============================================================================
-// Master Password UI Initialization
-// ============================================================================
-
-initMasterPasswordUi();
-
-// ============================================================================
 // Tab Navigation
 // ============================================================================
 
-function initTabNavigation(): void {
+export function initTabNavigation(): void {
     const tabButtons = document.querySelectorAll<HTMLButtonElement>('#tabList .tab-btn');
     const tabPanels = document.querySelectorAll<HTMLElement>('.tab-panel');
 
@@ -93,10 +81,10 @@ function initTabNavigation(): void {
 }
 
 // ============================================================================
-// Initialization
+// Helper Functions (exported for testability)
 // ============================================================================
 
-function setHtmlLangDir(): void {
+export function setHtmlLangDir(): void {
     const locale = chrome.i18n.getUILanguage();
     const langCode = locale.split('-')[0];
     document.documentElement.lang = locale;
@@ -109,36 +97,6 @@ function setHtmlLangDir(): void {
     }
 }
 
-try {
-    setHtmlLangDir();
-} catch (error) {
-    logError('[Popup] Error setting HTML lang/dir', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-try {
-    initNavigation();
-} catch (error) {
-    logError('[Popup] Error in initNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-try {
-    initTabNavigation();
-} catch (error) {
-    logError('[Popup] Error in initTabNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-try {
-    initDomainFilter();
-} catch (error) {
-    logError('[Popup] Error in initDomainFilter', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-try {
-    initPrivacySettings();
-} catch (error) {
-    logError('[Popup] Error in initPrivacySettings', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
 async function initCustomPromptFeature(): Promise<void> {
     try {
         const { getSettings } = await import('../utils/storage.js');
@@ -148,69 +106,121 @@ async function initCustomPromptFeature(): Promise<void> {
         logError('[Popup] Error in initCustomPromptManager', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 }
-initCustomPromptFeature();
 
-try {
-    load();
-} catch (error) {
-    logError('[Popup] Error in load', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
+// ============================================================================
+// Main Initialization Function (exported for testability)
+// ============================================================================
 
-setupAIProviderChangeListener(aiProviderElements);
+export function initPopup(): void {
+    // Settings Export/Import UI Initialization
+    initSettingsExportImportUi(load, showPasswordAuthModal);
 
-setupAllFieldValidations(
-    protocolInput,
-    portInput,
-    minVisitDurationInput,
-    minScrollDepthInput,
-    maxTokensPerPromptInput
-);
+    // Master Password UI Initialization
+    initMasterPasswordUi();
 
-if (saveBtn) {
-    setupSaveButtonListener(
-        saveBtn,
-        statusDiv,
+    // HTML lang/dir setup
+    try {
+        setHtmlLangDir();
+    } catch (error) {
+        logError('[Popup] Error setting HTML lang/dir', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Navigation initialization
+    try {
+        initNavigation();
+    } catch (error) {
+        logError('[Popup] Error in initNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Tab navigation initialization
+    try {
+        initTabNavigation();
+    } catch (error) {
+        logError('[Popup] Error in initTabNavigation', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Domain filter initialization
+    try {
+        initDomainFilter();
+    } catch (error) {
+        logError('[Popup] Error in initDomainFilter', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Privacy settings initialization
+    try {
+        initPrivacySettings();
+    } catch (error) {
+        logError('[Popup] Error in initPrivacySettings', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Custom prompt feature initialization
+    initCustomPromptFeature();
+
+    // Load settings
+    try {
+        load();
+    } catch (error) {
+        logError('[Popup] Error in load', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // AI provider change listener
+    setupAIProviderChangeListener(aiProviderElements);
+
+    // Field validations
+    setupAllFieldValidations(
         protocolInput,
         portInput,
         minVisitDurationInput,
         minScrollDepthInput,
-        maxTokensPerPromptInput,
-        settingsMapping
+        maxTokensPerPromptInput
     );
+
+    // Save button listener
+    if (saveBtn) {
+        setupSaveButtonListener(
+            saveBtn,
+            statusDiv,
+            protocolInput,
+            portInput,
+            minVisitDurationInput,
+            minScrollDepthInput,
+            maxTokensPerPromptInput,
+            settingsMapping
+        );
+    }
+
+    // Privacy Consent Initialization
+    try {
+        initPrivacyConsent();
+    } catch (error) {
+        logError('[Popup] Error in initPrivacyConsent', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    try {
+        setupPrivacyConsentListeners();
+    } catch (error) {
+        logError('[Popup] Error in setupPrivacyConsentListeners', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Master Password Settings Load
+    try {
+        loadMasterPasswordSettings();
+    } catch (error) {
+        logError('[Popup] Error in loadMasterPasswordSettings', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Tranco Update Notification
+    try {
+        initTrancoUpdateNotification();
+    } catch (error) {
+        logError('[Popup] Error in initTrancoUpdateNotification', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
 }
 
 // ============================================================================
-// Privacy Consent Initialization
+// Auto-initialize when loaded in browser context
 // ============================================================================
 
-try {
-    initPrivacyConsent();
-} catch (error) {
-    logError('[Popup] Error in initPrivacyConsent', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-try {
-    setupPrivacyConsentListeners();
-} catch (error) {
-    logError('[Popup] Error in setupPrivacyConsentListeners', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-// ============================================================================
-// Master Password Settings Load
-// ============================================================================
-
-try {
-    loadMasterPasswordSettings();
-} catch (error) {
-    logError('[Popup] Error in loadMasterPasswordSettings', { cause: error }, ErrorCode.INTERNAL_ERROR);
-}
-
-// ============================================================================
-// Tranco Update Notification
-// ============================================================================
-
-try {
-    initTrancoUpdateNotification();
-} catch (error) {
-    logError('[Popup] Error in initTrancoUpdateNotification', { cause: error }, ErrorCode.INTERNAL_ERROR);
+if (typeof window !== 'undefined') {
+    initPopup();
 }
