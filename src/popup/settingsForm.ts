@@ -139,30 +139,5 @@ export function setupOllamaPresetListener(): void {
     });
 }
 
-// Backward-compatible direct exports (computed on first access)
-export const apiKeyInput = getSettingsFormElements().apiKeyInput;
-export const protocolInput = getSettingsFormElements().protocolInput;
-export const portInput = getSettingsFormElements().portInput;
-export const dailyPathInput = getSettingsFormElements().dailyPathInput;
-export const aiProviderSelect = getSettingsFormElements().aiProviderSelect;
-export const geminiSettingsDiv = getSettingsFormElements().geminiSettingsDiv;
-export const openaiSettingsDiv = getSettingsFormElements().openaiSettingsDiv;
-export const openai2SettingsDiv = getSettingsFormElements().openai2SettingsDiv;
-export const geminiApiKeyInput = getSettingsFormElements().geminiApiKeyInput;
-export const geminiModelInput = getSettingsFormElements().geminiModelInput;
-export const openaiBaseUrlInput = getSettingsFormElements().openaiBaseUrlInput;
-export const openaiApiKeyInput = getSettingsFormElements().openaiApiKeyInput;
-export const openaiModelInput = getSettingsFormElements().openaiModelInput;
-export const openai2BaseUrlInput = getSettingsFormElements().openai2BaseUrlInput;
-export const openai2ApiKeyInput = getSettingsFormElements().openai2ApiKeyInput;
-export const openai2ModelInput = getSettingsFormElements().openai2ModelInput;
-export const minVisitDurationInput = getSettingsFormElements().minVisitDurationInput;
-export const minScrollDepthInput = getSettingsFormElements().minScrollDepthInput;
-export const maxTokensPerPromptInput = getSettingsFormElements().maxTokensPerPromptInput;
-export const saveBtn = getSettingsFormElements().saveBtn;
-export const statusDiv = getSettingsFormElements().statusDiv;
-
-const _legacyMapping = getSettingsMapping();
-const _legacyAiProvider = getAiProviderElements();
-const _legacyErrorPairs = getErrorPairs();
-export { _legacyMapping as settingsMapping, _legacyAiProvider as aiProviderElements, _legacyErrorPairs as errorPairs };
+// No module-level DOM element exports to avoid testability issues.
+// Use getSettingsFormElements(), getSettingsMapping(), getAiProviderElements(), getErrorPairs() instead.
