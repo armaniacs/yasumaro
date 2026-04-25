@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getCleansedReasonText, updateCleansingStatus, renderSpecialUrlStatus, initStatusPanel, initAllUrlsPermissionBanner } from '../statusPanel.js';
+import { getCleansedReasonText, updateCleansingStatus, renderSpecialUrlStatus, initStatusPanel, initAllUrlsPermissionBanner, updateTrustStatus } from '../statusPanel.js';
 
 // Mock dependencies using vi.hoisted
 const { mockGetCurrentTab, mockGetSettings, mockSaveSettings, mockGetMessage, mockIsAllUrlsPermitted, mockRequestAllUrls } = vi.hoisted(() => ({
