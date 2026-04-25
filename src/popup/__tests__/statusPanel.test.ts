@@ -204,3 +204,10 @@ describe('initAllUrlsPermissionBanner', () => {
         await expect(initAllUrlsPermissionBanner()).resolves.not.toThrow();
     });
 });
+
+describe('updateTrustStatus', () => {
+    it('returns early when trustContent element does not exist', async () => {
+        document.body.innerHTML = '';
+        await expect(updateTrustStatus('https://example.com')).resolves.not.toThrow();
+    });
+});
