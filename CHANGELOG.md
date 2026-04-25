@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.1.7] - 2026-04-26
+## [5.1.17] - 2026-04-26
 
 ### Refactored
 
@@ -11,10 +11,6 @@ All notable changes to this project will be documented in this file.
   - 進行中のリファクタリング作業を追跡するための `plans/00-index.md` を追加
   - ポップアップリファクタリング計画 `plans/2026-04-26-popup-refactoring.md` を追加
   - プロジェクト構造に合わせて CONTRIBUTING.md を更新
-
-## [5.1.16] - 2026-04-23
-
-
 
 ## [5.1.16] - 2026-04-23
 
