@@ -358,4 +358,17 @@ describe('testAiConnection', () => {
         }));
         expect(result.success).toBe(true);
     });
+
+    it('returns default error when no ai response', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({});
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+        });
+
+        const result = await testAiConnection();
+
+        expect(result.success).toBe(false);
+        expect(result.message).toBe('No response');
+    });
 });
