@@ -177,16 +177,6 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
     }
 }
 
-/**
- * privacy.tsを初期化し、DOMContentLoaded後にloadPrivacyPolicyを実行する
- * テスト时可视化のためのではなくなり、代わりにloadPrivacyPolicyを直接呼び出すことを推奨
- */
-export function initPrivacyPage(): void {
-    document.addEventListener('DOMContentLoaded', () => {
-        loadPrivacyPolicy().catch(console.error);
-    });
-}
-
 // 自动初期化（後方互換性のため維持）
 document.addEventListener('DOMContentLoaded', () => {
     loadPrivacyPolicy().catch(console.error);

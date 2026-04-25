@@ -1,9 +1,10 @@
 # popup/*.ts リファクタリング計画
 
 **作成日時**: 2026-04-26
-**最終更新**: 2026-04-26（深掘りセッション後）
+**最終更新**: 2026-04-26（実装完了）
 **対象ファイル**: privacy.ts, settingsForm.ts, settingsSaver.ts, aiProvider.ts
 **目的**: カバレッジ0%→70%+への向上とテスト可能化
+**ステータス**: ✅ 完了（コミット 6a40c8e）
 
 ---
 
@@ -50,7 +51,7 @@ popupディレクトリ内の低カバレッジファイルは.IIFE（ 即時実
 
 ---
 
-## 対象ファイル現状（実装後）
+## 対象ファイル現状（実装後 - 2026-04-26 完了）
 
 | ファイル | パス | _stmt | 関数 | 行数 | 備考 |
 |---------|------|-------|------|------|------|
@@ -59,7 +60,7 @@ popupディレクトリ内の低カバレッジファイルは.IIFE（ 即時実
 | settingsSaver.ts | `src/popup/settings/settingsSaver.ts` | **53.94%** | 52% | 249 | export追加 + テスト（runConnectionTestは結合テストに回す） |
 | aiProvider.ts | `src/popup/settings/aiProvider.ts` | **85%** | 82.35% | 112 | export追加 + テスト拡張完了 |
 
-> 注: settingsSaver.ts のカバレッジが低い理由は、runConnectionTest() (chrome.runtime.sendMessage使用) と handleSaveAndTest() (複雑な相依性) を結合テストに回す决策による。这些関数は单元テストではテストしない。
+> 注: settingsSaver.ts のカバレッジが低い理由は、runConnectionTest() (chrome.runtime.sendMessage使用) と handleSaveAndTest() (複雑な相依性) を結合テストに回す决策による。これらの関数は单元テストではテストしない。
 
 ---
 
@@ -205,12 +206,14 @@ export async function handleSaveAndTest(...): Promise<void> { ... }
 
 ## 成功基準（実装後）
 
-- [x] 各ファイルのカバレッジが70%+に向上（**一部達成** - settingsSaver.tsは53.94%）
-- [x] `npm test` で全テストパス（**0 failed** - 4436 passed）
-- [x] Chrome拡張としてポップアップが正常に動作することを確認（**未確認** - 手動確認が必要）
-- [x] リグレッションなし（**全テストパス確認済み**）
+| 基準 | 達成状況 |
+|------|---------|
+| 各ファイルのカバレッジが70%+に向上 | ✅ privacy.ts (96%), settingsForm.ts (100%), aiProvider.ts (85%)達成。settingsSaver.tsは53.94%（結合テストに回す决策） |
+| `npm test` で全テストパス | ✅ 4436 passed, 0 failed |
+| Chrome拡張としてポップアップが正常に動作することを確認 | ⏳ 未確認（手動確認が必要） |
+| リグレッションなし | ✅ 全テストパス確認済み |
 
-> settingsSaver.tsのカバレッジが53.94%となっているのは、runConnectionTest()とhandleSaveAndTest()を結合テストに回す决策による。。これらの関数はchrome.runtime.sendMessageを使用してservice workerと通信するため、jsdom环境での单元テストが困難。
+> settingsSaver.tsのカバレッジが53.94%となっているのは、runConnectionTest()とhandleSaveAndTest()を結合テストに回す决策による。これらの関数はchrome.runtime.sendMessageを使用してservice workerと通信するため、jsdom环境での单元テストが困難。
 
 ---
 
@@ -246,3 +249,19 @@ export async function handleSaveAndTest(...): Promise<void> { ... }
 - `src/popup/popup.ts`（これらを呼び出すメインモジュール）
 - `src/popup/settingsForm.ts`（settingsSaverが依存）
 - `plans/service-worker-refactoring.md`（参考パターン）
+
+---
+
+## 残タスク
+
+1. **settingsSaver.ts 結合テスト**: `runConnectionTest()` と `handleSaveAndTest()` の結合テスト作成（Playwright等を使用）
+2. **手動Chrome拡張確認**: ポップアップが正常に動作することを確認
+3. **`initPrivacyPage()` 確認**: 使用有無を確認し不要な場合は削除を検討
+
+---
+
+## コミット情報
+
+- **コミット**: `6a40c8e`
+- **日時**: 2026-04-26
+- **メッセージ**: `test: improve popup module testability with refactored exports and comprehensive tests`
