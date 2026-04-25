@@ -25,7 +25,7 @@ interface TestResponse {
  * 接続テストを実行
  * @returns {Promise<ConnectionTestResult>} テスト結果
  */
-async function runConnectionTest(): Promise<ConnectionTestResult> {
+export async function runConnectionTest(): Promise<ConnectionTestResult> {
     const testResult = await chrome.runtime.sendMessage({
         type: 'TEST_CONNECTIONS',
         payload: {}
@@ -47,7 +47,7 @@ async function runConnectionTest(): Promise<ConnectionTestResult> {
  * @param {HTMLElement} statusDiv - ステータス表示要素
  * @param {number} port - ポート番号
  */
-function addCertificateWarning(statusDiv: HTMLElement, port: number): void {
+export function addCertificateWarning(statusDiv: HTMLElement, port: number): void {
     const url = `https://127.0.0.1:${port}/`;
     const link = document.createElement('a');
     link.href = url;
@@ -66,7 +66,7 @@ function addCertificateWarning(statusDiv: HTMLElement, port: number): void {
  * @param {HTMLInputElement} protocolInput - プロトコル入力
  * @param {number} port - ポート番号
  */
-function displayConnectionResult(statusDiv: HTMLElement, result: ConnectionTestResult, protocolInput: HTMLInputElement, port: number): void {
+export function displayConnectionResult(statusDiv: HTMLElement, result: ConnectionTestResult, protocolInput: HTMLInputElement, port: number): void {
     const { obsidianSuccess, obsidianMessage, aiSuccess, aiMessage } = result;
 
     // ステータスエリアをクリア
