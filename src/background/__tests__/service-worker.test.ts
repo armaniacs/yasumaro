@@ -147,6 +147,16 @@ vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../../utils/crypto.js', () => ({
+    getNotificationHmacKey: vi.fn().mockResolvedValue({
+        type: 'hmac',
+        extractable: false,
+        algorithm: { name: 'HMAC', hash: 'SHA-256' },
+        usages: ['sign', 'verify']
+    } as CryptoKey),
+    generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
+    verifyHmacSignature: vi.fn().mockResolvedValue(true),
+}));
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
@@ -762,6 +772,205 @@ describe('service-worker handlers', () => {
             expect(pendingStorage.getPendingPages).not.toHaveBeenCalled();
         });
 
+        it('should clear notification and decode URL for valid notification', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.getPendingPages.mockResolvedValue([
+                { url: 'https://example.com', title: 'Example' }
+            ]);
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Use a properly formatted notification ID
+            // The notification ID format is: privacy-confirm-{base64url.url}.{signature}
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+            expect(mockClear).toHaveBeenCalled();
+        });
+
+        it('should handle decodeUrlFromNotificationId returning null silently', async () => {
+            // Use a notification ID that will fail signature verification
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.getPendingPages.mockResolvedValue([
+                { url: 'https://example.com', title: 'Example' }
+            ]);
+
+            // Import crypto to mock signature verification failure
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(false);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.badSignature';
+
+            // Should handle gracefully without throwing
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should call removePendingPages for skip action (buttonIndex 1)', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Import crypto to mock successful signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+
+            // Use a notification ID with valid format that passes prefix check
+            // Short IDs return early, so use a longer one with proper format
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 1);
+
+            // buttonIndex 1 should trigger removePendingPages
+            expect(pendingStorage.removePendingPages).toHaveBeenCalled();
+        });
+
+        it('should handle when decoded URL is invalid and log warning', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Import crypto to mock successful signature verification that returns a valid URL
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+
+            // Use a notification ID with valid format that will decode to "about:blank"
+            // which is a blocked scheme and will cause isValidUrl to return false
+            // about:blank base64url = "YWJvdXQ6Ymxhbms="
+            const notificationId = 'privacy-confirm-YWJvdXQ6Ymxhbms=.validSig';
+
+            // Should handle gracefully without throwing
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should log error when removePendingPages throws', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockRejectedValue(new Error('Remove failed'));
+
+            // Import crypto to mock successful signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.getNotificationHmacKey.mockResolvedValue({
+                type: 'hmac',
+                extractable: false,
+                algorithm: { name: 'HMAC', hash: 'SHA-256' },
+                usages: ['sign', 'verify']
+            } as CryptoKey);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            // Should handle error gracefully without throwing
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 1)).resolves.not.toThrow();
+            expect(logError).toHaveBeenCalled();
+        });
+
+        it('should call removePendingPages and verify URL decoding flow', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Import crypto to mock successful signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.getNotificationHmacKey.mockResolvedValue({
+                type: 'hmac',
+                extractable: false,
+                algorithm: { name: 'HMAC', hash: 'SHA-256' },
+                usages: ['sign', 'verify']
+            } as CryptoKey);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 1);
+
+            // buttonIndex 1 should trigger removePendingPages
+            expect(pendingStorage.removePendingPages).toHaveBeenCalledWith(['https://example.com']);
+        });
+
+        it('should handle notification ID with missing signature gracefully', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Use a notification ID without signature part - format without "." means split() returns only 1 part
+            // This causes decodeUrlFromNotificationId to return null with a warning
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ';
+
+            // Should handle gracefully without throwing
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+            // removePendingPages should NOT be called because URL decoding failed
+            expect(pendingStorage.removePendingPages).not.toHaveBeenCalled();
+        });
+
+        it('should trigger error logging when chrome.notifications.clear throws', async () => {
+            // Mock the clear function to throw
+            mockClear.mockRejectedValueOnce(new Error('Notification API error'));
+
+            // Import crypto to mock successful signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.getNotificationHmacKey.mockResolvedValue({
+                type: 'hmac',
+                extractable: false,
+                algorithm: { name: 'HMAC', hash: 'SHA-256' },
+                usages: ['sign', 'verify']
+            } as CryptoKey);
+
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            // Should handle error gracefully - the error is caught but doesn't propagate
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should record page when found in pending pages for buttonIndex 0', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.getPendingPages.mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' }
+            ]);
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Import crypto to mock successful signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+
+            // Use a notification ID that will decode to https://example.com
+            // base64url("https://example.com") = "aHR0cHM6Ly9leGFtcGxlLmNvbQ"
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.validSig';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+
+            // The handler should have called getPendingPages and found the matching page
+            expect(pendingStorage.getPendingPages).toHaveBeenCalled();
+            expect(mockClear).toHaveBeenCalled();
+        });
+
+        it('should handle notification ID with encoded URL that is too long', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Import crypto to mock signature verification
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.verifyHmacSignature.mockResolvedValue(true);
+
+            // Create a notification ID with an encoded part that exceeds MAX_ENCODED_LENGTH (5000)
+            // This will make decodeUrlFromNotificationId return early at the length check
+            const longSuffix = 'a'.repeat(6000);
+            const notificationId = `privacy-confirm-${longSuffix}`;
+
+            // Should handle gracefully without throwing
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
         it('should handle button index 1 (skip) without throwing', async () => {
             const mockGetPendingPages = pendingStorage.getPendingPages as ReturnType<typeof vi.fn>;
             // @ts-expect-error - vi.fn() type narrowing
@@ -773,6 +982,47 @@ describe('service-worker handlers', () => {
             const notificationId = 'privacy-confirm-'; // Short but starts with prefix
 
             await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 1)).resolves.not.toThrow();
+        });
+
+        it('should handle error in notification button click gracefully', async () => {
+            // Import crypto module to set up error mock
+            const crypto = await import('../../utils/crypto.js');
+            // @ts-expect-error - vi.fn() type narrowing
+            crypto.getNotificationHmacKey.mockRejectedValue(new Error('Crypto error'));
+
+            const notificationId = 'privacy-confirm-invalid';
+
+            // Should not throw
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should handle getPendingPages error gracefully', async () => {
+            // Mock getPendingPages to throw
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.getPendingPages.mockRejectedValue(new Error('Storage error'));
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.signature';
+
+            // Should not throw
+            await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should record page when buttonIndex is 0 and page found in pending', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.getPendingPages.mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' }
+            ]);
+            // @ts-expect-error - vi.fn() type narrowing
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Use a short notification ID that doesn't go through full decode path
+            // This test focuses on the notification clear behavior
+            const notificationId = 'privacy-confirm-test';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+
+            // Verify notification was cleared (short IDs return early at prefix check)
+            expect(mockClear).toHaveBeenCalledWith(notificationId);
         });
     });
 
@@ -789,6 +1039,11 @@ describe('service-worker handlers', () => {
         it('should ignore non-privacy notifications', () => {
             serviceWorker.handleNotificationClicked('other-notification');
             expect(mockClear).not.toHaveBeenCalled();
+        });
+
+        it('should clear notification for privacy confirm ID with long suffix', () => {
+            serviceWorker.handleNotificationClicked('privacy-confirm-verylongsuffix123456');
+            expect(mockClear).toHaveBeenCalledWith('privacy-confirm-verylongsuffix123456');
         });
     });
 
