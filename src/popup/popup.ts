@@ -14,31 +14,12 @@ import { setupSaveButtonListener } from './settings/settingsSaver.js';
 import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 
 import {
-    apiKeyInput,
-    protocolInput,
-    portInput,
-    dailyPathInput,
-    aiProviderSelect,
-    geminiSettingsDiv,
-    openaiSettingsDiv,
-    openai2SettingsDiv,
-    geminiApiKeyInput,
-    geminiModelInput,
-    openaiBaseUrlInput,
-    openaiApiKeyInput,
-    openaiModelInput,
-    openai2BaseUrlInput,
-    openai2ApiKeyInput,
-    openai2ModelInput,
-    minVisitDurationInput,
-    minScrollDepthInput,
-    maxTokensPerPromptInput,
-    saveBtn,
-    statusDiv,
-    settingsMapping,
-    aiProviderElements,
-    errorPairs,
-    load
+    getSettingsFormElements,
+    getSettingsMapping,
+    getAiProviderElements,
+    getErrorPairs,
+    load,
+    setupOllamaPresetListener,
 } from './settingsForm.js';
 
 import { initSettingsExportImportUi } from './settingsExportImportUi.js';
@@ -163,31 +144,41 @@ export function initPopup(): void {
         logError('[Popup] Error in load', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 
+    const el = getSettingsFormElements();
+    const aiProviderEl = getAiProviderElements();
+    const settingsMap = getSettingsMapping();
+    const errors = getErrorPairs();
+
     // AI provider change listener
-    setupAIProviderChangeListener(aiProviderElements);
+    if (aiProviderEl.select) {
+        setupAIProviderChangeListener(aiProviderEl);
+    }
 
     // Field validations
     setupAllFieldValidations(
-        protocolInput,
-        portInput,
-        minVisitDurationInput,
-        minScrollDepthInput,
-        maxTokensPerPromptInput
+        el.protocolInput,
+        el.portInput,
+        el.minVisitDurationInput,
+        el.minScrollDepthInput,
+        el.maxTokensPerPromptInput
     );
 
     // Save button listener
-    if (saveBtn && statusDiv && protocolInput && portInput && minVisitDurationInput && minScrollDepthInput && maxTokensPerPromptInput) {
+    if (el.saveBtn && el.statusDiv && el.protocolInput && el.portInput && el.minVisitDurationInput && el.minScrollDepthInput && el.maxTokensPerPromptInput) {
         setupSaveButtonListener(
-            saveBtn,
-            statusDiv,
-            protocolInput,
-            portInput,
-            minVisitDurationInput,
-            minScrollDepthInput,
-            maxTokensPerPromptInput,
-            settingsMapping as Record<string, HTMLInputElement | HTMLSelectElement>
+            el.saveBtn,
+            el.statusDiv,
+            el.protocolInput,
+            el.portInput,
+            el.minVisitDurationInput,
+            el.minScrollDepthInput,
+            el.maxTokensPerPromptInput,
+            settingsMap as Record<string, HTMLInputElement | HTMLSelectElement>
         );
     }
+
+    // Ollama preset button
+    setupOllamaPresetListener();
 
     // Privacy Consent Initialization
     try {
