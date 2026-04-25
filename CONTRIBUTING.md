@@ -54,7 +54,7 @@ npm run test:e2e:headed # E2Eテストヘッドフルモード（Playwright）
 
 このプロジェクトでは2種類のテストを使用しています：
 
-1. **Jest テスト**: ユニットテスト、統合テスト
+1. **Vitest テスト**: ユニットテスト、統合テスト
    - 位置: `src/**/__tests__/`
    - 用途: 個別の関数、クラス、モジュールのテスト
 
@@ -64,7 +64,7 @@ npm run test:e2e:headed # E2Eテストヘッドフルモード（Playwright）
 
 #### テストの追加
 
-**Jest テスト**:
+**Vitest テスト**:
 新しいテストは、対応するソースファイルと同じディレクトリの`__tests__`サブディレクトリに配置してください。
 
 ```
@@ -439,9 +439,9 @@ npm test
 #### Running Tests
 
 ```bash
-npm test              # Run all tests (Jest)
-npm run test:watch    # Run in watch mode (Jest)
-npm run test:coverage # Run with coverage report (Jest)
+npm test              # Run all tests (Vitest)
+npm run test:watch    # Run in watch mode (Vitest)
+npm run test:coverage # Run with coverage report (Vitest)
 npm run test:e2e      # Run E2E tests (Playwright)
 npm run test:e2e:ui   # Run E2E tests in UI mode (Playwright)
 npm run test:e2e:debug # Run E2E tests in debug mode (Playwright)
@@ -452,7 +452,7 @@ npm run test:e2e:headed # Run E2E tests in headed mode (Playwright)
 
 This project uses two types of tests:
 
-1. **Jest Tests**: Unit tests, integration tests
+1. **Vitest Tests**: Unit tests, integration tests
    - Location: `src/**/__tests__/`
    - Purpose: Test individual functions, classes, and modules
 
@@ -462,7 +462,7 @@ This project uses two types of tests:
 
 #### Adding Tests
 
-**Jest Tests**:
+**Vitest Tests**:
 Place new tests in a `__tests__` subdirectory alongside the corresponding source file.
 
 ```
