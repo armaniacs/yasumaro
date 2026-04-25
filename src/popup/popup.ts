@@ -176,7 +176,7 @@ export function initPopup(): void {
     );
 
     // Save button listener
-    if (saveBtn) {
+    if (saveBtn && statusDiv && protocolInput && portInput && minVisitDurationInput && minScrollDepthInput && maxTokensPerPromptInput) {
         setupSaveButtonListener(
             saveBtn,
             statusDiv,
@@ -185,7 +185,7 @@ export function initPopup(): void {
             minVisitDurationInput,
             minScrollDepthInput,
             maxTokensPerPromptInput,
-            settingsMapping
+            settingsMapping as Record<string, HTMLInputElement | HTMLSelectElement>
         );
     }
 
