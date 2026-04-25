@@ -26,7 +26,7 @@ plans/*.md には、今後やりたいこと、今やっていること、完了
   - 残る障壁は extractor.ts（63%）・dashboard.ts（44%）で構造的に難しい。
   - 一旦 popup-refactoring に移行し、popup側カバレッジ向上を通じて間接的に80%を狙う方針。
 - [レビュー待ち / 仕上げ中] 2026-04-24-action.md — カバレッジ80%実行計画（並列）
-- [レビュー待ち / 仕上げ中] service-worker-refactoring.md — 主要成功基準は達成済み（72.5%）。追加作業は任意。
+- [完了] service-worker-refactoring.md — 主要成功基準は達成済み（72.5%）。追加作業は任意。
 
 - [完了] 2026-04-26-popup-refactoring.md — popup/*.ts リファクタリング（カバレッジ0%→70%+）
   - privacy.ts: 96.26%, settingsForm.ts: 100%, aiProvider.ts: 85%, settingsSaver.ts: 53.94%
