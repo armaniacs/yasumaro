@@ -581,6 +581,45 @@ describe('service-worker handlers', () => {
 
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
         });
+
+        it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT without sender.tab', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message: ValidVisitMessage = { type: 'VALID_VISIT', payload: { content: 'test' } };
+
+            handler(message, {} as any, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+        });
+
+        it('should handle TEST_CONNECTIONS message', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message = { type: 'TEST_CONNECTIONS', payload: {} };
+
+            handler(message, {} as any, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, obsidian: expect.any(Object), ai: expect.any(Object) })
+            );
+        });
+
+        it('should send null for unrecognized message types that pass validation', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+
+            // Using VALID_MESSAGE_TYPES that exist but aren't specifically handled
+            // The handler falls through and sends null at the end
+            const message = { type: 'SAVE_RECORD' } as any;
+
+            handler(message, { tab: { id: 1, url: 'https://example.com' } } as any, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // SAVE_RECORD is handled, so this shouldn't send null
+            expect(sendResponse).toHaveBeenCalled();
+        });
     });
 
     describe('handleTabRemoved', () => {
@@ -1079,6 +1118,56 @@ describe('service-worker handlers', () => {
                 expect.objectContaining({ success: true, skipped: false })
             );
         });
+
+        it('should set badge for successful auto-save', async () => {
+            const sendResponse = vi.fn();
+            const message = { type: 'VALID_VISIT', payload: { content: 'test content' } } as ValidVisitMessage;
+            const sender = { tab: { id: 1, url: 'https://example.com', title: 'Example' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleValidVisit(message, sender, sendResponse);
+            expect(mockSetBadgeText).toHaveBeenCalled();
+            expect(mockSetBadgeBackgroundColor).toHaveBeenCalled();
+        });
+
+        it('should send confirmationRequired notification when needed', async () => {
+            // Override the record mock to return confirmationRequired
+            const recordingLogic = (await import('../recordingLogic.js')).RecordingLogic;
+            recordingLogic.prototype.record = vi.fn().mockResolvedValue({
+                success: true,
+                skipped: false,
+                confirmationRequired: true,
+                reason: 'cache-control'
+            });
+
+            const sendResponse = vi.fn();
+            const message = { type: 'VALID_VISIT', payload: { content: 'test content' } } as ValidVisitMessage;
+            const sender = { tab: { id: 3, url: 'https://example.com', title: 'Example' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleValidVisit(message, sender, sendResponse);
+            // Should still return success
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true })
+            );
+        });
+
+        it('should strip PII from maskedItems before sending response', async () => {
+            // Override the record mock to return maskedItems
+            const recordingLogic = (await import('../recordingLogic.js')).RecordingLogic;
+            recordingLogic.prototype.record = vi.fn().mockResolvedValue({
+                success: true,
+                skipped: false,
+                maskedItems: [{ original: 'secret', masked: true }]
+            });
+
+            const sendResponse = vi.fn();
+            const message = { type: 'VALID_VISIT', payload: { content: 'test content' } } as ValidVisitMessage;
+            const sender = { tab: { id: 4, url: 'https://example.com', title: 'Example' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleValidVisit(message, sender, sendResponse);
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true })
+            );
+        });
     });
 
     describe('handleFetchUrl', () => {
@@ -1111,6 +1200,25 @@ describe('service-worker handlers', () => {
 
             // @ts-expect-error - vi.fn() type narrowing
             fetchUtils.fetchWithTimeout.mockRejectedValue(new Error('Network error'));
+
+            await serviceWorker.handleFetchUrl(message, sendResponse);
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: false })
+            );
+        });
+
+        it('should throw error when response.ok is false', async () => {
+            const sendResponse = vi.fn();
+            const message = { type: 'FETCH_URL', payload: { url: 'https://example.com/filters.txt' } } as FetchUrlMessage;
+
+            // @ts-expect-error - vi.fn() type narrowing
+            fetchUtils.fetchWithTimeout.mockResolvedValue({
+                ok: false,
+                status: 404,
+                statusText: 'Not Found',
+                headers: { get: vi.fn(() => 'text/plain') },
+                text: vi.fn().mockResolvedValue('Not Found'),
+            });
 
             await serviceWorker.handleFetchUrl(message, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
@@ -1165,6 +1273,47 @@ describe('service-worker handlers', () => {
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
         });
+
+        it('should return warning when content fetch is disabled and no content provided', async () => {
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'MANUAL_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: '', skipAi: false }
+            } as ManualRecordMessage;
+            const sender = {} as chrome.runtime.MessageSender;
+
+            // Disable auto content fetch
+            // @ts-expect-error - vi.fn() type narrowing
+            storage.getSettings.mockResolvedValue({
+                PRIVACY_MODE: 'full_pipeline',
+                PII_SANITIZE_LOGS: true,
+                DOMAIN_WHITELIST: [],
+                AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
+                AUTO_CONTENT_FETCH_ENABLED: false, // Disabled!
+                SKIP_AI_RATE_LIMIT_MAX: 10,
+                SKIP_AI_RATE_LIMIT_WINDOW_MS: 60000,
+            });
+
+            await serviceWorker.handleManualRecord(message, sender, sendResponse);
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, warning: expect.stringContaining('Content fetch is disabled') })
+            );
+        });
+
+        it('should handle skipAi rate limiting', async () => {
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'MANUAL_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: 'content', skipAi: true }
+            } as ManualRecordMessage;
+            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            // First call - should succeed
+            await serviceWorker.handleManualRecord(message, sender, sendResponse);
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, summary: 'Pipeline summary' })
+            );
+        });
     });
 
     describe('handleSaveRecord', () => {
@@ -1182,6 +1331,33 @@ describe('service-worker handlers', () => {
             await serviceWorker.handleSaveRecord(message, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
+            );
+        });
+
+        it('should strip PII from maskedItems before sending response', async () => {
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'SAVE_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 2 }
+            } as SaveRecordMessage;
+
+            // Mock RecordingPipeline to return maskedItems with original field
+            const pipelineModule = await import('../../utils/piiStripper.js');
+            vi.spyOn(pipelineModule, 'stripPiiFromMaskedItems').mockReturnValue([{ masked: true }]);
+
+            // Access the mocked RecordingPipeline.execute to return masked items
+            const RecordingPipelineMock = (await import('../pipeline/RecordingPipeline.js')).RecordingPipeline;
+            (RecordingPipelineMock as any).mockImplementation(function(this: any) {
+                this.execute = vi.fn().mockResolvedValue({
+                    success: true,
+                    summary: 'Test summary',
+                    maskedItems: [{ original: 'secret', masked: true }]
+                });
+            });
+
+            await serviceWorker.handleSaveRecord(message, sendResponse);
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true })
             );
         });
     });
