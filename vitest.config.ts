@@ -8,7 +8,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'node',
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./vitest.setup'],
     globals: true,
     include: ['**/__tests__/**/*.test.ts'],
     exclude: [

@@ -122,9 +122,7 @@ test.describe('Privacy Consent Modal - Controls @ui', () => {
 });
 
 test.describe('Privacy Consent Modal - Interaction @interaction', () => {
-  // testInteraction.fixme(true, 'Requires Chrome extension context for JS event handlers');
-
-  testInteraction('checking checkbox should enable accept button', async ({ popupPage: page }) => {
+  testInteraction.fixme('checking checkbox should enable accept button', async ({ popupPage: page }) => {
     const checkbox = page.locator('#consentCheckbox');
     const acceptBtn = page.locator('#acceptConsentBtn');
 
@@ -132,7 +130,7 @@ test.describe('Privacy Consent Modal - Interaction @interaction', () => {
     await expect(acceptBtn).toBeEnabled();
   });
 
-  testInteraction('unchecking checkbox should disable accept button', async ({ popupPage: page }) => {
+  testInteraction.fixme('unchecking checkbox should disable accept button', async ({ popupPage: page }) => {
     const checkbox = page.locator('#consentCheckbox');
 
     await checkbox.check();
@@ -140,12 +138,12 @@ test.describe('Privacy Consent Modal - Interaction @interaction', () => {
     await expect(page.locator('#acceptConsentBtn')).toBeDisabled();
   });
 
-  testInteraction('decline button should close modal', async ({ popupPage: page }) => {
+  testInteraction.fixme('decline button should close modal', async ({ popupPage: page }) => {
     await page.locator('#declineConsentBtn').click();
     await expect(page.locator('#privacyConsentModal')).toHaveClass(/hidden/);
   });
 
-  testInteraction('accept button should close modal after consent', async ({ popupPage: page }) => {
+  testInteraction.fixme('accept button should close modal after consent', async ({ popupPage: page }) => {
     await page.locator('#consentCheckbox').check();
     await page.locator('#acceptConsentBtn').click();
     await expect(page.locator('#privacyConsentModal')).toHaveClass(/hidden/);

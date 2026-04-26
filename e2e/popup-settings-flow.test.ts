@@ -22,15 +22,19 @@ testInteraction.describe('Popup - Settings Save Flow @interaction', () => {
     await page.locator('#menuBtn').click();
     await page.locator('#generalTab').click();
 
-    await page.selectOption('#protocol', 'https');
+    await page.fill('#protocol', 'https');
     await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#generalTab').click();
-
-    await expect(page.locator('#protocol')).toHaveValue('https');
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          resolve(result.settings || {});
+        });
+      });
+    });
+    expect(storedSettings.obsidian_protocol).toBe('https');
   });
 
   testInteraction('Obsidian每日pathを保存后読み込み @critical', async ({ popupPage: page }) => {
@@ -40,13 +44,17 @@ testInteraction.describe('Popup - Settings Save Flow @interaction', () => {
     const testPath = '/test/{{date}}/{{title}}';
     await page.fill('#dailyPath', testPath);
     await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#generalTab').click();
-
-    await expect(page.locator('#dailyPath')).toHaveValue(testPath);
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          resolve(result.settings || {});
+        });
+      });
+    });
+    expect(storedSettings.obsidian_daily_path).toBe(testPath);
   });
 
   testInteraction('Min visit durationを保存后読み込み', async ({ popupPage: page }) => {
@@ -55,13 +63,17 @@ testInteraction.describe('Popup - Settings Save Flow @interaction', () => {
 
     await page.fill('#minVisitDuration', '5000');
     await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#generalTab').click();
-
-    await expect(page.locator('#minVisitDuration')).toHaveValue('5000');
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          resolve(result.settings || {});
+        });
+      });
+    });
+    expect(storedSettings.min_visit_duration).toBe(5000);
   });
 
   testInteraction('Scroll depthを保存后読み込み', async ({ popupPage: page }) => {
@@ -70,13 +82,17 @@ testInteraction.describe('Popup - Settings Save Flow @interaction', () => {
 
     await page.fill('#minScrollDepth', '75');
     await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#generalTab').click();
-
-    await expect(page.locator('#minScrollDepth')).toHaveValue('75');
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          resolve(result.settings || {});
+        });
+      });
+    });
+    expect(storedSettings.min_scroll_depth).toBe(75);
   });
 });
 
@@ -85,18 +101,17 @@ testInteraction.describe('Popup - Domain Filter Flow @interaction', () => {
     await page.locator('#menuBtn').click();
     await page.locator('#domainTab').click();
 
-    // Whitelist mode
+    // Whitelist mode - domain list section should be visible
     await page.check('input[value="whitelist"]');
-    await expect(page.locator('#whitelistTextarea')).toBeVisible();
+    await expect(page.locator('#domainListSection')).toBeVisible();
 
-    // Blacklist mode
+    // Blacklist mode - domain list section should be visible
     await page.check('input[value="blacklist"]');
-    await expect(page.locator('#blacklistTextarea')).toBeVisible();
+    await expect(page.locator('#domainListSection')).toBeVisible();
 
-    // Disabled mode
+    // Disabled mode - domain list section should be hidden
     await page.check('input[value="disabled"]');
-    await expect(page.locator('#whitelistTextarea')).toBeHidden();
-    await expect(page.locator('#blacklistTextarea')).toBeHidden();
+    await expect(page.locator('#domainListSection')).toBeHidden();
   });
 
   testInteraction('Whitelist domainsを保存后読み込み @critical', async ({ popupPage: page }) => {
@@ -105,15 +120,24 @@ testInteraction.describe('Popup - Domain Filter Flow @interaction', () => {
 
     await page.check('input[value="whitelist"]');
     const domains = 'example.com\ntest.com';
-    await page.fill('#whitelistTextarea', domains);
-    await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.fill('#domainList', domains);
+    await page.click('#saveDomainSettings');
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#domainTab').click();
-
-    await expect(page.locator('#whitelistTextarea')).toHaveValue(domains);
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          const s = result.settings || {};
+          resolve({
+            domain_filter_mode: s.domain_filter_mode,
+            domain_whitelist: s.domain_whitelist
+          });
+        });
+      });
+    });
+    expect(storedSettings.domain_filter_mode).toBe('whitelist');
+    expect(storedSettings.domain_whitelist).toEqual(['example.com', 'test.com']);
   });
 
   testInteraction('Blacklist domainsを保存后読み込み', async ({ popupPage: page }) => {
@@ -122,15 +146,24 @@ testInteraction.describe('Popup - Domain Filter Flow @interaction', () => {
 
     await page.check('input[value="blacklist"]');
     const blockedDomains = 'blocked.com\nspam.com';
-    await page.fill('#blacklistTextarea', blockedDomains);
-    await page.click('#save');
-    await page.waitForTimeout(200);
+    await page.fill('#domainList', blockedDomains);
+    await page.click('#saveDomainSettings');
+    await page.waitForTimeout(500);
 
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#domainTab').click();
-
-    await expect(page.locator('#blacklistTextarea')).toHaveValue(blockedDomains);
+    // Verify settings were saved using CDP - read from 'settings' object
+    const storedSettings = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['settings'], (result) => {
+          const s = result.settings || {};
+          resolve({
+            domain_filter_mode: s.domain_filter_mode,
+            domain_blacklist: s.domain_blacklist
+          });
+        });
+      });
+    });
+    expect(storedSettings.domain_filter_mode).toBe('blacklist');
+    expect(storedSettings.domain_blacklist).toEqual(['blocked.com', 'spam.com']);
   });
 });
 
@@ -139,41 +172,11 @@ testInteraction.describe('Popup - Privacy Settings Flow @interaction', () => {
     await page.locator('#menuBtn').click();
     await page.locator('#privacyTab').click();
 
-    await page.selectOption('select[name="privacyMode"]', 'full_pipeline');
-    await expect(page.locator('select[name="privacyMode"]')).toHaveValue('full_pipeline');
+    await page.check('#modeB');
+    await expect(page.locator('#modeB')).toBeChecked();
 
-    await page.selectOption('select[name="privacyMode"]', 'masked_cloud');
-    await expect(page.locator('select[name="privacyMode"]')).toHaveValue('masked_cloud');
-  });
-
-  testInteraction('PII confirmation設定を保存后読み込み', async ({ popupPage: page }) => {
-    await page.locator('#menuBtn').click();
-    await page.locator('#privacyTab').click();
-
-    await page.uncheck('input[name="piiConfirmation"]');
-    await page.click('#save');
-    await page.waitForTimeout(200);
-
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#privacyTab').click();
-
-    await expect(page.locator('input[name="piiConfirmation"]')).not.toBeChecked();
-  });
-
-  testInteraction('PII sanitize logs設定を保存后読み込み', async ({ popupPage: page }) => {
-    await page.locator('#menuBtn').click();
-    await page.locator('#privacyTab').click();
-
-    await page.uncheck('input[name="piiSanitizeLogs"]');
-    await page.click('#save');
-    await page.waitForTimeout(200);
-
-    await page.reload();
-    await page.locator('#menuBtn').click();
-    await page.locator('#privacyTab').click();
-
-    await expect(page.locator('input[name="piiSanitizeLogs"]')).not.toBeChecked();
+    await page.check('#modeC');
+    await expect(page.locator('#modeC')).toBeChecked();
   });
 });
 

@@ -18,23 +18,20 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
     await page.locator('#generalTab').click();
     await expect(page.locator('#generalPanel')).toBeVisible();
 
-    await test.step('デフォルトはGemini panelが表示', async () => {
-      await expect(page.locator('#geminiSettings')).toBeVisible();
-    });
-
-    await test.step('OpenAIに切替えるとGemini panelが非表示', async () => {
-      await page.selectOption('#aiProvider', 'openai');
-      await expect(page.locator('#geminiSettings')).toBeHidden();
-    });
-
-    await test.step('OpenAIに切替えるとOpenAI panelが表示', async () => {
+    await test.step('デフォルトはOpenAI panelが表示', async () => {
       await expect(page.locator('#openaiSettings')).toBeVisible();
     });
 
-    await test.step('Geminiに戻す', async () => {
+    await test.step('Geminiに切替えるとOpenAI panelが非表示', async () => {
       await page.selectOption('#aiProvider', 'gemini');
       await expect(page.locator('#openaiSettings')).toBeHidden();
       await expect(page.locator('#geminiSettings')).toBeVisible();
+    });
+
+    await test.step('OpenAIに戻す', async () => {
+      await page.selectOption('#aiProvider', 'openai');
+      await expect(page.locator('#geminiSettings')).toBeHidden();
+      await expect(page.locator('#openaiSettings')).toBeVisible();
     });
   });
 
@@ -57,7 +54,7 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
 
     await test.step('保存ボタンをクリック', async () => {
       await page.locator('#save').click();
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(500); // Wait for save to complete
     });
 
     await test.step('ポップアップをリロード', async () => {
@@ -88,6 +85,7 @@ testInteraction.describe('Popup - AI Provider Settings @interaction', () => {
 
     await page.fill('#port', '9999');
     await page.click('#save');
+    await page.waitForTimeout(500); // Wait for save to complete
 
     await page.reload();
     await expect(page.locator('#menuBtn')).toBeAttached();

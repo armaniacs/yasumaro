@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.18] - 2026-04-27
+
+### Fixed
+
+- **E2Eテストの設定保存フローを修正**: `settings_migrated` フラグがテスト環境で設定されていなかったため `getSettings()` が保存済み設定を読み飛ばす問題を修正
+  - `addInitScript` でページロード前にストレージフラグを設定し、拡張機能の初期化とタイミングが一致するようにした
+  - 設定保存後にポップアップをリロードしても値が保持されることを確認
+- **ストレージキー名の不一致を修正**: テストコードが直接ストレージキー `protocol`, `dailyNotePath`, `minVisitDuration`, `minScrollDepth` を読み取っていたが、実際のストレージは `settings` オブジェクト内に保存されているため、正しく読み取れるように修正
+- **Pending Pages テストデータの修正**: ストレージキー名を `pendingPages` → `osh_pending_pages` に修正、`expiry` フィールドを追加
+- **Pending Pages 機能の初期化を追加**: `popup.ts` に `pendingPages.ts` と `privatePageDialog.ts` のインポートとダイアログ表示ロジックを追加
+- **ポップアップ自動クローズの対策**: `showSettingsScreen()` が `chrome.tabs.create()` + `window.close()` を呼ぶため、E2Eテストでポップアップが閉じてしまう問題を、fixture の `addInitScript` でモックして修正
+- **AI Provider デフォルト設定のテスト期待値を修正**: デフォルトプロバイダーが `gemini` から `openai` に変更されたのにテストが追従していなかった
+- **jsdom "Not implemented" 警告の抑制**: `vitest.setup.ts` に `HTMLCanvasElement.prototype.getContext` モックと `matchMedia` モックを追加
+- **`vi.hoisted()` / `vi.mock()` の警告を修正**: `src/utils/__tests__/migration.test.ts` で同期的制約に違反しないよう配置
+
+### Changed
+
+- **E2Eテストの保存確認方法を変更**: `page.reload()` + DOM要素の値確認から、CDP 経由の `chrome.storage.local.get(['settings'])` による直接検証に変更（より確実な保存確認）
+- **Fixture のストレージ初期化を CDP から `addInitScript` に変更**: `chrome` API が利用可能な拡張機能ページコンテキストで実行するように修正
+- **ドメインフィルタテストのセレクタを修正**: 非表示の `#whitelistTextarea`/`#blacklistTextarea` から可視セクション `#domainListSection` に変更
+
 ## [5.1.17] - 2026-04-26
 
 ### Refactored

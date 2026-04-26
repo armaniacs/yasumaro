@@ -25,6 +25,9 @@ import {
 import { initSettingsExportImportUi } from './settingsExportImportUi.js';
 import { initMasterPasswordUi, loadMasterPasswordSettings, showPasswordAuthModal } from './masterPasswordUi.js';
 import { initTrancoUpdateNotification } from './trancoNotification.js';
+import { loadPendingPages } from './pendingPages.js';
+import { getPendingPages } from '../utils/pendingStorage.js';
+import { showPrivatePageDialog } from './privatePageDialog.js';
 
 // ============================================================================
 // Tab Navigation
@@ -92,7 +95,7 @@ async function initCustomPromptFeature(): Promise<void> {
 // Main Initialization Function (exported for testability)
 // ============================================================================
 
-export function initPopup(): void {
+export async function initPopup(): Promise<void> {
     // Settings Export/Import UI Initialization
     initSettingsExportImportUi(load, showPasswordAuthModal);
 
@@ -206,7 +209,19 @@ export function initPopup(): void {
     } catch (error) {
         logError('[Popup] Error in initTrancoUpdateNotification', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
-}
+
+    // Pending pages handling: load list and show dialog only if exactly one pending page
+    try {
+        loadPendingPages();
+        const pending = await getPendingPages();
+        if (pending.length === 1) {
+            const page = pending[0];
+            showPrivatePageDialog(page.url, page.reason, page.headerValue || '');
+        }
+    } catch (error) {
+        logError('[Popup] Error in pending pages handling', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+  }
 
 // ============================================================================
 // Auto-initialize when loaded in browser context

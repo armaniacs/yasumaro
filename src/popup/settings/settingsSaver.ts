@@ -142,6 +142,7 @@ export async function handleSaveAndTest(
     settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement>,
     validateFn: (p1: HTMLInputElement, p2: HTMLInputElement, p3: HTMLInputElement, p4: HTMLInputElement, p5: HTMLInputElement) => boolean
 ): Promise<void> {
+    console.log('[SettingsSaver] handleSaveAndTest called');
     statusDiv.textContent = getMessage('testingConnection');
     statusDiv.className = '';
 
@@ -155,55 +156,36 @@ export async function handleSaveAndTest(
     clearAllFieldErrors(errorPairs);
 
     if (!validateFn(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
+        console.log('[SettingsSaver] Validation failed');
         statusDiv.textContent = '';
         statusDiv.className = '';
         return;
     }
 
     const newSettings = extractSettingsFromInputs(settingsMapping);
-    console.log('[SettingsSaver] Extracted settings:', {
-        hasObsidianKey: !!newSettings['obsidian_api_key'],
-        hasGeminiKey: !!newSettings['gemini_api_key'],
-        hasOpenaiKey: !!newSettings['openai_api_key']
-    });
 
-    // 既存の設定を取得して、空のAPIキーフィールドは既存の値を保持
+    // Merge with current settings
     const currentSettings = await getSettings();
-    console.log('[SettingsSaver] Current settings from storage:', {
-        hasObsidianKey: !!currentSettings['obsidian_api_key'],
-        obsidianKeyLength: (typeof currentSettings['obsidian_api_key'] === 'string' ? currentSettings['obsidian_api_key'].length : 0),
-        hasGeminiKey: !!currentSettings['gemini_api_key'],
-        hasOpenaiKey: !!currentSettings['openai_api_key']
-    });
 
     const mergedSettings = { ...currentSettings, ...newSettings };
-    console.log('[SettingsSaver] Merged with current settings:', {
-        hasObsidianKey: !!mergedSettings['obsidian_api_key'],
-        obsidianKeyLength: (typeof mergedSettings['obsidian_api_key'] === 'string' ? mergedSettings['obsidian_api_key'].length : 0),
-        hasGeminiKey: !!mergedSettings['gemini_api_key'],
-        hasOpenaiKey: !!mergedSettings['openai_api_key']
-    });
 
-    await saveSettingsWithAllowedUrls(mergedSettings);
-    console.log('[SettingsSaver] Settings saved successfully');
+    try {
+      await saveSettingsWithAllowedUrls(mergedSettings);
+    } catch (error) {
+      console.error('[SettingsSaver] Error during saveSettingsWithAllowedUrls:', error);
+      statusDiv.textContent = getMessage('saveError') + ': ' + (error instanceof Error ? error.message : String(error));
+      statusDiv.className = 'error';
+      return;
+    }
 
     // 設定が完全に保存されるまで少し待つ
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // 保存後の確認
     const verifySettings = await getSettings();
-    console.log('[SettingsSaver] Verification after save:', {
-        hasObsidianKey: !!verifySettings['obsidian_api_key'],
-        obsidianKeyLength: (typeof verifySettings['obsidian_api_key'] === 'string' ? verifySettings['obsidian_api_key'].length : 0),
-        obsidianKeyType: typeof verifySettings['obsidian_api_key'],
-        hasGeminiKey: !!verifySettings['gemini_api_key'],
-        hasOpenaiKey: !!verifySettings['openai_api_key']
-    });
 
     const port = parseInt(portInput.value.trim(), 10);
-    console.log('[SettingsSaver] Running connection test...');
     const result = await runConnectionTest();
-    console.log('[SettingsSaver] Connection test result:', result);
     displayConnectionResult(statusDiv, result, protocolInput, port);
 }
 
