@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getCleansedReasonText, updateCleansingStatus, renderSpecialUrlStatus, initStatusPanel, initAllUrlsPermissionBanner } from '../statusPanel.js';
+import { getCleansedReasonText, updateCleansingStatus, renderSpecialUrlStatus, initStatusPanel, initAllUrlsPermissionBanner, updateTrustStatus } from '../statusPanel.js';
 
 // Mock dependencies using vi.hoisted
 const { mockGetCurrentTab, mockGetSettings, mockSaveSettings, mockGetMessage, mockIsAllUrlsPermitted, mockRequestAllUrls } = vi.hoisted(() => ({
@@ -202,5 +202,12 @@ describe('initAllUrlsPermissionBanner', () => {
         mockIsAllUrlsPermitted.mockResolvedValue(false);
 
         await expect(initAllUrlsPermissionBanner()).resolves.not.toThrow();
+    });
+});
+
+describe('updateTrustStatus', () => {
+    it('returns early when trustContent element does not exist', async () => {
+        document.body.innerHTML = '';
+        await expect(updateTrustStatus('https://example.com')).resolves.not.toThrow();
     });
 });

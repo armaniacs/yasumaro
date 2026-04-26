@@ -31,13 +31,18 @@ declare global {
 
 let session: AISession | null = null;
 
+// For testing only - reset session state
+export const _resetSessionForTesting = (): void => {
+    session = null;
+};
+
 // Helper to get the AI object
-const getAI = (): AI | null | undefined => {
+export const getAI = (): AI | null | undefined => {
     return window.ai || globalThis.ai || (typeof self !== 'undefined' ? (self as unknown as { ai?: AI }).ai : null);
 };
 
 // Check availability
-async function checkAvailability(): Promise<string> {
+export async function checkAvailability(): Promise<string> {
     const ai = getAI();
     if (!ai?.languageModel) {
         return 'unsupported';
@@ -52,7 +57,7 @@ async function checkAvailability(): Promise<string> {
 }
 
 // Create session if needed
-async function ensureSession(): Promise<boolean | { success: false; error: string }> {
+export async function ensureSession(): Promise<boolean | { success: false; error: string }> {
     if (session) return true;
 
     const ai = getAI();

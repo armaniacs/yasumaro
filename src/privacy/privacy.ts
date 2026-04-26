@@ -3,14 +3,24 @@
  * PRIVACY.md をフェッチしてブラウザ内でレンダリングする
  */
 
-function escapeHtml(text: string): string {
+/**
+ * HTMLエスケープ処理
+ * @param text エスケープするテキスト
+ * @returns エスケープ後のテキスト
+ */
+export function escapeHtml(text: string): string {
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 }
 
-function renderMarkdown(md: string): string {
+/**
+ * MarkdownテキストをHTMLに変換する
+ * @param md Markdownテキスト
+ * @returns HTML文字列
+ */
+export function renderMarkdown(md: string): string {
     const lines = md.split('\n');
     const out: string[] = [];
     let i = 0;
@@ -117,7 +127,12 @@ function renderMarkdown(md: string): string {
     return out.join('\n');
 }
 
-function renderInline(text: string): string {
+/**
+ * インラインMarkdown要素をHTMLに変換する
+ * @param text Markdownテキスト
+ * @returns HTML文字列
+ */
+export function renderInline(text: string): string {
     // Links [text](url) - only allow HTTPS and anchor links
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) => {
         let safeUrl = u;
@@ -144,8 +159,12 @@ function renderInline(text: string): string {
     return text;
 }
 
-async function loadPrivacyPolicy(): Promise<void> {
-    const content = document.getElementById('content');
+/**
+ * プライバシーポリシーをフェッチしてDOMに描画する
+ * @param containerId コンテナ要素のID（デフォルト: 'content'）
+ */
+export async function loadPrivacyPolicy(containerId: string = 'content'): Promise<void> {
+    const content = document.getElementById(containerId);
     if (!content) return;
 
     try {
@@ -158,4 +177,7 @@ async function loadPrivacyPolicy(): Promise<void> {
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadPrivacyPolicy);
+// 自动初期化（後方互換性のため維持）
+document.addEventListener('DOMContentLoaded', () => {
+    loadPrivacyPolicy().catch(console.error);
+});

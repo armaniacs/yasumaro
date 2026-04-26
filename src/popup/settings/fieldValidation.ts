@@ -6,7 +6,7 @@
 
 import { getMessage } from '../i18n.js';
 
-export type ErrorPair = [HTMLInputElement, string];
+export type ErrorPair = [HTMLInputElement | null, string];
 
 /**
  * フィールドバリデーションの結果を表示
@@ -43,7 +43,7 @@ export function clearFieldError(input: HTMLInputElement, errorId: string): void 
  */
 export function clearAllFieldErrors(pairs: ErrorPair[]): void {
     for (const [input, errorId] of pairs) {
-        clearFieldError(input, errorId);
+        if (input) clearFieldError(input, errorId);
     }
 }
 
@@ -155,7 +155,8 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数
  */
-export function setupProtocolValidation(input: HTMLInputElement): () => void {
+export function setupProtocolValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
     const handler = () => validateProtocol(input);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
@@ -166,7 +167,8 @@ export function setupProtocolValidation(input: HTMLInputElement): () => void {
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数
  */
-export function setupPortValidation(input: HTMLInputElement): () => void {
+export function setupPortValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
     const handler = () => validatePort(input);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
@@ -177,7 +179,8 @@ export function setupPortValidation(input: HTMLInputElement): () => void {
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数
  */
-export function setupMinVisitDurationValidation(input: HTMLInputElement): () => void {
+export function setupMinVisitDurationValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
     const handler = () => validateMinVisitDuration(input);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
@@ -188,7 +191,8 @@ export function setupMinVisitDurationValidation(input: HTMLInputElement): () => 
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数
  */
-export function setupMinScrollDepthValidation(input: HTMLInputElement): () => void {
+export function setupMinScrollDepthValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
     const handler = () => validateMinScrollDepth(input);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
@@ -214,7 +218,8 @@ export function validateMaxTokens(input: HTMLInputElement): boolean {
  * @param {HTMLInputElement} input - 入力要素
  * @returns {() => void} リスナー削除関数
  */
-export function setupMaxTokensValidation(input: HTMLInputElement): () => void {
+export function setupMaxTokensValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
     const handler = () => validateMaxTokens(input);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
@@ -229,11 +234,11 @@ export function setupMaxTokensValidation(input: HTMLInputElement): () => void {
  * @returns {Array.<() => void>} リスナー削除関数の配列
  */
 export function setupAllFieldValidations(
-    protocolInput: HTMLInputElement,
-    portInput: HTMLInputElement,
-    minVisitDurationInput: HTMLInputElement,
-    minScrollDepthInput: HTMLInputElement,
-    maxTokensPerPromptInput: HTMLInputElement
+    protocolInput: HTMLInputElement | null,
+    portInput: HTMLInputElement | null,
+    minVisitDurationInput: HTMLInputElement | null,
+    minScrollDepthInput: HTMLInputElement | null,
+    maxTokensPerPromptInput: HTMLInputElement | null
 ): (() => void)[] {
     return [
         setupProtocolValidation(protocolInput),
@@ -253,19 +258,19 @@ export function setupAllFieldValidations(
  * @returns {boolean} すべて有効な場合はtrue
  */
 export function validateAllFields(
-    protocolInput: HTMLInputElement,
-    portInput: HTMLInputElement,
-    minVisitDurationInput: HTMLInputElement,
-    minScrollDepthInput: HTMLInputElement,
-    maxTokensPerPromptInput: HTMLInputElement
+    protocolInput: HTMLInputElement | null,
+    portInput: HTMLInputElement | null,
+    minVisitDurationInput: HTMLInputElement | null,
+    minScrollDepthInput: HTMLInputElement | null,
+    maxTokensPerPromptInput: HTMLInputElement | null
 ): boolean {
     let hasError = false;
 
-    if (!validateProtocol(protocolInput)) hasError = true;
-    if (!validatePort(portInput)) hasError = true;
-    if (!validateMinVisitDuration(minVisitDurationInput)) hasError = true;
-    if (!validateMinScrollDepth(minScrollDepthInput)) hasError = true;
-    if (!validateMaxTokens(maxTokensPerPromptInput)) hasError = true;
+    if (protocolInput && !validateProtocol(protocolInput)) hasError = true;
+    if (portInput && !validatePort(portInput)) hasError = true;
+    if (minVisitDurationInput && !validateMinVisitDuration(minVisitDurationInput)) hasError = true;
+    if (minScrollDepthInput && !validateMinScrollDepth(minScrollDepthInput)) hasError = true;
+    if (maxTokensPerPromptInput && !validateMaxTokens(maxTokensPerPromptInput)) hasError = true;
 
     return !hasError;
 }

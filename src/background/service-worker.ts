@@ -33,8 +33,19 @@ import {
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
-import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from './messageTypes.js';
-import type { ExtensionMessage } from './messageTypes.js';
+import {
+    VALID_MESSAGE_TYPES,
+    CONTENT_SCRIPT_ONLY_TYPES,
+    NO_PAYLOAD_TYPES
+} from './messageTypes.js';
+import type {
+    ExtensionMessage,
+    ValidVisitMessage,
+    FetchUrlMessage,
+    ManualRecordMessage,
+    PreviewRecordMessage,
+    SaveRecordMessage
+} from './messageTypes.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -114,6 +125,348 @@ const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>(
 
 // Track whether cache has been initialized (for startup rehydration)
 let isCacheInitialized = false;
+
+// ============================================================================
+// Extracted Message Handlers (for testability)
+// ============================================================================
+
+/**
+ * Handle VALID_VISIT message from Content Script.
+ * Processes automatic visit recording, updates tab cache, and manages badges.
+ */
+export async function handleValidVisit(
+    message: ValidVisitMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    if (!sender.tab) {
+        sendResponse(INVALID_SENDER_ERROR);
+        return;
+    }
+
+    // 【パフォーマンス改善】: 直接キャッシュにタブを追加
+    tabCache.add(sender.tab);
+
+    const result = await recordingLogic.record({
+        title: sender.tab.title || '',
+        url: sender.tab.url || '',
+        content: message.payload?.content || '',
+        skipDuplicateCheck: false,
+        recordType: 'auto',
+        pageBytes: message.payload?.pageBytes,
+        candidateBytes: message.payload?.candidateBytes,
+        originalBytes: message.payload?.originalBytes,
+        cleansedBytes: message.payload?.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons
+    });
+
+    // 【パフォーマンス改善】: 直接キャッシュを更新
+    if (sender.tab.id) {
+        tabCache.update(sender.tab.id, {
+            title: sender.tab.title || '',
+            url: sender.tab.url || '',
+            content: message.payload?.content || '',
+            isValidVisit: true
+        });
+    }
+
+    // 自動保存成功時: 青色バッジ ◎ を表示（タブを離れるまで継続）
+    // スキップされた場合は表示しない
+    if (result.success && !result.skipped && sender.tab.id) {
+        const savedTabId = sender.tab.id;
+        autoSavedBadgeTabs.add(savedTabId);
+        chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
+        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
+    }
+
+    // 自動保存モード confirm: ボタン付き通知で保存確認を促す
+    if (result.confirmationRequired) {
+        const url = sender.tab.url || '';
+        const title = sender.tab.title || url;
+        const reason = result.reason || 'cache-control';
+        const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
+        const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
+        // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64 + HMAC署名）
+        const encodedUrl = await encodeUrlSafeBase64(url);
+        if (encodedUrl) {
+            const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encodedUrl;
+            NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
+        }
+    }
+
+    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+    if (result.maskedItems && Array.isArray(result.maskedItems)) {
+        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
+    }
+
+    sendResponse(result);
+}
+
+/**
+ * Handle FETCH_URL message from Popup.
+ * Fetches URL content with CORS bypass for filter import.
+ */
+export async function handleFetchUrl(
+    message: FetchUrlMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    try {
+        // SSRF対策: 内部ネットワークブロック
+        validateUrlForFilterImport(message.payload.url);
+
+        // 許可されたURLのリストを動的に構築（Deadlock回避）
+        const settings = await getSettings();
+        const allowedUrls = buildAllowedUrls(settings);
+
+        const response = await fetchWithTimeout(message.payload.url, {
+            method: 'GET',
+            cache: 'no-cache',
+            allowedUrls // 最新の動的URL検証リストを使用
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        const text = await response.text();
+
+        sendResponse({ success: true, data: text, contentType });
+    } catch (error) {
+        await logError(
+            'Fetch URL Error',
+            {
+                url: message.payload?.url,
+                error: error instanceof Error ? error.message : String(error)
+            },
+            ErrorCode.API_REQUEST_FAILURE,
+            'service-worker'
+        );
+        // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
+        sendResponse(createErrorResponse(error, { url: message.payload?.url }));
+    }
+}
+
+/**
+ * Handle MANUAL_RECORD or PREVIEW_RECORD message from Popup.
+ * Processes manual recording with optional AI summarization.
+ */
+export async function handleManualRecord(
+    message: ManualRecordMessage | PreviewRecordMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    let content = message.payload.content;
+    const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
+    const settings = await getSettings();
+
+    // URLバリデーション - http/httpsのみ許可
+    if (!isSecureUrl(message.payload.url)) {
+        await logWarn(
+            'Blocked MANUAL_RECORD with insecure URL',
+            { url: message.payload.url, type: message.type },
+            undefined,
+            'service-worker'
+        );
+        sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
+        return;
+    }
+
+    // skipAi操作のレート制限
+    if (skipAi) {
+        const now = Date.now();
+        const senderKey = sender.tab?.id?.toString() || 'unknown';
+        const limiterState = skipAiRateLimiter.get(senderKey);
+        const rateLimitMax = settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number ?? RATE_LIMITS.SKIP_AI_MAX;
+        const rateLimitWindow = settings[StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS] as number ?? RATE_LIMITS.SKIP_AI_WINDOW_MS;
+
+        if (limiterState) {
+            // ウィンドウが期限切れならリセット
+            if (now > limiterState.resetTime) {
+                skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
+            } else if (limiterState.count >= rateLimitMax) {
+                await logWarn(
+                    'Rate limit exceeded for skipAi operation',
+                    { sender: senderKey, limit: rateLimitMax },
+                    undefined,
+                    'service-worker'
+                );
+                sendResponse({ success: false, error: 'Rate limit exceeded. Please try again later.' });
+                return;
+            } else {
+                limiterState.count++;
+            }
+        } else {
+            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
+        }
+    }
+
+    // 【プライバシー（v4.2.1）】コンテンツフェッチ設定のチェック
+    const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
+    const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
+
+    // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
+    // Google Sitesなどの特殊的なサイトではコンテンツが取得できない場合がある
+    const isGoogleSites = message.payload.url.includes('sites.google.com');
+    if (!content && !skipAi) {
+        // Google SitesではCSPの問題でコンテンツが取得できない場合がある
+        // force=true の場合はスキップして続行
+        if (isGoogleSites && message.payload.force) {
+            await logDebug('Google Sites detected with force flag, skipping content fetch', { url: sanitizedUrl }, 'service-worker');
+            // 空のコンテンツで続行
+        } else {
+            if (!autoContentFetchEnabled && !message.payload.force) {
+                // 通常フローではコンテンツフェッチ無効を通知して終了
+                await logDebug(
+                    'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
+                    { url: sanitizedUrl },
+                    'service-worker'
+                );
+                sendResponse({
+                    success: true,
+                    warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
+                });
+                return;
+            }
+
+            let createdTabId: number | undefined;
+            try {
+                // 既存タブを探す
+                const allTabs = await chrome.tabs.query({});
+                const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
+                let targetTabId: number | undefined = existingTab?.id;
+
+                // タブが開いていなければバックグラウンドで開く
+                if (!targetTabId) {
+                    const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
+                    createdTabId = newTab.id;
+                    targetTabId = newTab.id;
+
+                    // ページが読み込まれるまで待機（最大10秒に短縮）
+                    await new Promise<void>((resolve) => {
+                        const timeout = setTimeout(resolve, 10000);
+                        const listener = (tabId: number, info: { status?: string }): void => {
+                            if (tabId === targetTabId && info.status === 'complete') {
+                                clearTimeout(timeout);
+                                chrome.tabs.onUpdated.removeListener(listener);
+                                resolve();
+                            }
+                        };
+                        chrome.tabs.onUpdated.addListener(listener);
+                    });
+                }
+
+                // scripting.executeScriptでページ本文を取得（Content Script不要）
+                if (targetTabId) {
+                    const results = await chrome.scripting.executeScript({
+                        target: { tabId: targetTabId },
+                        func: () => document.body?.innerText || ''
+                    });
+                    content = results?.[0]?.result?.trim().substring(0, 10000) || '';
+                }
+            } catch (err: unknown) {
+                await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
+            } finally {
+                // 新規作成したタブを閉じる
+                if (createdTabId !== undefined) {
+                    chrome.tabs.remove(createdTabId).catch(() => {});
+                }
+            }
+        }
+    }
+
+    // Use RecordingPipeline for manual recording
+    const pipeline = new RecordingPipeline(
+        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
+        obsidian,
+        aiClient
+    );
+
+    const result = await pipeline.execute({
+        title: message.payload.title,
+        url: message.payload.url,
+        content,
+        force: message.payload.force,
+        skipDuplicateCheck: true,
+        previewOnly: message.type === 'PREVIEW_RECORD',
+        recordType: 'manual',
+        skipAi,
+        pageBytes: message.payload.pageBytes,
+        candidateBytes: message.payload.candidateBytes,
+        originalBytes: message.payload.originalBytes,
+        cleansedBytes: message.payload.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
+    }, settings);
+
+    // コンテンツを記録履歴に保存（成功時のみ）
+    if (result.success) {
+        await setUrlContent(message.payload.url, content);
+    }
+
+    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+    if (result.maskedItems && Array.isArray(result.maskedItems)) {
+        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
+    }
+
+    sendResponse(result);
+}
+
+/**
+ * Handle SAVE_RECORD message from Popup.
+ * Saves a confirmed record after preview.
+ */
+export async function handleSaveRecord(
+    message: SaveRecordMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const settings = await getSettings();
+    // Use RecordingPipeline for saving confirmed record
+    const pipeline = new RecordingPipeline(
+        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
+        obsidian,
+        aiClient
+    );
+
+    const result = await pipeline.execute({
+        title: message.payload.title,
+        url: message.payload.url,
+        content: message.payload.content,
+        skipDuplicateCheck: true,
+        alreadyProcessed: true,
+        force: message.payload.force,
+        recordType: 'manual',
+        maskedCount: message.payload.maskedCount,
+        pageBytes: message.payload.pageBytes,
+        candidateBytes: message.payload.candidateBytes,
+        originalBytes: message.payload.originalBytes,
+        cleansedBytes: message.payload.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
+    }, settings);
+
+    // コンテンツを記録履歴に保存（成功時のみ）
+    if (result.success && message.payload.content) {
+        await setUrlContent(message.payload.url, message.payload.content);
+    }
+
+    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
+    if (result.maskedItems && Array.isArray(result.maskedItems)) {
+        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
+    }
+
+    sendResponse(result);
+}
 
 // ============================================================================
 // Message Handler Factory (extracted for testability)
@@ -216,106 +569,13 @@ export function createMessageHandler(): (
 
                 // Automatic Visit Processing (Content Script only)
                 if (message.type === 'VALID_VISIT' && sender.tab) {
-                    // 【パフォーマンス改善】: 直接キャッシュにタブを追加
-                    tabCache.add(sender.tab);
-
-                    const result = await recordingLogic.record({
-                        title: sender.tab.title || '',
-                        url: sender.tab.url || '',
-                        content: message.payload?.content || '',
-                        skipDuplicateCheck: false,
-                        recordType: 'auto',
-                        pageBytes: message.payload?.pageBytes,
-                        candidateBytes: message.payload?.candidateBytes,
-                        originalBytes: message.payload?.originalBytes,
-                        cleansedBytes: message.payload?.cleansedBytes,
-                        aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
-                        aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
-                        aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
-                        aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
-                        aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons
-                    });
-
-                    // 【パフォーマンス改善】: 直接キャッシュを更新
-                    if (sender.tab.id) {
-                        tabCache.update(sender.tab.id, {
-                            title: sender.tab.title || '',
-                            url: sender.tab.url || '',
-                            content: message.payload?.content || '',
-                            isValidVisit: true
-                        });
-                    }
-
-                    // 自動保存成功時: 青色バッジ ◎ を表示（タブを離れるまで継続）
-                    // スキップされた場合は表示しない
-                    if (result.success && !result.skipped && sender.tab.id) {
-                        const savedTabId = sender.tab.id;
-                        autoSavedBadgeTabs.add(savedTabId);
-                        chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
-                        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
-                    }
-
-                    // 自動保存モード confirm: ボタン付き通知で保存確認を促す
-                    if (result.confirmationRequired) {
-                        const url = sender.tab.url || '';
-                        const title = sender.tab.title || url;
-                        const reason = result.reason || 'cache-control';
-                        const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
-                        const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
-                        // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64 + HMAC署名）
-                        const encodedUrl = await encodeUrlSafeBase64(url);
-                        if (encodedUrl) {
-                            const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encodedUrl;
-                            NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
-                        }
-                    }
-
-                    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-                    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-                        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-                    }
-
-                    sendResponse(result);
+                    await handleValidVisit(message, sender, sendResponse);
                     return;
                 }
 
                 // Fetch URL Content (CORS Bypass for Popup)
                 if (message.type === 'FETCH_URL') {
-                    try {
-                        // SSRF対策: 内部ネットワークブロック
-                        validateUrlForFilterImport(message.payload.url);
-
-                        // 許可されたURLのリストを動的に構築（Deadlock回避）
-                        const settings = await getSettings();
-                        const allowedUrls = buildAllowedUrls(settings);
-
-                        const response = await fetchWithTimeout(message.payload.url, {
-                            method: 'GET',
-                            cache: 'no-cache',
-                            allowedUrls // 最新の動的URL検証リストを使用
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-
-                        const contentType = response.headers.get('content-type');
-                        const text = await response.text();
-
-                        sendResponse({ success: true, data: text, contentType });
-                    } catch (error) {
-                        await logError(
-                            'Fetch URL Error',
-                            {
-                                url: message.payload?.url,
-                                error: error instanceof Error ? error.message : String(error)
-                            },
-                            ErrorCode.API_REQUEST_FAILURE,
-                            'service-worker'
-                        );
-                        // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
-                        sendResponse(createErrorResponse(error, { url: message.payload?.url }));
-                    }
+                    await handleFetchUrl(message, sendResponse);
                     return;
                 }
 
@@ -373,207 +633,13 @@ export function createMessageHandler(): (
 
                 // Manual Record Processing & Preview
                 if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
-                    let content = message.payload.content;
-                    const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
-                    const settings = await getSettings();
-
-                    // URLバリデーション - http/httpsのみ許可
-                    if (!isSecureUrl(message.payload.url)) {
-                        await logWarn(
-                            'Blocked MANUAL_RECORD with insecure URL',
-                            { url: message.payload.url, type: message.type },
-                            undefined,
-                            'service-worker'
-                        );
-                        sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
-                        return;
-                    }
-
-                    // skipAi操作のレート制限
-                    if (skipAi) {
-                        const now = Date.now();
-                        const senderKey = sender.tab?.id?.toString() || 'unknown';
-                        const limiterState = skipAiRateLimiter.get(senderKey);
-                        const rateLimitMax = settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number ?? RATE_LIMITS.SKIP_AI_MAX;
-                        const rateLimitWindow = settings[StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS] as number ?? RATE_LIMITS.SKIP_AI_WINDOW_MS;
-
-                        if (limiterState) {
-                            // ウィンドウが期限切れならリセット
-                            if (now > limiterState.resetTime) {
-                                skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
-                            } else if (limiterState.count >= rateLimitMax) {
-                                await logWarn(
-                                    'Rate limit exceeded for skipAi operation',
-                                    { sender: senderKey, limit: rateLimitMax },
-                                    undefined,
-                                    'service-worker'
-                                );
-                                sendResponse({ success: false, error: 'Rate limit exceeded. Please try again later.' });
-                                return;
-                            } else {
-                                limiterState.count++;
-                            }
-                        } else {
-                            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
-                        }
-                    }
-
-                    // 【プライバシー（v4.2.1）】コンテンツフェッチ設定のチェック
-                    const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
-                    const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
-
-                    // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
-                    // Google Sitesなどの特殊的なサイトではコンテンツが取得できない場合がある
-                    const isGoogleSites = message.payload.url.includes('sites.google.com');
-                    if (!content && !skipAi) {
-                        // Google SitesではCSPの問題でコンテンツが取得できない場合がある
-                        // force=true の場合はスキップして続行
-                        if (isGoogleSites && message.payload.force) {
-                            await logDebug('Google Sites detected with force flag, skipping content fetch', { url: sanitizedUrl }, 'service-worker');
-                            // 空のコンテンツで続行
-                        } else {
-                            if (!autoContentFetchEnabled && !message.payload.force) {
-                                // 通常フローではコンテンツフェッチ無効を通知して終了
-                                await logDebug(
-                                    'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
-                                    { url: sanitizedUrl },
-                                    'service-worker'
-                                );
-                                sendResponse({
-                                    success: true,
-                                    warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
-                                });
-                                return;
-                            }
-
-                            let createdTabId: number | undefined;
-                            try {
-                                // 既存タブを探す
-                                const allTabs = await chrome.tabs.query({});
-                                const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
-                                let targetTabId: number | undefined = existingTab?.id;
-
-                                // タブが開いていなければバックグラウンドで開く
-                                if (!targetTabId) {
-                                    const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
-                                    createdTabId = newTab.id;
-                                    targetTabId = newTab.id;
-
-                                    // ページが読み込まれるまで待機（最大10秒に短縮）
-                                    await new Promise<void>((resolve) => {
-                                        const timeout = setTimeout(resolve, 10000);
-                                        const listener = (tabId: number, info: { status?: string }): void => {
-                                            if (tabId === targetTabId && info.status === 'complete') {
-                                                clearTimeout(timeout);
-                                                chrome.tabs.onUpdated.removeListener(listener);
-                                                resolve();
-                                            }
-                                        };
-                                        chrome.tabs.onUpdated.addListener(listener);
-                                    });
-                                }
-
-                                // scripting.executeScriptでページ本文を取得（Content Script不要）
-                                if (targetTabId) {
-                                    const results = await chrome.scripting.executeScript({
-                                        target: { tabId: targetTabId },
-                                        func: () => document.body?.innerText || ''
-                                    });
-                                    content = results?.[0]?.result?.trim().substring(0, 10000) || '';
-                                }
-                            } catch (err: unknown) {
-                                await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
-                            } finally {
-                                // 新規作成したタブを閉じる
-                                if (createdTabId !== undefined) {
-                                    chrome.tabs.remove(createdTabId).catch(() => {});
-                                }
-                            }
-                        }
-                    }
-
-                    // Use RecordingPipeline for manual recording
-                    const pipeline = new RecordingPipeline(
-                        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
-                        obsidian,
-                        aiClient
-                    );
-
-                    const result = await pipeline.execute({
-                        title: message.payload.title,
-                        url: message.payload.url,
-                        content,
-                        force: message.payload.force,
-                        skipDuplicateCheck: true,
-                        previewOnly: message.type === 'PREVIEW_RECORD',
-                        recordType: 'manual',
-                        skipAi,
-                        pageBytes: message.payload.pageBytes,
-                        candidateBytes: message.payload.candidateBytes,
-                        originalBytes: message.payload.originalBytes,
-                        cleansedBytes: message.payload.cleansedBytes,
-                        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-                        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-                        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-                        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-                        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
-                    }, settings);
-
-                    // コンテンツを記録履歴に保存（成功時のみ）
-                    if (result.success) {
-                        await setUrlContent(message.payload.url, content);
-                    }
-
-                    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-                    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-                        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-                    }
-
-                    sendResponse(result);
+                    await handleManualRecord(message, sender, sendResponse);
                     return;
                 }
 
                 // Save Confirmed Record (Post-Preview)
                 if (message.type === 'SAVE_RECORD') {
-                    const settings = await getSettings();
-                    // Use RecordingPipeline for saving confirmed record
-                    const pipeline = new RecordingPipeline(
-                        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
-                        obsidian,
-                        aiClient
-                    );
-
-                    const result = await pipeline.execute({
-                        title: message.payload.title,
-                        url: message.payload.url,
-                        content: message.payload.content,
-                        skipDuplicateCheck: true,
-                        alreadyProcessed: true,
-                        force: message.payload.force,
-                        recordType: 'manual',
-                        maskedCount: message.payload.maskedCount,
-                        pageBytes: message.payload.pageBytes,
-                        candidateBytes: message.payload.candidateBytes,
-                        originalBytes: message.payload.originalBytes,
-                        cleansedBytes: message.payload.cleansedBytes,
-                        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-                        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-                        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-                        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-                        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
-                    }, settings);
-
-                    // コンテンツを記録履歴に保存（成功時のみ）
-                    if (result.success && message.payload.content) {
-                        await setUrlContent(message.payload.url, message.payload.content);
-                    }
-
-                    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-                    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-                        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-                    }
-
-                    sendResponse(result);
+                    await handleSaveRecord(message, sendResponse);
                     return;
                 }
 
@@ -632,7 +698,7 @@ export function handleTabRemoved(tabId: number): void {
 /**
  * Handle tab activation - update badge to reflect privacy status.
  */
-async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
+export async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
     try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
         // 自動保存バッジ表示中のタブは ◎ を維持
@@ -665,7 +731,7 @@ async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> 
 /**
  * Handle tab navigation - update badge after page load completes.
  */
-function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void {
+export function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void {
     if (changeInfo.status !== 'complete' || !tab.url) return;
     // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
     autoSavedBadgeTabs.delete(tabId);
@@ -686,7 +752,7 @@ function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: {
 /**
  * Initialize extension on install/update.
  */
-async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
+export async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
     if (details.reason === 'install') {
         logInfo('Service Worker installed', {}, 'service-worker');
     } else if (details.reason === 'update') {
@@ -702,7 +768,7 @@ async function handleInstalled(details: { reason?: string; previousVersion?: str
 /**
  * Service Worker startup - rehydrate caches and cleanup.
  */
-async function handleStartup(): Promise<void> {
+export async function handleStartup(): Promise<void> {
     logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
 
     // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
@@ -1040,7 +1106,7 @@ export async function handleNotificationButtonClicked(notificationId: string, bu
 /**
  * Handle notification click (close the notification).
  */
-function handleNotificationClicked(notificationId: string): void {
+export function handleNotificationClicked(notificationId: string): void {
     if (notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
         chrome.notifications.clear(notificationId);
     }

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.17] - 2026-04-26
+
+### Refactored
+
+- **planファイルの整理**: 完了・不要になったplanファイルを削除し、新方式进行で管理
+  - `plans/2026-04-18-wtx.md`、`plans/2026-04-18-1115-review-vite-migration.md` を削除
+  - 進行中のリファクタリング作業を追跡するための `plans/00-index.md` を追加
+  - ポップアップリファクタリング計画 `plans/2026-04-26-popup-refactoring.md` を追加
+  - プロジェクト構造に合わせて CONTRIBUTING.md を更新
+
 ## [5.1.16] - 2026-04-23
 
 ### Fixed

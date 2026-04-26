@@ -36,7 +36,7 @@ import { initTrancoConsentPanel } from './trancoConsent.js';
 // Sidebar Navigation
 // ============================================================================
 
-function initSidebarNav(): void {
+export function initSidebarNav(): void {
   const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
   const panels = document.querySelectorAll<HTMLElement>('.panel');
 
@@ -81,98 +81,159 @@ function initSidebarNav(): void {
 }
 
 // ============================================================================
-// DOM Elements - General Settings Form
+// DOM Elements - General Settings Form (Lazy Initialization)
 // ============================================================================
+// Elements are fetched lazily to support testability (jsdom sets up DOM after import).
 
-const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
-const protocolInput = document.getElementById('protocol') as HTMLInputElement;
-const portInput = document.getElementById('port') as HTMLInputElement;
-const dailyPathInput = document.getElementById('dailyPath') as HTMLInputElement;
+let _domElements: {
+  apiKeyInput: HTMLInputElement | null;
+  protocolInput: HTMLInputElement | null;
+  portInput: HTMLInputElement | null;
+  dailyPathInput: HTMLInputElement | null;
+  aiProviderSelect: HTMLSelectElement | null;
+  geminiSettingsDiv: HTMLElement | null;
+  openaiSettingsDiv: HTMLElement | null;
+  openai2SettingsDiv: HTMLElement | null;
+  lmStudioSettingsDiv: HTMLElement | null;
+  openaiCompatibleSettingsDiv: HTMLElement | null;
+  geminiApiKeyInput: HTMLInputElement | null;
+  geminiModelInput: HTMLInputElement | null;
+  openaiBaseUrlInput: HTMLInputElement | null;
+  openaiApiKeyInput: HTMLInputElement | null;
+  openaiModelInput: HTMLInputElement | null;
+  openai2BaseUrlInput: HTMLInputElement | null;
+  openai2ApiKeyInput: HTMLInputElement | null;
+  openai2ModelInput: HTMLInputElement | null;
+  lmStudioBaseUrlInput: HTMLInputElement | null;
+  lmStudioModelInput: HTMLInputElement | null;
+  ollamaSettingsDiv: HTMLElement | null;
+  ollamaBaseUrlInput: HTMLInputElement | null;
+  ollamaModelInput: HTMLInputElement | null;
+  providerBaseUrlInput: HTMLInputElement | null;
+  providerApiKeyInput: HTMLInputElement | null;
+  providerModelInput: HTMLInputElement | null;
+  minVisitDurationInput: HTMLInputElement | null;
+  minScrollDepthInput: HTMLInputElement | null;
+  maxTokensPerPromptInput: HTMLInputElement | null;
+  aiTimeoutSecondsInput: HTMLInputElement | null;
+  saveBtn: HTMLButtonElement | null;
+  testObsidianBtn: HTMLButtonElement | null;
+  testAiBtn: HTMLButtonElement | null;
+  statusDiv: HTMLElement | null;
+} | null = null;
 
-const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement;
-const geminiSettingsDiv = document.getElementById('geminiSettings') as HTMLElement;
-const openaiSettingsDiv = document.getElementById('openaiSettings') as HTMLElement;
-const openai2SettingsDiv = document.getElementById('openai2Settings') as HTMLElement;
-const lmStudioSettingsDiv = document.getElementById('lm-studioSettings') as HTMLElement;
-const openaiCompatibleSettingsDiv = document.getElementById('openai-compatibleSettings') as HTMLElement;
+export function resetDashboardElements(): void {
+  _domElements = null;
+}
 
-const geminiApiKeyInput = document.getElementById('geminiApiKey') as HTMLInputElement;
-const geminiModelInput = document.getElementById('geminiModel') as HTMLInputElement;
+export function getDashboardElements() {
+  if (!_domElements && typeof document !== 'undefined') {
+    _domElements = {
+      apiKeyInput: document.getElementById('apiKey') as HTMLInputElement | null,
+      protocolInput: document.getElementById('protocol') as HTMLInputElement | null,
+      portInput: document.getElementById('port') as HTMLInputElement | null,
+      dailyPathInput: document.getElementById('dailyPath') as HTMLInputElement | null,
+      aiProviderSelect: document.getElementById('aiProvider') as HTMLSelectElement | null,
+      geminiSettingsDiv: document.getElementById('geminiSettings') as HTMLElement | null,
+      openaiSettingsDiv: document.getElementById('openaiSettings') as HTMLElement | null,
+      openai2SettingsDiv: document.getElementById('openai2Settings') as HTMLElement | null,
+      lmStudioSettingsDiv: document.getElementById('lm-studioSettings') as HTMLElement | null,
+      openaiCompatibleSettingsDiv: document.getElementById('openai-compatibleSettings') as HTMLElement | null,
+      geminiApiKeyInput: document.getElementById('geminiApiKey') as HTMLInputElement | null,
+      geminiModelInput: document.getElementById('geminiModel') as HTMLInputElement | null,
+      openaiBaseUrlInput: document.getElementById('openaiBaseUrl') as HTMLInputElement | null,
+      openaiApiKeyInput: document.getElementById('openaiApiKey') as HTMLInputElement | null,
+      openaiModelInput: document.getElementById('openaiModel') as HTMLInputElement | null,
+      openai2BaseUrlInput: document.getElementById('openai2BaseUrl') as HTMLInputElement | null,
+      openai2ApiKeyInput: document.getElementById('openai2ApiKey') as HTMLInputElement | null,
+      openai2ModelInput: document.getElementById('openai2Model') as HTMLInputElement | null,
+      lmStudioBaseUrlInput: document.getElementById('lmStudioBaseUrl') as HTMLInputElement | null,
+      lmStudioModelInput: document.getElementById('lmStudioModel') as HTMLInputElement | null,
+      ollamaSettingsDiv: document.getElementById('ollamaSettings') as HTMLElement | null,
+      ollamaBaseUrlInput: document.getElementById('ollamaBaseUrl') as HTMLInputElement | null,
+      ollamaModelInput: document.getElementById('ollamaModel') as HTMLInputElement | null,
+      providerBaseUrlInput: document.getElementById('providerBaseUrl') as HTMLInputElement | null,
+      providerApiKeyInput: document.getElementById('providerApiKey') as HTMLInputElement | null,
+      providerModelInput: document.getElementById('providerModel') as HTMLInputElement | null,
+      minVisitDurationInput: document.getElementById('minVisitDuration') as HTMLInputElement | null,
+      minScrollDepthInput: document.getElementById('minScrollDepth') as HTMLInputElement | null,
+      maxTokensPerPromptInput: document.getElementById('maxTokensPerPrompt') as HTMLInputElement | null,
+      aiTimeoutSecondsInput: document.getElementById('aiTimeoutSeconds') as HTMLInputElement | null,
+      saveBtn: document.getElementById('save') as HTMLButtonElement | null,
+      testObsidianBtn: document.getElementById('testObsidianBtn') as HTMLButtonElement | null,
+      testAiBtn: document.getElementById('testAiBtn') as HTMLButtonElement | null,
+      statusDiv: document.getElementById('status') as HTMLElement | null,
+    };
+  }
+  return _domElements ?? {
+    apiKeyInput: null, protocolInput: null, portInput: null, dailyPathInput: null,
+    aiProviderSelect: null, geminiSettingsDiv: null, openaiSettingsDiv: null,
+    openai2SettingsDiv: null, lmStudioSettingsDiv: null, openaiCompatibleSettingsDiv: null,
+    geminiApiKeyInput: null, geminiModelInput: null, openaiBaseUrlInput: null,
+    openaiApiKeyInput: null, openaiModelInput: null, openai2BaseUrlInput: null,
+    openai2ApiKeyInput: null, openai2ModelInput: null, lmStudioBaseUrlInput: null,
+    lmStudioModelInput: null, ollamaSettingsDiv: null, ollamaBaseUrlInput: null,
+    ollamaModelInput: null, providerBaseUrlInput: null, providerApiKeyInput: null,
+    providerModelInput: null, minVisitDurationInput: null, minScrollDepthInput: null,
+    maxTokensPerPromptInput: null, aiTimeoutSecondsInput: null, saveBtn: null,
+    testObsidianBtn: null, testAiBtn: null, statusDiv: null,
+  };
+}
 
-const openaiBaseUrlInput = document.getElementById('openaiBaseUrl') as HTMLInputElement;
-const openaiApiKeyInput = document.getElementById('openaiApiKey') as HTMLInputElement;
-const openaiModelInput = document.getElementById('openaiModel') as HTMLInputElement;
+export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSelectElement | null> {
+  const el = getDashboardElements();
+  return {
+    [StorageKeys.OBSIDIAN_API_KEY]: el.apiKeyInput,
+    [StorageKeys.OBSIDIAN_PROTOCOL]: el.protocolInput,
+    [StorageKeys.OBSIDIAN_PORT]: el.portInput,
+    [StorageKeys.OBSIDIAN_DAILY_PATH]: el.dailyPathInput,
+    [StorageKeys.AI_PROVIDER]: el.aiProviderSelect,
+    [StorageKeys.GEMINI_API_KEY]: el.geminiApiKeyInput,
+    [StorageKeys.GEMINI_MODEL]: el.geminiModelInput,
+    [StorageKeys.OPENAI_BASE_URL]: el.openaiBaseUrlInput,
+    [StorageKeys.OPENAI_API_KEY]: el.openaiApiKeyInput,
+    [StorageKeys.OPENAI_MODEL]: el.openaiModelInput,
+    [StorageKeys.OPENAI_2_BASE_URL]: el.openai2BaseUrlInput,
+    [StorageKeys.OPENAI_2_API_KEY]: el.openai2ApiKeyInput,
+    [StorageKeys.OPENAI_2_MODEL]: el.openai2ModelInput,
+    [StorageKeys.LM_STUDIO_BASE_URL]: el.lmStudioBaseUrlInput,
+    [StorageKeys.LM_STUDIO_MODEL]: el.lmStudioModelInput,
+    [StorageKeys.OLLAMA_BASE_URL]: el.ollamaBaseUrlInput,
+    [StorageKeys.OLLAMA_MODEL]: el.ollamaModelInput,
+    [StorageKeys.PROVIDER_TYPE]: null,
+    [StorageKeys.PROVIDER_BASE_URL]: el.providerBaseUrlInput,
+    [StorageKeys.PROVIDER_API_KEY]: el.providerApiKeyInput,
+    [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
+    [StorageKeys.MIN_VISIT_DURATION]: el.minVisitDurationInput,
+    [StorageKeys.MIN_SCROLL_DEPTH]: el.minScrollDepthInput,
+    [StorageKeys.MAX_TOKENS_PER_PROMPT]: el.maxTokensPerPromptInput
+  };
+}
 
-const openai2BaseUrlInput = document.getElementById('openai2BaseUrl') as HTMLInputElement;
-const openai2ApiKeyInput = document.getElementById('openai2ApiKey') as HTMLInputElement;
-const openai2ModelInput = document.getElementById('openai2Model') as HTMLInputElement;
+export function getAiProviderElements(): AIProviderElements {
+  const el = getDashboardElements();
+  return {
+    select: el.aiProviderSelect as HTMLSelectElement,
+    geminiSettings: el.geminiSettingsDiv as HTMLElement,
+    openaiSettings: el.openaiSettingsDiv as HTMLElement,
+    openai2Settings: el.openai2SettingsDiv as HTMLElement,
+    lmStudioSettings: el.lmStudioSettingsDiv ?? undefined,
+    ollamaSettings: el.ollamaSettingsDiv ?? undefined,
+    openaiCompatibleSettings: el.openaiCompatibleSettingsDiv ?? undefined
+  };
+}
 
-const lmStudioBaseUrlInput = document.getElementById('lmStudioBaseUrl') as HTMLInputElement;
-const lmStudioModelInput = document.getElementById('lmStudioModel') as HTMLInputElement;
-
-const ollamaSettingsDiv = document.getElementById('ollamaSettings') as HTMLElement;
-const ollamaBaseUrlInput = document.getElementById('ollamaBaseUrl') as HTMLInputElement;
-const ollamaModelInput = document.getElementById('ollamaModel') as HTMLInputElement;
-
-const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
-
-const providerApiKeyInput = document.getElementById('providerApiKey') as HTMLInputElement;
-const providerModelInput = document.getElementById('providerModel') as HTMLInputElement;
-
-const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement;
-const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement;
-const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
-const aiTimeoutSecondsInput = document.getElementById('aiTimeoutSeconds') as HTMLInputElement;
-const saveBtn = document.getElementById('save') as HTMLButtonElement;
-const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
-const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
-const statusDiv = document.getElementById('status') as HTMLElement;
-
-const settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement | null> = {
-  [StorageKeys.OBSIDIAN_API_KEY]: apiKeyInput,
-  [StorageKeys.OBSIDIAN_PROTOCOL]: protocolInput,
-  [StorageKeys.OBSIDIAN_PORT]: portInput,
-  [StorageKeys.OBSIDIAN_DAILY_PATH]: dailyPathInput,
-  [StorageKeys.AI_PROVIDER]: aiProviderSelect,
-  [StorageKeys.GEMINI_API_KEY]: geminiApiKeyInput,
-  [StorageKeys.GEMINI_MODEL]: geminiModelInput,
-  [StorageKeys.OPENAI_BASE_URL]: openaiBaseUrlInput,
-  [StorageKeys.OPENAI_API_KEY]: openaiApiKeyInput,
-  [StorageKeys.OPENAI_MODEL]: openaiModelInput,
-  [StorageKeys.OPENAI_2_BASE_URL]: openai2BaseUrlInput,
-  [StorageKeys.OPENAI_2_API_KEY]: openai2ApiKeyInput,
-  [StorageKeys.OPENAI_2_MODEL]: openai2ModelInput,
-  [StorageKeys.LM_STUDIO_BASE_URL]: lmStudioBaseUrlInput,
-  [StorageKeys.LM_STUDIO_MODEL]: lmStudioModelInput,
-  [StorageKeys.OLLAMA_BASE_URL]: ollamaBaseUrlInput,
-  [StorageKeys.OLLAMA_MODEL]: ollamaModelInput,
-  [StorageKeys.PROVIDER_TYPE]: null,
-  [StorageKeys.PROVIDER_BASE_URL]: providerBaseUrlInput,
-  [StorageKeys.PROVIDER_API_KEY]: providerApiKeyInput,
-  [StorageKeys.PROVIDER_MODEL]: providerModelInput,
-  [StorageKeys.MIN_VISIT_DURATION]: minVisitDurationInput,
-  [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepthInput,
-  [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensPerPromptInput
-};
-
-const aiProviderElements: AIProviderElements = {
-  select: aiProviderSelect,
-  geminiSettings: geminiSettingsDiv,
-  openaiSettings: openaiSettingsDiv,
-  openai2Settings: openai2SettingsDiv,
-  lmStudioSettings: lmStudioSettingsDiv,
-  ollamaSettings: ollamaSettingsDiv,
-  openaiCompatibleSettings: openaiCompatibleSettingsDiv
-};
-
-async function loadGeneralSettings(): Promise<void> {
+export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
-  loadSettingsToInputs(settings, settingsMapping);
-  updateAIProviderVisibility(aiProviderElements);
+  loadSettingsToInputs(settings, getSettingsMapping());
+  updateAIProviderVisibility(getAiProviderElements());
 
   // AIタイムアウト読み込み（0=自動のため空欄表示）
   const storedTimeoutMs = settings[StorageKeys.AI_TIMEOUT_MS] as number ?? 0;
-  aiTimeoutSecondsInput.value = storedTimeoutMs > 0 ? String(storedTimeoutMs / 1000) : '';
+  const el = getDashboardElements();
+  if (el.aiTimeoutSecondsInput) {
+    el.aiTimeoutSecondsInput.value = storedTimeoutMs > 0 ? String(storedTimeoutMs / 1000) : '';
+  }
 
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
@@ -191,7 +252,7 @@ async function loadGeneralSettings(): Promise<void> {
 // Connection Test Helpers
 // ============================================================================
 
-function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, successColor: string, errorColor: string): HTMLElement {
+export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, successColor: string, errorColor: string): HTMLElement {
   const statusDiv = document.createElement('div');
   statusDiv.style.marginBottom = '8px';
 
@@ -212,13 +273,14 @@ function createConnectionStatusElement(label: string, result: { success: boolean
   return statusDiv;
 }
 
-async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
+export async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
+  const el = getDashboardElements();
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_OBSIDIAN',
     payload: apiKey
       ? {
-          protocol: protocolInput?.value?.trim(),
-          port: portInput?.value?.trim(),
+          protocol: el.protocolInput?.value?.trim(),
+          port: el.portInput?.value?.trim(),
           apiKey: apiKey,
         }
       : {}
@@ -227,7 +289,7 @@ async function testObsidianConnection(apiKey: string): Promise<{ success: boolea
   return testResult?.obsidian || { success: false, message: 'No response' };
 }
 
-async function testAiConnection(): Promise<{ success: boolean; message: string }> {
+export async function testAiConnection(): Promise<{ success: boolean; message: string }> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
     payload: {}
@@ -236,128 +298,139 @@ async function testAiConnection(): Promise<{ success: boolean; message: string }
   return testResult?.ai || { success: false, message: 'No response' };
 }
 
-async function handleSaveOnly(): Promise<void> {
-  statusDiv.textContent = '';
-  statusDiv.className = '';
+export async function handleSaveOnly(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.statusDiv) return;
+  el.statusDiv.textContent = '';
+  el.statusDiv.className = '';
 
   const errorPairs: ErrorPair[] = [
-    [protocolInput, 'protocolError'],
-    [portInput, 'portError'],
-    [minVisitDurationInput, 'minVisitDurationError'],
-    [minScrollDepthInput, 'minScrollDepthError'],
-    [maxTokensPerPromptInput, 'maxTokensError']
+    [el.protocolInput, 'protocolError'],
+    [el.portInput, 'portError'],
+    [el.minVisitDurationInput, 'minVisitDurationError'],
+    [el.minScrollDepthInput, 'minScrollDepthError'],
+    [el.maxTokensPerPromptInput, 'maxTokensError']
   ];
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
+  if (!validateAllFields(el.protocolInput, el.portInput, el.minVisitDurationInput, el.minScrollDepthInput, el.maxTokensPerPromptInput)) {
     return;
   }
 
-  const newSettings = extractSettingsFromInputs(settingsMapping);
+  const newSettings = extractSettingsFromInputs(getSettingsMapping());
 
   // AIタイムアウト: 秒→ミリ秒変換（空欄=0=自動）
-  const timeoutSec = parseFloat(aiTimeoutSecondsInput.value);
+  const timeoutSec = el.aiTimeoutSecondsInput ? parseFloat(el.aiTimeoutSecondsInput.value) : NaN;
   newSettings[StorageKeys.AI_TIMEOUT_MS] = (!isNaN(timeoutSec) && timeoutSec >= 10) ? timeoutSec * 1000 : 0;
 
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
   await saveSettingsWithAllowedUrls(mergedSettings);
 
-  statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
-  statusDiv.className = 'success';
+  el.statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
+  el.statusDiv.className = 'success';
 }
 
-async function handleTestObsidian(): Promise<void> {
-  if (!testObsidianBtn) return;
+export async function handleTestObsidian(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.testObsidianBtn || !el.statusDiv) return;
 
-  statusDiv.innerHTML = '';
-  statusDiv.className = '';
-  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  el.statusDiv.innerHTML = '';
+  el.statusDiv.className = '';
+  el.statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  testObsidianBtn.disabled = true;
+  el.testObsidianBtn.disabled = true;
   try {
-    const typedApiKey = apiKeyInput?.value?.trim();
+    const typedApiKey = el.apiKeyInput?.value?.trim();
     const obsidianResult = await testObsidianConnection(typedApiKey || '');
 
-    statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    el.statusDiv.innerHTML = '';
+    el.statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
 
     // HTTPS証明書警告
-    if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && protocolInput.value === 'https') {
-      const port = parseInt(portInput.value.trim(), 10);
+    if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && el.protocolInput?.value === 'https') {
+      const port = parseInt(el.portInput?.value?.trim() || '0', 10);
       const url = `https://127.0.0.1:${port}/`;
       const link = document.createElement('a');
       link.href = url;
       link.target = '_blank';
       link.textContent = getMessage('acceptCertificate') || '証明書を承認する';
       link.rel = 'noopener noreferrer';
-      statusDiv.appendChild(document.createElement('br'));
-      statusDiv.appendChild(link);
+      el.statusDiv.appendChild(document.createElement('br'));
+      el.statusDiv.appendChild(link);
     }
 
-    statusDiv.className = obsidianResult.success ? 'success' : 'error';
+    el.statusDiv.className = obsidianResult.success ? 'success' : 'error';
   } catch (e) {
-    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
-    statusDiv.className = 'error';
+    el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    el.statusDiv.className = 'error';
   } finally {
-    testObsidianBtn.disabled = false;
+    el.testObsidianBtn.disabled = false;
   }
 }
 
-async function handleTestAi(): Promise<void> {
-  if (!testAiBtn) return;
+export async function handleTestAi(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.testAiBtn || !el.statusDiv) return;
 
-  statusDiv.innerHTML = '';
-  statusDiv.className = '';
-  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  el.statusDiv.innerHTML = '';
+  el.statusDiv.className = '';
+  el.statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  testAiBtn.disabled = true;
+  el.testAiBtn.disabled = true;
   try {
     const aiResult = await testAiConnection();
 
-    statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    el.statusDiv.innerHTML = '';
+    el.statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
 
-    statusDiv.className = aiResult.success ? 'success' : 'error';
+    el.statusDiv.className = aiResult.success ? 'success' : 'error';
   } catch (e) {
-    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
-    statusDiv.className = 'error';
+    el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    el.statusDiv.className = 'error';
   } finally {
-    testAiBtn.disabled = false;
+    el.testAiBtn.disabled = false;
   }
 }
 
 // Breaking Changes Notification Modal
 // ============================================================================
 
-const breakingChangesModal = document.getElementById('breakingChangesModal') as HTMLElement | null;
-const closeBreakingChangesModalBtn = document.getElementById('closeBreakingChangesModalBtn') as HTMLButtonElement | null;
-const dismissBreakingChangesModalBtn = document.getElementById('dismissBreakingChangesModalBtn') as HTMLButtonElement | null;
 let breakingChangesTrapId: string | null = null;
 
 const BREAKING_CHANGES_SHOWN_KEY = 'breaking_changes_v5_shown';
+
+function getBreakingChangesElements() {
+  return {
+    modal: document.getElementById('breakingChangesModal') as HTMLElement | null,
+    closeBtn: document.getElementById('closeBreakingChangesModalBtn') as HTMLButtonElement | null,
+    dismissBtn: document.getElementById('dismissBreakingChangesModalBtn') as HTMLButtonElement | null,
+  };
+}
 
 async function showBreakingChangesModal(): Promise<void> {
   // 既に表示済みの場合はスキップ
   const shown = await chrome.storage.local.get(BREAKING_CHANGES_SHOWN_KEY).then(result => result[BREAKING_CHANGES_SHOWN_KEY]);
   if (shown) return;
 
-  if (!breakingChangesModal) return;
-  breakingChangesModal.classList.remove('hidden');
-  breakingChangesModal.style.display = 'flex';
-  void breakingChangesModal.offsetHeight;
-  breakingChangesModal.classList.add('show');
+  const { modal, dismissBtn } = getBreakingChangesElements();
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+  void modal.offsetHeight;
+  modal.classList.add('show');
 
   // Focus trap
-  breakingChangesTrapId = focusTrapManager.trap(breakingChangesModal, closeBreakingChangesModal);
-  dismissBreakingChangesModalBtn?.focus();
+  breakingChangesTrapId = focusTrapManager.trap(modal, closeBreakingChangesModal);
+  dismissBtn?.focus();
 }
 
 async function closeBreakingChangesModal(): Promise<void> {
-  if (!breakingChangesModal) return;
-  breakingChangesModal.classList.remove('show');
-  breakingChangesModal.style.display = 'none';
-  breakingChangesModal.classList.add('hidden');
+  const { modal } = getBreakingChangesElements();
+  if (!modal) return;
+  modal.classList.remove('show');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
   if (breakingChangesTrapId) {
     focusTrapManager.release(breakingChangesTrapId);
     breakingChangesTrapId = null;
@@ -367,17 +440,11 @@ async function closeBreakingChangesModal(): Promise<void> {
   await chrome.storage.local.set({ [BREAKING_CHANGES_SHOWN_KEY]: true });
 }
 
-closeBreakingChangesModalBtn?.addEventListener('click', closeBreakingChangesModal);
-dismissBreakingChangesModalBtn?.addEventListener('click', closeBreakingChangesModal);
-breakingChangesModal?.addEventListener('click', (e: MouseEvent) => {
-  if (e.target === breakingChangesModal) closeBreakingChangesModal();
-});
-
 // ============================================================================
 // Initialization
 // ============================================================================
 
-function setHtmlLangDir(): void {
+export function setHtmlLangDir(): void {
   const locale = chrome.i18n.getUILanguage();
   const langCode = locale.split('-')[0];
   document.documentElement.lang = locale;
@@ -456,7 +523,10 @@ async function initConsentWithdrawal(): Promise<void> {
     }
   });
 
-  setupAIProviderChangeListener(aiProviderElements);
+  const aiProviderEl = getAiProviderElements();
+  if (aiProviderEl.select) {
+    setupAIProviderChangeListener(aiProviderEl);
+  }
 
   // Initialize models.dev dialog
   let modelsDevDialog: ModelsDevDialog | null = null;
@@ -475,8 +545,9 @@ async function initConsentWithdrawal(): Promise<void> {
           providerInfoDisplayDiv!.textContent = `${providerId} (${baseUrl})${model ? ` - ${model}` : ''}`;
 
           // Update input values
-          providerApiKeyInput.value = apiKey;
-          providerModelInput.value = model;
+          const el = getDashboardElements();
+          if (el.providerApiKeyInput) el.providerApiKeyInput.value = apiKey;
+          if (el.providerModelInput) el.providerModelInput.value = model;
 
           // Store in settings
           const settings = await getSettings();
@@ -496,35 +567,47 @@ async function initConsentWithdrawal(): Promise<void> {
   // LM Studio preset button
   const lmStudioPresetBtn = document.getElementById('lmStudioPresetBtn') as HTMLButtonElement;
   lmStudioPresetBtn?.addEventListener('click', () => {
-    providerBaseUrlInput.value = 'http://localhost:1234/v1';
-    statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
-    statusDiv.className = 'status-success';
+    const el = getDashboardElements();
+    if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:1234/v1';
+    if (el.statusDiv) {
+      el.statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
+      el.statusDiv.className = 'status-success';
+    }
   });
   // Ollama preset button
   const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
   ollamaPresetBtn?.addEventListener('click', () => {
-    providerBaseUrlInput.value = 'http://localhost:11434/v1';
-    statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
-    statusDiv.className = 'status-success';
+    const el = getDashboardElements();
+    if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:11434/v1';
+    if (el.statusDiv) {
+      el.statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
+      el.statusDiv.className = 'status-success';
+    }
   });
-  setupAllFieldValidations(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput);
+  {
+    const el = getDashboardElements();
+    setupAllFieldValidations(el.protocolInput, el.portInput, el.minVisitDurationInput, el.minScrollDepthInput, el.maxTokensPerPromptInput);
+  }
 
   // 保存ボタン（テストなし）
-  saveBtn?.addEventListener('click', async () => {
-    await handleSaveOnly();
-  });
+  {
+    const el = getDashboardElements();
+    el.saveBtn?.addEventListener('click', async () => {
+      await handleSaveOnly();
+    });
 
-  // 接続テストボタン（保存なし）
-  testObsidianBtn?.addEventListener('click', async () => {
-    await handleTestObsidian();
-  });
+    // 接続テストボタン（保存なし）
+    el.testObsidianBtn?.addEventListener('click', async () => {
+      await handleTestObsidian();
+    });
 
-  testAiBtn?.addEventListener('click', async () => {
-    await handleTestAi();
-  });
+    el.testAiBtn?.addEventListener('click', async () => {
+      await handleTestAi();
+    });
+  }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
-  try { initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
+  try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
@@ -532,4 +615,10 @@ async function initConsentWithdrawal(): Promise<void> {
 
   console.log('[Dashboard] Initialization complete');
 })();
+
+// Export for testability
+export function initDashboard(): void {
+  // This function can be called in tests to initialize the dashboard
+  // In production, the IIFE above calls this automatically
+}
 
