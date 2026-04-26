@@ -3,6 +3,35 @@
  * Chrome Extensions API mock settings for jsdom environment
  */
 
+// ============================================================================
+// jsdom Unimplemented Feature Warning Suppression (MUST be before any imports)
+// ============================================================================
+// Suppress jsdom "Not implemented" warnings for features this project does not use.
+// This must be at the top of the file to execute before jsdom emits warnings.
+// jsdom routes "Not implemented" warnings through both console.warn and console.error.
+const _originalConsoleWarn = console.warn;
+const _originalConsoleError = console.error;
+
+const _isJSDOMNotImplemented = (msg: string): boolean => {
+  return (
+    msg.includes('Not implemented: navigation to another Document') ||
+    msg.includes('Not implemented: HTMLCanvasElement') ||
+    msg.includes('without installing the canvas npm package')
+  );
+};
+
+console.warn = (...args: unknown[]) => {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (_isJSDOMNotImplemented(msg)) return;
+  _originalConsoleWarn.apply(console, args);
+};
+
+console.error = (...args: unknown[]) => {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (_isJSDOMNotImplemented(msg)) return;
+  _originalConsoleError.apply(console, args);
+};
+
 import { Crypto, CryptoKey } from '@peculiar/webcrypto';
 
 // ============================================================================
@@ -536,6 +565,74 @@ afterEach(() => {
     document.body.innerHTML = '';
   }
 });
+
+// ============================================================================
+// HTMLCanvasElement getContext Mock
+// ============================================================================
+
+// Provide a minimal mock for canvas.getContext() so tests that create <canvas>
+// elements do not trigger jsdom warnings. This is sufficient for tests that
+// only verify the function does not throw (e.g. renderFunnelChart).
+const _mockCanvasRenderingContext2D = {
+  fillRect: () => {},
+  fillText: () => {},
+  strokeText: () => {},
+  measureText: () => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 }),
+  beginPath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  stroke: () => {},
+  arc: () => {},
+  fill: () => {},
+  clearRect: () => {},
+  save: () => {},
+  restore: () => {},
+  setTransform: () => {},
+  createLinearGradient: () => ({ addColorStop: () => {} }),
+  roundRect: () => {},
+  rect: () => {},
+  closePath: () => {},
+  clip: () => {},
+  scale: () => {},
+  rotate: () => {},
+  translate: () => {},
+  transform: () => {},
+  setLineDash: () => {},
+  getLineDash: () => [],
+  lineWidth: 1,
+  strokeStyle: '',
+  fillStyle: '',
+  font: '',
+  textAlign: 'start',
+  textBaseline: 'alphabetic',
+  globalAlpha: 1,
+  globalCompositeOperation: 'source-over',
+} as unknown as CanvasRenderingContext2D;
+
+// Only mock canvas in jsdom environment (HTMLCanvasElement is undefined in node)
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = function(_contextId: string): CanvasRenderingContext2D | null {
+    return _mockCanvasRenderingContext2D;
+  };
+}
+
+// ============================================================================
+// matchMedia Mock (required for canvas/chart rendering tests)
+// ============================================================================
+
+// Only mock matchMedia in jsdom environment
+if (typeof global.matchMedia === 'undefined') {
+  global.matchMedia = vi.fn((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
 
 // Global alert and confirm mocks
 global.alert = vi.fn(() => {});

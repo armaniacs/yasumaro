@@ -4,8 +4,19 @@
  * 【テスト対象】: src/utils/migration.ts
  */
 
-import { test, expect, jest, beforeEach } from 'vitest';
+import { test, expect, jest, beforeEach, vi } from 'vitest';
 import { migrateToLightweightFormat, migrateUblockSettings, computeChecksum } from '../migration.js';
+
+// Define mock at top level to avoid hoisting warnings
+const { mockInitialize } = vi.hoisted(() => {
+  return {
+    mockInitialize: vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+  };
+});
+
+vi.mock('../trustDb/trustDb.js', () => ({
+  getTrustDb: () => ({ initialize: mockInitialize })
+}), { virtual: true });
 
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア
@@ -454,18 +465,6 @@ describe('initializeTrancoVersion', () => {
     // 【テスト目的】: 非推奨関数がTrustDbに委譲することを確認
     // 【テスト内容】: initializeTrancoVersionがgetTrustDb().initialize()を呼び出す
     // 【期待される動作】: 警告ログ出力後、TrustDbのinitializeメソッドが実行される
-
-    // Use vi.hoisted to define mock that will be hoisted along with vi.mock
-    const { mockInitialize } = vi.hoisted(() => {
-      return {
-        mockInitialize: vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
-      };
-    });
-
-    // Mock the trustDb module - vi.hoisted ensures mockInitialize is available
-    vi.mock('../trustDb/trustDb.js', () => ({
-      getTrustDb: () => ({ initialize: mockInitialize })
-    }), { virtual: true });
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
