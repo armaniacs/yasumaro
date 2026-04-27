@@ -1,4 +1,4 @@
-.PHONY: build clean test test-watch test-coverage test-e2e type-check validate
+.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch
 
 build:
 	npm run build
@@ -25,3 +25,10 @@ validate:
 	npm run validate
 
 test-and-build: test build
+
+# ニュースサイト統合テスト
+test-news:
+	npm test -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
+
+test-news-watch:
+	npm run test:watch -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
