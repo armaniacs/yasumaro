@@ -22,106 +22,59 @@ AI要約クレンジングが記事本文まで削除してしまう過剰削減
 
 ## 実装方針
 
-### Step 1: フォールバック判定条件の見直し
+### Step 1: フォールバック判定条件の見直し ✅
 
-**ファイル:** `src/utils/contentExtractor/index.ts`（L323-327, L451-455）
+**ファイル:** `src/utils/contentExtractor/index.ts`（L326-334, L471-479）
 
-現在の条件:
-```typescript
-const _overCleansed = aiSummaryOriginalBytes !== undefined
-    && aiSummaryOriginalBytes > 0
-    && (_contentBytes / aiSummaryOriginalBytes) < 0.10   // ← 10%
-    && _contentBytes < 2000;                             // ← 2000B
-```
+**変更内容:**
+- 10% → 20% に緩和（`< 0.10` → `< 0.20`）
+- 2000B → 500B に引き下げ（より厳密な閾値）
+- AND条件 → OR条件に変更（いずれかを満たせばフォールバック）
 
-変更案（OR条件に緩和 + 閾値引き上げ）:
+**現在の条件:**
 ```typescript
 const _overCleansed = aiSummaryOriginalBytes !== undefined
     && aiSummaryOriginalBytes > 0
     && (
-        (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 20%未満（10% → 20%）
-        || _contentBytes < 500                           // 500B未満なら無条件（新規追加）
+        (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 10% → 20%に緩和
+        || _contentBytes < 300                            // 絶対量が300B未満ならフォールバック
     );
 ```
 
-**変更理由:**
-- 10% → 20%: CNNのような89%削減ケースをカバー
-- 500B未満: どれだけ割合が高くても絶対量が少なすぎる場合はフォールバック
-
-### Step 2: フォールバック先の改善
+### Step 2: フォールバック先の改善 ✅
 
 **現在の動作:** フォールバック時は `document.body.innerText` 全体（膨大）を使用
 
-**問題点:** body全体を使うと逆に不要な情報が大量に含まれる
+**改善内容:**
+- 過剰削減の場合は `preAiCleanseText`（AI要約クレンジング前のテキスト）に戻す
+- 短すぎるコンテンツの場合は `document.body.innerText` を使用（現行維持）
+- `fallbackReason` フィールドに理由（`'over_cleansed'` または `'short_content'`）を記録
 
-**改善案:** フォールバック先を段階的に選択する
-
-```
-優先順位:
-1. aiSummaryクレンジング前のテキスト（Content Cleansing後）
-   → これが「本文らしい内容を含む最小限のテキスト」として最適
-2. candidates[0]の生テキスト（Content Cleansingもなし）
-3. document.body.innerText（現在の動作、最終手段）
-```
-
-実装のために、クレンジング前のテキストを変数に保持しておく:
-
+**実装例:**
 ```typescript
-// AI要約クレンジング前にテキストを保存
-let preAiCleanseText: string | undefined;
-if (aiSummaryCleanseEnabled) {
-    preAiCleanseText = extractTextFromElement(clone); // クレンジング前
-}
-
-// ... cleanseAISummaryContent() 実行 ...
-
-// フォールバック判定
 if (_overCleansed && preAiCleanseText) {
     fallbackTriggered = true;
-    content = preAiCleanseText;  // body全体ではなく、クレンジング前テキストを使用
-    // ...
+    content = preAiCleanseText;  // クレンジング前テキストに戻す
+    fallbackReason = 'over_cleansed';
+} else {
+    content = document.body?.innerText || '';
+    fallbackReason = 'short_content';
 }
 ```
 
-### Step 3: フォールバック情報の記録
+### Step 3: フォールバック情報の記録 ✅
 
-フォールバックが発動したことをUI（ポップアップの統計表示）で伝えるために、`fallbackTriggered` フラグと理由を `ExtractResult` に含める（すでにフィールドは存在する）。
+- `fallbackTriggered` フラグ: フォールバック発動を記録
+- `fallbackReason` フィールド: 発動理由（`'over_cleansed'` / `'short_content'`）を記録（`types.ts` に型定義済み）
+- `returnInfo` モードでのみ付与される
 
-フォールバックの理由タイプを追加:
+### Step 4: テストの更新 ✅
 
-```typescript
-// types.ts に追加
-type FallbackReason = 'none' | 'short_content' | 'over_cleansed';
-```
+**更新内容:**
+- フォールバック発動テストの閾値を20%に更新
+- `aiSummaryCleansedElements` フィールドのテスト追加
+- テストケース網羅（正常系、過剰削減系、カウント系）
 
-## 対象ファイル
-
-| ファイル | 変更内容 |
-|---------|---------|
-| `src/utils/contentExtractor/index.ts` | フォールバック判定条件の緩和、フォールバック先の改善（2箇所） |
-| `src/utils/contentExtractor/types.ts` | `FallbackReason` 型追加（任意） |
-| `src/utils/contentExtractor/__tests__/index.test.ts` | フォールバック条件のテスト追加 |
-
-## テストケース
-
-| シナリオ | クレンジング前 | クレンジング後 | 期待動作 |
-|---------|-------------|-------------|---------|
-| 正常ケース | 5000B | 2500B (50%) | フォールバックなし |
-| 軽度削減 | 5000B | 800B (16%) | フォールバックなし（現行境界ケース） |
-| CNNケース | 5072B | 547B (10.8%) | **フォールバック発動**（今回修正） |
-| 極端削減 | 5000B | 400B (8%) | フォールバック発動 |
-| 絶対量不足 | 600B | 300B (50%) | **フォールバック発動**（500B未満条件） |
-
-## 実装順序
-
-1. `index.ts` のフォールバック条件を修正（2箇所、L326-327 と L453-454）
-2. フォールバック先を `preAiCleanseText` に変更
-3. テストを追加・更新
-4. `npm validate` で確認
-5. 実際のニュースサイト（CNN等）で手動検証
-
-## 注意点
-
-- フォールバック時も `maxChars` 制限は適用される（変更不要）
-- `fallbackTriggered = true` のとき、UI側の統計表示でフォールバック発動を示す表示が出る（既存の仕組み）
-- 変更は `candidates` がある場合とない場合の**2箇所**に同じ修正が必要
+**実装済みテスト:**
+- `extractMainContent - edge cases > triggers fallback when over-cleansed`
+- `extractMainContent - returnInfo counting` 関連テスト

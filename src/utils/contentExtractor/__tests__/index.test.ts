@@ -287,6 +287,9 @@ describe('extractMainContent - fallback', () => {
         const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
         // fallbackTriggeredがtrueになるかどうかはコンテンツ長次第
         expect(typeof result.fallbackTriggered).toBe('boolean');
+        if (result.fallbackTriggered) {
+            expect(result.fallbackReason).toBe('short_content');
+        }
     });
 
     it('does not trigger fallback when content is sufficient', () => {
@@ -445,15 +448,16 @@ describe('extractMainContent - returnInfo counting when totalRemoved=0', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Content no AI targets. '.repeat(10)}</p>
+                <img src="test.jpg" alt="test alt">
             </article>
         `;
         const result = extractMainContent(
             10000,
-            { returnInfo: true },
-            { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
-        ) as Record<string, unknown>;
+            { cleanseEnabled: false, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false }
+        ) as Record<string, unknown> & { aiSummaryCleansedElements?: number };
 
-        expect(result.aiSummaryCleansedElements).toBeGreaterThanOrEqual(0);
+        expect(result.aiSummaryCleansedElements).toBe(1);
     });
 });
 
@@ -491,10 +495,10 @@ describe('extractMainContent - returnInfo counting when cleanseEnabled=false', (
             10000,
             { returnInfo: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
-        ) as Record<string, unknown>;
+        ) as Record<string, unknown> & { aiSummaryCleansedElements?: number };
 
-        // aiSummaryCleansedElements がカウントされる
-        expect(result.aiSummaryCleansedElements).toBeGreaterThanOrEqual(0);
+        // aiSummaryCleansedElements がカウントされる: 1つのimg[alt] → 1
+        expect(result.aiSummaryCleansedElements).toBe(1);
     });
 });
 
@@ -838,22 +842,25 @@ describe('extractMainContent - edge cases', () => {
         expect(typeof result.content).toBe('string');
     });
 
-    it('triggers fallback when over-cleansed (less than 10% remaining)', () => {
-        // 短いコンテンツを用意して過剰削減をシミュレート
+    it('triggers fallback when over-cleansed (less than 20% remaining)', () => {
+        // 過剰削減をシミュレート（テキスト100B、alt 5000B → alt削除で95%削減）
         document.body.innerHTML = `
             <article>
-                <p>Short</p>
-                <img src="x.jpg" alt="${'x'.repeat(2000)}">
+                <p>${'A'.repeat(100)}</p>
+                <img src="x.jpg" alt="${'B'.repeat(5000)}">
             </article>
         `;
         const result = extractMainContent(
             10000,
             { returnInfo: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
-        ) as Record<string, unknown>;
+        ) as Record<string, unknown> & { aiSummaryCleansedElements?: number, fallbackTriggered?: boolean, fallbackReason?: string, aiSummaryOriginalBytes?: number, content?: string };
 
-        // 過剰削減でフォールバックする可能性をチェック
-        expect(typeof result.fallbackTriggered).toBe('boolean');
+        // 過剰削減でフォールバックが発動するはず
+        expect(result.fallbackTriggered).toBe(true);
+        expect(result.fallbackReason).toBe('over_cleansed');
+        // 1つのimg[alt]が削除されたことを記録
+        expect(result.aiSummaryCleansedElements).toBe(1);
     });
 });
 

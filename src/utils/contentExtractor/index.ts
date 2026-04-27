@@ -74,8 +74,10 @@ export function extractMainContent(
     let aiSummaryCleansedBytes: number | undefined = undefined;  // AI要約クレンジング後のバイト数
     let aiSummaryCleansedElements: number | undefined = undefined;  // AI要約クレンジングで削除した要素数
     let aiSummaryCleansedReason: ExtractResult['aiSummaryCleansedReason'] = 'none';  // AI要約クレンジング実行理由
-    let aiSummaryCleansedReasons: string[] | undefined;  // 複数理由の詳細リスト
-    let fallbackTriggered = false;
+     let aiSummaryCleansedReasons: string[] | undefined;  // 複数理由の詳細リスト
+     let fallbackTriggered = false;
+     let preAiCleanseText: string | undefined;            // AI要約クレンジング前のテキスト（フォールバック用）
+     let fallbackReason: ExtractResult['fallbackReason'] = undefined; // フォールバック理由（triggered時のみ設定）
 
     try {
         // findMainContentCandidates() 前のbody全体のバイト数を計測（textContentベース、全バイト数と単位統一）
@@ -169,6 +171,9 @@ export function extractMainContent(
                     // Content Cleansing後のcloneの状態がAI要約クレンジングの開始点
                     aiSummaryOriginalBytes = cleansedBytes;
 
+                    // フォールバック用にAI要約クレンジング前のテキストを保存（textContent で生テキスト取得）
+                    preAiCleanseText = clone.textContent || '';
+
                     // AI要約クレンジングを実行
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
                         altEnabled,
@@ -248,6 +253,9 @@ export function extractMainContent(
                     // AI要約クレンジング**前**のバイト数を計算
                     aiSummaryOriginalBytes = cleansedBytes;
 
+                    // フォールバック用にAI要約クレンジング前のテキストを保存
+                    preAiCleanseText = clone.textContent || '';
+
                     // AI要約クレンジングを実行
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
                         altEnabled,
@@ -315,29 +323,43 @@ export function extractMainContent(
             // 要素からテキストを抽出
             content = extractTextFromElement(targetElement);
 
-            // 抽出テキストが短すぎる場合、または過剰削減された場合、body全体でフォールバック
-            const _contentBytes2 = getByteSize(content);
-            const _overCleansed2 = aiSummaryOriginalBytes !== undefined
+            // フォールバック判定: 短すぎるコンテンツまたは過剰削減
+            const _contentBytes = getByteSize(content);
+            const _isTooShort = content.trim().length < 100;
+            const _overCleansed = aiSummaryOriginalBytes !== undefined
                 && aiSummaryOriginalBytes > 0
-                && (_contentBytes2 / aiSummaryOriginalBytes) < 0.10
-                && _contentBytes2 < 2000;
-            if (content.trim().length < 100 || _overCleansed2) {
+                && (
+                    (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 10% → 20%に緩和
+                    || _contentBytes < 300                            // 絶対量が300B未満ならフォールバック
+                );
+
+            if (_isTooShort || _overCleansed) {
                 fallbackTriggered = true;
-                content = document.body?.innerText || '';
-                // フォールバック後のバイト数を再計算
-                originalBytes = getByteSize(content);
-                cleansedBytes = originalBytes; // クレンジングなしなので同じ値
-                
-                // フォールバックしたため、適用したクレンジングの結果を破棄
-                aiSummaryOriginalBytes = undefined;
-                aiSummaryCleansedBytes = undefined;
-                aiSummaryCleansedElements = undefined;
-                aiSummaryCleansedReason = 'none';
-                aiSummaryCleansedReasons = undefined;
+                if (_overCleansed && preAiCleanseText) {
+                    // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
+                    content = preAiCleanseText;
+                    fallbackReason = 'over_cleansed';
+                    // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
+                } else {
+                    // 短すぎるコンテンツの場合、body全体を使用
+                    content = document.body?.innerText || '';
+                    fallbackReason = 'short_content';
+
+                    // フォールバックしたため、適用したクレンジングの結果を破棄
+                    aiSummaryOriginalBytes = undefined;
+                    aiSummaryCleansedBytes = undefined;
+                    aiSummaryCleansedElements = undefined;
+                    aiSummaryCleansedReason = 'none';
+                    aiSummaryCleansedReasons = undefined;
+                }
                 cleansedReason = 'none';
                 hardStripRemoved = 0;
                 keywordStripRemoved = 0;
                 totalRemoved = 0;
+
+                // フォールバック後のバイト数を再計算
+                originalBytes = getByteSize(content);
+                cleansedBytes = originalBytes;
             }
         } else {
             // 候補がない場合、body全体をクレンジング対象としてフォールバック
@@ -375,6 +397,11 @@ export function extractMainContent(
                     // AI要約クレンジング**前**のバイト数を計算（テキストベース）
                     // Content Cleansing後のcloneの状態がAI要約クレンジングの開始点
                     aiSummaryOriginalBytes = cleansedBytes;
+
+                    // フォールバック用にAI要約クレンジング前のテキストを保存
+                    preAiCleanseText = clone.textContent || '';
+
+                    // AI要約クレンジングを実行
 
                     // AI要約クレンジングを実行
                     const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
@@ -443,28 +470,43 @@ export function extractMainContent(
 
                 content = extractTextFromElement(clone);
 
-                // 抽出テキストが短すぎる場合、または過剰削減された場合、body全体でフォールバック
+                // フォールバック判定: 短すぎるコンテンツまたは過剰削減
                 const _contentBytes = getByteSize(content);
+                const _isTooShort = content.trim().length < 100;
                 const _overCleansed = aiSummaryOriginalBytes !== undefined
                     && aiSummaryOriginalBytes > 0
-                    && (_contentBytes / aiSummaryOriginalBytes) < 0.10
-                    && _contentBytes < 2000;
-                if (content.trim().length < 100 || _overCleansed) {
-                    fallbackTriggered = true;
-                    content = document.body?.innerText || '';
-                    originalBytes = getByteSize(content);
-                    cleansedBytes = originalBytes;
-                    
-                    // フォールバックしたため、適用したクレンジングの結果を破棄
-                    aiSummaryOriginalBytes = undefined;
-                    aiSummaryCleansedBytes = undefined;
-                    aiSummaryCleansedElements = undefined;
-                    aiSummaryCleansedReason = 'none';
-                    aiSummaryCleansedReasons = undefined;
-                    cleansedReason = 'none';
-                    hardStripRemoved = 0;
-                    keywordStripRemoved = 0;
-                    totalRemoved = 0;
+                    && (
+                        (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 10% → 20%に緩和
+                        || _contentBytes < 300                            // 絶対量が300B未満ならフォールバック
+                    );
+
+                 if (_isTooShort || _overCleansed) {
+                     fallbackTriggered = true;
+                     if (_overCleansed && preAiCleanseText) {
+                         // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
+                         content = preAiCleanseText;
+                         fallbackReason = 'over_cleansed';
+                         // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
+                     } else {
+                         // 短すぎるコンテンツの場合、body全体を使用
+                         content = document.body?.innerText || '';
+                         fallbackReason = 'short_content';
+
+                         // フォールバックしたため、適用したクレンジングの結果を破棄
+                         aiSummaryOriginalBytes = undefined;
+                         aiSummaryCleansedBytes = undefined;
+                         aiSummaryCleansedElements = undefined;
+                         aiSummaryCleansedReason = 'none';
+                         aiSummaryCleansedReasons = undefined;
+                     }
+                     cleansedReason = 'none';
+                     hardStripRemoved = 0;
+                     keywordStripRemoved = 0;
+                     totalRemoved = 0;
+
+                     // フォールバック後のバイト数を再計算
+                     originalBytes = getByteSize(content);
+                     cleansedBytes = originalBytes;
                 }
             } else {
                 content = document.body?.innerText || '';
@@ -523,7 +565,7 @@ export function extractMainContent(
         // AI要約クレンジングが実行されなかった場合（または0件だった場合）、
         // body全体をスキャンして対象候補数をカウント（削除はしない）
         // ただしフォールバック発動時は実際の処理が行われなかったためカウント対象外とする
-        if (!fallbackTriggered && (aiSummaryCleansedElements === undefined || aiSummaryCleansedElements === 0) && aiSummaryCleanseEnabled && document.body) {
+        if (!fallbackTriggered && aiSummaryCleanseEnabled && document.body) {
             const aiSummaryCountResult = countAISummaryTargets(document.body, {
                 altEnabled,
                 metadataEnabled,
@@ -542,29 +584,61 @@ export function extractMainContent(
                 paginationEnabled,
                 snsPromoEnabled,
                 popupEnabled,
-                platformEnabled
+                platformEnabled,
+                // NEW: 9つの追加オプション
+                textDensityEnabled,
+                shortSeqEnabled,
+                symbolLineEnabled,
+                linkParaEnabled,
+                enhancedHiddenEnabled,
+                emptyElemEnabled,
+                jpLayoutEnabled,
+                jpNavigationEnabled,
+                authorEnabled,
             });
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
+            // カウント結果に応じて理由を設定（0件の場合は'none'のまま）
             if (aiSummaryCountResult.totalRemoved > 0) {
-                // AI要約クレンジング理由を決定
-                const removedTypes: string[] = [];
-                if (aiSummaryCountResult.altRemoved > 0) removedTypes.push('alt');
-                if (aiSummaryCountResult.metadataRemoved > 0) removedTypes.push('metadata');
-                if (aiSummaryCountResult.adsRemoved > 0) removedTypes.push('ads');
-                if (aiSummaryCountResult.navRemoved > 0) removedTypes.push('nav');
-                if (aiSummaryCountResult.socialRemoved > 0) removedTypes.push('social');
-                if (aiSummaryCountResult.deepRemoved > 0) removedTypes.push('deep');
+                if (aiSummaryCleansedReason === 'none') {
+                    const removedTypes: string[] = [];
+                    if (aiSummaryCountResult.altRemoved > 0) removedTypes.push('alt');
+                    if (aiSummaryCountResult.metadataRemoved > 0) removedTypes.push('metadata');
+                    if (aiSummaryCountResult.adsRemoved > 0) removedTypes.push('ads');
+                    if (aiSummaryCountResult.navRemoved > 0) removedTypes.push('nav');
+                    if (aiSummaryCountResult.socialRemoved > 0) removedTypes.push('social');
+                    if (aiSummaryCountResult.deepRemoved > 0) removedTypes.push('deep');
+                    if (aiSummaryCountResult.jsonLdRemoved! > 0) removedTypes.push('jsonLd');
+                    if (aiSummaryCountResult.lazyLoadRemoved! > 0) removedTypes.push('lazyLoad');
+                    if (aiSummaryCountResult.skipLinkRemoved! > 0) removedTypes.push('skipLink');
+                    if (aiSummaryCountResult.cardRemoved! > 0) removedTypes.push('card');
+                    if (aiSummaryCountResult.linkDensityRemoved! > 0) removedTypes.push('linkDensity');
+                    if (aiSummaryCountResult.fixedRemoved! > 0) removedTypes.push('fixed');
+                    if (aiSummaryCountResult.recommendRemoved! > 0) removedTypes.push('recommend');
+                    if (aiSummaryCountResult.paginationRemoved! > 0) removedTypes.push('pagination');
+                    if (aiSummaryCountResult.snsPromoRemoved! > 0) removedTypes.push('snsPromo');
+                    if (aiSummaryCountResult.popupRemoved! > 0) removedTypes.push('popup');
+                    if (aiSummaryCountResult.platformRemoved! > 0) removedTypes.push('platform');
+                    if (aiSummaryCountResult.textDensityRemoved! > 0) removedTypes.push('textDensity');
+                    if (aiSummaryCountResult.shortSeqRemoved! > 0) removedTypes.push('shortSeq');
+                    if (aiSummaryCountResult.symbolLineRemoved! > 0) removedTypes.push('symbolLine');
+                    if (aiSummaryCountResult.linkParaRemoved! > 0) removedTypes.push('linkPara');
+                    if (aiSummaryCountResult.enhancedHiddenRemoved! > 0) removedTypes.push('enhancedHidden');
+                    if (aiSummaryCountResult.emptyElemRemoved! > 0) removedTypes.push('emptyElem');
+                    if (aiSummaryCountResult.jpLayoutRemoved! > 0) removedTypes.push('jpLayout');
+                    if (aiSummaryCountResult.jpNavigationRemoved! > 0) removedTypes.push('jpNavigation');
+                    if (aiSummaryCountResult.authorRemoved! > 0) removedTypes.push('author');
 
-                if (removedTypes.length === 1) {
-                    aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-                } else if (removedTypes.length > 1) {
-                    aiSummaryCleansedReason = 'multiple';
-                    aiSummaryCleansedReasons = removedTypes;
+                    if (removedTypes.length === 1) {
+                        aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
+                    } else if (removedTypes.length > 1) {
+                        aiSummaryCleansedReason = 'multiple';
+                        aiSummaryCleansedReasons = removedTypes;
+                    }
                 }
             }
         }
-
-        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, fallbackTriggered };
+        
+        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, fallbackTriggered, fallbackReason };
     }
 
     return content;

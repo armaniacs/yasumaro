@@ -12,6 +12,11 @@ import type { CleanseResult } from '../contentCleaner.js';
 export type CleanseCallback = (result: CleanseResult | null) => void;
 
 /**
+ * フォールバック発動理由
+ */
+export type FallbackReason = 'short_content' | 'over_cleansed';
+
+/**
  * 抽出結果の型（コンテンツのみ、またはコンテンツとクレンジング情報）
  */
 export interface ExtractResult {
@@ -30,4 +35,5 @@ export interface ExtractResult {
     aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
     fallbackTriggered?: boolean;          // フォールバックが発動したか
+    fallbackReason?: FallbackReason;      // フォールバック発動理由（triggered 時のみ）
 }

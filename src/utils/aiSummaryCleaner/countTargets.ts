@@ -315,8 +315,25 @@ export function countAISummaryTargets(
         skipLinkRemoved: skipLinkCount,
         cardRemoved: cardCount,
         linkDensityRemoved: linkDensityCount,
+        // NEW: 6つの新しいオプション
+        fixedRemoved: 0,
+        recommendRemoved: 0,
+        paginationRemoved: 0,
+        snsPromoRemoved: 0,
+        popupRemoved: 0,
+        platformRemoved: 0,
+        // NEW: 9つの追加オプション
+        textDensityRemoved: 0,
+        shortSeqRemoved: 0,
+        symbolLineRemoved: 0,
+        linkParaRemoved: 0,
+        enhancedHiddenRemoved: 0,
+        emptyElemRemoved: 0,
+        jpLayoutRemoved: 0,
+        jpNavigationRemoved: 0,
+        authorRemoved: 0,
         totalRemoved: total,
         bytesBefore: 0,
         bytesAfter: 0
-    };
+    } as AiSummaryCleanseResult;
 }
