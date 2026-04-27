@@ -2,7 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.1.19] - to be released
+## [5.1.20] - 2026-04-28
+
+### Added
+
+- **Readabilityスコアによる本文保護（Body Protection）**
+  - Mozilla Readability アルゴリズムをベースに、本文らしさスコアで要素を判定
+  - クレンジング後に本文スコアが閾値未満になった場合、削除を元に戻して本文を保護
+  - ダッシュボードとポップアップ双方に ON/OFF トグルと閾値スライダー（50–500）を追加
+  - デフォルト: 有効、閾値 200
+
+### Fixed
+
+- **E2Eテストのフレーキー改善**: `does NOT fire when stay < 5 seconds` で `maxScrollPercentage` が `0` になる flaky テストを修正
+  - 原因: `window.scrollTo()` 後、content script 側の RAF + 100ms throttle スクロールリスナーが次の `readTestState` 呼び出し前に処理されないケースがあった
+  - 対策: スクロール操作後に `300ms` の wait を追加し、リスナーが確実に処理されるようにした
+
+## [5.1.19] - 2026-04-27
 
 ### Added
 
