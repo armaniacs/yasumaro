@@ -4,6 +4,21 @@
  */
 
 import { escapeCssSelector } from '../cssUtils.js';
+import { isBodyProtected } from './bodyProtection.js';
+
+/**
+ * 要素を削除する前に本文保護チェックを行う
+ * 本文と判定された要素は削除せずfalseを返す
+ * @param element 削除対象の要素
+ * @returns 削除に成功したかどうか（本文保護によりスキップされた場合はfalse）
+ */
+export function safeRemoveElement(element: Element): boolean {
+    if (isBodyProtected(element)) {
+        return false;  // 本文保護: 削除しない
+    }
+    element.remove();
+    return true;
+}
 
 /**
  * パターン配列から [class*="..."], [id*="..."] を結合したCSSセレクター文字列を生成する

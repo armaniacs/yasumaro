@@ -214,5 +214,46 @@ bodyProtectionThreshold?: number; // デフォルト: 200
 - `stripCore.ts`（11関数）と `stripExtended.ts`（15関数）の計26箇所に保護チェックを追加する必要がある
 - 各関数の削除カウント（`totalRemoved` 等）は保護された要素をカウントしない
 - パフォーマンス: `querySelectorAll` を大量に呼ぶため、大きなDOMでは遅くなる可能性がある
-  → 最初から `BODY_SCORE_THRESHOLD` を高めに設定してスキャン対象を絞る
+   → 最初から `BODY_SCORE_THRESHOLD` を高めに設定してスキャン対象を絞る
 - Plan A完了後に着手することを推奨（Plan Aがあれば最悪ケースはカバーできる）
+
+## 実装ステータス（2026-04-27）
+
+### 完了した作業
+
+- [x] **Step 1**: `readabilityScore.ts` 新規作成 — `calculateReadabilityScore()` 実装
+- [x] **Step 2**: `bodyProtection.ts` 新規作成 — `markBodyElements()`, `unmarkBodyElements()`, `isBodyProtected()` 実装
+- [x] **Step 3**: `helpers.ts` に `safeRemoveElement()` 追加
+- [x] **Step 4**: `types.ts` に `bodyProtectionEnabled`, `bodyProtectionThreshold` オプション追加
+- [x] **Step 5**: `stripCore.ts` の全 `elem.remove()` を `safeRemoveElement()` に置換
+- [x] **Step 6**: `stripExtended.ts` の全 `elem.remove()` を `safeRemoveElement()` に置換
+- [x] **Step 7**: `index.ts` に本文マーキング処理を組み込む（`markBodyElements` / `unmarkBodyElements` の呼び出し）
+- [x] **Step 8**: `bodyProtection.ts` の `markBodyElements()` に閾値パラメータを追加
+- [x] **Step 9**: ビルド成功確認（npm run build）
+- [x] **Step 10**: 型チェック成功確認（npm run type-check）
+- [x] **Step 11**: ユニットテスト作成（`readabilityScore.test.ts`: 14 件、`bodyProtection.test.ts`: 14 件）
+- [x] **Step 12**: 統合テスト作成（`newsIntegration.test.ts`: 15 件）
+  - 日本語ニュースサイト（ITmedia 風、Qiita 風、Yahoo!ニュース風）
+  - 英語ニュースサイト（Medium 風、TechCrunch 風）
+  - **実際のニュースサイト（CNN, BBC, CNBC, The Register）**
+  - 境界ケース、統合テスト
+- [x] **Step 13**: 全テスト成功確認（**4479 件パス**）
+
+### 残作業
+
+- [x] **Step 14**: UI（ポップアップ/ダッシュボード）に本文保護オプションのトグルを追加
+  - ダッシュボード: `entrypoints/options/index.html` にチェックボックス + スライダー追加
+  - ポップアップ: `entrypoints/popup/index.html` にチェックボックス + スライダー追加
+  - i18n: `public/_locales/en/messages.json` / `ja/messages.json` にメッセージ追加
+  - `src/popup/aiSummaryCleansingSettings.ts` の `apply/get/setup` 関数を更新
+  - `src/utils/storage/defaults.ts` にデフォルト値追加
+- [x] **Step 15**: 全テスト成功確認（**4480 件パス**）
+
+### 技術的決定事項
+
+1. **アルゴリズム**: Mozilla Readability アルゴリズムをベースに採用（計画通り）
+2. **保護実装**: データ属性（`data-ow-body-protected`）によるマーキング方式（計画通り）
+3. **パフォーマンス対策**: 閾値調整で対応（デフォルト 200）
+4. **オプション構成**: 
+   - `bodyProtectionEnabled`（デフォルト: true）
+   - `bodyProtectionThreshold`（デフォルト: 200）

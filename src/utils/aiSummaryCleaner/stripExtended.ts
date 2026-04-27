@@ -4,7 +4,7 @@
  * 9オプション（テキスト密度・短文連続・記号行・リンクのみ段落・非表示強化・空要素・JPレイアウト・JPナビ・著者メタ）
  */
 
-import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise } from './helpers.js';
+import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement } from './helpers.js';
 
 /**
  * 固定要素を削除（position:fixed/sticky）
@@ -57,8 +57,9 @@ export function stripFixedElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -113,8 +114,9 @@ export function stripRecommendSections(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -144,8 +146,9 @@ export function stripPaginationElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -203,8 +206,9 @@ export function stripSnsPromoElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -241,7 +245,7 @@ export function stripPopupElements(element: Element): number {
         }
     });
 
-    // dialog要素
+    // dialog 要素
     element.querySelectorAll('dialog[open]').forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
@@ -258,8 +262,9 @@ export function stripPopupElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -318,8 +323,9 @@ export function stripPlatformNoise(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -360,8 +366,7 @@ export function stripTextDensityElements(element: Element, threshold: number = 7
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -408,8 +413,9 @@ export function stripShortSequenceElements(element: Element, shortThreshold: num
     }
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     return removedCount;
 }
@@ -436,8 +442,7 @@ export function stripSymbolLineElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -505,8 +510,7 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -552,8 +556,7 @@ export function stripEnhancedHiddenElements(element: Element): number {
     }
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -598,8 +601,7 @@ export function stripEmptyElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -632,8 +634,7 @@ export function stripJPLayoutPatterns(element: Element, customPatterns: string[]
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -678,8 +679,7 @@ export function stripJPNavigationPatterns(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
 }
@@ -724,7 +724,6 @@ export function stripAuthorMetaElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
         removedCount++;
     }
     return removedCount;

@@ -4,7 +4,7 @@
  */
 
 import { escapeCssSelector } from '../cssUtils.js';
-import { buildClassIdSelectors } from './helpers.js';
+import { buildClassIdSelectors, safeRemoveElement } from './helpers.js';
 import { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES } from './patterns.js';
 
 /**
@@ -44,11 +44,12 @@ export function stripMetadataElements(element: Element): number {
     // linkタグ（icon, stylesheet, canonicalなど）
     const linkElements = element.querySelectorAll('link[rel="icon"], link[rel="stylesheet"], link[rel="canonical"]');
     linkElements.forEach(elem => elementsToRemove.push(elem));
-    
+     
     // 削除実行
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     
     return removedCount;
@@ -86,8 +87,9 @@ export function stripAdElements(element: Element): number {
 
     // 削除実行
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -138,7 +140,7 @@ export function stripNavElements(element: Element): number {
             counted.add(elem);
         }
     });
-
+    
     // SPA属性パターン (data-testid / aria-label)
     const spaNavElements = element.querySelectorAll(
         '[data-testid*="footer"], [data-testid*="nav"], ' +
@@ -158,11 +160,12 @@ export function stripNavElements(element: Element): number {
             counted.add(elem);
         }
     });
-
+    
     // 削除実行
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
 
     return removedCount;
@@ -199,8 +202,9 @@ export function stripLegalTextNodes(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     return removedCount;
 }
@@ -237,8 +241,9 @@ export function stripHighLinkDensityElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     return removedCount;
 }
@@ -273,8 +278,9 @@ export function stripSocialElements(element: Element): number {
 
     // 削除実行
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     
     return removedCount;
@@ -290,8 +296,9 @@ export function stripJsonLdScripts(element: Element): number {
     const scripts = element.querySelectorAll('script[type="application/ld+json"]');
     
     scripts.forEach(script => {
-        script.remove();
-        removedCount++;
+        if (safeRemoveElement(script)) {
+            removedCount++;
+        }
     });
     
     return removedCount;
@@ -337,8 +344,7 @@ export function stripLazyLoadElements(element: Element): number {
     });
     
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     
     return removedCount;
@@ -383,8 +389,9 @@ export function stripSkipLinks(element: Element): number {
     });
     
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) {
+            removedCount++;
+        }
     }
     
     return removedCount;
@@ -422,8 +429,7 @@ export function stripCardElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
 
     return removedCount;
@@ -502,8 +508,7 @@ export function stripDeepElements(element: Element): number {
     });
 
     for (const elem of elementsToRemove) {
-        elem.remove();
-        removedCount++;
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
 
     return removedCount;

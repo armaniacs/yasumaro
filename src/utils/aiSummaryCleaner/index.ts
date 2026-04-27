@@ -15,6 +15,7 @@
 
 import { logDebug } from '../logger.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
+import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
 
 // コア_strip関数
 import {
@@ -55,7 +56,8 @@ import {
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
 export { countAISummaryTargets } from './countTargets.js';
 export { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES } from './patterns.js';
-export { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise } from './helpers.js';
+export { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement } from './helpers.js';
+export { markBodyElements, unmarkBodyElements, isBodyProtected } from './bodyProtection.js';
 
 /**
  * DOMからAI要約に不要な要素を削除する
@@ -79,14 +81,14 @@ export function cleanseAISummaryContent(
         skipLinkEnabled = false,
         cardEnabled = false,
         linkDensityEnabled = false,
-        // NEW: 6つの新しいオプション
+        // NEW: 6 つの新しいオプション
         fixedEnabled = false,
         recommendEnabled = true,
         paginationEnabled = false,
         snsPromoEnabled = false,
         popupEnabled = true,
         platformEnabled = false,
-        // NEW: 9つの追加オプション
+        // NEW: 9 つの追加オプション
         textDensityEnabled = false,
         shortSeqEnabled = false,
         symbolLineEnabled = false,
@@ -96,6 +98,9 @@ export function cleanseAISummaryContent(
         jpLayoutEnabled = false,
         jpNavigationEnabled = false,
         authorEnabled = false,
+        // Body protection options
+        bodyProtectionEnabled = true,
+        bodyProtectionThreshold = 200,
         // Threshold settings
         linkRatioThreshold = 70,
         shortTextThreshold = 30,
@@ -118,14 +123,14 @@ export function cleanseAISummaryContent(
     let skipLinkRemoved = 0;
     let cardRemoved = 0;
     let linkDensityRemoved = 0;
-    // NEW: 6つの新しいオプション
+    // NEW: 6 つの新しいオプション
     let fixedRemoved = 0;
     let recommendRemoved = 0;
     let paginationRemoved = 0;
     let snsPromoRemoved = 0;
     let popupRemoved = 0;
     let platformRemoved = 0;
-    // NEW: 9つの追加オプション
+    // NEW: 9 つの追加オプション
     let textDensityRemoved = 0;
     let shortSeqRemoved = 0;
     let symbolLineRemoved = 0;
@@ -135,6 +140,11 @@ export function cleanseAISummaryContent(
     let jpLayoutRemoved = 0;
     let jpNavigationRemoved = 0;
     let authorRemoved = 0;
+
+    // Step 1: 本文要素にマーキング（本文保護が有効な場合）
+    if (bodyProtectionEnabled) {
+        markBodyElements(element, bodyProtectionThreshold);
+    }
 
     if (altEnabled) {
         altRemoved = stripAltAttributes(element);
@@ -241,6 +251,11 @@ export function cleanseAISummaryContent(
 
     if (authorEnabled) {
         authorRemoved = stripAuthorMetaElements(element);
+    }
+
+    // Step 3: マーカーを除去（本文保護が有効な場合）
+    if (bodyProtectionEnabled) {
+        unmarkBodyElements(element);
     }
 
     const bytesAfter = new Blob([element.outerHTML || '']).size;

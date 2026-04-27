@@ -339,6 +339,22 @@
         <div id="maxTokensError" class="field-error" role="alert"></div>
       </div>
 
+      <hr class="settings-hr">
+
+      <div class="form-group">
+        <label data-i18n="bodyProtectionSection">Body Protection</label>
+        <div class="mb-8">
+          <input type="checkbox" id="popup-body-protection-enabled" aria-describedby="popupBodyProtectionDesc">
+          <label for="popup-body-protection-enabled" class="inline-label" data-i18n="aiSummaryCleansingBodyProtectionEnabledDesc">Protect main article body if cleansing score drops below threshold.</label>
+        </div>
+        <div class="threshold-slider" id="popupBodyProtectionThresholdGroup">
+          <label for="popup-body-protection-threshold">
+            <span data-i18n="aiSummaryCleansingBodyProtectionThresholdLabel">Score Threshold</span>: <span id="popup-body-protection-threshold-value">200</span>
+          </label>
+          <input type="range" id="popup-body-protection-threshold" min="50" max="500" step="10" value="200" class="slider">
+        </div>
+      </div>
+
       <button id="save" data-i18n="saveAndTest">Save & Test Connection</button>
       <div id="status" aria-live="polite"></div>
     </div>

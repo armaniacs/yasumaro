@@ -43,6 +43,9 @@ export interface AiSummaryCleansingSettings {
     jpLayoutEnabled: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
     jpNavigationEnabled: boolean;     // JP ナビ頻出語（デフォルト: false）
     authorEnabled: boolean;         // 執筆者・メタ情報（デフォルト: false）
+    // Body protection settings
+    bodyProtectionEnabled: boolean;  // 本文保護機能（デフォルト：true）
+    bodyProtectionThreshold: number; // 本文スコア閾値（デフォルト：200）
 }
 
 /**
@@ -84,7 +87,10 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         emptyElemEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] ?? true,
         jpLayoutEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] ?? false,
         jpNavigationEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] ?? false,
-        authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false
+    authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false,
+    // Body protection
+    bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
+    bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200
     };
 }
 
@@ -127,6 +133,8 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] = settings.jpLayoutEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] = settings.jpNavigationEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] = settings.authorEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     await saveSettings(currentSettings);
 }
 
@@ -164,6 +172,9 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const jpLayoutCheckbox = document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement;
     const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
+    const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
+    const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
+    const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -189,16 +200,26 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (shortSeqCheckbox) shortSeqCheckbox.checked = settings.shortSeqEnabled;
     if (symbolLineCheckbox) symbolLineCheckbox.checked = settings.symbolLineEnabled;
     if (linkParaCheckbox) linkParaCheckbox.checked = settings.linkParaEnabled;
-if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.checked = settings.enhancedHiddenEnabled;
-     else console.warn('Missing UI element: ai-summary-cleansing-enhanced-hidden checkbox');
-     if (emptyElemCheckbox) emptyElemCheckbox.checked = settings.emptyElemEnabled;
-     else console.warn('Missing UI element: ai-summary-cleansing-empty-elem checkbox');
-     if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
-     else console.warn('Missing UI element: ai-summary-cleansing-jp-layout checkbox');
-     if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
-     else console.warn('Missing UI element: ai-summary-cleansing-jp-navigation checkbox');
-     if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
-     else console.warn('Missing UI element: ai-summary-cleansing-author checkbox');
+    if (enhancedHiddenCheckbox) enhancedHiddenCheckbox.checked = settings.enhancedHiddenEnabled;
+    if (emptyElemCheckbox) emptyElemCheckbox.checked = settings.emptyElemEnabled;
+    if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
+    if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
+    if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
+    // Body protection (dashboard)
+    if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
+    if (bodyProtectionThresholdSlider) {
+        bodyProtectionThresholdSlider.value = settings.bodyProtectionThreshold.toString();
+        if (bodyProtectionThresholdValue) bodyProtectionThresholdValue.textContent = settings.bodyProtectionThreshold.toString();
+    }
+    // Body protection (popup-specific elements)
+    const popupBodyProtectionEnabledCheckbox = document.getElementById('popup-body-protection-enabled') as HTMLInputElement;
+    const popupBodyProtectionThresholdSlider = document.getElementById('popup-body-protection-threshold') as HTMLInputElement;
+    const popupBodyProtectionThresholdValue = document.getElementById('popup-body-protection-threshold-value') as HTMLSpanElement;
+    if (popupBodyProtectionEnabledCheckbox) popupBodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
+    if (popupBodyProtectionThresholdSlider) {
+        popupBodyProtectionThresholdSlider.value = settings.bodyProtectionThreshold.toString();
+        if (popupBodyProtectionThresholdValue) popupBodyProtectionThresholdValue.textContent = settings.bodyProtectionThreshold.toString();
+    }
 
     const linkRatioThresholdInput = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     const shortTextThresholdInput = document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement;
@@ -294,7 +315,9 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         emptyElemEnabled: (document.getElementById('ai-summary-cleansing-empty-elem') as HTMLInputElement)?.checked ?? true,
         jpLayoutEnabled: (document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement)?.checked ?? false,
         jpNavigationEnabled: (document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement)?.checked ?? false,
-        authorEnabled: (document.getElementById('ai-summary-cleansing-author') as HTMLInputElement)?.checked ?? false
+        authorEnabled: (document.getElementById('ai-summary-cleansing-author') as HTMLInputElement)?.checked ?? false,
+        bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
+        bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10)
     };
 }
 
@@ -360,6 +383,15 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (jpLayoutCheckbox) jpLayoutCheckbox.disabled = !enabled;
     if (jpNavigationCheckbox) jpNavigationCheckbox.disabled = !enabled;
     if (authorCheckbox) authorCheckbox.disabled = !enabled;
+    // Body protection is independent of cleansing enabled/disabled
+    const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
+    const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
+    const popupBodyProtectionEnabledCheckbox = document.getElementById('popup-body-protection-enabled') as HTMLInputElement;
+    const popupBodyProtectionThresholdSlider = document.getElementById('popup-body-protection-threshold') as HTMLInputElement;
+    if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.disabled = false;
+    if (bodyProtectionThresholdSlider) bodyProtectionThresholdSlider.disabled = false;
+    if (popupBodyProtectionEnabledCheckbox) popupBodyProtectionEnabledCheckbox.disabled = false;
+    if (popupBodyProtectionThresholdSlider) popupBodyProtectionThresholdSlider.disabled = false;
 }
 
 /**
@@ -427,11 +459,28 @@ export function setupAiSummaryCleansingEventListeners(): void {
         }
     }
 
+    // Body protection checkboxes (dashboard + popup)
+    const bodyProtectionIds = [
+        'ai-summary-cleansing-body-protection-enabled',
+        'popup-body-protection-enabled'
+    ];
+    for (const id of bodyProtectionIds) {
+        const checkbox = document.getElementById(id) as HTMLInputElement;
+        if (checkbox) {
+            checkbox.addEventListener('change', async () => {
+                const settings = getAiSummaryCleansingSettingsFromUI();
+                await saveAiSummaryCleansingSettings(settings);
+            });
+        }
+    }
+
     const rangeConfigs = [
         { id: 'ai-summary-cleansing-link-ratio-threshold', valId: 'link-ratio-threshold-value' },
         { id: 'ai-summary-cleansing-short-text-threshold', valId: 'short-text-threshold-value' },
         { id: 'ai-summary-cleansing-short-seq-count', valId: 'short-seq-count-value' },
-        { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value' }
+        { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value' },
+        { id: 'ai-summary-cleansing-body-protection-threshold', valId: 'ai-summary-cleansing-body-protection-threshold-value' },
+        { id: 'popup-body-protection-threshold', valId: 'popup-body-protection-threshold-value' }
     ];
 
     for (const conf of rangeConfigs) {

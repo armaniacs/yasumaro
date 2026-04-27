@@ -34,5 +34,7 @@ plans/*.md には、今後やりたいこと、今やっていること、完了
   - E2E @ui テスト 35件 全パス
 
 - [プランのみ（未着手）] 2026-04-24-feature-A-cleansing-fallback.md
-- [プランのみ（未着手）] 2026-04-24-feature-C-readabilityscore.md
+- [完了] 2026-04-24-feature-C-readabilityscore.md — Readabilityスコアによる本文保護
+  - 14ステップ完了。UI制御（ポップアップ/ダッシュボード）も実装済み。
+  - 全テスト 4480件パス。type-check パス。
 

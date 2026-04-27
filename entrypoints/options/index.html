@@ -803,6 +803,28 @@
           </div>
         </div>
 
+        <!-- 本文保護設定（Body Protection） -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="bodyProtectionSection">本文保護（Body Protection）</h3>
+          <div class="form-group">
+            <label data-i18n="aiSummaryCleansingBodyProtectionEnabled">本文保護を有効にする</label>
+            <div class="mb-8">
+              <input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">
+              <label for="ai-summary-cleansing-body-protection-enabled" class="inline-label" data-i18n="aiSummaryCleansingBodyProtectionEnabledDesc">クレンジング後の本文スコアが閾値未満の場合、削除を元に戻して本文を保護します。</label>
+            </div>
+            <div class="threshold-slider" id="bodyProtectionThresholdGroup">
+              <label for="ai-summary-cleansing-body-protection-threshold">
+                <span data-i18n="aiSummaryCleansingBodyProtectionThresholdLabel">本文保護閾値</span>: <span id="ai-summary-cleansing-body-protection-threshold-value">200</span>
+              </label>
+              <input type="range" id="ai-summary-cleansing-body-protection-threshold" min="50" max="500" step="10" value="200" class="slider"
+                aria-describedby="bodyProtectionThresholdDesc">
+              <div class="help-text" id="bodyProtectionThresholdDesc" data-i18n="aiSummaryCleansingBodyProtectionThresholdDesc">
+                低い値ほど厳格に保護（50=厳格）、高い値ほど緩やか（500=緩やか）。デフォルト: 200
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">保存</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>

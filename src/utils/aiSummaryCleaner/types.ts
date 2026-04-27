@@ -36,6 +36,9 @@ export interface AiSummaryCleanseOptions {
     jpLayoutEnabled?: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
     jpNavigationEnabled?: boolean;     // JP ナビ頻出語（デフォルト: false）
     authorEnabled?: boolean;         // 執筆者・メタ情報（デフォルト: false）
+    // Body protection options
+    bodyProtectionEnabled?: boolean;   // 本文保護機能（デフォルト: true）
+    bodyProtectionThreshold?: number;  // 本文スコア閾値（デフォルト: 200）
     // Threshold settings
     linkRatioThreshold?: number;      // リンク密度閾値（デフォルト: 70）
     shortTextThreshold?: number;       // 短文閾値文字数（デフォルト: 30）

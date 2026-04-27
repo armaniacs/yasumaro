@@ -138,6 +138,9 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_JP_LAYOUT: 'ai_summary_cleansing_jp_layout', // JP BEM系レイアウトパターン（デフォルト: false）
     AI_SUMMARY_CLEANSING_JP_NAVIGATION: 'ai_summary_cleansing_jp_navigation', // JP ナビ・剰利用語（デフォルト: false）
     AI_SUMMARY_CLEANSING_AUTHOR: 'ai_summary_cleansing_author', // 執筆者・メタ情報（デフォルト: false）
+    // Body protection settings (Readability score)
+    AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED: 'ai_summary_cleansing_body_protection_enabled', // 本文保護機能（デフォルト: true）
+    AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD: 'ai_summary_cleansing_body_protection_threshold', // 本文スコア閾値（デフォルト: 200）
     // Threshold settings for numeric cleansing
     AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD: 'ai_summary_cleansing_link_ratio_threshold', // リンク密度閾値（デフォルト: 70）
     AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD: 'ai_summary_cleansing_short_text_threshold', // 短文閾値文字数（デフォルト: 30）
@@ -272,6 +275,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: number;

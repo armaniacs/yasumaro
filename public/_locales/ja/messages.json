@@ -1658,6 +1658,21 @@
   "aiSummaryCleansingAuthorDesc": {
     "message": "執筆者・メタ情報（author-profile、post-date、tag-list等）。"
   },
+  "bodyProtectionSection": {
+    "message": "本文保護（Body Protection）"
+  },
+  "aiSummaryCleansingBodyProtectionEnabled": {
+    "message": "本文保護を有効にする"
+  },
+  "aiSummaryCleansingBodyProtectionEnabledDesc": {
+    "message": "クレンジング後の本文スコアが閾値未満の場合、削除を元に戻して本文を保護します。"
+  },
+  "aiSummaryCleansingBodyProtectionThresholdLabel": {
+    "message": "保護スコア閾値"
+  },
+  "aiSummaryCleansingBodyProtectionThresholdDesc": {
+    "message": "低い値ほど厳格に保護（50=厳格）、高い値ほど緩やか（500=緩やか）。デフォルト: 200"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },
