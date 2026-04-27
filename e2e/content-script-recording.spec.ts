@@ -133,6 +133,8 @@ test.describe('Content Script Recording @extension', () => {
 
     await test.step('Scroll to 70% immediately', async () => {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.7));
+      // wait for throttled RAF scroll listener to process
+      await page.waitForTimeout(300);
     });
 
     await test.step('Wait only 2s and verify NOT fired', async () => {
