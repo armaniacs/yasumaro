@@ -60,9 +60,12 @@ document.body.innerHTML = `
     <div id="status"></div>
 `;
 
+// Mutable flag for controlling getSettings rejection inside hoisted mock
+const storageMockState = vi.hoisted(() => ({ shouldReject: false }));
+
 // Mock dependencies
-vi.mock('../utils/storage.js', () => ({
-    getSettings: vi.fn().mockResolvedValue({}),
+vi.mock('../../utils/storage.js', () => ({
+    getSettings: vi.fn().mockImplementation(() => storageMockState.shouldReject ? Promise.reject(new Error('fail')) : Promise.resolve({})),
     saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
     StorageKeys: {
         OBSIDIAN_API_KEY: 'obsidianApiKey',
@@ -131,8 +134,8 @@ vi.mock('../i18n.js', () => ({
 }));
 
 // Mock logger - must be before importing popup
-export const logErrorMock = vi.fn();
-vi.mock('../utils/logger.js', () => ({
+const { logErrorMock } = vi.hoisted(() => ({ logErrorMock: vi.fn() }));
+vi.mock('../../utils/logger.js', () => ({
     logError: logErrorMock,
     ErrorCode: {
         INTERNAL_ERROR: 'INTERNAL_ERROR',
@@ -184,6 +187,17 @@ vi.mock('../trancoNotification.js', () => ({
     initTrancoUpdateNotification: vi.fn(),
 }));
 
+// Mock pendingStorage
+vi.mock('../../utils/pendingStorage.js', () => ({
+    getPendingPages: vi.fn(() => Promise.resolve([])),
+    removePendingPages: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock privatePageDialog
+vi.mock('../privatePageDialog.js', () => ({
+    showPrivatePageDialog: vi.fn(),
+}));
+
 // Import after mocks
 import {
     initTabNavigation,
@@ -205,17 +219,38 @@ describe('popup.ts exports', () => {
     });
 });
 
-describe.skip('initTabNavigation', () => {
+describe('initTabNavigation', () => {
     beforeEach(() => {
-        // Reset tab states
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-selected', 'false');
-        });
-        document.querySelectorAll('.tab-panel').forEach(panel => {
-            panel.classList.remove('active');
-            panel.setAttribute('aria-hidden', 'true');
-        });
+        // Restore DOM for tab navigation tests
+        document.body.innerHTML = `
+            <div id="tabList">
+                <button class="tab-btn" aria-controls="panel1"></button>
+                <button class="tab-btn" aria-controls="panel2"></button>
+            </div>
+            <div id="panel1" class="tab-panel" aria-hidden="true"></div>
+            <div id="panel2" class="tab-panel" aria-hidden="true"></div>
+            <input id="apiKey" />
+            <input id="protocol" />
+            <input id="port" />
+            <input id="dailyPath" />
+            <select id="aiProvider"></select>
+            <div id="geminiSettings"></div>
+            <div id="openaiSettings"></div>
+            <div id="openai2Settings"></div>
+            <input id="geminiApiKey" />
+            <input id="geminiModel" />
+            <input id="openaiBaseUrl" />
+            <input id="openaiApiKey" />
+            <input id="openaiModel" />
+            <input id="openai2BaseUrl" />
+            <input id="openai2ApiKey" />
+            <input id="openai2Model" />
+            <input id="minVisitDuration" />
+            <input id="minScrollDepth" />
+            <input id="maxTokensPerPrompt" />
+            <button id="save"></button>
+            <div id="status"></div>
+        `;
         initTabNavigation();
     });
 
@@ -295,10 +330,10 @@ describe('initPopup error handling', () => {
         expect(() => initPopup()).not.toThrow();
     });
 
-    it('logError is called during initPopup execution', () => {
+    it('logError is called during initPopup execution', async () => {
         logErrorMock.mockClear();
-        initPopup();
-        // With getSettingsMock rejecting, logError should be called
+        await initPopup();
+        // With getSettings rejecting, logError may be called
         // for the initCustomPromptManager catch block
     });
 
@@ -308,14 +343,170 @@ describe('initPopup error handling', () => {
     });
 });
 
-describe('initCustomPromptFeature error handling', () => {
+describe('initPopup coverage', () => {
     beforeEach(() => {
         logErrorMock.mockClear();
     });
 
-    it('initCustomPromptFeature does not break initPopup', async () => {
-        // initCustomPromptFeature is called within initPopup
-        // Verify popup initialization still works
-        expect(() => initPopup()).not.toThrow();
+    it('covers normal flow including pending page dialog (one pending page)', async () => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        vi.mocked(getPendingPages).mockResolvedValue([
+            { url: 'https://example.com', reason: 'private', headerValue: 'Cache-Control: private' }
+        ]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+    });
+
+    it('covers AI provider select branch and save button branch', async () => {
+        const { getAiProviderElements } = await import('../settingsForm.js');
+        vi.mocked(getAiProviderElements).mockReturnValueOnce({
+            select: document.createElement('select'),
+            geminiSettings: null, openaiSettings: null, openai2Settings: null
+        } as any);
+        const { getSettingsFormElements } = await import('../settingsForm.js');
+        vi.mocked(getSettingsFormElements).mockReturnValueOnce({
+            apiKeyInput: null, protocolInput: document.createElement('input'), portInput: document.createElement('input'), dailyPathInput: null,
+            aiProviderSelect: null, geminiSettingsDiv: null, openaiSettingsDiv: null,
+            openai2SettingsDiv: null, geminiApiKeyInput: null, geminiModelInput: null,
+            openaiBaseUrlInput: null, openaiApiKeyInput: null, openaiModelInput: null,
+            openai2BaseUrlInput: null, openai2ApiKeyInput: null, openai2ModelInput: null,
+            minVisitDurationInput: document.createElement('input'), minScrollDepthInput: document.createElement('input'),
+            maxTokensPerPromptInput: document.createElement('input'), saveBtn: document.createElement('button'), statusDiv: document.createElement('div'),
+            ollamaPresetBtn: null,
+        } as any);
+        await initPopup();
+    });
+
+    it('catches error in initCustomPromptFeature when getSettings fails', async () => {
+        storageMockState.shouldReject = true;
+        try {
+            await initPopup();
+            await new Promise(r => setTimeout(r, 50));
+        } finally {
+            storageMockState.shouldReject = false;
+        }
+    });
+
+    it('catches error in initNavigation', async () => {
+        const { init: initNavigation } = await import('../navigation.js');
+        vi.mocked(initNavigation).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in initTabNavigation', async () => {
+        // restore normal first
+        vi.resetModules();
+        // This is tricky since initTabNavigation is in same module.
+        // We'll just cover via the catch branch by making querySelectorAll throw.
+        const origQuerySelectorAll = document.querySelectorAll.bind(document);
+        let callCount = 0;
+        vi.spyOn(document, 'querySelectorAll').mockImplementation((selector) => {
+            if (String(selector) === '#tabList .tab-btn' && callCount++ === 0) {
+                throw new Error('fail');
+            }
+            return origQuerySelectorAll(selector);
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+        vi.restoreAllMocks();
+    });
+
+    it('catches error in initDomainFilter', async () => {
+        const { init: initDomainFilter } = await import('../domainFilter.js');
+        vi.mocked(initDomainFilter).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in initPrivacySettings', async () => {
+        const { init: initPrivacySettings } = await import('../privacySettings.js');
+        vi.mocked(initPrivacySettings).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in load', async () => {
+        const { load } = await import('../settingsForm.js');
+        vi.mocked(load).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in initPrivacyConsent', async () => {
+        const { initPrivacyConsent } = await import('../privacyConsentController.js');
+        vi.mocked(initPrivacyConsent).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in loadMasterPasswordSettings', async () => {
+        const { loadMasterPasswordSettings } = await import('../masterPasswordUi.js');
+        vi.mocked(loadMasterPasswordSettings).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in setupPrivacyConsentListeners', async () => {
+        const { setupPrivacyConsentListeners } = await import('../privacyConsentController.js');
+        vi.mocked(setupPrivacyConsentListeners).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('catches error in initTrancoUpdateNotification', async () => {
+        const { initTrancoUpdateNotification } = await import('../trancoNotification.js');
+        vi.mocked(initTrancoUpdateNotification).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        await expect(initPopup()).resolves.not.toThrow();
+    });
+
+    it('shows private page dialog when exactly one pending page exists', async () => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const { showPrivatePageDialog } = await import('../privatePageDialog.js');
+        vi.mocked(getPendingPages).mockResolvedValue([
+            { url: 'https://example.com', reason: 'private', headerValue: 'Cache-Control: private' }
+        ]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'private', 'Cache-Control: private');
+    });
+
+    it('shows private page dialog with empty headerValue fallback', async () => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const { showPrivatePageDialog } = await import('../privatePageDialog.js');
+        vi.mocked(getPendingPages).mockResolvedValue([
+            { url: 'https://example.com', reason: 'private', headerValue: undefined }
+        ]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'private', '');
+    });
+
+    it('catches error in pending pages getPendingPages', async () => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const origImpl = vi.mocked(getPendingPages).getMockImplementation();
+        vi.mocked(getPendingPages).mockRejectedValue(new Error('fail'));
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        vi.mocked(getPendingPages).mockImplementation(origImpl || (() => Promise.resolve([])));
+    });
+
+    it('catches error in setHtmlLangDir', async () => {
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            i18n: {
+                ...chrome.i18n,
+                getUILanguage: vi.fn().mockImplementation(() => { throw new Error('fail'); }),
+            },
+        });
+        await expect(initPopup()).resolves.not.toThrow();
     });
 });

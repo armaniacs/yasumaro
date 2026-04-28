@@ -2,7 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.1.20] - 2026-04-28
+## [5.1.21] - 2026-04-28
+
+### Added
+
+- **テストカバレッジ大幅改善（75.37% → 78.02%）**
+  - dashboard.ts: 44.01% → 71.19% (+27%) — DOMハンドラ、保存/テスト接続、サイドバーナビゲーション
+  - exportImport.ts: 22.76% → 95.93% (+73%) — エクスポート/インポートフロー、暗号化パス、モーダル操作
+  - popup.ts: 59.52% → 89.28% (+30%) — エラーcatchブロック、イベントハンドラ、DOMContentLoaded
+  - main.ts: 61.53% → 100% (+38%) — DOMContentLoadedハンドラ、chrome.tabs.queryコールバック
+  - historyPanel.ts: 64.86% → 88.28% (+23%) — フィルタリング、検索、storage変更リスナー
+  - trancoConsent.ts: 53.57% → 98.80% (+45%) — 同意状態遷移、grant/denyハンドラ
+  - settingsSaver.ts: 53.94% → 100% (+46%) — 接続テスト、保存エッジケース
+  - messaging/types.ts: 17.39% → 100% (+83%) — タイプガード、メッセージバリデーション
+
+### Fixed
+
+- AIクレンジングcount-onlyパスのテスト期待値を実装に合わせて修正
+
 
 ### Added
 

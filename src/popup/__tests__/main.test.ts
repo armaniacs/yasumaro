@@ -128,7 +128,7 @@ vi.mock('../../utils/trustChecker.js', () => ({
 }), { virtual: true });
 
 // Import mocked functions after vi.mock declarations
-import { showPreview } from '../sanitizePreview.js';
+import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
