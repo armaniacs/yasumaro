@@ -668,4 +668,221 @@ describe('settingsSaver', () => {
             expect(statusDiv.textContent).toBe('');
         });
     });
+
+    describe('handleSaveAndTest edge cases', () => {
+        it('should handle saveSettingsWithAllowedUrls throwing null', async () => {
+            const statusDiv = document.createElement('div');
+            const inputs = createMockInputs();
+
+            (validateAllFields as any).mockReturnValue(true);
+            (getSettings as any).mockResolvedValue({});
+            (extractSettingsFromInputs as any).mockReturnValue({});
+            (saveSettingsWithAllowedUrls as any).mockRejectedValue(null);
+
+            await handleSaveAndTest(
+                statusDiv,
+                inputs.protocolInput,
+                inputs.portInput,
+                inputs.minVisitDurationInput,
+                inputs.minScrollDepthInput,
+                inputs.maxTokensInput,
+                {},
+                validateAllFields as any
+            );
+
+            expect(statusDiv.textContent).toBe('Save error: null');
+            expect(statusDiv.className).toBe('error');
+        });
+
+        it('should handle saveSettingsWithAllowedUrls throwing undefined', async () => {
+            const statusDiv = document.createElement('div');
+            const inputs = createMockInputs();
+
+            (validateAllFields as any).mockReturnValue(true);
+            (getSettings as any).mockResolvedValue({});
+            (extractSettingsFromInputs as any).mockReturnValue({});
+            (saveSettingsWithAllowedUrls as any).mockRejectedValue(undefined);
+
+            await handleSaveAndTest(
+                statusDiv,
+                inputs.protocolInput,
+                inputs.portInput,
+                inputs.minVisitDurationInput,
+                inputs.minScrollDepthInput,
+                inputs.maxTokensInput,
+                {},
+                validateAllFields as any
+            );
+
+            expect(statusDiv.textContent).toBe('Save error: undefined');
+            expect(statusDiv.className).toBe('error');
+        });
+
+        it('should handle saveSettingsWithAllowedUrls throwing 0 (falsy value)', async () => {
+            const statusDiv = document.createElement('div');
+            const inputs = createMockInputs();
+
+            (validateAllFields as any).mockReturnValue(true);
+            (getSettings as any).mockResolvedValue({});
+            (extractSettingsFromInputs as any).mockReturnValue({});
+            (saveSettingsWithAllowedUrls as any).mockRejectedValue(0);
+
+            await handleSaveAndTest(
+                statusDiv,
+                inputs.protocolInput,
+                inputs.portInput,
+                inputs.minVisitDurationInput,
+                inputs.minScrollDepthInput,
+                inputs.maxTokensInput,
+                {},
+                validateAllFields as any
+            );
+
+            expect(statusDiv.textContent).toBe('Save error: 0');
+            expect(statusDiv.className).toBe('error');
+        });
+
+        it('should handle saveSettingsWithAllowedUrls throwing an object without message property', async () => {
+            const statusDiv = document.createElement('div');
+            const inputs = createMockInputs();
+
+            (validateAllFields as any).mockReturnValue(true);
+            (getSettings as any).mockResolvedValue({});
+            (extractSettingsFromInputs as any).mockReturnValue({});
+            (saveSettingsWithAllowedUrls as any).mockRejectedValue({ code: 'ECONNREFUSED' });
+
+            await handleSaveAndTest(
+                statusDiv,
+                inputs.protocolInput,
+                inputs.portInput,
+                inputs.minVisitDurationInput,
+                inputs.minScrollDepthInput,
+                inputs.maxTokensInput,
+                {},
+                validateAllFields as any
+            );
+
+            expect(statusDiv.textContent).toBe('Save error: [object Object]');
+            expect(statusDiv.className).toBe('error');
+        });
+
+        it('should handle getSettings throwing before save', async () => {
+            const statusDiv = document.createElement('div');
+            const inputs = createMockInputs();
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            (validateAllFields as any).mockReturnValue(true);
+            (getSettings as any).mockRejectedValue(new Error('Storage error'));
+
+            await expect(handleSaveAndTest(
+                statusDiv,
+                inputs.protocolInput,
+                inputs.portInput,
+                inputs.minVisitDurationInput,
+                inputs.minScrollDepthInput,
+                inputs.maxTokensInput,
+                {},
+                validateAllFields as any
+            )).rejects.toThrow('Storage error');
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('displayConnectionResult edge cases', () => {
+        it('should NOT add certificate warning when Obsidian fails with non-fetch message', () => {
+            const statusDiv = document.createElement('div');
+            const protocolInput = document.createElement('input');
+            protocolInput.value = 'https';
+
+            const result = {
+                obsidianSuccess: false,
+                obsidianMessage: 'Connection refused',
+                aiSuccess: true,
+                aiMessage: 'Connected',
+            };
+
+            displayConnectionResult(statusDiv, result, protocolInput, 8080);
+
+            expect(statusDiv.querySelector('a')).toBeNull();
+            expect(statusDiv.className).toBe('error');
+        });
+
+        it('should use SUCCESS color when Obsidian connection succeeds', () => {
+            const statusDiv = document.createElement('div');
+            const protocolInput = document.createElement('input');
+            protocolInput.value = 'http';
+
+            const result = {
+                obsidianSuccess: true,
+                obsidianMessage: 'Connected',
+                aiSuccess: true,
+                aiMessage: 'Connected',
+            };
+
+            displayConnectionResult(statusDiv, result, protocolInput, 80);
+
+            const obsidianSpan = statusDiv.querySelector('div:first-child span');
+            expect(obsidianSpan).not.toBeNull();
+            expect((obsidianSpan as HTMLElement).style.color).toBeTruthy();
+        });
+
+        it('should use ERROR color when AI connection fails', () => {
+            const statusDiv = document.createElement('div');
+            const protocolInput = document.createElement('input');
+            protocolInput.value = 'http';
+
+            const result = {
+                obsidianSuccess: true,
+                obsidianMessage: 'Connected',
+                aiSuccess: false,
+                aiMessage: 'Timeout',
+            };
+
+            displayConnectionResult(statusDiv, result, protocolInput, 80);
+
+            const spans = statusDiv.querySelectorAll('span');
+            const aiSpan = spans[spans.length - 1];
+            expect(aiSpan).not.toBeNull();
+            expect((aiSpan as HTMLElement).style.color).toBeTruthy();
+        });
+
+        it('should show success for HTTP protocol when both connections succeed', () => {
+            const statusDiv = document.createElement('div');
+            const protocolInput = document.createElement('input');
+            protocolInput.value = 'http';
+
+            const result = {
+                obsidianSuccess: true,
+                obsidianMessage: 'Connected',
+                aiSuccess: true,
+                aiMessage: 'Connected',
+            };
+
+            displayConnectionResult(statusDiv, result, protocolInput, 80);
+
+            expect(statusDiv.className).toBe('success');
+            expect(statusDiv.querySelector('a')).toBeNull();
+        });
+    });
+
+    describe('runConnectionTest edge cases', () => {
+        it('should propagate when sendMessage throws', async () => {
+            (global.chrome.runtime.sendMessage as any).mockRejectedValue(new Error('Extension error'));
+
+            await expect(runConnectionTest()).rejects.toThrow('Extension error');
+        });
+
+        it('should handle ai message being an empty string', async () => {
+            (global.chrome.runtime.sendMessage as any).mockResolvedValue({
+                obsidian: { success: true, message: 'OK' },
+                ai: { success: false, message: '' },
+            });
+
+            const result = await runConnectionTest();
+
+            expect(result.aiMessage).toBe('');
+            expect(result.aiSuccess).toBe(false);
+        });
+    });
 });
