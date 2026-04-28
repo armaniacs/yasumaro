@@ -296,6 +296,16 @@ describe('initSidebarNav', () => {
         expect(navBtns[0].classList.contains('active')).toBe(false);
         expect(navBtns[1].classList.contains('active')).toBe(true);
     });
+
+    it('does nothing when nav button has no data-panel', () => {
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-nav-btn';
+        document.body.appendChild(btn);
+        initSidebarNav();
+
+        expect(() => btn.click()).not.toThrow();
+        document.body.removeChild(btn);
+    });
 });
 
 describe('setHtmlLangDir', () => {
@@ -428,6 +438,22 @@ describe('testObsidianConnection', () => {
             payload: expect.objectContaining({
                 apiKey: 'my-api-key',
             }),
+        }));
+    });
+
+    it('sends empty payload when apiKey is empty', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({
+            obsidian: { success: true, message: 'OK' }
+        });
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+        });
+
+        await testObsidianConnection('');
+
+        expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+            payload: {},
         }));
     });
 });

@@ -603,4 +603,75 @@ describe('initExportImport', () => {
 
     expect(importSettings).not.toHaveBeenCalled();
   });
+
+  it('shows error when encrypted import decrypt fails', async () => {
+    buildDom();
+    vi.mocked(getSettings).mockResolvedValue({ mp_require_on_import: true });
+    vi.mocked(isEncryptedExport).mockReturnValue(true);
+    vi.mocked(importEncryptedSettings).mockResolvedValue(null);
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, callback) => {
+      callback('wrong-password');
+    });
+
+    const encryptedData = {
+      encrypted: true,
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      ciphertext: 'abc',
+      iv: 'def',
+      hmac: 'ghi',
+      salt: 'jkl',
+    };
+
+    const file = new File([JSON.stringify(encryptedData)], 'test-encrypted.json', { type: 'application/json' });
+
+    const { initExportImport } = await getFreshModule();
+    initExportImport();
+
+    const fileInput = document.getElementById('importFileInput') as HTMLInputElement;
+    setFileOnInput(fileInput, file);
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function));
+    expect(importEncryptedSettings).toHaveBeenCalledWith(expect.any(String), 'wrong-password');
+    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error');
+  });
+
+  it('shows error when confirm import throws exception', async () => {
+    buildDom();
+    vi.mocked(isEncryptedExport).mockReturnValue(false);
+    vi.mocked(validateExportData).mockReturnValue(true);
+    vi.mocked(importSettings).mockRejectedValue(new Error('storage full'));
+
+    const testData = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      settings: {
+        obsidian_protocol: 'https',
+        obsidian_port: '27124',
+        domain_whitelist: [],
+        domain_blacklist: [],
+        domain_filter_mode: 'disabled',
+        privacy_mode: 'disabled',
+      },
+    };
+
+    const file = new File([JSON.stringify(testData)], 'test.json', { type: 'application/json' });
+
+    const { initExportImport } = await getFreshModule();
+    initExportImport();
+
+    const fileInput = document.getElementById('importFileInput') as HTMLInputElement;
+    setFileOnInput(fileInput, file);
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await new Promise(r => setTimeout(r, 10));
+
+    document.getElementById('confirmImportBtn')!.click();
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('storage full'), 'error');
+  });
 });

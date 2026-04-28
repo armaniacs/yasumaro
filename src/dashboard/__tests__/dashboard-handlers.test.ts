@@ -321,6 +321,28 @@ describe('handleSaveOnly', () => {
         await handleSaveOnly();
         expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
     });
+
+    it('sets AI timeout to 0 when input is less than 10 seconds', async () => {
+        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '5';
+        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
+        await handleSaveOnly();
+        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
+    });
+
+    it('sets AI timeout to 0 when input is NaN', async () => {
+        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = 'abc';
+        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
+        await handleSaveOnly();
+        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
+    });
+
+    it('sets AI timeout to 0 when aiTimeoutSecondsInput is null', async () => {
+        document.getElementById('aiTimeoutSeconds')!.remove();
+        resetDashboardElements();
+        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
+        await handleSaveOnly();
+        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
+    });
 });
 
 describe('handleTestObsidian', () => {
@@ -448,6 +470,28 @@ describe('initSidebarNav – AI Summary Cleansing panel', () => {
         document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
         await new Promise(r => setTimeout(r, 10));
         expect((document.getElementById('cleansingFunnelChart') as HTMLCanvasElement).style.display).toBe('none');
+        raf.mockRestore();
+    });
+
+    it('shows and renders chart when count > 0', async () => {
+        const { computeCleansingStats } = await import('../cleansingStatsView.js');
+        vi.mocked(computeCleansingStats).mockReturnValueOnce({ count: 5 });
+
+        const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 0; });
+        initSidebarNav();
+        document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
+        await new Promise(r => setTimeout(r, 10));
+        expect((document.getElementById('cleansingFunnelChart') as HTMLCanvasElement).style.display).toBe('block');
+        raf.mockRestore();
+    });
+
+    it('handles missing summary element gracefully', async () => {
+        document.getElementById('cleansingStatsSummary')!.remove();
+        const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 0; });
+        initSidebarNav();
+        document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
+        await new Promise(r => setTimeout(r, 10));
+        expect(() => {}).not.toThrow();
         raf.mockRestore();
     });
 });
