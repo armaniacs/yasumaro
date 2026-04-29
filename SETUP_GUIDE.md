@@ -38,7 +38,7 @@
 ### ステップ3: Chrome拡張機能のインストール
 1. `chrome://extensions` を開きます。
 2. 右上の「デベロッパーモード」をオンにします。
-3. 「パッケージ化されていない拡張機能を読み込む」からフォルダを選択します。
+3. 「パッケージ化されていない拡張機能を読み込む」をクリックし、`dist/chromium-mv3` フォルダを選択します。
 
 ### ステップ4: 拡張機能の設定
 拡張機能のアイコンをクリックしてメイン画面を開きます。
@@ -233,7 +233,7 @@ ollama list
 ### Step 3: Install Chrome Extension
 1. Open `chrome://extensions`.
 2. Enable "Developer mode" (top right).
-3. Click "Load unpacked" and select the extension folder.
+3. Click "Load unpacked" and select the `dist/chromium-mv3` folder.
 
 ### Step 4: Configure Settings
 Click the extension icon to open the main screen.

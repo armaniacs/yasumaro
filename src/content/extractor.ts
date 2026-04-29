@@ -680,7 +680,7 @@ async function reportValidVisit(): Promise<void> {
  * ブラウザ標準の confirm() を使わず Shadow DOM でロゴ・ステータスコード付きの
  * カスタムダイアログを表示する。
  */
-function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string): Promise<boolean> {
+export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string): Promise<boolean> {
     return new Promise((resolve) => {
         const iconUrl = chrome.runtime.getURL('icons/icon48.png');
         const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Obsidian Weave';
