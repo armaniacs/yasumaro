@@ -130,6 +130,15 @@ describe('PermissionManager - P0 - isHostPermitted', () => {
     expect(result).toBe(false);
     expect(chrome.permissions.contains).not.toHaveBeenCalled();
   });
+
+  it('should return false for non-HTTP(S) protocols', async () => {
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const result = await manager.isHostPermitted('ftp://example.com/file');
+    expect(result).toBe(false);
+    expect(chrome.permissions.contains).not.toHaveBeenCalled();
+  });
 });
 
 describe('PermissionManager - P0 - requestPermission', () => {

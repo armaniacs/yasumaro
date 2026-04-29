@@ -53,7 +53,7 @@ const HARD_STRIP_TAGS = new Set([
  * Hard Strip 用属性セレクタ
  * これらの属性に一致する要素を削除
  */
-interface AttributeSelector {
+export interface AttributeSelector {
     name: string;
     value?: string | RegExp;
 }
@@ -64,22 +64,24 @@ const HARD_STRIP_ATTRIBUTES: AttributeSelector[] = [
     { name: 'type', value: 'file' },
     { name: 'type', value: 'email' },
     { name: 'type', value: 'tel' },
-    { name: 'autocomplete' }
+    { name: 'autocomplete' },
+    { name: 'inputmode', value: /^(numeric|tel|email)$/i }
 ];
 
 /**
  * 要素がHard Strip対象かどうかを判定
  * @param element - 判定対象の要素
+ * @param attributes - 判定に使用する属性セレクタ（省略時はHARD_STRIP_ATTRIBUTES）
  * @returns trueの場合は削除対象
  */
-function isHardStripTarget(element: Element): boolean {
+export function isHardStripTarget(element: Element, attributes: AttributeSelector[] = HARD_STRIP_ATTRIBUTES): boolean {
     // タグ名で判定
     if (HARD_STRIP_TAGS.has(element.tagName.toLowerCase())) {
         return true;
     }
 
     // 属性で判定
-    for (const attr of HARD_STRIP_ATTRIBUTES) {
+    for (const attr of attributes) {
         if (attr.value === undefined) {
             // 属性が存在する場合のみ
             if (element.hasAttribute(attr.name)) {
@@ -124,13 +126,22 @@ export function stripHardStripElements(element: Element): number {
 
     // 属性に一致する要素を取得
     for (const attr of HARD_STRIP_ATTRIBUTES) {
-        const selector = buildAttributeSelector(attr);
-        const attrElements = element.querySelectorAll(selector);
-        attrElements.forEach(elem => {
-            if (!elementsToRemove.includes(elem)) {
-                elementsToRemove.push(elem);
-            }
-        });
+        if (attr.value instanceof RegExp) {
+            // RegExp は CSS セレクタで表現できないため、要素を直接走査
+            element.querySelectorAll('*').forEach(elem => {
+                if (isHardStripTarget(elem, [attr]) && !elementsToRemove.includes(elem)) {
+                    elementsToRemove.push(elem);
+                }
+            });
+        } else {
+            const selector = buildAttributeSelector(attr);
+            const attrElements = element.querySelectorAll(selector);
+            attrElements.forEach(elem => {
+                if (!elementsToRemove.includes(elem)) {
+                    elementsToRemove.push(elem);
+                }
+            });
+        }
     }
 
     // 削除実行
@@ -255,8 +266,19 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
 
         // 属性に一致する要素をカウント
         for (const attr of HARD_STRIP_ATTRIBUTES) {
-            const selector = buildAttributeSelector(attr);
-            hardStripCount += element.querySelectorAll(selector).length;
+            if (attr.value instanceof RegExp) {
+                // RegExp は CSS セレクタで表現できないため、要素を直接走査
+                // ここでは属性マッチのみをカウントし、タグマッチはタグセレクタ側で行われる
+                element.querySelectorAll('*').forEach(elem => {
+                    const attrValue = elem.getAttribute(attr.name);
+                    if (attrValue && attr.value.test(attrValue)) {
+                        hardStripCount++;
+                    }
+                });
+            } else {
+                const selector = buildAttributeSelector(attr);
+                hardStripCount += element.querySelectorAll(selector).length;
+            }
         }
     }
 

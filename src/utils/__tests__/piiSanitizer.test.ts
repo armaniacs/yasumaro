@@ -451,5 +451,145 @@ describe('piiSanitizer', () => {
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.maskedItems).toHaveLength(0);
     });
+
+    test('15桁クレジットカード番号（4-6-5形式）を検出してマスクできる', async () => {
+      // 【テスト目的】: 15桁カード番号パターンの検出確認
+      // 378282246310005 は Luhn 有効な15桁番号
+      const text = 'カード: 3782 822463 10005';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('カード: [MASKED:creditCard]');
+      expect(result.maskedItems[0].type).toBe('creditCard');
+    });
+
+    test('プライベートIPv4アドレス（172.16-31.x.x）を検出してマスクできる', async () => {
+      const text = '内部ネットワーク: 172.20.15.42';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('内部ネットワーク: [MASKED:ipv4]');
+      expect(result.maskedItems[0].type).toBe('ipv4');
+    });
+
+    test('スペース区切りのマイナンバーを検出してマスクできる', async () => {
+      const text = 'マイナンバー: 1234 5678 9012';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
+      expect(result.maskedItems[0].type).toBe('myNumber');
+    });
+
+    test('スペース区切りの電話番号を検出してマスクできる', async () => {
+      const text = '電話: 090 1234 5678';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('電話: [MASKED:phoneJp]');
+      expect(result.maskedItems[0].type).toBe('phoneJp');
+    });
+
+    test('連続した12桁（ハイフンなし）は運転免許番号としてマスクされる', async () => {
+      const text = '番号: 123456789012';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('番号: [MASKED:driverLicense]');
+      expect(result.maskedItems[0].type).toBe('driverLicense');
+    });
+
+    test('ハイフンあり12桁はマイナンバーとして優先マスクされる', async () => {
+      const text = '番号: 1234-5678-9012 と 123456789012';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('番号: [MASKED:myNumber] と [MASKED:driverLicense]');
+      const types = result.maskedItems.map(i => i.type);
+      expect(types).toContain('myNumber');
+      expect(types).toContain('driverLicense');
+    });
+
+    test('メールアドレスに特殊文字が含まれてもマスクできる', async () => {
+      const text = '連絡先: user.name+tag_%@example-domain.co.jp';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('連絡先: [MASKED:email]');
+      expect(result.maskedItems[0].type).toBe('email');
+    });
+
+    test('日本の固定電話番号（0X-XXXX-XXXX形式）を検出できる', async () => {
+      const text = '電話: 03-1234-5678';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('電話: [MASKED:phoneJp]');
+      expect(result.maskedItems[0].type).toBe('phoneJp');
+    });
+  });
+
+  describe('sanitizeRegex - 出力サイズ制限・切り詰め', () => {
+    test('skipSizeLimit使用時に出力が128KBを超えると切り詰められる', async () => {
+      // 【テスト目的】: 出力サイズ超過時の切り詰めロジック（lines 292-299）をカバー
+      // 【テスト内容】: skipSizeLimitで130KBのPIIなしテキストを通すと、
+      //                 出力が128KBを超えて切り詰められることを確認
+      // 空白文字を使うと各PIIパターンが即座に失敗し、
+      // IPv6正規表現のバックトラッキングを回避して高速にスキャンできる
+      const text = ' '.repeat(130 * 1024); // 130KB（64KB < 130KB < 512KB）
+      const result = await sanitizeRegex(text, { skipSizeLimit: true }) as SanitizeResult;
+
+      expect(result.text.length).toBe(128 * 1024);
+      expect(result.maskedItems).toEqual([]);
+      expect(result.error).toContain('Output truncated');
+      expect(result.error).toContain('131072');
+    });
+
+    test('出力切り詰め時に128KB境界内のPII項目のみ保持される', async () => {
+      // 【テスト目的】: 切り詰め後のmaskedItemsフィルタリングを確認
+      // 【テスト内容】: 先頭にPII（銀行口座）を置き、その後ろに空白パディングで
+      //                 出力が128KBを超えるテキストを作成し、
+      //                 境界内のマスク項目だけが保持されることを確認
+      const account = '1234567'; // 7桁 → [MASKED:bankAccount] (22文字)
+      const padding = ' '.repeat(128 * 1024); // 128KBの空白
+      const text = account + padding; // 入力 ≈ 128KB + 7バイト
+
+      const result = await sanitizeRegex(text, { skipSizeLimit: true }) as SanitizeResult;
+
+      // 切り詰めが発生し、128KB境界内のマスク項目のみ保持される
+      expect(result.error).toContain('Output truncated');
+      expect(result.text.length).toBe(128 * 1024);
+      // 銀行口座は先端にあるので境界内に含まれる
+      expect(result.maskedItems.length).toBe(1);
+      expect(result.maskedItems[0].type).toBe('bankAccount');
+      expect(result.maskedItems[0].original).toBe('1234567');
+    });
+  });
+
+  describe('sanitizeRegex - 複雑なマスキングシナリオ', () => {
+    test('重複するPIIパターンの範囲が適切に解決される', async () => {
+      // 16桁カード番号の一部が7桁銀行口座としてもマッチする可能性があるが、
+      // より長いマッチが優先される仕様を確認
+      const text = 'カード: 4111-1111-1111-1111';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      // 16桁全体がcreditCardとしてマスクされる（7桁パターンはオーバーラップして除外）
+      expect(result.maskedItems).toHaveLength(1);
+      expect(result.maskedItems[0].type).toBe('creditCard');
+      expect(result.maskedItems[0].original).toBe('4111-1111-1111-1111');
+    });
+
+    test('複数の同一タイプPIIが混在する大規模テキストを処理できる', async () => {
+      const emails = Array.from({ length: 50 }, (_, i) => `user${i}@example.com`).join(' ');
+      const result = await sanitizeRegex(emails) as SanitizeResult;
+
+      expect(result.maskedItems).toHaveLength(50);
+      expect(result.text).not.toContain('@example.com');
+      expect(result.text.split('[MASKED:email]').length - 1).toBe(50);
+    });
+
+    test('PIIがない64KB境界値テキストを正常に処理できる', async () => {
+      const text = 'x'.repeat(64 * 1024); // ちょうど64KB
+      const result = await sanitizeRegex(text) as SanitizeResult;
+
+      expect(result.text).toBe(text);
+      expect(result.maskedItems).toEqual([]);
+      expect(result.error).toBeUndefined();
+    });
+
+    test('真偽値入力に対して安全にエラーハンドリングできる', async () => {
+      const result = await sanitizeRegex(true as never) as SanitizeResult;
+      expect(result.text).toBe('');
+      expect(result.maskedItems).toEqual([]);
+    });
+
+    test('オブジェクト入力に対して安全にエラーハンドリングできる', async () => {
+      const result = await sanitizeRegex({} as never) as SanitizeResult;
+      expect(result.text).toBe('');
+      expect(result.maskedItems).toEqual([]);
+    });
   });
 });
