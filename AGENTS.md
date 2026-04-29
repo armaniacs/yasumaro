@@ -40,7 +40,7 @@ npm validate             # Type check + run tests (pre-commit gate)
 1. Run `npm build` to build the extension
 2. Open Chrome and navigate to `chrome://extensions`
 3. Enable "Developer mode" (toggle in top-right)
-4. Click "Load unpacked" and select the `dist/` directory
+4. Click "Load unpacked" and select the `dist/chromium-mv3` directory
 5. The extension is now installed
 
 ---
@@ -262,7 +262,7 @@ npm build             # Build TypeScript and copy assets to dist/
 npm run build:watch   # Watch mode for development
 ```
 
-> The extension loads from the `dist/` directory in Chrome.
+> The extension loads from the `dist/chromium-mv3` directory in Chrome.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 
