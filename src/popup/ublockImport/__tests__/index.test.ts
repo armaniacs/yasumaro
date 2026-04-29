@@ -732,4 +732,255 @@ describe('ublockImport/index.ts', () => {
       expect(dropZone.classList.contains('active')).toBe(true);
     });
   });
+
+  // =========================================================================
+  // handleFileSelect (file input change handler)
+  // =========================================================================
+  describe('handleFileSelect', () => {
+    test('should load file content into textarea on successful file select', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+      (readFile as vi.Mock).mockResolvedValueOnce('||example.com^\n||ads.net^');
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      const file = new File(['||example.com^'], 'test-filters.txt', { type: 'text/plain' });
+      
+      // Mock files property
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: true,
+      });
+
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 10));
+
+      const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement;
+      expect(textarea.value).toBe('||example.com^\n||ads.net^');
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('test-filters.txt'), 'success');
+    });
+
+    test('should handle file select with no file', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', {
+        value: [],
+        writable: true,
+      });
+
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 10));
+
+      const { readFile: readFileMock } = await import('../fileReader.js');
+      expect(readFileMock).not.toHaveBeenCalled();
+    });
+
+    test('should handle file read error', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+      (readFile as vi.Mock).mockRejectedValueOnce(new Error('File read failed'));
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      const file = new File(['bad'], 'bad.txt', { type: 'text/plain' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: true,
+      });
+
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 10));
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('File read error'), 'error');
+    });
+  });
+
+  // =========================================================================
+  // handleReloadSource
+  // =========================================================================
+  describe('handleReloadSource', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <div id="uBlockSourceItems"></div>
+        <div id="uBlockNoSources" style="display: none;"></div>
+        <div id="domainStatus"></div>
+      `;
+    });
+
+    test('should reload source and show rule count diff on success', async () => {
+      const { getSettings } = await import('../../../utils/storage.js');
+      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+        ublock_sources: [
+          { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
+        ],
+      }));
+
+      const { reloadSource } = await import('../sourceManager.js');
+      (reloadSource as vi.Mock).mockResolvedValueOnce({
+        sources: [{ url: 'https://example.com/filters.txt', blockDomains: ['example.com', 'new.com'], exceptionDomains: [], ruleCount: 5 }],
+        ruleCount: 5,
+      });
+
+      const { renderSourceList } = await import('../uiRenderer.js');
+
+      // Create a mock button element
+      const mockBtn = document.createElement('button');
+      mockBtn.className = 'reload-btn';
+      mockBtn.setAttribute('data-index', '0');
+      mockBtn.textContent = 'Reload';
+      document.body.appendChild(mockBtn);
+
+      // Import and call handleReloadSource via the exported function
+      const module = await import('../index.js');
+      
+      // Access the internal handleReloadSource through module's exported functions
+      // We need to test it indirectly through the public API
+      // Since handleReloadSource is not exported, we test via the render callback
+      const { deleteSource } = await import('../sourceManager.js');
+      
+      // Simulate what happens when reload is triggered from UI
+      await module.init();
+      
+      // Manually trigger reload by calling the internal function
+      // We'll use the fact that renderSourceList passes handleReloadSource as callback
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
+      const reloadCallback = renderCall[2];
+      
+      await reloadCallback(0);
+      await new Promise(r => setTimeout(r, 10));
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('5'), 'success');
+    });
+
+    test('should handle reload error and restore button state', async () => {
+      const { getSettings } = await import('../../../utils/storage.js');
+      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+        ublock_sources: [
+          { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
+        ],
+      }));
+
+      const { reloadSource } = await import('../sourceManager.js');
+      (reloadSource as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+      const { renderSourceList } = await import('../uiRenderer.js');
+
+      const mockBtn = document.createElement('button');
+      mockBtn.className = 'reload-btn';
+      mockBtn.setAttribute('data-index', '0');
+      mockBtn.textContent = 'Reload';
+      document.body.appendChild(mockBtn);
+
+      const module = await import('../index.js');
+      await module.init();
+
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
+      const reloadCallback = renderCall[2];
+
+      await reloadCallback(0);
+      await new Promise(r => setTimeout(r, 10));
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Reload error'), 'error');
+
+      const { addLog } = await import('../../../utils/logger.js');
+      expect(addLog).toHaveBeenCalledWith('ERROR', 'Reload error', { error: 'Network error' });
+    });
+
+    test('should handle reload when source has no ruleCount', async () => {
+      const { getSettings } = await import('../../../utils/storage.js');
+      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+        ublock_sources: [
+          { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [] },
+        ],
+      }));
+
+      const { reloadSource } = await import('../sourceManager.js');
+      (reloadSource as vi.Mock).mockResolvedValueOnce({
+        sources: [{ url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 3 }],
+        ruleCount: 3,
+      });
+
+      const { renderSourceList } = await import('../uiRenderer.js');
+
+      const mockBtn = document.createElement('button');
+      mockBtn.className = 'reload-btn';
+      mockBtn.setAttribute('data-index', '0');
+      document.body.appendChild(mockBtn);
+
+      const module = await import('../index.js');
+      await module.init();
+
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
+      const reloadCallback = renderCall[2];
+
+      await reloadCallback(0);
+      await new Promise(r => setTimeout(r, 10));
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('+3'), 'success');
+    });
+  });
+
+  // =========================================================================
+  // handleDeleteSource
+  // =========================================================================
+  describe('handleDeleteSource', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <div id="uBlockSourceItems"></div>
+        <div id="uBlockNoSources" style="display: none;"></div>
+        <div id="domainStatus"></div>
+      `;
+    });
+
+    test('should delete source and re-render list on success', async () => {
+      const { deleteSource } = await import('../sourceManager.js');
+      const { renderSourceList } = await import('../uiRenderer.js');
+
+      const module = await import('../index.js');
+      await module.init();
+
+      // Get the delete callback from renderSourceList call
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
+      const deleteCallback = renderCall[1];
+
+      await deleteCallback(0);
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(deleteSource).toHaveBeenCalledWith(0, expect.any(Function));
+    });
+
+    test('should handle delete error', async () => {
+      const { deleteSource } = await import('../sourceManager.js');
+      (deleteSource as vi.Mock).mockRejectedValueOnce(new Error('Delete failed'));
+
+      const { renderSourceList } = await import('../uiRenderer.js');
+
+      const module = await import('../index.js');
+      await module.init();
+
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
+      const deleteCallback = renderCall[1];
+
+      await deleteCallback(0);
+      await new Promise(r => setTimeout(r, 10));
+
+      const { showStatus } = await import('../../settingsUiHelper.js');
+      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Delete error'), 'error');
+    });
+  });
 });
