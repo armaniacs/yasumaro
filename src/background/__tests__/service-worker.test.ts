@@ -79,10 +79,18 @@ vi.mock('../recordingLogic.js', () => ({
         static invalidateSettingsCache = vi.fn();
         static invalidateUrlCache = vi.fn();
         static invalidatePrivacyCache = vi.fn();
-        record = vi.fn().mockResolvedValue({ success: true, skipped: false });
-        getPrivacyInfoWithCache = vi.fn().mockResolvedValue({});
-        getSettingsWithCache = vi.fn().mockResolvedValue({});
-        getSavedUrlsWithCache = vi.fn().mockResolvedValue(new Map());
+        record() {
+            return Promise.resolve({ success: true, skipped: false });
+        }
+        getPrivacyInfoWithCache() {
+            return Promise.resolve({});
+        }
+        getSettingsWithCache() {
+            return Promise.resolve(new Map());
+        }
+        getSavedUrlsWithCache() {
+            return Promise.resolve(new Map());
+        }
     }
 }));
 vi.mock('../tabCache.js', () => ({
@@ -170,7 +178,7 @@ import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
 import * as storageUrls from '../../utils/storageUrls.js';
 import * as permissionManager from '../../utils/permissionManager.js';
-import { logError } from '../../utils/logger.js';
+import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
 import type {
     ValidVisitMessage,
     FetchUrlMessage,
@@ -215,6 +223,7 @@ describe('service-worker handlers', () => {
                 globalChrome.notifications.onButtonClicked = { addListener: mockAddListener };
                 globalChrome.notifications.onClicked = { addListener: mockAddListener };
                 globalChrome.notifications.clear = mockClear;
+                globalChrome.notifications.create = vi.fn();
             }
             if (globalChrome.runtime) {
                 globalChrome.runtime.onInstalled = { addListener: mockAddListener };
@@ -762,6 +771,15 @@ describe('service-worker handlers', () => {
             expect(RecordingLogic.invalidateSettingsCache).not.toHaveBeenCalled();
             expect(storage.updateDomainFilterCache).not.toHaveBeenCalled();
         });
+
+        it('should propagate errors during update when getSettings fails', async () => {
+            (storage.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
+            await expect(serviceWorker.handleInstalled({
+                reason: 'update',
+                previousVersion: '1.0.0'
+            })).rejects.toThrow('Settings error');
+        });
+
     });
 
     describe('handleStartup', () => {
@@ -1033,6 +1051,43 @@ describe('service-worker handlers', () => {
 
             // Should not throw
             await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
+        });
+
+        it('should log error when recordingLogic.record throws', async () => {
+            // Spy on record and make it throw
+            vi.spyOn(RecordingLogic.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
+
+            // Setup pending pages
+            pendingStorage.getPendingPages.mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' }
+            ]);
+            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+
+            // Ensure crypto verification succeeds
+            const crypto = await import('../../utils/crypto.js');
+            crypto.getNotificationHmacKey.mockResolvedValueOnce({
+                type: 'hmac',
+                extractable: false,
+                algorithm: { name: 'HMAC', hash: 'SHA-256' },
+                usages: ['sign', 'verify']
+            } as CryptoKey);
+            crypto.verifyHmacSignature.mockResolvedValueOnce(true);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+
+            expect(logError).toHaveBeenCalledWith(
+                'Notification button click handler failed',
+                expect.objectContaining({
+                    buttonIndex: 0,
+                    error: 'Record failed'
+                }),
+                ErrorCode.INTERNAL_ERROR,
+                'service-worker'
+            );
+
+            expect(pendingStorage.removePendingPages).not.toHaveBeenCalled();
         });
 
         it('should handle getPendingPages error gracefully', async () => {
@@ -1314,6 +1369,85 @@ describe('service-worker handlers', () => {
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
         });
+
+        // Additional tests for handleManualRecord: rate limiting and content fetch branches
+
+        it('should enforce rate limit when limit is exceeded', async () => {
+            const sendResponse = vi.fn();
+            const createMessage = (): ManualRecordMessage => ({
+                type: 'MANUAL_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: 'content', skipAi: true }
+            });
+            const sender = { tab: { id: 999, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            const rateLimitMax = 10;
+
+            for (let i = 0; i < rateLimitMax; i++) {
+                await serviceWorker.handleManualRecord(createMessage(), sender, sendResponse);
+            }
+
+            await serviceWorker.handleManualRecord(createMessage(), sender, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: false, error: 'Rate limit exceeded. Please try again later.' })
+            );
+
+            expect(logWarn).toHaveBeenCalledWith(
+                'Rate limit exceeded for skipAi operation',
+                expect.objectContaining({ sender: '999', limit: rateLimitMax }),
+                undefined,
+                'service-worker'
+            );
+        });
+
+        it('should fetch content from existing tab when content is empty', async () => {
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'MANUAL_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: '' }
+            } as ManualRecordMessage;
+            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            mockQuery.mockResolvedValueOnce([
+                { id: 123, url: 'https://example.com' } as chrome.tabs.Tab
+            ]);
+
+            await serviceWorker.handleManualRecord(message, sender, sendResponse);
+
+            expect(mockExecuteScript).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    target: { tabId: 123 },
+                    func: expect.any(Function)
+                })
+            );
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should handle tab content fetch error gracefully', async () => {
+            mockQuery.mockRejectedValueOnce(new Error('Tabs query failed'));
+
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'MANUAL_RECORD',
+                payload: { title: 'Test', url: 'https://example.com', content: '' }
+            } as ManualRecordMessage;
+            const sender = { tab: { id: 2, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleManualRecord(message, sender, sendResponse);
+
+            expect(logWarn).toHaveBeenCalledWith(
+                'Failed to get page content from tab',
+                expect.objectContaining({ url: 'example.com', error: expect.any(String) }),
+                undefined,
+                'service-worker'
+            );
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
     });
 
     describe('handleSaveRecord', () => {

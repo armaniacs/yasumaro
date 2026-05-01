@@ -1,6 +1,8 @@
-import { describe, test, expect, jest, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach } from 'vitest';
 import { HeaderDetector } from '../headerDetector.js';
 import { RecordingLogic } from '../recordingLogic.js';
+import { checkPrivacy } from '../../utils/privacyChecker.js';
+import { ErrorCode } from '../../utils/logger.js';
 
 vi.mock('../../utils/privacyChecker.js', () => ({
   checkPrivacy: vi.fn((headers: any[]) => {
@@ -139,9 +141,36 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['onHeadersReceived'](details);
 
-      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/noct')).toBeFalsy();
+       expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/noct')).toBeFalsy();
+     });
+
+    test('should handle errors in onHeadersReceived gracefully', () => {
+      vi.mocked(checkPrivacy).mockImplementation(() => {
+        throw new Error('Test error');
+      });
+
+      const details = {
+        url: 'https://example.com/page',
+        type: 'main_frame' as chrome.webRequest.ResourceType,
+        responseHeaders: [
+          { name: 'Content-Type', value: 'text/html' }
+        ] as chrome.webRequest.HttpHeader[]
+      } as chrome.webRequest.WebResponseHeadersDetails;
+
+      expect(() => HeaderDetector['onHeadersReceived'](details)).not.toThrow();
+
+      return new Promise<void>(resolve => setTimeout(resolve, 10)).then(() => {
+        expect(logError).toHaveBeenCalledWith(
+          'HeaderDetector error',
+          expect.objectContaining({ 
+            error: 'Test error',
+            source: 'headerDetector'
+          }),
+          ErrorCode.UNKNOWN_ERROR
+        );
+      });
     });
-  });
+   });
 
   describe('normalizeUrl', () => {
     test('末尾スラッシュを削除する', () => {

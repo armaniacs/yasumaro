@@ -55,6 +55,14 @@ if (typeof global.TextDecoder === 'undefined') {
   } as any;
 }
 
+// btoa/atob polyfill for Node.js environment (used by urlNotificationHandlers)
+if (typeof global.btoa === 'undefined') {
+  global.btoa = (str: string) => Buffer.from(str, 'binary').toString('base64');
+}
+if (typeof global.atob === 'undefined') {
+  global.atob = (b64: string) => Buffer.from(b64, 'base64').toString('binary');
+}
+
 // Web Crypto API polyfill for Vitest testing environment
 const webcrypto = new Crypto();
 Object.defineProperty(global, 'crypto', {
@@ -272,33 +280,51 @@ const chromeRuntimeMock = {
       }),
     },
   },
-  runtime: {
-    lastError: null as any,
-    sendMessage: chromeRuntimeMock.sendMessage,
-    onMessage: chromeRuntimeMock.onMessage,
-    getURL: chromeRuntimeMock.getURL,
-    getBackgroundPage: vi.fn(),
-    getContexts: vi.fn(),
-    connect: vi.fn(),
-    connectNative: vi.fn(),
-  },
-  tabs: {
-    query: vi.fn(),
-    sendMessage: vi.fn((_tabId, _message, callback) => {
-      if (callback && typeof callback === 'function') {
-        callback();
-      }
-    }),
-    onUpdated: {
-      addListener: vi.fn(),
-    },
-  },
+   runtime: {
+     lastError: null as any,
+     sendMessage: chromeRuntimeMock.sendMessage,
+     onMessage: chromeRuntimeMock.onMessage,
+     onInstalled: {
+       addListener: vi.fn(),
+     },
+     onStartup: {
+       addListener: vi.fn(),
+     },
+     getURL: chromeRuntimeMock.getURL,
+     getBackgroundPage: vi.fn(),
+     getContexts: vi.fn(),
+     connect: vi.fn(),
+     connectNative: vi.fn(),
+   },
+   tabs: {
+     query: vi.fn(),
+     sendMessage: vi.fn((_tabId, _message, callback) => {
+       if (callback && typeof callback === 'function') {
+         callback();
+       }
+     }),
+     onRemoved: {
+       addListener: vi.fn(),
+     },
+     onActivated: {
+       addListener: vi.fn(),
+     },
+     onUpdated: {
+       addListener: vi.fn(),
+     },
+   },
   notifications: {
     create: vi.fn(),
     update: vi.fn(),
     clear: vi.fn(),
     getAll: vi.fn(),
     onClosed: {
+      addListener: vi.fn(),
+    },
+    onButtonClicked: {
+      addListener: vi.fn(),
+    },
+    onClicked: {
       addListener: vi.fn(),
     },
   },

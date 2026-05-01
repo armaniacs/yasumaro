@@ -180,11 +180,31 @@ describe('LocalAIClient', () => {
         });
 
         test('ドキュメントがない場合は作成する', async () => {
-            mockChrome.offscreen.hasDocument.mockResolvedValueOnce(false);
+          mockChrome.offscreen.hasDocument.mockResolvedValueOnce(false);
 
-            await client.ensureOffscreenDocument();
+          await client.ensureOffscreenDocument();
 
-            expect(mockChrome.offscreen.createDocument).toHaveBeenCalled();
+          expect(mockChrome.offscreen.createDocument).toHaveBeenCalled();
         });
-    });
+
+        test('既に作成中の場合は作成プロミスを待機して完了する', async () => {
+          mockChrome.offscreen.hasDocument.mockResolvedValueOnce(false);
+          let creationResolve: () => void;
+          const creationPromise = new Promise<void>(resolve => { creationResolve = resolve; });
+          mockChrome.offscreen.createDocument = vi.fn(() => creationPromise);
+
+          // First call starts creation
+          const firstPromise = client.ensureOffscreenDocument();
+          // Second call should await the existing promise
+          const secondPromise = client.ensureOffscreenDocument();
+
+          // Resolve the creation
+          creationResolve();
+
+          await expect(firstPromise).resolves.toBeUndefined();
+          await expect(secondPromise).resolves.toBeUndefined();
+
+          expect(mockChrome.offscreen.createDocument).toHaveBeenCalledTimes(1);
+        });
+      });
 });

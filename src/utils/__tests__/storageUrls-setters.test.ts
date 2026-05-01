@@ -485,6 +485,90 @@ describe('storageUrls setter functions', () => {
     });
   });
 
+  describe('setUrlAiDuration', () => {
+    it('既存エントリのaiDurationを設定する', async () => {
+      const { setUrlAiDuration } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlAiDuration('https://example.com', 1200);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.aiDuration).toBe(1200);
+    });
+  });
+
+  describe('setUrlObsidianDuration', () => {
+    it('既存エントリのobsidianDurationを設定する', async () => {
+      const { setUrlObsidianDuration } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlObsidianDuration('https://example.com', 350);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.obsidianDuration).toBe(350);
+    });
+  });
+
+  describe('setUrlAiSummaryCleansedReasons', () => {
+    it('既存エントリのaiSummaryCleansedReasonsを設定する', async () => {
+      const { setUrlAiSummaryCleansedReasons } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlAiSummaryCleansedReasons('https://example.com', ['ads', 'nav']);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.aiSummaryCleansedReasons).toEqual(['ads', 'nav']);
+    });
+  });
+
+  describe('setUrlExtractedSentencesBytes', () => {
+    it('既存エントリのextractedSentencesBytesを設定する', async () => {
+      const { setUrlExtractedSentencesBytes } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlExtractedSentencesBytes('https://example.com', 4096);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.extractedSentencesBytes).toBe(4096);
+    });
+  });
+
+  describe('setUrlExtractedSentencesOriginalBytes', () => {
+    it('既存エントリのextractedSentencesOriginalBytesを設定する', async () => {
+      const { setUrlExtractedSentencesOriginalBytes } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlExtractedSentencesOriginalBytes('https://example.com', 8192);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.extractedSentencesOriginalBytes).toBe(8192);
+    });
+  });
+
+  describe('setUrlFallbackTriggered', () => {
+    it('既存エントリのfallbackTriggeredを設定する', async () => {
+      const { setUrlFallbackTriggered } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlFallbackTriggered('https://example.com', true);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBe(true);
+    });
+
+    it('ハッシュ付きURLも正規化して設定する', async () => {
+      const { setUrlFallbackTriggered } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlFallbackTriggered('https://example.com#section', true);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBe(true);
+    });
+
+    it('存在しないURLは変更しない', async () => {
+      const { setUrlFallbackTriggered } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlFallbackTriggered('https://other.com', true);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBeUndefined();
+    });
+  });
+
   describe('computeUrlsHash', () => {
     it('URLのハッシュを計算する', async () => {
       const { computeUrlsHash } = await import('../storageUrls.js');

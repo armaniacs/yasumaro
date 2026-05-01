@@ -24,7 +24,33 @@ describe('TabCache', () => {
         it('isInitializedメソッドで初期化状態を取得できること', () => {
             expect(tabCache.isInitializedCache()).toBe(false);
         });
-    });
+
+        it('initialize() でタブ一覧をキャッシュにロードできること', async () => {
+          // Mock chrome.tabs.query to return some tabs (callback-style API)
+          const mockTabs = [
+            { id: 1, title: 'Tab 1', url: 'https://example.com/1', favIconUrl: null },
+            { id: 2, title: 'Tab 2', url: 'http://test.com', favIconUrl: null },
+            { id: 3, title: 'Invalid', url: 'chrome://extensions', favIconUrl: null }
+          ];
+          (chrome.tabs.query as any).mockImplementation((_query, callback) => {
+            callback(mockTabs);
+          });
+
+          await tabCache.initialize();
+
+          expect(chrome.tabs.query).toHaveBeenCalledWith({}, expect.any(Function));
+          // Only HTTP/HTTPS tabs with id and url should be cached
+          expect(tabCache.size()).toBe(2);
+          expect(tabCache.get(1)).toEqual({
+            title: 'Tab 1',
+            url: 'https://example.com/1',
+            favIconUrl: null,
+            lastUpdated: expect.any(Number),
+            isValidVisit: false,
+            content: null
+          });
+        });
+      });
 
     describe('タブ情報の追加', () => {
         it('有効なhttp URLのタブを追加できること', () => {

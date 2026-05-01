@@ -115,7 +115,8 @@ describe('aiUsageTracker', () => {
         });
 
         test('保存された使用量を返す', async () => {
-            const monthKey = new Date().toISOString().slice(0, 7);
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
             mockStorage['ai_usage_tokens_sent'] = 1000;
             mockStorage['ai_usage_tokens_received'] = 2000;
@@ -134,6 +135,18 @@ describe('aiUsageTracker', () => {
             const result = await getMonthlyUsage();
             expect(result.tokensSent).toBe(0);
         });
+
+        test('トークン数が未設定の場合は0を返す', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+
+            const result = await getMonthlyUsage();
+            expect(result.tokensSent).toBe(0);
+            expect(result.tokensReceived).toBe(0);
+            expect(result.requestCount).toBe(0);
+            expect(result.month).toBe(monthKey);
+        });
     });
 
     describe('recordUsage', () => {
@@ -144,7 +157,8 @@ describe('aiUsageTracker', () => {
         });
 
         test('既存の使用量に加算する', async () => {
-            const monthKey = new Date().toISOString().slice(0, 7);
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
             mockStorage['ai_usage_tokens_sent'] = 100;
             mockStorage['ai_usage_tokens_received'] = 200;
@@ -174,7 +188,8 @@ describe('aiUsageTracker', () => {
 
     describe('checkUsageWarning', () => {
         test('100万トークン以下は警告なし', async () => {
-            const monthKey = new Date().toISOString().slice(0, 7);
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
             mockStorage['ai_usage_tokens_sent'] = 100000;
             mockStorage['ai_usage_tokens_received'] = 100000;
@@ -184,7 +199,8 @@ describe('aiUsageTracker', () => {
         });
 
         test('100万トークン超過で警告あり', async () => {
-            const monthKey = new Date().toISOString().slice(0, 7);
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
             mockStorage['ai_usage_tokens_sent'] = 500000;
             mockStorage['ai_usage_tokens_received'] = 600000;

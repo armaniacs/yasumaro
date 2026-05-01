@@ -641,3 +641,150 @@ describe('PermissionManager - P0 - Utility Functions', () => {
     expect(stored['example.com'].count).toBe(4);
   });
 });
+
+describe('PermissionManager - P0 - Error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStorage.clear();
+  });
+
+  it('recordDeniedVisit should handle storage errors gracefully', async () => {
+    // Force chrome.storage.local.get to throw
+    const mockGetFail = vi.fn().mockRejectedValue(new Error('Storage unavailable'));
+    global.chrome = {
+      ...(global.chrome as any),
+      storage: {
+        local: {
+          get: mockGetFail,
+          set: vi.fn(),
+        },
+      },
+      permissions: { contains: vi.fn(), request: vi.fn() },
+    } as any;
+
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    // Should not throw
+    await expect(manager.recordDeniedVisit('example.com')).resolves.not.toThrow();
+  });
+
+  it('recordDomainDismissal should handle storage errors gracefully', async () => {
+    const mockGetFail = vi.fn().mockRejectedValue(new Error('Storage unavailable'));
+    global.chrome = {
+      ...(global.chrome as any),
+      storage: {
+        local: {
+          get: mockGetFail,
+          set: vi.fn(),
+        },
+      },
+      permissions: { contains: vi.fn(), request: vi.fn() },
+    } as any;
+
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await expect(manager.recordDomainDismissal('example.com')).resolves.not.toThrow();
+  });
+
+  it('cleanupOldDeniedEntries should handle storage errors gracefully', async () => {
+    const mockGetFail = vi.fn().mockRejectedValue(new Error('Storage unavailable'));
+    const originalChrome = global.chrome;
+    global.chrome = {
+      ...(originalChrome as any),
+      storage: {
+        local: {
+          get: mockGetFail,
+          set: vi.fn(),
+        },
+      },
+    } as any;
+
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await expect(manager.cleanupOldDeniedEntries(90)).resolves.not.toThrow();
+
+    global.chrome = originalChrome;
+  });
+
+  it('cleanupDismissedEntries should handle storage errors gracefully', async () => {
+    const mockGetFail = vi.fn().mockRejectedValue(new Error('Storage unavailable'));
+    const originalChrome = global.chrome;
+    global.chrome = {
+      ...(originalChrome as any),
+      storage: {
+        local: {
+          get: mockGetFail,
+          set: vi.fn(),
+        },
+      },
+    } as any;
+
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await expect(manager.cleanupDismissedEntries(7)).resolves.not.toThrow();
+
+    global.chrome = originalChrome;
+  });
+});
+describe('PermissionManager - P0 - Error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStorage.clear();
+  });
+
+  it('recordDeniedVisit should handle updateDeniedDomains error gracefully', async () => {
+    // mockStorage will work, but we need updateDeniedDomains to throw
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    // Force updateDeniedDomains to throw by making getDeniedDomains throw
+    const originalGetDeniedDomains = (manager as any).getDeniedDomains;
+    (manager as any).getDeniedDomains = vi.fn().mockRejectedValue(new Error('Storage error'));
+
+    // Should not throw
+    await expect(manager.recordDeniedVisit('example.com')).resolves.not.toThrow();
+
+    (manager as any).getDeniedDomains = originalGetDeniedDomains;
+  });
+
+  it('recordDomainDismissal should handle updateDeniedDomains error gracefully', async () => {
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const originalGetDeniedDomains = (manager as any).getDeniedDomains;
+    (manager as any).getDeniedDomains = vi.fn().mockRejectedValue(new Error('Storage error'));
+
+    await expect(manager.recordDomainDismissal('example.com')).resolves.not.toThrow();
+
+    (manager as any).getDeniedDomains = originalGetDeniedDomains;
+  });
+
+  it('cleanupOldDeniedEntries should handle storage errors gracefully', async () => {
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    // Make updateDeniedDomains throw
+    const originalUpdate = (manager as any).updateDeniedDomains;
+    (manager as any).updateDeniedDomains = vi.fn().mockRejectedValue(new Error('Storage error'));
+
+    await expect(manager.cleanupOldDeniedEntries(90)).resolves.not.toThrow();
+
+    (manager as any).updateDeniedDomains = originalUpdate;
+  });
+
+  it('cleanupDismissedEntries should handle storage errors gracefully', async () => {
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const originalUpdate = (manager as any).updateDeniedDomains;
+    (manager as any).updateDeniedDomains = vi.fn().mockRejectedValue(new Error('Storage error'));
+
+    await expect(manager.cleanupDismissedEntries(7)).resolves.not.toThrow();
+
+    (manager as any).updateDeniedDomains = originalUpdate;
+  });
+});

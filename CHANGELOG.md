@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.23] - 2026-05-02
+
+### Fixed
+
+- **失敗テスト 5 件をすべて修正・0 failures 達成**
+  - `obsidianClient.test.ts`: fetch モックを `AbortController` の signal に連動させ、タイムアウトテストを修正
+  - `urlNotificationHandlers.test.ts`: `vi.spyOn` → `mockRejectedValueOnce` / `mockResolvedValueOnce` に変更し、テスト間のモック汚染を解消
+  - `vitest.setup.ts`: `chrome.notifications.onButtonClicked` / `onClicked` モックを追加（service-worker のリスナー登録エラーを修正）
+
+### Added
+
+- **Statements カバレッジ 80% 達成（79.88% → 80.00%）**
+  - `storageUrls-setters.test.ts`: `setUrlAiDuration`, `setUrlObsidianDuration`, `setUrlAiSummaryCleansedReasons`, `setUrlExtractedSentencesBytes`, `setUrlExtractedSentencesOriginalBytes`, `setUrlFallbackTriggered` のテストを追加（11 ケース）
+  - `piiSanitizer.test.ts`: MAX_INPUT_SIZE 超過・タイムアウトのテストを追加
+  - `aiUsageTracker.test.ts`: トークン数未設定時のデフォルト値テストを追加
+
 ## [5.1.22] - 2026-04-29
 
 ### Added

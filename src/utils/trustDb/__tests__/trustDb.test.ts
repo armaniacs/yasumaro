@@ -462,15 +462,29 @@ describe('TrustDb', () => {
       expect(version).toBeNull();
     });
 
-    test('checkTrancoUpdate で更新検知', async () => {
-      (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
-      const db = getTrustDb();
-      await db.initialize();
-      const result = await db.checkTrancoUpdate();
-      expect(result).toHaveProperty('hasUpdate');
-      expect(result).toHaveProperty('oldVersion');
-      expect(result).toHaveProperty('newVersion');
-    });
+     test('checkTrancoUpdate で更新検知', async () => {
+       (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
+       const db = getTrustDb();
+       await db.initialize();
+       const result = await db.checkTrancoUpdate();
+       expect(result).toHaveProperty('hasUpdate');
+       expect(result).toHaveProperty('oldVersion');
+       expect(result).toHaveProperty('newVersion');
+     });
+
+     test('checkTrancoUpdate で更新がなければ false を返す', async () => {
+       const currentVersion = '2026-01-01';
+       // Mock storage to return same version
+       (chrome.storage.local.get as vi.Mock).mockResolvedValue({
+         tranco_version: currentVersion
+       });
+       const db = getTrustDb();
+       await db.initialize();
+       const result = await db.checkTrancoUpdate();
+       expect(result.hasUpdate).toBe(false);
+       expect(result.oldVersion).toBe(currentVersion);
+       expect(result.newVersion).toBe(currentVersion);
+     });
 
     test('getSavedTrancoDomains でドメインリストを取得', async () => {
       (chrome.storage.local.get as vi.Mock).mockResolvedValue({
@@ -641,6 +655,26 @@ describe('TrustDb', () => {
       await db.initialize();
       const result = db.isDomainTrusted('example.com');
       expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
+    });
+
+    test('bloom filter がミスした場合 UNVERIFIED を返す', async () => {
+      // Setup: initialize with empty tranco list and custom bloom filter returning false
+      (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
+      const db = getTrustDb();
+      await db.initialize();
+
+      // Replace bloomFilter with a mock that always returns false
+      const falseBloomFilter = {
+        mightContain: vi.fn(() => false),
+        toData: () => ({ data: 'mock', hashCount: 3, bitCount: 1024, expectedDomainCount: 100, hash: 'mockhash' })
+      };
+      (db as any).state.bloomFilter = falseBloomFilter;
+
+      const result = db.isDomainTrusted('example.com');
+
+      expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
+      expect(result.source).toBe('unknown');
+      expect(falseBloomFilter.mightContain).toHaveBeenCalledWith('example.com');
     });
   });
 

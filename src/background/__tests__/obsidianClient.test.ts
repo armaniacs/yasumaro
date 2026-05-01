@@ -422,47 +422,97 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
   });
 
-  describe('testConnection error paths', () => {
-    beforeEach(() => {
-      global.fetch = vi.fn();
+   describe('testConnection error paths', () => {
+     beforeEach(() => {
+       global.fetch = vi.fn();
+     });
+
+     afterEach(() => {
+       global.fetch.mockRestore();
+     });
+
+     it('タイムアウトエラーで適切なメッセージを返す', async () => {
+       storage.getSettings.mockResolvedValue({
+         OBSIDIAN_API_KEY: 'test_key',
+         OBSIDIAN_PROTOCOL: 'http',
+         OBSIDIAN_PORT: '27123',
+         OBSIDIAN_DAILY_PATH: ''
+       });
+
+       const timeoutError = new Error('Request timed out');
+       global.fetch.mockRejectedValue(timeoutError);
+
+       const result = await obsidianClient.testConnection();
+       expect(result.success).toBe(false);
+       expect(result.message).toContain('Connection timeout');
+     });
+
+     it('その他のエラーでConnection errorを返す', async () => {
+       storage.getSettings.mockResolvedValue({
+         OBSIDIAN_API_KEY: 'test_key',
+         OBSIDIAN_PROTOCOL: 'http',
+         OBSIDIAN_PORT: '27123',
+         OBSIDIAN_DAILY_PATH: ''
+       });
+
+       const otherError = new Error('Something unexpected happened');
+       global.fetch.mockRejectedValue(otherError);
+
+       const result = await obsidianClient.testConnection();
+       expect(result.success).toBe(false);
+       expect(result.message).toContain('Connection error');
+     });
+
+     it('_getConfig で API key エラーが起きた場合に適切なメッセージを返す', async () => {
+       storage.getSettings.mockResolvedValue({
+         OBSIDIAN_API_KEY: '',
+         OBSIDIAN_PROTOCOL: 'http',
+         OBSIDIAN_PORT: '27123',
+         OBSIDIAN_DAILY_PATH: ''
+       });
+       const result = await obsidianClient.testConnection();
+       expect(result.success).toBe(false);
+       expect(result.message).toContain('API key is missing');
+     });
+   });
+
+   describe('_fetchWithTimeout abort handling', () => {
+     beforeEach(() => {
+       vi.useFakeTimers();
+     });
+     afterEach(() => {
+       vi.useRealTimers();
+     });
+
+      it('should abort request after timeout and return timeout error', async () => {
+        storage.getSettings.mockResolvedValue({
+          OBSIDIAN_API_KEY: 'test_key',
+          OBSIDIAN_PROTOCOL: 'http',
+          OBSIDIAN_PORT: '27123',
+          OBSIDIAN_DAILY_PATH: ''
+        });
+        // Fetch resolves only when signal is aborted
+        global.fetch = vi.fn((_, opts: RequestInit) =>
+          new Promise((_, reject) => {
+            opts.signal?.addEventListener('abort', () => {
+              const err = new Error('The operation was aborted.');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          })
+        );
+
+        const client = new ObsidianClient();
+        const promise = client.testConnection();
+
+        // Advance timers past FETCH_TIMEOUT_MS (15000ms)
+        await vi.advanceTimersByTimeAsync(15001);
+
+        const result = await promise;
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('timeout');
+      }, 20000);
     });
-
-    afterEach(() => {
-      global.fetch.mockRestore();
-    });
-
-    it('タイムアウトエラーで適切なメッセージを返す', async () => {
-      storage.getSettings.mockResolvedValue({
-        OBSIDIAN_API_KEY: 'test_key',
-        OBSIDIAN_PROTOCOL: 'http',
-        OBSIDIAN_PORT: '27123',
-        OBSIDIAN_DAILY_PATH: ''
-      });
-
-      const timeoutError = new Error('Request timed out');
-      global.fetch.mockRejectedValue(timeoutError);
-
-      const result = await obsidianClient.testConnection();
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Connection timeout');
-    });
-
-    it('その他のエラーでConnection errorを返す', async () => {
-      storage.getSettings.mockResolvedValue({
-        OBSIDIAN_API_KEY: 'test_key',
-        OBSIDIAN_PROTOCOL: 'http',
-        OBSIDIAN_PORT: '27123',
-        OBSIDIAN_DAILY_PATH: ''
-      });
-
-      const otherError = new Error('Something unexpected happened');
-      global.fetch.mockRejectedValue(otherError);
-
-      const result = await obsidianClient.testConnection();
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Connection error');
-    });
-  });
 
   describe('enforceHttps', () => {
     it('HTTP接続をHTTPSに強制変換する', async () => {

@@ -41,5 +41,16 @@ describe('NoteSectionEditor', () => {
       expect(result).toContain('# 🌐 ブラウザ閲覧履歴');
       expect(result).toContain('First entry');
     });
+
+    it('should add newline before section when content does not end with newline', () => {
+      const result = NoteSectionEditor.insertIntoSection(
+        'Existing content', // no trailing newline
+        '# 🌐 ブラウザ閲覧履歴',
+        'New entry'
+      );
+
+      // The function should ensure content ends with newline
+      expect(result).toBe('Existing content\n# 🌐 ブラウザ閲覧履歴\nNew entry\n');
+    });
   });
 });
