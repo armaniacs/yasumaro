@@ -22,17 +22,17 @@ import { loadDomainSettings } from './domainFilter.js';
 import { loadPrivacySettings } from './privacySettings.js';
 import { focusTrapManager } from './utils/focusTrap.js';
 
-const settingsMenuBtn = document.getElementById('settingsMenuBtn') as HTMLButtonElement | null;
-const settingsMenu = document.getElementById('settingsMenu') as HTMLElement | null;
-const exportSettingsBtn = document.getElementById('exportSettingsBtn') as HTMLButtonElement | null;
-const importSettingsBtn = document.getElementById('importSettingsBtn') as HTMLButtonElement | null;
-const importFileInput = document.getElementById('importFileInput') as HTMLInputElement | null;
-
-const importConfirmModal = document.getElementById('importConfirmModal') as HTMLElement | null;
-const closeImportModalBtn = document.getElementById('closeImportModalBtn') as HTMLButtonElement | null;
-const cancelImportBtn = document.getElementById('cancelImportBtn') as HTMLButtonElement | null;
-const confirmImportBtn = document.getElementById('confirmImportBtn') as HTMLButtonElement | null;
-const importPreview = document.getElementById('importPreview') as HTMLElement | null;
+// DOM Elements (lazily resolved for testability)
+function getSettingsMenuBtnEl(): HTMLButtonElement | null { return document.getElementById('settingsMenuBtn') as HTMLButtonElement; }
+function getSettingsMenuEl(): HTMLElement | null { return document.getElementById('settingsMenu') as HTMLElement; }
+function getExportSettingsBtnEl(): HTMLButtonElement | null { return document.getElementById('exportSettingsBtn') as HTMLButtonElement; }
+function getImportSettingsBtnEl(): HTMLButtonElement | null { return document.getElementById('importSettingsBtn') as HTMLButtonElement; }
+function getImportFileInputEl(): HTMLInputElement | null { return document.getElementById('importFileInput') as HTMLInputElement; }
+function getImportConfirmModalEl(): HTMLElement | null { return document.getElementById('importConfirmModal') as HTMLElement; }
+function getCloseImportModalBtnEl(): HTMLButtonElement | null { return document.getElementById('closeImportModalBtn') as HTMLButtonElement; }
+function getCancelImportBtnEl(): HTMLButtonElement | null { return document.getElementById('cancelImportBtn') as HTMLButtonElement; }
+function getConfirmImportBtnEl(): HTMLButtonElement | null { return document.getElementById('confirmImportBtn') as HTMLButtonElement; }
+function getImportPreviewEl(): HTMLElement | null { return document.getElementById('importPreview') as HTMLElement; }
 
 let importTrapId: string | null = null;
 
@@ -42,6 +42,9 @@ let pendingImportJson: string | null = null;
 type ReloadFn = () => Promise<void>;
 
 function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (actionType: 'export' | 'import', action: (password: string) => Promise<void>) => void): void {
+    const settingsMenuBtn = getSettingsMenuBtnEl();
+    const settingsMenu = getSettingsMenuEl();
+
     if (settingsMenuBtn && settingsMenu) {
         settingsMenuBtn.addEventListener('click', (e: MouseEvent) => {
             e.stopPropagation();
@@ -59,6 +62,10 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
             }
         });
     }
+
+    const exportSettingsBtn = getExportSettingsBtnEl();
+    const importSettingsBtn = getImportSettingsBtnEl();
+    const importFileInput = getImportFileInputEl();
 
     exportSettingsBtn?.addEventListener('click', async () => {
         settingsMenu?.classList.add('hidden');
@@ -149,6 +156,7 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
 
             showImportPreview(parsed);
 
+            const importConfirmModal = getImportConfirmModalEl();
             if (importConfirmModal) {
                 importConfirmModal.classList.remove('hidden');
                 importConfirmModal.style.display = 'flex';
@@ -166,10 +174,10 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
         }
     });
 
-    closeImportModalBtn?.addEventListener('click', closeImportModal);
-    cancelImportBtn?.addEventListener('click', closeImportModal);
+    getCloseImportModalBtnEl()?.addEventListener('click', closeImportModal);
+    getCancelImportBtnEl()?.addEventListener('click', closeImportModal);
 
-    confirmImportBtn?.addEventListener('click', async () => {
+    getConfirmImportBtnEl()?.addEventListener('click', async () => {
         if (!pendingImportJson) {
             closeImportModal();
             return;
@@ -194,14 +202,16 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
         closeImportModal();
     });
 
-    importConfirmModal?.addEventListener('click', (e: MouseEvent) => {
-        if (e.target === importConfirmModal) {
+    const importConfirmModalOnClick = getImportConfirmModalEl();
+    importConfirmModalOnClick?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === importConfirmModalOnClick) {
             closeImportModal();
         }
     });
 }
 
 function closeImportModal(): void {
+    const importConfirmModal = getImportConfirmModalEl();
     if (importConfirmModal) {
         importConfirmModal.setAttribute('aria-hidden', 'true');
 
@@ -217,12 +227,14 @@ function closeImportModal(): void {
 
     pendingImportData = null;
     pendingImportJson = null;
+    const importPreview = getImportPreviewEl();
     if (importPreview) {
         importPreview.textContent = '';
     }
 }
 
 function showImportPreview(data: SettingsExportData): void {
+    const importPreview = getImportPreviewEl();
     if (!importPreview) return;
 
     const summary: Record<string, unknown> = {
