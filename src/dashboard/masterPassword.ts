@@ -176,8 +176,9 @@ async function authenticatePassword(): Promise<void> {
   const getStorageFn = async (keys: string[]) => chrome.storage.local.get(keys);
   const result = await verifyMasterPassword(password, getStorageFn);
   if (result.success) {
+    const action = pendingPasswordAction;
     closePasswordAuthModal();
-    if (pendingPasswordAction) await pendingPasswordAction(password);
+    if (action) await action(password);
   } else {
     if (passwordAuthError) {
       passwordAuthError.textContent = getMessage('passwordIncorrect') || result.error || 'Incorrect password.';
