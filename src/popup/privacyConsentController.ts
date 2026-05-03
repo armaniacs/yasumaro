@@ -8,13 +8,25 @@ import { getMessage } from './i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 
-// DOM Elements
-const privacyConsentModal = document.getElementById('privacyConsentModal') as HTMLElement;
-const viewPrivacyPolicyBtn = document.getElementById('viewPrivacyPolicyBtn') as HTMLAnchorElement;
-const consentCheckbox = document.getElementById('consentCheckbox') as HTMLInputElement;
-const acceptConsentBtn = document.getElementById('acceptConsentBtn') as HTMLButtonElement;
-const declineConsentBtn = document.getElementById('declineConsentBtn') as HTMLButtonElement;
-const privacyConsentTitle = document.getElementById('privacyConsentTitle') as HTMLElement;
+// DOM Elements (lazily resolved so they work in tests with dynamic imports)
+function getModalEl(): HTMLElement | null {
+    return document.getElementById('privacyConsentModal');
+}
+function getViewPolicyBtnEl(): HTMLAnchorElement | null {
+    return document.getElementById('viewPrivacyPolicyBtn') as HTMLAnchorElement;
+}
+function getConsentCheckboxEl(): HTMLInputElement | null {
+    return document.getElementById('consentCheckbox') as HTMLInputElement;
+}
+function getAcceptConsentBtnEl(): HTMLButtonElement | null {
+    return document.getElementById('acceptConsentBtn') as HTMLButtonElement;
+}
+function getDeclineConsentBtnEl(): HTMLButtonElement | null {
+    return document.getElementById('declineConsentBtn') as HTMLButtonElement;
+}
+function getPrivacyConsentTitleEl(): HTMLElement | null {
+    return document.getElementById('privacyConsentTitle');
+}
 
 // State
 let consentTrapId: string | null = null;
@@ -43,53 +55,60 @@ export async function initPrivacyConsent(): Promise<void> {
  * 同意モーダルを表示
  */
 function showPrivacyConsentModal(): void {
-    if (!privacyConsentModal) {
+    const modal = getModalEl();
+    if (!modal) {
         logError('[PrivacyConsent] Modal element not found', {}, ErrorCode.INTERNAL_ERROR);
         return;
     }
 
+    const cb = getConsentCheckboxEl();
+    const acceptBtn = getAcceptConsentBtnEl();
+    const policyBtn = getViewPolicyBtnEl();
+    const title = getPrivacyConsentTitleEl();
+
     // 状態リセット
-    if (consentCheckbox) consentCheckbox.checked = false;
-    if (acceptConsentBtn) acceptConsentBtn.disabled = true;
+    if (cb) cb.checked = false;
+    if (acceptBtn) acceptBtn.disabled = true;
 
     // プライバシーポリシーリンク設定
-    if (viewPrivacyPolicyBtn) {
-        viewPrivacyPolicyBtn.href = chrome.runtime.getURL('permissions.html');
-        viewPrivacyPolicyBtn.setAttribute(
+    if (policyBtn) {
+        policyBtn.href = chrome.runtime.getURL('permissions.html');
+        policyBtn.setAttribute(
             'aria-label',
             getMessage('viewFullPolicy') || 'View Full Privacy Policy'
         );
     }
 
     // 翻訳
-    if (privacyConsentTitle) {
-        privacyConsentTitle.textContent = getMessage('privacyConsentTitle') || 'Privacy Policy Consent';
+    if (title) {
+        title.textContent = getMessage('privacyConsentTitle') || 'Privacy Policy Consent';
     }
 
     // モーダル表示
-    privacyConsentModal.classList.remove('hidden');
-    privacyConsentModal.style.display = 'flex';
-    void privacyConsentModal.offsetHeight; // リフロー強制
-    privacyConsentModal.classList.add('show');
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    void modal.offsetHeight; // リフロー強制
+    modal.classList.add('show');
 
     // フォーカストラップ設定（ESCで閉じない）
-    consentTrapId = focusTrapManager.trap(privacyConsentModal, () => {
+    consentTrapId = focusTrapManager.trap(modal, () => {
         // ESC押下時は何もしない（同意が必要）
     });
 
     // チェックボックスにフォーカス
-    consentCheckbox?.focus();
+    cb?.focus();
 }
 
 /**
  * 同意モーダルを非表示にする
  */
 function hidePrivacyConsentModal(): void {
-    if (!privacyConsentModal) return;
+    const modal = getModalEl();
+    if (!modal) return;
 
-    privacyConsentModal.classList.remove('show');
-    privacyConsentModal.style.display = 'none';
-    privacyConsentModal.classList.add('hidden');
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
 
     // フォーカストラップ解放
     if (consentTrapId) {
@@ -98,8 +117,10 @@ function hidePrivacyConsentModal(): void {
     }
 
     // 状態リセット
-    if (consentCheckbox) consentCheckbox.checked = false;
-    if (acceptConsentBtn) acceptConsentBtn.disabled = true;
+    const cb = getConsentCheckboxEl();
+    const acceptBtn = getAcceptConsentBtnEl();
+    if (cb) cb.checked = false;
+    if (acceptBtn) acceptBtn.disabled = true;
 }
 
 /**
@@ -118,11 +139,12 @@ async function handleAcceptConsent(): Promise<void> {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
 
         // エラー表示
-        if (acceptConsentBtn) {
-            const originalText = acceptConsentBtn.textContent;
-            acceptConsentBtn.textContent = getMessage('saveFailed') || 'Failed to save consent';
+        const acceptBtn = getAcceptConsentBtnEl();
+        if (acceptBtn) {
+            const originalText = acceptBtn.textContent;
+            acceptBtn.textContent = getMessage('saveFailed') || 'Failed to save consent';
             setTimeout(() => {
-                acceptConsentBtn.textContent = originalText;
+                acceptBtn.textContent = originalText;
             }, 2000);
         }
     }
@@ -154,35 +176,41 @@ async function handleDeclineConsent(): Promise<void> {
  * イベントリスナー設定
  */
 export function setupPrivacyConsentListeners(): void {
+    const cb = getConsentCheckboxEl();
+    const acceptBtn = getAcceptConsentBtnEl();
+    const declineBtn = getDeclineConsentBtnEl();
+    const modal = getModalEl();
+    const policyBtn = getViewPolicyBtnEl();
+
     // チェックボックスでAcceptボタン有効化
-    if (consentCheckbox && acceptConsentBtn) {
-        consentCheckbox.addEventListener('change', () => {
-            acceptConsentBtn.disabled = !consentCheckbox.checked;
+    if (cb && acceptBtn) {
+        cb.addEventListener('change', () => {
+            acceptBtn.disabled = !cb.checked;
         });
     }
 
     // Acceptボタン
-    if (acceptConsentBtn) {
-        acceptConsentBtn.addEventListener('click', handleAcceptConsent);
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', handleAcceptConsent);
     }
 
     // Declineボタン
-    if (declineConsentBtn) {
-        declineConsentBtn.addEventListener('click', handleDeclineConsent);
+    if (declineBtn) {
+        declineBtn.addEventListener('click', handleDeclineConsent);
     }
 
     // 外部クリックで閉じない（明示的なアクションを要求）
-    if (privacyConsentModal) {
-        privacyConsentModal.addEventListener('click', (e: MouseEvent) => {
+    if (modal) {
+        modal.addEventListener('click', (e: MouseEvent) => {
             e.stopPropagation();
         });
     }
 
     // 新しいタブでプライバシーポリシーを開く
-    if (viewPrivacyPolicyBtn) {
-        viewPrivacyPolicyBtn.addEventListener('click', (e: MouseEvent) => {
+    if (policyBtn) {
+        policyBtn.addEventListener('click', (e: MouseEvent) => {
             e.preventDefault();
-            chrome.tabs.create({ url: viewPrivacyPolicyBtn.href });
+            chrome.tabs.create({ url: policyBtn.href });
         });
     }
 }
