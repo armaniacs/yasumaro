@@ -1496,6 +1496,288 @@ describe('service-worker handlers', () => {
         });
     });
 
+    describe('handleContentCleansingExecuted', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleContentCleansingExecuted).toBe('function');
+        });
+
+        it('should update badge with cleansing count and green color', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 2, keywordStripRemoved: 3, totalRemoved: 5 }
+            };
+            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: 'C5', tabId: 1 });
+            expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(
+                expect.objectContaining({ tabId: 1 })
+            );
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should call setUrlCleansedReason with "both" when both hard and keyword are present', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 2, keywordStripRemoved: 3, totalRemoved: 5 }
+            };
+            const sender = { tab: { id: 2, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'both');
+        });
+
+        it('should call setUrlCleansedReason with "hard" when only hard strip has removals', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 3, keywordStripRemoved: 0, totalRemoved: 3 }
+            };
+            const sender = { tab: { id: 3, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'hard');
+        });
+
+        it('should call setUrlCleansedReason with "keyword" when only keyword strip has removals', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 0, keywordStripRemoved: 4, totalRemoved: 4 }
+            };
+            const sender = { tab: { id: 4, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'keyword');
+        });
+
+        it('should not call setUrlCleansedReason when totalRemoved is 0', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 0, keywordStripRemoved: 0, totalRemoved: 0 }
+            };
+            const sender = { tab: { id: 5, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(storageUrls.setUrlCleansedReason).not.toHaveBeenCalled();
+            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+        });
+
+        it('should not call setUrlCleansedReason when sender.tab.url is missing', async () => {
+            const sendResponse = vi.fn();
+            const message: ContentCleansingExecutedMessage = {
+                type: 'CONTENT_CLEANSING_EXECUTED',
+                payload: { hardStripRemoved: 2, keywordStripRemoved: 3, totalRemoved: 5 }
+            };
+            const sender = { tab: { id: 6 } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
+
+            expect(storageUrls.setUrlCleansedReason).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleCheckDomain', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleCheckDomain).toBe('function');
+        });
+
+        it('should return allowed: true when domain is allowed', async () => {
+            const sendResponse = vi.fn();
+            const message: CheckDomainMessage = { type: 'CHECK_DOMAIN' };
+            const sender = { tab: { id: 1, url: 'https://allowed.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleCheckDomain(message, sender, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, allowed: true })
+            );
+        });
+
+        it('should return allowed: false when domain is not allowed', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            domainUtils.isDomainAllowed.mockResolvedValue(false);
+
+            const sendResponse = vi.fn();
+            const message: CheckDomainMessage = { type: 'CHECK_DOMAIN' };
+            const sender = { tab: { id: 2, url: 'https://blocked.com' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleCheckDomain(message, sender, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, allowed: false })
+            );
+        });
+
+        it('should return allowed: false when sender.tab.url is empty', async () => {
+            const sendResponse = vi.fn();
+            const message: CheckDomainMessage = { type: 'CHECK_DOMAIN' };
+            const sender = { tab: { id: 3, url: '' } } as chrome.runtime.MessageSender;
+
+            await serviceWorker.handleCheckDomain(message, sender, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, allowed: false })
+            );
+        });
+    });
+
+    describe('handleTestConnections', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleTestConnections).toBe('function');
+        });
+
+        it('should return both obsidian and ai connection results', async () => {
+            const sendResponse = vi.fn();
+            const message: TestConnectionsMessage = { type: 'TEST_CONNECTIONS' };
+
+            await serviceWorker.handleTestConnections(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    success: true,
+                    obsidian: expect.any(Object),
+                    ai: expect.any(Object)
+                })
+            );
+        });
+    });
+
+    describe('handleTestObsidian', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleTestObsidian).toBe('function');
+        });
+
+        it('should return obsidian connection result', async () => {
+            const sendResponse = vi.fn();
+            const message: TestObsidianMessage = { type: 'TEST_OBSIDIAN', payload: {} };
+
+            await serviceWorker.handleTestObsidian(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, obsidian: expect.any(Object) })
+            );
+        });
+
+        it('should pass apiKey override when provided', async () => {
+            const sendResponse = vi.fn();
+            const message: TestObsidianMessage = {
+                type: 'TEST_OBSIDIAN',
+                payload: { apiKey: 'override-key' }
+            };
+
+            await serviceWorker.handleTestObsidian(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, obsidian: expect.any(Object) })
+            );
+        });
+    });
+
+    describe('handleTestAi', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleTestAi).toBe('function');
+        });
+
+        it('should return ai connection result', async () => {
+            const sendResponse = vi.fn();
+            const message: TestAiMessage = { type: 'TEST_AI' };
+
+            await serviceWorker.handleTestAi(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, ai: expect.any(Object) })
+            );
+        });
+    });
+
+    describe('handleGetPrivacyCache', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleGetPrivacyCache).toBe('function');
+        });
+
+        it('should return cache entries when cache exists', async () => {
+            RecordingLogic.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
+
+            const sendResponse = vi.fn();
+            const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
+
+            await serviceWorker.handleGetPrivacyCache(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, cache: expect.any(Array) })
+            );
+        });
+
+        it('should return empty array when cache is null', async () => {
+            RecordingLogic.cacheState.privacyCache = null;
+
+            const sendResponse = vi.fn();
+            const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
+
+            await serviceWorker.handleGetPrivacyCache(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ success: true, cache: [] })
+            );
+        });
+    });
+
+    describe('handleActivityUpdate', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleActivityUpdate).toBe('function');
+        });
+
+        it('should call updateActivity and return success', async () => {
+            const sendResponse = vi.fn();
+            const message: ActivityUpdateMessage = { type: 'ACTIVITY_UPDATE' };
+
+            await serviceWorker.handleActivityUpdate(message, sendResponse);
+
+            expect(sessionAlarmsManager.updateActivity).toHaveBeenCalled();
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+    });
+
+    describe('handleSessionLockRequest', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleSessionLockRequest).toBe('function');
+        });
+
+        it('should call lockSession and return success', async () => {
+            const sendResponse = vi.fn();
+            const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
+
+            await serviceWorker.handleSessionLockRequest(message, sendResponse);
+
+            expect(storage.lockSession).toHaveBeenCalled();
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+    });
+
+    describe('handlePing', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handlePing).toBe('function');
+        });
+
+        it('should return success', async () => {
+            const sendResponse = vi.fn();
+            const message: PingMessage = { type: 'PING' };
+
+            await serviceWorker.handlePing(message, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+    });
+
     describe('handleTabActivated', () => {
         it('should be exported and be a function', async () => {
             const serviceWorker = await import('../service-worker.js');

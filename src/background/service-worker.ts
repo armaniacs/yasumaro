@@ -44,7 +44,16 @@ import type {
     FetchUrlMessage,
     ManualRecordMessage,
     PreviewRecordMessage,
-    SaveRecordMessage
+    SaveRecordMessage,
+    ContentCleansingExecutedMessage,
+    CheckDomainMessage,
+    TestConnectionsMessage,
+    TestObsidianMessage,
+    TestAiMessage,
+    GetPrivacyCacheMessage,
+    ActivityUpdateMessage,
+    SessionLockRequestMessage,
+    PingMessage
 } from './messageTypes.js';
 
 // ============================================================================
@@ -468,6 +477,149 @@ export async function handleSaveRecord(
     sendResponse(result);
 }
 
+/**
+ * Handle CONTENT_CLEANSING_EXECUTED message from Content Script.
+ * Updates badge to show cleansing count, sets timeout to clear badge,
+ * and records cleansing reason in storage.
+ */
+export async function handleContentCleansingExecuted(
+    message: ContentCleansingExecutedMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
+    const tabId = sender.tab!.id!;
+
+    chrome.action.setBadgeText({ text: `C${totalRemoved || 0}`, tabId });
+    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
+
+    setTimeout(() => {
+        if (!autoSavedBadgeTabs.has(tabId)) {
+            chrome.action.setBadgeText({ text: '', tabId });
+        }
+    }, 3000);
+
+    if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
+        const hardEnabled = (hardStripRemoved ?? 0) > 0;
+        const keywordEnabled = (keywordStripRemoved ?? 0) > 0;
+        let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
+        if (hardEnabled && !keywordEnabled) {
+            cleansedReason = 'hard';
+        } else if (!hardEnabled && keywordEnabled) {
+            cleansedReason = 'keyword';
+        }
+        await setUrlCleansedReason(sender.tab.url, cleansedReason);
+    }
+
+    sendResponse({ success: true });
+}
+
+/**
+ * Handle CHECK_DOMAIN message from Content Script.
+ * Checks if the sender's URL is in the allowed domain list.
+ */
+export async function handleCheckDomain(
+    message: CheckDomainMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const url = sender.tab?.url || '';
+    const allowed = url ? await isDomainAllowed(url) : false;
+    sendResponse({ success: true, allowed });
+}
+
+/**
+ * Handle TEST_CONNECTIONS message from Popup.
+ * Tests both Obsidian and AI provider connections.
+ */
+export async function handleTestConnections(
+    message: TestConnectionsMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const obsidianResult = await obsidian.testConnection();
+    const aiResult = await aiClient.testConnection();
+    sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
+}
+
+/**
+ * Handle TEST_OBSIDIAN message from Popup.
+ * Tests Obsidian connection only, optionally with an API key override.
+ */
+export async function handleTestObsidian(
+    message: TestObsidianMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const override = message.payload?.apiKey ? message.payload : undefined;
+    const obsidianResult = await obsidian.testConnection(override);
+    sendResponse({ success: true, obsidian: obsidianResult });
+}
+
+/**
+ * Handle TEST_AI message from Popup.
+ * Tests AI provider connection only.
+ */
+export async function handleTestAi(
+    message: TestAiMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const aiResult = await aiClient.testConnection();
+    sendResponse({ success: true, ai: aiResult });
+}
+
+/**
+ * Handle GET_PRIVACY_CACHE message from Popup.
+ * Returns the privacy cache contents for the status panel.
+ */
+export async function handleGetPrivacyCache(
+    message: GetPrivacyCacheMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const cache = RecordingLogic.cacheState.privacyCache;
+    await logDebug('GET_PRIVACY_CACHE requested', { cacheSize: cache?.size || 0 }, 'service-worker');
+    if (cache) {
+        const cacheArray = Array.from(cache.entries());
+        await logDebug('Sending cache entries to popup', { count: cacheArray.length }, 'service-worker');
+        sendResponse({ success: true, cache: cacheArray });
+    } else {
+        await logDebug('No cache available, sending empty array', undefined, 'service-worker');
+        sendResponse({ success: true, cache: [] });
+    }
+}
+
+/**
+ * Handle ACTIVITY_UPDATE message from Popup.
+ * Updates session activity timestamp.
+ */
+export async function handleActivityUpdate(
+    message: ActivityUpdateMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    await updateActivity();
+    sendResponse({ success: true });
+}
+
+/**
+ * Handle SESSION_LOCK_REQUEST message.
+ * Locks the current session.
+ */
+export async function handleSessionLockRequest(
+    message: SessionLockRequestMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    lockSession();
+    sendResponse({ success: true });
+}
+
+/**
+ * Handle PING message for Service Worker health check.
+ */
+export async function handlePing(
+    message: PingMessage,
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    sendResponse({ success: true });
+}
+
 // ============================================================================
 // Message Handler Factory (extracted for testability)
 // ============================================================================
@@ -525,45 +677,13 @@ export function createMessageHandler(): (
 
                 // Content Cleansing executed notification (Content Script only)
                 if (message.type === 'CONTENT_CLEANSING_EXECUTED' && sender.tab && sender.tab?.id) {
-                    const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
-                    const tabId = sender.tab.id;
-
-                    // Badge にクレンジング情報を表示（C + 削除数）
-                    const badgeText = `C${totalRemoved || 0}`;
-                    chrome.action.setBadgeText({ text: badgeText, tabId });
-                    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId: tabId }); // Green
-
-                    // 3秒後に Badge をクリア
-                    setTimeout(() => {
-                        // まだ自動保存されていない場合のみクリア
-                        if (!autoSavedBadgeTabs.has(tabId)) {
-                            chrome.action.setBadgeText({ text: '', tabId });
-                        }
-                    }, 3000);
-
-                    // 記録履歴にクレンジング理由を保存
-                    if (sender.tab?.url && totalRemoved > 0) {
-                        // クレンジング理由を決定
-                        const hardEnabled = hardStripRemoved > 0;
-                        const keywordEnabled = keywordStripRemoved > 0;
-                        let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
-                        if (hardEnabled && !keywordEnabled) {
-                            cleansedReason = 'hard';
-                        } else if (!hardEnabled && keywordEnabled) {
-                            cleansedReason = 'keyword';
-                        }
-                        await setUrlCleansedReason(sender.tab.url, cleansedReason);
-                    }
-
-                    sendResponse({ success: true });
+                    await handleContentCleansingExecuted(message, sender, sendResponse);
                     return;
                 }
 
                 // Domain Check (Content Script only: loader が extractor を inject する前に確認)
                 if (message.type === 'CHECK_DOMAIN' && sender.tab) {
-                    const url = sender.tab.url || '';
-                    const allowed = url ? await isDomainAllowed(url) : false;
-                    sendResponse({ success: true, allowed });
+                    await handleCheckDomain(message, sender, sendResponse);
                     return;
                 }
 
@@ -581,53 +701,25 @@ export function createMessageHandler(): (
 
                 // Connection Test (Obsidian + AI)
                 if (message.type === 'TEST_CONNECTIONS') {
-                    // 【パフォーマンス改善】: 接続テストはTabCacheを必要としない
-                    const obsidianResult = await obsidian.testConnection();
-                    const aiResult = await aiClient.testConnection();
-                    sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
+                    await handleTestConnections(message, sendResponse);
                     return;
                 }
 
                 // Obsidian のみ接続テスト
                 if (message.type === 'TEST_OBSIDIAN') {
-                    const override = message.payload?.apiKey ? message.payload : undefined;
-                    const obsidianResult = await obsidian.testConnection(override);
-                    sendResponse({ success: true, obsidian: obsidianResult });
+                    await handleTestObsidian(message, sendResponse);
                     return;
                 }
 
                 // AI のみ接続テスト
                 if (message.type === 'TEST_AI') {
-                    const aiResult = await aiClient.testConnection();
-                    sendResponse({ success: true, ai: aiResult });
+                    await handleTestAi(message, sendResponse);
                     return;
                 }
 
                 // Get Privacy Cache (for Popup status panel)
                 if (message.type === 'GET_PRIVACY_CACHE') {
-                    const cache = RecordingLogic.cacheState.privacyCache;
-                    await logDebug(
-                        'GET_PRIVACY_CACHE requested',
-                        { cacheSize: cache?.size || 0 },
-                        'service-worker'
-                    );
-                    if (cache) {
-                        // Map を配列に変換して送信
-                        const cacheArray = Array.from(cache.entries());
-                        await logDebug(
-                            'Sending cache entries to popup',
-                            { count: cacheArray.length },
-                            'service-worker'
-                        );
-                        sendResponse({ success: true, cache: cacheArray });
-                    } else {
-                        await logDebug(
-                            'No cache available, sending empty array',
-                            undefined,
-                            'service-worker'
-                        );
-                        sendResponse({ success: true, cache: [] });
-                    }
+                    await handleGetPrivacyCache(message, sendResponse);
                     return;
                 }
 
@@ -645,21 +737,19 @@ export function createMessageHandler(): (
 
                 // Activity Update (Popupからのアクティビティ通知)
                 if (message.type === 'ACTIVITY_UPDATE') {
-                    await updateActivity();
-                    sendResponse({ success: true });
+                    await handleActivityUpdate(message, sendResponse);
                     return;
                 }
 
                 // Session Lock Request (from sessionAlarmsManager.ts)
                 if (message.type === 'SESSION_LOCK_REQUEST') {
-                    lockSession();
-                    sendResponse({ success: true });
+                    await handleSessionLockRequest(message, sendResponse);
                     return;
                 }
 
                 // PING - Service Worker health check
                 if (message.type === 'PING') {
-                    sendResponse({ success: true });
+                    await handlePing(message, sendResponse);
                     return;
                 }
 
