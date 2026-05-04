@@ -37,6 +37,10 @@ docs/implements/
 *.local
 .*
 
+# Allow GitHub Actions workflow files (not matched by .* above)
+!/.github/workflows/*.yml
+!/.github/workflows/*.yaml
+
 video-autotag/
 video-config-export/
 video-*/
