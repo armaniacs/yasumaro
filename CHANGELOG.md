@@ -2,21 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.1.23] - 2026-05-02
+## [5.1.23] - 2026-05-05
+
+### Added
+
+- **テストカバレッジ大幅向上: Statements 91.47% / Lines 92.98%（5/4 現在）**
+  - 前回比: Statements +12.73%, Lines +12.36% の大幅改善
+  - 全 10 ファイルのカバレッジを平均 ~26% から ~99% に改善（+416 テスト）
+  - 全 5406 テストパス、0 failures
+
+- **10 ファイルの低カバレッジ改善**:
+  - `customPromptManager.ts`: 25.95% → 95.23%（36 tests）
+  - `privatePageDialog.ts`: 9.61% → 100%（24 tests）
+  - `historyEntryRow.ts`: 0.5% → 98.49%（46 tests）
+  - `masterPasswordUi.ts` (popup): 0% → 99%（59 tests）
+  - `diagnosticsPanel.ts`: 17.2% → 100%（28 tests）
+  - `domainFilterTagUI.ts`: 22.8% → 75%+（34 tests）
+  - `masterPassword.ts` (dashboard): 28.8% → 99.36%（48 tests）
+  - `models-dev-dialog.ts`: 52.4% → 98.78%（46 tests）
+  - `historyTagEditModal.ts`: 35.4% → 98.78%（43 tests）
+  - `historyPendingPanel.ts`: 53.7% → 100%（52 tests）
+
+- **GitHub Actions CI/CD パイプライン**:
+  - `ci.yml`: PR/push to main で `validate`（type-check + test）+ `build`
+  - `coverage.yml`: push to main でカバレッジレポート生成（`davelosert/vitest-coverage-report-action@v2`）
+  - `release.yml`: `v*` タグ作成時に Chrome/Firefox/Edge ビルド + GitHub Release 作成
+
+- **service-worker.ts リファクタリング**:
+  - 9 個のインラインメッセージハンドラをエクスポート可能な関数に抽出
+  - `handleContentCleansingExecuted`, `handleCheckDomain`, `handleTestConnections`, `handleTestObsidian`, `handleTestAi`, `handleGetPrivacyCache`, `handleActivityUpdate`, `handleSessionLockRequest`, `handlePing`
+  - 27 の新規ユニットテスト追加（service-worker.test.ts: 133 tests）
 
 ### Fixed
 
 - **失敗テスト 5 件をすべて修正・0 failures 達成**
-  - `obsidianClient.test.ts`: fetch モックを `AbortController` の signal に連動させ、タイムアウトテストを修正
-  - `urlNotificationHandlers.test.ts`: `vi.spyOn` → `mockRejectedValueOnce` / `mockResolvedValueOnce` に変更し、テスト間のモック汚染を解消
-  - `vitest.setup.ts`: `chrome.notifications.onButtonClicked` / `onClicked` モックを追加（service-worker のリスナー登録エラーを修正）
+  - `obsidianClient.test.ts`: fetch モックを `AbortController` の signal に連動
+  - `urlNotificationHandlers.test.ts`: `vi.spyOn` → `mockRejectedValueOnce` / `mockResolvedValueOnce` に変更
+  - `vitest.setup.ts`: `chrome.notifications.onButtonClicked` / `onClicked` モックを追加
 
-### Added
+- **バグ修正 2 件**:
+  - `masterPassword.ts` / `masterPasswordUi.ts`: `closePasswordAuthModal()` が `pendingPasswordAction` を先に null 化していた問題を修正
 
-- **Statements カバレッジ 80% 達成（79.88% → 80.00%）**
-  - `storageUrls-setters.test.ts`: `setUrlAiDuration`, `setUrlObsidianDuration`, `setUrlAiSummaryCleansedReasons`, `setUrlExtractedSentencesBytes`, `setUrlExtractedSentencesOriginalBytes`, `setUrlFallbackTriggered` のテストを追加（11 ケース）
-  - `piiSanitizer.test.ts`: MAX_INPUT_SIZE 超過・タイムアウトのテストを追加
-  - `aiUsageTracker.test.ts`: トークン数未設定時のデフォルト値テストを追加
+- **Checking Team レビュー指摘 7 件対応**:
+  - `extractor.ts`: loadSettings に 15+ の新クレンジング設定キーを追加
+  - `extractor.ts`: `parseInt` の `NaN` 伝搬ガード追加（`minVisitDuration`, `minScrollDepth`）
+  - `extractor.ts`: `extractPageContent` の `cleanseOptions` スプレッド除去
+  - `extractor.ts`: `throttle` 関数の `return` 修正
+  - `manifest.json`: `z-ai` → `z.ai` typo 修正（host_permissions）
+  - `contentCleaner.ts`: `Array` → `Set` に変更し重複排除を最適化
+  - `vitest.setup.ts`: 明示的な `vi` import 追加
+
+### Changed
+
+- `.gitignore` に `!/.github/workflows/*.yml` を追加（CI/CD ファイルを追跡可能に）
+
+### Documents
+
+- `plans/00-index.md`: 全ファイルステータスを最新に更新
+- `plans/2026-04-19-tobe-ow6.md`: カバレッジ 91.47% 達成を追記、次へを再整理
+- `plans/2026-05-03-coverage-improvement.md`: 全 8 タスク完了マーク
 
 ## [5.1.22] - 2026-04-29
 
