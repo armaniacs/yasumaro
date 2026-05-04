@@ -13,7 +13,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
-function extractVersion(content, filePath) {
+export const VERSION_FILES = [
+  'package.json',
+  'manifest.json',
+  'wxt.config.ts'
+];
+
+export function extractVersion(content, filePath) {
   // package.json: "version": "5.1.14"
   if (filePath.includes('package.json')) {
     const match = content.match(/"version"\s*:\s*"([^"]+)"/);
@@ -35,52 +41,44 @@ function extractVersion(content, filePath) {
   return null;
 }
 
-function checkVersionConsistency() {
-  const files = [
-    'package.json',
-    'manifest.json',
-    'wxt.config.ts'
-  ];
-
+export function readVersions(rootDir) {
   const versions = {};
+  for (const file of VERSION_FILES) {
+    const content = readFileSync(join(rootDir, file), 'utf8');
+    const version = extractVersion(content, file);
+    if (!version) {
+      throw new Error(`Could not extract version from ${file}`);
+    }
+    versions[file] = version;
+  }
+  return versions;
+}
+
+export function checkVersionConsistency(rootDir) {
+  const versions = readVersions(rootDir);
 
   console.log('🔍 Checking version consistency...\n');
+  Object.entries(versions).forEach(([file, version]) => {
+    console.log(`📄 ${file}: ${version}`);
+  });
 
-  for (const file of files) {
-    try {
-      const content = readFileSync(join(ROOT_DIR, file), 'utf8');
-      const version = extractVersion(content, file);
-
-      if (!version) {
-        console.error(`❌ Could not extract version from ${file}`);
-        process.exit(1);
-      }
-
-      versions[file] = version;
-      console.log(`📄 ${file}: ${version}`);
-
-    } catch (error) {
-      console.error(`❌ Error reading ${file}: ${error.message}`);
-      process.exit(1);
-    }
-  }
-
-  // Check if all versions are the same
-  const versionValues = Object.values(versions);
-  const uniqueVersions = [...new Set(versionValues)];
-
+  const uniqueVersions = [...new Set(Object.values(versions))];
   if (uniqueVersions.length === 1) {
     console.log(`\n✅ All version files are consistent: ${uniqueVersions[0]}`);
     return true;
-  } else {
-    console.error('\n❌ Version mismatch detected!');
-    console.error('Found versions:');
-    Object.entries(versions).forEach(([file, version]) => {
-      console.error(`  ${file}: ${version}`);
-    });
-    console.error('\nPlease update all version files to match.');
-    process.exit(1);
   }
+
+  console.error('\n❌ Version mismatch detected!');
+  console.error('Found versions:');
+  Object.entries(versions).forEach(([file, version]) => {
+    console.error(`  ${file}: ${version}`);
+  });
+  console.error('\nPlease update all version files to match.');
+  return false;
 }
 
-checkVersionConsistency();
+// CLI entry point
+if (process.argv[1] && (process.argv[1].includes('check-version-consistency'))) {
+  const result = checkVersionConsistency(ROOT_DIR);
+  if (!result) process.exit(1);
+}
