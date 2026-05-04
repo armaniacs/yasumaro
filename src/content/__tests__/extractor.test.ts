@@ -3,7 +3,7 @@
  * Comprehensive tests for extractor.ts
  * Covers error handling paths, edge cases, and fallback logic
  */
-import { describe, it, expect, vi, beforeEach, afterEach, jest } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 
 // Mock chrome API before importing

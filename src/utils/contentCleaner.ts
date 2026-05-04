@@ -113,7 +113,7 @@ export function stripHardStripElements(element: Element): number {
     let removedCount = 0;
 
     // 削除対象の要素を収集（後から削除してDOM操作の問題を回避）
-    const elementsToRemove: Element[] = [];
+    const elementsToRemove = new Set<Element>();
 
     // タグセレクタをCSSセレクタ文字列に変換
     const tagSelector = [...HARD_STRIP_TAGS].join(',');
@@ -121,7 +121,7 @@ export function stripHardStripElements(element: Element): number {
     // タグに一致する要素を取得
     if (tagSelector) {
         const tagElements = element.querySelectorAll(tagSelector);
-        tagElements.forEach(elem => elementsToRemove.push(elem));
+        tagElements.forEach(elem => elementsToRemove.add(elem));
     }
 
     // 属性に一致する要素を取得
@@ -129,16 +129,16 @@ export function stripHardStripElements(element: Element): number {
         if (attr.value instanceof RegExp) {
             // RegExp は CSS セレクタで表現できないため、要素を直接走査
             element.querySelectorAll('*').forEach(elem => {
-                if (isHardStripTarget(elem, [attr]) && !elementsToRemove.includes(elem)) {
-                    elementsToRemove.push(elem);
+                if (isHardStripTarget(elem, [attr]) && !elementsToRemove.has(elem)) {
+                    elementsToRemove.add(elem);
                 }
             });
         } else {
             const selector = buildAttributeSelector(attr);
             const attrElements = element.querySelectorAll(selector);
             attrElements.forEach(elem => {
-                if (!elementsToRemove.includes(elem)) {
-                    elementsToRemove.push(elem);
+                if (!elementsToRemove.has(elem)) {
+                    elementsToRemove.add(elem);
                 }
             });
         }
@@ -256,30 +256,31 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     let keywordStripCount = 0;
 
     if (hardStripEnabled) {
+        const elementsToCount = new Set<Element>();
+
         // タグセレクタをCSSセレクタ文字列に変換
         const tagSelector = [...HARD_STRIP_TAGS].join(',');
 
         // タグに一致する要素をカウント
         if (tagSelector) {
-            hardStripCount += element.querySelectorAll(tagSelector).length;
+            element.querySelectorAll(tagSelector).forEach(elem => elementsToCount.add(elem));
         }
 
         // 属性に一致する要素をカウント
         for (const attr of HARD_STRIP_ATTRIBUTES) {
             if (attr.value instanceof RegExp) {
                 // RegExp は CSS セレクタで表現できないため、要素を直接走査
-                // ここでは属性マッチのみをカウントし、タグマッチはタグセレクタ側で行われる
                 element.querySelectorAll('*').forEach(elem => {
-                    const attrValue = elem.getAttribute(attr.name);
-                    if (attrValue && attr.value.test(attrValue)) {
-                        hardStripCount++;
+                    if (isHardStripTarget(elem, [attr])) {
+                        elementsToCount.add(elem);
                     }
                 });
             } else {
                 const selector = buildAttributeSelector(attr);
-                hardStripCount += element.querySelectorAll(selector).length;
+                element.querySelectorAll(selector).forEach(elem => elementsToCount.add(elem));
             }
         }
+        hardStripCount = elementsToCount.size;
     }
 
     if (keywordStripEnabled && keywords.length > 0) {

@@ -232,7 +232,7 @@ export function extractPageContent(): string {
         dedupEnabled: contentDedupEnabled,
         dedupThreshold: contentDedupThreshold
     };
-    const result = extractMainContent(10000, { ...cleanseOptions, cleanseEnabled: true }, { ...aiSummaryCleanseOptions, aiSummaryCleanseEnabled: true }, dedupOptions);
+    const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
     // クレンジング情報を保存
     if (typeof result === 'object' && 'cleansedReason' in result) {
         lastCleansedReason = result.cleansedReason || 'none';
@@ -293,6 +293,30 @@ function loadSettings(): Promise<void> {
             AI_SUMMARY_CLEANSING_SKIP_LINK,
             AI_SUMMARY_CLEANSING_CARD,
             AI_SUMMARY_CLEANSING_LINK_DENSITY,
+            // NEW: 6つの新しいクレンジングオプション
+            AI_SUMMARY_CLEANSING_FIXED,
+            AI_SUMMARY_CLEANSING_RECOMMEND,
+            AI_SUMMARY_CLEANSING_PAGINATION,
+            AI_SUMMARY_CLEANSING_SNS_PROMO,
+            AI_SUMMARY_CLEANSING_POPUP,
+            AI_SUMMARY_CLEANSING_PLATFORM,
+            // NEW: 9つの追加クレンジングオプション
+            AI_SUMMARY_CLEANSING_TEXT_DENSITY,
+            AI_SUMMARY_CLEANSING_SHORT_SEQ,
+            AI_SUMMARY_CLEANSING_SYMBOL_LINE,
+            AI_SUMMARY_CLEANSING_LINK_PARA,
+            AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN,
+            AI_SUMMARY_CLEANSING_EMPTY_ELEM,
+            AI_SUMMARY_CLEANSING_JP_LAYOUT,
+            AI_SUMMARY_CLEANSING_JP_NAVIGATION,
+            AI_SUMMARY_CLEANSING_AUTHOR,
+            // Threshold settings
+            AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD,
+            AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD,
+            AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT,
+            AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD,
+            // Custom patterns
+            AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS,
             CONTENT_DEDUP_ENABLED,
             CONTENT_DEDUP_THRESHOLD
         ], (result: Record<string, unknown>) => {
@@ -302,10 +326,12 @@ function loadSettings(): Promise<void> {
                 : result;
 
             if (s.min_visit_duration !== undefined) {
-                minVisitDuration = parseInt(String(s.min_visit_duration), 10);
+                const parsedDuration = parseInt(String(s.min_visit_duration), 10);
+                minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
             }
             if (s.min_scroll_depth !== undefined) {
-                minScrollDepth = parseInt(String(s.min_scroll_depth), 10);
+                const parsedDepth = parseInt(String(s.min_scroll_depth), 10);
+                minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
             }
             // クレンジング設定を取得
             if (s[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
@@ -517,7 +543,7 @@ function throttle<T extends (...args: any[]) => void>(fn: T): T {
     let rafId: number | null = null;
     let lastArgs: Parameters<T> | null = null;
 
-    return ((...args: Parameters<T>) => {
+    const throttledFn = ((...args: Parameters<T>) => {
         lastArgs = args;
         const now = performance.now();
 
@@ -553,6 +579,8 @@ function throttle<T extends (...args: any[]) => void>(fn: T): T {
             rafId = null;
         }
     });
+
+    return throttledFn;
 }
 
 /**

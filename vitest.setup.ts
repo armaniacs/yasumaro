@@ -33,6 +33,7 @@ console.error = (...args: unknown[]) => {
 };
 
 import { Crypto, CryptoKey } from '@peculiar/webcrypto';
+import { vi } from 'vitest';
 
 // ============================================================================
 // Polyfills
