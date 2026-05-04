@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Cache node_modules
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: npm ci
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Build for Chrome
+        run: npx wxt zip -b chrome
+      - name: Build for Firefox
+        run: npx wxt zip -b firefox
+      - name: Build for Edge
+        run: npx wxt zip -b edge
+      - name: List output archives
+        run: ls -la dist/*.zip
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## Obsidian Weave v${{ steps.version.outputs.version }}
+
+            See [CHANGELOG.md](https://github.com/armaniacs/obsidian-weave/blob/main/CHANGELOG.md) for details.
+          files: |
+            dist/*.zip
+          draft: false
+          prerelease: false
