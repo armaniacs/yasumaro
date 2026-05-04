@@ -689,8 +689,9 @@ describe('contentCleaner', () => {
                 keywordStripEnabled: false
             });
 
-            // input matched by tag, inputmode matched by attribute
-            expect(result.hardStripRemoved).toBe(2); // tag count + attr count
+            // input matched by tag AND inputmode matched by attribute
+            // With Set-based dedup, same element is counted once
+            expect(result.hardStripRemoved).toBe(1);
             testDom.window.close();
         });
     });
