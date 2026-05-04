@@ -233,9 +233,10 @@ async function authenticatePassword(): Promise<void> {
 
     if (result.success) {
         await resetFailedAttempts();
+        const action = pendingPasswordAction;
         closePasswordAuthModal();
-        if (pendingPasswordAction) {
-            await pendingPasswordAction(password);
+        if (action) {
+            await action(password);
         }
     } else {
         await recordFailedAttempt();
