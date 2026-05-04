@@ -42,13 +42,9 @@ plans/*.md には、今後やりたいこと、今やっていること、完了
 - [完了] 2026-04-26-popup-refactoring.md — popup/*.ts リファクタリング（カバレッジ 0%→70%+）
   - privacy.ts: 96.26%, settingsForm.ts: 100%, aiProvider.ts: 85%, settingsSaver.ts: 53.94%
 
-- [アーカイブ推奨] 2026-04-29-memo-01.md — Phase 4 進捗メモ（内容は完了報告に統合済み）
-
 - [完了] 2026-05-02-0448-review-plus-0429.md — Checking Team レビュー結果
   - 全High/Medium指摘の修正対応完了
   - extractor.ts, manifest.json, contentCleaner.ts, vitest.setup.ts 等 7件
-
-- [アーカイブ推奨] 2026-05-02-memo-02.md — 現状整理メモ（内容は完了報告に統合済み）
 
 - [完了] 2026-05-03-coverage-improvement.md — 低カバレッジ10ファイル改善 🎉
   - 10ファイルのカバレッジを平均26%→99%に改善（+416テスト）
