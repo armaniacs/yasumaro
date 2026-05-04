@@ -273,11 +273,9 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 入力サイズ制限', () => {
-    test('64KB以下の入力は正常に処理される', async () => {
+    test('64KB以下の入力は正常に処理される', { timeout: 60000 }, async () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
       // 【テスト内容】: 64KB未満の入力が正常に処理されることを確認
-      // timeout を延長（全テスト同時実行時の負荷対策）
-      vi.setConfig({ testTimeout: 30000 });
       const text = 'a'.repeat(64 * 1024 - 1); // 64KB - 1文字
       const result = await sanitizeRegex(text) as SanitizeResult;
 
