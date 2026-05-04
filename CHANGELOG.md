@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.24] - 2026-05-05
+
+### Added
+
+- **バージョン不整合を自動検出するテストを追加**
+  - `src/utils/__tests__/versionConsistency.test.ts`: `package.json`, `manifest.json`, `wxt.config.ts` のバージョンが一致することを確認
+  - `scripts/check-version-consistency.js` をリファクタリングして `readVersions()` / `VERSION_FILES` をexport
+  - `make test` / `npm test` / `npm run validate` で常にチェックされる
+
+### Fixed
+
+- `wxt.config.ts` のバージョンが 5.1.22 のままだった問題を修正（→ 5.1.24）
+
+### Changed
+
+- `plans/00-index.md`: 全完了計画ファイルを `plans/archive-old/` に移動し簡素化
+- `plans/` 配下の完了済みファイルをすべて `archive-old/` に移動
+
 ## [5.1.23] - 2026-05-05
 
 ### Added
