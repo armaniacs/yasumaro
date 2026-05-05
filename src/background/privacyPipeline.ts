@@ -99,11 +99,28 @@ export class PrivacyPipeline {
     if (sanitizedSettings.useLocalAi) {
       const localStatus = await this.aiClient.getLocalAvailability();
       if (localStatus === 'readily' || this.mode === 'local_only') {
-        const localResult = await this.aiClient.summarizeLocally(content);
-        if (localResult.success) {
-          processingText = localResult.summary;
+        // Sanitize content before sending to Local AI (prompt injection protection)
+        const localSanitizeResult = sanitizePromptContent(content);
+        if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
+          addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
+            warnings: localSanitizeResult.warnings
+          });
+          return { summary: 'Error: Content blocked due to potential security risk.', originalTokens };
+        }
+
+        const localResult = await this.aiClient.summarizeLocally(localSanitizeResult.sanitized);
+        if (localResult.success && localResult.summary) {
+          // Sanitize the Local AI output as well (defense in depth)
+          const summarySanitizeResult = sanitizePromptContent(localResult.summary);
+          if (summarySanitizeResult.dangerLevel === DangerLevel.HIGH) {
+            addLog(LogType.WARN, 'Local AI summary sanitized - high danger content detected', {
+              warnings: summarySanitizeResult.warnings
+            });
+          }
+          processingText = summarySanitizeResult.sanitized;
+
           if (this.mode === 'local_only') {
-            return { summary: localResult.summary, originalTokens };
+            return { summary: processingText, originalTokens };
           }
         }
       }

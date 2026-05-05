@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.25] - 2026-05-05
+
+### Fixed / 修正
+
+- Local AI（ローカルAI）処理時のプロンプトインジェクション（Prompt Injection）脆弱性を修正
+  - ローカルAIにコンテンツを送信する前に `sanitizePromptContent()` によるサニタイズ処理を実行
+  - ローカルAIからの返却結果にもサニタイズを適用（多層防御戦略）
+  - 高リスクコンテンツを検出した場合、処理を直ちに遮断しエラー情報を返却
+  - 修正前の脆弱性：攻撃コンテンツ（例：「Ignore all previous instructions...」）がサニタイズを回避してローカルAIに直接送信される可能性があった
+
+### Added / 追加
+
+- テストカバレッジの拡充
+  - `privacyPipeline.test.ts` に `should block high danger content in local_only mode` テストを追加
+  - 新しいサニタイズフローに対応するため既存テストを更新
+
+### Changed / 変更
+
+- バージョン番号を更新：5.1.24 → 5.1.25
+
 ## [5.1.24] - 2026-05-05
 
 ### Added
