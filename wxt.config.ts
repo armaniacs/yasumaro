@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   outDir: 'dist',
   browser: 'chromium',
+  manifestVersion: 3,
 
   vite: () => ({
     plugins: [
@@ -13,7 +14,7 @@ export default defineConfig({
     ]
   }),
 
-manifest: {
+  manifest: {
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',

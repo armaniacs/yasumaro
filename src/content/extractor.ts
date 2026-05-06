@@ -833,7 +833,7 @@ function startPeriodicCheck(): void {
     if (checkIntervalId) {
         clearInterval(checkIntervalId);
     }
-    checkIntervalId = setInterval(checkVisitConditions, 1000);
+    checkIntervalId = setInterval(updateMaxScroll, 1000);
 }
 
 /**
