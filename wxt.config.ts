@@ -13,11 +13,11 @@ export default defineConfig({
     ]
   }),
 
-  manifest: {
+manifest: {
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-        version: '5.1.25',
+    version: '5.1.26',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     icons: {

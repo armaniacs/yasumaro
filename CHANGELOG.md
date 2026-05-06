@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.26] - 2026-05-06
+
+### Changed / 変更
+
+- **コード簡素化 (Code Simplifier)**
+  - `privacyPipeline.ts`: `process()` メソッドを小さな関数に分割（`_buildSanitizedSettings`, `_performLocalSummarization`, `_processCloudResult`）、可読性向上
+  - `historyFilters.ts`: フィルターロジックを `matchesFilterType()` 関数に抽出、入るべきブーリン値を明示的にラップ
+  - `historyBadges.ts`: `makeCleansedBadge()` の switch 文をルックアップオブジェクトに置き換え
+  - `historyEntryRow.ts`: コンテンツトグルUIを `createContentToggle()` ヘルパー関数に抽出、重複コード削除
+
+### Fixed / 修正
+
+- バージョン番号を更新：5.1.25 → 5.1.26
+
 ## [5.1.25] - 2026-05-05
 
 ### Fixed / 修正

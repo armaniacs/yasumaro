@@ -27,7 +27,7 @@ function makeTagBadges(
   const container = document.createElement('div');
   container.className = 'tag-badges';
 
-  tags.forEach(tag => {
+  tags.forEach(function createTagBadge(tag: string): void {
     const badge = document.createElement('button');
     badge.type = 'button';
     badge.className = 'tag-badge';
@@ -38,7 +38,7 @@ function makeTagBadges(
     if (isActive) badge.classList.add('filter-active');
     badge.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 
-    badge.addEventListener('click', e => {
+    badge.addEventListener('click', function handleTagClick(e: MouseEvent): void {
       e.preventDefault();
       e.stopPropagation();
       state.activeTagFilter = state.activeTagFilter === tag ? null : tag;
@@ -52,6 +52,37 @@ function makeTagBadges(
   return container;
 }
 
+function createContentToggle(
+  id: string,
+  label: string,
+  content: string,
+  info: HTMLElement,
+): void {
+  const toggle = document.createElement('button');
+  toggle.className = 'content-toggle-btn';
+  toggle.textContent = '📄 ';
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.setAttribute('aria-controls', id);
+
+  const labelEl = document.createElement('span');
+  labelEl.textContent = label;
+  toggle.appendChild(labelEl);
+
+  const area = document.createElement('div');
+  area.className = 'content-preview hidden';
+  area.id = id;
+  area.textContent = content;
+
+  toggle.addEventListener('click', function handleToggle(): void {
+    const isHidden = area.classList.toggle('hidden');
+    toggle.setAttribute('aria-expanded', String(!isHidden));
+    labelEl.textContent = isHidden ? label : 'データを非表示';
+  });
+
+  info.appendChild(toggle);
+  info.appendChild(area);
+}
+
 export function makeHistoryEntryRow(
   entry: SavedUrlEntry,
   index: number,
@@ -61,7 +92,6 @@ export function makeHistoryEntryRow(
   onTagFilterChange: () => void,
   onApplyFilters: (resetPage?: boolean) => void,
 ): HTMLElement {
-  const contentId = `content-entry-${start + index}`;
   const {
     url, timestamp, recordType, maskedCount, tags, content, cleansedReason,
     aiSummary, sentTokens, receivedTokens, originalTokens, cleansedTokens,
@@ -230,48 +260,13 @@ export function makeHistoryEntryRow(
   }
 
   if (content && content.trim().length > 0) {
-    const contentToggle = document.createElement('button');
-    contentToggle.className = 'content-toggle-btn';
-    contentToggle.textContent = '📄 ';
-    contentToggle.setAttribute('aria-expanded', 'false');
-    contentToggle.setAttribute('aria-controls', contentId);
-    const contentLabel = document.createElement('span');
-    contentLabel.textContent = 'AIへ送信したデータ';
-    contentToggle.appendChild(contentLabel);
-    const contentArea = document.createElement('div');
-    contentArea.className = 'content-preview hidden';
-    contentArea.id = contentId;
-    contentArea.textContent = content;
-    contentToggle.addEventListener('click', () => {
-      const isHidden = contentArea.classList.toggle('hidden');
-      contentToggle.setAttribute('aria-expanded', (!isHidden).toString());
-      contentLabel.textContent = isHidden ? 'AIへ送信したデータ' : 'データを非表示';
-    });
-    info.appendChild(contentToggle);
-    info.appendChild(contentArea);
+    const contentId = `content-entry-${start + index}`;
+    createContentToggle(contentId, 'AIへ送信したデータ', content, info);
   }
 
   if (aiSummary && aiSummary.trim().length > 0) {
     const summaryId = `summary-entry-${start + index}`;
-    const summaryToggle = document.createElement('button');
-    summaryToggle.className = 'content-toggle-btn';
-    summaryToggle.textContent = '📝 ';
-    summaryToggle.setAttribute('aria-expanded', 'false');
-    summaryToggle.setAttribute('aria-controls', summaryId);
-    const summaryLabel = document.createElement('span');
-    summaryLabel.textContent = 'AIから受信したデータ';
-    summaryToggle.appendChild(summaryLabel);
-    const summaryArea = document.createElement('div');
-    summaryArea.className = 'content-preview hidden';
-    summaryArea.id = summaryId;
-    summaryArea.textContent = aiSummary;
-    summaryToggle.addEventListener('click', () => {
-      const isHidden = summaryArea.classList.toggle('hidden');
-      summaryToggle.setAttribute('aria-expanded', (!isHidden).toString());
-      summaryLabel.textContent = isHidden ? 'AIから受信したデータ' : 'データを非表示';
-    });
-    info.appendChild(summaryToggle);
-    info.appendChild(summaryArea);
+    createContentToggle(summaryId, 'AIから受信したデータ', aiSummary, info);
   }
 
   const deleteBtn = document.createElement('button');

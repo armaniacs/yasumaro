@@ -25,30 +25,39 @@ export function makeMaskBadge(maskedCount: number | undefined): HTMLSpanElement 
   return badge;
 }
 
+interface CleansedBadgeConfig {
+  label: string;
+  title: string;
+}
+
+const CLEANSED_BADGE_CONFIG: Record<string, CleansedBadgeConfig> = {
+  hard: {
+    label: getMessage('cleansedBadgeHard') || '🧹 Hard',
+    title: getMessage('cleansedBadgeHardTitle') || 'タグ・属性ベース削除',
+  },
+  keyword: {
+    label: getMessage('cleansedBadgeKeyword') || '🧹 Keyword',
+    title: getMessage('cleansedBadgeKeywordTitle') || 'キーワードベース削除',
+  },
+  both: {
+    label: getMessage('cleansedBadgeBoth') || '🧹 Both',
+    title: getMessage('cleansedBadgeBothTitle') || 'Hard Strip + Keyword Strip',
+  },
+};
+
 export function makeCleansedBadge(cleansedReason: CleansedReason | undefined): HTMLSpanElement | null {
-  if (!cleansedReason || cleansedReason === 'none') return null;
-  const badge = document.createElement('span');
-  badge.className = 'history-badge history-badge-cleansed';
-
-  let label = '';
-  let title = '';
-
-  switch (cleansedReason) {
-    case 'hard':
-      label = getMessage('cleansedBadgeHard') || '🧹 Hard';
-      title = getMessage('cleansedBadgeHardTitle') || 'タグ・属性ベース削除';
-      break;
-    case 'keyword':
-      label = getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
-      title = getMessage('cleansedBadgeKeywordTitle') || 'キーワードベース削除';
-      break;
-    case 'both':
-      label = getMessage('cleansedBadgeBoth') || '🧹 Both';
-      title = getMessage('cleansedBadgeBothTitle') || 'Hard Strip + Keyword Strip';
-      break;
+  if (!cleansedReason || cleansedReason === 'none') {
+    return null;
   }
 
-  badge.textContent = label;
-  badge.title = title;
+  const config = CLEANSED_BADGE_CONFIG[cleansedReason];
+  if (!config) {
+    return null;
+  }
+
+  const badge = document.createElement('span');
+  badge.className = 'history-badge history-badge-cleansed';
+  badge.textContent = config.label;
+  badge.title = config.title;
   return badge;
 }
