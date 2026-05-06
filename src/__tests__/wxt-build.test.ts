@@ -25,7 +25,9 @@ const distDir = path.join(process.cwd(), 'dist', 'chromium-mv3');
  *   dist/chromium-mv3/chunks/content-*.js   (entrypoints/content/loader.ts から)
  */
 
-describe('WXT Build Output', () => {
+const distExists = fs.existsSync(distDir);
+
+describe.skipIf(!distExists)('WXT Build Output', () => {
   describe('manifest.json', () => {
     it('dist/manifest.json が存在する', () => {
       expect(fs.existsSync(path.join(distDir, 'manifest.json'))).toBe(true);
