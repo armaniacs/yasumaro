@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.27] - 2026-05-06
+
+### Changed / 変更
+
+- バージョン番号を更新：5.1.26 → 5.1.27
+
 ## [5.1.26] - 2026-05-06
 
 ### Changed / 変更
