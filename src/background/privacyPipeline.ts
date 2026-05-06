@@ -7,25 +7,26 @@ import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
 import type { MaskedItem } from '../messaging/types.js';
 
 /**
- * 文字数からトークン数を近似計算する
- * 日本語と英語でトークン数の計算方法が異なるため、簡単な近似値を使用
- * @param text テキスト
- * @returns トークン数（近似値）
+ * Calculate token count approximation from text length.
+ * Japanese and English have different token calculation methods,
+ * so we use simple approximations.
+ * @param text - Text to estimate tokens for
+ * @returns Approximate token count
  */
 function estimateTokens(text: string): number {
   if (!text) return 0;
-  
-  // 日本語文字（ひらがな、カタカナ、漢字）を検出
+
+  // Check for Japanese characters (Hiragana, Katakana, Kanji)
   const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
   const hasJapanese = japaneseRegex.test(text);
-  
+
   if (hasJapanese) {
-    // 日本語: 1トークン≈2文字
+    // Japanese: ~2 characters per token
     return Math.ceil(text.length / 2);
-  } else {
-    // 英語: 1トークン≈4文字
-    return Math.ceil(text.length / 4);
   }
+
+  // English: ~4 characters per token
+  return Math.ceil(text.length / 4);
 }
 
 // Temporary interface until AIClient is converted
@@ -42,7 +43,7 @@ interface ISanitizers {
 export interface PrivacyPipelineOptions {
   previewOnly?: boolean;
   alreadyProcessed?: boolean;
-  tagSummaryMode?: boolean;  // タグ付き要約モード
+  tagSummaryMode?: boolean;
 }
 
 export interface PrivacyPipelineResult {
@@ -53,13 +54,13 @@ export interface PrivacyPipelineResult {
   mode?: string;
   maskedCount?: number;
   maskedItems?: (string | MaskedItem)[];
-  tags?: string[];  // タグリスト（タグ付き要約モード時）
-  sentTokens?: number;  // 送信トークン数
-  receivedTokens?: number;  // 受信トークン数
-  originalTokens?: number;  // 元のトークン数
-  cleansedTokens?: number;  // クレンジング後のトークン数
-  aiProvider?: string;  // 使用したAIプロバイダー名
-  aiModel?: string;     // 使用したAIモデル名
+  tags?: string[];
+  sentTokens?: number;
+  receivedTokens?: number;
+  originalTokens?: number;
+  cleansedTokens?: number;
+  aiProvider?: string;
+  aiModel?: string;
 }
 
 export class PrivacyPipeline {
@@ -82,49 +83,25 @@ export class PrivacyPipeline {
       return { summary: 'Summary not available.' };
     }
 
-    const sanitizedSettings = {
-      useLocalAi: (this.mode === 'local_only' || this.mode === 'full_pipeline') && !alreadyProcessed,
-      useMasking: (this.mode === 'full_pipeline' || this.mode === 'masked_cloud') && !alreadyProcessed,
-      useCloudAi: this.mode !== 'local_only'
-    };
-
+    const sanitizedSettings = this._buildSanitizedSettings(alreadyProcessed);
     let processingText = content;
     let maskedCount = 0;
     let maskedItems: (string | MaskedItem)[] = [];
 
-    // 元のトークン数を計算
     const originalTokens = estimateTokens(content);
 
     // L1: Local Summarization
-    if (sanitizedSettings.useLocalAi) {
-      const localStatus = await this.aiClient.getLocalAvailability();
-      if (localStatus === 'readily' || this.mode === 'local_only') {
-        // Sanitize content before sending to Local AI (prompt injection protection)
-        const localSanitizeResult = sanitizePromptContent(content);
-        if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
-          addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
-            warnings: localSanitizeResult.warnings
-          });
-          return { summary: 'Error: Content blocked due to potential security risk.', originalTokens };
-        }
+    const localResult = await this._performLocalSummarization(
+      content,
+      processingText,
+      sanitizedSettings.useLocalAi,
+      originalTokens
+    );
 
-        const localResult = await this.aiClient.summarizeLocally(localSanitizeResult.sanitized);
-        if (localResult.success && localResult.summary) {
-          // Sanitize the Local AI output as well (defense in depth)
-          const summarySanitizeResult = sanitizePromptContent(localResult.summary);
-          if (summarySanitizeResult.dangerLevel === DangerLevel.HIGH) {
-            addLog(LogType.WARN, 'Local AI summary sanitized - high danger content detected', {
-              warnings: summarySanitizeResult.warnings
-            });
-          }
-          processingText = summarySanitizeResult.sanitized;
-
-          if (this.mode === 'local_only') {
-            return { summary: processingText, originalTokens };
-          }
-        }
-      }
+    if (localResult?.returnEarly) {
+      return localResult.result as PrivacyPipelineResult;
     }
+    processingText = localResult?.processedText || processingText;
 
     // L2: PII Masking
     if (sanitizedSettings.useMasking) {
@@ -132,11 +109,9 @@ export class PrivacyPipeline {
       processingText = sanitizeResult.text;
       maskedItems = sanitizeResult.maskedItems;
       maskedCount = maskedItems.length;
-
       this._logMasking(sanitizeResult);
     }
 
-    // クレンジング後のトークン数を計算
     const cleansedTokens = estimateTokens(processingText);
 
     if (previewOnly) {
@@ -148,63 +123,125 @@ export class PrivacyPipeline {
         maskedCount,
         maskedItems,
         originalTokens,
-        cleansedTokens
+        cleansedTokens,
       };
     }
 
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
       const aiResult = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
-
-      // AI要約結果をサニタイズ（プロンプトインジェクション対策）
-      let sanitizedSummary = aiResult.summary;
-      let tags: string[] | undefined;
-      if (aiResult.summary) {
-        const sanitizeResult = sanitizePromptContent(aiResult.summary);
-        sanitizedSummary = sanitizeResult.sanitized;
-
-        // 危険度が高い場合はログに記録
-        if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
-          addLog(LogType.WARN, 'AI summary sanitized - high danger content detected', {
-            warnings: sanitizeResult.warnings
-          });
-        }
-
-        // タグを抽出（タグ付き要約モード、またはカスタムプロンプトが #タグ | 要約 形式を返した場合）
-        // parsed.summary はタグ行・例示行を除去したクリーニング済みテキスト
-        const parsed = parseTagsFromSummary(sanitizedSummary);
-        tags = parsed.tags.length > 0 ? parsed.tags : undefined;
-        // タグあり・なしに関わらず parsed.summary を使用（例示行除去済み）
-        sanitizedSummary = parsed.summary;
-
-        // \n をスペースに正規化（Obsidian保存・ダッシュボード表示の両方で改行を防ぐ）
-        sanitizedSummary = sanitizedSummary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
-      }
-
-      return {
-        summary: sanitizedSummary,
-        maskedCount,
-        tags,
-        sentTokens: aiResult.sentTokens,
-        receivedTokens: aiResult.receivedTokens,
-        originalTokens,
-        cleansedTokens,
-        aiProvider: aiResult.providerName,
-        aiModel: aiResult.model
-      };
+      return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens);
     }
 
     return { summary: 'Summary not available.', originalTokens, cleansedTokens };
   }
 
-  private _logMasking(sanitizeResult: { maskedItems: (string | MaskedItem)[] }): void {
-    if (this.settings[StorageKeys.PII_SANITIZE_LOGS] !== false) {
-      const count = sanitizeResult.maskedItems.length;
-      if (count > 0) {
-        addLog(LogType.SANITIZE, `Masked ${count} PII items`, {
-          items: sanitizeResult.maskedItems.map(i => typeof i === 'string' ? i : i.type)
+  private _buildSanitizedSettings(alreadyProcessed: boolean) {
+    return {
+      useLocalAi: (this.mode === 'local_only' || this.mode === 'full_pipeline') && !alreadyProcessed,
+      useMasking: (this.mode === 'full_pipeline' || this.mode === 'masked_cloud') && !alreadyProcessed,
+      useCloudAi: this.mode !== 'local_only',
+    };
+  }
+
+  private async _performLocalSummarization(
+    content: string,
+    processingText: string,
+    useLocalAi: boolean,
+    originalTokens: number,
+  ): Promise<{
+    returnEarly?: boolean;
+    result?: PrivacyPipelineResult;
+    processedText?: string;
+  }> {
+    if (!useLocalAi) {
+      return {};
+    }
+
+    const localStatus = await this.aiClient.getLocalAvailability();
+    if (localStatus !== 'readily' && this.mode !== 'local_only') {
+      return {};
+    }
+
+    const localSanitizeResult = sanitizePromptContent(content);
+    if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
+      addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
+        warnings: localSanitizeResult.warnings,
+      });
+      return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
+    }
+
+    const localResult = await this.aiClient.summarizeLocally(localSanitizeResult.sanitized);
+    if (!localResult.success || !localResult.summary) {
+      return {};
+    }
+
+    const summarySanitizeResult = sanitizePromptContent(localResult.summary);
+    if (summarySanitizeResult.dangerLevel === DangerLevel.HIGH) {
+      addLog(LogType.WARN, 'Local AI summary sanitized - high danger content detected', {
+        warnings: summarySanitizeResult.warnings,
+      });
+    }
+
+    const processedText = summarySanitizeResult.sanitized;
+
+    if (this.mode === 'local_only') {
+      return { returnEarly: true, result: { summary: processedText, originalTokens } };
+    }
+
+    return { processedText };
+  }
+
+  private _processCloudResult(
+    aiResult: AISummaryResult,
+    maskedCount: number,
+    originalTokens: number,
+    cleansedTokens: number,
+  ): PrivacyPipelineResult {
+    let sanitizedSummary = aiResult.summary || '';
+    let tags: string[] | undefined;
+
+    if (aiResult.summary) {
+      const sanitizeResult = sanitizePromptContent(aiResult.summary);
+      sanitizedSummary = sanitizeResult.sanitized;
+
+      if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
+        addLog(LogType.WARN, 'AI summary sanitized - high danger content detected', {
+          warnings: sanitizeResult.warnings,
         });
       }
+
+      const parsed = parseTagsFromSummary(sanitizedSummary);
+      tags = parsed.tags.length > 0 ? parsed.tags : undefined;
+      sanitizedSummary = parsed.summary;
+      sanitizedSummary = sanitizedSummary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
     }
+
+    return {
+      summary: sanitizedSummary,
+      maskedCount,
+      tags,
+      sentTokens: aiResult.sentTokens,
+      receivedTokens: aiResult.receivedTokens,
+      originalTokens,
+      cleansedTokens,
+      aiProvider: aiResult.providerName,
+      aiModel: aiResult.model,
+    };
+  }
+
+  private _logMasking(sanitizeResult: { maskedItems: (string | MaskedItem)[] }): void {
+    if (this.settings[StorageKeys.PII_SANITIZE_LOGS] === false) {
+      return;
+    }
+
+    const count = sanitizeResult.maskedItems.length;
+    if (count === 0) {
+      return;
+    }
+
+    addLog(LogType.SANITIZE, `Masked ${count} PII items`, {
+      items: sanitizeResult.maskedItems.map(item => typeof item === 'string' ? item : item.type),
+    });
   }
 }

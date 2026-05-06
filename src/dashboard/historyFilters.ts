@@ -8,17 +8,36 @@ export function getFilteredEntries(
   activeTagFilter: string | null,
   searchText: string,
 ): SavedUrlEntry[] {
-  return entries.filter(e => {
-    const matchesSearch = !searchText || e.url.toLowerCase().includes(searchText);
-    const matchesType =
-      activeFilter === 'all' ||
-      (activeFilter === 'auto' && (!e.recordType || e.recordType === 'auto')) ||
-      (activeFilter === 'manual' && e.recordType === 'manual') ||
-      (activeFilter === 'masked' && !!e.maskedCount && e.maskedCount > 0) ||
-      (activeFilter === 'cleansed' && !!e.cleansedReason && e.cleansedReason !== 'none');
-    const matchesTag = !activeTagFilter || (e.tags && e.tags.includes(activeTagFilter));
-    return matchesSearch && matchesType && matchesTag;
+  return entries.filter(function matchesAllFilters(entry): boolean {
+    const matchesSearch = !searchText || entry.url.toLowerCase().includes(searchText);
+    const matchesFilter = matchesFilterType(entry, activeFilter);
+    const matchesTag = !activeTagFilter || Boolean(entry.tags && entry.tags.includes(activeTagFilter));
+    return matchesSearch && matchesFilter && matchesTag;
   });
+}
+
+function matchesFilterType(entry: SavedUrlEntry, activeFilter: FilterType): boolean {
+  if (activeFilter === 'all') {
+    return true;
+  }
+
+  if (activeFilter === 'auto') {
+    return !entry.recordType || entry.recordType === 'auto';
+  }
+
+  if (activeFilter === 'manual') {
+    return entry.recordType === 'manual';
+  }
+
+  if (activeFilter === 'masked') {
+    return Boolean(entry.maskedCount && entry.maskedCount > 0);
+  }
+
+  if (activeFilter === 'cleansed') {
+    return Boolean(entry.cleansedReason && entry.cleansedReason !== 'none');
+  }
+
+  return true;
 }
 
 export function renderPendingReason(reason: string): string {
