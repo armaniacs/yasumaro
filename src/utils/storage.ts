@@ -413,10 +413,10 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 /**
  * セッションをロックする（マスターパスワードキャッシュをクリア）
  */
-export function lockSession(): void {
+export async function lockSession(): Promise<void> {
     cachedMasterPassword = null;
     cachedEncryptionKey = null;
-    chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
+    await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
 }
 
 /** * マスターパスワードを再設定する（古いパスワード検証後）
@@ -712,6 +712,7 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
         }
     } catch (e) {
         await logError('Failed to encrypt API keys', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+        throw e;
     }
 
     if (updateAllowedUrlsFlag) {

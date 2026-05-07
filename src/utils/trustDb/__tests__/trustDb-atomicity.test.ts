@@ -79,5 +79,17 @@ describe('TrustDb - Atomicity Fix', () => {
       // Expected: Exactly 1 withOptimisticLock call in save() method
       expect(lockCount).toBeGreaterThanOrEqual(1);
     });
+
+    it('should not contain chrome.storage.local.set inside save() method', async () => {
+      const trustDbSource = await import('fs').then(fs =>
+        fs.readFileSync('src/utils/trustDb/trustDb.ts', 'utf8')
+      );
+
+      const saveMethodMatch = trustDbSource.match(/async save\(\): Promise<void>[\s\S]*?^  \}/m);
+      expect(saveMethodMatch).toBeDefined();
+
+      // withOptimisticLock のコールバック内で chrome.storage.local.set を直接呼んではいけない
+      expect(saveMethodMatch![0].includes('chrome.storage.local.set')).toBe(false);
+    });
   });
 });

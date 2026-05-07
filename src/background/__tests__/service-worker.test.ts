@@ -538,6 +538,26 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
+        it('should await lockSession before responding', async () => {
+            let resolveLock: (() => void) | undefined;
+            const lockPromise = new Promise<void>(resolve => { resolveLock = resolve; });
+            // @ts-expect-error - vi.fn() type narrowing
+            storage.lockSession.mockReturnValue(lockPromise);
+
+            const sendResponse = vi.fn();
+            const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
+
+            const promise = serviceWorker.handleSessionLockRequest(message, sendResponse);
+
+            // lockSession が解決する前は sendResponse されていない
+            expect(sendResponse).not.toHaveBeenCalled();
+
+            resolveLock!();
+            await promise;
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
         it('should handle PING message', async () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();

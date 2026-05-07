@@ -425,12 +425,9 @@ class TrustDb {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    // 楽観的ロックで保護して保存（bloomFilterもdatabase内に統合済み）
+    // Save the entire database atomically via optimistic lock
     await withOptimisticLock(STORAGE_KEY, async (_currentDb) => {
-      await chrome.storage.local.set({
-        [STORAGE_KEY]: this.state.database
-      });
-      // 初期化時は currentDb が undefined でも許可する
+      // Return the current database state; the lock handler persists it
       return this.state.database;
     });
 

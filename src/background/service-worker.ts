@@ -606,7 +606,7 @@ export async function handleSessionLockRequest(
     message: SessionLockRequestMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
-    lockSession();
+    await lockSession();
     sendResponse({ success: true });
 }
 

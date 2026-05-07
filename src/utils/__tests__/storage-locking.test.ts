@@ -237,13 +237,21 @@ describe('楽観的ロックの競合統計', () => {
         mockStorage['settings_migrated'] = true;
     });
 
-    it('競合統計が正しく記録される', async () => {
-        const { getConflictStats } = await import('../optimisticLock.ts');
+    it('APIキー暗号化失敗時にエラーを投げて保存を中断する', async () => {
+        // subtle.encrypt を失敗させる
+        const originalEncrypt = (global.crypto as any).subtle.encrypt;
+        (global.crypto as any).subtle.encrypt = vi.fn().mockRejectedValue(new Error('encryption failed'));
 
-        // 通常の保存
-        await saveSettings({ [StorageKeys.OBSIDIAN_PORT]: '27124' });
+        const settings = {
+            [StorageKeys.OPENAI_API_KEY]: 'secret-key-plaintext',
+            [StorageKeys.OBSIDIAN_PORT]: '27124'
+        };
 
-        const stats = getConflictStats();
-        expect(stats.totalAttempts).toBeGreaterThan(0);
+        await expect(saveSettings(settings)).rejects.toThrow('encryption failed');
+
+        // 暗号化に失敗したため、settings はストレージに保存されていないことを確認
+        expect(mockStorage['settings']).toBeUndefined();
+
+        (global.crypto as any).subtle.encrypt = originalEncrypt;
     });
 });
