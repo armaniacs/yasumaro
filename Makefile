@@ -6,7 +6,7 @@ build:
 clean:
 	npm run clean
 
-test:
+test: build
 	npm run validate && npm run test:e2e
 
 test-watch:
@@ -15,7 +15,7 @@ test-watch:
 test-coverage:
 	npm run test:coverage
 
-test-e2e:
+test-e2e: build
 	npm run test:e2e
 
 type-check:
@@ -24,7 +24,7 @@ type-check:
 validate:
 	npm run validate
 
-test-and-build: test build
+test-and-build: build test
 
 # ニュースサイト統合テスト
 test-news:
