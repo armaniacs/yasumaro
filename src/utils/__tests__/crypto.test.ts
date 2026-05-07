@@ -681,22 +681,22 @@ describe('verifyHmacSignature edge cases', () => {
     });
 });
 
-describe('deriveKeyWithExtensionId', () => {
-    test('拡張IDを含むキー導出ができる', async () => {
-        const { deriveKeyWithExtensionId } = await import('../crypto.js');
+describe('deriveKey', () => {
+    test('secretとsaltから暗号化キーを導出できる', async () => {
+        const { deriveKey } = await import('../crypto.js');
         const salt = generateSalt();
-        const key = await deriveKeyWithExtensionId('secret', salt, 'test-extension-id');
+        const key = await deriveKey('secret', salt);
         expect(key).toBeInstanceOf(CryptoKey);
         expect(key.type).toBe('secret');
     });
 
-    test('異なる拡張IDで異なるキーを導出する', async () => {
-        const { deriveKeyWithExtensionId } = await import('../crypto.js');
-        const salt = generateSalt();
-        const key1 = await deriveKeyWithExtensionId('secret', salt, 'ext-id-1');
-        const key2 = await deriveKeyWithExtensionId('secret', salt, 'ext-id-2');
+    test('異なるsaltで異なるキーを導出する', async () => {
+        const { deriveKey } = await import('../crypto.js');
+        const salt1 = generateSalt();
+        const salt2 = generateSalt();
+        const key1 = await deriveKey('secret', salt1);
+        const key2 = await deriveKey('secret', salt2);
 
-        // Different extension IDs should produce different keys
         const plaintext = 'test';
         const enc1 = await encrypt(plaintext, key1);
         const enc2 = await encrypt(plaintext, key2);

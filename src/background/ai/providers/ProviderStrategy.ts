@@ -12,6 +12,7 @@ export interface AIProviderConnectionResult {
 }
 
 export interface AISummaryResult {
+    success: boolean;
     summary: string;
     sentTokens?: number;
     receivedTokens?: number;

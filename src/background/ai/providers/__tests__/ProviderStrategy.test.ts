@@ -14,7 +14,7 @@ import {
 
 class TestProvider extends AIProviderStrategy {
     async generateSummary(content: string): Promise<AISummaryResult> {
-        return { summary: 'test summary' };
+        return { success: true, summary: 'test summary' };
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {
@@ -28,7 +28,7 @@ class TestProvider extends AIProviderStrategy {
 
 class CustomIdProvider extends AIProviderStrategy {
     async generateSummary(content: string): Promise<AISummaryResult> {
-        return { summary: 'custom' };
+        return { success: true, summary: 'custom' };
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {

@@ -61,7 +61,7 @@ export class AIClient {
         const factory = this.providers.get(providerName);
         if (!factory) {
             addLog(LogType.ERROR, `Unknown AI Provider: ${providerName}`);
-            return { summary: "Error: AI provider configuration is missing. Please check your settings." };
+            return { success: false, summary: "Error: AI provider configuration is missing. Please check your settings." };
         }
 
         try {
@@ -70,7 +70,7 @@ export class AIClient {
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             addLog(LogType.ERROR, `Generate summary failed: ${errorMessage}`);
-            return { summary: "Error: Failed to generate summary. Please try again." };
+            return { success: false, summary: "Error: Failed to generate summary. Please try again." };
         }
     }
 

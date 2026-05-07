@@ -278,6 +278,7 @@ function makeAiClient() {
     getLocalAvailability: vi.fn<() => Promise<string>>().mockResolvedValue('unavailable'),
     summarizeLocally: vi.fn(),
     generateSummary: vi.fn<() => Promise<any>>().mockResolvedValue({
+      success: true,
       summary: 'AI summary',
       sentTokens: 100,
       receivedTokens: 50,

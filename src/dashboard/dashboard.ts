@@ -570,7 +570,7 @@ async function initConsentWithdrawal(): Promise<void> {
     const el = getDashboardElements();
     if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:1234/v1';
     if (el.statusDiv) {
-      el.statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
+      el.statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
       el.statusDiv.className = 'status-success';
     }
   });
@@ -580,7 +580,7 @@ async function initConsentWithdrawal(): Promise<void> {
     const el = getDashboardElements();
     if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:11434/v1';
     if (el.statusDiv) {
-      el.statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
+      el.statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
       el.statusDiv.className = 'status-success';
     }
   });

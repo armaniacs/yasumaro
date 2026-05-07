@@ -99,13 +99,13 @@ export class OpenAIProvider extends AIProviderStrategy {
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.baseUrl) {
-            return { summary: "Error: Base URL is missing. Please check your settings." };
+            return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
         }
 
         // レート制限チェック
         const rateLimit = await checkRateLimit();
         if (!rateLimit.allowed) {
-            return { summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
+            return { success: false, summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
@@ -124,7 +124,7 @@ export class OpenAIProvider extends AIProviderStrategy {
         if (dangerLevel === 'high') {
             const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
             addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked: ${cause}`);
-            return { summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
+            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
         }
 
         // カスタムプロンプトを適用（タグ付き要約モード対応）
@@ -168,7 +168,7 @@ export class OpenAIProvider extends AIProviderStrategy {
             });
 
             if (!response.ok) {
-                return { summary: "Error: Failed to generate summary. Please check your API settings." };
+                return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
             }
 
             const data = await response.json();
@@ -176,9 +176,9 @@ export class OpenAIProvider extends AIProviderStrategy {
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             if (errorMessage.includes('timed out')) {
-                return { summary: "Error: AI request timed out. Please check your connection." };
+                return { success: false, summary: "Error: AI request timed out. Please check your connection." };
             }
-            return { summary: "Error: Failed to generate summary. Please try again or check your settings." };
+            return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
         }
     }
 
@@ -247,8 +247,8 @@ export class OpenAIProvider extends AIProviderStrategy {
             const summary = data.choices[0].message.content;
             const sentTokens = data.usage?.prompt_tokens;
             const receivedTokens = data.usage?.completion_tokens;
-            return { summary, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
+            return { success: true, summary, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
         }
-        return { summary: "No summary generated." };
+        return { success: true, summary: "No summary generated." };
     }
 }

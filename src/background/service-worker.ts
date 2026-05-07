@@ -33,6 +33,7 @@ import {
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
+import { extractMainContent } from '../utils/contentExtractor.js';
 import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ONLY_TYPES,
@@ -84,6 +85,9 @@ export function init(): void {
     // Notification listeners
     chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
     chrome.notifications.onClicked.addListener(handleNotificationClicked);
+
+    // Session alarm initialization for master password timeout
+    initializeSessionAlarms();
 }
 
 /**
@@ -351,31 +355,46 @@ export async function handleManualRecord(
 
                 // タブが開いていなければバックグラウンドで開く
                 if (!targetTabId) {
-                    const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
-                    createdTabId = newTab.id;
-                    targetTabId = newTab.id;
+                    try {
+                        const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
+                        createdTabId = newTab.id;
+                        targetTabId = newTab.id;
+                    } catch (e) {
+                        // Android: active:false may be ignored, fallback to existing tabs only
+                        await logWarn('Failed to create background tab, falling back to existing tabs only', { url: sanitizedUrl, error: e instanceof Error ? e.message : String(e) }, undefined, 'service-worker');
+                    }
 
-                    // ページが読み込まれるまで待機（最大10秒に短縮）
-                    await new Promise<void>((resolve) => {
-                        const timeout = setTimeout(resolve, 10000);
-                        const listener = (tabId: number, info: { status?: string }): void => {
-                            if (tabId === targetTabId && info.status === 'complete') {
-                                clearTimeout(timeout);
-                                chrome.tabs.onUpdated.removeListener(listener);
-                                resolve();
-                            }
-                        };
-                        chrome.tabs.onUpdated.addListener(listener);
-                    });
+                    if (targetTabId) {
+                        // ページが読み込まれるまで待機（最大10秒に短縮）
+                        await new Promise<void>((resolve) => {
+                            const timeout = setTimeout(resolve, 10000);
+                            const listener = (tabId: number, info: { status?: string }): void => {
+                                if (tabId === targetTabId && info.status === 'complete') {
+                                    clearTimeout(timeout);
+                                    chrome.tabs.onUpdated.removeListener(listener);
+                                    resolve();
+                                }
+                            };
+                            chrome.tabs.onUpdated.addListener(listener);
+                        });
+                    }
                 }
 
                 // scripting.executeScriptでページ本文を取得（Content Script不要）
+                // DOMクレンジングを適用して機密コンテンツがパイプラインをバイパスするのを防ぐ
                 if (targetTabId) {
                     const results = await chrome.scripting.executeScript({
                         target: { tabId: targetTabId },
-                        func: () => document.body?.innerText || ''
+                        func: () => {
+                            const body = document.body;
+                            if (!body) return '';
+                            const clone = body.cloneNode(true) as HTMLElement;
+                            const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
+                            clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
+                            return clone.innerText?.trim().substring(0, 10000) || '';
+                        }
                     });
-                    content = results?.[0]?.result?.trim().substring(0, 10000) || '';
+                    content = results?.[0]?.result || '';
                 }
             } catch (err: unknown) {
                 await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');

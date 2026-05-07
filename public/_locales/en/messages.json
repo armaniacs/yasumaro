@@ -2227,5 +2227,8 @@
   },
   "trancoUpdateDeny": {
     "message": "Deny"
+  },
+  "lmStudioPresetApplied": {
+    "message": "LM Studio preset applied (http://localhost:1234/v1)"
   }
 }

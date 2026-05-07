@@ -12,6 +12,7 @@ import { createSender } from '../utils/retryHelper.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+import { StorageKeys } from '../utils/storage.js';
 
 interface OWTestState {
     maxScrollPercentage: number;
@@ -26,58 +27,11 @@ interface ContentMessage {
     type: string;
 }
 
-function asBool(value: unknown): boolean {
-    return Boolean(value);
-}
-
 declare global {
     interface Window {
         __OW_TEST_STATE?: OWTestState;
     }
 }
-
-// StorageKeys（content script で使用するもののみ）
-const CONTENT_STRIP_HARD_ENABLED = 'content_strip_hard_enabled';
-const CONTENT_STRIP_KEYWORD_ENABLED = 'content_strip_keyword_enabled';
-const CONTENT_STRIP_KEYWORDS = 'content_strip_keywords';
-const AI_SUMMARY_CLEANSING_ENABLED = 'ai_summary_cleansing_enabled';
-const AI_SUMMARY_CLEANSING_ALT = 'ai_summary_cleansing_alt';
-const AI_SUMMARY_CLEANSING_METADATA = 'ai_summary_cleansing_metadata';
-const AI_SUMMARY_CLEANSING_ADS = 'ai_summary_cleansing_ads';
-const AI_SUMMARY_CLEANSING_NAV = 'ai_summary_cleansing_nav';
-const AI_SUMMARY_CLEANSING_SOCIAL = 'ai_summary_cleansing_social';
-const AI_SUMMARY_CLEANSING_DEEP = 'ai_summary_cleansing_deep';
-const AI_SUMMARY_CLEANSING_JSON_LD = 'ai_summary_cleansing_json_ld';
-const AI_SUMMARY_CLEANSING_LAZY_LOAD = 'ai_summary_cleansing_lazy_load';
-const AI_SUMMARY_CLEANSING_SKIP_LINK = 'ai_summary_cleansing_skip_link';
-const AI_SUMMARY_CLEANSING_CARD = 'ai_summary_cleansing_card';
-const AI_SUMMARY_CLEANSING_LINK_DENSITY = 'ai_summary_cleansing_link_density';
-// NEW: 6つの新しいストレージキー
-const AI_SUMMARY_CLEANSING_FIXED = 'ai_summary_cleansing_fixed';
-const AI_SUMMARY_CLEANSING_RECOMMEND = 'ai_summary_cleansing_recommend';
-const AI_SUMMARY_CLEANSING_PAGINATION = 'ai_summary_cleansing_pagination';
-const AI_SUMMARY_CLEANSING_SNS_PROMO = 'ai_summary_cleansing_sns_promo';
-const AI_SUMMARY_CLEANSING_POPUP = 'ai_summary_cleansing_popup';
-const AI_SUMMARY_CLEANSING_PLATFORM = 'ai_summary_cleansing_platform';
-// NEW: 9つの追加ストレージキー
-const AI_SUMMARY_CLEANSING_TEXT_DENSITY = 'ai_summary_cleansing_text_density';
-const AI_SUMMARY_CLEANSING_SHORT_SEQ = 'ai_summary_cleansing_short_seq';
-const AI_SUMMARY_CLEANSING_SYMBOL_LINE = 'ai_summary_cleansing_symbol_line';
-const AI_SUMMARY_CLEANSING_LINK_PARA = 'ai_summary_cleansing_link_para';
-const AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN = 'ai_summary_cleansing_enhanced_hidden';
-const AI_SUMMARY_CLEANSING_EMPTY_ELEM = 'ai_summary_cleansing_empty_elem';
-const AI_SUMMARY_CLEANSING_JP_LAYOUT = 'ai_summary_cleansing_jp_layout';
-const AI_SUMMARY_CLEANSING_JP_NAVIGATION = 'ai_summary_cleansing_jp_navigation';
-const AI_SUMMARY_CLEANSING_AUTHOR = 'ai_summary_cleansing_author';
-// Threshold settings
-const AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD = 'ai_summary_cleansing_link_ratio_threshold';
-const AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD = 'ai_summary_cleansing_short_text_threshold';
-const AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT = 'ai_summary_cleansing_short_seq_count';
-const AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD = 'ai_summary_cleansing_link_para_threshold';
-// Custom patterns
-const AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS = 'ai_summary_cleansing_custom_patterns';
-const CONTENT_DEDUP_ENABLED = 'content_dedup_enabled';
-const CONTENT_DEDUP_THRESHOLD = 'content_dedup_threshold';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -278,47 +232,47 @@ function loadSettings(): Promise<void> {
             'settings_migrated',
             'min_visit_duration',
             'min_scroll_depth',
-            CONTENT_STRIP_HARD_ENABLED,
-            CONTENT_STRIP_KEYWORD_ENABLED,
-            CONTENT_STRIP_KEYWORDS,
-            AI_SUMMARY_CLEANSING_ENABLED,
-            AI_SUMMARY_CLEANSING_ALT,
-            AI_SUMMARY_CLEANSING_METADATA,
-            AI_SUMMARY_CLEANSING_ADS,
-            AI_SUMMARY_CLEANSING_NAV,
-            AI_SUMMARY_CLEANSING_SOCIAL,
-            AI_SUMMARY_CLEANSING_DEEP,
-            AI_SUMMARY_CLEANSING_JSON_LD,
-            AI_SUMMARY_CLEANSING_LAZY_LOAD,
-            AI_SUMMARY_CLEANSING_SKIP_LINK,
-            AI_SUMMARY_CLEANSING_CARD,
-            AI_SUMMARY_CLEANSING_LINK_DENSITY,
+            StorageKeys.CONTENT_STRIP_HARD_ENABLED,
+            StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED,
+            StorageKeys.CONTENT_STRIP_KEYWORDS,
+            StorageKeys.AI_SUMMARY_CLEANSING_ENABLED,
+            StorageKeys.AI_SUMMARY_CLEANSING_ALT,
+            StorageKeys.AI_SUMMARY_CLEANSING_METADATA,
+            StorageKeys.AI_SUMMARY_CLEANSING_ADS,
+            StorageKeys.AI_SUMMARY_CLEANSING_NAV,
+            StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL,
+            StorageKeys.AI_SUMMARY_CLEANSING_DEEP,
+            StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD,
+            StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD,
+            StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK,
+            StorageKeys.AI_SUMMARY_CLEANSING_CARD,
+            StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY,
             // NEW: 6つの新しいクレンジングオプション
-            AI_SUMMARY_CLEANSING_FIXED,
-            AI_SUMMARY_CLEANSING_RECOMMEND,
-            AI_SUMMARY_CLEANSING_PAGINATION,
-            AI_SUMMARY_CLEANSING_SNS_PROMO,
-            AI_SUMMARY_CLEANSING_POPUP,
-            AI_SUMMARY_CLEANSING_PLATFORM,
+            StorageKeys.AI_SUMMARY_CLEANSING_FIXED,
+            StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND,
+            StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION,
+            StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO,
+            StorageKeys.AI_SUMMARY_CLEANSING_POPUP,
+            StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM,
             // NEW: 9つの追加クレンジングオプション
-            AI_SUMMARY_CLEANSING_TEXT_DENSITY,
-            AI_SUMMARY_CLEANSING_SHORT_SEQ,
-            AI_SUMMARY_CLEANSING_SYMBOL_LINE,
-            AI_SUMMARY_CLEANSING_LINK_PARA,
-            AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN,
-            AI_SUMMARY_CLEANSING_EMPTY_ELEM,
-            AI_SUMMARY_CLEANSING_JP_LAYOUT,
-            AI_SUMMARY_CLEANSING_JP_NAVIGATION,
-            AI_SUMMARY_CLEANSING_AUTHOR,
+            StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY,
+            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ,
+            StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE,
+            StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA,
+            StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN,
+            StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM,
+            StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT,
+            StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION,
+            StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR,
             // Threshold settings
-            AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD,
-            AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD,
-            AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT,
-            AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD,
+            StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD,
+            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD,
+            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT,
+            StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD,
             // Custom patterns
-            AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS,
-            CONTENT_DEDUP_ENABLED,
-            CONTENT_DEDUP_THRESHOLD
+            StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS,
+            StorageKeys.CONTENT_DEDUP_ENABLED,
+            StorageKeys.CONTENT_DEDUP_THRESHOLD
         ], (result: Record<string, unknown>) => {
             // 新方式: settings オブジェクトが存在する場合はそちらを優先
             const s: Record<string, unknown> = (result['settings_migrated'] && result['settings'])
@@ -334,124 +288,124 @@ function loadSettings(): Promise<void> {
                 minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
             }
             // クレンジング設定を取得
-            if (s[CONTENT_STRIP_HARD_ENABLED] !== undefined) {
-                contentStripHardEnabled = asBool(s[CONTENT_STRIP_HARD_ENABLED]);
+            if (s[StorageKeys.CONTENT_STRIP_HARD_ENABLED] !== undefined) {
+                contentStripHardEnabled = Boolean(s[StorageKeys.CONTENT_STRIP_HARD_ENABLED]);
             }
-            if (s[CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
-                contentStripKeywordEnabled = asBool(s[CONTENT_STRIP_KEYWORD_ENABLED]);
+            if (s[StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED] !== undefined) {
+                contentStripKeywordEnabled = Boolean(s[StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED]);
             }
-            if (s[CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(s[CONTENT_STRIP_KEYWORDS])) {
-                contentStripKeywords = s[CONTENT_STRIP_KEYWORDS] as string[];
+            if (s[StorageKeys.CONTENT_STRIP_KEYWORDS] !== undefined && Array.isArray(s[StorageKeys.CONTENT_STRIP_KEYWORDS])) {
+                contentStripKeywords = s[StorageKeys.CONTENT_STRIP_KEYWORDS] as string[];
             }
             // AI要約クレンジング設定を取得
-            if (s[AI_SUMMARY_CLEANSING_ENABLED] !== undefined) {
-                aiSummaryCleansingEnabled = asBool(s[AI_SUMMARY_CLEANSING_ENABLED]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED] !== undefined) {
+                aiSummaryCleansingEnabled = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]);
             }
-            if (s[AI_SUMMARY_CLEANSING_ALT] !== undefined) {
-                aiSummaryCleansingAlt = asBool(s[AI_SUMMARY_CLEANSING_ALT]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_ALT] !== undefined) {
+                aiSummaryCleansingAlt = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_ALT]);
             }
-            if (s[AI_SUMMARY_CLEANSING_METADATA] !== undefined) {
-                aiSummaryCleansingMetadata = asBool(s[AI_SUMMARY_CLEANSING_METADATA]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_METADATA] !== undefined) {
+                aiSummaryCleansingMetadata = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_METADATA]);
             }
-            if (s[AI_SUMMARY_CLEANSING_ADS] !== undefined) {
-                aiSummaryCleansingAds = asBool(s[AI_SUMMARY_CLEANSING_ADS]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_ADS] !== undefined) {
+                aiSummaryCleansingAds = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_ADS]);
             }
-            if (s[AI_SUMMARY_CLEANSING_NAV] !== undefined) {
-                aiSummaryCleansingNav = asBool(s[AI_SUMMARY_CLEANSING_NAV]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_NAV] !== undefined) {
+                aiSummaryCleansingNav = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_NAV]);
             }
-            if (s[AI_SUMMARY_CLEANSING_SOCIAL] !== undefined) {
-                aiSummaryCleansingSocial = asBool(s[AI_SUMMARY_CLEANSING_SOCIAL]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL] !== undefined) {
+                aiSummaryCleansingSocial = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]);
             }
-            if (s[AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
-                aiSummaryCleansingDeep = asBool(s[AI_SUMMARY_CLEANSING_DEEP]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_DEEP] !== undefined) {
+                aiSummaryCleansingDeep = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_DEEP]);
             }
-            if (s[AI_SUMMARY_CLEANSING_JSON_LD] !== undefined) {
-                aiSummaryCleansingJsonLd = asBool(s[AI_SUMMARY_CLEANSING_JSON_LD]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD] !== undefined) {
+                aiSummaryCleansingJsonLd = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]);
             }
-            if (s[AI_SUMMARY_CLEANSING_LAZY_LOAD] !== undefined) {
-                aiSummaryCleansingLazyLoad = asBool(s[AI_SUMMARY_CLEANSING_LAZY_LOAD]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD] !== undefined) {
+                aiSummaryCleansingLazyLoad = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]);
             }
-            if (s[AI_SUMMARY_CLEANSING_SKIP_LINK] !== undefined) {
-                aiSummaryCleansingSkipLink = asBool(s[AI_SUMMARY_CLEANSING_SKIP_LINK]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK] !== undefined) {
+                aiSummaryCleansingSkipLink = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]);
             }
-            if (s[AI_SUMMARY_CLEANSING_CARD] !== undefined) {
-                aiSummaryCleansingCard = asBool(s[AI_SUMMARY_CLEANSING_CARD]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_CARD] !== undefined) {
+                aiSummaryCleansingCard = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_CARD]);
             }
-            if (s[AI_SUMMARY_CLEANSING_LINK_DENSITY] !== undefined) {
-                aiSummaryCleansingLinkDensity = asBool(s[AI_SUMMARY_CLEANSING_LINK_DENSITY]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY] !== undefined) {
+                aiSummaryCleansingLinkDensity = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]);
             }
             // NEW: 6つの新しいクレンジングオプション
-            if (s[AI_SUMMARY_CLEANSING_FIXED] !== undefined) {
-                aiSummaryCleansingFixed = asBool(s[AI_SUMMARY_CLEANSING_FIXED]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_FIXED] !== undefined) {
+                aiSummaryCleansingFixed = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_FIXED]);
             }
-            if (s[AI_SUMMARY_CLEANSING_RECOMMEND] !== undefined) {
-                aiSummaryCleansingRecommend = asBool(s[AI_SUMMARY_CLEANSING_RECOMMEND]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND] !== undefined) {
+                aiSummaryCleansingRecommend = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND]);
             }
-            if (s[AI_SUMMARY_CLEANSING_PAGINATION] !== undefined) {
-                aiSummaryCleansingPagination = asBool(s[AI_SUMMARY_CLEANSING_PAGINATION]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION] !== undefined) {
+                aiSummaryCleansingPagination = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]);
             }
-            if (s[AI_SUMMARY_CLEANSING_SNS_PROMO] !== undefined) {
-                aiSummaryCleansingSnsPromo = asBool(s[AI_SUMMARY_CLEANSING_SNS_PROMO]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO] !== undefined) {
+                aiSummaryCleansingSnsPromo = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]);
             }
-            if (s[AI_SUMMARY_CLEANSING_POPUP] !== undefined) {
-                aiSummaryCleansingPopup = asBool(s[AI_SUMMARY_CLEANSING_POPUP]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_POPUP] !== undefined) {
+                aiSummaryCleansingPopup = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_POPUP]);
             }
-            if (s[AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
-                aiSummaryCleansingPlatform = asBool(s[AI_SUMMARY_CLEANSING_PLATFORM]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM] !== undefined) {
+                aiSummaryCleansingPlatform = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]);
             }
             // NEW: 9つの追加クレンジングオプション
-            if (s[AI_SUMMARY_CLEANSING_TEXT_DENSITY] !== undefined) {
-                aiSummaryCleansingTextDensity = asBool(s[AI_SUMMARY_CLEANSING_TEXT_DENSITY]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY] !== undefined) {
+                aiSummaryCleansingTextDensity = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]);
             }
-            if (s[AI_SUMMARY_CLEANSING_SHORT_SEQ] !== undefined) {
-                aiSummaryCleansingShortSeq = asBool(s[AI_SUMMARY_CLEANSING_SHORT_SEQ]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ] !== undefined) {
+                aiSummaryCleansingShortSeq = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]);
             }
-            if (s[AI_SUMMARY_CLEANSING_SYMBOL_LINE] !== undefined) {
-                aiSummaryCleansingSymbolLine = asBool(s[AI_SUMMARY_CLEANSING_SYMBOL_LINE]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE] !== undefined) {
+                aiSummaryCleansingSymbolLine = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE]);
             }
-            if (s[AI_SUMMARY_CLEANSING_LINK_PARA] !== undefined) {
-                aiSummaryCleansingLinkPara = asBool(s[AI_SUMMARY_CLEANSING_LINK_PARA]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA] !== undefined) {
+                aiSummaryCleansingLinkPara = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA]);
             }
-            if (s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] !== undefined) {
-                aiSummaryCleansingEnhancedHidden = asBool(s[AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN] !== undefined) {
+                aiSummaryCleansingEnhancedHidden = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]);
             }
-            if (s[AI_SUMMARY_CLEANSING_EMPTY_ELEM] !== undefined) {
-                aiSummaryCleansingEmptyElem = asBool(s[AI_SUMMARY_CLEANSING_EMPTY_ELEM]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] !== undefined) {
+                aiSummaryCleansingEmptyElem = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM]);
             }
-            if (s[AI_SUMMARY_CLEANSING_JP_LAYOUT] !== undefined) {
-                aiSummaryCleansingJpLayout = asBool(s[AI_SUMMARY_CLEANSING_JP_LAYOUT]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] !== undefined) {
+                aiSummaryCleansingJpLayout = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]);
             }
-            if (s[AI_SUMMARY_CLEANSING_JP_NAVIGATION] !== undefined) {
-                aiSummaryCleansingJpNavigation = asBool(s[AI_SUMMARY_CLEANSING_JP_NAVIGATION]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] !== undefined) {
+                aiSummaryCleansingJpNavigation = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]);
             }
-            if (s[AI_SUMMARY_CLEANSING_AUTHOR] !== undefined) {
-                aiSummaryCleansingAuthor = asBool(s[AI_SUMMARY_CLEANSING_AUTHOR]);
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] !== undefined) {
+                aiSummaryCleansingAuthor = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]);
             }
             // Threshold settings (with bounds validation)
-            if (s[AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
-                aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
+                aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
             }
-            if (s[AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] !== undefined) {
-                aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] !== undefined) {
+                aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
             }
-            if (s[AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] !== undefined) {
-                aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] !== undefined) {
+                aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
             }
-            if (s[AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
-                aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
+                aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
             }
             // Custom patterns
-            if (s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] !== undefined) {
-                aiSummaryCleansingCustomPatterns = Array.isArray(s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]) 
-                    ? s[AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] as string[] 
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] !== undefined) {
+                aiSummaryCleansingCustomPatterns = Array.isArray(s[StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]) 
+                    ? s[StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS] as string[] 
                     : [];
             }
             // テキスト品質設定を取得
-            if (s[CONTENT_DEDUP_ENABLED] !== undefined) {
-                contentDedupEnabled = asBool(s[CONTENT_DEDUP_ENABLED]);
+            if (s[StorageKeys.CONTENT_DEDUP_ENABLED] !== undefined) {
+                contentDedupEnabled = Boolean(s[StorageKeys.CONTENT_DEDUP_ENABLED]);
             }
-            if (s[CONTENT_DEDUP_THRESHOLD] !== undefined) {
-                contentDedupThreshold = parseFloat(String(s[CONTENT_DEDUP_THRESHOLD]));
+            if (s[StorageKeys.CONTENT_DEDUP_THRESHOLD] !== undefined) {
+                contentDedupThreshold = parseFloat(String(s[StorageKeys.CONTENT_DEDUP_THRESHOLD]));
             }
             logInfo('Settings loaded', {
                 minVisitDuration,
