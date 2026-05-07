@@ -6,11 +6,67 @@ All notable changes to this project will be documented in this file.
 
 ## [5.1.29] - 2026-05-08
 
+### Added / 追加
+
+- **SW state persistence: Service Worker 再起動間での状態維持**
+  - `SessionStore` クラスを新設（`src/background/sessionStore.ts`）: `chrome.storage.session` をラップし、`queueMicrotask` による debounced 書き込みと Map シリアライズを提供
+  - `skipAiRateLimiter`: SW 再起動後もレート制限状態を維持（起動時に session storage からロード、各 mutation で保存）
+  - `TabCache`: タブ情報キャッシュを session storage に永続化。`initialize()` 後に session からリストアし、`add/update/remove` ごとに debounced 保存
+  - `RecordingLogic.cacheState`: settings/URL/privacy の各キャッシュを session storage に永続化。TTL チェック付きリストア、全 mutation 後に `scheduleCacheSave()`
+
+- **AISummaryResult に success フィールドを追加**
+  - `ProviderStrategy.ts` のインターフェースに `success: boolean` を必須フィールドとして追加
+  - OpenAIProvider / GeminiProvider / aiClient の全エラーパス・成功パスに `success: true/false` を設定
+
+- **プライバシーポリシー更新時の再同意フローを追加**
+  - `privacyConsent.ts` の `getPrivacyConsent()` で保存済み `consentVersion` と `PRIVACY_POLICY_VERSION` を比較
+  - バージョン不一致時は `hasConsented: false` を返し、再同意ダイアログを表示
+
 ### Fixed / 修正
 
-- **trustDb-atomicity.test.ts の 2 件の失敗テストを修正**
-  - `trustDb.ts` の `save()` メソッド内のインラインコメント（`withOptimisticLock` および `chrome.storage.local.set` を日本語文に含んでいた）がテストアサーションと干渉していた問題を修正
-  - コメントを実装意図のみを伝える英語コメントに置き換え、テストが正しく単一トランザクションの使用を検証できるようにした
+- **E2Eテスト属性によるドメインフィルタバイパスを修正**
+  - `src/content/loader.ts`: `data-ow-e2e-test` 属性によるバイパスを `import.meta.env.DEV` でガード。本番ビルドでは完全に無効化
+
+- **過剰なパーミッションを削減**
+  - `manifest.json`: `permissions` から `webRequest` を削除（`declarativeNetRequest` で代替済み）
+  - `optional_host_permissions` から `<all_urls>` を削除（コンテンツスクリプトは matches 宣言で動作）
+
+- **CSP connect-src を最小化**
+  - `manifest.json` の `connect-src` を約 50 ドメインから 8 必須エントリ（localhost, 127.0.0.1, Gemini, OpenAI, Anthropic, Groq）に削減
+
+- **DOM TreeWalker の repeated 呼び出しを修正**
+  - `src/utils/contentExtractor/scoring.ts`: `calculateTextScore()` を sort コンパレータ内で繰り返し呼ばないよう改良。スコアを事前計算して O(n) の TreeWalker 走査に削減
+
+- **DRY原則違反を修正: 設定キーの多重定義を解消**
+  - `src/content/extractor.ts`: 37 個の重複 StorageKeys 定数を削除し `src/utils/storage.js` からのインポートに統一
+  - `asBool` 恒等関数を削除し 31 箇所の呼び出しを `Boolean()` に置換
+
+- **Service Worker 起動時にセッションタイムアウトアラームが初期化されない問題を修正**
+  - `service-worker.ts` の `init()` に `initializeSessionAlarms()` 呼び出しを追加
+
+- **手動保存フォールバック時のコンテンツクレンジング bypass を修正**
+  - `service-worker.ts` の `handleManualRecord`: `document.body?.innerText` 取得時に DOM クレンジング（script/style/nav/header/footer/aside を除去）を適用
+
+- **マスターパスワード未設定時の暗号化方式を改善**
+  - `crypto.ts` / `storage.ts` / `storageEncrypted.ts`: Extension ID（公開情報）をキー導出から除去。初回生成のランダム 32 バイトシークレットのみで PBKDF2 導出
+
+- **`extractSentencesStep` のパイプライン順序を修正**
+  - `RecordingPipeline.ts`: `extractSentencesStep` を `processPrivacyPipelineStep`（AI API 呼び出し）の前に移動。トークンコストを 2-3 倍削減
+
+- **`ts-node` が devDependencies に含まれていない問題を修正**
+  - `package.json`: `ts-node ^10.9.2` を devDependencies に追加
+
+- **Android 版ブラウザでバックグラウンドタブ作成がフォアグラウンド化する問題を修正**
+  - `service-worker.ts` の `chrome.tabs.create({ active: false })` を try-catch でラップし、フォールバック処理を追加
+
+- **PII 統合正規表現を関数呼び出しごとに再コンパイルしていた問題を修正**
+  - `piiSanitizer.ts`: `COMBINED_PII_REGEX` 定数をモジュールスコープに hoist し、関数呼び出しごとの `new RegExp(...)` を排除
+
+### Changed / 変更
+
+- **ハードコードされた英語 UI 文字列を i18n 対応**
+  - `dashboard.ts`: LM Studio / Ollama プリセット適用メッセージを `getMessage()` に置き換え
+  - `_locales/en/messages.json` / `_locales/ja/messages.json`: 対応するメッセージキーを追加
 
 ## [5.1.28] - 2026-05-07
 
