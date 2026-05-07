@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [5.1.28] - 2026-05-07
+
+### Fixed / 修正
+
+- **Makefile**: `make test` / `make test-e2e` が E2E テスト実行前に `npm run build` を実行しない問題を修正
+  - `test` ターゲットに `build` 依存関係を追加。従来は `npm run validate && npm run test:e2e` のみ実行しており、`dist/chromium-mv3/popup.html` が存在せず 70 件の E2E テストが `ERR_FILE_NOT_FOUND` で失敗していた
+  - `test-e2e` ターゲットにも `build` 依存関係を追加
+  - `test-and-build` ターゲットの実行順序を `test build` → `build test` に修正（ビルドを先に実行）
+
 ## [5.1.27] - 2026-05-06
 
 ### Changed / 変更
