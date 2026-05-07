@@ -148,6 +148,7 @@ export class HeaderDetector {
     // URL正規化してインメモリキャッシュに保存
     const normalizedUrl = HeaderDetector.normalizeUrl(url);
     RecordingLogic.cacheState.privacyCache.set(normalizedUrl, info);
+    RecordingLogic.scheduleCacheSave();
 
     // Service Worker 再起動後もプライバシー情報を失わないよう session storage にも保存
     // chrome.storage.session はブラウザセッション中は永続 (SW 再起動をまたいでも保持される)

@@ -79,6 +79,8 @@ vi.mock('../recordingLogic.js', () => ({
         static invalidateSettingsCache = vi.fn();
         static invalidateUrlCache = vi.fn();
         static invalidatePrivacyCache = vi.fn();
+        static loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
+        static scheduleCacheSave = vi.fn();
         record() {
             return Promise.resolve({ success: true, skipped: false });
         }

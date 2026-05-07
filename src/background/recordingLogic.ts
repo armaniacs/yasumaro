@@ -17,6 +17,7 @@ import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../utils/privacyChecker.js';
 import { normalizeJapaneseSummary } from '../utils/summaryNormalizer.js';
 import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
+import { SessionStore, SESSION_KEYS } from './sessionStore.js';
 // P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
 import { getPermissionManager } from '../utils/permissionManager.js';
 
@@ -195,6 +196,69 @@ export class RecordingLogic {
     privacyCacheTimestamp: null
   };
 
+  static sessionStore: SessionStore = new SessionStore();
+
+  /**
+   * Session storage からキャッシュ状態を復元
+   */
+  static async loadCacheFromSession(): Promise<void> {
+    try {
+      const saved = await RecordingLogic.sessionStore.get<{
+        settingsCache: Settings | null;
+        cacheTimestamp: number | null;
+        cacheVersion: number;
+        urlCache: [string, number][] | null;
+        urlCacheTimestamp: number | null;
+        privacyCache: [string, PrivacyInfo][] | null;
+        privacyCacheTimestamp: number | null;
+      }>(SESSION_KEYS.RECORDING_CACHE);
+      if (!saved) return;
+      const now = Date.now();
+      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < 30000) {
+        RecordingLogic.cacheState.settingsCache = saved.settingsCache;
+        RecordingLogic.cacheState.cacheTimestamp = saved.cacheTimestamp;
+        RecordingLogic.cacheState.cacheVersion = saved.cacheVersion;
+      }
+      if (saved.urlCache && saved.urlCacheTimestamp && (now - saved.urlCacheTimestamp) < 60000) {
+        RecordingLogic.cacheState.urlCache = SessionStore.entriesToMap(saved.urlCache);
+        RecordingLogic.cacheState.urlCacheTimestamp = saved.urlCacheTimestamp;
+      }
+      if (saved.privacyCache && saved.privacyCacheTimestamp && (now - saved.privacyCacheTimestamp) < 300000) {
+        RecordingLogic.cacheState.privacyCache = SessionStore.entriesToMap(saved.privacyCache);
+        RecordingLogic.cacheState.privacyCacheTimestamp = saved.privacyCacheTimestamp;
+      }
+    } catch {
+      // session store unavailable
+    }
+  }
+
+  private static saveQueueScheduled = false;
+
+  /**
+   * キャッシュ状態を session storage に保存（デバウンス）
+   */
+  static scheduleCacheSave(): void {
+    if (RecordingLogic.saveQueueScheduled) return;
+    RecordingLogic.saveQueueScheduled = true;
+    queueMicrotask(() => {
+      RecordingLogic.saveQueueScheduled = false;
+      RecordingLogic.saveCacheToSession();
+    });
+  }
+
+  private static saveCacheToSession(): void {
+    const cs = RecordingLogic.cacheState;
+    RecordingLogic.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
+      settingsCache: cs.settingsCache,
+      cacheTimestamp: cs.cacheTimestamp,
+      cacheVersion: cs.cacheVersion,
+      urlCache: cs.urlCache ? SessionStore.mapToEntries(cs.urlCache) : null,
+      urlCacheTimestamp: cs.urlCacheTimestamp,
+      privacyCache: cs.privacyCache ? SessionStore.mapToEntries(cs.privacyCache) : null,
+      privacyCacheTimestamp: cs.privacyCacheTimestamp,
+    });
+  }
+
   private obsidian: ObsidianClient;
   private aiClient: AIClient;
   private mode: string | null;
@@ -240,6 +304,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     RecordingLogic.cacheState.cacheVersion++;
 
     addLog(LogType.DEBUG, 'Settings cache updated', { cacheVersion: RecordingLogic.cacheState.cacheVersion });
+    RecordingLogic.scheduleCacheSave();
 
     return settings;
   }
@@ -253,6 +318,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     RecordingLogic.cacheState.settingsCache = null;
     RecordingLogic.cacheState.cacheTimestamp = null;
     RecordingLogic.cacheState.cacheVersion++;
+    RecordingLogic.scheduleCacheSave();
   }
 
   /**
@@ -289,6 +355,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     RecordingLogic.cacheState.urlCacheTimestamp = now;
 
     addLog(LogType.DEBUG, 'URL cache updated', { count: urlMap.size });
+    RecordingLogic.scheduleCacheSave();
 
     return urlMap;
   }
@@ -301,6 +368,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     addLog(LogType.DEBUG, 'URL cache invalidated');
     RecordingLogic.cacheState.urlCache = null;
     RecordingLogic.cacheState.urlCacheTimestamp = null;
+    RecordingLogic.scheduleCacheSave();
   }
 
   /**
@@ -374,6 +442,7 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     addLog(LogType.DEBUG, 'Privacy cache invalidated');
     RecordingLogic.cacheState.privacyCache = null;
     RecordingLogic.cacheState.privacyCacheTimestamp = null;
+    RecordingLogic.scheduleCacheSave();
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {

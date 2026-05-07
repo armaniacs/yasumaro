@@ -3,6 +3,7 @@ import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
+import { SessionStore, SESSION_KEYS } from './sessionStore.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { BADGE_COLORS, RATE_LIMITS } from '../constants/appConstants.js';
 import {
@@ -113,6 +114,9 @@ async function runMigration(): Promise<void> {
     }
 }
 
+// Session store for cross-SW-restart persistence
+const sessionStore = new SessionStore();
+
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
@@ -122,7 +126,7 @@ const recordingLogic = new RecordingLogic(obsidian, aiClient);
 import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 
 // TabCache for storing tab data
-const tabCache = new TabCache();
+const tabCache = new TabCache(sessionStore);
 
 // 自動保存成功バッジを表示中のタブIDセット
 const autoSavedBadgeTabs = new Set<number>();
@@ -135,6 +139,17 @@ const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
 // Rate limit configuration for skipAi operations (defaults from constants, can be overridden via settings)
 const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>();
+// Load persisted rate limiter state from session storage
+sessionStore.get<[string, { count: number; resetTime: number }][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER).then((entries) => {
+  if (entries) {
+    const now = Date.now();
+    for (const [key, val] of entries) {
+      if (now < val.resetTime) {
+        skipAiRateLimiter.set(key, val);
+      }
+    }
+  }
+});
 
 // Track whether cache has been initialized (for startup rehydration)
 let isCacheInitialized = false;
@@ -301,6 +316,7 @@ export async function handleManualRecord(
             // ウィンドウが期限切れならリセット
             if (now > limiterState.resetTime) {
                 skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
+                sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
             } else if (limiterState.count >= rateLimitMax) {
                 await logWarn(
                     'Rate limit exceeded for skipAi operation',
@@ -313,8 +329,10 @@ export async function handleManualRecord(
             } else {
                 limiterState.count++;
             }
+            sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
         } else {
             skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
+            sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
         }
     }
 
@@ -802,6 +820,7 @@ export function handleTabRemoved(tabId: number): void {
     autoSavedBadgeTabs.delete(tabId);
     // skipAiRateLimiterからも削除（メモリリーク防止）
     skipAiRateLimiter.delete(tabId.toString());
+    sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
 }
 
 /**
@@ -892,6 +911,21 @@ export async function handleStartup(): Promise<void> {
         const settings = await getSettings();
         await updateDomainFilterCache(settings);
         isCacheInitialized = true;
+
+        // Reload recording cache from session
+        await RecordingLogic.loadCacheFromSession();
+
+        // Reload rate limiter from session
+        const rateLimiterEntries = await sessionStore.get<[string, { count: number; resetTime: number }][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
+        if (rateLimiterEntries) {
+            const now = Date.now();
+            skipAiRateLimiter.clear();
+            for (const [key, val] of rateLimiterEntries) {
+                if (now < val.resetTime) {
+                    skipAiRateLimiter.set(key, val);
+                }
+            }
+        }
 
         logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
     } catch (error) {

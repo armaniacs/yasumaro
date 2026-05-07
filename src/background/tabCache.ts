@@ -1,7 +1,4 @@
-/**
- * TabCache
- * Service Workerにおけるタブ情報のキャッシュ管理
- */
+import { SessionStore, SESSION_KEYS } from './sessionStore.js';
 
 export interface TabData {
     title?: string;
@@ -17,18 +14,20 @@ export class TabCache {
     private cache: Map<number, TabData>;
     private isInitialized: boolean;
     private initPromise: Promise<void> | null;
+    private sessionStore: SessionStore;
 
-    constructor() {
+    constructor(sessionStore?: SessionStore) {
         this.cache = new Map();
         this.isInitialized = false;
         this.initPromise = null;
+        this.sessionStore = sessionStore ?? new SessionStore();
     }
 
     /**
      * キャッシュを初期化
      */
-    initialize(): Promise<void> {
-        if (this.isInitialized) return Promise.resolve();
+    async initialize(): Promise<void> {
+        if (this.isInitialized) return;
         if (this.initPromise) return this.initPromise;
 
         this.initPromise = new Promise((resolve) => {
@@ -49,7 +48,29 @@ export class TabCache {
                 resolve();
             });
         });
-        return this.initPromise;
+        await this.initPromise;
+        await this.loadFromSession();
+    }
+
+    /**
+     * Session storage から以前のキャッシュエントリを復元
+     */
+    private async loadFromSession(): Promise<void> {
+        const entries = await this.sessionStore.get<[number, TabData][]>(SESSION_KEYS.TAB_CACHE);
+        if (entries) {
+            for (const [tabId, data] of entries) {
+                if (!this.cache.has(tabId)) {
+                    this.cache.set(tabId, data);
+                }
+            }
+        }
+    }
+
+    /**
+     * キャッシュを session storage に保存
+     */
+    private saveToSession(): void {
+        this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache));
     }
 
     /**
@@ -72,6 +93,7 @@ export class TabCache {
                 isValidVisit: false,
                 content: null
             });
+            this.saveToSession();
         }
     }
 
@@ -89,6 +111,7 @@ export class TabCache {
         const current = this.cache.get(tabId);
         if (current) {
             this.cache.set(tabId, { ...current, ...data });
+            this.saveToSession();
         }
     }
 
@@ -97,6 +120,7 @@ export class TabCache {
      */
     remove(tabId: number): void {
         this.cache.delete(tabId);
+        this.saveToSession();
     }
 
     /**
@@ -113,6 +137,7 @@ export class TabCache {
         this.cache.clear();
         this.isInitialized = false;
         this.initPromise = null;
+        this.sessionStore.remove(SESSION_KEYS.TAB_CACHE);
     }
 
     /**
