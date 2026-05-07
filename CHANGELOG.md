@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.29] - 2026-05-08
+
+### Fixed / 修正
+
+- **trustDb-atomicity.test.ts の 2 件の失敗テストを修正**
+  - `trustDb.ts` の `save()` メソッド内のインラインコメント（`withOptimisticLock` および `chrome.storage.local.set` を日本語文に含んでいた）がテストアサーションと干渉していた問題を修正
+  - コメントを実装意図のみを伝える英語コメントに置き換え、テストが正しく単一トランザクションの使用を検証できるようにした
+
 ## [5.1.28] - 2026-05-07
 
 ### Fixed / 修正
