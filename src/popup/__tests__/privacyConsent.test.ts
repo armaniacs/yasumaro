@@ -75,11 +75,22 @@ describe('getPrivacyConsent', () => {
         storageMock['privacy_consent'] = {
             hasConsented: true,
             consentDate: '2026-01-01T00:00:00.000Z',
-            consentVersion: '1.0'
+            consentVersion: '2026-02-23'
         };
         const state = await getPrivacyConsent();
         expect(state.hasConsented).toBe(true);
         expect(state.consentDate).toBe('2026-01-01T00:00:00.000Z');
+        expect(state.consentVersion).toBe('2026-02-23');
+    });
+
+    it('バージョン不一致の場合は hasConsented: false を返す', async () => {
+        storageMock['privacy_consent'] = {
+            hasConsented: true,
+            consentDate: '2026-01-01T00:00:00.000Z',
+            consentVersion: '1.0'
+        };
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(false);
         expect(state.consentVersion).toBe('1.0');
     });
 
@@ -138,7 +149,7 @@ describe('savePrivacyConsent', () => {
 
 describe('hasPrivacyConsent', () => {
     it('同意済みの場合は true', async () => {
-        storageMock['privacy_consent'] = { hasConsented: true };
+        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: '2026-02-23' };
         const result = await hasPrivacyConsent();
         expect(result).toBe(true);
     });
@@ -157,7 +168,7 @@ describe('hasPrivacyConsent', () => {
 
 describe('requireConsent', () => {
     it('同意済みの場合はエラーを投げない', async () => {
-        storageMock['privacy_consent'] = { hasConsented: true };
+        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: '2026-02-23' };
         await expect(requireConsent()).resolves.not.toThrow();
     });
 

@@ -382,7 +382,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     it('プロバイダーがthrowした場合にエラー結果を返す', async () => {
       const client = new AIClient();
       client.registerProvider('throwing', () => ({
-        generateSummary: () => Promise.resolve({ summary: 'ok' }),
+        generateSummary: () => Promise.resolve({ success: true, summary: 'ok' }),
         testConnection: () => { throw new Error('Connection test internal error'); }
       }));
 

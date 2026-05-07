@@ -153,19 +153,7 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
     return derivedKey;
 }
 
-/**
- * 暗号化キーを導出する（Extension IDを使用）
- * chrome.runtime.idをキー導出に組み込むことで、異なる環境間のデータ分離を実現
- * @param {string} secret - 共有シークレット
- * @param {Uint8Array} salt - ソルト
- * @param {string} extensionId - 拡張機能ID
- * @returns {Promise<CryptoKey>} 導出された暗号化キー
- */
-export async function deriveKeyWithExtensionId(secret: string, salt: Uint8Array, extensionId: string): Promise<CryptoKey> {
-    // secret + extensionId を組み合わせてキー導出用のパスワードを作成
-    const combinedPassword = `${secret}:${extensionId}`;
-    return deriveKey(combinedPassword, salt);
-}
+
 
 /**
  * 平文を暗号化する
@@ -390,10 +378,8 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
 
         const encryptedData = result[HMAC_SIGNATURE_KEY_STORAGE];
         if (encryptedData && isEncrypted(encryptedData)) {
-            // Derive decryption key from extension ID (same as API key encryption)
-            const extensionId = chrome.runtime.id;
             const salt = textEncoder.encode('notification-salt');
-            const decryptKey = await deriveKeyWithExtensionId('notification-secret', salt, extensionId);
+            const decryptKey = await deriveKey('notification-secret', salt);
 
             const keyDataBase64 = await decryptData(encryptedData, decryptKey);
             const keyData = base64ToUint8Array(keyDataBase64);
@@ -414,10 +400,8 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
     // Generate new key
     const keyData = webcrypto.getRandomValues(new Uint8Array(32));
 
-    // Encrypt the key with same mechanism as API keys
-    const extensionId = chrome.runtime.id;
     const salt = textEncoder.encode('notification-salt');
-    const encryptKey = await deriveKeyWithExtensionId('notification-secret', salt, extensionId);
+    const encryptKey = await deriveKey('notification-secret', salt);
     const encryptedKey = await encrypt(uint8ArrayToBase64(keyData), encryptKey);
 
     // Store encrypted key

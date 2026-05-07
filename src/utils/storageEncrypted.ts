@@ -4,11 +4,10 @@
  * 暗号化キー管理、キャッシュ、HMAC Secret管理
  */
 
-import { deriveKeyWithExtensionId } from './crypto.js';
+import { deriveKey } from './crypto.js';
 
 // 暗号化キー用キャッシュ
 let cachedEncryptionKey: CryptoKey | null = null;
-let cachedExtensionId: string | null = null;
 
 // HMAC Secret用キャッシュ
 let cachedHmacSecret: string | null = null;
@@ -25,18 +24,9 @@ export async function getOrCreateEncryptionKey(StorageKeys: {
     ENCRYPTION_SALT: string;
     ENCRYPTION_SECRET: string;
 }): Promise<CryptoKey> {
-    if (cachedEncryptionKey && cachedExtensionId) {
+    if (cachedEncryptionKey) {
         return cachedEncryptionKey;
     }
-
-    // 現在のextension IDを取得
-    const extensionId = chrome.runtime.id;
-
-    // Extension ID変更時にキャッシュをクリア（通常は発生しないが安全策）
-    if (cachedExtensionId && cachedExtensionId !== extensionId) {
-        cachedEncryptionKey = null;
-    }
-    cachedExtensionId = extensionId;
 
     const result = await chrome.storage.local.get([
         StorageKeys.ENCRYPTION_SALT,
@@ -67,8 +57,8 @@ export async function getOrCreateEncryptionKey(StorageKeys: {
         salt[i] = binaryString.charCodeAt(i);
     }
 
-    // Extension IDを使用してキーを導出
-    cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
+    // secretとsaltからPBKDF2でキーを導出
+    cachedEncryptionKey = await deriveKey(secret, salt);
     return cachedEncryptionKey;
 }
 

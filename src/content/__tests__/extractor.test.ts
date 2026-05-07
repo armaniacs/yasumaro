@@ -632,28 +632,6 @@ describe('showPrivacyConfirmDialog - Promise and DOM', () => {
     });
 });
 
-describe('asBool function coverage', () => {
-    it('converts truthy values to true', () => {
-        expect(asBool(true)).toBe(true);
-        expect(asBool(1)).toBe(true);
-        expect(asBool('string')).toBe(true);
-        expect(asBool({})).toBe(true);
-    });
-
-    it('converts falsy values to false', () => {
-        expect(asBool(false)).toBe(false);
-        expect(asBool(0)).toBe(false);
-        expect(asBool('')).toBe(false);
-        expect(asBool(null)).toBe(false);
-        expect(asBool(undefined)).toBe(false);
-    });
-});
-
-// Helper function for testing internal asBool
-function asBool(value: unknown): boolean {
-    return Boolean(value);
-}
-
 describe('module level code execution', () => {
     it('module-level chrome.runtime.onMessage guard passes', async () => {
         // Test that the module-level guard passes with our mock

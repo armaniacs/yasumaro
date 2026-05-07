@@ -14,7 +14,7 @@ import { migrateUblockSettings } from './migration.js';
 import { calculatePasswordStrength } from './masterPassword.js';
 import {
     generateSalt,
-    deriveKeyWithExtensionId,
+    deriveKey,
     encryptApiKey,
     decryptApiKey,
     isEncrypted,
@@ -164,7 +164,7 @@ export function isDomainInWhitelist(url: string): boolean {
 
 // メモリキャッシュ
 let cachedEncryptionKey: CryptoKey | null = null;
-let cachedExtensionId: string | null = null;
+
 let cachedSettings: { data: Settings | null; timestamp: number } | null = null;
 let cachedMasterPassword: string | null = null; // セッション中のマスターパスワードキャッシュ
 let cachedServerKey: CryptoKey | null = null; // 【マイグレーション用】サーバーサイド保存のキー
@@ -183,18 +183,9 @@ let isMasterPasswordRequired = false; // マスターパスワードが設定済
  * @throws {Error} ロックされている場合（マスターパスワード未入力）
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
-    if (cachedEncryptionKey && cachedExtensionId) {
+    if (cachedEncryptionKey) {
         return cachedEncryptionKey;
     }
-
-    // 現在のextension IDを取得
-    const extensionId = chrome.runtime.id;
-
-    // Extension ID変更時にキャッシュをクリア（通常は発生しないが安全策）
-    if (cachedExtensionId && cachedExtensionId !== extensionId) {
-        cachedEncryptionKey = null;
-    }
-    cachedExtensionId = extensionId;
 
     // マスターパスワード設定状態を確認
     const result = await chrome.storage.local.get([
@@ -251,9 +242,12 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
 
     const salt = base64ToUint8Array(saltBase64);
 
-    // 【脆弱な方式】Extension IDを使用してキー導出
-    // マスターパスワード設定後に再暗号化が必要
-    cachedEncryptionKey = await deriveKeyWithExtensionId(secret, salt, extensionId);
+    // ランダムなsecretとsaltからPBKDF2でキー導出
+    // 【セキュリティ】secretは初回生成時にcrypto.getRandomValuesで生成した32バイトの乱数であり、
+    // これ単体で十分なエントロピーを持つ。以前はchrome.runtime.id（Extension ID）を
+    // 追加で結合していたが、Extension IDは公開情報であるためセキュリティ上の
+    // 価値がなく、誤った安心感を与えるだけだったため削除した。
+    cachedEncryptionKey = await deriveKey(secret, salt);
     return cachedEncryptionKey;
 }
 

@@ -40,13 +40,13 @@ export class GeminiProvider extends AIProviderStrategy {
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.apiKey) {
-            return { summary: "Error: API key is missing. Please check your settings." };
+            return { success: false, summary: "Error: API key is missing. Please check your settings." };
         }
 
         // レート制限チェック
         const rateLimit = await checkRateLimit();
         if (!rateLimit.allowed) {
-            return { summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
+            return { success: false, summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
         }
 
         const cleanModelName = this.model.replace(/^models\//, '');
@@ -61,7 +61,7 @@ export class GeminiProvider extends AIProviderStrategy {
         if (dangerLevel === 'high') {
             const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
             addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked: ${cause}`);
-            return { summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
+            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
         }
 
         // カスタムプロンプトを適用（タグ付き要約モード対応）
@@ -107,9 +107,9 @@ export class GeminiProvider extends AIProviderStrategy {
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             if (errorMessage.includes('timed out')) {
-                return { summary: "Error: AI request timed out. Please check your connection." };
+                return { success: false, summary: "Error: AI request timed out. Please check your connection." };
             }
-            return { summary: "Error: Failed to generate summary. Please try again or check your settings." };
+            return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
         }
     }
 
@@ -178,9 +178,9 @@ export class GeminiProvider extends AIProviderStrategy {
     private async _handleError(response: Response): Promise<AISummaryResult> {
         // const errorText = await response.text();
         if (response.status === 404) {
-            return { summary: "Error: Model not found. Please check your AI model settings." };
+            return { success: false, summary: "Error: Model not found. Please check your AI model settings." };
         }
-        return { summary: "Error: Failed to generate summary. Please check your API settings." };
+        return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
     }
 
     private async _extractSummary(data: GeminiApiResponse): Promise<AISummaryResult> {
@@ -192,8 +192,8 @@ export class GeminiProvider extends AIProviderStrategy {
             // トークン使用量を記録
             await recordUsage(sentTokens, receivedTokens);
 
-            return { summary, sentTokens, receivedTokens };
+            return { success: true, summary, sentTokens, receivedTokens };
         }
-        return { summary: "No summary generated." };
+        return { success: true, summary: "No summary generated." };
     }
 }
