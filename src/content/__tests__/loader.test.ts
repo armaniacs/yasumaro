@@ -110,10 +110,11 @@ describe('loader.ts', () => {
   });
 
   describe('E2E bypass', () => {
-    it('bypasses domain filter when data-ow-e2e-test is present', async () => {
+    it('loads extractor with cache-based domain check when data-ow-e2e-test is present', async () => {
       await importLoader('https://example.com/page', { e2eTest: true });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
-      expect(storageGetSpy).not.toHaveBeenCalled();
+      // Cache-based domain check runs (avoids SW message round-trip for reliability)
+      expect(storageGetSpy).toHaveBeenCalled();
       expect(sendMessageSpy).not.toHaveBeenCalled();
     });
   });
@@ -370,6 +371,12 @@ describe('loader.ts', () => {
       } as any;
       globalThis.document = dom.window.document as any;
       dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+      // E2E path now checks cache-based domain filter; provide default data
+      setStorageData({
+        domain_filter_cache: [],
+        domain_filter_cache_timestamp: 999999,
+        domain_filter_mode: 'disabled',
+      });
       getURLSpy.mockReturnValue('data:text/javascript,throw "string error"');
       await import(LOADER_PATH);
       await new Promise((r) => setTimeout(r, 50));

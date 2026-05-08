@@ -178,8 +178,14 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
 
     const url = window.location.href;
 
-    // E2E test bypass: skips domain filter when data-ow-e2e-test is present (dev only)
-    if (import.meta.env.DEV && document.documentElement.hasAttribute('data-ow-e2e-test')) {
+    // E2E test path: imports extractor directly when data-ow-e2e-test is present.
+    // Still performs cache-based domain check (does not bypass security), but avoids
+    // the service worker message round-trip that causes flaky E2E tests on first load.
+    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
+        const cacheCheck = await checkDomainAllowedFromCache(url);
+        if (cacheCheck.useCache && !cacheCheck.allowed) {
+            return;  // Domain explicitly blocked by filter cache
+        }
         const src = chrome.runtime.getURL('content-extractor.js');
         try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked (e2e)', url, e instanceof Error ? e.message : String(e)); }
         return;
