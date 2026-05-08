@@ -8,7 +8,7 @@
  * - フラグによる重複防止の検証
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import type * as ModelsDevApi from '../../utils/modelsDevApi.js';
 
 // Mock the modules
@@ -100,10 +100,10 @@ class MockModelsDevDialog {
     // Create DOM elements
     const mockElement = {
       addEventListener: vi.fn(),
-      querySelectorAll: vi.fn().mockReturnValue([])
+      querySelectorAll: vi.fn().mockReturnValue([]),
     };
 
-    (global.document.getElementById as vi.Mock).mockImplementation((id: string) => {
+    vi.spyOn(document, 'getElementById').mockImplementation((id: string) => {
       return mockElement;
     });
   }
@@ -126,10 +126,7 @@ class MockModelsDevDialog {
   }
 }
 
-// SKIPPED: This test file has mock configuration issues that cause test failures.
-// The actual models-dev-dialog.ts already has eventListenersAttached flag implemented.
-// See: models-dev-dialog-accessibility.test.ts for working tests.
-describe.skip('ModelsDevDialog Event Listener Deduplication Tests', () => {
+describe('ModelsDevDialog Event Listener Deduplication Tests', () => {
   let dialog: MockModelsDevDialog;
 
   beforeEach(() => {

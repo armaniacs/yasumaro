@@ -1257,15 +1257,6 @@ describe('main', () => {
     });
   });
 
-  // Pending pages UI moved to dashboard - these tests verify pendingPages.ts module works correctly
-  describe.skip('loadPendingPages', () => {
-    // Pending pages feature is now in dashboard, not popup
-    // Tests skipped because popup-ui elements were removed
-    it.skip('pending pages moved to dashboard', () => {
-      expect(true).toBe(true);
-    });
-  });
-
   describe('recordCurrentPage with cleansing info', () => {
     it('should update cleansing status with stats', async () => {
       const mockTab = {

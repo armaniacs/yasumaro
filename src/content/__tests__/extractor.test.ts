@@ -660,29 +660,6 @@ describe('throttle function - beforeunload cleanup', () => {
         vi.useRealTimers();
     });
 
-    it.skip('cleans up rafId on beforeunload event', async () => {
-        vi.useFakeTimers();
-
-        await init();
-
-        // Get the scroll event listener that was registered
-        const scrollListeners = vi.mocked(window.addEventListener).mock.calls.filter(
-            ([event]) => event === 'scroll'
-        );
-
-        expect(scrollListeners.length).toBeGreaterThan(0);
-
-        // Simulate beforeunload to trigger cleanup
-        window.dispatchEvent(new Event('beforeunload'));
-
-        // Verify beforeunload listener was called (throttle's cleanup)
-        const beforeunloadListeners = vi.mocked(window.addEventListener).mock.calls.filter(
-            ([event]) => event === 'beforeunload'
-        );
-
-        expect(beforeunloadListeners.length).toBeGreaterThan(0);
-    });
-
     it('throttle returns a function that can be called', async () => {
         vi.useFakeTimers();
 
