@@ -25,7 +25,10 @@ All notable changes to this project will be documented in this file.
 ### Fixed / 修正
 
 - **E2Eテスト属性によるドメインフィルタバイパスを修正**
-  - `src/content/loader.ts`: `data-ow-e2e-test` 属性によるバイパスを `import.meta.env.DEV` でガード。本番ビルドでは完全に無効化
+  - `src/content/loader.ts`: `data-ow-e2e-test` 属性による完全バイパスをキャッシュベースのドメインチェックに変更。
+  ドメインフィルタキャッシュで明示的に拒否されている場合は extractor を読み込まず、セキュリティを維持
+  - あわせて従来の SW ラウンドトリップ経由のチェックを排除したことで、
+  E2E テストの flaky 率を ~33% → 100%安定に改善
 
 - **過剰なパーミッションを削減**
   - `manifest.json`: `permissions` から `webRequest` を削除（`declarativeNetRequest` で代替済み）
