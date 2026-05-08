@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.30] - 2026-05-08
+
+### Fixed / 修正
+
+- **SessionStore フラッシュ信頼性を改善（SW 終了時のデータ損失リスク低減）**
+  - `queueMicrotask` ベースのフラッシュを `setTimeout(50ms)` に変更。サービスワーカーの突然終了時もデータが保存される可能性が向上
+  - `flushNow()` 公開メソッドを追加。重要な操作後に即座に永続化可能
+  - `deleteQueue` を導入。`remove()` は `chrome.storage.session.remove()` を直接呼び出し、書き込み済みキーの削除を正しく処理
+  - フラッシュ失敗時のキュー復元＋リトライ機構を追加。一時的なストレージ利用不可でもデータが保持される
+  - 11 のユニットテストでキューイング・バッチ・タイマー・リトライ・エラー処理を網羅
+
+- **スキップテスト 10 件を修正／削除**
+  - `extractor.test.ts`: 冗長な `beforeunload` クリーンアップテストを削除（既存テストがカバー済み）
+  - `main.test.ts`: dashboard に移行済みの `loadPendingPages` テストブロックを削除
+  - `piiSanitizer.test.ts`: 64KB 境界値テストを有効化（正常に PASS することを確認）
+  - `models-dev-dialog-event-handlers.test.ts`: `vi.spyOn` を用いてモック構成を修正、全 7 テストを有効化
+
+### Changed / 変更
+
+- `plans/2026-05-08-sessionstore.md`: 実装後の振り返りセクションを追加（計画差異・設計判断・テスト結果）
+
 ## [5.1.29] - 2026-05-08
 
 ### Added / 追加
