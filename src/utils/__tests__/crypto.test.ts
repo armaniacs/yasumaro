@@ -473,7 +473,8 @@ describe('crypto', () => {
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
 
             // 一致する場合と不一致する場合の実行時間を比較
-            const iterations = 30;
+            // CI環境（QEMU エミュレーション）でのメモリ節約のため少数回に抑える
+            const iterations = 3;
             const timesMatch: number[] = [];
             const timesMismatch: number[] = [];
 

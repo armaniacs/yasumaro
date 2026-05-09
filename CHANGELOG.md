@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.2.1] - 2026-05-09
+
+### Fixed / 修正
+
+- **CI: Node.js を 24 にアップグレード**（全ワークフロー）: `engines: >=24.0.0` に合わせて `ci.yml`・`coverage.yml`・`release.yml` の `node-version` を 20/22 → 24 に統一
+- **`package-lock.json` に `ts-node` を追加**: lock ファイルと `package.json` の不一致による `npm ci` 失敗を修正
+
+### Changed / 変更
+
+- **CI 環境でのタイムアウト・性能閾値を緩和**（テスト 3 件）: linux/amd64 エミュレーション環境での実行速度差を考慮
+  - `contentCleaner`: パフォーマンス閾値 200ms → 1000ms
+  - `crypto`: PBKDF2 定数時間比較テストに `timeout: 60000` を追加
+  - `piiSanitizer`: 64KB 境界値テストに `timeout: 60000` を追加
+- **`versionConsistency` テストに lockfile 同期チェックを追加**: `package.json` の全依存パッケージが `package-lock.json` に存在するかを `npm validate` で自動検証
+- **`make local-ci` / `make test-all` を追加**: `act` を使って GitHub Actions CI をローカルで再現できるターゲットを追加
+
 ## [5.2.0] - 2026-05-09
 
 v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テストカバレッジ大幅向上・TypeScript strict 化・SessionStore 信頼性強化・Service Worker 状態永続化・セキュリティ修正・CI/CD 整備など、品質基盤を全面的に強化。

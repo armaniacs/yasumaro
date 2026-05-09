@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "short_name": "__MSG_extensionShortName__",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "__MSG_extensionDescription__",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.groq.com; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';"
