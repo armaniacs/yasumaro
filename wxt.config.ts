@@ -18,7 +18,7 @@ export default defineConfig({
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: '5.1.30',
+    version: '5.2.0',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     icons: {

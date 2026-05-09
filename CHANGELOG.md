@@ -4,6 +4,56 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-05-09
+
+v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テストカバレッジ大幅向上・TypeScript strict 化・SessionStore 信頼性強化・Service Worker 状態永続化・セキュリティ修正・CI/CD 整備など、品質基盤を全面的に強化。
+
+### Added / 追加
+
+- **Service Worker 状態永続化**（v5.1.29）
+  - `SessionStore` クラス（`src/background/sessionStore.ts`）: `chrome.storage.session` ラッパー。SW 再起動後もレート制限・タブキャッシュ・設定キャッシュを維持
+  - `skipAiRateLimiter`, `TabCache`, `RecordingLogic.cacheState` に永続化を適用
+
+- **テストカバレッジ大幅向上: 45% → 91%**（v5.1.23）
+  - 全 5,406 テストパス・0 failures
+  - 10 ファイルのカバレッジを平均 26% → 99% に改善
+
+- **GitHub Actions CI/CD パイプライン**（v5.1.23）
+  - `ci.yml`（PR/push）・`coverage.yml`（カバレッジレポート）・`release.yml`（タグで自動リリース）
+
+- **バージョン整合性テスト**（v5.1.24）
+  - `package.json`・`manifest.json`・`wxt.config.ts` のバージョン一致を `npm validate` で自動確認
+
+- **プライバシーポリシー更新時の再同意フロー**（v5.1.29）
+
+### Fixed / 修正
+
+- **SessionStore フラッシュ信頼性改善**（v5.1.30）: `queueMicrotask` → `setTimeout(50ms)` に変更。フラッシュ失敗時のキュー復元＋リトライ機構を追加
+
+- **E2E テスト安定化**（v5.1.29）: キャッシュベースのドメインチェックで flaky 率 ~33% → 0%
+
+- **ローカル AI の Prompt Injection 脆弱性を修正**（v5.1.25）: 送信前・受信後の二重サニタイズ
+
+- **セッションタイムアウトアラームが SW 起動時に初期化されない問題を修正**（v5.1.29）
+
+- **CSP connect-src を最小化**（v5.1.29）: 約 50 ドメイン → 8 必須エントリに削減
+
+- **過剰なパーミッションを削減**（v5.1.29）: `webRequest` および `<all_urls>` optional 権限を削除
+
+- **PII 正規表現のモジュールスコープへの hoist**（v5.1.29）: 呼び出しごとの再コンパイルを排除
+
+- **スキップテスト 10 件を修正・削除**（v5.1.30）
+
+### Changed / 変更
+
+- **service-worker.ts リファクタリング**（v5.1.23）: 9 個のインラインハンドラをエクスポート可能関数に抽出（テスト可能な設計に）
+
+- **コード簡素化**（v5.1.26）: `privacyPipeline.ts`・`historyFilters.ts`・`historyBadges.ts`・`historyEntryRow.ts` を関数分割・ルックアップ化
+
+- **AISummaryResult に `success` フィールドを追加**（v5.1.29）: 全プロバイダの成功・失敗パスに設定
+
+- **i18n 対応拡張**（v5.1.29）: LM Studio / Ollama プリセット適用メッセージを `getMessage()` に移行
+
 ## [5.1.30] - 2026-05-08
 
 ### Fixed / 修正
