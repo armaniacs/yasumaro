@@ -1,4 +1,4 @@
-.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch
+.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all
 
 build:
 	npm run build
@@ -25,6 +25,17 @@ validate:
 	npm run validate
 
 test-and-build: build test
+
+# 全テスト: unit + ニュース統合 + E2E + local-ci（act + Docker が必要）
+test-all: build
+	npm run validate
+	npm test -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
+	npm run test:e2e
+	act push --job validate --container-architecture linux/amd64 -W .github/workflows/ci.yml
+
+# GitHub Actions CI をローカルで再現（act + Docker が必要）
+local-ci:
+	act push --job validate --container-architecture linux/amd64 -W .github/workflows/ci.yml
 
 # ニュースサイト統合テスト
 test-news:
