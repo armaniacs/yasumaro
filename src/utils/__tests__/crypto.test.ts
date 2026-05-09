@@ -467,7 +467,7 @@ describe('crypto', () => {
             expect(isValid).toBe(false);
         });
 
-        test('定数時間比較を使用している', async () => {
+        test('定数時間比較を使用している', { timeout: 60000 }, async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);

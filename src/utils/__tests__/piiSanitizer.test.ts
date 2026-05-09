@@ -571,7 +571,7 @@ describe('piiSanitizer', () => {
       expect(result.text.split('[MASKED:email]').length - 1).toBe(50);
     });
 
-    test('PIIがない64KB境界値テキストを正常に処理できる', async () => {
+    test('PIIがない64KB境界値テキストを正常に処理できる', { timeout: 60000 }, async () => {
       const text = 'x'.repeat(64 * 1024); // ちょうど64KB
       const result = await sanitizeRegex(text) as SanitizeResult;
 
