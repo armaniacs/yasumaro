@@ -36,6 +36,7 @@ docs/implements/
 # Local override files
 *.local
 .*
+!docs/.nojekyll
 
 # Allow GitHub Actions workflow files (not matched by .* above)
 !/.github/workflows/*.yml
