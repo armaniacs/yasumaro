@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [5.2.2] - 2026-05-10
+
+### Added / 追加
+
+- **GitHub Pages ランディングページ**: 日英バイリンガル対応のランディングページを追加。拡張機能の紹介・導入手順・ドキュメントへのリンクを提供
+
+### Fixed / 修正
+
+- **`package-lock.json` に不足していた `@emnapi/core`・`@emnapi/runtime` を追加**: Linux CI 環境で `npm ci` が `Missing: @emnapi/core@1.10.0 from lock file` で失敗する問題を修正
+- **CI カバレッジレポートの `json-summary` reporter を明示的に追加**: vitest coverage report action がカバレッジサマリーを正しく読み取れるよう修正
+
+### Changed / 変更
+
+- **`.nojekyll` ファイルを追加**: GitHub Pages で `_` で始まるディレクトリ（`_locales` など）が正しく配信されるよう設定
 
 ## [5.2.1] - 2026-05-09
 
