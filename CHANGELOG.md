@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.2.3] - 2026-06-08
+
+### Fixed / 修正
+
+- **インストール時の「理解しました」ボタンが押せない問題を修正**（#3）: ダッシュボードのブレークチェンジ通知モーダル（`#breakingChangesModal`）の「理解しました」ボタン（`#dismissBreakingChangesModalBtn`）と「×」ボタン（`#closeBreakingChangesModalBtn`）にクリックイベントリスナーが設定されていなかった問題を修正。モーダル表示時に両ボタンの `addEventListener('click', closeBreakingChangesModal)` を追加
+
 ## [5.2.2] - 2026-05-10
 
 ### Added / 追加
