@@ -413,12 +413,16 @@ async function showBreakingChangesModal(): Promise<void> {
   const shown = await chrome.storage.local.get(BREAKING_CHANGES_SHOWN_KEY).then(result => result[BREAKING_CHANGES_SHOWN_KEY]);
   if (shown) return;
 
-  const { modal, dismissBtn } = getBreakingChangesElements();
+  const { modal, dismissBtn, closeBtn } = getBreakingChangesElements();
   if (!modal) return;
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
   void modal.offsetHeight;
   modal.classList.add('show');
+
+  // ボタンのイベントリスナー設定
+  dismissBtn?.addEventListener('click', closeBreakingChangesModal);
+  closeBtn?.addEventListener('click', closeBreakingChangesModal);
 
   // Focus trap
   breakingChangesTrapId = focusTrapManager.trap(modal, closeBreakingChangesModal);
