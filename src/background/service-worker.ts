@@ -70,6 +70,10 @@ import type {
 export function init(): void {
     // Migration (already async, run at startup)
     runMigration();
+    // SQLite data migration from chrome.storage.local
+    migrationService.run().catch((err) => {
+        logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+    });
 
     // Message listener
     chrome.runtime.onMessage.addListener(createMessageHandler());
@@ -121,6 +125,10 @@ const sessionStore = new SessionStore();
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient);
+import { SqliteClient } from './sqliteClient.js';
+import { MigrationService } from './migrationService.js';
+const sqliteClient = new SqliteClient();
+const migrationService = new MigrationService(sqliteClient);
 
 // Import RecordingPipeline
 import { RecordingPipeline } from './pipeline/RecordingPipeline.js';

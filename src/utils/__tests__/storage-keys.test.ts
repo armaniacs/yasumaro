@@ -31,7 +31,9 @@ describe('getSettings key refinement', () => {
       StorageKeys.MASTER_PASSWORD_ENABLED,
       StorageKeys.MASTER_PASSWORD_SALT,
       StorageKeys.MASTER_PASSWORD_HASH,
-      StorageKeys.IS_LOCKED
+      StorageKeys.IS_LOCKED,
+      StorageKeys.YASUMARO_MIGRATION_STATUS,
+      StorageKeys.YASUMARO_MIGRATION_PROGRESS,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {
