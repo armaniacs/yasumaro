@@ -43,6 +43,7 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_logs_created ON browsing_logs(created_at);
   CREATE INDEX IF NOT EXISTS idx_logs_domain ON browsing_logs(domain);
   CREATE INDEX IF NOT EXISTS idx_logs_active ON browsing_logs(is_deleted, created_at);
+  CREATE INDEX IF NOT EXISTS idx_logs_obsidian ON browsing_logs(obsidian_synced);
 
   CREATE VIRTUAL TABLE IF NOT EXISTS browsing_logs_fts USING fts5(
     url, title, summary, tags,
@@ -169,6 +170,13 @@ async function _doInit(): Promise<boolean> {
 
     // Execute schema creation
     await sqlite3.exec(dbHandle, SCHEMA_SQL);
+
+    // Schema migration: add obsidian_synced column if not present (Phase 6)
+    try {
+      await sqlite3.exec(dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
+    } catch {
+      // Column already exists — that's fine
+    }
 
     // Enable WAL mode for better concurrent read performance
     await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
