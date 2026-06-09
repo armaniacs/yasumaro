@@ -60,7 +60,8 @@
     "wxt": "^0.20.25"
   },
   "dependencies": {
-    "bloomfilter": "1.1.0"
+    "bloomfilter": "1.1.0",
+    "wa-sqlite": "^1.0.0"
   },
   "overrides": {
     "htmlparser2": "^12.0.0"
