@@ -26,7 +26,7 @@
   "entryPointStrategy": "expand",
   "externalSymbolLinkMappings": {},
   "out": "docs/typedoc",
-  "name": "Obsidian Weave API",
+  "name": "Yasumaro API",
   "includeVersion": true,
   "excludePrivate": false,
   "excludeProtected": false,
@@ -35,6 +35,6 @@
   "plugin": [],
   "theme": "default",
   "navigationLinks": {
-    "GitHub": "https://github.com/armaniacs/obsidian-weave"
+    "GitHub": "https://github.com/armaniacs/yasumaro"
   }
 }

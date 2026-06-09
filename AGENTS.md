@@ -314,18 +314,19 @@ See [i18n-guide.md](docs/i18n-guide.md) for detailed guidelines.
 
 | 用途 | 表記 |
 |------|------|
-| リポジトリ・パッケージ名 | `obsidian-weave` |
-| 拡張機能名・UI・ドキュメント見出し | `Obsidian Weave` |
-| GitHub リンクテキスト | `obsidian-weave` |
+| リポジトリ・パッケージ名 | `yasumaro` |
+| 拡張機能名・UI・ドキュメント見出し | `Yasumaro` / `Yasumaro - AI Browsing Logger` |
+| GitHub リンクテキスト | `yasumaro` |
 
 **禁止表記（旧称）:**
+- `obsidian-weave` — 旧名。新規ドキュメントでは使用しない
 - `obsidian-smart-history` — リポジトリ旧名。新規ドキュメントでは使用しない
+- `Obsidian Weave` — 拡張機能旧名。新規ドキュメントでは使用しない
 - `Obsidian Smart History` — 拡張機能旧名。新規ドキュメントでは使用しない
-- ADR-003（`docs/ADR/2026-02-25-rename-to-obsidian-weave.md`）参照
 
 **ブログ・リリースノート記述時のチェック:**
-- GitHub リンク: `[obsidian-weave](https://github.com/armaniacs/obsidian-weave)`
-- ヘッダー・本文: `Obsidian Weave v4.x` 形式
+- GitHub リンク: `[yasumaro](https://github.com/armaniacs/yasumaro)`
+- ヘッダー・本文: `Yasumaro v1.x` 形式
 
 ### Documentation Update Points
 
