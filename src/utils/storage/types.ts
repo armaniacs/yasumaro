@@ -165,7 +165,10 @@ export const StorageKeys = {
     // Text Quality
     CONTENT_DEDUP_ENABLED: 'content_dedup_enabled',     // センテンス冗長除去（デフォルト: true）
     CONTENT_DEDUP_THRESHOLD: 'content_dedup_threshold', // Jaccard類似度閾値（デフォルト: 0.7）
-    SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled' // 日本語文末正規化（デフォルト: true）
+    SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled', // 日本語文末正規化（デフォルト: true）
+    // SQLite migration tracking
+    YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | null
+    YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress', // 移行済み件数（再開用）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -297,6 +300,8 @@ export interface StorageKeyValues {
     [StorageKeys.CONTENT_DEDUP_ENABLED]: boolean;
     [StorageKeys.CONTENT_DEDUP_THRESHOLD]: number;
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: boolean;
+    [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | null;
+    [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
 }
 
 // 厳格な Settings 型
