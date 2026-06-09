@@ -107,6 +107,11 @@ export type PingMessage = {
  * Type-safe union of all messages the Service Worker can receive.
  * Discriminate on `type` to narrow to a specific message shape.
  */
+export type DashboardSqliteMessage = {
+    type: 'DASHBOARD_SQLITE';
+    payload?: Record<string, unknown>;
+};
+
 export type ExtensionMessage =
     | ValidVisitMessage
     | CheckDomainMessage
@@ -122,7 +127,8 @@ export type ExtensionMessage =
     | ActivityUpdateMessage
     | SessionLockRequestMessage
     | ContentCleansingExecutedMessage
-    | PingMessage;
+    | PingMessage
+    | DashboardSqliteMessage;
 
 // ============================================================================
 // Runtime constants (kept for backward compatibility and runtime checks)
@@ -144,6 +150,7 @@ export const VALID_MESSAGE_TYPES = [
     'SESSION_LOCK_REQUEST',
     'CONTENT_CLEANSING_EXECUTED',
     'PING', // Service Worker health check
+    'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
 ] as const;
 
 export const CONTENT_SCRIPT_ONLY_TYPES = [

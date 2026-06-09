@@ -45,6 +45,20 @@ export function showMainScreen(): void {
  * 🟢 要求定義（tdd-requirements.md 169-174行目、画面遷移時のタイマーキャンセル）
  * 🟡 設定上の妥当な推測: カウントダウン完了前の画面遷移に対してタイマーを停止することは合理的
  */
+/**
+ * Open the SQLite history dashboard in a new tab.
+ */
+export function openHistory(): void {
+  console.log('[Navigation] openHistory called - opening SQLite history');
+
+  clearAutoCloseTimer();
+
+  const historyUrl = chrome.runtime.getURL('options.html?tab=sqlite-history');
+  chrome.tabs.create({ url: historyUrl });
+
+  window.close();
+}
+
 export function showSettingsScreen(): void {
   console.log('[Navigation] showSettingsScreen called - opening dashboard');
 
@@ -84,6 +98,12 @@ export function init(): void {
   // 【イベントリスナー設定】: ボタンクリック時の画面遷移を設定 🟢
   if (menuBtn) {
     menuBtn.addEventListener('click', showSettingsScreen);
+
+    // Open SQLite History dashboard
+    const historyBtn = document.getElementById('historyBtn');
+    if (historyBtn) {
+      historyBtn.addEventListener('click', openHistory);
+    }
     console.log('[Navigation] Event listener attached to menu button');
   } else {
     // console.error('[Navigation] Menu button not found! Cannot attach event listener.');

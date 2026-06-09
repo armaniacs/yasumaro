@@ -21,6 +21,7 @@ import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
+import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
@@ -490,6 +491,13 @@ async function initConsentWithdrawal(): Promise<void> {
 
   initSidebarNav();
 
+  // Auto-navigate to SQLite history if URL parameter is present
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('tab') === 'sqlite-history') {
+    const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
+    if (historyBtn) historyBtn.click();
+  }
+
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
   try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initExportImport(); } catch (e) { console.error('[Dashboard] initExportImport error:', e); }
@@ -611,6 +619,7 @@ async function initConsentWithdrawal(): Promise<void> {
   }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
+  try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }

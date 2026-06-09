@@ -17,6 +17,8 @@ import {
     StorageKeys
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
+import { SqliteClient } from './sqliteClient.js';
+import { MigrationService } from './migrationService.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
 import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
@@ -125,8 +127,6 @@ const sessionStore = new SessionStore();
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient);
-import { SqliteClient } from './sqliteClient.js';
-import { MigrationService } from './migrationService.js';
 const sqliteClient = new SqliteClient();
 const migrationService = new MigrationService(sqliteClient);
 
@@ -665,6 +665,77 @@ export async function handlePing(
     sendResponse({ success: true });
 }
 
+/**
+ * Handle dashboard SQLite queries and updates.
+ * Subtypes: query, search, update_star, delete, get_dates, get_count
+ */
+async function handleDashboardSqlite(
+    message: { type: 'DASHBOARD_SQLITE'; payload?: Record<string, unknown> },
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const payload = message.payload || {};
+    const subtype = payload.subtype as string;
+
+    try {
+        switch (subtype) {
+            case 'query': {
+                const result = await sqliteClient.query({
+                    limit: (payload.limit as number) ?? 100,
+                    offset: (payload.offset as number) ?? 0,
+                    domain: payload.domain as string | undefined,
+                    isStarred: payload.isStarred as boolean | undefined,
+                    since: payload.since as number | undefined,
+                    until: payload.until as number | undefined,
+                    orderBy: (payload.orderBy as string) || 'created_at',
+                    orderDir: (payload.orderDir as 'ASC' | 'DESC') || 'DESC',
+                });
+                sendResponse(result ?? { success: false, error: 'Query failed' });
+                break;
+            }
+            case 'search': {
+                const result = await sqliteClient.search(
+                    payload.query as string || '',
+                    (payload.limit as number) ?? 50,
+                    (payload.offset as number) ?? 0
+                );
+                sendResponse(result ?? { success: false, error: 'Search failed' });
+                break;
+            }
+            case 'toggle_star': {
+                const result = await sqliteClient.toggleStar(payload.id as number);
+                sendResponse(result ?? { success: false, error: 'Toggle star failed' });
+                break;
+            }
+            case 'delete': {
+                const result = await sqliteClient.delete(payload.id as number);
+                sendResponse({ success: result });
+                break;
+            }
+            case 'update': {
+                const result = await sqliteClient.update(
+                    payload.id as number,
+                    (payload.changes || {}) as Record<string, unknown>
+                );
+                sendResponse({ success: result });
+                break;
+            }
+            case 'get_count': {
+                const count = await sqliteClient.getCount();
+                sendResponse({ success: true, count: count ?? 0 });
+                break;
+            }
+            default:
+                sendResponse({ success: false, error: `Unknown subtype: ${subtype}` });
+        }
+    } catch (error) {
+        logError('Dashboard SQLite error', {
+            subtype,
+            error: error instanceof Error ? error.message : String(error),
+        }, ErrorCode.UNKNOWN_ERROR);
+        sendResponse({ success: false, error: String(error) });
+    }
+}
+
 // ============================================================================
 // Message Handler Factory (extracted for testability)
 // ============================================================================
@@ -795,6 +866,12 @@ export function createMessageHandler(): (
                 // PING - Service Worker health check
                 if (message.type === 'PING') {
                     await handlePing(message, sendResponse);
+                    return;
+                }
+
+                // DASHBOARD_SQLITE - Dashboard SQLite operations
+                if (message.type === 'DASHBOARD_SQLITE') {
+                    await handleDashboardSqlite(message, sendResponse);
                     return;
                 }
 
