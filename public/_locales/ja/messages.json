@@ -1,15 +1,15 @@
 {
   "extensionName": {
-    "message": "Obsidian Weave"
+    "message": "Yasumaro - AI Browsing Logger"
   },
   "extensionShortName": {
-    "message": "Weave"
+    "message": "Yasumaro"
   },
   "extensionDescription": {
-    "message": "スマートに閉じたタブをAI要約・コンテキストリンクと共にObsidianにバックアップします。"
+    "message": "ブラウジング履歴をAIで要約しローカルSQLiteに永続保存します。Obsidian連携もサポート。"
   },
   "appTitle": {
-    "message": "Obsidian Weave"
+    "message": "Yasumaro"
   },
   "settings": {
     "message": "設定"

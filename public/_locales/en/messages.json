@@ -1,15 +1,15 @@
 {
   "extensionName": {
-    "message": "Obsidian Weave"
+    "message": "Yasumaro - AI Browsing Logger"
   },
   "extensionShortName": {
-    "message": "Weave"
+    "message": "Yasumaro"
   },
   "extensionDescription": {
-    "message": "Smartly backup closed tabs to Obsidian with AI summaries and context linking."
+    "message": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration."
   },
   "appTitle": {
-    "message": "Obsidian Weave"
+    "message": "Yasumaro"
   },
   "settings": {
     "message": "Settings"
