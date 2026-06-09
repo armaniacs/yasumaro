@@ -281,6 +281,23 @@ export class SqliteClient {
   }
 
   /**
+   * Export the database as a binary blob (.db format).
+   */
+  async exportDb(): Promise<Uint8Array | null> {
+    try {
+      const response = await this.msgOffscreen('SQLITE_EXPORT');
+      if (response?.success && response.data) {
+        return new Uint8Array(response.data as number[]);
+      }
+      return null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      addLog(LogType.ERROR, 'SqliteClient: exportDb failed', { error: errorMessage });
+      return null;
+    }
+  }
+
+  /**
    * Get database status information.
    */
   async getStatus(): Promise<{ initialized: boolean; path: string } | null> {

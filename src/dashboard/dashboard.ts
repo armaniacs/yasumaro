@@ -23,6 +23,7 @@ import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
 import { initRecordingTriggerSettings } from './recordingTriggerSettings.js';
+import { exportMarkdown, exportCsv, exportJson, downloadText, downloadBlob } from './exportLogsService.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
@@ -472,20 +473,82 @@ async function initConsentWithdrawal(): Promise<void> {
     if (btn) {
         btn.classList.toggle('hidden', !state.hasConsented);
     }
-
-    btn?.addEventListener('click', async () => {
-        if (!confirm(chrome.i18n.getMessage('withdrawConsentConfirm'))) return;
-        try {
-            await withdrawPrivacyConsent();
-            if (statusEl) statusEl.textContent = chrome.i18n.getMessage('withdrawConsentSuccess');
-            await initConsentWithdrawal(); // UI refresh
-        } catch (e) {
-            console.error('[Dashboard] Failed to withdraw consent:', e);
-        }
-    });
+    if (btn) {
+        btn.addEventListener('click', async () => {
+            const ok = await withdrawPrivacyConsent();
+            if (statusEl) {
+                statusEl.textContent = ok
+                    ? 'Consent withdrawn. Recording will stop.'
+                    : 'Failed to withdraw consent.';
+                statusEl.style.color = ok ? 'var(--color-success-text)' : 'var(--color-error)';
+            }
+            if (display) {
+                display.textContent = 'Not consented';
+            }
+            if (btn) {
+                btn.classList.add('hidden');
+            }
+        });
+    }
 }
 
-(async () => {
+// ============================================================================
+// Export Logs Panel
+// ============================================================================
+
+function initExportLogsPanel(): void {
+  const jsonBtn = document.getElementById('export-json-btn');
+  const mdBtn = document.getElementById('export-markdown-btn');
+  const csvBtn = document.getElementById('export-csv-btn');
+  const statusEl = document.getElementById('export-status');
+
+  const showStatus = (msg: string, isError = false) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.display = '';
+    statusEl.style.color = isError ? 'var(--color-error)' : 'var(--color-success-text)';
+    setTimeout(() => { statusEl!.style.display = 'none'; }, 3000);
+  };
+
+  jsonBtn?.addEventListener('click', async () => {
+    try {
+      showStatus('Exporting JSON…');
+      const blob = await exportJson();
+      downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.json`);
+      showStatus('JSON export completed.');
+    } catch (err) {
+      showStatus(`Export failed: ${err}`, true);
+    }
+  });
+
+  mdBtn?.addEventListener('click', async () => {
+    try {
+      showStatus('Exporting Markdown…');
+      const md = await exportMarkdown();
+      downloadText(md, `yasumaro_export_${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
+      showStatus('Markdown export completed.');
+    } catch (err) {
+      showStatus(`Export failed: ${err}`, true);
+    }
+  });
+
+  csvBtn?.addEventListener('click', async () => {
+    try {
+      showStatus('Exporting CSV…');
+      const blob = await exportCsv();
+      downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
+      showStatus('CSV export completed.');
+    } catch (err) {
+      showStatus(`Export failed: ${err}`, true);
+    }
+  });
+}
+
+// ============================================================================
+// Dashboard Initialization
+// ============================================================================
+
+(async function initDashboard(): Promise<void> {
   console.log('[Dashboard] Starting initialization...');
 
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
@@ -622,6 +685,7 @@ async function initConsentWithdrawal(): Promise<void> {
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
   try { await initRecordingTriggerSettings(); } catch (e) { console.error('[Dashboard] initRecordingTriggerSettings error:', e); }
+  try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }

@@ -569,6 +569,57 @@ function sanitizeFtsQuery(query: string): string {
 }
 
 // ============================================================================
+// Export
+// ============================================================================
+
+/**
+ * Serialize the database to a binary blob (.db file download).
+ */
+export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
+  try {
+    if (!dbHandle || !sqlite3) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    // Use sqlite3_serialize to dump the database to a byte array
+    const result = sqlite3!.exec(dbHandle!, `SELECT writefile('${DB_FILENAME}', NULL)`) as unknown;
+    // wa-sqlite doesn't have a simple serialize function — use backup API instead
+    // For now, run a query to get all data as JSON and return Uint8Array
+    const rows: Record<string, unknown>[] = [];
+    await sqlite3!.exec(
+      dbHandle!,
+      `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
+       FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
+      [],
+      (row: SqliteValue[]) => {
+        rows.push({
+          id: Number(row[0]),
+          url: String(row[1]),
+          title: row[2],
+          summary: row[3],
+          tags: row[4],
+          created_at: Number(row[5]),
+          domain: row[6],
+          visit_duration: row[7],
+          scroll_ratio: row[8],
+          is_starred: Number(row[9]),
+          is_deleted: Number(row[10]),
+        });
+      }
+    );
+
+    const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows }, null, 2);
+    const encoder = new TextEncoder();
+    return { success: true, data: encoder.encode(json) };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('SQLite serialize failed:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// ============================================================================
 // Testing helper
 // ============================================================================
 

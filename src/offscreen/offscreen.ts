@@ -14,6 +14,7 @@ import {
   toggleStar as sqliteToggleStar,
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
+  serialize as sqliteSerialize,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
 
@@ -247,6 +248,10 @@ export function handleOffscreenMessage(
 
             } else if (msg.type === 'SQLITE_STATUS') {
                 const result = await sqliteGetStatus();
+                sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_EXPORT') {
+                const result = await sqliteSerialize();
                 sendResponse(result);
 
             } else {
