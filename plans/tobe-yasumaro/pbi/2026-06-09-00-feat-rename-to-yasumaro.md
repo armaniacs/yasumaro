@@ -28,14 +28,14 @@ Scenario: GitHubリポジトリのURLがリダイレクトされる
 ---
 
 ## 受け入れ基準
-- [ ] **【手動】** GitHub Settings でリポジトリ名を `yasumaro` に変更する
-- [ ] `package.json` の `name` を `"yasumaro"` に変更する
-- [ ] `manifest.json` の `name` を `"Yasumaro - AI Browsing Logger"` に変更する
-- [ ] `manifest.json` の `description` を yasumaro として書き直す
-- [ ] `README.md` のタイトル・説明文を yasumaro 向けに更新する
-- [ ] `AGENTS.md` の "Project Naming Guidelines" に `yasumaro` を追記する（`CLAUDE.md` から名称変更済み。現状反映済みのため確認のみ）
-- [ ] `git remote set-url origin` で新URLに更新する（リポジトリリネーム後）
-- [ ] `npm run build` と `npm validate` がパスする
+- [x] **【手動】** GitHub Settings でリポジトリ名を `yasumaro` に変更する
+- [x] `package.json` の `name` を `"yasumaro"` に変更する
+- [x] `manifest.json` の `name` を `"Yasumaro - AI Browsing Logger"` に変更する（`__MSG_extensionName__` 経由）
+- [x] `manifest.json` の `description` を yasumaro として書き直す
+- [x] `README.md` のタイトル・説明文を yasumaro 向けに更新する
+- [x] `AGENTS.md` の "Project Naming Guidelines" に `yasumaro` を追記する（`CLAUDE.md` から名称変更済み）
+- [x] `git remote set-url origin` で新URLに更新する（リポジトリリネーム後）
+- [x] `npm run build` と `npm validate` がパスする
 
 ---
 
@@ -88,6 +88,6 @@ Scenario: GitHubリポジトリのURLがリダイレクトされる
 - [x] `git remote -v` が新URLを示している
 - [x] `npm validate` がパスする（type-check 通過確認済み）
 - [x] コードレビュー完了（2026-06-09）
-- [ ] `README.md` のタイトルを `# Obsidian Weave` から `# Yasumaro` に更新する（未完了）
-- [ ] `AGENTS.md` 内の `Obsidian Weave Chrome extension` → `Yasumaro Chrome extension` に更新する（未完了）
-- [ ] `_locales/` ディレクトリが未作成であることを確認し、i18n移行タスクとして記録する
+- [x] `README.md` のタイトルを `# Obsidian Weave` から `# Yasumaro` に更新する
+- [x] `AGENTS.md` 内の `Obsidian Weave Chrome extension` → `Yasumaro Chrome extension` に更新する
+- [ ] `_locales/` ディレクトリが未作成であることを確認し、i18n移行タスクとして記録する（Phase 8 で対応）
