@@ -42,7 +42,8 @@ ${entry.summary || ''}
 // CSV Export (UTF-8 BOM for Excel compatibility)
 // ============================================================================
 
-function escapeCsv(value: unknown): string {
+/** @internal exported for testing */
+export function escapeCsv(value: unknown): string {
   if (value == null) return '';
   const str = String(value);
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
