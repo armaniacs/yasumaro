@@ -1,4 +1,4 @@
-# Obsidian Weave
+# Yasumaro - AI Browsing Logger
 
 [日本語](#日本語) | [English](#english)
 
@@ -12,7 +12,7 @@
 ### オリジナルの Obsidian Smart History の紹介
 オリジナルは https://note.com/izuru_tcnkc/n/nd0a758483901 で紹介されている記事です。
 
-Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークして作成したものです。
+Yasumaroは、オリジナルの Obsidian Smart History をフォークして作成したものです。
 
 ### フォークの理由
 オリジナルからフォークさせた一番の理由は、OpenAI互換APIをサポートすることでした。つまり、GroqやOllama、さくらのAIエンジンなども使えるようになりました。
@@ -25,7 +25,7 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 - 📂 **整理された保存**: デイリーノート内に専用の「ブラウザ閲覧履歴」セクションを自動作成し、管理します。
 - ⚙️ **カスタマイズ可能**: 最小滞在時間、スクロール深度、API設定などを自由に構成できます。
 
-以下は、obsidian-weaveの独自でversion2以降に追加した機能です。
+以下は、yasumaroの独自でversion2以降に追加した機能です。
 
 - 🖱️ **手動記録機能**: 「今すぐ記録」ボタンで現在のページを即座に記録できます。重複チェックなしで同じページを複数回記録可能です。
 - 📱 **改良されたUI**: メイン画面と設定画面を分離し、⚙アイコンから専用ダッシュボードへ簡単にアクセスできます。
@@ -54,8 +54,8 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
-   git clone https://github.com/armaniacs/obsidian-weave.git
-   cd obsidian-weave
+   git clone https://github.com/armaniacs/yasumaro.git
+   cd yasumaro
    ```
 
 2. 依存パッケージをインストールします:
@@ -162,7 +162,7 @@ Obsidian Weaveは、オリジナルの Obsidian Smart History をフォークし
 A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
 ### About the Original — Obsidian Smart History
-Obsidian Weave is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901).
+Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901).
 
 ### Why This Fork?
 The primary motivation was to add OpenAI-compatible API support — enabling Groq, Ollama, Sakura AI Engine, and many other providers alongside the original Gemini support.
@@ -175,7 +175,7 @@ If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md
 - 📂 **Organized Storage**: Automatically creates and maintains a dedicated "Browser History" section in your daily notes
 - ⚙️ **Customizable**: Configure minimum visit duration, scroll depth, and API settings
 
-The following features were added exclusively in Obsidian Weave from version 2 onwards:
+The following features were added exclusively in Yasumaro from version 2 onwards:
 
 - 🖱️ **Manual Recording**: Record any page instantly with the "Record Now" button. No duplicate URL restrictions - record the same page multiple times.
 - 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
@@ -203,8 +203,8 @@ To install the extension, follow these steps:
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/armaniacs/obsidian-weave.git
-   cd obsidian-weave
+   git clone https://github.com/armaniacs/yasumaro.git
+   cd yasumaro
    ```
 
 2. Install dependencies:
