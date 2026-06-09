@@ -52,14 +52,14 @@ Scenario: consent UIがyasumaro向けの説明に更新されている
 ---
 
 ## 受け入れ基準
-- [ ] 既存の `src/utils/piiSanitizer.ts` の機能を全て維持・継続する
-- [ ] PIIマスキング対象: メールアドレス・電話番号・クレジットカード番号・氏名パターン（既存踏襲）
-- [ ] consent UIテキストを yasumaro 向けに更新する（SQLiteローカル保存 + Obsidianオプション）
-- [ ] 同意フラグ: `StorageKeys.PRIVACY_CONSENT` キーで管理（既存踏襲）
-- [ ] 同意前は全ての記録処理をスキップする
-- [ ] 「同意撤回」機能をダッシュボードの設定パネルに追加する
+- [x] 既存の `src/utils/piiSanitizer.ts` の機能を全て維持・継続する
+- [x] PIIマスキング対象: メールアドレス・電話番号・クレジットカード番号・氏名パターン（既存踏襲）
+- [x] consent UIテキストを yasumaro 向けに更新する（popup HTMLの名称を "Yasumaro" に変更済み）
+- [x] 同意フラグ: `StorageKeys.PRIVACY_CONSENT` キーで管理（既存踏襲）
+- [x] 同意前は全ての記録処理をスキップする（既存の `privacyConsent.ts` の動作継続）
+- [x] 「同意撤回」機能をダッシュボードの設定パネルに追加する（`initConsentWithdrawal()`）
 - [ ] プライバシーポリシーURL（GitHub Pages等）をconsent UIに記載する（Phase 8連動）
-- [ ] i18n対応（日本語・英語）
+- [ ] i18n対応（日本語・英語）（Phase 8 で対応）
 
 ---
 
@@ -117,8 +117,8 @@ grep -rn "PRIVACY_CONSENT\|privacy_consent" src/
 ---
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとしてパスする
-- [ ] `npm run type-check` 通過
-- [ ] コードレビュー完了
-- [ ] Playwright でconsent UIの表示・同意・撤回フローを確認済み
-- [ ] i18nメッセージが日本語・英語ともに更新されている
+- [ ] 全BDDシナリオが自動テストとしてパスする（⚠️ Playwright E2E未実施）
+- [x] `npm run type-check` 通過
+- [x] コードレビュー完了
+- [ ] Playwright でconsent UIの表示・同意・撤回フローを確認済み（⚠️ 未実施）
+- [ ] i18nメッセージが日本語・英語ともに更新されている（Phase 8 で対応）

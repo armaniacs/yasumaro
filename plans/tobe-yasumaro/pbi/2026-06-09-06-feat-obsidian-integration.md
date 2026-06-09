@@ -43,14 +43,14 @@ Scenario: Obsidian接続設定をダッシュボードでテストできる
 ---
 
 ## 受け入れ基準
-- [ ] 既存の `src/background/obsidianClient.ts` の機能を全て維持する
-- [ ] SQLiteスキーマに `obsidian_synced INTEGER DEFAULT 0` カラムを追加する
-- [ ] Obsidian送信成功時に `obsidian_synced = 1` を更新する
-- [ ] Obsidian送信失敗時はサイレントスキップ（ユーザー通知なし）
-- [ ] ダッシュボードに「Obsidian未送信ログ」のフィルターと再送信ボタンを追加する
-- [ ] 接続テスト機能をダッシュボードの設定画面に追加する
-- [ ] Obsidianが設定されていない場合（APIキー未設定）は連携処理を完全スキップする
-- [ ] i18nメッセージ（obsidian関連）を新規作成する（`_locales/` は未作成のため、`_locales/ja/messages.json` と `_locales/en/messages.json` を新規作成し、Obsidian関連メッセージを追加する）
+- [x] 既存の `src/background/obsidianClient.ts` の機能を全て維持する
+- [x] SQLiteスキーマに `obsidian_synced INTEGER DEFAULT 0` カラムを追加する（ALTER TABLE + インデックス）
+- [x] Obsidian送信成功時に `obsidian_synced = 1` を更新する（`SqliteClient.update()`）
+- [x] Obsidian送信失敗時はサイレントスキップ（ユーザー通知なし）
+- [ ] ダッシュボードに「Obsidian未送信ログ」のフィルターと再送信ボタンを追加する（未実装）
+- [ ] 接続テスト機能をダッシュボードの設定画面に追加する（未実装）
+- [x] Obsidianが設定されていない場合（APIキー未設定）は連携処理を完全スキップする
+- [ ] i18nメッセージ（obsidian関連）を新規作成する（Phase 8 で対応）
 
 ---
 
@@ -106,8 +106,8 @@ grep -rn "obsidian" src/utils/storage.ts
 ---
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとしてパスする
-- [ ] `npm run type-check` 通過
-- [ ] コードレビュー完了
-- [ ] Obsidian起動中・停止中の両シナリオを手動確認済み
-- [ ] 既存のObsidian連携設定（URL・ポート・API Key）が引き続き動作する
+- [ ] 全BDDシナリオが自動テストとしてパスする（⚠️ E2E未実施）
+- [x] `npm run type-check` 通過
+- [x] コードレビュー完了
+- [ ] Obsidian起動中・停止中の両シナリオを手動確認済み（⚠️ 未実施）
+- [x] 既存のObsidian連携設定（URL・ポート・API Key）が引き続き動作する（変更なし）

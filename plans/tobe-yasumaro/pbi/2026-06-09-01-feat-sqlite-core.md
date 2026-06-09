@@ -37,9 +37,9 @@ Scenario: SQLite初期化に失敗した場合のフォールバック
 ---
 
 ## 受け入れ基準
-- [ ] wa-sqliteライブラリがOffscreen Document内で正常にロードされる
-- [ ] OPFSバックエンド（`opfs-sahpool`）でSQLiteファイルが永続化される
-- [ ] 以下のスキーマが作成される:
+- [x] wa-sqliteライブラリがOffscreen Document内で正常にロードされる
+- [x] OPFSバックエンド（`opfs-sahpool`）でSQLiteファイルが永続化される
+- [x] 以下のスキーマが作成される:
   ```sql
   CREATE TABLE browsing_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,10 +59,10 @@ Scenario: SQLite初期化に失敗した場合のフォールバック
     content='browsing_logs', content_rowid='id'
   );
   ```
-- [ ] Service Worker ↔ Offscreen Document間のメッセージパッシングで CRUD が動作する
-- [ ] FTS5検索が動作し、50ms以内に結果が返る（10万件想定）
-- [ ] `manifest.json`に `"offscreen"` パーミッションが含まれている（確認済み: 既に存在）
-- [ ] `manifest.json`に `"unlimitedStorage"` パーミッションが含まれている（確認済み: 既に存在）
+- [x] Service Worker ↔ Offscreen Document間のメッセージパッシングで CRUD が動作する
+- [ ] FTS5検索が動作し、50ms以内に結果が返る（10万件想定）（⚠️ 実機E2E未検証）
+- [x] `manifest.json`に `"offscreen"` パーミッションが含まれている（確認済み: 既に存在）
+- [x] `manifest.json`に `"unlimitedStorage"` パーミッションが含まれている（確認済み: 既に存在）
 
 ---
 
@@ -149,9 +149,9 @@ cat src/offscreen/offscreen.ts
 ---
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テスト（統合テスト）としてパスする
-- [ ] 単体テストが追加されカバレッジが維持される
-- [ ] TypeScriptの型エラーがゼロ（`npm run type-check` 通過）
-- [ ] コードレビュー完了
-- [ ] 既存の obsidian-weave 機能（Obsidian連携）が引き続き動作する（リグレッションなし）
-- [ ] CLAUDE.md に SQLite関連アーキテクチャを追記
+- [x] 全BDDシナリオが自動テスト（統合テスト）としてパスする（31 tests）
+- [x] 単体テストが追加されカバレッジが維持される
+- [x] TypeScriptの型エラーがゼロ（`npm run type-check` 通過）
+- [x] コードレビュー完了（SQLインジェクション・sender validation 含む全指摘 fix）
+- [x] 既存の obsidian-weave 機能（Obsidian連携）が引き続き動作する（リグレッションなし、全5,495テスト通過）
+- [ ] CLAUDE.md に SQLite関連アーキテクチャを追記（→ AGENTS.md が対象ファイル、未追記）
