@@ -166,6 +166,9 @@ export const StorageKeys = {
     CONTENT_DEDUP_ENABLED: 'content_dedup_enabled',     // センテンス冗長除去（デフォルト: true）
     CONTENT_DEDUP_THRESHOLD: 'content_dedup_threshold', // Jaccard類似度閾値（デフォルト: 0.7）
     SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled', // 日本語文末正規化（デフォルト: true）
+    // Recording trigger settings
+    RECORDING_TRIGGERS: 'recording_triggers', // 記録トリガー設定（JSON）
+    SNAPSHOT_INTERVAL_MINUTES: 'snapshot_interval_minutes', // 定期スナップショット間隔（分）
     // SQLite migration tracking
     YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | null
     YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress', // 移行済み件数（再開用）
@@ -300,6 +303,8 @@ export interface StorageKeyValues {
     [StorageKeys.CONTENT_DEDUP_ENABLED]: boolean;
     [StorageKeys.CONTENT_DEDUP_THRESHOLD]: number;
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: boolean;
+    [StorageKeys.RECORDING_TRIGGERS]: string;
+    [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: number;
     [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | null;
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
 }

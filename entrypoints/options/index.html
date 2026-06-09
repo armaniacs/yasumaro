@@ -99,6 +99,13 @@
           </svg>
           <span data-i18n="historyTab">History</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-recording-triggers">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          <span data-i18n="recordingTriggersTab">Recording Triggers</span>
+        </button>
         <button class="sidebar-nav-btn" data-panel="panel-sqlite-history">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -1268,6 +1275,15 @@
 
         <div id="historyStats" class="history-stats"></div>
         <div id="historyList" class="history-list" aria-live="polite"></div>
+      </section>
+
+      <!-- Recording Triggers Panel -->
+      <section id="panel-recording-triggers" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="recordingTriggersTab">Recording Triggers</h2>
+        <p class="panel-description" data-i18n="recordingTriggersDesc">
+          Choose when browsing sessions should be recorded. At least one trigger must be enabled.
+        </p>
+        <div id="recording-trigger-settings"></div>
       </section>
 
       <!-- SQLite History Panel -->

@@ -22,6 +22,7 @@ import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
+import { initRecordingTriggerSettings } from './recordingTriggerSettings.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
@@ -620,6 +621,7 @@ async function initConsentWithdrawal(): Promise<void> {
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
+  try { await initRecordingTriggerSettings(); } catch (e) { console.error('[Dashboard] initRecordingTriggerSettings error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }

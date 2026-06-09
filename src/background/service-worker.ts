@@ -76,6 +76,10 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
+    // Setup periodic snapshot alarm if enabled
+    setupSnapshotAlarm().catch(err => {
+        logWarn('Failed to setup snapshot alarm', { error: String(err) });
+    });
 
     // Message listener
     chrome.runtime.onMessage.addListener(createMessageHandler());
@@ -658,6 +662,59 @@ export async function handleSessionLockRequest(
 /**
  * Handle PING message for Service Worker health check.
  */
+/**
+ * Setup chrome.alarms for periodic snapshots based on current trigger settings.
+ */
+async function setupSnapshotAlarm(): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get([StorageKeys.RECORDING_TRIGGERS, StorageKeys.SNAPSHOT_INTERVAL_MINUTES]);
+    let isEnabled = false;
+    const raw = result[StorageKeys.RECORDING_TRIGGERS];
+    if (raw) {
+      const triggers = JSON.parse(raw as string);
+      isEnabled = triggers.periodicSnapshot === true;
+    }
+    const intervalMinutes = (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
+
+    // Clear existing alarm first
+    chrome.alarms.clear('yasumaro-snapshot');
+    if (isEnabled) {
+      chrome.alarms.create('yasumaro-snapshot', { periodInMinutes: intervalMinutes });
+      logInfo('Snapshot alarm created', { intervalMinutes }, 'service-worker');
+    }
+  } catch (err) {
+    logWarn('setupSnapshotAlarm failed', { error: String(err) });
+  }
+}
+
+// Handle snapshot alarm
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== 'yasumaro-snapshot') return;
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url || !tab.id) return;
+
+    // Save active tab to SQLite
+    const record = {
+      url: tab.url,
+      title: tab.title || null,
+      created_at: Date.now(),
+      domain: tab.url ? extractDomainFromUrl(tab.url) : null,
+    };
+    const result = await sqliteClient.insert(record);
+    if (result) {
+      logInfo('Snapshot saved', { url: tab.url, id: result.id }, 'service-worker');
+    }
+  } catch (err) {
+    logWarn('Snapshot alarm failed', { error: String(err) });
+  }
+});
+
+function extractDomainFromUrl(url: string): string {
+  try { return new URL(url).hostname; } catch { return url; }
+}
+
 export async function handlePing(
     message: PingMessage,
     sendResponse: (response?: unknown) => void

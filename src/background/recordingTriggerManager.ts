@@ -1,0 +1,153 @@
+/**
+ * recordingTriggerManager.ts
+ * Manages recording trigger settings and provides shouldRecord() evaluation.
+ * Integrates with chrome.alarms for periodic snapshots.
+ */
+
+import { StorageKeys } from '../utils/storage.js';
+import { addLog, LogType } from '../utils/logger.js';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface RecordingTriggers {
+  tabClose: boolean;
+  scrollAndTime: boolean;
+  manualSave: boolean;
+  periodicSnapshot: boolean;
+}
+
+const DEFAULT_TRIGGERS: RecordingTriggers = {
+  tabClose: true,
+  scrollAndTime: false,
+  manualSave: true,
+  periodicSnapshot: false,
+};
+
+export interface RecordingEvent {
+  type: 'tab_close' | 'scroll_idle' | 'manual_save' | 'snapshot';
+  /** Scroll percentage (0-100). Only for scroll_idle events. */
+  scrollPercent?: number;
+  /** Visit duration in ms. Only for scroll_idle events. */
+  visitDuration?: number;
+}
+
+// ============================================================================
+// RecordingTriggerManager
+// ============================================================================
+
+export class RecordingTriggerManager {
+  private cachedTriggers: RecordingTriggers | null = null;
+
+  /**
+   * Load trigger settings from chrome.storage.local with caching.
+   */
+  async loadTriggers(): Promise<RecordingTriggers> {
+    if (this.cachedTriggers) return this.cachedTriggers;
+
+    try {
+      const result = await chrome.storage.local.get(StorageKeys.RECORDING_TRIGGERS);
+      const raw = result[StorageKeys.RECORDING_TRIGGERS];
+      if (typeof raw === 'string') {
+        const parsed = JSON.parse(raw) as Partial<RecordingTriggers>;
+        this.cachedTriggers = { ...DEFAULT_TRIGGERS, ...parsed };
+      } else {
+        this.cachedTriggers = { ...DEFAULT_TRIGGERS };
+      }
+    } catch {
+      this.cachedTriggers = { ...DEFAULT_TRIGGERS };
+    }
+
+    return this.cachedTriggers!;
+  }
+
+  /**
+   * Save trigger settings to chrome.storage.local.
+   */
+  async saveTriggers(triggers: RecordingTriggers): Promise<boolean> {
+    try {
+      const raw = JSON.stringify(triggers);
+      await chrome.storage.local.set({ [StorageKeys.RECORDING_TRIGGERS]: raw });
+      this.cachedTriggers = { ...triggers };
+      addLog(LogType.INFO, 'Recording triggers saved', { triggers });
+      return true;
+    } catch (error) {
+      addLog(LogType.ERROR, 'Failed to save recording triggers', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Evaluate whether an event should trigger recording.
+   */
+  async shouldRecord(event: RecordingEvent): Promise<boolean> {
+    const triggers = await this.loadTriggers();
+
+    switch (event.type) {
+      case 'tab_close':
+        return triggers.tabClose;
+
+      case 'scroll_idle':
+        if (!triggers.scrollAndTime) return false;
+        // Validate scroll depth (50%+) and visit duration (5s+)
+        if ((event.scrollPercent ?? 0) < 50) return false;
+        if ((event.visitDuration ?? 0) < 5000) return false;
+        return true;
+
+      case 'manual_save':
+        return triggers.manualSave;
+
+      case 'snapshot':
+        return triggers.periodicSnapshot;
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Validate that at least one trigger is enabled.
+   */
+  validate(triggers: RecordingTriggers): { valid: boolean; error?: string } {
+    const enabled = Object.values(triggers).filter(Boolean).length;
+    if (enabled === 0) {
+      return { valid: false, error: 'At least one recording trigger must be enabled.' };
+    }
+    return { valid: true };
+  }
+
+  /**
+   * Get the snapshot interval from storage.
+   */
+  async getSnapshotIntervalMinutes(): Promise<number> {
+    try {
+      const result = await chrome.storage.local.get(StorageKeys.SNAPSHOT_INTERVAL_MINUTES);
+      return (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
+    } catch {
+      return 5;
+    }
+  }
+
+  /**
+   * Save snapshot interval.
+   */
+  async saveSnapshotInterval(minutes: number): Promise<boolean> {
+    try {
+      const clamped = Math.max(1, Math.min(60, minutes));
+      await chrome.storage.local.set({ [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: clamped });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Invalidate cache so next loadTriggers re-reads from storage.
+   */
+  invalidateCache(): void {
+    this.cachedTriggers = null;
+  }
+}

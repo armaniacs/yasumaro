@@ -34,6 +34,8 @@ describe('getSettings key refinement', () => {
       StorageKeys.IS_LOCKED,
       StorageKeys.YASUMARO_MIGRATION_STATUS,
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,
+      StorageKeys.RECORDING_TRIGGERS,
+      StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {
