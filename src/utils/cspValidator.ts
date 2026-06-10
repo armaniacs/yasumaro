@@ -4,7 +4,7 @@
  *
  * 設計: manifest.json connect-src（第一層）は接続可能ドメインの上限。
  * このバリデーターはユーザー設定済みプロバイダーのみ許可する（第二層）。
- * 詳細: docs/ADR/0002-csp-layered-security.md
+ * 詳細: dev-docs/ADR/0002-csp-layered-security.md
  */
 
 import { logWarn, ErrorCode } from './logger.js';

@@ -5,6 +5,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Use vi.hoisted to ensure mocks are set up before any module imports
+const { mockAlarmsCreate, mockAlarmsClear, storageMock } = vi.hoisted(() => {
+    const storageKeys = {
+        PRIVACY_MODE: 'PRIVACY_MODE',
+        PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+        DOMAIN_WHITELIST: 'DOMAIN_WHITELIST',
+        AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+        AUTO_CONTENT_FETCH_ENABLED: 'AUTO_CONTENT_FETCH_ENABLED',
+        SKIP_AI_RATE_LIMIT_MAX: 'SKIP_AI_RATE_LIMIT_MAX',
+        SKIP_AI_RATE_LIMIT_WINDOW_MS: 'SKIP_AI_RATE_LIMIT_WINDOW_MS',
+        IS_LOCKED: 'IS_LOCKED',
+        DENIED_DOMAINS: 'DENIED_DOMAINS',
+        PERMISSION_NOTIFY_THRESHOLD: 'PERMISSION_NOTIFY_THRESHOLD',
+        RECORDING_TRIGGERS: 'recording_triggers',
+        SNAPSHOT_INTERVAL_MINUTES: 'snapshot_interval_minutes',
+        YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status',
+        YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress',
+    };
+    return {
+        mockAlarmsCreate: vi.fn<Promise<void>, [string, chrome.alarms.AlarmCreateInfo]>((_name, _info) => Promise.resolve()),
+        mockAlarmsClear: vi.fn<Promise<boolean>, [string]>(() => Promise.resolve(true)),
+        storageMock: { StorageKeys: storageKeys },
+    };
+});
+
 const { mockAddListener, mockQuery, mockGet, mockCreate, mockRemove, mockClear,
         mockSetBadgeText, mockSetBadgeBackgroundColor, mockExecuteScript } = vi.hoisted(() => {
     return {
@@ -51,6 +75,11 @@ vi.mock('chrome', () => ({
     scripting: {
         executeScript: mockExecuteScript,
     },
+    alarms: {
+        create: mockAlarmsCreate,
+        clear: mockAlarmsClear,
+        onAlarm: { addListener: mockAddListener },
+    },
     storage: {
         local: { get: vi.fn(), set: vi.fn() },
         session: { get: vi.fn(), set: vi.fn() },
@@ -61,7 +90,22 @@ vi.mock('chrome', () => ({
 }));
 
 // Mock dependencies
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage.js', () => ({
+    StorageKeys: storageMock.StorageKeys,
+    getSettings: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    buildAllowedUrls: vi.fn(),
+    saveSettingsWithAllowedUrls: vi.fn(),
+    updateDomainFilterCache: vi.fn(),
+    lockSession: vi.fn(),
+    cacheSessionState: vi.fn(),
+    initSettings: vi.fn(),
+    ensureDefaultSettings: vi.fn(),
+    removeOldKeys: vi.fn(),
+    migrateToSingleSettingsObject: vi.fn(),
+}));
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 vi.mock('../../utils/pendingStorage.js');
@@ -264,18 +308,6 @@ describe('service-worker handlers', () => {
         storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
         // @ts-expect-error - vi.fn() type narrowing
         storage.setSavedUrlsWithTimestamps.mockResolvedValue();
-        storage.StorageKeys = {
-            PRIVACY_MODE: 'PRIVACY_MODE',
-            PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
-            DOMAIN_WHITELIST: 'DOMAIN_WHITELIST',
-            AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
-            AUTO_CONTENT_FETCH_ENABLED: 'AUTO_CONTENT_FETCH_ENABLED',
-            SKIP_AI_RATE_LIMIT_MAX: 'SKIP_AI_RATE_LIMIT_MAX',
-            SKIP_AI_RATE_LIMIT_WINDOW_MS: 'SKIP_AI_RATE_LIMIT_WINDOW_MS',
-            IS_LOCKED: 'IS_LOCKED',
-            DENIED_DOMAINS: 'DENIED_DOMAINS',
-            PERMISSION_NOTIFY_THRESHOLD: 'PERMISSION_NOTIFY_THRESHOLD',
-        };
         // @ts-expect-error - vi.fn() type narrowing
         storage.updateDomainFilterCache.mockResolvedValue(undefined);
         // @ts-expect-error - vi.fn() type narrowing
@@ -1305,6 +1337,12 @@ describe('service-worker handlers', () => {
     });
 
     describe('handleManualRecord', () => {
+        beforeEach(() => {
+            // Clear in-memory manual-record content cache for test isolation
+            // @ts-expect-error - accessing exported test helper via namespace import
+            serviceWorker.resetManualRecordCache?.();
+        });
+
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.handleManualRecord).toBe('function');
         });
@@ -1796,6 +1834,30 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handlePing(message, sendResponse);
 
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should re-read trigger settings from storage (setupSnapshotAlarm)', async () => {
+            const sendResponse = vi.fn();
+            const message: PingMessage = { type: 'PING' };
+
+            // handlePing calls setupSnapshotAlarm which reads chrome.storage.local
+            const storageGet = chrome.storage.local.get as ReturnType<typeof vi.fn>;
+            storageGet.mockResolvedValue({
+                recording_triggers: JSON.stringify({
+                    tabClose: true,
+                    scrollAndTime: false,
+                    manualSave: true,
+                    periodicSnapshot: true,
+                }),
+                snapshot_interval_minutes: 10,
+            });
+
+            await serviceWorker.handlePing(message, sendResponse);
+
+            // Verify setupSnapshotAlarm ran: chrome.storage.local.get was called
+            expect(storageGet).toHaveBeenCalled();
+            // PING should still respond success
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });

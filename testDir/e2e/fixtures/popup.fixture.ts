@@ -5,8 +5,8 @@ import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const EXTENSION_PATH = join(__dirname, '../../dist/chromium-mv3');
-const POPUP_PATH = join(__dirname, '../../dist/chromium-mv3/popup.html');
+const EXTENSION_PATH = join(__dirname, '../../../dist/chromium-mv3');
+const POPUP_PATH = join(__dirname, '../../../dist/chromium-mv3/popup.html');
 
 type PopupFixtures = {
   context: ChromiumBrowserContext;

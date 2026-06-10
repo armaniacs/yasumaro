@@ -9,6 +9,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { StorageKeys } from '../utils/storage.js';
 import { SqliteClient } from './sqliteClient.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 const BATCH_SIZE = 100;
 const MIGRATION_STATUS_KEY = StorageKeys.YASUMARO_MIGRATION_STATUS;
@@ -96,14 +97,15 @@ export class MigrationService {
             hasErrors = true;
             addLog(LogType.ERROR, 'Migration: failed to insert record', {
               url: entry.url,
-              error: insertError instanceof Error ? insertError.message : String(insertError),
+              error: errorMessage(insertError),
             });
             // Continue with next entry — don't fail the whole batch
           }
         }
 
         // Save progress after each batch (so interrupted runs can resume)
-        const completedCount = progress + i + batch.length;
+        // Use batchSuccessCount so failed entries are retried on restart
+        const completedCount = progress + i + batchSuccessCount;
         await this.setMigrationProgress(completedCount);
       }
 
@@ -123,7 +125,7 @@ export class MigrationService {
       addLog(LogType.INFO, 'Migration: completed', { totalMigrated: entries.length });
     } catch (error) {
       addLog(LogType.ERROR, 'Migration: failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       // Don't set status — next startup will retry
     }

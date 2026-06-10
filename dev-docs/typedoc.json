@@ -25,7 +25,7 @@
   ],
   "entryPointStrategy": "expand",
   "externalSymbolLinkMappings": {},
-  "out": "docs/typedoc",
+  "out": "dev-docs/typedoc",
   "name": "Yasumaro API",
   "includeVersion": true,
   "excludePrivate": false,

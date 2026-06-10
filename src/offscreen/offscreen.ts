@@ -15,6 +15,7 @@ import {
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
   serialize as sqliteSerialize,
+  clearAll as sqliteClearAll,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
 
@@ -248,6 +249,10 @@ export function handleOffscreenMessage(
 
             } else if (msg.type === 'SQLITE_STATUS') {
                 const result = await sqliteGetStatus();
+                sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_CLEAR_ALL') {
+                const result = await sqliteClearAll();
                 sendResponse(result);
 
             } else if (msg.type === 'SQLITE_EXPORT') {

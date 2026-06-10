@@ -11,18 +11,21 @@ tmp/
 
 node_modules/
 dist/
-coverage/
+testDir/coverage/
 tsconfig.tsbuildinfo
 test-results/
 playwright-report/
 playwright/.cache/
 
-docs/blog-*
-docs/implements/
+docs/typedoc/
+dev-docs/typedoc/
+dev-docs/blog-*
+.ruff_cache/
 .worktrees/
 .DS_Store
 **/archive-old/*
 
+!dev-docs/plans/archive-old/00-index.md
 .env
 .idea/
 .vscode/

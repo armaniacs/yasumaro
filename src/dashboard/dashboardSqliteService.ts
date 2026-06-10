@@ -42,18 +42,8 @@ function sendDashboardMessage(payload: Record<string, unknown>): Promise<Dashboa
 // Public API
 // ============================================================================
 
-export interface BrowsingLogEntry {
-  id: number;
-  url: string;
-  title: string | null;
-  summary: string | null;
-  tags: string | null;
-  created_at: number;
-  domain: string | null;
-  visit_duration: number | null;
-  scroll_ratio: number | null;
-  is_starred: number;
-}
+import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+export type { BrowsingLogEntry };
 
 export interface DateCount {
   date: string; // YYYY-MM-DD

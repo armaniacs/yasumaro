@@ -103,6 +103,10 @@ export function applyI18n(element: HTMLElement | Document = document): void {
 
     const translatedText = getMessage(key, args);
 
+    // Guard: if translation is empty (key missing from messages.json),
+    // preserve the original HTML fallback text
+    if (!translatedText) return;
+
     if (htmlEl.tagName === 'INPUT' || htmlEl.tagName === 'TEXTAREA') {
       // 入力要素のプレースホルダー
       (htmlEl as HTMLInputElement | HTMLTextAreaElement).placeholder = translatedText;

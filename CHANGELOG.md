@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.2] - 2026-06-10
+
+### Changed / 変更
+
+- **ルートディレクトリ整理**: プロジェクトルートのファイルをカテゴリ別に再配置
+  - `docs/` を GitHub Pages 公開ドキュメント専用にし、開発者内部ドキュメントは `dev-docs/` に分離
+  - `testDir/` に全テスト関連ファイル（E2E, Playwright設定, Vitest設定, tsconfig）を集約
+  - ユーザ向けドキュメント（`SETUP_GUIDE.md`, `PRIVACY.md` 等）を `docs/` に移動
+  - ブログ原稿・古い計画・不要ファイルを `dev-docs/` に移動または削除
+
+- **Typedoc API ドキュメントの CI 自動化**: GitHub Actions (`pages.yml`) で push 時に自動ビルド・公開。生成物は git 追跡から除外
+
+### Added / 追加
+
+- **テストカバレッジ改善**: 4 ファイルに 58 のテストを追加
+  - `dashboardSqliteService.test.ts` (18 tests): CRUD・検索・カウントの全API
+  - `recordingTriggerSettings.test.ts` (13 tests): 設定読込・保存・バリデーション・UI制御
+  - `exportLogsService.test.ts` (17 tests): Markdown/CSV/JSONエクスポート・ダウンロード
+  - `privacySettings.test.ts` (10 tests): プライバシーモード・PII確認・自動保存動作
+
+### Removed / 削除
+
+- 未使用ファイル・重複ファイルを整理
+  - `build-scripts/`（未使用データ生成スクリプト）
+  - `vendor/`（型定義を `src/utils/trustDb/` に移動）
+  - `fix_extractor.patch`, `fix_recording_logic.patch`（既にソースに適用済み）
+  - `failures.log`（過去のJest実行ログ）
+  - `temp.txt`, `build.js`（未使用）
+  - Makefile を `dev-docs/` に移動（ルートには forwarding Makefile を設置）
+
 ## [5.2.3] - 2026-06-08
 
 ### Fixed / 修正
