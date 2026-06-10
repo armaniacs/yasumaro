@@ -36,7 +36,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - 🔔 **ツールバーバッジ通知**: プライバシーヘッダー検出時はオレンジ `!`、自動保存完了時は青 `◎` がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
-- 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](PRIVACY.md) を参照。
+- 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照。
 - 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
 
 ### 必要なもの
@@ -119,7 +119,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 
 設定画面の「AIプロンプト」タブで、AI要約時のプロンプトをカスタマイズできます。プロバイダーごとに異なるプロンプトを設定したり、複数のプロンプトを保存して切り替えたりすることができます。
 
-デフォルトのプロンプト、各設定項目の説明、カスタマイズ例は [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) を参照してください。
+デフォルトのプロンプト、各設定項目の説明、カスタマイズ例は [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) を参照してください。
 
 #### uBlock Origin形式フィルターの使用
 設定画面の「ドメインフィルター」タブで、「フィルター形式」を「uBlock Origin 形式」に切り替えることで、uBlock Origin形式のフィルターリストを使用できます。
@@ -130,7 +130,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - ドラッグ＆ドロップでファイルを読み込む
 - URLからフィルターリストをダウンロードする
 
-詳細な使い方は [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) を参照してください。
+詳細な使い方は [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) を参照してください。
 
 
 ### Obsidianへの追加の仕組み（`src/background/obsidianClient.ts`）
@@ -186,7 +186,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🔔 **Toolbar Badge Notifications**: An orange `!` badge appears when privacy headers are detected; a blue `◎` badge appears when auto-recording completes. Check status without opening the popup.
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
-- 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](PRIVACY.md) for details.
+- 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](docs/PRIVACY.md) for details.
 - 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
 
 ### Requirements
@@ -221,7 +221,7 @@ To install the extension, follow these steps:
 
 5. Enable "Developer mode" in the top right
 
-6. Click "Load unpacked" and select the **`dist` folder**
+6. Click "Load unpacked" and select the **`dist/chromium-mv3` folder**
 
 ### Usage
 
@@ -268,7 +268,7 @@ You can use wildcards in the domain list (e.g., `*.example.com`). Use the "Add C
 
 In the "AI Prompt" tab of the settings screen, you can customize the prompts used for AI summarization. Configure different prompts per provider or save multiple prompts to switch between them as needed.
 
-For default prompt values, field descriptions, and customization examples, see [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md).
+For default prompt values, field descriptions, and customization examples, see [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md).
 
 #### Using uBlock Origin Format Filters
 In the "Domain Filter" tab of the settings screen, switch the "Filter Format" to "uBlock Origin Format" to use uBlock Origin format filter lists.
@@ -279,14 +279,14 @@ Ways to input filters:
 - Drag and drop a file to load
 - Download a filter list from a URL
 
-For detailed usage instructions, please refer to [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md).
+For detailed usage instructions, please refer to [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md).
 
 ---
 
 ## Privacy / プライバシー
 データはすべてローカルに保存されます。詳細は [PRIVACY.md](PRIVACY.md) を参照してください。
 
-All data is stored locally. See [PRIVACY.md](PRIVACY.md) for details.
+All data is stored locally. See [PRIVACY.md](docs/PRIVACY.md) for details.
 
 ## License / ライセンス
 MIT License
@@ -296,21 +296,21 @@ MIT License
 ### 文書一覧
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
-- [SETUP_GUIDE.md](SETUP_GUIDE.md) - セットアップガイド
+- [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - セットアップガイド
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [LICENSE.md](LICENSE.md) - ライセンス詳細
-- [PRIVACY.md](PRIVACY.md) - プライバシーポリシー
-- [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) - 個人情報保護機能ガイド
-- [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) - AIプロンプトカスタマイズガイド
-- [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) - uBlockフィルターインポートガイド
+- [PRIVACY.md](docs/PRIVACY.md) - プライバシーポリシー
+- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - 個人情報保護機能ガイド
+- [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) - AIプロンプトカスタマイズガイド
+- [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) - uBlockフィルターインポートガイド
 
 ### Documentation
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
-- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Setup Guide
+- [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - Setup Guide
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
 - [LICENSE.md](LICENSE.md) - License Details
-- [PRIVACY.md](PRIVACY.md) - Privacy Policy
-- [PII_FEATURE_GUIDE.md](PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
-- [USER-GUIDE-AI-PROMPT.md](USER-GUIDE-AI-PROMPT.md) - AI Prompt Customization Guide
-- [USER-GUIDE-UBLOCK-IMPORT.md](USER-GUIDE-UBLOCK-IMPORT.md) - uBlock Filter Import Guide
+- [PRIVACY.md](docs/PRIVACY.md) - Privacy Policy
+- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
+- [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) - AI Prompt Customization Guide
+- [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) - uBlock Filter Import Guide

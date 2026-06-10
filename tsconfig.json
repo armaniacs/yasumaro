@@ -45,6 +45,6 @@
         "node_modules",
         "dist",
         "src/**/__tests__",
-        "vitest.setup.ts"
+        "testDir"
     ]
 }

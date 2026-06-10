@@ -7,6 +7,7 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
@@ -15,45 +16,7 @@ const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
 // Types
 // ============================================================================
 
-export interface BrowsingLogRecord {
-  id?: number;
-  url: string;
-  title?: string | null;
-  summary?: string | null;
-  tags?: string | null;
-  created_at: number;
-  domain?: string | null;
-  visit_duration?: number | null;
-  scroll_ratio?: number | null;
-  is_starred?: number;
-  is_deleted?: number;
-}
-
-export interface QueryOptions {
-  limit?: number;
-  offset?: number;
-  orderBy?: string;
-  orderDir?: 'ASC' | 'DESC';
-  domain?: string;
-  isStarred?: boolean;
-  excludeDeleted?: boolean;
-  since?: number;
-  until?: number;
-}
-
-export interface SearchResult {
-  id: number;
-  url: string;
-  title: string | null;
-  summary: string | null;
-  tags: string | null;
-  created_at: number;
-  domain: string | null;
-  visit_duration: number | null;
-  scroll_ratio: number | null;
-  is_starred: number;
-  rank: number;
-}
+import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
 
 interface OffscreenResponse {
   success?: boolean;
@@ -155,8 +118,8 @@ export class SqliteClient {
       const response = await this.msgOffscreen('SQLITE_INIT');
       return response?.success === true;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: init failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: init failed', { error: errorMessage(error) });
       return false;
     }
   }
@@ -172,8 +135,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: insert failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: insert failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -192,8 +155,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: query failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: query failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -212,8 +175,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: search failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: search failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -226,8 +189,8 @@ export class SqliteClient {
       const response = await this.msgOffscreen('SQLITE_UPDATE', { id, ...changes });
       return response?.success === true;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: update failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: update failed', { error: errorMessage(error) });
       return false;
     }
   }
@@ -240,8 +203,8 @@ export class SqliteClient {
       const response = await this.msgOffscreen('SQLITE_DELETE', { id });
       return response?.success === true;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: delete failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: delete failed', { error: errorMessage(error) });
       return false;
     }
   }
@@ -257,8 +220,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: toggleStar failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: toggleStar failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -274,8 +237,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: getCount failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: getCount failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -291,8 +254,8 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: exportDb failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: exportDb failed', { error: errorMessage(error) });
       return null;
     }
   }
@@ -311,9 +274,23 @@ export class SqliteClient {
       }
       return null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.ERROR, 'SqliteClient: getStatus failed', { error: errorMessage });
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: getStatus failed', { error: errorMessage(error) });
       return null;
+    }
+  }
+
+  /**
+   * Clear all browsing logs (GDPR Art.17 hard delete).
+   */
+  async clearAll(): Promise<boolean> {
+    try {
+      const response = await this.msgOffscreen('SQLITE_CLEAR_ALL');
+      return response?.success === true;
+    } catch (error: unknown) {
+      // using errorMessage utility
+      addLog(LogType.ERROR, 'SqliteClient: clearAll failed', { error: errorMessage(error) });
+      return false;
     }
   }
 }

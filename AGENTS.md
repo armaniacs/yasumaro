@@ -18,9 +18,9 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 
 | For Documentation | See |
 |------------------|-----|
-| Project Architecture | [docs/DESIGN_SPECIFICATIONS.md](docs/DESIGN_SPECIFICATIONS.md) |
-| Architecture Decisions | [docs/ADR/](docs/ADR/) |
-| Error Codes | [docs/ERROR_CODES.md](docs/ERROR_CODES.md) |
+| Project Architecture | [dev-docs/DESIGN_SPECIFICATIONS.md](dev-docs/DESIGN_SPECIFICATIONS.md) |
+| Architecture Decisions | [dev-docs/ADR/](dev-docs/ADR/) |
+| Error Codes | [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
 | i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
@@ -106,7 +106,7 @@ Content Scripts (src/content/)
 | Permission Manager | `src/utils/permissionManager.ts` | chrome.permissions API wrapper + denied domain tracking |
 | CSP Settings | `src/dashboard/cspSettings.ts` | Conditional CSP configuration for AI providers |
 
-**Before implementing major features**, review [docs/ADR/](docs/ADR/) for existing architectural decisions and consistency.
+**Before implementing major features**, review [dev-docs/ADR/](dev-docs/ADR/) for existing architectural decisions and consistency.
 
 ### Critical Considerations
 
@@ -139,7 +139,7 @@ Content Scripts (src/content/)
 ### Code Quality Standards
 
 - [ ] Consistent error handling with user notifications
-- [ ] Use structured error codes (see [docs/ERROR_CODES.md](docs/ERROR_CODES.md))
+- [ ] Use structured error codes (see [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md))
 - [ ] Proper cleanup of event listeners and intervals
 - [ ] No memory leaks in long-running service worker
 - [ ] Modular code organization
@@ -275,19 +275,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 | Document | Language | Purpose |
 |----------|----------|---------|
 | README.md | Bilingual (JP/EN) | Quick start guide, features overview |
-| SETUP_GUIDE.md | Bilingual (JP/EN) | Detailed step-by-step instructions |
-| PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
-| USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
-| PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |
+| docs/SETUP_GUIDE.md | Bilingual (JP/EN) | Detailed step-by-step instructions |
+| docs/PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
+| docs/USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
+| docs/PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |
 | CHANGELOG.md | Mixed | Version history |
 
 ### Developer Documentation
 
 | Document | Language | Purpose |
 |----------|----------|---------|
-| docs/DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
-| docs/ADR/ | English | Architecture Decision Records |
-| docs/ERROR_CODES.md | English | Structured error code definitions |
+| dev-docs/DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
+| dev-docs/ADR/ | English | Architecture Decision Records |
+| dev-docs/ERROR_CODES.md | English | Structured error code definitions |
 | CONTRIBUTING.md | Bilingual (JP/EN) | Development & contribution guide |
 | AGENTS.md | English | This file - agent-specific guidance |
 | UBLOCK_MIGRATION.md | Bilingual (JP/EN) | Migration guide |

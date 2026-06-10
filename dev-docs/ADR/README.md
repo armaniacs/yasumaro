@@ -110,7 +110,7 @@ ADRが作成または更新された日付（ISO 8601形式: YYYY-MM-DD）
 
 ## ファイル命名規則
 
-ADRファイルは `docs/ADR/` ディレクトリに格納します：
+ADRファイルは `dev-docs/ADR/` ディレクトリに格納します：
 
 ```
 YYYY-MM-DD-[決定のタイトルをkebab-caseにしたもの].md

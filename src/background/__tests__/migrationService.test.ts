@@ -128,12 +128,59 @@ describe('MigrationService', () => {
     expect(mockStorage['yasumaro_migration_status']).toBe('completed');
   });
 
-  it('continues on insert failure, does not mark as completed', async () => {
+  it('does not advance progress for failed inserts', async () => {
     mockStorage['savedUrlsWithTimestamps'] = [
       { url: 'https://example.com/1', timestamp: 1000 },
     ];
 
-    // First call fails, second succeeds (for progress save)
+    // Insert fails
+    sendMessageMock.mockResolvedValue({ success: false, error: 'Insert failed' });
+
+    await service.run();
+
+    // Should not mark as completed since insert failed
+    expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
+    // Progress should NOT advance — 0 entries were successfully inserted
+    expect(mockStorage['yasumaro_migration_progress']).toBe(0);
+  });
+
+  it('progress reflects only successfully inserted entries in a batch', async () => {
+    mockStorage['savedUrlsWithTimestamps'] = [
+      { url: 'https://example.com/1', timestamp: 1000 },
+      { url: 'https://example.com/2', timestamp: 2000 },
+      { url: 'https://example.com/3', timestamp: 3000 },
+    ];
+
+    let callIndex = 0;
+    sendMessageMock.mockImplementation(
+      (_msg: unknown, callback: (response: unknown) => void) => {
+        callIndex++;
+        // First insert fails, rest succeed
+        if (callIndex === 1) {
+          callback({ success: false, error: 'Insert failed' });
+        } else {
+          callback({ success: true, id: callIndex });
+        }
+      }
+    );
+
+    await service.run();
+
+    // Only 2 of 3 entries were successfully inserted
+    expect(mockStorage['yasumaro_migration_progress']).toBe(2);
+    // Should not mark as completed since there were errors
+    expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
+  });
+
+  it('retries previously failed entries on restart', async () => {
+    mockStorage['savedUrlsWithTimestamps'] = [
+      { url: 'https://example.com/1', timestamp: 1000 },
+      { url: 'https://example.com/2', timestamp: 2000 },
+      { url: 'https://example.com/3', timestamp: 3000 },
+      { url: 'https://example.com/4', timestamp: 4000 },
+    ];
+
+    // First run: entry 1 fails, entries 2-4 succeed
     let callIndex = 0;
     sendMessageMock.mockImplementation(
       (_msg: unknown, callback: (response: unknown) => void) => {
@@ -141,17 +188,26 @@ describe('MigrationService', () => {
         if (callIndex === 1) {
           callback({ success: false, error: 'Insert failed' });
         } else {
-          // This is the progress save check
-          callback({ success: true, id: 1 });
+          callback({ success: true, id: callIndex });
         }
       }
     );
 
     await service.run();
 
-    // Should not mark as completed since insert failed
-    expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
-    // Progress should still be saved
-    expect(mockStorage['yasumaro_migration_progress']).toBe(1);
+    // 3 out of 4 succeeded
+    expect(mockStorage['yasumaro_migration_progress']).toBe(3);
+
+    // Simulate restart — entry 1 should be retried
+    callIndex = 0;
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValue({ success: true, id: 1 });
+
+    // Reset status but keep same data + progress from first run
+    mockStorage['yasumaro_migration_status'] = null;
+    await service.run();
+
+    // Entry at index 0 was never successfully inserted — must be retried
+    expect(sendMessageMock).toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@
 
 import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
+import { errorMessage } from '../utils/errorUtils.js';
 import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
 
 // The wa-sqlite package uses ambient type declarations for SQLiteAPI and SQLiteCompatibleType
@@ -77,55 +78,7 @@ const DB_FILENAME = 'yasumaro.db';
 // Types
 // ============================================================================
 
-export interface BrowsingLogRecord {
-  id?: number;
-  url: string;
-  title?: string | null;
-  summary?: string | null;
-  tags?: string | null;
-  created_at: number;
-  domain?: string | null;
-  visit_duration?: number | null;
-  scroll_ratio?: number | null;
-  is_starred?: number;
-  is_deleted?: number;
-}
-
-export interface QueryOptions {
-  /** Maximum number of rows to return */
-  limit?: number;
-  /** Number of rows to skip */
-  offset?: number;
-  /** Column to order by (default: created_at) */
-  orderBy?: string;
-  /** Sort direction (default: DESC) */
-  orderDir?: 'ASC' | 'DESC';
-  /** Filter by domain (exact match) */
-  domain?: string;
-  /** Filter by starred status */
-  isStarred?: boolean;
-  /** Filter out deleted records (default: true) */
-  excludeDeleted?: boolean;
-  /** Filter records on or after this timestamp (Unix ms) */
-  since?: number;
-  /** Filter records on or before this timestamp (Unix ms) */
-  until?: number;
-}
-
-export interface SearchResult {
-  id: number;
-  url: string;
-  title: string | null;
-  summary: string | null;
-  tags: string | null;
-  created_at: number;
-  domain: string | null;
-  visit_duration: number | null;
-  scroll_ratio: number | null;
-  is_starred: number;
-  /** FTS5 rank (relevance score) */
-  rank: number;
-}
+import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
 
 // ============================================================================
 // Module-level state
@@ -184,8 +137,7 @@ async function _doInit(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite init failed:', errorMessage, error);
+    console.error('SQLite init failed:', errorMessage(error), error);
     dbHandle = null;
     sqlite3 = null;
     initPromise = null;
@@ -236,9 +188,8 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 
     return { success: true, id: newId };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite insert failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite insert failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -324,9 +275,8 @@ export async function query(options: QueryOptions = {}): Promise<{
 
     return { success: true, rows, total };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite query failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite query failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -390,9 +340,8 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 
     return { success: true, rows, total };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite search failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite search failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -434,9 +383,8 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite update failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite update failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -474,9 +422,8 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
     );
     return { success: true, is_starred: newStarred };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite toggleStar failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite toggleStar failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -502,9 +449,8 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 
     return { success: true, count };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite getCount failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite getCount failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -529,9 +475,31 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
 
     return { success: true, initialized: true, path: DB_FILENAME };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite getStatus failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite getStatus failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Clear all browsing logs from the database (GDPR Art.17 hard delete).
+ */
+export async function clearAll(): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!dbHandle || !sqlite3) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    await sqlite3!.exec(dbHandle!, `BEGIN IMMEDIATE;
+      DELETE FROM browsing_logs;
+      DELETE FROM browsing_logs_fts;
+      COMMIT;
+    `);
+
+    return { success: true };
+  } catch (error) {
+    console.error('SQLite clearAll failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 
@@ -581,7 +549,8 @@ function sanitizeFtsQuery(query: string): string {
 // ============================================================================
 
 /**
- * Serialize the database to a binary blob (.db file download).
+ * Export all browsing_logs as a JSON Uint8Array (NOT a SQLite binary .db file).
+ * For true SQLite binary serialization, use wa-sqlite backup API.
  */
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   try {
@@ -590,10 +559,8 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
       if (!ok) return { success: false, error: 'Database not initialized' };
     }
 
-    // Use sqlite3_serialize to dump the database to a byte array
-    const result = sqlite3!.exec(dbHandle!, `SELECT writefile('${DB_FILENAME}', NULL)`) as unknown;
-    // wa-sqlite doesn't have a simple serialize function — use backup API instead
-    // For now, run a query to get all data as JSON and return Uint8Array
+    // Export all rows as a JSON byte array
+    // (wa-sqlite doesn't support sqlite3_serialize; for true .db export use backup API)
     const rows: Record<string, unknown>[] = [];
     await sqlite3!.exec(
       dbHandle!,
@@ -621,9 +588,8 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
     const encoder = new TextEncoder();
     return { success: true, data: encoder.encode(json) };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('SQLite serialize failed:', errorMessage);
-    return { success: false, error: errorMessage };
+    console.error('SQLite serialize failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
   }
 }
 

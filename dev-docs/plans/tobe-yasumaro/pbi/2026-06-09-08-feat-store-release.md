@@ -46,7 +46,9 @@ Scenario: ZIPパッケージが正しく構成されている
 ## 受け入れ基準
 - [ ] `manifest.json` の更新:
   - `name`: "Yasumaro - AI Browsing Logger"
-  - `version`: 新バージョン番号（1.0.0）
+  - `version`: **現行の `5.9.1` のまま維持**（初回公開でも `1.0.0` にする必要はない。Chrome Web Store はバージョン番号に制限なし）
+  - バージョン番号の形式確認: 各数値が `0`〜`65535` の範囲内、先頭ゼロなし（`5.9.1` は問題なし）
+  - `"manifest_version": 3` であることを確認（MV2 は新規受け付け終了済み）
   - `description`: 英語・日本語両方（`default_locale` 設定）
   - パーミッション確認: `"unlimitedStorage"`, `"offscreen"`（既に manifest.json に含まれていることを確認）
   - パーミッション正当化コメント（manifest内またはREADME）
@@ -55,8 +57,8 @@ Scenario: ZIPパッケージが正しく構成されている
 - [ ] ストア用スクリーンショット（最低1枚 1280x800）を用意する
 - [ ] ストア掲載テキスト（概要・説明文）を日本語・英語で用意する
 - [ ] `npm run build` でZIPパッケージを生成するスクリプトを追加する
-- [ ] CHANGELOG.md に v1.0.0 リリースエントリを追加する
-- [ ] `package.json` と `manifest.json` のバージョンを同期する
+- [ ] CHANGELOG.md に v5.9.1（Chrome Web Store 初回公開）エントリを追加する
+- [ ] `package.json` と `manifest.json` のバージョンを同期する（どちらも `5.9.1`）
 
 ---
 
@@ -148,6 +150,6 @@ AIが要約し、ローカルのSQLiteデータベースに永続保存するChr
 - [ ] Chrome Web Store Developer Dashboard でアイテムを「下書き保存」できた
 - [ ] プライバシーポリシーURLが有効（HTTP 200）
 - [ ] `npm run build` がエラーなく完了し、ZIPが生成される
-- [ ] CHANGELOG.md に v1.0.0 エントリが追加されている
+- [ ] CHANGELOG.md に v5.9.1（Chrome Web Store 初回公開）エントリが追加されている
 - [ ] コードレビュー完了
 - [ ] 審査提出完了（または提出準備完了の確認）

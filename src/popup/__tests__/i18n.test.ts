@@ -315,5 +315,17 @@ describe('i18n', () => {
 
       expect(div.textContent).toBe('Test Message');
     });
+
+    it('preserves fallback text when translation key is missing', () => {
+      const div = document.createElement('div');
+      div.setAttribute('data-i18n', 'nonexistentKey');
+      div.textContent = 'Fallback text';
+      document.body.appendChild(div);
+
+      applyI18n();
+
+      // Should preserve the original fallback text, not overwrite with empty string
+      expect(div.textContent).toBe('Fallback text');
+    });
   });
 });

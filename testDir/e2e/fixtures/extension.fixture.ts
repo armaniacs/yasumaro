@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // WXT outputs to dist/<browser>-mv3/ directory
-const EXTENSION_PATH = path.join(__dirname, '../../dist/chromium-mv3');
+const EXTENSION_PATH = path.join(__dirname, '../../../dist/chromium-mv3');
 
 type ExtensionFixtures = {
   context: BrowserContext;

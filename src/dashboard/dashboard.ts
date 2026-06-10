@@ -591,11 +591,20 @@ function initExportLogsPanel(): void {
     if (!confirm(chrome.i18n.getMessage('deleteAllDataConfirm'))) return;
     try {
       await chrome.storage.local.clear();
+      // Also clear SQLite browsing logs (GDPR Art.17) — await confirmation before showing success
+      const sqliteResult = await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all' } });
+      if (!sqliteResult?.success) {
+        const statusEl = document.getElementById('deleteAllDataStatus');
+        if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
+        return;
+      }
       const statusEl = document.getElementById('deleteAllDataStatus');
       if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataSuccess');
       setTimeout(() => window.location.reload(), 2000);
     } catch (e) {
       console.error('[Dashboard] Failed to delete all data:', e);
+      const statusEl = document.getElementById('deleteAllDataStatus');
+      if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to delete all data. Please try again.';
     }
   });
 

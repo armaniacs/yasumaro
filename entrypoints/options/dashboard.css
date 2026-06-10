@@ -9,6 +9,9 @@
    ============================================================================= */
 
 :root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+
   --color-primary: #7c3aed;
   --color-primary-hover: #6d28d9;
   --color-primary-light: rgba(124, 58, 237, 0.1);

@@ -164,6 +164,6 @@ console.log(await response.json());
 
 ## 関連ドキュメント / Related Docs
 
-- [ADR: LM Studio 統合](./docs/ADR/2026-04-04-lm-studio-integration.md)
+- [ADR: LM Studio 統合](./dev-docs/ADR/2026-04-04-lm-studio-integration.md)
 - [SETUP_GUIDE.md](./SETUP_GUIDE.md)
 - [OpenAIProvider.ts](./src/background/ai/providers/OpenAIProvider.ts)

@@ -77,7 +77,7 @@ export function init(): void {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
     // Setup periodic snapshot alarm if enabled
-    setupSnapshotAlarm().catch(err => {
+    setupSnapshotAlarm(true).catch(err => {
         logWarn('Failed to setup snapshot alarm', { error: String(err) });
     });
 
@@ -165,6 +165,21 @@ sessionStore.get<[string, { count: number; resetTime: number }][]>(SESSION_KEYS.
 
 // Track whether cache has been initialized (for startup rehydration)
 let isCacheInitialized = false;
+
+// Snapshot alarm: cache last settings hash to avoid unnecessary clear/create on every ping
+let cachedSnapshotSettingsHash: string | null = null;
+
+// Manual record: cache extracted page content per URL to avoid repeated tab scans + DOM clones
+const MANUAL_RECORD_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const manualRecordContentCache = new Map<string, { content: string; timestamp: number }>();
+
+/**
+ * Reset in-memory manual-record content cache.
+ * Exported for test isolation.
+ */
+export function resetManualRecordCache(): void {
+    manualRecordContentCache.clear();
+}
 
 // ============================================================================
 // Extracted Message Handlers (for testability)
@@ -376,62 +391,79 @@ export async function handleManualRecord(
                 return;
             }
 
-            let createdTabId: number | undefined;
-            try {
-                // 既存タブを探す
-                const allTabs = await chrome.tabs.query({});
-                const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
-                let targetTabId: number | undefined = existingTab?.id;
-
-                // タブが開いていなければバックグラウンドで開く
-                if (!targetTabId) {
-                    try {
-                        const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
-                        createdTabId = newTab.id;
-                        targetTabId = newTab.id;
-                    } catch (e) {
-                        // Android: active:false may be ignored, fallback to existing tabs only
-                        await logWarn('Failed to create background tab, falling back to existing tabs only', { url: sanitizedUrl, error: e instanceof Error ? e.message : String(e) }, undefined, 'service-worker');
-                    }
-
-                    if (targetTabId) {
-                        // ページが読み込まれるまで待機（最大10秒に短縮）
-                        await new Promise<void>((resolve) => {
-                            const timeout = setTimeout(resolve, 10000);
-                            const listener = (tabId: number, info: { status?: string }): void => {
-                                if (tabId === targetTabId && info.status === 'complete') {
-                                    clearTimeout(timeout);
-                                    chrome.tabs.onUpdated.removeListener(listener);
-                                    resolve();
-                                }
-                            };
-                            chrome.tabs.onUpdated.addListener(listener);
-                        });
-                    }
+            // Manual record content cache: reuse recently fetched page content for the same URL
+            const targetUrl = message.payload.url;
+            const cachedEntry = manualRecordContentCache.get(targetUrl);
+            if (cachedEntry) {
+                const age = Date.now() - cachedEntry.timestamp;
+                if (age < MANUAL_RECORD_CACHE_TTL_MS) {
+                    content = cachedEntry.content;
+                } else {
+                    // Evict stale entry so the Map does not grow unbounded
+                    manualRecordContentCache.delete(targetUrl);
                 }
+            } else {
+                let createdTabId: number | undefined;
+                try {
+                    // 既存タブを探す
+                    const allTabs = await chrome.tabs.query({});
+                    const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
+                    let targetTabId: number | undefined = existingTab?.id;
 
-                // scripting.executeScriptでページ本文を取得（Content Script不要）
-                // DOMクレンジングを適用して機密コンテンツがパイプラインをバイパスするのを防ぐ
-                if (targetTabId) {
-                    const results = await chrome.scripting.executeScript({
-                        target: { tabId: targetTabId },
-                        func: () => {
-                            const body = document.body;
-                            if (!body) return '';
-                            const clone = body.cloneNode(true) as HTMLElement;
-                            const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
-                            clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
-                            return clone.innerText?.trim().substring(0, 10000) || '';
+                    // タブが開いていなければバックグラウンドで開く
+                    if (!targetTabId) {
+                        try {
+                            const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
+                            createdTabId = newTab.id;
+                            targetTabId = newTab.id;
+                        } catch (e) {
+                            // Android: active:false may be ignored, fallback to existing tabs only
+                            await logWarn('Failed to create background tab, falling back to existing tabs only', { url: sanitizedUrl, error: e instanceof Error ? e.message : String(e) }, undefined, 'service-worker');
                         }
-                    });
-                    content = results?.[0]?.result || '';
+
+                        if (targetTabId) {
+                            // ページが読み込まれるまで待機（最大10秒に短縮）
+                            await new Promise<void>((resolve) => {
+                                const timeout = setTimeout(resolve, 10000);
+                                const listener = (tabId: number, info: { status?: string }): void => {
+                                    if (tabId === targetTabId && info.status === 'complete') {
+                                        clearTimeout(timeout);
+                                        chrome.tabs.onUpdated.removeListener(listener);
+                                        resolve();
+                                    }
+                                };
+                                chrome.tabs.onUpdated.addListener(listener);
+                            });
+                        }
+                    }
+
+                    // scripting.executeScriptでページ本文を取得（Content Script不要）
+                    // DOMクレンジングを適用して機密コンテンツがパイプラインをバイパスするのを防ぐ
+                    if (targetTabId) {
+                        const results = await chrome.scripting.executeScript({
+                            target: { tabId: targetTabId },
+                            func: () => {
+                                const body = document.body;
+                                if (!body) return '';
+                                const clone = body.cloneNode(true) as HTMLElement;
+                                const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
+                                clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
+                                return clone.innerText?.trim().substring(0, 10000) || '';
+                            }
+                        });
+                        content = results?.[0]?.result || '';
+                    }
+                } catch (err: unknown) {
+                    await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
+                } finally {
+                    // 新規作成したタブを閉じる
+                    if (createdTabId !== undefined) {
+                        chrome.tabs.remove(createdTabId).catch(() => {});
+                    }
                 }
-            } catch (err: unknown) {
-                await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
-            } finally {
-                // 新規作成したタブを閉じる
-                if (createdTabId !== undefined) {
-                    chrome.tabs.remove(createdTabId).catch(() => {});
+                // Cache successfully fetched content for reuse within the TTL window
+                if (content) {
+                    manualRecordContentCache.set(targetUrl, { content, timestamp: Date.now() });
                 }
             }
         }
@@ -664,17 +696,21 @@ export async function handleSessionLockRequest(
  */
 /**
  * Setup chrome.alarms for periodic snapshots based on current trigger settings.
+ * Skips work if settings haven't changed since the last successful run.
  */
-async function setupSnapshotAlarm(): Promise<void> {
+async function setupSnapshotAlarm(force = false): Promise<boolean> {
   try {
     const result = await chrome.storage.local.get([StorageKeys.RECORDING_TRIGGERS, StorageKeys.SNAPSHOT_INTERVAL_MINUTES]);
-    let isEnabled = false;
     const raw = result[StorageKeys.RECORDING_TRIGGERS];
-    if (raw) {
-      const triggers = JSON.parse(raw as string);
-      isEnabled = triggers.periodicSnapshot === true;
-    }
+    const triggers = raw ? JSON.parse(raw as string) : {};
+    const isEnabled = triggers.periodicSnapshot === true;
     const intervalMinutes = (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
+
+    const settingsHash = `${isEnabled}-${intervalMinutes}`;
+    if (!force && settingsHash === cachedSnapshotSettingsHash) {
+      return false;
+    }
+    cachedSnapshotSettingsHash = settingsHash;
 
     // Clear existing alarm first
     chrome.alarms.clear('yasumaro-snapshot');
@@ -682,8 +718,10 @@ async function setupSnapshotAlarm(): Promise<void> {
       chrome.alarms.create('yasumaro-snapshot', { periodInMinutes: intervalMinutes });
       logInfo('Snapshot alarm created', { intervalMinutes }, 'service-worker');
     }
+    return true;
   } catch (err) {
     logWarn('setupSnapshotAlarm failed', { error: String(err) });
+    return false;
   }
 }
 
@@ -719,6 +757,8 @@ export async function handlePing(
     message: PingMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
+    // Re-setup snapshot alarm only when trigger settings have changed since the last ping
+    await setupSnapshotAlarm(false);
     sendResponse({ success: true });
 }
 
@@ -728,6 +768,7 @@ export async function handlePing(
  */
 async function handleDashboardSqlite(
     message: { type: 'DASHBOARD_SQLITE'; payload?: Record<string, unknown> },
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
     const payload = message.payload || {};
@@ -779,6 +820,17 @@ async function handleDashboardSqlite(
             case 'get_count': {
                 const count = await sqliteClient.getCount();
                 sendResponse({ success: true, count: count ?? 0 });
+                break;
+            }
+            case 'clear_all': {
+                // Destructive operation: reject calls from content scripts (sender.tab present).
+                // Only extension-origin pages (dashboard) may invoke this.
+                if (sender.tab) {
+                    sendResponse({ success: false, error: 'clear_all is not allowed from content scripts' });
+                    break;
+                }
+                const ok = await sqliteClient.clearAll();
+                sendResponse({ success: ok });
                 break;
             }
             default:
@@ -928,7 +980,7 @@ export function createMessageHandler(): (
 
                 // DASHBOARD_SQLITE - Dashboard SQLite operations
                 if (message.type === 'DASHBOARD_SQLITE') {
-                    await handleDashboardSqlite(message, sendResponse);
+                    await handleDashboardSqlite(message, sender, sendResponse);
                     return;
                 }
 
