@@ -240,12 +240,12 @@ describe('SqliteClient', () => {
     it('sends SQLITE_STATUS message', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, initialized: true, path: 'yasumaro.db' });
+          callback({ success: true, initialized: true, path: 'yasumaro.db', fallback: false });
         }
       );
 
       const result = await client.getStatus();
-      expect(result).toEqual({ initialized: true, path: 'yasumaro.db' });
+      expect(result).toEqual({ initialized: true, path: 'yasumaro.db', fallback: false });
     });
   });
 

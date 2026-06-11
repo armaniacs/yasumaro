@@ -2230,5 +2230,111 @@
   },
   "lmStudioPresetApplied": {
     "message": "LM Studioプリセット適用 (http://localhost:1234/v1)"
+  },
+  "sqliteHistoryTitle": {
+    "message": "閲覧履歴"
+  },
+  "historyToday": {
+    "message": "今日"
+  },
+  "historyYesterday": {
+    "message": "昨日"
+  },
+  "historyLast7Days": {
+    "message": "過去7日間"
+  },
+  "historyLast30Days": {
+    "message": "過去30日間"
+  },
+  "historyPrev": {
+    "message": "前へ"
+  },
+  "historyNext": {
+    "message": "次へ"
+  },
+  "historyNoRecords": {
+    "message": "記録が見つかりませんでした。"
+  },
+  "historySearchPlaceholder": {
+    "message": "検索（FTS5）..."
+  },
+  "historyLoading": {
+    "message": "読み込み中..."
+  },
+  "historyLoadError": {
+    "message": "データの読み込みに失敗しました"
+  },
+  "historyDeleteConfirm": {
+    "message": "この記録を削除しますか？"
+  },
+  "historySearchAriaLabel": {
+    "message": "閲覧履歴を検索"
+  },
+  "historyRecordCount": {
+    "message": "$COUNT$件",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
+  "historyPageInfo": {
+    "message": "$TOTAL$ページ中$CURRENT$ページ",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "triggerTabClose": {
+    "message": "タブを閉じた時"
+  },
+  "triggerTabCloseDesc": {
+    "message": "タブが閉じられた時に記録"
+  },
+  "triggerScrollTime": {
+    "message": "スクロール＆時間"
+  },
+  "triggerScrollTimeDesc": {
+    "message": "スクロール深度50%以上かつ滞在時間5秒以上で記録"
+  },
+  "triggerManual": {
+    "message": "手動保存"
+  },
+  "triggerManualDesc": {
+    "message": "手動でトリガーされた時に記録"
+  },
+  "triggerSnapshot": {
+    "message": "定期スナップショット"
+  },
+  "triggerSnapshotDesc": {
+    "message": "一定間隔で記録"
+  },
+  "snapshotIntervalLabel": {
+    "message": "間隔（分）"
+  },
+  "saveTriggers": {
+    "message": "保存"
+  },
+  "triggersSaved": {
+    "message": "設定を保存しました。"
+  },
+  "triggerValidationAtLeastOne": {
+    "message": "少なくとも1つのトリガーを有効にする必要があります。"
+  },
+  "triggerSaveError": {
+    "message": "エラー: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "ネットワークエラー"
+      }
+    }
   }
 }

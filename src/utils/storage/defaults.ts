@@ -67,6 +67,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.L0_EXTRACTIVE_SIMILARITY_THRESHOLD]: 0.3,
     [StorageKeys.L0_EXTRACTIVE_PERFORMANCE_THRESHOLD]: 1000,
     [StorageKeys.PRIVACY_CONSENT]: false,
+    [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 0,
     [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: false,
     [StorageKeys.ALERT_FINANCE]: true,
     [StorageKeys.ALERT_SENSITIVE]: true,

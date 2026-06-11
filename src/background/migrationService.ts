@@ -67,46 +67,49 @@ export class MigrationService {
       let hasErrors = false;
 
       for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
-        const batch = remaining.slice(i, i + BATCH_SIZE);
-        let batchSuccessCount = 0;
+        const batch = remaining.slice(i, i + BATCH_SIZE).map((entry) => ({
+          url: entry.url,
+          created_at: entry.timestamp,
+          title: null,
+          summary: null,
+          tags: null,
+          domain: null,
+          visit_duration: null,
+          scroll_ratio: null,
+          is_starred: 0,
+          is_deleted: 0,
+        }));
 
-        for (const entry of batch) {
-          try {
-            const result = await this.sqliteClient.insert({
-              url: entry.url,
-              created_at: entry.timestamp,
-              title: null,
-              summary: null,
-              tags: null,
-              domain: null,
-              visit_duration: null,
-              scroll_ratio: null,
-              is_starred: 0,
-              is_deleted: 0,
-            });
+        try {
+          const result = await this.sqliteClient.insertBatch(batch);
 
-            if (result !== null) {
-              batchSuccessCount++;
-            } else {
+          if (result !== null) {
+            const completedCount = progress + i + result.count;
+            await this.setMigrationProgress(completedCount);
+            if (result.count < batch.length) {
               hasErrors = true;
-              addLog(LogType.WARN, 'Migration: insert returned null, will retry', {
-                url: entry.url,
+              addLog(LogType.WARN, 'Migration: insertBatch partially succeeded', {
+                batchSize: batch.length,
+                insertedCount: result.count,
               });
             }
-          } catch (insertError) {
+          } else {
             hasErrors = true;
-            addLog(LogType.ERROR, 'Migration: failed to insert record', {
-              url: entry.url,
-              error: errorMessage(insertError),
+            const completedCount = progress + i;
+            await this.setMigrationProgress(completedCount);
+            addLog(LogType.WARN, 'Migration: insertBatch returned null, will retry', {
+              batchSize: batch.length,
             });
-            // Continue with next entry — don't fail the whole batch
           }
+        } catch (batchError) {
+          hasErrors = true;
+          const completedCount = progress + i;
+          await this.setMigrationProgress(completedCount);
+          addLog(LogType.ERROR, 'Migration: failed to insert batch', {
+            batchSize: batch.length,
+            error: errorMessage(batchError),
+          });
         }
-
-        // Save progress after each batch (so interrupted runs can resume)
-        // Use batchSuccessCount so failed entries are retried on restart
-        const completedCount = progress + i + batchSuccessCount;
-        await this.setMigrationProgress(completedCount);
       }
 
       if (hasErrors) {

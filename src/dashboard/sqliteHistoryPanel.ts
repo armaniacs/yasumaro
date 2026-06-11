@@ -10,10 +10,15 @@ import {
   toggleStar,
   deleteLog,
   getLogCount,
+  getSqliteStatus,
 } from './dashboardSqliteService.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 
 const PAGE_SIZE = 20;
+
+function t(key: string, substitutions?: string | string[]): string {
+  return chrome.i18n.getMessage(key, substitutions as string | string[]) || key;
+}
 
 interface SqliteHistoryState {
   entries: BrowsingLogEntry[];
@@ -23,6 +28,7 @@ interface SqliteHistoryState {
   selectedDate: string | null; // YYYY-MM-DD
   loading: boolean;
   error: string | null;
+  fallbackMode: boolean;
 }
 
 let state: SqliteHistoryState = {
@@ -33,6 +39,7 @@ let state: SqliteHistoryState = {
   selectedDate: null,
   loading: false,
   error: null,
+  fallbackMode: false,
 };
 
 // ============================================================================
@@ -91,7 +98,7 @@ async function loadData(options: {
       state.entries = result.rows;
       state.total = result.total;
     } else {
-      state.error = 'Failed to load data';
+      state.error = t('historyLoadError');
       state.entries = [];
       state.total = 0;
     }
@@ -120,7 +127,7 @@ async function handleToggleStar(id: number): Promise<void> {
 }
 
 async function handleDelete(id: number): Promise<void> {
-  if (!confirm('Delete this record?')) return;
+  if (!confirm(t('historyDeleteConfirm'))) return;
   const ok = await deleteLog(id);
   if (ok) {
     state.entries = state.entries.filter(e => e.id !== id);
@@ -159,23 +166,30 @@ function renderState(): void {
   const container = document.getElementById('sqlite-history-container');
   if (!container) return;
 
+  const fallbackBanner = state.fallbackMode
+    ? `<div class="sqlite-fallback-warning" role="alert" style="background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px 12px;margin-bottom:8px;border-radius:4px;font-size:0.9em;">
+        ⚠️ 簡易ストレージモード: OPFSが利用できないため、chrome.storage.localを使用しています。容量制限（5MB）にご注意ください。
+       </div>`
+    : '';
+
   container.innerHTML = `
+    ${fallbackBanner}
     <div class="sqlite-history-header">
       <h3 data-i18n="sqliteHistoryTitle">SQLite History</h3>
-      <span class="sqlite-history-count">${state.total} records</span>
+      <span class="sqlite-history-count">${t('historyRecordCount', [String(state.total)])}</span>
     </div>
     <div class="sqlite-history-search">
       <input type="text" id="sqlite-search-input"
-        placeholder="Search (FTS5)..."
+        placeholder="${t('historySearchPlaceholder')}"
         value="${escapeHtml(state.searchQuery)}"
-        aria-label="Search browsing history" />
+        aria-label="${t('historySearchAriaLabel')}" />
       <div id="sqlite-calendar-nav" class="sqlite-calendar-nav"></div>
       <div id="sqlite-error" class="sqlite-history-error" style="${state.error ? '' : 'display:none'}">
         ${escapeHtml(state.error || '')}
       </div>
     </div>
     <div id="sqlite-entry-list" class="sqlite-entry-list">
-      ${state.loading ? '<div class="loading">Loading...</div>' : ''}
+      ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
     <div id="sqlite-pagination" class="sqlite-pagination"></div>
   `;
@@ -201,19 +215,20 @@ function renderEntryList(): void {
   if (!listEl) return;
 
   if (state.entries.length === 0) {
-    listEl.innerHTML = '<div class="empty-state">No records found.</div>';
+    listEl.innerHTML = `<div class="empty-state">${t('historyNoRecords')}</div>`;
     return;
   }
 
   listEl.innerHTML = state.entries.map(entry => `
     <div class="sqlite-entry" data-id="${entry.id}">
       <div class="sqlite-entry-header">
-        <span class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
-              data-action="star" title="Toggle star">★</span>
+        <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
+                data-action="star" title="Toggle star" 
+                aria-pressed="${entry.is_starred}" aria-label="Toggle star">★</button>
         <a href="${escapeHtml(entry.url)}" target="_blank" class="sqlite-entry-title">
           ${escapeHtml(entry.title || entry.url)}
         </a>
-        <button class="sqlite-entry-delete" data-action="delete" title="Delete">✕</button>
+        <button type="button" class="sqlite-entry-delete" data-action="delete" title="Delete" aria-label="Delete this record">✕</button>
       </div>
       <div class="sqlite-entry-meta">
         <span class="sqlite-entry-domain">${escapeHtml(entry.domain || '')}</span>
@@ -243,9 +258,9 @@ function renderPagination(): void {
   }
 
   pagEl.innerHTML = `
-    <button ${state.currentPage === 0 ? 'disabled' : ''} data-page="prev">Previous</button>
-    <span>Page ${state.currentPage + 1} of ${totalPages}</span>
-    <button ${state.currentPage >= totalPages - 1 ? 'disabled' : ''} data-page="next">Next</button>
+    <button ${state.currentPage === 0 ? 'disabled' : ''} data-page="prev">${t('historyPrev')}</button>
+    <span>${t('historyPageInfo', [String(state.currentPage + 1), String(totalPages)])}</span>
+    <button ${state.currentPage >= totalPages - 1 ? 'disabled' : ''} data-page="next">${t('historyNext')}</button>
   `;
 
   pagEl.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
@@ -273,10 +288,10 @@ function renderCalendarNav(): void {
   // Generate quick date buttons: today, yesterday, this week, and month days
   navEl.innerHTML = `
     <div class="sqlite-calendar-quick">
-      <button data-date="${formatDate(now)}">Today</button>
-      <button data-date="${formatDate(new Date(now.getTime() - 86400000))}">Yesterday</button>
-      <button data-date="${formatDate(now)}" data-range="7">Last 7 days</button>
-      <button data-date="${formatDate(now)}" data-range="30">Last 30 days</button>
+      <button data-date="${formatDate(now)}">${t('historyToday')}</button>
+      <button data-date="${formatDate(new Date(now.getTime() - 86400000))}">${t('historyYesterday')}</button>
+      <button data-date="${formatDate(now)}" data-range="7">${t('historyLast7Days')}</button>
+      <button data-date="${formatDate(now)}" data-range="30">${t('historyLast30Days')}</button>
     </div>
     <div class="sqlite-calendar-month">
       <button data-month-prev>&lt;</button>
@@ -328,14 +343,15 @@ function renderCalendarNav(): void {
   let daysHtml = '';
   // Empty cells for days before the 1st
   for (let i = 0; i < firstDay; i++) {
-    daysHtml += '<span class="day empty"></span>';
+    daysHtml += '<span class="day empty" aria-hidden="true"></span>';
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isSelected = dateStr === state.selectedDate;
     const isToday = dateStr === formatDate(now);
-    daysHtml += `<span class="day${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}"
-      data-date="${dateStr}">${d}</span>`;
+    const dateLabel = `${year}年${month + 1}月${d}日`;
+    daysHtml += `<button type="button" class="day${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}"
+      data-date="${dateStr}" aria-pressed="${isSelected}" aria-label="${dateLabel}">${d}</button>`;
   }
   daysEl.innerHTML = daysHtml;
 
@@ -375,8 +391,21 @@ export function initSqliteHistoryPanel(): void {
     return;
   }
 
+  checkFallbackStatus();
   renderState();
   loadData({ limit: PAGE_SIZE });
+}
+
+async function checkFallbackStatus(): Promise<void> {
+  try {
+    const status = await getSqliteStatus();
+    if (status?.fallback) {
+      state.fallbackMode = true;
+      renderState();
+    }
+  } catch {
+    // Ignore status check failures
+  }
 }
 
 // ============================================================================

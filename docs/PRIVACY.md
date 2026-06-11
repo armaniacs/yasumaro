@@ -1,8 +1,9 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年2月23日 / Last Updated: February 23, 2026**
+**最終更新日: 2026年6月11日 / Last Updated: June 11, 2026**
 
 > **更新履歴 / Update History**:
+> - **2026年6月11日**: v5.0.0 - SQLite (OPFS) 移行、データ保持ポリシー追加、GDPR 削除権の物理削除対応
 > - **2026年3月9日**: v4.2.1 - 自動コンテンツフェッチ機能の有効化手順、URLログの記録について追加
 > - **2026年2月23日**: v4.1.3 - マスターパスワード保護機能追加
 
@@ -13,7 +14,7 @@
 ## 日本語
 
 ### 概要
-Obsidian Weave（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
+Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
 
 ### データの収集
 本拡張機能は、以下のデータを**ユーザーのデバイス上のみ（ローカル）**で収集します。
@@ -32,13 +33,16 @@ Obsidian Weave（以下「本拡張機能」）は、ユーザーのプライバ
    - 設定情報（最小滞在時間、スクロール深度など）
 
 ### データの保存場所
+- 閲覧履歴データは、デバイス上の **OPFS (Origin Private File System) 上の SQLite DB** に保存されます。
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
-- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** に保存されます。また、直近7日分（最大10,000件）のメタデータ（URL・タイトル・記録種別等）が **Chrome ローカルストレージ** にも保存され、拡張機能のダッシュボードから確認できます。
+- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
+- **データ保持ポリシー**: 閲覧履歴は90日間または1000件（先に到達した方）保持されます。保持期間を超えたデータは自動的に削除されます。
+- **旧バージョンからの移行**: 旧バージョンからのデータ移行はOPFS上のSQLite DBに対して実行されます。移行完了後、旧ストレージのデータは削除されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
 
 ### データの使用方法
 1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。
-2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。また、直近7日分のメタデータ（URL・タイトル・記録種別・PIIマスク件数等）が Chrome ローカルストレージに保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。
+2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。閲覧履歴はOPFS上のSQLite DBにも保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。
 3. **設定**: Obsidian および AI プロバイダー API への接続に使用されます。
 
 ### プライベートページ保護機能
@@ -172,7 +176,7 @@ v4.2.1以降、以下の機能が追加されました：
 ## English
 
 ### Overview
-Obsidian Weave ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
+Yasumaro ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
 
 ### Data Collection
 The Extension collects the following data **locally on your device**:
@@ -180,13 +184,16 @@ The Extension collects the following data **locally on your device**:
 - Configuration data (API keys, connection settings)
 
 ### Storage
+- Browsing history data is stored in **SQLite DB on OPFS (Origin Private File System)** on your device.
 - All configuration data is stored in **Chrome's local storage** on your device.
-- Browsing history entries are saved to **your local Obsidian vault**. Additionally, metadata for recent entries (last 7 days, up to 10,000 entries — URL, title, record type, etc.) is also stored in **Chrome's local storage** and viewable in the extension's Dashboard.
+- Browsing history entries are also saved to **your local Obsidian vault**.
+- **Data Retention Policy**: Browsing history is retained for 90 days or 1,000 entries (whichever comes first). Data exceeding the retention period is automatically deleted.
+- **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
 - **No data is stored on our servers.**
 
 ### How Data Is Used
 1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries.
-2. **Browsing history**: Saved to your Obsidian vault via the Local REST API. Metadata for the last 7 days (URL, title, record type, PII mask count, etc.) is also stored in Chrome's local storage and can be viewed and managed in the extension's Dashboard (History tab).
+2. **Browsing history**: Saved to your Obsidian vault via the Local REST API. Browsing history is also stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (History tab).
 3. **Settings**: Used to connect to Obsidian and the AI provider API.
 
 ### Master Password Protection
@@ -323,5 +330,9 @@ This extension requires the following permissions:
 ダッシュボード → プライバシー設定 → 「データ管理」セクション → 「すべてのデータを削除」ボタン
 
 Dashboard → Privacy Settings → "Data Management" section → "Delete All Data" button
+
+個別の閲覧履歴エントリは物理的に削除されます（GDPR Art.17 対応）。WAL チェックポイントにより、削除後にディスク領域も確実に解放されます。
+
+Individual browsing history entries are physically deleted from the database (GDPR Art.17 compliance). WAL checkpoint ensures disk space is released after deletion.
 
 All data is stored locally and can be deleted by uninstalling the extension or manually deleting notes in Obsidian.

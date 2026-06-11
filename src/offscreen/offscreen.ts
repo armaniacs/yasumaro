@@ -7,10 +7,11 @@
 import {
   init as sqliteInit,
   insert as sqliteInsert,
+  insertBatch as sqliteInsertBatch,
   query as sqliteQuery,
   search as sqliteSearch,
   update as sqliteUpdate,
-  softDelete as sqliteSoftDelete,
+  hardDelete as sqliteHardDelete,
   toggleStar as sqliteToggleStar,
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
@@ -132,16 +133,28 @@ export function handleOffscreenMessage(
     if (msg.target !== 'offscreen') return false;
 
     // Security: SQLite operations must only come from the service worker,
-    // not from content scripts running in web pages (which would have a tab).
+    // not from content scripts running in web pages (which would have a tab)
+    // or from external extensions.
     // Content scripts can send CHECK_AVAILABILITY and SUMMARIZE (Prompt API)
     // but NOT SQLITE_* operations.
     const isSqliteMessage = typeof msg.type === 'string' && msg.type.startsWith('SQLITE_');
-    if (isSqliteMessage && _sender.tab) {
-      sendResponse({
-        success: false,
-        error: 'Forbidden: SQLite operations are not available from content scripts.',
-      });
-      return true;
+    if (isSqliteMessage) {
+      // Block content scripts (which have a tab)
+      if (_sender.tab) {
+        sendResponse({
+          success: false,
+          error: 'Forbidden: SQLite operations are not available from content scripts.',
+        });
+        return true;
+      }
+      // Block external extensions (sender.id must match our extension)
+      if (_sender.id !== chrome.runtime.id) {
+        sendResponse({
+          success: false,
+          error: 'Forbidden: SQLite operations are not available from external extensions.',
+        });
+        return true;
+      }
     }
 
     (async () => {
@@ -183,6 +196,12 @@ export function handleOffscreenMessage(
 
             } else if (msg.type === 'SQLITE_INSERT') {
                 const payload = msg.payload as Record<string, unknown>;
+
+                if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
+                    sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
+                    return;
+                }
+
                 const record = {
                     url: String(payload.url || ''),
                     title: payload.title != null ? String(payload.title) : null,
@@ -196,6 +215,26 @@ export function handleOffscreenMessage(
                     is_deleted: 0,
                 };
                 const result = await sqliteInsert(record);
+                sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_INSERT_BATCH') {
+                const payload = msg.payload as Record<string, unknown>;
+                const rawRecords = (payload.records || []) as Record<string, unknown>[];
+
+                const records = rawRecords.map((r) => ({
+                    url: String(r.url || ''),
+                    title: r.title != null ? String(r.title) : null,
+                    summary: r.summary != null ? String(r.summary) : null,
+                    tags: r.tags != null ? String(r.tags) : null,
+                    created_at: Number(r.created_at || Date.now()),
+                    domain: r.domain != null ? String(r.domain) : null,
+                    visit_duration: r.visit_duration != null ? Number(r.visit_duration) : null,
+                    scroll_ratio: r.scroll_ratio != null ? Number(r.scroll_ratio) : null,
+                    is_starred: r.is_starred != null ? Number(r.is_starred) : 0,
+                    is_deleted: 0,
+                }));
+
+                const result = await sqliteInsertBatch(records);
                 sendResponse(result);
 
             } else if (msg.type === 'SQLITE_QUERY') {
@@ -225,7 +264,7 @@ export function handleOffscreenMessage(
                 const payload = msg.payload as Record<string, unknown>;
                 const id = Number(payload.id);
                 const changes: Record<string, unknown> = {};
-                for (const key of ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted']) {
+                for (const key of ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced']) {
                     if (key in payload) {
                         changes[key] = payload[key];
                     }
@@ -235,7 +274,7 @@ export function handleOffscreenMessage(
 
             } else if (msg.type === 'SQLITE_DELETE') {
                 const id = Number(msg.payload?.['id']);
-                const result = await sqliteSoftDelete(id);
+                const result = await sqliteHardDelete(id);
                 sendResponse(result);
 
             } else if (msg.type === 'SQLITE_TOGGLE_STAR') {

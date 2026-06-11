@@ -64,9 +64,17 @@ export class RecordingTriggerManager {
 
   /**
    * Save trigger settings to chrome.storage.local.
+   * Validates that at least one trigger is enabled before saving.
    */
   async saveTriggers(triggers: RecordingTriggers): Promise<boolean> {
     try {
+      // Validate before saving to prevent silent failure (all triggers OFF)
+      const validation = this.validate(triggers);
+      if (!validation.valid) {
+        addLog(LogType.WARN, 'Recording trigger validation failed', { error: validation.error });
+        return false;
+      }
+
       const raw = JSON.stringify(triggers);
       await chrome.storage.local.set({ [StorageKeys.RECORDING_TRIGGERS]: raw });
       this.cachedTriggers = { ...triggers };

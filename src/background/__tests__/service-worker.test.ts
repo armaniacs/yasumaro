@@ -1501,7 +1501,7 @@ describe('service-worker handlers', () => {
                 'Failed to get page content from tab',
                 expect.objectContaining({ url: 'example.com', error: expect.any(String) }),
                 undefined,
-                'service-worker'
+                'manualContentFetcher'
             );
 
             await new Promise(resolve => setTimeout(resolve, 50));

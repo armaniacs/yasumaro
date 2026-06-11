@@ -3,9 +3,9 @@ import { AIClient } from './aiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
-import { SessionStore, SESSION_KEYS } from './sessionStore.js';
+import { SessionStore } from './sessionStore.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
-import { BADGE_COLORS, RATE_LIMITS } from '../constants/appConstants.js';
+import { BADGE_COLORS } from '../constants/appConstants.js';
 import {
     getAllowedUrls,
     getSettings,
@@ -28,12 +28,11 @@ import {
     cleanupOldDeniedEntries,
     cleanupDismissedEntries
 } from '../utils/permissionManager.js';
-import {
-    getNotificationHmacKey,
-    generateHmacSignature,
-    verifyHmacSignature
-} from '../utils/crypto.js';
+
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { encodeUrlSafeBase64, decodeUrlFromNotificationId } from './handlers/urlNotificationHandlers.js';
+import { RateLimiter } from './rateLimiter.js';
+import { ManualContentFetcher } from './manualContentFetcher.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
@@ -149,19 +148,9 @@ HeaderDetector.initialize();
 const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
-// Rate limit configuration for skipAi operations (defaults from constants, can be overridden via settings)
-const skipAiRateLimiter = new Map<string, { count: number; resetTime: number }>();
-// Load persisted rate limiter state from session storage
-sessionStore.get<[string, { count: number; resetTime: number }][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER).then((entries) => {
-  if (entries) {
-    const now = Date.now();
-    for (const [key, val] of entries) {
-      if (now < val.resetTime) {
-        skipAiRateLimiter.set(key, val);
-      }
-    }
-  }
-});
+// Rate limiter for skipAi operations
+const rateLimiter = new RateLimiter(sessionStore);
+rateLimiter.initialize();
 
 // Track whether cache has been initialized (for startup rehydration)
 let isCacheInitialized = false;
@@ -169,16 +158,10 @@ let isCacheInitialized = false;
 // Snapshot alarm: cache last settings hash to avoid unnecessary clear/create on every ping
 let cachedSnapshotSettingsHash: string | null = null;
 
-// Manual record: cache extracted page content per URL to avoid repeated tab scans + DOM clones
-const MANUAL_RECORD_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const manualRecordContentCache = new Map<string, { content: string; timestamp: number }>();
+const manualContentFetcher = new ManualContentFetcher();
 
-/**
- * Reset in-memory manual-record content cache.
- * Exported for test isolation.
- */
 export function resetManualRecordCache(): void {
-    manualRecordContentCache.clear();
+    manualContentFetcher.clear();
 }
 
 // ============================================================================
@@ -246,10 +229,16 @@ export async function handleValidVisit(
         const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
         const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
         // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64 + HMAC署名）
-        const encodedUrl = await encodeUrlSafeBase64(url);
-        if (encodedUrl) {
-            const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encodedUrl;
+        try {
+            const notificationId = await encodeUrlSafeBase64(url);
             NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
+        } catch (error) {
+            await logWarn(
+                'Failed to encode URL for notification',
+                { error: error instanceof Error ? error.message : String(error) },
+                ErrorCode.CRYPTO_HMAC_FAILURE,
+                'service-worker'
+            );
         }
     }
 
@@ -333,33 +322,11 @@ export async function handleManualRecord(
 
     // skipAi操作のレート制限
     if (skipAi) {
-        const now = Date.now();
         const senderKey = sender.tab?.id?.toString() || 'unknown';
-        const limiterState = skipAiRateLimiter.get(senderKey);
-        const rateLimitMax = settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number ?? RATE_LIMITS.SKIP_AI_MAX;
-        const rateLimitWindow = settings[StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS] as number ?? RATE_LIMITS.SKIP_AI_WINDOW_MS;
-
-        if (limiterState) {
-            // ウィンドウが期限切れならリセット
-            if (now > limiterState.resetTime) {
-                skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
-                sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
-            } else if (limiterState.count >= rateLimitMax) {
-                await logWarn(
-                    'Rate limit exceeded for skipAi operation',
-                    { sender: senderKey, limit: rateLimitMax },
-                    undefined,
-                    'service-worker'
-                );
-                sendResponse({ success: false, error: 'Rate limit exceeded. Please try again later.' });
-                return;
-            } else {
-                limiterState.count++;
-            }
-            sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
-        } else {
-            skipAiRateLimiter.set(senderKey, { count: 1, resetTime: now + rateLimitWindow });
-            sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
+        const rateLimitResult = await rateLimiter.check(senderKey, settings);
+        if (!rateLimitResult.allowed) {
+            sendResponse({ success: false, error: rateLimitResult.error });
+            return;
         }
     }
 
@@ -391,81 +358,7 @@ export async function handleManualRecord(
                 return;
             }
 
-            // Manual record content cache: reuse recently fetched page content for the same URL
-            const targetUrl = message.payload.url;
-            const cachedEntry = manualRecordContentCache.get(targetUrl);
-            if (cachedEntry) {
-                const age = Date.now() - cachedEntry.timestamp;
-                if (age < MANUAL_RECORD_CACHE_TTL_MS) {
-                    content = cachedEntry.content;
-                } else {
-                    // Evict stale entry so the Map does not grow unbounded
-                    manualRecordContentCache.delete(targetUrl);
-                }
-            } else {
-                let createdTabId: number | undefined;
-                try {
-                    // 既存タブを探す
-                    const allTabs = await chrome.tabs.query({});
-                    const existingTab = allTabs.find(t => t.url === message.payload.url && t.id !== undefined);
-                    let targetTabId: number | undefined = existingTab?.id;
-
-                    // タブが開いていなければバックグラウンドで開く
-                    if (!targetTabId) {
-                        try {
-                            const newTab = await chrome.tabs.create({ url: message.payload.url, active: false });
-                            createdTabId = newTab.id;
-                            targetTabId = newTab.id;
-                        } catch (e) {
-                            // Android: active:false may be ignored, fallback to existing tabs only
-                            await logWarn('Failed to create background tab, falling back to existing tabs only', { url: sanitizedUrl, error: e instanceof Error ? e.message : String(e) }, undefined, 'service-worker');
-                        }
-
-                        if (targetTabId) {
-                            // ページが読み込まれるまで待機（最大10秒に短縮）
-                            await new Promise<void>((resolve) => {
-                                const timeout = setTimeout(resolve, 10000);
-                                const listener = (tabId: number, info: { status?: string }): void => {
-                                    if (tabId === targetTabId && info.status === 'complete') {
-                                        clearTimeout(timeout);
-                                        chrome.tabs.onUpdated.removeListener(listener);
-                                        resolve();
-                                    }
-                                };
-                                chrome.tabs.onUpdated.addListener(listener);
-                            });
-                        }
-                    }
-
-                    // scripting.executeScriptでページ本文を取得（Content Script不要）
-                    // DOMクレンジングを適用して機密コンテンツがパイプラインをバイパスするのを防ぐ
-                    if (targetTabId) {
-                        const results = await chrome.scripting.executeScript({
-                            target: { tabId: targetTabId },
-                            func: () => {
-                                const body = document.body;
-                                if (!body) return '';
-                                const clone = body.cloneNode(true) as HTMLElement;
-                                const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
-                                clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
-                                return clone.innerText?.trim().substring(0, 10000) || '';
-                            }
-                        });
-                        content = results?.[0]?.result || '';
-                    }
-                } catch (err: unknown) {
-                    await logWarn('Failed to get page content from tab', { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) }, undefined, 'service-worker');
-                } finally {
-                    // 新規作成したタブを閉じる
-                    if (createdTabId !== undefined) {
-                        chrome.tabs.remove(createdTabId).catch(() => {});
-                    }
-                }
-                // Cache successfully fetched content for reuse within the TTL window
-                if (content) {
-                    manualRecordContentCache.set(targetUrl, { content, timestamp: Date.now() });
-                }
-            }
+            content = await manualContentFetcher.fetchContent(message.payload.url);
         }
     }
 
@@ -775,6 +668,11 @@ async function handleDashboardSqlite(
     const subtype = payload.subtype as string;
 
     try {
+        if (sender.tab) {
+            sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
+            return;
+        }
+
         switch (subtype) {
             case 'query': {
                 const result = await sqliteClient.query({
@@ -810,9 +708,16 @@ async function handleDashboardSqlite(
                 break;
             }
             case 'update': {
+                const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
+                const changes = (payload.changes || {}) as Record<string, unknown>;
+                const invalidKeys = Object.keys(changes).filter((k) => !ALLOWED_UPDATE_FIELDS.includes(k));
+                if (invalidKeys.length > 0) {
+                    sendResponse({ success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` });
+                    break;
+                }
                 const result = await sqliteClient.update(
                     payload.id as number,
-                    (payload.changes || {}) as Record<string, unknown>
+                    changes
                 );
                 sendResponse({ success: result });
                 break;
@@ -823,14 +728,17 @@ async function handleDashboardSqlite(
                 break;
             }
             case 'clear_all': {
-                // Destructive operation: reject calls from content scripts (sender.tab present).
-                // Only extension-origin pages (dashboard) may invoke this.
-                if (sender.tab) {
-                    sendResponse({ success: false, error: 'clear_all is not allowed from content scripts' });
-                    break;
-                }
                 const ok = await sqliteClient.clearAll();
                 sendResponse({ success: ok });
+                break;
+            }
+            case 'status': {
+                const status = await sqliteClient.getStatus();
+                if (status) {
+                    sendResponse({ success: true, ...status });
+                } else {
+                    sendResponse({ success: false, error: 'Status check failed' });
+                }
                 break;
             }
             default:
@@ -1012,9 +920,7 @@ export function createMessageHandler(): (
 export function handleTabRemoved(tabId: number): void {
     tabCache.remove(tabId);
     autoSavedBadgeTabs.delete(tabId);
-    // skipAiRateLimiterからも削除（メモリリーク防止）
-    skipAiRateLimiter.delete(tabId.toString());
-    sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(skipAiRateLimiter));
+    rateLimiter.removeTab(tabId);
 }
 
 /**
@@ -1110,16 +1016,7 @@ export async function handleStartup(): Promise<void> {
         await RecordingLogic.loadCacheFromSession();
 
         // Reload rate limiter from session
-        const rateLimiterEntries = await sessionStore.get<[string, { count: number; resetTime: number }][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
-        if (rateLimiterEntries) {
-            const now = Date.now();
-            skipAiRateLimiter.clear();
-            for (const [key, val] of rateLimiterEntries) {
-                if (now < val.resetTime) {
-                    skipAiRateLimiter.set(key, val);
-                }
-            }
-        }
+        await rateLimiter.reload();
 
         logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
     } catch (error) {
@@ -1156,7 +1053,6 @@ const BLOCKED_URL_SCHEMES = ['javascript:', 'data:', 'file:', 'vbscript:', 'abou
 
 // 最大URL長（Base64エンコード後の通知ID上限を考慮）
 const MAX_URL_LENGTH = 2000;
-const MAX_ENCODED_LENGTH = 5000;
 
 /**
  * URLのバリデーションを行う
@@ -1196,178 +1092,6 @@ function isValidUrl(url: string): boolean {
     }
 }
 
-/**
- * 署名を生成する（crypto.tsのgenerateHmacSignatureをラップ）
- * @param {string} data - 署名するデータ
- * @param {CryptoKey} key - HMAC署名キー
- * @returns {Promise<string>} URL-safe base64エンコードされた署名
- */
-async function generateSignature(data: string, key: CryptoKey): Promise<string> {
-    return generateHmacSignature(data, key);
-}
-
-/**
- * 署名を検証する（crypto.tsのverifyHmacSignatureをラップ）
- * @param {string} data - 元データ
- * @param {string} signature - URL-safe base64エンコードされた署名
- * @param {CryptoKey} key - HMAC署名キー
- * @returns {Promise<boolean>} 署名が有効な場合はtrue
- */
-async function verifySignature(data: string, signature: string, key: CryptoKey): Promise<boolean> {
-    return verifyHmacSignature(data, signature, key);
-}
-
-/**
- * URLをURL-safe base64でエンコードし、HMAC署名を付与する（P0: 通知ID偽造脆弱性対策）
- * @param {string} url - エンコードするURL
- * @param {number} [maxLength] - 最大エンコード長（デフォルト: 256）
- * @returns {Promise<string>} URL-safe base64エンコードされたURLと署名
- *
- * @example
- * const notificationId = await encodeUrlSafeBase64('https://example.com/path');
- */
-async function encodeUrlSafeBase64(url: string, maxLength: number = 256): Promise<string> {
-    try {
-        // 入力バリデーション
-        if (!isValidUrl(url)) {
-            await logWarn(
-                'encodeUrlSafeBase64: Invalid URL',
-                { urlLength: url.length },
-                ErrorCode.INVALID_INPUT,
-                'service-worker'
-            );
-            return '';
-        }
-
-        // プレフィックス長を考慮してURL長を制限
-        // 完全なHMAC-SHA256署名は32バイト → URL-safe base64で43文字
-        const prefixLength = PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length;
-        const signatureLength = 43; // 完全な署名長（URL-safe base64）
-        const maxUrlLength = (maxLength - prefixLength - signatureLength) * 0.75; // Base64オーバーヘッドを考慮
-        if (url.length > maxUrlLength) {
-            await logWarn(
-                'encodeUrlSafeBase64: URL too long',
-                { urlLength: url.length, maxLength: maxUrlLength },
-                ErrorCode.INVALID_INPUT,
-                'service-worker'
-            );
-            return '';
-        }
-
-        const encoder = new TextEncoder();
-        const data = encoder.encode(url);
-
-        // ループベースでスタックオーバーフロー回避（P1: `String.fromCharCode(...data)` の改善）
-        const binaryString = Array.from(data, b => String.fromCharCode(b)).join('');
-
-        const urlB64 = btoa(binaryString)
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=/g, '');
-
-        // HMAC署名を付与（P0: 通知ID偽造脆弱性対策）
-        const key = await getNotificationHmacKey();
-        const signature = await generateSignature(url, key);
-
-        return `${urlB64}.${signature}`;
-    } catch (error) {
-        await logError(
-            'encodeUrlSafeBase64: Failed to encode URL',
-            { error: error instanceof Error ? error.message : String(error) },
-            ErrorCode.CRYPTO_HMAC_FAILURE,
-            'service-worker'
-        );
-        return '';
-    }
-}
-
-/**
- * 通知IDからURLをデコードし、署名を検証する（P0: 通知ID偽造脆弱性対策）
- * CRITICAL: レガシーフォーマット（署名なし）は廃止済み - 有効な署名必須
- * @param {string} notificationId - デコードする通知ID
- * @returns {Promise<string | null>} デコードされたURL、またはnull（無効な場合）
- *
- * @example
- * const url = await decodeUrlFromNotificationId('privacy-confirm-abc123.def456');
- */
-async function decodeUrlFromNotificationId(notificationId: string): Promise<string | null> {
-    // プレフィックスチェック
-    if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
-        return null;
-    }
-
-    const encodedPart = notificationId.slice(PRIVACY_CONFIRM_NOTIFICATION_PREFIX.length);
-
-    // 入力長チェック（P1: 入力バリデーション）
-    if (encodedPart.length > MAX_ENCODED_LENGTH) {
-        await logWarn(
-            'decodeUrlFromNotificationId: Notification ID too long',
-            { length: encodedPart.length, maxLength: MAX_ENCODED_LENGTH },
-            ErrorCode.INVALID_INPUT,
-            'service-worker'
-        );
-        return null;
-    }
-
-    try {
-        // 署名とURLの部分を分離
-        const parts = encodedPart.split('.');
-        if (parts.length !== 2) {
-            await logWarn(
-                'decodeUrlFromNotificationId: Invalid format (must be URL.signature)',
-                { format: 'missing_signature' },
-                ErrorCode.CRYPTO_HMAC_FAILURE,
-                'service-worker'
-            );
-            return null;
-        }
-
-        const [urlB64, signature] = parts;
-
-        // デコードしてURLを取得
-        const b64 = urlB64.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
-        const binaryString = atob(padded);
-        const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
-        const decoder = new TextDecoder();
-        const url = decoder.decode(bytes);
-
-        // URLバリデーション（署名検証の前）
-        if (!isValidUrl(url)) {
-            await logWarn(
-                'decodeUrlFromNotificationId: Invalid URL after decoding',
-                { urlHash: url.substring(0, 10) + '...' },
-                ErrorCode.INVALID_INPUT,
-                'service-worker'
-            );
-            return null;
-        }
-
-        // 署名検証（P0: 通知ID偽造脆弱性対策）- 必須
-        const key = await getNotificationHmacKey();
-        const isValid = await verifySignature(url, signature, key);
-
-        if (isValid) {
-            return url;
-        } else {
-            await logWarn(
-                'decodeUrlFromNotificationId: Invalid signature - forged notification rejected',
-                { urlHash: url.substring(0, 10) + '...' },
-                ErrorCode.CRYPTO_HMAC_FAILURE,
-                'service-worker'
-            );
-            return null;
-        }
-    } catch (error) {
-        await logError(
-            'decodeUrlFromNotificationId: Failed to decode notification ID',
-            { error: error instanceof Error ? error.message : String(error) },
-            ErrorCode.CRYPTO_HMAC_FAILURE,
-            'service-worker'
-        );
-        return null;
-    }
-}
 
 // ============================================================================
 // Notification Handlers (extracted for testability)
@@ -1392,9 +1116,10 @@ export async function handleNotificationButtonClicked(notificationId: string, bu
             );
         });
 
-        const url = await decodeUrlFromNotificationId(notificationId);
-        if (!url) {
-            // デコード失敗時はsilent return（既存の挙動）
+        let url: string;
+        try {
+            url = await decodeUrlFromNotificationId(notificationId);
+        } catch {
             return;
         }
 

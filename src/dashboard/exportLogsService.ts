@@ -20,7 +20,12 @@ export async function exportMarkdown(ids?: number[]): Promise<string> {
   const entries = ids ? all.filter(e => ids.includes(e.id)) : all;
 
   return entries.map(entry => {
-    const date = new Date(entry.created_at).toISOString().split('T')[0];
+    const date = new Date(entry.created_at).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
     let tags: string[] = [];
     if (entry.tags) {
       try { tags = JSON.parse(entry.tags); } catch { tags = []; }

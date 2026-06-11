@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "5.9.2",
+  "version": "5.9.3",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -26,7 +26,8 @@
     "validate": "npm run type-check && npm test",
     "docs": "typedoc --options dev-docs/typedoc.json",
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "check-htmlparser2": "node scripts/check-htmlparser2-override.js"
   },
   "keywords": [
     "obsidian",

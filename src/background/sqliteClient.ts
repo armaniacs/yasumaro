@@ -28,6 +28,7 @@ interface OffscreenResponse {
   count?: number;
   is_starred?: number;
   path?: string;
+  fallback?: boolean;
   [key: string]: unknown;
 }
 
@@ -110,187 +111,106 @@ export class SqliteClient {
     }
   }
 
-  /**
-   * Initialize the SQLite database. Safe to call multiple times.
-   */
+  private async call<T>(
+    type: string,
+    payload: Record<string, unknown> = {},
+    transform?: (res: OffscreenResponse) => T,
+  ): Promise<T | null> {
+    try {
+      const response = await this.msgOffscreen(type, payload);
+      if (response?.success) {
+        return transform ? transform(response) : (response as unknown as T);
+      }
+      return null;
+    } catch (error: unknown) {
+      addLog(LogType.ERROR, `SqliteClient: ${type} failed`, { error: errorMessage(error) });
+      return null;
+    }
+  }
+
   async init(): Promise<boolean> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_INIT');
-      return response?.success === true;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: init failed', { error: errorMessage(error) });
-      return false;
-    }
+    return (await this.call<void>('SQLITE_INIT')) !== null;
   }
 
-  /**
-   * Insert a new browsing log record.
-   */
   async insert(record: BrowsingLogRecord): Promise<{ id: number } | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_INSERT', record as unknown as Record<string, unknown>);
-      if (response?.success) {
-        return { id: Number(response.id) };
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: insert failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<{ id: number }>(
+      'SQLITE_INSERT',
+      record as unknown as Record<string, unknown>,
+      (res) => ({ id: Number(res.id) }),
+    );
   }
 
-  /**
-   * Query browsing logs with optional filters.
-   */
+  async insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null> {
+    return this.call<{ count: number }>(
+      'SQLITE_INSERT_BATCH',
+      { records: records as unknown as Record<string, unknown>[] },
+      (res) => ({ count: Number(res.count) }),
+    );
+  }
+
   async query<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<{ rows: T[]; total: number } | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_QUERY', options as unknown as Record<string, unknown>);
-      if (response?.success) {
-        return {
-          rows: (response.rows || []) as T[],
-          total: Number(response.total || 0),
-        };
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: query failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<{ rows: T[]; total: number }>(
+      'SQLITE_QUERY',
+      options as unknown as Record<string, unknown>,
+      (res) => ({
+        rows: (res.rows || []) as T[],
+        total: Number(res.total || 0),
+      }),
+    );
   }
 
-  /**
-   * Full-text search using FTS5.
-   */
   async search(query: string, limit = 50, offset = 0): Promise<{ rows: SearchResult[]; total: number } | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_SEARCH', { query, limit, offset });
-      if (response?.success) {
-        return {
-          rows: (response.rows || []) as SearchResult[],
-          total: Number(response.total || 0),
-        };
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: search failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<{ rows: SearchResult[]; total: number }>(
+      'SQLITE_SEARCH',
+      { query, limit, offset },
+      (res) => ({
+        rows: (res.rows || []) as SearchResult[],
+        total: Number(res.total || 0),
+      }),
+    );
   }
 
-  /**
-   * Update a browsing log record by id.
-   */
   async update(id: number, changes: Partial<Record<string, unknown>>): Promise<boolean> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_UPDATE', { id, ...changes });
-      return response?.success === true;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: update failed', { error: errorMessage(error) });
-      return false;
-    }
+    return (await this.call<void>('SQLITE_UPDATE', { id, ...changes })) !== null;
   }
 
-  /**
-   * Soft-delete a record by id.
-   */
   async delete(id: number): Promise<boolean> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_DELETE', { id });
-      return response?.success === true;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: delete failed', { error: errorMessage(error) });
-      return false;
-    }
+    return (await this.call<void>('SQLITE_DELETE', { id })) !== null;
   }
 
-  /**
-   * Toggle the starred status of a record.
-   */
   async toggleStar(id: number): Promise<{ is_starred: number } | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_TOGGLE_STAR', { id });
-      if (response?.success) {
-        return { is_starred: Number(response.is_starred) };
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: toggleStar failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<{ is_starred: number }>(
+      'SQLITE_TOGGLE_STAR',
+      { id },
+      (res) => ({ is_starred: Number(res.is_starred) }),
+    );
   }
 
-  /**
-   * Get the total number of records.
-   */
   async getCount(): Promise<number | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_COUNT');
-      if (response?.success) {
-        return Number(response.count);
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: getCount failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
   }
 
-  /**
-   * Export the database as a binary blob (.db format).
-   */
   async exportDb(): Promise<Uint8Array | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_EXPORT');
-      if (response?.success && response.data) {
-        return new Uint8Array(response.data as number[]);
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: exportDb failed', { error: errorMessage(error) });
-      return null;
-    }
+    return this.call<Uint8Array>(
+      'SQLITE_EXPORT',
+      {},
+      (res) => new Uint8Array(res.data as number[]),
+    );
   }
 
-  /**
-   * Get database status information.
-   */
-  async getStatus(): Promise<{ initialized: boolean; path: string } | null> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_STATUS');
-      if (response?.success) {
-        return {
-          initialized: Boolean(response.initialized),
-          path: String(response.path || ''),
-        };
-      }
-      return null;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: getStatus failed', { error: errorMessage(error) });
-      return null;
-    }
+  async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean } | null> {
+    return this.call<{ initialized: boolean; path: string; fallback: boolean }>(
+      'SQLITE_STATUS',
+      {},
+      (res) => ({
+        initialized: Boolean(res.initialized),
+        path: String(res.path || ''),
+        fallback: Boolean(res.fallback),
+      }),
+    );
   }
 
-  /**
-   * Clear all browsing logs (GDPR Art.17 hard delete).
-   */
   async clearAll(): Promise<boolean> {
-    try {
-      const response = await this.msgOffscreen('SQLITE_CLEAR_ALL');
-      return response?.success === true;
-    } catch (error: unknown) {
-      // using errorMessage utility
-      addLog(LogType.ERROR, 'SqliteClient: clearAll failed', { error: errorMessage(error) });
-      return false;
-    }
+    return (await this.call<void>('SQLITE_CLEAR_ALL')) !== null;
   }
 }

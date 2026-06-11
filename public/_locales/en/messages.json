@@ -2230,5 +2230,111 @@
   },
   "lmStudioPresetApplied": {
     "message": "LM Studio preset applied (http://localhost:1234/v1)"
+  },
+  "sqliteHistoryTitle": {
+    "message": "Browsing History"
+  },
+  "historyToday": {
+    "message": "Today"
+  },
+  "historyYesterday": {
+    "message": "Yesterday"
+  },
+  "historyLast7Days": {
+    "message": "Last 7 days"
+  },
+  "historyLast30Days": {
+    "message": "Last 30 days"
+  },
+  "historyPrev": {
+    "message": "Previous"
+  },
+  "historyNext": {
+    "message": "Next"
+  },
+  "historyNoRecords": {
+    "message": "No records found."
+  },
+  "historySearchPlaceholder": {
+    "message": "Search (FTS5)..."
+  },
+  "historyLoading": {
+    "message": "Loading..."
+  },
+  "historyLoadError": {
+    "message": "Failed to load data"
+  },
+  "historyDeleteConfirm": {
+    "message": "Delete this record?"
+  },
+  "historySearchAriaLabel": {
+    "message": "Search browsing history"
+  },
+  "historyRecordCount": {
+    "message": "$COUNT$ records",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
+  "historyPageInfo": {
+    "message": "Page $CURRENT$ of $TOTAL$",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "triggerTabClose": {
+    "message": "Tab Close"
+  },
+  "triggerTabCloseDesc": {
+    "message": "Record when a tab is closed"
+  },
+  "triggerScrollTime": {
+    "message": "Scroll & Time"
+  },
+  "triggerScrollTimeDesc": {
+    "message": "Record when scroll depth ≥50% and visit duration ≥5s"
+  },
+  "triggerManual": {
+    "message": "Manual Save"
+  },
+  "triggerManualDesc": {
+    "message": "Record when manually triggered"
+  },
+  "triggerSnapshot": {
+    "message": "Periodic Snapshot"
+  },
+  "triggerSnapshotDesc": {
+    "message": "Record at regular intervals"
+  },
+  "snapshotIntervalLabel": {
+    "message": "Interval (minutes)"
+  },
+  "saveTriggers": {
+    "message": "Save"
+  },
+  "triggersSaved": {
+    "message": "Settings saved."
+  },
+  "triggerValidationAtLeastOne": {
+    "message": "At least one trigger must be enabled."
+  },
+  "triggerSaveError": {
+    "message": "Error: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Network error"
+      }
+    }
   }
 }

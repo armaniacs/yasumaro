@@ -83,14 +83,17 @@ describe('MigrationService', () => {
 
     sendMessageMock.mockImplementation(
       (_msg: unknown, callback: (response: unknown) => void) => {
-        callback({ success: true, id: 1 });
+        callback({ success: true, count: 2 });
       }
     );
 
     await service.run();
 
-    // Should insert 2 records
-    expect(sendMessageMock).toHaveBeenCalledTimes(2);
+    // Should insert batch with 2 records (1 batch call)
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    const callArgs = sendMessageMock.mock.calls[0][0];
+    expect(callArgs.type).toBe('SQLITE_INSERT_BATCH');
+    expect(callArgs.payload.records).toHaveLength(2);
     expect(mockStorage['yasumaro_migration_status']).toBe('completed');
   });
 
@@ -113,18 +116,18 @@ describe('MigrationService', () => {
     // Simulate 2 already migrated
     mockStorage['yasumaro_migration_progress'] = 2;
 
-    let callCount = 0;
     sendMessageMock.mockImplementation(
       (_msg: unknown, callback: (response: unknown) => void) => {
-        callCount++;
-        callback({ success: true, id: callCount });
+        callback({ success: true, count: 2 });
       }
     );
 
     await service.run();
 
-    // Should only migrate remaining 2
-    expect(sendMessageMock).toHaveBeenCalledTimes(2);
+    // Should only migrate remaining 2 in 1 batch call
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    const callArgs = sendMessageMock.mock.calls[0][0];
+    expect(callArgs.payload.records).toHaveLength(2);
     expect(mockStorage['yasumaro_migration_status']).toBe('completed');
   });
 
@@ -151,24 +154,17 @@ describe('MigrationService', () => {
       { url: 'https://example.com/3', timestamp: 3000 },
     ];
 
-    let callIndex = 0;
     sendMessageMock.mockImplementation(
       (_msg: unknown, callback: (response: unknown) => void) => {
-        callIndex++;
-        // First insert fails, rest succeed
-        if (callIndex === 1) {
-          callback({ success: false, error: 'Insert failed' });
-        } else {
-          callback({ success: true, id: callIndex });
-        }
+        callback({ success: true, count: 2 });
       }
     );
 
     await service.run();
 
-    // Only 2 of 3 entries were successfully inserted
+    // 2 of 3 entries were inserted (1 was duplicate/ignored)
     expect(mockStorage['yasumaro_migration_progress']).toBe(2);
-    // Should not mark as completed since there were errors
+    // Should not mark as completed since not all entries were inserted
     expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
   });
 
@@ -180,16 +176,10 @@ describe('MigrationService', () => {
       { url: 'https://example.com/4', timestamp: 4000 },
     ];
 
-    // First run: entry 1 fails, entries 2-4 succeed
-    let callIndex = 0;
+    // First run: batch returns count 3 (1 duplicate/failed)
     sendMessageMock.mockImplementation(
       (_msg: unknown, callback: (response: unknown) => void) => {
-        callIndex++;
-        if (callIndex === 1) {
-          callback({ success: false, error: 'Insert failed' });
-        } else {
-          callback({ success: true, id: callIndex });
-        }
+        callback({ success: true, count: 3 });
       }
     );
 
@@ -198,16 +188,15 @@ describe('MigrationService', () => {
     // 3 out of 4 succeeded
     expect(mockStorage['yasumaro_migration_progress']).toBe(3);
 
-    // Simulate restart — entry 1 should be retried
-    callIndex = 0;
+    // Simulate restart — remaining entry should be retried
     sendMessageMock.mockClear();
-    sendMessageMock.mockResolvedValue({ success: true, id: 1 });
+    sendMessageMock.mockResolvedValue({ success: true, count: 1 });
 
     // Reset status but keep same data + progress from first run
     mockStorage['yasumaro_migration_status'] = null;
     await service.run();
 
-    // Entry at index 0 was never successfully inserted — must be retried
+    // Remaining entry at index 3 should be retried
     expect(sendMessageMock).toHaveBeenCalled();
   });
 });
