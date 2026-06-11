@@ -12,18 +12,18 @@
 
 | # | PBI | ポイント | 対象指摘 |
 |---|-----|---------|---------|
-| 01 | [SQLite データ整合性強化](2026-06-11-01-fix-sqlite-data-integrity.md) | 8pt | Migration競合、UNIQUE制約、CHECK制約、バルクINSERT、入力検証 |
-| 02 | [GDPR 完全準拠](2026-06-11-02-fix-gdpr-compliance.md) | 5pt | 物理DELETE、PRIVACY.md更新、同意ダークパターン修正 |
-| 03 | [ドキュメント刷新 & i18n](2026-06-11-03-fix-documentation-i18n.md) | 5pt | README/AGENTS/CONTRIBUTING更新、ビルドパス、i18n完全対応 |
+| 01 | [SQLite データ整合性強化](2026-06-11-101-fix-sqlite-data-integrity.md) | 8pt | Migration競合、UNIQUE制約、CHECK制約、バルクINSERT、入力検証 |
+| 02 | [GDPR 完全準拠](2026-06-11-102-fix-gdpr-compliance.md) | 5pt | 物理DELETE、PRIVACY.md更新、同意ダークパターン修正 |
+| 03 | [ドキュメント刷新 & i18n](2026-06-11-103-fix-documentation-i18n.md) | 5pt | README/AGENTS/CONTRIBUTING更新、ビルドパス、i18n完全対応 |
 
 ### 🟡 MEDIUM 優先
 
 | # | PBI | ポイント | 対象指摘 |
 |---|-----|---------|---------|
-| 04 | [Service Worker モジュラー化](2026-06-11-04-fix-service-worker-modularization.md) | 8pt | 3モジュール分割（urlNotificationHandlers, rateLimiter, manualContentFetcher） |
-| 05 | [SqliteClient DRY 違反解消](2026-06-11-05-fix-sqlite-client-dry.md) | 3pt | call<T>()ヘルパー導入、11メソッドのボイラープレート削除 |
-| 06 | [モバイル OPFS フォールバック](2026-06-11-06-fix-mobile-opfs-fallback.md) | 8pt | OPFSチェック、chrome.storage.localフォールバック |
-| 07 | [AI プロバイダー最適化 & サプライチェーン](2026-06-11-07-fix-ai-provider-supply-chain.md) | 5pt | リトライ制限、ライセンス記録、favicon権限、多言語プロンプト |
+| 04 | [Service Worker モジュラー化](2026-06-11-104-fix-service-worker-modularization.md) | 8pt | 3モジュール分割（urlNotificationHandlers, rateLimiter, manualContentFetcher） |
+| 05 | [SqliteClient DRY 違反解消](2026-06-11-105-fix-sqlite-client-dry.md) | 3pt | call<T>()ヘルパー導入、11メソッドのボイラープレート削除 |
+| 06 | [モバイル OPFS フォールバック](2026-06-11-106-fix-mobile-opfs-fallback.md) | 8pt | OPFSチェック、chrome.storage.localフォールバック |
+| 07 | [AI プロバイダー最適化 & サプライチェーン](2026-06-11-107-fix-ai-provider-supply-chain.md) | 5pt | リトライ制限、ライセンス記録、favicon権限、多言語プロンプト |
 
 ---
 
