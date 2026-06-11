@@ -66,17 +66,24 @@ export function getDefaultSystemPrompt(locale: string = 'ja'): string {
  * @returns Language code ('ja' or 'en', default is 'ja')
  */
 export function getBrowserLocale(): string {
-    // Service worker does not have navigator, return default
     if (typeof navigator === 'undefined') return 'ja';
     
     try {
         const lang = navigator.language || ('userLanguage' in navigator ? (navigator as unknown as { userLanguage: string }).userLanguage : null) || 'ja';
-        const locale = lang.startsWith('ja') ? 'ja' : 'en';
+        const locale = resolveLocaleWithFallback(lang);
         return locale;
     } catch (e) {
         console.warn('[customPromptUtils] Failed to detect browser locale, using default: ja');
-        return 'ja'; // Default is Japanese
+        return 'ja';
     }
+}
+
+function resolveLocaleWithFallback(lang: string): string {
+    if (lang.startsWith('ja')) return 'ja';
+    if (lang.startsWith('ko')) return 'en';
+    if (lang.startsWith('zh')) return 'ja';
+    if (lang.startsWith('es')) return 'en';
+    return 'en';
 }
 
 /**

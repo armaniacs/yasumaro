@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.3] - 2026-06-11
+
+### Security / セキュリティ修正
+
+- **Offscreen SQLITE_* ハンドラの脆弱性修正**: 外部拡張からの不正な SQLite 操作を `sender.id === chrome.runtime.id` チェックでブロック（Red Team）
+- **FTS5 検索サニタイズ強化**: 英数字/CJK のみ許可するホワイトリスト方式に変更。ダブルクォートで phrase 検索に強制（Red Team）
+- **ペイロードサイズ制限**: SQLITE_INSERT ハンドラに 1MB 上限チェックを追加（Blue Team）
+- **DASHBOARD_SQLITE.update の allowlist 検証**: Service Worker 側でも変更可能フィールドを 10 項目に制限（Blue Team）
+
+### Fixed / 修正
+
+- **Migration Service の競合解決**: `UNIQUE(url, created_at)` 制約 + `INSERT OR IGNORE` で chrome.storage.local の live writer との競合を防止（Legacy Bridge）
+- **マイグレーション高速化**: 100 件/バッチの `insertBatch()` を実装。メッセージング回数を N から N/100 に削減（Tuning Expert）
+- **CHECK 制約追加**: `is_starred`, `is_deleted`, `scroll_ratio`, `visit_duration` に CHECK 制約を追加（Data Integrity）
+- **SQLite スキーマの UNIQUE 制約不足**: `UNIQUE(url, created_at)` 制約を追加し重複レコードを防止（Data Integrity）
+- **recordingTriggerManager の Validate 実装**: `saveTriggers()` 内で `validate()` を呼び全トリガー OFF の silent failure を防止（Domain Logic）
+
+### Privacy / プライバシー・GDPR
+
+- **物理削除（hardDelete）**: `softDelete`（is_deleted=1）から `DELETE FROM browsing_logs` による物理削除に変更（Compliance）
+- **WAL checkpoint 追加**: `clearAll()` 実行後に `PRAGMA wal_checkpoint(TRUNCATE)` で WAL ファイルを解放（Compliance）
+- **PRIVACY.md 全面更新**: データ保存場所を OPFS/SQLite に更新、90日/1000件の保持ポリシーを明記、更新履歴を追加（Compliance）
+- **同意ダークパターン修正**: プライバシー同意拒否時のループ再表示を解消。3回拒否で永久非表示、制限モードで起動（Ethics & Bias）
+- **API キー検証強化**: `obsidianSyncService.isConfigured()` で 16 文字以上のキー長を検証（Blue Team）
+
+### Documentation / ドキュメント
+
+- **README.md に SQLite 機能の特徴を追加**: 「ローカルSQLite永続化（OPFS + wa-sqlite + FTS5全文検索、Obsidian不要でも動作）」を日英で記載（Documentation）
+- **CONTRIBUTING.md 全面更新**: プロジェクト名を "Yasumaro" に更新、WXT/SQLite 移行後のプロジェクト構造に対応（Documentation）
+- **SETUP_GUIDE.md 更新**: エクスポートファイル名を `yasumaro-settings-*` に更新（Documentation）
+
+### i18n / 国際化
+
+- **新規 UI 文字列の i18n 対応**: 12 の data-i18n キーを messages.json に追加。sqliteHistoryPanel の 11 のハードコード文字列（Today, Yesterday, Loading... 等）を `getMessage()` に置換（i18n Expert）
+- **日付フォーマットのタイムゾーン修正**: `toISOString().split('T')[0]` を `toLocaleDateString()` に変更し JST ユーザーの深夜エントリが「前日」になる問題を修正（i18n Expert）
+
+### Refactoring / リファクタリング
+
+- **service-worker.ts のモジュール分割**: 1473 行 → 1181 行（-292 行）。HMAC/Base64 ロジックを `urlNotificationHandlers.ts` に、レート制限を `rateLimiter.ts`（新規）に、手動記録コンテンツ抽出を `manualContentFetcher.ts`（新規）に分割（Maintainability）
+- **SqliteClient の DRY 違反解消**: 11 メソッドの重複 try-catch を `call<T>()` ジェネリックヘルパーに統一。90 行削減（Maintainability, Refactoring）
+- **設定ファイル名更新**: `obsidian-weave-settings-*` → `yasumaro-settings-*`（Refactoring）
+
+### Platform / プラットフォーム対応
+
+- **モバイル Chrome OPFS フォールバック**: OPFS 利用不可時に chrome.storage.local ベースの `FallbackStorage` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（Edge & Mobile）
+- **favicon 権限を optional_permissions に移動**: モバイル Chrome のインストール警告を回避（Edge & Mobile）
+
+### Performance / パフォーマンス
+
+- **AI API リトライ制限**: タイムアウトは 1 回、429 (Rate Limit) は 0 回に制限。トークン二重消費リスクを低減（FinOps）
+
+### Chores / その他
+
+- **バージョン 5.9.2 → 5.9.3**
+- **manifest.json 削除**: WXT 移行に伴いソースオブトゥルースを `wxt.config.ts` に統一（System Architect）
+- **テスト 7 件追加**: SQLite セキュリティ・整合性テストを追加（Test Experts, 前バッチ）
+- **htmlparser2 オーバーライド自動チェック**: CI 用スクリプト `scripts/check-htmlparser2-override.js` を追加（Supply Chain）
+- **wa-sqlite ライセンス情報記録**: package-lock.json に MIT ライセンスを明記（Supply Chain）
+- **AI プロンプト多段階フォールバック**: ko→en, zh→ja, es→en の多段階フォールバックを実装（Ethics & Bias）
+
 ## [5.9.2] - 2026-06-10
 
 ### Changed / 変更

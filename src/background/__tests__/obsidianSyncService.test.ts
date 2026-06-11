@@ -9,7 +9,7 @@ describe('ObsidianSyncService', () => {
 
   beforeEach(() => {
     mockStorage = {
-      obsidian_api_key: 'test-api-key',
+      obsidian_api_key: 'test-api-key-1234567',
     };
 
     (globalThis as any).chrome = {

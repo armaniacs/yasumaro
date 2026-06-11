@@ -298,7 +298,7 @@ describe('privacyConsentController', () => {
       });
     });
 
-    it('should decline and re-show modal when decline is clicked', async () => {
+    it('should decline and close modal permanently when decline is clicked', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
 
       window.alert = vi.fn();
@@ -309,16 +309,13 @@ describe('privacyConsentController', () => {
       declineBtn!.click();
       await vi.waitFor(() => {
         expect(window.alert).toHaveBeenCalledWith(
-          'Privacy consent is required to use this extension.'
+          'consentDeclinedMessage'
         );
       });
 
-      // Should re-show after 100ms
-      vi.advanceTimersByTime(100);
-
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
-      expect(modal?.style.display).toBe('flex');
+      expect(modal?.classList.contains('hidden')).toBe(true);
+      expect(modal?.style.display).toBe('none');
     });
 
     it('should call consent callback on decline', async () => {

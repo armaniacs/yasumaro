@@ -151,3 +151,23 @@ export async function getLogCount(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Get SQLite status including fallback mode flag.
+ */
+export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean } | null> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'status' });
+    if (response.success) {
+      return {
+        initialized: Boolean(response.initialized),
+        path: String(response.path || ''),
+        fallback: Boolean(response.fallback),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('getSqliteStatus failed:', error);
+    return null;
+  }
+}

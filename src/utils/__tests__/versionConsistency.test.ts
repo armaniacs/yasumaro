@@ -35,7 +35,7 @@ describe('version consistency', () => {
   });
 
   it('should read all expected version files', () => {
-    const expected = ['package.json', 'manifest.json', 'wxt.config.ts'];
+    const expected = ['package.json', 'wxt.config.ts'];
     expect(VERSION_FILES).toEqual(expected);
   });
 

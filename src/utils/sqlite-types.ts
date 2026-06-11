@@ -20,6 +20,7 @@ export interface BrowsingLogRecord {
   scroll_ratio?: number | null;
   is_starred?: number;
   is_deleted?: number;
+  obsidian_synced?: number;
 }
 
 // Dashboard row type derived from BrowsingLogRecord (no is_deleted, id is required)

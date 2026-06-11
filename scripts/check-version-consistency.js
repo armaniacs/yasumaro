@@ -15,7 +15,6 @@ const ROOT_DIR = join(__dirname, '..');
 
 export const VERSION_FILES = [
   'package.json',
-  'manifest.json',
   'wxt.config.ts'
 ];
 

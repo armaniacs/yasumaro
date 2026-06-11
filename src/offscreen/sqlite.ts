@@ -8,6 +8,7 @@ import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { errorMessage } from '../utils/errorUtils.js';
 import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
+import { FallbackStorage } from './storageFallback.js';
 
 // The wa-sqlite package uses ambient type declarations for SQLiteAPI and SQLiteCompatibleType
 // that are not directly exported. We define local aliases for the types we need.
@@ -35,10 +36,12 @@ const SCHEMA_SQL = `
     tags TEXT,
     created_at INTEGER NOT NULL,
     domain TEXT,
-    visit_duration INTEGER,
-    scroll_ratio REAL,
-    is_starred INTEGER DEFAULT 0,
-    is_deleted INTEGER DEFAULT 0
+    visit_duration INTEGER CHECK(visit_duration IS NULL OR visit_duration >= 0),
+    scroll_ratio REAL CHECK(scroll_ratio IS NULL OR (scroll_ratio >= 0 AND scroll_ratio <= 1)),
+    is_starred INTEGER DEFAULT 0 CHECK(is_starred IN (0, 1)),
+    is_deleted INTEGER DEFAULT 0 CHECK(is_deleted IN (0, 1)),
+    obsidian_synced INTEGER DEFAULT 0,
+    UNIQUE(url, created_at)
   );
 
   CREATE INDEX IF NOT EXISTS idx_logs_created ON browsing_logs(created_at);
@@ -87,6 +90,22 @@ import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sql
 let dbHandle: number | null = null;
 let sqlite3: WaSqliteAPI | null = null;
 let initPromise: Promise<boolean> | null = null;
+let usingFallbackStorage = false;
+let fallbackStorage: FallbackStorage | null = null;
+
+// ============================================================================
+// OPFS Availability Check
+// ============================================================================
+
+async function isOpfsAvailable(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.getDirectory) return false;
+    const dir = await navigator.storage.getDirectory();
+    return dir !== null;
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // Initialization
@@ -106,6 +125,16 @@ export async function init(): Promise<boolean> {
 
 async function _doInit(): Promise<boolean> {
   try {
+    const opfsAvailable = await isOpfsAvailable();
+
+    if (!opfsAvailable) {
+      console.warn('OPFS not available, using chrome.storage.local fallback');
+      usingFallbackStorage = true;
+      fallbackStorage = new FallbackStorage();
+      await tryMigrateFallbackToSqlite();
+      return true;
+    }
+
     // Load the SQLite WASM module
     const module = await SQLiteESMFactory();
     sqlite3 = SQLite.Factory(module);
@@ -135,6 +164,9 @@ async function _doInit(): Promise<boolean> {
     await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
     await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
 
+    // Attempt migration from fallback storage if it has data
+    await tryMigrateFallbackToSqlite();
+
     return true;
   } catch (error) {
     console.error('SQLite init failed:', errorMessage(error), error);
@@ -142,6 +174,57 @@ async function _doInit(): Promise<boolean> {
     sqlite3 = null;
     initPromise = null;
     return false;
+  }
+}
+
+// ============================================================================
+// Migration: Fallback → SQLite
+// ============================================================================
+
+async function tryMigrateFallbackToSqlite(): Promise<void> {
+  try {
+    const tempFallback = new FallbackStorage();
+    const records = await tempFallback.getAllRecords();
+
+    if (records.length === 0) return;
+
+    if (!dbHandle || !sqlite3) {
+      return;
+    }
+
+    let migrated = 0;
+    for (const record of records) {
+      try {
+        const domain = record.domain || extractDomain(record.url);
+        await sqlite3.exec(
+          dbHandle,
+          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            record.url,
+            record.title ?? null,
+            record.summary ?? null,
+            record.tags ?? null,
+            record.created_at,
+            domain,
+            record.visit_duration ?? null,
+            record.scroll_ratio ?? null,
+            record.is_starred ?? 0,
+            record.is_deleted ?? 0,
+          ]
+        );
+        migrated++;
+      } catch {
+        // Skip individual failed records
+      }
+    }
+
+    if (migrated > 0) {
+      console.log(`Migrated ${migrated} records from fallback storage to SQLite`);
+      await tempFallback.clearAll();
+    }
+  } catch (error) {
+    console.error('Fallback migration failed:', errorMessage(error));
   }
 }
 
@@ -154,9 +237,13 @@ async function _doInit(): Promise<boolean> {
  */
 export async function insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.insert(record);
     }
 
     const domain = record.domain || extractDomain(record.url);
@@ -194,15 +281,83 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 }
 
 /**
+ * Insert a batch of records atomically using a transaction.
+ * Uses INSERT OR IGNORE to handle UNIQUE constraint violations (url, created_at).
+ */
+export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; count: number } | { success: false; error: string }> {
+  if (records.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  try {
+    if (!dbHandle && !usingFallbackStorage) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.insertBatch(records);
+    }
+
+    await sqlite3!.exec(dbHandle!, 'BEGIN IMMEDIATE');
+
+    try {
+      let insertedCount = 0;
+
+      for (const record of records) {
+        const domain = record.domain || extractDomain(record.url);
+
+        await sqlite3!.exec(
+          dbHandle!,
+          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            record.url,
+            record.title ?? null,
+            record.summary ?? null,
+            record.tags ?? null,
+            record.created_at,
+            domain,
+            record.visit_duration ?? null,
+            record.scroll_ratio ?? null,
+            record.is_starred ?? 0,
+            record.is_deleted ?? 0,
+          ]
+        );
+
+        let changes = 0;
+        await sqlite3!.exec(dbHandle!, 'SELECT changes()', (row: SqliteValue[]) => {
+          changes = Number(row[0]);
+        });
+        insertedCount += changes;
+      }
+
+      await sqlite3!.exec(dbHandle!, 'COMMIT');
+      return { success: true, count: insertedCount };
+    } catch (innerError) {
+      await sqlite3!.exec(dbHandle!, 'ROLLBACK');
+      throw innerError;
+    }
+  } catch (error) {
+    console.error('SQLite insertBatch failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
  * Query browsing logs with optional filters.
  */
 export async function query(options: QueryOptions = {}): Promise<{
   success: true; rows: BrowsingLogRecord[]; total: number
 } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.query(options);
     }
 
     const conditions: string[] = [];
@@ -287,9 +442,13 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
   success: true; rows: SearchResult[]; total: number
 } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.search(searchQuery, limit, offset);
     }
 
     // Sanitize the search query for FTS5
@@ -350,9 +509,13 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
  */
 export async function update(id: number, changes: Partial<BrowsingLogRecord>): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.update(id, changes);
     }
 
     const setClauses: string[] = [];
@@ -389,10 +552,26 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
 }
 
 /**
- * Soft-delete a browsing log record by id (marks is_deleted = 1).
+ * Hard-delete a browsing log record by id (physical DELETE, GDPR Art.17).
+ * FTS5 triggers automatically clean up the FTS index.
  */
-export async function softDelete(id: number): Promise<{ success: true } | { success: false; error: string }> {
-  return update(id, { is_deleted: 1 });
+export async function hardDelete(id: number): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    if (!dbHandle && !usingFallbackStorage) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.hardDelete(id);
+    }
+
+    await sqlite3!.exec(dbHandle!, 'DELETE FROM browsing_logs WHERE id = ?', [id]);
+    return { success: true };
+  } catch (error) {
+    console.error('SQLite hardDelete failed:', errorMessage(error));
+    return { success: false, error: errorMessage(error) };
+  }
 }
 
 /**
@@ -400,10 +579,15 @@ export async function softDelete(id: number): Promise<{ success: true } | { succ
  */
 export async function toggleStar(id: number): Promise<{ success: true; is_starred: number } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
     }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.toggleStar(id);
+    }
+
     // Toggle the star value
     await sqlite3!.exec(
       dbHandle!,
@@ -432,9 +616,13 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
  */
 export async function getCount(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.getCount();
     }
 
     let count = 0;
@@ -457,10 +645,16 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean } | { success: false; error: string }> {
   try {
+    if (usingFallbackStorage && fallbackStorage) {
+      const countResult = await fallbackStorage.getCount();
+      const count = countResult.success ? countResult.count : 0;
+      return { success: true, initialized: count >= 0, path: 'chrome.storage.local', fallback: true };
+    }
+
     if (!dbHandle || !sqlite3) {
-      return { success: true, initialized: false, path: DB_FILENAME };
+      return { success: true, initialized: false, path: DB_FILENAME, fallback: false };
     }
 
     let count = 0;
@@ -473,7 +667,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       }
     );
 
-    return { success: true, initialized: true, path: DB_FILENAME };
+    return { success: true, initialized: true, path: DB_FILENAME, fallback: false };
   } catch (error) {
     console.error('SQLite getStatus failed:', errorMessage(error));
     return { success: false, error: errorMessage(error) };
@@ -485,9 +679,13 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
  */
 export async function clearAll(): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.clearAll();
     }
 
     await sqlite3!.exec(dbHandle!, `BEGIN IMMEDIATE;
@@ -495,6 +693,8 @@ export async function clearAll(): Promise<{ success: boolean; error?: string }> 
       DELETE FROM browsing_logs_fts;
       COMMIT;
     `);
+
+    await sqlite3!.exec(dbHandle!, 'PRAGMA wal_checkpoint(TRUNCATE);');
 
     return { success: true };
   } catch (error) {
@@ -521,7 +721,7 @@ function extractDomain(url: string): string {
 
 /**
  * Sanitize user input for FTS5 query syntax.
- * Escapes special FTS5 characters and wraps in double quotes if needed.
+ * Uses a whitelist approach to prevent SQL injection via FTS5 operators.
  */
 const FTS_QUERY_MAX_LENGTH = 200;
 
@@ -531,17 +731,19 @@ function sanitizeFtsQuery(query: string): string {
   // Limit input length to prevent DoS via extremely long queries
   const truncated = query.slice(0, FTS_QUERY_MAX_LENGTH);
 
-  // FTS5 special chars: ^ * " : ~ ( ) + -
-  // Remove or escape them to prevent syntax errors
+  // Whitelist: only allow alphanumeric, CJK characters, and spaces
+  // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
+  // and special character injection (*, ", ~, ^, :, (, ), +, -)
   const sanitized = truncated
-    .replace(/[()"*~^:]/g, '')
-    .replace(/[+-]/g, ' ')
+    .replace(/[^A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\s]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
   if (!sanitized) return '';
 
-  // For multi-word queries, use implicit AND
-  return sanitized;
+  // Wrap in double quotes to force phrase search (prevents operator interpretation)
+  // This is the safest approach for user input
+  return `"${sanitized}"`;
 }
 
 // ============================================================================
@@ -554,9 +756,32 @@ function sanitizeFtsQuery(query: string): string {
  */
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   try {
-    if (!dbHandle || !sqlite3) {
+    if (!dbHandle && !usingFallbackStorage) {
       const ok = await init();
       if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      const queryResult = await fallbackStorage.query({ excludeDeleted: true, orderBy: 'created_at', orderDir: 'DESC', limit: 100000 });
+      if (!queryResult.success) {
+        return { success: false, error: queryResult.error };
+      }
+      const rows = queryResult.rows.map(r => ({
+        id: r.id,
+        url: r.url,
+        title: r.title,
+        summary: r.summary,
+        tags: r.tags,
+        created_at: r.created_at,
+        domain: r.domain,
+        visit_duration: r.visit_duration,
+        scroll_ratio: r.scroll_ratio,
+        is_starred: r.is_starred,
+        is_deleted: r.is_deleted,
+      }));
+      const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows }, null, 2);
+      const encoder = new TextEncoder();
+      return { success: true, data: encoder.encode(json) };
     }
 
     // Export all rows as a JSON byte array
@@ -602,4 +827,6 @@ export function _resetForTesting(): void {
   dbHandle = null;
   sqlite3 = null;
   initPromise = null;
+  usingFallbackStorage = false;
+  fallbackStorage = null;
 }

@@ -7,6 +7,7 @@ import { focusTrapManager } from './utils/focusTrap.js';
 import { getMessage } from './i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
+import { StorageKeys } from '../utils/storage.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
 function getModalEl(): HTMLElement | null {
@@ -37,18 +38,36 @@ let onConsentCallback: ((consented: boolean) => void) | null = null;
  */
 export async function initPrivacyConsent(): Promise<void> {
     try {
-        // 既存ユーザーのマイグレーション
         await migrateLegacyPrivacyConsent();
 
         const state = await getPrivacyConsent();
 
         if (!state.hasConsented) {
-            // 同意モーダルを表示
+            const denialCount = await getConsentDeniedCount();
+            if (denialCount >= 3) {
+                return;
+            }
             showPrivacyConsentModal();
         }
     } catch (error) {
         logError('[PrivacyConsent] Error in initialization', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
+}
+
+async function getConsentDeniedCount(): Promise<number> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_DENIED_COUNT);
+        return Number(result[StorageKeys.PRIVACY_CONSENT_DENIED_COUNT] ?? 0);
+    } catch {
+        return 0;
+    }
+}
+
+async function incrementConsentDeniedCount(): Promise<number> {
+    const current = await getConsentDeniedCount();
+    const next = current + 1;
+    await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: next });
+    return next;
 }
 
 /**
@@ -154,22 +173,22 @@ async function handleAcceptConsent(): Promise<void> {
  * 拒否ボタンハンドラー
  */
 async function handleDeclineConsent(): Promise<void> {
+    const newCount = await incrementConsentDeniedCount();
+
     hidePrivacyConsentModal();
-
-    // 同意が必要であることを通知
-    const message = getMessage('consentRequired') ||
-        'Privacy consent is required to use this extension.';
-    alert(message);
-
-    // モーダルを再表示（同意が必要）
-    setTimeout(() => {
-        showPrivacyConsentModal();
-    }, 100);
 
     if (onConsentCallback) {
         onConsentCallback(false);
         onConsentCallback = null;
     }
+
+    if (newCount >= 3) {
+        return;
+    }
+
+    const message = getMessage('consentDeclinedMessage') ||
+        '同意しない場合、拡張機能の主要機能は利用できません。後から設定画面で同意することができます。';
+    alert(message);
 }
 
 /**

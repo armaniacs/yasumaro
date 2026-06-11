@@ -38,6 +38,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
 - 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照。
 - 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
+- 🗄️ **ローカル SQLite 永続化**（OPFS + wa-sqlite + FTS5 全文検索、Obsidian 不要でも動作）
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)
@@ -188,6 +189,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
 - 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](docs/PRIVACY.md) for details.
 - 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
+- 🗄️ **Local SQLite Persistence** (OPFS + wa-sqlite + FTS5 full-text search, works without Obsidian)
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api)

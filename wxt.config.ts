@@ -18,7 +18,7 @@ export default defineConfig({
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: '5.9.2',
+    version: '5.9.3',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     icons: {
@@ -32,10 +32,12 @@ export default defineConfig({
       'scripting',
       'notifications',
       'offscreen',
-      'favicon',
       'unlimitedStorage',
       'webRequest',
       'alarms',
+    ],
+    optional_permissions: [
+      'favicon',
     ],
     optional_host_permissions: [
       'https://api-inference.huggingface.co/*',

@@ -99,8 +99,8 @@ function renderSettings(container: HTMLElement): void {
 
     <div class="form-actions">
       <button id="save-trigger-settings" class="btn-primary" data-i18n="saveTriggers">Save</button>
-      <span id="trigger-validation-error" class="validation-error" style="display:none"></span>
-      <span id="trigger-save-success" class="save-success" style="display:none" data-i18n="triggersSaved">Settings saved.</span>
+      <span id="trigger-validation-error" class="validation-error" role="alert" style="display:none"></span>
+      <span id="trigger-save-success" class="save-success" aria-live="polite" style="display:none" data-i18n="triggersSaved">Settings saved.</span>
     </div>
   `;
 }
