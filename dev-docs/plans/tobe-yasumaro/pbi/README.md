@@ -19,11 +19,11 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 
 | # | ファイル | 概要 | SP | 状態 |
 |---|---------|------|-----|------|
-| 01-07 | [archive/](./archive/) | Phase 1〜7 (完了) | 52 | ✅ 完了済み、archive/ に移動 |
+| 01-08 | [archive/](./archive/) | Phase 1〜7 + DEV-78 (完了) | 53 | ✅ 完了済み、archive/ に移動 |
 | 09 | [design-system](./2026-06-10-09-feat-design-system.md) | 和モダン・精緻デザインシステム確立 | 8 | 🔜 次に着手 |
-| 08 | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備 | 5 | ⬜ 未着手（PBI-09完了後） |
+| 08 (旧) | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備 | 5 | ⛔ **明示指示待ち**（v6.0.0 リリース直前のみ着手） |
 
-**合計: 65ストーリーポイント | 完了済み: 52 SP (80%) | 未着手: 13 SP (20%)**
+**合計: 66ストーリーポイント | 完了済み: 53 SP (80%) | 未着手: 13 SP (20%)**
 
 ### Archive (完了済み PBI)
 
@@ -37,6 +37,7 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 05 | [archive/2026-06-09-05-feat-export.md](./archive/2026-06-09-05-feat-export.md) | JSON / Markdown / CSVエクスポート | 8 |
 | 06 | [archive/2026-06-09-06-feat-obsidian-integration.md](./archive/2026-06-09-06-feat-obsidian-integration.md) | Obsidian連携ハイブリッド動作維持 | 5 |
 | 07 | [archive/2026-06-09-07-feat-privacy.md](./archive/2026-06-09-07-feat-privacy.md) | PIIマスキング継続 + consent UI再設計 | 5 |
+| 08 | [archive/2026-06-11-08-fix-gh-pages-redirect.md](./archive/2026-06-11-08-fix-gh-pages-redirect.md) | DEV-78: 旧GitHub Pagesリダイレクト復旧 | 1 |
 
 ## 技術スタック決定事項
 
