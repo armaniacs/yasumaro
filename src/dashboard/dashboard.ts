@@ -34,6 +34,7 @@ import { initTagsPanel } from './tagsPanel.js';
 import { initDomainSearchPanel } from './domainSearchPanel.js';
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
+import { getSqliteStatus } from './dashboardSqliteService.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -693,6 +694,13 @@ function initExportLogsPanel(): void {
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
+  try {
+    const sqliteStatus = await getSqliteStatus();
+    const fallbackBanner = document.getElementById('fallbackStorageBanner');
+    if (fallbackBanner && sqliteStatus?.fallback) {
+      fallbackBanner.classList.remove('hidden');
+    }
+  } catch (e) { console.error('[Dashboard] fallbackStorageBanner error:', e); }
   try { await initRecordingTriggerSettings(); } catch (e) { console.error('[Dashboard] initRecordingTriggerSettings error:', e); }
   try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }

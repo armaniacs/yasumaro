@@ -211,6 +211,10 @@ vi.mock('../../utils/crypto.js', () => ({
     generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
     verifyHmacSignature: vi.fn().mockResolvedValue(true),
 }));
+vi.mock('../../popup/privacyConsent.js', () => ({
+    hasPrivacyConsent: vi.fn().mockResolvedValue(true),
+    migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(true),
+}));
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';

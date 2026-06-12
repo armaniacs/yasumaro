@@ -184,6 +184,16 @@ a:hover {
   display: none !important;
 }
 
+.warning-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 8px 16px;
+  margin: 0 0 12px 0;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
 /* =============================================================================
    Dashboard Layout
    ============================================================================= */

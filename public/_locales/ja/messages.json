@@ -2231,6 +2231,9 @@
   "lmStudioPresetApplied": {
     "message": "LM Studioプリセット適用 (http://localhost:1234/v1)"
   },
+  "fallbackStorageWarning": {
+    "message": "簡易ストレージモードで動作中です。お使いの環境ではOPFSが利用できないため、chrome.storage.localを使用しています。検索機能が制限されます。"
+  },
   "sqliteHistoryTitle": {
     "message": "閲覧履歴"
   },

@@ -173,6 +173,8 @@ export const StorageKeys = {
     // SQLite migration tracking
     YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | null
     YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress', // 移行済み件数（再開用）
+    // OPFS fallback mode tracking
+    OPFS_FALLBACK_MODE: 'opfs_fallback_mode', // true when OPFS is unavailable and using chrome.storage.local fallback
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -309,6 +311,7 @@ export interface StorageKeyValues {
     [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: number;
     [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | null;
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
+    [StorageKeys.OPFS_FALLBACK_MODE]: boolean;
 }
 
 // 厳格な Settings 型

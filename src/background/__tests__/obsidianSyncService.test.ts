@@ -61,6 +61,26 @@ describe('ObsidianSyncService', () => {
       delete mockStorage['obsidian_api_key'];
       expect(await service.isConfigured()).toBe(false);
     });
+
+    it('returns false when API key is shorter than 16 characters', async () => {
+      mockStorage['obsidian_api_key'] = 'short';
+      expect(await service.isConfigured()).toBe(false);
+    });
+
+    it('returns false when API key is exactly 15 characters (boundary)', async () => {
+      mockStorage['obsidian_api_key'] = 'a'.repeat(15);
+      expect(await service.isConfigured()).toBe(false);
+    });
+
+    it('returns true when API key is exactly 16 characters (boundary)', async () => {
+      mockStorage['obsidian_api_key'] = 'a'.repeat(16);
+      expect(await service.isConfigured()).toBe(true);
+    });
+
+    it('returns false when API key is a number (non-string)', async () => {
+      mockStorage['obsidian_api_key'] = 1234567890123456;
+      expect(await service.isConfigured()).toBe(false);
+    });
   });
 
   describe('sync', () => {

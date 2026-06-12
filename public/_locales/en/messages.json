@@ -2231,6 +2231,9 @@
   "lmStudioPresetApplied": {
     "message": "LM Studio preset applied (http://localhost:1234/v1)"
   },
+  "fallbackStorageWarning": {
+    "message": "Running in fallback storage mode. OPFS is not available in your environment, using chrome.storage.local. Search functionality is limited."
+  },
   "sqliteHistoryTitle": {
     "message": "Browsing History"
   },

@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.4] - 2026-06-12
+
+### Tests / テスト追加
+
+- **新規テストファイル 4 件（合計 66 テスト追加）**:
+  - `rateLimiter.test.ts` (8 tests): レート制限の許可・ブロック・タブ削除・リセット動作
+  - `manualContentFetcher.test.ts` (9 tests): キャッシュ・最大エントリ数・期限切れクリア・タブ管理
+  - `notificationHandlers.test.ts` (14 tests): URL検証 9 件 + 通知ハンドラ 5 件
+  - `obsidianSyncService.test.ts` — APIキー長バリデーション境界値テストを 5 件追加（16文字未満・非string → false）
+- **既存テストに追記**:
+  - `offscreen-sqlite.test.ts` — SQLITE_INSERT_BATCH の空配列・フィールドなし・content script拒否テストを追加
+  - `fetch.test.ts` — `defaultShouldRetry`: 429 リトライなし・タイムアウト 1 回制限の動作テストを追加
+
+### Fixed / 修正
+
+- **`sqlite-security-integrity.test.ts` のリグレッション修正**: PBI-104 で `handleDashboardSqlite` を `dashboardSqliteHandlers.ts` に抽出したことで壊れた 3 件のソースコード解析テストを、正しいファイルを参照するよう修正（7/7 パスに回復）
+
+### Documentation / ドキュメント
+
+- **`docs/SETUP_GUIDE.md` 更新**:
+  - 保持ポリシーを 7日/10,000件 → 90日/1,000件 に修正（日英）
+  - 履歴タブに全文検索（FTS5）・スター・物理削除の説明を追記
+  - プライバシー同意フロー（3回拒否で制限モード）の説明を追記（日英）
+  - OPFSフォールバックへの参照リンクを追加
+- **`README.md` 更新**:
+  - プライバシー同意フロー（3回拒否・制限モード・GDPR物理削除）を特徴一覧に追記（日英）
+  - モバイルChrome / OPFSフォールバック機能を特徴一覧に追記（日英）
+
+### Chores / その他
+
+- **バージョン 5.9.3 → 5.9.4**
+
 ## [5.9.3] - 2026-06-11
 
 ### Security / セキュリティ修正

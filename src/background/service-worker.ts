@@ -21,8 +21,7 @@ import { SqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
-import { NotificationHelper, PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from './notificationHelper.js';
-import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
+import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import {
     cleanupOldDeniedEntries,
@@ -30,7 +29,10 @@ import {
 } from '../utils/permissionManager.js';
 
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
-import { encodeUrlSafeBase64, decodeUrlFromNotificationId } from './handlers/urlNotificationHandlers.js';
+import { encodeUrlSafeBase64 } from './handlers/urlNotificationHandlers.js';
+import { handleDashboardSqlite } from './handlers/dashboardSqliteHandlers.js';
+import { createNotificationHandlers } from './handlers/notificationHandlers.js';
+import { hasPrivacyConsent, migrateLegacyPrivacyConsent } from '../popup/privacyConsent.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
@@ -168,6 +170,10 @@ export function resetManualRecordCache(): void {
 // Extracted Message Handlers (for testability)
 // ============================================================================
 
+async function isRecordingAllowed(): Promise<boolean> {
+    return hasPrivacyConsent();
+}
+
 /**
  * Handle VALID_VISIT message from Content Script.
  * Processes automatic visit recording, updates tab cache, and manages badges.
@@ -179,6 +185,11 @@ export async function handleValidVisit(
 ): Promise<void> {
     if (!sender.tab) {
         sendResponse(INVALID_SENDER_ERROR);
+        return;
+    }
+
+    if (!(await isRecordingAllowed())) {
+        sendResponse({ success: false, reason: 'privacy_consent_required' });
         return;
     }
 
@@ -304,6 +315,11 @@ export async function handleManualRecord(
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
+    if (!(await isRecordingAllowed())) {
+        sendResponse({ success: false, reason: 'privacy_consent_required' });
+        return;
+    }
+
     let content = message.payload.content;
     const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
     const settings = await getSettings();
@@ -410,6 +426,11 @@ export async function handleSaveRecord(
     message: SaveRecordMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
+    if (!(await isRecordingAllowed())) {
+        sendResponse({ success: false, reason: 'privacy_consent_required' });
+        return;
+    }
+
     const settings = await getSettings();
     // Use RecordingPipeline for saving confirmed record
     const pipeline = new RecordingPipeline(
@@ -655,103 +676,6 @@ export async function handlePing(
     sendResponse({ success: true });
 }
 
-/**
- * Handle dashboard SQLite queries and updates.
- * Subtypes: query, search, update_star, delete, get_dates, get_count
- */
-async function handleDashboardSqlite(
-    message: { type: 'DASHBOARD_SQLITE'; payload?: Record<string, unknown> },
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const payload = message.payload || {};
-    const subtype = payload.subtype as string;
-
-    try {
-        if (sender.tab) {
-            sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
-            return;
-        }
-
-        switch (subtype) {
-            case 'query': {
-                const result = await sqliteClient.query({
-                    limit: (payload.limit as number) ?? 100,
-                    offset: (payload.offset as number) ?? 0,
-                    domain: payload.domain as string | undefined,
-                    isStarred: payload.isStarred as boolean | undefined,
-                    since: payload.since as number | undefined,
-                    until: payload.until as number | undefined,
-                    orderBy: (payload.orderBy as string) || 'created_at',
-                    orderDir: (payload.orderDir as 'ASC' | 'DESC') || 'DESC',
-                });
-                sendResponse(result ?? { success: false, error: 'Query failed' });
-                break;
-            }
-            case 'search': {
-                const result = await sqliteClient.search(
-                    payload.query as string || '',
-                    (payload.limit as number) ?? 50,
-                    (payload.offset as number) ?? 0
-                );
-                sendResponse(result ?? { success: false, error: 'Search failed' });
-                break;
-            }
-            case 'toggle_star': {
-                const result = await sqliteClient.toggleStar(payload.id as number);
-                sendResponse(result ?? { success: false, error: 'Toggle star failed' });
-                break;
-            }
-            case 'delete': {
-                const result = await sqliteClient.delete(payload.id as number);
-                sendResponse({ success: result });
-                break;
-            }
-            case 'update': {
-                const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
-                const changes = (payload.changes || {}) as Record<string, unknown>;
-                const invalidKeys = Object.keys(changes).filter((k) => !ALLOWED_UPDATE_FIELDS.includes(k));
-                if (invalidKeys.length > 0) {
-                    sendResponse({ success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` });
-                    break;
-                }
-                const result = await sqliteClient.update(
-                    payload.id as number,
-                    changes
-                );
-                sendResponse({ success: result });
-                break;
-            }
-            case 'get_count': {
-                const count = await sqliteClient.getCount();
-                sendResponse({ success: true, count: count ?? 0 });
-                break;
-            }
-            case 'clear_all': {
-                const ok = await sqliteClient.clearAll();
-                sendResponse({ success: ok });
-                break;
-            }
-            case 'status': {
-                const status = await sqliteClient.getStatus();
-                if (status) {
-                    sendResponse({ success: true, ...status });
-                } else {
-                    sendResponse({ success: false, error: 'Status check failed' });
-                }
-                break;
-            }
-            default:
-                sendResponse({ success: false, error: `Unknown subtype: ${subtype}` });
-        }
-    } catch (error) {
-        logError('Dashboard SQLite error', {
-            subtype,
-            error: error instanceof Error ? error.message : String(error),
-        }, ErrorCode.UNKNOWN_ERROR);
-        sendResponse({ success: false, error: String(error) });
-    }
-}
 
 // ============================================================================
 // Message Handler Factory (extracted for testability)
@@ -888,7 +812,12 @@ export function createMessageHandler(): (
 
                 // DASHBOARD_SQLITE - Dashboard SQLite operations
                 if (message.type === 'DASHBOARD_SQLITE') {
-                    await handleDashboardSqlite(message, sender, sendResponse);
+                    if (sender.tab) {
+                        sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
+                        return;
+                    }
+                    const result = await handleDashboardSqlite(message.payload || {}, sqliteClient);
+                    sendResponse(result);
                     return;
                 }
 
@@ -911,21 +840,15 @@ export function createMessageHandler(): (
 }
 
 // ============================================================================
-// Tab Event Handlers (extracted for testability)
+// Tab Event Handlers
 // ============================================================================
 
-/**
- * Handle tab closure - cleanup tab cache and related state.
- */
 export function handleTabRemoved(tabId: number): void {
     tabCache.remove(tabId);
     autoSavedBadgeTabs.delete(tabId);
     rateLimiter.removeTab(tabId);
 }
 
-/**
- * Handle tab activation - update badge to reflect privacy status.
- */
 export async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
     try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
@@ -990,6 +913,20 @@ export async function handleInstalled(details: { reason?: string; previousVersio
         RecordingLogic.invalidateSettingsCache();
         const settings = await getSettings();
         await updateDomainFilterCache(settings);
+
+        // Migrate legacy privacy consent for existing users
+        // This ensures users who had boolean consent get the new object format
+        // with version info, so isRecordingAllowed() works correctly
+        try {
+            await migrateLegacyPrivacyConsent();
+        } catch (error) {
+            await logWarn(
+                'Legacy privacy consent migration failed',
+                { error: error instanceof Error ? error.message : String(error) },
+                ErrorCode.UNKNOWN_ERROR,
+                'service-worker'
+            );
+        }
     }
 }
 
@@ -1044,135 +981,13 @@ export async function handleStartup(): Promise<void> {
 }
 
 // ============================================================================
-// Privacy Confirmation Notification Handlers
+// Notification Handlers
 // ============================================================================
+export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
 
-// URLスキーマの許可リスト
-const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
-const BLOCKED_URL_SCHEMES = ['javascript:', 'data:', 'file:', 'vbscript:', 'about:'];
-
-// 最大URL長（Base64エンコード後の通知ID上限を考慮）
-const MAX_URL_LENGTH = 2000;
-
-/**
- * URLのバリデーションを行う
- * @param {string} url - 検証するURL
- * @returns {boolean} URLが有効で安全な場合はtrue
- */
-function isValidUrl(url: string): boolean {
-    if (typeof url !== 'string' || url.length === 0) {
-        return false;
-    }
-
-    if (url.length > MAX_URL_LENGTH) {
-        return false;
-    }
-
-    try {
-        const parsedUrl = new URL(url);
-
-        // ブロックされたスキーマを拒否
-        for (const blockedScheme of BLOCKED_URL_SCHEMES) {
-            if (parsedUrl.protocol === blockedScheme && url.startsWith(blockedScheme)) {
-                return false;
-            }
-        }
-
-        // 許可されたスキーマのみ受け付ける
-        // chrome-extension: は内部使用のみ
-        for (const allowedScheme of ALLOWED_URL_SCHEMES) {
-            if (parsedUrl.protocol === allowedScheme) {
-                return true;
-            }
-        }
-
-        return false;
-    } catch {
-        return false;
-    }
-}
-
-
-// ============================================================================
-// Notification Handlers (extracted for testability)
-// ============================================================================
-
-/**
- * Handle notification button clicks.
- * Button 0: Save / Button 1: Skip
- */
-export async function handleNotificationButtonClicked(notificationId: string, buttonIndex: number): Promise<void> {
-    try {
-        if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
-            return;
-        }
-
-        chrome.notifications.clear(notificationId).catch(e => {
-            logWarn(
-                'Failed to clear notification',
-                { notificationId, error: e instanceof Error ? e.message : String(e) },
-                ErrorCode.UNKNOWN_ERROR,
-                'service-worker'
-            );
-        });
-
-        let url: string;
-        try {
-            url = await decodeUrlFromNotificationId(notificationId);
-        } catch {
-            return;
-        }
-
-        // URLのバリデーション（P1: 入力バリデーション）
-        if (!isValidUrl(url)) {
-            await logWarn(
-                'Invalid URL decoded from notification ID',
-                { urlHash: url.substring(0, 10) + '...' },
-                ErrorCode.INVALID_INPUT,
-                'service-worker'
-            );
-            return;
-        }
-
-        if (buttonIndex === 0) {
-            // 「保存する」: pendingから取得してforce記録
-            const pages = await getPendingPages();
-            const page = pages.find(p => p.url === url);
-            if (page) {
-                await recordingLogic.record({
-                    title: page.title,
-                    url: page.url,
-                    content: '',
-                    force: true,
-                    skipDuplicateCheck: true,
-                    recordType: 'auto'
-                });
-            }
-        }
-        // buttonIndex === 1 「スキップ」: pending に残したまま何もしない（ダッシュボードから後で登録可能）
-        await removePendingPages([url]);
-    } catch (error) {
-        await logError(
-            'Notification button click handler failed',
-            {
-                notificationId: notificationId.substring(0, 20) + '...',
-                buttonIndex,
-                error: error instanceof Error ? error.message : String(error)
-            },
-            ErrorCode.INTERNAL_ERROR,
-            'service-worker'
-        );
-    }
-}
-
-/**
- * Handle notification click (close the notification).
- */
-export function handleNotificationClicked(notificationId: string): void {
-    if (notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
-        chrome.notifications.clear(notificationId);
-    }
-}
+const _notificationHandlers = createNotificationHandlers(recordingLogic);
+export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
+export const handleNotificationClicked = _notificationHandlers.onClicked;
 
 // ============================================================================
 // Module-level initialization - register all Chrome event listeners directly

@@ -364,16 +364,29 @@ export interface RetryOptions {
 
 /**
  * デフォルトのリトライ条件判定
- * ネットワークエラー、5xxサーバーエラー、429 Too Many Requestsの場合はリトライ
+ * - AbortError（タイムアウト）: 最大1回リトライ（合計2試行）
+ * - HTTP 429 Too Many Requests: リトライなし（即時終了）
+ * - HTTP 5xx サーバーエラー: maxRetryCount まで通常リトライ
  */
 function defaultShouldRetry(error: Error, attempt: number, response: Response | null): boolean {
-  // ネットワークエラー（タイムアウト、接続失敗等）
-  if (error.name === 'AbortError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
+  // 429 Too Many Requests: リトライしない
+  if (response && response.status === 429) {
+    return false;
+  }
+
+  // 5xxサーバーエラー: 通常リトライ
+  if (response && response.status >= 500) {
     return true;
   }
 
-  // 5xxサーバーエラーまたは429 Too Many Requests
-  if (response && (response.status >= 500 || response.status === 429)) {
+  // AbortError（タイムアウト）: 最大1回のみリトライ（attempt=1 のとき、つまり2回目の試行まで）
+  // fetchWithTimeout converts AbortError to Error('Request timed out...'), so check both
+  if (error.name === 'AbortError' || error.message.includes('timed out')) {
+    return attempt <= 1;
+  }
+
+  // その他のネットワークエラー（接続失敗等）
+  if (error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
     return true;
   }
 

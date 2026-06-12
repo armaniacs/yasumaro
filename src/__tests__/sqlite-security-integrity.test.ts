@@ -13,56 +13,49 @@ import { join } from 'path';
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
+    // After PBI-104 refactor: handleDashboardSqlite is in dashboardSqliteHandlers.ts
+    // The sender.tab guard is enforced at the call site in service-worker.ts
     let serviceWorkerSource: string;
+    let handlerSource: string;
 
     beforeEach(() => {
-      const filePath = join(process.cwd(), 'src/background/service-worker.ts');
-      serviceWorkerSource = readFileSync(filePath, 'utf8');
+      serviceWorkerSource = readFileSync(join(process.cwd(), 'src/background/service-worker.ts'), 'utf8');
+      handlerSource = readFileSync(join(process.cwd(), 'src/background/handlers/dashboardSqliteHandlers.ts'), 'utf8');
     });
 
     it('should reject DASHBOARD_SQLITE calls from content scripts (sender.tab present) for ALL subtypes', () => {
-      const handleFnMatch = serviceWorkerSource.match(
-        /async function handleDashboardSqlite\([\s\S]*?\n\}/
+      // The guard lives in service-worker.ts at the call site
+      const dashboardSqliteBlock = serviceWorkerSource.match(
+        /if\s*\(\s*message\.type\s*===\s*['"]DASHBOARD_SQLITE['"]\s*\)[\s\S]*?return;\s*\}/
       );
-      expect(handleFnMatch).toBeTruthy();
-      const handleFn = handleFnMatch![0];
+      expect(dashboardSqliteBlock).toBeTruthy();
+      const block = dashboardSqliteBlock![0];
 
-      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\s*\)/.test(handleFn);
+      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\s*\)/.test(block);
       expect(hasEarlySenderGuard).toBe(true);
-
-      const guardPos = handleFn.indexOf('sender.tab');
-      const switchPos = handleFn.indexOf('switch (subtype)');
-      expect(guardPos).toBeLessThan(switchPos);
     });
 
     it('should NOT have subtype-specific sender.tab checks (unified guard)', () => {
-      const handleFnMatch = serviceWorkerSource.match(
-        /async function handleDashboardSqlite\([\s\S]*?\n\}/
-      );
-      expect(handleFnMatch).toBeTruthy();
-      const handleFn = handleFnMatch![0];
-
-      const clearAllMatch = handleFn.match(/case\s+'clear_all'[\s\S]*?break;/);
-      expect(clearAllMatch).toBeTruthy();
-      const clearAllBlock = clearAllMatch![0];
-
-      const hasDuplicateGuard = clearAllBlock.includes('sender.tab');
-      expect(hasDuplicateGuard).toBe(false);
+      // The extracted handler in dashboardSqliteHandlers.ts should NOT contain sender.tab checks
+      // because the guard is unified at the service-worker call site
+      const hasSenderTabInHandler = handlerSource.includes('sender.tab');
+      expect(hasSenderTabInHandler).toBe(false);
     });
 
     it('should have sender.tab guard BEFORE any SQLite operation', () => {
-      const handleFnMatch = serviceWorkerSource.match(
-        /async function handleDashboardSqlite\([\s\S]*?\n\}/
+      // In service-worker.ts, the sender.tab check must come before handleDashboardSqlite call
+      const dashboardSection = serviceWorkerSource.match(
+        /message\.type\s*===\s*['"]DASHBOARD_SQLITE['"][\s\S]*?handleDashboardSqlite/
       );
-      expect(handleFnMatch).toBeTruthy();
-      const handleFn = handleFnMatch![0];
+      expect(dashboardSection).toBeTruthy();
+      const section = dashboardSection![0];
 
-      const guardPos = handleFn.indexOf('sender.tab');
-      const firstSqliteCall = handleFn.indexOf('sqliteClient.');
+      const guardPos = section.indexOf('sender.tab');
+      const callPos = section.indexOf('handleDashboardSqlite');
 
       expect(guardPos).toBeGreaterThan(-1);
-      expect(firstSqliteCall).toBeGreaterThan(-1);
-      expect(guardPos).toBeLessThan(firstSqliteCall);
+      expect(callPos).toBeGreaterThan(-1);
+      expect(guardPos).toBeLessThan(callPos);
     });
   });
 

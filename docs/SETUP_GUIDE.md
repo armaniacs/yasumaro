@@ -173,6 +173,8 @@ ollama list
 #### 5. プライバシー設定
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
 
+**プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると以降は表示されなくなります（詳細: [PRIVACY.md](PRIVACY.md)）。
+
 **自動保存時のプライバシー動作** (`Dashboard → Privacy → Confirmation Settings`):
 - **save（デフォルト）**: プライベートページを通常通り保存します
 - **skip**: プライベートページを保存せず「スキップ済み」として履歴に残します。後から手動で保存することも可能です
@@ -187,7 +189,12 @@ ollama list
 - パスワード強度は設定時にリアルタイム表示（Weak / Medium / Strong）で確認できます
 
 #### 6. ダッシュボード（履歴管理）
-`Dashboard → History` タブで、記録されたURLの履歴を確認・管理できます。
+`Dashboard → History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。
+
+**主な機能**:
+- **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
+- **スター**: よく参照するページにスターを付けて後から素早く探せます
+- **削除**: 個別エントリを物理削除（GDPR Art.17準拠）。「すべてのデータを削除」で全件一括削除も可能です
 
 **フィルター**:
 - **All**: 全ての記録を表示
@@ -196,7 +203,9 @@ ollama list
 - **Skipped**: プライバシー検出によりスキップされたページを表示。「今すぐ記録」ボタンで手動保存が可能
 - **🔒 Masked**: PIIマスキングが行われた記録のみ表示
 
-**保持ポリシー**: 過去7日間の記録（最大10,000件）が保持されます。
+**保持ポリシー**: 過去90日間の記録（最大1,000件）が保持されます。それを超えたデータは自動削除されます。
+
+**モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [OPFS_FALLBACK.md](OPFS_FALLBACK.md)）。
 
 ---
 
@@ -354,6 +363,8 @@ Useful for migrating settings to another device or creating backups (you will ne
 #### 5. Privacy Settings
 In the "Privacy" tab, you can configure detailed privacy behavior.
 
+**Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is permanently dismissed (see [PRIVACY.md](PRIVACY.md) for details).
+
 **Auto-save Privacy Behavior** (`Dashboard → Privacy → Confirmation Settings`):
 - **save (default)**: Saves private pages as usual
 - **skip**: Does not save private pages; they appear as "Skipped" in history for later manual save
@@ -368,7 +379,12 @@ In the "Privacy" tab, you can configure detailed privacy behavior.
 - Password strength is shown in real time during setup (Weak / Medium / Strong)
 
 #### 6. Dashboard (History Management)
-In the `Dashboard → History` tab, you can view and manage your recording history.
+In the `Dashboard → History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured.
+
+**Key features**:
+- **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
+- **Star**: Star frequently referenced pages to find them quickly later
+- **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
 
 **Filters**:
 - **All**: Shows all records
@@ -377,4 +393,6 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 - **Skipped**: Shows pages skipped by privacy detection. Use "Record Now" to manually save them
 - **🔒 Masked**: Shows only records where PII masking was applied
 
-**Retention Policy**: Records from the past 7 days (up to 10,000 entries) are retained.
+**Retention Policy**: Records from the past 90 days (up to 1,000 entries) are retained. Data beyond this limit is automatically deleted.
+
+**Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [OPFS_FALLBACK.md](OPFS_FALLBACK.md) for details).

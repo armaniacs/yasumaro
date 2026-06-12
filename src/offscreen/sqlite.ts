@@ -9,6 +9,7 @@ import * as SQLite from 'wa-sqlite';
 import { errorMessage } from '../utils/errorUtils.js';
 import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
 import { FallbackStorage } from './storageFallback.js';
+import { StorageKeys } from '../utils/storage/types.js';
 
 // The wa-sqlite package uses ambient type declarations for SQLiteAPI and SQLiteCompatibleType
 // that are not directly exported. We define local aliases for the types we need.
@@ -131,6 +132,7 @@ async function _doInit(): Promise<boolean> {
       console.warn('OPFS not available, using chrome.storage.local fallback');
       usingFallbackStorage = true;
       fallbackStorage = new FallbackStorage();
+      await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
       await tryMigrateFallbackToSqlite();
       return true;
     }
@@ -186,7 +188,11 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
     const tempFallback = new FallbackStorage();
     const records = await tempFallback.getAllRecords();
 
-    if (records.length === 0) return;
+    if (records.length === 0) {
+      // No records to migrate, but OPFS is available so clear the fallback flag
+      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
+      return;
+    }
 
     if (!dbHandle || !sqlite3) {
       return;
@@ -223,6 +229,7 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
       console.log(`Migrated ${migrated} records from fallback storage to SQLite`);
       await tempFallback.clearAll();
     }
+    await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
   } catch (error) {
     console.error('Fallback migration failed:', errorMessage(error));
   }
