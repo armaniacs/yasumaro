@@ -5,7 +5,6 @@ set -e
 
 BUILD_DIR="/tmp/wa-sqlite-build-$$"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo "=== Building wa-sqlite with FTS5 support ==="
 
@@ -40,13 +39,9 @@ cp cache/extension-functions.c deps/
 # Build async WASM with FTS5
 make WASQLITE_EXTRA_DEFINES="-DSQLITE_ENABLE_FTS5" dist/wa-sqlite-async.mjs
 
-# Copy to vendor
+# Copy to vendor (Makefile handles copying to node_modules)
 cp dist/wa-sqlite-async.wasm "$SCRIPT_DIR/"
 cp dist/wa-sqlite-async.mjs "$SCRIPT_DIR/"
-
-# Also copy to node_modules for immediate use
-cp dist/wa-sqlite-async.wasm "$PROJECT_ROOT/node_modules/wa-sqlite/dist/"
-cp dist/wa-sqlite-async.mjs "$PROJECT_ROOT/node_modules/wa-sqlite/dist/"
 
 # Cleanup
 rm -rf "$BUILD_DIR"
@@ -56,5 +51,3 @@ echo "WASM size: $(wc -c < "$SCRIPT_DIR/wa-sqlite-async.wasm") bytes"
 echo "Files updated:"
 echo "  vendor/wa-sqlite/wa-sqlite-async.wasm"
 echo "  vendor/wa-sqlite/wa-sqlite-async.mjs"
-echo "  node_modules/wa-sqlite/dist/wa-sqlite-async.wasm"
-echo "  node_modules/wa-sqlite/dist/wa-sqlite-async.mjs"
