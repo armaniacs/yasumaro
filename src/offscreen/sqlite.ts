@@ -50,7 +50,9 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_logs_domain ON browsing_logs(domain);
   CREATE INDEX IF NOT EXISTS idx_logs_active ON browsing_logs(is_deleted, created_at);
   CREATE INDEX IF NOT EXISTS idx_logs_obsidian ON browsing_logs(obsidian_synced);
+`;
 
+const FTS5_SQL = `
   CREATE VIRTUAL TABLE IF NOT EXISTS browsing_logs_fts USING fts5(
     url, title, summary, tags,
     content='browsing_logs',
@@ -95,6 +97,7 @@ let initPromise: Promise<boolean> | null = null;
 let usingFallbackStorage = false;
 let fallbackStorage: FallbackStorage | null = null;
 let lastInitError: string | null = null;
+let fts5Available = false;
 
 const PREPARED_STMT_CACHE_MAX_SIZE = 50;
 const preparedStmtCache = new Map<string, number>();
@@ -141,6 +144,15 @@ async function _doInit(): Promise<boolean> {
       await sqlite3.exec(dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
     } catch {
       // Column already exists — that's fine
+    }
+
+    // FTS5 virtual table (optional — WASM build may not include FTS5)
+    fts5Available = false;
+    try {
+      await sqlite3.exec(dbHandle, FTS5_SQL);
+      fts5Available = true;
+    } catch (ftsErr) {
+      console.warn('SQLite: FTS5 not available, using LIKE-based search fallback', ftsErr);
     }
 
     // Enable WAL mode for better concurrent read performance
@@ -485,13 +497,58 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
       return fallbackStorage.search(searchQuery, limit, offset);
     }
 
-    // Sanitize the search query for FTS5
-    const ftsQuery = sanitizeFtsQuery(searchQuery);
+    // FTS5 full-text search (preferred) or LIKE-based fallback
+    if (fts5Available) {
+      const ftsQuery = sanitizeFtsQuery(searchQuery);
 
+      let total = 0;
+      await execWithCache(
+        `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
+        [ftsQuery],
+        (row: SqliteValue[]) => {
+          total = Number(row[0]);
+        }
+      );
+
+      const rows: SearchResult[] = [];
+      await execWithCache(
+        `SELECT
+           b.id, b.url, b.title, b.summary, b.tags,
+           b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred,
+           rank
+         FROM browsing_logs_fts
+         JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
+         WHERE browsing_logs_fts MATCH ?
+           AND b.is_deleted = 0
+         ORDER BY rank
+         LIMIT ? OFFSET ?`,
+        [ftsQuery, limit, offset],
+        (row: SqliteValue[]) => {
+          rows.push({
+            id: Number(row[0]),
+            url: String(row[1]),
+            title: row[2] as string | null,
+            summary: row[3] as string | null,
+            tags: row[4] as string | null,
+            created_at: Number(row[5]),
+            domain: row[6] as string | null,
+            visit_duration: row[7] != null ? Number(row[7]) : null,
+            scroll_ratio: row[8] != null ? Number(row[8]) : null,
+            is_starred: Number(row[9]),
+            rank: Number(row[10]),
+          });
+        }
+      );
+
+      return { success: true, rows, total };
+    }
+
+    // LIKE-based fallback when FTS5 is not available
+    const likePattern = `%${searchQuery}%`;
     let total = 0;
     await execWithCache(
-      `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
-      [ftsQuery],
+      `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)`,
+      [likePattern, likePattern, likePattern, likePattern],
       (row: SqliteValue[]) => {
         total = Number(row[0]);
       }
@@ -499,17 +556,12 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 
     const rows: SearchResult[] = [];
     await execWithCache(
-      `SELECT
-         b.id, b.url, b.title, b.summary, b.tags,
-         b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred,
-         rank
-       FROM browsing_logs_fts
-       JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-       WHERE browsing_logs_fts MATCH ?
-         AND b.is_deleted = 0
-       ORDER BY rank
+      `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
+       FROM browsing_logs
+       WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)
+       ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
-      [ftsQuery, limit, offset],
+      [likePattern, likePattern, likePattern, likePattern, limit, offset],
       (row: SqliteValue[]) => {
         rows.push({
           id: Number(row[0]),
@@ -522,7 +574,7 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
           visit_duration: row[7] != null ? Number(row[7]) : null,
           scroll_ratio: row[8] != null ? Number(row[8]) : null,
           is_starred: Number(row[9]),
-          rank: Number(row[10]),
+          rank: 0,
         });
       }
     );
