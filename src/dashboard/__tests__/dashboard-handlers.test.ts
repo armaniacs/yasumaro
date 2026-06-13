@@ -243,13 +243,6 @@ describe('loadGeneralSettings', () => {
         getSavedUrlEntriesCallCount = 0;
     });
 
-    it('populates AI timeout from storage (30s)', async () => {
-        const m = await mocked('../../utils/storage.js');
-        m.getSettings.mockResolvedValueOnce({ ai_timeout_ms: 30000 });
-        await loadGeneralSettings();
-        expect((document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value).toBe('30');
-    });
-
     it('shows selected provider info when configured', async () => {
         const m = await mocked('../../utils/storage.js');
         m.getSettings.mockResolvedValueOnce({
@@ -306,42 +299,6 @@ describe('handleSaveOnly', () => {
         lastSavedSettings = null;
         await handleSaveOnly();
         expect(lastSavedSettings).toBeNull();
-    });
-
-    it('converts AI timeout from seconds to ms', async () => {
-        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '15';
-        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
-        await handleSaveOnly();
-        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(15000);
-    });
-
-    it('sets AI timeout to 0 when input is empty', async () => {
-        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '';
-        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
-        await handleSaveOnly();
-        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
-    });
-
-    it('sets AI timeout to 0 when input is less than 10 seconds', async () => {
-        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '5';
-        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
-        await handleSaveOnly();
-        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
-    });
-
-    it('sets AI timeout to 0 when input is NaN', async () => {
-        (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = 'abc';
-        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
-        await handleSaveOnly();
-        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
-    });
-
-    it('sets AI timeout to 0 when aiTimeoutSecondsInput is null', async () => {
-        document.getElementById('aiTimeoutSeconds')!.remove();
-        resetDashboardElements();
-        (await mocked('../../popup/settingsUiHelper.js')).extractSettingsFromInputs.mockReturnValueOnce({});
-        await handleSaveOnly();
-        expect((lastSavedSettings as Record<string, unknown>).ai_timeout_ms).toBe(0);
     });
 });
 

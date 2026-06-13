@@ -1137,7 +1137,7 @@
     "message": "Shows records from the past 7 days (up to 10,000 entries). Older entries are automatically removed."
   },
   "historySearchLabel": {
-    "message": "Search recorded URLs"
+    "message": "Search URLs, summaries, and tags"
   },
   "recordTypeAuto": {
     "message": "Auto"
@@ -1228,6 +1228,42 @@
   },
   "diagSavedUrls": {
     "message": "Saved URLs"
+  },
+  "diagSqliteTitle": {
+    "message": "SQLite Database"
+  },
+  "diagSqliteStatus": {
+    "message": "Status"
+  },
+  "diagSqlitePath": {
+    "message": "Path"
+  },
+  "diagSqliteFallback": {
+    "message": "Fallback Mode"
+  },
+  "diagSqliteAvailable": {
+    "message": "Available"
+  },
+  "diagSqliteUnavailable": {
+    "message": "Unavailable"
+  },
+  "diagSqliteFallbackYes": {
+    "message": "Yes (using fallback storage)"
+  },
+  "diagSqliteFallbackNo": {
+    "message": "No (native SQLite)"
+  },
+  "diagSqliteCheckFailed": {
+    "message": "Failed to check SQLite status."
+  },
+  "testSqliteBtn": {
+    "message": "Test SQLite"
+  },
+  "diagSqliteTestOk": {
+    "message": "SQLite is working correctly."
+  },
+  "diagSqliteTestInitFailed": {
+    "message": "SQLite initialization failed."
   },
   "diagVersion": {
     "message": "Version"

@@ -236,17 +236,18 @@ export function setupMaxTokensValidation(input: HTMLInputElement | null): () => 
 export function setupAllFieldValidations(
     protocolInput: HTMLInputElement | null,
     portInput: HTMLInputElement | null,
-    minVisitDurationInput: HTMLInputElement | null,
-    minScrollDepthInput: HTMLInputElement | null,
-    maxTokensPerPromptInput: HTMLInputElement | null
+    minVisitDurationInput?: HTMLInputElement | null,
+    minScrollDepthInput?: HTMLInputElement | null,
+    maxTokensPerPromptInput?: HTMLInputElement | null
 ): (() => void)[] {
-    return [
+    const listeners: (() => void)[] = [
         setupProtocolValidation(protocolInput),
         setupPortValidation(portInput),
-        setupMinVisitDurationValidation(minVisitDurationInput),
-        setupMinScrollDepthValidation(minScrollDepthInput),
-        setupMaxTokensValidation(maxTokensPerPromptInput)
     ];
+    if (minVisitDurationInput) listeners.push(setupMinVisitDurationValidation(minVisitDurationInput));
+    if (minScrollDepthInput) listeners.push(setupMinScrollDepthValidation(minScrollDepthInput));
+    if (maxTokensPerPromptInput) listeners.push(setupMaxTokensValidation(maxTokensPerPromptInput));
+    return listeners;
 }
 
 /**
@@ -260,9 +261,9 @@ export function setupAllFieldValidations(
 export function validateAllFields(
     protocolInput: HTMLInputElement | null,
     portInput: HTMLInputElement | null,
-    minVisitDurationInput: HTMLInputElement | null,
-    minScrollDepthInput: HTMLInputElement | null,
-    maxTokensPerPromptInput: HTMLInputElement | null
+    minVisitDurationInput?: HTMLInputElement | null,
+    minScrollDepthInput?: HTMLInputElement | null,
+    maxTokensPerPromptInput?: HTMLInputElement | null
 ): boolean {
     let hasError = false;
 

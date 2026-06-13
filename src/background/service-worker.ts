@@ -856,9 +856,10 @@ export function createMessageHandler(): (
                     return;
                 }
 
-                // DASHBOARD_SQLITE - Dashboard SQLite operations
+                // DASHBOARD_SQLITE - Dashboard SQLite operations (from options page or dashboard)
                 if (message.type === 'DASHBOARD_SQLITE') {
-                    if (sender.tab) {
+                    // Allow from extension pages (options.html, dashboard), block from content scripts
+                    if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
                         sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
                         return;
                     }

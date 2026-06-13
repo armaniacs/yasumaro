@@ -156,10 +156,6 @@ let _domElements: {
   providerBaseUrlInput: HTMLInputElement | null;
   providerApiKeyInput: HTMLInputElement | null;
   providerModelInput: HTMLInputElement | null;
-  minVisitDurationInput: HTMLInputElement | null;
-  minScrollDepthInput: HTMLInputElement | null;
-  maxTokensPerPromptInput: HTMLInputElement | null;
-  aiTimeoutSecondsInput: HTMLInputElement | null;
   saveBtn: HTMLButtonElement | null;
   testObsidianBtn: HTMLButtonElement | null;
   testAiBtn: HTMLButtonElement | null;
@@ -199,10 +195,6 @@ export function getDashboardElements() {
       providerBaseUrlInput: document.getElementById('providerBaseUrl') as HTMLInputElement | null,
       providerApiKeyInput: document.getElementById('providerApiKey') as HTMLInputElement | null,
       providerModelInput: document.getElementById('providerModel') as HTMLInputElement | null,
-      minVisitDurationInput: document.getElementById('minVisitDuration') as HTMLInputElement | null,
-      minScrollDepthInput: document.getElementById('minScrollDepth') as HTMLInputElement | null,
-      maxTokensPerPromptInput: document.getElementById('maxTokensPerPrompt') as HTMLInputElement | null,
-      aiTimeoutSecondsInput: document.getElementById('aiTimeoutSeconds') as HTMLInputElement | null,
       saveBtn: document.getElementById('save') as HTMLButtonElement | null,
       testObsidianBtn: document.getElementById('testObsidianBtn') as HTMLButtonElement | null,
       testAiBtn: document.getElementById('testAiBtn') as HTMLButtonElement | null,
@@ -218,8 +210,7 @@ export function getDashboardElements() {
     openai2ApiKeyInput: null, openai2ModelInput: null, lmStudioBaseUrlInput: null,
     lmStudioModelInput: null, ollamaSettingsDiv: null, ollamaBaseUrlInput: null,
     ollamaModelInput: null, providerBaseUrlInput: null, providerApiKeyInput: null,
-    providerModelInput: null, minVisitDurationInput: null, minScrollDepthInput: null,
-    maxTokensPerPromptInput: null, aiTimeoutSecondsInput: null, saveBtn: null,
+    providerModelInput: null, saveBtn: null,
     testObsidianBtn: null, testAiBtn: null, statusDiv: null,
   };
 }
@@ -248,9 +239,6 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.PROVIDER_BASE_URL]: el.providerBaseUrlInput,
     [StorageKeys.PROVIDER_API_KEY]: el.providerApiKeyInput,
     [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
-    [StorageKeys.MIN_VISIT_DURATION]: el.minVisitDurationInput,
-    [StorageKeys.MIN_SCROLL_DEPTH]: el.minScrollDepthInput,
-    [StorageKeys.MAX_TOKENS_PER_PROMPT]: el.maxTokensPerPromptInput
   };
 }
 
@@ -271,13 +259,6 @@ export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, getSettingsMapping());
   updateAIProviderVisibility(getAiProviderElements());
-
-  // AIタイムアウト読み込み（0=自動のため空欄表示）
-  const storedTimeoutMs = settings[StorageKeys.AI_TIMEOUT_MS] as number ?? 0;
-  const el = getDashboardElements();
-  if (el.aiTimeoutSecondsInput) {
-    el.aiTimeoutSecondsInput.value = storedTimeoutMs > 0 ? String(storedTimeoutMs / 1000) : '';
-  }
 
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
@@ -351,21 +332,14 @@ export async function handleSaveOnly(): Promise<void> {
   const errorPairs: ErrorPair[] = [
     [el.protocolInput, 'protocolError'],
     [el.portInput, 'portError'],
-    [el.minVisitDurationInput, 'minVisitDurationError'],
-    [el.minScrollDepthInput, 'minScrollDepthError'],
-    [el.maxTokensPerPromptInput, 'maxTokensError']
   ];
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(el.protocolInput, el.portInput, el.minVisitDurationInput, el.minScrollDepthInput, el.maxTokensPerPromptInput)) {
+  if (!validateAllFields(el.protocolInput, el.portInput)) {
     return;
   }
 
   const newSettings = extractSettingsFromInputs(getSettingsMapping());
-
-  // AIタイムアウト: 秒→ミリ秒変換（空欄=0=自動）
-  const timeoutSec = el.aiTimeoutSecondsInput ? parseFloat(el.aiTimeoutSecondsInput.value) : NaN;
-  newSettings[StorageKeys.AI_TIMEOUT_MS] = (!isNaN(timeoutSec) && timeoutSec >= 10) ? timeoutSec * 1000 : 0;
 
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
@@ -718,7 +692,7 @@ function initExportLogsPanel(): void {
   });
   {
     const el = getDashboardElements();
-    setupAllFieldValidations(el.protocolInput, el.portInput, el.minVisitDurationInput, el.minScrollDepthInput, el.maxTokensPerPromptInput);
+    setupAllFieldValidations(el.protocolInput, el.portInput);
   }
 
   // 保存ボタン（テストなし）

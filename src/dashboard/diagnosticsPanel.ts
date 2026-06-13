@@ -6,6 +6,7 @@ import { getMessage } from '../popup/i18n.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
+import { getSqliteStatus } from './dashboardSqliteService.js';
 
 /**
  * Creates a stat row element for the diagnostics panel
@@ -161,6 +162,41 @@ async function initDiagnosticsPanel(): Promise<void> {
     }
   }
 
+  // SQLite status
+  const sqliteStats = document.getElementById('diagSqliteStats') as HTMLElement | null;
+  const diagTestSqliteBtn = document.getElementById('diagTestSqliteBtn') as HTMLButtonElement | null;
+  const sqliteResult = document.getElementById('diagSqliteResult') as HTMLElement | null;
+
+  if (sqliteStats) {
+    try {
+      const status = await getSqliteStatus();
+      if (status) {
+        const initializedText = status.initialized
+          ? (getMessage('diagSqliteAvailable') || 'Available')
+          : (getMessage('diagSqliteUnavailable') || 'Unavailable');
+        sqliteStats.appendChild(makeStatRow(
+          getMessage('diagSqliteStatus') || 'Status',
+          initializedText
+        ));
+        sqliteStats.appendChild(makeStatRow(
+          getMessage('diagSqlitePath') || 'Path',
+          status.path || '(none)'
+        ));
+        const fallbackText = status.fallback
+          ? (getMessage('diagSqliteFallbackYes') || 'Yes (using fallback storage)')
+          : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
+        sqliteStats.appendChild(makeStatRow(
+          getMessage('diagSqliteFallback') || 'Fallback Mode',
+          fallbackText
+        ));
+      } else {
+        sqliteStats.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
+      }
+    } catch {
+      sqliteStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
+    }
+  }
+
   // Extension info
   if (extInfo) {
     const manifest = chrome.runtime.getManifest();
@@ -228,6 +264,39 @@ async function initDiagnosticsPanel(): Promise<void> {
       connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagTestAiBtn.disabled = false;
+    }
+  });
+
+  // SQLite テスト
+  diagTestSqliteBtn?.addEventListener('click', async () => {
+    if (!sqliteResult) return;
+    diagTestSqliteBtn.disabled = true;
+    sqliteResult.textContent = getMessage('testing') || 'Testing...';
+    sqliteResult.className = 'diag-result';
+
+    try {
+      const testResult = await chrome.runtime.sendMessage({
+        type: 'DASHBOARD_SQLITE',
+        payload: { subtype: 'status' }
+      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string };
+
+      if (testResult.success) {
+        const status = testResult.initialized
+          ? (getMessage('diagSqliteTestOk') || 'SQLite is working correctly.')
+          : (getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.');
+        sqliteResult.textContent = testResult.initialized ? `✓ ${status}` : `✗ ${status}`;
+        sqliteResult.style.color = testResult.initialized
+          ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`
+          : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      } else {
+        sqliteResult.textContent = `✗ ${testResult.error || 'SQLite test failed.'}`;
+        sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      }
+    } catch (e) {
+      sqliteResult.textContent = getMessage('testError') || 'Connection test failed.';
+      sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+    } finally {
+      diagTestSqliteBtn.disabled = false;
     }
   });
 }

@@ -1137,7 +1137,7 @@
     "message": "過去7日間の記録を表示（最大10,000件）。古いものから順に自動削除されます。"
   },
   "historySearchLabel": {
-    "message": "記録済みURLを検索"
+    "message": "URL・要約・タグで検索"
   },
   "recordTypeAuto": {
     "message": "自動"
@@ -1228,6 +1228,42 @@
   },
   "diagSavedUrls": {
     "message": "記録済みURL数"
+  },
+  "diagSqliteTitle": {
+    "message": "SQLite データベース"
+  },
+  "diagSqliteStatus": {
+    "message": "状態"
+  },
+  "diagSqlitePath": {
+    "message": "パス"
+  },
+  "diagSqliteFallback": {
+    "message": "フォールバックモード"
+  },
+  "diagSqliteAvailable": {
+    "message": "利用可能"
+  },
+  "diagSqliteUnavailable": {
+    "message": "利用不可"
+  },
+  "diagSqliteFallbackYes": {
+    "message": "はい（フォールバックストレージを使用）"
+  },
+  "diagSqliteFallbackNo": {
+    "message": "いいえ（ネイティブ SQLite）"
+  },
+  "diagSqliteCheckFailed": {
+    "message": "SQLite 状態の確認に失敗しました。"
+  },
+  "testSqliteBtn": {
+    "message": "SQLite テスト"
+  },
+  "diagSqliteTestOk": {
+    "message": "SQLite は正常に動作しています。"
+  },
+  "diagSqliteTestInitFailed": {
+    "message": "SQLite の初期化に失敗しました。"
   },
   "diagVersion": {
     "message": "バージョン"

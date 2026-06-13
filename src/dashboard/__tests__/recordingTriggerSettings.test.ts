@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const mockStorageGet = vi.fn();
 const mockStorageSet = vi.fn();
 const mockSendMessage = vi.fn();
+const mockGetMessage = vi.fn((key: string) => key);
 
 globalThis.chrome = {
   runtime: {
@@ -22,6 +23,9 @@ globalThis.chrome = {
       get: mockStorageGet,
       set: mockStorageSet,
     },
+  },
+  i18n: {
+    getMessage: mockGetMessage,
   },
 } as any;
 
@@ -36,33 +40,60 @@ import { initRecordingTriggerSettings } from '../recordingTriggerSettings.js';
 function setupDOM() {
   document.body.innerHTML = `
     <div id="recording-trigger-settings">
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="trigger-tab-close" />
-          <span>Tab Close</span>
-        </label>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="trigger-scroll-time" />
-          <span>Scroll 50% + 5s Visit</span>
-        </label>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="trigger-manual" />
-          <span>Manual Save</span>
-        </label>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="trigger-snapshot" />
-          <span>Periodic Snapshot</span>
-        </label>
-        <div id="snapshot-interval-group" style="display:none">
-          <input type="number" id="snapshot-interval" min="1" max="60" value="5" />
+      <!-- Recording Triggers Section -->
+      <div class="settings-section">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="trigger-tab-close" />
+            <span>Tab Close</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="trigger-scroll-time" />
+            <span>Scroll 50% + 5s Visit</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="trigger-manual" />
+            <span>Manual Save</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="trigger-snapshot" />
+            <span>Periodic Snapshot</span>
+          </label>
+          <div id="snapshot-interval-group" style="display:none">
+            <input type="number" id="snapshot-interval" min="1" max="60" value="5" />
+          </div>
         </div>
       </div>
+
+      <!-- Recording Conditions Section -->
+      <div class="settings-section">
+        <div class="form-group">
+          <label for="minVisitDuration">Min Visit Duration (seconds)</label>
+          <input type="number" id="minVisitDuration" min="1" value="5" />
+          <div id="minVisitDurationError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group">
+          <label for="minScrollDepth">Min Scroll Depth (%)</label>
+          <input type="number" id="minScrollDepth" min="0" max="100" value="50" />
+          <div id="minScrollDepthError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group">
+          <label for="maxTokensPerPrompt">Max Tokens Per Prompt</label>
+          <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" />
+          <div id="maxTokensError" class="field-error" role="alert"></div>
+        </div>
+        <div class="form-group">
+          <label for="aiTimeoutSeconds">AI Timeout (seconds)</label>
+          <input type="number" id="aiTimeoutSeconds" min="10" max="600" step="10" value="" />
+        </div>
+      </div>
+
       <div class="form-actions">
         <button id="save-trigger-settings">Save</button>
         <span id="trigger-validation-error" style="display:none"></span>
@@ -273,7 +304,8 @@ describe('recordingTriggerSettings', () => {
       await vi.waitFor(() => {
         expect(validationError.style.display).not.toBe('none');
       });
-      expect(validationError.textContent).toContain('enabled');
+      // The error message is now an i18n key
+      expect(validationError.textContent).toBeTruthy();
     });
 
     it('shows success message after saving', async () => {

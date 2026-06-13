@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none'; connect-src https://tranco-list.eu;">
+    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' chrome-extension: data:; object-src 'none'; connect-src https://tranco-list.eu;">
   <title>Yasumaro Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="models-dev-dialog.css">
@@ -313,40 +313,6 @@
               <label for="providerModel" data-i18n="modelName">Model Name (optional)</label>
               <input type="text" id="providerModel" data-i18n-input-placeholder="providerModelPlaceholder">
             </div>
-          </div>
-        </div>
-
-        <!-- 記録条件セクション -->
-        <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="recordingSection">記録条件</h3>
-
-          <div class="form-group">
-            <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
-            <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false"
-              aria-describedby="minVisitDurationError">
-            <div id="minVisitDurationError" class="field-error" role="alert"></div>
-          </div>
-
-          <div class="form-group">
-            <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
-            <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false"
-              aria-describedby="minScrollDepthError">
-            <div id="minScrollDepthError" class="field-error" role="alert"></div>
-          </div>
-
-          <div class="form-group">
-            <label for="maxTokensPerPrompt" data-i18n="label_max_tokens">Max Tokens Per Prompt</label>
-            <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" aria-invalid="false"
-              aria-describedby="maxTokensError maxTokensNote">
-            <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
-            <div id="maxTokensError" class="field-error" role="alert"></div>
-          </div>
-
-          <div class="form-group">
-            <label for="aiTimeoutSeconds" data-i18n="label_ai_timeout">AIタイムアウト（秒）</label>
-            <input type="number" id="aiTimeoutSeconds" min="10" max="600" step="10" aria-invalid="false"
-              aria-describedby="aiTimeoutNote">
-            <p class="help-text" id="aiTimeoutNote" data-i18n="note_ai_timeout"></p>
           </div>
         </div>
 
@@ -1270,7 +1236,7 @@
         <!-- 記録済み履歴 -->
         <div class="history-controls">
           <div class="form-group history-search-group">
-            <label for="historySearch" data-i18n="historySearchLabel">Search recorded URLs</label>
+            <label for="historySearch" data-i18n="historySearchLabel">Search URLs, summaries, and tags</label>
             <input type="search" id="historySearch" class="history-search"
               data-i18n-input-placeholder="historySearchPlaceholder">
           </div>
@@ -1406,6 +1372,13 @@
         <div class="diag-section">
           <h3 class="diag-section-title" data-i18n="diagStorageTitle">Storage</h3>
           <div id="diagStorageStats" class="diag-stats"></div>
+        </div>
+
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagSqliteTitle">SQLite Database</h3>
+          <div id="diagSqliteStats" class="diag-stats"></div>
+          <button id="diagTestSqliteBtn" class="secondary-btn" data-i18n="testSqliteBtn">SQLite テスト</button>
+          <div id="diagSqliteResult" class="diag-result" aria-live="polite"></div>
         </div>
 
         <div class="diag-section">
