@@ -208,14 +208,16 @@ export class SqliteClient {
     );
   }
 
-  async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean } | null> {
-    return this.call<{ initialized: boolean; path: string; fallback: boolean }>(
+  async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string } | null> {
+    return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string }>(
       'SQLITE_STATUS',
       {},
       (res) => ({
         initialized: Boolean(res.initialized),
         path: String(res.path || ''),
         fallback: Boolean(res.fallback),
+        fts5: Boolean(res.fts5),
+        initError: res.initError ? String(res.initError) : undefined,
       }),
     );
   }
