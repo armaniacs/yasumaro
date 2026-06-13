@@ -13,6 +13,7 @@ import {
   getSqliteStatus,
 } from './dashboardSqliteService.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
+import { showConfirmDialog } from './utils/confirmDialog.js';
 
 const PAGE_SIZE = 20;
 
@@ -127,7 +128,14 @@ async function handleToggleStar(id: number): Promise<void> {
 }
 
 async function handleDelete(id: number): Promise<void> {
-  if (!confirm(t('historyDeleteConfirm'))) return;
+  const confirmed = await showConfirmDialog({
+    title: t('sqliteHistoryTitle'),
+    message: t('historyDeleteConfirm'),
+    confirmLabel: t('confirmDelete'),
+    cancelLabel: t('cancel'),
+    dangerous: true,
+  });
+  if (!confirmed) return;
   const ok = await deleteLog(id);
   if (ok) {
     state.entries = state.entries.filter(e => e.id !== id);

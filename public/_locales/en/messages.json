@@ -732,6 +732,15 @@
   "confirmDeletePrompt": {
     "message": "Are you sure you want to delete this prompt?"
   },
+  "confirmClearAllTitle": {
+    "message": "Delete all history"
+  },
+  "confirmClearAllMessage": {
+    "message": "This action cannot be undone. All browsing history stored in SQLite will be deleted. Continue?"
+  },
+  "confirmDelete": {
+    "message": "Delete"
+  },
   "confirm": {
     "message": "Import"
   },

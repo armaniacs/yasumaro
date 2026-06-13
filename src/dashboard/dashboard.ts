@@ -34,7 +34,8 @@ import { initTagsPanel } from './tagsPanel.js';
 import { initDomainSearchPanel } from './domainSearchPanel.js';
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
-import { getSqliteStatus } from './dashboardSqliteService.js';
+import { getSqliteStatus, clearAllLogs } from './dashboardSqliteService.js';
+import { showConfirmDialog } from './utils/confirmDialog.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -589,12 +590,18 @@ function initExportLogsPanel(): void {
 
   // Data erasure button (GDPR Art.17)
   document.getElementById('btnDeleteAllData')?.addEventListener('click', async () => {
-    if (!confirm(chrome.i18n.getMessage('deleteAllDataConfirm'))) return;
+    const confirmed = await showConfirmDialog({
+      title: chrome.i18n.getMessage('confirmClearAllTitle') || 'Delete All History',
+      message: chrome.i18n.getMessage('confirmClearAllMessage') || chrome.i18n.getMessage('deleteAllDataConfirm') || 'This will permanently delete all stored data. Continue?',
+      confirmLabel: chrome.i18n.getMessage('confirmDelete') || 'Delete',
+      cancelLabel: chrome.i18n.getMessage('cancel') || 'Cancel',
+      dangerous: true,
+    });
+    if (!confirmed) return;
     try {
       await chrome.storage.local.clear();
-      // Also clear SQLite browsing logs (GDPR Art.17) — await confirmation before showing success
-      const sqliteResult = await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all' } });
-      if (!sqliteResult?.success) {
+      const sqliteResult = await clearAllLogs();
+      if (!sqliteResult) {
         const statusEl = document.getElementById('deleteAllDataStatus');
         if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
         return;

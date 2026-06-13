@@ -732,6 +732,15 @@
   "confirmDeletePrompt": {
     "message": "このプロンプトを削除してもよろしいですか？"
   },
+  "confirmClearAllTitle": {
+    "message": "履歴を全て削除"
+  },
+  "confirmClearAllMessage": {
+    "message": "この操作は取り消せません。SQLite に保存された全ての閲覧履歴が削除されます。続行しますか？"
+  },
+  "confirmDelete": {
+    "message": "削除"
+  },
   "confirm": {
     "message": "インポート"
   },

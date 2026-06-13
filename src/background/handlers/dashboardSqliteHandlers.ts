@@ -3,14 +3,45 @@ import { logError, ErrorCode } from '../../utils/logger.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
+export const TOKEN_REQUIRED_SUBTYPES = new Set([
+    'toggle_star', 'update', 'delete', 'migrate', 'clear_all',
+]);
+
+export const MODAL_REQUIRED_SUBTYPES = new Set([
+    'delete', 'migrate', 'clear_all',
+]);
+
 export async function handleDashboardSqlite(
     payload: Record<string, unknown>,
-    sqliteClient: SqliteClient
+    sqliteClient: SqliteClient,
+    runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
+    validConfirmToken?: string
 ): Promise<unknown> {
     const subtype = payload.subtype as string;
 
+    if (TOKEN_REQUIRED_SUBTYPES.has(subtype)) {
+        const providedToken = payload.confirmToken as string | undefined;
+        if (!providedToken || providedToken !== validConfirmToken) {
+            logError(
+                'Dashboard SQLite: token mismatch',
+                { subtype, hasToken: Boolean(providedToken) },
+                ErrorCode.INTERNAL_ERROR
+            );
+            return { success: false, error: 'Confirmation token mismatch' };
+        }
+    }
+
     try {
         switch (subtype) {
+            case 'migrate': {
+                if (!runMigration) {
+                    return { success: false, error: 'Migration not available' };
+                }
+                const migrateResult = await runMigration();
+                return migrateResult.success
+                    ? { success: true, count: migrateResult.count, read: migrateResult.read, inserted: migrateResult.inserted, error: migrateResult.error }
+                    : { success: false, error: migrateResult.error || 'Migration failed' };
+            }
             case 'query': {
                 const result = await sqliteClient.query({
                     limit: (payload.limit as number) ?? 100,
@@ -22,7 +53,9 @@ export async function handleDashboardSqlite(
                     orderBy: (payload.orderBy as string) || 'created_at',
                     orderDir: (payload.orderDir as 'ASC' | 'DESC') || 'DESC',
                 });
-                return result ?? { success: false, error: 'Query failed' };
+                return result
+                    ? { success: true, rows: result.rows, total: result.total }
+                    : { success: false, error: 'Query failed' };
             }
             case 'search': {
                 const result = await sqliteClient.search(
