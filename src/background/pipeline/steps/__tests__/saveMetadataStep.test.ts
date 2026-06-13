@@ -18,7 +18,6 @@ vi.mock('../../../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
 vi.mock('../../../../utils/storageUrls.js', () => ({
-  setSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(undefined),
   setUrlRecordType: vi.fn().mockResolvedValue(undefined),
   setUrlMaskedCount: vi.fn().mockResolvedValue(undefined),
   setUrlTags: vi.fn().mockResolvedValue(undefined),
@@ -36,7 +35,6 @@ vi.mock('../../../../utils/storageUrls.js', () => ({
   setUrlAiSummaryCleansedBytes: vi.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedElements: vi.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedReason: vi.fn().mockResolvedValue(undefined),
-  getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
 }));
 
 import { saveMetadataStep } from '../saveMetadataStep.js';
@@ -105,7 +103,6 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      expect(storageUrls.setSavedUrlsWithTimestamps).toHaveBeenCalled();
       expect(storageUrls.setUrlRecordType).toHaveBeenCalledWith('https://example.com/page', 'auto');
       expect(storageUrls.setUrlMaskedCount).toHaveBeenCalledWith('https://example.com/page', 3);
       expect(storageUrls.setUrlContent).toHaveBeenCalledWith('https://example.com/page', 'Page content');

@@ -6,7 +6,6 @@
 import { addLog, LogType } from '../../../utils/logger.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import {
-  setSavedUrlsWithTimestamps,
   setUrlRecordType,
   setUrlMaskedCount,
   setUrlTags,
@@ -30,8 +29,7 @@ import {
   setUrlAiDuration,
   setUrlObsidianDuration,
   setUrlExtractedSentencesBytes,
-  setUrlExtractedSentencesOriginalBytes,
-  getSavedUrlsWithTimestamps
+  setUrlExtractedSentencesOriginalBytes
 } from '../../../utils/storageUrls.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
@@ -72,11 +70,6 @@ export const saveMetadataStep: PipelineStepFunction = async (
       addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage, url });
     }
   };
-
-  // Update saved URLs timestamp
-  const urlMap = await getSavedUrlsWithTimestamps();
-  urlMap.set(url, Date.now());
-  await save('urlTimestamp', setSavedUrlsWithTimestamps(urlMap, url));
 
   // Save record type
   const resolvedRecordType: RecordType = (recordType as RecordType) ?? 'auto';

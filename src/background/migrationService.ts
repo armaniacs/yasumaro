@@ -49,6 +49,7 @@ export class MigrationService {
       if (entries.length === 0) {
         // No data to migrate — mark as fresh install
         await this.setMigrationStatus('fresh_install');
+        await chrome.storage.local.set({ legacyStoreReadOnly: true });
         addLog(LogType.INFO, 'Migration: no legacy data found, marked as fresh install');
         return;
       }
@@ -124,6 +125,7 @@ export class MigrationService {
       // Mark migration as complete
       await this.setMigrationStatus('completed');
       await chrome.storage.local.remove(MIGRATION_PROGRESS_KEY);
+      await chrome.storage.local.set({ legacyStoreReadOnly: true });
 
       addLog(LogType.INFO, 'Migration: completed', { totalMigrated: entries.length });
     } catch (error) {
