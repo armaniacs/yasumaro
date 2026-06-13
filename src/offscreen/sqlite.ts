@@ -669,7 +669,7 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; error?: string } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string } | { success: false; error: string }> {
   try {
     if (usingFallbackStorage && fallbackStorage) {
       const countResult = await fallbackStorage.getCount();
@@ -681,7 +681,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       // Try to initialize if not yet initialized (consistent with query/search)
       const ok = await init();
       if (!ok || (!dbHandle && !usingFallbackStorage)) {
-        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, error: lastInitError || 'Init returned false' };
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false' };
       }
       // If init switched to fallback, return fallback status
       if (usingFallbackStorage && fallbackStorage) {
