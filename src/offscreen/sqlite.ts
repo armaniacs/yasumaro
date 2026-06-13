@@ -700,7 +700,15 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
     }
 
     if (!dbHandle || !sqlite3) {
-      return { success: true, initialized: false, path: DB_FILENAME, fallback: false };
+      // Try to initialize if not yet initialized (consistent with query/search)
+      const ok = await init();
+      if (!ok || (!dbHandle && !usingFallbackStorage)) {
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false };
+      }
+      // If init switched to fallback, return fallback status
+      if (usingFallbackStorage && fallbackStorage) {
+        return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true };
+      }
     }
 
     let count = 0;
