@@ -1271,6 +1271,9 @@
   "diagSqliteFallbackNo": {
     "message": "いいえ（ネイティブ SQLite）"
   },
+  "diagSqliteFts5": {
+    "message": "FTS5 検索"
+  },
   "diagSqliteCheckFailed": {
     "message": "SQLite 状態の確認に失敗しました。"
   },
