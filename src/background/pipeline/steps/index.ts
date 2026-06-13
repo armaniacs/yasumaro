@@ -14,3 +14,4 @@ export { extractSentencesStep } from './extractSentencesStep.js';
 export { formatMarkdownStep } from './formatMarkdownStep.js';
 export { saveToObsidianStep } from './saveToObsidianStep.js';
 export { saveMetadataStep } from './saveMetadataStep.js';
+export { saveSqliteStep } from './saveSqliteStep.js';

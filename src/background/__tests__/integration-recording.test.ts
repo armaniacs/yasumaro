@@ -111,7 +111,6 @@ describe('Recording Integration Test', () => {
 
     expect(result.success).toBe(true);
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
-    expect(storageUrls.setSavedUrlsWithTimestamps).toHaveBeenCalled();
     expect(chrome.notifications.create).toHaveBeenCalled();
   });
 

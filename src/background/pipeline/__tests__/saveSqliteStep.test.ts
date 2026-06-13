@@ -1,0 +1,160 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+
+vi.mock('../../../utils/optimisticLock.js', () => ({
+  withOptimisticLock: vi.fn(),
+}));
+
+vi.mock('../../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+
+import { saveSqliteStep } from '../steps/saveSqliteStep.js';
+import type { SqliteClient } from '../../sqliteClient.js';
+import { withOptimisticLock } from '../../../utils/optimisticLock.js';
+
+function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
+  return {
+    insert: vi.fn().mockResolvedValue({ id: 1 }),
+    update: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  } as unknown as SqliteClient;
+}
+
+describe('saveSqliteStep — Optimistic Lock (H5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('wraps insert + update in withOptimisticLock', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://x.com', created_at: 100 },
+      sqliteClient: mockSqlite,
+      obsidianSynced: true,
+    });
+
+    expect(withOptimisticLock).toHaveBeenCalledWith(
+      expect.stringContaining('sqlite-write'),
+      expect.any(Function),
+      expect.objectContaining({ maxRetries: 3, initialDelay: 100 })
+    );
+    expect(mockSqlite.insert).toHaveBeenCalled();
+    expect(mockSqlite.update).toHaveBeenCalled();
+  });
+
+  it('does not write to old chrome.storage.savedUrlsWithTimestamps', async () => {
+    const setSpy = vi.spyOn(chrome.storage.local, 'set');
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://x.com', created_at: 100 },
+      sqliteClient: mockSqlite,
+    });
+
+    const callsToLegacy = setSpy.mock.calls.filter(
+      (call) => call[0] && 'savedUrlsWithTimestamps' in (call[0] as object)
+    );
+    expect(callsToLegacy).toHaveLength(0);
+
+    setSpy.mockRestore();
+  });
+
+  it('skips update when obsidianSynced is undefined', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://x.com', created_at: 100 },
+      sqliteClient: mockSqlite,
+    });
+
+    expect(mockSqlite.insert).toHaveBeenCalled();
+    expect(mockSqlite.update).not.toHaveBeenCalled();
+  });
+
+  it('calls update with obsidian_synced=1 when obsidianSynced is true', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://x.com', created_at: 100 },
+      sqliteClient: mockSqlite,
+      obsidianSynced: true,
+    });
+
+    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+  });
+
+  it('calls update with obsidian_synced=0 when obsidianSynced is false', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://x.com', created_at: 100 },
+      sqliteClient: mockSqlite,
+      obsidianSynced: false,
+    });
+
+    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 0 });
+  });
+
+  it('throws when withOptimisticLock fails', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('ConflictError')
+    );
+
+    await expect(
+      saveSqliteStep({
+        recordId: 1,
+        record: { url: 'https://x.com', created_at: 100 },
+        sqliteClient: mockSqlite,
+      })
+    ).rejects.toThrow('ConflictError');
+
+    expect(mockSqlite.insert).not.toHaveBeenCalled();
+  });
+
+  it('uses url and created_at in lock key', async () => {
+    const mockSqlite = makeMockSqlite();
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://example.com/page', created_at: 1234567890 },
+      sqliteClient: mockSqlite,
+    });
+
+    const lockKey = (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(lockKey).toContain('https://example.com/page');
+    expect(lockKey).toContain('1234567890');
+  });
+});
