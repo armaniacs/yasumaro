@@ -6,6 +6,7 @@
 
 import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../../utils/crypto.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 // Constants for URL encoding
 const MAX_URL_LENGTH = 2000;
@@ -121,7 +122,7 @@ export async function decodeUrlFromNotificationId(notificationId: string): Promi
   } catch (error) {
     await logError(
       'Failed to decode notification ID',
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: errorMessage(error) },
       ErrorCode.CRYPTO_HMAC_FAILURE,
       'notification-helpers'
     );

@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -103,8 +104,7 @@ async function saveContentSettings(): Promise<void> {
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logError('[ContentSettings] Save error', { cause: errorMessage }, ErrorCode.STORAGE_WRITE_FAILURE);
+        logError('[ContentSettings] Save error', { cause: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE);
         showStatus('contentSettingsStatus', getMessage('settingsSaveError') || '設定の保存に失敗しました', 'error');
     }
 }

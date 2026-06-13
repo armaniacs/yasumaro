@@ -4,6 +4,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage.js';
 import { PrivacyPipeline, IAIClient } from '../../privacyPipeline.js';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
@@ -59,9 +60,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       sanitizedSummary: pipelineResult.summary || 'Summary not available.'
     };
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
     addLog(LogType.ERROR, 'Privacy pipeline failed', {
-      error: errorMessage,
+      error: errorMessage(error),
       url: data.url,
       previewOnly
     });
@@ -71,13 +71,13 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
         ...context,
         result: {
           success: false,
-          error: errorMessage,
+          error: errorMessage(error),
           title: data.title,
           url: data.url
         }
       };
     }
 
-    throw error instanceof Error ? error : new Error(errorMessage);
+    throw error instanceof Error ? error : new Error(errorMessage(error));
   }
 };

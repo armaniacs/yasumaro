@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import type { RecordingTriggers } from '../background/recordingTriggerManager.js';
 
 const DEFAULT_TRIGGERS: RecordingTriggers = {
@@ -154,7 +155,7 @@ function wireEvents(container: HTMLElement): void {
       // Notify service worker to reload trigger config
       chrome.runtime.sendMessage({ type: 'PING' }).catch(() => { /* ignore */ });
     } catch (err) {
-      validationError.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+      validationError.textContent = `Error: ${errorMessage(err)}`;
       validationError.style.display = '';
     }
   });

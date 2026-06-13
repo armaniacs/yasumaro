@@ -4,6 +4,7 @@
  */
 
 import { isValidUrl } from './validation.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { LogType } from '../../utils/logger.js';
 import { addLog } from '../../utils/logger.js';
 
@@ -46,10 +47,10 @@ export async function fetchFromUrl(url: string): Promise<string> {
 
     return text as string;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch') || errorMessage.includes('TypeError')) {
-      throw new Error(`ネットワークエラーまたはアクセス拒否が発生しました (${errorMessage})。URLが正しいか、またはインターネット接続を確認してください。CSP制限の可能性もあります。`);
+    const msg = errorMessage(error);
+    if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('TypeError')) {
+      throw new Error(`ネットワークエラーまたはアクセス拒否が発生しました (${msg})。URLが正しいか、またはインターネット接続を確認してください。CSP制限の可能性もあります。`);
     }
-    throw new Error(`URL読み込みエラー: ${errorMessage}`);
+    throw new Error(`URL読み込みエラー: ${msg}`);
   }
 }

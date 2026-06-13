@@ -8,6 +8,7 @@ import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.j
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
@@ -105,8 +106,8 @@ export class GeminiProvider extends AIProviderStrategy {
             const data = await response.json();
             return await this._extractSummary(data);
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            if (errorMessage.includes('timed out')) {
+            const msg = errorMessage(error);
+            if (msg.includes('timed out')) {
                 return { success: false, summary: "Error: AI request timed out. Please check your connection." };
             }
             return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
@@ -124,9 +125,8 @@ export class GeminiProvider extends AIProviderStrategy {
         try {
             validateUrlForAIRequests(testUrl);
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage}`);
-            return { success: false, message: `Invalid test URL: ${errorMessage}` };
+            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage(error)}`);
+            return { success: false, message: `Invalid test URL: ${errorMessage(error)}` };
         }
 
         try {
@@ -161,12 +161,11 @@ export class GeminiProvider extends AIProviderStrategy {
                 return { success: false, message: `Gemini API Error: ${response.status} ${response.statusText}` };
             }
         } catch (e: unknown) {
-            // より具体的なエラーメッセージ
-            const errorMessage = e instanceof Error ? e.message : String(e);
-            if (errorMessage.includes('timeout')) {
+            const msg = errorMessage(e);
+            if (msg.includes('timeout')) {
                 return { success: false, message: 'Connection timeout. Check your network connection.' };
             } else {
-                return { success: false, message: `Connection error: ${errorMessage}` };
+                return { success: false, message: `Connection error: ${msg}` };
             }
         }
     }

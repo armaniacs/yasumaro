@@ -10,6 +10,7 @@ import type {
 } from './trustDbSchema.js';
 import { getTrustDb } from './trustDb.js';
 import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
+import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
 
 // ===== 定数 =====
@@ -87,17 +88,16 @@ export class TrancoUpdater {
           duration
         };
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logWarn('Tranco update failed, retrying...', { error: errorMessage, attempt, maxRetries }, undefined, 'TrancoUpdater');
+        logWarn('Tranco update failed, retrying...', { error: errorMessage(error), attempt, maxRetries }, undefined, 'TrancoUpdater');
 
         // 最終試行でエラー
         if (attempt === maxRetries) {
-          logError('TrancoUpdater', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
+          logError('TrancoUpdater', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED);
           return {
             success: false,
             domainsCount: 0,
             sizeBytes: 0,
-            error: errorMessage
+            error: errorMessage(error)
           };
         }
 

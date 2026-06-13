@@ -10,6 +10,7 @@
  */
 
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 import { migrateUblockSettings } from './migration.js';
 import { calculatePasswordStrength } from './masterPassword.js';
 import {
@@ -616,13 +617,13 @@ export async function getSettings(): Promise<Settings> {
                         const decryptedValue = await decryptApiKey(value, key);
                         (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                     } catch (e) {
-                        await logError(`Failed to decrypt ${field}`, { error: e instanceof Error ? e.message : String(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
+                        await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
                         (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                     }
                 }
             }
         } catch (e) {
-            await logError('Failed to get encryption key for decryption', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
+            await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
         }
 
         // 【パフォーマンス改善】復号後にキャッシュを保存
@@ -663,13 +664,13 @@ export async function getSettings(): Promise<Settings> {
                     const decryptedValue = await decryptApiKey(value, key);
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
                 } catch (e) {
-                    await logError(`Failed to decrypt ${field}`, { error: e instanceof Error ? e.message : String(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
+                    await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
                 }
             }
         }
     } catch (e) {
-        await logError('Failed to get encryption key for decryption', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
+        await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
     }
 
     // 【パフォーマンス改善】復号後にキャッシュを保存
@@ -713,7 +714,7 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
             }
         }
     } catch (e) {
-        await logError('Failed to encrypt API keys', { error: e instanceof Error ? e.message : String(e) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+        await logError('Failed to encrypt API keys', { error: errorMessage(e) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
         throw e;
     }
 
@@ -946,12 +947,12 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${errorMessage(e)}`);
     }
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (localhost), skipping: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`);
     }
 
     // Gemini API
@@ -965,7 +966,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
                 const normalized = normalizeUrl(openaiBaseUrl);
                 allowedUrls.add(normalized);
             } catch (e) {
-                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${errorMessage(e)}`);
             }
         } else {
             console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
@@ -979,7 +980,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
                 const normalized = normalizeUrl(openai2BaseUrl);
                 allowedUrls.add(normalized);
             } catch (e) {
-                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${errorMessage(e)}`);
             }
         } else {
             console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
@@ -994,7 +995,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
                 const normalized = normalizeUrl(providerBaseUrl);
                 allowedUrls.add(normalized);
             } catch (e) {
-                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${errorMessage(e)}`);
             }
         } else {
             console.warn(`Provider Base URL not in whitelist, skipped: ${providerBaseUrl}`);

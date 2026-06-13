@@ -7,6 +7,7 @@
 // @ts-ignore — vendor JS file bundled from bloomfilter npm package
 import { BloomFilter } from './bloomfilter-vendor.mjs';
 import type { BloomFilterData } from './trustDbSchema.js';
+import { errorMessage } from '../errorUtils.js';
 
 /**
  * Trust Bloom Filter クラス
@@ -132,7 +133,7 @@ export function bloomFilterFromBase64(data: string, params: {
       expectedDomainCount
     });
   } catch (error) {
-    throw new Error(`Failed to restore Bloom Filter from base64: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to restore Bloom Filter from base64: ${errorMessage(error)}`);
   }
 }
 

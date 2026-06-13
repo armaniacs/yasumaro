@@ -4,6 +4,8 @@
  * 問題点2: URLパスサニタイズ不足の修正
  */
 
+import { errorMessage } from './errorUtils.js';
+
 /**
  * 許可された文字とパターン
  */
@@ -163,9 +165,7 @@ export function sanitizePathForUrl(pathRaw: string): string {
 
     return result;
   } catch (error: unknown) {
-    // サニタイズエラーの場合は安全なデフォルト値を返す
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.warn('Path sanitization failed:', errorMessage);
+    console.warn('Path sanitization failed:', errorMessage(error));
     return '';
   }
 }

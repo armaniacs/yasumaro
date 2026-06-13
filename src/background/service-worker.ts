@@ -21,6 +21,7 @@ import { SqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import {
@@ -118,7 +119,7 @@ async function runMigration(): Promise<void> {
     } catch (e) {
         logError(
             'Failed to migrate settings',
-            { error: e instanceof Error ? e.message : String(e) },
+            { error: errorMessage(e) },
             ErrorCode.STORAGE_MIGRATION_FAILURE,
             'service-worker'
         );
@@ -278,7 +279,7 @@ export async function handleValidVisit(
         } catch (error) {
             await logWarn(
                 'Failed to encode URL for notification',
-                { error: error instanceof Error ? error.message : String(error) },
+                { error: errorMessage(error) },
                 ErrorCode.CRYPTO_HMAC_FAILURE,
                 'service-worker'
             );
@@ -328,7 +329,7 @@ export async function handleFetchUrl(
             'Fetch URL Error',
             {
                 url: message.payload?.url,
-                error: error instanceof Error ? error.message : String(error)
+                error: errorMessage(error)
             },
             ErrorCode.API_REQUEST_FAILURE,
             'service-worker'
@@ -861,7 +862,7 @@ export function createMessageHandler(): (
             } catch (error) {
                 logError(
                     'Service Worker Error',
-                    { error: error instanceof Error ? error.message : String(error) },
+                    { error: errorMessage(error) },
                     ErrorCode.INTERNAL_ERROR,
                     'service-worker'
                 );
@@ -908,7 +909,7 @@ export async function handleTabActivated(activeInfo: { tabId: number }): Promise
     } catch (error) {
         await logError('Failed to update badge on tab activation', {
             tabId: activeInfo.tabId,
-            error: error instanceof Error ? error.message : String(error)
+            error: errorMessage(error)
         }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
         chrome.action.setBadgeText({ text: '' });
     }
@@ -957,7 +958,7 @@ export async function handleInstalled(details: { reason?: string; previousVersio
         } catch (error) {
             await logWarn(
                 'Legacy privacy consent migration failed',
-                { error: error instanceof Error ? error.message : String(error) },
+                { error: errorMessage(error) },
                 ErrorCode.UNKNOWN_ERROR,
                 'service-worker'
             );
@@ -994,7 +995,7 @@ export async function handleStartup(): Promise<void> {
     } catch (error) {
         await logError(
             'Service Worker startup - cache rehydration failed',
-            { error: error instanceof Error ? error.message : String(error) },
+            { error: errorMessage(error) },
             ErrorCode.STORAGE_READ_FAILURE,
             'service-worker'
         );
@@ -1008,7 +1009,7 @@ export async function handleStartup(): Promise<void> {
     } catch (error) {
         logWarn(
             'Permission cleanup failed on startup',
-            { error: error instanceof Error ? error.message : String(error) },
+            { error: errorMessage(error) },
             undefined,
             'service-worker'
         );

@@ -4,6 +4,7 @@
  */
 
 import { saveSettingsWithAllowedUrls, getSettings, Settings } from '../../utils/storage.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { extractSettingsFromInputs } from '../settingsUiHelper.js';
 import { getMessage } from '../i18n.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from './fieldValidation.js';
@@ -173,7 +174,7 @@ export async function handleSaveAndTest(
       await saveSettingsWithAllowedUrls(mergedSettings);
     } catch (error) {
       console.error('[SettingsSaver] Error during saveSettingsWithAllowedUrls:', error);
-      statusDiv.textContent = getMessage('saveError') + ': ' + (error instanceof Error ? error.message : String(error));
+      statusDiv.textContent = getMessage('saveError') + ': ' + (errorMessage(error));
       statusDiv.className = 'error';
       return;
     }

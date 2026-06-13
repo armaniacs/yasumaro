@@ -2,6 +2,7 @@ import { getSettings, StorageKeys, Settings } from '../utils/storage.js';
 import { LocalAIClient, LocalAIAvailability, LocalAISummaryResult } from './localAiClient.js';
 import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
@@ -68,8 +69,7 @@ export class AIClient {
             const providerInstance = factory(settings);
             return await providerInstance.generateSummary(content, tagSummaryMode);
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            addLog(LogType.ERROR, `Generate summary failed: ${errorMessage}`);
+            addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`);
             return { success: false, summary: "Error: Failed to generate summary. Please try again." };
         }
     }
@@ -91,9 +91,9 @@ export class AIClient {
             const providerInstance = factory(settings);
             return await providerInstance.testConnection();
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            addLog(LogType.ERROR, `Connection test failed: ${errorMessage}`);
-            return { success: false, message: errorMessage };
+            const msg = errorMessage(error);
+            addLog(LogType.ERROR, `Connection test failed: ${msg}`);
+            return { success: false, message: msg };
         }
     }
 

@@ -7,6 +7,7 @@
  */
 
 import type { EncryptedData } from './typesCrypto.js';
+import { errorMessage } from './errorUtils.js';
 
 // 定数設定
 const PBKDF2_ITERATIONS = 100000;
@@ -394,7 +395,7 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
         }
     } catch (error: unknown) {
         // If loading fails, we'll generate a new key
-        console.warn('Failed to load HMAC key, generating new one:', error instanceof Error ? error.message : String(error));
+        console.warn('Failed to load HMAC key, generating new one:', errorMessage(error));
     }
 
     // Generate new key

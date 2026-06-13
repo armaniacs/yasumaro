@@ -5,6 +5,7 @@
  */
 
 import type { TrancoTier, SafetyMode } from '../utils/trustDb/trustDbSchema.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
 import { getTrustDb } from '../utils/trustDb/trustDb.js';
 import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
@@ -290,9 +291,8 @@ async function updateTrancoList(): Promise<void> {
       updateTrancoStatus({ error: result.error || 'Update failed' });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logError('TrustSettings', { error: errorMessage }, ErrorCode.TRANCO_FETCH_FAILED);
-    updateTrancoStatus({ error: errorMessage });
+    logError('TrustSettings', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED);
+    updateTrancoStatus({ error: errorMessage(error) });
   }
 }
 

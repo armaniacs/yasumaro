@@ -8,6 +8,7 @@ import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.j
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
@@ -58,9 +59,8 @@ export class OpenAIProvider extends AIProviderStrategy {
             try {
                 validateUrlForAIRequests(this.baseUrl);
             } catch (error: unknown) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage}`);
-                throw new Error(`Invalid baseUrl: ${errorMessage}`);
+                addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
+                throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);
             }
         }
 
@@ -185,8 +185,8 @@ export class OpenAIProvider extends AIProviderStrategy {
             const data = await response.json();
             return this._extractSummary(data);
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            if (errorMessage.includes('timed out')) {
+            const msg = errorMessage(error);
+            if (msg.includes('timed out')) {
                 return { success: false, summary: "Error: AI request timed out. Please check your connection." };
             }
             return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
@@ -236,15 +236,14 @@ export class OpenAIProvider extends AIProviderStrategy {
                 return { success: false, message: `AI API Error: ${response.status} ${response.statusText}` };
             }
         } catch (e: unknown) {
-            // より具体的なエラーメッセージ
-            const errorMessage = e instanceof Error ? e.message : String(e);
+            const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : 'Error';
-            if (errorMessage.includes('timeout')) {
+            if (msg.includes('timeout')) {
                 return { success: false, message: 'Connection timeout. Check your network or Base URL.' };
-            } else if (errorMessage.includes('Failed to fetch') || errorName === 'TypeError') {
+            } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
                 return { success: false, message: 'Cannot connect. Check your Base URL and network.' };
             } else {
-                return { success: false, message: `Connection error: ${errorMessage}` };
+                return { success: false, message: `Connection error: ${msg}` };
             }
         }
     }

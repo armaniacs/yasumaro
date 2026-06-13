@@ -4,6 +4,7 @@
  */
 
 import { parseUblockFilterListWithErrors, ParseError } from '../../utils/ublockParser.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 interface Source {
   blockDomains?: string[];
@@ -85,7 +86,6 @@ export function previewUblockFilter(text: string): PreviewResult {
       errorDetails: result.errors
     };
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       blockCount: 0,
       exceptionCount: 0,
@@ -93,7 +93,7 @@ export function previewUblockFilter(text: string): PreviewResult {
       errorDetails: [{
         lineNumber: 0,
         line: '',
-        message: errorMessage
+        message: errorMessage(error)
       }]
     };
   }

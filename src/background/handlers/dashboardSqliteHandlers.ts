@@ -1,5 +1,6 @@
 import { SqliteClient } from '../sqliteClient.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
@@ -107,7 +108,7 @@ export async function handleDashboardSqlite(
     } catch (error) {
         logError('Dashboard SQLite error', {
             subtype,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
         }, ErrorCode.UNKNOWN_ERROR);
         return { success: false, error: String(error) };
     }

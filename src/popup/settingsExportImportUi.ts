@@ -4,6 +4,7 @@
  */
 
 import { getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import {
     exportSettings,
@@ -91,9 +92,8 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
                 showStatus('status', getMessage('settingsExported'), 'success');
             }
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logError('Export error', { cause: errorMessage }, ErrorCode.SETTINGS_EXPORT_FAILURE);
-            showStatus('status', `${getMessage('exportError')}: ${errorMessage}`, 'error');
+            logError('Export error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_EXPORT_FAILURE);
+            showStatus('status', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
         }
     });
 
@@ -168,9 +168,8 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
             }
 
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logError('Import error', { cause: errorMessage }, ErrorCode.SETTINGS_IMPORT_FAILURE);
-            showStatus('status', `${getMessage('importError')}: ${errorMessage}`, 'error');
+            logError('Import error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE);
+            showStatus('status', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
         }
     });
 
@@ -194,9 +193,8 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
                 showStatus('status', `${getMessage('importError')}: Failed to apply settings`, 'error');
             }
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logError('Import error', { cause: errorMessage }, ErrorCode.SETTINGS_IMPORT_FAILURE);
-            showStatus('status', `${getMessage('importError')}: ${errorMessage}`, 'error');
+            logError('Import error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE);
+            showStatus('status', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
         }
 
         closeImportModal();

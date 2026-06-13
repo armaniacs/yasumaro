@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, getSettings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { showStatus } from './settingsUiHelper.js';
 
@@ -73,8 +74,7 @@ export async function copyToClipboard(rules: UblockRules): Promise<boolean> {
     await navigator.clipboard.writeText(text);
     return true;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    addLog(LogType.ERROR, 'クリップボードコピー失敗', { error: errorMessage });
+    addLog(LogType.ERROR, 'クリップボードコピー失敗', { error: errorMessage(error) });
     return false;
   }
 }
@@ -111,9 +111,8 @@ async function handleExport(): Promise<void> {
     downloadAsFile(rules);
     showStatus('domainStatus', 'エクスポートしました', 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    addLog(LogType.ERROR, 'エクスポートエラー', { error: errorMessage });
-    showStatus('domainStatus', `エクスポートエラー: ${errorMessage}`, 'error');
+    addLog(LogType.ERROR, 'エクスポートエラー', { error: errorMessage(error) });
+    showStatus('domainStatus', `エクスポートエラー: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -137,9 +136,8 @@ async function handleCopy(): Promise<void> {
       showStatus('domainStatus', 'コピーに失敗しました', 'error');
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    addLog(LogType.ERROR, 'コピーエラー', { error: errorMessage });
-    showStatus('domainStatus', `コピーエラー: ${errorMessage}`, 'error');
+    addLog(LogType.ERROR, 'コピーエラー', { error: errorMessage(error) });
+    showStatus('domainStatus', `コピーエラー: ${errorMessage(error)}`, 'error');
   }
 }
 

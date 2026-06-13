@@ -4,6 +4,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
@@ -45,13 +46,11 @@ export const saveToObsidianStep = async (
 
     return { ...context, obsidianDuration };
   } catch (error: unknown) {
-    // Throw error to trigger retry
-    const errorMessage = error instanceof Error ? error.message : String(error);
     addLog(LogType.ERROR, 'Failed to save to Obsidian', {
-      error: errorMessage,
+      error: errorMessage(error),
       url,
       title
     });
-    throw error instanceof Error ? error : new Error(errorMessage);
+    throw error instanceof Error ? error : new Error(errorMessage(error));
   }
 };

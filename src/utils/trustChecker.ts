@@ -8,6 +8,7 @@ import type { TrustResult, AlertSettings, SafetyMode, TrancoTier } from './trust
 import { getTrustDb } from './trustDb/trustDb.js';
 import { StorageKeys } from './storage.js';
 import { logInfo, logDebug, logWarn } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 
 // ============================================================================
 // Alert Settings
@@ -80,7 +81,7 @@ export class TrustChecker {
       this.alertConfigInitialized = true;
       await logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
     } catch (error) {
-      await logWarn('TrustChecker', { error: error instanceof Error ? error.message : String(error) }, undefined, 'Failed to load alert settings');
+      await logWarn('TrustChecker', { error: errorMessage(error) }, undefined, 'Failed to load alert settings');
       // エラーの場合も初期化済みフラグを立てて、デフォルト値を使用する
       this.alertConfigInitialized = true;
     }

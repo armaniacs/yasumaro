@@ -1,5 +1,6 @@
 import { logWarn, logDebug } from '../utils/logger.js';
 import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 interface CacheEntry {
   content: string;
@@ -79,7 +80,7 @@ export class ManualContentFetcher {
         } catch (e) {
           await logWarn(
             'Failed to create background tab, falling back to existing tabs only',
-            { url: sanitizedUrl, error: e instanceof Error ? e.message : String(e) },
+            { url: sanitizedUrl, error: errorMessage(e) },
             undefined,
             'manualContentFetcher'
           );
@@ -117,7 +118,7 @@ export class ManualContentFetcher {
     } catch (err: unknown) {
       await logWarn(
         'Failed to get page content from tab',
-        { url: sanitizedUrl, error: err instanceof Error ? err.message : String(err) },
+        { url: sanitizedUrl, error: errorMessage(err) },
         undefined,
         'manualContentFetcher'
       );

@@ -4,6 +4,7 @@
  */
 
 import { PermissionManager } from '../../utils/permissionManager.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { logWarn } from '../../utils/logger.js';
 
 /**
@@ -105,7 +106,7 @@ export function setupAIProviderChangeListener(elements: AIProviderElements): voi
         const provider = elements.select.value;
         if (provider !== 'openai-compatible') {
             requestAIProviderPermission(provider).catch((error) => {
-                logWarn('AIProvider', { error: error instanceof Error ? error.message : String(error), provider }, undefined, 'Failed to request AI provider permission');
+                logWarn('AIProvider', { error: errorMessage(error), provider }, undefined, 'Failed to request AI provider permission');
             });
         }
     });

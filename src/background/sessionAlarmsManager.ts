@@ -5,6 +5,7 @@
  */
 
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
 
 // 定数
@@ -22,10 +23,9 @@ export async function updateActivity(): Promise<void> {
             [STORAGE_KEY_LAST_ACTIVITY]: Date.now()
         });
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logWarn(
             'Failed to update activity',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             undefined,
             'sessionAlarmsManager.ts'
         );
@@ -54,10 +54,9 @@ export async function startTimeoutChecker(): Promise<void> {
             'sessionAlarmsManager.ts'
         );
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logError(
             'Failed to start session timeout checker',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.INTERNAL_ERROR,
             'sessionAlarmsManager.ts'
         );
@@ -76,10 +75,9 @@ export async function stopTimeoutChecker(): Promise<void> {
             'sessionAlarmsManager.ts'
         );
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logWarn(
             'Failed to stop session timeout checker',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             undefined,
             'sessionAlarmsManager.ts'
         );
@@ -111,10 +109,9 @@ async function checkTimeout(): Promise<void> {
             );
         }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logError(
             'Failed to check session timeout',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.INTERNAL_ERROR,
             'sessionAlarmsManager.ts'
         );
@@ -135,10 +132,9 @@ async function lockSession(): Promise<void> {
             // 送信失敗は無視
         });
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logError(
             'Failed to lock session',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.INTERNAL_ERROR,
             'sessionAlarmsManager.ts'
         );
@@ -172,10 +168,9 @@ export async function initialize(): Promise<void> {
         // タイムアウトチェッカーを開始
         await startTimeoutChecker();
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         logError(
             'Failed to initialize session alarms manager',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.INTERNAL_ERROR,
             'sessionAlarmsManager.ts'
         );

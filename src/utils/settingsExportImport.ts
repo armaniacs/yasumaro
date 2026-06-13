@@ -8,6 +8,7 @@ import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
 import { hashPasswordWithPBKDF2, verifyPasswordWithPBKDF2, generateSalt } from './crypto.js';
 import { API_KEY_FIELDS } from './storageSettings.js';
 import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
@@ -128,7 +129,7 @@ export async function exportEncryptedSettings(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: errorMessage(error)
     };
   }
 }
@@ -219,7 +220,7 @@ export async function importEncryptedSettings(
   } catch (error) {
     await logError(
       'Failed to import encrypted settings',
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: errorMessage(error) },
       ErrorCode.SETTINGS_IMPORT_FAILURE,
       'settingsExportImport.ts'
     );
@@ -440,7 +441,7 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
   } catch (error) {
     await logError(
       'Failed to import settings',
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: errorMessage(error) },
       ErrorCode.SETTINGS_IMPORT_FAILURE,
       'settingsExportImport.ts'
     );

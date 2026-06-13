@@ -19,6 +19,7 @@ import {
   clearAll as sqliteClearAll,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 interface AICapabilities {
     available: 'readily' | 'after-download' | 'no';
@@ -116,9 +117,8 @@ export async function ensureSession(): Promise<boolean | { success: false; error
         console.log("Offscreen: Session created successfully.");
         return true;
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Offscreen: Failed to create session', error);
-        return { success: false, error: `Session creation failed: ${errorMessage}` };
+        return { success: false, error: `Session creation failed: ${errorMessage(error)}` };
     }
 }
 
@@ -188,7 +188,7 @@ export function handleOffscreenMessage(
                 } catch (promptError: unknown) {
                     console.error('Offscreen: Prompt extraction failed', promptError);
                     session = null;
-                    sendResponse({ success: false, error: `Prompt failed: ${promptError instanceof Error ? promptError.message : String(promptError)}` });
+                    sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
             } else if (msg.type === 'SQLITE_INIT') {
                 const ok = await sqliteInit();
@@ -304,7 +304,7 @@ export function handleOffscreenMessage(
             }
         } catch (err: unknown) {
             console.error('Offscreen: Unexpected error', err);
-            sendResponse({ success: false, error: err instanceof Error ? err.message : String(err) });
+            sendResponse({ success: false, error: errorMessage(err) });
         }
     })();
 

@@ -6,6 +6,7 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 const MESSAGE_TIMEOUT_MS = 30000; // 30秒
@@ -89,8 +90,7 @@ export class LocalAIClient {
             const response = await this.msgOffscreen('CHECK_AVAILABILITY');
             return response?.status || 'unsupported';
         } catch (e: unknown) {
-            const errorMessage = e instanceof Error ? e.message : String(e);
-            addLog(LogType.ERROR, 'LocalAIClient: Failed to check availability via offscreen', { error: errorMessage });
+            addLog(LogType.ERROR, 'LocalAIClient: Failed to check availability via offscreen', { error: errorMessage(e) });
             return 'unsupported';
         }
     }

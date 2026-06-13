@@ -14,6 +14,7 @@ import {
 } from './dashboardSqliteService.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 const PAGE_SIZE = 20;
 
@@ -104,7 +105,7 @@ async function loadData(options: {
       state.total = 0;
     }
   } catch (err) {
-    state.error = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    state.error = `Error: ${errorMessage(err)}`;
     state.entries = [];
     state.total = 0;
   } finally {
