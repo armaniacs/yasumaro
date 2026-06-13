@@ -13,7 +13,7 @@
 ## 日本語
 
 ### 概要
-Obsidian Weave（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
+Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー保護に努めています。本ポリシーでは、収集されるデータ、その使用方法、およびユーザーの権利について説明します。
 
 ### データの収集
 本拡張機能は、以下のデータを**ユーザーのデバイス上のみ（ローカル）**で収集します。
@@ -172,7 +172,7 @@ v4.2.1以降、以下の機能が追加されました：
 ## English
 
 ### Overview
-Obsidian Weave ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
+Yasumaro ("the Extension") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights.
 
 ### Data Collection
 The Extension collects the following data **locally on your device**:

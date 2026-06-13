@@ -1,12 +1,12 @@
 ---
-title: "テストカバレッジ 45% から 91% へ — Obsidian Weave の品質改善記録"
+title: "テストカバレッジ 45% から 91% へ — Yasumaro の品質改善記録"
 emoji: "📊"
 type: "tech"
 topics: ["typescript", "vitest", "テスト", "chrome拡張機能", "ci"]
 published: false
 ---
 
-Obsidian Weave v5.2 に向けた開発の中で、テストカバレッジを 45% から 91% に引き上げました。この記事では、その過程で取り組んだことと、Chrome 拡張機能のテストで直面した課題を振り返ります。
+Yasumaro v5.2 に向けた開発の中で、テストカバレッジを 45% から 91% に引き上げました。この記事では、その過程で取り組んだことと、Chrome 拡張機能のテストで直面した課題を振り返ります。
 
 ---
 

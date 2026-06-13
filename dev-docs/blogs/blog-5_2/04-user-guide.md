@@ -1,12 +1,12 @@
 ---
-title: "Obsidian Weave v5.2 ユーザーガイド"
+title: "Yasumaro v5.2 ユーザーガイド"
 emoji: "📖"
 type: "idea"
 topics: ["obsidian", "chrome拡張機能", "ai", "使い方"]
 published: false
 ---
 
-Obsidian Weave は、Chrome でタブを閉じるときに閲覧内容を AI で要約して Obsidian の日次ノートに自動記録する Chrome 拡張機能です。
+Yasumaro は、Chrome でタブを閉じるときに閲覧内容を AI で要約して Obsidian の日次ノートに自動記録する Chrome 拡張機能です。
 
 この記事では v5.2 の機能を中心に、導入から日常的な使い方までを説明します。
 
@@ -35,7 +35,7 @@ Obsidian と連携するために [Local REST API](https://obsidian-local-rest-a
 
 ### 2. 拡張機能のインストール
 
-Chrome ウェブストアから「Obsidian Weave」をインストールします。インストール後、ツールバーのアイコンをクリックするとポップアップが開きます。
+Chrome ウェブストアから「Yasumaro」をインストールします。インストール後、ツールバーのアイコンをクリックするとポップアップが開きます。
 
 ### 3. 初回設定
 
@@ -138,7 +138,7 @@ v5.2 ではユーザーが直接体感できる変更はほとんどありませ
 
 ## 関連リンク
 
-- [obsidian-weave リポジトリ](https://github.com/armaniacs/obsidian-weave)
+- [yasumaro リポジトリ](https://github.com/armaniacs/yasumaro)
 - [v5.2 リリースノート](./05-release-note.md)
 - [v5.1.2 → v5.1.26 技術まとめ](./01-v512-to-v5126.md)
 - [v5.1.27 → v5.1.30 技術まとめ](./02-v5127-to-v5130.md)

@@ -8,7 +8,7 @@
 
 ### 概要
 
-Obsidian Weaveは、Chrome Extensionのi18n APIを使用した多言語対応アーキテクチャを採用しています。本ガイドでは、翻訳キーの命名規則、データ属性の使い方、新しい翻訳の追加手順について説明します。
+Yasumaroは、Chrome Extensionのi18n APIを使用した多言語対応アーキテクチャを採用しています。本ガイドでは、翻訳キーの命名規則、データ属性の使い方、新しい翻訳の追加手順について説明します。
 
 ### サポートされる言語
 
@@ -259,7 +259,7 @@ test('翻訳取得', () => {
 
 ### Overview
 
-Obsidian Weave uses a multi-language architecture based on Chrome Extension i18n API. This guide covers translation key naming conventions, data attribute usage, and procedures for adding new translations.
+Yasumaro uses a multi-language architecture based on Chrome Extension i18n API. This guide covers translation key naming conventions, data attribute usage, and procedures for adding new translations.
 
 ### Supported Languages
 

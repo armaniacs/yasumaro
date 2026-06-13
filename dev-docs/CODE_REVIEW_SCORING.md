@@ -1,6 +1,6 @@
 # Code Review Scoring Criteria
 
-このドキュメントは、Obsidian Weaveプロジェクトで使用しているChecking Teamによるコードレビューのスコアリング基準を定義します。
+このドキュメントは、Yasumaroプロジェクトで使用しているChecking Teamによるコードレビューのスコアリング基準を定義します。
 
 ## スコアリングシステム
 
