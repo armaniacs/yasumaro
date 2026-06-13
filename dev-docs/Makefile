@@ -1,7 +1,13 @@
-.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all lock-linux
+.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all lock-linux build-wasm
 
-build:
+# build: vendor WASM → node_modules コピー後にバンドル
+build: copy-wasm
 	npm run build
+
+# vendor WASM を node_modules にコピー
+copy-wasm:
+	cp vendor/wa-sqlite/wa-sqlite-async.wasm node_modules/wa-sqlite/dist/
+	cp vendor/wa-sqlite/wa-sqlite-async.mjs node_modules/wa-sqlite/dist/
 
 clean:
 	npm run clean
@@ -54,3 +60,10 @@ test-news:
 
 test-news-watch:
 	npm run test:watch -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
+
+# wa-sqlite WASM を Emscripten で再ビルド（FTS5 有効）
+# 前提: brew install emscripten
+build-wasm:
+	bash vendor/wa-sqlite/build-wasm.sh
+	cp vendor/wa-sqlite/wa-sqlite-async.wasm node_modules/wa-sqlite/dist/
+	cp vendor/wa-sqlite/wa-sqlite-async.mjs node_modules/wa-sqlite/dist/
