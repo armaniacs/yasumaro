@@ -26,8 +26,14 @@ import {
     generateHmacSignature,
     verifyHmacSignature,
     hashUrl,
-    getNotificationHmacKey
+    getNotificationHmacKey,
+    encryptEnvelope,
+    decryptEnvelope,
+    migrateLegacyCiphertext,
+    isEncryptionEnvelope,
+    CURRENT_ENVELOPE_VERSION,
 } from '../crypto.js';
+import type { EncryptionEnvelope } from '../crypto.js';
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {
@@ -702,5 +708,129 @@ describe('deriveKey', () => {
         const enc1 = await encrypt(plaintext, key1);
         const enc2 = await encrypt(plaintext, key2);
         expect(enc1.ciphertext).not.toBe(enc2.ciphertext);
+    });
+});
+
+describe('versioned encryption envelope (H3)', () => {
+    const TEST_PASSWORD = 'test-master-password-12345';
+
+    describe('encryptEnvelope / decryptEnvelope', () => {
+        test('encrypts and decrypts a string with current version', async () => {
+            const plaintext = 'sk-test-openai-key-12345';
+            const envelope = await encryptEnvelope(plaintext, TEST_PASSWORD);
+            expect(envelope.version).toBe(CURRENT_ENVELOPE_VERSION);
+            const decrypted = await decryptEnvelope(envelope, TEST_PASSWORD);
+            expect(decrypted).toBe(plaintext);
+        });
+
+        test('fails to decrypt with wrong password', async () => {
+            const envelope = await encryptEnvelope('secret', TEST_PASSWORD);
+            await expect(decryptEnvelope(envelope, 'wrong-password')).rejects.toThrow();
+        });
+
+        test('envelope contains version, kdf, hash, iterations, salt, iv, data', async () => {
+            const envelope = await encryptEnvelope('hello', TEST_PASSWORD);
+            expect(envelope).toMatchObject({
+                version: expect.any(Number),
+                kdf: 'pbkdf2',
+                hash: expect.stringMatching(/^SHA-/),
+                iterations: expect.any(Number),
+                salt: expect.any(String),
+                iv: expect.any(String),
+                data: expect.any(String),
+            });
+        });
+
+        test('each encryption produces unique salt and iv', async () => {
+            const env1 = await encryptEnvelope('same', TEST_PASSWORD);
+            const env2 = await encryptEnvelope('same', TEST_PASSWORD);
+            expect(env1.salt).not.toBe(env2.salt);
+            expect(env1.iv).not.toBe(env2.iv);
+            expect(env1.data).not.toBe(env2.data);
+        });
+
+        test('handles empty string', async () => {
+            const envelope = await encryptEnvelope('', TEST_PASSWORD);
+            const decrypted = await decryptEnvelope(envelope, TEST_PASSWORD);
+            expect(decrypted).toBe('');
+        });
+
+        test('handles long plaintext', async () => {
+            const plaintext = 'a'.repeat(10000);
+            const envelope = await encryptEnvelope(plaintext, TEST_PASSWORD);
+            const decrypted = await decryptEnvelope(envelope, TEST_PASSWORD);
+            expect(decrypted).toBe(plaintext);
+        });
+
+        test('handles unicode plaintext', async () => {
+            const plaintext = '日本語テスト🔐秘密鍵';
+            const envelope = await encryptEnvelope(plaintext, TEST_PASSWORD);
+            const decrypted = await decryptEnvelope(envelope, TEST_PASSWORD);
+            expect(decrypted).toBe(plaintext);
+        });
+    });
+
+    describe('isEncryptionEnvelope', () => {
+        test('returns true for valid envelope', async () => {
+            const envelope = await encryptEnvelope('test', TEST_PASSWORD);
+            expect(isEncryptionEnvelope(envelope)).toBe(true);
+        });
+
+        test('returns false for legacy EncryptedData', () => {
+            const legacy = { ciphertext: 'abc', iv: 'def' };
+            expect(isEncryptionEnvelope(legacy)).toBe(false);
+        });
+
+        test('returns false for non-objects', () => {
+            expect(isEncryptionEnvelope(null)).toBe(false);
+            expect(isEncryptionEnvelope(undefined)).toBe(false);
+            expect(isEncryptionEnvelope('string')).toBe(false);
+            expect(isEncryptionEnvelope(42)).toBe(false);
+        });
+
+        test('returns false for incomplete envelope', () => {
+            expect(isEncryptionEnvelope({ version: 2 })).toBe(false);
+            expect(isEncryptionEnvelope({ version: 2, kdf: 'pbkdf2' })).toBe(false);
+        });
+    });
+
+    describe('migrateLegacyCiphertext', () => {
+        test('converts legacy EncryptedData to EncryptionEnvelope', async () => {
+            const plaintext = 'sk-legacy-api-key-12345';
+            const salt = generateSalt();
+            const legacyKey = await deriveKey('legacy-secret', salt);
+            const legacyData = await encrypt(plaintext, legacyKey);
+
+            const envelope = await migrateLegacyCiphertext(legacyData, legacyKey, TEST_PASSWORD);
+
+            expect(isEncryptionEnvelope(envelope)).toBe(true);
+            expect(envelope.version).toBe(CURRENT_ENVELOPE_VERSION);
+
+            const decrypted = await decryptEnvelope(envelope, TEST_PASSWORD);
+            expect(decrypted).toBe(plaintext);
+        });
+
+        test('migrated data is decryptable with new password', async () => {
+            const plaintext = 'sk-migrated-key';
+            const salt = generateSalt();
+            const legacyKey = await deriveKey('old-secret', salt);
+            const legacyData = await encrypt(plaintext, legacyKey);
+
+            const newPassword = 'completely-new-password';
+            const envelope = await migrateLegacyCiphertext(legacyData, legacyKey, newPassword);
+
+            const decrypted = await decryptEnvelope(envelope, newPassword);
+            expect(decrypted).toBe(plaintext);
+        });
+
+        test('throws for invalid legacy data', async () => {
+            const salt = generateSalt();
+            const legacyKey = await deriveKey('secret', salt);
+            const invalidData = { ciphertext: 'bad', iv: 'bad' };
+
+            await expect(
+                migrateLegacyCiphertext(invalidData, legacyKey, TEST_PASSWORD)
+            ).rejects.toThrow();
+        });
     });
 });

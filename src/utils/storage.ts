@@ -21,6 +21,14 @@ import {
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2
 } from './crypto.js';
+export {
+    encryptEnvelope,
+    decryptEnvelope,
+    migrateLegacyCiphertext,
+    isEncryptionEnvelope,
+    CURRENT_ENVELOPE_VERSION,
+} from './crypto.js';
+export type { EncryptionEnvelope } from './crypto.js';
 import { withOptimisticLock } from './optimisticLock.js';
 import { normalizeUrl } from './urlUtils.js';
 
