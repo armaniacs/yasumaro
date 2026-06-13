@@ -101,6 +101,8 @@ export function init(): void {
 
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
+
+    chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
 }
 
 /**
@@ -673,6 +675,18 @@ async function setupSnapshotAlarm(force = false): Promise<boolean> {
 
 // Handle snapshot alarm
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'yasumaro-daily-purge') {
+    try {
+      const result = await sqliteClient.purgeOldRecords();
+      if (result) {
+        logInfo('Daily purge completed', { purged: result.purged }, 'service-worker');
+      }
+    } catch (err) {
+      logWarn('Daily purge failed', { error: errorMessage(err) }, 'service-worker');
+    }
+    return;
+  }
+
   if (alarm.name !== 'yasumaro-snapshot') return;
 
   try {

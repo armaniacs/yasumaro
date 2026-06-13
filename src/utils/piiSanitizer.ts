@@ -71,6 +71,36 @@ const PII_PATTERNS: PiiPattern[] = [
     {
         type: 'ipv6',
         pattern: /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b/
+    },
+    // US Social Security Number (SSN): 9桁（3-2-4形式）
+    {
+        type: 'ssn',
+        pattern: /\b\d{3}-\d{2}-\d{4}\b/
+    },
+    // US phone number: (XXX) XXX-XXXX or +1-XXX-XXX-XXXX
+    {
+        type: 'phoneUs',
+        pattern: /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/
+    },
+    // Chinese phone number: +86 or 1[3-9]XXXXXXXXX
+    {
+        type: 'phoneCn',
+        pattern: /(?:\+?86[-.\s]?)?1[3-9]\d{9}\b/
+    },
+    // Chinese ID number: 18 digits (last may be X)
+    {
+        type: 'idCn',
+        pattern: /\b\d{17}[\dXx]\b/
+    },
+    // Korean Resident Registration Number: 6-7 digits (YYMMDD-NGNNNN)
+    {
+        type: 'rrnKr',
+        pattern: /\b\d{6}[-.\s]?[1-4]\d{6}\b/
+    },
+    // Korean phone number: +82 or 01X-XXXX-XXXX
+    {
+        type: 'phoneKr',
+        pattern: /(?:\+?82[-.\s]?)?0?\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/
     }
 ];
 

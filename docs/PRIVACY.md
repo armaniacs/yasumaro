@@ -1,8 +1,9 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年6月11日 / Last Updated: June 11, 2026**
+**最終更新日: 2026年6月13日 / Last Updated: June 13, 2026**
 
 > **更新履歴 / Update History**:
+> - **2026年6月13日**: v5.1.0 - PII サニタイゼーション強化（多言語対応）、データ保持期間の自動削除実装
 > - **2026年6月11日**: v5.0.0 - SQLite (OPFS) 移行、データ保持ポリシー追加、GDPR 削除権の物理削除対応
 > - **2026年3月9日**: v4.2.1 - 自動コンテンツフェッチ機能の有効化手順、URLログの記録について追加
 > - **2026年2月23日**: v4.1.3 - マスターパスワード保護機能追加
@@ -37,6 +38,8 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
 - 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
 - **データ保持ポリシー**: 閲覧履歴は90日間または1000件（先に到達した方）保持されます。保持期間を超えたデータは自動的に削除されます。
+  - **自動削除の仕組み**: サービスワーカーが24時間ごとに `chrome.alarms` を使用して自動パージを実行します。90日経過した非スター付きエントリが物理削除され、総数が1000件を超える場合は古いエントリから追加削除されます。スター付きエントリは自動削除の対象外です。
+  - **PII サニタイゼーション**: 取得されたページコンテンツは保存前に PII（個人情報）サニタイザーで処理されます。メールアドレス、クレジットカード番号、電話番号（日本・米国・中国・韓国）、マイナンバー、SSN（米国社会保障番号）などが自動的にマスクされます。
 - **旧バージョンからの移行**: 旧バージョンからのデータ移行はOPFS上のSQLite DBに対して実行されます。移行完了後、旧ストレージのデータは削除されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
 
@@ -188,6 +191,8 @@ The Extension collects the following data **locally on your device**:
 - All configuration data is stored in **Chrome's local storage** on your device.
 - Browsing history entries are also saved to **your local Obsidian vault**.
 - **Data Retention Policy**: Browsing history is retained for 90 days or 1,000 entries (whichever comes first). Data exceeding the retention period is automatically deleted.
+  - **Automatic Deletion Mechanism**: The service worker runs an automatic purge every 24 hours using `chrome.alarms`. Non-starred entries older than 90 days are physically deleted. If the total count exceeds 1,000, the oldest non-starred entries are additionally removed. Starred entries are exempt from automatic deletion.
+  - **PII Sanitization**: Fetched page content is processed through a PII (Personally Identifiable Information) sanitizer before storage. Email addresses, credit card numbers, phone numbers (Japan, US, China, Korea), My Number (Japan), SSN (US Social Security Numbers), and other PII patterns are automatically masked.
 - **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
 - **No data is stored on our servers.**
 

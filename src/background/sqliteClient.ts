@@ -223,4 +223,12 @@ export class SqliteClient {
   async clearAll(): Promise<boolean> {
     return (await this.call<void>('SQLITE_CLEAR_ALL')) !== null;
   }
+
+  async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
+    return this.call<{ purged: number }>(
+      'SQLITE_PURGE',
+      { retentionDays, maxRecords },
+      (res) => ({ purged: Number(res.purged || 0) }),
+    );
+  }
 }

@@ -749,6 +749,79 @@ export async function clearAll(): Promise<{ success: boolean; error?: string }> 
 }
 
 // ============================================================================
+// Data Retention
+// ============================================================================
+
+const DEFAULT_RETENTION_DAYS = 90;
+const DEFAULT_MAX_RECORDS = 1000;
+
+/**
+ * Purge old browsing log records based on retention policy.
+ * Deletes records older than retentionDays (excluding starred items).
+ * If total non-deleted records still exceed maxRecords, deletes oldest non-starred.
+ */
+export async function purgeOldRecords(
+  retentionDays: number = DEFAULT_RETENTION_DAYS,
+  maxRecords: number = DEFAULT_MAX_RECORDS
+): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  try {
+    if (!dbHandle && !usingFallbackStorage) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.purgeOldRecords(retentionDays, maxRecords);
+    }
+
+    const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    let totalPurged = 0;
+
+    await execWithCache(
+      `DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0`,
+      [cutoffMs]
+    );
+
+    let changes1 = 0;
+    await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
+      changes1 = Number(row[0]);
+    });
+    totalPurged += changes1;
+
+    let totalCount = 0;
+    await execWithCache(
+      'SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0',
+      [],
+      (row: SqliteValue[]) => {
+        totalCount = Number(row[0]);
+      }
+    );
+
+    if (totalCount > maxRecords) {
+      const excess = totalCount - maxRecords;
+      await execWithCache(
+        `DELETE FROM browsing_logs WHERE id IN (
+          SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
+          ORDER BY created_at ASC LIMIT ?
+        )`,
+        [excess]
+      );
+
+      let changes2 = 0;
+      await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
+        changes2 = Number(row[0]);
+      });
+      totalPurged += changes2;
+    }
+
+    return { success: true, purged: totalPurged };
+  } catch (error) {
+    logError('SQLite: purgeOldRecords failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
