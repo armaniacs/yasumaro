@@ -40,7 +40,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
 - 🗄️ **ローカル SQLite 永続化**（OPFS + wa-sqlite + FTS5 全文検索、Obsidian 不要でも動作）
 - 🛡️ **プライバシー同意フロー**: 初回起動時に同意確認を表示。3回拒否で永久非表示、その後は制限モード（記録停止）で動作。GDPRに準拠した物理削除（DELETE FROM）対応。
-- 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [OPFS_FALLBACK.md](docs/OPFS_FALLBACK.md)）。
+- 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)
@@ -193,7 +193,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
 - 🗄️ **Local SQLite Persistence** (OPFS + wa-sqlite + FTS5 full-text search, works without Obsidian)
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
-- 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [OPFS_FALLBACK.md](docs/OPFS_FALLBACK.md)).
+- 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api)
