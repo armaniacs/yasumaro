@@ -94,6 +94,7 @@ let sqlite3: WaSqliteAPI | null = null;
 let initPromise: Promise<boolean> | null = null;
 let usingFallbackStorage = false;
 let fallbackStorage: FallbackStorage | null = null;
+let lastInitError: string | null = null;
 
 const PREPARED_STMT_CACHE_MAX_SIZE = 50;
 const preparedStmtCache = new Map<string, number>();
@@ -151,7 +152,8 @@ async function _doInit(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    logError('SQLite: init failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+    lastInitError = errorMessage(error);
+    console.error('SQLite: init failed', error);
     dbHandle = null;
     sqlite3 = null;
     initPromise = null;
@@ -667,7 +669,7 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; error?: string } | { success: false; error: string }> {
   try {
     if (usingFallbackStorage && fallbackStorage) {
       const countResult = await fallbackStorage.getCount();
@@ -679,7 +681,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       // Try to initialize if not yet initialized (consistent with query/search)
       const ok = await init();
       if (!ok || (!dbHandle && !usingFallbackStorage)) {
-        return { success: true, initialized: false, path: DB_FILENAME, fallback: false };
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, error: lastInitError || 'Init returned false' };
       }
       // If init switched to fallback, return fallback status
       if (usingFallbackStorage && fallbackStorage) {
