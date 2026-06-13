@@ -2,6 +2,12 @@
 
 [日本語](#日本語) | [English](#english)
 
+> **概要 / Summary:** Yasumaro は **2 つのストレージモード**を持ちます。
+> 1. **通常モード（IndexedDB + SQLite + FTS5）** — wa-sqlite による全文検索対応のメインストレージ
+> 2. **簡易ストレージモード（chrome.storage.local フォールバック）** — IndexedDB が利用できない環境向け
+>
+> 旧称の `OPFS_FALLBACK.md` はリネームされました（旧 OPFS ベースの実装は廃止済み）。
+
 ---
 
 ## 日本語

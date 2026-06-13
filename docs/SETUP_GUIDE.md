@@ -205,7 +205,7 @@ ollama list
 
 **保持ポリシー**: 過去90日間の記録（最大1,000件）が保持されます。それを超えたデータは自動削除されます。
 
-**モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [OPFS_FALLBACK.md](OPFS_FALLBACK.md)）。
+**モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [STORAGE_MODES.md](STORAGE_MODES.md)）。
 
 ---
 
@@ -395,4 +395,4 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 
 **Retention Policy**: Records from the past 90 days (up to 1,000 entries) are retained. Data beyond this limit is automatically deleted.
 
-**Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [OPFS_FALLBACK.md](OPFS_FALLBACK.md) for details).
+**Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
