@@ -1,6 +1,6 @@
 /**
  * exportImport.ts
- * Settings export/import functionality for the dashboard
+ * Settings export/import and log import functionality for the dashboard
  */
 
 import { getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
@@ -25,11 +25,15 @@ import { loadDomainSettings } from '../popup/domainFilter.js';
 import { loadPrivacySettings } from '../popup/privacySettings.js';
 import { loadContentSettings } from '../popup/contentSettings.js';
 import { loadTrustSettings } from '../popup/trustSettings.js';
+import { importFromJson } from './importLogsService.js';
 
 // DOM Elements
 const exportSettingsBtn = document.getElementById('exportSettingsBtn') as HTMLButtonElement | null;
 const importSettingsBtn = document.getElementById('importSettingsBtn') as HTMLButtonElement | null;
 const importFileInput = document.getElementById('importFileInput') as HTMLInputElement | null;
+const importLogsBtn = document.getElementById('importLogsBtn') as HTMLButtonElement | null;
+const importLogsFileInput = document.getElementById('importLogsFileInput') as HTMLInputElement | null;
+const importLogsProgress = document.getElementById('importLogsProgress') as HTMLElement | null;
 
 const importConfirmModal = document.getElementById('importConfirmModal') as HTMLElement | null;
 const closeImportModalBtn = document.getElementById('closeImportModalBtn') as HTMLButtonElement | null;
@@ -204,6 +208,55 @@ export function initExportImport(): void {
 
   importConfirmModal?.addEventListener('click', (e: MouseEvent) => {
     if (e.target === importConfirmModal) closeImportModal();
+  });
+
+  // --- Log Import ---
+  importLogsBtn?.addEventListener('click', () => {
+    importLogsFileInput?.click();
+  });
+
+  importLogsFileInput?.addEventListener('change', async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (importLogsProgress) {
+      importLogsProgress.style.display = '';
+      importLogsProgress.textContent = getMessage('importLogsProcessing') || 'Importing...';
+      importLogsProgress.className = 'diag-result';
+    }
+
+    try {
+      const text = await file.text();
+      const result = await importFromJson(text, (current, total) => {
+        if (importLogsProgress) {
+          importLogsProgress.textContent = `${getMessage('importLogsProcessing') || 'Importing...'} ${current}/${total}`;
+        }
+      });
+
+      if ('error' in result) {
+        if (importLogsProgress) {
+          importLogsProgress.textContent = `${getMessage('importLogsError') || 'Import error'}: ${result.error}`;
+          importLogsProgress.className = 'diag-result error';
+        }
+      } else {
+        const msg = (getMessage('importLogsComplete') || 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)')
+          .replace('%{inserted}', String(result.inserted))
+          .replace('%{skipped}', String(result.skipped))
+          .replace('%{total}', String(result.total));
+        if (importLogsProgress) {
+          importLogsProgress.textContent = `✓ ${msg}`;
+          importLogsProgress.className = 'diag-result success';
+        }
+      }
+    } catch (error: unknown) {
+      if (importLogsProgress) {
+        importLogsProgress.textContent = `${getMessage('importLogsError') || 'Import error'}: ${errorMessage(error)}`;
+        importLogsProgress.className = 'diag-result error';
+      }
+    }
+
+    if (importLogsFileInput) importLogsFileInput.value = '';
   });
 }
 

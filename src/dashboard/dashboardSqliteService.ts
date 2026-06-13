@@ -238,3 +238,30 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
     return null;
   }
 }
+
+/**
+ * Import browsing log rows into SQLite.
+ */
+export async function importLogs(rows: Array<{
+  url: string; title?: string; summary?: string; tags?: string;
+  created_at: number; domain?: string; visit_duration?: number;
+  scroll_ratio?: number; is_starred?: number; is_deleted?: number;
+}>): Promise<{ inserted: number; skipped: number; total: number } | null> {
+  try {
+    const response = await sendDashboardMessage(
+      { subtype: 'import', rows },
+      { requireConfirmToken: true }
+    );
+    if (response.success) {
+      return {
+        inserted: Number(response.inserted || 0),
+        skipped: Number(response.skipped || 0),
+        total: Number(response.total || 0),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('importLogs failed:', error);
+    return null;
+  }
+}

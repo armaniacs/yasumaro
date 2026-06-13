@@ -1423,6 +1423,16 @@
           <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
         </div>
 
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="importLogsTitle">Import Browsing Logs</h3>
+          <p class="help-text" data-i18n="importLogsDesc">Import browsing history records from a JSON file exported from the Export Logs panel.</p>
+          <button id="importLogsBtn" class="secondary-btn" data-i18n="importLogsBtn">Import Logs from JSON</button>
+          <input type="file" id="importLogsFileInput" accept=".json" class="hidden" aria-hidden="true">
+          <div id="importLogsProgress" class="diag-result" style="display:none" aria-live="polite"></div>
+        </div>
+
         <div id="exportImportStatus" aria-live="polite"></div>
       </section>
 

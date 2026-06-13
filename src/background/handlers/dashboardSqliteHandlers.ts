@@ -5,7 +5,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 export const TOKEN_REQUIRED_SUBTYPES = new Set([
-    'toggle_star', 'update', 'delete', 'migrate', 'clear_all',
+    'toggle_star', 'update', 'delete', 'migrate', 'clear_all', 'import',
 ]);
 
 export const MODAL_REQUIRED_SUBTYPES = new Set([
@@ -93,6 +93,43 @@ export async function handleDashboardSqlite(
             case 'clear_all': {
                 const ok = await sqliteClient.clearAll();
                 return { success: ok };
+            }
+            case 'import': {
+                const rows = payload.rows as Array<{
+                    url: string; title?: string; summary?: string; tags?: string;
+                    created_at: number; domain?: string; visit_duration?: number;
+                    scroll_ratio?: number; is_starred?: number; is_deleted?: number;
+                }> | undefined;
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    return { success: false, error: 'No rows provided' };
+                }
+                const BATCH = 50;
+                let inserted = 0;
+                let skipped = 0;
+                for (let i = 0; i < rows.length; i += BATCH) {
+                    const batch = rows.slice(i, i + BATCH);
+                    for (const row of batch) {
+                        try {
+                            const result = await sqliteClient.insert({
+                                url: row.url,
+                                title: row.title ?? null,
+                                summary: row.summary ?? null,
+                                tags: row.tags ?? null,
+                                created_at: row.created_at,
+                                domain: row.domain ?? null,
+                                visit_duration: row.visit_duration ?? null,
+                                scroll_ratio: row.scroll_ratio ?? null,
+                                is_starred: row.is_starred ?? 0,
+                                is_deleted: row.is_deleted ?? 0,
+                            });
+                            if (result) inserted++;
+                            else skipped++;
+                        } catch {
+                            skipped++;
+                        }
+                    }
+                }
+                return { success: true, inserted, skipped, total: rows.length };
             }
             case 'status': {
                 const status = await sqliteClient.getStatus();
