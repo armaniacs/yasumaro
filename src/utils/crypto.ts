@@ -120,7 +120,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  * @param {Uint8Array} salt - ソルト
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
  */
-export async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+export async function deriveKey(password: string, salt: Uint8Array, iterations: number = PBKDF2_ITERATIONS, hash: string = HASH_ALGORITHM): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
@@ -138,8 +138,8 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
         {
             name: 'PBKDF2',
             salt: salt as BufferSource,
-            iterations: PBKDF2_ITERATIONS,
-            hash: HASH_ALGORITHM
+            iterations: iterations,
+            hash: hash
         },
         baseKey,
         {
@@ -515,4 +515,97 @@ export async function hashUrl(url: string): Promise<string> {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return `[hash:${hashHex.substring(0, 8)}]`;
+}
+
+// ============================================================================
+// Versioned Encryption Envelope (H3)
+// ============================================================================
+
+export const CURRENT_ENVELOPE_VERSION = 2;
+const ENVELOPE_ITERATIONS = 600_000;
+const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
+
+export interface EncryptionEnvelope {
+    version: number;
+    kdf: 'pbkdf2';
+    hash: string;
+    iterations: number;
+    salt: string;
+    iv: string;
+    data: string;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]!);
+    }
+    return btoa(binary);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+export async function encryptEnvelope(plaintext: string, password: string): Promise<EncryptionEnvelope> {
+    const salt = generateSalt();
+    const iv = generateIV();
+    const key = await deriveKey(password, salt, ENVELOPE_ITERATIONS, ENVELOPE_HASH);
+    const webcrypto = getWebCrypto();
+    const ciphertext = await webcrypto.subtle.encrypt(
+        { name: ENCRYPTION_ALGORITHM, iv: iv as BufferSource },
+        key,
+        new TextEncoder().encode(plaintext),
+    );
+    return {
+        version: CURRENT_ENVELOPE_VERSION,
+        kdf: 'pbkdf2',
+        hash: ENVELOPE_HASH,
+        iterations: ENVELOPE_ITERATIONS,
+        salt: bytesToBase64(salt),
+        iv: bytesToBase64(iv),
+        data: bytesToBase64(new Uint8Array(ciphertext)),
+    };
+}
+
+export async function decryptEnvelope(envelope: EncryptionEnvelope, password: string): Promise<string> {
+    const salt = base64ToBytes(envelope.salt);
+    const iv = base64ToBytes(envelope.iv);
+    const ciphertext = base64ToBytes(envelope.data);
+    const key = await deriveKey(password, salt, envelope.iterations, envelope.hash);
+    const webcrypto = getWebCrypto();
+    const plaintext = await webcrypto.subtle.decrypt(
+        { name: ENCRYPTION_ALGORITHM, iv: iv as BufferSource },
+        key,
+        ciphertext as BufferSource,
+    );
+    return new TextDecoder().decode(plaintext);
+}
+
+export function isEncryptionEnvelope(data: unknown): data is EncryptionEnvelope {
+    if (!data || typeof data !== 'object') return false;
+    const d = data as Record<string, unknown>;
+    return (
+        typeof d.version === 'number' &&
+        d.kdf === 'pbkdf2' &&
+        typeof d.hash === 'string' &&
+        typeof d.iterations === 'number' &&
+        typeof d.salt === 'string' &&
+        typeof d.iv === 'string' &&
+        typeof d.data === 'string'
+    );
+}
+
+export async function migrateLegacyCiphertext(
+    legacyData: EncryptedData,
+    legacyKey: CryptoKey,
+    password: string,
+): Promise<EncryptionEnvelope> {
+    const plaintext = await decryptData(legacyData, legacyKey);
+    return encryptEnvelope(plaintext, password);
 }
