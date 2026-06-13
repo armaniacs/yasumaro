@@ -1,4 +1,4 @@
-# Refactor Phase Report - Obsidian Weave
+# Refactor Phase Report - Yasumaro
 
 **日付**: 2026-02-25
 **バージョン**: 4.0.2
