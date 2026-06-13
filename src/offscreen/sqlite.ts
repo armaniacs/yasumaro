@@ -822,6 +822,60 @@ export async function purgeOldRecords(
 }
 
 // ============================================================================
+// FTS5 Index Monitoring
+// ============================================================================
+
+const FTS_INDEX_WARNING_THRESHOLD = 10_000;
+
+/**
+ * Get the number of entries in the FTS5 index.
+ */
+export async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
+  try {
+    if (!dbHandle && !usingFallbackStorage) {
+      const ok = await init();
+      if (!ok) return { success: false, error: 'Database not initialized' };
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return { success: true, count: 0 };
+    }
+
+    let count = 0;
+    await execWithCache(
+      'SELECT COUNT(*) FROM browsing_logs_fts',
+      [],
+      (row: SqliteValue[]) => {
+        count = Number(row[0]);
+      }
+    );
+
+    return { success: true, count };
+  } catch (error) {
+    logError('SQLite: getFtsIndexSize failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Check FTS5 index health and log a warning if it exceeds the threshold.
+ * Returns the current FTS index size.
+ */
+export async function checkFtsIndexHealth(): Promise<{ count: number; warning: boolean }> {
+  const result = await getFtsIndexSize();
+  if (!result.success) {
+    return { count: 0, warning: false };
+  }
+
+  const warning = result.count > FTS_INDEX_WARNING_THRESHOLD;
+  if (warning) {
+    logWarn('FTS index is large; consider evaluation', { count: result.count }, undefined, 'sqlite');
+  }
+
+  return { count: result.count, warning };
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 

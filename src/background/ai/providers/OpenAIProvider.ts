@@ -88,6 +88,17 @@ export class OpenAIProvider extends AIProviderStrategy {
         return false;
     }
 
+    private static readonly DEFAULT_MAX_CONTENT_LENGTH = 10_000;
+
+    private getMaxContentLength(): number {
+        const s = this.settings as Record<string, unknown>;
+        const override = s['openai_content_limit'] as number | undefined;
+        if (typeof override === 'number' && override > 0 && override <= 100_000) {
+            return override;
+        }
+        return OpenAIProvider.DEFAULT_MAX_CONTENT_LENGTH;
+    }
+
     getName(): string {
         return this.providerName;
     }
@@ -113,7 +124,9 @@ export class OpenAIProvider extends AIProviderStrategy {
         // ローカルLLMは context size が小さい（4096トークン程度）ため、送信コンテンツを絞る
         // 日本語 1トークン≈2文字 として 4096トークン×2 = ~8192文字が理論上限
         // system prompt・プロンプトテンプレートの分を引き、安全マージンを取り4000文字に制限
-        const contentLimit = OpenAIProvider.isLocalUrl(this.baseUrl) ? 4000 : 30000;
+        const contentLimit = OpenAIProvider.isLocalUrl(this.baseUrl)
+            ? 4000
+            : this.getMaxContentLength();
         const truncatedContent = content.substring(0, contentLimit);
 
         // プロンプトインジェクション対策 - コンテンツのサニタイズ

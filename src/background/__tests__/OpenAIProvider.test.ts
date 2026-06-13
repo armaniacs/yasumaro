@@ -214,7 +214,7 @@ describe('OpenAIProvider', () => {
             expect(userPrompt.length).toBeLessThanOrEqual(4200); // プロンプトテンプレート分の余裕を含む
         });
 
-        test('クラウドURLの場合、コンテンツを30000文字に切り詰める', async () => {
+        test('クラウドURLの場合、コンテンツを10000文字に切り詰める', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -222,14 +222,14 @@ describe('OpenAIProvider', () => {
 
             const p = new OpenAIProvider(baseSettings);
 
-            // 35000文字のコンテンツを送る
-            const longContent = 'a'.repeat(35000);
+            // 15000文字のコンテンツを送る
+            const longContent = 'a'.repeat(15000);
             await p.generateSummary(longContent);
 
             const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
             const userPrompt = body.messages[1].content as string;
-            // 30000文字を超えたコンテンツは送られない
-            expect(userPrompt.length).toBeLessThanOrEqual(30200);
+            // 10000文字を超えたコンテンツは送られない
+            expect(userPrompt.length).toBeLessThanOrEqual(10200);
         });
 
         test('baseUrl 末尾スラッシュを除去', async () => {
