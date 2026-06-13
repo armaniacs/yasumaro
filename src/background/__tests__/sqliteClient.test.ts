@@ -249,6 +249,53 @@ describe('SqliteClient', () => {
     });
   });
 
+  describe('msgOffscreen — timeout lifecycle (H1)', () => {
+    let h1Client: SqliteClient;
+
+    beforeEach(() => {
+      h1Client = new SqliteClient();
+      (h1Client as unknown as { offscreenAlive: boolean }).offscreenAlive = true;
+    });
+
+    it('clears the timeout when a response arrives before expiry', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          setTimeout(() => callback({ success: true, rows: [], total: 0 }), 10);
+        }
+      );
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+      const result = await h1Client.msgOffscreen('SQLITE_STATUS');
+      expect(result).toEqual({ success: true, rows: [], total: 0 });
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+
+      clearTimeoutSpy.mockRestore();
+    });
+
+    it('rejects the promise on timeout (not double-resolution)', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, _callback: (response: unknown) => void) => {
+          // never invoke callback
+        }
+      );
+
+      // Shrink the 10s timeout so the test runs fast
+      const originalSetTimeout = globalThis.setTimeout;
+      const setTimeoutSpy = vi
+        .spyOn(globalThis, 'setTimeout')
+        .mockImplementation((cb: () => void, ms?: number, ...args: unknown[]) => {
+          if (ms === 10000) {
+            return originalSetTimeout(cb, 50, ...args) as unknown as ReturnType<typeof setTimeout>;
+          }
+          return originalSetTimeout(cb, ms as number, ...args) as unknown as ReturnType<typeof setTimeout>;
+        });
+
+      await expect(h1Client.msgOffscreen('SQLITE_STATUS')).rejects.toThrow(/timed out/);
+
+      setTimeoutSpy.mockRestore();
+    });
+  });
+
   describe('offscreen document management', () => {
     it('creates offscreen document if not already present', async () => {
       hasDocumentMock.mockResolvedValue(false);

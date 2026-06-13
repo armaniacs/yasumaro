@@ -86,23 +86,29 @@ export class SqliteClient {
     try {
       await this.ensureOffscreenDocument();
       return await new Promise<OffscreenResponse>((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          fn();
+        };
+        const timeoutId = setTimeout(() => {
+          settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`)));
+        }, MESSAGE_TIMEOUT_MS);
+
         chrome.runtime.sendMessage(
           { type, target: 'offscreen', payload },
           (response: OffscreenResponse) => {
             if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
+              settle(() => reject(new Error(chrome.runtime.lastError.message)));
             } else if (response && response.error) {
-              reject(new Error(response.error));
+              settle(() => reject(new Error(response.error)));
             } else {
-              resolve(response);
+              settle(() => resolve(response));
             }
           }
         );
-
-        // Timeout guard
-        setTimeout(() => {
-          reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`));
-        }, MESSAGE_TIMEOUT_MS);
       });
     } catch (error) {
       // Reset the cached alive flag so the next call re-checks the document.
