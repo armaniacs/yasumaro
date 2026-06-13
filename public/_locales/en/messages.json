@@ -629,6 +629,24 @@
   "importDesc": {
     "message": "Restore settings from a previously exported JSON file."
   },
+  "importLogsTitle": {
+    "message": "Import Browsing Logs"
+  },
+  "importLogsDesc": {
+    "message": "Import browsing history records from a JSON file exported from the Export Logs panel."
+  },
+  "importLogsBtn": {
+    "message": "Import Logs from JSON"
+  },
+  "importLogsProcessing": {
+    "message": "Importing..."
+  },
+  "importLogsComplete": {
+    "message": "Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)"
+  },
+  "importLogsError": {
+    "message": "Import error: %{error}"
+  },
   "settingsExported": {
     "message": "Settings exported successfully"
   },

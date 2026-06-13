@@ -629,6 +629,24 @@
   "importDesc": {
     "message": "以前にエクスポートしたJSONファイルから設定を復元します。"
   },
+  "importLogsTitle": {
+    "message": "閲覧ログのインポート"
+  },
+  "importLogsDesc": {
+    "message": "エクスポートログパネルから出力したJSONファイルから閲覧履歴レコードをインポートします。"
+  },
+  "importLogsBtn": {
+    "message": "JSON からログをインポート"
+  },
+  "importLogsProcessing": {
+    "message": "インポート中..."
+  },
+  "importLogsComplete": {
+    "message": "インポート完了: %{inserted} 件挿入、%{skipped} 件スキップ（全 %{total} 件）"
+  },
+  "importLogsError": {
+    "message": "インポートエラー: %{error}"
+  },
   "settingsExported": {
     "message": "設定をエクスポートしました"
   },
