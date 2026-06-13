@@ -189,6 +189,10 @@ async function initDiagnosticsPanel(): Promise<void> {
           getMessage('diagSqliteFallback') || 'Fallback Mode',
           fallbackText
         ));
+        sqliteStats.appendChild(makeStatRow(
+          getMessage('diagSqliteFts5') || 'FTS5 Search',
+          status.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'
+        ));
       } else {
         sqliteStats.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
       }
@@ -278,11 +282,12 @@ async function initDiagnosticsPanel(): Promise<void> {
       const testResult = await chrome.runtime.sendMessage({
         type: 'DASHBOARD_SQLITE',
         payload: { subtype: 'status' }
-      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string };
+      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string; fts5?: boolean };
 
       if (testResult.success) {
         if (testResult.initialized) {
-          sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'}`;
+          const fts5Text = testResult.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
+          sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'} (${fts5Text})`;
           sqliteResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
         } else {
           const errorMsg = testResult.initError || testResult.error || 'SQLite initialization failed.';

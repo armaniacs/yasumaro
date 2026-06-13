@@ -1271,6 +1271,9 @@
   "diagSqliteFallbackNo": {
     "message": "No (native SQLite)"
   },
+  "diagSqliteFts5": {
+    "message": "FTS5 Search"
+  },
   "diagSqliteCheckFailed": {
     "message": "Failed to check SQLite status."
   },

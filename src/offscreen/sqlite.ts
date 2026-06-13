@@ -155,6 +155,13 @@ async function _doInit(): Promise<boolean> {
       console.warn('SQLite: FTS5 not available, using LIKE-based search fallback', ftsErr);
     }
 
+    // Log available extensions
+    const compileOptions: string[] = [];
+    await execWithCache('PRAGMA compile_options', [], (row: SqliteValue[]) => {
+      compileOptions.push(String(row[0]));
+    });
+    console.log('SQLite compile options:', compileOptions.filter(o => o.includes('FTS') || o.includes('VFS')));
+
     // Enable WAL mode for better concurrent read performance
     await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
     await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
@@ -721,23 +728,23 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean } | { success: false; error: string }> {
   try {
     if (usingFallbackStorage && fallbackStorage) {
       const countResult = await fallbackStorage.getCount();
       const count = countResult.success ? countResult.count : 0;
-      return { success: true, initialized: count >= 0, path: 'chrome.storage.local', fallback: true };
+      return { success: true, initialized: count >= 0, path: 'chrome.storage.local', fallback: true, fts5: false };
     }
 
     if (!dbHandle || !sqlite3) {
       // Try to initialize if not yet initialized (consistent with query/search)
       const ok = await init();
       if (!ok || (!dbHandle && !usingFallbackStorage)) {
-        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false' };
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false', fts5: false };
       }
       // If init switched to fallback, return fallback status
       if (usingFallbackStorage && fallbackStorage) {
-        return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true };
+        return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false };
       }
     }
 
@@ -750,7 +757,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       }
     );
 
-    return { success: true, initialized: true, path: DB_FILENAME, fallback: false };
+    return { success: true, initialized: true, path: DB_FILENAME, fallback: false, fts5: fts5Available };
   } catch (error) {
     logError('SQLite: getStatus failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };

@@ -222,7 +222,7 @@ export async function getLogCount(): Promise<number> {
 /**
  * Get SQLite status including fallback mode flag.
  */
-export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean } | null> {
+export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'status' });
     if (response.success) {
@@ -230,6 +230,7 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
         initialized: Boolean(response.initialized),
         path: String(response.path || ''),
         fallback: Boolean(response.fallback),
+        fts5: Boolean(response.fts5),
       };
     }
     return null;
