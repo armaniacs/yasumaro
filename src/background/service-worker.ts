@@ -682,7 +682,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         logInfo('Daily purge completed', { purged: result.purged }, 'service-worker');
       }
     } catch (err) {
-      logWarn('Daily purge failed', { error: errorMessage(err) }, 'service-worker');
+      logWarn('Daily purge failed', { error: errorMessage(err) }, undefined, 'service-worker');
     }
     return;
   }
@@ -865,7 +865,11 @@ export function createMessageHandler(): (
                     const result = await handleDashboardSqlite(
                         message.payload || {},
                         sqliteClient,
-                        () => migrationService.forceRun(),
+                        async () => {
+                            await migrationService.run();
+                            const count = await sqliteClient.getCount();
+                            return { success: true, count: count ?? 0 };
+                        },
                         await ensureConfirmToken()
                     );
                     sendResponse(result);
