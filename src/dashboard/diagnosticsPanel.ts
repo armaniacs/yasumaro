@@ -281,13 +281,14 @@ async function initDiagnosticsPanel(): Promise<void> {
       }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string };
 
       if (testResult.success) {
-        const status = testResult.initialized
-          ? (getMessage('diagSqliteTestOk') || 'SQLite is working correctly.')
-          : (getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.');
-        sqliteResult.textContent = testResult.initialized ? `✓ ${status}` : `✗ ${status}`;
-        sqliteResult.style.color = testResult.initialized
-          ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`
-          : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+        if (testResult.initialized) {
+          sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'}`;
+          sqliteResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
+        } else {
+          const errorMsg = testResult.error || 'SQLite initialization failed.';
+          sqliteResult.textContent = `✗ ${getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.'}\n${errorMsg}`;
+          sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+        }
       } else {
         sqliteResult.textContent = `✗ ${testResult.error || 'SQLite test failed.'}`;
         sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
