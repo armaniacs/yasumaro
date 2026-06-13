@@ -121,14 +121,15 @@ async function _doInit(): Promise<boolean> {
     sqlite3 = SQLite.Factory(module);
 
     // Register the IndexedDB-based VFS (works in offscreen document main thread)
-    const vfs = new IDBBatchAtomicVFS(DB_FILENAME);
+    const VFS_NAME = 'idb-batch-atomic';
+    const vfs = new IDBBatchAtomicVFS(VFS_NAME);
     sqlite3.vfs_register(vfs, true);
 
     // Open the database on IndexedDB
     dbHandle = await sqlite3.open_v2(
       DB_FILENAME,
       SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
-      'idb-batch-atomic'
+      VFS_NAME
     );
 
     // Execute schema creation
