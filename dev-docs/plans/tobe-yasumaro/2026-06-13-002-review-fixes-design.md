@@ -29,7 +29,7 @@
 | H1 | `msgOffscreen` の `setTimeout` 二重解決/リーク修正 | Domain Logic / System Architect / Tuning |
 | H2 | `migrate`/`clear_all` の認証化（confirmToken + 確認モーダル） | Red Team / Test Experts / SRE |
 | H3 | 暗号鍵導出の version header 化＋`getOrCreateEncryptionKey` 集約 | Legacy Bridge / Blue Team |
-| H4 | レート制限の `chrome.storage.session` 仕様確認＋必要なら `local` へ昇格 | Red Team |
+| H4 | レート制限の sender key をタブ→オリジンに変更 + `chrome.storage.local` へ昇格 | Red Team |
 | H5 | データストア二重化の Optimistic Lock 適用（旧ストア読み取り専用化） | System Architect / Data Integrity / Maintainability |
 | H6 | `OPFS_FALLBACK.md` リネーム + 冒頭概要明記 + 参照更新 | Documentation |
 | H7 | `cspStyleUtils` の CSS エスケープ（`setElementColor`/`setElementWidth`） | Red Team / Blue Team |
@@ -212,22 +212,41 @@ export async function encryptEnvelope(
 - 旧生 ciphertext が残っていても、新コードで復号 → envelope で再保存のフォールバック
 - 1 リリース並行稼働後、旧生 ciphertext パスを削除
 
-### 5.4 H4: レート制限の永続化確認
+### 5.4 H4: レート制限の sender key 設計変更 + 永続化
 
 **ファイル:** `src/background/rateLimiter.ts` + `src/background/sessionStore.ts`
 
-**確認事項と対応:**
-1. `SessionStore` の保存先が `chrome.storage.session` か `chrome.storage.local` か確認
-   - `chrome.storage.session`: ブラウザ終了まで保持、SW 再起動でも保持
-   - `chrome.storage.local`: 永続保持
-2. `chrome.storage.session` なら **Red Team 指摘の「タブクローズでリセット」は誤り** — ただし sender key がタブ依存なら sender key 寿命で消える
-3. sender key がタブ ID なら、`chrome.storage.local` への昇格を検討
-4. 永続化テストを追加して仕様を明文化
+**現状の問題（確認結果）:**
+- 既存コードは `SessionStore` 経由で `chrome.storage.session` に保存
+- sender key は `tabId.toString()` のタブ ID ベース
+- タブクローズ → sender key 消滅 → レート制限リセット → バイパス可能（Red Team 指摘の該当箇所）
 
-**設計判断（要確認の上で）:**
-- sender key を「タブ ID」ではなく「オリジン（ドメイン）」に変更
-- 保存先は `chrome.storage.local`
-- 1 時間ウィンドウ
+**設計判断（確定）:**
+- sender key を「タブ ID」から「オリジン（`new URL(sender.url).origin`）」に変更
+- 保存先を `chrome.storage.session` から `chrome.storage.local` に昇格
+- 1 時間ウィンドウ（`RATE_LIMITS.SKIP_AI_WINDOW_MS`）を維持
+- 永続化テストを追加して仕様を明文化
+
+**コードイメージ:**
+```typescript
+// Before
+removeTab(tabId: number): void {
+  this.state.delete(tabId.toString());
+  this.persist();
+}
+
+// After
+removeOrigin(origin: string): void {
+  this.state.delete(`origin:${origin}`);
+  this.persist();
+}
+
+async check(sender: chrome.runtime.MessageSender, settings: Record<string, unknown>): Promise<RateLimitResult> {
+  const origin = new URL(sender.url || 'unknown://').origin;
+  const senderKey = `origin:${origin}`;
+  // ... 既存ロジック
+}
+```
 
 ### 5.5 H5: Optimistic Lock 適用
 
