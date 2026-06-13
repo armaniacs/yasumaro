@@ -724,7 +724,11 @@ export async function migrateLegacyCiphertext(
 }
 ```
 
-注: 実際のレガシー v1 暗号化スキーマ（salt/iv の保存形式）は `src/utils/storage.ts` の旧 `getOrCreateEncryptionKey` を確認の上、`migrateLegacyCiphertext` 内の復号ロジックを実装に整合させること。
+注: 実際のレガシー v1 暗号化スキーマ（salt/iv の保存形式）は `src/utils/storage.ts` の旧 `getOrCreateEncryptionKey` を確認の上、`migrateLegacyCiphertext` 内の復号ロジックを実装に整合させること。**実装手順:**
+1. 旧 `getOrCreateEncryptionKey` の暗号化/復号コードを Read で確認
+2. salt の生成方法（固定文字列かユーザー入力依存か）、IV の保存場所を特定
+3. 特定したスキーマに合わせて `migrateLegacyCiphertext` の引数と内部ロジックを調整
+4. レガシーデータが存在する状態でテスト（モックでレガシーデータを注入）
 
 - [ ] **Step 3.5: `src/utils/storage.ts` から旧 `getOrCreateEncryptionKey` を削除し `crypto.ts` から re-export**
 
