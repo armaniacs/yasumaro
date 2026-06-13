@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "copy-wasm": "cp vendor/wa-sqlite/wa-sqlite-async.wasm node_modules/wa-sqlite/dist/ && cp vendor/wa-sqlite/wa-sqlite-async.mjs node_modules/wa-sqlite/dist/",
-    "build:wasm": "bash vendor/wa-sqlite/build-wasm.sh",
-    "build": "npm run copy-wasm && node scripts/check-version-consistency.js && wxt build",
+    "build": "node scripts/check-version-consistency.js && wxt build",
     "build:watch": "wxt build --watch",
     "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
