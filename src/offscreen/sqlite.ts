@@ -94,6 +94,9 @@ let initPromise: Promise<boolean> | null = null;
 let usingFallbackStorage = false;
 let fallbackStorage: FallbackStorage | null = null;
 
+const PREPARED_STMT_CACHE_MAX_SIZE = 50;
+const preparedStmtCache = new Map<string, number>();
+
 // ============================================================================
 // OPFS Availability Check
 // ============================================================================
@@ -199,29 +202,25 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
     }
 
     let migrated = 0;
+    const insertSql = `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     for (const record of records) {
       try {
         const domain = record.domain || extractDomain(record.url);
-        await sqlite3.exec(
-          dbHandle,
-          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            record.url,
-            record.title ?? null,
-            record.summary ?? null,
-            record.tags ?? null,
-            record.created_at,
-            domain,
-            record.visit_duration ?? null,
-            record.scroll_ratio ?? null,
-            record.is_starred ?? 0,
-            record.is_deleted ?? 0,
-          ]
-        );
+        await execWithCache(insertSql, [
+          record.url,
+          record.title ?? null,
+          record.summary ?? null,
+          record.tags ?? null,
+          record.created_at,
+          domain,
+          record.visit_duration ?? null,
+          record.scroll_ratio ?? null,
+          record.is_starred ?? 0,
+          record.is_deleted ?? 0,
+        ]);
         migrated++;
       } catch {
-        // Skip individual failed records
       }
     }
 
@@ -233,6 +232,72 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
   } catch (error) {
     console.error('Fallback migration failed:', errorMessage(error));
   }
+}
+
+// ============================================================================
+// Prepared Statement Cache
+// ============================================================================
+
+async function getOrPrepare(sql: string): Promise<number> {
+  const cached = preparedStmtCache.get(sql);
+  if (cached !== undefined) {
+    await sqlite3!.reset(cached);
+    return cached;
+  }
+
+  const str = sqlite3!.str_new(dbHandle!, sql);
+  try {
+    const prepared = await sqlite3!.prepare_v2(dbHandle!, sqlite3!.str_value(str));
+    if (!prepared) throw new Error(`Failed to prepare: ${sql}`);
+    const stmt = prepared.stmt;
+
+    if (preparedStmtCache.size >= PREPARED_STMT_CACHE_MAX_SIZE) {
+      const oldestKey = preparedStmtCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        const oldestStmt = preparedStmtCache.get(oldestKey);
+        if (oldestStmt !== undefined) {
+          await sqlite3!.finalize(oldestStmt);
+        }
+        preparedStmtCache.delete(oldestKey);
+      }
+    }
+
+    preparedStmtCache.set(sql, stmt);
+    return stmt;
+  } finally {
+    sqlite3!.str_finish(str);
+  }
+}
+
+async function execWithCache(
+  sql: string,
+  params: SqliteValue[] = [],
+  callback?: (row: SqliteValue[]) => void
+): Promise<void> {
+  const stmt = await getOrPrepare(sql);
+
+  if (params.length > 0) {
+    sqlite3!.bind_collection(stmt, params);
+  }
+
+  try {
+    if (callback) {
+      while (await sqlite3!.step(stmt) === SQLite.SQLITE_ROW) {
+        callback(sqlite3!.row(stmt));
+      }
+    } else {
+      await sqlite3!.step(stmt);
+    }
+  } finally {
+    await sqlite3!.reset(stmt);
+  }
+}
+
+function clearPreparedStmtCache(): void {
+  for (const stmt of preparedStmtCache.values()) {
+    sqlite3?.finalize(stmt).catch(() => {});
+  }
+  preparedStmtCache.clear();
 }
 
 // ============================================================================
@@ -255,9 +320,7 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 
     const domain = record.domain || extractDomain(record.url);
 
-    // Use run() for INSERT, then query last_insert_rowid
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       `INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -274,9 +337,8 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
       ]
     );
 
-    // Get the last insert row id
     let newId = 0;
-    await sqlite3!.exec(dbHandle!, 'SELECT last_insert_rowid()', (row: SqliteValue[]) => {
+    await execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
       newId = Number(row[0]);
     });
 
@@ -310,30 +372,27 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 
     try {
       let insertedCount = 0;
+      const insertSql = `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
 
-        await sqlite3!.exec(
-          dbHandle!,
-          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            record.url,
-            record.title ?? null,
-            record.summary ?? null,
-            record.tags ?? null,
-            record.created_at,
-            domain,
-            record.visit_duration ?? null,
-            record.scroll_ratio ?? null,
-            record.is_starred ?? 0,
-            record.is_deleted ?? 0,
-          ]
-        );
+        await execWithCache(insertSql, [
+          record.url,
+          record.title ?? null,
+          record.summary ?? null,
+          record.tags ?? null,
+          record.created_at,
+          domain,
+          record.visit_duration ?? null,
+          record.scroll_ratio ?? null,
+          record.is_starred ?? 0,
+          record.is_deleted ?? 0,
+        ]);
 
         let changes = 0;
-        await sqlite3!.exec(dbHandle!, 'SELECT changes()', (row: SqliteValue[]) => {
+        await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
           changes = Number(row[0]);
         });
         insertedCount += changes;
@@ -391,49 +450,38 @@ export async function query(options: QueryOptions = {}): Promise<{
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    // Validate orderBy against allowlist to prevent SQL injection
     const orderBy = options.orderBy && ALLOWED_ORDER_COLUMNS.includes(options.orderBy as typeof ALLOWED_ORDER_COLUMNS[number])
       ? options.orderBy : 'created_at';
     const orderDir = options.orderDir === 'ASC' ? 'ASC' : 'DESC';
     const limit = options.limit ?? 100;
     const offset = options.offset ?? 0;
 
-    // Get total count
+    const countSql = `SELECT COUNT(*) FROM browsing_logs ${whereClause}`;
     let total = 0;
-    await sqlite3!.exec(
-      dbHandle!,
-      `SELECT COUNT(*) FROM browsing_logs ${whereClause}`,
-      params,
-      (row: SqliteValue[]) => {
-        total = Number(row[0]);
-      }
-    );
+    await execWithCache(countSql, params, (row: SqliteValue[]) => {
+      total = Number(row[0]);
+    });
 
-    // Get rows
+    const selectSql = `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
+         FROM browsing_logs ${whereClause}
+         ORDER BY ${orderBy} ${orderDir}
+         LIMIT ? OFFSET ?`;
     const rows: BrowsingLogRecord[] = [];
-    await sqlite3!.exec(
-      dbHandle!,
-      `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
-       FROM browsing_logs ${whereClause}
-       ORDER BY ${orderBy} ${orderDir}
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset],
-      (row: SqliteValue[]) => {
-        rows.push({
-          id: Number(row[0]),
-          url: String(row[1]),
-          title: row[2] as string | null,
-          summary: row[3] as string | null,
-          tags: row[4] as string | null,
-          created_at: Number(row[5]),
-          domain: row[6] as string | null,
-          visit_duration: row[7] != null ? Number(row[7]) : null,
-          scroll_ratio: row[8] != null ? Number(row[8]) : null,
-          is_starred: Number(row[9]),
-          is_deleted: Number(row[10]),
-        });
-      }
-    );
+    await execWithCache(selectSql, [...params, limit, offset], (row: SqliteValue[]) => {
+      rows.push({
+        id: Number(row[0]),
+        url: String(row[1]),
+        title: row[2] as string | null,
+        summary: row[3] as string | null,
+        tags: row[4] as string | null,
+        created_at: Number(row[5]),
+        domain: row[6] as string | null,
+        visit_duration: row[7] != null ? Number(row[7]) : null,
+        scroll_ratio: row[8] != null ? Number(row[8]) : null,
+        is_starred: Number(row[9]),
+        is_deleted: Number(row[10]),
+      });
+    });
 
     return { success: true, rows, total };
   } catch (error) {
@@ -461,10 +509,8 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
     // Sanitize the search query for FTS5
     const ftsQuery = sanitizeFtsQuery(searchQuery);
 
-    // Get total count
     let total = 0;
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
       [ftsQuery],
       (row: SqliteValue[]) => {
@@ -472,10 +518,8 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
       }
     );
 
-    // Search with ranking using FTS5 bm25 function
     const rows: SearchResult[] = [];
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       `SELECT
          b.id, b.url, b.title, b.summary, b.tags,
          b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred,
@@ -545,8 +589,7 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
     }
 
     params.push(id);
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       `UPDATE browsing_logs SET ${setClauses.join(', ')} WHERE id = ?`,
       params
     );
@@ -573,7 +616,7 @@ export async function hardDelete(id: number): Promise<{ success: true } | { succ
       return fallbackStorage.hardDelete(id);
     }
 
-    await sqlite3!.exec(dbHandle!, 'DELETE FROM browsing_logs WHERE id = ?', [id]);
+    await execWithCache('DELETE FROM browsing_logs WHERE id = ?', [id]);
     return { success: true };
   } catch (error) {
     console.error('SQLite hardDelete failed:', errorMessage(error));
@@ -595,16 +638,12 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
       return fallbackStorage.toggleStar(id);
     }
 
-    // Toggle the star value
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?',
       [id]
     );
-    // Read back the new value
     let newStarred = 0;
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       'SELECT is_starred FROM browsing_logs WHERE id = ?',
       [id],
       (row: SqliteValue[]) => {
@@ -633,8 +672,7 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
     }
 
     let count = 0;
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       'SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0',
       [],
       (row: SqliteValue[]) => {
@@ -665,8 +703,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
     }
 
     let count = 0;
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       'SELECT COUNT(*) FROM browsing_logs',
       [],
       (row: SqliteValue[]) => {
@@ -794,8 +831,7 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
     // Export all rows as a JSON byte array
     // (wa-sqlite doesn't support sqlite3_serialize; for true .db export use backup API)
     const rows: Record<string, unknown>[] = [];
-    await sqlite3!.exec(
-      dbHandle!,
+    await execWithCache(
       `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
        FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
       [],
@@ -831,6 +867,7 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
 
 /** Reset the module state for testing. */
 export function _resetForTesting(): void {
+  clearPreparedStmtCache();
   dbHandle = null;
   sqlite3 = null;
   initPromise = null;

@@ -39,6 +39,29 @@ export interface RecordingEvent {
 
 export class RecordingTriggerManager {
   private cachedTriggers: RecordingTriggers | null = null;
+  private storageListener: ((changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => void) | null = null;
+
+  constructor() {
+    this.setupStorageListener();
+  }
+
+  private setupStorageListener(): void {
+    if (this.storageListener) return;
+
+    this.storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName !== 'local') return;
+
+      if (StorageKeys.RECORDING_TRIGGERS in changes) {
+        this.cachedTriggers = null;
+      }
+    };
+
+    try {
+      chrome.storage.onChanged.addListener(this.storageListener);
+    } catch {
+      this.storageListener = null;
+    }
+  }
 
   /**
    * Load trigger settings from chrome.storage.local with caching.

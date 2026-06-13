@@ -12,6 +12,7 @@ import { SqliteClient } from './sqliteClient.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 const BATCH_SIZE = 100;
+const PROGRESS_WRITE_INTERVAL = 5;
 const MIGRATION_STATUS_KEY = StorageKeys.YASUMARO_MIGRATION_STATUS;
 const MIGRATION_PROGRESS_KEY = StorageKeys.YASUMARO_MIGRATION_PROGRESS;
 
@@ -66,6 +67,8 @@ export class MigrationService {
 
       // Process in batches
       let hasErrors = false;
+      let batchesSinceLastWrite = 0;
+      let lastWrittenProgress = -1;
 
       for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
         const batch = remaining.slice(i, i + BATCH_SIZE).map((entry) => ({
@@ -85,8 +88,15 @@ export class MigrationService {
           const result = await this.sqliteClient.insertBatch(batch);
 
           if (result !== null) {
-            const completedCount = progress + i + result.count;
-            await this.setMigrationProgress(completedCount);
+            const currentProgress = progress + i + result.count;
+            batchesSinceLastWrite++;
+
+            if (batchesSinceLastWrite >= PROGRESS_WRITE_INTERVAL || i + BATCH_SIZE >= remaining.length) {
+              await this.setMigrationProgress(currentProgress);
+              lastWrittenProgress = currentProgress;
+              batchesSinceLastWrite = 0;
+            }
+
             if (result.count < batch.length) {
               hasErrors = true;
               addLog(LogType.WARN, 'Migration: insertBatch partially succeeded', {
@@ -96,16 +106,24 @@ export class MigrationService {
             }
           } else {
             hasErrors = true;
-            const completedCount = progress + i;
-            await this.setMigrationProgress(completedCount);
-            addLog(LogType.WARN, 'Migration: insertBatch returned null, will retry', {
+            const currentProgress = progress + i;
+            if (currentProgress !== lastWrittenProgress) {
+              await this.setMigrationProgress(currentProgress);
+              lastWrittenProgress = currentProgress;
+              batchesSinceLastWrite = 0;
+            }
+            addLog(LogType.WARN, 'Migration: insertBatch failed or returned null, will retry', {
               batchSize: batch.length,
             });
           }
         } catch (batchError) {
           hasErrors = true;
-          const completedCount = progress + i;
-          await this.setMigrationProgress(completedCount);
+          const currentProgress = progress + i;
+          if (currentProgress !== lastWrittenProgress) {
+            await this.setMigrationProgress(currentProgress);
+            lastWrittenProgress = currentProgress;
+            batchesSinceLastWrite = 0;
+          }
           addLog(LogType.ERROR, 'Migration: failed to insert batch', {
             batchSize: batch.length,
             error: errorMessage(batchError),
