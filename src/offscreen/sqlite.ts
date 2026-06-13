@@ -106,7 +106,12 @@ async function isOpfsAvailable(): Promise<boolean> {
   try {
     if (!navigator.storage?.getDirectory) return false;
     const dir = await navigator.storage.getDirectory();
-    return dir !== null;
+    if (!dir) return false;
+    // Verify createSyncAccessHandle is actually available (required by OriginPrivateFileSystemVFS)
+    const handle = await dir.getFileHandle('opfs-test', { create: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (handle as any).createSyncAccessHandle !== 'function') return false;
+    return true;
   } catch {
     return false;
   }
@@ -136,7 +141,11 @@ async function _doInit(): Promise<boolean> {
       logWarn('SQLite: OPFS not available, using chrome.storage.local fallback', {}, undefined, 'sqlite');
       usingFallbackStorage = true;
       fallbackStorage = new FallbackStorage();
-      await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
+      try {
+        await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
+      } catch {
+        // chrome.storage may not be available in offscreen context
+      }
       await tryMigrateFallbackToSqlite();
       return true;
     }
@@ -194,7 +203,7 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
 
     if (records.length === 0) {
       // No records to migrate, but OPFS is available so clear the fallback flag
-      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
+      try { await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE); } catch { /* offscreen context */ }
       return;
     }
 
@@ -229,7 +238,7 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
       logInfo(`SQLite: migrated ${migrated} records from fallback storage`, { migrated }, 'sqlite');
       await tempFallback.clearAll();
     }
-    await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
+    try { await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE); } catch { /* offscreen context */ }
   } catch (error) {
     logError('SQLite: fallback migration failed', { error: errorMessage(error) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'sqlite');
   }

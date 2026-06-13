@@ -68,7 +68,7 @@ export class SqliteClient {
 
     this.creatingOffscreenPromise = chrome.offscreen.createDocument({
       url: OFFSCREEN_DOCUMENT_PATH,
-      reasons: [chrome.offscreen.Reason.WORKERS],
+      reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
       justification: 'To access SQLite (wa-sqlite) for local browsing log storage.',
     });
 
