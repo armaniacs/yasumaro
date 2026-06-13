@@ -265,6 +265,42 @@ export class FallbackStorage {
     }
   }
 
+  async purgeOldRecords(retentionDays: number = 90, maxRecords: number = 1000): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+    try {
+      const data = await this.loadData();
+      const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      let purged = 0;
+
+      const before = data.records.length;
+      data.records = data.records.filter(r => {
+        if (r.is_starred === 1 || r.is_deleted === 1) return true;
+        if (r.created_at < cutoffMs) {
+          purged++;
+          return false;
+        }
+        return true;
+      });
+
+      const activeRecords = data.records.filter(r => r.is_deleted === 0);
+      if (activeRecords.length > maxRecords) {
+        const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
+        const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+        data.records = data.records.filter(r => {
+          if (toRemove.has(r.id)) {
+            purged++;
+            return false;
+          }
+          return true;
+        });
+      }
+
+      await this.saveData(data);
+      return { success: true, purged };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   async getAllRecords(): Promise<BrowsingLogRecord[]> {
     const data = await this.loadData();
     return data.records;

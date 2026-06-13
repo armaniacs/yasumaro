@@ -1,6 +1,7 @@
 import { logWarn, logDebug } from '../utils/logger.js';
 import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { sanitizeRegex } from '../utils/piiSanitizer.js';
 
 interface CacheEntry {
   content: string;
@@ -29,9 +30,26 @@ export class ManualContentFetcher {
 
     const content = await this.fetchFromTab(url);
     if (content) {
-      this.addToCache(url, content);
+      const sanitized = await this.sanitizeContent(content);
+      this.addToCache(url, sanitized);
+      return sanitized;
     }
     return content;
+  }
+
+  private async sanitizeContent(content: string): Promise<string> {
+    try {
+      const result = await sanitizeRegex(content);
+      return result.text || content;
+    } catch (err: unknown) {
+      await logWarn(
+        'PII sanitization failed, using raw content',
+        { error: errorMessage(err) },
+        undefined,
+        'manualContentFetcher'
+      );
+      return content;
+    }
   }
 
   clearExpired(): void {

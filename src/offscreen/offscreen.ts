@@ -17,6 +17,7 @@ import {
   getStatus as sqliteGetStatus,
   serialize as sqliteSerialize,
   clearAll as sqliteClearAll,
+  purgeOldRecords as sqlitePurgeOldRecords,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -296,6 +297,13 @@ export function handleOffscreenMessage(
 
             } else if (msg.type === 'SQLITE_EXPORT') {
                 const result = await sqliteSerialize();
+                sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_PURGE') {
+                const payload = msg.payload as Record<string, unknown> | undefined;
+                const retentionDays = payload?.retentionDays != null ? Number(payload.retentionDays) : undefined;
+                const maxRecords = payload?.maxRecords != null ? Number(payload.maxRecords) : undefined;
+                const result = await sqlitePurgeOldRecords(retentionDays, maxRecords);
                 sendResponse(result);
 
             } else {
