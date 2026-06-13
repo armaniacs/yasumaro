@@ -102,7 +102,7 @@ export class SqliteClient {
           { type, target: 'offscreen', payload },
           (response: OffscreenResponse) => {
             if (chrome.runtime.lastError) {
-              settle(() => reject(new Error(chrome.runtime.lastError.message)));
+              settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
             } else if (response && response.error) {
               settle(() => reject(new Error(response.error)));
             } else {
