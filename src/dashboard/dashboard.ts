@@ -45,23 +45,45 @@ export function initSidebarNav(): void {
   const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
   const panels = document.querySelectorAll<HTMLElement>('.panel');
 
-  navBtns.forEach(btn => {
+  const sidebarNav = document.querySelector<HTMLElement>('.sidebar-nav');
+  if (sidebarNav) {
+    sidebarNav.setAttribute('role', 'tablist');
+    sidebarNav.setAttribute('aria-orientation', 'vertical');
+  }
+
+  navBtns.forEach((btn, idx) => {
+    btn.setAttribute('role', 'tab');
+    if (!btn.id) btn.id = `sidebar-tab-${idx}`;
+    const panelId = btn.getAttribute('data-panel');
+    if (panelId) btn.setAttribute('aria-controls', panelId);
+  });
+
+  panels.forEach(panel => {
+    panel.setAttribute('role', 'tabpanel');
+    const controllingBtn = document.querySelector<HTMLButtonElement>(`[data-panel="${panel.id}"]`);
+    if (controllingBtn) panel.setAttribute('aria-labelledby', controllingBtn.id);
+  });
+
+  const activateBtn = (index: number): void => {
+    navBtns.forEach((b, i) => {
+      const selected = i === index;
+      b.setAttribute('aria-selected', String(selected));
+      b.setAttribute('tabindex', selected ? '0' : '-1');
+      if (selected) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+    const targetPanelId = navBtns[index]?.getAttribute('data-panel');
+    panels.forEach(panel => {
+      if (panel.id === targetPanelId) panel.classList.add('active');
+      else panel.classList.remove('active');
+    });
+  };
+
+  navBtns.forEach((btn, i) => {
     btn.addEventListener('click', () => {
+      activateBtn(i);
       const targetPanelId = btn.getAttribute('data-panel');
-      if (!targetPanelId) return;
 
-      navBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      panels.forEach(panel => {
-        if (panel.id === targetPanelId) {
-          panel.classList.add('active');
-        } else {
-          panel.classList.remove('active');
-        }
-      });
-
-      // AI Summary Cleansingパネル表示時にCanvas再描画（display:none時はwidth=0になるため）
       if (targetPanelId === 'panel-ai-summary-cleansing') {
         requestAnimationFrame(() => {
           getSavedUrlEntries().then(panelEntries => {
@@ -82,7 +104,24 @@ export function initSidebarNav(): void {
         });
       }
     });
+
+    btn.addEventListener('keydown', (e) => {
+      const key = e.key;
+      let targetIndex: number | null = null;
+      if (key === 'ArrowDown') targetIndex = (i + 1) % navBtns.length;
+      else if (key === 'ArrowUp') targetIndex = (i - 1 + navBtns.length) % navBtns.length;
+      else if (key === 'Home') targetIndex = 0;
+      else if (key === 'End') targetIndex = navBtns.length - 1;
+      if (targetIndex !== null) {
+        e.preventDefault();
+        navBtns[targetIndex]!.focus();
+        activateBtn(targetIndex);
+      }
+    });
   });
+
+  const activeIndex = Array.from(navBtns).findIndex(b => b.classList.contains('active'));
+  activateBtn(activeIndex >= 0 ? activeIndex : 0);
 }
 
 // ============================================================================

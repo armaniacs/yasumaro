@@ -17,8 +17,9 @@ export function showSpinner(text?: string): void {
     console.warn('loadingSpinner element not found');
     return;
   }
+  spinner.setAttribute('role', 'status');
+  spinner.setAttribute('aria-live', 'polite');
   const spinnerText = spinner.querySelector('.spinner-text');
-  // Use provided text or default to "Processing..." from i18n
   if (spinnerText) {
     spinnerText.textContent = text || getMessage('processing');
   }
