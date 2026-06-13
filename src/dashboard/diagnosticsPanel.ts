@@ -278,14 +278,14 @@ async function initDiagnosticsPanel(): Promise<void> {
       const testResult = await chrome.runtime.sendMessage({
         type: 'DASHBOARD_SQLITE',
         payload: { subtype: 'status' }
-      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string };
+      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string };
 
       if (testResult.success) {
         if (testResult.initialized) {
           sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'}`;
           sqliteResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
         } else {
-          const errorMsg = testResult.error || 'SQLite initialization failed.';
+          const errorMsg = testResult.initError || testResult.error || 'SQLite initialization failed.';
           sqliteResult.textContent = `✗ ${getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.'}\n${errorMsg}`;
           sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
         }
