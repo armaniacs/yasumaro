@@ -370,8 +370,7 @@ export async function handleManualRecord(
 
     // skipAi操作のレート制限
     if (skipAi) {
-        const senderKey = sender.tab?.id?.toString() || 'unknown';
-        const rateLimitResult = await rateLimiter.check(senderKey, settings);
+        const rateLimitResult = await rateLimiter.check(sender, settings);
         if (!rateLimitResult.allowed) {
             sendResponse({ success: false, error: rateLimitResult.error });
             return;
@@ -883,7 +882,6 @@ export function createMessageHandler(): (
 export function handleTabRemoved(tabId: number): void {
     tabCache.remove(tabId);
     autoSavedBadgeTabs.delete(tabId);
-    rateLimiter.removeTab(tabId);
 }
 
 export async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {

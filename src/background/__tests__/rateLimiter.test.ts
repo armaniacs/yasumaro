@@ -8,7 +8,6 @@ function makeSessionStore(): SessionStore {
     get: vi.fn((key: string) => Promise.resolve(map.get(key) ?? null)),
     set: vi.fn((key: string, value: unknown) => { map.set(key, value); return Promise.resolve(); }),
   } as unknown as SessionStore;
-  // Expose static method used in persist()
   (SessionStore as unknown as Record<string, unknown>).mapToEntries = vi.fn(
     (m: Map<string, unknown>) => [...m.entries()]
   );
@@ -26,66 +25,114 @@ describe('RateLimiter', () => {
   });
 
   it('allows first request for a new sender', async () => {
-    const result = await rateLimiter.check('tab:1', settings);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     expect(result.allowed).toBe(true);
   });
 
   it('allows requests under the rate limit', async () => {
     for (let i = 0; i < 5; i++) {
-      const result = await rateLimiter.check('tab:1', settings);
+      const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
       expect(result.allowed).toBe(true);
     }
   });
 
   it('blocks requests exceeding the rate limit (default max=5)', async () => {
-    // デフォルト SKIP_AI_MAX は 5（appConstants.ts）
     for (let i = 0; i < 5; i++) {
-      await rateLimiter.check('tab:1', settings);
+      await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     }
-    const result = await rateLimiter.check('tab:1', settings);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     expect(result.allowed).toBe(false);
     expect(result.error).toBeDefined();
   });
 
-  it('different senders have independent rate limits', async () => {
+  it('different origins have independent rate limits', async () => {
     for (let i = 0; i < 5; i++) {
-      await rateLimiter.check('tab:1', settings);
+      await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     }
-    // tab:2 はまだカウントゼロなので許可される
-    const result = await rateLimiter.check('tab:2', settings);
+    const result = await rateLimiter.check({ url: 'https://other.com/page' }, settings);
     expect(result.allowed).toBe(true);
   });
 
-  it('removeTab removes rate limit state for that tab', async () => {
+  it('removeOrigin removes rate limit state for that origin', async () => {
     for (let i = 0; i < 5; i++) {
-      await rateLimiter.check('1', settings);
+      await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    }
+    rateLimiter.removeOrigin('https://example.com');
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('removeTab is a deprecated no-op', async () => {
+    for (let i = 0; i < 5; i++) {
+      await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     }
     rateLimiter.removeTab(1);
-    // 削除後は再びカウントゼロから開始
-    const result = await rateLimiter.check('1', settings);
-    expect(result.allowed).toBe(true);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(false);
   });
 
   it('clear resets all rate limit state', async () => {
     for (let i = 0; i < 5; i++) {
-      await rateLimiter.check('tab:1', settings);
+      await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     }
     rateLimiter.clear();
-    const result = await rateLimiter.check('tab:1', settings);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     expect(result.allowed).toBe(true);
   });
 
   it('custom rate limit max from settings', async () => {
     const customSettings = { skip_ai_rate_limit_max: 2 };
-    await rateLimiter.check('tab:1', customSettings);
-    await rateLimiter.check('tab:1', customSettings);
-    const result = await rateLimiter.check('tab:1', customSettings);
+    await rateLimiter.check({ url: 'https://example.com/page' }, customSettings);
+    await rateLimiter.check({ url: 'https://example.com/page' }, customSettings);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, customSettings);
     expect(result.allowed).toBe(false);
   });
 
   it('initialize loads empty state when no session data exists', async () => {
     await rateLimiter.initialize();
-    const result = await rateLimiter.check('tab:1', settings);
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     expect(result.allowed).toBe(true);
+  });
+});
+
+describe('RateLimiter — origin-based sender key (H4)', () => {
+  let limiter: RateLimiter;
+  let store: SessionStore;
+
+  beforeEach(() => {
+    store = makeSessionStore();
+    limiter = new RateLimiter(store);
+  });
+
+  it('uses origin as the sender key, not tabId', async () => {
+    const sender = { url: 'https://example.com/page1', tab: { id: 1 } };
+    const result = await limiter.check(sender, {});
+    expect(result.allowed).toBe(true);
+    expect(limiter['state'].has('origin:https://example.com')).toBe(true);
+  });
+
+  it('rate limit applies across all tabs from the same origin', async () => {
+    const settings = { skip_ai_rate_limit_max: 2 };
+    await limiter.check({ url: 'https://example.com/p1' }, settings);
+    await limiter.check({ url: 'https://example.com/p2' }, settings);
+    const result = await limiter.check({ url: 'https://example.com/p3' }, settings);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('handles sender with no url gracefully', async () => {
+    const result = await limiter.check(undefined, {});
+    expect(result.allowed).toBe(true);
+    expect(limiter['state'].has('origin:unknown')).toBe(true);
+  });
+
+  it('handles sender with invalid url gracefully', async () => {
+    const result = await limiter.check({ url: 'not-a-url' }, {});
+    expect(result.allowed).toBe(true);
+    expect(limiter['state'].has('origin:unknown')).toBe(true);
+  });
+
+  it('persists state via sessionStore.set on check', async () => {
+    await limiter.check({ url: 'https://example.com/' }, {});
+    expect(store.set).toHaveBeenCalled();
   });
 });

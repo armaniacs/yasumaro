@@ -13,7 +13,7 @@ describe('SessionStore', () => {
       remove: vi.fn().mockResolvedValue(undefined),
     };
     (globalThis as any).chrome = {
-      storage: { session: mockSession },
+      storage: { local: mockSession },
     };
   });
 
@@ -104,7 +104,7 @@ describe('SessionStore', () => {
 
   // T10
   it('storage unavailable should not throw', async () => {
-    delete (globalThis as any).chrome.storage.session;
+    delete (globalThis as any).chrome.storage.local;
     expect(() => store.set('key1', 'value1')).not.toThrow();
     const value = await store.get('key1');
     expect(value).toBeNull();

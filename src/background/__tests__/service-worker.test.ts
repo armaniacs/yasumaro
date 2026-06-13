@@ -1458,7 +1458,7 @@ describe('service-worker handlers', () => {
 
             expect(logWarn).toHaveBeenCalledWith(
                 'Rate limit exceeded for skipAi operation',
-                expect.objectContaining({ sender: '999', limit: rateLimitMax }),
+                expect.objectContaining({ sender: 'origin:https://example.com', limit: rateLimitMax }),
                 undefined,
                 'service-worker'
             );

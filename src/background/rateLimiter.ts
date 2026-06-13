@@ -13,6 +13,20 @@ interface RateLimitResult {
   error?: string;
 }
 
+export interface MessageSenderLike {
+  url?: string;
+  tab?: { id?: number };
+}
+
+export function originFromSender(sender: MessageSenderLike | undefined): string {
+  if (!sender?.url) return 'unknown';
+  try {
+    return new URL(sender.url).origin;
+  } catch {
+    return 'unknown';
+  }
+}
+
 export class RateLimiter {
   private state = new Map<string, RateLimitEntry>();
   private sessionStore: SessionStore;
@@ -46,7 +60,11 @@ export class RateLimiter {
     }
   }
 
-  async check(senderKey: string, settings: Record<string, unknown>): Promise<RateLimitResult> {
+  async check(
+    sender: MessageSenderLike | undefined,
+    settings: Record<string, unknown>
+  ): Promise<RateLimitResult> {
+    const senderKey = `origin:${originFromSender(sender)}`;
     const now = Date.now();
     const limiterState = this.state.get(senderKey);
     const rateLimitMax = (settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number) ?? RATE_LIMITS.SKIP_AI_MAX;
@@ -76,9 +94,14 @@ export class RateLimiter {
     return { allowed: true };
   }
 
-  removeTab(tabId: number): void {
-    this.state.delete(tabId.toString());
+  removeOrigin(origin: string): void {
+    this.state.delete(`origin:${origin}`);
     this.persist();
+  }
+
+  /** @deprecated Use removeOrigin instead. Kept for backwards compatibility. */
+  removeTab(_tabId: number): void {
+    logWarn('RateLimiter.removeTab called but is deprecated; use removeOrigin', {}, undefined, 'service-worker');
   }
 
   clear(): void {

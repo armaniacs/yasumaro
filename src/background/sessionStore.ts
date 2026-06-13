@@ -16,12 +16,12 @@ export class SessionStore {
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      if (chrome?.storage?.session) {
-        const result = await chrome.storage.session.get(key);
+      if (chrome?.storage?.local) {
+        const result = await chrome.storage.local.get(key);
         return (result[key] as T) ?? null;
       }
     } catch {
-      // chrome.storage.session unavailable
+      // chrome.storage.local unavailable
     }
     return null;
   }
@@ -74,20 +74,20 @@ export class SessionStore {
     this.deleteQueue.clear();
 
     try {
-      if (chrome?.storage?.session) {
+      if (chrome?.storage?.local) {
         if (items.size > 0) {
           const obj: Record<string, unknown> = {};
           for (const [key, value] of items) {
             obj[key] = value;
           }
-          await chrome.storage.session.set(obj);
+          await chrome.storage.local.set(obj);
         }
         if (keysToDelete.size > 0) {
-          await chrome.storage.session.remove(Array.from(keysToDelete));
+          await chrome.storage.local.remove(Array.from(keysToDelete));
         }
       }
     } catch {
-      // chrome.storage.session unavailable or quota exceeded
+      // chrome.storage.local unavailable or quota exceeded
       // フラッシュに失敗した場合はキューに戻してリトライ
       for (const [key, value] of items) {
         this.writeQueue.set(key, value);
