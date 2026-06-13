@@ -7,6 +7,7 @@
 import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { errorMessage } from '../utils/errorUtils.js';
+import { logError, logWarn, logInfo, ErrorCode } from '../utils/logger.js';
 import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -132,7 +133,7 @@ async function _doInit(): Promise<boolean> {
     const opfsAvailable = await isOpfsAvailable();
 
     if (!opfsAvailable) {
-      console.warn('OPFS not available, using chrome.storage.local fallback');
+      logWarn('SQLite: OPFS not available, using chrome.storage.local fallback', {}, undefined, 'sqlite');
       usingFallbackStorage = true;
       fallbackStorage = new FallbackStorage();
       await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
@@ -174,7 +175,7 @@ async function _doInit(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error('SQLite init failed:', errorMessage(error), error);
+    logError('SQLite: init failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     dbHandle = null;
     sqlite3 = null;
     initPromise = null;
@@ -225,12 +226,12 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
     }
 
     if (migrated > 0) {
-      console.log(`Migrated ${migrated} records from fallback storage to SQLite`);
+      logInfo(`SQLite: migrated ${migrated} records from fallback storage`, { migrated }, 'sqlite');
       await tempFallback.clearAll();
     }
     await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
   } catch (error) {
-    console.error('Fallback migration failed:', errorMessage(error));
+    logError('SQLite: fallback migration failed', { error: errorMessage(error) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'sqlite');
   }
 }
 
@@ -344,7 +345,7 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 
     return { success: true, id: newId };
   } catch (error) {
-    console.error('SQLite insert failed:', errorMessage(error));
+    logError('SQLite: insert failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -405,7 +406,7 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
       throw innerError;
     }
   } catch (error) {
-    console.error('SQLite insertBatch failed:', errorMessage(error));
+    logError('SQLite: insertBatch failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -485,7 +486,7 @@ export async function query(options: QueryOptions = {}): Promise<{
 
     return { success: true, rows, total };
   } catch (error) {
-    console.error('SQLite query failed:', errorMessage(error));
+    logError('SQLite: query failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -550,7 +551,7 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 
     return { success: true, rows, total };
   } catch (error) {
-    console.error('SQLite search failed:', errorMessage(error));
+    logError('SQLite: search failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -596,7 +597,7 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
 
     return { success: true };
   } catch (error) {
-    console.error('SQLite update failed:', errorMessage(error));
+    logError('SQLite: update failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -619,7 +620,7 @@ export async function hardDelete(id: number): Promise<{ success: true } | { succ
     await execWithCache('DELETE FROM browsing_logs WHERE id = ?', [id]);
     return { success: true };
   } catch (error) {
-    console.error('SQLite hardDelete failed:', errorMessage(error));
+    logError('SQLite: hardDelete failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -652,7 +653,7 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
     );
     return { success: true, is_starred: newStarred };
   } catch (error) {
-    console.error('SQLite toggleStar failed:', errorMessage(error));
+    logError('SQLite: toggleStar failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -682,7 +683,7 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 
     return { success: true, count };
   } catch (error) {
-    console.error('SQLite getCount failed:', errorMessage(error));
+    logError('SQLite: getCount failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -713,7 +714,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
 
     return { success: true, initialized: true, path: DB_FILENAME, fallback: false };
   } catch (error) {
-    console.error('SQLite getStatus failed:', errorMessage(error));
+    logError('SQLite: getStatus failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -742,7 +743,7 @@ export async function clearAll(): Promise<{ success: boolean; error?: string }> 
 
     return { success: true };
   } catch (error) {
-    console.error('SQLite clearAll failed:', errorMessage(error));
+    logError('SQLite: clearAll failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }
@@ -856,7 +857,7 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
     const encoder = new TextEncoder();
     return { success: true, data: encoder.encode(json) };
   } catch (error) {
-    console.error('SQLite serialize failed:', errorMessage(error));
+    logError('SQLite: serialize failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }

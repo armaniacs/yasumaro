@@ -8,6 +8,7 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
@@ -125,11 +126,14 @@ export class SqliteClient {
     try {
       const response = await this.msgOffscreen(type, payload);
       if (response?.success) {
+        recordSqliteSuccess();
         return transform ? transform(response) : (response as unknown as T);
       }
+      recordSqliteFailure(type, response?.error || 'unknown');
       return null;
     } catch (error: unknown) {
       addLog(LogType.ERROR, `SqliteClient: ${type} failed`, { error: errorMessage(error) });
+      recordSqliteFailure(type, errorMessage(error));
       return null;
     }
   }

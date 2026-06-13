@@ -604,3 +604,50 @@ async function writeStructuredLog(entry: LogEntry): Promise<void> {
         console.error('Logger: Failed to write structured log', e);
     }
 }
+
+const CRITICAL_NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000;
+let lastCriticalNotificationTime = 0;
+
+/**
+ * CRITICAL — 構造化ERRORログ + chrome.notifications アラート
+ * 暗号化失敗、データ損失リスクなど重大な障害で使用する。
+ * 通知にはクールダウン（5分）があり、連続通知スパムを防ぐ。
+ */
+export async function logCritical<T extends object = Record<string, unknown>>(
+    message: string,
+    details: T = {} as T,
+    errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
+    source?: string
+): Promise<void> {
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
+    await writeStructuredLog(entry);
+
+    console.error(`[CRITICAL:${errorCode}] ${message}`, details);
+
+    const now = Date.now();
+    if (now - lastCriticalNotificationTime < CRITICAL_NOTIFICATION_COOLDOWN_MS) {
+        return;
+    }
+    lastCriticalNotificationTime = now;
+
+    try {
+        if (typeof chrome !== 'undefined' && chrome.notifications && typeof chrome.notifications.create === 'function') {
+            const title = chrome.i18n.getMessage('criticalAlertTitle') || 'Yasumaro — Critical Error';
+            const notificationMessage = chrome.i18n.getMessage('criticalAlertBody', [message]) || message;
+            const iconUrl = (typeof chrome.runtime !== 'undefined' && typeof chrome.runtime.getURL === 'function')
+                ? chrome.runtime.getURL('icons/icon48.png')
+                : 'icons/icon48.png';
+
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl,
+                title,
+                message: notificationMessage,
+                priority: 2,
+                requireInteraction: true,
+            });
+        }
+    } catch (e) {
+        console.error('Logger: Failed to create critical notification', e);
+    }
+}

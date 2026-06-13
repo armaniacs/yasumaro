@@ -2396,5 +2396,17 @@
   },
   "historyDateDay": {
     "message": "日"
+  },
+  "criticalAlertTitle": {
+    "message": "Yasumaro — 重大なエラー"
+  },
+  "criticalAlertBody": {
+    "message": "重大なエラーが発生しました: $1。設定の「診断」パネルを確認してください。"
+  },
+  "sqliteAlertTitle": {
+    "message": "SQLite 初期化エラー"
+  },
+  "sqliteAlertMessage": {
+    "message": "履歴データベースの初期化に繰り返し失敗しています。設定の「診断」パネルを確認してください。"
   }
 }

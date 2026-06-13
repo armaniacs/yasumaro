@@ -2396,5 +2396,17 @@
   },
   "historyDateDay": {
     "message": ""
+  },
+  "criticalAlertTitle": {
+    "message": "Yasumaro — Critical Error"
+  },
+  "criticalAlertBody": {
+    "message": "A critical error occurred: $1. Check the Diagnostics panel in settings."
+  },
+  "sqliteAlertTitle": {
+    "message": "SQLite Initialization Error"
+  },
+  "sqliteAlertMessage": {
+    "message": "History database initialization has failed repeatedly. Check the Diagnostics panel in settings."
   }
 }
