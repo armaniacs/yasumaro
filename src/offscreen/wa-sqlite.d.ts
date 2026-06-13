@@ -13,3 +13,13 @@ declare module 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js' {
     close(): Promise<void>;
   }
 }
+
+declare module 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js' {
+  import * as VFS from 'wa-sqlite/src/VFS.js';
+
+  export class IDBBatchAtomicVFS extends VFS.Base {
+    constructor(idbDatabaseName?: string, options?: Record<string, unknown>);
+    get name(): string;
+    close(): Promise<void>;
+  }
+}

@@ -8,7 +8,7 @@ import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logWarn, logInfo, ErrorCode } from '../utils/logger.js';
-import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
+import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
@@ -99,25 +99,6 @@ const PREPARED_STMT_CACHE_MAX_SIZE = 50;
 const preparedStmtCache = new Map<string, number>();
 
 // ============================================================================
-// OPFS Availability Check
-// ============================================================================
-
-async function isOpfsAvailable(): Promise<boolean> {
-  try {
-    if (!navigator.storage?.getDirectory) return false;
-    const dir = await navigator.storage.getDirectory();
-    if (!dir) return false;
-    // Verify createSyncAccessHandle is actually available (required by OriginPrivateFileSystemVFS)
-    const handle = await dir.getFileHandle('opfs-test', { create: true });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (handle as any).createSyncAccessHandle !== 'function') return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -135,34 +116,19 @@ export async function init(): Promise<boolean> {
 
 async function _doInit(): Promise<boolean> {
   try {
-    const opfsAvailable = await isOpfsAvailable();
-
-    if (!opfsAvailable) {
-      logWarn('SQLite: OPFS not available, using chrome.storage.local fallback', {}, undefined, 'sqlite');
-      usingFallbackStorage = true;
-      fallbackStorage = new FallbackStorage();
-      try {
-        await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
-      } catch {
-        // chrome.storage may not be available in offscreen context
-      }
-      await tryMigrateFallbackToSqlite();
-      return true;
-    }
-
     // Load the SQLite WASM module
     const module = await SQLiteESMFactory();
     sqlite3 = SQLite.Factory(module);
 
-    // Register the OPFS VFS
-    const vfs = new OriginPrivateFileSystemVFS();
+    // Register the IndexedDB-based VFS (works in offscreen document main thread)
+    const vfs = new IDBBatchAtomicVFS(DB_FILENAME);
     sqlite3.vfs_register(vfs, true);
 
-    // Open the database on OPFS
+    // Open the database on IndexedDB
     dbHandle = await sqlite3.open_v2(
       DB_FILENAME,
       SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
-      'opfs'
+      'idb-batch-atomic'
     );
 
     // Execute schema creation
