@@ -3,6 +3,7 @@ import { RecordingLogic } from '../background/recordingLogic.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { hashUrl } from '../utils/crypto.js';
 
 export interface StatusInfo {
@@ -155,7 +156,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
         await logDebug('Found privacy info in cache', { isPrivate: privacyInfo?.isPrivate, reason: privacyInfo?.reason, source: 'statusChecker' });
       }
     } catch (error) {
-      await logWarn('Failed to get privacy cache', { error: error instanceof Error ? error.message : String(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
+      await logWarn('Failed to get privacy cache', { error: errorMessage(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
     }
 
     // 並列処理で設定とURL履歴を取得
@@ -236,7 +237,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
       lastSaved: lastSavedInfo
     };
   } catch (error) {
-    await logError('Error checking page status', { error: error instanceof Error ? error.message : String(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
+    await logError('Error checking page status', { error: errorMessage(error), source: 'statusChecker' }, ErrorCode.UNKNOWN_ERROR);
     // エラー時はデフォルト値を返す
     return {
       domainFilter: {

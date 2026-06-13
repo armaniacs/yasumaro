@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
 /** プライバシーポリシーバージョン定数 */
@@ -51,10 +52,9 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
         // 未設定の場合
         return { hasConsented: false };
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         await logError(
             'Failed to get privacy consent state',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.STORAGE_READ_FAILURE,
             'privacyConsent.ts'
         );
@@ -81,10 +81,9 @@ export async function savePrivacyConsent(version: string = PRIVACY_POLICY_VERSIO
             'privacyConsent.ts'
         );
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         await logError(
             'Failed to save privacy consent',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             ErrorCode.STORAGE_WRITE_FAILURE,
             'privacyConsent.ts'
         );
@@ -154,10 +153,9 @@ export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
 
         return false;
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         await logWarn(
             'Failed to migrate legacy privacy consent',
-            { error: errorMessage },
+            { error: errorMessage(error) },
             undefined,
             'privacyConsent.ts'
         );
@@ -193,8 +191,7 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
         await logInfo('Privacy consent withdrawn', { withdrawalDate: withdrawal.withdrawalDate }, 'privacyConsent.ts');
         return withdrawal;
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        await logError('Failed to withdraw privacy consent', { error: errorMessage }, ErrorCode.STORAGE_WRITE_FAILURE, 'privacyConsent.ts');
+        await logError('Failed to withdraw privacy consent', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'privacyConsent.ts');
         throw error;
     }
 }

@@ -9,6 +9,7 @@
  */
 
 import { DEFAULT_METADATA, RULE_TYPES, RuleType } from './constants.js';
+import { errorMessage } from '../errorUtils.js';
 import { isValidString, isCommentLine, isEmptyLine, validateDomain, isValidRulePattern } from './validation.js';
 import { createEmptyRuleset, generateRuleId, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, UblockRules } from './transform.js';
 import { parseUblockFilterLine } from './parsing.js';
@@ -173,12 +174,10 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
                 });
             }
         } catch (error: unknown) {
-            // 【エラー収集】: パースエラーを収集 🟢
-            const errorMessage = error instanceof Error ? error.message : String(error);
             errors.push({
                 lineNumber: i + 1,
                 line: line,
-                message: errorMessage
+                message: errorMessage(error)
             });
         }
     }

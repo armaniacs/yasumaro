@@ -12,6 +12,7 @@ import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { getSettings, StorageKeys } from './storage.js';
 import { logDebug, logWarn } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 import { TIMEOUTS } from '../constants/appConstants.js';
 
 // セキュリティ定数
@@ -53,8 +54,7 @@ function validateUrl(url: string, options: ValidateUrlOptions = {}): void {
   try {
     parsedUrl = new URL(url);
   } catch (e: unknown) {
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    throw new Error(`Invalid URL: ${errorMessage}`);
+    throw new Error(`Invalid URL: ${errorMessage(e)}`);
   }
 
   // プロトコル検証（オプション）

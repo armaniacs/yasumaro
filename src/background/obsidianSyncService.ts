@@ -8,6 +8,7 @@
 import { ObsidianClient } from './obsidianClient.js';
 import { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
 
 export class ObsidianSyncService {
@@ -51,7 +52,7 @@ export class ObsidianSyncService {
       return true;
     } catch (error) {
       addLog(LogType.WARN, 'ObsidianSync: failed (silent skip)', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         url,
       });
       return false;
@@ -72,7 +73,7 @@ export class ObsidianSyncService {
     } catch (error) {
       return {
         success: false,
-        message: `Connection failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Connection failed: ${errorMessage(error)}`,
       };
     }
   }

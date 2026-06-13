@@ -3,6 +3,7 @@ import { RecordingLogic } from './recordingLogic.js';
 import { logInfo, logDebug, logError, logWarn, ErrorCode } from '../utils/logger.js';
 import { hashUrl } from '../utils/crypto.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 const MAX_CACHE_SIZE = 100;
 
@@ -28,8 +29,7 @@ export class HeaderDetector {
 
       await logInfo('Successfully initialized webRequest listener', { source: 'headerDetector' });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      await logError('HeaderDetector initialization failed', { error: errorMessage, source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
+      await logError('HeaderDetector initialization failed', { error: errorMessage(error), source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
     }
   }
 
@@ -116,12 +116,11 @@ export class HeaderDetector {
         await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
       })();
     } catch (error: unknown) {
-      // エラーは握りつぶしてログのみ記録
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const msg = errorMessage(error);
       (async () => {
         const urlHash = await hashUrl(details.url);
         await logError('HeaderDetector error', {
-          error: errorMessage,
+          error: msg,
           urlHash,
           source: 'headerDetector'
         }, ErrorCode.UNKNOWN_ERROR);
@@ -169,7 +168,7 @@ export class HeaderDetector {
         logError('Failed to set privacy badge', {
           tabId,
           url: normalizedUrl,
-          error: error instanceof Error ? error.message : String(error)
+          error: errorMessage(error)
         }, ErrorCode.BADGE_UPDATE_FAILED, 'headerDetector.ts');
       }
     }

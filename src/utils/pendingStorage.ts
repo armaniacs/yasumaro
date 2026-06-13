@@ -1,5 +1,6 @@
 import { getSettings, saveSettings } from './storage.js';
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './crypto.js';
 
 export interface PendingPage {
@@ -24,7 +25,7 @@ async function getPendingPagesList(): Promise<PendingPage[]> {
   } catch (error) {
     await logError(
       'Failed to get pending pages list',
-      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      { error: errorMessage(error), source: 'pendingStorage' },
       ErrorCode.STORAGE_READ_FAILURE
     );
     return [];
@@ -58,7 +59,7 @@ export async function addPendingPage(page: PendingPage): Promise<void> {
   } catch (error) {
     await logError(
       'Failed to add pending page',
-      { error: error instanceof Error ? error.message : String(error), urlHash: await hashUrl(page.url), source: 'pendingStorage' },
+      { error: errorMessage(error), urlHash: await hashUrl(page.url), source: 'pendingStorage' },
       ErrorCode.STORAGE_WRITE_FAILURE
     );
     throw error;
@@ -76,7 +77,7 @@ export async function getPendingPages(): Promise<PendingPage[]> {
   } catch (error) {
     await logError(
       'Failed to get pending pages',
-      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      { error: errorMessage(error), source: 'pendingStorage' },
       ErrorCode.STORAGE_READ_FAILURE
     );
     return [];
@@ -98,7 +99,7 @@ export async function removePendingPages(urls: string[]): Promise<void> {
   } catch (error) {
     await logError(
       'Failed to remove pending pages',
-      { error: error instanceof Error ? error.message : String(error), urlsCount: urls.length, source: 'pendingStorage' },
+      { error: errorMessage(error), urlsCount: urls.length, source: 'pendingStorage' },
       ErrorCode.STORAGE_WRITE_FAILURE
     );
   }
@@ -117,7 +118,7 @@ export async function clearExpiredPages(): Promise<void> {
   } catch (error) {
     await logError(
       'Failed to clear expired pages',
-      { error: error instanceof Error ? error.message : String(error), source: 'pendingStorage' },
+      { error: errorMessage(error), source: 'pendingStorage' },
       ErrorCode.STORAGE_WRITE_FAILURE
     );
   }

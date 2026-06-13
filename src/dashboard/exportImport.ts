@@ -4,6 +4,7 @@
  */
 
 import { getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../popup/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
@@ -107,8 +108,7 @@ export function initExportImport(): void {
         showStatus('exportImportStatus', getMessage('settingsExported'), 'success');
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatus('exportImportStatus', `${getMessage('exportError')}: ${message}`, 'error');
+      showStatus('exportImportStatus', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
     }
   });
 
@@ -175,8 +175,7 @@ export function initExportImport(): void {
         importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatus('exportImportStatus', `${getMessage('importError')}: ${message}`, 'error');
+      showStatus('exportImportStatus', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
     }
   });
 
@@ -198,8 +197,7 @@ export function initExportImport(): void {
         showStatus('exportImportStatus', `${getMessage('importError')}: Failed to apply settings`, 'error');
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatus('exportImportStatus', `${getMessage('importError')}: ${message}`, 'error');
+      showStatus('exportImportStatus', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
     }
     closeImportModal();
   });

@@ -4,6 +4,7 @@ import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from './Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { redactSensitiveData } from '../utils/redaction.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 /**
  * Problem #2: HTTPヘッダーの固定部分を定数化
@@ -98,7 +99,7 @@ async function _fetchWithTimeout(url: string, options: RequestInit = {}): Promis
         if (error instanceof Error && error.name === 'AbortError') {
             throw new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
-        throw error instanceof Error ? error : new Error(String(error));
+        throw error instanceof Error ? error : new Error(errorMessage(error));
     }
 }
 
@@ -306,19 +307,18 @@ export class ObsidianClient {
                 }
             }
         } catch (e: unknown) {
-            const errorMessage = e instanceof Error ? e.message : String(e);
+            const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : 'Error';
-            addLog(LogType.ERROR, `Connection test failed: ${errorMessage}`);
+            addLog(LogType.ERROR, `Connection test failed: ${msg}`);
 
-            // より具体的なエラーメッセージ
-            if (errorMessage.includes('timed out')) {
+            if (msg.includes('timed out')) {
                 return { success: false, message: 'Connection timeout. Is Obsidian running?' };
-            } else if (errorMessage.includes('Failed to fetch') || errorName === 'TypeError') {
+            } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
                 return { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' };
-            } else if (errorMessage.includes('API key is missing')) {
+            } else if (msg.includes('API key is missing')) {
                 return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
             } else {
-                return { success: false, message: `Connection error: ${errorMessage}` };
+                return { success: false, message: `Connection error: ${msg}` };
             }
         }
     }

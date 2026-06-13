@@ -9,6 +9,7 @@
  */
 
 import { createSender } from '../utils/retryHelper.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
@@ -632,8 +633,7 @@ async function reportValidVisit(): Promise<void> {
                             }
                         });
                     } catch (retryError: unknown) {
-                        const message = retryError instanceof Error ? retryError.message : String(retryError);
-                        await logError('Failed to force save private page', { error: message }, ErrorCode.INTERNAL_ERROR, 'extractor');
+                        await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'extractor');
                     }
                 }
                 return;
@@ -642,9 +642,8 @@ async function reportValidVisit(): Promise<void> {
             await logError('Background worker error', { error: response.error }, ErrorCode.INTERNAL_ERROR, 'extractor');
         }
     } catch (error: unknown) {
-        // 全てのリトライが失敗した場合
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage && (errorMessage.includes('Extension context invalidated') || errorMessage.includes('sendMessage'))) {
+        const msg = errorMessage(error);
+        if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
             // 拡張機能がリロードされた場合は、定期チェックを停止してページリフレッシュを推奨
             if (checkIntervalId) {
                 clearInterval(checkIntervalId);
@@ -652,7 +651,7 @@ async function reportValidVisit(): Promise<void> {
             }
             await logInfo('Extension reloaded - page refresh needed', {}, 'extractor');
         } else {
-            await logWarn('Failed to report valid visit', { error: errorMessage }, ErrorCode.API_REQUEST_FAILURE, 'extractor');
+            await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'extractor');
         }
     }
 }

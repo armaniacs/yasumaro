@@ -4,6 +4,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import {
   setUrlRecordType,
@@ -66,8 +67,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
       results.success.push(name);
     } catch (error: unknown) {
       results.failed.push(name);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage, url });
+      addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage(error), url });
     }
   };
 

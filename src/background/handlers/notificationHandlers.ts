@@ -2,6 +2,7 @@ import { decodeUrlFromNotificationId } from './urlNotificationHandlers.js';
 import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import type { RecordingLogic } from '../recordingLogic.js';
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
@@ -33,7 +34,7 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
             chrome.notifications.clear(notificationId).catch(e => {
                 logWarn(
                     'Failed to clear notification',
-                    { notificationId, error: e instanceof Error ? e.message : String(e) },
+                    { notificationId, error: errorMessage(e) },
                     ErrorCode.UNKNOWN_ERROR,
                     'service-worker'
                 );
@@ -77,7 +78,7 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
                 {
                     notificationId: notificationId.substring(0, 20) + '...',
                     buttonIndex,
-                    error: error instanceof Error ? error.message : String(error)
+                    error: errorMessage(error)
                 },
                 ErrorCode.INTERNAL_ERROR,
                 'service-worker'

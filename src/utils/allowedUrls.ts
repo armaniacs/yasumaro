@@ -4,6 +4,7 @@
  */
 
 import { normalizeUrl } from './urlUtils.js';
+import { errorMessage } from './errorUtils.js';
 import type { Source } from './types.js';
 import type { Settings } from './storageSettings.js';
 
@@ -25,12 +26,12 @@ export function buildAllowedUrls(
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${errorMessage(e)}`);
     }
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (localhost), skipping: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`);
     }
 
     // Gemini API
@@ -44,7 +45,7 @@ export function buildAllowedUrls(
                 const normalized = normalizeUrl(openaiBaseUrl);
                 allowedUrls.add(normalized);
             } catch (e) {
-                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${errorMessage(e)}`);
             }
         } else {
             console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
@@ -58,7 +59,7 @@ export function buildAllowedUrls(
                 const normalized = normalizeUrl(openai2BaseUrl);
                 allowedUrls.add(normalized);
             } catch (e) {
-                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${e instanceof Error ? e.message : String(e)}`);
+                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${errorMessage(e)}`);
             }
         } else {
             console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);

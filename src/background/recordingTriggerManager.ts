@@ -6,6 +6,7 @@
 
 import { StorageKeys } from '../utils/storage.js';
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 // ============================================================================
 // Types
@@ -105,7 +106,7 @@ export class RecordingTriggerManager {
       return true;
     } catch (error) {
       addLog(LogType.ERROR, 'Failed to save recording triggers', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       return false;
     }

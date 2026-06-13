@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
@@ -64,9 +65,8 @@ async function savePrivacySettings(): Promise<void> {
         showStatus('privacyStatus', getMessage('privacySaved'), 'success');
 
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        addLog(LogType.ERROR, 'Error saving privacy settings', { error: errorMessage });
-        showStatus('privacyStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
+        addLog(LogType.ERROR, 'Error saving privacy settings', { error: errorMessage(error) });
+        showStatus('privacyStatus', `${getMessage('saveError')}: ${errorMessage(error)}`, 'error');
     }
 }
 

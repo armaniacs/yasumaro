@@ -8,6 +8,7 @@
  */
 
 import { logWarn, ErrorCode } from './logger.js';
+import { errorMessage } from './errorUtils.js';
 
 class CspError extends Error {
     code: string;
@@ -242,7 +243,7 @@ export class CSPValidator {
       // Log error without including the URL to avoid logging sensitive data
       logWarn(
         'CSP validation failed for URL',
-        { error: error instanceof Error ? error.message : String(error) },
+        { error: errorMessage(error) },
         undefined,
         'cspValidator'
       );
@@ -279,7 +280,7 @@ export class CSPValidator {
       // Log error without including the URL to avoid logging sensitive data
       logWarn(
         'CSP provider URL validation failed',
-        { error: error instanceof Error ? error.message : String(error) },
+        { error: errorMessage(error) },
         undefined,
         'cspValidator'
       );
@@ -400,7 +401,7 @@ export function getCspErrorMessage(url: string): string | null {
   } catch (error) {
     logWarn(
       'Failed to generate CSP error message',
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: errorMessage(error) },
       undefined,
       'cspValidator'
     );

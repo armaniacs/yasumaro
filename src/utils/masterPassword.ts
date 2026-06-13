@@ -5,6 +5,7 @@
  */
 
 import type { EncryptedData } from './typesCrypto.js';
+import { errorMessage } from './errorUtils.js';
 import {
     generateSalt,
     hashPasswordWithPBKDF2,
@@ -128,7 +129,7 @@ export async function setMasterPassword(
 
         return { success: true };
     } catch (e: unknown) {
-        return { success: false, error: e instanceof Error ? e.message : String(e) };
+        return { success: false, error: errorMessage(e) };
     }
 }
 
@@ -163,7 +164,7 @@ export async function verifyMasterPassword(
 
         return { success: true };
     } catch (e: unknown) {
-        return { success: false, error: e instanceof Error ? e.message : String(e) };
+        return { success: false, error: errorMessage(e) };
     }
 }
 
@@ -238,7 +239,7 @@ export async function changeMasterPassword(
 
         return { success: true };
     } catch (e: unknown) {
-        return { success: false, error: e instanceof Error ? e.message : String(e) };
+        return { success: false, error: errorMessage(e) };
     }
 }
 

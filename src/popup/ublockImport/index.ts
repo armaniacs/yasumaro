@@ -4,6 +4,7 @@
  */
 
 import { readFile } from './fileReader.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { fetchFromUrl } from './urlFetcher.js';
 import { isValidUrl } from './validation.js';
 import { rebuildRulesFromSources, previewUblockFilter } from './rulesBuilder.js';
@@ -98,8 +99,7 @@ async function handleFileSelect(event: Event): Promise<void> {
     handleTextInputPreview();
     showStatus('domainStatus', getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage}`, 'error');
+    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -162,8 +162,7 @@ async function handleExport(): Promise<void> {
     URL.revokeObjectURL(url);
     showStatus('domainStatus', getMessage('fileExported'), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', `${getMessage('exportError')}: ${errorMessage}`, 'error');
+    showStatus('domainStatus', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -183,8 +182,7 @@ async function handleCopy(): Promise<void> {
     await copyToClipboard(text);
     showStatus('domainStatus', getMessage('copiedToClipboard'), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', `${getMessage('copyError')}: ${errorMessage}`, 'error');
+    showStatus('domainStatus', `${getMessage('copyError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -217,8 +215,7 @@ async function handleUrlImport(): Promise<void> {
 
     showStatus('domainStatus', getMessage('loadedFromUrl', { url }), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', errorMessage, 'error');
+    showStatus('domainStatus', errorMessage(error), 'error');
   } finally {
     if (importBtn) {
       importBtn.textContent = getMessage('importFromUrl');
@@ -244,8 +241,7 @@ async function handleDeleteSource(index: number): Promise<void> {
       );
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', `${getMessage('deleteError')}: ${errorMessage}`, 'error');
+    showStatus('domainStatus', `${getMessage('deleteError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -279,9 +275,8 @@ async function handleReloadSource(index: number): Promise<void> {
 
     showStatus('domainStatus', getMessage('sourceUpdatedWithDiff', { ruleCount: newRuleCount, diff: diffStr }), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    addLog(LogType.ERROR, getMessage('reloadError'), { error: errorMessage });
-    showStatus('domainStatus', `${getMessage('reloadError')}: ${errorMessage}`, 'error');
+    addLog(LogType.ERROR, getMessage('reloadError'), { error: errorMessage(error) });
+    showStatus('domainStatus', `${getMessage('reloadError')}: ${errorMessage(error)}`, 'error');
 
     // Use preserved currentSources for button state reset
     renderSourceList(
@@ -401,8 +396,7 @@ async function processFile(file: File): Promise<void> {
     handleTextInputPreview();
     showStatus('domainStatus', getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage}`, 'error');
+    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
 

@@ -4,6 +4,7 @@
  */
 
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { extractDomain, parseDomainList, validateDomainList } from '../utils/domainUtils.js';
 // @ts-ignore: ublockImport/index.js might not be converted yet or type definitions missing
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport.js';
@@ -279,10 +280,9 @@ export async function handleSaveDomainSettings(): Promise<void> {
         await handleSaveUblockSettings();
 
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : undefined;
-        addLog(LogType.ERROR, 'Error saving domain settings', { error: errorMessage, stack: errorStack });
-        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
+        addLog(LogType.ERROR, 'Error saving domain settings', { error: errorMessage(error), stack: errorStack });
+        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage(error)}`, 'error');
     }
 }
 
@@ -338,9 +338,8 @@ async function saveSimpleFormatSettings(): Promise<void> {
         await saveSettings(newSettings, true);
         showStatus('domainStatus', getMessage('domainFilterSaved'), 'success');
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: errorMessage });
-        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage}`, 'error');
+        addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: errorMessage(error) });
+        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage(error)}`, 'error');
     }
 }
 
