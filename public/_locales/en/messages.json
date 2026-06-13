@@ -2348,5 +2348,53 @@
         "example": "Network error"
       }
     }
+  },
+  "cleansingStatsNoData": {
+    "message": "No reduction rate data available. Enable cleansing and record a few pages to see statistics."
+  },
+  "cleansingStatsAvgRate": {
+    "message": "Avg. Reduction Rate"
+  },
+  "cleansingStatsTotalSaved": {
+    "message": "Total Saved"
+  },
+  "cleansingStatsCount": {
+    "message": "Records"
+  },
+  "cleansingStatsCountSuffix": {
+    "message": " record(s)"
+  },
+  "cleansingFunnelDom": {
+    "message": "Full DOM"
+  },
+  "cleansingFunnelCandidate": {
+    "message": "Candidate"
+  },
+  "cleansingFunnelAi": {
+    "message": "AI Summary\nCleansing"
+  },
+  "cleansingFunnelFooter": {
+    "message": "Average"
+  },
+  "cleansingReduction": {
+    "message": "reduction"
+  },
+  "historyToggleStar": {
+    "message": "Toggle star"
+  },
+  "historyDeleteRecord": {
+    "message": "Delete"
+  },
+  "historyDeleteRecordAria": {
+    "message": "Delete this record"
+  },
+  "historyDateYear": {
+    "message": "/"
+  },
+  "historyDateMonth": {
+    "message": "/"
+  },
+  "historyDateDay": {
+    "message": ""
   }
 }

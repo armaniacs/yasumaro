@@ -2348,5 +2348,53 @@
         "example": "ネットワークエラー"
       }
     }
+  },
+  "cleansingStatsNoData": {
+    "message": "削減率データがありません。クレンジングを有効にして数件記録すると統計が表示されます。"
+  },
+  "cleansingStatsAvgRate": {
+    "message": "平均削減率"
+  },
+  "cleansingStatsTotalSaved": {
+    "message": "累計削減量"
+  },
+  "cleansingStatsCount": {
+    "message": "集計対象"
+  },
+  "cleansingStatsCountSuffix": {
+    "message": "件"
+  },
+  "cleansingFunnelDom": {
+    "message": "DOM全体"
+  },
+  "cleansingFunnelCandidate": {
+    "message": "候補絞込"
+  },
+  "cleansingFunnelAi": {
+    "message": "AI要約\nクレンジング"
+  },
+  "cleansingFunnelFooter": {
+    "message": "平均"
+  },
+  "cleansingReduction": {
+    "message": "削減"
+  },
+  "historyToggleStar": {
+    "message": "スターの切り替え"
+  },
+  "historyDeleteRecord": {
+    "message": "削除"
+  },
+  "historyDeleteRecordAria": {
+    "message": "この記録を削除"
+  },
+  "historyDateYear": {
+    "message": "年"
+  },
+  "historyDateMonth": {
+    "message": "月"
+  },
+  "historyDateDay": {
+    "message": "日"
   }
 }

@@ -551,6 +551,23 @@ const chromeRuntimeMock = {
         importNoSignatureWarning: '⚠️ This settings file contains no signature.\n\nSignatures are used to prevent settings file tampering.\n\nIt is recommended not to import files from untrusted sources.\n\nDo you want to continue importing?',
         importNoSignature: 'Settings file does not contain a signature. Only signed files can be imported.',
         hmacVerificationFailedConfirm: 'Settings file signature verification failed.\n\nReason: HMAC secret may have changed (extension update/reload, etc.).\n\nIf this is a trusted settings file, click "OK" to force import.\nIf not, click "Cancel".',
+        cleansingStatsNoData: '削減率データがありません。クレンジングを有効にして数件記録すると統計が表示されます。',
+        cleansingStatsAvgRate: '平均削減率',
+        cleansingStatsTotalSaved: '累計削減量',
+        cleansingStatsCount: '集計対象',
+        cleansingStatsCountSuffix: '件',
+        cleansingFunnelDom: 'DOM全体',
+        cleansingFunnelCandidate: '候補絞込',
+        cleansingFunnelAi: 'AI要約\nクレンジング',
+        cleansingFunnelFooter: '平均',
+        cleansingReduction: '削減',
+        fallbackStorageWarning: '簡易ストレージモードで動作中です。お使いの環境ではOPFSが利用できないため、chrome.storage.localを使用しています。検索機能が制限されます。',
+        historyToggleStar: 'スターの切り替え',
+        historyDeleteRecord: '削除',
+        historyDeleteRecordAria: 'この記録を削除',
+        historyDateYear: '年',
+        historyDateMonth: '月',
+        historyDateDay: '日',
       };
 
       let message = messages[key] || key;

@@ -1,6 +1,10 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
 
+function t(key: string): string {
+  return chrome.i18n.getMessage(key) || key;
+}
+
 /**
  * バイト数を4桁有効数字で KB / MB / GB に自動変換する
  */
@@ -87,16 +91,16 @@ export function computeCleansingStats(entries: SavedUrlEntry[]): CleansingStats 
 export function renderStatsSummary(container: HTMLElement, stats: CleansingStats): void {
   if (stats.count === 0) {
     container.className = 'cleansing-stats-summary no-data';
-    container.textContent = '削減率データがありません。クレンジングを有効にして数件記録すると統計が表示されます。';
+    container.textContent = t('cleansingStatsNoData');
     return;
   }
 
   container.className = 'cleansing-stats-summary';
 
   const cards = [
-    { value: `${stats.avgReductionRate.toFixed(1)}%`, label: '平均削減率' },
-    { value: formatBytes(stats.totalSavedBytes), label: '累計削減量' },
-    { value: `${stats.count}件`, label: '集計対象' },
+    { value: `${stats.avgReductionRate.toFixed(1)}%`, label: t('cleansingStatsAvgRate') },
+    { value: formatBytes(stats.totalSavedBytes), label: t('cleansingStatsTotalSaved') },
+    { value: `${stats.count}${t('cleansingStatsCountSuffix')}`, label: t('cleansingStatsCount') },
   ];
 
   container.innerHTML = cards.map(c => `
@@ -107,7 +111,9 @@ export function renderStatsSummary(container: HTMLElement, stats: CleansingStats
   `).join('');
 }
 
-const FUNNEL_LABELS = ['DOM全体', '候補絞込', 'Content\nCleansing', 'AI要約\nクレンジング'];
+function getFunnelLabels(): string[] {
+  return [t('cleansingFunnelDom'), t('cleansingFunnelCandidate'), 'Content\nCleansing', t('cleansingFunnelAi')];
+}
 
 // WCAG 2.0 AA準拠カラーパレット（ライト/ダーク両対応）
 // ライト: 背景 #f8fafc に対して各色のコントラスト比を確保
@@ -189,7 +195,8 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     ctx.fillStyle = colors.label;
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'right';
-    const labelLines = FUNNEL_LABELS[i].split('\n');
+    const funnelLabels = getFunnelLabels();
+    const labelLines = funnelLabels[i].split('\n');
     if (labelLines.length === 1) {
       ctx.fillText(labelLines[0], paddingLeft - 8, y + barHeight / 2 + 4);
     } else {
@@ -205,7 +212,7 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
   ctx.textAlign = 'center';
   ctx.fillStyle = colors.footer;
   ctx.font = 'bold 12px system-ui, sans-serif';
-  ctx.fillText(`平均 ${stats.avgReductionRate.toFixed(1)}% 削減`, W / 2, H - 4);
+  ctx.fillText(`${t('cleansingFunnelFooter')} ${stats.avgReductionRate.toFixed(1)}%`, W / 2, H - 4);
 }
 
 /**
@@ -252,7 +259,7 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
   const label = document.createElement('span');
   label.className = 'cleansing-progress-label';
   // "1.76 MB → 16 KB (99.1% 削減)" のような表示
-  label.textContent = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% 削減)`;
+  label.textContent = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% ${t('cleansingReduction')})`;
 
   wrapper.appendChild(track);
   wrapper.appendChild(label);

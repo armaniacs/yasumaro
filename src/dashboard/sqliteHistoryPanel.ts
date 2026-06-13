@@ -176,7 +176,7 @@ function renderState(): void {
 
   const fallbackBanner = state.fallbackMode
     ? `<div class="sqlite-fallback-warning" role="alert" style="background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px 12px;margin-bottom:8px;border-radius:4px;font-size:0.9em;">
-        ⚠️ 簡易ストレージモード: OPFSが利用できないため、chrome.storage.localを使用しています。容量制限（5MB）にご注意ください。
+        ⚠️ ${t('fallbackStorageWarning')}
        </div>`
     : '';
 
@@ -231,12 +231,12 @@ function renderEntryList(): void {
     <div class="sqlite-entry" data-id="${entry.id}">
       <div class="sqlite-entry-header">
         <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
-                data-action="star" title="Toggle star" 
-                aria-pressed="${entry.is_starred}" aria-label="Toggle star">★</button>
+                data-action="star" title="${t('historyToggleStar')}" 
+                aria-pressed="${entry.is_starred}" aria-label="${t('historyToggleStar')}">★</button>
         <a href="${escapeHtml(entry.url)}" target="_blank" class="sqlite-entry-title">
           ${escapeHtml(entry.title || entry.url)}
         </a>
-        <button type="button" class="sqlite-entry-delete" data-action="delete" title="Delete" aria-label="Delete this record">✕</button>
+        <button type="button" class="sqlite-entry-delete" data-action="delete" title="${t('historyDeleteRecord')}" aria-label="${t('historyDeleteRecordAria')}">✕</button>
       </div>
       <div class="sqlite-entry-meta">
         <span class="sqlite-entry-domain">${escapeHtml(entry.domain || '')}</span>
@@ -357,7 +357,7 @@ function renderCalendarNav(): void {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isSelected = dateStr === state.selectedDate;
     const isToday = dateStr === formatDate(now);
-    const dateLabel = `${year}年${month + 1}月${d}日`;
+    const dateLabel = `${year}${t('historyDateYear')}${month + 1}${t('historyDateMonth')}${d}${t('historyDateDay')}`;
     daysHtml += `<button type="button" class="day${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}"
       data-date="${dateStr}" aria-pressed="${isSelected}" aria-label="${dateLabel}">${d}</button>`;
   }
