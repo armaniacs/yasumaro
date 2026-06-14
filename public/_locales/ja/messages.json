@@ -1313,6 +1313,111 @@
   "diagLoadError": {
     "message": "ストレージ情報の読み込みに失敗しました。"
   },
+  "diagDebugMode": {
+    "message": "デバッグモード"
+  },
+  "diagDebugDescription": {
+    "message": "開発者向けの詳細な診断情報とデバッグツールを表示します。"
+  },
+  "diagDeficiencyTitle": {
+    "message": "不足診断"
+  },
+  "diagDeficiencyNone": {
+    "message": "不足なし — 全機能が有効です。"
+  },
+  "diagDeficiencyNoOpfsSummary": {
+    "message": "OPFS: 利用不可"
+  },
+  "diagDeficiencyNoOpfsDetail": {
+    "message": "この環境では OPFS (Origin Private File System) が利用できません。"
+  },
+  "diagDeficiencyNoOpfsAction": {
+    "message": "Chrome 102 以上にアップグレードしてください。現在 fallback ストレージで動作中です。"
+  },
+  "diagDeficiencyNoSyncHandleSummary": {
+    "message": "SyncAccessHandle: 利用不可"
+  },
+  "diagDeficiencyNoSyncHandleDetail": {
+    "message": "FileSystemFileHandle.createSyncAccessHandle は Worker コンテキスト外では利用できません。"
+  },
+  "diagDeficiencyNoSyncHandleAction": {
+    "message": "SyncAccessHandle は Web Worker 内でのみ利用可能です。"
+  },
+  "diagDeficiencyNoWorkerSummary": {
+    "message": "Worker: 利用不可"
+  },
+  "diagDeficiencyNoWorkerDetail": {
+    "message": "Worker コンストラクターが利用できません（CSP またはブラウザ制限）。"
+  },
+  "diagDeficiencyNoWorkerAction": {
+    "message": "Content Security Policy の設定を確認してください。"
+  },
+  "diagDeficiencyNoFts5Summary": {
+    "message": "FTS5: 利用不可"
+  },
+  "diagDeficiencyNoFts5Detail": {
+    "message": "FTS5 全文検索が SQLite WASM ビルドに含まれていません。"
+  },
+  "diagDeficiencyNoFts5Action": {
+    "message": "FTS5 を有効にして WASM を再ビルドしてください。LIKE 検索で代替動作中です。"
+  },
+  "diagDeficiencyOpfsNoFts5Summary": {
+    "message": "FTS5: 利用不可 (OPFS 同期ビルド)"
+  },
+  "diagDeficiencyOpfsNoFts5Detail": {
+    "message": "OPFS が使用する同期ビルドには FTS5 が含まれていません。既知の制限です。"
+  },
+  "diagDeficiencyOpfsNoFts5Action": {
+    "message": "LIKE 検索で代替動作中。FTS5 を有効にする場合は wa-sqlite を再ビルドしてください。"
+  },
+  "diagDeficiencyInitFailedSummary": {
+    "message": "データベース: 初期化失敗"
+  },
+  "diagDeficiencyInitFailedDetail": {
+    "message": "SQLite データベースの初期化がエラーで失敗しました。"
+  },
+  "diagDeficiencyInitFailedAction": {
+    "message": "ブラウザのバージョンを確認し、必要に応じて拡張機能データをクリアしてください。"
+  },
+  "diagDeficiencyNotInitializedSummary": {
+    "message": "データベース: 未初期化"
+  },
+  "diagDeficiencyNotInitializedDetail": {
+    "message": "データベースがまだ初期化されていません。"
+  },
+  "diagDeficiencyNotInitializedAction": {
+    "message": "ページを再読み込みするか、拡張機能を再起動してください。"
+  },
+  "diagDeficiencyFallbackSummary": {
+    "message": "ストレージ: fallback モード"
+  },
+  "diagDeficiencyFallbackDetail": {
+    "message": "ネイティブ SQLite が利用できず、chrome.storage.local を fallback として使用中です。"
+  },
+  "diagDeficiencyFallbackAction": {
+    "message": "OPFS と IDB の両方が利用できません。ブラウザバージョンを確認してください。"
+  },
+  "diagCompileOptionsTitle": {
+    "message": "コンパイルオプション (デバッグ)"
+  },
+  "diagCompileOptionsSource": {
+    "message": "ソース"
+  },
+  "diagCompileOptionsHighlight": {
+    "message": "FTS/VFS 関連"
+  },
+  "diagDivergenceWarning": {
+    "message": "dashboard 側と offscreen 側の環境判定に乖離があります。"
+  },
+  "diagSeverityHigh": {
+    "message": "高"
+  },
+  "diagSeverityMedium": {
+    "message": "中"
+  },
+  "diagSeverityLow": {
+    "message": "低"
+  },
   "testing": {
     "message": "テスト中..."
   },

@@ -1366,9 +1366,27 @@
           Check storage usage, verify the Obsidian REST API connection, and view extension information.
         </p>
 
+        <!-- Debug Mode Toggle -->
+        <div class="diag-section">
+          <div class="domain-toggle-row">
+            <label class="toggle-switch" for="diagDebugModeToggle">
+              <input type="checkbox" id="diagDebugModeToggle" role="switch" aria-checked="false">
+              <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+            <span class="toggle-label" data-i18n="diagDebugMode">Debug Mode</span>
+          </div>
+          <p class="diag-debug-description" data-i18n="diagDebugDescription">Show detailed diagnostics and debugging tools for developers.</p>
+        </div>
+
         <div class="diag-section">
           <h3 class="diag-section-title" data-i18n="diagStorageTitle">Storage</h3>
           <div id="diagStorageStats" class="diag-stats"></div>
+        </div>
+
+        <!-- Deficiency Diagnosis -->
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagDeficiencyTitle">Deficiency Diagnosis</h3>
+          <div id="diagDeficiencyStats" class="diag-stats"></div>
         </div>
 
         <div class="diag-section">
@@ -1380,6 +1398,19 @@
           <div id="diagOpfsSpikeResult" class="diag-result" aria-live="polite"></div>
           <button id="diagMigrateBtn" class="secondary-btn" data-i18n="diagMigrateBtn">記録履歴を SQLite へ変換</button>
           <div id="diagMigrateResult" class="diag-result" aria-live="polite"></div>
+        </div>
+
+        <!-- Compile Options (Debug Mode only) -->
+        <details class="advanced-details" id="diagCompileOptionsSection">
+          <summary class="advanced-details-summary" data-i18n="diagCompileOptionsTitle">Compile Options</summary>
+          <div class="advanced-details-content">
+            <div id="diagCompileOptionsStats" class="diag-stats"></div>
+          </div>
+        </details>
+
+        <!-- Divergence Warning -->
+        <div id="diagDivergenceWarning" class="diag-section" style="display: none;">
+          <div class="diag-warning" data-i18n="diagDivergenceWarning">Environment detection mismatch between dashboard and offscreen.</div>
         </div>
 
         <div class="diag-section">

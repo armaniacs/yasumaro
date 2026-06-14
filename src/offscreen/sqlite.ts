@@ -98,6 +98,7 @@ let usingFallbackStorage = false;
 let fallbackStorage: FallbackStorage | null = null;
 let lastInitError: string | null = null;
 let fts5Available = false;
+let cachedCompileOptions: string[] | null = null;
 
 // OPFS Worker state
 let opfsWorker: Worker | null = null;
@@ -316,6 +317,7 @@ async function _doInit(): Promise<boolean> {
     await execWithCache('PRAGMA compile_options', [], (row: SqliteValue[]) => {
       compileOptions.push(String(row[0]));
     });
+    cachedCompileOptions = compileOptions;
     console.log('SQLite compile options:', compileOptions.filter(o => o.includes('FTS') || o.includes('VFS')));
 
     // Enable WAL mode for better concurrent read performance
@@ -1000,18 +1002,18 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | { success: false; error: string }> {
   try {
     // OPFS Worker path
-    const opfsResult = await tryOpfsProxy<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number }>('STATUS');
+    const opfsResult = await tryOpfsProxy<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }>('STATUS');
     if (opfsResult !== null) {
-      return { success: true, initialized: opfsResult.initialized, path: opfsResult.path, fallback: opfsResult.fallback, fts5: opfsResult.fts5 };
+      return { success: true, initialized: opfsResult.initialized, path: opfsResult.path, fallback: opfsResult.fallback, fts5: opfsResult.fts5, compileOptions: opfsResult.compileOptions, compileOptionsSource: 'opfs-worker' };
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       const countResult = await fallbackStorage.getCount();
       const count = countResult.success ? countResult.count : 0;
-      return { success: true, initialized: count >= 0, path: 'chrome.storage.local', fallback: true, fts5: false };
+      return { success: true, initialized: count >= 0, path: 'chrome.storage.local', fallback: true, fts5: false, compileOptionsSource: 'fallback' };
     }
 
     if (!dbHandle || !sqlite3) {
@@ -1019,10 +1021,10 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       await init();
       // If init switched to fallback, return fallback status
       if (usingFallbackStorage && fallbackStorage) {
-        return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false };
+        return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false, compileOptionsSource: 'fallback' };
       }
       if (!dbHandle) {
-        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false', fts5: false };
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false', fts5: false, compileOptionsSource: 'idb' };
       }
     }
 
@@ -1035,7 +1037,7 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       }
     );
 
-    return { success: true, initialized: true, path: DB_FILENAME, fallback: false, fts5: fts5Available };
+    return { success: true, initialized: true, path: DB_FILENAME, fallback: false, fts5: fts5Available, compileOptions: cachedCompileOptions ?? undefined, compileOptionsSource: 'idb' };
   } catch (error) {
     logError('SQLite: getStatus failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
