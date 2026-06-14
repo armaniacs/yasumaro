@@ -178,24 +178,21 @@ async function execWithCache(
 ): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
 
-  // wa-sqlite sync build: statements() returns an AsyncGenerator, use for-await
+  // wa-sqlite sync build: statements() returns an AsyncGenerator.
+  // The generator handles finalize internally after each yield.
   for await (const stmt of s.statements(db, sql)) {
-    try {
-      await s.bind_collection(stmt, params as any[]);
+    await s.bind_collection(stmt, params as any[]);
 
-      if (rowCallback) {
-        while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
-          const names = s.column_names(stmt);
-          const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
-          rowCallback(columns);
-        }
-      } else {
-        if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
-          throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
-        }
+    if (rowCallback) {
+      while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
+        const names = s.column_names(stmt);
+        const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
+        rowCallback(columns);
       }
-    } finally {
-      s.finalize(stmt).catch(() => {});
+    } else {
+      if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
+        throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
+      }
     }
   }
 }
