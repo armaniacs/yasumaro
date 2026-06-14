@@ -113,11 +113,7 @@ const preparedStmtCache = new Map<string, number>();
 
 function isOpfsAvailable(): boolean {
   try {
-    const g = globalThis as any;
-    return (
-      typeof g.navigator?.storage?.getDirectory === 'function' &&
-      typeof g.FileSystemFileHandle?.prototype?.createSyncAccessHandle === 'function'
-    );
+    return typeof navigator?.storage?.getDirectory === 'function';
   } catch {
     return false;
   }
