@@ -170,31 +170,19 @@ function extractDomain(url: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Prepared statement cache
+// SQL execution helper — uses s.exec() which supports parameter binding
 // ---------------------------------------------------------------------------
 
-async function execWithCache(
-  sql: string, params: SqliteValue[], rowCallback?: (row: SqliteValue[]) => void
+async function sqlExec(sql: string, params: SqliteValue[] = []): Promise<void> {
+  const { sqlite3: s, db } = getSqlite();
+  await (s.exec as (db: number, sql: string, bind?: any[]) => Promise<number>)(db, sql, params as any[]);
+}
+
+async function sqlQuery(
+  sql: string, params: SqliteValue[], callback: (row: SqliteValue[]) => void
 ): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
-
-  // wa-sqlite sync build: statements() returns an AsyncGenerator.
-  // The generator handles finalize internally after each yield.
-  for await (const stmt of s.statements(db, sql)) {
-    await s.bind_collection(stmt, params as any[]);
-
-    if (rowCallback) {
-      while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
-        const names = s.column_names(stmt);
-        const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
-        rowCallback(columns);
-      }
-    } else {
-      if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
-        throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
-      }
-    }
-  }
+  await (s.exec as (db: number, sql: string, bind?: any[], opts?: any) => Promise<number>)(db, sql, params as any[], { callback: (row: any[]) => callback(row) });
 }
 
 // ---------------------------------------------------------------------------
@@ -204,7 +192,7 @@ async function execWithCache(
 async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> {
   const domain = record.domain || extractDomain(record.url);
 
-  await execWithCache(
+  await sqlExec(
     `INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -215,7 +203,7 @@ async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> 
   );
 
   let id = 0;
-  await execWithCache('SELECT last_insert_rowid()', [], (row) => { id = Number(row[0]); });
+  await sqlQuery('SELECT last_insert_rowid()', [], (row) => { id = Number(row[0]); });
   return { id };
 }
 
@@ -251,11 +239,11 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
 
   // Count
   let total = 0;
-  await execWithCache(`SELECT COUNT(*) FROM browsing_logs ${where}`, params, (row) => { total = Number(row[0]); });
+  await sqlQuery(`SELECT COUNT(*) FROM browsing_logs ${where}`, params, (row) => { total = Number(row[0]); });
 
   // Select
   const rows: BrowsingLogRecord[] = [];
-  await execWithCache(
+  await sqlQuery(
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced
      FROM browsing_logs ${where}
      ORDER BY ${orderBy} ${dir} LIMIT ? OFFSET ?`,
@@ -290,29 +278,29 @@ async function handleUpdate(payload: { id: number; changes: Record<string, unkno
   if (sets.length === 0) return;
   vals.push(id);
 
-  await execWithCache(
+  await sqlExec(
     `UPDATE browsing_logs SET ${sets.join(', ')} WHERE id = ?`,
     vals
   );
 }
 
 async function handleHardDelete(id: number): Promise<void> {
-  await execWithCache('DELETE FROM browsing_logs WHERE id = ?', [id]);
+  await sqlExec('DELETE FROM browsing_logs WHERE id = ?', [id]);
 }
 
 async function handleToggleStar(id: number): Promise<{ is_starred: number }> {
-  await execWithCache(
+  await sqlExec(
     'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?',
     [id]
   );
   let isStarred = 0;
-  await execWithCache('SELECT is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row[0]); });
+  await sqlQuery('SELECT is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row[0]); });
   return { is_starred: isStarred };
 }
 
 async function handleGetCount(): Promise<number> {
   let count = 0;
-  await execWithCache('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
   return count;
 }
 
@@ -327,7 +315,7 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
   for (const record of records) {
     try {
       const domain = record.domain || extractDomain(record.url);
-      await execWithCache(
+      await sqlExec(
         `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -350,7 +338,7 @@ async function handleGetStatus(): Promise<{ initialized: boolean; path: string; 
   }
 
   let count = 0;
-  await execWithCache('SELECT COUNT(*) FROM browsing_logs', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) FROM browsing_logs', [], (row) => { count = Number(row[0]); });
 
   return {
     initialized: true,
@@ -367,7 +355,7 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
   let totalPurged = 0;
 
   // Delete old non-starred records
-  await execWithCache(
+  await sqlExec(
     'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
     [cutoffMs]
   );
@@ -375,11 +363,11 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
 
   // If still over max, delete oldest non-starred records
   let count = 0;
-  await execWithCache('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
 
   if (count > maxRecords) {
     const toDelete = count - maxRecords;
-    await execWithCache(
+    await sqlExec(
       `DELETE FROM browsing_logs WHERE id IN (
          SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
          ORDER BY created_at ASC LIMIT ?
@@ -397,18 +385,18 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
 
 async function getChangeCount(): Promise<number> {
   let count = 0;
-  await execWithCache('SELECT changes()', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT changes()', [], (row) => { count = Number(row[0]); });
   return count;
 }
 
 async function handleClearAll(): Promise<void> {
-  await execWithCache('DELETE FROM browsing_logs', []);
+  await sqlExec('DELETE FROM browsing_logs', []);
   try { await sqlite3?.exec(dbHandle!, 'PRAGMA wal_checkpoint(TRUNCATE);'); } catch { /* best effort */ }
 }
 
 async function handleSerialize(): Promise<Uint8Array> {
   const rows: BrowsingLogRecord[] = [];
-  await execWithCache(
+  await sqlQuery(
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced
      FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
     [],
