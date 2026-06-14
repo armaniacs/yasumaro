@@ -72,7 +72,6 @@ type SqliteValue = number | string | Uint8Array | null;
 
 const POOL_DIR = '/yasumaro-opfs';
 const DB_FILENAME = 'yasumaro.db';
-const VFS_NAME = 'opfs-pool';
 const PREPARED_STMT_CACHE_MAX = 50;
 const ALLOWED_ORDER_COLUMNS = [
   'id', 'url', 'title', 'summary', 'tags', 'created_at',
@@ -135,10 +134,12 @@ async function initSqlite(): Promise<void> {
   await (vfs as unknown as { isReady: Promise<void> }).isReady;
   sqlite3.vfs_register(vfs as unknown as Parameters<typeof sqlite3.vfs_register>[0], true);
 
+  const vfsName = (vfs as unknown as { name: string }).name;
+
   dbHandle = await sqlite3.open_v2(
     DB_FILENAME,
     SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
-    VFS_NAME
+    vfsName
   );
 
   await sqlite3.exec(dbHandle, SCHEMA_SQL);
