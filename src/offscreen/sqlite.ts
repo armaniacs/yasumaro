@@ -99,8 +99,145 @@ let fallbackStorage: FallbackStorage | null = null;
 let lastInitError: string | null = null;
 let fts5Available = false;
 
+// OPFS Worker state
+let opfsWorker: Worker | null = null;
+let opfsRequestId = 0;
+const opfsPending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+
 const PREPARED_STMT_CACHE_MAX_SIZE = 50;
 const preparedStmtCache = new Map<string, number>();
+
+// ============================================================================
+// OPFS Worker Proxy
+// ============================================================================
+
+function isOpfsAvailable(): boolean {
+  try {
+    return (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.storage?.getDirectory === 'function' &&
+      typeof FileSystemFileHandle !== 'undefined' &&
+      typeof FileSystemFileHandle.prototype.createSyncAccessHandle === 'function'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function canCreateWorker(): boolean {
+  try {
+    return typeof Worker !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
+function createOpfsWorker(): Worker | null {
+  try {
+    const worker = new Worker(
+      new URL('./opfsWorker.js', import.meta.url),
+      { type: 'module' }
+    );
+
+    worker.onmessage = (e: MessageEvent<{ id: number; success: boolean; result?: unknown; error?: string }>) => {
+      const { id, success, result, error } = e.data;
+      const pending = opfsPending.get(id);
+      if (pending) {
+        opfsPending.delete(id);
+        if (success) {
+          pending.resolve(result);
+        } else {
+          pending.reject(new Error(error || 'OPFS Worker error'));
+        }
+      }
+    };
+
+    worker.onerror = (e: ErrorEvent) => {
+      console.error('OPFS Worker error:', e.message);
+      // Reject all pending requests
+      for (const [id, pending] of opfsPending) {
+        pending.reject(new Error(`OPFS Worker error: ${e.message}`));
+        opfsPending.delete(id);
+      }
+    };
+
+    return worker;
+  } catch (err) {
+    console.warn('Failed to create OPFS Worker:', errorMessage(err));
+    return null;
+  }
+}
+
+function sendToOpfsWorker(type: string, payload?: unknown): Promise<unknown> {
+  if (!opfsWorker) {
+    return Promise.reject(new Error('OPFS Worker not available'));
+  }
+
+  const id = ++opfsRequestId;
+  return new Promise((resolve, reject) => {
+    opfsPending.set(id, { resolve, reject });
+
+    // Timeout after 15 seconds
+    const timeout = setTimeout(() => {
+      opfsPending.delete(id);
+      reject(new Error(`OPFS Worker timeout: ${type}`));
+    }, 15000);
+
+    const originalResolve = resolve;
+    const originalReject = reject;
+
+    opfsPending.set(id, {
+      resolve: (v) => { clearTimeout(timeout); originalResolve(v); },
+      reject: (e) => { clearTimeout(timeout); originalReject(e); },
+    });
+
+    opfsWorker!.postMessage({ id, type, payload });
+  });
+}
+
+async function initOpfsWorker(): Promise<boolean> {
+  try {
+    if (!isOpfsAvailable()) {
+      console.log('OPFS: not available (missing getDirectory or createSyncAccessHandle)');
+      return false;
+    }
+
+    if (!canCreateWorker()) {
+      console.log('OPFS: Worker constructor not available');
+      return false;
+    }
+
+    opfsWorker = createOpfsWorker();
+    if (!opfsWorker) {
+      console.log('OPFS: failed to create Worker');
+      return false;
+    }
+
+    // Send INIT to the worker
+    const result = await sendToOpfsWorker('INIT') as { initialized: boolean } | undefined;
+    if (result?.initialized) {
+      console.log('OPFS: Worker initialized successfully');
+      return true;
+    }
+
+    console.warn('OPFS: Worker INIT returned unexpected result:', result);
+    return false;
+  } catch (err) {
+    console.warn('OPFS: Worker init failed:', errorMessage(err));
+    return false;
+  }
+}
+
+function terminateOpfsWorker(): void {
+  if (opfsWorker) {
+    opfsWorker.terminate();
+    opfsWorker = null;
+    for (const [, pending] of opfsPending) {
+      pending.reject(new Error('OPFS Worker terminated'));
+    }
+    opfsPending.clear();
+  }
+}
 
 // ============================================================================
 // Initialization
@@ -111,6 +248,7 @@ const preparedStmtCache = new Map<string, number>();
  * subsequent calls are no-ops.
  */
 export async function init(): Promise<boolean> {
+  if (opfsWorker) return true;
   if (dbHandle) return true;
   if (usingFallbackStorage) return false;
   if (initPromise) return initPromise;
@@ -121,24 +259,31 @@ export async function init(): Promise<boolean> {
 
 async function _doInit(): Promise<boolean> {
   try {
-    // Load the SQLite WASM module
-    const module = await SQLiteESMFactory();
-
-    // Compatibility shim: wa-sqlite npm wrapper (v1.0.0) calls `Module.registerVFS`,
-    // but the custom Emscripten build (upstream v1.1.1+) exports it as `Module.vfs_register`.
-    if (!module.registerVFS && typeof module.vfs_register === 'function') {
-      module.registerVFS = module.vfs_register;
+    // 1. Try OPFS Worker first (preferred — persistent, fast)
+    const opfsOk = await initOpfsWorker();
+    if (opfsOk) {
+      console.log('SQLite: using OPFS Worker (AccessHandlePoolVFS)');
+      fts5Available = false; // npm sync build lacks FTS5 — LIKE fallback used
+      return true;
     }
 
-    sqlite3 = SQLite.Factory(module);
+    // 2. Try IDBBatchAtomicVFS (IndexedDB) as fallback
+    console.log('SQLite: OPFS not available, trying IDBBatchAtomicVFS');
 
-    // Register the IndexedDB-based VFS (works in offscreen document main thread)
+    // Load the SQLite WASM module (async build for IDB VFS compatibility)
+    const asyncModule = await SQLiteESMFactory();
+
+    // Compatibility shim for wa-sqlite npm wrapper (v1.0.0)
+    if (!asyncModule.registerVFS && typeof asyncModule.vfs_register === 'function') {
+      asyncModule.registerVFS = asyncModule.vfs_register;
+    }
+
+    sqlite3 = SQLite.Factory(asyncModule);
+
     const VFS_NAME = 'idb-batch-atomic';
     const vfs = new IDBBatchAtomicVFS(VFS_NAME);
 
-    // Compatibility shim: upstream libvfs.js (v1.1.1+) calls `vfs.hasAsyncMethod(method)`,
-    // but the npm v1.0.0 IDBBatchAtomicVFS does not extend FacadeVFS and lacks this method.
-    // IDBBatchAtomicVFS uses synchronous WebLocks internally, so reporting no async methods is safe.
+    // Compatibility shim for v1.0.0 IDBBatchAtomicVFS
     if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
       (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
     }
@@ -185,6 +330,7 @@ async function _doInit(): Promise<boolean> {
     // Attempt migration from fallback storage if it has data
     await tryMigrateFallbackToSqlite();
 
+    console.log('SQLite: using IDBBatchAtomicVFS (IndexedDB)');
     return true;
   } catch (error) {
     lastInitError = errorMessage(error);
@@ -192,7 +338,13 @@ async function _doInit(): Promise<boolean> {
     dbHandle = null;
     sqlite3 = null;
     initPromise = null;
-    // Fall back to chrome.storage.local when SQLite/OPFS is unavailable
+
+    // If OPFS Worker was created but failed, clean it up
+    if (opfsWorker) {
+      terminateOpfsWorker();
+    }
+
+    // Fall back to chrome.storage.local when both OPFS and IDB are unavailable
     usingFallbackStorage = true;
     fallbackStorage = new FallbackStorage();
     try { await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true }); } catch { /* offscreen context */ }
@@ -319,6 +471,45 @@ function clearPreparedStmtCache(): void {
 }
 
 // ============================================================================
+// OPFS Worker CRUD proxy helpers
+// ============================================================================
+
+/**
+ * Try to proxy a call to the OPFS Worker. Returns the result if the Worker
+ * is available and succeeds, otherwise returns null (caller should use fallback).
+ */
+async function tryOpfsProxy<T>(type: string, payload?: unknown): Promise<T | null> {
+  if (!opfsWorker) return null;
+  try {
+    return await sendToOpfsWorker(type, payload) as T;
+  } catch (err) {
+    console.warn(`OPFS Worker call failed (${type}), falling back:`, errorMessage(err));
+    return null;
+  }
+}
+
+/**
+ * Ensure a storage backend is initialized and return the appropriate handler.
+ * Priority: OPFS Worker > IDBBatchAtomicVFS > FallbackStorage
+ */
+async function ensureBackend(): Promise<'opfs' | 'idb' | 'fallback' | 'none'> {
+  // Already initialized?
+  if (opfsWorker) return 'opfs';
+  if (dbHandle) return 'idb';
+  if (usingFallbackStorage && fallbackStorage) return 'fallback';
+
+  // Try to initialize
+  await init();
+
+  // Re-check after init
+  if (opfsWorker) return 'opfs';
+  if (dbHandle) return 'idb';
+  if (usingFallbackStorage && fallbackStorage) return 'fallback';
+
+  return 'none';
+}
+
+// ============================================================================
 // CRUD Operations
 // ============================================================================
 
@@ -327,8 +518,19 @@ function clearPreparedStmtCache(): void {
  */
 export async function insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
   try {
+    // OPFS Worker path
+    if (opfsWorker) {
+      const result = await sendToOpfsWorker('INSERT', record) as { id: number };
+      return { success: true, id: result.id };
+    }
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
+    }
+
+    if (opfsWorker) {
+      const result = await sendToOpfsWorker('INSERT', record) as { id: number };
+      return { success: true, id: result.id };
     }
 
     if (usingFallbackStorage && fallbackStorage) {
@@ -380,6 +582,9 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
   }
 
   try {
+    const opfsResult = await tryOpfsProxy<{ count: number }>('INSERT_BATCH', records);
+    if (opfsResult !== null) return { success: true, count: opfsResult.count };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -441,6 +646,13 @@ export async function query(options: QueryOptions = {}): Promise<{
   success: true; rows: BrowsingLogRecord[]; total: number
 } | { success: false; error: string }> {
   try {
+    // OPFS Worker proxy
+    const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
+      limit: options.limit, offset: options.offset, since: options.since, until: options.until,
+      domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
+    });
+    if (opfsResult !== null) return { success: true, rows: opfsResult.rows, total: opfsResult.total };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -524,6 +736,15 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
   success: true; rows: SearchResult[]; total: number
 } | { success: false; error: string }> {
   try {
+    // OPFS Worker: proxy search as QUERY with searchQuery (LIKE fallback)
+    const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
+      searchQuery, limit, offset, orderBy: 'created_at', orderDir: 'DESC',
+    });
+    if (opfsResult !== null) {
+      const searchRows: SearchResult[] = opfsResult.rows.map(r => ({ ...r, rank: 0 } as SearchResult));
+      return { success: true, rows: searchRows, total: opfsResult.total };
+    }
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -630,6 +851,9 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
  */
 export async function update(id: number, changes: Partial<BrowsingLogRecord>): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<{ updated: boolean }>('UPDATE', { id, changes });
+    if (opfsResult !== null) return { success: true };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -680,6 +904,9 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
  */
 export async function hardDelete(id: number): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<{ deleted: boolean }>('DELETE', id);
+    if (opfsResult !== null) return { success: true };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -705,6 +932,9 @@ export async function hardDelete(id: number): Promise<{ success: true } | { succ
  */
 export async function toggleStar(id: number): Promise<{ success: true; is_starred: number } | { success: false; error: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<{ is_starred: number }>('TOGGLE_STAR', id);
+    if (opfsResult !== null) return { success: true, is_starred: opfsResult.is_starred };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -741,6 +971,9 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
  */
 export async function getCount(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<{ count: number }>('GET_COUNT');
+    if (opfsResult !== null) return { success: true, count: opfsResult.count };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -774,6 +1007,12 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
  */
 export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean } | { success: false; error: string }> {
   try {
+    // OPFS Worker path
+    const opfsResult = await tryOpfsProxy<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number }>('STATUS');
+    if (opfsResult !== null) {
+      return { success: true, initialized: opfsResult.initialized, path: opfsResult.path, fallback: opfsResult.fallback, fts5: opfsResult.fts5 };
+    }
+
     if (usingFallbackStorage && fallbackStorage) {
       const countResult = await fallbackStorage.getCount();
       const count = countResult.success ? countResult.count : 0;
@@ -813,6 +1052,9 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
  */
 export async function clearAll(): Promise<{ success: boolean; error?: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<{ cleared: boolean }>('CLEAR_ALL');
+    if (opfsResult !== null) return { success: true };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -857,17 +1099,20 @@ export async function purgeOldRecords(
   maxRecords: number = DEFAULT_MAX_RECORDS
 ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
   try {
-    if (!dbHandle && !usingFallbackStorage) {
-      await init();
-    }
+    const opfsResult = await tryOpfsProxy<{ purged: number }>('PURGE', { retentionDays, maxRecords });
+    if (opfsResult !== null) return { success: true, purged: opfsResult.purged };
 
-    if (usingFallbackStorage && fallbackStorage) {
-      return fallbackStorage.purgeOldRecords(retentionDays, maxRecords);
-    }
+if (!dbHandle && !usingFallbackStorage) {
+await init();
+}
 
-    if (!dbHandle) {
-      return { success: false, error: 'Database not initialized' };
-    }
+if (usingFallbackStorage && fallbackStorage) {
+return fallbackStorage.purgeOldRecords(retentionDays, maxRecords);
+}
+
+if (!dbHandle) {
+return { success: false, error: 'Database not initialized' };
+}
 
     const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
     let totalPurged = 0;
@@ -927,6 +1172,10 @@ const FTS_INDEX_WARNING_THRESHOLD = 10_000;
  */
 export async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
+    // OPFS Worker: no FTS in sync build, always return 0
+    const opfsResult = await tryOpfsProxy<{ count: number }>('FTS_INDEX_SIZE');
+    if (opfsResult !== null) return { success: true, count: opfsResult.count };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
@@ -1026,6 +1275,9 @@ function sanitizeFtsQuery(query: string): string {
  */
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   try {
+    const opfsResult = await tryOpfsProxy<Uint8Array>('SERIALIZE');
+    if (opfsResult !== null) return { success: true, data: opfsResult };
+
     if (!dbHandle && !usingFallbackStorage) {
       await init();
     }
