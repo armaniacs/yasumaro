@@ -84,7 +84,7 @@ export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolea
     confirm.className = options.dangerous
       ? 'confirm-dialog-btn confirm-dialog-btn-danger'
       : 'confirm-dialog-btn confirm-dialog-btn-primary';
-    confirm.textContent = t('confirmDelete', 'Delete', options.confirmLabel);
+    confirm.textContent = options.confirmLabel || t('confirmDelete', 'Delete');
 
     actions.append(cancel, confirm);
     dialog.append(title, message, actions);
