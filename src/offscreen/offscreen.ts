@@ -306,6 +306,13 @@ export function handleOffscreenMessage(
                 const result = await sqlitePurgeOldRecords(retentionDays, maxRecords);
                 sendResponse(result);
 
+            } else if (msg.type === 'SQLITE_OPFS_SPIKE') {
+                // OPFS feasibility spike (PBI-10). Runs 案A (Worker + AccessHandlePoolVFS),
+                // the only viable path since createSyncAccessHandle is Worker-only.
+                const { runOpfsSpikeA } = await import('./opfsSpike.js');
+                const report = await runOpfsSpikeA();
+                sendResponse({ success: true, report });
+
             } else {
                 console.warn(`Offscreen: Unknown message type ${msg.type}`);
                 sendResponse({ success: false, error: 'Unknown message type' });

@@ -6,7 +6,7 @@ import { getMessage } from '../popup/i18n.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
-import { getSqliteStatus } from './dashboardSqliteService.js';
+import { getSqliteStatus, runOpfsSpike } from './dashboardSqliteService.js';
 
 /**
  * Creates a stat row element for the diagnostics panel
@@ -303,6 +303,38 @@ async function initDiagnosticsPanel(): Promise<void> {
       sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagTestSqliteBtn.disabled = false;
+    }
+  });
+
+  // OPFS feasibility spike (PBI-10, debug)
+  const diagOpfsSpikeBtn = document.getElementById('diagOpfsSpikeBtn') as HTMLButtonElement | null;
+  const opfsSpikeResult = document.getElementById('diagOpfsSpikeResult') as HTMLElement | null;
+  diagOpfsSpikeBtn?.addEventListener('click', async () => {
+    if (!opfsSpikeResult) return;
+    diagOpfsSpikeBtn.disabled = true;
+    opfsSpikeResult.textContent = getMessage('testing') || 'Testing...';
+    opfsSpikeResult.className = 'diag-result';
+
+    try {
+      const report = await runOpfsSpike();
+      if (report) {
+        const header = `${report.passed ? '✓' : '✗'} strategy=${report.strategy} (${report.durationMs}ms)`;
+        const lines = report.steps.map(
+          s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` — ${s.detail}` : ''}`
+        );
+        opfsSpikeResult.textContent = [header, ...lines].join('\n');
+        opfsSpikeResult.style.color = report.passed
+          ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`
+          : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      } else {
+        opfsSpikeResult.textContent = '✗ OPFS spike returned no report.';
+        opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      }
+    } catch (e) {
+      opfsSpikeResult.textContent = getMessage('testError') || 'Spike failed.';
+      opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+    } finally {
+      diagOpfsSpikeBtn.disabled = false;
     }
   });
 }

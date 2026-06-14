@@ -194,6 +194,31 @@ export async function migrateLogs(): Promise<{ count: number; read: number; inse
   }
 }
 
+export interface OpfsSpikeStepResult { name: string; ok: boolean; detail: string }
+export interface OpfsSpikeReportView {
+  strategy: string;
+  steps: OpfsSpikeStepResult[];
+  passed: boolean;
+  durationMs: number;
+}
+
+/**
+ * Run the OPFS feasibility spike (PBI-10) and return its structured report.
+ * Used by the diagnostics panel for manual verification in real Chrome.
+ */
+export async function runOpfsSpike(): Promise<OpfsSpikeReportView | null> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'opfs_spike' });
+    if (response.success && response.report) {
+      return response.report as OpfsSpikeReportView;
+    }
+    return null;
+  } catch (error) {
+    console.error('runOpfsSpike failed:', error);
+    return null;
+  }
+}
+
 export async function clearAllLogs(): Promise<boolean> {
   try {
     const response = await sendDashboardMessage({ subtype: 'clear_all' }, { requireConfirmToken: true });

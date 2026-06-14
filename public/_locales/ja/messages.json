@@ -1280,6 +1280,9 @@
   "testSqliteBtn": {
     "message": "SQLite テスト"
   },
+  "diagOpfsSpikeBtn": {
+    "message": "OPFS スパイク実行"
+  },
   "diagSqliteTestOk": {
     "message": "SQLite は正常に動作しています。"
   },

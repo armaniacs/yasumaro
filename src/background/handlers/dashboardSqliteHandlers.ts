@@ -139,6 +139,12 @@ export async function handleDashboardSqlite(
                     return { success: false, error: 'Status check failed' };
                 }
             }
+            case 'opfs_spike': {
+                const report = await sqliteClient.runOpfsSpike();
+                return report
+                    ? { success: true, report }
+                    : { success: false, error: 'OPFS spike failed' };
+            }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };
         }

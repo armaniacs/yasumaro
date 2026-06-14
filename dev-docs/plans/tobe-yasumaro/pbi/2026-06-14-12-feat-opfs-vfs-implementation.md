@@ -4,6 +4,16 @@
 > 関連設計: `dev-docs/specs/2026-06-14-sqlite-opfs-persistence-design.md`
 > 依存: PBI-10（OPFS スパイク）完了が前提
 > 進め方: **TDD 必須**
+>
+> ## スパイク確定事項（PBI-10 より）
+> - 採用方式: **offscreen 内 Worker + 同期 wa-sqlite ビルド + AccessHandlePoolVFS**（案B/非同期ビルドは OPFS open 不可）
+> - 雛形: `src/offscreen/opfsWorker.ts`（open/CRUD/FTS5/persist シーケンスの実証済みコード）
+> - WXT/Vite の Worker バンドルは検証済み（`new Worker(new URL('./opfsWorker.js', import.meta.url), {type:'module'})`）
+> - **未解決の最重要課題（要先行調査）**: 「OPFS 永続化（AccessHandlePoolVFS @ Worker）」と「FTS5」の両立。
+>   - npm 配布の同期 WASM は AccessHandlePoolVFS で open 可だが FTS5 非同梱
+>   - 自前ビルドの同期 FTS5 WASM（HEAD / v1.0.0 タグ どちらも）は `CANTOPEN(14)` で open 不可（JS API とのバイナリ非互換）
+>   - 解決の方向性: (a) npm 配布バイナリと同条件（emscripten バージョン・リンクフラグ・SQLite バージョン）で FTS5 付き同期ビルドを再現、(b) wa-sqlite を OPFS+FTS5 を公式サポートする新しいバージョンへ更新し JS/WASM を一致させる
+>   - FTS5 が間に合わない場合の暫定: 既存の LIKE フォールバック検索（`sqlite.ts` の `fts5Available=false` 経路）で OPFS 移行を先行し、FTS5 は別途対応
 
 ## ユーザーストーリー
 

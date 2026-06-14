@@ -1280,6 +1280,9 @@
   "testSqliteBtn": {
     "message": "Test SQLite"
   },
+  "diagOpfsSpikeBtn": {
+    "message": "Run OPFS Spike"
+  },
   "diagSqliteTestOk": {
     "message": "SQLite is working correctly."
   },

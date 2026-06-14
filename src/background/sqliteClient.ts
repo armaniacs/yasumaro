@@ -18,6 +18,7 @@ const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
 // ============================================================================
 
 import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
+import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
 
 interface OffscreenResponse {
   success?: boolean;
@@ -224,6 +225,15 @@ export class SqliteClient {
 
   async clearAll(): Promise<boolean> {
     return (await this.call<void>('SQLITE_CLEAR_ALL')) !== null;
+  }
+
+  /** Run the OPFS feasibility spike (PBI-10) in the offscreen document. */
+  async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
+    return this.call<OpfsSpikeReport>(
+      'SQLITE_OPFS_SPIKE',
+      {},
+      (res) => res.report as OpfsSpikeReport,
+    );
   }
 
   async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
