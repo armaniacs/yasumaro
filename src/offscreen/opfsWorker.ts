@@ -72,7 +72,6 @@ type SqliteValue = number | string | Uint8Array | null;
 
 const POOL_DIR = '/yasumaro-opfs';
 const DB_FILENAME = 'yasumaro.db';
-const PREPARED_STMT_CACHE_MAX = 50;
 const ALLOWED_ORDER_COLUMNS = [
   'id', 'url', 'title', 'summary', 'tags', 'created_at',
   'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
@@ -102,12 +101,13 @@ const SCHEMA_SQL = `
 `;
 
 // ---------------------------------------------------------------------------
+// Init helpers
+// ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
 
 let sqlite3: ReturnType<typeof SQLite.Factory> | null = null;
 let dbHandle: number | null = null;
-let preparedStmtCache = new Map<string, number>();
 
 // ---------------------------------------------------------------------------
 // Init helpers
@@ -178,41 +178,26 @@ async function execWithCache(
 ): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
 
-  let stmt: number | undefined = preparedStmtCache.get(sql);
-  if (stmt === undefined) {
-    const prepared = await s.statements(db, sql);
-    if (prepared === null) throw new Error(`Failed to prepare: ${sql.slice(0, 80)}`);
-    stmt = prepared as unknown as number;
+  // wa-sqlite sync build: statements() returns an AsyncGenerator, use for-await
+  for await (const stmt of s.statements(db, sql)) {
+    try {
+      await s.bind_collection(stmt, params as any[]);
 
-    // LRU eviction
-    if (preparedStmtCache.size >= PREPARED_STMT_CACHE_MAX) {
-      const oldest = preparedStmtCache.keys().next().value;
-      if (oldest) {
-        const oldStmt = preparedStmtCache.get(oldest);
-        if (oldStmt !== undefined) {
-          s.finalize(oldStmt as number).catch(() => {});
-          preparedStmtCache.delete(oldest);
+      if (rowCallback) {
+        while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
+          const names = s.column_names(stmt);
+          const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
+          rowCallback(columns);
+        }
+      } else {
+        if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
+          throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
         }
       }
-    }
-    preparedStmtCache.set(sql, stmt);
-  }
-
-  await s.bind_collection(stmt, params as any[]);
-
-  if (rowCallback) {
-    while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
-      const names = s.column_names(stmt);
-      const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
-      rowCallback(columns);
-    }
-  } else {
-    if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
-      throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
+    } finally {
+      s.finalize(stmt).catch(() => {});
     }
   }
-
-  await s.reset(stmt);
 }
 
 // ---------------------------------------------------------------------------
