@@ -113,11 +113,10 @@ const preparedStmtCache = new Map<string, number>();
 
 function isOpfsAvailable(): boolean {
   try {
+    const g = globalThis as any;
     return (
-      typeof navigator !== 'undefined' &&
-      typeof navigator.storage?.getDirectory === 'function' &&
-      typeof FileSystemFileHandle !== 'undefined' &&
-      typeof FileSystemFileHandle.prototype.createSyncAccessHandle === 'function'
+      typeof g.navigator?.storage?.getDirectory === 'function' &&
+      typeof g.FileSystemFileHandle?.prototype?.createSyncAccessHandle === 'function'
     );
   } catch {
     return false;
@@ -126,7 +125,7 @@ function isOpfsAvailable(): boolean {
 
 function canCreateWorker(): boolean {
   try {
-    return typeof Worker !== 'undefined';
+    return typeof (globalThis as any).Worker !== 'undefined';
   } catch {
     return false;
   }
