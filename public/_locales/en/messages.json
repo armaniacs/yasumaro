@@ -1283,6 +1283,21 @@
   "diagOpfsSpikeBtn": {
     "message": "Run OPFS Spike"
   },
+  "diagMigrateBtn": {
+    "message": "Convert history to SQLite"
+  },
+  "diagMigrateConfirm": {
+    "message": "Convert legacy browsing history into SQLite? The original data is kept. Continue?"
+  },
+  "diagMigrateConfirmLabel": {
+    "message": "Convert"
+  },
+  "diagMigrateDone": {
+    "message": "Conversion complete."
+  },
+  "diagMigrateFailed": {
+    "message": "Conversion failed."
+  },
   "diagSqliteTestOk": {
     "message": "SQLite is working correctly."
   },

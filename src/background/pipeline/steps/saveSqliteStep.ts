@@ -21,7 +21,10 @@ export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void
     );
 
     const insertResult = await params.sqliteClient.insert(params.record);
-    if (insertResult && params.obsidianSynced !== undefined) {
+    if (!insertResult) {
+      throw new Error(`SQLite insert returned null for url=${params.record.url}`);
+    }
+    if (params.obsidianSynced !== undefined) {
       await params.sqliteClient.update(insertResult.id, {
         obsidian_synced: params.obsidianSynced ? 1 : 0,
       });

@@ -17,6 +17,7 @@ import { TabCache } from './tabCache.js';
 import { Mutex } from './Mutex.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import { SqliteClient } from './sqliteClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { PrivacyPipeline } from './privacyPipeline.js';
 
@@ -25,6 +26,7 @@ export interface ServiceWorkerDependencies {
     mutex?: Mutex;
     obsidianClient?: ObsidianClient | null;
     aiClient?: AIClient | null;
+    sqliteClient?: SqliteClient | null;
     recordingLogic?: RecordingLogic | null;
     privacyPipeline?: PrivacyPipeline | null;
 }
@@ -56,6 +58,7 @@ export class ServiceWorkerContext {
             mutex: dependencies.mutex || new Mutex(),
             obsidianClient: dependencies.obsidianClient || null, // 遅延初期化
             aiClient: dependencies.aiClient || null, // 遅延初期化
+            sqliteClient: dependencies.sqliteClient || null, // 遅延初期化
             recordingLogic: dependencies.recordingLogic || null, // 遅延初期化
             privacyPipeline: dependencies.privacyPipeline || null // 遅延初期化
         };
@@ -110,10 +113,22 @@ export class ServiceWorkerContext {
             this.dependencies.recordingLogic = new RecordingLogic(
                 this.dependencies.obsidianClient || this.getObsidianClient(),
                 this.dependencies.aiClient || this.getAIClient(),
-                this.dependencies.privacyPipeline || this.getPrivacyPipeline()
+                this.dependencies.privacyPipeline || this.getPrivacyPipeline(),
+                this.dependencies.sqliteClient || this.getSqliteClient()
             );
         }
         return this.dependencies.recordingLogic!;
+    }
+
+    /**
+     * SQLiteクライアントを取得（遅延初期化）
+     * @returns {SqliteClient}
+     */
+    getSqliteClient(): SqliteClient {
+        if (!this.dependencies.sqliteClient) {
+            this.dependencies.sqliteClient = new SqliteClient();
+        }
+        return this.dependencies.sqliteClient!;
     }
 
     /**

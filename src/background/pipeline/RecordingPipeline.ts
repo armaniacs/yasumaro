@@ -18,13 +18,17 @@ import {
   extractSentencesStep,
   formatMarkdownStep,
   saveToObsidianStep,
-  saveMetadataStep
+  saveMetadataStep,
+  saveSqliteStep
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
+import type { SqliteClient } from '../sqliteClient.js';
+import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import { extractDomain } from '../../utils/domainUtils.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
@@ -41,15 +45,18 @@ export class RecordingPipeline {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private obsidian: ObsidianClient;
   private aiClient: AIClient | null;
+  private sqliteClient: SqliteClient | null;
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
     obsidian: ObsidianClient,
-    aiClient: AIClient | null = null
+    aiClient: AIClient | null = null,
+    sqliteClient: SqliteClient | null = null
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
     this.obsidian = obsidian;
     this.aiClient = aiClient;
+    this.sqliteClient = sqliteClient;
 
     // Define pipeline steps with their error strategies
     this.steps = [
@@ -107,6 +114,11 @@ export class RecordingPipeline {
         execute: this.createSaveToObsidianStep()
       },
       {
+        name: 'saveSqlite',
+        errorStrategy: ErrorStrategy.BEST_EFFORT,
+        execute: this.createSaveSqliteStep()
+      },
+      {
         name: 'saveMetadata',
         errorStrategy: ErrorStrategy.BEST_EFFORT,
         execute: saveMetadataStep
@@ -127,6 +139,50 @@ export class RecordingPipeline {
    */
   private createSaveToObsidianStep() {
     return (context: RecordingContext) => saveToObsidianStep(context, this.obsidian);
+  }
+
+  /**
+   * Create save to SQLite step with injected dependency
+   */
+  private createSaveSqliteStep() {
+    return async (context: RecordingContext): Promise<RecordingContext> => {
+      if (!this.sqliteClient) {
+        addLog(LogType.WARN, 'No SqliteClient available, skipping SQLite save', {
+          url: context.data.url
+        });
+        return context;
+      }
+
+      const { data, privacyResult, obsidianDuration } = context;
+      const { url, title } = data;
+
+      // Build BrowsingLogRecord from pipeline context
+      const record: BrowsingLogRecord = {
+        url,
+        title: title || null,
+        summary: privacyResult?.summary || null,
+        tags: privacyResult?.tags && privacyResult.tags.length > 0
+          ? privacyResult.tags.map(t => `#${t}`).join(' ')
+          : null,
+        created_at: Date.now(),
+        domain: extractDomain(url) || null,
+        visit_duration: null,
+        scroll_ratio: null,
+        is_starred: 0,
+        is_deleted: 0
+      };
+
+      // Use 0 as placeholder recordId (SQLite auto-generates real id)
+      await saveSqliteStep({
+        recordId: 0,
+        record,
+        sqliteClient: this.sqliteClient,
+        obsidianSynced: obsidianDuration !== undefined ? true : undefined
+      });
+
+      addLog(LogType.INFO, 'Saved to SQLite', { url, title });
+      return context;
+    };
   }
 
   /**

@@ -6,7 +6,8 @@ import { getMessage } from '../popup/i18n.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
-import { getSqliteStatus, runOpfsSpike } from './dashboardSqliteService.js';
+import { getSqliteStatus, runOpfsSpike, migrateLogs } from './dashboardSqliteService.js';
+import { showConfirmDialog } from './utils/confirmDialog.js';
 
 /**
  * Creates a stat row element for the diagnostics panel
@@ -335,6 +336,42 @@ async function initDiagnosticsPanel(): Promise<void> {
       opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagOpfsSpikeBtn.disabled = false;
+    }
+  });
+
+  // Legacy history → SQLite conversion (PBI-11)
+  const diagMigrateBtn = document.getElementById('diagMigrateBtn') as HTMLButtonElement | null;
+  const migrateResult = document.getElementById('diagMigrateResult') as HTMLElement | null;
+  diagMigrateBtn?.addEventListener('click', async () => {
+    if (!migrateResult) return;
+    const confirmed = await showConfirmDialog({
+      title: getMessage('diagMigrateBtn') || 'Convert history to SQLite',
+      message: getMessage('diagMigrateConfirm') || 'Convert legacy browsing history into SQLite? The original data is kept.',
+      confirmLabel: getMessage('diagMigrateConfirmLabel') || 'Convert',
+      cancelLabel: getMessage('cancel') || 'Cancel',
+    });
+    if (!confirmed) return;
+
+    diagMigrateBtn.disabled = true;
+    migrateResult.textContent = getMessage('testing') || 'Working...';
+    migrateResult.className = 'diag-result';
+
+    try {
+      const result = await migrateLogs();
+      if (result) {
+        migrateResult.textContent =
+          `✓ ${getMessage('diagMigrateDone') || 'Conversion complete.'} ` +
+          `read=${result.read} inserted=${result.inserted} total=${result.count}`;
+        migrateResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
+      } else {
+        migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
+        migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      }
+    } catch (e) {
+      migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
+      migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+    } finally {
+      diagMigrateBtn.disabled = false;
     }
   });
 }

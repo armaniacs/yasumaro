@@ -166,8 +166,8 @@ export async function ensureConfirmToken(): Promise<string> {
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
-const recordingLogic = new RecordingLogic(obsidian, aiClient);
 const sqliteClient = new SqliteClient();
+const recordingLogic = new RecordingLogic(obsidian, aiClient, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
 // Import RecordingPipeline
@@ -416,7 +416,8 @@ export async function handleManualRecord(
     const pipeline = new RecordingPipeline(
         recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
         obsidian,
-        aiClient
+        aiClient,
+        sqliteClient
     );
 
     const result = await pipeline.execute({
@@ -470,7 +471,8 @@ export async function handleSaveRecord(
     const pipeline = new RecordingPipeline(
         recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
         obsidian,
-        aiClient
+        aiClient,
+        sqliteClient
     );
 
     const result = await pipeline.execute({

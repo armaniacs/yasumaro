@@ -112,6 +112,7 @@ const preparedStmtCache = new Map<string, number>();
  */
 export async function init(): Promise<boolean> {
   if (dbHandle) return true;
+  if (usingFallbackStorage) return false;
   if (initPromise) return initPromise;
 
   initPromise = _doInit();
@@ -122,11 +123,26 @@ async function _doInit(): Promise<boolean> {
   try {
     // Load the SQLite WASM module
     const module = await SQLiteESMFactory();
+
+    // Compatibility shim: wa-sqlite npm wrapper (v1.0.0) calls `Module.registerVFS`,
+    // but the custom Emscripten build (upstream v1.1.1+) exports it as `Module.vfs_register`.
+    if (!module.registerVFS && typeof module.vfs_register === 'function') {
+      module.registerVFS = module.vfs_register;
+    }
+
     sqlite3 = SQLite.Factory(module);
 
     // Register the IndexedDB-based VFS (works in offscreen document main thread)
     const VFS_NAME = 'idb-batch-atomic';
     const vfs = new IDBBatchAtomicVFS(VFS_NAME);
+
+    // Compatibility shim: upstream libvfs.js (v1.1.1+) calls `vfs.hasAsyncMethod(method)`,
+    // but the npm v1.0.0 IDBBatchAtomicVFS does not extend FacadeVFS and lacks this method.
+    // IDBBatchAtomicVFS uses synchronous WebLocks internally, so reporting no async methods is safe.
+    if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
+      (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
+    }
+
     sqlite3.vfs_register(vfs, true);
 
     // Open the database on IndexedDB
@@ -176,6 +192,10 @@ async function _doInit(): Promise<boolean> {
     dbHandle = null;
     sqlite3 = null;
     initPromise = null;
+    // Fall back to chrome.storage.local when SQLite/OPFS is unavailable
+    usingFallbackStorage = true;
+    fallbackStorage = new FallbackStorage();
+    try { await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true }); } catch { /* offscreen context */ }
     return false;
   }
 }
@@ -308,12 +328,15 @@ function clearPreparedStmtCache(): void {
 export async function insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.insert(record);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     const domain = record.domain || extractDomain(record.url);
@@ -358,12 +381,15 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.insertBatch(records);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     await sqlite3!.exec(dbHandle!, 'BEGIN IMMEDIATE');
@@ -416,12 +442,15 @@ export async function query(options: QueryOptions = {}): Promise<{
 } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.query(options);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     const conditions: string[] = [];
@@ -496,12 +525,15 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.search(searchQuery, limit, offset);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     // FTS5 full-text search (preferred) or LIKE-based fallback
@@ -599,12 +631,15 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 export async function update(id: number, changes: Partial<BrowsingLogRecord>): Promise<{ success: true } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.update(id, changes);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     const setClauses: string[] = [];
@@ -646,12 +681,15 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
 export async function hardDelete(id: number): Promise<{ success: true } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.hardDelete(id);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     await execWithCache('DELETE FROM browsing_logs WHERE id = ?', [id]);
@@ -668,12 +706,15 @@ export async function hardDelete(id: number): Promise<{ success: true } | { succ
 export async function toggleStar(id: number): Promise<{ success: true; is_starred: number } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.toggleStar(id);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     await execWithCache(
@@ -701,12 +742,15 @@ export async function toggleStar(id: number): Promise<{ success: true; is_starre
 export async function getCount(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.getCount();
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     let count = 0;
@@ -738,13 +782,13 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
 
     if (!dbHandle || !sqlite3) {
       // Try to initialize if not yet initialized (consistent with query/search)
-      const ok = await init();
-      if (!ok || (!dbHandle && !usingFallbackStorage)) {
-        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false', fts5: false };
-      }
+      await init();
       // If init switched to fallback, return fallback status
       if (usingFallbackStorage && fallbackStorage) {
         return { success: true, initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false };
+      }
+      if (!dbHandle) {
+        return { success: true, initialized: false, path: DB_FILENAME, fallback: false, initError: lastInitError || 'Init returned false', fts5: false };
       }
     }
 
@@ -770,12 +814,15 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
 export async function clearAll(): Promise<{ success: boolean; error?: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.clearAll();
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     await sqlite3!.exec(dbHandle!, `BEGIN IMMEDIATE;
@@ -811,12 +858,15 @@ export async function purgeOldRecords(
 ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return fallbackStorage.purgeOldRecords(retentionDays, maxRecords);
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -878,12 +928,15 @@ const FTS_INDEX_WARNING_THRESHOLD = 10_000;
 export async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {
       return { success: true, count: 0 };
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
     }
 
     let count = 0;
@@ -974,8 +1027,7 @@ function sanitizeFtsQuery(query: string): string {
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   try {
     if (!dbHandle && !usingFallbackStorage) {
-      const ok = await init();
-      if (!ok) return { success: false, error: 'Database not initialized' };
+      await init();
     }
 
     if (usingFallbackStorage && fallbackStorage) {

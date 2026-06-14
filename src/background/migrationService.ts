@@ -10,6 +10,33 @@ import { addLog, LogType } from '../utils/logger.js';
 import { StorageKeys } from '../utils/storage.js';
 import { SqliteClient } from './sqliteClient.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+
+/** Separator used when serializing the legacy tags array into the SQLite `tags` TEXT column. */
+const TAGS_SEPARATOR = ', ';
+
+/**
+ * Map a legacy chrome.storage.local browsing entry to a SQLite BrowsingLogRecord.
+ * `domain` is left null so the SQLite layer derives it from the url.
+ * Legacy entries have no title field, so `title` stays null.
+ */
+export function mapLegacyEntryToRecord(entry: LegacyUrlEntry): BrowsingLogRecord {
+  const tags = Array.isArray(entry.tags) && entry.tags.length > 0
+    ? entry.tags.join(TAGS_SEPARATOR)
+    : null;
+  return {
+    url: entry.url,
+    created_at: entry.timestamp,
+    title: null,
+    summary: typeof entry.aiSummary === 'string' ? entry.aiSummary : null,
+    tags,
+    domain: null,
+    visit_duration: null,
+    scroll_ratio: null,
+    is_starred: 0,
+    is_deleted: 0,
+  };
+}
 
 const BATCH_SIZE = 100;
 const PROGRESS_WRITE_INTERVAL = 5;
@@ -71,18 +98,7 @@ export class MigrationService {
       let lastWrittenProgress = -1;
 
       for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
-        const batch = remaining.slice(i, i + BATCH_SIZE).map((entry) => ({
-          url: entry.url,
-          created_at: entry.timestamp,
-          title: null,
-          summary: null,
-          tags: null,
-          domain: null,
-          visit_duration: null,
-          scroll_ratio: null,
-          is_starred: 0,
-          is_deleted: 0,
-        }));
+        const batch = remaining.slice(i, i + BATCH_SIZE).map(mapLegacyEntryToRecord);
 
         try {
           const result = await this.sqliteClient.insertBatch(batch);
@@ -183,5 +199,7 @@ export class MigrationService {
 interface LegacyUrlEntry {
   url: string;
   timestamp: number;
+  tags?: string[];
+  aiSummary?: string;
   [key: string]: unknown;
 }
