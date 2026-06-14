@@ -869,13 +869,18 @@ export function createMessageHandler(): (
                         message.payload || {},
                         sqliteClient,
                         async () => {
+                            // Reset progress for manual re-run via diagnostics panel
+                            await chrome.storage.local.remove([
+                                'yasumaro_migration_status',
+                                'yasumaro_migration_progress',
+                            ]);
                             const beforeCount = await sqliteClient.getCount();
                             await migrationService.run();
                             const afterCount = await sqliteClient.getCount();
                             return {
                                 success: true,
                                 count: afterCount ?? 0,
-                                read: 0, // filled by migrationService.run() internally
+                                read: 0,
                                 inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
                             };
                         },
