@@ -178,13 +178,11 @@ async function execWithCache(
 ): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
 
-  let stmt = preparedStmtCache.get(sql) ?? null;
-  if (stmt === null) {
-    // wa-sqlite sync build: statements() is synchronous (returns number), but TS types
-    // may report AsyncIterable. Use explicit cast for the synchronous API.
-    const rawStmts = s.statements(db, sql) as unknown as number;
-    stmt = rawStmts;
-    if (stmt === null) throw new Error(`Failed to prepare: ${sql.slice(0, 80)}`);
+  let stmt: number | undefined = preparedStmtCache.get(sql);
+  if (stmt === undefined) {
+    const prepared = await s.statements(db, sql);
+    if (prepared === null) throw new Error(`Failed to prepare: ${sql.slice(0, 80)}`);
+    stmt = prepared as unknown as number;
 
     // LRU eviction
     if (preparedStmtCache.size >= PREPARED_STMT_CACHE_MAX) {
@@ -192,7 +190,7 @@ async function execWithCache(
       if (oldest) {
         const oldStmt = preparedStmtCache.get(oldest);
         if (oldStmt !== undefined) {
-          s.finalize(oldStmt).catch(() => {});
+          s.finalize(oldStmt as number).catch(() => {});
           preparedStmtCache.delete(oldest);
         }
       }
@@ -200,19 +198,21 @@ async function execWithCache(
     preparedStmtCache.set(sql, stmt);
   }
 
-  (s.bind_collection as unknown as (stmt: number, params: unknown[]) => void)(stmt, params);
+  await s.bind_collection(stmt, params as any[]);
 
   if (rowCallback) {
-    while ((await (s.step as unknown as (stmt: number) => Promise<number>)(stmt)) === SQLite.SQLITE_ROW) {
-      rowCallback((s.column_names as unknown as (stmt: number) => string[])(stmt).map((_name, i) => (s.column as unknown as (stmt: number, col: number) => SqliteValue)(stmt, i)));
+    while ((await s.step(stmt)) === SQLite.SQLITE_ROW) {
+      const names = s.column_names(stmt);
+      const columns = names.map((_name, i) => s.column(stmt, i) as unknown as SqliteValue);
+      rowCallback(columns);
     }
   } else {
-    if ((await (s.step as unknown as (stmt: number) => Promise<number>)(stmt)) !== SQLite.SQLITE_DONE) {
+    if ((await s.step(stmt)) !== SQLite.SQLITE_DONE) {
       throw new Error(`Expected SQLITE_DONE after exec: ${sql.slice(0, 80)}`);
     }
   }
 
-  (s.reset as unknown as (stmt: number) => void)(stmt);
+  await s.reset(stmt);
 }
 
 // ---------------------------------------------------------------------------
