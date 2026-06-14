@@ -157,4 +157,46 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
     expect(lockKey).toContain('https://example.com/page');
     expect(lockKey).toContain('1234567890');
   });
+
+  it('throws when insert returns null', async () => {
+    const mockSqlite = makeMockSqlite({
+      insert: vi.fn().mockResolvedValue(null),
+    });
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await expect(
+      saveSqliteStep({
+        recordId: 1,
+        record: { url: 'https://x.com', created_at: 100 },
+        sqliteClient: mockSqlite,
+      })
+    ).rejects.toThrow('SQLite insert returned null');
+
+    expect(mockSqlite.insert).toHaveBeenCalled();
+    expect(mockSqlite.update).not.toHaveBeenCalled();
+  });
+
+  it('does not call update when insert returns null', async () => {
+    const mockSqlite = makeMockSqlite({
+      insert: vi.fn().mockResolvedValue(null),
+    });
+
+    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_key: string, fn: (v: number) => number) => fn(0)
+    );
+
+    await expect(
+      saveSqliteStep({
+        recordId: 1,
+        record: { url: 'https://x.com', created_at: 100 },
+        sqliteClient: mockSqlite,
+        obsidianSynced: true,
+      })
+    ).rejects.toThrow();
+
+    expect(mockSqlite.update).not.toHaveBeenCalled();
+  });
 });

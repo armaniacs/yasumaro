@@ -5,7 +5,9 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { withOptimisticLock } from '../../../utils/optimisticLock.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
+import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
 import {
   setUrlRecordType,
   setUrlMaskedCount,
@@ -59,6 +61,28 @@ export const saveMetadataStep: PipelineStepFunction = async (
   } = data;
 
   const results: { success: string[]; failed: string[] } = { success: [], failed: [] };
+
+  // Add URL entry to savedUrlsWithTimestamps for legacy history panel
+  await (async () => {
+    try {
+      await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (currentEntries) => {
+        const current = currentEntries || [];
+        const existingIdx = current.findIndex(e => e.url === url);
+        if (existingIdx >= 0) {
+          return current.map((e, i) =>
+            i === existingIdx ? { ...e, timestamp: Date.now() } : e
+          );
+        }
+        return [...current, { url, title: data.title || '', timestamp: Date.now() }];
+      });
+      results.success.push('savedUrlsWithTimestamps');
+    } catch (error: unknown) {
+      results.failed.push('savedUrlsWithTimestamps');
+      addLog(LogType.WARN, 'Failed to save savedUrlsWithTimestamps entry', {
+        error: errorMessage(error), url
+      });
+    }
+  })();
 
   // Helper to track results
   const save = async (name: string, promise: Promise<void>): Promise<void> => {

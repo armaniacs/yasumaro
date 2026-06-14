@@ -1283,6 +1283,21 @@
   "diagOpfsSpikeBtn": {
     "message": "OPFS スパイク実行"
   },
+  "diagMigrateBtn": {
+    "message": "記録履歴を SQLite へ変換"
+  },
+  "diagMigrateConfirm": {
+    "message": "レガシーの記録履歴を SQLite へ変換します。元データは保持されます。実行しますか？"
+  },
+  "diagMigrateConfirmLabel": {
+    "message": "変換"
+  },
+  "diagMigrateDone": {
+    "message": "変換が完了しました。"
+  },
+  "diagMigrateFailed": {
+    "message": "変換に失敗しました。"
+  },
   "diagSqliteTestOk": {
     "message": "SQLite は正常に動作しています。"
   },

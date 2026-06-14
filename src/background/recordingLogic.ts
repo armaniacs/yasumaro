@@ -13,6 +13,7 @@ import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { isPrivateIpAddress } from '../utils/fetch.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import type { SqliteClient } from './sqliteClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../utils/privacyChecker.js';
 import { normalizeJapaneseSummary } from '../utils/summaryNormalizer.js';
@@ -261,11 +262,13 @@ export class RecordingLogic {
 
   private obsidian: ObsidianClient;
   private aiClient: AIClient;
+  private sqliteClient: SqliteClient | null;
   private mode: string | null;
 
-constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?: PrivacyPipeline | null) {
+constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?: PrivacyPipeline | null, sqliteClient?: SqliteClient | null) {
     this.obsidian = obsidianClient;
     this.aiClient = aiClient;
+    this.sqliteClient = sqliteClient || null;
     // Problem #3: 2重キャッシュ構造を1段階に簡素化 - インスタンスキャッシュを削除
     // Code Review #1: this.modeの初期化（初期値はnull、record()で設定取得後に更新）
     this.mode = null;
@@ -450,7 +453,8 @@ constructor(obsidianClient: ObsidianClient, aiClient: AIClient, privacyPipeline?
     const pipeline = new RecordingPipeline(
       this.getPrivacyInfoWithCache.bind(this),
       this.obsidian,
-      this.aiClient
+      this.aiClient,
+      this.sqliteClient
     );
 
     // Get settings with cache
