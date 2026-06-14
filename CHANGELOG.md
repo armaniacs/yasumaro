@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.5] - 2026-06-15
+
+### Fixed / 修正
+
+- **記録履歴がダッシュボードに表示されない問題を修正**: `saveSqliteStep` が RecordingPipeline に接続されていなかった。`saveObsidian` と `saveMetadata` の間に `saveSqlite` ステップを追加
+- **レガシー記録履歴パネルの表示を復旧**: `saveMetadataStep` が `savedUrlsWithTimestamps` にエントリを追加していなかった問題を修正
+- **SQLite 初期化失敗時のフォールバックを修正**: `_doInit()` 失敗時に `usingFallbackStorage` が設定されず、全 CRUD 操作がエラーになる問題を修正
+- **確認ダイアログのボタンラベルを修正**: `showConfirmDialog` が `confirmLabel` パラメータを無視し常に「削除」と表示していた問題を修正
+- **レガシー記録→SQLite 変換で全件移行されない問題を修正**: 手動変換時に progress をリセットするよう修正
+- **OPFS Worker が初期化に失敗する問題を修正**: VFS 名が `'opfs-pool'` ではなく `'AccessHandlePool'` であることを修正
+- **OPFS Worker が `exec` の代わりに `run`/`execWithParams` を使用するよう修正**: wa-sqlite v1.0.0 の `exec()` は bindings をサポートしていない
+
+### Added / 追加
+
+- **OPFS Worker ベースの VFS を実装（PBI-12）**: `offscreen` 内 Worker + npm 同期 WASM + `AccessHandlePoolVFS`。全 13 CRUD 操作に対応。FTS5 非対応のため LIKE フォールバック
+- **レガシー記録→SQLite 変換機能（PBI-11）**: `mapLegacyEntryToRecord` マッピング（7 tests）、診断パネルの変換ボタン、英日 i18n キー
+
+### Changed / 変更
+
+- **RecordingPipeline に `SqliteClient` を注入**: 自動記録・手動記録・確認保存の全経路で SQLite 保存が有効化
+- **service-worker.ts の宣言順序を修正**: `sqliteClient` を `recordingLogic` より先に宣言
+
+### Chores / その他
+
+- **バージョン 5.9.4 → 5.9.5**
+
 ## [5.9.4] - 2026-06-12
 
 ### Tests / テスト追加
