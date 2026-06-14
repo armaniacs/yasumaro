@@ -325,8 +325,11 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
         ]
       );
       inserted++;
-    } catch {
-      // INSERT OR IGNORE handles duplicates, individual errors are non-fatal
+    } catch (err) {
+      // Log first error for diagnosis, silently skip the rest
+      if (inserted === 0 && records.indexOf(record) === 0) {
+        console.error('OPFS Worker: first INSERT failed:', err, 'record:', record.url);
+      }
     }
   }
   return { count: inserted };

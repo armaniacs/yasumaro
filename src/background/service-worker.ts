@@ -869,9 +869,15 @@ export function createMessageHandler(): (
                         message.payload || {},
                         sqliteClient,
                         async () => {
+                            const beforeCount = await sqliteClient.getCount();
                             await migrationService.run();
-                            const count = await sqliteClient.getCount();
-                            return { success: true, count: count ?? 0 };
+                            const afterCount = await sqliteClient.getCount();
+                            return {
+                                success: true,
+                                count: afterCount ?? 0,
+                                read: 0, // filled by migrationService.run() internally
+                                inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
+                            };
                         },
                         await ensureConfirmToken()
                     );
