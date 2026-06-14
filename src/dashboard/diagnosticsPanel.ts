@@ -8,6 +8,8 @@ import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
 import { getSqliteStatus, runOpfsSpike, migrateLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from './diagnoseDeficiencies.js';
+import { detectLiveVfsStrategy } from '../offscreen/opfsCapabilities.js';
 
 /**
  * Creates a stat row element for the diagnostics panel
@@ -24,6 +26,18 @@ function makeStatRow(label: string, value: string, masked = false): HTMLElement 
     : `<span class="diag-stat-value">${value}</span>`;
   row.innerHTML = `<span class="diag-stat-label">${label}</span>${valueHtml}`;
   return row;
+}
+
+/**
+ * Returns the localized severity label for a deficiency severity level.
+ */
+function getSeverityLabel(severity: DeficiencyItem['severity']): string {
+  switch (severity) {
+    case 'high': return getMessage('diagSeverityHigh') || 'High';
+    case 'medium': return getMessage('diagSeverityMedium') || 'Medium';
+    case 'low': return getMessage('diagSeverityLow') || 'Low';
+    default: return severity;
+  }
 }
 
 /**
@@ -168,11 +182,51 @@ async function initDiagnosticsPanel(): Promise<void> {
   const diagTestSqliteBtn = document.getElementById('diagTestSqliteBtn') as HTMLButtonElement | null;
   const sqliteResult = document.getElementById('diagSqliteResult') as HTMLElement | null;
 
+  // Debug mode toggle
+  const diagDebugModeToggle = document.getElementById('diagDebugModeToggle') as HTMLInputElement | null;
+  const compileOptionsSection = document.getElementById('diagCompileOptionsSection') as HTMLElement | null;
+  const diagCompileOptionsStats = document.getElementById('diagCompileOptionsStats') as HTMLElement | null;
+  const diagDeficiencyStats = document.getElementById('diagDeficiencyStats') as HTMLElement | null;
+  const diagDivergenceWarning = document.getElementById('diagDivergenceWarning') as HTMLElement | null;
+
+  // Load debug mode state
+  const debugModeResult = await chrome.storage.local.get('debugMode');
+  const debugMode = Boolean(debugModeResult.debugMode);
+  if (diagDebugModeToggle) {
+    diagDebugModeToggle.checked = debugMode;
+    diagDebugModeToggle.setAttribute('aria-checked', String(debugMode));
+  }
+  // Show/hide debug sections based on debugMode
+  if (compileOptionsSection) {
+    compileOptionsSection.style.display = debugMode ? '' : 'none';
+  }
+
+  // Debug mode toggle handler
+  diagDebugModeToggle?.addEventListener('change', async () => {
+    const isOn = diagDebugModeToggle.checked;
+    diagDebugModeToggle.setAttribute('aria-checked', String(isOn));
+    await chrome.storage.local.set({ debugMode: isOn });
+    if (compileOptionsSection) {
+      compileOptionsSection.style.display = isOn ? '' : 'none';
+    }
+  });
+
+  // Environment divergence detection
+  let dashboardVfsStrategy: string | null = null;
+  try {
+    const { strategy } = detectLiveVfsStrategy();
+    dashboardVfsStrategy = strategy;
+  } catch {
+    // detectLiveVfsStrategy may fail in some environments
+  }
+
+  let sqliteStatus: Awaited<ReturnType<typeof getSqliteStatus>> = null;
+
   if (sqliteStats) {
     try {
-      const status = await getSqliteStatus();
-      if (status) {
-        const initializedText = status.initialized
+      sqliteStatus = await getSqliteStatus();
+      if (sqliteStatus) {
+        const initializedText = sqliteStatus.initialized
           ? (getMessage('diagSqliteAvailable') || 'Available')
           : (getMessage('diagSqliteUnavailable') || 'Unavailable');
         sqliteStats.appendChild(makeStatRow(
@@ -181,9 +235,9 @@ async function initDiagnosticsPanel(): Promise<void> {
         ));
         sqliteStats.appendChild(makeStatRow(
           getMessage('diagSqlitePath') || 'Path',
-          status.path || '(none)'
+          sqliteStatus.path || '(none)'
         ));
-        const fallbackText = status.fallback
+        const fallbackText = sqliteStatus.fallback
           ? (getMessage('diagSqliteFallbackYes') || 'Yes (using fallback storage)')
           : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
         sqliteStats.appendChild(makeStatRow(
@@ -192,13 +246,102 @@ async function initDiagnosticsPanel(): Promise<void> {
         ));
         sqliteStats.appendChild(makeStatRow(
           getMessage('diagSqliteFts5') || 'FTS5 Search',
-          status.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'
+          sqliteStatus.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'
         ));
+
+        // Compile options source
+        if (sqliteStatus.compileOptionsSource) {
+          sqliteStats.appendChild(makeStatRow(
+            getMessage('diagCompileOptionsSource') || 'Source',
+            sqliteStatus.compileOptionsSource
+          ));
+        }
       } else {
         sqliteStats.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
       }
     } catch {
       sqliteStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
+    }
+  }
+
+  // Deficiency diagnosis
+  if (diagDeficiencyStats && sqliteStatus) {
+    const vfsStrategy = dashboardVfsStrategy ?? 'fallback';
+    const diagInput: DiagnosticInput = {
+      opfsDirectory: vfsStrategy !== 'fallback',
+      syncAccessHandle: vfsStrategy === 'opfs-sync-worker',
+      worker: vfsStrategy === 'opfs-sync-worker',
+      initialized: sqliteStatus.initialized,
+      fallback: sqliteStatus.fallback,
+      fts5: sqliteStatus.fts5,
+      vfsStrategy: vfsStrategy as DiagnosticInput['vfsStrategy'],
+    };
+    const deficiencies = diagnoseDeficiencies(diagInput);
+
+    if (deficiencies.length === 0) {
+      diagDeficiencyStats.appendChild(makeStatRow(
+        getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.',
+        '✓'
+      ));
+    } else {
+      for (const item of deficiencies) {
+        const severityLabel = getSeverityLabel(item.severity);
+        const summaryText = getMessage(item.summaryKey) || item.id;
+        diagDeficiencyStats.appendChild(makeStatRow(
+          `${summaryText} [${severityLabel}]`,
+          getMessage(item.recommendedActionKey) || ''
+        ));
+      }
+    }
+  }
+
+  // Compile options display (debug mode only)
+  if (diagCompileOptionsStats && sqliteStatus?.compileOptions && debugMode) {
+    const options = sqliteStatus.compileOptions;
+    const source = sqliteStatus.compileOptionsSource || 'unknown';
+    diagCompileOptionsStats.appendChild(makeStatRow(
+      getMessage('diagCompileOptionsSource') || 'Source',
+      source
+    ));
+    diagCompileOptionsStats.appendChild(makeStatRow(
+      'Total',
+      String(options.length)
+    ));
+
+    // Highlight FTS/VFS related options
+    const ftsVfsOptions = options.filter(o => o.includes('FTS') || o.includes('VFS'));
+    if (ftsVfsOptions.length > 0) {
+      diagCompileOptionsStats.appendChild(makeStatRow(
+        getMessage('diagCompileOptionsHighlight') || 'FTS/VFS related',
+        ftsVfsOptions.join(', ')
+      ));
+    }
+
+    // Show all options in a collapsible details
+    const allOptionsDetails = document.createElement('details');
+    allOptionsDetails.className = 'advanced-details';
+    allOptionsDetails.innerHTML = `
+      <summary class="advanced-details-summary">All ${options.length} options</summary>
+      <div class="advanced-details-content">
+        <pre class="diag-compile-options-list">${options.join('\n')}</pre>
+      </div>
+    `;
+    diagCompileOptionsStats.appendChild(allOptionsDetails);
+  }
+
+  // Divergence detection
+  if (diagDivergenceWarning && dashboardVfsStrategy && sqliteStatus) {
+    let offscreenStrategy: string | null = null;
+    if (sqliteStatus.fallback) {
+      offscreenStrategy = 'fallback';
+    } else if (sqliteStatus.path.startsWith('OPFS:')) {
+      offscreenStrategy = 'opfs-sync-worker';
+    } else if (sqliteStatus.initialized) {
+      offscreenStrategy = 'opfs-async-main';
+    }
+
+    if (offscreenStrategy && dashboardVfsStrategy !== offscreenStrategy) {
+      diagDivergenceWarning.style.display = '';
     }
   }
 

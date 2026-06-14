@@ -1313,6 +1313,111 @@
   "diagLoadError": {
     "message": "Failed to load storage info."
   },
+  "diagDebugMode": {
+    "message": "Debug Mode"
+  },
+  "diagDebugDescription": {
+    "message": "Show detailed diagnostics and debugging tools for developers."
+  },
+  "diagDeficiencyTitle": {
+    "message": "Deficiency Diagnosis"
+  },
+  "diagDeficiencyNone": {
+    "message": "No deficiencies — all features are enabled."
+  },
+  "diagDeficiencyNoOpfsSummary": {
+    "message": "OPFS: Not available"
+  },
+  "diagDeficiencyNoOpfsDetail": {
+    "message": "OPFS (Origin Private File System) is not available in this environment."
+  },
+  "diagDeficiencyNoOpfsAction": {
+    "message": "Upgrade to Chrome 102 or later. Currently using fallback storage."
+  },
+  "diagDeficiencyNoSyncHandleSummary": {
+    "message": "SyncAccessHandle: Not available"
+  },
+  "diagDeficiencyNoSyncHandleDetail": {
+    "message": "FileSystemFileHandle.createSyncAccessHandle is not available outside Worker context."
+  },
+  "diagDeficiencyNoSyncHandleAction": {
+    "message": "SyncAccessHandle is only available inside a Web Worker."
+  },
+  "diagDeficiencyNoWorkerSummary": {
+    "message": "Worker: Not available"
+  },
+  "diagDeficiencyNoWorkerDetail": {
+    "message": "The Worker constructor is not available (CSP or browser restriction)."
+  },
+  "diagDeficiencyNoWorkerAction": {
+    "message": "Check Content Security Policy settings."
+  },
+  "diagDeficiencyNoFts5Summary": {
+    "message": "FTS5: Not available"
+  },
+  "diagDeficiencyNoFts5Detail": {
+    "message": "FTS5 full-text search is not compiled into the SQLite WASM build."
+  },
+  "diagDeficiencyNoFts5Action": {
+    "message": "Rebuild WASM with FTS5 enabled. LIKE-based search is used as fallback."
+  },
+  "diagDeficiencyOpfsNoFts5Summary": {
+    "message": "FTS5: Not available (OPFS sync build)"
+  },
+  "diagDeficiencyOpfsNoFts5Detail": {
+    "message": "The synchronous WASM build used by OPFS does not include FTS5. This is a known limitation."
+  },
+  "diagDeficiencyOpfsNoFts5Action": {
+    "message": "LIKE-based search is used as fallback. To enable FTS5, rebuild wa-sqlite with FTS5 support."
+  },
+  "diagDeficiencyInitFailedSummary": {
+    "message": "Database: Initialization failed"
+  },
+  "diagDeficiencyInitFailedDetail": {
+    "message": "SQLite database initialization failed with an error."
+  },
+  "diagDeficiencyInitFailedAction": {
+    "message": "Check browser version and clear extension data if needed."
+  },
+  "diagDeficiencyNotInitializedSummary": {
+    "message": "Database: Not initialized"
+  },
+  "diagDeficiencyNotInitializedDetail": {
+    "message": "The database has not been initialized yet."
+  },
+  "diagDeficiencyNotInitializedAction": {
+    "message": "Reload the page or restart the extension."
+  },
+  "diagDeficiencyFallbackSummary": {
+    "message": "Storage: Fallback mode active"
+  },
+  "diagDeficiencyFallbackDetail": {
+    "message": "Using chrome.storage.local as fallback. Native SQLite is not available."
+  },
+  "diagDeficiencyFallbackAction": {
+    "message": "OPFS and IndexedDB are both unavailable. Check browser version."
+  },
+  "diagCompileOptionsTitle": {
+    "message": "Compile Options (Debug)"
+  },
+  "diagCompileOptionsSource": {
+    "message": "Source"
+  },
+  "diagCompileOptionsHighlight": {
+    "message": "FTS/VFS related"
+  },
+  "diagDivergenceWarning": {
+    "message": "Environment detection mismatch between dashboard and offscreen."
+  },
+  "diagSeverityHigh": {
+    "message": "High"
+  },
+  "diagSeverityMedium": {
+    "message": "Medium"
+  },
+  "diagSeverityLow": {
+    "message": "Low"
+  },
   "testing": {
     "message": "Testing..."
   },

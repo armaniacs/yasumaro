@@ -108,6 +108,7 @@ const SCHEMA_SQL = `
 
 let sqlite3: ReturnType<typeof SQLite.Factory> | null = null;
 let dbHandle: number | null = null;
+let cachedCompileOptions: string[] | null = null;
 
 // ---------------------------------------------------------------------------
 // Init helpers
@@ -153,6 +154,13 @@ async function initSqlite(): Promise<void> {
 
   await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
   await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
+
+  // Cache compile options for diagnostics
+  const compileOptions: string[] = [];
+  await sqlQuery('PRAGMA compile_options', [], (row) => {
+    compileOptions.push(String(row[0]));
+  });
+  cachedCompileOptions = compileOptions;
 }
 
 function getSqlite(): { sqlite3: NonNullable<typeof sqlite3>; db: number } {
@@ -342,7 +350,7 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
   return { count: inserted };
 }
 
-async function handleGetStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number }> {
+async function handleGetStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }> {
   if (!dbHandle) {
     return { initialized: false, path: DB_FILENAME, fallback: false, fts5: false, count: 0 };
   }
@@ -356,6 +364,7 @@ async function handleGetStatus(): Promise<{ initialized: boolean; path: string; 
     fallback: false,
     fts5: false, // sync build lacks FTS5
     count,
+    compileOptions: cachedCompileOptions ?? undefined,
   };
 }
 

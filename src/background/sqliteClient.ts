@@ -209,8 +209,8 @@ export class SqliteClient {
     );
   }
 
-  async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string } | null> {
-    return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string }>(
+  async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | null> {
+    return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' }>(
       'SQLITE_STATUS',
       {},
       (res) => ({
@@ -219,6 +219,8 @@ export class SqliteClient {
         fallback: Boolean(res.fallback),
         fts5: Boolean(res.fts5),
         initError: res.initError ? String(res.initError) : undefined,
+        compileOptions: Array.isArray(res.compileOptions) ? res.compileOptions : undefined,
+        compileOptionsSource: res.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
       }),
     );
   }

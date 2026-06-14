@@ -2182,6 +2182,35 @@ details[open] .advanced-details-summary {
   }
 }
 
+/* Debug mode description */
+.diag-debug-description {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: var(--space-1) 0 0 var(--space-2);
+}
+
+/* Deficiency warning */
+.diag-warning {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg, #fff3cd);
+  border: 1px solid var(--color-warning-border, #ffc107);
+  border-radius: var(--radius-md);
+  color: var(--color-warning-text, #856404);
+  font-size: 13px;
+}
+
+/* Compile options list */
+.diag-compile-options-list {
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
 /* Button Row (Save + Test side by side) */
 .general-btn-row {
   display: flex;

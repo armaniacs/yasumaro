@@ -51,11 +51,15 @@ vi.mock('../../utils/storageUrls.js', () => ({
 const mockGetBytesInUse = vi.fn().mockResolvedValue(102400);
 const mockGetManifest = vi.fn().mockReturnValue({ version: '1.0.0', name: 'Test Extension' });
 const mockSendMessage = vi.fn();
+const mockStorageLocalGet = vi.fn().mockResolvedValue({});
+const mockStorageLocalSet = vi.fn().mockResolvedValue(undefined);
 
 function setupChromeMocks(): void {
   const c = globalThis as any;
   if (c.chrome?.storage?.local) {
     c.chrome.storage.local.getBytesInUse = mockGetBytesInUse;
+    c.chrome.storage.local.get = mockStorageLocalGet;
+    c.chrome.storage.local.set = mockStorageLocalSet;
   }
   if (c.chrome?.runtime) {
     c.chrome.runtime.getManifest = mockGetManifest;
@@ -76,6 +80,10 @@ function setupDOM(includeConnectionResult = true): void {
     ${includeConnectionResult ? '<div id="diagConnectionResult"></div>' : ''}
     <div id="diagObsidianSettings"></div>
     <div id="diagAiSettings"></div>
+    <input type="checkbox" id="diagDebugModeToggle" role="switch">
+    <div id="diagDeficiencyStats"></div>
+    <details id="diagCompileOptionsSection"></details>
+    <div id="diagDivergenceWarning" style="display: none;"></div>
   `;
 }
 
