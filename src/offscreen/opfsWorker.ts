@@ -175,14 +175,21 @@ function extractDomain(url: string): string | null {
 
 async function sqlExec(sql: string, params: SqliteValue[] = []): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
-  await (s.exec as (db: number, sql: string, bind?: any[]) => Promise<number>)(db, sql, params as any[]);
+  // Use s.run() for DML (INSERT/UPDATE/DELETE) — supports bindings
+  await s.run(db, sql, params as any[]);
 }
 
 async function sqlQuery(
   sql: string, params: SqliteValue[], callback: (row: SqliteValue[]) => void
 ): Promise<void> {
   const { sqlite3: s, db } = getSqlite();
-  await (s.exec as (db: number, sql: string, bind?: any[], opts?: any) => Promise<number>)(db, sql, params as any[], { callback: (row: any[]) => callback(row) });
+  // Use s.execWithParams() for SELECT with bindings
+  const result = await s.execWithParams(db, sql, params as any[]);
+  if (result?.rows) {
+    for (const row of result.rows) {
+      callback(row as SqliteValue[]);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
