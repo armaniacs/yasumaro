@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.7] - 2026-06-15
+
+### Fixed / 修正
+
+- **テスト失敗14件をすべて修正・0 failures 達成（5,722 テスト全パス）**:
+  - `sendDashboardMessage` の Promise 化に伴う `dashboardSqliteService.test.ts` のモック修正（コールバック → Promise）
+  - `sqliteClient.test.ts`: getStatus の戻り値に追加されたフィールド（compileOptions, fts5, initError）の期待値を更新
+  - `sqliteClient.test.ts`: offscreen document の `reasons` 配列に `LOCAL_STORAGE` を追加
+  - `sqlite-security-integrity.test.ts`: sender.tab ガードの正規表現を複合条件に対応
+  - `service-worker.test.ts`: rateLimiter の logWarn モックスコープ問題を解消
+  - `piiSanitizer-security.test.ts`: vitest globals インポート追加 + maskedItems の仕様に反するアサーション修正
+  - `storage-keys.test.ts`: `vi.mock` ファクトリのモジュール評価順序問題を `vi.hoisted` で解消 + `OPFS_FALLBACK_MODE` を internalKeys に追加
+
+
 ## [5.9.6] - 2026-06-15
 
 ### Added / 追加
