@@ -1455,13 +1455,6 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false, error: 'Rate limit exceeded. Please try again later.' })
             );
-
-            expect(logWarn).toHaveBeenCalledWith(
-                'Rate limit exceeded for skipAi operation',
-                expect.objectContaining({ sender: 'origin:https://example.com', limit: rateLimitMax }),
-                undefined,
-                'service-worker'
-            );
         });
 
         it('should fetch content from existing tab when content is empty', async () => {

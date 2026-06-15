@@ -1,29 +1,24 @@
+import { describe, it, test, expect, vi, beforeEach } from 'vitest';
 import { getSettings, StorageKeys, saveSettings, clearSettingsCache } from '../storage.js';
 import * as migration from '../migration.js';
-
-// Mock migration module
-vi.mock('../migration', () => ({
-  migrateUblockSettings: vi.fn(() => Promise.resolve(false))
-}));
 
 const mockedMigration = migration as vi.Mocked<typeof migration>;
 
 describe('getSettings key refinement', () => {
   beforeEach(() => {
-    // 各テスト前にキャッシュをクリア
     clearSettingsCache();
+    vi.restoreAllMocks();
   });
 
   test('StorageKeysのみを取得する', async () => {
-    // 不相応なデータをセット
     await chrome.storage.local.set({ extra_key: 'should_not', another_junk: 123 });
-    clearSettingsCache(); // storage直接更新後にキャッシュクリア
+    clearSettingsCache();
 
     const settings = await getSettings();
 
     expect(settings).not.toHaveProperty('extra_key');
     expect(settings).not.toHaveProperty('another_junk');
-    // 暗号化用と楽観的ロック用の内部キーはgetSettings()の返却値に含まれない
+    // 暗号化用・ランタイムフラグ等の内部キーはgetSettings()の返却値に含まれない
     const internalKeys: StorageKeys[] = [
       StorageKeys.ENCRYPTION_SALT,
       StorageKeys.ENCRYPTION_SECRET,
@@ -36,6 +31,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,
       StorageKeys.RECORDING_TRIGGERS,
       StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
+      StorageKeys.OPFS_FALLBACK_MODE,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {
@@ -47,21 +43,18 @@ describe('getSettings key refinement', () => {
   test('空ストレージの場合はデフォルト値のみを返す', async () => {
     const settings = await getSettings();
 
-    // デフォルト値が含まれることを確認
     expect(settings).toHaveProperty(StorageKeys.OBSIDIAN_PROTOCOL);
     expect(settings).toHaveProperty(StorageKeys.OBSIDIAN_PORT);
     expect(settings).not.toHaveProperty('extra_key');
   });
 
   test('保存した値が正しく取得できる', async () => {
-    // 設定を保存
     await chrome.storage.local.set({
       [StorageKeys.OBSIDIAN_API_KEY]: 'my-api-key',
       [StorageKeys.OBSIDIAN_PORT]: '8000'
     });
-    clearSettingsCache(); // storage直接更新後にキャッシュクリア
+    clearSettingsCache();
 
-    // getSettingsを呼ぶ
     const settings = await getSettings();
 
     expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('my-api-key');

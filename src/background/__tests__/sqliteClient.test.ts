@@ -240,12 +240,12 @@ describe('SqliteClient', () => {
     it('sends SQLITE_STATUS message', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, initialized: true, path: 'yasumaro.db', fallback: false });
+          callback({ success: true, initialized: true, path: 'yasumaro.db', fallback: false, fts5: false, compileOptionsSource: 'idb' });
         }
       );
 
       const result = await client.getStatus();
-      expect(result).toEqual({ initialized: true, path: 'yasumaro.db', fallback: false });
+      expect(result).toEqual({ initialized: true, path: 'yasumaro.db', fallback: false, fts5: false, initError: undefined, compileOptions: undefined, compileOptionsSource: 'idb' });
     });
   });
 
@@ -310,7 +310,7 @@ describe('SqliteClient', () => {
       expect(hasDocumentMock).toHaveBeenCalled();
       expect(createDocumentMock).toHaveBeenCalledWith({
         url: 'offscreen.html',
-        reasons: [chrome.offscreen.Reason.WORKERS],
+        reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
         justification: expect.any(String),
       });
     });

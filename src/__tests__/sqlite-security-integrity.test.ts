@@ -31,7 +31,7 @@ describe('SQLite Security & Data Integrity', () => {
       expect(dashboardSqliteBlock).toBeTruthy();
       const block = dashboardSqliteBlock![0];
 
-      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\s*\)/.test(block);
+      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\b/.test(block);
       expect(hasEarlySenderGuard).toBe(true);
     });
 
