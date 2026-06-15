@@ -3459,3 +3459,173 @@ details[open] .advanced-details-summary {
   color: var(--color-text-secondary);
   font-size: 14px;
 }
+
+
+/* =============================================================================
+   PBI-09: Phase B — サイドバー刷新（和モダン・金箔アクセント）
+   ============================================================================= */
+
+.sidebar {
+  /* 和紙濃 / 墨 の背景を優先（既存 --color-bg-subtle を上書き） */
+  background: var(--ym-color-paper-warm);
+}
+
+.sidebar-title {
+  font-family: var(--ym-font-ui);
+  letter-spacing: -0.02em;
+}
+
+.sidebar-nav-btn {
+  /* Stagger animation */
+  animation: ym-slide-in var(--ym-duration-md) var(--ym-ease-ink) both;
+}
+
+.sidebar-nav-btn:nth-child(1) { animation-delay: 40ms; }
+.sidebar-nav-btn:nth-child(2) { animation-delay: 80ms; }
+.sidebar-nav-btn:nth-child(3) { animation-delay: 120ms; }
+.sidebar-nav-btn:nth-child(4) { animation-delay: 160ms; }
+.sidebar-nav-btn:nth-child(5) { animation-delay: 200ms; }
+.sidebar-nav-btn:nth-child(6) { animation-delay: 240ms; }
+.sidebar-nav-btn:nth-child(7) { animation-delay: 280ms; }
+.sidebar-nav-btn:nth-child(8) { animation-delay: 320ms; }
+.sidebar-nav-btn:nth-child(9) { animation-delay: 360ms; }
+.sidebar-nav-btn:nth-child(10) { animation-delay: 400ms; }
+
+/* ホバー：金箔ティント */
+.sidebar-nav-btn:hover {
+  background: var(--ym-color-gold-dim);
+}
+
+/* アクティブ：金箔左ボーダー + 金色テキスト */
+.sidebar-nav-btn.active {
+  border-left-color: var(--ym-color-gold);
+  color: var(--ym-color-gold);
+  font-weight: 600;
+}
+
+.sidebar-nav-btn.active .sidebar-nav-icon {
+  color: var(--ym-color-gold);
+}
+
+/* ダークモード：ノイズオーバーレイ + 墨色サイドバー */
+@media (prefers-color-scheme: dark) {
+  .sidebar {
+    background: var(--ym-color-ink-deep);
+  }
+
+  .sidebar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  .sidebar:hover .sidebar-nav-btn.active .sidebar-nav-icon {
+    color: var(--ym-color-gold-light);
+  }
+}
+
+@keyframes ym-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* =============================================================================
+   PBI-09: Phase C — メインコンテンツエリア刷新（和紙・墨色）
+   ============================================================================= */
+
+#dashboardContent {
+  background: var(--ym-color-paper);
+}
+
+/* ライトモード：和紙ラインテクスチャ */
+body {
+  background-image: var(--ym-paper-lines);
+  background-attachment: fixed;
+}
+
+/* パネル切替アニメーション */
+.panel {
+  animation: ym-panel-in var(--ym-duration-md) var(--ym-ease-paper) both;
+}
+
+@keyframes ym-panel-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* タイポグラフィスケール */
+h2 {
+  font-family: var(--ym-font-ui);
+  font-size: var(--ym-text-lg);
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-family: var(--ym-font-ui);
+  font-size: var(--ym-text-md);
+  letter-spacing: -0.01em;
+}
+
+h4 {
+  font-family: var(--ym-font-ui);
+  font-size: var(--ym-text-sm);
+}
+
+/* フォーカスリング（全インタラクティブ要素） */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ym-focus-ring);
+  border-radius: var(--ym-radius-sm);
+}
+
+/* ダークモード */
+@media (prefers-color-scheme: dark) {
+  #dashboardContent {
+    background: var(--ym-color-ink-black);
+  }
+
+  body {
+    background-image: none;
+  }
+}
+
+/* =============================================================================
+   PBI-09: Phase D — アトモスフィア（金箔スピナー・トースト）
+   ============================================================================= */
+
+/* 金箔スピナー（弧アニメーション） */
+.spinner-path {
+  stroke: var(--ym-color-gold);
+}
+
+/* ダークモード：body ノイズオーバーレイ */
+@media (prefers-color-scheme: dark) {
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+}
+
+/* トースト通知アニメーション */
+.status-message {
+  transition: opacity var(--ym-duration-md) var(--ym-ease-ink),
+              transform var(--ym-duration-md) var(--ym-ease-ink);
+}
+
+.status-message.show {
+  animation: ym-toast-in var(--ym-duration-md) var(--ym-ease-ink) both;
+}
+
+@keyframes ym-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

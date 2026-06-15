@@ -85,7 +85,7 @@ export const UI_COLORS = {
   /** CSS変数フォールバックエラー色 */
   CSS_ERROR_FALLBACK: '#ef4444',
   /** スピナー/ローディング色 */
-  SPINNER_COLOR: '#4CAF50',
+  SPINNER_COLOR: '#c9a84c' /* 金箔 */,
 } as const;
 
 // =============================================================================
