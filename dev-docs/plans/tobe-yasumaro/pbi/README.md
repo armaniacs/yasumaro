@@ -40,6 +40,7 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 14 | [archive/2026-06-16-14-feat-ym-token-migration.md](./archive/2026-06-16-14-feat-ym-token-migration.md) | 既存セレクタの `--ym-*` 移行 | 3〜5 |
 | 15 | [archive/2026-06-16-15-feat-popup-wamo-theme.md](./archive/2026-06-16-15-feat-popup-wamo-theme.md) | ポップアップ和モダン化 | 3〜4 |
 | 100-108 | [archive/](./archive/) | Checking Team Review | 42 |
+| (plan) | [../archive/2026-06-13-002-review-fixes-design_DONE.md](../archive/2026-06-13-002-review-fixes-design_DONE.md) + [003](../archive/2026-06-13-003-review-fixes-hotfix-plan_DONE.md) + [004](../archive/2026-06-13-004-review-fixes-normal-tracks-plan_DONE.md) | Checking Team レビュー対応（Hotfix 7 + Normal 8 トラック、v5.9.3 で全件完了） | — |
 
 ## 技術スタック決定事項
 
