@@ -1321,6 +1321,22 @@ button#changeMasterPassword:hover {
     background: var(--ym-color-primary-light, rgba(192, 132, 252, 0.15));
     border-color: var(--ym-color-primary, #c084fc);
   }
+
+  .sqlite-calendar-month button {
+    color: #cbd5e1;
+    border-color: #475569;
+    background: var(--ym-color-bg-subtle, #1e293b);
+  }
+
+  .sqlite-calendar-month span {
+    color: #f0f6fc;
+  }
+
+  .sqlite-calendar-quick button {
+    color: #cbd5e1;
+    border-color: #475569;
+    background: var(--ym-color-bg-subtle, #1e293b);
+  }
 }
 
 /* History entry top row (badge + URL) */
@@ -3403,6 +3419,7 @@ details[open] .advanced-details-summary {
   background: var(--color-bg);
   cursor: pointer;
   font-size: 12px;
+  color: var(--ym-color-text, #1e293b);
 }
 
 .sqlite-calendar-quick button:hover {
@@ -3424,6 +3441,7 @@ details[open] .advanced-details-summary {
   padding: 2px 10px;
   cursor: pointer;
   font-size: 14px;
+  color: var(--ym-color-text, #1e293b);
 }
 
 .sqlite-calendar-month button:hover {
@@ -3436,6 +3454,7 @@ details[open] .advanced-details-summary {
   font-weight: 600;
   min-width: 80px;
   text-align: center;
+  color: var(--ym-color-text, #1e293b);
 }
 
 .sqlite-calendar-days {
@@ -3451,6 +3470,11 @@ details[open] .advanced-details-summary {
   font-size: 12px;
   border-radius: 3px;
   cursor: pointer;
+  /* Explicit colors so cells are visible in both light and dark mode */
+  background: transparent;
+  color: var(--ym-color-text, #1e293b);
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .sqlite-calendar-days .day:hover:not(.empty) {
@@ -3460,6 +3484,29 @@ details[open] .advanced-details-summary {
 
 .sqlite-calendar-days .day.today {
   font-weight: 700;
+  color: var(--ym-color-primary, #7c3aed);
+}
+
+/* ダークモード：カレンダーセル */
+@media (prefers-color-scheme: dark) {
+  .sqlite-calendar-days .day {
+    color: #cbd5e1; /* slate-300: 11.5:1 on ink-black */
+    border-color: #1a1a24;
+  }
+
+  .sqlite-calendar-days .day.empty {
+    color: #475569; /* slate-600: visible but dim */
+  }
+
+  .sqlite-calendar-days .day.today {
+    color: var(--ym-color-gold, #c9a84c); /* gold accent for today */
+    font-weight: 700;
+  }
+
+  .sqlite-calendar-days .day:hover:not(.empty) {
+    background: #1a1a24; /* ink-deep */
+    color: #f0ece4; /* sumi-text */
+  }
 }
 
 .sqlite-calendar-days .day.selected {
