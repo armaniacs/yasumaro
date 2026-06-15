@@ -1175,11 +1175,13 @@ button#changeMasterPassword:hover {
 
 .history-entry-ai-summary {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   margin-top: 4px;
-  padding: 6px 8px;
-  background: var(--color-primary-bg);
-  border-left: 3px solid var(--color-primary);
+  padding: 8px 10px;
+  /* Subtle neutral background instead of tinted purple */
+  background: #f8fafc; /* slate-50 */
+  border: 1px solid #e2e8f0; /* slate-200 */
+  border-left: 2px solid #94a3b8; /* slate-400 accent */
   border-radius: var(--radius-sm);
   line-height: 1.5;
   word-break: break-word;
@@ -1283,7 +1285,8 @@ button#changeMasterPassword:hover {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-bg-white);
-  color: var(--color-text-secondary);
+  /* gray-600: WCAG AA (7.3:1 on white), better visual weight than slate-600 */
+  color: #4b5563;
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
@@ -2650,20 +2653,23 @@ details[open] .advanced-details-summary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 5px 10px;
   margin-top: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  /* Thicker border (gray-200 to gray-300) for clear clickability */
+  border: 1.5px solid #cbd5e1; /* slate-300 — more distinct than #e2e8f0 */
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-white, #ffffff);
+  color: #475569; /* slate-600 — readable but not dominant */
   font-size: 13px;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  font-weight: 500;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .content-toggle-btn:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-hover);
+  background: #f1f5f9; /* slate-100 */
+  border-color: #94a3b8; /* slate-400 */
+  color: #334155; /* slate-700 */
 }
 
 .content-toggle-btn:focus {
