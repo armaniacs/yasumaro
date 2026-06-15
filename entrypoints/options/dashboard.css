@@ -1300,6 +1300,23 @@ button#changeMasterPassword:hover {
   border-color: var(--color-primary);
 }
 
+/* ダークモード：非アクティブ状態のコントラスト改善
+   元の color (#b1bac4) は AA 適合だが、背景と同一色で境界が
+   不明確なため、テキスト色をより明るく + 背景を差別化 */
+@media (prefers-color-scheme: dark) {
+  .history-filter-btn {
+    color: #cbd5e1; /* 7.7:1 on #1e293b — WCAG AAA */
+    background: var(--ym-color-bg-subtle, #1e293b);
+    border-color: #475569;
+  }
+
+  .history-filter-btn:hover {
+    color: #f0f6fc; /* 13.5:1 on bg-subtle */
+    background: var(--ym-color-primary-light, rgba(192, 132, 252, 0.15));
+    border-color: var(--ym-color-primary, #c084fc);
+  }
+}
+
 /* History entry top row (badge + URL) */
 .history-entry-top {
   display: flex;
@@ -3628,4 +3645,39 @@ h4 {
 @keyframes ym-toast-in {
   from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+input[type="search"],
+input[type="text"],
+input[type="number"],
+input[type="password"],
+textarea {
+  background: var(--color-bg-white);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ダークモード：フォーム要素の境界とプレースホルダ視認性 */
+@media (prefers-color-scheme: dark) {
+  input[type="search"],
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  textarea {
+    background: var(--ym-color-bg, #0d1117);
+    border-color: #475569;
+    color: var(--ym-color-text, #f0f6fc);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ym-color-text-muted, #8b949e); /* 4.7:1 on #0d1117 — AA */
+  }
 }
