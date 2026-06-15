@@ -56,22 +56,15 @@ async function sendDashboardMessage(
     ? await withConfirmToken(payload)
     : payload;
 
-  return new Promise<DashboardResponse>((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { type: 'DASHBOARD_SQLITE', payload: messagePayload },
-      (response: DashboardResponse) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(response);
-        }
-      }
-    );
-
-    setTimeout(() => {
-      reject(new Error('Dashboard SQLite request timed out'));
-    }, DASHBOARD_SQLITE_TIMEOUT);
-  });
+  // Use Promise-based API (MV3) with timeout for reliability.
+  // The callback-based API can silently fail with chrome.runtime.lastError
+  // when the service worker responds async via sendResponse().
+  return Promise.race([
+    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: messagePayload }),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT);
+    }),
+  ]);
 }
 
 // ============================================================================
