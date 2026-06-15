@@ -42,12 +42,7 @@ function setupDOM() {
     <div id="recording-trigger-settings">
       <!-- Recording Triggers Section -->
       <div class="settings-section">
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="trigger-tab-close" />
-            <span>Tab Close</span>
-          </label>
-        </div>
+
         <div class="form-group">
           <label class="checkbox-label">
             <input type="checkbox" id="trigger-scroll-time" />
@@ -122,12 +117,10 @@ describe('recordingTriggerSettings', () => {
     mockStorageGet.mockResolvedValue({});
     await initRecordingTriggerSettings();
 
-    const tabCloseCheckbox = document.getElementById('trigger-tab-close') as HTMLInputElement;
     const manualCheckbox = document.getElementById('trigger-manual') as HTMLInputElement;
     const scrollCheckbox = document.getElementById('trigger-scroll-time') as HTMLInputElement;
     const snapshotCheckbox = document.getElementById('trigger-snapshot') as HTMLInputElement;
 
-    expect(tabCloseCheckbox?.checked).toBe(true);
     expect(manualCheckbox?.checked).toBe(true);
     expect(scrollCheckbox?.checked).toBe(false);
     expect(snapshotCheckbox?.checked).toBe(false);
@@ -152,12 +145,10 @@ describe('recordingTriggerSettings', () => {
 
     await initRecordingTriggerSettings();
 
-    const tabCloseCheckbox = document.getElementById('trigger-tab-close') as HTMLInputElement;
     const scrollCheckbox = document.getElementById('trigger-scroll-time') as HTMLInputElement;
     const snapshotCheckbox = document.getElementById('trigger-snapshot') as HTMLInputElement;
     const intervalInput = document.getElementById('snapshot-interval') as HTMLInputElement;
 
-    expect(tabCloseCheckbox?.checked).toBe(false);
     expect(scrollCheckbox?.checked).toBe(true);
     expect(snapshotCheckbox?.checked).toBe(true);
     expect(intervalInput?.value).toBe('10');
@@ -168,7 +159,7 @@ describe('recordingTriggerSettings', () => {
       const result: Record<string, any> = {};
       if (keys.includes(STORAGE_KEYS.RECORDING_TRIGGERS)) {
         result[STORAGE_KEYS.RECORDING_TRIGGERS] = JSON.stringify({
-          tabClose: false, scrollAndTime: true, manualSave: true, periodicSnapshot: false,
+          scrollAndTime: true, manualSave: true, periodicSnapshot: false,
         });
       }
       if (keys.includes(STORAGE_KEYS.SNAPSHOT_INTERVAL_MINUTES)) {
@@ -178,8 +169,7 @@ describe('recordingTriggerSettings', () => {
     });
 
     await initRecordingTriggerSettings();
-    const tabCloseCheckbox = document.getElementById('trigger-tab-close') as HTMLInputElement;
-    expect(tabCloseCheckbox?.checked).toBe(false);
+    // tabClose no longer exists
   });
 
   it('falls back to defaults on JSON parse error', async () => {
@@ -192,16 +182,14 @@ describe('recordingTriggerSettings', () => {
     });
 
     await initRecordingTriggerSettings();
-    const tabCloseCheckbox = document.getElementById('trigger-tab-close') as HTMLInputElement;
-    expect(tabCloseCheckbox?.checked).toBe(true); // Default
+    // tabClose no longer exists
   });
 
   it('falls back to defaults on storage error', async () => {
     mockStorageGet.mockRejectedValue(new Error('Storage error'));
     await initRecordingTriggerSettings();
 
-    const tabCloseCheckbox = document.getElementById('trigger-tab-close') as HTMLInputElement;
-    expect(tabCloseCheckbox?.checked).toBe(true);
+    // tabClose no longer exists
   });
 
   it('does nothing when container element is missing', async () => {
@@ -222,7 +210,7 @@ describe('recordingTriggerSettings', () => {
         const result: Record<string, any> = {};
         if (keys.includes(STORAGE_KEYS.RECORDING_TRIGGERS)) {
           result[STORAGE_KEYS.RECORDING_TRIGGERS] = JSON.stringify({
-            tabClose: true, scrollAndTime: false, manualSave: true, periodicSnapshot: false,
+            scrollAndTime: false, manualSave: true, periodicSnapshot: false,
           });
         }
         if (keys.includes(STORAGE_KEYS.SNAPSHOT_INTERVAL_MINUTES)) {
@@ -253,7 +241,6 @@ describe('recordingTriggerSettings', () => {
       );
       expect(triggerCall).toBeDefined();
       const savedTriggers = JSON.parse(triggerCall[0][STORAGE_KEYS.RECORDING_TRIGGERS]);
-      expect(savedTriggers.tabClose).toBe(true);
       expect(savedTriggers.manualSave).toBe(true);
     });
 

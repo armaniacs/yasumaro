@@ -13,21 +13,19 @@ import { errorMessage } from '../utils/errorUtils.js';
 // ============================================================================
 
 export interface RecordingTriggers {
-  tabClose: boolean;
   scrollAndTime: boolean;
   manualSave: boolean;
   periodicSnapshot: boolean;
 }
 
 const DEFAULT_TRIGGERS: RecordingTriggers = {
-  tabClose: true,
   scrollAndTime: false,
   manualSave: true,
   periodicSnapshot: false,
 };
 
 export interface RecordingEvent {
-  type: 'tab_close' | 'scroll_idle' | 'manual_save' | 'snapshot';
+  type: 'scroll_idle' | 'manual_save' | 'snapshot';
   /** Scroll percentage (0-100). Only for scroll_idle events. */
   scrollPercent?: number;
   /** Visit duration in ms. Only for scroll_idle events. */
@@ -119,9 +117,6 @@ export class RecordingTriggerManager {
     const triggers = await this.loadTriggers();
 
     switch (event.type) {
-      case 'tab_close':
-        return triggers.tabClose;
-
       case 'scroll_idle':
         if (!triggers.scrollAndTime) return false;
         // Validate scroll depth (50%+) and visit duration (5s+)
