@@ -286,12 +286,6 @@ async function initDiagnosticsPanel(): Promise<void> {
         ? 'opfs-sync-worker'
         : 'opfs-async-main';
 
-    // For OPFS-related capabilities, only assert them when we know for sure.
-    // OPFS Worker path: all capabilities present.
-    // Fallback: no OPFS at all.
-    // IDB path: OPFS capabilities unknown — don't report them as deficiencies.
-    const isOpfsKnown = isOpfsWorker || sqliteStatus.fallback;
-
     const diagInput: DiagnosticInput = {
       opfsDirectory: isOpfsWorker,
       syncAccessHandle: isOpfsWorker,
