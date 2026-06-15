@@ -355,18 +355,17 @@ async function initDiagnosticsPanel(): Promise<void> {
     diagCompileOptionsStats.appendChild(allOptionsDetails);
   }
 
-  // Divergence detection
+  // Divergence detection — only warn when there's a real functional mismatch.
+  // Dashboard window cannot detect Worker-only APIs (SyncAccessHandle), so
+  // dashboardVfsStrategy will often differ from offscreenStrategy in the
+  // normal OPFS Worker case. This is expected, not a problem.
+  // Only warn when offscreen is using fallback but dashboard detects OPFS
+  // (meaning OPFS is available but not being used).
   if (diagDivergenceWarning && dashboardVfsStrategy && sqliteStatus) {
-    let offscreenStrategy: string | null = null;
-    if (sqliteStatus.fallback) {
-      offscreenStrategy = 'fallback';
-    } else if (sqliteStatus.path.startsWith('OPFS:')) {
-      offscreenStrategy = 'opfs-sync-worker';
-    } else if (sqliteStatus.initialized) {
-      offscreenStrategy = 'opfs-async-main';
-    }
+    const offscreenUsesFallback = sqliteStatus.fallback;
+    const dashboardDetectsOpfs = dashboardVfsStrategy !== 'fallback';
 
-    if (offscreenStrategy && dashboardVfsStrategy !== offscreenStrategy) {
+    if (offscreenUsesFallback && dashboardDetectsOpfs) {
       diagDivergenceWarning.style.display = '';
     }
   }

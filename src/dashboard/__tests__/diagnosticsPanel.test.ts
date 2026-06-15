@@ -783,8 +783,9 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     document.body.innerHTML = '';
   });
 
-  it('hides divergence warning when dashboard and offscreen agree', async () => {
-    // Both dashboard and offscreen report OPFS sync worker strategy
+  it('hides divergence warning when offscreen is working normally', async () => {
+    // Normal case: OPFS Worker is active, dashboard can't detect Worker-only APIs
+    // but everything is working fine — no warning needed
     mockGetSqliteStatus.mockResolvedValue({
       initialized: true,
       path: 'OPFS:/yasumaro-opfs/yasumaro.db',
@@ -797,19 +798,21 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     expect(warning!.style.display).toBe('none');
   });
 
-  it('shows divergence warning when dashboard and offscreen disagree', async () => {
-    // Dashboard detects OPFS (via detectLiveVfsStrategy mock → opfs-sync-worker),
-    // but offscreen returns path='yasumaro.db' (infers opfs-async-main) → divergence
+  it('shows divergence warning only when offscreen uses fallback but dashboard detects OPFS', async () => {
+    // Real problem: dashboard detects OPFS available, but offscreen fell back to chrome.storage.local
+    mockDetectLiveVfsStrategy.mockReturnValue({
+      caps: { opfsDirectory: true, syncAccessHandle: true, worker: true },
+      strategy: 'opfs-sync-worker',
+    });
     mockGetSqliteStatus.mockResolvedValue({
       initialized: true,
-      path: 'yasumaro.db',
-      fallback: false,
-      fts5: true,
-      compileOptionsSource: 'idb',
+      path: 'chrome.storage.local',
+      fallback: true,
+      fts5: false,
+      compileOptionsSource: 'fallback',
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning');
-    // Warning should be visible because dashboard strategy (opfs-sync-worker) != offscreen (opfs-async-main)
     expect(warning!.style.display).not.toBe('none');
   });
 });
