@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.6] - 2026-06-15
+
+### Added / 追加
+
+- **診断パネルに SQLite ケイパビリティ・マトリクスを追加（PBI-13）**
+  - 不足診断: 環境能力（OPFS/FTS5/初期化）を9パターンに分類し、不足している機能と具体的な対処を表示
+  - コンパイルオプション表示: `PRAGMA compile_options` の全項目をデバッグモードで確認可能（FTS/VFS 関連をハイライト）
+  - デバッグモード切替: `chrome.storage.local` ランタイムフラグで折りたたみセクションの表示/非表示を制御
+  - dashboard/offscreen 間の乖離検出: OPFS が利用可能なのに fallback が使用されている場合に警告
+  - initError 表示: DB 初期化失敗時にエラーメッセージを診断パネルに表示
+
+### Fixed / 修正
+
+- **`sendDashboardMessage` を Promise ベースに修正**: MV3 サービスワーカーのコールバックベース応答で `chrome.runtime.lastError` が誤検出し、診断パネル初期化時にタイムアウトする問題を修正
+- **不足診断の誤検出を修正**: dashboard 側の環境判定（ウィンドウコンテキスト）を正として使っていたため Worker コンテキストで利用不可の API を「利用不可」と誤判定していた問題を修正。offscreen 側の実測結果を使用するよう変更
+- **乖離警告の誤検出を削減**: dashboard 側は Worker 専用 API を検出できないため、通常の OPFS Worker 環境でも乖離警告が表示されていた問題を修正。offscreen が fallback の場合のみ警告を表示
+- **diagnosticsPanel テストの `chrome is not defined` 問題を修正**: `setupChromeMocks()` が `chrome` オブジェクトを未定義時にサイレントに no-op していた問題を修正
+
+### Changed / 変更
+
+- **sendDashboardMessage の API 切替**: コールバックベース → Promise ベース（`Promise.race` によるタイムアウト制御）
+- **不足診断の入力ソース変更**: dashboard 側 `detectLiveVfsStrategy()` → offscreen 側の status レスポンス
+- **`no-opfs` 不足の検出条件変更**: OPFS 未利用時全般 → fallback 使用中のみ報告（IDB 動作中は誤検出しない）
+
+### Tests / テスト追加
+
+- **diagnoseDeficiencies 単体テスト 15件**: 全不足パターンのカバレッジ
+- **diagnosticsPanel BDD テスト 8件**: 不足診断表示、デバッグモード切替、乖離検出の統合テスト
+- **diagnosticsPanel テスト既存28件の復旧**: chrome mock 修正で全件パス回复
+
+### Chores / その他
+
+- **バージョン 5.9.5 → 5.9.6**
+
+
 ## [5.9.5] - 2026-06-15
 
 ### Fixed / 修正
