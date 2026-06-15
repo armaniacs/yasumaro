@@ -2699,24 +2699,26 @@ details[open] .advanced-details-summary {
 .content-preview {
   margin-top: 8px;
   padding: 12px;
-  background: var(--ym-color-bg-subtle, #f8fafc);
-  border: 1px solid var(--color-border);
+  /* ライトモード：明示的カラー（未定義変数の継承を防ぐ） */
+  background: #f8fafc; /* slate-50 */
+  border: 1px solid #cbd5e1; /* slate-300 — 視認性アップ */
   border-radius: 4px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--ym-color-text, #1e293b);
+  color: #1e293b; /* slate-800: 14.7:1 on slate-50 */
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 300px;
   overflow-y: auto;
 }
 
-/* ダークモード：展開したコンテンツプレビューの視認性 */
+/* ダークモード：展開したコンテンツプレビューの視認性
+   !important 使用で、他のルールより優先させる */
 @media (prefers-color-scheme: dark) {
   .content-preview {
-    background: #0e0e12; /* ink-black */
-    border-color: #1a1a24; /* ink-deep */
-    color: #e2e8f0; /* slate-200: 12.9:1 on ink-black */
+    background: #0e0e12 !important; /* ink-black */
+    border-color: #1a1a24 !important; /* ink-deep */
+    color: #e2e8f0 !important; /* slate-200: 12.9:1 on ink-black */
   }
 }
 
