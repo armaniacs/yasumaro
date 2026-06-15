@@ -1,0 +1,256 @@
+/**
+ * tokens.css
+ * Yasumaro Design Tokens — 和モダン・精緻テーマ
+ *
+ * コンセプト「研墨（けんぼく）」:
+ * 知識を蓄え、記録し、伝承する道具としての美学。墨と紙と金。
+ *
+ * 使用方法:
+ *   各エントリポイント（dashboard.css / popup/styles.css）で
+ *   @import url('../styles/tokens.css'); を先頭に追加する
+ *
+ * 命名規則:
+ *   --ym-*  = Yasumaro Design Token（本ファイルで一元定義）
+ *   --color-* = 既存変数（段階移行中用。PBI-14 で置換予定）
+ */
+
+/* =============================================================================
+   1. カラーパレット — ライトモード
+   ============================================================================= */
+
+:root {
+  /* ---- ブランドコア ---- */
+  --ym-color-ink-black:   #0e0e12;   /* 漆黒（ダーク基本背景） */
+  --ym-color-ink-deep:    #1a1a24;   /* 墨（ダークサイドバー背景） */
+  --ym-color-ink-mid:     #2a2a38;   /* 硯（ボーダー・カード背景） */
+  --ym-color-gold:        #c9a84c;   /* 金箔（プライマリアクセント：装飾用） */
+  --ym-color-gold-light:  #e8c97a;   /* 金箔ホバー */
+  --ym-color-gold-dim:    rgba(201, 168, 76, 0.15);  /* 金箔背景ティント */
+  --ym-color-paper:       #f5f0e8;   /* 和紙（ライト基本背景） */
+  --ym-color-paper-warm:  #ede7d9;   /* 和紙濃（ライトサイドバー背景） */
+  --ym-color-sumi-text:   #1e1a14;   /* 墨（ライトテキスト） */
+  --ym-color-sumi-muted:  #7a7060;   /* 薄墨（ライトセカンダリテキスト） */
+
+  /* ---- 操作要素（紫系。金は装飾のみ） ---- */
+  --ym-color-primary:       #7c3aed;  /* 操作要素のプライマリ */
+  --ym-color-primary-hover: #6d28d9;
+  --ym-color-primary-light: rgba(124, 58, 237, 0.1);
+  --ym-color-primary-bg:    #f5f3ff;
+  --ym-color-primary-border:#ddd6fe;
+
+  /* ---- セマンティック ---- */
+  --ym-color-danger:        #ef4444;
+  --ym-color-danger-hover:  #dc2626;
+  --ym-color-danger-text:   #991b1b;
+  --ym-color-danger-bg:     #fef2f2;
+  --ym-color-danger-border: #fecaca;
+
+  --ym-color-success:        #10b981;
+  --ym-color-success-text:   #065f46;
+  --ym-color-success-bg:     #f0fdf4;
+  --ym-color-success-border: #bbf7d0;
+
+  --ym-color-warning:        #f59e0b;
+  --ym-color-warning-hover:  #d97706;
+  --ym-color-warning-text:   #92400e;
+  --ym-color-warning-bg:     #fef3c7;
+  --ym-color-warning-border: #fde68a;
+
+  --ym-color-info:        #3b82f6;
+  --ym-color-info-accent: #0ea5e9;
+  --ym-color-info-accent-bg: #e0f2fe;
+  --ym-color-info-light:  rgba(59, 130, 246, 0.1);
+
+  /* ---- テキスト ---- */
+  --ym-color-text:          #1e293b;
+  --ym-color-text-secondary:#475569;
+  --ym-color-text-muted:    #64748b;
+  --ym-color-text-placeholder:#94a3b8;
+
+  /* ---- 背景・ボーダー ---- */
+  --ym-color-bg:            #ffffff;
+  --ym-color-bg-subtle:     #f8fafc;
+  --ym-color-bg-code:       #f1f5f9;
+  --ym-color-border:        #e2e8f0;
+  --ym-color-border-light:  #f1f5f9;
+  --ym-color-border-hover:  #cbd5e1;
+
+  /* ---- オーバーレイ・シャドウ ---- */
+  --ym-color-overlay:   rgba(15, 23, 42, 0.6);
+  --ym-shadow-sm:  rgba(15, 23, 42, 0.05);
+  --ym-shadow:     rgba(15, 23, 42, 0.1);
+  --ym-shadow-lg:  rgba(15, 23, 42, 0.15);
+}
+
+/* =============================================================================
+   2. カラーパレット — ダークモード
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* ブランドコア（ダーク用） */
+    --ym-color-ink-black:   #0e0e12;   /* 漆黒：変化なし */
+    --ym-color-ink-deep:    #1a1a24;   /* 墨サイドバー */
+    --ym-color-ink-mid:     #2a2a38;   /* 硯 */
+    --ym-color-gold:        #c9a84c;   /* 金箔：変化なし */
+    --ym-color-gold-light:  #e8c97a;
+    --ym-color-gold-dim:    rgba(201, 168, 76, 0.15);
+    --ym-color-paper:       #0e0e12;   /* 漆黒背景 */
+    --ym-color-paper-warm:  #1a1a24;   /* 墨サイドバー */
+    --ym-color-sumi-text:   #f0ece4;   /* 白墨テキスト */
+    --ym-color-sumi-muted:  #9a9080;   /* 薄墨（セカンダリ） */
+
+    /* 操作要素（ダーク用） */
+    --ym-color-primary:        #c084fc;
+    --ym-color-primary-hover:  #a855f7;
+    --ym-color-primary-light:  rgba(192, 132, 252, 0.15);
+    --ym-color-primary-bg:     #1a1025;
+    --ym-color-primary-border: #6b21a8;
+
+    /* セマンティック（ダーク用） */
+    --ym-color-danger:        #f85149;
+    --ym-color-danger-text:   #f0f6fc;
+    --ym-color-danger-bg:     rgba(248, 81, 73, 0.1);
+    --ym-color-danger-border: #3d1a1a;
+
+    --ym-color-success:        #3fb950;
+    --ym-color-success-text:   #f0f6fc;
+    --ym-color-success-bg:     rgba(63, 185, 80, 0.1);
+    --ym-color-success-border: #1a3d1a;
+
+    --ym-color-warning:        #d29922;
+    --ym-color-warning-text:   #f0f6fc;
+    --ym-color-warning-bg:     rgba(210, 153, 34, 0.1);
+    --ym-color-warning-border: #3d2e1a;
+
+    --ym-color-info:           #58a6ff;
+    --ym-color-info-accent:    #0ea5e9;
+    --ym-color-info-accent-bg: rgba(14, 165, 233, 0.1);
+    --ym-color-info-light:     rgba(88, 166, 255, 0.15);
+
+    /* テキスト（ダーク用） */
+    --ym-color-text:           #f0f6fc;
+    --ym-color-text-secondary: #b1bac4;
+    --ym-color-text-muted:     #8b949e;
+    --ym-color-text-placeholder:#484f58;
+
+    /* 背景・ボーダー（ダーク用） */
+    --ym-color-bg:            #0d1117;
+    --ym-color-bg-subtle:     #161b22;
+    --ym-color-bg-code:       #1c2128;
+    --ym-color-border:        #30363d;
+    --ym-color-border-light:  #21262d;
+    --ym-color-border-hover:  #484f58;
+
+    /* オーバーレイ・シャドウ（ダーク用） */
+    --ym-color-overlay:   rgba(1, 4, 9, 0.8);
+    --ym-shadow-sm:  rgba(1, 4, 9, 0.2);
+    --ym-shadow:     rgba(1, 4, 9, 0.3);
+    --ym-shadow-lg:  rgba(1, 4, 9, 0.4);
+  }
+}
+
+/* =============================================================================
+   3. タイポグラフィ
+   ============================================================================= */
+
+:root {
+  /* UI デフォルト：ゴシック体（明朝体は設定オプション用） */
+  --ym-font-ui: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+
+  --ym-font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code",
+                  "Consolas", monospace;
+
+  --ym-font-serif: "Hiragino Mincho ProN", "Yu Mincho",
+                   "Times New Roman", Georgia, serif;
+
+  /* タイポグラフィスケール */
+  --ym-text-xs:   11px;  /* letter-spacing: 0.04em  — ラベル・バッジ */
+  --ym-text-sm:   13px;  /* line-height: 1.6        — 補足・キャプション */
+  --ym-text-base: 14px;  /* line-height: 1.7        — 本文 */
+  --ym-text-md:   16px;  /* letter-spacing: -0.01em — セクション見出し */
+  --ym-text-lg:   20px;  /* letter-spacing: -0.02em — パネル見出し */
+  --ym-text-xl:   28px;  /* letter-spacing: -0.03em — ブランド名 */
+}
+
+/* =============================================================================
+   4. スペーシング
+   ============================================================================= */
+
+:root {
+  --ym-space-1:  4px;
+  --ym-space-2:  8px;
+  --ym-space-3:  12px;
+  --ym-space-4:  16px;
+  --ym-space-5:  20px;
+  --ym-space-6:  24px;
+  --ym-space-7:  28px;  /* 既存スケールのギャップを埋める */
+  --ym-space-8:  32px;
+}
+
+/* =============================================================================
+   5. ボーダー半径
+   ============================================================================= */
+
+:root {
+  --ym-radius-sm: 6px;
+  --ym-radius-md: 8px;  /* 既存コードで参照されているが未定義だったものを追加 */
+  --ym-radius:    8px;
+  --ym-radius-lg: 12px;
+  --ym-radius-full: 9999px;
+}
+
+/* =============================================================================
+   6. トランジション・モーション
+   ============================================================================= */
+
+:root {
+  --ym-ease-ink:    cubic-bezier(0.4, 0, 0.15, 1);  /* インクが滲む緩減速 */
+  --ym-ease-paper:  cubic-bezier(0.0, 0, 0.2, 1);   /* 紙をめくる加速 */
+
+  --ym-duration-sm: 120ms;
+  --ym-duration-md: 220ms;
+  --ym-duration-lg: 380ms;
+
+  /* 互換性のため既存 transition 変数も維持 */
+  --ym-transition-fast: 150ms var(--ym-ease-paper);
+  --ym-transition:      200ms var(--ym-ease-paper);
+  --ym-transition-slow: 300ms var(--ym-ease-paper);
+}
+
+/* =============================================================================
+   7. 質感・エフェクト
+   ============================================================================= */
+
+:root {
+  /* 和紙ラインテクスチャ（ライトモード限定） */
+  --ym-paper-lines: repeating-linear-gradient(
+    0deg, transparent, transparent 23px,
+    rgba(0,0,0,0.03) 23px, rgba(0,0,0,0.03) 24px
+  );
+
+  /* 金の2層フォーカスリング（装飾用。occlusive な要素のみ） */
+  --ym-focus-ring-gold: 0 0 0 2px var(--ym-color-ink-black),
+                        0 0 0 4px var(--ym-color-gold);
+
+  /* 標準フォーカスリング（操作要素用。コントラスト優先） */
+  --ym-focus-ring: 0 0 0 2px var(--ym-color-bg),
+                   0 0 0 4px var(--ym-color-primary);
+}
+
+/* =============================================================================
+   8. prefers-reduced-motion
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ym-duration-sm: 0.01ms;
+    --ym-duration-md: 0.01ms;
+    --ym-duration-lg: 0.01ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

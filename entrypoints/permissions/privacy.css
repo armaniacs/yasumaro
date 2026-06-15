@@ -1,3 +1,6 @@
+/** @import tokens.css */
+@import url("../../src/styles/tokens.css");
+
 :root {
   --bg: #1a1a2e;
   --surface: #16213e;

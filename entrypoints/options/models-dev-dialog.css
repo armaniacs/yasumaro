@@ -83,8 +83,8 @@
 }
 
 .tab-btn.active {
-    border-bottom-color: var(--primary-color, #007bff);
-    color: var(--primary-color, #007bff);
+    border-bottom-color: var(--ym-color-primary, #7c3aed);
+    color: var(--ym-color-primary, #7c3aed);
     font-weight: 600;
 }
 
@@ -128,7 +128,7 @@
     width: 20px;
     height: 20px;
     border: 2px solid var(--border-color, #e0e0e0);
-    border-top-color: var(--primary-color, #007bff);
+    border-top-color: var(--ym-color-primary, #7c3aed);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -164,7 +164,7 @@
 
 .provider-item.selected {
     background-color: var(--selected-bg, #e3f2fd);
-    border-left: 3px solid var(--primary-color, #007bff);
+    border-left: 3px solid var(--ym-color-primary, #7c3aed);
 }
 
 .provider-item-name {
@@ -307,12 +307,12 @@
 }
 
 .btn-primary {
-    background-color: var(--primary-color, #007bff);
+    background-color: var(--ym-color-primary, #7c3aed);
     color: white;
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-hover-color, #0056b3);
+    background-color: var(--ym-color-primary-hover, #6d28d9);
 }
 
 /* Scrollbar Styling */

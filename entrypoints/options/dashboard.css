@@ -1,3 +1,6 @@
+/** @import tokens.css */
+@import url("../../src/styles/tokens.css");
+
 /**
  * dashboard.css
  * Smart History Dashboard - standalone stylesheet
