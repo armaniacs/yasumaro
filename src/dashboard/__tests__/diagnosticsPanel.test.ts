@@ -43,6 +43,23 @@ vi.mock('../../utils/storageUrls.js', () => ({
   getSavedUrlCount: () => mockGetSavedUrlCount(),
 }));
 
+const mockGetSqliteStatus = vi.fn().mockResolvedValue(null);
+const mockRunOpfsSpike = vi.fn().mockResolvedValue(null);
+const mockMigrateLogs = vi.fn().mockResolvedValue(null);
+vi.mock('../dashboardSqliteService.js', () => ({
+  getSqliteStatus: () => mockGetSqliteStatus(),
+  runOpfsSpike: () => mockRunOpfsSpike(),
+  migrateLogs: () => mockMigrateLogs(),
+}));
+
+const mockDetectLiveVfsStrategy = vi.fn().mockReturnValue({
+  caps: { opfsDirectory: true, syncAccessHandle: true, worker: true },
+  strategy: 'opfs-sync-worker',
+});
+vi.mock('../../offscreen/opfsCapabilities.js', () => ({
+  detectLiveVfsStrategy: () => mockDetectLiveVfsStrategy(),
+}));
+
 // ---------------------------------------------------------------------------
 // Chrome API overrides — vitest.setup.ts beforeEach() resets these, so we
 // reassign them in each test's beforeEach.
@@ -50,21 +67,30 @@ vi.mock('../../utils/storageUrls.js', () => ({
 
 const mockGetBytesInUse = vi.fn().mockResolvedValue(102400);
 const mockGetManifest = vi.fn().mockReturnValue({ version: '1.0.0', name: 'Test Extension' });
-const mockSendMessage = vi.fn();
+const mockSendMessage = vi.fn((_message: unknown, callback?: (response: unknown) => void) => {
+  // Support both callback pattern (used by dashboardSqliteService) and
+  // promise pattern (used by existing test assertions via mockResolvedValue)
+  if (typeof callback === 'function') {
+    callback({ success: true });
+  }
+  return Promise.resolve({ success: true });
+});
 const mockStorageLocalGet = vi.fn().mockResolvedValue({});
 const mockStorageLocalSet = vi.fn().mockResolvedValue(undefined);
 
 function setupChromeMocks(): void {
   const c = globalThis as any;
-  if (c.chrome?.storage?.local) {
-    c.chrome.storage.local.getBytesInUse = mockGetBytesInUse;
-    c.chrome.storage.local.get = mockStorageLocalGet;
-    c.chrome.storage.local.set = mockStorageLocalSet;
-  }
-  if (c.chrome?.runtime) {
-    c.chrome.runtime.getManifest = mockGetManifest;
-    c.chrome.runtime.sendMessage = mockSendMessage;
-  }
+  // Ensure chrome exists (guard against environment mismatch)
+  if (!c.chrome) c.chrome = {};
+  if (!c.chrome.storage) c.chrome.storage = {};
+  if (!c.chrome.storage.local) c.chrome.storage.local = {};
+  if (!c.chrome.runtime) c.chrome.runtime = { lastError: null };
+
+  c.chrome.storage.local.getBytesInUse = mockGetBytesInUse;
+  c.chrome.storage.local.get = mockStorageLocalGet;
+  c.chrome.storage.local.set = mockStorageLocalSet;
+  c.chrome.runtime.getManifest = mockGetManifest;
+  c.chrome.runtime.sendMessage = mockSendMessage;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +108,13 @@ function setupDOM(includeConnectionResult = true): void {
     <div id="diagAiSettings"></div>
     <input type="checkbox" id="diagDebugModeToggle" role="switch">
     <div id="diagDeficiencyStats"></div>
+    <div id="diagSqliteStats"></div>
+    <button id="diagTestSqliteBtn"></button>
+    <div id="diagSqliteResult"></div>
+    <button id="diagOpfsSpikeBtn"></button>
+    <div id="diagOpfsSpikeResult"></div>
+    <button id="diagMigrateBtn"></button>
+    <div id="diagMigrateResult"></div>
     <details id="diagCompileOptionsSection"></details>
     <div id="diagDivergenceWarning" style="display: none;"></div>
   `;
@@ -614,5 +647,169 @@ describe('initDiagnosticsPanel — Connection test with missing connectionResult
   it('AI test button handler returns early when connectionResult is null', () => {
     const btn = document.getElementById('diagTestAiBtn') as HTMLButtonElement;
     expect(() => btn.click()).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BDD Scenarios: PBI-13 SQLite Capability Matrix
+// ---------------------------------------------------------------------------
+
+describe('BDD: SQLite capability matrix — deficiency diagnosis', () => {
+  beforeEach(async () => {
+    setupChromeMocks();
+    setupDOM();
+    mockGetSettings.mockResolvedValue({
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: '',
+      obsidian_daily_path: '',
+      ai_provider: 'gemini',
+    });
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'yasumaro.db',
+      fallback: false,
+      fts5: true,
+      compileOptions: ['ENABLE_FTS5', 'ENABLE_COLUMN_METADATA'],
+      compileOptionsSource: 'idb',
+    });
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('shows "no deficiencies" when all features are enabled', async () => {
+    await initDiagnosticsPanel();
+    const deficiencyStats = document.getElementById('diagDeficiencyStats');
+    expect(deficiencyStats).not.toBeNull();
+    expect(deficiencyStats!.textContent).toContain('diagDeficiencyNone');
+  });
+
+  it('shows deficiency when fts5 is false', async () => {
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'yasumaro.db',
+      fallback: false,
+      fts5: false,
+      compileOptionsSource: 'idb',
+    });
+    await initDiagnosticsPanel();
+    const deficiencyStats = document.getElementById('diagDeficiencyStats');
+    // dashboard mock returns opfs-sync-worker, so FTS5 absence is detected as opfs-no-fts5
+    expect(deficiencyStats!.textContent).toContain('diagDeficiencyOpfsNoFts5Summary');
+  });
+
+  it('shows deficiency when fallback is true', async () => {
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'chrome.storage.local',
+      fallback: true,
+      fts5: false,
+      compileOptionsSource: 'fallback',
+    });
+    await initDiagnosticsPanel();
+    const deficiencyStats = document.getElementById('diagDeficiencyStats');
+    expect(deficiencyStats!.textContent).toContain('diagDeficiencyFallbackSummary');
+  });
+});
+
+describe('BDD: SQLite capability matrix — debug mode', () => {
+  beforeEach(async () => {
+    setupChromeMocks();
+    setupDOM();
+    mockGetSettings.mockResolvedValue({
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: '',
+      obsidian_daily_path: '',
+      ai_provider: 'gemini',
+    });
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'yasumaro.db',
+      fallback: false,
+      fts5: true,
+      compileOptions: ['ENABLE_FTS5', 'THREADSAFE=1'],
+      compileOptionsSource: 'idb',
+    });
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('hides compile options section when debug mode is OFF', async () => {
+    mockStorageLocalGet.mockResolvedValue({ debugMode: false });
+    await initDiagnosticsPanel();
+    const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
+    expect(section.style.display).toBe('none');
+  });
+
+  it('shows compile options section when debug mode is ON', async () => {
+    mockStorageLocalGet.mockResolvedValue({ debugMode: true });
+    await initDiagnosticsPanel();
+    const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
+    expect(section.style.display).toBe('');
+  });
+
+  it('toggles debug mode and persists to chrome.storage.local', async () => {
+    mockStorageLocalGet.mockResolvedValue({ debugMode: false });
+    await initDiagnosticsPanel();
+    const toggle = document.getElementById('diagDebugModeToggle') as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+
+    toggle.click();
+    await vi.waitFor(() => {
+      expect(mockStorageLocalSet).toHaveBeenCalledWith({ debugMode: true });
+    });
+  });
+});
+
+describe('BDD: SQLite capability matrix — divergence detection', () => {
+  beforeEach(async () => {
+    setupChromeMocks();
+    setupDOM();
+    mockGetSettings.mockResolvedValue({
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: '',
+      obsidian_daily_path: '',
+      ai_provider: 'gemini',
+    });
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('hides divergence warning when dashboard and offscreen agree', async () => {
+    // Both dashboard and offscreen report OPFS sync worker strategy
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'OPFS:/yasumaro-opfs/yasumaro.db',
+      fallback: false,
+      fts5: false,
+      compileOptionsSource: 'opfs-worker',
+    });
+    await initDiagnosticsPanel();
+    const warning = document.getElementById('diagDivergenceWarning');
+    expect(warning!.style.display).toBe('none');
+  });
+
+  it('shows divergence warning when dashboard and offscreen disagree', async () => {
+    // Dashboard detects OPFS (via detectLiveVfsStrategy mock → opfs-sync-worker),
+    // but offscreen returns path='yasumaro.db' (infers opfs-async-main) → divergence
+    mockGetSqliteStatus.mockResolvedValue({
+      initialized: true,
+      path: 'yasumaro.db',
+      fallback: false,
+      fts5: true,
+      compileOptionsSource: 'idb',
+    });
+    await initDiagnosticsPanel();
+    const warning = document.getElementById('diagDivergenceWarning');
+    // Warning should be visible because dashboard strategy (opfs-sync-worker) != offscreen (opfs-async-main)
+    expect(warning!.style.display).not.toBe('none');
   });
 });
