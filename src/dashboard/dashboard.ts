@@ -22,7 +22,7 @@ import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
-import { initRecordingTriggerSettings } from './recordingTriggerSettings.js';
+import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
 import { exportMarkdown, exportCsv, exportJson, downloadText, downloadBlob } from './exportLogsService.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
@@ -714,7 +714,7 @@ function initExportLogsPanel(): void {
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
-  try { await initRecordingTriggerSettings(); } catch (e) { console.error('[Dashboard] initRecordingTriggerSettings error:', e); }
+  try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
   try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }

@@ -1834,29 +1834,7 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
-        it('should re-read trigger settings from storage (setupSnapshotAlarm)', async () => {
-            const sendResponse = vi.fn();
-            const message: PingMessage = { type: 'PING' };
 
-            // handlePing calls setupSnapshotAlarm which reads chrome.storage.local
-            const storageGet = chrome.storage.local.get as ReturnType<typeof vi.fn>;
-            storageGet.mockResolvedValue({
-                recording_triggers: JSON.stringify({
-                    tabClose: true,
-                    scrollAndTime: false,
-                    manualSave: true,
-                    periodicSnapshot: true,
-                }),
-                snapshot_interval_minutes: 10,
-            });
-
-            await serviceWorker.handlePing(message, sendResponse);
-
-            // Verify setupSnapshotAlarm ran: chrome.storage.local.get was called
-            expect(storageGet).toHaveBeenCalled();
-            // PING should still respond success
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-        });
     });
 
     describe('handleTabActivated', () => {

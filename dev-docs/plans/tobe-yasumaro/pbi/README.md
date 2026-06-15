@@ -19,12 +19,12 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 
 | # | ファイル | 概要 | SP | 状態 |
 |---|---------|------|-----|------|
-| 01-08 | [archive/](./archive/) | Phase 1〜7 + DEV-78 (完了) | 53 | ✅ 完了済み |
+| 01-08 | [archive/](./archive/) | Phase 1〜7 + DEV-78 (完了、PBI-04 記録トリガーUIは削除) | 53 | ✅ 完了済み |
 | 100-108 | [archive/](./archive/) | Checking Team Review (完了) | 42 | ✅ 完了済み |
 | 09-15 | [archive/](./archive/) | デザインシステム + OPFS/診断パネル拡張 (完了) | 24 | ✅ 完了済み |
 | 08 (旧) | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備 | 5 | ⛔ **明示指示待ち**（v6.0.0 リリース直前のみ） |
 
-**合計: 124 SP | 完了済み: 119 SP (96%) | 指示待ち: 5 SP**
+**合計: 124 SP | 完了済み: 119 SP (96%) | 指示待ち: 5 SP**（PBI-04 記録トリガーUIは削除）
 
 ### Archive (完了済み PBI)
 

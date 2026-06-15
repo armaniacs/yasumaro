@@ -78,11 +78,6 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
-    // Setup periodic snapshot alarm if enabled
-    setupSnapshotAlarm(true).catch(err => {
-        logWarn('Failed to setup snapshot alarm', { error: String(err) });
-    });
-
     // Message listener
     chrome.runtime.onMessage.addListener(createMessageHandler());
 
@@ -191,9 +186,6 @@ rateLimiter.initialize();
 
 // Track whether cache has been initialized (for startup rehydration)
 let isCacheInitialized = false;
-
-// Snapshot alarm: cache last settings hash to avoid unnecessary clear/create on every ping
-let cachedSnapshotSettingsHash: string | null = null;
 
 const manualContentFetcher = new ManualContentFetcher();
 
@@ -644,88 +636,15 @@ export async function handleSessionLockRequest(
 /**
  * Handle PING message for Service Worker health check.
  */
-/**
- * Setup chrome.alarms for periodic snapshots based on current trigger settings.
- * Skips work if settings haven't changed since the last successful run.
- */
-async function setupSnapshotAlarm(force = false): Promise<boolean> {
-  try {
-    const result = await chrome.storage.local.get([StorageKeys.RECORDING_TRIGGERS, StorageKeys.SNAPSHOT_INTERVAL_MINUTES]);
-    const raw = result[StorageKeys.RECORDING_TRIGGERS];
-    const triggers = raw ? JSON.parse(raw as string) : {};
-    const isEnabled = triggers.periodicSnapshot === true;
-    const intervalMinutes = (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
-
-    const settingsHash = `${isEnabled}-${intervalMinutes}`;
-    if (!force && settingsHash === cachedSnapshotSettingsHash) {
-      return false;
-    }
-    cachedSnapshotSettingsHash = settingsHash;
-
-    // Clear existing alarm first
-    chrome.alarms.clear('yasumaro-snapshot');
-    if (isEnabled) {
-      chrome.alarms.create('yasumaro-snapshot', { periodInMinutes: intervalMinutes });
-      logInfo('Snapshot alarm created', { intervalMinutes }, 'service-worker');
-    }
-    return true;
-  } catch (err) {
-    logWarn('setupSnapshotAlarm failed', { error: String(err) });
-    return false;
-  }
-}
-
-// Handle snapshot alarm
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'yasumaro-daily-purge') {
-    try {
-      const result = await sqliteClient.purgeOldRecords();
-      if (result) {
-        logInfo('Daily purge completed', { purged: result.purged }, 'service-worker');
-      }
-    } catch (err) {
-      logWarn('Daily purge failed', { error: errorMessage(err) }, undefined, 'service-worker');
-    }
-    return;
-  }
-
-  if (alarm.name !== 'yasumaro-snapshot') return;
-
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.url || !tab.id) return;
-
-    // Save active tab to SQLite
-    const record = {
-      url: tab.url,
-      title: tab.title || null,
-      created_at: Date.now(),
-      domain: tab.url ? extractDomainFromUrl(tab.url) : null,
-    };
-    const result = await sqliteClient.insert(record);
-    if (result) {
-      logInfo('Snapshot saved', { url: tab.url, id: result.id }, 'service-worker');
-    }
-  } catch (err) {
-    logWarn('Snapshot alarm failed', { error: String(err) });
-  }
-});
-
-function extractDomainFromUrl(url: string): string {
-  try { return new URL(url).hostname; } catch { return url; }
-}
-
 export async function handlePing(
-    message: PingMessage,
+    _message: PingMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
-    // Re-setup snapshot alarm only when trigger settings have changed since the last ping
-    await setupSnapshotAlarm(false);
     sendResponse({ success: true });
 }
 
 
-// ============================================================================
+
 // Message Handler Factory (extracted for testability)
 // ============================================================================
 

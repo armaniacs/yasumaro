@@ -1475,7 +1475,13 @@
   "aiSection": {
     "message": "AI Provider"
   },
-  "recordingSection": {
+  "recordingConditionsTab": {
+    "message": "Recording Conditions"
+  },
+  "recordingConditionsDesc": {
+    "message": "Set thresholds for automatic recording and AI processing."
+  },
+    "recordingSection": {
     "message": "Recording Conditions"
   },
   "saveBtn": {
