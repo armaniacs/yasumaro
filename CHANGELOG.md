@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.9.8] - 2026-06-16
+
+### Added / 追加
+
+- **Yasumaro デザインシステム確立（PBI-09）**
+  - `src/styles/tokens.css` を新規作成し、`--ym-*` プレフィックスのデザイントークンを一元定義
+  - カラー（漆黒・墨・硯・金箔・和紙・白墨）、フォント（Noto Sans JP ゴシック体）、タイポグラフィスケール、スペーシング、ボーダー半径、モモーション、質感（和紙ラインテクスチャ・金フォーカスリング）、`prefers-reduced-motion` 対応を定義
+  - サイドバーに金箔アクティブアクセント・スタガーアニメーション・ダークモードノイズオーバーレイを適用
+  - メインコンテンツに和紙背景・パーパー・墨色・パネル切替アニメーション・グローバルフォーカスリング適用
+  - 金箔スピナー（金色アクセント）、トーストアニメーション、ダークモード body ノイズオーバーレイ追加
+  - 金箔アクセントは装飾限定（ナビアクティブ・フォーカスリング）。操作要素（ボタン・リンク）は紫維持（深掘り決定）
+
+- **既存セレクタの `--ym-*` 移行（PBI-14）**
+  - `dashboard.css` の `:root` ブロックで全 `--color-*` 変数を `var(--ym-color-*, <fallback>)` 形式で書き換え
+  - 500+ の既存セレクタを個別に変更せず、`--ym-*` トークン経由に統一
+  - ダークモード上書きも `--ym-*` 経由に統一
+
+- **ポップアップの和モダンテーマ適用（PBI-15）**
+  - `entrypoints/popup/styles.css` の `:root` ブロックも `--ym-*` 参照に書き換え
+  - `tokens.css` を popup エントリでも読み込み、ダークモードパレットをダッシュボードと統一
+
+### Fixed / 修正
+
+- **ダッシュボード可視性の包括的改善（10コミット・ダーク/ライト両方）**
+  - ダークモード: `.history-entry-time`、`.history-entry-tokens`、`.token-label`、`.history-entry-token-reduction`、`.history-entry-byte-reduction`、`.history-entry-ai-summary-cleansing` のハードコード色 `#475569` を `var(--color-text-secondary)` に変更（7.0:1 AAA）
+  - ダークモード: `.tag-badge` 色を `#6b21a8` から `#e9d5ff` に上書き（12.0:1 AAA）
+  - ダークモード: `.content-toggle-btn` を明示的に上書き（ボーダー `#475569`、テキスト `#cbd5e1`、ホバーで `#334155`/`#f0f6fc`）
+  - ダークモード: `.history-entry-ai-summary` ボックスを `!important` で `#0e0e12` 背景に明示上書き（12.9:1 AAA）
+  - ダークモード: `.content-preview` ボックスに `!important` ダークモード上書きを追加
+  - ダークモード: カレンダーの日セル（`.day`）に明示的な色・ボーダー定義（背景透過、テキスト `#cbd5e1` 11.5:1）
+  - ダークモード: カレンダーの月ナビボタン・クイックボタン・月タイトルにテキスト色定義
+  - 未定義 CSS 変数の修正: `.sqlite-entry-title` の `var(--color-link)` → `var(--color-primary)`（6.1:1 AA）、`.sqlite-entry-delete:hover` の `var(--color-error*)` → `var(--color-danger*)`、`.category-tab:hover` の `var(--color-bg-hover)` → `var(--color-bg-subtle)`、`.sqlite-history-error` の `var(--color-error-bg)` → `var(--color-danger-bg)`
+  - ライトモード: `.history-filter-btn` のテキスト色を `#4b5563`（gray-600, 7.3:1 AA）に変更
+  - ライトモード: `.history-entry-ai-summary` の背景を紫ティント `#f5f3ff` からニュートラル `#f8fafc`（slate-50）に、左アクセントを slate-400 に変更
+  - ライトモード: `.content-toggle-btn` のボーダーを 1px slate-200 → 1.5px slate-300、テキストを slate-600 に強化
+  - ライトモード: メタデータテキスト（タイムスタンプ、トークン数、削減率等）を slate-600 `#475569` に統一（7.3:1 AAA）
+  - ライトモード: タグバッジのテキスト色を `--color-primary` から `#6b21a8`（purple-800, 7.5:1 AAA）に変更
+  - アクセシビリティ: `prefers-reduced-motion` でアニメーションを 0.01ms に短縮（tokens.css 内）
+
+### Chores / その他
+
+- **バージョン 5.9.7 → 5.9.8**
+
+
 ## [5.9.7] - 2026-06-15
 
 ### Fixed / 修正
