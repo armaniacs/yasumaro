@@ -52,7 +52,7 @@ Scenario: トリガーが1つも選択されていない場合
 
 ## 受け入れ基準
 - [x] 設定画面（ダッシュボード内）で以下のトリガーが複数選択可能:
-  - タブクローズ時（デフォルト: ON）
+  - ~~タブクローズ時（削除）~~
   - 読み対済50%+5秒以上（デフォルト: OFF）
   - 手動保存（ポップアップから）（デフォルト: ON）
   - 定期スナップショット（デフォルト: OFF、間隔を分単位で設定可能）
@@ -61,6 +61,16 @@ Scenario: トリガーが1つも選択されていない場合
 - [x] トリガー設定は `StorageKeys.RECORDING_TRIGGERS` に保存する
 - [x] 既存の「コンテンツスクリプトによる滞在時間計測」ロジックをトリガー判定に利用する（`recordingTriggerManager.shouldRecord()`）
 - [ ] i18n対応（日本語・英語）（Phase 8 で対応）
+
+---
+
+## 実装上の問題
+
+**2026-06-16 追記**: Tab Closeトリガーは設定UIには存在したが、実装されていなかった。
+- `RecordingTriggerManager` は `service-worker.ts` でインスタンス化されていない
+- `handleTabRemoved` はキャッシュクリーンアップのみで録録ロジックなし
+- 実際の録録は `VALID_VISIT` メッセージ（scroll/time条件）経由でのみ発生
+- Tab Closeトリガーは削除され、Scroll + Time / Manual Save / Periodic Snapshot の3つのみに統一
 
 ---
 
