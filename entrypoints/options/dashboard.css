@@ -1188,6 +1188,18 @@ button#changeMasterPassword:hover {
   word-break: break-word;
 }
 
+/* ダークモード：AI要約ボックスのテキスト色反転防止
+   ライトの背景 (#f8fafc) + var(--color-text) が暗黒に切り替わる
+   ライトグレーになり、コントラストが 1.03:1 になる問題を修正 */
+@media (prefers-color-scheme: dark) {
+  .history-entry-ai-summary {
+    background: #0e0e12 !important; /* ink-black: var(--color-bg) ダーク時 */
+    border-color: #1a1a24 !important; /* ink-deep */
+    border-left-color: #c9a84c !important; /* gold accent */
+    color: #e2e8f0 !important; /* slate-200: 12.9:1 on ink-black */
+  }
+}
+
 .history-entry-tokens {
   font-size: 11px;
   color: #475569; /* slate-600: stronger contrast for metadata */
