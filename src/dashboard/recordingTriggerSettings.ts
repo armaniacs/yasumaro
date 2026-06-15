@@ -9,7 +9,6 @@ import { getMessage } from '../popup/i18n.js';
 import type { RecordingTriggers } from '../background/recordingTriggerManager.js';
 
 const DEFAULT_TRIGGERS: RecordingTriggers = {
-  tabClose: true,
   scrollAndTime: false,
   manualSave: true,
   periodicSnapshot: false,
@@ -72,16 +71,6 @@ function renderSettings(container: HTMLElement): void {
     <!-- Recording Triggers Section -->
     <div class="settings-section">
       <h3 class="settings-section-title" data-i18n="recordingTriggersSection">記録トリガー</h3>
-
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="trigger-tab-close" ${currentTriggers.tabClose ? 'checked' : ''} />
-          <span data-i18n="triggerTabClose">Tab Close</span>
-        </label>
-        <p class="field-description" data-i18n="triggerTabCloseDesc">
-          Record when a tab is closed.
-        </p>
-      </div>
 
       <div class="form-group">
         <label class="checkbox-label">
@@ -179,7 +168,6 @@ function wireEvents(container: HTMLElement): void {
     successMsg.style.display = 'none';
 
     const triggers: RecordingTriggers = {
-      tabClose: (container.querySelector('#trigger-tab-close') as HTMLInputElement)?.checked ?? false,
       scrollAndTime: (container.querySelector('#trigger-scroll-time') as HTMLInputElement)?.checked ?? false,
       manualSave: (container.querySelector('#trigger-manual') as HTMLInputElement)?.checked ?? false,
       periodicSnapshot: snapshotCheckbox?.checked ?? false,

@@ -33,16 +33,6 @@ describe('RecordingTriggerManager', () => {
   });
 
   describe('shouldRecord', () => {
-    it('returns true for tab_close when trigger is enabled (default)', async () => {
-      expect(await manager.shouldRecord({ type: 'tab_close' })).toBe(true);
-    });
-
-    it('returns false for tab_close when trigger is disabled', async () => {
-      mockStorage['recording_triggers'] = JSON.stringify({ tabClose: false });
-      manager.invalidateCache();
-      expect(await manager.shouldRecord({ type: 'tab_close' })).toBe(false);
-    });
-
     it('returns true for scroll_idle when scroll >= 50% and duration >= 5s and trigger enabled', async () => {
       mockStorage['recording_triggers'] = JSON.stringify({ scrollAndTime: true });
       manager.invalidateCache();
@@ -109,16 +99,14 @@ describe('RecordingTriggerManager', () => {
   describe('validate', () => {
     it('returns valid when at least one trigger is enabled', () => {
       expect(manager.validate({
-        tabClose: true,
         scrollAndTime: false,
-        manualSave: false,
+        manualSave: true,  // Manual Save is default enabled
         periodicSnapshot: false,
       })).toEqual({ valid: true });
     });
 
     it('returns invalid when no triggers are enabled', () => {
       const result = manager.validate({
-        tabClose: false,
         scrollAndTime: false,
         manualSave: false,
         periodicSnapshot: false,
@@ -130,7 +118,7 @@ describe('RecordingTriggerManager', () => {
 
   describe('saveTriggers', () => {
     it('saves triggers to storage and updates cache', async () => {
-      const triggers = { tabClose: false, scrollAndTime: true, manualSave: false, periodicSnapshot: true };
+      const triggers = { scrollAndTime: true, manualSave: false, periodicSnapshot: false };
       const result = await manager.saveTriggers(triggers);
       expect(result).toBe(true);
       expect(mockStorage['recording_triggers']).toBe(JSON.stringify(triggers));
@@ -173,14 +161,11 @@ describe('RecordingTriggerManager', () => {
   describe('invalidateCache', () => {
     it('forces reload from storage on next loadTriggers call', async () => {
       await manager.loadTriggers();
-      mockStorage['recording_triggers'] = JSON.stringify({ tabClose: false });
       // Without invalidate, cache returns old value
       const cached = await manager.loadTriggers();
-      expect(cached.tabClose).toBe(true);
       // After invalidate, reads from storage
       manager.invalidateCache();
       const fresh = await manager.loadTriggers();
-      expect(fresh.tabClose).toBe(false);
     });
   });
 
@@ -189,7 +174,6 @@ describe('RecordingTriggerManager', () => {
       mockStorage['recording_triggers'] = '{invalid json}';
       manager.invalidateCache();
       const triggers = await manager.loadTriggers();
-      expect(triggers.tabClose).toBe(true);
       expect(triggers.scrollAndTime).toBe(false);
     });
 
@@ -197,7 +181,6 @@ describe('RecordingTriggerManager', () => {
       (globalThis as any).chrome.storage.local.get = vi.fn().mockRejectedValue(new Error('Storage error'));
       manager.invalidateCache();
       const triggers = await manager.loadTriggers();
-      expect(triggers.tabClose).toBe(true);
     });
   });
 });

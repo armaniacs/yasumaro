@@ -2484,12 +2484,6 @@
       }
     }
   },
-  "triggerTabClose": {
-    "message": "Tab Close"
-  },
-  "triggerTabCloseDesc": {
-    "message": "Record when a tab is closed"
-  },
   "triggerScrollTime": {
     "message": "Scroll & Time"
   },
