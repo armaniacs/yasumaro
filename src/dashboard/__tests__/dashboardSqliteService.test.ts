@@ -2,48 +2,28 @@
  * dashboardSqliteService.test.ts
  * Tests for dashboard SQLite service layer (message-passing proxy).
  *
- * Uses the global chrome mock from vitest.setup.ts which provides
- * chrome.runtime.sendMessage with default { success: true } callback.
+ * Uses Promise-based chrome.runtime.sendMessage mock matching the
+ * production sendDashboardMessage implementation.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-let responseToDeliver: any = undefined;
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  responseToDeliver = undefined;
-  (globalThis as any).chrome.runtime.lastError = null;
-});
-
 /**
- * Mock chrome.runtime.sendMessage to call the callback with a controlled response.
+ * Mock chrome.runtime.sendMessage to return a controlled Promise response.
  * After calling this, the NEXT call to sendMessage will use the given response.
  */
 function givenResponse(response: any) {
-  responseToDeliver = response;
   (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: any, callback?: (response: any) => void) => {
-      if (callback) {
-        callback(responseToDeliver);
-      }
-    }
+    (_message: any) => Promise.resolve(response),
   );
 }
 
 /**
- * Mock chrome.runtime.sendMessage to simulate a lastError condition.
+ * Mock chrome.runtime.sendMessage to reject (simulating lastError / connection failure).
  */
 function givenLastError(errorMessage: string) {
-  responseToDeliver = undefined;
-  (globalThis as any).chrome.runtime.lastError = { message: errorMessage };
-  // sendMessage calls callback with undefined when lastError is set (handled by sendDashboardMessage)
   (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: any, callback?: (response: any) => void) => {
-      if (callback) {
-        callback(undefined);
-      }
-    }
+    (_message: any) => Promise.reject(new Error(errorMessage)),
   );
 }
 
@@ -52,8 +32,13 @@ import { queryLogs, searchLogs, toggleStar, deleteLog, updateLog, getLogCount } 
 describe('dashboardSqliteService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    responseToDeliver = undefined;
-    (globalThis as any).chrome.runtime.lastError = null;
+    // Ensure chrome runtime exists
+    if (!(globalThis as any).chrome) {
+      (globalThis as any).chrome = {};
+    }
+    if (!(globalThis as any).chrome.runtime) {
+      (globalThis as any).chrome.runtime = {};
+    }
   });
 
   describe('queryLogs', () => {
@@ -72,7 +57,6 @@ describe('dashboardSqliteService', () => {
 
       expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
         { type: 'DASHBOARD_SQLITE', payload: { subtype: 'query', limit: 10, offset: 0 } },
-        expect.any(Function),
       );
     });
 
@@ -83,7 +67,7 @@ describe('dashboardSqliteService', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null when lastError is set', async () => {
+    it('returns null on rejection', async () => {
       givenLastError('Connection failed');
 
       const result = await queryLogs();
@@ -107,11 +91,10 @@ describe('dashboardSqliteService', () => {
         expect.objectContaining({
           payload: expect.objectContaining({ subtype: 'search', query: 'test', limit: 50, offset: 0 }),
         }),
-        expect.any(Function),
       );
     });
 
-    it('returns null on lastError', async () => {
+    it('returns null on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await searchLogs('test');
@@ -134,7 +117,7 @@ describe('dashboardSqliteService', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null on lastError', async () => {
+    it('returns null on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await toggleStar(42);
@@ -157,7 +140,7 @@ describe('dashboardSqliteService', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false on lastError', async () => {
+    it('returns false on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await deleteLog(42);
@@ -173,7 +156,7 @@ describe('dashboardSqliteService', () => {
       expect(result).toBe(true);
     });
 
-    it('returns false on lastError', async () => {
+    it('returns false on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await updateLog(1, {});
@@ -196,7 +179,7 @@ describe('dashboardSqliteService', () => {
       expect(result).toBe(0);
     });
 
-    it('returns 0 on lastError', async () => {
+    it('returns 0 on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await getLogCount();
