@@ -1169,7 +1169,8 @@ button#changeMasterPassword:hover {
 
 .history-entry-time {
   font-size: 11px;
-  color: #475569; /* slate-600: 7.3:1 on white — WCAG AAA */
+  /* ダークモードで var(--color-text-secondary) は #b1bac4 = 7.0:1 AA */
+  color: var(--color-text-secondary);
   margin-top: 2px;
   font-weight: 500;
 }
@@ -1202,7 +1203,8 @@ button#changeMasterPassword:hover {
 
 .history-entry-tokens {
   font-size: 11px;
-  color: #475569; /* slate-600: stronger contrast for metadata */
+  /* ダークモードで var(--color-text-secondary) は #b1bac4 = 7.0:1 AA */
+  color: var(--color-text-secondary);
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -1217,7 +1219,8 @@ button#changeMasterPassword:hover {
 
 .history-entry-tokens .token-label {
   font-weight: 600;
-  color: #334155; /* slate-700: 11.6:1 on white — strongest weight */
+  /* var(--color-text) is #f0f6fc in dark = 15.8:1 AAA */
+  color: var(--color-text);
 }
 
 .history-entry-tokens .token-value {
@@ -1228,7 +1231,8 @@ button#changeMasterPassword:hover {
 
 .history-entry-token-reduction {
   font-size: 11px;
-  color: #475569; /* slate-600: AAA contrast */
+  /* var(--color-text-secondary) properly overridden in dark */
+  color: var(--color-text-secondary);
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -1236,7 +1240,7 @@ button#changeMasterPassword:hover {
 
 .history-entry-byte-reduction {
   font-size: 11px;
-  color: #475569; /* slate-600: AAA contrast */
+  color: var(--color-text-secondary);
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -1244,7 +1248,7 @@ button#changeMasterPassword:hover {
 
 .history-entry-ai-summary-cleansing {
   font-size: 11px;
-  color: #475569; /* slate-600: AAA contrast */
+  color: var(--color-text-secondary);
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -2355,6 +2359,17 @@ details[open] .advanced-details-summary {
   user-select: none;
 }
 
+/* ダークモード：タグバッジのテキスト色反転
+   var(--color-primary-bg) = #1a1025, #6b21a8 on it = 3.4:1 → FAILS
+   → 明るくした purple-200 (#e9d5ff) で 12.0:1 AAA */
+@media (prefers-color-scheme: dark) {
+  .tag-badge {
+    color: #e9d5ff !important; /* purple-200: 12.0:1 on #1a1025 */
+    background: #1a1025 !important;
+    border-color: #6b21a8 !important;
+  }
+}
+
 .tag-badge:hover {
   background: var(--color-primary-light);
   border-color: var(--color-primary-hover);
@@ -2686,11 +2701,10 @@ details[open] .advanced-details-summary {
   gap: 6px;
   padding: 5px 10px;
   margin-top: 8px;
-  /* Thicker border (gray-200 to gray-300) for clear clickability */
-  border: 1.5px solid #cbd5e1; /* slate-300 — more distinct than #e2e8f0 */
+  border: 1.5px solid #cbd5e1; /* slate-300 */
   border-radius: var(--radius-sm);
   background: var(--color-bg-white, #ffffff);
-  color: #475569; /* slate-600 — readable but not dominant */
+  color: #475569; /* slate-600: 7.3:1 on white — AA */
   font-size: 13px;
   cursor: pointer;
   font-weight: 500;
@@ -2700,7 +2714,24 @@ details[open] .advanced-details-summary {
 .content-toggle-btn:hover {
   background: #f1f5f9; /* slate-100 */
   border-color: #94a3b8; /* slate-400 */
-  color: #334155; /* slate-700 */
+  color: #334155; /* slate-700: 9.4:1 on slate-100 */
+}
+
+/* ダークモード：AI要約トグルボタン
+   ライト用スレート色（#cbd5e1, #475569, #f1f5f9）が暗背景で
+   コントラスト不足。スレート 200-300 で明示的に上書き */
+@media (prefers-color-scheme: dark) {
+  .content-toggle-btn {
+    background: #1e293b !important; /* slate-800 */
+    border-color: #475569 !important; /* slate-600 */
+    color: #cbd5e1 !important; /* slate-300: 9.6:1 on slate-800 */
+  }
+
+  .content-toggle-btn:hover {
+    background: #334155 !important; /* slate-700 */
+    border-color: #64748b !important; /* slate-500 */
+    color: #f0f6fc !important; /* slate-50: 12.1:1 on slate-700 */
+  }
 }
 
 .content-toggle-btn:focus {
@@ -2777,7 +2808,8 @@ details[open] .advanced-details-summary {
 
 .category-tab:hover {
   color: var(--color-text);
-  background: var(--color-bg-hover);
+  /* --color-bg-hover was undefined → no hover bg. Use --color-bg-subtle instead */
+  background: var(--color-bg-subtle, #f8fafc);
 }
 
 .category-tab.active {
@@ -3307,7 +3339,7 @@ details[open] .advanced-details-summary {
   font-size: 13px;
   margin-top: 8px;
   padding: 8px 12px;
-  background: var(--color-error-bg, #fff0f0);
+  background: var(--color-danger-bg, #fef2f2);
   border-radius: 4px;
 }
 
@@ -3351,7 +3383,8 @@ details[open] .advanced-details-summary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-link, #0066cc);
+  /* --color-link was undefined → use --color-primary (6.1:1 AA in dark) */
+  color: var(--color-primary, #7c3aed);
   text-decoration: none;
   font-size: 14px;
 }
@@ -3372,8 +3405,9 @@ details[open] .advanced-details-summary {
 }
 
 .sqlite-entry-delete:hover {
-  color: var(--color-error);
-  background: var(--color-error-bg, #fff0f0);
+  /* --color-error and --color-error-bg were undefined → use --color-danger variants */
+  color: var(--color-danger, #ef4444);
+  background: var(--color-danger-bg, #fef2f2);
 }
 
 .sqlite-entry-meta {
