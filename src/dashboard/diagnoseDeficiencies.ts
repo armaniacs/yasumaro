@@ -58,8 +58,9 @@ export interface DeficiencyItem {
 export function diagnoseDeficiencies(input: DiagnosticInput): DeficiencyItem[] {
   const items: DeficiencyItem[] = [];
 
-  // OPFS not available
-  if (!input.opfsDirectory) {
+  // OPFS not available AND using fallback storage (IDB or chrome.storage.local).
+  // When IDB is working, OPFS absence is not a deficiency.
+  if (!input.opfsDirectory && input.fallback) {
     items.push({
       id: 'no-opfs',
       severity: 'high',

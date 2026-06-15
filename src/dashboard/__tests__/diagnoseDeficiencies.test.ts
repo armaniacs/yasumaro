@@ -22,13 +22,23 @@ describe('diagnoseDeficiencies', () => {
     expect(result).toEqual([]);
   });
 
-  it('detects no-opfs when opfsDirectory is false', () => {
-    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false }));
+  it('detects no-opfs when opfsDirectory is false AND fallback is active', () => {
+    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false, fallback: true }));
     expect(result).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'no-opfs', severity: 'high' }),
       ])
     );
+  });
+
+  it('does not detect no-sync-access-handle when opfsDirectory is false', () => {
+    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false, syncAccessHandle: false }));
+    expect(result.find(d => d.id === 'no-sync-access-handle')).toBeUndefined();
+  });
+
+  it('does not detect no-opfs when opfsDirectory is false but IDB is working', () => {
+    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false, fallback: false }));
+    expect(result.find(d => d.id === 'no-opfs')).toBeUndefined();
   });
 
   it('detects no-sync-access-handle when syncAccessHandle is false but opfsDirectory is true', () => {
@@ -118,16 +128,17 @@ describe('diagnoseDeficiencies', () => {
   });
 
   it('returns all fields in each deficiency item', () => {
-    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false }));
-    expect(result.length).toBe(1);
-    const item = result[0];
-    expect(item).toHaveProperty('id');
-    expect(item).toHaveProperty('severity');
-    expect(item).toHaveProperty('summaryKey');
-    expect(item).toHaveProperty('detailKey');
-    expect(item).toHaveProperty('recommendedActionKey');
-    expect(typeof item.summaryKey).toBe('string');
-    expect(typeof item.detailKey).toBe('string');
-    expect(typeof item.recommendedActionKey).toBe('string');
+    const result = diagnoseDeficiencies(fullInput({ opfsDirectory: false, fallback: true }));
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    for (const item of result) {
+      expect(item).toHaveProperty('id');
+      expect(item).toHaveProperty('severity');
+      expect(item).toHaveProperty('summaryKey');
+      expect(item).toHaveProperty('detailKey');
+      expect(item).toHaveProperty('recommendedActionKey');
+      expect(typeof item.summaryKey).toBe('string');
+      expect(typeof item.detailKey).toBe('string');
+      expect(typeof item.recommendedActionKey).toBe('string');
+    }
   });
 });

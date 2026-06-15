@@ -256,6 +256,14 @@ async function initDiagnosticsPanel(): Promise<void> {
             sqliteStatus.compileOptionsSource
           ));
         }
+
+        // Init error (when DB failed to initialize)
+        if (sqliteStatus.initError) {
+          sqliteStats.appendChild(makeStatRow(
+            'Init Error',
+            sqliteStatus.initError
+          ));
+        }
       } else {
         sqliteStats.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
       }
@@ -264,17 +272,35 @@ async function initDiagnosticsPanel(): Promise<void> {
     }
   }
 
-  // Deficiency diagnosis
+  // Deficiency diagnosis — use offscreen status (the actual runtime) as the source of truth,
+  // not the dashboard-side detection which runs in a different context (window vs Worker).
   if (diagDeficiencyStats && sqliteStatus) {
-    const vfsStrategy = dashboardVfsStrategy ?? 'fallback';
+    // Derive VFS strategy from offscreen status, not dashboard detection.
+    // Only 'opfs-sync-worker' and 'fallback' are production-ready paths.
+    // IDB path (compileOptionsSource === 'idb') is the standard async path — not OPFS.
+    const isOpfsWorker = sqliteStatus.compileOptionsSource === 'opfs-worker'
+      || sqliteStatus.path.startsWith('OPFS:');
+    const offscreenStrategy: DiagnosticInput['vfsStrategy'] = sqliteStatus.fallback
+      ? 'fallback'
+      : isOpfsWorker
+        ? 'opfs-sync-worker'
+        : 'opfs-async-main';
+
+    // For OPFS-related capabilities, only assert them when we know for sure.
+    // OPFS Worker path: all capabilities present.
+    // Fallback: no OPFS at all.
+    // IDB path: OPFS capabilities unknown — don't report them as deficiencies.
+    const isOpfsKnown = isOpfsWorker || sqliteStatus.fallback;
+
     const diagInput: DiagnosticInput = {
-      opfsDirectory: vfsStrategy !== 'fallback',
-      syncAccessHandle: vfsStrategy === 'opfs-sync-worker',
-      worker: vfsStrategy === 'opfs-sync-worker',
+      opfsDirectory: isOpfsWorker,
+      syncAccessHandle: isOpfsWorker,
+      worker: isOpfsWorker,
       initialized: sqliteStatus.initialized,
       fallback: sqliteStatus.fallback,
       fts5: sqliteStatus.fts5,
-      vfsStrategy: vfsStrategy as DiagnosticInput['vfsStrategy'],
+      initError: sqliteStatus.initError,
+      vfsStrategy: offscreenStrategy,
     };
     const deficiencies = diagnoseDeficiencies(diagInput);
 

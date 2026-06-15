@@ -696,8 +696,8 @@ describe('BDD: SQLite capability matrix — deficiency diagnosis', () => {
     });
     await initDiagnosticsPanel();
     const deficiencyStats = document.getElementById('diagDeficiencyStats');
-    // dashboard mock returns opfs-sync-worker, so FTS5 absence is detected as opfs-no-fts5
-    expect(deficiencyStats!.textContent).toContain('diagDeficiencyOpfsNoFts5Summary');
+    // IDB path: FTS5 absence is detected as plain 'no-fts5' (not opfs-no-fts5)
+    expect(deficiencyStats!.textContent).toContain('diagDeficiencyNoFts5Summary');
   });
 
   it('shows deficiency when fallback is true', async () => {
