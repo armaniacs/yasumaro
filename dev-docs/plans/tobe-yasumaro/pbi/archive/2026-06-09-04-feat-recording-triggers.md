@@ -1,3 +1,13 @@
+> **2026-06-16: Recording Triggers functionality removed**
+> The Recording Triggers feature (Tab Close, Scroll+Time, Manual Save, Periodic Snapshot)
+> was removed from the UI because:
+> - Tab Close was never implemented (dead code)
+> - The remaining trigger toggles were not wired to any actual recording logic
+> - Recording conditions (thresholds) are still configurable via Recording Conditions panel
+> 
+> Recording Triggers setting UI has been completely removed.
+> This document is preserved for historical reference.
+
 # PBI: 記録トリガー設定UI（ユーザーが複数条件から選択）
 
 ## ユーザーストーリー

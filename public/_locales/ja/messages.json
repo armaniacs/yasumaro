@@ -1475,6 +1475,13 @@
   "aiSection": {
     "message": "AI プロバイダー"
   },
+  "recordingConditionsTab": {
+    "message": "録録条件"
+  },
+  "recordingConditionsDesc": {
+    "message": "自動録録とAI処理の閾値を設定します。"
+  },
+
   "recordingSection": {
     "message": "記録条件"
   },
@@ -2489,33 +2496,6 @@
   },
   "triggerTabCloseDesc": {
     "message": "タブが閉じられた時に記録"
-  },
-  "triggerScrollTime": {
-    "message": "スクロール＆時間"
-  },
-  "triggerScrollTimeDesc": {
-    "message": "スクロール深度50%以上かつ滞在時間5秒以上で記録"
-  },
-  "triggerManual": {
-    "message": "手動保存"
-  },
-  "triggerManualDesc": {
-    "message": "手動でトリガーされた時に記録"
-  },
-  "triggerSnapshot": {
-    "message": "定期スナップショット"
-  },
-  "triggerSnapshotDesc": {
-    "message": "一定間隔で記録"
-  },
-  "snapshotIntervalLabel": {
-    "message": "間隔（分）"
-  },
-  "saveTriggers": {
-    "message": "保存"
-  },
-  "triggersSaved": {
-    "message": "設定を保存しました。"
   },
   "triggerValidationAtLeastOne": {
     "message": "少なくとも1つのトリガーを有効にする必要があります。"
