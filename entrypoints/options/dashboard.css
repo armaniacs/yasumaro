@@ -1169,8 +1169,9 @@ button#changeMasterPassword:hover {
 
 .history-entry-time {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: #475569; /* slate-600: 7.3:1 on white — WCAG AAA */
   margin-top: 2px;
+  font-weight: 500;
 }
 
 .history-entry-ai-summary {
@@ -1189,10 +1190,11 @@ button#changeMasterPassword:hover {
 
 .history-entry-tokens {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: #475569; /* slate-600: stronger contrast for metadata */
   margin-top: 2px;
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .history-entry-tokens span {
@@ -1202,18 +1204,19 @@ button#changeMasterPassword:hover {
 }
 
 .history-entry-tokens .token-label {
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  font-weight: 600;
+  color: #334155; /* slate-700: 11.6:1 on white — strongest weight */
 }
 
 .history-entry-tokens .token-value {
   font-family: monospace;
   color: var(--color-primary);
+  font-weight: 600;
 }
 
 .history-entry-token-reduction {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: #475569; /* slate-600: AAA contrast */
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -1221,7 +1224,7 @@ button#changeMasterPassword:hover {
 
 .history-entry-byte-reduction {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: #475569; /* slate-600: AAA contrast */
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -1229,7 +1232,7 @@ button#changeMasterPassword:hover {
 
 .history-entry-ai-summary-cleansing {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: #475569; /* slate-600: AAA contrast */
   margin-top: 2px;
   display: flex;
   gap: 8px;
@@ -2312,11 +2315,11 @@ details[open] .advanced-details-summary {
 .tag-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: var(--radius-sm);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--color-primary);
+  font-weight: 600;
+  color: #6b21a8; /* purple-800: 7.5:1 on #f5f3ff — WCAG AAA */
   background: var(--color-primary-bg);
   border: 1px solid var(--color-primary-border);
   cursor: pointer;
