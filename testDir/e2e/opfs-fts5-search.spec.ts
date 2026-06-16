@@ -75,27 +75,37 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
   );
   expect(confirmToken).not.toBeNull();
 
-  // Step 3: Seed a record via import (token-required)
-  const seed = await page.evaluate(
-    async ({ tok, token }: { tok: string; token: string }) => {
-      return (await chrome.runtime.sendMessage({
-        type: 'DASHBOARD_SQLITE',
-        payload: {
-          subtype: 'import',
-          confirmToken: token,
-          rows: [
-            {
-              url: `https://example.com/${tok}`,
-              title: tok,
-              summary: 'fts5 e2e seed',
-              created_at: Date.now(),
-              domain: 'example.com',
+  // Step 3: Seed a record via import (token-required).
+  // Poll the import until a row is actually inserted: the SQLite worker inits
+  // lazily, and when tests share the persistent context the DB may not be ready
+  // on the first attempt. A fresh created_at per attempt avoids a permanent
+  // INSERT OR IGNORE skip.
+  const seed = await poll(
+    () =>
+      page.evaluate(
+        async ({ tok, token }: { tok: string; token: string }) => {
+          return (await chrome.runtime.sendMessage({
+            type: 'DASHBOARD_SQLITE',
+            payload: {
+              subtype: 'import',
+              confirmToken: token,
+              rows: [
+                {
+                  url: `https://example.com/${tok}`,
+                  title: tok,
+                  summary: 'fts5 e2e seed',
+                  created_at: Date.now(),
+                  domain: 'example.com',
+                },
+              ],
             },
-          ],
+          })) as Record<string, unknown>;
         },
-      })) as Record<string, unknown>;
-    },
-    { tok: uniqueToken, token: confirmToken as string }
+        { tok: uniqueToken, token: confirmToken as string }
+      ),
+    (r) => r?.success === true && Number(r?.inserted) >= 1,
+    8,
+    500
   );
   expect(seed?.success).toBe(true);
   expect(Number(seed?.inserted)).toBeGreaterThanOrEqual(1);
@@ -119,8 +129,9 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
   expect(statusAfter?.fts5).toBe(true);
 
   // Step 5: FTS5 search finds the seeded record (poll for indexing)
-  // Note: search returns { rows, total } (no success field) on success,
-  // or { success: false, error } on failure. Poll until total >= 1.
+  // The DASHBOARD_SQLITE search response MUST include success:true — the
+  // dashboard service (searchLogs) treats a missing success as a load error,
+  // which previously produced "データの読み込みに失敗しました" for every query.
   const search1 = await poll(
     () =>
       page.evaluate(async (tok: string) => {
@@ -129,10 +140,11 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
           payload: { subtype: 'search', query: tok },
         })) as Record<string, unknown>;
       }, uniqueToken),
-    (r) => Array.isArray(r?.rows) && Number(r?.total) >= 1,
+    (r) => r?.success === true && Array.isArray(r?.rows) && Number(r?.total) >= 1,
     6,
     500
   );
+  expect(search1?.success).toBe(true);
   expect(Array.isArray(search1?.rows)).toBe(true);
   expect(Number(search1?.total)).toBeGreaterThanOrEqual(1);
 
@@ -179,18 +191,24 @@ test('@extension OPFS+FTS5: CJK (Japanese) substring search', async ({
     return stored[key] ?? null;
   }, CONFIRM_TOKEN_KEY);
 
-  // seed Japanese title
-  const seed = await page.evaluate(
-    async ({ title, token }: { title: string; token: string }) => {
-      return (await chrome.runtime.sendMessage({
-        type: 'DASHBOARD_SQLITE',
-        payload: {
-          subtype: 'import', confirmToken: token,
-          rows: [{ url: `https://example.com/jp${Date.now()}`, title, summary: '日本語の本文テスト', created_at: Date.now(), domain: 'example.com' }],
+  // seed Japanese title (poll until inserted — DB may init lazily / shared context)
+  const seed = await poll(
+    () =>
+      page.evaluate(
+        async ({ title, token }: { title: string; token: string }) => {
+          return (await chrome.runtime.sendMessage({
+            type: 'DASHBOARD_SQLITE',
+            payload: {
+              subtype: 'import', confirmToken: token,
+              rows: [{ url: `https://example.com/jp${Date.now()}-${Math.random()}`, title, summary: '日本語の本文テスト', created_at: Date.now(), domain: 'example.com' }],
+            },
+          })) as Record<string, unknown>;
         },
-      })) as Record<string, unknown>;
-    },
-    { title: jpTitle, token: confirmToken as string }
+        { title: jpTitle, token: confirmToken as string }
+      ),
+    (r) => r?.success === true && Number(r?.inserted) >= 1,
+    8,
+    500
   );
   expect(seed?.success).toBe(true);
 

@@ -84,4 +84,32 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     );
     expect(result).toMatchObject({ success: true });
   });
+
+  it('wraps search results with success:true (regression: dashboard search showed load error)', async () => {
+    // sqliteClient.search resolves to { rows, total } with NO success field.
+    // The handler must add success:true so the dashboard service does not treat
+    // a valid result as a failure ("データの読み込みに失敗しました").
+    const rows = [{ id: 1, url: 'https://a.com', title: 'kddi', rank: -1 }];
+    (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
+      vi.fn().mockResolvedValue({ rows, total: 1 });
+    const result = await handleDashboardSqlite(
+      { subtype: 'search', query: 'kddi' },
+      sqliteClient,
+      undefined,
+      VALID_TOKEN
+    );
+    expect(result).toEqual({ success: true, rows, total: 1 });
+  });
+
+  it('returns success:false when search yields null', async () => {
+    (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
+      vi.fn().mockResolvedValue(null);
+    const result = await handleDashboardSqlite(
+      { subtype: 'search', query: 'kddi' },
+      sqliteClient,
+      undefined,
+      VALID_TOKEN
+    );
+    expect(result).toMatchObject({ success: false });
+  });
 });

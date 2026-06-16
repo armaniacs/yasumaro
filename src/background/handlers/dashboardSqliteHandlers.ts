@@ -64,7 +64,9 @@ export async function handleDashboardSqlite(
                     (payload.limit as number) ?? 50,
                     (payload.offset as number) ?? 0
                 );
-                return result ?? { success: false, error: 'Search failed' };
+                return result
+                    ? { success: true, rows: result.rows, total: result.total }
+                    : { success: false, error: 'Search failed' };
             }
             case 'toggle_star': {
                 const result = await sqliteClient.toggleStar(payload.id as number);

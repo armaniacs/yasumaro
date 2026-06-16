@@ -75,7 +75,14 @@ async function loadData(options: {
 } = {}): Promise<void> {
   state.loading = true;
   state.error = null;
-  renderState();
+  // Bug fix: do NOT rebuild the whole panel (which recreates the search <input>
+  // and resets the caret to the start) on every keystroke. When the panel is
+  // already mounted, update only the dynamic regions and keep the input intact.
+  if (isPanelMounted()) {
+    updateDynamicRegions();
+  } else {
+    renderState();
+  }
 
   try {
     const page = options.page ?? state.currentPage;
@@ -111,7 +118,44 @@ async function loadData(options: {
     state.total = 0;
   } finally {
     state.loading = false;
-    renderState();
+    if (isPanelMounted()) {
+      updateDynamicRegions();
+    } else {
+      renderState();
+    }
+  }
+}
+
+/** True once the panel (and its search input) has been mounted into the DOM. */
+function isPanelMounted(): boolean {
+  return document.getElementById('sqlite-search-input') !== null;
+}
+
+/**
+ * Update only the dynamic regions of an already-mounted panel without
+ * recreating the search <input> (which would reset the caret position).
+ */
+function updateDynamicRegions(): void {
+  const countEl = document.querySelector('.sqlite-history-count');
+  if (countEl) countEl.textContent = t('historyRecordCount', [String(state.total)]);
+
+  const errorEl = document.getElementById('sqlite-error');
+  if (errorEl) {
+    errorEl.textContent = state.error || '';
+    (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
+  }
+
+  const listEl = document.getElementById('sqlite-entry-list');
+  if (listEl) {
+    if (state.loading) {
+      listEl.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
+    } else {
+      renderEntryList();
+    }
+  }
+
+  if (!state.loading) {
+    renderPagination();
   }
 }
 
