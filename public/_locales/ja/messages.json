@@ -1476,10 +1476,10 @@
     "message": "AI プロバイダー"
   },
   "recordingConditionsTab": {
-    "message": "録録条件"
+    "message": "記録条件"
   },
   "recordingConditionsDesc": {
-    "message": "自動録録とAI処理の閾値を設定します。"
+    "message": "自動記録とAI処理の閾値を設定します。"
   },
 
   "recordingSection": {
