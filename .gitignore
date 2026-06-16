@@ -50,6 +50,12 @@ video-autotag/
 video-config-export/
 video-*/
 
+# Build artifacts
+*.zip
+*.tar.gz
+store-assets/
+yasumaro-*.zip
+
 # i18n message backup/temp files
 _locales/*-base.json
 _locales/*-fixed.json

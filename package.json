@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "node scripts/check-version-consistency.js && wxt build",
+    "build:store": "node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:watch": "wxt build --watch",
     "update-preset": "node --loader ts-node/esm scripts/update-preset-domains.ts",
     "update-manifest": "npx ts-node scripts/update-manifest-from-preset.ts",
