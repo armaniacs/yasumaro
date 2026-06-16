@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added / 追加
 
+### Fixed / 修正
+
+### Chores / その他
+
+## [5.9.9] - 2026-06-17
+
+### Added / 追加
+
 - **OPFS 永続化と FTS5 全文検索の両立（`@subframe7536/sqlite-wasm` 導入）**
   - `@subframe7536/sqlite-wasm` を採用し、OPFS（OriginPrivateFileSystem）永続化と FTS5 全文検索を同一データベースで実現
   - OPFS persistence and FTS5 full-text search now coexist in the same database via `@subframe7536/sqlite-wasm`
@@ -20,6 +28,10 @@ All notable changes to this project will be documented in this file.
   - FTS5 tokenizer を `trigram` に変更し、日本語など空白で区切られない言語の部分一致検索を有効化（3 文字未満のクエリは LIKE 検索にフォールバック）
   - 併せて tokenizer 設定の誤りにより全文検索が機能していなかった問題も修正
   - Fixed Japanese/CJK full-text search by switching the FTS5 tokenizer to `trigram` (queries shorter than 3 characters fall back to LIKE), and corrected a malformed tokenizer config that prevented search from returning results
+
+### Chores / その他
+
+- **バージョン 5.9.8 → 5.9.9**
 
 ## [5.9.8] - 2026-06-16
 
