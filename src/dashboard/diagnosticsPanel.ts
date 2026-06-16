@@ -8,6 +8,7 @@ import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
 import { getSqliteStatus, runOpfsSpike, migrateLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { retryWithExponentialBackoff } from './utils/retry.js';
 import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from './diagnoseDeficiencies.js';
 import { detectLiveVfsStrategy } from '../offscreen/opfsCapabilities.js';
 
@@ -223,8 +224,14 @@ async function initDiagnosticsPanel(): Promise<void> {
   let sqliteStatus: Awaited<ReturnType<typeof getSqliteStatus>> = null;
 
   if (sqliteStats) {
+    // Retry with exponential backoff: SQLite may not be initialized yet
+    sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...';
     try {
-      sqliteStatus = await getSqliteStatus();
+      sqliteStatus = await retryWithExponentialBackoff(
+        () => getSqliteStatus(),
+        { label: 'diagSqliteStatus', maxAttempts: 4 }
+      );
+      sqliteStats.innerHTML = '';
       if (sqliteStatus) {
         const initializedText = sqliteStatus.initialized
           ? (getMessage('diagSqliteAvailable') || 'Available')

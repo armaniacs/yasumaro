@@ -1274,6 +1274,9 @@
   "diagSqliteFts5": {
     "message": "FTS5 Search"
   },
+  "diagSqliteChecking": {
+    "message": "Checking SQLite status..."
+  },
   "diagSqliteCheckFailed": {
     "message": "Failed to check SQLite status."
   },

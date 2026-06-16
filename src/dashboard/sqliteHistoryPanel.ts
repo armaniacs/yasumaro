@@ -14,6 +14,7 @@ import {
 } from './dashboardSqliteService.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { retryWithExponentialBackoff } from './utils/retry.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 const PAGE_SIZE = 20;
@@ -390,36 +391,29 @@ function reloadCurrent(): void {
 
 let initCalled = false;
 
-const RETRY_MAX_ATTEMPTS = 4;
-const RETRY_BASE_DELAY_MS = 500;
-
 /**
- * Load data with retry on failure. On first load the SQLite client in the
- * service worker may not be fully initialized yet (requires Offscreen Document
- * setup + WASM loading), so we retry with backoff rather than showing an error.
+ * Load data with retry on failure using exponential backoff.
+ * On first load the SQLite client in the service worker may not be fully
+ * initialized yet (requires Offscreen Document setup + WASM loading), so we
+ * retry with backoff rather than showing a permanent error.
  */
 async function retryInitialLoad(): Promise<void> {
-  let lastError: string | null = null;
-  for (let attempt = 0; attempt < RETRY_MAX_ATTEMPTS; attempt++) {
-    if (attempt > 0) {
-      // Show persistent loading state during retries
-      state.loading = true;
-      state.error = null;
-      renderState();
-      await new Promise(resolve => setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt));
-    }
-    await loadData({ limit: PAGE_SIZE });
-    if (!state.error) {
-      // Success — data loaded
-      return;
-    }
-    lastError = state.error;
-    // Clear error so retry shows loading indicator, not the stale error
-    state.error = null;
-  }
-  // All retries exhausted — show the last error
-  state.error = lastError;
+  state.loading = true;
+  state.error = null;
+  renderState();
+
+  const result = await retryWithExponentialBackoff<boolean>(
+    async () => {
+      await loadData({ limit: PAGE_SIZE });
+      return state.error ? null : true;
+    },
+    { label: 'sqliteHistory', maxAttempts: 4 }
+  );
+
   state.loading = false;
+  if (!result) {
+    // All retries exhausted — error is already set by loadData
+  }
   renderState();
 }
 
