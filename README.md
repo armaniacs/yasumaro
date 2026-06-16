@@ -38,7 +38,8 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
 - 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照。
 - 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
-- 🗄️ **ローカル SQLite 永続化**（OPFS + wa-sqlite + FTS5 全文検索、Obsidian 不要でも動作）
+- 🗄️ **ローカル SQLite 永続化**（OPFS + FTS5 全文検索を `@subframe7536/sqlite-wasm` で両立、Obsidian 不要でも動作）
+- 🇯🇵 **日本語全文検索対応**: FTS5 の trigram トークナイザにより日本語（CJK）の部分一致検索が可能（3 文字未満のクエリは LIKE 検索にフォールバック）
 - 🔍 **SQLite 診断パネル**: 環境判定（OPFS/FTS5）、不足診断（具体的な対処提示）、コンパイルオプション表示、デバッグモード対応。設定画面の Diagnostics タブで確認可能。
 - 🛡️ **プライバシー同意フロー**: 初回起動時に同意確認を表示。3回拒否で永久非表示、その後は制限モード（記録停止）で動作。GDPRに準拠した物理削除（DELETE FROM）対応。
 - 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
@@ -192,7 +193,8 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
 - 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](docs/PRIVACY.md) for details.
 - 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
-- 🗄️ **Local SQLite Persistence** (OPFS + wa-sqlite + FTS5 full-text search, works without Obsidian)
+- 🗄️ **Local SQLite Persistence** (OPFS + FTS5 full-text search coexist via `@subframe7536/sqlite-wasm`, works without Obsidian)
+- 🇯🇵 **Japanese full-text search**: FTS5 `trigram` tokenizer enables substring search for Japanese/CJK text (queries shorter than 3 characters fall back to LIKE)
 - 🔍 **SQLite Diagnostics Panel**: Environment detection (OPFS/FTS5), deficiency diagnosis with recommended actions, compile options viewer, debug mode. Available in Settings > Diagnostics tab.
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).

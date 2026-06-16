@@ -23,6 +23,8 @@ Yasumaroで使用するエラーコードの定義と使用ガイドラインで
 | `STRG_WR_001` | STORAGE_WRITE_FAILURE | ストレージへの書き込み失敗 | High |
 | `STRG_NF_001` | STORAGE_KEY_NOT_FOUND | 指定されたストレージキーが存在しない | Medium |
 | `STRG_MIG_001` | STORAGE_MIGRATION_FAILURE | ストレージマイグレーション失敗 | Critical |
+| `STRG_QUOTA_001` | STORAGE_QUOTA_EXCEEDED | ストレージ容量超過 | High |
+| `STRG_ROLLBACK_001` | MIGRATION_ROLLBACK_FAILED | マイグレーションのロールバック失敗 | Critical |
 
 ### 暗号化関連 (CRPT_)
 
