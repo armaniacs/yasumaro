@@ -57,7 +57,7 @@ const FTS5_SQL = `
     url, title, summary, tags,
     content='browsing_logs',
     content_rowid='id',
-    tokenize='unicode61 tokenchars'
+    tokenize='trigram'
   );
 
   -- Triggers to keep FTS index in sync with the main table
@@ -258,8 +258,8 @@ async function _doInit(): Promise<boolean> {
     // 1. Try OPFS Worker first (preferred — persistent, fast)
     const opfsOk = await initOpfsWorker();
     if (opfsOk) {
-      console.log('SQLite: using OPFS Worker (AccessHandlePoolVFS)');
-      fts5Available = false; // npm sync build lacks FTS5 — LIKE fallback used
+      console.log('SQLite: using OPFS Worker (OPFSCoopSyncVFS + FTS5)');
+      fts5Available = true; // new engine includes FTS5
       return true;
     }
 
@@ -308,6 +308,22 @@ async function _doInit(): Promise<boolean> {
     try {
       await sqlite3.exec(dbHandle, FTS5_SQL);
       fts5Available = true;
+
+      // I2: If base table has rows but FTS index is empty, rebuild the index.
+      // This handles the case where rows existed before FTS triggers were added.
+      try {
+        let baseCount = 0;
+        await execWithCache('SELECT COUNT(*) FROM browsing_logs', [], (row: SqliteValue[]) => { baseCount = Number(row[0]); });
+        let ftsCount = 0;
+        await execWithCache('SELECT COUNT(*) FROM browsing_logs_fts', [], (row: SqliteValue[]) => { ftsCount = Number(row[0]); });
+        if (baseCount > 0 && ftsCount === 0) {
+          console.info('SQLite IDB: FTS index empty, rebuilding...');
+          await sqlite3.exec(dbHandle, "INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')");
+          console.info('SQLite IDB: FTS index rebuild complete');
+        }
+      } catch (rebuildErr) {
+        console.warn('SQLite IDB: FTS rebuild check failed:', rebuildErr);
+      }
     } catch (ftsErr) {
       console.warn('SQLite: FTS5 not available, using LIKE-based search fallback', ftsErr);
     }
@@ -733,13 +749,12 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
   success: true; rows: SearchResult[]; total: number
 } | { success: false; error: string }> {
   try {
-    // OPFS Worker: proxy search as QUERY with searchQuery (LIKE fallback)
-    const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
-      searchQuery, limit, offset, orderBy: 'created_at', orderDir: 'DESC',
+    // OPFS Worker: real FTS5 search via the worker's SEARCH handler.
+    const opfsResult = await tryOpfsProxy<{ rows: SearchResult[]; total: number }>('SEARCH', {
+      searchQuery, limit, offset,
     });
     if (opfsResult !== null) {
-      const searchRows: SearchResult[] = opfsResult.rows.map(r => ({ ...r, rank: 0 } as SearchResult));
-      return { success: true, rows: searchRows, total: opfsResult.total };
+      return { success: true, rows: opfsResult.rows, total: opfsResult.total };
     }
 
     if (!dbHandle && !usingFallbackStorage) {
@@ -754,9 +769,16 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
       return { success: false, error: 'Database not initialized' };
     }
 
-    // FTS5 full-text search (preferred) or LIKE-based fallback
-    if (fts5Available) {
-      const ftsQuery = sanitizeFtsQuery(searchQuery);
+    // FTS5 full-text search (preferred) or LIKE-based fallback.
+    // trigram MATCH requires >= 3 unicode code points; shorter terms fall back to LIKE.
+    const bare = sanitizeFtsTerm(searchQuery);
+    // Empty/punctuation-only input: return early with empty results (consistent with OPFS path).
+    if (!bare) {
+      return { success: true, rows: [], total: 0 };
+    }
+    const charLen = [...bare].length;
+    if (fts5Available && charLen >= 3) {
+      const ftsQuery = `"${bare}"`;
 
       let total = 0;
       await execWithCache(
@@ -800,7 +822,7 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
       return { success: true, rows, total };
     }
 
-    // LIKE-based fallback when FTS5 is not available
+    // LIKE-based fallback: FTS5 not available, or query is < 3 unicode chars (trigram can't match)
     const likePattern = `%${searchQuery}%`;
     let total = 0;
     await execWithCache(
@@ -1241,7 +1263,11 @@ function extractDomain(url: string): string {
  */
 const FTS_QUERY_MAX_LENGTH = 200;
 
-function sanitizeFtsQuery(query: string): string {
+/**
+ * Returns the sanitized bare term (no surrounding quotes).
+ * Used for length-checking before deciding FTS5 vs LIKE.
+ */
+function sanitizeFtsTerm(query: string): string {
   if (!query) return '';
 
   // Limit input length to prevent DoS via extremely long queries
@@ -1250,16 +1276,10 @@ function sanitizeFtsQuery(query: string): string {
   // Whitelist: only allow alphanumeric, CJK characters, and spaces
   // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
   // and special character injection (*, ", ~, ^, :, (, ), +, -)
-  const sanitized = truncated
+  return truncated
     .replace(/[^A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-
-  if (!sanitized) return '';
-
-  // Wrap in double quotes to force phrase search (prevents operator interpretation)
-  // This is the safest approach for user input
-  return `"${sanitized}"`;
 }
 
 // ============================================================================
@@ -1347,4 +1367,12 @@ export function _resetForTesting(): void {
   initPromise = null;
   usingFallbackStorage = false;
   fallbackStorage = null;
+  if (opfsWorker) {
+    opfsWorker.terminate();
+    opfsWorker = null;
+  }
+  opfsPending.clear();
+  fts5Available = false;
+  lastInitError = null;
+  cachedCompileOptions = null;
 }

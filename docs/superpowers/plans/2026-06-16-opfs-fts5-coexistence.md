@@ -35,6 +35,11 @@
 
 各ファイルは単一責務に分離する。`sqliteEngine.ts` は新ライブラリ依存を 1 箇所に閉じ込め、`opfsWorker.ts` から SQLite ベンダ詳細を隠蔽する。`opfsMigrationV2.ts` は旧 `wa-sqlite` 依存をここだけに限定し、将来バンドルから外しやすくする。
 
+> **Task 1 スパイクで判明した API 訂正（後続タスクは以下に従うこと）:**
+> - **WASM パス**: v1.1.1 には `wa-sqlite-fts5/` サブディレクトリは存在しない。FTS5 はパッケージ export `"./wasm"`（= `dist/wa-sqlite.wasm`）にコンパイル済み（`ENABLE_FTS5` 確認済み）。よって URL は `new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href`。Task 2/3 の `WASM_URL` はこれを使う。
+> - **useOpfsStorage シグネチャ**: 第2引数はオブジェクト `{ url }`。`useOpfsStorage('yasumaro.db', { url: WASM_URL })`。
+> - **run() の行型**: `Record<string, SQLiteCompatibleType>`（`SQLiteCompatibleType = number | string | Uint8Array | Array<number> | bigint | null`）。`sqliteEngine.ts` の `SqliteValue` 型はこれに合わせ、`bigint` / `number[]` も含めるか、数値は `Number()` で正規化する。Task 2 のラッパで吸収すること。
+
 ---
 
 ## Task 1: 依存追加とスパイク準備

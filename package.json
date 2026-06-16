@@ -61,6 +61,7 @@
     "wxt": "^0.20.25"
   },
   "dependencies": {
+    "@subframe7536/sqlite-wasm": "^1.1.1",
     "bloomfilter": "1.1.0",
     "wa-sqlite": "^1.0.0"
   },

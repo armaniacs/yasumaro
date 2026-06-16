@@ -132,6 +132,26 @@ init()
 | ビルド設定 | `wa-sqlite-fts5` WASM の dist コピー |
 | テスト各種 | proxy / 移行のユニットテスト、E2E 1本 |
 
+## スパイク結果（2026-06-16・実機 Chrome 確定ゲート通過）
+
+`@subframe7536/sqlite-wasm@1.1.1` を Chrome 拡張の offscreen → 専用 Worker で起動して検証（`spikeOpfsFts5` / `runOpfsFts5Spike`）。
+
+| 検証項目 | 結果 |
+|---|---|
+| OPFS supported（Worker 内） | ✅ true |
+| FTS5 MATCH が動作 | ✅ true（`ftsMatchWorked: true`） |
+| `PRAGMA compile_options` に ENABLE_FTS5 | ✅ true（`hasFts5CompileOption: true`） |
+| OPFS 永続化（再実行で件数累積） | ✅ 1回目 `matchCount: 1` → 2回目 `matchCount: 2` |
+| エラー/警告 | なし |
+
+**API 訂正（実態）:**
+- WASM パスは `wa-sqlite-fts5/` ではなく、パッケージ export `"./wasm"`（= `dist/wa-sqlite.wasm`、FTS5 ビルトイン）。URL は `new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href`。
+- `useOpfsStorage(path, { url })` — 第2引数はオブジェクト。
+- `run()` 戻り行型は `Record<string, SQLiteCompatibleType>`（`number | string | Uint8Array | number[] | bigint | null`）。
+- WXT は `manifest.json` を生成するため、`wxt.config.ts` の `manifest.web_accessible_resources` を編集する（今回ビルドでは追加不要だった）。
+
+**結論:** OPFS 永続化と FTS5 全文検索の両立を実機で確認。本設計の前提が成立。
+
 ## 8. 未確定・後続検討
 - 旧 wa-sqlite の併存をいつバンドルから外すか（移行完了率が十分に上がった後のリリース）
-- `OPFSCoopSyncVFS` の WAL 変種を使うか（ブラウザロック要件次第。スパイクで判断）
+- `OPFSCoopSyncVFS` の WAL 変種を使うか（ブラウザロック要件次第。デフォルトの OPFSCoopSyncVFS で両立を確認済み。WAL 変種は本実装では不採用とし、必要時に再検討）

@@ -194,3 +194,4 @@ export async function runOpfsSpikeB(): Promise<OpfsSpikeReport> {
   const { steps: results, passed } = await runSpikeSteps(steps);
   return { strategy, steps: results, passed, durationMs: Date.now() - started };
 }
+

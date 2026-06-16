@@ -1,19 +1,19 @@
 /**
  * opfsWorker.ts
- * Production OPFS Worker for wa-sqlite with AccessHandlePoolVFS.
+ * Production OPFS Worker using @subframe7536/sqlite-wasm with OPFSCoopSyncVFS + FTS5.
  *
  * Runs inside a Worker (where createSyncAccessHandle is permitted) and handles
  * all SQLite operations. Communicates with the offscreen document via postMessage.
  *
- * Uses the npm synchronous wa-sqlite build which lacks FTS5.
- * Full-text search falls back to LIKE queries in the offscreen proxy.
+ * Replaces the old wa-sqlite sync build (AccessHandlePoolVFS, no FTS5).
  */
 /// <reference lib="webworker" />
 
-import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite.mjs';
-import * as SQLite from 'wa-sqlite';
-import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
+import { createEngine, type SqliteEngine, type SqliteValue, type SqliteRow } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { migrateOldOpfsDb } from './opfsMigrationV2.js';
+import { readOldDbRecords, deleteOldDbFile } from './opfsMigrationV2Reader.js';
+import { StorageKeys } from '../utils/storage/types.js';
 
 // ---------------------------------------------------------------------------
 // Types (worker-internal — mirrors BrowsingLogRecord / QueryOptions / SearchResult)
@@ -34,6 +34,20 @@ interface BrowsingLogRecord {
   obsidian_synced?: number;
 }
 
+interface SearchResultRecord {
+  id: number;
+  url: string;
+  title: string | null;
+  summary: string | null;
+  tags: string | null;
+  created_at: number;
+  domain: string | null;
+  visit_duration: number | null;
+  scroll_ratio: number | null;
+  is_starred: number;
+  rank: number;
+}
+
 interface QueryPayload {
   limit?: number;
   offset?: number;
@@ -43,8 +57,12 @@ interface QueryPayload {
   isStarred?: number;
   orderBy?: string;
   orderDir?: string;
-  // LIKE fallback search
-  searchQuery?: string;
+}
+
+interface SearchPayload {
+  searchQuery: string;
+  limit?: number;
+  offset?: number;
 }
 
 interface RequestMessage {
@@ -61,21 +79,17 @@ interface ResponseMessage {
 }
 
 // ---------------------------------------------------------------------------
-// SQL type helpers
-// ---------------------------------------------------------------------------
-
-type SqliteValue = number | string | Uint8Array | null;
-
-// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const POOL_DIR = '/yasumaro-opfs';
 const DB_FILENAME = 'yasumaro.db';
 const ALLOWED_ORDER_COLUMNS = [
   'id', 'url', 'title', 'summary', 'tags', 'created_at',
   'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
 ] as const;
+
+const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
+const FTS_QUERY_MAX_LENGTH = 200;
 
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS browsing_logs (
@@ -100,72 +114,175 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_logs_obsidian ON browsing_logs(obsidian_synced);
 `;
 
-// ---------------------------------------------------------------------------
-// Init helpers
+// FTS5 DDL kept as individual statements for explicit per-statement error
+// isolation and readability. (The engine does support multi-statement SQL.)
+const FTS5_STATEMENTS = [
+  `CREATE VIRTUAL TABLE IF NOT EXISTS browsing_logs_fts USING fts5(
+    url, title, summary, tags,
+    content='browsing_logs',
+    content_rowid='id',
+    tokenize='trigram'
+  )`,
+  `CREATE TRIGGER IF NOT EXISTS browsing_logs_ai AFTER INSERT ON browsing_logs BEGIN
+    INSERT INTO browsing_logs_fts(rowid, url, title, summary, tags)
+    VALUES (new.id, new.url, new.title, new.summary, new.tags);
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS browsing_logs_ad AFTER DELETE ON browsing_logs BEGIN
+    INSERT INTO browsing_logs_fts(browsing_logs_fts, rowid, url, title, summary, tags)
+    VALUES ('delete', old.id, old.url, old.title, old.summary, old.tags);
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS browsing_logs_au AFTER UPDATE ON browsing_logs BEGIN
+    INSERT INTO browsing_logs_fts(browsing_logs_fts, rowid, url, title, summary, tags)
+    VALUES ('delete', old.id, old.url, old.title, old.summary, old.tags);
+    INSERT INTO browsing_logs_fts(rowid, url, title, summary, tags)
+    VALUES (new.id, new.url, new.title, new.summary, new.tags);
+  END`,
+];
+
 // ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
 
-let sqlite3: ReturnType<typeof SQLite.Factory> | null = null;
-let dbHandle: number | null = null;
+let engine: SqliteEngine | null = null;
 let cachedCompileOptions: string[] | null = null;
+let fts5Available = false;
+
+// ---------------------------------------------------------------------------
+// FTS query sanitization
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the sanitized bare term (no surrounding quotes).
+ * Used for length-checking before deciding FTS5 vs LIKE.
+ */
+function sanitizeFtsTerm(query: string): string {
+  if (!query) return '';
+
+  // Limit input length to prevent DoS via extremely long queries
+  const truncated = query.slice(0, FTS_QUERY_MAX_LENGTH);
+
+  // Whitelist: only allow alphanumeric, CJK characters, and spaces
+  // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
+  // and special character injection (*, ", ~, ^, :, (, ), +, -)
+  return truncated
+    .replace(/[^A-Za-z0-9぀-ゟ゠-ヿ一-鿿㐀-䶿\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 // ---------------------------------------------------------------------------
 // Init helpers
 // ---------------------------------------------------------------------------
 
-function wrapModule(module: ReturnType<typeof SQLiteESMFactory> extends Promise<infer M> ? M : never) {
-  if (!module.registerVFS && typeof module.vfs_register === 'function') {
-    module.registerVFS = module.vfs_register;
-  }
-  return module;
-}
-
 async function initSqlite(): Promise<void> {
-  if (dbHandle !== null) return;
+  if (engine !== null) return;
 
-  const module = wrapModule(await SQLiteESMFactory());
-  sqlite3 = SQLite.Factory(module);
+  engine = await createEngine(DB_FILENAME, WASM_URL);
 
-  const vfs = new AccessHandlePoolVFS(POOL_DIR);
-  if (typeof (vfs as unknown as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
-    (vfs as unknown as { hasAsyncMethod: () => boolean }).hasAsyncMethod = () => false;
-  }
-
-  await (vfs as unknown as { isReady: Promise<void> }).isReady;
-  sqlite3.vfs_register(vfs as unknown as Parameters<typeof sqlite3.vfs_register>[0], true);
-
-  const vfsName = (vfs as unknown as { name: string }).name;
-
-  dbHandle = await sqlite3.open_v2(
-    DB_FILENAME,
-    SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
-    vfsName
-  );
-
-  await sqlite3.exec(dbHandle, SCHEMA_SQL);
+  await engine.exec(SCHEMA_SQL);
 
   // Schema migration: add obsidian_synced column if not present
   try {
-    await sqlite3.exec(dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
+    await engine.exec('ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
   } catch {
     // Column already exists
   }
 
-  await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
-  await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
+  // Try to enable FTS5 — execute each DDL statement individually because
+  // @subframe7536/sqlite-wasm's run() does not support multi-statement SQL.
+  fts5Available = false;
+  try {
+    for (const stmt of FTS5_STATEMENTS) {
+      await engine.exec(stmt);
+    }
+    fts5Available = true;
+
+    // I2: If base table has rows but FTS index is empty, rebuild the index.
+    // This handles the case where rows existed before FTS triggers were added.
+    try {
+      const baseCount = Number(await engine.queryValue('SELECT COUNT(*) AS c FROM browsing_logs') ?? 0);
+      const ftsCount = Number(await engine.queryValue('SELECT COUNT(*) AS c FROM browsing_logs_fts') ?? 0);
+      if (baseCount > 0 && ftsCount === 0) {
+        console.info('OPFS Worker: FTS index empty, rebuilding...');
+        await engine.exec("INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')");
+        console.info('OPFS Worker: FTS index rebuild complete');
+      }
+    } catch (rebuildErr) {
+      console.warn('OPFS Worker: FTS rebuild check failed:', errorMessage(rebuildErr));
+    }
+  } catch (err) {
+    console.warn('OPFS Worker: FTS5 unavailable, falling back to LIKE search:', errorMessage(err));
+  }
 
   // Cache compile options for diagnostics
-  const compileOptions: string[] = [];
-  await sqlQuery('PRAGMA compile_options', [], (row) => {
-    compileOptions.push(String(row[0]));
-  });
-  cachedCompileOptions = compileOptions;
+  const opts = await engine.query('PRAGMA compile_options');
+  cachedCompileOptions = opts.map((r) => String(Object.values(r)[0] ?? ''));
+
+  // Migrate old AccessHandlePoolVFS database (one-time, idempotent)
+  await runMigrationV2();
 }
 
-function getSqlite(): { sqlite3: NonNullable<typeof sqlite3>; db: number } {
-  if (!sqlite3 || dbHandle === null) throw new Error('OPFS SQLite not initialized');
-  return { sqlite3, db: dbHandle };
+// ---------------------------------------------------------------------------
+// V2 Migration helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Module-level guard to avoid redundant migration attempts within the same
+ * Worker lifetime (covers the case where chrome.storage is unavailable).
+ */
+let migrationV2AttemptedThisSession = false;
+
+async function runMigrationV2(): Promise<void> {
+  if (migrationV2AttemptedThisSession) return;
+  migrationV2AttemptedThisSession = true;
+
+  try {
+    // chrome.storage.local may not be available inside a Worker depending on the
+    // browser version and extension manifest.  We guard before each access and
+    // fall back to a purely idempotent strategy:
+    //   - isMigrationDone: check chrome.storage if available; otherwise treat
+    //     the old OPFS dir absence (which readOldDbRecords already handles by
+    //     returning []) as "nothing to do".
+    //   - setMigrationDone: write to chrome.storage if available; otherwise the
+    //     module-level guard + deleteOldDb ensure we don't re-migrate.
+    const chromeStorageAvailable =
+      typeof chrome !== 'undefined' && chrome.storage?.local !== undefined;
+
+    const result = await migrateOldOpfsDb({
+      isMigrationDone: async () => {
+        if (!chromeStorageAvailable) return false; // rely on old-dir absence check
+        return new Promise<boolean>((resolve) => {
+          chrome.storage.local.get(StorageKeys.OPFS_MIGRATION_V2_DONE, (items) => {
+            resolve(items[StorageKeys.OPFS_MIGRATION_V2_DONE] === true);
+          });
+        });
+      },
+      setMigrationDone: async () => {
+        if (!chromeStorageAvailable) return;
+        await new Promise<void>((resolve) => {
+          chrome.storage.local.set({ [StorageKeys.OPFS_MIGRATION_V2_DONE]: true }, resolve);
+        });
+      },
+      readOldRecords: readOldDbRecords,
+      insertBatch: handleInsertBatch,
+      deleteOldDb: deleteOldDbFile,
+    });
+
+    if (result.skipped) {
+      // Already done — nothing to log
+    } else if (result.error) {
+      console.warn('OPFS Worker: V2 migration failed (will retry next init):', result.error);
+    } else {
+      console.info(`OPFS Worker: V2 migration complete — ${result.migrated} records migrated`);
+    }
+  } catch (err) {
+    console.warn('OPFS Worker: runMigrationV2 unexpected error:', errorMessage(err));
+  }
+}
+
+function getEngine(): SqliteEngine {
+  if (!engine) throw new Error('OPFS SQLite not initialized');
+  return engine;
 }
 
 function extractDomain(url: string): string | null {
@@ -178,26 +295,18 @@ function extractDomain(url: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// SQL execution helper — uses s.exec() which supports parameter binding
+// SQL execution helpers
 // ---------------------------------------------------------------------------
 
 async function sqlExec(sql: string, params: SqliteValue[] = []): Promise<void> {
-  const { sqlite3: s, db } = getSqlite();
-  // Use s.run() for DML (INSERT/UPDATE/DELETE) — supports bindings
-  await s.run(db, sql, params as any[]);
+  await getEngine().exec(sql, params);
 }
 
 async function sqlQuery(
-  sql: string, params: SqliteValue[], callback: (row: SqliteValue[]) => void
+  sql: string, params: SqliteValue[], callback: (row: SqliteRow) => void
 ): Promise<void> {
-  const { sqlite3: s, db } = getSqlite();
-  // Use s.execWithParams() for SELECT with bindings
-  const result = await s.execWithParams(db, sql, params as any[]);
-  if (result?.rows) {
-    for (const row of result.rows) {
-      callback(row as SqliteValue[]);
-    }
-  }
+  const rows = await getEngine().query(sql, params);
+  for (const row of rows) callback(row);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,14 +327,14 @@ async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> 
   );
 
   let id = 0;
-  await sqlQuery('SELECT last_insert_rowid()', [], (row) => { id = Number(row[0]); });
+  await sqlQuery('SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
   return { id };
 }
 
 async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
   const {
     limit = 20, offset = 0, since, until, domain,
-    isStarred, orderBy = 'created_at', orderDir = 'DESC', searchQuery,
+    isStarred, orderBy = 'created_at', orderDir = 'DESC',
   } = payload;
 
   // Validate sort columns
@@ -243,18 +352,11 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
   if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
 
-  // LIKE fallback search (no FTS5 in sync build)
-  if (searchQuery) {
-    const like = `%${searchQuery}%`;
-    conditions.push('(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)');
-    params.push(like, like, like, like);
-  }
-
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // Count
   let total = 0;
-  await sqlQuery(`SELECT COUNT(*) FROM browsing_logs ${where}`, params, (row) => { total = Number(row[0]); });
+  await sqlQuery(`SELECT COUNT(*) AS c FROM browsing_logs ${where}`, params, (row) => { total = Number(row.c); });
 
   // Select
   const rows: BrowsingLogRecord[] = [];
@@ -265,12 +367,18 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
     [...params, limit, offset],
     (row) => {
       rows.push({
-        id: Number(row[0]), url: String(row[1]), title: row[2] as string | null,
-        summary: row[3] as string | null, tags: row[4] as string | null,
-        created_at: Number(row[5]), domain: row[6] as string | null,
-        visit_duration: row[7] as number | null, scroll_ratio: row[8] as number | null,
-        is_starred: Number(row[9]), is_deleted: Number(row[10]),
-        obsidian_synced: Number(row[11]),
+        id: Number(row.id),
+        url: String(row.url),
+        title: row.title as string | null,
+        summary: row.summary as string | null,
+        tags: row.tags as string | null,
+        created_at: Number(row.created_at),
+        domain: row.domain as string | null,
+        visit_duration: row.visit_duration as number | null,
+        scroll_ratio: row.scroll_ratio as number | null,
+        is_starred: Number(row.is_starred),
+        is_deleted: Number(row.is_deleted),
+        obsidian_synced: Number(row.obsidian_synced),
       });
     }
   );
@@ -278,7 +386,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   return { rows, total };
 }
 
-async function handleUpdate(payload: { id: number; changes: Record<string, unknown> }): Promise<void> {
+async function handleUpdate(payload: { id: number; changes: Record<string, SqliteValue> }): Promise<void> {
   const { id, changes } = payload;
   const sets: string[] = [];
   const vals: SqliteValue[] = [];
@@ -286,7 +394,7 @@ async function handleUpdate(payload: { id: number; changes: Record<string, unkno
   for (const [key, val] of Object.entries(changes)) {
     if (val !== undefined) {
       sets.push(`${key} = ?`);
-      vals.push(val as SqliteValue);
+      vals.push(val);
     }
   }
 
@@ -309,23 +417,25 @@ async function handleToggleStar(id: number): Promise<{ is_starred: number }> {
     [id]
   );
   let isStarred = 0;
-  await sqlQuery('SELECT is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row[0]); });
+  await sqlQuery('SELECT is_starred AS is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row.is_starred); });
   return { is_starred: isStarred };
 }
 
 async function handleGetCount(): Promise<number> {
   let count = 0;
-  await sqlQuery('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
   return count;
 }
 
 async function handleFtsIndexSize(): Promise<{ count: number }> {
-  // sync build lacks FTS5 — always returns 0
-  return { count: 0 };
+  if (!engine || !fts5Available) return { count: 0 };
+  let count = 0;
+  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs_fts', [], (row) => { count = Number(row.c); });
+  return { count };
 }
 
 async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count: number }> {
-  if (!dbHandle) await initSqlite();
+  if (!engine) await initSqlite();
   let inserted = 0;
   for (const record of records) {
     try {
@@ -339,7 +449,7 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
           record.is_starred ?? 0, record.is_deleted ?? 0,
         ]
       );
-      inserted++;
+      await sqlQuery('SELECT changes() AS c', [], (row) => { inserted += Number(row.c); });
     } catch (err) {
       // Log first error for diagnosis, silently skip the rest
       if (inserted === 0 && records.indexOf(record) === 0) {
@@ -351,18 +461,18 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
 }
 
 async function handleGetStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }> {
-  if (!dbHandle) {
+  if (!engine) {
     return { initialized: false, path: DB_FILENAME, fallback: false, fts5: false, count: 0 };
   }
 
   let count = 0;
-  await sqlQuery('SELECT COUNT(*) FROM browsing_logs', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs', [], (row) => { count = Number(row.c); });
 
   return {
     initialized: true,
-    path: `OPFS:${POOL_DIR}/${DB_FILENAME}`,
+    path: `OPFS:${DB_FILENAME}`,
     fallback: false,
-    fts5: false, // sync build lacks FTS5
+    fts5: fts5Available,
     count,
     compileOptions: cachedCompileOptions ?? undefined,
   };
@@ -378,11 +488,13 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
     'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
     [cutoffMs]
   );
-  totalPurged = sqlite3 ? await getChangeCount() : 0;
+
+  // Get change count via query
+  await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
 
   // If still over max, delete oldest non-starred records
   let count = 0;
-  await sqlQuery('SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row[0]); });
+  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
 
   if (count > maxRecords) {
     const toDelete = count - maxRecords;
@@ -396,21 +508,14 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
     totalPurged += toDelete;
   }
 
-  // Trigger checkpoint to reclaim space
-  try { await sqlite3?.exec(dbHandle!, 'PRAGMA wal_checkpoint(TRUNCATE);'); } catch { /* best effort */ }
-
   return { purged: totalPurged };
-}
-
-async function getChangeCount(): Promise<number> {
-  let count = 0;
-  await sqlQuery('SELECT changes()', [], (row) => { count = Number(row[0]); });
-  return count;
 }
 
 async function handleClearAll(): Promise<void> {
   await sqlExec('DELETE FROM browsing_logs', []);
-  try { await sqlite3?.exec(dbHandle!, 'PRAGMA wal_checkpoint(TRUNCATE);'); } catch { /* best effort */ }
+  if (fts5Available) {
+    await sqlExec("INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')", []);
+  }
 }
 
 async function handleSerialize(): Promise<Uint8Array> {
@@ -421,18 +526,117 @@ async function handleSerialize(): Promise<Uint8Array> {
     [],
     (row) => {
       rows.push({
-        id: Number(row[0]), url: String(row[1]), title: row[2] as string | null,
-        summary: row[3] as string | null, tags: row[4] as string | null,
-        created_at: Number(row[5]), domain: row[6] as string | null,
-        visit_duration: row[7] as number | null, scroll_ratio: row[8] as number | null,
-        is_starred: Number(row[9]), is_deleted: Number(row[10]),
-        obsidian_synced: Number(row[11]),
+        id: Number(row.id),
+        url: String(row.url),
+        title: row.title as string | null,
+        summary: row.summary as string | null,
+        tags: row.tags as string | null,
+        created_at: Number(row.created_at),
+        domain: row.domain as string | null,
+        visit_duration: row.visit_duration as number | null,
+        scroll_ratio: row.scroll_ratio as number | null,
+        is_starred: Number(row.is_starred),
+        is_deleted: Number(row.is_deleted),
+        obsidian_synced: Number(row.obsidian_synced),
       });
     }
   );
 
   const encoder = new TextEncoder();
   return encoder.encode(JSON.stringify(rows));
+}
+
+async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResultRecord[]; total: number }> {
+  const { searchQuery, limit = 50, offset = 0 } = payload;
+  const bare = sanitizeFtsTerm(searchQuery);
+  if (!bare) return { rows: [], total: 0 };
+
+  // trigram MATCH requires >= 3 unicode code points; shorter terms fall back to LIKE.
+  const charLen = [...bare].length;
+  if (fts5Available && charLen >= 3) {
+    return handleSearchFts(`"${bare}"`, limit, offset);
+  }
+  return handleSearchLike(searchQuery, limit, offset);
+}
+
+async function handleSearchFts(
+  sanitizedQuery: string, limit: number, offset: number
+): Promise<{ rows: SearchResultRecord[]; total: number }> {
+  let total = 0;
+  await sqlQuery(
+    `SELECT COUNT(*) AS c FROM browsing_logs_fts
+JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
+WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
+    [sanitizedQuery],
+    (row) => { total = Number(row.c); }
+  );
+
+  const rows: SearchResultRecord[] = [];
+  await sqlQuery(
+    `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
+     FROM browsing_logs_fts
+     JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
+     WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
+     ORDER BY rank LIMIT ? OFFSET ?`,
+    [sanitizedQuery, limit, offset],
+    (row) => {
+      rows.push({
+        id: Number(row.id),
+        url: String(row.url),
+        title: row.title as string | null,
+        summary: row.summary as string | null,
+        tags: row.tags as string | null,
+        created_at: Number(row.created_at),
+        domain: row.domain as string | null,
+        visit_duration: row.visit_duration as number | null,
+        scroll_ratio: row.scroll_ratio as number | null,
+        is_starred: Number(row.is_starred),
+        rank: Number(row.rank),
+      });
+    }
+  );
+
+  return { rows, total };
+}
+
+async function handleSearchLike(
+  rawQuery: string, limit: number, offset: number
+): Promise<{ rows: SearchResultRecord[]; total: number }> {
+  const like = `%${rawQuery}%`;
+  const conditions = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
+  const params: SqliteValue[] = [like, like, like, like];
+
+  let total = 0;
+  await sqlQuery(
+    `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
+    params,
+    (row) => { total = Number(row.c); }
+  );
+
+  const rows: SearchResultRecord[] = [];
+  await sqlQuery(
+    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
+     FROM browsing_logs WHERE ${conditions}
+     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+    (row) => {
+      rows.push({
+        id: Number(row.id),
+        url: String(row.url),
+        title: row.title as string | null,
+        summary: row.summary as string | null,
+        tags: row.tags as string | null,
+        created_at: Number(row.created_at),
+        domain: row.domain as string | null,
+        visit_duration: row.visit_duration as number | null,
+        scroll_ratio: row.scroll_ratio as number | null,
+        is_starred: Number(row.is_starred),
+        rank: 0,
+      });
+    }
+  );
+
+  return { rows, total };
 }
 
 // ---------------------------------------------------------------------------
@@ -452,54 +656,60 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
         break;
       }
       case 'INSERT': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handleInsert(payload as BrowsingLogRecord);
         break;
       }
       case 'QUERY': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handleQuery(payload as QueryPayload);
         break;
       }
+      case 'SEARCH': {
+        if (!engine) await initSqlite();
+        result = await handleSearch(payload as SearchPayload);
+        break;
+      }
       case 'UPDATE': {
-        if (!dbHandle) await initSqlite();
-        await handleUpdate(payload as { id: number; changes: Record<string, unknown> });
+        if (!engine) await initSqlite();
+        await handleUpdate(payload as { id: number; changes: Record<string, SqliteValue> });
         result = { updated: true };
         break;
       }
       case 'DELETE': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         await handleHardDelete(payload as number);
         result = { deleted: true };
         break;
       }
       case 'TOGGLE_STAR': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handleToggleStar(payload as number);
         break;
       }
       case 'GET_COUNT': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = { count: await handleGetCount() };
         break;
       }
       case 'STATUS': {
+        if (!engine) await initSqlite();
         result = await handleGetStatus();
         break;
       }
       case 'PURGE': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handlePurgeOldRecords(payload as { retentionDays: number; maxRecords: number });
         break;
       }
       case 'CLEAR_ALL': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         await handleClearAll();
         result = { cleared: true };
         break;
       }
       case 'SERIALIZE': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handleSerialize();
         break;
       }
@@ -508,7 +718,7 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
         break;
       }
       case 'INSERT_BATCH': {
-        if (!dbHandle) await initSqlite();
+        if (!engine) await initSqlite();
         result = await handleInsertBatch(payload as BrowsingLogRecord[]);
         break;
       }
