@@ -3,7 +3,7 @@ import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys, getSettings } from '../../utils/storage.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
@@ -157,10 +157,14 @@ export async function handleDashboardSqlite(
                     return { success: false, error: 'No IDs provided' };
                 }
 
-                // Check if Obsidian API key is configured
-                const settingsResult = await chrome.storage.local.get('settings');
-                const settings = settingsResult.settings as Record<string, unknown> | undefined;
-                const apiKey = settings?.[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+                // Check OBSIDIAN_ENABLED flag first (respects user's setting)
+                const allSettings = await getSettings();
+                if (allSettings[StorageKeys.OBSIDIAN_ENABLED] === false) {
+                    return { success: false, error: 'Obsidian is disabled by user' };
+                }
+
+                // Check if Obsidian API key is configured (uses decrypted value from getSettings)
+                const apiKey = allSettings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
                 if (!apiKey || apiKey.length < 16) {
                     return { success: false, error: 'Obsidian API key not configured' };
                 }

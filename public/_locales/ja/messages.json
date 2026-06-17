@@ -2520,6 +2520,12 @@
   "historyAppendFailed": {
     "message": "追記に失敗しました"
   },
+  "sqliteHistoryTab": {
+    "message": "履歴"
+  },
+  "sqliteHistoryDescription": {
+    "message": "SQLite に保存されたブラウジング履歴を検索・管理できます。AI要約の閲覧、スター・削除、選択した記事の Obsidian への追記が可能です。"
+  },
   "historyPageInfo": {
     "message": "$TOTAL$ページ中$CURRENT$ページ",
     "placeholders": {
