@@ -18,7 +18,11 @@ vi.mock('../../utils/errorUtils.js', () => ({
 }));
 
 vi.mock('../../utils/storage.js', () => ({
-  StorageKeys: { OBSIDIAN_API_KEY: 'obsidian_api_key' },
+  StorageKeys: {
+    OBSIDIAN_API_KEY: 'obsidian_api_key',
+    OBSIDIAN_ENABLED: 'obsidian_enabled',
+  },
+  getSettings: vi.fn(),
 }));
 
 vi.mock('../obsidianClient.js', () => {
@@ -42,6 +46,7 @@ import { handleDashboardSqlite } from '../handlers/dashboardSqliteHandlers.js';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo } from '../../utils/logger.js';
+import { getSettings } from '../../utils/storage.js';
 
 // Helper to create a mock SqliteClient
 function createMockSqliteClient(rows: unknown[] = []) {
@@ -61,26 +66,19 @@ function createMockSqliteClient(rows: unknown[] = []) {
 
 describe('handleDashboardSqlite — append_to_obsidian', () => {
   let mockSqliteClient: ReturnType<typeof createMockSqliteClient>;
-  let mockChromeStorage: Record<string, unknown>;
+
+  function setupSettings(overrides: Record<string, unknown> = {}) {
+    const defaults = {
+      obsidian_api_key: 'valid-api-key-123456',
+      obsidian_enabled: true,
+    };
+    vi.mocked(getSettings).mockResolvedValue({ ...defaults, ...overrides } as any);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockSqliteClient = createMockSqliteClient();
-    mockChromeStorage = {};
-
-    // Mock chrome.storage.local.get
-    (globalThis as any).chrome = {
-      storage: {
-        local: {
-          get: vi.fn().mockImplementation((keys: string | string[]) => {
-            if (keys === 'settings') {
-              return Promise.resolve({ settings: mockChromeStorage });
-            }
-            return Promise.resolve({});
-          }),
-        },
-      },
-    };
+    setupSettings();
   });
 
   it('returns error when ids is empty array', async () => {
@@ -111,7 +109,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when Obsidian API key is not configured', async () => {
-    mockChromeStorage = {}; // No API key
+    setupSettings({ obsidian_api_key: '' });
 
     const result = await handleDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
@@ -122,7 +120,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when Obsidian API key is too short', async () => {
-    mockChromeStorage = { obsidian_api_key: 'short' };
+    setupSettings({ obsidian_api_key: 'short' });
 
     const result = await handleDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
@@ -132,8 +130,19 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     expect(result).toEqual({ success: false, error: 'Obsidian API key not configured' });
   });
 
+  it('returns error when Obsidian is disabled by user', async () => {
+    setupSettings({ obsidian_enabled: false, obsidian_api_key: 'valid-api-key-123456' });
+
+    const result = await handleDashboardSqlite(
+      { subtype: 'append_to_obsidian', ids: [1, 2] },
+      mockSqliteClient as any
+    );
+
+    expect(result).toEqual({ success: false, error: 'Obsidian is disabled by user' });
+  });
+
   it('returns error when no matching entries found', async () => {
-    mockChromeStorage = { obsidian_api_key: 'valid-api-key-123456' };
+    setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     mockSqliteClient.query.mockResolvedValue({
       rows: [{ id: 10 }, { id: 20 }],
       total: 2,
@@ -148,7 +157,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('successfully appends entries to Obsidian', async () => {
-    mockChromeStorage = { obsidian_api_key: 'valid-api-key-123456' };
+    setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     const mockEntries = [
       { id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' },
       { id: 2, url: 'https://b.com', title: 'Page B', summary: 'Summary B' },
@@ -166,7 +175,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when Obsidian append fails', async () => {
-    mockChromeStorage = { obsidian_api_key: 'valid-api-key-123456' };
+    setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     mockSqliteClient.query.mockResolvedValue({
       rows: [{ id: 1, url: 'https://a.com', title: 'Page A' }],
       total: 1,
@@ -188,7 +197,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('filters entries correctly when multiple pages exist', async () => {
-    mockChromeStorage = { obsidian_api_key: 'valid-api-key-123456' };
+    setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     // Simulate a large result set with various IDs
     const allEntries = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
@@ -210,7 +219,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('handles mixed valid and invalid IDs', async () => {
-    mockChromeStorage = { obsidian_api_key: 'valid-api-key-123456' };
+    setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     mockSqliteClient.query.mockResolvedValue({
       rows: [{ id: 1, url: 'https://a.com', title: 'Exists' }],
       total: 1,

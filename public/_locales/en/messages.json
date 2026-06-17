@@ -2522,6 +2522,12 @@
   "historyAppendFailed": {
     "message": "Failed to append to Obsidian"
   },
+  "sqliteHistoryTab": {
+    "message": "History"
+  },
+  "sqliteHistoryDescription": {
+    "message": "Search and manage your browsing history stored in SQLite. View AI summaries, star/delete records, and append selected entries to Obsidian."
+  },
   "historyPageInfo": {
     "message": "Page $CURRENT$ of $TOTAL$",
     "placeholders": {
