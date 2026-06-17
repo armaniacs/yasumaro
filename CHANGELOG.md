@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [5.9.11] - 2026-06-17
+
+### Added / 追加
+
+- **Obsidian非依存のAIテスト・録画動作（PBI-16）**
+  - `handleTestAi` に自動保存ロジックを追加（テスト前に設定をストレージに保存し、正しいAPIキーが読み取られるように）
+  - `saveToObsidianStep` にObsidian未設定時のスキップロジックを追加（APIキーが16文字未満または未設定の場合にスキップ）
+  - `saveObsidian` ステップのエラー戦略を `RETRY` → `BEST_EFFORT` に変更（Obsidian接続エラー時もパイプラインが継続し、SQLite保存が実行される）
+  - `getSettings()` 旧パスで `settings` オブジェクトをマージ修正（`saveSettings` 書き込み先と読み込み先の不一致を解消）
+  - `CSPValidator` を毎回再初期化するよう修正（設定変更後のドメイン許可リスト更新が反映されるように）
+  - `CSPValidator` に全プロバイダー Base URL ドメイン（openai, openai2, lm-studio, ollama）を追加
+  - `GeminiProvider` に HTTP 401/403/429/500 エラーハンドリングを追加
+  - テスト15件を追加（統合2件、単体5件、CSP 8件）
+
+### Chores / その他
+
+- **バージョン 5.9.10 → 5.9.11**
+
 ## [5.9.10] - 2026-06-17
 
 ### Added / 追加
