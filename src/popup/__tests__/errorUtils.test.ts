@@ -427,33 +427,53 @@ describe('formatDuration edge cases', () => {
 });
 
 describe('formatSuccessMessage', () => {
-  it('should format message with total time only', () => {
+  it('should format message with total time only (no AI, local save)', () => {
     const message = formatSuccessMessage(1234);
-    expect(message).toBe('✓ Saved to Obsidian (1.2seconds)');
+    expect(message).toBe('✓ AI Summary failed — saved (1.2seconds)');
   });
 
-  it('should format message with total and AI time', () => {
+  it('should format message with total and AI time (local save)', () => {
     const message = formatSuccessMessage(2000, 850);
-    expect(message).toBe('✓ Saved to Obsidian (2.0seconds / AI: 850ms)');
+    expect(message).toBe('✓ AI Summary saved (2.0seconds / AI: 850ms)');
   });
 
   it('should not show AI time when undefined', () => {
     const message = formatSuccessMessage(1500, undefined);
-    expect(message).toBe('✓ Saved to Obsidian (1.5seconds)');
+    expect(message).toBe('✓ AI Summary failed — saved (1.5seconds)');
   });
 
   it('should not show AI time when zero', () => {
     const message = formatSuccessMessage(1500, 0);
-    expect(message).toBe('✓ Saved to Obsidian (1.5seconds)');
+    expect(message).toBe('✓ AI Summary failed — saved (1.5seconds)');
   });
 
-  it('should handle both times in milliseconds', () => {
+  it('should handle both times in milliseconds (local save)', () => {
     const message = formatSuccessMessage(800, 300);
-    expect(message).toBe('✓ Saved to Obsidian (800ms / AI: 300ms)');
+    expect(message).toBe('✓ AI Summary saved (800ms / AI: 300ms)');
   });
 
-  it('should handle both times in seconds', () => {
+  it('should handle both times in seconds (local save)', () => {
     const message = formatSuccessMessage(3456, 1234);
-    expect(message).toBe('✓ Saved to Obsidian (3.5seconds / AI: 1.2seconds)');
+    expect(message).toBe('✓ AI Summary saved (3.5seconds / AI: 1.2seconds)');
+  });
+
+  it('should show Obsidian message when obsidianSaved is true', () => {
+    const message = formatSuccessMessage(2000, 850, true);
+    expect(message).toBe('✓ AI Summary saved to Obsidian (2.0seconds / AI: 850ms)');
+  });
+
+  it('should show local message when obsidianSaved is false', () => {
+    const message = formatSuccessMessage(2000, 850, false);
+    expect(message).toBe('✓ AI Summary saved (2.0seconds / AI: 850ms)');
+  });
+
+  it('should show AI failed message when aiDuration is undefined', () => {
+    const message = formatSuccessMessage(2000, undefined, true);
+    expect(message).toBe('✓ AI Summary failed — saved (2.0seconds)');
+  });
+
+  it('should show AI failed message when aiDuration is zero', () => {
+    const message = formatSuccessMessage(2000, 0, true);
+    expect(message).toBe('✓ AI Summary failed — saved (2.0seconds)');
   });
 });

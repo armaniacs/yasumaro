@@ -73,6 +73,7 @@ export interface ServiceWorkerResponse {
     maskedCount?: number;
     maskedItems?: unknown[];
     aiDuration?: number;
+    obsidianDuration?: number;
     confirmationRequired?: boolean;
     headerValue?: string;
 }

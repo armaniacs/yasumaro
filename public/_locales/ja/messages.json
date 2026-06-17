@@ -476,6 +476,15 @@
   "success": {
     "message": "✓ Obsidianに保存しました"
   },
+  "successObsidian": {
+    "message": "✓ AI要約をObsidianに記録しました"
+  },
+  "successLocal": {
+    "message": "✓ AI要約を記録しました"
+  },
+  "successAiFailed": {
+    "message": "✓ AI要約に失敗 — 記録しました"
+  },
   "aiTagsLabel": {
     "message": "AIタグ"
   },

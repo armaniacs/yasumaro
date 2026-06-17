@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [0.0.1] - 2026-06-18
+
+### Fixed / 修正
+
+- **POPUP の記録完了メッセージを状況に応じて表示するよう修正**
+  - Obsidian 無効時に「✓ Obsidianに保存しました」と誤表示される問題を修正
+  - AI要約成功 + Obsidian有効: 「✓ AI要約をObsidianに記録しました」
+  - AI要約成功 + Obsidian無効: 「✓ AI要約を記録しました」
+  - AI要約失敗時: 「✓ AI要約に失敗 — 記録しました」
+  - `formatSuccessMessage` に第3引数 `obsidianSaved` を追加
+  - `RecordingResult` に `obsidianDuration` フィールドを追加し、Obsidian 保存の有無を伝播
+  - PII確認フロー (`SAVE_RECORD`) で `aiDuration` が失われる問題を修正
+    - `PreviewResponse` に `aiDuration` を追加
+    - `SaveRecordMessage` ペイロードに `aiDuration` を追加し、プレビュー段階のAI処理時間を保存ステップに伝播
+
+### Chores / その他
+
+- **バージョン 5.9.15 → 0.0.1**
+
 ## [5.9.15] - 2026-06-18
 
 ### Fixed / 修正

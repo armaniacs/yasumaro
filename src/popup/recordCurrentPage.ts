@@ -134,7 +134,7 @@ async function forceRecord(
       chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
 
       const totalDuration = performance.now() - startTime;
-      const message = formatSuccessMessage(totalDuration, result.aiDuration);
+      const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
       statusDiv.textContent = message;
       statusDiv.className = 'success';
       startAutoCloseTimer();
@@ -334,6 +334,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           content: finalContent,
           force: force,
           maskedCount: previewResponse.maskedCount,
+          aiDuration: previewResponse.aiDuration,
           pageBytes: contentResponse.byteStats?.pageBytes,
           candidateBytes: contentResponse.byteStats?.candidateBytes,
           originalBytes: contentResponse.byteStats?.originalBytes,
@@ -384,7 +385,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
 
       const totalDuration = performance.now() - startTime;
-      const message = formatSuccessMessage(totalDuration, result.aiDuration);
+      const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
 
       if (statusDiv) {
         statusDiv.textContent = message;
