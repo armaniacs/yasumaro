@@ -635,6 +635,13 @@ export async function getSettings(): Promise<Settings> {
     // 旧方式: StorageKeysで定義されているキーのみを取得
     const keysToGet: string[] = Object.values(StorageKeys);
     let settings = await chrome.storage.local.get(keysToGet);
+
+    // Merge with 'settings' object if it exists (saveSettings writes to this object)
+    // The 'settings' object takes precedence since saveSettings always writes there
+    if (rawSettings) {
+        settings = { ...settings, ...rawSettings };
+    }
+
     const migrated = await migrateUblockSettings();
     if (migrated) {
         // マイグレーション後は同じキーで再取得

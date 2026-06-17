@@ -164,6 +164,19 @@ export class GeminiProvider extends AIProviderStrategy {
             const msg = errorMessage(e);
             if (msg.includes('timeout')) {
                 return { success: false, message: 'Connection timeout. Check your network connection.' };
+            }
+
+            // fetchWithRetry throws HTTP errors as "HTTP {status}: {statusText}"
+            // Parse status code to provide specific guidance
+            const httpMatch = msg.match(/HTTP\s+(\d+):/);
+            const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
+
+            if (statusCode === 401 || statusCode === 403) {
+                return { success: false, message: `Authentication failed (${statusCode}). Check your Gemini API key.` };
+            } else if (statusCode === 429) {
+                return { success: false, message: 'Rate limit exceeded (429). Please try again later.' };
+            } else if (statusCode >= 500) {
+                return { success: false, message: `Gemini API server error (${statusCode}). Please try again later.` };
             } else {
                 return { success: false, message: `Connection error: ${msg}` };
             }

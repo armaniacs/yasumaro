@@ -7,7 +7,7 @@
  * We avoid static imports of mocked modules to prevent resolution mismatches.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, mocked } from 'vitest';
 import {
     resetDashboardElements,
     loadGeneralSettings,
@@ -15,7 +15,9 @@ import {
     handleTestObsidian,
     handleTestAi,
     initSidebarNav,
+    getSettingsMapping,
 } from '../dashboard.js';
+import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 
 // Capture variables for assertions
 let lastSavedSettings: unknown = null;
@@ -369,6 +371,31 @@ describe('handleTestAi', () => {
         await handleTestAi();
         expect(document.getElementById('status')!.className).toBe('success');
     });
+
+  it('saves settings before testing AI connection', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } });
+    vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage } });
+
+    const geminiInput = document.getElementById('geminiApiKey') as HTMLInputElement;
+    const modelInput = document.getElementById('geminiModel') as HTMLInputElement;
+    geminiInput.value = 'test-key';
+    modelInput.value = 'gemini-2.0-flash';
+
+    const mapping = getSettingsMapping();
+    const geminiKey = mapping['gemini_api_key'] as HTMLInputElement | null;
+    expect(geminiKey).not.toBeNull();
+    expect(geminiKey!.value).toBe('test-key');
+
+    const expectedSettings = { gemini_api_key: 'test-key', gemini_model: 'gemini-2.0-flash' };
+    const helper = await mocked('../../popup/settingsUiHelper.js');
+    helper.extractSettingsFromInputs.mockReturnValueOnce(expectedSettings);
+
+    await handleTestAi();
+
+    expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+      expect.objectContaining(expectedSettings)
+    );
+  });
 
     it('error', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: false, message: 'API key invalid' } }) } });

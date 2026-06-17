@@ -151,6 +151,22 @@ export class CSPValidator {
       }
     }
 
+    // All provider Base URL domains (openai, openai2, etc.)
+    const providerTypes = ['openai', 'openai2', 'lm-studio', 'ollama'];
+    for (const pt of providerTypes) {
+      const baseUrl = settings[`${pt}_base_url`] as string | undefined;
+      if (baseUrl) {
+        try {
+          const domain = new URL(baseUrl).hostname;
+          if (domain) {
+            CSPValidator.allowedDomains.add(domain);
+          }
+        } catch {
+          // 無効なURLは無視
+        }
+      }
+    }
+
     CSPValidator.initialized = true; // 初回ロードフラグ（fetch.ts内での重複初期化抑制用）
     CSPValidator.initializing = false;
 

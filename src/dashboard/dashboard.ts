@@ -397,6 +397,11 @@ export async function handleTestAi(): Promise<void> {
 
   el.testAiBtn.disabled = true;
   try {
+    const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const currentSettings = await getSettings();
+    const mergedSettings = { ...currentSettings, ...newSettings };
+    await saveSettingsWithAllowedUrls(mergedSettings);
+
     const aiResult = await testAiConnection();
 
     el.statusDiv.innerHTML = '';

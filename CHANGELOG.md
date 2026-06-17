@@ -10,13 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-## [6.0.0] - 2026-XX-XX (予定 / Planned)
+## [5.9.10] - 2026-06-17
 
 ### Added / 追加
 
-- **Chrome Web Store 公開準備（PBI-08: P1〜P4 完了、P5 は審査提出時）**
-  - `scripts/build-store-zip.mjs` を新規追加（`dist/chromium-mv3/` を ZIP 化、ソースマップ・`.bak*`・`__tests__` ディレクトリを自動除外）
-  - `scripts/__tests__/build-store-zip.test.ts` を新規追加（33 テストケース、ZIP 内容の整合性検証）
+- **Chrome Web Store 公開準備（PBI-08: P1 完了、P2〜P4 は次フェーズ、P5 は審査提出時）**
+  - `scripts/build-store-zip.mjs` を新規追加（`dist/chromium-mv3/` を ZIP 化、ソースマップ・`.bak*`・`__tests__` ディレクトリを自動除外、ZIP 整合性検証機能付き）
+  - `scripts/__tests__/build-store-zip.test.ts` を新規追加（33 テストケース）
   - `package.json` に `build:store` スクリプト追加（バージョン整合性チェック → WXT ビルド → ZIP 生成を一度に実行）
   - `PERMISSIONS.md` を新規作成（9 種類のパーミッション正当化理由を Chrome Web Store 審査向けに文書化）
   - プライバシーポリシー (`PRIVACY.md` および `docs/PRIVACY.md`) の最終更新日を 2026-06-17 に更新
@@ -24,7 +24,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-- **バージョン 5.9.9 → 6.0.0**（メジャー番号の更新 = 公式 Chrome Web Store 公開の節目）
+- **バージョン 5.9.9 → 5.9.10**
 
 ## [5.9.9] - 2026-06-17
 
