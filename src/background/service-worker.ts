@@ -461,6 +461,7 @@ export async function handleSaveRecord(
         force: message.payload.force,
         recordType: 'manual',
         maskedCount: message.payload.maskedCount,
+        aiDuration: message.payload.aiDuration,
         pageBytes: message.payload.pageBytes,
         candidateBytes: message.payload.candidateBytes,
         originalBytes: message.payload.originalBytes,

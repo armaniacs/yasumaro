@@ -476,6 +476,15 @@
   "success": {
     "message": "✓ Saved to Obsidian"
   },
+  "successObsidian": {
+    "message": "✓ AI Summary saved to Obsidian"
+  },
+  "successLocal": {
+    "message": "✓ AI Summary saved"
+  },
+  "successAiFailed": {
+    "message": "✓ AI Summary failed — saved"
+  },
   "aiTagsLabel": {
     "message": "AI tags"
   },
