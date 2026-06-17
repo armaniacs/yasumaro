@@ -10,6 +10,16 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [5.9.14] - 2026-06-17
+
+### Fixed / 修正
+
+- **E2Eテストの jsdom 化**: `testDir/e2e/sqlite-history-selection.spec.ts` はダッシュボードが Chrome 拡張 API に依存するため `file://` で動作せず全24テスト失敗。代わりに `src/dashboard/__tests__/sqliteHistoryPanel-selection-ui.test.ts` を jsdom 環境で作成し 13 テストを安定稼働
+
+### Chores / その他
+
+- **バージョン 5.9.13 → 5.9.14**
+
 ## [5.9.13] - 2026-06-17
 
 ### Tests / テスト追加
@@ -17,10 +27,10 @@ All notable changes to this project will be documented in this file.
 - **テストカバレッジ監査と改善（6ギャップ対応）**:
   - `dashboardSqliteHandlers-append.test.ts`（新規 10 件）: `append_to_obsidian` ハンドラの全パス（空IDs、API Key未設定、存在しないIDs、成功/失敗、ページ跨りフィルタ、混在IDs）
   - `sqliteClient-unit.test.ts`（新規 17 件）: SqliteClient の全CRUD操作、getStatus、clearAll、toggleStar、insertBatch、offscreen文書管理
-  - `sqlite-history-selection.spec.ts`（新規 E2E 8 件）: SQLite History 選択UI のDOM構造、ARIA属性、i18n属性
+  - `sqliteHistoryPanel-selection-ui.test.ts`（新規 13 件）: SQLite History 選択UI のDOM構造、ARIA属性、i18n属性
   - `pbi18-selective-obsidian-append.test.ts`（追記 5 件）: エッジケース（長いタイトル、特殊文字URL、空summary、改行正規化、スペース正規化）
   - `saveToObsidianStep.test.ts`（追記 3 件）: フラグ未定義フォールバック、フラグ優先判定
-  - 合計 43 テスト追加（5805 → 5845）
+  - 合計 53 テスト追加（5805 → 5858）
 
 ### Chores / その他
 
