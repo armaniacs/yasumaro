@@ -133,4 +133,50 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       expect.objectContaining({ error: 'Connection refused' })
     );
   });
+
+  // Gap 5: Race condition and edge case tests
+  it('falls back to API key check when OBSIDIAN_ENABLED is undefined', async () => {
+    const mockObsidian = makeMockObsidian();
+    const context = makeContext({
+      [StorageKeys.OBSIDIAN_ENABLED]: undefined,
+      [StorageKeys.OBSIDIAN_API_KEY]: 'valid-api-key-123456',
+    });
+
+    const result = await saveToObsidianStep(context, mockObsidian);
+
+    // Should proceed because API key is valid
+    expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+  });
+
+  it('skips when OBSIDIAN_ENABLED is true but API key is empty (no DI client)', async () => {
+    const context = makeContext({
+      [StorageKeys.OBSIDIAN_ENABLED]: true,
+      [StorageKeys.OBSIDIAN_API_KEY]: '',
+    });
+
+    const result = await saveToObsidianStep(context); // no DI client
+
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.INFO,
+      'Obsidian not configured, skipping save',
+      expect.objectContaining({ url: 'https://example.com' })
+    );
+  });
+
+  it('flag takes precedence over API key (flag=false + valid key = skip)', async () => {
+    const mockObsidian = makeMockObsidian();
+    const context = makeContext({
+      [StorageKeys.OBSIDIAN_ENABLED]: false,
+      [StorageKeys.OBSIDIAN_API_KEY]: 'valid-api-key-123456',
+    });
+
+    const result = await saveToObsidianStep(context, mockObsidian);
+
+    expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.INFO,
+      'Obsidian disabled by user, skipping save',
+      expect.objectContaining({ url: 'https://example.com' })
+    );
+  });
 });

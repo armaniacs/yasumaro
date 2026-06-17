@@ -192,6 +192,107 @@ describe('formatEntriesToMarkdown', () => {
     expect(formatEntriesToMarkdown(undefined as unknown as BrowsingLogEntry[])).toBe('');
     expect(formatEntriesToMarkdown(null as unknown as BrowsingLogEntry[])).toBe('');
   });
+
+  // Gap 4: Edge case tests
+  it('handles very long title (1000+ chars)', () => {
+    const longTitle = 'A'.repeat(1000);
+    const entry: BrowsingLogEntry = {
+      id: 1,
+      url: 'https://example.com',
+      title: longTitle,
+      summary: 'Short summary',
+      domain: 'example.com',
+      created_at: Date.now(),
+      tags: null,
+      visit_duration: null,
+      scroll_ratio: null,
+      is_starred: 0,
+      obsidian_synced: 0,
+    };
+
+    const md = formatEntriesToMarkdown([entry]);
+    expect(md).toContain(`[${longTitle}]`);
+    expect(md).toContain('Short summary');
+  });
+
+  it('handles URL with special characters', () => {
+    const entry: BrowsingLogEntry = {
+      id: 1,
+      url: 'https://example.com/page?q=hello&lang=ja#section',
+      title: 'Page',
+      summary: 'Summary',
+      domain: 'example.com',
+      created_at: Date.now(),
+      tags: null,
+      visit_duration: null,
+      scroll_ratio: null,
+      is_starred: 0,
+      obsidian_synced: 0,
+    };
+
+    const md = formatEntriesToMarkdown([entry]);
+    expect(md).toContain('https://example.com/page?q=hello&lang=ja#section');
+  });
+
+  it('handles empty summary by falling back to default', () => {
+    const entry: BrowsingLogEntry = {
+      id: 1,
+      url: 'https://example.com',
+      title: 'Title',
+      summary: '',
+      domain: 'example.com',
+      created_at: Date.now(),
+      tags: null,
+      visit_duration: null,
+      scroll_ratio: null,
+      is_starred: 0,
+      obsidian_synced: 0,
+    };
+
+    const md = formatEntriesToMarkdown([entry]);
+    const summaryLine = md.split('\n')[1];
+    expect(summaryLine).toBe('    - Summary not available.');
+  });
+
+  it('normalizes multiple consecutive newlines in summary', () => {
+    const entry: BrowsingLogEntry = {
+      id: 1,
+      url: 'https://example.com',
+      title: 'Title',
+      summary: 'Line1\n\n\n\nLine2',
+      domain: 'example.com',
+      created_at: Date.now(),
+      tags: null,
+      visit_duration: null,
+      scroll_ratio: null,
+      is_starred: 0,
+      obsidian_synced: 0,
+    };
+
+    const md = formatEntriesToMarkdown([entry]);
+    const summaryLine = md.split('\n')[1];
+    expect(summaryLine).toBe('    - Line1 Line2');
+  });
+
+  it('normalizes multiple spaces to single space', () => {
+    const entry: BrowsingLogEntry = {
+      id: 1,
+      url: 'https://example.com',
+      title: 'Title',
+      summary: 'Word1   Word2    Word3',
+      domain: 'example.com',
+      created_at: Date.now(),
+      tags: null,
+      visit_duration: null,
+      scroll_ratio: null,
+      is_starred: 0,
+      obsidian_synced: 0,
+    };
+
+    const md = formatEntriesToMarkdown([entry]);
+    const summaryLine = md.split('\n')[1];
+    expect(summaryLine).toBe('    - Word1 Word2 Word3');
+  });
 });
 
 // ============================================================================
