@@ -23,9 +23,6 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 100-108 | [archive/](./archive/) | Checking Team Review (完了) | 42 | ✅ 完了済み |
 | 09-15 | [archive/](./archive/) | デザインシステム + OPFS/診断パネル拡張 (完了) | 24 | ✅ 完了済み |
 | 08 (旧) | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備（P1〜P4 即時着手可 / P5 は v6.0.0 後） | 5 | 🟡 **P1〜P4 着手可**（2026-06-17 ユーザー明示指示） |
-| 16 | [obsidian-independent-usage](./2026-06-17-16-fix-obsidian-independent-usage.md) | Obsidian非依存のAIテスト・録画動作 | 5 | ✅ **完了**（2026-06-17） |
-| 17 | [obsidian-enable-checkbox](./2026-06-17-17-feat-obsidian-enable-checkbox.md) | ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加 | 5 | ✅ **完了**（2026-06-17） |
-| 18 | [selective-obsidian-append](./2026-06-17-18-feat-selective-obsidian-append.md) | SQLite History から選択した記事を Obsidian に追記する | 5 | ✅ **完了**（2026-06-17） |
 
 **合計: 139 SP | 完了済み: 134 SP (96%) | 未着手: 5 SP**（PBI-04 記録トリガーUIは削除）
 
@@ -42,6 +39,9 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 13 | [archive/2026-06-14-13-feat-diagnostics-capability-matrix.md](./archive/2026-06-14-13-feat-diagnostics-capability-matrix.md) | 診断パネル | 3 |
 | 14 | [archive/2026-06-16-14-feat-ym-token-migration.md](./archive/2026-06-16-14-feat-ym-token-migration.md) | 既存セレクタの `--ym-*` 移行 | 3〜5 |
 | 15 | [archive/2026-06-16-15-feat-popup-wamo-theme.md](./archive/2026-06-16-15-feat-popup-wamo-theme.md) | ポップアップ和モダン化 | 3〜4 |
+| 16 | [archive/2026-06-17-16-fix-obsidian-independent-usage.md](./archive/2026-06-17-16-fix-obsidian-independent-usage.md) | Obsidian非依存のAIテスト・録画動作 | 5 |
+| 17 | [archive/2026-06-17-17-feat-obsidian-enable-checkbox.md](./archive/2026-06-17-17-feat-obsidian-enable-checkbox.md) | ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加 | 5 |
+| 18 | [archive/2026-06-17-18-feat-selective-obsidian-append.md](./archive/2026-06-17-18-feat-selective-obsidian-append.md) | SQLite History から選択した記事を Obsidian に追記する | 5 |
 | 100-108 | [archive/](./archive/) | Checking Team Review | 42 |
 | (plan) | [../archive/2026-06-13-002-review-fixes-design_DONE.md](../archive/2026-06-13-002-review-fixes-design_DONE.md) + [003](../archive/2026-06-13-003-review-fixes-hotfix-plan_DONE.md) + [004](../archive/2026-06-13-004-review-fixes-normal-tracks-plan_DONE.md) | Checking Team レビュー対応（Hotfix 7 + Normal 8 トラック、v5.9.3 で全件完了） | — |
 
