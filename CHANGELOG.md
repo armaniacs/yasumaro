@@ -10,6 +10,37 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [5.9.12] - 2026-06-17
+
+### Added / 追加
+
+- **ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加（PBI-17）**
+  - `StorageKeys.OBSIDIAN_ENABLED` を新規追加（デフォルト: `false`）
+  - ダッシュボードの初期設定パネルに「Obsidian を使う」チェックボックスを設置
+  - チェックボックス ON/OFF で Obsidian 接続セクションの展開/折りたたみを制御
+  - `getSettings()` に既存ユーザー向けマイグレーション判定を追加（API Key 有無で初期値を自動決定）
+  - `saveToObsidianStep` に `OBSIDIAN_ENABLED === false` でスキップするフラグ判定を追加（フラグ優先）
+  - 日本語・英語の i18n メッセージを追加
+
+- **SQLite History から選択した記事を Obsidian に追記する機能（PBI-18）**
+  - `formatEntriesToMarkdown()` 純粋関数を新設（BrowsingLogEntry → Obsidian markdown 変換）
+  - SQLite History の各行に選択チェックボックスを追加
+  - 一括バー（全選択/解除/件数表示/追記ボタン）を追加
+  - `appendToLogs()` サービス関数を追加（Dashboard → SW メッセージング）
+  - `append_to_obsidian` ハンドラを SW 側に追加（API Key チェック → SQLite 読み取り → markdown 整形 → Obsidian 追記）
+  - 追記成功/失敗を通知で表示
+  - 選択状態はページ遷移・検索・日付変更で自動リセット
+  - 日本語・英語の i18n メッセージを追加（7キー）
+
+### Tests / テスト追加
+
+- PBI-17 テスト 16 件: ストレージキー定義、マイグレーション判定、saveToObsidianStep フラグ判定、ダッシュボード UI 連動
+- PBI-18 テスト 16 件: formatEntriesToMarkdown 整形、appendToLogs メッセージング
+
+### Chores / その他
+
+- **バージョン 5.9.11 → 5.9.12**
+
 ## [5.9.11] - 2026-06-17
 
 ### Added / 追加

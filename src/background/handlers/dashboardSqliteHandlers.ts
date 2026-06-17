@@ -1,6 +1,10 @@
 import { SqliteClient } from '../sqliteClient.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ObsidianClient } from '../obsidianClient.js';
+import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
+import { logError, logInfo, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { StorageKeys } from '../../utils/storage.js';
+import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
@@ -146,6 +150,48 @@ export async function handleDashboardSqlite(
                 return report
                     ? { success: true, report }
                     : { success: false, error: 'OPFS spike failed' };
+            }
+            case 'append_to_obsidian': {
+                const ids = payload.ids as number[] | undefined;
+                if (!Array.isArray(ids) || ids.length === 0) {
+                    return { success: false, error: 'No IDs provided' };
+                }
+
+                // Check if Obsidian API key is configured
+                const settingsResult = await chrome.storage.local.get('settings');
+                const settings = settingsResult.settings as Record<string, unknown> | undefined;
+                const apiKey = settings?.[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+                if (!apiKey || apiKey.length < 16) {
+                    return { success: false, error: 'Obsidian API key not configured' };
+                }
+
+                // Fetch entries and filter by IDs
+                // Note: Full table scan is acceptable for v1 (users select from current page of 20).
+                // Future optimization: add getByIds() method to SqliteClient for targeted queries.
+                const allResult = await sqliteClient.query({ limit: 10000, offset: 0, orderBy: 'id', orderDir: 'ASC' });
+                const selectedEntries = (allResult?.rows || []).filter((r): r is BrowsingLogEntry => r.id !== undefined && ids.includes(r.id));
+
+                if (selectedEntries.length === 0) {
+                    return { success: false, error: 'No matching entries found' };
+                }
+
+                const markdown = formatEntriesToMarkdown(selectedEntries);
+                if (!markdown) {
+                    return { success: false, error: 'Failed to format entries' };
+                }
+
+                try {
+                    const obsidianClient = new ObsidianClient();
+                    await obsidianClient.appendToDailyNote(markdown);
+                    logInfo('Appended entries to Obsidian', { count: selectedEntries.length });
+                    return { success: true, appended: selectedEntries.length };
+                } catch (error) {
+                    logError('Failed to append to Obsidian', {
+                        error: errorMessage(error),
+                        count: selectedEntries.length,
+                    }, ErrorCode.UNKNOWN_ERROR);
+                    return { success: false, error: errorMessage(error) };
+                }
             }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };

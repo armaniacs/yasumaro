@@ -23,10 +23,11 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 100-108 | [archive/](./archive/) | Checking Team Review (完了) | 42 | ✅ 完了済み |
 | 09-15 | [archive/](./archive/) | デザインシステム + OPFS/診断パネル拡張 (完了) | 24 | ✅ 完了済み |
 | 08 (旧) | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備（P1〜P4 即時着手可 / P5 は v6.0.0 後） | 5 | 🟡 **P1〜P4 着手可**（2026-06-17 ユーザー明示指示） |
-| 16 | [obsidian-independent-usage](./2026-06-17-16-fix-obsidian-independent-usage.md) | Obsidian非依存のAIテスト・録画動作 | 5 | 🟢 **着手可**（2026-06-17） |
-| 17 | [obsidian-enable-checkbox](./2026-06-17-17-feat-obsidian-enable-checkbox.md) | ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加 | 5 | ⚪ **未着手**（PBI-16 完了後を推奨） |
+| 16 | [obsidian-independent-usage](./2026-06-17-16-fix-obsidian-independent-usage.md) | Obsidian非依存のAIテスト・録画動作 | 5 | ✅ **完了**（2026-06-17） |
+| 17 | [obsidian-enable-checkbox](./2026-06-17-17-feat-obsidian-enable-checkbox.md) | ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加 | 5 | ✅ **完了**（2026-06-17） |
+| 18 | [selective-obsidian-append](./2026-06-17-18-feat-selective-obsidian-append.md) | SQLite History から選択した記事を Obsidian に追記する | 5 | ✅ **完了**（2026-06-17） |
 
-**合計: 134 SP | 完了済み: 119 SP (89%) | 進行中: 5 SP | 未着手: 10 SP**（PBI-04 記録トリガーUIは削除）
+**合計: 139 SP | 完了済み: 134 SP (96%) | 未着手: 5 SP**（PBI-04 記録トリガーUIは削除）
 
 ### Archive (完了済み PBI)
 

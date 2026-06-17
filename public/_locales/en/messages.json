@@ -1472,6 +1472,12 @@
   "obsidianSection": {
     "message": "Obsidian Connection"
   },
+  "obsidianEnabledLabel": {
+    "message": "Use Obsidian"
+  },
+  "obsidianEnabledHelp": {
+    "message": "When OFF, records are saved to SQLite only."
+  },
   "advancedSettings": {
     "message": "Advanced Settings (Protocol / Port / Daily Note Path)"
   },
@@ -2479,6 +2485,42 @@
         "example": "42"
       }
     }
+  },
+  "historySelectAll": {
+    "message": "Select All"
+  },
+  "historyClearSelection": {
+    "message": "Clear Selection"
+  },
+  "historySelectionCount": {
+    "message": "$COUNT$ selected",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "historySelectRecord": {
+    "message": "Select this record"
+  },
+  "historyAppendToObsidian": {
+    "message": "Append selected to Obsidian"
+  },
+  "historyAppendSuccess": {
+    "message": "$COUNT$ records appended to Obsidian",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyAppendObsidianNotConfigured": {
+    "message": "Please configure Obsidian"
+  },
+  "historyAppendFailed": {
+    "message": "Failed to append to Obsidian"
   },
   "historyPageInfo": {
     "message": "Page $CURRENT$ of $TOTAL$",

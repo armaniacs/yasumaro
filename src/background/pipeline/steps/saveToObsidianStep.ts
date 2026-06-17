@@ -32,10 +32,17 @@ export const saveToObsidianStep = async (
     return context;
   }
 
+  // ユーザーが Obsidian 使用を明示的に OFF にしている場合はスキップ（フラグ優先）
+  const settings = context.settings as Record<string, unknown>;
+  const obsidianEnabled = settings[StorageKeys.OBSIDIAN_ENABLED];
+  if (obsidianEnabled === false) {
+    addLog(LogType.INFO, 'Obsidian disabled by user, skipping save', { url });
+    return context;
+  }
+
   // If obsidian client was not injected via DI, check if Obsidian is configured
   // (e.g., in test environments or when using the default ObsidianClient fallback)
   if (!obsidian) {
-    const settings = context.settings as Record<string, unknown>;
     const obsidianApiKey = settings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
     if (!obsidianApiKey || obsidianApiKey.length < 16) {
       addLog(LogType.INFO, 'Obsidian not configured, skipping save', { url });

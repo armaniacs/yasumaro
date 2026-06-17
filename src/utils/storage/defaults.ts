@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_API_KEY]: '',
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
     [StorageKeys.OBSIDIAN_PORT]: '27124',
+    [StorageKeys.OBSIDIAN_ENABLED]: false,
     [StorageKeys.MIN_VISIT_DURATION]: 5,
     [StorageKeys.MIN_SCROLL_DEPTH]: 50,
     [StorageKeys.GEMINI_API_KEY]: '',

@@ -134,6 +134,7 @@ let _domElements: {
   protocolInput: HTMLInputElement | null;
   portInput: HTMLInputElement | null;
   dailyPathInput: HTMLInputElement | null;
+  obsidianEnabledInput: HTMLInputElement | null;
   aiProviderSelect: HTMLSelectElement | null;
   geminiSettingsDiv: HTMLElement | null;
   openaiSettingsDiv: HTMLElement | null;
@@ -173,6 +174,7 @@ export function getDashboardElements() {
       protocolInput: document.getElementById('protocol') as HTMLInputElement | null,
       portInput: document.getElementById('port') as HTMLInputElement | null,
       dailyPathInput: document.getElementById('dailyPath') as HTMLInputElement | null,
+      obsidianEnabledInput: document.getElementById('obsidianEnabled') as HTMLInputElement | null,
       aiProviderSelect: document.getElementById('aiProvider') as HTMLSelectElement | null,
       geminiSettingsDiv: document.getElementById('geminiSettings') as HTMLElement | null,
       openaiSettingsDiv: document.getElementById('openaiSettings') as HTMLElement | null,
@@ -203,6 +205,7 @@ export function getDashboardElements() {
   }
   return _domElements ?? {
     apiKeyInput: null, protocolInput: null, portInput: null, dailyPathInput: null,
+    obsidianEnabledInput: null,
     aiProviderSelect: null, geminiSettingsDiv: null, openaiSettingsDiv: null,
     openai2SettingsDiv: null, lmStudioSettingsDiv: null, openaiCompatibleSettingsDiv: null,
     geminiApiKeyInput: null, geminiModelInput: null, openaiBaseUrlInput: null,
@@ -222,6 +225,7 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.OBSIDIAN_PROTOCOL]: el.protocolInput,
     [StorageKeys.OBSIDIAN_PORT]: el.portInput,
     [StorageKeys.OBSIDIAN_DAILY_PATH]: el.dailyPathInput,
+    [StorageKeys.OBSIDIAN_ENABLED]: el.obsidianEnabledInput,
     [StorageKeys.AI_PROVIDER]: el.aiProviderSelect,
     [StorageKeys.GEMINI_API_KEY]: el.geminiApiKeyInput,
     [StorageKeys.GEMINI_MODEL]: el.geminiModelInput,
@@ -259,6 +263,13 @@ export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, getSettingsMapping());
   updateAIProviderVisibility(getAiProviderElements());
+
+  // Sync Obsidian details open state with checkbox
+  const el = getDashboardElements();
+  const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
+  if (details && el.obsidianEnabledInput) {
+    details.open = el.obsidianEnabledInput.checked;
+  }
 
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
@@ -602,6 +613,15 @@ function initExportLogsPanel(): void {
   } catch (e) { console.error('[Dashboard] initCustomPromptManager error:', e); }
 
   try { await loadGeneralSettings(); } catch (e) { console.error('[Dashboard] loadGeneralSettings error:', e); }
+
+  // Obsidian enabled checkbox → details open/close
+  const obsidianEnabledInput = document.getElementById('obsidianEnabled') as HTMLInputElement | null;
+  const obsidianDetails = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
+  if (obsidianEnabledInput && obsidianDetails) {
+    obsidianEnabledInput.addEventListener('change', () => {
+      obsidianDetails.open = obsidianEnabledInput.checked;
+    });
+  }
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
   try { await initConsentWithdrawal(); } catch (e) { console.error('[Dashboard] initConsentWithdrawal error:', e); }
   try { await loadTrustSettings(); } catch (e) { console.error('[Dashboard] loadTrustSettings error:', e); }
