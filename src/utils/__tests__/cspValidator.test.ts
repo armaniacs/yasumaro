@@ -326,3 +326,116 @@ describe('CSPValidator - P1 - getCspErrorMessage', () => {
     expect(errorMsg).toBeNull();
   });
 });
+
+describe('CSPValidator - Provider Base URL Domains', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CSPValidator.reset();
+  });
+
+  it('should add provider_base_url domain to allowed list', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      provider_base_url: 'https://api.ai.sakura.ad.jp/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/chat/completions')).toBe(true);
+    // 異なるドメインはブロック
+    expect(CSPValidator.isUrlAllowed('https://other-domain.com/v1/models')).toBe(false);
+  });
+
+  it('should add openai_base_url domain to allowed list', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      openai_base_url: 'https://custom-openai.example.com/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/chat/completions')).toBe(true);
+  });
+
+  it('should add openai2_base_url domain to allowed list', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      openai2_base_url: 'https://secondary-openai.example.com/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://secondary-openai.example.com/v1/models')).toBe(true);
+  });
+
+  it('should add lm_studio_base_url domain to allowed list', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      lm_studio_base_url: 'http://localhost:1234/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('http://localhost:1234/v1/models')).toBe(true);
+  });
+
+  it('should add ollama_base_url domain to allowed list', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      ollama_base_url: 'http://localhost:11434/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('http://localhost:11434/v1/models')).toBe(true);
+  });
+
+  it('should handle multiple base URLs simultaneously', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      provider_base_url: 'https://api.ai.sakura.ad.jp/v1',
+      openai_base_url: 'https://custom-openai.example.com/v1',
+      ollama_base_url: 'http://localhost:11434/v1'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('http://localhost:11434/v1/models')).toBe(true);
+  });
+
+  it('should handle invalid base URL gracefully', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      provider_base_url: 'not-a-valid-url'
+    };
+    // Should not throw
+    expect(() => CSPValidator.initializeFromSettings(settings)).not.toThrow();
+
+    // Invalid URL domain should not be added
+    expect(CSPValidator.isUrlAllowed('https://not-a-valid-url/models')).toBe(false);
+  });
+
+  it('should handle base URL with trailing slash', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    const settings = {
+      conditional_csp_providers: [],
+      provider_base_url: 'https://api.ai.sakura.ad.jp/v1/'
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/models')).toBe(true);
+  });
+});

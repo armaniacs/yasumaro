@@ -121,10 +121,9 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     const conditionalCspEnabled = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false; // デフォルトはtrue
 
     if (conditionalCspEnabled) {
-      // CSPValidatorが初期化されていない場合、設定から初期化
-      if (!CSPValidator.isInitialized()) {
-        CSPValidator.initializeFromSettings(settings);
-      }
+      // Always re-initialize CSPValidator with fresh settings
+      // (settings may have been updated since last call)
+      CSPValidator.initializeFromSettings(settings);
 
       // CSP検証
       if (!CSPValidator.isUrlAllowed(url)) {

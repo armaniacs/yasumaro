@@ -93,6 +93,7 @@ vi.mock('chrome', () => ({
 vi.mock('../../utils/storage.js', () => ({
     StorageKeys: storageMock.StorageKeys,
     getSettings: vi.fn(),
+    clearSettingsCache: vi.fn(),
     getSavedUrlsWithTimestamps: vi.fn(),
     setSavedUrlsWithTimestamps: vi.fn(),
     getAllowedUrls: vi.fn(),

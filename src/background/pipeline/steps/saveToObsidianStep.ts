@@ -7,11 +7,12 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { NotificationHelper } from '../../notificationHelper.js';
+import { StorageKeys } from '../../../utils/storage.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
  * Save formatted markdown to Obsidian daily note
- * This step uses RETRY error strategy - retry on failure
+ * Skips silently when Obsidian is not configured.
  *
  * @param context - The current recording pipeline context
  * @param obsidian - The Obsidian client instance.
@@ -29,6 +30,17 @@ export const saveToObsidianStep = async (
   if (!markdown) {
     addLog(LogType.WARN, 'No markdown to save to Obsidian', { url });
     return context;
+  }
+
+  // If obsidian client was not injected via DI, check if Obsidian is configured
+  // (e.g., in test environments or when using the default ObsidianClient fallback)
+  if (!obsidian) {
+    const settings = context.settings as Record<string, unknown>;
+    const obsidianApiKey = settings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+    if (!obsidianApiKey || obsidianApiKey.length < 16) {
+      addLog(LogType.INFO, 'Obsidian not configured, skipping save', { url });
+      return context;
+    }
   }
 
   // Use provided Obsidian client (injected via DI in production) or create new one

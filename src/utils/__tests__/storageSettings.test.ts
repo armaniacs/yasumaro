@@ -205,6 +205,41 @@ describe('storageSettings', () => {
             expect(mockRunMigration).toHaveBeenCalled();
             expect(result.ai_provider).toBe('gemini');
         });
+
+        test('旧方式: settings オブジェクトが個別キーより優先される', async () => {
+            // SETTINGS_MIGRATED_KEY を設定しない → 旧パス
+            delete mockStorage[SETTINGS_MIGRATED_KEY];
+            // 個別キーには古い値
+            mockStorage['ai_provider'] = 'gemini';
+            mockStorage['openai_base_url'] = 'https://api.groq.com/openai/v1';
+            // settings オブジェクトには新しい値
+            mockStorage['settings'] = {
+                ai_provider: 'openai',
+                openai_base_url: 'https://api.ai.sakura.ad.jp/v1'
+            };
+
+            const result = await getSettings(mockGetEncryptionKey, mockRunMigration, ['ai_provider', 'openai_base_url'], 'obsidian_api_key');
+
+            // settings オブジェクトの値が優先される
+            expect(result.ai_provider).toBe('openai');
+            expect(result.openai_base_url).toBe('https://api.ai.sakura.ad.jp/v1');
+        });
+
+        test('旧方式: settings オブジェクトのみ存在する場合も正しく読み取れる', async () => {
+            delete mockStorage[SETTINGS_MIGRATED_KEY];
+            // 個別キーは空、settings オブジェクトのみ
+            delete mockStorage['ai_provider'];
+            delete mockStorage['openai_base_url'];
+            mockStorage['settings'] = {
+                ai_provider: 'openai',
+                openai_base_url: 'https://api.ai.sakura.ad.jp/v1'
+            };
+
+            const result = await getSettings(mockGetEncryptionKey, mockRunMigration, ['ai_provider', 'openai_base_url'], 'obsidian_api_key');
+
+            expect(result.ai_provider).toBe('openai');
+            expect(result.openai_base_url).toBe('https://api.ai.sakura.ad.jp/v1');
+        });
     });
 
     describe('saveSettings', () => {

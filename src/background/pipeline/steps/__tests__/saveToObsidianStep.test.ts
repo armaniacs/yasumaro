@@ -13,6 +13,11 @@ import { vi } from 'vitest';
 // 自動モック: すべての export が vi.fn() になる
 vi.mock('../../utils/logger.js');
 vi.mock('../../../obsidianClient.js');
+vi.mock('../../../utils/storage.js', () => ({
+  StorageKeys: {
+    OBSIDIAN_API_KEY: 'obsidian_api_key',
+  },
+}));
 vi.mock('../../../notificationHelper.js', () => ({
   NotificationHelper: { notifySuccess: vi.fn(), notifyError: vi.fn() },
 }));
@@ -20,6 +25,7 @@ vi.mock('../../../notificationHelper.js', () => ({
 import { saveToObsidianStep } from '../saveToObsidianStep.js';
 import type { RecordingContext } from '../../types.js';
 import { ObsidianClient } from '../../../obsidianClient.js';
+import { StorageKeys } from '../../../utils/storage.js';
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -28,7 +34,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       url: 'https://example.com',
       content: 'Some content',
     },
-    settings: {} as any,
+    settings: { obsidian_api_key: 'valid-api-key-with-at-least-16-chars' } as any,
     force: false,
     errors: [],
     markdown: '## Test Page\n\nSome content',
@@ -95,6 +101,50 @@ describe('saveToObsidianStep', () => {
 
       expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
       expect(result).toBe(context);
+    });
+  });
+
+  describe('Obsidian 未設定の場合', () => {
+    it('Obsidian API key が空の場合はスキップしコンテキストを返す', async () => {
+      const context = makeContext({ settings: { obsidian_api_key: '' } as any });
+
+      const result = await saveToObsidianStep(context); // no obsidian param → checks settings
+
+      // appendToDailyNote should not be called (skipped by settings check)
+      expect(ObsidianClient).not.toHaveBeenCalled();
+      expect(result).toBe(context);
+    });
+
+    it('Obsidian API key が短すぎる場合はスキップする', async () => {
+      const context = makeContext({ settings: { obsidian_api_key: 'short' } as any });
+
+      const result = await saveToObsidianStep(context); // no obsidian param → checks settings
+
+      expect(ObsidianClient).not.toHaveBeenCalled();
+      expect(result).toBe(context);
+    });
+
+    it('settings に obsidian_api_key がない場合はスキップする', async () => {
+      const context = makeContext({ settings: {} as any });
+
+      const result = await saveToObsidianStep(context); // no obsidian param → checks settings
+
+      expect(ObsidianClient).not.toHaveBeenCalled();
+      expect(result).toBe(context);
+    });
+
+    it('obsidian パラメーターが注入された場合は設定チェックをスキップし保存する', async () => {
+      const mockObsidian = {
+        appendToDailyNote: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      };
+      // settings with no API key → should still save because obsidian is injected
+      const context = makeContext({ settings: {} as any });
+
+      const result = await saveToObsidianStep(context, mockObsidian as any);
+
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown);
+      expect(result).toEqual(expect.objectContaining(context));
+      expect(result).toHaveProperty('obsidianDuration');
     });
   });
 

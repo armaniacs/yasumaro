@@ -109,8 +109,7 @@ export class RecordingPipeline {
       },
       {
         name: 'saveObsidian',
-        errorStrategy: ErrorStrategy.RETRY,
-        maxRetries: 3,
+        errorStrategy: ErrorStrategy.BEST_EFFORT,
         execute: this.createSaveToObsidianStep()
       },
       {

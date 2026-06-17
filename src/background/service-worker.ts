@@ -14,7 +14,8 @@ import {
     migrateToSingleSettingsObject,
     updateDomainFilterCache,
     lockSession,
-    StorageKeys
+    StorageKeys,
+    clearSettingsCache
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { SqliteClient } from './sqliteClient.js';
@@ -585,6 +586,8 @@ export async function handleTestAi(
     message: TestAiMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
+    // Force clear settings cache to ensure we read fresh settings
+    clearSettingsCache();
     const aiResult = await aiClient.testConnection();
     sendResponse({ success: true, ai: aiResult });
 }
