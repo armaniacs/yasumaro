@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-## [0.0.1] - 2026-06-18
+## [5.9.16] - 2026-06-18
 
 ### Fixed / 修正
 
@@ -27,7 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-- **バージョン 5.9.15 → 0.0.1**
+- **バージョン 5.9.15 → 5.9.16**
 
 ## [5.9.15] - 2026-06-18
 
