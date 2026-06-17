@@ -169,11 +169,9 @@ export async function handleDashboardSqlite(
                     return { success: false, error: 'Obsidian API key not configured' };
                 }
 
-                // Fetch entries and filter by IDs
-                // Note: Full table scan is acceptable for v1 (users select from current page of 20).
-                // Future optimization: add getByIds() method to SqliteClient for targeted queries.
-                const allResult = await sqliteClient.query({ limit: 10000, offset: 0, orderBy: 'id', orderDir: 'ASC' });
-                const selectedEntries = (allResult?.rows || []).filter((r): r is BrowsingLogEntry => r.id !== undefined && ids.includes(r.id));
+                // Fetch entries by IDs (targeted query, no full table scan)
+                const allResult = await sqliteClient.query({ ids, limit: ids.length, orderBy: 'id', orderDir: 'ASC' });
+                const selectedEntries = (allResult?.rows || []) as BrowsingLogEntry[];
 
                 if (selectedEntries.length === 0) {
                     return { success: false, error: 'No matching entries found' };
