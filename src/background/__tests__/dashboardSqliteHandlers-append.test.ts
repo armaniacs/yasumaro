@@ -144,16 +144,20 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('returns error when no matching entries found', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     mockSqliteClient.query.mockResolvedValue({
-      rows: [{ id: 10 }, { id: 20 }],
-      total: 2,
+      rows: [],
+      total: 0,
     });
 
     const result = await handleDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] }, // IDs 1,2 don't exist
+      { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
 
     expect(result).toEqual({ success: false, error: 'No matching entries found' });
+    // Verify the query was called with the targeted ids
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+      expect.objectContaining({ ids: [1, 2] })
+    );
   });
 
   it('successfully appends entries to Obsidian', async () => {
@@ -196,41 +200,43 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     expect(logError).toHaveBeenCalled();
   });
 
-  it('filters entries correctly when multiple pages exist', async () => {
+  it('queries by IDs correctly', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
-    // Simulate a large result set with various IDs
     const allEntries = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       url: `https://page${i + 1}.com`,
       title: `Page ${i + 1}`,
     }));
+    // Mock returns all entries; handler passes IDs to SQL layer
     mockSqliteClient.query.mockResolvedValue({ rows: allEntries, total: 50 });
 
-    // Select entries with specific IDs
     const result = await handleDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [5, 25, 45] },
       mockSqliteClient as any
     );
 
-    expect(result).toEqual({ success: true, appended: 3 });
-    // Verify the formatter received only the filtered entries
-    const filteredEntries = allEntries.filter(e => [5, 25, 45].includes(e.id));
-    expect(formatEntriesToMarkdown).toHaveBeenCalledWith(filteredEntries);
+    expect(result).toEqual({ success: true, appended: 50 }); // all returned from mock
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+      expect.objectContaining({ ids: [5, 25, 45] })
+    );
   });
 
   it('handles mixed valid and invalid IDs', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
+    // SQL handles filtering; mock returns all matching entries
     mockSqliteClient.query.mockResolvedValue({
       rows: [{ id: 1, url: 'https://a.com', title: 'Exists' }],
       total: 1,
     });
 
-    // Request IDs [1, 999] but only 1 exists
     const result = await handleDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 999] },
       mockSqliteClient as any
     );
 
     expect(result).toEqual({ success: true, appended: 1 });
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+      expect.objectContaining({ ids: [1, 999] })
+    );
   });
 });

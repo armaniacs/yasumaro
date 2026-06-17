@@ -79,22 +79,6 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
-    // Message listener
-    chrome.runtime.onMessage.addListener(createMessageHandler());
-
-    // Tab event listeners
-    chrome.tabs.onRemoved.addListener(handleTabRemoved);
-    chrome.tabs.onActivated.addListener(handleTabActivated);
-    chrome.tabs.onUpdated.addListener(handleTabUpdated);
-
-    // Extension lifecycle listeners
-    chrome.runtime.onInstalled.addListener(handleInstalled);
-    chrome.runtime.onStartup.addListener(handleStartup);
-
-    // Notification listeners
-    chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
-    chrome.notifications.onClicked.addListener(handleNotificationClicked);
-
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 

@@ -45,6 +45,8 @@ export interface QueryOptions {
   since?: number;
   /** Filter records on or before this timestamp (Unix ms) */
   until?: number;
+  /** Filter by specific IDs (targeted query, bypasses limit if set) */
+  ids?: number[];
 }
 
 export interface SearchResult {

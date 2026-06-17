@@ -700,6 +700,11 @@ export async function query(options: QueryOptions = {}): Promise<{
       conditions.push('created_at <= ?');
       params.push(options.until);
     }
+    if (options.ids !== undefined && Array.isArray(options.ids) && options.ids.length > 0) {
+      const placeholders = options.ids.map(() => '?').join(',');
+      conditions.push(`id IN (${placeholders})`);
+      params.push(...options.ids);
+    }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const orderBy = options.orderBy && ALLOWED_ORDER_COLUMNS.includes(options.orderBy as typeof ALLOWED_ORDER_COLUMNS[number])
