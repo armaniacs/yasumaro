@@ -130,15 +130,18 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     expect(result).toEqual({ success: false, error: 'Obsidian API key not configured' });
   });
 
-  it('returns error when Obsidian is disabled by user', async () => {
+  it('proceeds even when OBSIDIAN_ENABLED is false (manual append ignores the flag)', async () => {
     setupSettings({ obsidian_enabled: false, obsidian_api_key: 'valid-api-key-123456' });
+    const mockEntries = [{ id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' }];
+    mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 1 });
 
     const result = await handleDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
 
-    expect(result).toEqual({ success: false, error: 'Obsidian is disabled by user' });
+    // Should reach ObsidianClient, not be blocked by the flag
+    expect(result).not.toEqual({ success: false, error: 'Obsidian is disabled by user' });
   });
 
   it('returns error when no matching entries found', async () => {

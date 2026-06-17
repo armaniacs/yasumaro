@@ -10,6 +10,35 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [5.9.15] - 2026-06-18
+
+### Fixed / 修正
+
+- レビュー指摘対応（3件修正、1件調査完了）
+  - `append_to_obsidian` の10000件フルテーブルスキャンを `QueryOptions.ids` 追加によりターゲットクエリに変更（4レイヤー: 型定義・SQLiteClient・Offscreen・sqlite.ts を一貫修正）
+  - Service Worker の `init()` 関数から重複イベントリスナー登録を削除（module-level で一元化）
+  - `append_to_obsidian` が暗号化API Key を生ストレージから直接読み取っていた問題を `getSettings()` 使用に修正
+  - `append_to_obsidian` に `OBSIDIAN_ENABLED` フラグチェックを追加
+  - i18n 不足キー `sqliteHistoryTab` / `sqliteHistoryDescription` を ja/en に追加
+  - AIプロバイダー地理的バイアスは調査の結果、誤検出と判定（40+ドメインがCSPで許可済み、任意Base URLが利用可能）
+  - レビューレポート: `plans/2026-06-17-2024-review-feature-non-obsidian.md`
+
+- **手動追記が OBSIDIAN_ENABLED フラグで誤ってブロックされる問題を修正**
+  - `OBSIDIAN_ENABLED` は「自動記録時に Obsidian にも書く」設定であり、履歴パネルからの手動追記には関係しない
+  - `append_to_obsidian` ハンドラから `OBSIDIAN_ENABLED === false` ガードを削除
+
+- **手動追記で選択した記事と異なる記事が Obsidian に送られる問題を修正**
+  - `opfsWorker.ts` の `QueryPayload` インターフェースと `handleQuery` 関数に `ids` フィールドが欠落していた
+  - OPFS ワーカー経由の場合、ID フィルタが無視されて `ORDER BY created_at DESC` の先頭件が返されていた
+  - `sqlite.ts` の `tryOpfsProxy` 呼び出し、`opfsWorker.ts` の `QueryPayload`・`handleQuery` に `ids` を追加
+
+- **手動追記時のタイムスタンプをオリジナルの記録時刻から追記した現在時刻に変更**
+  - `obsidianFormatter.ts` でエントリの `created_at` ではなく `Date.now()` を使用するよう修正
+
+### Chores / その他
+
+- **バージョン 5.9.14 → 5.9.15**
+
 ## [5.9.14] - 2026-06-17
 
 ### Fixed / 修正

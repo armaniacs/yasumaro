@@ -663,6 +663,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
       limit: options.limit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
+      ids: options.ids,
     });
     if (opfsResult !== null) return { success: true, rows: opfsResult.rows, total: opfsResult.total };
 

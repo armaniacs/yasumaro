@@ -157,11 +157,8 @@ export async function handleDashboardSqlite(
                     return { success: false, error: 'No IDs provided' };
                 }
 
-                // Check OBSIDIAN_ENABLED flag first (respects user's setting)
+                // OBSIDIAN_ENABLED controls auto-recording only; manual append always proceeds.
                 const allSettings = await getSettings();
-                if (allSettings[StorageKeys.OBSIDIAN_ENABLED] === false) {
-                    return { success: false, error: 'Obsidian is disabled by user' };
-                }
 
                 // Check if Obsidian API key is configured (uses decrypted value from getSettings)
                 const apiKey = allSettings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;

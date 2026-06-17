@@ -9,16 +9,15 @@ import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 
 /**
  * Format a single BrowsingLogEntry as an Obsidian markdown list item.
- * Matches the format produced by formatMarkdownStep in the recording pipeline:
  * - HH:MM [Title](url)
  *     - Summary text
  *
- * Note: Timestamp uses ja-JP locale to match the pipeline's formatMarkdownStep.
- * This ensures consistency in Obsidian daily notes across auto-recording and manual append.
+ * appendedAt is the current time (Date.now()) when the user manually appended,
+ * not the original recording time stored in entry.created_at.
  */
-function formatSingleEntry(entry: BrowsingLogEntry): string {
-  // Use ja-JP locale to match formatMarkdownStep pipeline format
-  const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
+function formatSingleEntry(entry: BrowsingLogEntry, appendedAt: number): string {
+  // Use the time when the user manually appended, not the original recording time
+  const timestamp = new Date(appendedAt).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -45,5 +44,6 @@ export function formatEntriesToMarkdown(entries: BrowsingLogEntry[]): string {
   if (!entries || entries.length === 0) {
     return '';
   }
-  return entries.map(formatSingleEntry).join('\n');
+  const appendedAt = Date.now();
+  return entries.map(entry => formatSingleEntry(entry, appendedAt)).join('\n');
 }
