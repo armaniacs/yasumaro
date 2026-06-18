@@ -1500,6 +1500,39 @@
   "recordingSection": {
     "message": "記録条件"
   },
+  "retentionPolicyTitle": {
+    "message": "閲覧履歴 保持ポリシー"
+  },
+  "retentionDaysLabel": {
+    "message": "保持期間"
+  },
+  "maxRecordsLabel": {
+    "message": "最大件数"
+  },
+  "retentionUnlimited": {
+    "message": "無制限（削除しない）"
+  },
+  "retention30days": {
+    "message": "30日"
+  },
+  "retention90days": {
+    "message": "90日"
+  },
+  "retention180days": {
+    "message": "180日"
+  },
+  "retention365days": {
+    "message": "365日"
+  },
+  "purgeNowBtn": {
+    "message": "今すぐ削除を実行"
+  },
+  "purgeNowSuccess": {
+    "message": "$COUNT$ 件を削除しました"
+  },
+  "purgeNowSkipped": {
+    "message": "保持ポリシーが未設定のため、削除をスキップしました"
+  },
   "saveBtn": {
     "message": "保存する"
   },

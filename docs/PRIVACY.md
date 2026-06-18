@@ -38,8 +38,8 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - 閲覧履歴データは、デバイス上の **OPFS (Origin Private File System) 上の SQLite DB** に保存されます。
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
 - 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
-- **データ保持ポリシー**: 閲覧履歴は90日間または1000件（先に到達した方）保持されます。保持期間を超えたデータは自動的に削除されます。
-  - **自動削除の仕組み**: サービスワーカーが24時間ごとに `chrome.alarms` を使用して自動パージを実行します。90日経過した非スター付きエントリが物理削除され、総数が1000件を超える場合は古いエントリから追加削除されます。スター付きエントリは自動削除の対象外です。
+- **データ保持ポリシー**: デフォルトでは閲覧履歴は**無制限に保持**されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から、保持期間（30日〜365日）および最大件数（1,000〜100,000件）を任意で設定できます。いずれかを設定すると、24時間ごとに自動パージが実行されます。
+  - **自動削除の仕組み**: 保持期間を超えた非スター付きエントリが物理削除されます。総数が最大件数を超える場合は古い非スター付きエントリから追加削除されます。スター付きエントリは自動削除の対象外です。「今すぐ削除を実行」ボタンで手動パージも可能です。
   - **PII サニタイゼーション**: 取得されたページコンテンツは保存前に PII（個人情報）サニタイザーで処理されます。メールアドレス、クレジットカード番号、電話番号（日本・米国・中国・韓国）、マイナンバー、SSN（米国社会保障番号）などが自動的にマスクされます。
 - **旧バージョンからの移行**: 旧バージョンからのデータ移行はOPFS上のSQLite DBに対して実行されます。移行完了後、旧ストレージのデータは削除されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
@@ -191,8 +191,8 @@ The Extension collects the following data **locally on your device**:
 - Browsing history data is stored in **SQLite DB on OPFS (Origin Private File System)** on your device.
 - All configuration data is stored in **Chrome's local storage** on your device.
 - Browsing history entries are also saved to **your local Obsidian vault**.
-- **Data Retention Policy**: Browsing history is retained for 90 days or 1,000 entries (whichever comes first). Data exceeding the retention period is automatically deleted.
-  - **Automatic Deletion Mechanism**: The service worker runs an automatic purge every 24 hours using `chrome.alarms`. Non-starred entries older than 90 days are physically deleted. If the total count exceeds 1,000, the oldest non-starred entries are additionally removed. Starred entries are exempt from automatic deletion.
+- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy". When either setting is configured, an automatic purge runs every 24 hours.
+  - **Automatic Deletion Mechanism**: Non-starred entries older than the configured retention period are physically deleted. If the total count exceeds the configured maximum, the oldest non-starred entries are additionally removed. Starred entries are exempt from automatic deletion. A "Purge now" button is also available for immediate manual purge.
   - **PII Sanitization**: Fetched page content is processed through a PII (Personally Identifiable Information) sanitizer before storage. Email addresses, credit card numbers, phone numbers (Japan, US, China, Korea), My Number (Japan), SSN (US Social Security Numbers), and other PII patterns are automatically masked.
 - **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
 - **No data is stored on our servers.**

@@ -34,8 +34,9 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 
 ### データの保存場所
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
-- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** に保存されます。また、直近7日分（最大10,000件）のメタデータ（URL・タイトル・記録種別等）が **Chrome ローカルストレージ** にも保存され、拡張機能のダッシュボードから確認できます。
+- 閲覧履歴は、デバイス上の **OPFS（Origin Private File System）上の SQLite DB** に保存されます。Obsidian 連携を有効にした場合は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
+- **データ保持ポリシー**: デフォルトでは閲覧履歴は**無制限に保持**されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から、保持期間（30日〜365日）および最大件数（1,000〜100,000件）を任意で設定できます。スター付きエントリは自動削除の対象外です。
 
 ### データの使用方法
 1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。送信先の AI プロバイダーはユーザーが設定画面で選択したものであり、各プロバイダーのデータ利用ポリシーが適用されます。各プロバイダーのプライバシーポリシーをご確認ください。
@@ -182,8 +183,9 @@ The Extension collects the following data **locally on your device**:
 
 ### Storage
 - All configuration data is stored in **Chrome's local storage** on your device.
-- Browsing history entries are saved to **your local Obsidian vault**. Additionally, metadata for recent entries (last 7 days, up to 10,000 entries — URL, title, record type, etc.) is also stored in **Chrome's local storage** and viewable in the extension's Dashboard.
+- Browsing history is stored in a **SQLite DB on OPFS (Origin Private File System)** on your device. If Obsidian integration is enabled, entries are also saved to **your local Obsidian vault**.
 - **No data is stored on our servers.**
+- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in Settings under "History Retention Policy". Starred entries are exempt from automatic deletion.
 
 ### How Data Is Used
 1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider.

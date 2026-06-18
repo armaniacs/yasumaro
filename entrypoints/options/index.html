@@ -320,6 +320,34 @@
           </div>
         </div>
 
+        <!-- 閲覧履歴 保持ポリシー -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="retentionPolicyTitle">閲覧履歴 保持ポリシー</h3>
+          <div class="form-group">
+            <label for="sqliteRetentionDays" data-i18n="retentionDaysLabel">保持期間</label>
+            <select id="sqliteRetentionDays">
+              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="30" data-i18n="retention30days">30日</option>
+              <option value="90" data-i18n="retention90days">90日</option>
+              <option value="180" data-i18n="retention180days">180日</option>
+              <option value="365" data-i18n="retention365days">365日</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sqliteMaxRecords" data-i18n="maxRecordsLabel">最大件数</label>
+            <select id="sqliteMaxRecords">
+              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="1000">1,000</option>
+              <option value="10000">10,000</option>
+              <option value="100000">100,000</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button id="purgeNowBtn" class="secondary-btn" data-i18n="purgeNowBtn">今すぐ削除を実行</button>
+            <span id="purgeNowStatus" aria-live="polite"></span>
+          </div>
+        </div>
+
         <!-- ボタンエリア -->
         <div class="general-btn-row">
           <button id="save" class="primary-btn" data-i18n="saveBtn">保存する</button>

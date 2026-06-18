@@ -161,6 +161,9 @@ let _domElements: {
   testObsidianBtn: HTMLButtonElement | null;
   testAiBtn: HTMLButtonElement | null;
   statusDiv: HTMLElement | null;
+  sqliteRetentionDaysSelect: HTMLSelectElement | null;
+  sqliteMaxRecordsSelect: HTMLSelectElement | null;
+  purgeNowBtn: HTMLButtonElement | null;
 } | null = null;
 
 export function resetDashboardElements(): void {
@@ -201,6 +204,9 @@ export function getDashboardElements() {
       testObsidianBtn: document.getElementById('testObsidianBtn') as HTMLButtonElement | null,
       testAiBtn: document.getElementById('testAiBtn') as HTMLButtonElement | null,
       statusDiv: document.getElementById('status') as HTMLElement | null,
+      sqliteRetentionDaysSelect: document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null,
+      sqliteMaxRecordsSelect: document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null,
+      purgeNowBtn: document.getElementById('purgeNowBtn') as HTMLButtonElement | null,
     };
   }
   return _domElements ?? {
@@ -215,6 +221,7 @@ export function getDashboardElements() {
     ollamaModelInput: null, providerBaseUrlInput: null, providerApiKeyInput: null,
     providerModelInput: null, saveBtn: null,
     testObsidianBtn: null, testAiBtn: null, statusDiv: null,
+    sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
   };
 }
 
@@ -243,6 +250,8 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.PROVIDER_BASE_URL]: el.providerBaseUrlInput,
     [StorageKeys.PROVIDER_API_KEY]: el.providerApiKeyInput,
     [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
+    [StorageKeys.SQLITE_RETENTION_DAYS]: el.sqliteRetentionDaysSelect,
+    [StorageKeys.SQLITE_MAX_RECORDS]: el.sqliteMaxRecordsSelect,
   };
 }
 
@@ -352,6 +361,14 @@ export async function handleSaveOnly(): Promise<void> {
 
   const newSettings = extractSettingsFromInputs(getSettingsMapping());
 
+  // Convert retention select values: "" → null, numeric string → number
+  const retentionDaysRaw = newSettings[StorageKeys.SQLITE_RETENTION_DAYS];
+  newSettings[StorageKeys.SQLITE_RETENTION_DAYS] =
+    retentionDaysRaw === '' || retentionDaysRaw === undefined ? null : Number(retentionDaysRaw);
+  const maxRecordsRaw = newSettings[StorageKeys.SQLITE_MAX_RECORDS];
+  newSettings[StorageKeys.SQLITE_MAX_RECORDS] =
+    maxRecordsRaw === '' || maxRecordsRaw === undefined ? null : Number(maxRecordsRaw);
+
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
   await saveSettingsWithAllowedUrls(mergedSettings);
@@ -424,6 +441,32 @@ export async function handleTestAi(): Promise<void> {
     el.statusDiv.className = 'error';
   } finally {
     el.testAiBtn.disabled = false;
+  }
+}
+
+export async function handlePurgeNow(): Promise<void> {
+  const el = getDashboardElements();
+  const statusEl = document.getElementById('purgeNowStatus');
+  if (!el.purgeNowBtn || !statusEl) return;
+
+  el.purgeNowBtn.disabled = true;
+  statusEl.textContent = '';
+  try {
+    const result = await chrome.runtime.sendMessage({
+      type: 'DASHBOARD_SQLITE',
+      payload: { subtype: 'purge_now' },
+    }) as { success: boolean; purged: number; skipped?: boolean; error?: string } | undefined;
+
+    if (result?.skipped) {
+      statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
+    } else if (result?.success) {
+      const msg = getMessage('purgeNowSuccess') || '$COUNT$ 件を削除しました';
+      statusEl.textContent = msg.replace('$COUNT$', String(result.purged));
+    } else {
+      statusEl.textContent = result?.error ?? 'Error';
+    }
+  } finally {
+    el.purgeNowBtn.disabled = false;
   }
 }
 
@@ -734,6 +777,10 @@ function initExportLogsPanel(): void {
 
     el.testAiBtn?.addEventListener('click', async () => {
       await handleTestAi();
+    });
+
+    el.purgeNowBtn?.addEventListener('click', async () => {
+      await handlePurgeNow();
     });
   }
 

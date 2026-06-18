@@ -133,5 +133,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.CONTENT_DEDUP_ENABLED]: true,
     [StorageKeys.CONTENT_DEDUP_THRESHOLD]: 0.7,
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: true,
-    [StorageKeys.OPFS_MIGRATION_V2_DONE]: false
+    [StorageKeys.OPFS_MIGRATION_V2_DONE]: false,
+    [StorageKeys.SQLITE_RETENTION_DAYS]: null,
+    [StorageKeys.SQLITE_MAX_RECORDS]: null,
 };

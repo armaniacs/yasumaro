@@ -31,6 +31,7 @@ import {
 } from '../utils/permissionManager.js';
 
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
 import { encodeUrlSafeBase64 } from './handlers/urlNotificationHandlers.js';
 import { handleDashboardSqlite } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
@@ -986,4 +987,11 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Notification listeners
     chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
     chrome.notifications.onClicked.addListener(handleNotificationClicked);
+
+    // Daily purge alarm
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === 'yasumaro-daily-purge') {
+            handleDailyPurgeAlarm((days, max) => sqliteClient.purgeOldRecords(days, max));
+        }
+    });
 }

@@ -192,6 +192,19 @@ export async function handleDashboardSqlite(
                     return { success: false, error: errorMessage(error) };
                 }
             }
+            case 'purge_now': {
+                const settings = await getSettings();
+                const days = settings[StorageKeys.SQLITE_RETENTION_DAYS] ?? null;
+                const max  = settings[StorageKeys.SQLITE_MAX_RECORDS]    ?? null;
+                if (days === null && max === null) {
+                    return { success: true, purged: 0, skipped: true };
+                }
+                const result = await sqliteClient.purgeOldRecords(
+                    days !== null ? Number(days) : undefined,
+                    max  !== null ? Number(max)  : undefined,
+                );
+                return { success: true, purged: result?.purged ?? 0, skipped: false };
+            }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };
         }

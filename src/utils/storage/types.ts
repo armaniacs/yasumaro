@@ -177,6 +177,9 @@ export const StorageKeys = {
     // OPFS fallback mode tracking
     OPFS_FALLBACK_MODE: 'opfs_fallback_mode', // true when OPFS is unavailable and using chrome.storage.local fallback
     OPFS_MIGRATION_V2_DONE: 'opfs_migration_v2_done', // true when AccessHandlePoolVFS→OPFSCoopSyncVFS migration completed
+    // SQLite retention policy (null = unlimited / no purge)
+    SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+    SQLITE_MAX_RECORDS: 'sqlite_max_records',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -316,6 +319,8 @@ export interface StorageKeyValues {
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
     [StorageKeys.OPFS_FALLBACK_MODE]: boolean;
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
+    [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;
+    [StorageKeys.SQLITE_MAX_RECORDS]: number | null;
 }
 
 // 厳格な Settings 型

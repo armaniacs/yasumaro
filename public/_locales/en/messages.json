@@ -1502,6 +1502,39 @@
     "recordingSection": {
     "message": "Recording Conditions"
   },
+  "retentionPolicyTitle": {
+    "message": "History Retention Policy"
+  },
+  "retentionDaysLabel": {
+    "message": "Retention period"
+  },
+  "maxRecordsLabel": {
+    "message": "Maximum records"
+  },
+  "retentionUnlimited": {
+    "message": "Unlimited (keep forever)"
+  },
+  "retention30days": {
+    "message": "30 days"
+  },
+  "retention90days": {
+    "message": "90 days"
+  },
+  "retention180days": {
+    "message": "180 days"
+  },
+  "retention365days": {
+    "message": "365 days"
+  },
+  "purgeNowBtn": {
+    "message": "Purge now"
+  },
+  "purgeNowSuccess": {
+    "message": "Deleted $COUNT$ record(s)"
+  },
+  "purgeNowSkipped": {
+    "message": "No retention policy set — purge skipped"
+  },
   "saveBtn": {
     "message": "Save"
   },
