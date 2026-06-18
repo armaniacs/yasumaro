@@ -21,6 +21,7 @@ export default defineConfig({
     version: '5.9.16',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
+    homepage_url: 'https://github.com/armaniacs/yasumaro',
     icons: {
       '16': 'icons/icon16.png',
       '48': 'icons/icon48.png',
