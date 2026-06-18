@@ -45,7 +45,7 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
 
 ### データの使用方法
-1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。
+1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。送信先の AI プロバイダーはユーザーが設定画面で選択したものであり、各プロバイダーのデータ利用ポリシーが適用されます。各プロバイダーのプライバシーポリシーをご確認ください。
 2. **閲覧履歴**: Local REST API を通じて Obsidian Vault に保存されます。閲覧履歴はOPFS上のSQLite DBにも保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。
 3. **設定**: Obsidian および AI プロバイダー API への接続に使用されます。
 
@@ -198,7 +198,7 @@ The Extension collects the following data **locally on your device**:
 - **No data is stored on our servers.**
 
 ### How Data Is Used
-1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries.
+1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider.
 2. **Browsing history**: Saved to your Obsidian vault via the Local REST API. Browsing history is also stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (History tab).
 3. **Settings**: Used to connect to Obsidian and the AI provider API.
 
