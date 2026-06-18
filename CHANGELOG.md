@@ -10,6 +10,20 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [6.0.0] - TBD (Chrome Web Store 初回公開)
+
+### Added / 追加
+
+- **Chrome Web Store 初回公開** — 世界中の Chrome ユーザーが Web Store から直接インストール可能に
+- **`homepage_url`** を `wxt.config.ts` に追加 (`https://github.com/armaniacs/yasumaro`)
+- **`PERMISSIONS.md`** — 9 種類のパーミッション正当化ドキュメントを新規作成（審査用）
+- **`scripts/build-store-zip.mjs`** — Chrome Web Store 提出用 ZIP 生成スクリプト
+- **`npm run build:store`** — ビルド + ZIP 化を一括実行するスクリプト
+
+### Chores / その他
+
+- **バージョン 5.9.x → 6.0.0**（Chrome Web Store 公式リリースに合わせてメジャーバージョンアップ）
+
 ## [5.9.16] - 2026-06-18
 
 ### Fixed / 修正
