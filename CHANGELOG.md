@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-## [6.0.0] - TBD (Chrome Web Store 初回公開)
+## [6.0.0] - 2026-06-18 (Chrome Web Store 初回公開)
 
 ### Added / 追加
 
@@ -19,6 +19,20 @@ All notable changes to this project will be documented in this file.
 - **`PERMISSIONS.md`** — 9 種類のパーミッション正当化ドキュメントを新規作成（審査用）
 - **`scripts/build-store-zip.mjs`** — Chrome Web Store 提出用 ZIP 生成スクリプト
 - **`npm run build:store`** — ビルド + ZIP 化を一括実行するスクリプト
+- **閲覧履歴 保持ポリシー設定（General パネル）**
+  - 保持期間セレクト: 無制限（デフォルト）/ 30日 / 90日 / 180日 / 365日
+  - 最大件数セレクト: 無制限（デフォルト）/ 1,000 / 10,000 / 100,000
+  - 「今すぐ削除を実行」ボタン（設定に従い即時削除）
+  - `StorageKeys.SQLITE_RETENTION_DAYS` / `StorageKeys.SQLITE_MAX_RECORDS` を追加（デフォルト: `null` = 無制限）
+  - `dailyPurgeHandler.ts` を新規作成
+  - `dashboardSqliteHandlers.ts` に `purge_now` サブタイプを追加
+  - i18n キー 11 件を ja/en に追加
+
+### Fixed / 修正
+
+- **`yasumaro-daily-purge` アラームハンドラが未登録だった問題を修正** — `service-worker.ts` に `chrome.alarms.onAlarm` リスナーを追加
+- **`$COUNT$` 変数未定義エラーを修正** — `purgeNowSuccess` メッセージの `$COUNT$` を `{COUNT}` に変更し、JS 側で置換するよう統一
+- **記録履歴パネルの「過去7日間・最大10,000件・自動削除」という誤った説明を削除**
 
 ### Chores / その他
 

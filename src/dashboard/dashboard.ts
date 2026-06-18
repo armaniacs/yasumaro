@@ -461,7 +461,7 @@ export async function handlePurgeNow(): Promise<void> {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
       const msg = getMessage('purgeNowSuccess') || '$COUNT$ 件を削除しました';
-      statusEl.textContent = msg.replace('$COUNT$', String(result.purged));
+      statusEl.textContent = msg.replace('{COUNT}', String(result.purged));
     } else {
       statusEl.textContent = result?.error ?? 'Error';
     }
