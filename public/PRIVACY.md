@@ -1,6 +1,6 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年6月17日 / Last Updated: June 17, 2026**
+**最終更新日: 2026年6月18日 / Last Updated: June 18, 2026**
 
 > **更新履歴 / Update History**:
 > - **2026年6月17日**: v6.0.0 - Chrome Web Store 公開準備。各パーミッションの使用目的の明確化、AI プロバイダーの選択肢拡大、データ保持期間の説明

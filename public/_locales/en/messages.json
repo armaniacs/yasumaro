@@ -1160,9 +1160,6 @@
   "historyDescription": {
     "message": "URLs recorded by Yasumaro. Use the search box to filter entries. Click × to delete an individual URL."
   },
-  "historyRetentionPolicy": {
-    "message": "Shows records from the past 7 days (up to 10,000 entries). Older entries are automatically removed."
-  },
   "historySearchLabel": {
     "message": "Search URLs, summaries, and tags"
   },
@@ -1530,7 +1527,7 @@
     "message": "Purge now"
   },
   "purgeNowSuccess": {
-    "message": "Deleted $COUNT$ record(s)"
+    "message": "Deleted {COUNT} record(s)"
   },
   "purgeNowSkipped": {
     "message": "No retention policy set — purge skipped"

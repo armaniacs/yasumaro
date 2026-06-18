@@ -1160,9 +1160,6 @@
   "historyDescription": {
     "message": "Yasumaroが記録したURLの一覧です。検索ボックスで絞り込み、× で個別に削除できます。"
   },
-  "historyRetentionPolicy": {
-    "message": "過去7日間の記録を表示（最大10,000件）。古いものから順に自動削除されます。"
-  },
   "historySearchLabel": {
     "message": "URL・要約・タグで検索"
   },
@@ -1528,7 +1525,7 @@
     "message": "今すぐ削除を実行"
   },
   "purgeNowSuccess": {
-    "message": "$COUNT$ 件を削除しました"
+    "message": "{COUNT} 件を削除しました"
   },
   "purgeNowSkipped": {
     "message": "保持ポリシーが未設定のため、削除をスキップしました"

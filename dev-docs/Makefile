@@ -1,8 +1,12 @@
-.PHONY: build clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all lock-linux build-wasm
+.PHONY: build build-store clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all lock-linux build-wasm
 
 # build: vendor WASM → node_modules コピー後にバンドル
 build: copy-wasm
 	npm run build
+
+# build-store: バージョン整合性チェック → ビルド → ZIP 生成
+build-store: copy-wasm
+	npm run build:store
 
 # vendor WASM を node_modules にコピー
 copy-wasm:
