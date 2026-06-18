@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Yasumaro</title>
+  <meta name="description" content="Yasumaro のプライバシーポリシー / Privacy Policy for Yasumaro - AI Browsing Logger" />
+  <link rel="icon" href="https://github.com/armaniacs/yasumaro/raw/main/public/icons/icon128.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+      --obsidian: #1e1e2e;
+      --obsidian-mid: #2a2a3e;
+      --obsidian-light: #313244;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--obsidian);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--obsidian-mid);
+      border-bottom: 1px solid var(--obsidian-light);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header a {
+      color: var(--purple-light);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    header a:hover { text-decoration: underline; }
+
+    header span { color: var(--text-muted); }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    #content h1 { font-size: 2rem; margin-bottom: 8px; color: var(--text); }
+    #content h2 { font-size: 1.4rem; margin: 40px 0 12px; color: var(--purple-light); border-bottom: 1px solid var(--obsidian-light); padding-bottom: 8px; }
+    #content h3 { font-size: 1.1rem; margin: 24px 0 8px; color: var(--text); }
+    #content h4 { font-size: 1rem; margin: 16px 0 8px; color: var(--text-muted); }
+    #content p { margin: 12px 0; color: var(--text); }
+    #content ul, #content ol { margin: 12px 0 12px 24px; }
+    #content li { margin: 6px 0; }
+    #content a { color: var(--purple-light); }
+    #content strong { color: #f1f5f9; }
+    #content blockquote {
+      border-left: 3px solid var(--purple);
+      padding: 8px 16px;
+      margin: 16px 0;
+      background: var(--obsidian-mid);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--text-muted);
+    }
+    #content hr { border: none; border-top: 1px solid var(--obsidian-light); margin: 32px 0; }
+    #content code {
+      background: var(--obsidian-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.875em;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+    #content pre {
+      background: var(--obsidian-light);
+      padding: 16px;
+      border-radius: var(--radius);
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    #content pre code { background: none; padding: 0; }
+    #content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+    #content th, #content td {
+      padding: 10px 14px;
+      text-align: left;
+      border: 1px solid var(--obsidian-light);
+    }
+    #content th { background: var(--obsidian-mid); color: var(--purple-light); }
+    #content tr:nth-child(even) td { background: var(--obsidian-mid); }
+
+    .loading {
+      text-align: center;
+      padding: 80px 0;
+      color: var(--text-muted);
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--obsidian-light);
+    }
+
+    footer a { color: var(--purple-light); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Yasumaro</a>
+    <span>/</span>
+    <span>Privacy Policy</span>
+  </header>
+
+  <main>
+    <div id="content">
+      <div class="loading">Loading privacy policy…</div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      <a href="index.html">Yasumaro</a> &nbsp;·&nbsp;
+      <a href="https://github.com/armaniacs/yasumaro">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://github.com/armaniacs/yasumaro/issues">Issues</a>
+    </p>
+  </footer>
+
+  <script type="module">
+    // Render Markdown to HTML using a minimal parser
+    // (no external dependencies — keeps the page self-contained)
+    async function loadPrivacyPolicy() {
+      const contentEl = document.getElementById('content');
+      try {
+        const res = await fetch('PRIVACY.md');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const md = await res.text();
+        contentEl.innerHTML = renderMarkdown(md);
+      } catch (err) {
+        contentEl.innerHTML = `<p style="color:#f87171">Failed to load privacy policy. <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md">View on GitHub</a></p>`;
+      }
+    }
+
+    function renderMarkdown(md) {
+      let html = md
+        // Escape HTML
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+
+        // Code blocks (before inline code)
+        .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) => `<pre><code>${code.trimEnd()}</code></pre>`)
+
+        // Blockquotes
+        .replace(/^((?:&gt; ?.+\n?)+)/gm, (match) => {
+          const inner = match.replace(/^&gt; ?/gm, '').trimEnd();
+          return `<blockquote>${renderInline(inner)}</blockquote>\n`;
+        })
+
+        // Headings
+        .replace(/^#### (.+)$/gm, (_, t) => `<h4>${renderInline(t)}</h4>`)
+        .replace(/^### (.+)$/gm, (_, t) => `<h3>${renderInline(t)}</h3>`)
+        .replace(/^## (.+)$/gm, (_, t) => `<h2>${renderInline(t)}</h2>`)
+        .replace(/^# (.+)$/gm, (_, t) => `<h1>${renderInline(t)}</h1>`)
+
+        // HR
+        .replace(/^---+$/gm, '<hr>')
+
+        // Unordered lists
+        .replace(/^((?:[*\-] .+\n?)+)/gm, (match) => {
+          const items = match.trim().split('\n').map(l => `<li>${renderInline(l.replace(/^[*\-] /, ''))}</li>`).join('');
+          return `<ul>${items}</ul>\n`;
+        })
+
+        // Ordered lists
+        .replace(/^((?:\d+\. .+\n?)+)/gm, (match) => {
+          const items = match.trim().split('\n').map(l => `<li>${renderInline(l.replace(/^\d+\. /, ''))}</li>`).join('');
+          return `<ol>${items}</ol>\n`;
+        })
+
+        // Tables
+        .replace(/^(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*)/gm, renderTable)
+
+        // Paragraphs: wrap lines not already in a block element
+        .replace(/^(?!<[a-z]|$)(.+)$/gm, (_, line) => `<p>${renderInline(line)}</p>`);
+
+      return html;
+    }
+
+    function renderInline(text) {
+      return text
+        // Inline code (restore from escaped)
+        .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
+        // Bold
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    }
+
+    function renderTable(match) {
+      const lines = match.trim().split('\n');
+      const headers = lines[0].split('|').filter(c => c.trim()).map(c => `<th>${renderInline(c.trim())}</th>`).join('');
+      const rows = lines.slice(2).map(line => {
+        const cells = line.split('|').filter(c => c.trim()).map(c => `<td>${renderInline(c.trim())}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+      return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>\n`;
+    }
+
+    loadPrivacyPolicy();
+  </script>
+</body>
+</html>

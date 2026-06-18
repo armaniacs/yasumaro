@@ -476,6 +476,15 @@
   "success": {
     "message": "✓ Saved to Obsidian"
   },
+  "successObsidian": {
+    "message": "✓ AI Summary saved to Obsidian"
+  },
+  "successLocal": {
+    "message": "✓ AI Summary saved"
+  },
+  "successAiFailed": {
+    "message": "✓ AI Summary failed — saved"
+  },
   "aiTagsLabel": {
     "message": "AI tags"
   },
@@ -1471,6 +1480,12 @@
   },
   "obsidianSection": {
     "message": "Obsidian Connection"
+  },
+  "obsidianEnabledLabel": {
+    "message": "Use Obsidian"
+  },
+  "obsidianEnabledHelp": {
+    "message": "When OFF, records are saved to SQLite only."
   },
   "advancedSettings": {
     "message": "Advanced Settings (Protocol / Port / Daily Note Path)"
@@ -2479,6 +2494,48 @@
         "example": "42"
       }
     }
+  },
+  "historySelectAll": {
+    "message": "Select All"
+  },
+  "historyClearSelection": {
+    "message": "Clear Selection"
+  },
+  "historySelectionCount": {
+    "message": "$COUNT$ selected",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "historySelectRecord": {
+    "message": "Select this record"
+  },
+  "historyAppendToObsidian": {
+    "message": "Append selected to Obsidian"
+  },
+  "historyAppendSuccess": {
+    "message": "$COUNT$ records appended to Obsidian",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyAppendObsidianNotConfigured": {
+    "message": "Please configure Obsidian"
+  },
+  "historyAppendFailed": {
+    "message": "Failed to append to Obsidian"
+  },
+  "sqliteHistoryTab": {
+    "message": "History"
+  },
+  "sqliteHistoryDescription": {
+    "message": "Search and manage your browsing history stored in SQLite. View AI summaries, star/delete records, and append selected entries to Obsidian."
   },
   "historyPageInfo": {
     "message": "Page $CURRENT$ of $TOTAL$",

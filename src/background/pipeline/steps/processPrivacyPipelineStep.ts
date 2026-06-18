@@ -35,7 +35,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
     });
 
     const aiEndTime = performance.now();
-    const aiDuration = !alreadyProcessed ? aiEndTime - aiStartTime : undefined;
+    // alreadyProcessed 時はプレビューから伝播した aiDuration を保持
+    const aiDuration = !alreadyProcessed ? aiEndTime - aiStartTime : context.aiDuration;
 
     if (previewOnly) {
       // Return preview result

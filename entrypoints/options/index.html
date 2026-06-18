@@ -162,6 +162,13 @@
         <!-- Obsidian 接続セクション -->
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="obsidianSection">Obsidian 接続</h3>
+
+          <div class="form-group">
+            <input type="checkbox" id="obsidianEnabled" aria-describedby="obsidianEnabledHelp">
+            <label for="obsidianEnabled" class="inline-label" data-i18n="obsidianEnabledLabel">Obsidian を使う</label>
+            <div id="obsidianEnabledHelp" class="help-text" data-i18n="obsidianEnabledHelp">OFF の場合、記録は SQLite のみに保存されます。</div>
+          </div>
+
           <div class="form-group">
             <label for="apiKey" data-i18n="obsidianApiKey">Obsidian API Key</label>
             <input type="password" id="apiKey" data-i18n-input-placeholder="apiKeyPlaceholder">
@@ -169,7 +176,7 @@
         </div>
 
         <!-- 詳細設定（折りたたみ） -->
-        <details class="advanced-details">
+        <details id="obsidianSettingsDetails" class="advanced-details">
           <summary class="advanced-details-summary" data-i18n="advancedSettings">詳細設定（Protocol / Port / Daily Note Path）</summary>
           <div class="advanced-details-content">
             <div class="form-group">

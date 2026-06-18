@@ -476,6 +476,15 @@
   "success": {
     "message": "✓ Obsidianに保存しました"
   },
+  "successObsidian": {
+    "message": "✓ AI要約をObsidianに記録しました"
+  },
+  "successLocal": {
+    "message": "✓ AI要約を記録しました"
+  },
+  "successAiFailed": {
+    "message": "✓ AI要約に失敗 — 記録しました"
+  },
   "aiTagsLabel": {
     "message": "AIタグ"
   },
@@ -1468,6 +1477,12 @@
   },
   "obsidianSection": {
     "message": "Obsidian 接続"
+  },
+  "obsidianEnabledLabel": {
+    "message": "Obsidian を使う"
+  },
+  "obsidianEnabledHelp": {
+    "message": "OFF の場合、記録は SQLite のみに保存されます。"
   },
   "advancedSettings": {
     "message": "詳細設定（Protocol / Port / Daily Note Path）"
@@ -2477,6 +2492,48 @@
         "example": "42"
       }
     }
+  },
+  "historySelectAll": {
+    "message": "全選択"
+  },
+  "historyClearSelection": {
+    "message": "選択解除"
+  },
+  "historySelectionCount": {
+    "message": "$COUNT$件選択中",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "historySelectRecord": {
+    "message": "この記録を選択"
+  },
+  "historyAppendToObsidian": {
+    "message": "選択した記事を Obsidian に追記"
+  },
+  "historyAppendSuccess": {
+    "message": "$COUNT$件を Obsidian に追記しました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyAppendObsidianNotConfigured": {
+    "message": "Obsidian を設定してください"
+  },
+  "historyAppendFailed": {
+    "message": "追記に失敗しました"
+  },
+  "sqliteHistoryTab": {
+    "message": "履歴"
+  },
+  "sqliteHistoryDescription": {
+    "message": "SQLite に保存されたブラウジング履歴を検索・管理できます。AI要約の閲覧、スター・削除、選択した記事の Obsidian への追記が可能です。"
   },
   "historyPageInfo": {
     "message": "$TOTAL$ページ中$CURRENT$ページ",

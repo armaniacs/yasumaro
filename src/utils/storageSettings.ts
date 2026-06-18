@@ -216,6 +216,13 @@ export async function getSettings(
 
     // 旧方式: StorageKeysで定義されているキーのみを取得
     let settings = await chrome.storage.local.get(Array.from(validStorageKeys));
+
+    // Merge with 'settings' object if it exists (saveSettings writes to this object)
+    // The 'settings' object takes precedence since saveSettings always writes there
+    if (rawSettings) {
+        settings = { ...settings, ...rawSettings };
+    }
+
     const migrated = await runMigration();
     if (migrated) {
         // マイグレーション後は同じキーで再取得

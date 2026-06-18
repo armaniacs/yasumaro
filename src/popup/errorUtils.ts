@@ -419,13 +419,29 @@ export function formatDuration(ms: number): string {
  * 処理時間付き成功メッセージを生成
  * @param totalDuration - 全体処理時間 (ms)
  * @param aiDuration - AI処理時間 (ms, optional)
+ * @param obsidianSaved - Obsidianに保存されたか (optional)
  * @returns フォーマットされたメッセージ
  */
 export function formatSuccessMessage(
   totalDuration: number,
-  aiDuration?: number
+  aiDuration?: number,
+  obsidianSaved?: boolean
 ): string {
-  const baseMessage = getMsgWithCache('success'); // "✓ Saved to Obsidian"
+  // AI要約の成否に応じてベースメッセージを選択
+  const aiSucceeded = aiDuration !== undefined && aiDuration > 0;
+  let baseMessage: string;
+
+  if (!aiSucceeded) {
+    // AI要約に失敗した場合
+    baseMessage = getMsgWithCache('successAiFailed');
+  } else if (obsidianSaved) {
+    // AI要約成功 + Obsidianに保存
+    baseMessage = getMsgWithCache('successObsidian');
+  } else {
+    // AI要約成功 + Obsidianに未保存（ローカル保存）
+    baseMessage = getMsgWithCache('successLocal');
+  }
+
   const totalTime = formatDuration(totalDuration);
 
   if (aiDuration !== undefined && aiDuration > 0) {

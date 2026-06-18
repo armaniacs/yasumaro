@@ -663,6 +663,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
       limit: options.limit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
+      ids: options.ids,
     });
     if (opfsResult !== null) return { success: true, rows: opfsResult.rows, total: opfsResult.total };
 
@@ -699,6 +700,11 @@ export async function query(options: QueryOptions = {}): Promise<{
     if (options.until !== undefined) {
       conditions.push('created_at <= ?');
       params.push(options.until);
+    }
+    if (options.ids !== undefined && Array.isArray(options.ids) && options.ids.length > 0) {
+      const placeholders = options.ids.map(() => '?').join(',');
+      conditions.push(`id IN (${placeholders})`);
+      params.push(...options.ids);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

@@ -12,6 +12,7 @@ export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
     OBSIDIAN_PROTOCOL: 'obsidian_protocol', // 'http' or 'https'
     OBSIDIAN_PORT: 'obsidian_port',
+    OBSIDIAN_ENABLED: 'obsidian_enabled', // true | false
     GEMINI_API_KEY: 'gemini_api_key',
     MIN_VISIT_DURATION: 'min_visit_duration',
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
@@ -185,6 +186,7 @@ export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
     [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.OBSIDIAN_ENABLED]: boolean;
     [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;

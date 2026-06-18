@@ -11,6 +11,7 @@ import {
   deleteLog,
   getLogCount,
   getSqliteStatus,
+  appendToLogs,
 } from './dashboardSqliteService.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -32,6 +33,7 @@ interface SqliteHistoryState {
   loading: boolean;
   error: string | null;
   fallbackMode: boolean;
+  selectedIds: Set<number>;
 }
 
 let state: SqliteHistoryState = {
@@ -43,6 +45,7 @@ let state: SqliteHistoryState = {
   loading: false,
   error: null,
   fallbackMode: false,
+  selectedIds: new Set(),
 };
 
 // ============================================================================
@@ -107,6 +110,8 @@ async function loadData(options: {
     if (result) {
       state.entries = result.rows;
       state.total = result.total;
+      // Reset selection when entries change (search, pagination, date)
+      state.selectedIds.clear();
     } else {
       state.error = t('historyLoadError');
       state.entries = [];
@@ -186,7 +191,69 @@ async function handleDelete(id: number): Promise<void> {
   if (ok) {
     state.entries = state.entries.filter(e => e.id !== id);
     state.total = Math.max(0, state.total - 1);
+    state.selectedIds.delete(id);
     renderEntryList();
+    updateBulkBar();
+  }
+}
+
+function updateBulkBar(): void {
+  const bar = document.getElementById('sqlite-bulk-bar');
+  const selectAll = document.getElementById('sqlite-select-all') as HTMLInputElement | null;
+  const countEl = document.getElementById('sqlite-selection-count');
+  const appendBtn = document.getElementById('sqlite-append-obsidian') as HTMLButtonElement | null;
+
+  if (bar) {
+    bar.style.display = state.selectedIds.size > 0 ? '' : 'none';
+  }
+
+  if (selectAll) {
+    selectAll.checked = state.entries.length > 0 && state.selectedIds.size === state.entries.length;
+  }
+
+  if (countEl) {
+    countEl.textContent = t('historySelectionCount', [String(state.selectedIds.size)]);
+  }
+
+  if (appendBtn) {
+    appendBtn.disabled = state.selectedIds.size === 0;
+  }
+}
+
+async function handleAppendToObsidian(): Promise<void> {
+  if (state.selectedIds.size === 0) return;
+
+  const ids = Array.from(state.selectedIds);
+  const result = await appendToLogs(ids);
+
+  if (result === null) {
+    // API Key not configured or connection error
+    chrome.notifications?.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
+      title: t('historyAppendToObsidian'),
+      message: t('historyAppendObsidianNotConfigured'),
+    });
+    return;
+  }
+
+  if (result.success) {
+    state.selectedIds.clear();
+    updateBulkBar();
+    renderEntryList();
+    chrome.notifications?.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
+      title: t('historyAppendToObsidian'),
+      message: t('historyAppendSuccess', [String(ids.length)]),
+    });
+  } else {
+    chrome.notifications?.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
+      title: t('historyAppendToObsidian'),
+      message: t('historyAppendFailed'),
+    });
   }
 }
 
@@ -242,6 +309,15 @@ function renderState(): void {
         ${escapeHtml(state.error || '')}
       </div>
     </div>
+    <div id="sqlite-bulk-bar" class="sqlite-bulk-bar" style="${state.selectedIds.size > 0 ? '' : 'display:none'}">
+      <label class="sqlite-bulk-select-all">
+        <input type="checkbox" id="sqlite-select-all" aria-label="${t('historySelectAll')}">
+        <span data-i18n="historySelectAll">${t('historySelectAll')}</span>
+      </label>
+      <button type="button" id="sqlite-clear-selection" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
+      <span id="sqlite-selection-count" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(state.selectedIds.size)])}</span>
+      <button type="button" id="sqlite-append-obsidian" class="primary-btn" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
+    </div>
     <div id="sqlite-entry-list" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -262,6 +338,36 @@ function renderState(): void {
     }, 300));
     searchInput.focus();
   }
+
+  // Wire bulk action bar
+  const selectAllCheckbox = document.getElementById('sqlite-select-all') as HTMLInputElement | null;
+  const clearSelectionBtn = document.getElementById('sqlite-clear-selection') as HTMLButtonElement | null;
+  const appendBtn = document.getElementById('sqlite-append-obsidian') as HTMLButtonElement | null;
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.checked = state.selectedIds.size > 0 && state.selectedIds.size === state.entries.length;
+    selectAllCheckbox.addEventListener('change', () => {
+      if (selectAllCheckbox.checked) {
+        state.entries.forEach(e => state.selectedIds.add(e.id));
+      } else {
+        state.selectedIds.clear();
+      }
+      updateBulkBar();
+      renderEntryList();
+    });
+  }
+
+  if (clearSelectionBtn) {
+    clearSelectionBtn.addEventListener('click', () => {
+      state.selectedIds.clear();
+      updateBulkBar();
+      renderEntryList();
+    });
+  }
+
+  if (appendBtn) {
+    appendBtn.addEventListener('click', handleAppendToObsidian);
+  }
 }
 
 function renderEntryList(): void {
@@ -276,6 +382,9 @@ function renderEntryList(): void {
   listEl.innerHTML = state.entries.map(entry => `
     <div class="sqlite-entry" data-id="${entry.id}">
       <div class="sqlite-entry-header">
+        <input type="checkbox" class="sqlite-entry-checkbox" data-action="select"
+               data-id="${entry.id}" ${state.selectedIds.has(entry.id) ? 'checked' : ''}
+               aria-label="${t('historySelectRecord')}">
         <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
                 data-action="star" title="${t('historyToggleStar')}" 
                 aria-pressed="${entry.is_starred}" aria-label="${t('historyToggleStar')}">★</button>
@@ -293,6 +402,18 @@ function renderEntryList(): void {
   `).join('');
 
   // Wire action buttons
+  listEl.querySelectorAll('[data-action="select"]').forEach((el) => {
+    const id = Number((el as HTMLElement).getAttribute('data-id'));
+    el.addEventListener('change', () => {
+      const checkbox = el as HTMLInputElement;
+      if (checkbox.checked) {
+        state.selectedIds.add(id);
+      } else {
+        state.selectedIds.delete(id);
+      }
+      updateBulkBar();
+    });
+  });
   listEl.querySelectorAll('[data-action="star"]').forEach((el, i) => {
     el.addEventListener('click', () => handleToggleStar(state.entries[i].id));
   });

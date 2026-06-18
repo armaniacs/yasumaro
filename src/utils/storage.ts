@@ -607,6 +607,12 @@ export async function getSettings(): Promise<Settings> {
         }
         const merged = { ...DEFAULT_SETTINGS, ...filteredSettings };
 
+        // obsidian_enabled が未設定の場合、obsidian_api_key の有無で初期化（既存ユーザー向けマイグレーション）
+        if (!(StorageKeys.OBSIDIAN_ENABLED in filteredSettings)) {
+            const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+            merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
+        }
+
         // 暗号化されたAPIキーを復号
         try {
             const key = await getOrCreateEncryptionKey();
@@ -635,6 +641,13 @@ export async function getSettings(): Promise<Settings> {
     // 旧方式: StorageKeysで定義されているキーのみを取得
     const keysToGet: string[] = Object.values(StorageKeys);
     let settings = await chrome.storage.local.get(keysToGet);
+
+    // Merge with 'settings' object if it exists (saveSettings writes to this object)
+    // The 'settings' object takes precedence since saveSettings always writes there
+    if (rawSettings) {
+        settings = { ...settings, ...rawSettings };
+    }
+
     const migrated = await migrateUblockSettings();
     if (migrated) {
         // マイグレーション後は同じキーで再取得
@@ -654,7 +667,11 @@ export async function getSettings(): Promise<Settings> {
     }
     const merged = { ...DEFAULT_SETTINGS, ...settings };
 
-    // 暗号化されたAPIキーを復号
+    // obsidian_enabled が未設定の場合、obsidian_api_key の有無で初期化（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.OBSIDIAN_ENABLED in settings)) {
+        const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+        merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
+    }
     try {
         const key = await getOrCreateEncryptionKey();
         for (const field of API_KEY_FIELDS) {

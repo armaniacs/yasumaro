@@ -24,6 +24,7 @@
 | 2026-06-09 | PBI 初版作成（version 5.9.1 想定） |
 | 2026-06-11 | 着手ガード設定（v6.0.0 リリース直前のみ） |
 | 2026-06-17 | **現状調査反映**: version 5.9.9 へ更新、WXT 環境反映、完了済み項目（DONE）/未着手項目（TODO）マーク、ストア素材準備を P1〜P2 に分割 |
+| 2026-06-18 | **P1/P2/P3/P4 実施**: 完了済み項目を更新、手動対応項目を明記 |
 
 ---
 
@@ -39,43 +40,58 @@
 
 ---
 
-## 🔍 現状調査結果（2026-06-17 時点）
+## 🔍 現状調査結果（2026-06-18 更新）
 
-### ✅ DONE（着手済み・追加作業不要）
+### ✅ DONE（2026-06-18 時点で完了済み）
 
-| 項目 | 状態 | 確認方法 |
-|------|------|---------|
-| Manifest V3 構成 | ✅ WXT (`wxt.config.ts`) で `manifest_version: 3` 設定済み | `wxt.config.ts:8,18` |
-| バージョン番号 `5.9.9` | ✅ `package.json` と `wxt.config.ts` で一致 | `npm run build` 通過 |
-| `name` / `short_name` / `description` i18n | ✅ `__MSG_extensionName__` 等で `_locales/en/messages.json` と `_locales/ja/messages.json` 参照 | `dist/chromium-mv3/_locales/{en,ja}/messages.json` 生成確認 |
-| 拡張機能アイコン 16/48/128 px | ✅ `public/icons/icon{16,48,128}.png` に実在（`file` コマンドでピクセル寸法確認済） | `file public/icons/*.png` |
-| プライバシーポリシー | ✅ `public/PRIVACY.md`（19KB）と `docs/PRIVACY.md`（21KB、二者ともバイリンガル） | `head public/PRIVACY.md` |
-| GitHub Pages デプロイ WF | ✅ `.github/workflows/pages.yml` で `docs/` を自動デプロイ | YAML 確認 |
-| バージョン整合性チェック | ✅ `scripts/check-version-consistency.js` で `package.json` ⇔ `wxt.config.ts` 検証 | `npm run build` 内で自動実行 |
-| ビルド成功 | ✅ `dist/chromium-mv3/`（5.0MB、`manifest.json` 含む） | `ls dist/chromium-mv3/manifest.json` |
-| Chrome Web Store 審査用パーミッション正当化（コード使用実績） | ✅ 全パーミッションが `src/` 配下の実装で実際に使用されている | `grep` 結果参照 |
+| 項目 | 状態 | 備考 |
+|------|------|------|
+| Manifest V3 構成 | ✅ | WXT (`wxt.config.ts`) で `manifest_version: 3` 設定済み |
+| バージョン番号 `5.9.16` | ✅ | `package.json` と `wxt.config.ts` で一致 |
+| `name` / `short_name` / `description` i18n | ✅ | `__MSG_extensionName__` で `_locales/{en,ja}/messages.json` 参照 |
+| 拡張機能アイコン 16/48/128 px | ✅ | `public/icons/icon{16,48,128}.png` 実在確認済 |
+| プライバシーポリシー（MD） | ✅ | `public/PRIVACY.md` / `docs/PRIVACY.md` バイリンガル |
+| GitHub Pages デプロイ WF | ✅ | `.github/workflows/pages.yml` で `docs/` を自動デプロイ |
+| バージョン整合性チェック | ✅ | `scripts/check-version-consistency.js` が `npm run build` 内で自動実行 |
+| ビルド成功 | ✅ | `dist/chromium-mv3/` 生成済み（`manifest.json` 含む） |
+| パーミッション実装確認 | ✅ | 全パーミッションが `src/` 配下の実装で実際に使用 |
+| **`homepage_url` 追加** | ✅ | `wxt.config.ts` に `https://github.com/armaniacs/yasumaro` 追加済み（P3 完了） |
+| **CHANGELOG.md v6.0.0 エントリ** | ✅ | `[Unreleased]` 直下に `[6.0.0] - TBD (Chrome Web Store 初回公開)` 追加済み（P1 完了） |
+| **`docs/privacy.html` 作成** | ✅ | `docs/PRIVACY.md` を fetch して表示する SPA、ダークテーマ対応済み（P4 完了） |
+| **`docs/index.html` フッター更新** | ✅ | プライバシーリンクを `privacy.html` へ変更済み（P4 完了） |
+| **スクリーンショット撮影スクリプト** | ✅ | `dev-docs/store-assets/playwright/` に Playwright スクリプト作成済み（P2 完了） |
+| **スクリーンショット（英語版 5 枚）** | ✅ | `dev-docs/store-assets/screenshots/en/` に保存済み |
+| **スクリーンショット（日本語版 5 枚）** | ✅ | `dev-docs/store-assets/screenshots/ja/` に保存済み |
 
-### ⚠️ TODO（v6.0.0 公開前に完了必要）
+### 🖐 手動作業が必要な項目
 
-| # | 項目 | 該当フェーズ | 影響度 |
-|---|------|-------------|--------|
-| 1 | **ZIP パッケージ生成スクリプト** | P1 | 必須（審査提出物が ZIP） |
-| 2 | **PRIVACY.md 「最終更新日」更新**（v6.0.0 時点） | P1 | 必須（古日付は信頼性低下） |
-| 3 | **ストア掲載テキスト（英・日）**の確定 | P1 | 必須 |
-| 4 | **パーミッション正当化ドキュメント**（`PERMISSIONS.md`） | P1 | 必須（審査申告用） |
-| 5 | **ストア用アイコン 128x128 PNG**（透過背景推奨） | P2 | 必須（現状の `icon128.png` を流用可） |
-| 6 | **ストア用スクリーンショット（1280x800）** ×最低 1 枚 | P2 | 必須（推奨 3〜5 枚: ダッシュボード・設定・保存ログ） |
-| 7 | **`wxt.config.ts` に `homepage_url` 追加** | P3 | 推奨 |
-| 8 | **GitHub Pages でのプライバシーポリシー HTML ラッパー** | P4 | 推奨（.md 単体は text/plain のため、整形 HTML があると親切） |
-| 9 | **PRIVACY.md URL の HTTP 200 確認** | P4 | 必須 |
-| 10 | **CHANGELOG.md に v6.0.0 エントリ**（Store 公開リリース） | P1 | 必須 |
-| 11 | **`.gitignore` 確認**: `dist/`, `*.zip` が無視されているか | P1 | 推奨 |
+以下の項目はツール制約またはアカウント権限の都合上、**あなたが手動で実施してください**。
+
+| # | 項目 | タイミング | 手順 |
+|---|------|-----------|------|
+| 1 | **`git commit` → `git push`** | 今すぐ | ローカルの変更（`wxt.config.ts`, `CHANGELOG.md`, `docs/privacy.html`, `docs/index.html`, `dev-docs/store-assets/`）をコミットして `main` へマージ |
+| 2 | **`privacy.html` の HTTP 200 確認** | push 後 | ブラウザで `https://armaniacs.github.io/yasumaro/privacy.html` を開いて正常表示を確認（GitHub Actions 完了後） |
+| 3 | **スクリーンショット内容確認・選定** | 今すぐ | `dev-docs/store-assets/screenshots/en/` と `ja/` の各 5 枚を確認し、Store に掲載する枚数・組み合わせを決定 |
+| 4 | **PERMISSIONS.md 新規作成** | v6.0.0 前 | 後述のパーミッション正当化表を元に `PERMISSIONS.md` を作成。審査申告用 |
+| 5 | **PRIVACY.md「最終更新日」更新** | v6.0.0 時点 | `public/PRIVACY.md` と `docs/PRIVACY.md` の最終更新日を v6.0.0 リリース日に変更 |
+| 6 | **ZIP パッケージ生成** | v6.0.0 後 | `cd dist/chromium-mv3 && zip -r ../../yasumaro-6.0.0.zip .` または `build:store` スクリプト整備 |
+| 7 | **Developer Dashboard 登録** | v6.0.0 後 | $5 登録料支払い、「新規アイテム」作成、ZIP アップロード、審査提出 |
+
+### ⚠️ まだ着手していない項目（v6.0.0 前に完了）
+
+| # | 項目 | 優先度 |
+|---|------|--------|
+| 1 | `PERMISSIONS.md` 新規作成（9 パーミッション全正当化） | 必須 |
+| 2 | `PRIVACY.md` 最終更新日更新（v6.0.0 リリース日） | 必須 |
+| 3 | ZIP 生成スクリプト（`package.json` に `build:store` 追加） | 必須 |
+| 4 | `.gitignore` に `*.zip` 追記（未確認） | 推奨 |
 
 ### 🟡 補足
 
-- **GitHub リポジトリ**: `https://github.com/armaniacs/yasumaro`（`origin` 設定で確定）
-- **GitHub Pages URL**: `https://armaniacs.github.io/yasumaro/PRIVACY.md`（.nojekyll 有効、text/plain 配信）
-- **審査期間の注意**: 2026 年時点で Chrome Web Store は新規審査に 3〜8 週かかる場合あり。公開予定日の 4 週間前には ZIP アップロードを完了させること
+- **GitHub リポジトリ**: `https://github.com/armaniacs/yasumaro`
+- **GitHub Pages Privacy URL**: `https://armaniacs.github.io/yasumaro/privacy.html`（push 後に HTTP 200 要確認）
+- **スクリーンショット撮影シーン**: 01_dashboard_calendar / 02_entry_detail / 03_popup_recording / 04_ai_provider_settings / 05_fts_search
+- **審査期間**: 新規審査に 3〜8 週かかる場合あり。公開予定日の **4 週間前** には ZIP アップロードを完了させること
 
 ---
 
@@ -120,55 +136,52 @@ Scenario: Developer Dashboard への登録準備が完了している
 
 ---
 
-## 受け入れ基準（P1〜P4 = 即時着手可、P5 = v6.0.0 後）
+## 受け入れ基準（2026-06-18 時点の状態）
 
-### P1: ドキュメント整備（即時着手可）
+凡例: ✅ 完了済み（自動）｜🖐 手動作業が必要｜⬜ 未着手
 
-- [ ] `PERMISSIONS.md` を新規作成し、9 種類のパーミッションすべての正当化理由を記載
-- [ ] `PRIVACY.md` の「最終更新日」を v6.0.0 リリース日に更新
-- [ ] `docs/PRIVACY.md` も同期
-- [ ] ストア掲載用の説明文（英・日）を確定（後述の「ストア掲載テキスト」セクション参照）
-- [ ] `package.json` に `build:store` スクリプト追加（`wxt build` → ZIP 化）
-- [ ] `.gitignore` に `*.zip` が含まれているか確認（無ければ追加）
-- [ ] `scripts/build-store-zip.mjs`（または `.js`）を新規作成
-- [ ] CHANGELOG.md の `[Unreleased]` に v6.0.0 エントリを追加（P5 で日付確定）
+### P1: ドキュメント整備
 
-### P2: ストア用素材（即時着手可）
+- ✅ CHANGELOG.md の `[Unreleased]` に v6.0.0 エントリを追加
+- ⬜ `PERMISSIONS.md` を新規作成し、9 種類のパーミッションすべての正当化理由を記載
+- ⬜ `PRIVACY.md` の「最終更新日」を v6.0.0 リリース日に更新
+- ⬜ `docs/PRIVACY.md` も同期
+- ⬜ ストア掲載用の説明文（英・日）を確定（後述の「ストア掲載テキスト」セクション参照）
+- ⬜ `package.json` に `build:store` スクリプト追加（`wxt build` → ZIP 化）
+- ⬜ `.gitignore` に `*.zip` が含まれているか確認（無ければ追加）
+- ⬜ `scripts/build-store-zip.mjs`（または `.js`）を新規作成
 
-- [ ] ストアアイコン 128x128 PNG を確認（既存 `public/icons/icon128.png` を流用予定）
-- [ ] ストア用スクリーンショットを 3 枚以上用意:
-  - [ ] ダッシュボード（カレンダー + タイムライン）
-  - [ ] 設定画面（AI プロバイダー + ドメインワイプリスト）
-  - [ ] ポップアップ（記録ステータス）
-  - [ ] （任意）データエクスポート画面
-- [ ] スクリーンショットを `dev-docs/store-assets/` ディレクトリに配置
-- [ ] 全画像が 1280x800 ピクセル、PNG または JPEG
+### P2: ストア用素材
 
-### P3: `wxt.config.ts` 最終調整（即時着手可）
+- ✅ ストアアイコン 128x128 PNG 確認（`public/icons/icon128.png` を流用）
+- ✅ Playwright スクリーンショット撮影スクリプト作成（`dev-docs/store-assets/playwright/`）
+- ✅ スクリーンショット英語版 5 枚（`dev-docs/store-assets/screenshots/en/`）
+- ✅ スクリーンショット日本語版 5 枚（`dev-docs/store-assets/screenshots/ja/`）
+- 🖐 **スクリーンショット内容確認・使用枚数の選定**（あなたが手動で確認）
 
-- [ ] `homepage_url: "https://github.com/armaniacs/yasumaro"` を追加
-- [ ] パーミッション正当化コメントを `wxt.config.ts` 内にインラインで記載
-- [ ] `developer` フィールド（任意）を追加検討（GitHub URL と同じでも可）
-- [ ] `webRequest` パーミッションの用途を再評価（`headerDetector.ts` での Set-Cookie/Cache-Control 検出専用であることを確認）
-- [ ] `unlimitedStorage` が必要か再評価（OPFS 利用で chrome.storage の quota は不要の可能性）
+### P3: `wxt.config.ts` 最終調整
 
-### P4: GitHub Pages 用 HTML ラッパー（即時着手可）
+- ✅ `homepage_url: "https://github.com/armaniacs/yasumaro"` 追加済み
+- ⬜ パーミッション正当化コメントを `wxt.config.ts` 内にインラインで記載（任意）
+- ⬜ `webRequest` / `unlimitedStorage` の要否最終確認（任意）
 
-- [ ] `docs/privacy.html` を新規作成（マークダウンを HTML で装飾してラップ）
-- [ ] `docs/index.html` のフッターに Privacy Policy リンクを追加（既存の場合は確認）
-- [ ] `https://armaniacs.github.io/yasumaro/privacy.html` の HTTP 200 確認
-- [ ] GitHub Pages のデプロイ成功を確認（Actions タブ）
+### P4: GitHub Pages 用 HTML ラッパー
 
-### P5: 審査提出（v6.0.0 後）
+- ✅ `docs/privacy.html` 新規作成（PRIVACY.md を fetch して表示する SPA、ダークテーマ）
+- ✅ `docs/index.html` フッターのプライバシーリンクを `privacy.html` に変更
+- 🖐 **`git commit` → `git push` → `main` へマージ**（あなたが手動で実施）
+- 🖐 **`https://armaniacs.github.io/yasumaro/privacy.html` の HTTP 200 確認**（push 後にブラウザで確認）
 
-- [ ] v6.0.0 リリースタグ打設（GitHub Release / CHANGELOG 同期）
-- [ ] Chrome Web Store Developer Dashboard（$5 登録料）で「新規アイテム」を作成
-- [ ] ZIP ファイル（`yasumaro-6.0.0.zip`）をアップロード
-- [ ] プライバシーポリシー URL（`https://armaniacs.github.io/yasumaro/privacy.html`）を入力
-- [ ] アイコン・スクリーンショットをアップロード
-- [ ] カテゴリ・言語・公開範囲を設定
-- [ ] 「審査のために送信」をクリック
-- [ ] 審査結果通知（3〜8 週待ち）を待つ
+### P5: 審査提出（v6.0.0 後）—すべて手動
+
+- 🖐 v6.0.0 リリースタグ打設（GitHub Release / CHANGELOG 同期）
+- 🖐 Chrome Web Store Developer Dashboard（$5 登録料）で「新規アイテム」を作成
+- 🖐 ZIP ファイル（`yasumaro-6.0.0.zip`）を生成してアップロード
+- 🖐 プライバシーポリシー URL（`https://armaniacs.github.io/yasumaro/privacy.html`）を入力
+- 🖐 アイコン・スクリーンショットをアップロード
+- 🖐 カテゴリ・言語・公開範囲を設定
+- 🖐 「審査のために送信」をクリック
+- 🖐 審査結果通知（3〜8 週待ち）を待つ
 
 ---
 
@@ -384,14 +397,19 @@ Uninstalling the extension removes all your data.
 
 ## Definition of Done
 
-- [ ] P1〜P4 がすべて完了し、`main` ブランチにマージ済み
-- [ ] `npm run build:store` が正常終了し、`yasumaro-X.Y.Z.zip` が生成される
-- [ ] `https://armaniacs.github.io/yasumaro/privacy.html`（または `PRIVACY.md`）が HTTP 200 を返す
-- [ ] PERMISSIONS.md が 9 パーミッションすべてを網羅
-- [ ] ストア用アイコン・スクリーンショットが `dev-docs/store-assets/` に揃っている
-- [ ] v6.0.0 リリースタグ打設後（P5）:
-  - [ ] Chrome Web Store Developer Dashboard でアイテムを「下書き保存」できた
-  - [ ] 審査提出完了（または提出準備完了の確認）
-  - [ ] 審査通過後、ストアで公開
-  - [ ] CHANGELOG.md に v6.0.0（Chrome Web Store 初回公開）エントリが記載
-- [ ] コードレビュー完了
+凡例: ✅ 完了済み｜🖐 手動作業（あなたが実施）｜⬜ 未着手
+
+- ✅ CHANGELOG.md に v6.0.0 エントリが記載
+- ✅ `wxt.config.ts` に `homepage_url` 追加済み
+- ✅ `docs/privacy.html` 作成済み
+- ✅ スクリーンショット（英語版・日本語版 各 5 枚）が `dev-docs/store-assets/screenshots/` に揃っている
+- 🖐 **`git commit` → `git push` → `main` マージ**（P1〜P4 変更を反映）
+- 🖐 **`https://armaniacs.github.io/yasumaro/privacy.html` が HTTP 200 を返す**（push 後確認）
+- 🖐 **スクリーンショット内容確認・選定完了**
+- ⬜ `PERMISSIONS.md` が 9 パーミッションすべてを網羅
+- ⬜ `PRIVACY.md` 最終更新日が v6.0.0 リリース日に更新済み
+- ⬜ `npm run build:store` が正常終了し、`yasumaro-X.Y.Z.zip` が生成される
+- ⬜ v6.0.0 リリースタグ打設後（P5）:
+  - 🖐 Chrome Web Store Developer Dashboard でアイテムを「下書き保存」できた
+  - 🖐 審査提出完了
+  - 🖐 審査通過後、ストアで公開

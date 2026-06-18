@@ -109,8 +109,7 @@ export class RecordingPipeline {
       },
       {
         name: 'saveObsidian',
-        errorStrategy: ErrorStrategy.RETRY,
-        maxRetries: 3,
+        errorStrategy: ErrorStrategy.BEST_EFFORT,
         execute: this.createSaveToObsidianStep()
       },
       {
@@ -195,7 +194,9 @@ export class RecordingPipeline {
       settings,
       force: data.force || false,
       aiClient: this.aiClient,
-      errors: []
+      errors: [],
+      // alreadyProcessed 時にプレビューから AI 処理時間を伝播
+      aiDuration: data.aiDuration
     };
 
     // Execute each step
@@ -353,6 +354,7 @@ export class RecordingPipeline {
       originalTokens: privacyResult?.originalTokens,
       cleansedTokens: privacyResult?.cleansedTokens,
       aiDuration,
+      obsidianDuration: context.obsidianDuration,
       title: data.title,
       url: data.url
     };

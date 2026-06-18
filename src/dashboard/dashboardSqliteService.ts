@@ -287,3 +287,20 @@ export async function importLogs(rows: Array<{
     return null;
   }
 }
+
+/**
+ * Append selected log entries to Obsidian daily note.
+ * Read-only on SQLite — no confirm token needed.
+ */
+export async function appendToLogs(ids: number[]): Promise<{ success: boolean; appended?: number; error?: string } | null> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'append_to_obsidian', ids });
+    if (response.success) {
+      return { success: true, appended: Number(response.appended || ids.length) };
+    }
+    return { success: false, error: response.error ? String(response.error) : 'Append failed' };
+  } catch (error) {
+    console.error('appendToLogs failed:', error);
+    return null;
+  }
+}

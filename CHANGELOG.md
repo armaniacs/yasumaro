@@ -10,13 +10,150 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-## [6.0.0] - 2026-XX-XX (予定 / Planned)
+## [6.0.0] - TBD (Chrome Web Store 初回公開)
 
 ### Added / 追加
 
-- **Chrome Web Store 公開準備（PBI-08: P1〜P4 完了、P5 は審査提出時）**
-  - `scripts/build-store-zip.mjs` を新規追加（`dist/chromium-mv3/` を ZIP 化、ソースマップ・`.bak*`・`__tests__` ディレクトリを自動除外）
-  - `scripts/__tests__/build-store-zip.test.ts` を新規追加（33 テストケース、ZIP 内容の整合性検証）
+- **Chrome Web Store 初回公開** — 世界中の Chrome ユーザーが Web Store から直接インストール可能に
+- **`homepage_url`** を `wxt.config.ts` に追加 (`https://github.com/armaniacs/yasumaro`)
+- **`PERMISSIONS.md`** — 9 種類のパーミッション正当化ドキュメントを新規作成（審査用）
+- **`scripts/build-store-zip.mjs`** — Chrome Web Store 提出用 ZIP 生成スクリプト
+- **`npm run build:store`** — ビルド + ZIP 化を一括実行するスクリプト
+
+### Chores / その他
+
+- **バージョン 5.9.x → 6.0.0**（Chrome Web Store 公式リリースに合わせてメジャーバージョンアップ）
+
+## [5.9.16] - 2026-06-18
+
+### Fixed / 修正
+
+- **POPUP の記録完了メッセージを状況に応じて表示するよう修正**
+  - Obsidian 無効時に「✓ Obsidianに保存しました」と誤表示される問題を修正
+  - AI要約成功 + Obsidian有効: 「✓ AI要約をObsidianに記録しました」
+  - AI要約成功 + Obsidian無効: 「✓ AI要約を記録しました」
+  - AI要約失敗時: 「✓ AI要約に失敗 — 記録しました」
+  - `formatSuccessMessage` に第3引数 `obsidianSaved` を追加
+  - `RecordingResult` に `obsidianDuration` フィールドを追加し、Obsidian 保存の有無を伝播
+  - PII確認フロー (`SAVE_RECORD`) で `aiDuration` が失われる問題を修正
+    - `PreviewResponse` に `aiDuration` を追加
+    - `SaveRecordMessage` ペイロードに `aiDuration` を追加し、プレビュー段階のAI処理時間を保存ステップに伝播
+
+### Chores / その他
+
+- **バージョン 5.9.15 → 5.9.16**
+
+## [5.9.15] - 2026-06-18
+
+### Fixed / 修正
+
+- レビュー指摘対応（3件修正、1件調査完了）
+  - `append_to_obsidian` の10000件フルテーブルスキャンを `QueryOptions.ids` 追加によりターゲットクエリに変更（4レイヤー: 型定義・SQLiteClient・Offscreen・sqlite.ts を一貫修正）
+  - Service Worker の `init()` 関数から重複イベントリスナー登録を削除（module-level で一元化）
+  - `append_to_obsidian` が暗号化API Key を生ストレージから直接読み取っていた問題を `getSettings()` 使用に修正
+  - `append_to_obsidian` に `OBSIDIAN_ENABLED` フラグチェックを追加
+  - i18n 不足キー `sqliteHistoryTab` / `sqliteHistoryDescription` を ja/en に追加
+  - AIプロバイダー地理的バイアスは調査の結果、誤検出と判定（40+ドメインがCSPで許可済み、任意Base URLが利用可能）
+  - レビューレポート: `plans/2026-06-17-2024-review-feature-non-obsidian.md`
+
+- **手動追記が OBSIDIAN_ENABLED フラグで誤ってブロックされる問題を修正**
+  - `OBSIDIAN_ENABLED` は「自動記録時に Obsidian にも書く」設定であり、履歴パネルからの手動追記には関係しない
+  - `append_to_obsidian` ハンドラから `OBSIDIAN_ENABLED === false` ガードを削除
+
+- **手動追記で選択した記事と異なる記事が Obsidian に送られる問題を修正**
+  - `opfsWorker.ts` の `QueryPayload` インターフェースと `handleQuery` 関数に `ids` フィールドが欠落していた
+  - OPFS ワーカー経由の場合、ID フィルタが無視されて `ORDER BY created_at DESC` の先頭件が返されていた
+  - `sqlite.ts` の `tryOpfsProxy` 呼び出し、`opfsWorker.ts` の `QueryPayload`・`handleQuery` に `ids` を追加
+
+- **手動追記時のタイムスタンプをオリジナルの記録時刻から追記した現在時刻に変更**
+  - `obsidianFormatter.ts` でエントリの `created_at` ではなく `Date.now()` を使用するよう修正
+
+### Chores / その他
+
+- **バージョン 5.9.14 → 5.9.15**
+
+## [5.9.14] - 2026-06-17
+
+### Fixed / 修正
+
+- **E2Eテストの jsdom 化**: `testDir/e2e/sqlite-history-selection.spec.ts` はダッシュボードが Chrome 拡張 API に依存するため `file://` で動作せず全24テスト失敗。代わりに `src/dashboard/__tests__/sqliteHistoryPanel-selection-ui.test.ts` を jsdom 環境で作成し 13 テストを安定稼働
+
+### Chores / その他
+
+- **バージョン 5.9.13 → 5.9.14**
+
+## [5.9.13] - 2026-06-17
+
+### Tests / テスト追加
+
+- **テストカバレッジ監査と改善（6ギャップ対応）**:
+  - `dashboardSqliteHandlers-append.test.ts`（新規 10 件）: `append_to_obsidian` ハンドラの全パス（空IDs、API Key未設定、存在しないIDs、成功/失敗、ページ跨りフィルタ、混在IDs）
+  - `sqliteClient-unit.test.ts`（新規 17 件）: SqliteClient の全CRUD操作、getStatus、clearAll、toggleStar、insertBatch、offscreen文書管理
+  - `sqliteHistoryPanel-selection-ui.test.ts`（新規 13 件）: SQLite History 選択UI のDOM構造、ARIA属性、i18n属性
+  - `pbi18-selective-obsidian-append.test.ts`（追記 5 件）: エッジケース（長いタイトル、特殊文字URL、空summary、改行正規化、スペース正規化）
+  - `saveToObsidianStep.test.ts`（追記 3 件）: フラグ未定義フォールバック、フラグ優先判定
+  - 合計 53 テスト追加（5805 → 5858）
+
+### Chores / その他
+
+- **バージョン 5.9.12 → 5.9.13**
+
+## [5.9.12] - 2026-06-17
+
+### Added / 追加
+
+- **ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加（PBI-17）**
+  - `StorageKeys.OBSIDIAN_ENABLED` を新規追加（デフォルト: `false`）
+  - ダッシュボードの初期設定パネルに「Obsidian を使う」チェックボックスを設置
+  - チェックボックス ON/OFF で Obsidian 接続セクションの展開/折りたたみを制御
+  - `getSettings()` に既存ユーザー向けマイグレーション判定を追加（API Key 有無で初期値を自動決定）
+  - `saveToObsidianStep` に `OBSIDIAN_ENABLED === false` でスキップするフラグ判定を追加（フラグ優先）
+  - 日本語・英語の i18n メッセージを追加
+
+- **SQLite History から選択した記事を Obsidian に追記する機能（PBI-18）**
+  - `formatEntriesToMarkdown()` 純粋関数を新設（BrowsingLogEntry → Obsidian markdown 変換）
+  - SQLite History の各行に選択チェックボックスを追加
+  - 一括バー（全選択/解除/件数表示/追記ボタン）を追加
+  - `appendToLogs()` サービス関数を追加（Dashboard → SW メッセージング）
+  - `append_to_obsidian` ハンドラを SW 側に追加（API Key チェック → SQLite 読み取り → markdown 整形 → Obsidian 追記）
+  - 追記成功/失敗を通知で表示
+  - 選択状態はページ遷移・検索・日付変更で自動リセット
+  - 日本語・英語の i18n メッセージを追加（7キー）
+
+### Tests / テスト追加
+
+- PBI-17 テスト 16 件: ストレージキー定義、マイグレーション判定、saveToObsidianStep フラグ判定、ダッシュボード UI 連動
+- PBI-18 テスト 16 件: formatEntriesToMarkdown 整形、appendToLogs メッセージング
+
+### Chores / その他
+
+- **バージョン 5.9.11 → 5.9.12**
+
+## [5.9.11] - 2026-06-17
+
+### Added / 追加
+
+- **Obsidian非依存のAIテスト・録画動作（PBI-16）**
+  - `handleTestAi` に自動保存ロジックを追加（テスト前に設定をストレージに保存し、正しいAPIキーが読み取られるように）
+  - `saveToObsidianStep` にObsidian未設定時のスキップロジックを追加（APIキーが16文字未満または未設定の場合にスキップ）
+  - `saveObsidian` ステップのエラー戦略を `RETRY` → `BEST_EFFORT` に変更（Obsidian接続エラー時もパイプラインが継続し、SQLite保存が実行される）
+  - `getSettings()` 旧パスで `settings` オブジェクトをマージ修正（`saveSettings` 書き込み先と読み込み先の不一致を解消）
+  - `CSPValidator` を毎回再初期化するよう修正（設定変更後のドメイン許可リスト更新が反映されるように）
+  - `CSPValidator` に全プロバイダー Base URL ドメイン（openai, openai2, lm-studio, ollama）を追加
+  - `GeminiProvider` に HTTP 401/403/429/500 エラーハンドリングを追加
+  - テスト15件を追加（統合2件、単体5件、CSP 8件）
+
+### Chores / その他
+
+- **バージョン 5.9.10 → 5.9.11**
+
+## [5.9.10] - 2026-06-17
+
+### Added / 追加
+
+- **Chrome Web Store 公開準備（PBI-08: P1 完了、P2〜P4 は次フェーズ、P5 は審査提出時）**
+  - `scripts/build-store-zip.mjs` を新規追加（`dist/chromium-mv3/` を ZIP 化、ソースマップ・`.bak*`・`__tests__` ディレクトリを自動除外、ZIP 整合性検証機能付き）
+  - `scripts/__tests__/build-store-zip.test.ts` を新規追加（33 テストケース）
   - `package.json` に `build:store` スクリプト追加（バージョン整合性チェック → WXT ビルド → ZIP 生成を一度に実行）
   - `PERMISSIONS.md` を新規作成（9 種類のパーミッション正当化理由を Chrome Web Store 審査向けに文書化）
   - プライバシーポリシー (`PRIVACY.md` および `docs/PRIVACY.md`) の最終更新日を 2026-06-17 に更新
@@ -24,7 +161,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
-- **バージョン 5.9.9 → 6.0.0**（メジャー番号の更新 = 公式 Chrome Web Store 公開の節目）
+- **バージョン 5.9.9 → 5.9.10**
 
 ## [5.9.9] - 2026-06-17
 

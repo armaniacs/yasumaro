@@ -14,7 +14,8 @@ import {
     migrateToSingleSettingsObject,
     updateDomainFilterCache,
     lockSession,
-    StorageKeys
+    StorageKeys,
+    clearSettingsCache
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { SqliteClient } from './sqliteClient.js';
@@ -78,22 +79,6 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
-    // Message listener
-    chrome.runtime.onMessage.addListener(createMessageHandler());
-
-    // Tab event listeners
-    chrome.tabs.onRemoved.addListener(handleTabRemoved);
-    chrome.tabs.onActivated.addListener(handleTabActivated);
-    chrome.tabs.onUpdated.addListener(handleTabUpdated);
-
-    // Extension lifecycle listeners
-    chrome.runtime.onInstalled.addListener(handleInstalled);
-    chrome.runtime.onStartup.addListener(handleStartup);
-
-    // Notification listeners
-    chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
-    chrome.notifications.onClicked.addListener(handleNotificationClicked);
-
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 
@@ -476,6 +461,7 @@ export async function handleSaveRecord(
         force: message.payload.force,
         recordType: 'manual',
         maskedCount: message.payload.maskedCount,
+        aiDuration: message.payload.aiDuration,
         pageBytes: message.payload.pageBytes,
         candidateBytes: message.payload.candidateBytes,
         originalBytes: message.payload.originalBytes,
@@ -585,6 +571,8 @@ export async function handleTestAi(
     message: TestAiMessage,
     sendResponse: (response?: unknown) => void
 ): Promise<void> {
+    // Force clear settings cache to ensure we read fresh settings
+    clearSettingsCache();
     const aiResult = await aiClient.testConnection();
     sendResponse({ success: true, ai: aiResult });
 }
