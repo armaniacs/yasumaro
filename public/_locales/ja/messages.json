@@ -2032,13 +2032,13 @@
     "message": "ドメイン名を入力してください"
   },
   "sensitiveInvalidDomain": {
-    "message": "Invalid domain format"
+    "message": "無効なドメイン形式です"
   },
   "sensitiveDuplicate": {
-    "message": "Domain already exists"
+    "message": "ドメインはすでに登録されています"
   },
   "sensitiveAdded": {
-    "message": "Domain added"
+    "message": "ドメインを追加しました"
   },
   "whitelistSection": {
     "message": "ホワイトリスト（信頼済み除外）"
@@ -2053,13 +2053,13 @@
     "message": "除外するドメイン名を入力してください"
   },
   "whitelistInvalidDomain": {
-    "message": "Invalid domain format"
+    "message": "無効なドメイン形式です"
   },
   "whitelistDuplicate": {
-    "message": "Domain already exists"
+    "message": "ドメインはすでに登録されています"
   },
   "whitelistAdded": {
-    "message": "Domain added"
+    "message": "ドメインを追加しました"
   },
   "alertSettingsSection": {
     "message": "警告設定"
@@ -2086,7 +2086,7 @@
     "message": "追加"
   },
   "settingsSaved": {
-    "message": "Settings saved"
+    "message": "設定を保存しました"
   },
   "statusCleansing": {
     "message": "クレンジング"
@@ -2561,6 +2561,9 @@
   },
   "sqliteHistoryTab": {
     "message": "履歴"
+  },
+  "exportLogsTab": {
+    "message": "ログをエクスポート"
   },
   "sqliteHistoryDescription": {
     "message": "SQLite に保存されたブラウジング履歴を検索・管理できます。AI要約の閲覧、スター・削除、選択した記事の Obsidian への追記が可能です。"

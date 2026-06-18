@@ -10,7 +10,7 @@ import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -111,6 +111,12 @@ export class OpenAIProvider extends AIProviderStrategy {
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.baseUrl) {
             return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
+        }
+
+        // 使用量警告チェック
+        const usageWarning = await checkUsageWarning();
+        if (usageWarning.warning) {
+            return { success: false, summary: `Error: ${usageWarning.message}` };
         }
 
         // レート制限チェック

@@ -60,16 +60,16 @@ describe('SQLite Security & Data Integrity', () => {
   });
 
   describe('Issue 2: obsidian_synced schema consistency (Domain Logic High)', () => {
-    let sqliteSource: string;
+    let schemaSource: string;
 
     beforeEach(() => {
-      const filePath = join(process.cwd(), 'src/offscreen/sqlite.ts');
-      sqliteSource = readFileSync(filePath, 'utf8');
+      const filePath = join(process.cwd(), 'src/offscreen/schema.ts');
+      schemaSource = readFileSync(filePath, 'utf8');
     });
 
     it('should define obsidian_synced column in CREATE TABLE if index references it', () => {
-      const schemaMatch = sqliteSource.match(
-        /const SCHEMA_SQL\s*=\s*`([\s\S]*?)`;/
+      const schemaMatch = schemaSource.match(
+        /export const SCHEMA_SQL\s*=\s*`([\s\S]*?)`;/
       );
       expect(schemaMatch).toBeTruthy();
       const schema = schemaMatch![1];

@@ -2564,6 +2564,9 @@
   "sqliteHistoryTab": {
     "message": "History"
   },
+  "exportLogsTab": {
+    "message": "Export Logs"
+  },
   "sqliteHistoryDescription": {
     "message": "Search and manage your browsing history stored in SQLite. View AI summaries, star/delete records, and append selected entries to Obsidian."
   },

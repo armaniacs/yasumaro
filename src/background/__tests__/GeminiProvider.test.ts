@@ -50,6 +50,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
 // aiUsageTracker モック
 vi.mock('../../utils/aiUsageTracker.js', () => ({
     checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: 60 })),
+    checkUsageWarning: vi.fn(async () => ({ warning: false })),
     recordUsage: vi.fn(async () => {}),
     getRateLimitMessage: vi.fn((resetTime: number) => `Rate limited. Wait ${resetTime}s.`)
 }));
@@ -59,7 +60,7 @@ import { fetchWithRetry, validateUrlForAIRequests } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
-const { checkRateLimit } = vi.mocked(aiUsageTrackerModule);
+const { checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('GeminiProvider', () => {

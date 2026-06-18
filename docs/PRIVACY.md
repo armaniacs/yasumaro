@@ -157,8 +157,8 @@ v4.2.1以降、以下の機能が追加されました：
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
 
-1. **全Webサイトへのアクセス権限 (`<all_urls>`)**:
-   - 訪問したページのコンテンツを抽出するために必要です
+1. **コンテンツスクリプトによるページアクセス権限**:
+   - `content_scripts` で指定されたWebサイトのコンテンツを抽出するために必要です
    - ページのタイトル、URL、本文テキストを取得します
    - このデータはAI要約生成とObsidianへの保存にのみ使用されます
 
@@ -308,8 +308,8 @@ The following data is temporarily stored locally for pages detected as private:
 ### Extension Permissions
 This extension requires the following permissions:
 
-1. **Access to All Websites (`<all_urls>`)**:
-   - Required to extract content from visited pages
+1. **Content Script Page Access**:
+   - Required to extract content from visited pages as specified in `content_scripts`
    - Collects page titles, URLs, and body text
    - Data is used solely for AI summarization and saving to Obsidian
 

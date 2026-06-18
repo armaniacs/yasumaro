@@ -117,12 +117,16 @@ export class RecordingTriggerManager {
     const triggers = await this.loadTriggers();
 
     switch (event.type) {
-      case 'scroll_idle':
+      case 'scroll_idle': {
         if (!triggers.scrollAndTime) return false;
-        // Validate scroll depth (50%+) and visit duration (5s+)
-        if ((event.scrollPercent ?? 0) < 50) return false;
-        if ((event.visitDuration ?? 0) < 5000) return false;
+        // Read user-configured thresholds from storage, fall back to defaults
+        const settings = await chrome.storage.local.get([StorageKeys.MIN_SCROLL_DEPTH, StorageKeys.MIN_VISIT_DURATION]);
+        const minScrollDepth = (settings[StorageKeys.MIN_SCROLL_DEPTH] as number) ?? 50;
+        const minVisitDuration = (settings[StorageKeys.MIN_VISIT_DURATION] as number) ?? 5;
+        if ((event.scrollPercent ?? 0) < minScrollDepth) return false;
+        if ((event.visitDuration ?? 0) < minVisitDuration * 1000) return false;
         return true;
+      }
 
       case 'manual_save':
         return triggers.manualSave;

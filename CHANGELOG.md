@@ -10,6 +10,52 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [6.0.1] - 2026-06-19
+
+### Added / 追加
+
+- **`src/offscreen/schema.ts`** — SQLite スキーマ定義を共通モジュールに抽出（`sqlite.ts` と `opfsWorker.ts` で重複していた DDL を一元化）
+- **`StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME`** — 同意拒否の最終時刻を記録し、30 日後に再表示する仕組みを追加
+- **`activeTab` パーミッションを追加** — Chrome Web Store 審査推奨に従い、ポップアップからの手動保存に限定した Tab アクセスを実現。`wxt.config.ts` の重複パーミッション（`scripting` / `offscreen` / `unlimitedStorage` ×2）を一掃し単一化
+- **`web_accessible_resources` の `matches` を `['<all_urls>']` → `['http://*/*', 'https://*/*']` に狭域化**
+
+### Fixed / 修正
+
+- **未使用の `sidePanel` パーミッションを削除** — ソースコード内で `chrome.sidePanel.*` が一切使われていなかったため削除
+- **`notifications` パーミッション欠落を修正** — `wxt.config.ts` の `permissions` 配列に `'notifications'` を復元（6.0.0 で誤って削除されていた）
+- **`favicon` 権限レグレッションを修正** — `optional_permissions` から `permissions` に戻し、アップグレード後の favicon 表示を復旧
+- **`RecordingTriggerManager.shouldRecord()` がユーザー設定を無視していた問題を修正** — ハードコードされた閾値（50%, 5000ms）の代わりに `chrome.storage.local` から `MIN_SCROLL_DEPTH` / `MIN_VISIT_DURATION` を読み込むよう修正
+- **ダッシュボードエラーメッセージに SQL 内部情報が露出する問題を修正** — `String(error)` → 汎用メッセージに変更、詳細は内部ログのみに記録
+- **`checkUsageWarning()` 未使用を修正** — Gemini／OpenAI Provider の `generateSummary()` 先頭で月間使用量警告をチェックするよう追加
+- **通知 HMAC 鍵のハードコードされた暗号化パスワードを削除** — 拡張スコープストレージに Base64 で保存し、ソースコード内の固定文字列を排除
+- **プライバシー同意拒否の永久抑制を修正** — 3 回拒否後も 30 日後に再表示するよう変更（GDPR 第 7 条準拠）
+- **`exportLogsTab` 翻訳キー欠落を修正** — `en/messages.json` / `ja/messages.json` にキーを追加
+- **`ja/messages.json` に未訳の 7 キーを日本語化** — `sensitiveInvalidDomain`, `sensitiveDuplicate`, `sensitiveAdded`, `whitelistInvalidDomain`, `whitelistDuplicate`, `whitelistAdded`, `settingsSaved`
+- **Playwright E2E テスト設定の逆転を修正** — `grepInverse: /@extension/` → `grep: /@extension/` で extension プロジェクトのテストを正しく実行
+- **`migrationService` でレガシーストレージキーが残存していた問題を修正** — 移行完了後に `savedUrlsWithTimestamps` / `savedUrls` を削除
+- **README.md 日本語プライバシーポリシーリンクが 404 になる問題を修正** — `[PRIVACY.md](PRIVACY.md)` → `[PRIVACY.md](docs/PRIVACY.md)`
+- **PRIVACY.md に削除済みの `<all_urls>` 権限が記載されていた問題を修正** — 実態に合わせた記述に更新
+- **`aria-pressed` に数値が設定されていた問題を修正** — `String(Boolean(entry.is_starred))` で正しい文字列値に変換
+- **CSS `.settings-section` の重複定義を修正** — Trust パネルの重複を `.trust-panel-section` に変更
+
+### Documentation / ドキュメント
+
+- **`THIRD_PARTY_NOTICES.md` に `@subframe7536/sqlite-wasm` の MIT ライセンス表記を追加**
+- **`PERMISSIONS.md` を全面更新**:
+  - `tabs` セクションを削除（宣言済みパーミッションからも削除済み）
+  - `activeTab` セクションを追加（使用箇所・理由・プライバシー保護を日英で詳述）
+  - `<all_urls>` content script の正当化を冒頭に追記
+  - `sidePanel` 削除に伴うサマリーテーブル更新
+  - セクション番号を 10 → 9 に振り直し
+
+### Chores / その他
+
+- **Checking Team レビュー（22名）** — 全 21 エージェント完了、スコア 80/100（B）
+  - High 指摘 6 件修正、Medium 指摘 10 件修正
+  - レポート: `plans/2026-06-18-2050-review-v6.0.0.md`
+- **`package-lock.json` を `v6.0.1` に同期** — `npm install --package-lock-only` を実行
+- **バージョン 6.0.0 → 6.0.1**
+
 ## [6.0.0] - 2026-06-18 (Chrome Web Store 初回公開)
 
 ### Added / 追加

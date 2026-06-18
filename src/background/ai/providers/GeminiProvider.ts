@@ -10,7 +10,7 @@ import { getAllowedUrls, Settings } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
     candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
@@ -42,6 +42,12 @@ export class GeminiProvider extends AIProviderStrategy {
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.apiKey) {
             return { success: false, summary: "Error: API key is missing. Please check your settings." };
+        }
+
+        // 使用量警告チェック
+        const usageWarning = await checkUsageWarning();
+        if (usageWarning.warning) {
+            return { success: false, summary: `Error: ${usageWarning.message}` };
         }
 
         // レート制限チェック

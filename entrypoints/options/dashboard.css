@@ -2773,13 +2773,13 @@ details[open] .advanced-details-summary {
    Trust Panel Styles
    ============================================================================= */
 
-.settings-section {
+.trust-panel-section {
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--color-border);
 }
 
-.settings-section-title {
+.trust-panel-section-title {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 16px;

@@ -161,6 +161,12 @@ export class MigrationService {
       await chrome.storage.local.remove(MIGRATION_PROGRESS_KEY);
       await chrome.storage.local.set({ legacyStoreReadOnly: true });
 
+      // Clean up legacy storage keys to free space and prevent stale reads
+      const legacyKeys = ['savedUrlsWithTimestamps', 'savedUrls'];
+      const totalBytes = (await chrome.storage.local.get(legacyKeys)).length;
+      await chrome.storage.local.remove(legacyKeys);
+      addLog(LogType.INFO, 'Migration: legacy storage keys removed', { keys: legacyKeys, totalBytes });
+
       addLog(LogType.INFO, 'Migration: completed', { totalMigrated: entries.length });
     } catch (error) {
       addLog(LogType.ERROR, 'Migration: failed', {

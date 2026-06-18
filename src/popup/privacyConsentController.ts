@@ -44,8 +44,13 @@ export async function initPrivacyConsent(): Promise<void> {
 
         if (!state.hasConsented) {
             const denialCount = await getConsentDeniedCount();
+            // After 3+ rejections, wait 30 days before showing the modal again
             if (denialCount >= 3) {
-                return;
+                const lastDenialTime = await getLastConsentDenialTime();
+                const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+                if (lastDenialTime && (Date.now() - lastDenialTime < THIRTY_DAYS_MS)) {
+                    return;
+                }
             }
             showPrivacyConsentModal();
         }
@@ -63,10 +68,22 @@ async function getConsentDeniedCount(): Promise<number> {
     }
 }
 
+async function getLastConsentDenialTime(): Promise<number | null> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME);
+        return (result[StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME] as number) ?? null;
+    } catch {
+        return null;
+    }
+}
+
 async function incrementConsentDeniedCount(): Promise<number> {
     const current = await getConsentDeniedCount();
     const next = current + 1;
-    await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: next });
+    await chrome.storage.local.set({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: next,
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: Date.now(),
+    });
     return next;
 }
 

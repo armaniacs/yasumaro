@@ -52,7 +52,7 @@ export default defineConfig({
     {
       name: 'extension',
       testDir: './e2e',
-      grepInverse: /@extension/,  // Skip tests matching @extension
+      grep: /@extension/,  // Only run tests tagged @extension
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,

@@ -213,6 +213,6 @@ export async function handleDashboardSqlite(
             subtype,
             error: errorMessage(error),
         }, ErrorCode.UNKNOWN_ERROR);
-        return { success: false, error: String(error) };
+        return { success: false, error: 'An internal error occurred' };
     }
 }

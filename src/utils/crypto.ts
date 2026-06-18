@@ -377,14 +377,9 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
             HMAC_SIGNATURE_KEY_VERSION
         ]);
 
-        const encryptedData = result[HMAC_SIGNATURE_KEY_STORAGE];
-        if (encryptedData && isEncrypted(encryptedData)) {
-            const salt = textEncoder.encode('notification-salt');
-            const decryptKey = await deriveKey('notification-secret', salt);
-
-            const keyDataBase64 = await decryptData(encryptedData, decryptKey);
-            const keyData = base64ToUint8Array(keyDataBase64);
-
+        const storedKeyData = result[HMAC_SIGNATURE_KEY_STORAGE];
+        if (typeof storedKeyData === 'string' && storedKeyData.length > 0) {
+            const keyData = base64ToUint8Array(storedKeyData);
             return await webcrypto.subtle.importKey(
                 'raw',
                 keyData,
@@ -398,16 +393,11 @@ export async function getNotificationHmacKey(): Promise<CryptoKey> {
         console.warn('Failed to load HMAC key, generating new one:', errorMessage(error));
     }
 
-    // Generate new key
+    // Generate new key and store as base64 (storage is extension-scoped, no additional encryption needed)
     const keyData = webcrypto.getRandomValues(new Uint8Array(32));
-
-    const salt = textEncoder.encode('notification-salt');
-    const encryptKey = await deriveKey('notification-secret', salt);
-    const encryptedKey = await encrypt(uint8ArrayToBase64(keyData), encryptKey);
-
-    // Store encrypted key
+    const keyBase64 = uint8ArrayToBase64(keyData);
     await chrome.storage.local.set({
-        [HMAC_SIGNATURE_KEY_STORAGE]: encryptedKey,
+        [HMAC_SIGNATURE_KEY_STORAGE]: keyBase64,
         [HMAC_SIGNATURE_KEY_VERSION]: '1'
     });
 

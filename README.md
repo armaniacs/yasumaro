@@ -294,7 +294,7 @@ For detailed usage instructions, please refer to [USER-GUIDE-UBLOCK-IMPORT.md](d
 ---
 
 ## Privacy / プライバシー
-データはすべてローカルに保存されます。詳細は [PRIVACY.md](PRIVACY.md) を参照してください。
+データはすべてローカルに保存されます。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照してください。
 
 All data is stored locally. See [PRIVACY.md](docs/PRIVACY.md) for details.
 

@@ -387,7 +387,7 @@ function renderEntryList(): void {
                aria-label="${t('historySelectRecord')}">
         <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
                 data-action="star" title="${t('historyToggleStar')}" 
-                aria-pressed="${entry.is_starred}" aria-label="${t('historyToggleStar')}">★</button>
+                 aria-pressed="${String(Boolean(entry.is_starred))}" aria-label="${t('historyToggleStar')}">★</button>
         <a href="${escapeHtml(entry.url)}" target="_blank" class="sqlite-entry-title">
           ${escapeHtml(entry.title || entry.url)}
         </a>
