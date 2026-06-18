@@ -1,6 +1,10 @@
 import { SqliteClient } from '../sqliteClient.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ObsidianClient } from '../obsidianClient.js';
+import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
+import { logError, logInfo, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { StorageKeys, getSettings } from '../../utils/storage.js';
+import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
@@ -146,6 +150,47 @@ export async function handleDashboardSqlite(
                 return report
                     ? { success: true, report }
                     : { success: false, error: 'OPFS spike failed' };
+            }
+            case 'append_to_obsidian': {
+                const ids = payload.ids as number[] | undefined;
+                if (!Array.isArray(ids) || ids.length === 0) {
+                    return { success: false, error: 'No IDs provided' };
+                }
+
+                // OBSIDIAN_ENABLED controls auto-recording only; manual append always proceeds.
+                const allSettings = await getSettings();
+
+                // Check if Obsidian API key is configured (uses decrypted value from getSettings)
+                const apiKey = allSettings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+                if (!apiKey || apiKey.length < 16) {
+                    return { success: false, error: 'Obsidian API key not configured' };
+                }
+
+                // Fetch entries by IDs (targeted query, no full table scan)
+                const allResult = await sqliteClient.query({ ids, limit: ids.length, orderBy: 'id', orderDir: 'ASC' });
+                const selectedEntries = (allResult?.rows || []) as BrowsingLogEntry[];
+
+                if (selectedEntries.length === 0) {
+                    return { success: false, error: 'No matching entries found' };
+                }
+
+                const markdown = formatEntriesToMarkdown(selectedEntries);
+                if (!markdown) {
+                    return { success: false, error: 'Failed to format entries' };
+                }
+
+                try {
+                    const obsidianClient = new ObsidianClient();
+                    await obsidianClient.appendToDailyNote(markdown);
+                    logInfo('Appended entries to Obsidian', { count: selectedEntries.length });
+                    return { success: true, appended: selectedEntries.length };
+                } catch (error) {
+                    logError('Failed to append to Obsidian', {
+                        error: errorMessage(error),
+                        count: selectedEntries.length,
+                    }, ErrorCode.UNKNOWN_ERROR);
+                    return { success: false, error: errorMessage(error) };
+                }
             }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };

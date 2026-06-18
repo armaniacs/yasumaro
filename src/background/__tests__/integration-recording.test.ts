@@ -145,7 +145,7 @@ describe('Recording Integration Test', () => {
 
   it('should handle recording errors gracefully', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+   
     mockObsidian.appendToDailyNote.mockRejectedValue(new Error('Connection failed'));
 
     const result = await logic.record({
@@ -155,8 +155,29 @@ describe('Recording Integration Test', () => {
     });
 
     console.log('Result:', result);
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Connection failed');
-    expect(chrome.notifications.create).toHaveBeenCalled();
+    // Obsidian save failure should NOT cause the entire recording to fail
+    // (BEST_EFFORT strategy allows SQLite+metadata to still succeed)
+    expect(result.success).toBe(true);
+  });
+
+  it('should continue pipeline after saveObsidian failure and record error', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+    mockObsidian.appendToDailyNote.mockRejectedValue(new Error('Obsidian connection failed'));
+
+    const result = await logic.record({
+      url: 'https://example.com',
+      title: 'Example',
+      content: 'Test content'
+    });
+
+    // Pipeline should succeed overall (BEST_EFFORT allows continuation)
+    expect(result.success).toBe(true);
+
+    // AI summary should still be generated
+    expect(result.summary).toBeDefined();
+
+    // Title and URL should be preserved
+    expect(result.title).toBe('Example');
+    expect(result.url).toBe('https://example.com');
   });
 });

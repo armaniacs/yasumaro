@@ -57,6 +57,7 @@ interface QueryPayload {
   isStarred?: number;
   orderBy?: string;
   orderDir?: string;
+  ids?: number[];
 }
 
 interface SearchPayload {
@@ -334,7 +335,7 @@ async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> 
 async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
   const {
     limit = 20, offset = 0, since, until, domain,
-    isStarred, orderBy = 'created_at', orderDir = 'DESC',
+    isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
   } = payload;
 
   // Validate sort columns
@@ -351,6 +352,10 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
   if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
+  if (ids !== undefined && ids.length > 0) {
+    conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
+    params.push(...ids);
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
