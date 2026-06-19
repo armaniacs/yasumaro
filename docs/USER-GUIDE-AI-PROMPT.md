@@ -18,6 +18,7 @@
 
 ```
 You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.
+Only use information explicitly stated in the provided content. Do not add facts, context, or details not present in the source text.
 ```
 
 ユーザープロンプト
@@ -125,6 +126,7 @@ System Prompt (for OpenAI-compatible providers)
 
 ```
 You are a helpful assistant that summarizes web pages effectively and concisely in Japanese.
+Only use information explicitly stated in the provided content. Do not add facts, context, or details not present in the source text.
 ```
 
 User Prompt

@@ -115,8 +115,9 @@ E-mail1件、クレジットカード番号2件をマスクしました
 
 #### プロンプトインジェクション対策
 AI要約時のセキュリティ保護機能：
-- **検出パターン**: `ignore above`、`SYSTEM`、`PASSWORD`、`execute()`、`eval()`、`previous conversation` 等の危険パターンを検出
-- **処理**: 危険な部分は `[FILTERED]` に置き換え残り安全なコンテンツをAIに送信
+- **検出パターン**: `ignore above`、`SYSTEM`、`PASSWORD`、`execute()` 等の危険パターンを検出
+- **リスク評価**: HIGHリスクパターン（インジェクション指示）は `[FILTERED]` に置き換え、LOWリスクパターン（`password`、`execute` などの単語）は文脈分析で評価
+- **処理**: HIGHリスク部分は `[FILTERED]` に置き換え、残りの安全なコンテンツをAIに送信
 - **安全評価**: サニタイズ後のコンテンツを再評価し、リスクが残っている場合のみブロック
 - **ログ記録**: 検出されたパターンとブロック原因をログに記録
 
@@ -296,8 +297,9 @@ Automatically detects and masks the following patterns:
 
 #### Prompt Injection Protection
 Security protection feature during AI summarization:
-- **Detection Patterns**: Detects dangerous patterns like `ignore above`, `SYSTEM`, `PASSWORD`, `execute()`, `eval()`, `previous conversation`
-- **Processing**: Dangerous parts are replaced with `[FILTERED]` and remaining safe content is sent to AI
+- **Detection Patterns**: Detects dangerous patterns like `ignore above`, `SYSTEM`, `PASSWORD`, `execute()`
+- **Risk Assessment**: HIGH-risk patterns (injection instructions) are replaced with `[FILTERED]`; LOW-risk patterns (generic words like `password`, `execute`) are evaluated via context analysis
+- **Processing**: HIGH-risk parts are replaced with `[FILTERED]` and remaining safe content is sent to AI
 - **Safety Evaluation**: Re-evaluates sanitized content; only blocks if risks remain
 - **Logging**: Records detected patterns and block reasons in logs
 

@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ### Chores / その他
 
+## [6.0.2] - 2026-06-20
+
+### Fixed / 修正
+
+- **全ドキュメントの実態調査に基づく包括的修正** — コードの実装と乖離していた 9 ファイルの記述を修正:
+  - **`docs/CLEANSING_ORDER.md`**: Hard Strip の削除対象タグ一覧（16個の誤ったタグを 13 個の正しいタグに訂正、form 関連タグ 5 個を追加）および属性削除ルール（35 個の存在しないルールを実際の 7 ルールに置換）を修正
+  - **`docs/PRIVACY.md`**: プライバシー同意拒否の動作を「永久非表示」から「30 日後に再表示」に訂正（v6.0.1 の GDPR 修正に追従）、最終更新日および更新履歴を更新
+  - **`docs/SETUP_GUIDE.md`**: 保持ポリシーのデフォルトを「90 日/1,000 件」から「無制限」に訂正（日英）、プライバシー同意の動作を 30 日間抑制に訂正（日英）、AI プロバイダー許可ドメイン表に 24 個の未記載ドメインを追加
+  - **`docs/i18n-guide.md`**: キー数を 162 から 867/en・859/ja に更新、ファイルパスを `_locales/` から `public/_locales/` に訂正（日英、例示コードブロック含む）
+  - **`docs/PII_FEATURE_GUIDE.md`**: プロンプトインジェクション検出パターンから `eval()` と `previous conversation` を削除（コードに存在しない）、HIGH/LOW リスクレベルの区別を追加（日英）
+  - **`docs/USER-GUIDE-AI-PROMPT.md`**: デフォルトシステムプロンプトに欠落していた制約文（"Only use information explicitly stated..."）を追加（日英）
+  - **`docs/PORT_MIGRATION.md`**: 2 箇所の ADR リンクパスを `./ADR/` → `../dev-docs/ADR/` に修正
+  - **`docs/UBLOCK_MIGRATION.md`**: 「約 70% 削減」の記載に「環境により変動」の但し書きを追加（日英）
+  - **`docs/USER-GUIDE-UBLOCK-IMPORT.md`**: 「20 万ドメイン対応」の記載に Set ベース O(1) マッチングの技術的根拠を追加（日英）
+
+### Documentation / ドキュメント
+
+- **`docs/*.md` 9 ファイル — コードベースの網羅的ファクトチェック結果に基づく一律修正**:
+  - 全 11 のドキュメントファイルを調査し、14 件の不整合を発見・修正。10 ファイル、74 insertions / 40 deletions
+
 ## [6.0.1] - 2026-06-19
 
 ### Added / 追加

@@ -187,7 +187,7 @@ ls -l ~/.config/obsidian/obsidian_key.pem
 
 この変更に関する技術的な背景は、以下の ADR を参照してください：
 
-- [ADR-002: Default Port Migration to 27124 for HTTPS Support](./ADR/2026-02-22-port-migration-to-https.md)
+- [ADR-002: Default Port Migration to 27124 for HTTPS Support](../dev-docs/ADR/2026-02-22-port-migration-to-https.md)
 
 ---
 
@@ -204,4 +204,4 @@ ls -l ~/.config/obsidian/obsidian_key.pem
 
 - **バージョン**: 3.9.8
 - **リリース日**: 2026年2月22日
-- **ADR**: [2026-02-22-port-migration-to-https.md](./ADR/2026-02-22-port-migration-to-https.md)
+- **ADR**: [2026-02-22-port-migration-to-https.md](../dev-docs/ADR/2026-02-22-port-migration-to-https.md)
