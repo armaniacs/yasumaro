@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
-## [Unreleased]
+## [6.0.3] - 2026-06-20
 
 ### Added / 追加
 
