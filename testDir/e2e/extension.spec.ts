@@ -3,7 +3,7 @@ import { test as staticTest, testInteraction, expect } from './fixtures/popup.fi
 const test = staticTest;
 
 /**
- * E2E Tests for Obsidian Weave Chrome Extension - Popup UI
+ * E2E Tests for Yasumaro Chrome Extension - Popup UI
  *
  * These tests verify the extension's popup UI static structure using file:// protocol.
  * Note: Interaction tests requiring Chrome extension APIs (chrome.runtime, chrome.storage)

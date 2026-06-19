@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for Obsidian Weave Chrome Extension
+ * Playwright configuration for Yasumaro Chrome Extension
  * 
  * This configuration is set up for E2E testing of the extension's popup UI
  * and content script functionality.

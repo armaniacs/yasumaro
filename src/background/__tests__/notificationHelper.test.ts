@@ -93,7 +93,7 @@ describe('NotificationHelper', () => {
             mockGetMessage.mockReturnValue('');
             NotificationHelper.notifyPrivacyConfirm('id', 'Page', 'reason');
             const opts = mockCreate.mock.calls[0][1];
-            expect(opts.title).toBe('Obsidian Weave');
+            expect(opts.title).toBe('Yasumaro');
             expect(opts.buttons[0].title).toBe('保存する');
             expect(opts.buttons[1].title).toBe('スキップ');
         });
