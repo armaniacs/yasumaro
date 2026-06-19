@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Version consistency checker for Obsidian Weave
+ * Version consistency checker for Yasumaro
  * Ensures all version-related files have matching version numbers
  */
 

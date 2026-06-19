@@ -664,7 +664,7 @@ async function reportValidVisit(): Promise<void> {
 export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string): Promise<boolean> {
     return new Promise((resolve) => {
         const iconUrl = chrome.runtime.getURL('icons/icon48.png');
-        const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Obsidian Weave';
+        const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Yasumaro';
         const bodyText = chrome.i18n.getMessage('privacyDialogBody', [reasonLabel])
             || `このページにはプライバシー懸念があります（${reasonLabel}）。それでも保存しますか？`;
         const saveLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSave') || '保存する';
