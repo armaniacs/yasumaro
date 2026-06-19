@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+> **v6 系バージョニングポリシー**
+>
+> - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
+> - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
+> - 現時点では `v6.0.2` リリース直後。次の機能実装リリースは `v6.1.x`、その安定化リリースは `v6.2.x` となる。
+
 ## [Unreleased]
 
 ### Added / 追加
