@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed / 修正
 
+- **残存した旧ブランド名を修正** — ソースコード・テスト・コメント・ドキュメント内の `Obsidian Weave` / `obsidian-weave` を `Yasumaro` / `yasumaro` に一括修正（15 ファイル、20 insertions / 20 deletions）。GitHub Pages 用 `docs/index.html` の favicon URL も新リポジトリ名に更新
+
 - **全ドキュメントの実態調査に基づく包括的修正** — コードの実装と乖離していた 9 ファイルの記述を修正:
   - **`docs/CLEANSING_ORDER.md`**: Hard Strip の削除対象タグ一覧（16個の誤ったタグを 13 個の正しいタグに訂正、form 関連タグ 5 個を追加）および属性削除ルール（35 個の存在しないルールを実際の 7 ルールに置換）を修正
   - **`docs/PRIVACY.md`**: プライバシー同意拒否の動作を「永久非表示」から「30 日後に再表示」に訂正（v6.0.1 の GDPR 修正に追従）、最終更新日および更新履歴を更新
