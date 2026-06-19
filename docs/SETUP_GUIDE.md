@@ -104,7 +104,10 @@
 | **DeepSeek** | `deepseek.com` |
 | **Perplexity AI** | `perplexity.ai` |
 | **Sakuraクラウド (AI API)** | `api.ai.sakura.ad.jp` |
-| **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai` 等 |
+| **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` 等 |
+| **クラウドネイティブAI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
+| **埋め込みAI** | `jina.ai`, `voyageai.com` |
+| **その他** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
 | **ローカル環境** | `localhost`, `127.0.0.1` |
 
 ---
@@ -173,7 +176,7 @@ ollama list
 #### 5. プライバシー設定
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
 
-**プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると以降は表示されなくなります（詳細: [PRIVACY.md](PRIVACY.md)）。
+**プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります（30日経過後に再表示、GDPR第7条準拠）（詳細: [PRIVACY.md](PRIVACY.md)）。
 
 **自動保存時のプライバシー動作** (`Dashboard → Privacy → Confirmation Settings`):
 - **save（デフォルト）**: プライベートページを通常通り保存します
@@ -203,7 +206,7 @@ ollama list
 - **Skipped**: プライバシー検出によりスキップされたページを表示。「今すぐ記録」ボタンで手動保存が可能
 - **🔒 Masked**: PIIマスキングが行われた記録のみ表示
 
-**保持ポリシー**: 過去90日間の記録（最大1,000件）が保持されます。それを超えたデータは自動削除されます。
+**保持ポリシー**: デフォルトでは無制限に保持されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から保持期間（30〜365日）と最大件数（1,000〜100,000件）を任意で設定できます。
 
 **モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [STORAGE_MODES.md](STORAGE_MODES.md)）。
 
@@ -327,6 +330,10 @@ For security reasons, only the following domains are officially supported. Conne
 | **DeepSeek** | `deepseek.com` |
 | **Perplexity AI** | `perplexity.ai` |
 | **Sakura Cloud (AI API)** | `api.ai.sakura.ad.jp` |
+| **LiteLLM Providers** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` |
+| **Cloud Native AI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
+| **Embedding AI** | `jina.ai`, `voyageai.com` |
+| **Other** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
 | **Local Environments** | `localhost`, `127.0.0.1` |
 
 ---
@@ -363,7 +370,7 @@ Useful for migrating settings to another device or creating backups (you will ne
 #### 5. Privacy Settings
 In the "Privacy" tab, you can configure detailed privacy behavior.
 
-**Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is permanently dismissed (see [PRIVACY.md](PRIVACY.md) for details).
+**Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days (then reappears, GDPR Article 7 compliance. See [PRIVACY.md](PRIVACY.md) for details).
 
 **Auto-save Privacy Behavior** (`Dashboard → Privacy → Confirmation Settings`):
 - **save (default)**: Saves private pages as usual
@@ -393,6 +400,6 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 - **Skipped**: Shows pages skipped by privacy detection. Use "Record Now" to manually save them
 - **🔒 Masked**: Shows only records where PII masking was applied
 
-**Retention Policy**: Records from the past 90 days (up to 1,000 entries) are retained. Data beyond this limit is automatically deleted.
+**Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy".
 
 **Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).

@@ -1,9 +1,9 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年6月18日 / Last Updated: June 18, 2026**
+**最終更新日: 2026年6月20日 / Last Updated: June 20, 2026**
 
 > **更新履歴 / Update History**:
-> - **2026年6月17日**: v6.0.0 - Chrome Web Store 公開準備。各パーミッションの使用目的の明確化、AI プロバイダーの選択肢拡大、データ保持期間の説明
+> - **2026年6月20日**: v6.0.1 - GDPR 準拠修正。プライバシー同意拒否を「永久非表示」から「30日後に再表示」に変更
 > - **2026年6月13日**: v5.1.0 - PII サニタイゼーション強化（多言語対応）、データ保持期間の自動削除実装
 > - **2026年6月11日**: v5.0.0 - SQLite (OPFS) 移行、データ保持ポリシー追加、GDPR 削除権の物理削除対応
 > - **2026年3月9日**: v4.2.1 - 自動コンテンツフェッチ機能の有効化手順、URLログの記録について追加
@@ -108,9 +108,21 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **有効にする方法**: ダッシュボード → Privacy タブ → 「マスターパスワード保護を有効にする」をオンにして、パスワードを設定します
 - **暗号化方式**: AES-GCM（業界標準）+ PBKDF2による鍵導出（100,000回反復）
 - **適用範囲**: エクスポートされたJSONファイルに含まれるすべての設定（APIキーを含む）
-- **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+  - **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+
+#### プライバシー同意の仕組み
+
+初回起動時にデータ収集への同意確認モーダルが表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります。30日経過後、再度同意確認が表示されます（GDPR 第7条「再同意取得」準拠）。
 
 通常の使用（拡張機能内でのAPIキー保存）には、マスターパスワードとは別の自動暗号化機構が使用されており、ユーザーの操作は不要です。
+
+#### 自動暗号化機構の仕組みと限界
+
+通常の使用では、APIキーは**自動的に暗号化されて保存**されます。マスターパスワードの設定は不要で、ユーザーの操作なくバックグラウンドでAES-GCMによる暗号化が適用されます。
+
+ただし、マスターパスワードが**未設定の場合**、暗号化に使用するキー自体が `chrome.storage.local` に平文で保存されます。Chrome拡張機能のストレージは拡張機能スコープで分離されているため、他の拡張機能から直接読み取ることはできませんが、本拡張機能内からは参照可能です。この場合、暗号化は「外部からの読み取り防止」の意味は持ちますが、「拡張機能自体によるアクセス防止」の意味は持ちません。
+
+**マスターパスワードを設定することで、暗号化キー自体がマスターパスワードから導出されるようになり、この制限を超えた保護が実現されます。**
 
 ### v4.2.1 プライバシー保護機能（追加）
 
@@ -211,7 +223,19 @@ You can encrypt exported settings files with a **master password**.
 - **Scope**: All settings in the exported JSON file, including API keys
 - **Note**: If you forget your password, encrypted export files cannot be decrypted
 
+#### Privacy Consent Mechanism
+
+On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days. After 30 days, the consent prompt reappears (GDPR Article 7 "Right to Re-consent" compliance).
+
 For regular use (storing API keys within the extension), a separate auto-encryption mechanism is used that requires no user action.
+
+#### Auto-Encryption Mechanism: Scope and Limitations
+
+Under normal use, API keys are **automatically encrypted** before being stored. No master password is required; AES-GCM encryption is applied in the background without any user action.
+
+However, when no master password is set, the encryption key itself is stored in plaintext within `chrome.storage.local`. While Chrome extension storage is scoped to the extension and cannot be read directly by other extensions, it is accessible from within this extension. In this state, encryption prevents external read access, but does not prevent access from within the extension itself.
+
+**Setting a master password changes this behavior: the encryption key is derived from the master password via PBKDF2, providing protection beyond the extension's own storage boundary.**
 
 ### v4.2.1 Privacy Protections (Updated)
 
