@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed / 修正
 
+- `CHANGELOG.md` と `CONTRIBUTING.md` をブランド名の扱いについて追加
+
 ### Chores / その他
 
 ## [6.0.2] - 2026-06-20
