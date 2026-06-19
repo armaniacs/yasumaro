@@ -408,9 +408,7 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 ### リリースフロー
 
-GitHub Release を作成する際は、`CHANGELOG.md` の該当セクションをリリースノートとして使用し、冒頭に以下の Yasumaro ブランド案内を含めてください。
-
-> 本拡張機能は旧称「Obsidian Weave」から「Yasumaro」へ改名しました。今後のリリースは `armaniacs/yasumaro` リポジトリで公開されます。
+GitHub Release を作成する際は、`CHANGELOG.md` の該当セクションをリリースノートとして使用し、冒頭には `CHANGELOG.md` 先頭に記載の Yasumaro ブランド案内を含めてください。
 
 ---
 
@@ -818,6 +816,4 @@ Include for bug reports:
 
 ### Release Process
 
-When creating a GitHub Release, use the corresponding section in `CHANGELOG.md` as the release notes and include the following Yasumaro brand notice at the top:
-
-> This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
+When creating a GitHub Release, use the corresponding section in `CHANGELOG.md` as the release notes and include the Yasumaro brand notice from the top of `CHANGELOG.md` at the top.
