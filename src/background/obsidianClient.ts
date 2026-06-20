@@ -123,7 +123,7 @@ export class ObsidianClient {
         const settings = await getSettings();
 
         const s = settings as Record<string, unknown>;
-        const protocol = String(s[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'http') || 'http';
+        const protocol = String(s[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'https') || 'https';
         const rawPort = (s[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT) as string | number;
         const port = this._validatePort(rawPort);
         const apiKey = s[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;

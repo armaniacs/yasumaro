@@ -341,21 +341,22 @@ yasumaro/
 ```bash
 git checkout -b feature/your-feature-name
 ```
+   - バグ修正の場合は `feature/` の代わりに `fix/` または `hotfix/` を、ドキュメント更新の場合は `docs/` を選択します。
 
 2. 変更をコミット
 ```bash
-git add .
+git add -p
 git commit -m "feat: 功能の説明"
 ```
 
-3. テストを実行
+3. テストと型チェックを実行
 ```bash
-npm test
+npm run validate
 ```
 
 4. プッシュ
 ```bash
-git push origin feature/your-feature-name
+git push origin {ブランチ名}
 ```
 
 5. プルリクエストを作成
@@ -387,22 +388,28 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 #### ブランチ命名規則
 
-本プロジェクトではシンプルなブランチ運用を採用しています。
+本プロジェクトではシンプルなブランチ運用を採用しています。`CHANGELOG.md` のバージョニングポリシーに従い、v6.偶数.x はバグ修正のみ、v6.奇数.x は新機能実装となります。
 
-- `main` — 現在の安定系列。v6.0.x のバグ修正を受け入れます。
+- `main` — 現在の偶数安定系列。バグ修正のみ受け入れます。
 - `feature/<名前>` — 新機能開発用ブランチ。例: `feature/ai-provider-improvements`
-- `hotfix/<名前>` — 緊急のバグ修正用ブランチ。例: `hotfix/fix-notification-crash`
+- `fix/<名前>` — 通常のバグ修正用ブランチ。例: `fix/notification-crash`
+- `hotfix/<名前>` — 緊急のバグ修正用ブランチ。例: `hotfix/critical-security-patch`
+- `docs/<名前>` — ドキュメント更新用ブランチ。例: `docs/api-guide`
+- `refactor/<名前>` — リファクタリング用ブランチ。例: `refactor/extractor-cleanup`
 
-新機能は `feature/` ブランチで開発し、準備ができたら `main` へマージしてリリースします。v6.0.x はバグ修正のみを予定しています。
+新機能は `feature/` ブランチで開発し、準備ができたら `main` へマージしてリリースします。v6.偶数.x はバグ修正のみを予定しています。プルリクエストやコミットメッセージは各ブランチ種別に応じた Conventional Commits タイプを使用してください。
 
 ### コードレビュー
 
 レビューの時は以下を確認してください：
 
-- [ ] テストが通っている (`npm test` および `npm run test:e2e`)
+- [ ] テストが通っている (`npm run validate`)
 - [ ] 新しいコードにテストが含まれている
+- [ ] セキュリティレビューを実施した（CSP・入力検証・機密情報の露出がないか）
 - [ ] i18nが適切に実装されている
 - [ ] アクセシビリティ要件を満たしている
+- [ ] モバイル端末でのメモリ使用量・パフォーマンスへの影響が評価されている
+- [ ] オフライン/低速回線での動作が検証されている
 - [ ] ドキュメントが更新されている
 
 ### バグ報告と機能リクエスト
@@ -759,21 +766,22 @@ yasumaro/
 ```bash
 git checkout -b feature/your-feature-name
 ```
+   - Use `fix/` or `hotfix/` for bug fixes, `docs/` for documentation updates.
 
 2. Commit changes
 ```bash
-git add .
+git add -p
 git commit -m "feat: description of feature"
 ```
 
-3. Run tests
+3. Run tests and type-check
 ```bash
-npm test
+npm run validate
 ```
 
 4. Push
 ```bash
-git push origin feature/your-feature-name
+git push origin {branch-name}
 ```
 
 5. Create a pull request
@@ -805,22 +813,28 @@ feat(domainFilter): uBlock format filter import feature
 
 #### Branch Naming Convention
 
-This project uses a simple branch workflow.
+This project uses a simple branch workflow aligned with the versioning policy in `CHANGELOG.md` (v6.even.x = bug fixes only, v6.odd.x = new features).
 
-- `main` — The current stable release line. Accepts v6.0.x bug fixes.
+- `main` — The current even stable release line. Accepts bug fixes only.
 - `feature/<name>` — New feature branches. Example: `feature/ai-provider-improvements`
-- `hotfix/<name>` — Urgent bug fix branches. Example: `hotfix/fix-notification-crash`
+- `fix/<name>` — Regular bug fix branches. Example: `fix/notification-crash`
+- `hotfix/<name>` — Urgent bug fix branches. Example: `hotfix/critical-security-patch`
+- `docs/<name>` — Documentation update branches. Example: `docs/api-guide`
+- `refactor/<name>` — Refactoring branches. Example: `refactor/extractor-cleanup`
 
-Develop new features in `feature/` branches and merge them into `main` when ready for release. The v6.0.x line is intended for bug fixes only.
+Develop new features in `feature/` branches and merge them into `main` when ready for release. The v6.even.x line is intended for bug fixes only. Use the appropriate Conventional Commits type for each branch type.
 
 ### Code Review Checklist
 
 When reviewing code, check for:
 
-- [ ] Tests pass (`npm test` and `npm run test:e2e`)
+- [ ] Tests pass (`npm run validate`)
 - [ ] New code includes tests
+- [ ] Security review completed (CSP, input validation, no sensitive data exposure)
 - [ ] i18n is properly implemented
 - [ ] Accessibility requirements are met
+- [ ] Mobile memory/performance impact has been evaluated
+- [ ] Offline/slow-network behavior has been verified
 - [ ] Documentation is updated
 
 ### Bug Reports and Feature Requests

@@ -589,10 +589,7 @@ export async function getSettings(): Promise<Settings> {
     const rawSettings = result.settings as Settings | undefined;
     await logInfo('[Storage] Raw storage result:', {
         hasSettings: !!rawSettings,
-        hasMigratedKey: !!result[SETTINGS_MIGRATED_KEY],
-        obsidianKeyInSettings: rawSettings ? StorageKeys.OBSIDIAN_API_KEY in rawSettings : false,
-        obsidianKeyType: typeof rawSettings?.[StorageKeys.OBSIDIAN_API_KEY],
-        isEncryptedCheck: rawSettings?.[StorageKeys.OBSIDIAN_API_KEY] ? isEncrypted(rawSettings[StorageKeys.OBSIDIAN_API_KEY]) : false
+        hasKeys: rawSettings ? Object.keys(rawSettings).some(k => k.toLowerCase().includes('key')) : false
     });
 
     if (result.settings && result[SETTINGS_MIGRATED_KEY]) {
