@@ -75,6 +75,7 @@ import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
 import { checkPageStatus } from '../statusChecker.js';
+import { showPreview } from '../sanitizePreview.js';
 
 // getURL must return a valid URL for new URL() in loadCurrentTab
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
@@ -295,6 +296,41 @@ describe('recordCurrentPage', () => {
 
         expect(btn.textContent).toBe('recordNowError');
         expect(btn.disabled).toBe(true);
+    });
+
+    it('passes cleansedReason and cleanseStats to showPreview when recording a page', async () => {
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://example.com',
+            title: 'Test',
+        });
+        chrome.tabs.sendMessage.mockResolvedValueOnce({
+            content: 'test content',
+            cleansedReason: 'both',
+            cleanseStats: { hardStripRemoved: 3, keywordStripRemoved: 5, totalRemoved: 8 },
+        });
+        (sendMessageWithRetry as ReturnType<typeof vi.fn>)
+            .mockResolvedValueOnce({
+                success: true,
+                processedContent: 'masked content',
+                maskedCount: 2,
+                maskedItems: ['email', 'phoneJp'],
+            })
+            .mockResolvedValueOnce({
+                success: true,
+                aiDuration: 100,
+            });
+        (showPreview as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ confirmed: true, content: 'masked content' });
+
+        await recordCurrentPage();
+
+        expect(showPreview).toHaveBeenCalledWith(
+            'masked content',
+            ['email', 'phoneJp'],
+            2,
+            'both',
+            { hardStripRemoved: 3, keywordStripRemoved: 5, totalRemoved: 8 }
+        );
     });
 
     it('preserves Record Anyway state after result-state reset when domain is blocked', async () => {
