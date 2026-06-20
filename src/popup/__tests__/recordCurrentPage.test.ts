@@ -74,6 +74,7 @@ import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
+import { checkPageStatus } from '../statusChecker.js';
 
 // getURL must return a valid URL for new URL() in loadCurrentTab
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
@@ -193,6 +194,8 @@ describe('recordCurrentPage', () => {
         vi.clearAllMocks();
         chrome.runtime.lastError = null;
         chrome.tabs.sendMessage.mockResolvedValue({ content: 'test content' });
+        chrome.runtime.sendMessage.mockResolvedValue(undefined);
+        (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null);
         (sendMessageWithRetry as ReturnType<typeof vi.fn>).mockResolvedValue({
             success: true,
             aiDuration: 100,
@@ -269,5 +272,70 @@ describe('recordCurrentPage', () => {
 
         // Verify recordCurrentPage was invoked via showSpinner call
         expect(showSpinner).toHaveBeenCalled();
+    });
+
+    it('shows progress text while recording', async () => {
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://example.com',
+            title: 'Test',
+        });
+        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+
+        const promise = recordCurrentPage();
+        expect(btn.textContent).toBe('recordNowProgress');
+        expect(btn.disabled).toBe(true);
+
+        await promise;
+    });
+
+    it('shows done text on success', async () => {
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://example.com',
+            title: 'Test',
+        });
+        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+
+        await recordCurrentPage();
+
+        expect(btn.textContent).toBe('recordNowDone');
+        expect(btn.disabled).toBe(true);
+    });
+
+    it('shows error text on failure', async () => {
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://example.com',
+            title: 'Test',
+        });
+        (sendMessageWithRetry as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Save failed'));
+        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+
+        await recordCurrentPage();
+
+        expect(btn.textContent).toBe('recordNowError');
+        expect(btn.disabled).toBe(true);
+    });
+
+    it('preserves Record Anyway state after result-state reset when domain is blocked', async () => {
+        (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+            domainFilter: { allowed: false },
+        });
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            id: 1,
+            url: 'https://blocked.com',
+            title: 'Blocked',
+        });
+        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+
+        await recordCurrentPage();
+        expect(btn.textContent).toBe('recordNowDone');
+
+        // Wait for the result-state timeout to expire and reset the button
+        await new Promise(resolve => setTimeout(resolve, 2100));
+
+        expect(btn.textContent).toBe('forceRecordAnyway');
+        expect(btn.disabled).toBe(false);
     });
 });
