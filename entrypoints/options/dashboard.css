@@ -1271,6 +1271,24 @@ button#changeMasterPassword:hover {
   background: var(--color-danger-bg);
 }
 
+.sqlite-entry-copy {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--ym-color-border);
+  border-radius: var(--ym-radius-md);
+  background: var(--ym-color-bg-subtle);
+  color: var(--ym-color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.sqlite-entry-copy:hover {
+  border-color: var(--ym-color-primary);
+  color: var(--ym-color-primary);
+}
+
 .history-empty {
   text-align: center;
   color: var(--color-text-muted);

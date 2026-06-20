@@ -398,6 +398,12 @@
   "copiedToClipboard": {
     "message": "クリップボードにコピーしました"
   },
+  "copyMarkdown": {
+    "message": "Markdown をコピー"
+  },
+  "copyMarkdownSuccess": {
+    "message": "クリップボードにコピーしました"
+  },
   "nothingToExport": {
     "message": "エクスポートするデータがありません"
   },
