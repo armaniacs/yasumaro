@@ -38,6 +38,9 @@
   "recordWithoutAi": {
     "message": "📝 AI要約なしで記録"
   },
+  "contextMenuRecord": {
+    "message": "Yasumaro でこのページを記録"
+  },
   "cannotRecordPage": {
     "message": "記録できないページです"
   },

@@ -1206,6 +1206,20 @@ describe('service-worker handlers', () => {
         });
     });
 
+    describe('contextMenus manual record', () => {
+        it('registers context menu on install', async () => {
+            serviceWorker.registerManualRecordContextMenu();
+            const createMock = chrome.contextMenus.create as ReturnType<typeof vi.fn>;
+            expect(createMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: 'yasumaro-manual-record',
+                    title: expect.any(String),
+                    contexts: ['page', 'link'],
+                })
+            );
+        });
+    });
+
     describe('handleValidVisit', () => {
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.handleValidVisit).toBe('function');
