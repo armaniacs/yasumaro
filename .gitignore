@@ -53,6 +53,7 @@ video-config-export/
 video-*/
 
 # Build artifacts
+coverage/
 *.zip
 *.tar.gz
 store-assets/
