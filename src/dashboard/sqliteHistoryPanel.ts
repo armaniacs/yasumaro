@@ -204,20 +204,28 @@ function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
   button.type = 'button';
   button.className = 'history-copy-btn sqlite-entry-copy';
   button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
-  button.textContent = '📋';
+  const originalIcon = '📋';
+  button.textContent = originalIcon;
   button.addEventListener('click', async () => {
+    button.disabled = true;
     try {
       const markdown = formatEntryToMarkdown(entry);
       await copyTextToClipboard(markdown);
-      const originalText = button.textContent;
       button.textContent = '✓';
       button.setAttribute('aria-label', t('copyMarkdownSuccess') || 'Copied to clipboard');
       setTimeout(() => {
-        button.textContent = originalText;
+        button.textContent = originalIcon;
         button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
+        button.disabled = false;
       }, 2000);
     } catch {
-      button.setAttribute('aria-label', t('clipboardCopyFailed') || 'Failed to copy to clipboard');
+      button.textContent = '✗';
+      button.setAttribute('aria-label', t('copyMarkdownError') || 'Failed to copy');
+      setTimeout(() => {
+        button.textContent = originalIcon;
+        button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
+        button.disabled = false;
+      }, 2000);
     }
   });
   return button;

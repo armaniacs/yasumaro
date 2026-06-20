@@ -404,6 +404,9 @@
   "copyMarkdownSuccess": {
     "message": "クリップボードにコピーしました"
   },
+  "copyMarkdownError": {
+    "message": "コピーに失敗しました"
+  },
   "nothingToExport": {
     "message": "エクスポートするデータがありません"
   },

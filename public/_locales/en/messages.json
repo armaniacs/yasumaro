@@ -404,6 +404,9 @@
   "copyMarkdownSuccess": {
     "message": "Copied to clipboard"
   },
+  "copyMarkdownError": {
+    "message": "Failed to copy"
+  },
   "nothingToExport": {
     "message": "Nothing to export"
   },

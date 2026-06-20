@@ -179,7 +179,7 @@ async function forceRecord(
       statusDiv.textContent = message;
       statusDiv.className = 'success';
       startAutoCloseTimer();
-      await showCopyMarkdownButton(tab);
+      await showCopyMarkdownButton(tab, result);
       showButtonResultState(recordBtn, 'done');
     } else {
       statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || 'Unknown error'}`;
@@ -238,46 +238,57 @@ function getOrCreateResultActionsContainer(): HTMLElement | null {
   return container;
 }
 
-function buildMinimalEntryFromSavedUrl(
+interface SaveRecordResult {
+  success: boolean;
+  summary?: string;
+  tags?: string[];
+}
+
+function buildEntryFromSaveResult(
   tab: chrome.tabs.Tab,
-  savedEntry: Awaited<ReturnType<typeof getSavedUrlEntries>>[number]
+  result: SaveRecordResult
 ): BrowsingLogEntry {
   return {
     id: 0,
-    url: tab.url || savedEntry.url,
-    title: tab.title || savedEntry.url,
-    summary: savedEntry.aiSummary || '',
-    tags: savedEntry.tags ? savedEntry.tags.join(',') : '',
-    created_at: savedEntry.timestamp || Date.now(),
+    url: tab.url || '',
+    title: tab.title || tab.url || '',
+    summary: result.summary || '',
+    tags: Array.isArray(result.tags) ? result.tags.join(',') : '',
+    created_at: Date.now(),
     is_starred: 0,
   };
 }
 
-async function showCopyMarkdownButton(tab: chrome.tabs.Tab): Promise<void> {
+async function showCopyMarkdownButton(
+  tab: chrome.tabs.Tab,
+  result: SaveRecordResult
+): Promise<void> {
   const container = getOrCreateResultActionsContainer();
   if (!container) return;
 
   try {
-    const entries = await getSavedUrlEntries();
-    const savedEntry = entries.find(e => e.url === tab.url);
-    if (!savedEntry) return;
-
-    const entry = buildMinimalEntryFromSavedUrl(tab, savedEntry);
+    const entry = buildEntryFromSaveResult(tab, result);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'copy-markdown-btn secondary-btn';
     button.textContent = getMessage('copyMarkdown') || 'Copy Markdown';
     button.addEventListener('click', async () => {
+      const originalText = getMessage('copyMarkdown') || 'Copy Markdown';
+      button.disabled = true;
       try {
         const markdown = formatEntryToMarkdown(entry);
         await copyTextToClipboard(markdown);
-        const originalText = getMessage('copyMarkdown') || 'Copy Markdown';
         button.textContent = getMessage('copyMarkdownSuccess') || 'Copied!';
         setTimeout(() => {
           button.textContent = originalText;
+          button.disabled = false;
         }, 2000);
       } catch {
-        button.textContent = getMessage('clipboardCopyFailed') || 'Copy failed';
+        button.textContent = getMessage('copyMarkdownError') || 'Copy failed';
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+        }, 2000);
       }
     });
 
@@ -498,7 +509,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       startAutoCloseTimer();
       await showTagResult(tab.url ?? '');
-      await showCopyMarkdownButton(tab);
+      await showCopyMarkdownButton(tab, result);
       if (recordBtn) {
         showButtonResultState(recordBtn, 'done');
       }

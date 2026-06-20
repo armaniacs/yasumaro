@@ -6,7 +6,7 @@ export function formatEntryToMarkdown(entry: BrowsingLogEntry): string {
   const url = entry.url;
   const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
   const tags = entry.tags
-    ? entry.tags.split(',').map(t => `#${t.trim()}`).join(' ')
+    ? entry.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `#${t}`).join(' ')
     : '';
   const date = new Date(entry.created_at).toLocaleString();
 
