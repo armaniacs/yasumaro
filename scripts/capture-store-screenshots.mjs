@@ -364,6 +364,25 @@ async function capturePopup(page, baseUrl, colorScheme, outputName) {
 
   await sleep(800);
 
+  // Enforce readable contrast regardless of how CSS variables resolved in the capture environment.
+  const isPopupDark = colorScheme === 'dark';
+  await page.addStyleTag({
+    content: `
+      html, body {
+        background: ${isPopupDark ? '#1a1a24' : '#ffffff'} !important;
+        color: ${isPopupDark ? '#f4f4f5' : '#18181b'} !important;
+      }
+      body * {
+        color: ${isPopupDark ? '#f4f4f5' : '#18181b'} !important;
+      }
+      button, .btn, .primary-btn, #recordBtn {
+        color: #ffffff !important;
+      }
+      a { color: ${isPopupDark ? '#a78bfa' : '#7c3aed'} !important; }
+    `,
+  });
+  await sleep(200);
+
   // Screenshot the popup body element (360px wide) so we can present it centered.
   const popupBuffer = await page.locator('body').screenshot();
   const popupDataUrl = `data:image/png;base64,${popupBuffer.toString('base64')}`;
@@ -485,7 +504,30 @@ async function captureDashboardPanel(page, baseUrl, panelId, outputName, colorSc
     });
   }
 
-  await sleep(800);
+  // Enforce readable contrast on the dashboard panel.
+  const isDashboardDark = colorScheme === 'dark';
+  await page.addStyleTag({
+    content: `
+      html, body, #dashboardLayout, #${panelId} {
+        background: ${isDashboardDark ? '#0e0e12' : '#ffffff'} !important;
+        color: ${isDashboardDark ? '#f4f4f5' : '#18181b'} !important;
+      }
+      #${panelId} *, #dashboardLayout * {
+        color: ${isDashboardDark ? '#f4f4f5' : '#18181b'} !important;
+      }
+      button, .btn, .primary-btn {
+        color: #ffffff !important;
+      }
+      a { color: ${isDashboardDark ? '#a78bfa' : '#7c3aed'} !important; }
+      input, select, textarea {
+        background: ${isDashboardDark ? '#232329' : '#ffffff'} !important;
+        color: ${isDashboardDark ? '#f4f4f5' : '#18181b'} !important;
+        border-color: ${isDashboardDark ? '#3f3f46' : '#d4d4d8'} !important;
+      }
+    `,
+  });
+  await sleep(200);
+
   await page.screenshot({ path: path.join(OUTPUT_DIR, outputName), fullPage: false });
 }
 
