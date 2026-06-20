@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.0.2` リリース直後。次の機能実装リリースは `v6.1.x`、その安定化リリースは `v6.2.x` となる。
+> - 現時点では `v6.1.0` リリース直後。次の安定化リリースは `v6.2.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,22 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.1.0] - 2026-06-20
+
+### Added / 追加
+
+- **対話型設定ウィザード** — 初回起動時にユーザータイプ別（Obsidian 使い / SQLite 派 / とりあえず試す）のステップ案内を表示
+- **コンテキストメニューからの手動記録** — ページ上で右クリックして「Yasumaro でこのページを記録」から即座に保存可能に
+- **手動実行ボタンの視認性向上** — ポップアップの「今すぐ記録」ボタンを強調し、進捗状態を表示
+- **Markdown 1クリックコピー** — 記録した要約をポップアップ/ダッシュボードから Markdown 形式でクリップボードにコピー
+- **Chrome Web Store ランディング素材** — ストア説明文（日英）、スクリーンショット 4 枚、`store-assets/` 運用フローを追加
+
+### Changed / 変更
+
+- `PERMISSIONS.md` を更新 — `contextMenus` 権限の正当化を追加
+
+---
 
 ## [6.0.4] - 2026-06-20
 
