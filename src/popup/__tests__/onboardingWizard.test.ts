@@ -29,4 +29,33 @@ describe('onboardingWizard', () => {
     expect(mockStorage.get('onboarding_wizard_completed')).toBe(true);
     expect(mockStorage.get('onboarding_wizard_type')).toBe('obsidian');
   });
+
+  it('returns localized label for each wizard type', () => {
+    const originalGetMessage = chrome.i18n.getMessage;
+    (chrome.i18n.getMessage as vi.Mock).mockImplementation((key: string) => {
+      const messages: Record<string, string> = {
+        wizardTypeObsidian: 'Obsidian user',
+        wizardTypeSqlite: 'SQLite (no Obsidian)',
+        wizardTypeMinimal: 'Just trying it out',
+      };
+      return messages[key] || key;
+    });
+
+    const obsidianLabel = getWizardTypeLabel('obsidian');
+    const sqliteLabel = getWizardTypeLabel('sqlite');
+    const minimalLabel = getWizardTypeLabel('minimal');
+
+    expect(typeof obsidianLabel).toBe('string');
+    expect(obsidianLabel.length).toBeGreaterThan(0);
+    expect(typeof sqliteLabel).toBe('string');
+    expect(sqliteLabel.length).toBeGreaterThan(0);
+    expect(typeof minimalLabel).toBe('string');
+    expect(minimalLabel.length).toBeGreaterThan(0);
+
+    expect(obsidianLabel).toBe('Obsidian user');
+    expect(sqliteLabel).toBe('SQLite (no Obsidian)');
+    expect(minimalLabel).toBe('Just trying it out');
+
+    chrome.i18n.getMessage = originalGetMessage;
+  });
 });
