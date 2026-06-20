@@ -56,8 +56,10 @@ video-*/
 coverage/
 *.zip
 *.tar.gz
-store-assets/
 yasumaro-*.zip
+
+# Legacy store assets location (new assets live at /store-assets)
+dev-docs/store-assets/
 
 # i18n message backup/temp files
 _locales/*-base.json
