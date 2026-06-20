@@ -398,6 +398,12 @@
   "copiedToClipboard": {
     "message": "Copied to clipboard"
   },
+  "copyMarkdown": {
+    "message": "Copy Markdown"
+  },
+  "copyMarkdownSuccess": {
+    "message": "Copied to clipboard"
+  },
   "nothingToExport": {
     "message": "Nothing to export"
   },

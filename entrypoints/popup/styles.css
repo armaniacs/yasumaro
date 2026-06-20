@@ -570,6 +570,29 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   animation: fadeIn var(--transition) ease;
 }
 
+.record-result-actions {
+  margin-top: var(--space-3);
+  animation: fadeIn var(--transition) ease;
+}
+
+.copy-markdown-btn {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ym-color-border);
+  border-radius: var(--ym-radius-md);
+  background: var(--ym-color-bg-subtle);
+  color: var(--ym-color-text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+}
+
+.copy-markdown-btn:hover {
+  border-color: var(--ym-color-primary);
+  color: var(--ym-color-primary);
+}
+
 .error-text {
   color: var(--color-danger);
   max-height: 120px;

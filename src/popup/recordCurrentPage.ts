@@ -11,6 +11,9 @@ import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from './mainTypes.js';
 import { setCurrentPendingSave } from './privatePageDialog.js';
+import { copyTextToClipboard } from '../utils/clipboard.js';
+import { formatEntryToMarkdown } from '../dashboard/markdownFormatter.js';
+import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus, initStatusPanel as _initStatusPanel } from './statusPanel.js';
 
 let _recordCurrentPageFn: ((force: boolean) => Promise<void>) | null = null;
@@ -176,6 +179,7 @@ async function forceRecord(
       statusDiv.textContent = message;
       statusDiv.className = 'success';
       startAutoCloseTimer();
+      await showCopyMarkdownButton(tab);
       showButtonResultState(recordBtn, 'done');
     } else {
       statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || 'Unknown error'}`;
@@ -213,7 +217,73 @@ async function showTagResult(url: string): Promise<void> {
 
     startAutoCloseTimer(4000);
   } catch {
-    // タグ取得失敗はサイレントフェール
+    // タグ取得失敗はサイレントフェイル
+  }
+}
+
+function getOrCreateResultActionsContainer(): HTMLElement | null {
+  let container = document.getElementById('recordResultActions');
+  if (container) {
+    container.innerHTML = '';
+    return container;
+  }
+
+  const tagPanel = document.getElementById('tagResultPanel');
+  if (!tagPanel) return null;
+
+  container = document.createElement('div');
+  container.id = 'recordResultActions';
+  container.className = 'record-result-actions';
+  tagPanel.parentNode?.insertBefore(container, tagPanel.nextSibling);
+  return container;
+}
+
+function buildMinimalEntryFromSavedUrl(
+  tab: chrome.tabs.Tab,
+  savedEntry: Awaited<ReturnType<typeof getSavedUrlEntries>>[number]
+): BrowsingLogEntry {
+  return {
+    id: 0,
+    url: tab.url || savedEntry.url,
+    title: tab.title || savedEntry.url,
+    summary: savedEntry.aiSummary || '',
+    tags: savedEntry.tags ? savedEntry.tags.join(',') : '',
+    created_at: savedEntry.timestamp || Date.now(),
+    is_starred: 0,
+  };
+}
+
+async function showCopyMarkdownButton(tab: chrome.tabs.Tab): Promise<void> {
+  const container = getOrCreateResultActionsContainer();
+  if (!container) return;
+
+  try {
+    const entries = await getSavedUrlEntries();
+    const savedEntry = entries.find(e => e.url === tab.url);
+    if (!savedEntry) return;
+
+    const entry = buildMinimalEntryFromSavedUrl(tab, savedEntry);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-markdown-btn secondary-btn';
+    button.textContent = getMessage('copyMarkdown') || 'Copy Markdown';
+    button.addEventListener('click', async () => {
+      try {
+        const markdown = formatEntryToMarkdown(entry);
+        await copyTextToClipboard(markdown);
+        const originalText = getMessage('copyMarkdown') || 'Copy Markdown';
+        button.textContent = getMessage('copyMarkdownSuccess') || 'Copied!';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 2000);
+      } catch {
+        button.textContent = getMessage('clipboardCopyFailed') || 'Copy failed';
+      }
+    });
+
+    container.appendChild(button);
+  } catch {
+    // コピーボタン追加失敗はサイレントフェイル
   }
 }
 
@@ -428,6 +498,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       startAutoCloseTimer();
       await showTagResult(tab.url ?? '');
+      await showCopyMarkdownButton(tab);
       if (recordBtn) {
         showButtonResultState(recordBtn, 'done');
       }
