@@ -12,7 +12,7 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from './mainTypes.js';
 import { setCurrentPendingSave } from './privatePageDialog.js';
 import { copyTextToClipboard } from '../utils/clipboard.js';
-import { formatEntryToMarkdown } from '../dashboard/markdownFormatter.js';
+import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus, initStatusPanel as _initStatusPanel } from './statusPanel.js';
 
@@ -143,46 +143,35 @@ async function forceRecord(
   showSpinner(getMessage('saving'));
 
   try {
-    const settings = await getSettings();
-    const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
-
-    let result;
-    if (usePreview) {
-      result = await sendMessageWithRetry({
-        type: 'SAVE_RECORD',
-        payload: {
-          title: tab.title,
-          url: tab.url,
-          content: content,
-          force: true
-        }
-      });
-    } else {
-      result = await sendMessageWithRetry({
-        type: 'MANUAL_RECORD',
-        payload: {
-          title: tab.title,
-          url: tab.url,
-          content: content,
-          force: true
-        }
-      });
-    }
+    const previewSave = await runPreviewAndSave({ tab, content, force: true });
 
     hideSpinner();
 
-    if (result && result.success) {
+    if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
+      statusDiv.textContent = buildPrivatePageErrorMessage(previewSave.reason);
+      statusDiv.className = 'error';
+      setRecordAnywayButton(recordBtn, tab, content);
+      return;
+    }
+
+    if (previewSave.error === 'CANCELLED') {
+      statusDiv.textContent = getMessage('cancelled');
+      void resetRecordButton(recordBtn);
+      return;
+    }
+
+    const result = previewSave.result;
+    if (previewSave.success && result) {
       chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
 
       const totalDuration = performance.now() - startTime;
       const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
       statusDiv.textContent = message;
       statusDiv.className = 'success';
-      startAutoCloseTimer();
       await showCopyMarkdownButton(tab, result);
       showButtonResultState(recordBtn, 'done');
     } else {
-      statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || 'Unknown error'}`;
+      statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || previewSave.error || 'Unknown error'}`;
       statusDiv.className = 'error';
       showButtonResultState(recordBtn, 'error');
     }
@@ -199,7 +188,7 @@ function buildPrivatePageErrorMessage(reason?: string): string {
   return `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reasonText})`;
 }
 
-async function showTagResult(url: string): Promise<void> {
+async function showTagResult(url: string, skipAutoClose: boolean = false): Promise<void> {
   if (!url) return;
 
   const panel = document.getElementById('tagResultPanel');
@@ -215,10 +204,134 @@ async function showTagResult(url: string): Promise<void> {
     panel.textContent = `🏷 ${getMessage('aiTagsLabel')}: ${tags.map(t => `#${t}`).join('  ')}`;
     panel.classList.remove('hidden');
 
-    startAutoCloseTimer(4000);
+    if (!skipAutoClose) {
+      startAutoCloseTimer(4000);
+    }
   } catch {
     // タグ取得失敗はサイレントフェイル
   }
+}
+
+interface PreviewSaveOptions {
+  tab: chrome.tabs.Tab;
+  content: string;
+  force: boolean;
+  byteStats?: ContentResponse['byteStats'];
+  aiSummaryCleansedStats?: ContentResponse['aiSummaryCleansedStats'];
+}
+
+interface PreviewSaveResult {
+  success: boolean;
+  result?: SaveRecordResult;
+  error?: string;
+  reason?: string;
+}
+
+async function runPreviewAndSave(options: PreviewSaveOptions): Promise<PreviewSaveResult> {
+  const { tab, content, force, byteStats, aiSummaryCleansedStats } = options;
+  const settings = await getSettings();
+  const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
+
+  if (!usePreview) {
+    const result = await sendMessageWithRetry({
+      type: 'MANUAL_RECORD',
+      payload: {
+        title: tab.title,
+        url: tab.url,
+        content,
+        force,
+        pageBytes: byteStats?.pageBytes,
+        candidateBytes: byteStats?.candidateBytes,
+        originalBytes: byteStats?.originalBytes,
+        cleansedBytes: byteStats?.cleansedBytes,
+        aiSummaryOriginalBytes: aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: aiSummaryCleansedStats?.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: aiSummaryCleansedStats?.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: aiSummaryCleansedStats?.aiSummaryCleansedReasons
+      }
+    });
+    return { success: !!result?.success, result, error: result?.error };
+  }
+
+  showSpinner(getMessage('localAiProcessing'));
+  const previewResponse = await sendMessageWithRetry({
+    type: 'PREVIEW_RECORD',
+    payload: {
+      title: tab.title,
+      url: tab.url,
+      content,
+      force,
+      pageBytes: byteStats?.pageBytes,
+      candidateBytes: byteStats?.candidateBytes,
+      originalBytes: byteStats?.originalBytes,
+      cleansedBytes: byteStats?.cleansedBytes,
+      aiSummaryOriginalBytes: aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+      aiSummaryCleansedBytes: aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+      aiSummaryCleansedElements: aiSummaryCleansedStats?.aiSummaryCleansedElements,
+      aiSummaryCleansedReason: aiSummaryCleansedStats?.aiSummaryCleansedReason,
+      aiSummaryCleansedReasons: aiSummaryCleansedStats?.aiSummaryCleansedReasons
+    }
+  }) as PreviewResponse;
+
+  if (!previewResponse) {
+    const errorMsg = 'No response from background worker';
+    logError('PREVIEW_RECORD failed: No response', {}, ErrorCode.CONTENT_EXTRACTION_FAILURE);
+    throw new Error(errorMsg);
+  }
+
+  if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
+    return { success: false, error: 'PRIVATE_PAGE_DETECTED', reason: previewResponse.reason };
+  }
+
+  if (!previewResponse.success) {
+    const errorMsg = previewResponse.error || 'Processing failed';
+    logError('PREVIEW_RECORD failed', { response: previewResponse }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
+    throw new Error(errorMsg);
+  }
+
+  const shouldShowPreview = (previewResponse.maskedCount || 0) > 0;
+  let finalContent = previewResponse.processedContent;
+
+  if (shouldShowPreview) {
+    hideSpinner();
+    const confirmation = await showPreview(
+      previewResponse.processedContent,
+      previewResponse.maskedItems,
+      previewResponse.maskedCount || 0,
+      undefined,
+      undefined
+    );
+
+    if (!confirmation.confirmed) {
+      return { success: false, error: 'CANCELLED' };
+    }
+    finalContent = confirmation.content || '';
+  }
+
+  showSpinner(getMessage('saving'));
+  const result = await sendMessageWithRetry({
+    type: 'SAVE_RECORD',
+    payload: {
+      title: tab.title,
+      url: tab.url,
+      content: finalContent,
+      force: force,
+      maskedCount: previewResponse.maskedCount,
+      aiDuration: previewResponse.aiDuration,
+      pageBytes: byteStats?.pageBytes,
+      candidateBytes: byteStats?.candidateBytes,
+      originalBytes: byteStats?.originalBytes,
+      cleansedBytes: byteStats?.cleansedBytes,
+      aiSummaryOriginalBytes: aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+      aiSummaryCleansedBytes: aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+      aiSummaryCleansedElements: aiSummaryCleansedStats?.aiSummaryCleansedElements,
+      aiSummaryCleansedReason: aiSummaryCleansedStats?.aiSummaryCleansedReason,
+      aiSummaryCleansedReasons: aiSummaryCleansedStats?.aiSummaryCleansedReasons
+    }
+  });
+
+  return { success: !!result?.success, result, error: result?.error };
 }
 
 function getOrCreateResultActionsContainer(): HTMLElement | null {
@@ -242,6 +355,9 @@ interface SaveRecordResult {
   success: boolean;
   summary?: string;
   tags?: string[];
+  aiDuration?: number;
+  obsidianDuration?: number;
+  error?: string;
 }
 
 function buildEntryFromSaveResult(
@@ -262,9 +378,9 @@ function buildEntryFromSaveResult(
 async function showCopyMarkdownButton(
   tab: chrome.tabs.Tab,
   result: SaveRecordResult
-): Promise<void> {
+): Promise<boolean> {
   const container = getOrCreateResultActionsContainer();
-  if (!container) return;
+  if (!container) return false;
 
   try {
     const entry = buildEntryFromSaveResult(tab, result);
@@ -293,8 +409,10 @@ async function showCopyMarkdownButton(
     });
 
     container.appendChild(button);
+    return true;
   } catch {
     // コピーボタン追加失敗はサイレントフェイル
+    return false;
   }
 }
 
@@ -381,111 +499,17 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       void updateTrustStatus(tab.url);
     }
 
-    let result;
+    const previewSave = await runPreviewAndSave({
+      tab,
+      content: contentResponse.content,
+      force,
+      byteStats: contentResponse.byteStats,
+      aiSummaryCleansedStats: contentResponse.aiSummaryCleansedStats,
+    });
 
-    if (usePreview) {
-      showSpinner(getMessage('localAiProcessing'));
-      const previewResponse = await sendMessageWithRetry({
-        type: 'PREVIEW_RECORD',
-        payload: {
-          title: tab.title,
-          url: tab.url,
-          content: contentResponse.content,
-          force: force
-        }
-      }) as PreviewResponse;
-
-      if (!previewResponse) {
-        const errorMsg = 'No response from background worker';
-        logError('PREVIEW_RECORD failed: No response', {}, ErrorCode.CONTENT_EXTRACTION_FAILURE);
-        throw new Error(errorMsg);
-      }
-
-      if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
-        hideSpinner();
-        statusDiv.textContent = buildPrivatePageErrorMessage(previewResponse.reason);
-        statusDiv.className = 'error';
-
-        if (recordBtn) {
-          setRecordAnywayButton(recordBtn, tab, contentResponse.content);
-        }
-        return;
-      }
-
-      if (!previewResponse.success) {
-        const errorMsg = previewResponse.error || 'Processing failed';
-        logError('PREVIEW_RECORD failed', { response: previewResponse }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
-        throw new Error(errorMsg);
-      }
-
-      const shouldShowPreview = (previewResponse.maskedCount || 0) > 0;
-
-      let finalContent = previewResponse.processedContent;
-
-      if (shouldShowPreview) {
-        hideSpinner();
-        const confirmation = await showPreview(
-          previewResponse.processedContent,
-          previewResponse.maskedItems,
-          previewResponse.maskedCount || 0,
-          contentResponse.cleansedReason,
-          contentResponse.cleanseStats
-        );
-
-        if (!confirmation.confirmed) {
-          statusDiv.textContent = getMessage('cancelled');
-          if (recordBtn) void resetRecordButton(recordBtn);
-          return;
-        }
-        finalContent = confirmation.content || '';
-      }
-
-      showSpinner(getMessage('saving'));
-      result = await sendMessageWithRetry({
-        type: 'SAVE_RECORD',
-        payload: {
-          title: tab.title,
-          url: tab.url,
-          content: finalContent,
-          force: force,
-          maskedCount: previewResponse.maskedCount,
-          aiDuration: previewResponse.aiDuration,
-          pageBytes: contentResponse.byteStats?.pageBytes,
-          candidateBytes: contentResponse.byteStats?.candidateBytes,
-          originalBytes: contentResponse.byteStats?.originalBytes,
-          cleansedBytes: contentResponse.byteStats?.cleansedBytes,
-          aiSummaryOriginalBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
-          aiSummaryCleansedBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
-          aiSummaryCleansedElements: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedElements,
-          aiSummaryCleansedReason: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReason,
-          aiSummaryCleansedReasons: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReasons
-        }
-      });
-
-    } else {
-      result = await sendMessageWithRetry({
-        type: 'MANUAL_RECORD',
-        payload: {
-          title: tab.title,
-          url: tab.url,
-          content: contentResponse.content,
-          force: force,
-          pageBytes: contentResponse.byteStats?.pageBytes,
-          candidateBytes: contentResponse.byteStats?.candidateBytes,
-          originalBytes: contentResponse.byteStats?.originalBytes,
-          cleansedBytes: contentResponse.byteStats?.cleansedBytes,
-          aiSummaryOriginalBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
-          aiSummaryCleansedBytes: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
-          aiSummaryCleansedElements: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedElements,
-          aiSummaryCleansedReason: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReason,
-          aiSummaryCleansedReasons: contentResponse.aiSummaryCleansedStats?.aiSummaryCleansedReasons
-        }
-      });
-    }
-
-    if (result && result.error === 'PRIVATE_PAGE_DETECTED') {
+    if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
       hideSpinner();
-      statusDiv.textContent = buildPrivatePageErrorMessage(result.reason);
+      statusDiv.textContent = buildPrivatePageErrorMessage(previewSave.reason);
       statusDiv.className = 'error';
 
       if (recordBtn) {
@@ -494,27 +518,42 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       return;
     }
 
-    if (result && result.success) {
+    if (previewSave.error === 'CANCELLED') {
       hideSpinner();
+      statusDiv.textContent = getMessage('cancelled');
+      if (recordBtn) void resetRecordButton(recordBtn);
+      return;
+    }
 
-      chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
+    if (!previewSave.success) {
+      throw new Error(previewSave.error || 'Save failed');
+    }
 
-      const totalDuration = performance.now() - startTime;
-      const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
+    const result = previewSave.result;
 
-      if (statusDiv) {
-        statusDiv.textContent = message;
-        statusDiv.className = 'success';
-      }
+    hideSpinner();
 
+    chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
+
+    const totalDuration = performance.now() - startTime;
+    const message = formatSuccessMessage(totalDuration, result?.aiDuration, result?.obsidianDuration !== undefined);
+
+    if (statusDiv) {
+      statusDiv.textContent = message;
+      statusDiv.className = 'success';
+    }
+
+    const copyButtonShown = await showCopyMarkdownButton(tab, result as SaveRecordResult);
+    if (copyButtonShown) {
+      // Keep the popup open so the user can click Copy Markdown.
+      // Do not start the auto-close timer, but still show tag results.
+      await showTagResult(tab.url ?? '', true);
+    } else {
       startAutoCloseTimer();
       await showTagResult(tab.url ?? '');
-      await showCopyMarkdownButton(tab, result);
-      if (recordBtn) {
-        showButtonResultState(recordBtn, 'done');
-      }
-    } else {
-      throw new Error(result.error || 'Save failed');
+    }
+    if (recordBtn) {
+      showButtonResultState(recordBtn, 'done');
     }
   } catch (error: unknown) {
     hideSpinner();
@@ -533,10 +572,3 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
   }
 }
 
-export function initRecordButton(): void {
-  const recordBtnInit = document.getElementById('recordBtn') as HTMLButtonElement | null;
-  if (recordBtnInit) {
-    recordBtnInit.onclick = () => handleRecordNowClick(false);
-  }
-}
-initRecordButton();

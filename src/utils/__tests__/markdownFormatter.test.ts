@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatEntryToMarkdown, formatEntriesToGenericMarkdown } from '../markdownFormatter.js';
-import { sanitizeForObsidian } from '../../utils/markdownSanitizer.js';
-import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
+import { sanitizeForObsidian } from '../markdownSanitizer.js';
+import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
   id: 1,
@@ -80,6 +80,18 @@ describe('markdownFormatter', () => {
     const entry = { ...baseEntry, title: 'Read [more](https://example.com) here' };
     const md = formatEntryToMarkdown(entry);
     expect(md).toContain('# Read \\[more\\]\\(https://example.com\\) here');
+  });
+
+  it('escapes markdown links in URL via sanitizeForObsidian', () => {
+    const entry = { ...baseEntry, url: 'https://example.com/[click](https://evil.com)' };
+    const md = formatEntryToMarkdown(entry);
+    expect(md).toContain('- URL: https://example.com/\\[click\\]\\(https://evil.com\\)');
+  });
+
+  it('escapes markdown links in tags via sanitizeForObsidian', () => {
+    const entry = { ...baseEntry, tags: '[promo](https://evil.com),ai' };
+    const md = formatEntryToMarkdown(entry);
+    expect(md).toContain('- Tags: #\\[promo\\]\\(https://evil.com\\) #ai');
   });
 
   it('leaves standalone ] and # characters unchanged', () => {

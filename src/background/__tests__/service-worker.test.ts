@@ -1320,6 +1320,33 @@ describe('service-worker handlers', () => {
 
             handleManualRecordSpy.mockRestore();
         });
+
+        it('ignores duplicate clicks while a record is in progress', async () => {
+            if (!contextMenuClickListener) throw new Error('Context menu listener not registered');
+
+            const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
+            let resolveDeferred: (value: unknown) => void = () => {};
+            const deferred = new Promise<unknown>((resolve) => {
+                resolveDeferred = resolve;
+            });
+            executeScriptMock.mockReturnValueOnce(deferred);
+
+            const firstClick = contextMenuClickListener(
+                { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
+                { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
+            );
+
+            // Second click while the first one is still pending should be ignored.
+            await contextMenuClickListener(
+                { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
+                { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
+            );
+
+            expect(executeScriptMock).toHaveBeenCalledTimes(1);
+
+            resolveDeferred([{ result: { url: 'https://example.com', title: 'Example', content: 'body text' } }]);
+            await firstClick;
+        });
     });
 
     describe('handleValidVisit', () => {

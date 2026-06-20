@@ -1008,6 +1008,8 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     registerManualRecordContextMenu();
     chrome.runtime.onInstalled.addListener(registerManualRecordContextMenu);
 
+    let contextMenuRecordInProgress: Promise<void> | null = null;
+
     chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
 
@@ -1016,45 +1018,59 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
             return;
         }
 
-        try {
-            const [result] = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: () => ({
-                    url: window.location.href,
-                    title: document.title,
-                    content: document.body?.innerText?.slice(0, 5000) || '',
-                }),
-            });
+        if (contextMenuRecordInProgress) return;
 
-            const raw = result?.result;
-            if (!raw || typeof raw !== 'object' || !('url' in raw)) {
-                await logWarn('Context menu received invalid page data', { url: tab.url }, undefined, 'service-worker');
-                return;
-            }
+        const targetTabId = tab.id;
+        const targetTabUrl = tab.url;
+        if (!targetTabId || !targetTabUrl) return;
 
-            const payload = raw as { url: string; title: string; content: string };
-            const sender: chrome.runtime.MessageSender = {
-                tab: { id: tab.id, url: payload.url } as chrome.tabs.Tab,
-                id: chrome.runtime.id,
-                url: chrome.runtime.getURL(''),
-            };
+        contextMenuRecordInProgress = (async () => {
+            try {
+                const [result] = await chrome.scripting.executeScript({
+                    target: { tabId: targetTabId },
+                    func: () => ({
+                        url: window.location.href,
+                        title: document.title,
+                        content: document.body?.innerText?.slice(0, 5000) || '',
+                    }),
+                });
 
-            await handleManualRecord(
-                {
-                    type: 'MANUAL_RECORD',
-                    payload: {
-                        url: payload.url,
-                        title: payload.title,
-                        content: payload.content,
-                        force: true,
-                        skipAi: false,
+                const raw = result?.result;
+                if (!raw || typeof raw !== 'object' || !('url' in raw)) {
+                    await logWarn('Context menu received invalid page data', { url: targetTabUrl }, undefined, 'service-worker');
+                    return;
+                }
+
+                const payload = raw as { url: string; title: string; content: string };
+                const sender: chrome.runtime.MessageSender = {
+                    tab: { id: targetTabId, url: payload.url } as chrome.tabs.Tab,
+                    id: chrome.runtime.id,
+                    url: chrome.runtime.getURL(''),
+                };
+
+                await handleManualRecord(
+                    {
+                        type: 'MANUAL_RECORD',
+                        payload: {
+                            url: payload.url,
+                            title: payload.title,
+                            content: payload.content,
+                            force: true,
+                            skipAi: false,
+                        },
                     },
-                },
-                sender,
-                () => {}
-            );
-        } catch (error) {
-            logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+                    sender,
+                    () => {}
+                );
+            } catch (error) {
+                logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+            }
+        })();
+
+        try {
+            await contextMenuRecordInProgress;
+        } finally {
+            contextMenuRecordInProgress = null;
         }
     });
 
