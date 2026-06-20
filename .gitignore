@@ -46,6 +46,8 @@ dev-docs/blog-*
 !/.github/workflows/*.yml
 !/.github/workflows/*.yaml
 
+# Allow project-specific skills and commandsn!/.kilo/skills/**n!/.kilo/commands/**n
+
 video-autotag/
 video-config-export/
 video-*/

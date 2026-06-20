@@ -1,0 +1,23 @@
+{
+  "skill_name": "yasumaro-github-release",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "v6.0.5 をリリースする準備をして。CHANGELOG.md と wxt.config.ts、package.json のバージョンはすでに 6.0.5 に更新済みで、.github/workflows/release.yml には古い 'Obsidian Weave' と 'armaniacs/obsidian-weave' の参照が残っている。リリース作成前にやるべきことをリストアップし、release.yml の修正内容と、生成すべき GitHub リリース本文を出力してください。",
+      "expected_output": "The response should identify the wrong brand/repo references, propose fixes for release.yml, and generate release notes using 'Yasumaro' and 'armaniacs/Yasumaro' only.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create the GitHub release notes for Yasumaro v6.0.5. The current CHANGELOG.md top entry is for [6.0.5] and contains a Fixed section with one bullet about updating AI provider domains and a Chores section with one bullet about dependency updates. Output the exact release body that should be passed to `gh release create`.",
+      "expected_output": "The response should produce a release body titled '## Yasumaro v6.0.5' with a CHANGELOG.md link pointing to armaniacs/Yasumaro, followed by the changelog content.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I want to cut a new release. package.json says 6.0.5, wxt.config.ts says 6.0.5, but package-lock.json still says 6.0.4. What should you do before creating the git tag and GitHub release?",
+      "expected_output": "The response should detect the version mismatch and state that npm install --package-lock-only must be run to sync package-lock.json before proceeding.",
+      "files": []
+    }
+  ]
+}
