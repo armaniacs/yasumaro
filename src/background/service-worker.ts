@@ -971,11 +971,15 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 // ============================================================================
 
 export function registerManualRecordContextMenu(): void {
-    chrome.contextMenus.create({
-        id: 'yasumaro-manual-record',
-        title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
-        contexts: ['page', 'link'],
-    });
+    try {
+        chrome.contextMenus.create({
+            id: 'yasumaro-manual-record',
+            title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
+            contexts: ['page', 'link'],
+        });
+    } catch {
+        // Menu may already exist on service worker restart; ignore duplicate ID errors.
+    }
 }
 
 // ============================================================================
