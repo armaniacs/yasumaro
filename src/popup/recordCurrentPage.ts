@@ -21,6 +21,8 @@ export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): v
 
 // 「それでも記録」ボタン表示中フラグ（recordCurrentPage の finally でのリセットを防ぐ）
 let isAwaitingForceConfirm = false;
+// 記録結果状態（成功/失敗）を表示中のフラグ
+let isShowingResultState = false;
 
 export async function loadCurrentTab(): Promise<void> {
   const tab = await getCurrentTab();
@@ -65,10 +67,10 @@ async function resetRecordButton(recordBtn: HTMLButtonElement): Promise<void> {
   const status = url ? await checkPageStatus(url) : null;
   if (status && !status.domainFilter.allowed) {
     recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
-    recordBtn.onclick = () => void recordCurrentPage(true);
+    recordBtn.onclick = () => handleRecordNowClick(true);
   } else {
     recordBtn.textContent = getMessage('recordNow');
-    recordBtn.onclick = () => recordCurrentPage(false);
+    recordBtn.onclick = () => handleRecordNowClick(false);
   }
 }
 
@@ -82,8 +84,44 @@ function setRecordAnywayButton(
   recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
   recordBtn.onclick = () => {
     isAwaitingForceConfirm = false;
-    void forceRecord(recordBtn, tab, content);
+    return handleRecordNowClick(true, tab, content);
   };
+}
+
+export async function handleRecordNowClick(
+  force: boolean = false,
+  tab?: chrome.tabs.Tab,
+  content?: string
+): Promise<void> {
+  const button = document.getElementById('recordBtn') as HTMLButtonElement | null;
+  if (!button) return;
+
+  button.disabled = true;
+  button.textContent = getMessage('recordNowProgress') || 'Recording...';
+
+  if (force && tab && content !== undefined) {
+    await forceRecord(button, tab, content);
+  } else {
+    await recordCurrentPage(force);
+  }
+}
+
+function showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'error'): void {
+  isAwaitingForceConfirm = false;
+  isShowingResultState = true;
+  recordBtn.disabled = true;
+  recordBtn.textContent = getMessage(state === 'done' ? 'recordNowDone' : 'recordNowError')
+    || (state === 'done' ? 'Saved!' : 'Failed');
+  setTimeout(() => {
+    isShowingResultState = false;
+    const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
+    if (btn) void resetRecordButton(btn);
+  }, 2000);
+}
+
+function resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
+  isAwaitingForceConfirm = false;
+  void resetRecordButton(btn);
 }
 
 async function forceRecord(
@@ -96,7 +134,7 @@ async function forceRecord(
   if (!statusDiv) return;
 
   recordBtn.disabled = true;
-  recordBtn.textContent = getMessage('recording') || 'Recording...';
+  recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
   statusDiv.textContent = '';
   statusDiv.className = '';
   showSpinner(getMessage('saving'));
@@ -138,22 +176,17 @@ async function forceRecord(
       statusDiv.textContent = message;
       statusDiv.className = 'success';
       startAutoCloseTimer();
-      resetRecordButtonAndClearFlag(recordBtn);
+      showButtonResultState(recordBtn, 'done');
     } else {
       statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || 'Unknown error'}`;
       statusDiv.className = 'error';
-      resetRecordButtonAndClearFlag(recordBtn);
+      showButtonResultState(recordBtn, 'error');
     }
   } catch (error: unknown) {
     hideSpinner();
-    showError(statusDiv, error, () => void forceRecord(recordBtn, tab, content));
-    resetRecordButtonAndClearFlag(recordBtn);
+    showError(statusDiv, error, () => handleRecordNowClick(true, tab, content));
+    showButtonResultState(recordBtn, 'error');
   }
-}
-
-function resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
-  isAwaitingForceConfirm = false;
-  void resetRecordButton(btn);
 }
 
 function buildPrivatePageErrorMessage(reason?: string): string {
@@ -193,6 +226,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
   if (recordBtn) {
     recordBtn.disabled = true;
+    recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
   }
 
   hideSpinner();
@@ -394,14 +428,20 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
       startAutoCloseTimer();
       await showTagResult(tab.url ?? '');
+      if (recordBtn) {
+        showButtonResultState(recordBtn, 'done');
+      }
     } else {
       throw new Error(result.error || 'Save failed');
     }
   } catch (error: unknown) {
     hideSpinner();
+    if (recordBtn) {
+      showButtonResultState(recordBtn, 'error');
+    }
     showError(statusDiv, error, () => recordCurrentPage(true));
   } finally {
-    if (!isAwaitingForceConfirm) {
+    if (!isAwaitingForceConfirm && !isShowingResultState) {
       const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
       const currentTab = await getCurrentTab();
       if (btn && currentTab && isRecordable(currentTab)) {
@@ -414,7 +454,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 export function initRecordButton(): void {
   const recordBtnInit = document.getElementById('recordBtn') as HTMLButtonElement | null;
   if (recordBtnInit) {
-    recordBtnInit.onclick = () => recordCurrentPage(false);
+    recordBtnInit.onclick = () => handleRecordNowClick(false);
   }
 }
 initRecordButton();
