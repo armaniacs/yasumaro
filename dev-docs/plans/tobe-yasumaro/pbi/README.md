@@ -23,8 +23,12 @@ Phase 9 (デザインシステム) ── 独立して着手可、Store公開前
 | 100-108 | [archive/](./archive/) | Checking Team Review (完了) | 42 | ✅ 完了済み |
 | 09-15 | [archive/](./archive/) | デザインシステム + OPFS/診断パネル拡張 (完了) | 24 | ✅ 完了済み |
 | 08 (旧) | [store-release](./2026-06-09-08-feat-store-release.md) | Chrome Web Store公開準備（P1〜P4 即時着手可 / P5 は v6.0.0 後） | 5 | 🟡 **P1〜P4 着手可**（2026-06-17 ユーザー明示指示） |
+| 19 | [2026-06-20-19-feat-onboarding-wizard.md](./2026-06-20-19-feat-onboarding-wizard.md) | 対話型設定ウィザード | 5 | 🟡 **v6.1.x 着手可** |
+| 20 | [2026-06-20-20-feat-manual-record-visibility.md](./2026-06-20-20-feat-manual-record-visibility.md) | 手動実行ボタンの視認性向上 | 3 | 🟡 **v6.1.x 着手可** |
+| 21 | [2026-06-20-21-feat-markdown-copy.md](./2026-06-20-21-feat-markdown-copy.md) | Markdown 1クリックコピー | 3 | 🟡 **v6.1.x 着手可** |
+| 22 | [2026-06-20-22-feat-store-landing-refresh.md](./2026-06-20-22-feat-store-landing-refresh.md) | Chrome Web Store ランディングページ刷新 | 3 | 🟡 **v6.1.x 着手可** |
 
-**合計: 139 SP | 完了済み: 134 SP (96%) | 未着手: 5 SP**（PBI-04 記録トリガーUIは削除）
+**合計: 153 SP | 完了済み: 134 SP (88%) | 未着手: 14 SP**（うち v6.1.x が 14 SP、v6.3.x 以降は設計書内に候補として管理）
 
 ### Archive (完了済み PBI)
 
