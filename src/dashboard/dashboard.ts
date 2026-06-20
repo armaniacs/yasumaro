@@ -124,6 +124,35 @@ export function initSidebarNav(): void {
   activateBtn(activeIndex >= 0 ? activeIndex : 0);
 }
 
+export function openSettingsPanel(section: string): void {
+  const panelMap: Record<string, string> = {
+    obsidian: 'panel-general',
+    'ai-provider': 'panel-general',
+    general: 'panel-general',
+  };
+
+  const panelId = panelMap[section];
+  if (!panelId) return;
+
+  const navBtn = document.querySelector<HTMLButtonElement>(`.sidebar-nav-btn[data-panel="${panelId}"]`);
+  if (navBtn) {
+    navBtn.click();
+  }
+
+  if (section === 'obsidian') {
+    const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
+    if (details) {
+      details.open = true;
+      details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } else if (section === 'ai-provider') {
+    const aiSection = document.querySelector<HTMLElement>('#panel-general .settings-section:nth-of-type(2)');
+    if (aiSection) {
+      aiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+}
+
 // ============================================================================
 // DOM Elements - General Settings Form (Lazy Initialization)
 // ============================================================================
@@ -629,11 +658,16 @@ function initExportLogsPanel(): void {
 
   initSidebarNav();
 
-  // Auto-navigate to SQLite history if URL parameter is present
+  // Auto-navigate based on URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'sqlite-history') {
     const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
     if (historyBtn) historyBtn.click();
+  }
+
+  const section = urlParams.get('section');
+  if (section) {
+    openSettingsPanel(section);
   }
 
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
