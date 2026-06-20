@@ -8,6 +8,11 @@ export async function shouldShowWizard(): Promise<boolean> {
   return !settings[StorageKeys.ONBOARDING_WIZARD_COMPLETED];
 }
 
+export async function hasCompletedWizard(): Promise<boolean> {
+  const settings = await getSettings();
+  return !!settings[StorageKeys.ONBOARDING_WIZARD_COMPLETED];
+}
+
 export async function completeWizard(type: WizardType): Promise<void> {
   await saveSettings({
     [StorageKeys.ONBOARDING_WIZARD_COMPLETED]: true,
