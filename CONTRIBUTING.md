@@ -385,6 +385,16 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 - ドラッグ＆ドロップ対応
 ```
 
+#### ブランチ命名規則
+
+本プロジェクトではシンプルなブランチ運用を採用しています。
+
+- `main` — 現在の安定系列。v6.0.x のバグ修正を受け入れます。
+- `feature/<名前>` — 新機能開発用ブランチ。例: `feature/ai-provider-improvements`
+- `hotfix/<名前>` — 緊急のバグ修正用ブランチ。例: `hotfix/fix-notification-crash`
+
+新機能は `feature/` ブランチで開発し、準備ができたら `main` へマージしてリリースします。v6.0.x はバグ修正のみを予定しています。
+
 ### コードレビュー
 
 レビューの時は以下を確認してください：
@@ -792,6 +802,16 @@ feat(domainFilter): uBlock format filter import feature
 - Import from URL
 - Drag and drop support
 ```
+
+#### Branch Naming Convention
+
+This project uses a simple branch workflow.
+
+- `main` — The current stable release line. Accepts v6.0.x bug fixes.
+- `feature/<name>` — New feature branches. Example: `feature/ai-provider-improvements`
+- `hotfix/<name>` — Urgent bug fix branches. Example: `hotfix/fix-notification-crash`
+
+Develop new features in `feature/` branches and merge them into `main` when ready for release. The v6.0.x line is intended for bug fixes only.
 
 ### Code Review Checklist
 
