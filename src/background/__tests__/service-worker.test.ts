@@ -1219,7 +1219,8 @@ describe('service-worker handlers', () => {
                     id: 'yasumaro-manual-record',
                     title: expect.any(String),
                     contexts: ['page', 'link'],
-                })
+                }),
+                expect.any(Function)
             );
         });
 

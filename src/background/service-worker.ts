@@ -971,18 +971,21 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 // ============================================================================
 
 export function registerManualRecordContextMenu(): void {
-    try {
-        chrome.contextMenus.create({
+    chrome.contextMenus.create(
+        {
             id: 'yasumaro-manual-record',
             title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
             contexts: ['page', 'link'],
-        });
-    } catch (error) {
-        const message = chrome.runtime.lastError?.message || String(error);
-        if (!message.includes('duplicate id')) {
-            logError('Failed to register context menu', { cause: message }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+        },
+        () => {
+            const error = chrome.runtime.lastError;
+            if (!error) return;
+            const message = error.message || '';
+            if (!message.includes('duplicate id')) {
+                logError('Failed to register context menu', { cause: message }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+            }
         }
-    }
+    );
 }
 
 // ============================================================================
@@ -1005,7 +1008,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.runtime.onStartup.addListener(handleStartup);
 
     // Context menu for manual recording
-    registerManualRecordContextMenu();
+    // Registered on install/update; context menu items persist across service worker restarts.
     chrome.runtime.onInstalled.addListener(registerManualRecordContextMenu);
 
     let contextMenuRecordInProgress: Promise<void> | null = null;
