@@ -143,7 +143,13 @@ async function forceRecord(
   showSpinner(getMessage('saving'));
 
   try {
-    const previewSave = await runPreviewAndSave({ tab, content, force: true });
+    const previewSave = await runPreviewAndSave({
+      tab,
+      content,
+      force: true,
+      cleansedReason: undefined,
+      cleanseStats: undefined,
+    });
 
     hideSpinner();
 
@@ -218,6 +224,8 @@ interface PreviewSaveOptions {
   force: boolean;
   byteStats?: ContentResponse['byteStats'];
   aiSummaryCleansedStats?: ContentResponse['aiSummaryCleansedStats'];
+  cleansedReason?: ContentResponse['cleansedReason'];
+  cleanseStats?: ContentResponse['cleanseStats'];
 }
 
 interface PreviewSaveResult {
@@ -228,7 +236,7 @@ interface PreviewSaveResult {
 }
 
 async function runPreviewAndSave(options: PreviewSaveOptions): Promise<PreviewSaveResult> {
-  const { tab, content, force, byteStats, aiSummaryCleansedStats } = options;
+  const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats } = options;
   const settings = await getSettings();
   const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
@@ -299,8 +307,8 @@ async function runPreviewAndSave(options: PreviewSaveOptions): Promise<PreviewSa
       previewResponse.processedContent,
       previewResponse.maskedItems,
       previewResponse.maskedCount || 0,
-      undefined,
-      undefined
+      cleansedReason,
+      cleanseStats
     );
 
     if (!confirmation.confirmed) {
@@ -505,6 +513,8 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       force,
       byteStats: contentResponse.byteStats,
       aiSummaryCleansedStats: contentResponse.aiSummaryCleansedStats,
+      cleansedReason: contentResponse.cleansedReason,
+      cleanseStats: contentResponse.cleanseStats,
     });
 
     if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
