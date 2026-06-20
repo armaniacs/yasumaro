@@ -1682,6 +1682,48 @@
   "saveFailed": {
     "message": "Failed to save consent"
   },
+  "wizardTitle": {
+    "message": "Welcome to Yasumaro"
+  },
+  "wizardTypePrompt": {
+    "message": "How do you plan to use Yasumaro?"
+  },
+  "wizardTypeObsidian": {
+    "message": "Obsidian user"
+  },
+  "wizardTypeSqlite": {
+    "message": "SQLite (no Obsidian)"
+  },
+  "wizardTypeMinimal": {
+    "message": "Just trying it out"
+  },
+  "wizardObsidianTitle": {
+    "message": "Connect Obsidian"
+  },
+  "wizardObsidianDescription": {
+    "message": "Set your Local REST API key and daily notes path."
+  },
+  "wizardSqliteTitle": {
+    "message": "Set up AI Provider"
+  },
+  "wizardSqliteDescription": {
+    "message": "Choose an AI provider for summaries."
+  },
+  "wizardMinimalTitle": {
+    "message": "You're ready"
+  },
+  "wizardMinimalDescription": {
+    "message": "Yasumaro will record pages automatically. Open settings anytime."
+  },
+  "wizardSkip": {
+    "message": "Skip"
+  },
+  "wizardOpenDashboard": {
+    "message": "Open Dashboard"
+  },
+  "wizardFinish": {
+    "message": "Get started"
+  },
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },

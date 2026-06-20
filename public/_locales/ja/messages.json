@@ -1680,6 +1680,48 @@
   "saveFailed": {
     "message": "同意の保存に失敗しました"
   },
+  "wizardTitle": {
+    "message": "Yasumaro へようこそ"
+  },
+  "wizardTypePrompt": {
+    "message": "Yasumaro をどのように使いますか？"
+  },
+  "wizardTypeObsidian": {
+    "message": "Obsidian 使い"
+  },
+  "wizardTypeSqlite": {
+    "message": "SQLite（Obsidian なし）"
+  },
+  "wizardTypeMinimal": {
+    "message": "とりあえず試したい"
+  },
+  "wizardObsidianTitle": {
+    "message": "Obsidian を接続"
+  },
+  "wizardObsidianDescription": {
+    "message": "Local REST API キーとデイリーノートのパスを設定してください。"
+  },
+  "wizardSqliteTitle": {
+    "message": "AI プロバイダーを設定"
+  },
+  "wizardSqliteDescription": {
+    "message": "要約に使用する AI プロバイダーを選んでください。"
+  },
+  "wizardMinimalTitle": {
+    "message": "準備完了です"
+  },
+  "wizardMinimalDescription": {
+    "message": "Yasumaro がページを自動で記録します。設定はいつでも開けます。"
+  },
+  "wizardSkip": {
+    "message": "スキップ"
+  },
+  "wizardOpenDashboard": {
+    "message": "ダッシュボードを開く"
+  },
+  "wizardFinish": {
+    "message": "はじめる"
+  },
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },
