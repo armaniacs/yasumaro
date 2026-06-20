@@ -41,31 +41,33 @@ function getContentType(filePath) {
   return map[ext] || 'application/octet-stream';
 }
 
-function startStaticServer(root, port) {
+function startStaticServer(root) {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
-      let urlPath = decodeURIComponent(req.url.split('?')[0]);
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      let urlPath = decodeURIComponent(url.pathname);
       if (urlPath === '/') urlPath = '/popup.html';
-      const filePath = path.join(root, urlPath);
+      const requestedPath = path.resolve(root, urlPath.slice(1));
 
-      if (!filePath.startsWith(root)) {
+      if (!requestedPath.startsWith(root + path.sep) && requestedPath !== root) {
         res.writeHead(403);
         res.end('Forbidden');
         return;
       }
 
-      fs.readFile(filePath, (err, data) => {
+      fs.readFile(requestedPath, (err, data) => {
         if (err) {
           res.writeHead(404);
           res.end('Not found');
           return;
         }
-        res.writeHead(200, { 'Content-Type': getContentType(filePath) });
+        res.writeHead(200, { 'Content-Type': getContentType(requestedPath) });
         res.end(data);
       });
     });
 
-    server.listen(port, '127.0.0.1', () => {
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
       console.log(`Static server running at http://127.0.0.1:${port}`);
       resolve(server);
     });
@@ -77,13 +79,17 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function mockChromeApisInitScript(messages) {
+function mockChromeApisInitScript({ messages, baseUrl }) {
   // This function is serialized and executed in the page before any other scripts.
   const noop = () => {};
 
   const storageListeners = [];
   const storageData = {
-    privacyConsent: { accepted: true, timestamp: Date.now() },
+    privacy_consent: {
+      hasConsented: true,
+      consentDate: new Date().toISOString(),
+      consentVersion: '2026-02-23',
+    },
     settings_migrated: true,
     obsidian_api_key: 'yasumaro-example-key-0000',
     obsidian_protocol: 'https',
@@ -220,7 +226,7 @@ function mockChromeApisInitScript(messages) {
 
   const runtimeApi = {
     id: 'yasumaro-screenshot-mock',
-    getURL: (p) => `http://127.0.0.1:9999${p}`,
+    getURL: (p) => `${baseUrl}${p}`,
     getManifest: () => ({
       name: 'Yasumaro',
       version: '6.1.0',
@@ -492,15 +498,15 @@ async function main() {
 
   const messages = loadI18nMessages();
 
-  const port = 9999;
-  const server = await startStaticServer(DIST_PATH, port);
+  const server = await startStaticServer(DIST_PATH);
+  const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
 
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
 
   try {
     const context = await browser.newContext({ viewport: VIEWPORT });
-    await context.addInitScript(mockChromeApisInitScript, messages);
+    await context.addInitScript(mockChromeApisInitScript, { messages, baseUrl });
 
     const page = await context.newPage();
 
