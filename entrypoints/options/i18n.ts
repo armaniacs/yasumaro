@@ -10,7 +10,7 @@
  * @returns {string} 翻訳された文字列
  */
 export function getMessage(key: string, substitutions: any = null): string {
-  const message = chrome.i18n.getMessage(key);
+  const message = browser.i18n.getMessage(key);
   if (!message) return "";
 
   if (substitutions && typeof substitutions === 'object' && !Array.isArray(substitutions)) {
@@ -20,12 +20,12 @@ export function getMessage(key: string, substitutions: any = null): string {
     });
   }
 
-  // Handle array substitutions which chrome.i18n supports natively but wrapper might want strict control
+  // Handle array substitutions which browser.i18n supports natively but wrapper might want strict control
   if (Array.isArray(substitutions)) {
-    // Re-fetch with substitutions if array provided, though chrome.i18n.getMessage(key, substitutions) works.
+    // Re-fetch with substitutions if array provided, though browser.i18n.getMessage(key, substitutions) works.
     // But here we already fetched message without substitutions.
-    // Actually chrome.i18n.getMessage(key, substitutions) is standard.
-    return chrome.i18n.getMessage(key, substitutions) || "";
+    // Actually browser.i18n.getMessage(key, substitutions) is standard.
+    return browser.i18n.getMessage(key, substitutions) || "";
   }
 
   return message;

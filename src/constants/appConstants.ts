@@ -200,6 +200,8 @@ export const ERROR_CODES = {
 /** 特殊URLスキーム（記録不可） */
 export const NON_RECORDABLE_SCHEMES = [
   'chrome://',
+  'browser-extension://',
+  'moz-extension://',
   'chrome-extension://',
   'edge://',
   'about:',
