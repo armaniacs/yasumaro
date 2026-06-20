@@ -3,7 +3,7 @@
  *
  * Serves the built dist/chromium-mv3 directory over HTTP to avoid CORS issues
  * when opening popup/options pages directly, mocks the chrome.* APIs the UI
- * requires, and saves 1280x800 PNG screenshots.
+ * requires using real English i18n messages, and saves 1280x800 PNG screenshots.
  */
 import { chromium } from 'playwright';
 import path from 'path';
@@ -16,8 +16,14 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.join(__dirname, '..');
 const DIST_PATH = path.join(PROJECT_ROOT, 'dist', 'chromium-mv3');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'store-assets', 'screenshots');
+const MESSAGES_PATH = path.join(PROJECT_ROOT, 'public', '_locales', 'en', 'messages.json');
 
 const VIEWPORT = { width: 1280, height: 800 };
+
+function loadI18nMessages() {
+  const raw = fs.readFileSync(MESSAGES_PATH, 'utf-8');
+  return JSON.parse(raw);
+}
 
 function getContentType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
@@ -71,7 +77,7 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function mockChromeApisInitScript() {
+function mockChromeApisInitScript(messages) {
   // This function is serialized and executed in the page before any other scripts.
   const noop = () => {};
 
@@ -210,11 +216,36 @@ function mockChromeApisInitScript() {
     },
   };
 
-  const i18nApi = {
-    getMessage: (key, substitutions) => {
-      // Return the key as a readable fallback so labels remain visible
+  // Implement chrome.i18n.getMessage using real English messages.
+  function getMessage(key, substitutions) {
+    const entry = messages[key];
+    if (!entry || !entry.message) {
       return key;
-    },
+    }
+
+    let message = entry.message;
+    const subs = Array.isArray(substitutions) ? substitutions : [];
+    const placeholders = entry.placeholders || {};
+
+    // Replace named placeholders ($NAME$) with their content definitions.
+    for (const [name, def] of Object.entries(placeholders)) {
+      let content = typeof def === 'string' ? def : (def?.content ?? `$${name.toUpperCase()}$`);
+      // Substitute $1, $2, etc. inside the placeholder content.
+      content = content.replace(/\$(\d+)\$/g, (m, n) => subs[parseInt(n, 10) - 1] ?? m);
+      content = content.replace(/\$(\d+)/g, (m, n) => subs[parseInt(n, 10) - 1] ?? m);
+      const pattern = new RegExp(`\\$${name.toUpperCase()}\\$`, 'g');
+      message = message.replace(pattern, content);
+    }
+
+    // Replace any remaining $1, $2, ... placeholders in the message text.
+    message = message.replace(/\$(\d+)\$/g, (m, n) => subs[parseInt(n, 10) - 1] ?? m);
+    message = message.replace(/\$(\d+)/g, (m, n) => subs[parseInt(n, 10) - 1] ?? m);
+
+    return message;
+  }
+
+  const i18nApi = {
+    getMessage,
     getUILanguage: () => 'en',
     getAcceptLanguages: () => Promise.resolve(['en']),
   };
@@ -245,8 +276,9 @@ function mockChromeApisInitScript() {
 }
 
 async function capturePopup(page, baseUrl, colorScheme, outputName) {
+  // Capture the popup at a higher device scale for a crisp presentation image.
   await page.emulateMedia({ colorScheme });
-  await page.setViewportSize(VIEWPORT);
+  await page.setViewportSize({ width: VIEWPORT.width, height: VIEWPORT.height });
   await page.goto(`${baseUrl}/popup.html`);
 
   // Wait for the main screen to be visible
@@ -261,7 +293,72 @@ async function capturePopup(page, baseUrl, colorScheme, outputName) {
   }
 
   await sleep(800);
-  await page.screenshot({ path: path.join(OUTPUT_DIR, outputName), fullPage: false });
+
+  // Screenshot the popup body element (360px wide) so we can present it centered.
+  const popupBuffer = await page.locator('body').screenshot();
+  const popupDataUrl = `data:image/png;base64,${popupBuffer.toString('base64')}`;
+
+  // Create a 1280x800 presentation page that centers the popup with a branded background.
+  const presentationPage = await page.context().newPage();
+  await presentationPage.setViewportSize(VIEWPORT);
+
+  const isDark = colorScheme === 'dark';
+  const bgGradient = isDark
+    ? 'radial-gradient(circle at 50% 30%, #1a1a24 0%, #0e0e12 70%)'
+    : 'radial-gradient(circle at 50% 30%, #ede7d9 0%, #f5f0e8 70%)';
+  const frameShadow = isDark
+    ? '0 32px 64px -12px rgba(0,0,0,0.6)'
+    : '0 32px 64px -12px rgba(0,0,0,0.18)';
+
+  await presentationPage.setContent(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * { box-sizing: border-box; }
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: ${VIEWPORT.width}px;
+            height: ${VIEWPORT.height}px;
+            overflow: hidden;
+          }
+          body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: ${bgGradient};
+          }
+          .popup-frame {
+            max-width: 720px;
+            max-height: 720px;
+            width: auto;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: ${frameShadow};
+            overflow: hidden;
+          }
+          .popup-frame img {
+            display: block;
+            max-width: 100%;
+            max-height: 720px;
+            width: auto;
+            height: auto;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="popup-frame">
+          <img src="${popupDataUrl}" alt="Yasumaro popup">
+        </div>
+      </body>
+    </html>
+  `);
+
+  await sleep(300);
+  await presentationPage.screenshot({ path: path.join(OUTPUT_DIR, outputName) });
+  await presentationPage.close();
 }
 
 async function dismissModals(page) {
@@ -318,6 +415,8 @@ async function main() {
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  const messages = loadI18nMessages();
+
   const port = 9999;
   const server = await startStaticServer(DIST_PATH, port);
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -326,7 +425,7 @@ async function main() {
 
   try {
     const context = await browser.newContext({ viewport: VIEWPORT });
-    await context.addInitScript(mockChromeApisInitScript);
+    await context.addInitScript(mockChromeApisInitScript, messages);
 
     const page = await context.newPage();
 
@@ -353,7 +452,11 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+export { mockChromeApisInitScript, dismissModals };
+
+if (import.meta.url === new URL(process.argv[1], 'file://').href) {
+  main().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
