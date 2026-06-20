@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 ### Chores / その他
 
 - **testConnection override https デフォルトのテストを追加** — プロトコル指定なしで `testConnection` を呼び出した場合、https がデフォルトとして使用されることを確認するテストを追加
+- **GitHub Release ワークフローのブランド名を修正** — `.github/workflows/release.yml` のハードコードされた `Obsidian Weave` を `Yasumaro` に、リポジトリURLを `armaniacs/obsidian-weave` から `armaniacs/Yasumaro` に修正
 ## [6.0.3] - 2026-06-20
 
 ### Added / 追加

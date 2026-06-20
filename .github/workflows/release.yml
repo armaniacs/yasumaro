@@ -47,9 +47,9 @@ jobs:
           name: v${{ steps.version.outputs.version }}
           tag_name: ${{ github.ref_name }}
           body: |
-            ## Obsidian Weave v${{ steps.version.outputs.version }}
+            ## Yasumaro v${{ steps.version.outputs.version }}
 
-            See [CHANGELOG.md](https://github.com/armaniacs/obsidian-weave/blob/main/CHANGELOG.md) for details.
+            See [CHANGELOG.md](https://github.com/armaniacs/Yasumaro/blob/main/CHANGELOG.md) for details.
           files: |
             dist/*.zip
           draft: false
