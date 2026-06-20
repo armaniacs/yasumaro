@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.0.4] - 2026-06-20
+
+### Fixed / 修正
+
+- **Obsidian接続の`testConnection` override メソッドでのデフォルトプロトコルを http → https に修正** — `_getConfig()` と一貫性を保つため、protocol パラメータが指定されていない場合のデフォルトを `https` に変更（Checking Team 指摘対応）
+
+### Chores / その他
+
+- **testConnection override https デフォルトのテストを追加** — プロトコル指定なしで `testConnection` を呼び出した場合、https がデフォルトとして使用されることを確認するテストを追加
 ## [6.0.3] - 2026-06-20
 
 ### Added / 追加

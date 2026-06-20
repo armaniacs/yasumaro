@@ -551,6 +551,35 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       global.fetch.mockRestore();
     });
   });
+  describe('testConnection override defaults to https', () => {
+    beforeEach(() => {
+      global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+      global.fetch.mockRestore();
+    });
+
+    it('overrideでprotocolを指定しない場合、httpsをデフォルトとして使用する', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('OK')
+      });
+
+      const result = await obsidianClient.testConnection({
+        apiKey: 'test_key',
+        port: 27123
+      });
+
+      expect(result.success).toBe(true);
+      // Verify that the URL used was https (fetch was called with https URL)
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://'),
+        expect.any(Object)
+      );
+    });
+  });
 
   describe('appendToDailyNote - success path', () => {
     beforeEach(() => {

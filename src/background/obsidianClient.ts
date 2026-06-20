@@ -273,7 +273,7 @@ export class ObsidianClient {
             let baseUrl: string;
             let headers: HeadersInit;
             if (override) {
-                const protocol = override.protocol || 'http';
+                const protocol = override.protocol || 'https';
                 const port = this._validatePort(override.port);
                 const apiKey = override.apiKey;
                 if (!apiKey) {
