@@ -35,6 +35,15 @@
   "recordNow": {
     "message": "📝 今すぐ記録"
   },
+  "recordNowProgress": {
+    "message": "記録中..."
+  },
+  "recordNowDone": {
+    "message": "保存しました"
+  },
+  "recordNowError": {
+    "message": "失敗しました"
+  },
   "recordWithoutAi": {
     "message": "📝 AI要約なしで記録"
   },

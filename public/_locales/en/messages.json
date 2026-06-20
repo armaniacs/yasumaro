@@ -35,6 +35,15 @@
   "recordNow": {
     "message": "📝 Record Now"
   },
+  "recordNowProgress": {
+    "message": "Recording..."
+  },
+  "recordNowDone": {
+    "message": "Saved!"
+  },
+  "recordNowError": {
+    "message": "Failed"
+  },
   "recordWithoutAi": {
     "message": "📝 Record Without AI"
   },
