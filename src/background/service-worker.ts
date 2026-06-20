@@ -966,6 +966,19 @@ export const handleNotificationButtonClicked = _notificationHandlers.onButtonCli
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 
 // ============================================================================
+// Context menu registration for manual recording
+// Extracted so it can be reused in tests after vi.clearAllMocks().
+// ============================================================================
+
+export function registerManualRecordContextMenu(): void {
+    chrome.contextMenus.create({
+        id: 'yasumaro-manual-record',
+        title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
+        contexts: ['page', 'link'],
+    });
+}
+
+// ============================================================================
 // Module-level initialization - register all Chrome event listeners directly
 // Guard allows this module to be imported in test environments where
 // globalThis.chrome is undefined, without causing errors.
@@ -983,6 +996,43 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Extension lifecycle listeners
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);
+
+    // Context menu for manual recording
+    registerManualRecordContextMenu();
+    chrome.runtime.onInstalled.addListener(registerManualRecordContextMenu);
+
+    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+        if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id) return;
+
+        try {
+            const [result] = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => ({
+                    url: window.location.href,
+                    title: document.title,
+                    content: document.body?.innerText?.slice(0, 5000) || '',
+                }),
+            });
+
+            const payload = result?.result as { url: string; title: string; content: string };
+            await handleManualRecord(
+                {
+                    type: 'MANUAL_RECORD',
+                    payload: {
+                        url: payload.url,
+                        title: payload.title,
+                        content: payload.content,
+                        force: true,
+                        skipAi: false,
+                    },
+                },
+                { tab: { id: tab.id, url: payload.url } } as chrome.runtime.MessageSender,
+                () => {}
+            );
+        } catch (error) {
+            logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+        }
+    });
 
     // Notification listeners
     chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
