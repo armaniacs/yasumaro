@@ -85,6 +85,14 @@ function mockChromeApisInitScript(messages) {
   const storageData = {
     privacyConsent: { accepted: true, timestamp: Date.now() },
     settings_migrated: true,
+    obsidian_api_key: 'yasumaro-example-key-0000',
+    obsidian_protocol: 'https',
+    obsidian_port: '27124',
+    obsidian_enabled: true,
+    obsidian_daily_path: '092.Daily',
+    ai_provider: 'gemini',
+    gemini_api_key: 'fake-gemini-api-key-for-screenshot',
+    gemini_model: 'gemini-1.5-flash',
   };
 
   const storageArea = {
@@ -167,6 +175,49 @@ function mockChromeApisInitScript(messages) {
     onUpdated: { addListener: noop, removeListener: noop },
   };
 
+  // Sample browsing history records for the SQLite history screenshot.
+  const sampleHistoryEntries = [
+    {
+      id: 1,
+      url: 'https://example.com/sqlite-fts5',
+      title: 'Getting Started with SQLite FTS5',
+      summary: 'A guide to full-text search in SQLite.',
+      tags: 'sqlite,search',
+      created_at: Date.now() - 86400000,
+      domain: 'example.com',
+      visit_duration: 125,
+      scroll_ratio: 0.78,
+      is_starred: 1,
+      obsidian_synced: 1,
+    },
+    {
+      id: 2,
+      url: 'https://developer.chrome.com/docs/extensions/develop/concepts/service-workers',
+      title: 'Service Workers - Chrome for Developers',
+      summary: 'Architecture summary of Chrome Extension service workers.',
+      tags: 'chrome,extension',
+      created_at: Date.now() - 172800000,
+      domain: 'developer.chrome.com',
+      visit_duration: 210,
+      scroll_ratio: 0.62,
+      is_starred: 0,
+      obsidian_synced: 0,
+    },
+    {
+      id: 3,
+      url: 'https://obsidian.md/publish',
+      title: 'Obsidian Publish',
+      summary: 'Turn your notes into a personal knowledge base website.',
+      tags: 'obsidian,notes',
+      created_at: Date.now() - 259200000,
+      domain: 'obsidian.md',
+      visit_duration: 95,
+      scroll_ratio: 0.48,
+      is_starred: 0,
+      obsidian_synced: 1,
+    },
+  ];
+
   const runtimeApi = {
     id: 'yasumaro-screenshot-mock',
     getURL: (p) => `http://127.0.0.1:9999${p}`,
@@ -189,10 +240,23 @@ function mockChromeApisInitScript(messages) {
         response.message = 'AI connection successful';
       } else if (message?.type === 'DASHBOARD_SQLITE') {
         response.success = true;
-        response.entries = [];
+        const payload = message?.payload || {};
+        if (payload.subtype === 'query' || payload.subtype === 'search') {
+          response.rows = sampleHistoryEntries;
+          response.total = sampleHistoryEntries.length;
+        } else if (payload.subtype === 'get_count') {
+          response.count = sampleHistoryEntries.length;
+        } else if (payload.subtype === 'status') {
+          response.initialized = true;
+          response.path = ':memory:';
+          response.fallback = false;
+          response.fts5 = true;
+        } else if (payload.subtype === 'confirm_token') {
+          response.confirmToken = 'screenshot-mock-token';
+        }
       } else if (message?.type === 'GET_SQLITE_HISTORY') {
         response.success = true;
-        response.entries = [];
+        response.entries = sampleHistoryEntries;
       } else if (message?.type === 'PING') {
         response.success = true;
       }
@@ -403,6 +467,17 @@ async function captureDashboardPanel(page, baseUrl, panelId, outputName, colorSc
   // Ensure requested panel is active and visible
   const panel = page.locator(`#${panelId}`);
   await panel.waitFor({ state: 'visible', timeout: 10000 });
+
+  // For the settings screenshot, ensure sensitive fields display a clean masked
+  // indicator and realistic values are visible.
+  if (outputName === 'dashboard-settings.png') {
+    await page.evaluate(() => {
+      const apiKey = document.getElementById('apiKey');
+      if (apiKey) {
+        apiKey.value = 'yasumaro-example-key-0000';
+      }
+    });
+  }
 
   await sleep(800);
   await page.screenshot({ path: path.join(OUTPUT_DIR, outputName), fullPage: false });
