@@ -977,8 +977,11 @@ export function registerManualRecordContextMenu(): void {
             title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
             contexts: ['page', 'link'],
         });
-    } catch {
-        // Menu may already exist on service worker restart; ignore duplicate ID errors.
+    } catch (error) {
+        const message = chrome.runtime.lastError?.message || String(error);
+        if (!message.includes('duplicate id')) {
+            logError('Failed to register context menu', { cause: message }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+        }
     }
 }
 
@@ -1006,7 +1009,12 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.runtime.onInstalled.addListener(registerManualRecordContextMenu);
 
     chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-        if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id) return;
+        if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
+
+        if (!isSecureUrl(tab.url)) {
+            await logWarn('Context menu ignored for insecure URL', { url: tab.url }, undefined, 'service-worker');
+            return;
+        }
 
         try {
             const [result] = await chrome.scripting.executeScript({
@@ -1018,7 +1026,19 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
                 }),
             });
 
-            const payload = result?.result as { url: string; title: string; content: string };
+            const raw = result?.result;
+            if (!raw || typeof raw !== 'object' || !('url' in raw)) {
+                await logWarn('Context menu received invalid page data', { url: tab.url }, undefined, 'service-worker');
+                return;
+            }
+
+            const payload = raw as { url: string; title: string; content: string };
+            const sender: chrome.runtime.MessageSender = {
+                tab: { id: tab.id, url: payload.url } as chrome.tabs.Tab,
+                id: chrome.runtime.id,
+                url: chrome.runtime.getURL(''),
+            };
+
             await handleManualRecord(
                 {
                     type: 'MANUAL_RECORD',
@@ -1030,7 +1050,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
                         skipAi: false,
                     },
                 },
-                { tab: { id: tab.id, url: payload.url } } as chrome.runtime.MessageSender,
+                sender,
                 () => {}
             );
         } catch (error) {
