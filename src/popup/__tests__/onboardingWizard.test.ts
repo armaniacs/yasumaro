@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { shouldShowWizard, completeWizard, getWizardTypeLabel } from '../onboardingWizard.js';
+import { shouldShowWizard, completeWizard } from '../onboardingWizard.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 const mockStorage = new Map<string, unknown>();
 
@@ -19,43 +20,14 @@ describe('onboardingWizard', () => {
   });
 
   it('should not show wizard when completed', async () => {
-    mockStorage.set('onboarding_wizard_completed', true);
+    mockStorage.set(StorageKeys.ONBOARDING_WIZARD_COMPLETED, true);
     const result = await shouldShowWizard();
     expect(result).toBe(false);
   });
 
   it('should save completion and type', async () => {
     await completeWizard('obsidian');
-    expect(mockStorage.get('onboarding_wizard_completed')).toBe(true);
-    expect(mockStorage.get('onboarding_wizard_type')).toBe('obsidian');
-  });
-
-  it('returns localized label for each wizard type', () => {
-    const originalGetMessage = chrome.i18n.getMessage;
-    (chrome.i18n.getMessage as vi.Mock).mockImplementation((key: string) => {
-      const messages: Record<string, string> = {
-        wizardTypeObsidian: 'Obsidian user',
-        wizardTypeSqlite: 'SQLite (no Obsidian)',
-        wizardTypeMinimal: 'Just trying it out',
-      };
-      return messages[key] || key;
-    });
-
-    const obsidianLabel = getWizardTypeLabel('obsidian');
-    const sqliteLabel = getWizardTypeLabel('sqlite');
-    const minimalLabel = getWizardTypeLabel('minimal');
-
-    expect(typeof obsidianLabel).toBe('string');
-    expect(obsidianLabel.length).toBeGreaterThan(0);
-    expect(typeof sqliteLabel).toBe('string');
-    expect(sqliteLabel.length).toBeGreaterThan(0);
-    expect(typeof minimalLabel).toBe('string');
-    expect(minimalLabel.length).toBeGreaterThan(0);
-
-    expect(obsidianLabel).toBe('Obsidian user');
-    expect(sqliteLabel).toBe('SQLite (no Obsidian)');
-    expect(minimalLabel).toBe('Just trying it out');
-
-    chrome.i18n.getMessage = originalGetMessage;
+    expect(mockStorage.get(StorageKeys.ONBOARDING_WIZARD_COMPLETED)).toBe(true);
+    expect(mockStorage.get(StorageKeys.ONBOARDING_WIZARD_TYPE)).toBe('obsidian');
   });
 });

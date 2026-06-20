@@ -39,11 +39,15 @@ class FocusTrapManager {
     const trapId = this.generateId();
     this.previousFocus.set(trapId, document.activeElement);
 
-    // フォーカス可能な要素を取得
+    // フォーカス可能な要素を取得（非表示要素は除外）
     const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const focusableElements = modalElement.querySelectorAll(focusableSelector);
-    const firstFocusable = focusableElements[0] as HTMLElement;
-    const lastFocusable = focusableElements[focusableElements.length - 1] as HTMLElement;
+    const focusableElements = Array.from(modalElement.querySelectorAll(focusableSelector)).filter((el) => {
+      const element = el as HTMLElement;
+      // display:none / hidden 属性 / 非表示祖先を持つ要素はフォーカストラップ対象外
+      return !element.closest('.hidden, [hidden]');
+    }) as HTMLElement[];
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
 
     if (!firstFocusable || !lastFocusable) {
       this.previousFocus.delete(trapId);
@@ -75,7 +79,7 @@ class FocusTrapManager {
     this.handlers.set(trapId, { element: modalElement, handler: keydownHandler });
 
     // 最初のフォーカス可能要素にフォーカス
-    if (firstFocusable && document.body.contains(firstFocusable)) {
+    if (firstFocusable && document.body.contains(firstFocusable) && firstFocusable.offsetParent !== null) {
       firstFocusable.focus();
     }
 

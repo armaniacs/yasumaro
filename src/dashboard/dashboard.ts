@@ -146,7 +146,7 @@ export function openSettingsPanel(section: string): void {
       details.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   } else if (section === 'ai-provider') {
-    const aiSection = document.querySelector<HTMLElement>('#panel-general .settings-section:nth-of-type(2)');
+    const aiSection = document.getElementById('aiProviderSection');
     if (aiSection) {
       aiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
