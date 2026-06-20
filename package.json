@@ -28,6 +28,7 @@
     "docs": "typedoc --options dev-docs/typedoc.json",
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",
     "clean": "rm -rf dist",
+    "capture:store-screenshots": "node scripts/capture-store-screenshots.mjs",
     "check-htmlparser2": "node scripts/check-htmlparser2-override.js"
   },
   "keywords": [

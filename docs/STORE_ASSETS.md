@@ -1,5 +1,12 @@
 # Store Assets Workflow
 
+## Generating Screenshots
+
+```bash
+npm run build
+npm run capture:store-screenshots
+```
+
 ## Directory Structure
 
 ```
@@ -24,3 +31,7 @@ store-assets/
 - [ ] Ensure screenshots are 1280x800 or 640x400 PNG
 - [ ] Update both `en` and `ja` descriptions
 - [ ] Copy final assets to Chrome Web Store Developer Dashboard
+
+## TODO
+
+- Generate Japanese screenshot variants
