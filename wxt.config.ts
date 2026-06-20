@@ -37,6 +37,7 @@ export default defineConfig({
       'webRequest',
       'alarms',
       'favicon',
+      'contextMenus',
     ],
     optional_host_permissions: [
       'https://api-inference.huggingface.co/*',

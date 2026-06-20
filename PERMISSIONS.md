@@ -23,6 +23,7 @@
 | `alarms` | required | `src/background/sessionAlarmsManager.ts` (session timeout) | Yes |
 | `activeTab` | required | Popup "Record Now" + manual content fetch | Yes |
 | `favicon` | optional | User opt-in via settings | No |
+| `contextMenus` | required | `src/background/service-worker.ts` (manual record trigger) | Yes |
 
 ---
 
@@ -62,6 +63,16 @@
 
 - `src/background/handlers/faviconHandlers.ts` (planned)
 - `src/utils/permissionManager.ts` (dynamic permission flow)
+
+---
+
+## 10. `contextMenus`
+
+**用途**: ユーザーが Web ページ上で右クリックしたときに、「Yasumaro でこのページを記録」メニューを表示し、手動記録を実行できるようにする。
+
+**理由**: 拡張機能アイコンのクリック以外にも、ページ閲覧中に手動で要約・保存をトリガーする手段を提供するため。
+
+**プライバシー保護**: コンテキストメニューはユーザーが明示的に右クリックしたときのみ表示される。自動で記録は行われない。
 
 ---
 
