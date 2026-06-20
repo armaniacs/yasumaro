@@ -111,7 +111,7 @@ class FocusTrapManager {
    * @returns {string}
    */
   generateId(): string {
-    return `focusTrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `focusTrap_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   /**

@@ -17,7 +17,7 @@ import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from './utils/retry.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { formatEntryToMarkdown } from './markdownFormatter.js';
+import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../utils/clipboard.js';
 
 const PAGE_SIZE = 20;

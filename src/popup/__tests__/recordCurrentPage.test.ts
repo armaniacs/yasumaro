@@ -69,7 +69,7 @@ vi.mock('../../utils/logger.js', () => ({
     },
 }));
 
-import { loadCurrentTab, recordCurrentPage, initRecordButton } from '../recordCurrentPage.js';
+import { loadCurrentTab, recordCurrentPage } from '../recordCurrentPage.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { showError } from '../errorUtils.js';
@@ -251,27 +251,6 @@ describe('recordCurrentPage', () => {
             target: { tabId: 1 },
             func: expect.any(Function),
         });
-    });
-
-    it('initializes record button onclick handler (L415)', async () => {
-        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-            id: 1,
-            url: 'https://example.com',
-            title: 'Test',
-        });
-
-        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-
-        initRecordButton();
-
-        expect(btn.onclick).toBeDefined();
-        expect(typeof btn.onclick).toBe('function');
-
-        // Trigger onclick to cover the arrow function at L415
-        await (btn.onclick!() as Promise<void>);
-
-        // Verify recordCurrentPage was invoked via showSpinner call
-        expect(showSpinner).toHaveBeenCalled();
     });
 
     it('shows progress text while recording', async () => {

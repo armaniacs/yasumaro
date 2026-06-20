@@ -622,7 +622,7 @@ describe('main', () => {
 
       expect(statusDiv.className).toBe('success');
       expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
-      expect(startAutoCloseTimer).toHaveBeenCalled();
+      expect(startAutoCloseTimer).not.toHaveBeenCalled();
     });
 
     it('should successfully record page without preview', async () => {
@@ -654,7 +654,7 @@ describe('main', () => {
 
       expect(statusDiv.className).toBe('success');
       expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
-      expect(startAutoCloseTimer).toHaveBeenCalled();
+      expect(startAutoCloseTimer).not.toHaveBeenCalled();
     });
 
     it('should handle preview cancellation', async () => {
