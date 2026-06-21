@@ -1636,7 +1636,7 @@ label.inline-label {
 }
 
 .status-warning {
-  color: #92400e; /* amber-800 */
+  color: var(--ym-color-warning-text, #92400e);
 }
 
 .status-error {
@@ -1876,6 +1876,29 @@ label.inline-label {
 
   .tab-btn.active {
     background: #1e293b;
+  }
+
+  .global-permission-banner {
+    background-color: #422006;
+    border-color: #b45309;
+  }
+
+  .banner-title {
+    color: #fbbf24;
+  }
+
+  .banner-desc {
+    color: var(--color-text-secondary);
+  }
+
+  .status-warning {
+    color: var(--ym-color-warning, #d29922);
+  }
+
+  .cleansing-badge {
+    background: #052e16;
+    color: #34d399;
+    border-color: #10b981;
   }
 }
 
@@ -2425,7 +2448,7 @@ label.inline-label {
   inset: 0;
   z-index: 1000;
   padding: var(--ym-space-5, 1.25rem);
-  background: var(--ym-color-paper, #ffffff);
+  background: var(--ym-color-bg, #ffffff);
   border-radius: 0;
   box-shadow: none;
 }

@@ -1372,6 +1372,24 @@ button#changeMasterPassword:hover {
     border-color: #475569;
     background: var(--ym-color-bg-subtle, #1e293b);
   }
+
+  .history-badge-masked {
+    background: #422006;
+    color: #fbbf24;
+    border-color: #b45309;
+  }
+
+  .history-badge-cleansed {
+    background: #052e16;
+    color: #34d399;
+    border-color: #10b981;
+  }
+
+  .warning-banner {
+    background: #422006;
+    border-color: #b45309;
+    color: #fbbf24;
+  }
 }
 
 /* History entry top row (badge + URL) */
