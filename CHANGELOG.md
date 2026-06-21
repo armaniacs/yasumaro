@@ -15,6 +15,15 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.1] - 2026-06-22
+
+### Fixed / 修正
+
+- **backupDb() フォールバックパスで JSON を .db として返す問題を修正** — OPFS 非対応環境でバイナリエクスポートが失敗することを明示的に通知するように変更（Checking Team: High#1）
+- **OPFS 復旧マイグレーションの非アトミック操作を修正** — データ削除→フラグクリアの順序に変更し、SWクラッシュ時のオーファンデータを防止（Checking Team: High#2）
+- **`.then()` チェーンを async/await IIFE に変更** — Manifest V3 ベストプラクティスに準拠。エラーハンドリングを改善（Checking Team: High#3）
+- **`consentDeclinedMessage` ロケールキー未定義を修正** — 英語/日本語両ロケールファイルにキーを追加。コード内のハードコードされた日本語フォールバックを削除（Checking Team: High#4）
+
 ## [6.3.0] - 2026-06-21
 
 ### Added / 追加
