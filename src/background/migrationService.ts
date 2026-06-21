@@ -15,6 +15,9 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 /** Separator used when serializing the legacy tags array into the SQLite `tags` TEXT column. */
 const TAGS_SEPARATOR = ', ';
 
+/** FallbackStorage のストレージキー */
+const FALLBACK_STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
+
 /**
  * Map a legacy chrome.storage.local browsing entry to a SQLite BrowsingLogRecord.
  * `domain` is left null so the SQLite layer derives it from the url.
@@ -197,6 +200,125 @@ export class MigrationService {
   private async setMigrationProgress(count: number): Promise<void> {
     await chrome.storage.local.set({ [MIGRATION_PROGRESS_KEY]: count });
   }
+
+  /**
+   * OPFS 復旧時のマイグレーションが必要かチェック
+   * - OPFS_FALLBACK_MODE が true
+   * - SQLite が OPFS/IDB で利用可能
+   * - フォールバックデータが存在する
+   */
+  async needsOpfsRecoveryMigration(): Promise<boolean> {
+    try {
+      // 1. フォールバックモードかチェック
+      const fallbackResult = await chrome.storage.local.get(StorageKeys.OPFS_FALLBACK_MODE);
+      const isFallbackMode = fallbackResult[StorageKeys.OPFS_FALLBACK_MODE] === true;
+
+      if (!isFallbackMode) {
+        return false;
+      }
+
+      // 2. SQLite が利用可能かチェック
+      const statusResult = await this.sqliteClient.getStatus();
+      if (!statusResult || statusResult.fallback === true) {
+        // まだフォールバックモードのまま
+        return false;
+      }
+
+      // 3. フォールバックデータが存在するかチェック
+      const dataResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
+      const fallbackData = dataResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
+
+      if (!fallbackData || !fallbackData.records || !Array.isArray(fallbackData.records) || fallbackData.records.length === 0) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      addLog(LogType.ERROR, 'OPFS recovery check failed', { error: errorMessage(error) });
+      return false; // エラー時は安全側に倒す
+    }
+  }
+
+  /**
+   * OPFS 復旧時にフォールバックデータを SQLite に移行
+   */
+  async migrateOpfsRecovery(): Promise<{ success: boolean; migrated: number; error?: string }> {
+    let totalMigrated = 0;
+
+    try {
+      // フォールバックデータを取得
+      const dataResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
+      const fallbackData = dataResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
+
+      if (!fallbackData || !fallbackData.records || !Array.isArray(fallbackData.records)) {
+        return { success: true, migrated: 0 };
+      }
+
+      const records = fallbackData.records;
+      addLog(LogType.INFO, 'OPFS recovery: starting migration', { totalRecords: records.length });
+
+      // バッチ単位で SQLite にインポート
+      for (let i = 0; i < records.length; i += BATCH_SIZE) {
+        const batch = records.slice(i, i + BATCH_SIZE).map(convertFallbackRecord);
+
+        try {
+          const result = await this.sqliteClient.insertBatch(batch);
+
+          if (result !== null) {
+            totalMigrated += result.count;
+          } else {
+            return {
+              success: false,
+              migrated: totalMigrated,
+              error: 'insertBatch returned null',
+            };
+          }
+        } catch (batchError) {
+          return {
+            success: false,
+            migrated: totalMigrated,
+            error: errorMessage(batchError),
+          };
+        }
+      }
+
+      // 移行完了 — フラグをクリア
+      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
+
+      // フォールバックデータを削除
+      await chrome.storage.local.remove(FALLBACK_STORAGE_KEY);
+
+      addLog(LogType.INFO, 'OPFS recovery: migration completed', { migrated: totalMigrated });
+
+      return { success: true, migrated: totalMigrated };
+    } catch (error) {
+      addLog(LogType.ERROR, 'OPFS recovery: migration failed', { error: errorMessage(error) });
+      return {
+        success: false,
+        migrated: totalMigrated,
+        error: errorMessage(error),
+      };
+    }
+  }
+}
+
+/**
+ * フォールバックデータを BrowsingLogRecord 形式に変換
+ */
+function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
+  return {
+    url: record.url,
+    title: record.title ?? null,
+    summary: record.summary ?? null,
+    tags: record.tags ?? null,
+    created_at: record.created_at,
+    domain: record.domain ?? null,
+    visit_duration: record.visit_duration ?? null,
+    scroll_ratio: record.scroll_ratio ?? null,
+    is_starred: record.is_starred ?? 0,
+    is_deleted: record.is_deleted ?? 0,
+    obsidian_synced: record.obsidian_synced ?? 0,
+  };
 }
 
 /**
