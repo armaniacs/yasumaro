@@ -205,6 +205,13 @@ export async function handleDashboardSqlite(
                 );
                 return { success: true, purged: result?.purged ?? 0, skipped: false };
             }
+            case 'backup_db': {
+                const data = await sqliteClient.backupDb();
+                if (data) {
+                    return { success: true, data: Array.from(data) };
+                }
+                return { success: false, error: 'Backup failed' };
+            }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };
         }

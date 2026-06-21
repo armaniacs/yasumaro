@@ -23,7 +23,7 @@ import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
 import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
-import { exportMarkdown, exportCsv, exportJson, downloadText, downloadBlob } from './exportLogsService.js';
+import { exportMarkdown, exportCsv, exportJson, exportDb, downloadText, downloadBlob } from './exportLogsService.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
@@ -642,6 +642,22 @@ function initExportLogsPanel(): void {
       const blob = await exportCsv();
       downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
       showStatus('CSV export completed.');
+    } catch (err) {
+      showStatus(`Export failed: ${err}`, true);
+    }
+  });
+
+  const dbBtn = document.getElementById('export-db-btn');
+  dbBtn?.addEventListener('click', async () => {
+    try {
+      showStatus('Exporting database…');
+      const blob = await exportDb();
+      if (blob) {
+        downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.db`);
+        showStatus('Database export completed.');
+      } else {
+        showStatus('Binary export requires OPFS storage. Use JSON export instead.', true);
+      }
     } catch (err) {
       showStatus(`Export failed: ${err}`, true);
     }
