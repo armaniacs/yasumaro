@@ -89,6 +89,7 @@ export const StorageKeys = {
     PRIVACY_CONSENT: 'privacy_consent', // プライバシーポリシーへの同意状態
     PRIVACY_CONSENT_DENIED_COUNT: 'privacy_consent_denied_count', // 同意拒否回数（3回で一時非表示）
     PRIVACY_CONSENT_LAST_DENIAL_TIME: 'privacy_consent_last_denial_time', // 最終拒否時刻（30日後に再表示）
+    PRIVACY_CONSENT_VERSION: 'privacy_consent_version', // 最後に確認したポリシーバージョン
     // Onboarding wizard
     ONBOARDING_WIZARD_COMPLETED: 'onboarding_wizard_completed', // オンボーディングウィザード完了フラグ
     ONBOARDING_WIZARD_TYPE: 'onboarding_wizard_type', // オンボーディングウィザードタイプ
@@ -254,6 +255,7 @@ export interface StorageKeyValues {
     [StorageKeys.PRIVACY_CONSENT]: { hasConsented: boolean; consentDate?: string; consentVersion?: string } | boolean;
     [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: number;
     [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: number;
+    [StorageKeys.PRIVACY_CONSENT_VERSION]: string | null;
     [StorageKeys.ONBOARDING_WIZARD_COMPLETED]: boolean;
     [StorageKeys.ONBOARDING_WIZARD_TYPE]: 'obsidian' | 'sqlite' | 'minimal' | string;
     [StorageKeys.AUTO_CONTENT_FETCH_ENABLED]: boolean;
