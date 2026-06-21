@@ -9,8 +9,8 @@
 /*  Wizard container                                                   */
 /* ------------------------------------------------------------------ */
 .wizard {
-  background: #ffffff;
-  color: #111827;
+  background: var(--ym-color-bg, #ffffff);
+  color: var(--ym-color-text, #111827);
   padding: 2rem;
   display: flex;
   flex-direction: column;
@@ -36,7 +36,7 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--ym-color-ink-black, #111827);
+  color: var(--ym-color-text, #111827);
 }
 
 .wizard-step p {
@@ -59,12 +59,12 @@
   padding: var(--ym-space-4, 1rem) 1.25rem;
   border: 2px solid var(--ym-color-border, #d1d5db);
   border-radius: 10px;
-  background: var(--ym-color-paper, #ffffff);
+  background: var(--ym-color-bg-subtle, #ffffff);
   cursor: pointer;
   text-align: left;
   font-weight: 600;
   font-size: 1rem;
-  color: var(--ym-color-ink-black, #111827);
+  color: var(--ym-color-text, #111827);
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
