@@ -16,6 +16,7 @@ import {
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
   serialize as sqliteSerialize,
+  backupDb as sqliteBackupDb,
   clearAll as sqliteClearAll,
   purgeOldRecords as sqlitePurgeOldRecords,
   _resetForTesting as sqliteResetForTesting,
@@ -299,6 +300,14 @@ export function handleOffscreenMessage(
             } else if (msg.type === 'SQLITE_EXPORT') {
                 const result = await sqliteSerialize();
                 sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_BACKUP') {
+                const result = await sqliteBackupDb();
+                if (result.success && result.data instanceof Uint8Array) {
+                    sendResponse({ success: true, data: Array.from(result.data) });
+                } else {
+                    sendResponse(result);
+                }
 
             } else if (msg.type === 'SQLITE_PURGE') {
                 const payload = msg.payload as Record<string, unknown> | undefined;

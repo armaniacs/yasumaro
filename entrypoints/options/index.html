@@ -1305,7 +1305,7 @@
       <section id="panel-export-logs" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
         <p class="panel-description" data-i18n="exportLogsDesc">
-          Export your browsing history as JSON, Markdown, or CSV. Data is sourced from the local SQLite database.
+          Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file. Data is sourced from the local SQLite database.
         </p>
         <div id="export-logs-container">
           <div class="form-group">
@@ -1319,6 +1319,10 @@
           <div class="form-group">
             <button id="export-csv-btn" class="btn-primary">Export as CSV (.csv)</button>
             <p class="field-description">UTF-8 BOM CSV for Excel compatibility.</p>
+          </div>
+          <div class="form-group">
+            <button id="export-db-btn" class="btn-primary">Export as Database (.db)</button>
+            <p class="field-description">Raw SQLite database file. Only available with OPFS storage.</p>
           </div>
           <div id="export-status" class="save-success" style="display:none"></div>
         </div>

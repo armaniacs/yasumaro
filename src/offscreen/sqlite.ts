@@ -1313,6 +1313,26 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
   }
 }
 
+/**
+ * バイナリ .db バックアップを取得
+ * OPFS パスではバイナリ .db、IDB/Fallback パスでは JSON にフォールバック
+ */
+export async function backupDb(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
+  try {
+    // OPFS Worker パス: バイナリ .db エクスポート
+    const opfsResult = await tryOpfsProxy<Uint8Array>('BACKUP');
+    if (opfsResult !== null && opfsResult.length > 0) {
+      return { success: true, data: opfsResult };
+    }
+
+    // IDB/Fallback パス: JSON エクスポートにフォールバック
+    return serialize();
+  } catch (error) {
+    logError('SQLite: backupDb failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
 // ============================================================================
 // Testing helper
 // ============================================================================

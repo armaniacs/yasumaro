@@ -262,6 +262,22 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
 }
 
 /**
+ * バイナリ .db バックアップを取得
+ */
+export async function backupDb(): Promise<Uint8Array | null> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'backup_db' });
+    if (response.success && response.data) {
+      return new Uint8Array(response.data as number[]);
+    }
+    return null;
+  } catch (error) {
+    console.error('backupDb failed:', error);
+    return null;
+  }
+}
+
+/**
  * Import browsing log rows into SQLite.
  */
 export async function importLogs(rows: Array<{
