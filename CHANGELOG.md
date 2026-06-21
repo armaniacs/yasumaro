@@ -15,6 +15,26 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.1.1] - 2026-06-21
+
+### Fixed / 修正
+
+- **OPFS Worker 同時アクセスによる database is locked を修正** — `opfsWorker.ts` の `onmessage` ハンドラが async だったため、複数リクエストが並列実行されて SQLite ロックエラーが発生していた問題を、リクエストキューによるシリアライズで解消
+
+### Added / 追加
+
+- **ダッシュボードからセットアップウィザードを再表示** — 初期設定パネルのボタン行（上部・下部）に「セットアップウィザード」ボタンを追加。クリックするとダッシュボード上にオンボーディングウィザードがオーバーレイ表示される
+- **プロバイダー選択ダイアログに APIキー作成リンクを追加** — OpenAI互換プロバイダー選択後、APIキー入力欄の直下に各プロバイダーのAPIキー発行ページへのリンクを表示（40プロバイダー対応、未知プロバイダーはdocフィールドURLにフォールバック）
+- **初期設定パネルにボタン行を上部追加** — 長いフォームを下までスクロールしなくても「保存する」「各種テスト」ボタンにアクセス可能に
+
+### Fixed / 修正（続き）
+
+- **プロバイダー選択ダイアログが開かない問題を修正** — `.modal-overlay` の CSS が `display: none` 固定で `show` クラスを追加するコードがなかったため、`:not(.hidden)` セレクターを追加して `hidden` クラス除去で表示されるよう修正
+- **OPFS Workerキューが例外後に永続ブロックされる問題を修正** — `processQueue` のタスク実行に `try/finally` を追加し、SQLite I/Oエラー等でタスクが例外を投げても `queueProcessing` フラグが必ずリセットされるよう修正。未修正のままだと以降のリクエストがすべて無音でキュー待ちとなり処理されなかった
+- **ウィザード再表示時にイベントリスナーが重複登録される問題を修正** — `initOnboardingWizard` を `AbortController` ベースに変更し、再呼び出し時に前回のリスナーを一括削除してから再登録するよう修正。未修正のままだと「再表示→閉じる」を繰り返すごとにボタンのクリックハンドラが累積されていた
+
+---
+
 ## [6.1.0] - 2026-06-20
 
 ### Added / 追加

@@ -780,30 +780,6 @@
     </div>
   </dialog>
 
-  <!-- Onboarding Wizard -->
-  <div id="onboardingWizard" class="wizard hidden" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
-    <h2 id="wizardTitle" class="wizard-title" data-i18n="wizardTitle">Welcome to Yasumaro</h2>
-    <div class="wizard-step" data-step="type">
-      <p data-i18n="wizardTypePrompt">How do you plan to use Yasumaro?</p>
-      <div class="wizard-options">
-        <button class="wizard-option" data-type="obsidian" data-i18n="wizardTypeObsidian">Obsidian user</button>
-        <button class="wizard-option" data-type="sqlite" data-i18n="wizardTypeSqlite">SQLite (no Obsidian)</button>
-        <button class="wizard-option" data-type="minimal" data-i18n="wizardTypeMinimal">Just trying it out</button>
-      </div>
-    </div>
-    <div class="wizard-step hidden" data-step="obsidian">
-      <p data-i18n="wizardObsidianDescription">Set your Local REST API key and daily notes path.</p>
-      <button class="wizard-skip" data-i18n="wizardSkip">Skip</button>
-      <button class="wizard-next" data-i18n="wizardOpenDashboard">Open Dashboard</button>
-    </div>
-    <div class="wizard-step hidden" data-step="sqlite">
-      <p data-i18n="wizardSqliteDescription">Choose an AI provider for summaries.</p>
-      <button class="wizard-skip" data-i18n="wizardSkip">Skip</button>
-      <button class="wizard-next" data-i18n="wizardOpenDashboard">Open Dashboard</button>
-    </div>
-
-  </div>
-
   <!-- Privacy Consent Modal -->
   <div id="privacyConsentModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
     <div class="modal-content privacy-consent-content">

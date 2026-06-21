@@ -36,6 +36,7 @@ import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { initOnboardingWizard } from '../popup/onboardingWizard.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -816,6 +817,41 @@ function initExportLogsPanel(): void {
     el.purgeNowBtn?.addEventListener('click', async () => {
       await handlePurgeNow();
     });
+
+    const syncBackdrop = () => {
+      const backdropNow = document.getElementById('wizardBackdrop');
+      const wizardNow = document.getElementById('onboardingWizard');
+      if (backdropNow) backdropNow.style.display = wizardNow?.classList.contains('hidden') ? 'none' : 'block';
+    };
+    // Observe wizard class changes to keep backdrop in sync
+    const observeWizard = () => {
+      const wizardEl = document.getElementById('onboardingWizard');
+      const backdropEl = document.getElementById('wizardBackdrop');
+      if (wizardEl && backdropEl) {
+        const obs = new MutationObserver(syncBackdrop);
+        obs.observe(wizardEl, { attributes: true, attributeFilter: ['class'] });
+      }
+    };
+
+    const reopenWizard = () => {
+      const wizard = document.getElementById('onboardingWizard');
+      if (wizard) {
+        delete wizard.dataset.initialized;
+      }
+      initOnboardingWizard(true);
+      observeWizard();
+      syncBackdrop();
+    };
+    document.getElementById('reopenWizardBtn')?.addEventListener('click', reopenWizard);
+    document.getElementById('reopenWizardBtnTop')?.addEventListener('click', reopenWizard);
+
+    // Bind top button row to the same handlers as the bottom row
+    const bindTopButton = (id: string, handler: () => void) => {
+      document.getElementById(id)?.addEventListener('click', () => handler());
+    };
+    bindTopButton('saveTop', handleSaveOnly);
+    bindTopButton('testObsidianBtnTop', handleTestObsidian);
+    bindTopButton('testAiBtnTop', handleTestAi);
   }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
