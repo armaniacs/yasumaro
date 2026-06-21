@@ -209,6 +209,14 @@ export class SqliteClient {
     );
   }
 
+  async backupDb(): Promise<Uint8Array | null> {
+    return this.call<Uint8Array>(
+      'SQLITE_BACKUP',
+      {},
+      (res) => new Uint8Array(res.data as number[]),
+    );
+  }
+
   async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | null> {
     return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' }>(
       'SQLITE_STATUS',

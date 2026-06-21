@@ -1,15 +1,19 @@
 /* models-dev-dialog.css
  * Styles for models.dev provider selection dialog
+ * All selectors are scoped to #models-dev-dialog to avoid overriding
+ * shared dashboard modal styles (e.g., breaking changes modal).
+ *
+ * Uses --ym-* design tokens from tokens.css for dark mode support.
  */
 
 /* Modal Overlay */
-.modal-overlay {
+#models-dev-dialog.modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--ym-color-overlay, rgba(0, 0, 0, 0.5));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17,8 +21,9 @@
 }
 
 /* Modal Content */
-.modal-content {
-    background-color: var(--bg-primary, #ffffff);
+#models-dev-dialog .modal-content {
+    background-color: var(--ym-color-bg, #ffffff);
+    color: var(--ym-color-text, #1e293b);
     border-radius: 8px;
     width: 90%;
     max-width: 600px;
@@ -28,21 +33,22 @@
 }
 
 /* Modal Header */
-.modal-header {
+#models-dev-dialog .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.modal-header h2 {
+#models-dev-dialog .modal-header h2 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.close-btn {
+#models-dev-dialog .close-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
@@ -55,19 +61,20 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.close-btn:hover {
-    background-color: var(--hover-bg, #f5f5f5);
+#models-dev-dialog .close-btn:hover {
+    background-color: var(--ym-color-bg-subtle, #f5f5f5);
 }
 
 /* Tabs */
-.tabs {
+#models-dev-dialog .tabs {
     display: flex;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.tab-btn {
+#models-dev-dialog .tab-btn {
     flex: 1;
     padding: 12px;
     background: none;
@@ -76,58 +83,62 @@
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.tab-btn:hover {
-    background-color: var(--hover-bg, #f5f5f5);
+#models-dev-dialog .tab-btn:hover {
+    background-color: var(--ym-color-bg-subtle, #f5f5f5);
 }
 
-.tab-btn.active {
+#models-dev-dialog .tab-btn.active {
     border-bottom-color: var(--ym-color-primary, #7c3aed);
     color: var(--ym-color-primary, #7c3aed);
     font-weight: 600;
 }
 
 /* Search Bar */
-.search-bar {
+#models-dev-dialog .search-bar {
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--ym-color-border, #e0e0e0);
     display: flex;
     gap: 12px;
     align-items: center;
 }
 
-.search-bar input[type="text"] {
+#models-dev-dialog .search-bar input[type="text"] {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid var(--input-border, #ccc);
+    border: 1px solid var(--ym-color-border, #ccc);
     border-radius: 4px;
     font-size: 0.9rem;
+    color: var(--ym-color-text, #1e293b);
+    background-color: var(--ym-color-bg, #ffffff);
 }
 
-.checkbox-label {
+#models-dev-dialog .checkbox-label {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 0.9rem;
     cursor: pointer;
     user-select: none;
+    color: var(--ym-color-text, #1e293b);
 }
 
 /* Loading State */
-.loading-state {
+#models-dev-dialog .loading-state {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
     padding: 32px;
-    color: var(--text-secondary, #666);
+    color: var(--ym-color-text-secondary, #666);
 }
 
-.spinner {
+#models-dev-dialog .spinner {
     width: 20px;
     height: 20px;
-    border: 2px solid var(--border-color, #e0e0e0);
+    border: 2px solid var(--ym-color-border, #e0e0e0);
     border-top-color: var(--ym-color-primary, #7c3aed);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -138,157 +149,181 @@
 }
 
 /* Provider Count */
-.provider-count {
+#models-dev-dialog .provider-count {
     padding: 8px 20px;
     font-size: 0.85rem;
-    color: var(--text-secondary, #666);
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    color: var(--ym-color-text-secondary, #666);
+    border-bottom: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
 /* Provider List */
-.provider-list {
+#models-dev-dialog .provider-list {
     max-height: 300px;
     overflow-y: auto;
 }
 
-.provider-item {
+#models-dev-dialog .provider-item {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--ym-color-border, #e0e0e0);
     cursor: pointer;
     transition: background-color 0.2s;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.provider-item:hover {
-    background-color: var(--hover-bg, #f5f5f5);
+#models-dev-dialog .provider-item:hover {
+    background-color: var(--ym-color-bg-subtle, #f5f5f5);
 }
 
-.provider-item.selected {
-    background-color: var(--selected-bg, #e3f2fd);
+#models-dev-dialog .provider-item.selected {
+    background-color: var(--ym-color-primary-bg, #e3f2fd);
     border-left: 3px solid var(--ym-color-primary, #7c3aed);
 }
 
-.provider-item-name {
+#models-dev-dialog .provider-item-name {
     font-weight: 600;
     font-size: 0.95rem;
     margin-bottom: 4px;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.provider-item-meta {
+#models-dev-dialog .provider-item-meta {
     display: flex;
     gap: 12px;
     font-size: 0.8rem;
-    color: var(--text-secondary, #666);
+    color: var(--ym-color-text-secondary, #666);
 }
 
-.provider-badge {
+#models-dev-dialog .provider-badge {
     display: inline-block;
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 0.75rem;
-    background-color: var(--badge-bg, #e0e0e0);
+    background-color: var(--ym-color-bg-code, #e0e0e0);
+    color: var(--ym-color-text, #1e293b);
 }
 
-.badge-aggregator {
-    background-color: var(--badge-accent-bg, #fff3cd);
-    color: var(--badge-accent-text, #856404);
+#models-dev-dialog .badge-aggregator {
+    background-color: var(--ym-color-warning-bg, #fff3cd);
+    color: var(--ym-color-warning-text, #856404);
 }
 
 /* Selected Info */
-.selected-info {
+#models-dev-dialog .selected-info {
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.selected-info.hidden {
+#models-dev-dialog .selected-info.hidden {
     display: none;
 }
 
-.selected-label {
+#models-dev-dialog .selected-label {
     font-size: 0.85rem;
-    color: var(--text-secondary, #666);
+    color: var(--ym-color-text-secondary, #666);
     margin-bottom: 4px;
 }
 
-.selected-name {
+#models-dev-dialog .selected-name {
     font-weight: 600;
     font-size: 1rem;
     margin-bottom: 2px;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.selected-model {
+#models-dev-dialog .selected-model {
     font-size: 0.9rem;
-    color: var(--text-secondary, #666);
+    color: var(--ym-color-text-secondary, #666);
 }
 
 /* Model Selection */
-.model-selection {
+#models-dev-dialog .model-selection {
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.model-selection.hidden {
+#models-dev-dialog .model-selection.hidden {
     display: none;
 }
 
-.model-selection label {
+#models-dev-dialog .model-selection label {
     display: block;
     font-size: 0.9rem;
     margin-bottom: 6px;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.model-selection input[type="text"] {
+#models-dev-dialog .model-selection input[type="text"] {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--input-border, #ccc);
+    border: 1px solid var(--ym-color-border, #ccc);
     border-radius: 4px;
     font-size: 0.9rem;
     box-sizing: border-box;
+    color: var(--ym-color-text, #1e293b);
+    background-color: var(--ym-color-bg, #ffffff);
 }
 
 /* API Key Section */
-.api-key-section {
+#models-dev-dialog .api-key-section {
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.api-key-section label {
+#models-dev-dialog .api-key-section label {
     display: block;
     font-size: 0.9rem;
     margin-bottom: 6px;
+    color: var(--ym-color-text, #1e293b);
 }
 
-.api-key-section input[type="password"] {
+#models-dev-dialog .api-key-section input[type="password"] {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--input-border, #ccc);
+    border: 1px solid var(--ym-color-border, #ccc);
     border-radius: 4px;
     font-size: 0.9rem;
     box-sizing: border-box;
+    color: var(--ym-color-text, #1e293b);
+    background-color: var(--ym-color-bg, #ffffff);
+}
+
+/* API Key Creation Link */
+#models-dev-dialog .api-key-create-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--ym-color-primary, #7c3aed);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+#models-dev-dialog .api-key-create-link:hover {
+    text-decoration: underline;
 }
 
 /* Error Message */
-.error-message {
+#models-dev-dialog .error-message {
     padding: 12px 20px;
-    background-color: var(--error-bg, #fee);
-    color: var(--error-text, #c00);
-    border-top: 1px solid var(--error-border, #fcc);
+    background-color: var(--ym-color-danger-bg, #fee);
+    color: var(--ym-color-danger, #c00);
+    border-top: 1px solid var(--ym-color-danger-border, #fcc);
     font-size: 0.9rem;
 }
 
-.error-message.hidden {
+#models-dev-dialog .error-message.hidden {
     display: none;
 }
 
 /* Modal Footer */
-.modal-footer {
+#models-dev-dialog .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--ym-color-border, #e0e0e0);
 }
 
-.btn {
+#models-dev-dialog .btn {
     padding: 8px 20px;
     border-radius: 4px;
     font-size: 0.9rem;
@@ -297,42 +332,42 @@
     transition: all 0.2s;
 }
 
-.btn-secondary {
-    background-color: var(--btn-secondary-bg, #f0f0f0);
-    color: var(--btn-secondary-text, #333);
+#models-dev-dialog .btn-secondary {
+    background-color: var(--ym-color-bg-subtle, #f0f0f0);
+    color: var(--ym-color-text, #333);
 }
 
-.btn-secondary:hover {
-    background-color: var(--btn-secondary-hover-bg, #e0e0e0);
+#models-dev-dialog .btn-secondary:hover {
+    background-color: var(--ym-color-border, #e0e0e0);
 }
 
-.btn-primary {
+#models-dev-dialog .btn-primary {
     background-color: var(--ym-color-primary, #7c3aed);
     color: white;
 }
 
-.btn-primary:hover {
+#models-dev-dialog .btn-primary:hover {
     background-color: var(--ym-color-primary-hover, #6d28d9);
 }
 
 /* Scrollbar Styling */
-.provider-list::-webkit-scrollbar,
-.modal-content::-webkit-scrollbar {
+#models-dev-dialog .provider-list::-webkit-scrollbar,
+#models-dev-dialog .modal-content::-webkit-scrollbar {
     width: 8px;
 }
 
-.provider-list::-webkit-scrollbar-track,
-.modal-content::-webkit-scrollbar-track {
-    background: var(--scrollbar-track, #f1f1f1);
+#models-dev-dialog .provider-list::-webkit-scrollbar-track,
+#models-dev-dialog .modal-content::-webkit-scrollbar-track {
+    background: var(--ym-color-bg-subtle, #f1f1f1);
 }
 
-.provider-list::-webkit-scrollbar-thumb,
-.modal-content::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb, #ccc);
+#models-dev-dialog .provider-list::-webkit-scrollbar-thumb,
+#models-dev-dialog .modal-content::-webkit-scrollbar-thumb {
+    background: var(--ym-color-border, #ccc);
     border-radius: 4px;
 }
 
-.provider-list::-webkit-scrollbar-thumb:hover,
-.modal-content::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover, #999);
+#models-dev-dialog .provider-list::-webkit-scrollbar-thumb:hover,
+#models-dev-dialog .modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--ym-color-border-hover, #999);
 }

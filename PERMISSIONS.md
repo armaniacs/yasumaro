@@ -4,8 +4,8 @@
 
 **目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。Chrome Web Store 審査プロセスにおいて、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
 
-**Last Updated / 最終更新日**: 2026-06-19
-**Target Version / 対象バージョン**: v6.0.1
+**Last Updated / 最終更新日**: 2026-06-20
+**Target Version / 対象バージョン**: v6.0.4
 
 ---
 
@@ -22,7 +22,8 @@
 | `webRequest` | required | `src/background/headerDetector.ts` (privacy header detection) | Yes |
 | `alarms` | required | `src/background/sessionAlarmsManager.ts` (session timeout) | Yes |
 | `activeTab` | required | Popup "Record Now" + manual content fetch | Yes |
-| `favicon` | optional | User opt-in via settings | No |
+| `favicon` | required | Popup current page + dashboard/history favicon display | Yes |
+| `contextMenus` | required | `src/background/service-worker.ts` (manual record trigger) | Yes |
 
 ---
 
@@ -40,28 +41,37 @@
 ### 6. `webRequest`
 ### 7. `alarms`
 ### 8. `activeTab`
-### 9. `favicon` (optional)
+### 9. `favicon` (required)
 
 **Why we need it / なぜ必要か**
 
-- ユーザーがオプションで有効化した場合のみ、アクセス中サイトの favicon を取得
-- ダッシュボードのログ一覧を視覚的にリッチ化
+- ポップアップの現在ページ表示およびダッシュボードの履歴一覧で、各サイトの favicon を表示するために使用
+- 視覚的に記録対象ページを識別しやすくするため
 
 **What it enables / 有効化される機能**
 
-- ホスト権限を動的に要求（`chrome.permissions.request`）
-- `chrome://favicon/<url>` 経由でファビコン画像を取得
+- `chrome-extension://_favicon/` 経由でファビコン画像を取得
+- ポップアップ、ダッシュボードの各履歴項目でサイトアイコンを表示
 
 **Privacy safeguards / プライバシー保護**
 
-- デフォルトでは無効（ユーザーが明示的にオプトイン）
-- 設定でいつでも無効化可能
 - ファビコン取得以外の用途には使用しない
+- 取得した画像は UI 表示にのみ使用し、外部に送信しない
 
 **Code references / コード参照**
 
-- `src/background/handlers/faviconHandlers.ts` (planned)
-- `src/utils/permissionManager.ts` (dynamic permission flow)
+- `src/popup/recordCurrentPage.ts` (popup favicon)
+- `src/dashboard/sqliteHistoryPanel.ts` (history favicon display)
+
+---
+
+## 10. `contextMenus`
+
+**用途**: ユーザーが Web ページ上で右クリックしたときに、「Yasumaro でこのページを記録」メニューを表示し、手動記録を実行できるようにする。
+
+**理由**: 拡張機能アイコンのクリック以外にも、ページ閲覧中に手動で要約・保存をトリガーする手段を提供するため。
+
+**プライバシー保護**: コンテキストメニューはユーザーが明示的に右クリックしたときのみ表示される。自動で記録は行われない。
 
 ---
 

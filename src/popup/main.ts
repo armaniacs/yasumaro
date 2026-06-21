@@ -1,7 +1,7 @@
 import { showPreview, initializeModalEvents } from './sanitizePreview.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { isRecordable } from './tabUtils.js';
-import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn } from './recordCurrentPage.js';
+import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn, handleRecordNowClick } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
 
 export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus, isRecordable };
@@ -14,6 +14,11 @@ async function loadCurrentTabAndInitStatus(): Promise<void> {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
+  if (recordBtn) {
+    recordBtn.onclick = () => handleRecordNowClick(false);
+  }
+
   initializeModalEvents();
   loadCurrentTabAndInitStatus().catch((error) => {
     logError('[Initialize] Failed to load current tab or init status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);

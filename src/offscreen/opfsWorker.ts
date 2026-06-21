@@ -505,6 +505,32 @@ async function handleSerialize(): Promise<Uint8Array> {
   return encoder.encode(JSON.stringify(rows));
 }
 
+/**
+ * バイナリ .db バックアップを取得
+ * OPFS ファイルシステムから直接データベースファイルを読み取る
+ *
+ * 注意: createSyncAccessHandle は OPFSCoopSyncVFS が同一ファイルを開いていると
+ *       INVALID_STATE エラーになるため、非排他読み取りの getFile() を使用する。
+ */
+async function handleBackup(): Promise<Uint8Array> {
+  if (!engine) throw new Error('OPFS SQLite not initialized');
+
+  // WAL チェックポイントを実行し、すべてのデータをメイン .db ファイルにフラッシュ
+  try {
+    await engine.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch {
+    // WAL モードでない場合は無視
+  }
+
+  // OPFS ファイルシステムから .db ファイルのスナップショットを読み取る
+  // getFile() は排他ロックを要求しないため、SQLite が使用中でも動作する
+  const root = await navigator.storage.getDirectory();
+  const fileHandle = await root.getFileHandle(DB_FILENAME, { create: false });
+  const file = await fileHandle.getFile();
+  const buffer = await file.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
 async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResultRecord[]; total: number }> {
   const { searchQuery, limit = 50, offset = 0 } = payload;
   const bare = sanitizeFtsTerm(searchQuery);
@@ -672,6 +698,11 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
         result = await handleSerialize();
         break;
       }
+      case 'BACKUP': {
+        if (!engine) await initSqlite();
+        result = await handleBackup();
+        break;
+      }
       case 'FTS_INDEX_SIZE': {
         result = await handleFtsIndexSize();
         break;
@@ -692,10 +723,39 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
 }
 
 // ---------------------------------------------------------------------------
+// Request serialization queue
+// Prevents concurrent SQLite access which causes SQLITE_LOCKED errors.
+// ---------------------------------------------------------------------------
+
+type QueueTask = () => Promise<void>;
+const requestQueue: QueueTask[] = [];
+let queueProcessing = false;
+
+async function processQueue(): Promise<void> {
+  if (queueProcessing) return;
+  queueProcessing = true;
+  try {
+    while (requestQueue.length > 0) {
+      const task = requestQueue.shift()!;
+      try { await task(); } catch { /* individual task errors are handled inside task */ }
+    }
+  } finally {
+    queueProcessing = false;
+  }
+}
+
+function enqueue(task: QueueTask): void {
+  requestQueue.push(task);
+  void processQueue();
+}
+
+// ---------------------------------------------------------------------------
 // Worker entry point
 // ---------------------------------------------------------------------------
 
-self.onmessage = async (e: MessageEvent<RequestMessage>) => {
-  const response = await handleRequest(e.data);
-  (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
+self.onmessage = (e: MessageEvent<RequestMessage>) => {
+  enqueue(async () => {
+    const response = await handleRequest(e.data);
+    (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
+  });
 };

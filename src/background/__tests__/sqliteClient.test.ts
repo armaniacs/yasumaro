@@ -296,6 +296,39 @@ describe('SqliteClient', () => {
     });
   });
 
+  describe('backupDb', () => {
+    it('reconstructs Uint8Array from number[] returned by offscreen', async () => {
+      // offscreen converts Uint8Array → number[] before calling sendResponse
+      // sqliteClient must convert it back to Uint8Array
+      const bytes = [83, 81, 76, 105, 116, 101]; // "SQLite"
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true, data: bytes });
+        }
+      );
+
+      const result = await client.backupDb();
+
+      expect(result).toBeInstanceOf(Uint8Array);
+      expect(Array.from(result!)).toEqual(bytes);
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'SQLITE_BACKUP', target: 'offscreen' }),
+        expect.any(Function)
+      );
+    });
+
+    it('returns null when backup fails', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: false, error: 'Backup failed' });
+        }
+      );
+
+      const result = await client.backupDb();
+      expect(result).toBeNull();
+    });
+  });
+
   describe('offscreen document management', () => {
     it('creates offscreen document if not already present', async () => {
       hasDocumentMock.mockResolvedValue(false);

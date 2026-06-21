@@ -2,6 +2,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handleOffscreenMessage, getAI, checkAvailability, ensureSession, _resetSessionForTesting } from '../offscreen.js';
 
+vi.mock('../sqlite.js', () => ({
+    init: vi.fn().mockResolvedValue({ success: true }),
+    insert: vi.fn(),
+    insertBatch: vi.fn(),
+    query: vi.fn(),
+    search: vi.fn(),
+    update: vi.fn(),
+    hardDelete: vi.fn(),
+    toggleStar: vi.fn(),
+    getCount: vi.fn(),
+    getStatus: vi.fn(),
+    serialize: vi.fn(),
+    backupDb: vi.fn(),
+    clearAll: vi.fn(),
+    purgeOldRecords: vi.fn(),
+    _resetForTesting: vi.fn(),
+}));
+
 const noop = () => {};
 
 function makeMessage(type: string, payload?: Record<string, unknown>) {
@@ -269,6 +287,55 @@ describe('checkAvailability', () => {
         Object.defineProperty(window, 'ai', { value: mockAi, writable: true, configurable: true });
         const result = await checkAvailability();
         expect(result).toBe('unsupported');
+    });
+});
+
+describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
+    beforeEach(() => {
+        (globalThis as unknown as Record<string, unknown>).chrome = {
+            runtime: { id: 'test-extension-id' },
+        };
+    });
+
+    afterEach(() => {
+        delete (globalThis as unknown as Record<string, unknown>).chrome;
+    });
+
+    it('converts Uint8Array to number[] so Chrome message passing serializes it correctly', async () => {
+        const { backupDb } = await import('../sqlite.js');
+        const mockData = new Uint8Array([83, 81, 76, 105, 116, 101]); // "SQLite" bytes
+        vi.mocked(backupDb).mockResolvedValue({ success: true, data: mockData });
+
+        const responses: unknown[] = [];
+        handleOffscreenMessage(
+            makeMessage('SQLITE_BACKUP'),
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
+            (r) => responses.push(r)
+        );
+        await vi.waitFor(() => expect(responses.length).toBe(1));
+
+        const resp = responses[0] as { success: boolean; data: number[] };
+        expect(resp.success).toBe(true);
+        // Must be a plain Array, not Uint8Array — Chrome sendResponse cannot serialize TypedArrays
+        expect(Array.isArray(resp.data)).toBe(true);
+        expect(resp.data).toEqual([83, 81, 76, 105, 116, 101]);
+    });
+
+    it('passes through failure response unchanged', async () => {
+        const { backupDb } = await import('../sqlite.js');
+        vi.mocked(backupDb).mockResolvedValue({ success: false, error: 'OPFS unavailable' });
+
+        const responses: unknown[] = [];
+        handleOffscreenMessage(
+            makeMessage('SQLITE_BACKUP'),
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
+            (r) => responses.push(r)
+        );
+        await vi.waitFor(() => expect(responses.length).toBe(1));
+
+        const resp = responses[0] as { success: boolean; error: string };
+        expect(resp.success).toBe(false);
+        expect(resp.error).toBe('OPFS unavailable');
     });
 });
 

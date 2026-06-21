@@ -1,5 +1,7 @@
 /**
- * Vitest設定ファイル
+ * @deprecated This config is re-exported by the root vitest.config.ts.
+ * Do not reference this file directly. Make changes here, and the root
+ * config will pick them up automatically.
  */
 
 import { defineConfig } from 'vitest/config';

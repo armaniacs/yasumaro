@@ -365,6 +365,17 @@ const chromeRuntimeMock = {
     insertCSS: vi.fn(() => Promise.resolve()),
     removeCSS: vi.fn(() => Promise.resolve()),
   },
+  contextMenus: {
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    removeAll: vi.fn(),
+    onClicked: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      hasListener: vi.fn(() => false),
+    },
+  },
   action: {
     setBadgeText: vi.fn((details: any, callback?: () => void) => {
       if (callback) callback();

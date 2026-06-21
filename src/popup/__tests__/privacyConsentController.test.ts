@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const mockGetPrivacyConsent = vi.hoisted(() => vi.fn());
 const mockSavePrivacyConsent = vi.hoisted(() => vi.fn());
 const mockMigrateLegacyPrivacyConsent = vi.hoisted(() => vi.fn());
+const mockRecordPolicyVersionAcknowledgment = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-id-1'));
@@ -34,6 +35,7 @@ vi.mock('../privacyConsent.js', () => ({
   getPrivacyConsent: mockGetPrivacyConsent,
   savePrivacyConsent: mockSavePrivacyConsent,
   migrateLegacyPrivacyConsent: mockMigrateLegacyPrivacyConsent,
+  recordPolicyVersionAcknowledgment: mockRecordPolicyVersionAcknowledgment,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -259,6 +261,7 @@ describe('privacyConsentController', () => {
     it('should save consent and hide modal when accept is clicked', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
       mockSavePrivacyConsent.mockResolvedValue(undefined);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
 
@@ -272,6 +275,7 @@ describe('privacyConsentController', () => {
       acceptBtn!.click();
       await vi.waitFor(() => {
         expect(mockSavePrivacyConsent).toHaveBeenCalled();
+        expect(mockRecordPolicyVersionAcknowledgment).toHaveBeenCalled();
       });
 
       const modal = getModal();

@@ -4,7 +4,7 @@
  * Uses the DASHBOARD_SQLITE service worker messaging for data access.
  */
 
-import { queryLogs } from './dashboardSqliteService.js';
+import { queryLogs, backupDb } from './dashboardSqliteService.js';
 
 // ============================================================================
 // Markdown Export
@@ -79,6 +79,17 @@ export async function exportJson(): Promise<Blob> {
   const all = await queryAllData();
   const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows: all }, null, 2);
   return new Blob([json], { type: 'application/json' });
+}
+
+// ============================================================================
+// Binary .db Export
+// ============================================================================
+
+export async function exportDb(): Promise<Blob | null> {
+  const data = await backupDb();
+  if (!data) return null;
+  // Uint8Array を Blob に変換
+  return new Blob([new Uint8Array(data)], { type: 'application/x-sqlite3' });
 }
 
 // ============================================================================
