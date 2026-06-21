@@ -15,6 +15,23 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.0] - 2026-06-21
+
+### Added / 追加
+
+- **プライバシー同意のバージョン移行** — プライバシーポリシーが更新された際、自動的に再同意モーダルを表示。ポリシーバージョン記録機能と拒否カウンターのリセット機能を追加 (PBI-23)
+- **`.db` バイナリデータベースエクスポート** — ダッシュボードのエクスポート機能に「Export as Database (.db)」ボタンを追加。OPFS ストレージ使用時に SQLite ファイルを直接ダウンロード可能 (PBI-24)
+- **OPFS 復旧時の自動マイグレーション** — OPFS ストレージが復旧した際、フォールバックデータを SQLite に自動移行。起動時に復旧検出し、バッチ処理で安全に移行 (PBI-25)
+
+### Fixed / 修正
+
+- **vitest 設定ファイルの自動発見問題** — `vitest.config.ts` が `testDir/` 内にあったため `npx vitest run` で 215 件の False Positive が発生。ルートに設定ファイルを追加し、`--config` パラメータを不要に (PBI-27)
+- **ダークモード視認性の包括的修正** — オンボーディングウィザード、OpenAI 互換プロバイダーダイアログ、バナー、バッジのダークモード対応。`--ym-color-paper` / `--ym-color-ink-black` の同一色問題を修正
+
+### Changed / 変更
+
+- **Service Worker モジュール分割** — `service-worker.ts` を 1106 行から 908 行に削減。タブイベントハンドラ、ライフサイクルハンドラ、コンテキストメニューを別モジュールに抽出 (PBI-26)
+
 ## [6.1.2] - 2026-06-21
 
 ### Fixed / 修正
