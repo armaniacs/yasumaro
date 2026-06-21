@@ -83,12 +83,20 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             expect(result.needsReconsent).toBe(false);
         });
 
-        it('should return needsReconsent: undefined for legacy boolean consent', async () => {
+        it('should return needsReconsent: undefined for legacy boolean consent (known gap)', async () => {
             storageMock['privacy_consent'] = true;
 
             const result = await getPrivacyConsent();
             expect(result.hasConsented).toBe(true);
-            // Legacy boolean consent doesn't set needsReconsent
+            expect(result.needsReconsent).toBeUndefined();
+        });
+
+        it('should return needsReconsent for legacy boolean consent when policy version changes', async () => {
+            storageMock['privacy_consent'] = true;
+            storageMock['privacy_consent_version'] = 'old-version';
+
+            const result = await getPrivacyConsent();
+            expect(result.hasConsented).toBe(true);
             expect(result.needsReconsent).toBeUndefined();
         });
 
