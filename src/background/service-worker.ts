@@ -80,6 +80,22 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
+
+    // OPFS recovery migration — runs after standard migration
+    migrationService.needsOpfsRecoveryMigration().then(async (needsRecovery) => {
+        if (needsRecovery) {
+            logInfo('OPFS recovery migration triggered', {}, 'service-worker');
+            const result = await migrationService.migrateOpfsRecovery();
+            if (result.success) {
+                logInfo('OPFS recovery completed', { migrated: result.migrated }, 'service-worker');
+            } else {
+                logError('OPFS recovery failed', { error: result.error || 'Unknown error' }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+            }
+        }
+    }).catch((err) => {
+        logError('OPFS recovery check failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+    });
+
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 
