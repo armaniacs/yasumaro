@@ -1315,7 +1315,8 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
 
 /**
  * バイナリ .db バックアップを取得
- * OPFS パスではバイナリ .db、IDB/Fallback パスでは JSON にフォールバック
+ * OPFS パスではバイナリ .db を返し、IDB/Fallback パスではエラーを返す
+ * (JSON フォールバックは廃止 — コンシューマーに破損 .db を渡すため)
  */
 export async function backupDb(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   try {
@@ -1325,8 +1326,8 @@ export async function backupDb(): Promise<{ success: true; data: Uint8Array } | 
       return { success: true, data: opfsResult };
     }
 
-    // IDB/Fallback パス: JSON エクスポートにフォールバック
-    return serialize();
+    // IDB/Fallback パス: バイナリバックアップ非対応
+    return { success: false, error: 'Binary backup requires OPFS storage. Use JSON export instead.' };
   } catch (error) {
     logError('SQLite: backupDb failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };

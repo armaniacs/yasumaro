@@ -224,7 +224,7 @@ async function handleDeclineConsent(): Promise<void> {
     }
 
     const message = getMessage('consentDeclinedMessage') ||
-        '同意しない場合、拡張機能の主要機能は利用できません。後から設定画面で同意することができます。';
+        'Without consent, main features of the extension will not be available. You can consent later from the settings screen.';
     alert(message);
 }
 

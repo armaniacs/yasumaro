@@ -186,7 +186,6 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             };
 
             mockSqliteClient.insertBatch.mockImplementation((batch) => {
-                // Verify the record was converted correctly
                 expect(batch[0].url).toBe('https://example.com');
                 expect(batch[0].title).toBe('Test Title');
                 expect(batch[0].tags).toBe('tag1, tag2');
@@ -198,6 +197,73 @@ describe('PBI-25: OPFS Recovery Migration', () => {
 
             expect(result.success).toBe(true);
             expect(result.migrated).toBe(1);
+        });
+
+        it('should handle partial batch failure (batch 2 of 2 fails)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const records = Array.from({ length: 150 }, (_, i) => ({
+                url: `https://example${i}.com`,
+                created_at: i,
+            }));
+            storageMock['FALLBACK_STORAGE_DATA'] = { records };
+
+            let callCount = 0;
+            mockSqliteClient.insertBatch.mockImplementation(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return Promise.resolve({ count: 100 });
+                }
+                return Promise.resolve(null);
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            expect(result.migrated).toBe(100);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+        });
+
+        it('should remove data before clearing flag (atomicity fix: data-first order)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            storageMock['FALLBACK_STORAGE_DATA'] = {
+                records: [{ url: 'https://example.com', created_at: 123 }],
+            };
+            mockSqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+
+            const removeSpy = vi.spyOn(chrome.storage.local, 'remove');
+
+            await migrationService.migrateOpfsRecovery();
+
+            const removeCalls = removeSpy.mock.calls.map(c => c[0]);
+            const flagIndex = removeCalls.indexOf('opfs_fallback_mode');
+            const dataIndex = removeCalls.indexOf('FALLBACK_STORAGE_DATA');
+
+            expect(flagIndex).toBeGreaterThanOrEqual(0);
+            expect(dataIndex).toBeGreaterThanOrEqual(0);
+            expect(dataIndex).toBeLessThan(flagIndex);
+
+            removeSpy.mockRestore();
+        });
+
+        it('should leave both flag and data when remove() throws during flag clearance', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            storageMock['FALLBACK_STORAGE_DATA'] = {
+                records: [{ url: 'https://example.com', created_at: 123 }],
+            };
+            mockSqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+
+            const originalRemove = chrome.storage.local.remove;
+            vi.spyOn(chrome.storage.local, 'remove').mockImplementationOnce(async () => {
+                throw new Error('Simulated crash during flag clearance');
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+            expect(storageMock['FALLBACK_STORAGE_DATA']).toBeDefined();
+
+            vi.restoreAllMocks();
         });
     });
 });
