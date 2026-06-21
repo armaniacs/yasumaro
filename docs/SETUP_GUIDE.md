@@ -80,7 +80,7 @@
 
 **B. Google Gemini**
 *   **API Key**: GeminiのAPIキーを入力。
-*   **Model Name**: `gemini-1.5-flash` (推奨) など。
+*   **Model Name**: `gemini-3.1-flash-lite` (推奨) など。
 
 **C. OpenAI Compatible 2 (サブ設定)**
 *   ローカルLLMなどを2つ目の設定として保存できます。
@@ -280,7 +280,7 @@ Select your preferred provider from the dropdown.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
     *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.
-*   **Google Gemini**: Enter API Key and Model (e.g., `gemini-1.5-flash`).
+*   **Google Gemini**: Enter API Key and Model (e.g., `gemini-3.1-flash-lite`).
 *   **OpenAI Compatible 2**: Use this for a secondary provider like a local LLM (`http://localhost:11434/v1`).
 
 #### 💡 Local LLM (LM Studio / Ollama) Setup

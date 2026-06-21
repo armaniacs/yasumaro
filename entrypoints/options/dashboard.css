@@ -795,6 +795,7 @@ button#changeMasterPassword:hover {
    ============================================================================= */
 
 #status,
+#statusTop,
 #domainStatus,
 #promptStatus,
 #exportImportStatus {

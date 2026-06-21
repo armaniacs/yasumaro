@@ -110,7 +110,7 @@ function createTestPopupDOM() {
 
       <div id="geminiSettings" style="display:none;">
         <input type="text" id="geminiApiKey" value="">
-        <input type="text" id="geminiModel" value="gemini-1.5-flash">
+        <input type="text" id="geminiModel" value="gemini-3.1-flash-lite">
       </div>
 
       <div id="openaiSettings" style="display:block;">

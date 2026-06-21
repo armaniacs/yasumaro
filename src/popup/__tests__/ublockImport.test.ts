@@ -16,7 +16,7 @@ vi.mock('../../utils/storage.js', () => {
     gemini_api_key: '',
     min_visit_duration: 5,
     min_scroll_depth: 50,
-    gemini_model: 'gemini-1.5-flash',
+    gemini_model: 'gemini-3.1-flash-lite',
     obsidian_daily_path: '092.Daily',
     ai_provider: 'openai',
     openai_base_url: 'https://api.groq.com/openai/v1',

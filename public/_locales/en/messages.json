@@ -128,11 +128,14 @@
   "geminiApiKeyPlaceholder": {
     "message": "Paste your Gemini key here..."
   },
+  "geminiApiKeyHelp": {
+    "message": "Get it from Google AI Studio."
+  },
   "modelName": {
     "message": "Model Name"
   },
   "geminiModelPlaceholder": {
-    "message": "gemini-1.5-flash"
+    "message": "gemini-3.1-flash-lite"
   },
   "baseUrl": {
     "message": "Base URL"

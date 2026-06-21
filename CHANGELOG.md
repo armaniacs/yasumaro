@@ -15,6 +15,19 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.2] - 2026-06-22
+
+### Added / 追加
+
+- **Gemini API Key 取得リンクをダッシュボードに追加** — Gemini API Key 入力欄の下に「Google AI Studio で取得できます。 APIキーを作成 →」リンクを表示。新規ユーザーがAPIキーを容易に取得できるよう UX を改善
+- **初期設定パネルの上部ボタン行にステータス表示を追加** — 上部の「保存する」「Obsidian テスト」「AI テスト」ボタン押下時の結果をボタン直下に表示。ページ下部までスクロールせずに結果を確認可能に
+
+### Changed / 変更
+
+- **Gemini デフォルトモデル名を `gemini-3.1-flash-lite` に変更** — ダッシュボード・ポップアップ・プロバイダーのフォールバック値、i18n プレースホルダー、テストフィクスチャ、ドキュメントを全て更新
+
+---
+
 ## [6.3.1] - 2026-06-22
 
 ### Fixed / 修正

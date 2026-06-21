@@ -50,7 +50,7 @@ describe('AI Provider timeout', () => {
 
     const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
-      [StorageKeys.GEMINI_MODEL]: 'gemini-1.5-flash'
+      [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite'
     };
     const provider = new GeminiProvider(settings);
     const result = await provider.generateSummary('test content');
@@ -75,7 +75,7 @@ describe('AI Provider timeout', () => {
 
     const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
-      [StorageKeys.GEMINI_MODEL]: 'gemini-1.5-flash'
+      [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite'
     };
     const provider = new GeminiProvider(settings);
     const result = await provider.generateSummary('test content');

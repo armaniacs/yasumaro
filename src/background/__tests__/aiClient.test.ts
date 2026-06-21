@@ -119,7 +119,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
-        gemini_model: 'gemini-1.5-flash'
+        gemini_model: 'gemini-3.1-flash-lite'
       });
 
       // 404エラーのモック - fetchWithTimeoutが正しく動作するようにモック
@@ -146,7 +146,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
-        gemini_model: 'gemini-1.5-flash'
+        gemini_model: 'gemini-3.1-flash-lite'
       });
 
       // エラーレスポンスのモック
@@ -213,7 +213,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
-        gemini_model: 'gemini-1.5-flash'
+        gemini_model: 'gemini-3.1-flash-lite'
       });
 
       // ネットワークエラーのモック
@@ -335,7 +335,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       mockGetSettings.mockResolvedValue({
         ai_provider: 'gemini',
         gemini_api_key: 'test_key',
-        gemini_model: 'gemini-1.5-flash'
+        gemini_model: 'gemini-3.1-flash-lite'
       });
 
       const result = await aiClient.generateSummary('Test content');

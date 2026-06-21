@@ -486,7 +486,7 @@ const chromeRuntimeMock = {
         openaiCompatible2: 'OpenAI Compatible 2 (Local, etc.)',
         geminiApiKey: 'Gemini API Key',
         geminiApiKeyPlaceholder: 'Paste your Gemini key here...',
-        modelName: 'Model Name (e.g. gemini-1.5-flash)',
+        modelName: 'Model Name (e.g. gemini-3.1-flash-lite)',
         baseUrl: 'Base URL',
         openaiBaseUrlPlaceholder: 'https://api.openai.com/v1',
         openaiApiKeyPlaceholder: 'sk-...',

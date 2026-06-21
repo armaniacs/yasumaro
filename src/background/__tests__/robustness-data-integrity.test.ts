@@ -95,7 +95,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
-      GEMINI_MODEL: 'gemini-1.5-flash',
+      GEMINI_MODEL: 'gemini-3.1-flash-lite',
       PRIVACY_MODE: 'masked_cloud'
     });
 

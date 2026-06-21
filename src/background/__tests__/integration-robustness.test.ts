@@ -110,7 +110,7 @@ describe('Integration: Robustness improvements', () => {
 
     const settings: any = {
       [StorageKeys.GEMINI_API_KEY]: 'test-key',
-      [StorageKeys.GEMINI_MODEL]: 'gemini-1.5-flash'
+      [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite'
     };
 
     const provider = new GeminiProvider(settings);
