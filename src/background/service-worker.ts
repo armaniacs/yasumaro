@@ -6,6 +6,9 @@ import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
+import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
+import { createLifecycleHandlers } from './handlers/lifecycleHandlers.js';
+import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
     getAllowedUrls,
     getSettings,
@@ -833,144 +836,24 @@ export function createMessageHandler(): (
 }
 
 // ============================================================================
-// Tab Event Handlers
+// Tab Event Handlers (delegated to handlers/tabEventHandlers.ts)
 // ============================================================================
 
-export function handleTabRemoved(tabId: number): void {
-    tabCache.remove(tabId);
-    autoSavedBadgeTabs.delete(tabId);
-}
-
-export async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
-    try {
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        // 自動保存バッジ表示中のタブは ◎ を維持
-        if (autoSavedBadgeTabs.has(activeInfo.tabId)) {
-            chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: activeInfo.tabId });
-            return;
-        }
-        if (!tab.url) {
-            chrome.action.setBadgeText({ text: '' });
-            return;
-        }
-        const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
-        if (privacyInfo?.isPrivate) {
-            chrome.action.setBadgeText({ text: '!' });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
-        } else {
-            chrome.action.setBadgeText({ text: '' });
-        }
-    } catch (error) {
-        await logError('Failed to update badge on tab activation', {
-            tabId: activeInfo.tabId,
-            error: errorMessage(error)
-        }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
-        chrome.action.setBadgeText({ text: '' });
-    }
-}
-
-/**
- * Handle tab navigation - update badge after page load completes.
- */
-export function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void {
-    if (changeInfo.status !== 'complete' || !tab.url) return;
-    // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
-    autoSavedBadgeTabs.delete(tabId);
-    const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-    const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
-    if (privacyInfo?.isPrivate) {
-        chrome.action.setBadgeText({ text: '!', tabId });
-        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
-    } else {
-        chrome.action.setBadgeText({ text: '', tabId });
-    }
-}
+const _tabHandlers = createTabEventHandlers({ tabCache, autoSavedBadgeTabs });
+export const handleTabRemoved = _tabHandlers.handleTabRemoved;
+export const handleTabActivated = _tabHandlers.handleTabActivated;
+export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 
 // ============================================================================
-// Extension Lifecycle Handlers
+// Extension Lifecycle Handlers (delegated to handlers/lifecycleHandlers.ts)
 // ============================================================================
 
-/**
- * Initialize extension on install/update.
- */
-export async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
-    if (details.reason === 'install') {
-        logInfo('Service Worker installed', {}, 'service-worker');
-    } else if (details.reason === 'update') {
-        logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
-
-        // 更新時はキャッシュをクリアして再初期化
-        RecordingLogic.invalidateSettingsCache();
-        const settings = await getSettings();
-        await updateDomainFilterCache(settings);
-
-        // Migrate legacy privacy consent for existing users
-        // This ensures users who had boolean consent get the new object format
-        // with version info, so isRecordingAllowed() works correctly
-        try {
-            await migrateLegacyPrivacyConsent();
-        } catch (error) {
-            await logWarn(
-                'Legacy privacy consent migration failed',
-                { error: errorMessage(error) },
-                ErrorCode.UNKNOWN_ERROR,
-                'service-worker'
-            );
-        }
-    }
-}
-
-/**
- * Service Worker startup - rehydrate caches and cleanup.
- */
-export async function handleStartup(): Promise<void> {
-    logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
-
-    // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
-    if (isCacheInitialized) {
-        logDebug('Cache already initialized, skipping startup rehydration', {}, 'service-worker');
-        return;
-    }
-
-    try {
-        // 関連キャッシュを無効化して再読み込みを強制
-        RecordingLogic.invalidateSettingsCache();
-        const settings = await getSettings();
-        await updateDomainFilterCache(settings);
-        isCacheInitialized = true;
-
-        // Reload recording cache from session
-        await RecordingLogic.loadCacheFromSession();
-
-        // Reload rate limiter from session
-        await rateLimiter.reload();
-
-        logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
-    } catch (error) {
-        await logError(
-            'Service Worker startup - cache rehydration failed',
-            { error: errorMessage(error) },
-            ErrorCode.STORAGE_READ_FAILURE,
-            'service-worker'
-        );
-    }
-
-    // 期限切れの権限データをクリーンアップ（起動時のみ実行）
-    try {
-        await cleanupOldDeniedEntries(90);
-        await cleanupDismissedEntries(7);
-        logDebug('Permission cleanup completed on startup', {}, 'service-worker');
-    } catch (error) {
-        logWarn(
-            'Permission cleanup failed on startup',
-            { error: errorMessage(error) },
-            undefined,
-            'service-worker'
-        );
-    }
-}
+const _lifecycleHandlers = createLifecycleHandlers({
+    isCacheInitialized: { get value() { return isCacheInitialized; }, set value(v: boolean) { isCacheInitialized = v; } },
+    rateLimiter,
+});
+export const handleInstalled = _lifecycleHandlers.handleInstalled;
+export const handleStartup = _lifecycleHandlers.handleStartup;
 
 // ============================================================================
 // Notification Handlers
@@ -982,27 +865,11 @@ export const handleNotificationButtonClicked = _notificationHandlers.onButtonCli
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 
 // ============================================================================
-// Context menu registration for manual recording
-// Extracted so it can be reused in tests after vi.clearAllMocks().
+// Context Menu (delegated to handlers/contextMenuHandlers.ts)
 // ============================================================================
 
-export function registerManualRecordContextMenu(): void {
-    chrome.contextMenus.create(
-        {
-            id: 'yasumaro-manual-record',
-            title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
-            contexts: ['page', 'link'],
-        },
-        () => {
-            const error = chrome.runtime.lastError;
-            if (!error) return;
-            const message = error.message || '';
-            if (!message.includes('duplicate id')) {
-                logError('Failed to register context menu', { cause: message }, ErrorCode.INTERNAL_ERROR, 'service-worker');
-            }
-        }
-    );
-}
+export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
+const _contextClickHandler = createContextClickHandler({ handleManualRecord });
 
 // ============================================================================
 // Module-level initialization - register all Chrome event listeners directly
@@ -1025,73 +892,9 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
 
     // Context menu for manual recording
     // Registered on install/update; context menu items persist across service worker restarts.
-    chrome.runtime.onInstalled.addListener(registerManualRecordContextMenu);
+    chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
 
-    let contextMenuRecordInProgress: Promise<void> | null = null;
-
-    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-        if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
-
-        if (!isSecureUrl(tab.url)) {
-            await logWarn('Context menu ignored for insecure URL', { url: tab.url }, undefined, 'service-worker');
-            return;
-        }
-
-        if (contextMenuRecordInProgress) return;
-
-        const targetTabId = tab.id;
-        const targetTabUrl = tab.url;
-        if (!targetTabId || !targetTabUrl) return;
-
-        contextMenuRecordInProgress = (async () => {
-            try {
-                const [result] = await chrome.scripting.executeScript({
-                    target: { tabId: targetTabId },
-                    func: () => ({
-                        url: window.location.href,
-                        title: document.title,
-                        content: document.body?.innerText?.slice(0, 5000) || '',
-                    }),
-                });
-
-                const raw = result?.result;
-                if (!raw || typeof raw !== 'object' || !('url' in raw)) {
-                    await logWarn('Context menu received invalid page data', { url: targetTabUrl }, undefined, 'service-worker');
-                    return;
-                }
-
-                const payload = raw as { url: string; title: string; content: string };
-                const sender: chrome.runtime.MessageSender = {
-                    tab: { id: targetTabId, url: payload.url } as chrome.tabs.Tab,
-                    id: chrome.runtime.id,
-                    url: chrome.runtime.getURL(''),
-                };
-
-                await handleManualRecord(
-                    {
-                        type: 'MANUAL_RECORD',
-                        payload: {
-                            url: payload.url,
-                            title: payload.title,
-                            content: payload.content,
-                            force: true,
-                            skipAi: false,
-                        },
-                    },
-                    sender,
-                    () => {}
-                );
-            } catch (error) {
-                logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
-            }
-        })();
-
-        try {
-            await contextMenuRecordInProgress;
-        } finally {
-            contextMenuRecordInProgress = null;
-        }
-    });
+    chrome.contextMenus.onClicked.addListener(_contextClickHandler);
 
     // Notification listeners
     chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
