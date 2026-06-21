@@ -1701,6 +1701,9 @@
   "saveFailed": {
     "message": "同意の保存に失敗しました"
   },
+  "consentDeclinedMessage": {
+    "message": "同意しない場合、拡張機能の主要機能は利用できません。後から設定画面で同意することができます。"
+  },
   "wizardTitle": {
     "message": "Yasumaro へようこそ"
   },

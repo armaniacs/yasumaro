@@ -1703,6 +1703,9 @@
   "saveFailed": {
     "message": "Failed to save consent"
   },
+  "consentDeclinedMessage": {
+    "message": "Without consent, main features of the extension will not be available. You can consent later from the settings screen."
+  },
   "wizardTitle": {
     "message": "Welcome to Yasumaro"
   },

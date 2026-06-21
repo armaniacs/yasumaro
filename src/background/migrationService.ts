@@ -282,11 +282,10 @@ export class MigrationService {
         }
       }
 
-      // 移行完了 — フラグをクリア
-      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
-
-      // フォールバックデータを削除
+      // 移行完了 — まずデータを削除し、最後にフラグをクリアする
+      // (データ削除を先に行うことで、途中でSW終了しても復旧可能に保つ)
       await chrome.storage.local.remove(FALLBACK_STORAGE_KEY);
+      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
 
       addLog(LogType.INFO, 'OPFS recovery: migration completed', { migrated: totalMigrated });
 
