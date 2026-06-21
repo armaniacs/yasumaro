@@ -1745,6 +1745,12 @@
   "wizardFinish": {
     "message": "Get started"
   },
+  "reopenWizardBtn": {
+    "message": "Setup Wizard"
+  },
+  "apiKeyCreateLink": {
+    "message": "Create API Key →"
+  },
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },

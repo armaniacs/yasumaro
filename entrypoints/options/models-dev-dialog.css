@@ -285,6 +285,20 @@
     background-color: var(--bg-primary, #ffffff);
 }
 
+/* API Key Creation Link */
+#models-dev-dialog .api-key-create-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--color-primary, #7c3aed);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+#models-dev-dialog .api-key-create-link:hover {
+    text-decoration: underline;
+}
+
 /* Error Message */
 #models-dev-dialog .error-message {
     padding: 12px 20px;

@@ -7,7 +7,8 @@ import type { ModelsDevData, ModelsDevProvider, ModelsDevModel } from '../utils/
 import {
     loadModelsDevData,
     formatContextLimit,
-    getApiKeyEnvName
+    getApiKeyEnvName,
+    getApiKeyUrl,
 } from '../utils/modelsDevApi.js';
 import { StorageKeys, saveSettings, getSettings, Settings } from '../utils/storage.js';
 import { applyI18n } from '../popup/i18n.js';
@@ -396,6 +397,23 @@ export class ModelsDevDialog {
         const apiKeyInput = document.getElementById('api-key-input') as HTMLInputElement;
         if (apiKeyInput) {
             apiKeyInput.placeholder = `Enter ${getApiKeyEnvName(provider.id)}...`;
+        }
+
+        // Show API key creation link if available
+        const existingLink = document.getElementById('api-key-create-link');
+        existingLink?.remove();
+        const apiKeyUrl = getApiKeyUrl(provider.id, provider.doc);
+        if (apiKeyUrl) {
+            const link = document.createElement('a');
+            link.id = 'api-key-create-link';
+            link.href = apiKeyUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'api-key-create-link';
+            link.dataset.i18n = 'apiKeyCreateLink';
+            link.textContent = 'API Key →';
+            apiKeyInput?.insertAdjacentElement('afterend', link);
+            applyI18n(link);
         }
     }
 

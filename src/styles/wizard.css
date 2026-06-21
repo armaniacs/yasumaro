@@ -1,0 +1,111 @@
+/**
+ * wizard.css
+ * Shared onboarding wizard styles for both popup and dashboard.
+ *
+ * Both consumers must @import tokens.css before this file.
+ */
+
+/* ------------------------------------------------------------------ */
+/*  Wizard container                                                   */
+/* ------------------------------------------------------------------ */
+.wizard {
+  background: #ffffff;
+  color: #111827;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+
+.wizard.hidden {
+  display: none;
+}
+
+.wizard-step.hidden {
+  display: none;
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ym-space-3, 0.75rem);
+}
+
+.wizard-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ym-color-ink-black, #111827);
+}
+
+.wizard-step p {
+  margin: 0;
+  color: var(--ym-color-text-secondary, #4b5563);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Options                                                            */
+/* ------------------------------------------------------------------ */
+.wizard-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ym-space-3, 0.75rem);
+}
+
+.wizard-option {
+  padding: var(--ym-space-4, 1rem) 1.25rem;
+  border: 2px solid var(--ym-color-border, #d1d5db);
+  border-radius: 10px;
+  background: var(--ym-color-paper, #ffffff);
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ym-color-ink-black, #111827);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.wizard-option:hover,
+.wizard-option:focus-visible {
+  border-color: var(--ym-color-primary, #7c3aed);
+  background: var(--ym-color-primary-bg, #f5f3ff);
+  color: var(--ym-color-primary-hover, #5b21b6);
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Buttons                                                            */
+/* ------------------------------------------------------------------ */
+.wizard-skip,
+.wizard-next,
+.wizard-finish {
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  background: var(--ym-color-primary, #7c3aed);
+  color: #ffffff;
+  align-self: flex-start;
+  transition: background 0.15s;
+}
+
+.wizard-skip {
+  background: transparent;
+  color: var(--ym-color-text-muted, #6b7280);
+  border: 1px solid var(--ym-color-border, #d1d5db);
+}
+
+.wizard-skip:hover {
+  background: var(--ym-color-bg-subtle, #f3f4f6);
+  color: var(--ym-color-ink-deep, #374151);
+}
+
+.wizard-next:hover,
+.wizard-finish:hover {
+  background: var(--ym-color-primary-hover, #6d28d9);
+}

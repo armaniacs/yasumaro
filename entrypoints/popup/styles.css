@@ -1,5 +1,6 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
+@import url("../../src/styles/wizard.css");
 
 /**
  * styles.css
@@ -2417,98 +2418,18 @@ label.inline-label {
 }
 
 /* =============================================================================
-   Onboarding Wizard
+   Onboarding Wizard (popup-specific overrides for shared wizard.css)
    ============================================================================= */
-
 .wizard {
   position: fixed;
   inset: 0;
-  background: var(--color-bg-white);
   z-index: 1000;
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  overflow-y: auto;
+  padding: var(--ym-space-5, 1.25rem);
+  background: var(--ym-color-paper, #ffffff);
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.wizard.hidden {
-  display: none;
-}
-
-.wizard-step.hidden {
-  display: none;
-}
-
-.wizard-step {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.wizard-step h2,
-.wizard-title {
+.wizard-step h2 {
   margin-bottom: 0;
-}
-
-.wizard-step p {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.wizard-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.wizard-option {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-white);
-  cursor: pointer;
-  text-align: left;
-  font-weight: 500;
-  transition: all var(--transition-fast);
-}
-
-.wizard-option:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-bg);
-}
-
-.wizard-option:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.wizard-skip,
-.wizard-next,
-.wizard-finish {
-  margin-top: var(--space-2);
-}
-
-.wizard-skip {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.wizard-skip:hover {
-  background: var(--color-bg-subtle);
-}
-
-@media (prefers-color-scheme: dark) {
-  .wizard {
-    background: var(--color-bg-white);
-  }
-
-  .wizard-option {
-    background: var(--color-bg-white);
-  }
-
-  .wizard-option:hover {
-    background: var(--color-bg-subtle);
-  }
 }

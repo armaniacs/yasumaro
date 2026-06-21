@@ -1743,6 +1743,12 @@
   "wizardFinish": {
     "message": "はじめる"
   },
+  "reopenWizardBtn": {
+    "message": "セットアップウィザード"
+  },
+  "apiKeyCreateLink": {
+    "message": "APIキーを作成 →"
+  },
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },

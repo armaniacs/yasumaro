@@ -692,10 +692,39 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
 }
 
 // ---------------------------------------------------------------------------
+// Request serialization queue
+// Prevents concurrent SQLite access which causes SQLITE_LOCKED errors.
+// ---------------------------------------------------------------------------
+
+type QueueTask = () => Promise<void>;
+const requestQueue: QueueTask[] = [];
+let queueProcessing = false;
+
+async function processQueue(): Promise<void> {
+  if (queueProcessing) return;
+  queueProcessing = true;
+  try {
+    while (requestQueue.length > 0) {
+      const task = requestQueue.shift()!;
+      try { await task(); } catch { /* individual task errors are handled inside task */ }
+    }
+  } finally {
+    queueProcessing = false;
+  }
+}
+
+function enqueue(task: QueueTask): void {
+  requestQueue.push(task);
+  void processQueue();
+}
+
+// ---------------------------------------------------------------------------
 // Worker entry point
 // ---------------------------------------------------------------------------
 
-self.onmessage = async (e: MessageEvent<RequestMessage>) => {
-  const response = await handleRequest(e.data);
-  (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
+self.onmessage = (e: MessageEvent<RequestMessage>) => {
+  enqueue(async () => {
+    const response = await handleRequest(e.data);
+    (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
+  });
 };

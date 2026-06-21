@@ -1,5 +1,6 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
+@import url("../../src/styles/wizard.css");
 
 /**
  * dashboard.css
@@ -1768,6 +1769,12 @@ mark.domain-match-highlight {
 }
 
 .modal-overlay.show {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-overlay:not(.hidden) {
+  display: flex;
   opacity: 1;
 }
 
@@ -3811,4 +3818,28 @@ textarea {
   textarea::placeholder {
     color: var(--ym-color-text-muted, #8b949e); /* 4.7:1 on #0d1117 — AA */
   }
+}
+
+/* ============================================================
+   Onboarding Wizard overlay (dashboard-specific overrides)
+   Shared wizard styles live in src/styles/wizard.css
+   ============================================================ */
+/* Backdrop */
+.wizard-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+}
+
+.wizard {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  width: min(480px, 90vw);
+  max-height: 90vh;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
 }
