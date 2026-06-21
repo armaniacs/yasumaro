@@ -8,7 +8,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
 /** プライバシーポリシーバージョン定数 */
-const PRIVACY_POLICY_VERSION = '2026-02-23';
+export const PRIVACY_POLICY_VERSION = '2026-02-23';
 
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {
@@ -18,6 +18,8 @@ export interface PrivacyConsentState {
     consentDate?: string;
     /** 同意したポリシーバージョン */
     consentVersion?: string;
+    /** ポリシーバージョンが変更され、再同意が必要かどうか */
+    needsReconsent?: boolean;
 }
 
 /**
@@ -42,10 +44,13 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
         if (typeof consentValue === 'object' && consentValue !== null) {
             const data = consentValue as PrivacyConsentState;
             const versionMatch = data.consentVersion === PRIVACY_POLICY_VERSION;
+            // バージョン不一致の場合、再同意が必要
+            const needsReconsent = !versionMatch && data.hasConsented === true;
             return {
                 hasConsented: data.hasConsented === true && versionMatch,
                 consentDate: data.consentDate,
-                consentVersion: data.consentVersion
+                consentVersion: data.consentVersion,
+                needsReconsent
             };
         }
 
@@ -205,4 +210,36 @@ export async function getConsentWithdrawalHistory(): Promise<PrivacyConsentWithd
         return (data as Record<string, unknown>).withdrawal as PrivacyConsentWithdrawal;
     }
     return null;
+}
+
+/**
+ * ポリシーバージョンの確認を記録する
+ * 同意/拒否の両方で呼び出し、再同意プロンプトを防止する
+ */
+export async function recordPolicyVersionAcknowledgment(): Promise<void> {
+    try {
+        await chrome.storage.local.set({
+            [StorageKeys.PRIVACY_CONSENT_VERSION]: PRIVACY_POLICY_VERSION
+        });
+    } catch (error) {
+        await logWarn(
+            'Failed to record policy version acknowledgment',
+            { error: errorMessage(error) },
+            undefined,
+            'privacyConsent.ts'
+        );
+    }
+}
+
+/**
+ * ポリシーバージョンが変更されたかチェックする
+ */
+export async function isPolicyVersionChanged(): Promise<boolean> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_VERSION);
+        const stored = result[StorageKeys.PRIVACY_CONSENT_VERSION] as string | undefined;
+        return stored !== PRIVACY_POLICY_VERSION;
+    } catch {
+        return true; // エラー時は再同意を促す
+    }
 }
