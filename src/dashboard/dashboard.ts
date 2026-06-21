@@ -191,6 +191,7 @@ let _domElements: {
   testObsidianBtn: HTMLButtonElement | null;
   testAiBtn: HTMLButtonElement | null;
   statusDiv: HTMLElement | null;
+  statusTopDiv: HTMLElement | null;
   sqliteRetentionDaysSelect: HTMLSelectElement | null;
   sqliteMaxRecordsSelect: HTMLSelectElement | null;
   purgeNowBtn: HTMLButtonElement | null;
@@ -234,6 +235,7 @@ export function getDashboardElements() {
       testObsidianBtn: document.getElementById('testObsidianBtn') as HTMLButtonElement | null,
       testAiBtn: document.getElementById('testAiBtn') as HTMLButtonElement | null,
       statusDiv: document.getElementById('status') as HTMLElement | null,
+      statusTopDiv: document.getElementById('statusTop') as HTMLElement | null,
       sqliteRetentionDaysSelect: document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null,
       sqliteMaxRecordsSelect: document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null,
       purgeNowBtn: document.getElementById('purgeNowBtn') as HTMLButtonElement | null,
@@ -250,9 +252,21 @@ export function getDashboardElements() {
     lmStudioModelInput: null, ollamaSettingsDiv: null, ollamaBaseUrlInput: null,
     ollamaModelInput: null, providerBaseUrlInput: null, providerApiKeyInput: null,
     providerModelInput: null, saveBtn: null,
-    testObsidianBtn: null, testAiBtn: null, statusDiv: null,
+    testObsidianBtn: null, testAiBtn: null, statusDiv: null, statusTopDiv: null,
     sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
   };
+}
+
+/**
+ * Sync status display between top and bottom status divs.
+ * Copies the content and class from the bottom status div to the top status div.
+ */
+function syncStatusToTop(): void {
+  const el = getDashboardElements();
+  if (el.statusTopDiv && el.statusDiv) {
+    el.statusTopDiv.innerHTML = el.statusDiv.innerHTML;
+    el.statusTopDiv.className = el.statusDiv.className;
+  }
 }
 
 export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSelectElement | null> {
@@ -405,6 +419,7 @@ export async function handleSaveOnly(): Promise<void> {
 
   el.statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
   el.statusDiv.className = 'success';
+  syncStatusToTop();
 }
 
 export async function handleTestObsidian(): Promise<void> {
@@ -437,9 +452,11 @@ export async function handleTestObsidian(): Promise<void> {
     }
 
     el.statusDiv.className = obsidianResult.success ? 'success' : 'error';
+    syncStatusToTop();
   } catch (e) {
     el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
     el.statusDiv.className = 'error';
+    syncStatusToTop();
   } finally {
     el.testObsidianBtn.disabled = false;
   }
@@ -466,9 +483,11 @@ export async function handleTestAi(): Promise<void> {
     el.statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
 
     el.statusDiv.className = aiResult.success ? 'success' : 'error';
+    syncStatusToTop();
   } catch (e) {
     el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
     el.statusDiv.className = 'error';
+    syncStatusToTop();
   } finally {
     el.testAiBtn.disabled = false;
   }
@@ -797,6 +816,7 @@ function initExportLogsPanel(): void {
     if (el.statusDiv) {
       el.statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
       el.statusDiv.className = 'status-success';
+      syncStatusToTop();
     }
   });
   // Ollama preset button
@@ -807,6 +827,7 @@ function initExportLogsPanel(): void {
     if (el.statusDiv) {
       el.statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
       el.statusDiv.className = 'status-success';
+      syncStatusToTop();
     }
   });
   {

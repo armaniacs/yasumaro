@@ -98,7 +98,7 @@ function mockChromeApisInitScript({ messages, baseUrl }) {
     obsidian_daily_path: '092.Daily',
     ai_provider: 'gemini',
     gemini_api_key: 'fake-gemini-api-key-for-screenshot',
-    gemini_model: 'gemini-1.5-flash',
+    gemini_model: 'gemini-3.1-flash-lite',
   };
 
   const storageArea = {

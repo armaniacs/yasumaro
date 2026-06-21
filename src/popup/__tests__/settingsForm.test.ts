@@ -74,7 +74,7 @@ describe('settingsForm', () => {
             <div id="openaiSettings"></div>
             <div id="openai2Settings"></div>
             <input id="geminiApiKey" type="password" />
-            <input id="geminiModel" type="text" value="gemini-1.5-flash" />
+            <input id="geminiModel" type="text" value="gemini-3.1-flash-lite" />
             <input id="openaiBaseUrl" type="text" />
             <input id="openaiApiKey" type="password" />
             <input id="openaiModel" type="text" />

@@ -75,7 +75,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     getSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
-      GEMINI_MODEL: 'gemini-1.5-flash',
+      GEMINI_MODEL: 'gemini-3.1-flash-lite',
       PRIVACY_MODE: 'masked_cloud'
     });
     // @ts-expect-error - vi.fn() type narrowing issue

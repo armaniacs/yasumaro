@@ -67,7 +67,7 @@ describe('GeminiProvider', () => {
 
     const baseSettings = {
         gemini_api_key: 'test-api-key',
-        gemini_model: 'gemini-1.5-flash'
+        gemini_model: 'gemini-3.1-flash-lite'
     };
 
     beforeEach(() => {
