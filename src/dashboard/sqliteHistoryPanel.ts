@@ -17,6 +17,8 @@ import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from './utils/retry.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
+import { copyTextToClipboard } from '../utils/clipboard.js';
 
 const PAGE_SIZE = 20;
 
@@ -195,6 +197,38 @@ async function handleDelete(id: number): Promise<void> {
     renderEntryList();
     updateBulkBar();
   }
+}
+
+function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'history-copy-btn sqlite-entry-copy';
+  button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
+  const originalIcon = '📋';
+  button.textContent = originalIcon;
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      const markdown = formatEntryToMarkdown(entry);
+      await copyTextToClipboard(markdown);
+      button.textContent = '✓';
+      button.setAttribute('aria-label', t('copyMarkdownSuccess') || 'Copied to clipboard');
+      setTimeout(() => {
+        button.textContent = originalIcon;
+        button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
+        button.disabled = false;
+      }, 2000);
+    } catch {
+      button.textContent = '✗';
+      button.setAttribute('aria-label', t('copyMarkdownError') || 'Failed to copy');
+      setTimeout(() => {
+        button.textContent = originalIcon;
+        button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
+        button.disabled = false;
+      }, 2000);
+    }
+  });
+  return button;
 }
 
 function updateBulkBar(): void {
@@ -419,6 +453,13 @@ function renderEntryList(): void {
   });
   listEl.querySelectorAll('[data-action="delete"]').forEach((el, i) => {
     el.addEventListener('click', () => handleDelete(state.entries[i].id));
+  });
+
+  state.entries.forEach(entry => {
+    const entryEl = listEl.querySelector(`.sqlite-entry[data-id="${entry.id}"] .sqlite-entry-header`);
+    if (entryEl) {
+      entryEl.appendChild(createCopyButton(entry));
+    }
   });
 }
 

@@ -1,5 +1,6 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
+@import url("../../src/styles/wizard.css");
 
 /**
  * dashboard.css
@@ -1271,6 +1272,24 @@ button#changeMasterPassword:hover {
   background: var(--color-danger-bg);
 }
 
+.sqlite-entry-copy {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--ym-color-border);
+  border-radius: var(--ym-radius-md);
+  background: var(--ym-color-bg-subtle);
+  color: var(--ym-color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.sqlite-entry-copy:hover {
+  border-color: var(--ym-color-primary);
+  color: var(--ym-color-primary);
+}
+
 .history-empty {
   text-align: center;
   color: var(--color-text-muted);
@@ -1352,6 +1371,24 @@ button#changeMasterPassword:hover {
     color: #cbd5e1;
     border-color: #475569;
     background: var(--ym-color-bg-subtle, #1e293b);
+  }
+
+  .history-badge-masked {
+    background: #422006;
+    color: #fbbf24;
+    border-color: #b45309;
+  }
+
+  .history-badge-cleansed {
+    background: #052e16;
+    color: #34d399;
+    border-color: #10b981;
+  }
+
+  .warning-banner {
+    background: #422006;
+    border-color: #b45309;
+    color: #fbbf24;
   }
 }
 
@@ -1750,6 +1787,12 @@ mark.domain-match-highlight {
 }
 
 .modal-overlay.show {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-overlay:not(.hidden) {
+  display: flex;
   opacity: 1;
 }
 
@@ -3793,4 +3836,28 @@ textarea {
   textarea::placeholder {
     color: var(--ym-color-text-muted, #8b949e); /* 4.7:1 on #0d1117 — AA */
   }
+}
+
+/* ============================================================
+   Onboarding Wizard overlay (dashboard-specific overrides)
+   Shared wizard styles live in src/styles/wizard.css
+   ============================================================ */
+/* Backdrop */
+.wizard-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+}
+
+.wizard {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  width: min(480px, 90vw);
+  max-height: 90vh;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
 }

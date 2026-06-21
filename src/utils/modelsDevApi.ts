@@ -98,3 +98,53 @@ const ENV_MAP: Record<string, string> = {
 export function getApiKeyEnvName(providerId: string): string {
     return ENV_MAP[providerId] || `${providerId.toUpperCase()}_API_KEY`;
 }
+
+/**
+ * Known API key creation page URLs for major providers.
+ * Fallback: use provider's doc field or undefined (no link shown).
+ */
+const API_KEY_URLS: Record<string, string> = {
+    'openrouter':             'https://openrouter.ai/settings/keys',
+    'groq':                   'https://console.groq.com/keys',
+    'perplexity':             'https://www.perplexity.ai/settings/api',
+    'deepseek':               'https://platform.deepseek.com/api_keys',
+    'mistral':                'https://console.mistral.ai/api-keys/',
+    'together':               'https://api.together.ai/settings/api-keys',
+    'fireworks-ai':           'https://fireworks.ai/account/api-keys',
+    'cohere':                 'https://dashboard.cohere.com/api-keys',
+    'anthropic':              'https://console.anthropic.com/settings/keys',
+    'nvidia':                 'https://build.nvidia.com/settings/api-key',
+    'huggingface':            'https://huggingface.co/settings/tokens',
+    'github-models':          'https://github.com/settings/tokens',
+    'cloudflare-workers-ai':  'https://dash.cloudflare.com/profile/api-tokens',
+    'nebius':                 'https://studio.nebius.ai/settings/api-keys',
+    'scaleway':               'https://console.scaleway.com/iam/api-keys',
+    'ovhcloud':               'https://endpoints.ai.cloud.ovh.net/',
+    'friendli':               'https://suite.friendli.ai/user-settings/tokens',
+    'upstage':                'https://console.upstage.ai/api-keys',
+    'moonshotai':             'https://platform.moonshot.ai/console/api-keys',
+    'zhipuai':                'https://bigmodel.cn/usercenter/apikeys',
+    'alibaba':                'https://bailian.console.aliyun.com/settings#/api-key',
+    'siliconflow':            'https://cloud.siliconflow.cn/account/ak',
+    'stepfun':                'https://platform.stepfun.com/account/apiKey',
+    'minimax-cn':             'https://platform.minimaxi.com/user-center/basic-information/interface-key',
+    'minimax':                'https://platform.minimaxi.com/user-center/basic-information/interface-key',
+    'vultr':                  'https://my.vultr.com/settings/#settingsapi',
+    'baseten':                'https://app.baseten.co/settings/account/api_keys',
+    'wandb':                  'https://wandb.ai/settings#api',
+    'abacus':                 'https://abacus.ai/settings/api',
+    'novita-ai':              'https://novita.ai/settings/key-management',
+    'inception':              'https://platform.inceptionlabs.ai/account',
+    'berget':                 'https://api.berget.ai/settings/keys',
+    'llama':                  'https://llama.developer.meta.com/',
+    'stackit':                'https://console.stackit.cloud/iam/service-accounts',
+    'modelscope':             'https://modelscope.cn/my/myaccesstoken',
+};
+
+/**
+ * Get the API key creation page URL for a provider.
+ * Returns the known URL if available, falls back to the provider's doc URL.
+ */
+export function getApiKeyUrl(providerId: string, docUrl?: string): string | undefined {
+    return API_KEY_URLS[providerId] ?? docUrl;
+}

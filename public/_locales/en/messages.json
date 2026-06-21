@@ -35,8 +35,20 @@
   "recordNow": {
     "message": "📝 Record Now"
   },
+  "recordNowProgress": {
+    "message": "Recording..."
+  },
+  "recordNowDone": {
+    "message": "Saved!"
+  },
+  "recordNowError": {
+    "message": "Failed"
+  },
   "recordWithoutAi": {
     "message": "📝 Record Without AI"
+  },
+  "contextMenuRecord": {
+    "message": "Record page with Yasumaro"
   },
   "cannotRecordPage": {
     "message": "Cannot record this page"
@@ -385,6 +397,15 @@
   },
   "copiedToClipboard": {
     "message": "Copied to clipboard"
+  },
+  "copyMarkdown": {
+    "message": "Copy Markdown"
+  },
+  "copyMarkdownSuccess": {
+    "message": "Copied to clipboard"
+  },
+  "copyMarkdownError": {
+    "message": "Failed to copy"
   },
   "nothingToExport": {
     "message": "Nothing to export"
@@ -1681,6 +1702,54 @@
   },
   "saveFailed": {
     "message": "Failed to save consent"
+  },
+  "wizardTitle": {
+    "message": "Welcome to Yasumaro"
+  },
+  "wizardTypePrompt": {
+    "message": "How do you plan to use Yasumaro?"
+  },
+  "wizardTypeObsidian": {
+    "message": "Obsidian user"
+  },
+  "wizardTypeSqlite": {
+    "message": "SQLite (no Obsidian)"
+  },
+  "wizardTypeMinimal": {
+    "message": "Just trying it out"
+  },
+  "wizardObsidianTitle": {
+    "message": "Connect Obsidian"
+  },
+  "wizardObsidianDescription": {
+    "message": "Set your Local REST API key and daily notes path."
+  },
+  "wizardSqliteTitle": {
+    "message": "Set up AI Provider"
+  },
+  "wizardSqliteDescription": {
+    "message": "Choose an AI provider for summaries."
+  },
+  "wizardMinimalTitle": {
+    "message": "You're ready"
+  },
+  "wizardMinimalDescription": {
+    "message": "Yasumaro will record pages automatically. Open settings anytime."
+  },
+  "wizardSkip": {
+    "message": "Skip"
+  },
+  "wizardOpenDashboard": {
+    "message": "Open Dashboard"
+  },
+  "wizardFinish": {
+    "message": "Get started"
+  },
+  "reopenWizardBtn": {
+    "message": "Setup Wizard"
+  },
+  "apiKeyCreateLink": {
+    "message": "Create API Key →"
   },
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"

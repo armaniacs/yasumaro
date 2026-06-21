@@ -29,6 +29,7 @@ vi.mock('../../utils/modelsDevApi.js', () => ({
   loadModelsDevData: vi.fn().mockResolvedValue({ providers: mockProviders }),
   formatContextLimit: vi.fn().mockReturnValue('8K'),
   getApiKeyEnvName: vi.fn().mockImplementation((id: string) => `MOCK_${id.toUpperCase()}_KEY`),
+  getApiKeyUrl: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('../../utils/storage.js', () => ({

@@ -1,5 +1,6 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
+@import url("../../src/styles/wizard.css");
 
 /**
  * styles.css
@@ -309,6 +310,20 @@ h4 {
   box-shadow: none;
 }
 
+#recordBtn {
+  background: var(--ym-color-primary, var(--color-primary));
+  color: var(--ym-color-on-primary, #ffffff);
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--ym-radius-lg, 12px);
+  width: 100%;
+}
+
+#recordBtn:hover {
+  filter: brightness(1.1);
+}
+
 .secondary-btn {
   width: 100%;
   padding: 12px 16px;
@@ -554,6 +569,29 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   color: var(--color-text-secondary);
   padding: var(--space-2) var(--space-3);
   animation: fadeIn var(--transition) ease;
+}
+
+.record-result-actions {
+  margin-top: var(--space-3);
+  animation: fadeIn var(--transition) ease;
+}
+
+.copy-markdown-btn {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ym-color-border);
+  border-radius: var(--ym-radius-md);
+  background: var(--ym-color-bg-subtle);
+  color: var(--ym-color-text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+}
+
+.copy-markdown-btn:hover {
+  border-color: var(--ym-color-primary);
+  color: var(--ym-color-primary);
 }
 
 .error-text {
@@ -1598,7 +1636,7 @@ label.inline-label {
 }
 
 .status-warning {
-  color: #92400e; /* amber-800 */
+  color: var(--ym-color-warning-text, #92400e);
 }
 
 .status-error {
@@ -1838,6 +1876,29 @@ label.inline-label {
 
   .tab-btn.active {
     background: #1e293b;
+  }
+
+  .global-permission-banner {
+    background-color: #422006;
+    border-color: #b45309;
+  }
+
+  .banner-title {
+    color: #fbbf24;
+  }
+
+  .banner-desc {
+    color: var(--color-text-secondary);
+  }
+
+  .status-warning {
+    color: var(--ym-color-warning, #d29922);
+  }
+
+  .cleansing-badge {
+    background: #052e16;
+    color: #34d399;
+    border-color: #10b981;
   }
 }
 
@@ -2377,4 +2438,21 @@ label.inline-label {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--color-secondary);
+}
+
+/* =============================================================================
+   Onboarding Wizard (popup-specific overrides for shared wizard.css)
+   ============================================================================= */
+.wizard {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: var(--ym-space-5, 1.25rem);
+  background: var(--ym-color-bg, #ffffff);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wizard-step h2 {
+  margin-bottom: 0;
 }

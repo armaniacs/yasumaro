@@ -5,7 +5,7 @@
 
 import { focusTrapManager } from './utils/focusTrap.js';
 import { getMessage } from './i18n.js';
-import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent } from './privacyConsent.js';
+import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { StorageKeys } from '../utils/storage.js';
 
@@ -41,6 +41,13 @@ export async function initPrivacyConsent(): Promise<void> {
         await migrateLegacyPrivacyConsent();
 
         const state = await getPrivacyConsent();
+
+        // ポリシーバージョンが変更された場合、拒否カウンターをリセットして再同意を促す
+        if (state.needsReconsent) {
+            await resetConsentDeniedCount();
+            showPrivacyConsentModal();
+            return;
+        }
 
         if (!state.hasConsented) {
             const denialCount = await getConsentDeniedCount();
@@ -85,6 +92,17 @@ async function incrementConsentDeniedCount(): Promise<number> {
         [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: Date.now(),
     });
     return next;
+}
+
+/**
+ * 同意拒否カウンターをリセットする
+ * ポリシーバージョン変更時に呼び出す
+ */
+async function resetConsentDeniedCount(): Promise<void> {
+    await chrome.storage.local.set({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 0,
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: 0,
+    });
 }
 
 /**
@@ -165,6 +183,7 @@ function hidePrivacyConsentModal(): void {
 async function handleAcceptConsent(): Promise<void> {
     try {
         await savePrivacyConsent();
+        await recordPolicyVersionAcknowledgment();
         hidePrivacyConsentModal();
 
         if (onConsentCallback) {
@@ -191,6 +210,7 @@ async function handleAcceptConsent(): Promise<void> {
  */
 async function handleDeclineConsent(): Promise<void> {
     const newCount = await incrementConsentDeniedCount();
+    await recordPolicyVersionAcknowledgment();
 
     hidePrivacyConsentModal();
 

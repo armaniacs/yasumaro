@@ -6,6 +6,9 @@ import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
+import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
+import { createLifecycleHandlers } from './handlers/lifecycleHandlers.js';
+import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
     getAllowedUrls,
     getSettings,
@@ -80,6 +83,22 @@ export function init(): void {
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     });
+
+    // OPFS recovery migration — runs after standard migration
+    migrationService.needsOpfsRecoveryMigration().then(async (needsRecovery) => {
+        if (needsRecovery) {
+            logInfo('OPFS recovery migration triggered', {}, 'service-worker');
+            const result = await migrationService.migrateOpfsRecovery();
+            if (result.success) {
+                logInfo('OPFS recovery completed', { migrated: result.migrated }, 'service-worker');
+            } else {
+                logError('OPFS recovery failed', { error: result.error || 'Unknown error' }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+            }
+        }
+    }).catch((err) => {
+        logError('OPFS recovery check failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+    });
+
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 
@@ -817,144 +836,24 @@ export function createMessageHandler(): (
 }
 
 // ============================================================================
-// Tab Event Handlers
+// Tab Event Handlers (delegated to handlers/tabEventHandlers.ts)
 // ============================================================================
 
-export function handleTabRemoved(tabId: number): void {
-    tabCache.remove(tabId);
-    autoSavedBadgeTabs.delete(tabId);
-}
-
-export async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
-    try {
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        // 自動保存バッジ表示中のタブは ◎ を維持
-        if (autoSavedBadgeTabs.has(activeInfo.tabId)) {
-            chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: activeInfo.tabId });
-            return;
-        }
-        if (!tab.url) {
-            chrome.action.setBadgeText({ text: '' });
-            return;
-        }
-        const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
-        if (privacyInfo?.isPrivate) {
-            chrome.action.setBadgeText({ text: '!' });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
-        } else {
-            chrome.action.setBadgeText({ text: '' });
-        }
-    } catch (error) {
-        await logError('Failed to update badge on tab activation', {
-            tabId: activeInfo.tabId,
-            error: errorMessage(error)
-        }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
-        chrome.action.setBadgeText({ text: '' });
-    }
-}
-
-/**
- * Handle tab navigation - update badge after page load completes.
- */
-export function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void {
-    if (changeInfo.status !== 'complete' || !tab.url) return;
-    // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
-    autoSavedBadgeTabs.delete(tabId);
-    const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-    const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
-    if (privacyInfo?.isPrivate) {
-        chrome.action.setBadgeText({ text: '!', tabId });
-        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
-    } else {
-        chrome.action.setBadgeText({ text: '', tabId });
-    }
-}
+const _tabHandlers = createTabEventHandlers({ tabCache, autoSavedBadgeTabs });
+export const handleTabRemoved = _tabHandlers.handleTabRemoved;
+export const handleTabActivated = _tabHandlers.handleTabActivated;
+export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 
 // ============================================================================
-// Extension Lifecycle Handlers
+// Extension Lifecycle Handlers (delegated to handlers/lifecycleHandlers.ts)
 // ============================================================================
 
-/**
- * Initialize extension on install/update.
- */
-export async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
-    if (details.reason === 'install') {
-        logInfo('Service Worker installed', {}, 'service-worker');
-    } else if (details.reason === 'update') {
-        logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
-
-        // 更新時はキャッシュをクリアして再初期化
-        RecordingLogic.invalidateSettingsCache();
-        const settings = await getSettings();
-        await updateDomainFilterCache(settings);
-
-        // Migrate legacy privacy consent for existing users
-        // This ensures users who had boolean consent get the new object format
-        // with version info, so isRecordingAllowed() works correctly
-        try {
-            await migrateLegacyPrivacyConsent();
-        } catch (error) {
-            await logWarn(
-                'Legacy privacy consent migration failed',
-                { error: errorMessage(error) },
-                ErrorCode.UNKNOWN_ERROR,
-                'service-worker'
-            );
-        }
-    }
-}
-
-/**
- * Service Worker startup - rehydrate caches and cleanup.
- */
-export async function handleStartup(): Promise<void> {
-    logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
-
-    // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
-    if (isCacheInitialized) {
-        logDebug('Cache already initialized, skipping startup rehydration', {}, 'service-worker');
-        return;
-    }
-
-    try {
-        // 関連キャッシュを無効化して再読み込みを強制
-        RecordingLogic.invalidateSettingsCache();
-        const settings = await getSettings();
-        await updateDomainFilterCache(settings);
-        isCacheInitialized = true;
-
-        // Reload recording cache from session
-        await RecordingLogic.loadCacheFromSession();
-
-        // Reload rate limiter from session
-        await rateLimiter.reload();
-
-        logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
-    } catch (error) {
-        await logError(
-            'Service Worker startup - cache rehydration failed',
-            { error: errorMessage(error) },
-            ErrorCode.STORAGE_READ_FAILURE,
-            'service-worker'
-        );
-    }
-
-    // 期限切れの権限データをクリーンアップ（起動時のみ実行）
-    try {
-        await cleanupOldDeniedEntries(90);
-        await cleanupDismissedEntries(7);
-        logDebug('Permission cleanup completed on startup', {}, 'service-worker');
-    } catch (error) {
-        logWarn(
-            'Permission cleanup failed on startup',
-            { error: errorMessage(error) },
-            undefined,
-            'service-worker'
-        );
-    }
-}
+const _lifecycleHandlers = createLifecycleHandlers({
+    isCacheInitialized: { get value() { return isCacheInitialized; }, set value(v: boolean) { isCacheInitialized = v; } },
+    rateLimiter,
+});
+export const handleInstalled = _lifecycleHandlers.handleInstalled;
+export const handleStartup = _lifecycleHandlers.handleStartup;
 
 // ============================================================================
 // Notification Handlers
@@ -964,6 +863,13 @@ export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
 const _notificationHandlers = createNotificationHandlers(recordingLogic);
 export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
 export const handleNotificationClicked = _notificationHandlers.onClicked;
+
+// ============================================================================
+// Context Menu (delegated to handlers/contextMenuHandlers.ts)
+// ============================================================================
+
+export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
+const _contextClickHandler = createContextClickHandler({ handleManualRecord });
 
 // ============================================================================
 // Module-level initialization - register all Chrome event listeners directly
@@ -983,6 +889,12 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Extension lifecycle listeners
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);
+
+    // Context menu for manual recording
+    // Registered on install/update; context menu items persist across service worker restarts.
+    chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
+
+    chrome.contextMenus.onClicked.addListener(_contextClickHandler);
 
     // Notification listeners
     chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);

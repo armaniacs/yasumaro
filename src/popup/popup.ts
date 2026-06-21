@@ -28,6 +28,8 @@ import { initTrancoUpdateNotification } from './trancoNotification.js';
 import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog } from './privatePageDialog.js';
+import { getPrivacyConsent } from './privacyConsent.js';
+import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
 // ============================================================================
 // Tab Navigation
@@ -220,6 +222,17 @@ export async function initPopup(): Promise<void> {
         }
     } catch (error) {
         logError('[Popup] Error in pending pages handling', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Onboarding Wizard — only show after privacy consent acceptance
+    try {
+        const consent = await getPrivacyConsent();
+        const showWizard = consent.hasConsented && !(await hasCompletedWizard());
+        if (showWizard) {
+            initOnboardingWizard();
+        }
+    } catch (error) {
+        logError('[Popup] Error initializing onboarding wizard', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
   }
 

@@ -23,7 +23,7 @@ import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { initHistoryPanel } from './historyPanel.js';
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
 import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
-import { exportMarkdown, exportCsv, exportJson, downloadText, downloadBlob } from './exportLogsService.js';
+import { exportMarkdown, exportCsv, exportJson, exportDb, downloadText, downloadBlob } from './exportLogsService.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
@@ -36,6 +36,7 @@ import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { initOnboardingWizard } from '../popup/onboardingWizard.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -122,6 +123,35 @@ export function initSidebarNav(): void {
 
   const activeIndex = Array.from(navBtns).findIndex(b => b.classList.contains('active'));
   activateBtn(activeIndex >= 0 ? activeIndex : 0);
+}
+
+export function openSettingsPanel(section: string): void {
+  const panelMap: Record<string, string> = {
+    obsidian: 'panel-general',
+    'ai-provider': 'panel-general',
+    general: 'panel-general',
+  };
+
+  const panelId = panelMap[section];
+  if (!panelId) return;
+
+  const navBtn = document.querySelector<HTMLButtonElement>(`.sidebar-nav-btn[data-panel="${panelId}"]`);
+  if (navBtn) {
+    navBtn.click();
+  }
+
+  if (section === 'obsidian') {
+    const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
+    if (details) {
+      details.open = true;
+      details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } else if (section === 'ai-provider') {
+    const aiSection = document.getElementById('aiProviderSection');
+    if (aiSection) {
+      aiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 }
 
 // ============================================================================
@@ -616,6 +646,22 @@ function initExportLogsPanel(): void {
       showStatus(`Export failed: ${err}`, true);
     }
   });
+
+  const dbBtn = document.getElementById('export-db-btn');
+  dbBtn?.addEventListener('click', async () => {
+    try {
+      showStatus('Exporting database…');
+      const blob = await exportDb();
+      if (blob) {
+        downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.db`);
+        showStatus('Database export completed.');
+      } else {
+        showStatus('Binary export requires OPFS storage. Use JSON export instead.', true);
+      }
+    } catch (err) {
+      showStatus(`Export failed: ${err}`, true);
+    }
+  });
 }
 
 // ============================================================================
@@ -629,11 +675,16 @@ function initExportLogsPanel(): void {
 
   initSidebarNav();
 
-  // Auto-navigate to SQLite history if URL parameter is present
+  // Auto-navigate based on URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'sqlite-history') {
     const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
     if (historyBtn) historyBtn.click();
+  }
+
+  const section = urlParams.get('section');
+  if (section) {
+    openSettingsPanel(section);
   }
 
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
@@ -782,6 +833,41 @@ function initExportLogsPanel(): void {
     el.purgeNowBtn?.addEventListener('click', async () => {
       await handlePurgeNow();
     });
+
+    const syncBackdrop = () => {
+      const backdropNow = document.getElementById('wizardBackdrop');
+      const wizardNow = document.getElementById('onboardingWizard');
+      if (backdropNow) backdropNow.style.display = wizardNow?.classList.contains('hidden') ? 'none' : 'block';
+    };
+    // Observe wizard class changes to keep backdrop in sync
+    const observeWizard = () => {
+      const wizardEl = document.getElementById('onboardingWizard');
+      const backdropEl = document.getElementById('wizardBackdrop');
+      if (wizardEl && backdropEl) {
+        const obs = new MutationObserver(syncBackdrop);
+        obs.observe(wizardEl, { attributes: true, attributeFilter: ['class'] });
+      }
+    };
+
+    const reopenWizard = () => {
+      const wizard = document.getElementById('onboardingWizard');
+      if (wizard) {
+        delete wizard.dataset.initialized;
+      }
+      initOnboardingWizard(true);
+      observeWizard();
+      syncBackdrop();
+    };
+    document.getElementById('reopenWizardBtn')?.addEventListener('click', reopenWizard);
+    document.getElementById('reopenWizardBtnTop')?.addEventListener('click', reopenWizard);
+
+    // Bind top button row to the same handlers as the bottom row
+    const bindTopButton = (id: string, handler: () => void) => {
+      document.getElementById(id)?.addEventListener('click', () => handler());
+    };
+    bindTopButton('saveTop', handleSaveOnly);
+    bindTopButton('testObsidianBtnTop', handleTestObsidian);
+    bindTopButton('testAiBtnTop', handleTestAi);
   }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
