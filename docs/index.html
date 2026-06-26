@@ -372,12 +372,13 @@
 <nav>
   <span class="nav-logo">
     Yasumaro
-    <span class="badge">v6.0</span>
+    <span class="badge">v6.3</span>
   </span>
   <div class="nav-center">
     <a href="#features" data-i18n="nav.features">機能</a>
     <a href="#providers" data-i18n="nav.providers">対応AI</a>
     <a href="#how" data-i18n="nav.how">使い方</a>
+    <a href="#news" data-i18n="nav.news">ニュース</a>
     <a href="#install" data-i18n="nav.install">インストール</a>
   </div>
   <div class="nav-right">
@@ -450,31 +451,45 @@
     <div class="section-label">How it works</div>
     <h2 class="section-title" data-i18n="how.title">シンプルな4ステップ</h2>
     <p class="section-sub" data-i18n="how.sub">セットアップが完了したら、あとは普通にブラウジングするだけです。</p>
-    <div class="steps" id="steps-grid">
-      <!-- rendered by JS -->
-    </div>
-  </div>
-</section>
+<div class="steps" id="steps-grid">
+       <!-- rendered by JS -->
+     </div>
+   </div>
+ </section>
 
 
-<!-- Install -->
+<!-- News -->
+ <section id="news" style="background:rgba(124,58,237,0.08); border-top:1px solid rgba(124,58,237,0.2); border-bottom:1px solid rgba(124,58,237,0.2);">
+   <div class="container">
+     <div class="section-label" style="color:var(--purple-light);" data-i18n="news.title">News</div>
+     <h2 class="section-title" style="margin-bottom:0.5rem;" data-i18n="news.heading">Yasumaro v6.0 が Chrome Web Store に公開されました</h2>
+     <p class="section-sub" style="margin-bottom:1.5rem;" data-i18n="news.desc">2026年6月18日、Chrome Web Store への公開が完了しました。世界中の Chrome ユーザーがストアから直接インストールできるようになります。</p>
+     <a class="btn-primary" href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener" style="margin-top:0;">
+       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
+       <span data-i18n="news.cta">Chrome Web Store でインストール →</span>
+     </a>
+   </div>
+ </section>
+
+
+ <!-- Install -->
 <section id="install" class="install-section">
   <div class="container">
     <div class="section-label">Installation</div>
     <h2 class="section-title" data-i18n="install.title">インストール方法</h2>
-    <p class="section-sub" data-i18n="install.sub">現在はソースからのビルドが必要です。Chrome Web Store への公開は今後予定しています。</p>
+    <p class="section-sub" data-i18n="install.sub">Chrome Web Store から直接インストールするか、ソースからビルドして使用できます。</p>
     <div class="install-steps" id="install-steps">
       <!-- rendered by JS -->
     </div>
-    <div style="margin-top:2.5rem; display:flex; gap:1rem; flex-wrap:wrap;">
-      <a class="btn-primary" href="https://github.com/armaniacs/yasumaro">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        <span data-i18n="install.cta.primary">GitHubでソースを見る</span>
-      </a>
-      <a class="btn-secondary" href="https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md">
-        <span data-i18n="install.cta.secondary">詳細セットアップガイド →</span>
-      </a>
-    </div>
+<div style="margin-top:2.5rem; display:flex; gap:1rem; flex-wrap:wrap;">
+       <a class="btn-primary" href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener">
+         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
+         <span data-i18n="install.cta.primary">Chrome Web Store からインストール</span>
+       </a>
+       <a class="btn-secondary" href="https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md">
+         <span data-i18n="install.cta.secondary">詳細セットアップガイド →</span>
+       </a>
+     </div>
   </div>
 </section>
 
@@ -496,7 +511,7 @@ const TRANSLATIONS = {
     "nav.features": "機能",
     "nav.providers": "対応AI",
     "nav.how": "使い方",
-    "nav.blog": "ブログ",
+    "nav.news": "ニュース",
     "nav.install": "インストール",
     "hero.eyebrow": "Chrome 拡張機能 — 無料 / オープンソース",
     "hero.h1": "読んだページを<br /><span>AI要約</span>付きで<br />Obsidian / SQLite / Markdown へ",
@@ -512,8 +527,8 @@ const TRANSLATIONS = {
     "blog.title": "日本語で発信しています",
     "blog.sub": "Yasumaro の使い方・新機能・開発の裏側などを Zenn の <strong>#obsidianweave</strong> トピックで継続的に発信しています。",
     "install.title": "インストール方法",
-    "install.sub": "現在はソースからのビルドが必要です。Chrome Web Store への公開は今後予定しています。",
-    "install.cta.primary": "GitHubでソースを見る",
+    "install.sub": "Chrome Web Store から直接インストールするか、ソースからビルドして使用できます。",
+    "install.cta.primary": "Chrome Web Store からインストール",
     "install.cta.secondary": "詳細セットアップガイド →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "プライバシー",
@@ -524,7 +539,7 @@ const TRANSLATIONS = {
     "nav.features": "Features",
     "nav.providers": "AI Providers",
     "nav.how": "How it works",
-    "nav.blog": "Blog",
+    "nav.news": "News",
     "nav.install": "Install",
     "hero.eyebrow": "Chrome Extension — Free & Open Source",
     "hero.h1": "Save every page you read<br />to Obsidian / SQLite / Markdown<br />with <span>AI summaries</span>",
@@ -540,8 +555,8 @@ const TRANSLATIONS = {
     "blog.title": "Articles on Zenn (Japanese)",
     "blog.sub": "Tips, new features, and behind-the-scenes development of Yasumaro are shared on Zenn under the <strong>#obsidianweave</strong> topic.",
     "install.title": "Installation",
-    "install.sub": "Building from source is required for now. Chrome Web Store publication is planned.",
-    "install.cta.primary": "View source on GitHub",
+    "install.sub": "Install directly from Chrome Web Store, or build from source.",
+    "install.cta.primary": "Install from Chrome Web Store",
     "install.cta.secondary": "Detailed setup guide →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "Privacy",
@@ -615,16 +630,16 @@ const STEPS = {
 
 const INSTALL_STEPS = {
   ja: [
-    { title: "リポジトリをクローン", body: "<code>git clone https://github.com/armaniacs/yasumaro.git</code>" },
-    { title: "依存パッケージをインストール &amp; ビルド", body: "<code>npm install &amp;&amp; npm run build</code>" },
-    { title: "Chrome に読み込む", body: "<code>chrome://extensions</code> を開き「デベロッパーモード」を有効化 → 「パッケージ化されていない拡張機能を読み込む」→ <code>dist/chromium-mv3</code> を選択" },
-    { title: "保存先の設定", body: "拡張機能の設定画面で保存先（Obsidian / SQLite / Markdown）を選択し、APIキーと保存先パスを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールも必要です。" },
+    { title: "Chrome Web Store からインストール", body: "Google Chrome Web Store から直接インストールできます。<a href='https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc' target='_blank' style='margin-left:0.5rem;color:var(--purple-light);'>ストアページを開く →</a>" },
+    { title: "保存先とAIの設定", body: "拡張機能の設定画面で保存先（Obsidian / SQLite / Markdown）とAIプロバイダーを選択し、APIキーを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールも必要です。" },
+    { title: "ブラウジングするだけ", body: "5秒以上滞在し、50%以上スクロールしたページが自動で検出・要約・保存されます。ノートに履歴が積み上がっていきます。" },
+    { title: "必要に応じて手動記録", body: "ツールバーの「今すぐ記録」ボタンで任意のページも即座に保存できます。ドメインフィルター設定で記録するサイトを細かく制御することもできます。" },
   ],
   en: [
-    { title: "Clone the repository", body: "<code>git clone https://github.com/armaniacs/yasumaro.git</code>" },
-    { title: "Install dependencies &amp; build", body: "<code>npm install &amp;&amp; npm run build</code>" },
-    { title: "Load into Chrome", body: "Open <code>chrome://extensions</code>, enable Developer mode, click 'Load unpacked', and select the <code>dist/chromium-mv3</code> folder." },
-    { title: "Configure storage", body: "In the extension settings, pick your storage (Obsidian / SQLite / Markdown) and enter the API key and path. For Obsidian, also install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a>." },
+    { title: "Install from Chrome Web Store", body: "Install directly from the Chrome Web Store.<a href='https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc' target='_blank' style='margin-left:0.5rem;color:var(--purple-light);'>Open store page →</a>" },
+    { title: "Configure Storage & AI", body: "In the extension settings, pick your storage (Obsidian / SQLite / Markdown) and AI provider, then enter the API keys. For Obsidian, also install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a>." },
+    { title: "Just browse the web", body: "Any page you read for 5+ seconds with 50%+ scroll depth is automatically detected, summarized, and saved to your chosen storage." },
+    { title: "Manual recording when needed", body: "Use the 'Record Now' button in the toolbar popup to save any page instantly. Fine-tune what gets recorded with the domain filter settings." },
   ]
 };
 
@@ -639,7 +654,7 @@ const DEMO_NOTE = {
 <div class="hl-muted">&nbsp;&nbsp;閲覧: 15:10 | 滞在: 12分</div>
 <div>&nbsp;&nbsp;TypeScriptを使ったObsidianプラグインの基本構造と、ライフサイクルフックの説明。</div>
 <br/>
-<div class="hl-muted"><!-- auto-generated by Yasumaro v6.0 --></div>`,
+<div class="hl-muted"><!-- auto-generated by Yasumaro v6.3 --></div>`,
   en: `<div class="hl-heading"># 🌐 Browser History</div>
 <br/>
 <div>- <span class="hl-link">[[Claude 4.0 Released]]</span> <span class="hl-tag">#AI #LLM #Anthropic</span></div>
@@ -650,7 +665,7 @@ const DEMO_NOTE = {
 <div class="hl-muted">&nbsp;&nbsp;Visited: 3:10 PM | Time spent: 12 min</div>
 <div>&nbsp;&nbsp;Explains the basic structure of an Obsidian plugin in TypeScript and its lifecycle hooks.</div>
 <br/>
-<div class="hl-muted"><!-- auto-generated by Yasumaro v6.0 --></div>`,
+<div class="hl-muted"><!-- auto-generated by Yasumaro v6.3 --></div>`,
 };
 
 let currentLang = (navigator.language || 'ja').startsWith('ja') ? 'ja' : 'en';
