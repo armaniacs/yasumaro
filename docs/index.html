@@ -314,6 +314,26 @@
       letter-spacing: 0.04em;
     }
 
+    /* ── Demo video ── */
+    .demo-video-section { background: var(--obsidian-mid); }
+    .video-wrap {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+      border: 1px solid var(--obsidian-light);
+    }
+    .video-wrap iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
     /* ── Install ── */
     .install-section {
       background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(79,70,229,0.08) 100%);
@@ -457,6 +477,18 @@
    </div>
  </section>
 
+<!-- Demo video -->
+<section id="demo" class="demo-video-section">
+  <div class="container">
+    <div class="section-label">Demo</div>
+    <h2 class="section-title" data-i18n="demo.title">ダッシュボードで履歴を確認</h2>
+    <p class="section-sub" data-i18n="demo.sub">ダッシュボードの履歴タブから、記録されたページの一覧・全文検索・スター機能を確認できます。</p>
+    <div class="video-wrap">
+      <iframe src="https://www.youtube.com/embed/uHoiOYJhaB8" title="Yasumaro Demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
+
 
 <!-- Install -->
 <section id="install" class="install-section">
@@ -509,6 +541,8 @@ const TRANSLATIONS = {
     "providers.sub": "OpenAI互換APIをサポートするため、クラウド・ローカル問わず幅広いLLMを利用できます。",
     "how.title": "シンプルな4ステップ",
     "how.sub": "セットアップが完了したら、あとは普通にブラウジングするだけです。",
+    "demo.title": "ダッシュボードで履歴を確認",
+    "demo.sub": "ダッシュボードの履歴タブから、記録されたページの一覧・全文検索・スター機能を確認できます。",
     "blog.title": "日本語で発信しています",
     "blog.sub": "Yasumaro の使い方・新機能・開発の裏側などを Zenn の <strong>#obsidianweave</strong> トピックで継続的に発信しています。",
     "install.title": "インストール方法",
@@ -536,6 +570,8 @@ const TRANSLATIONS = {
     "providers.sub": "Full OpenAI-compatible API support means you can use cloud or local LLMs of your choice.",
     "how.title": "Four simple steps",
     "how.sub": "Once set up, just browse the web as you normally would.",
+    "demo.title": "Browse your history in the dashboard",
+    "demo.sub": "The History tab in the dashboard shows your recorded pages, with full-text search and starring.",
     "blog.title": "Articles on Zenn (Japanese)",
     "blog.sub": "Tips, new features, and behind-the-scenes development of Yasumaro are shared on Zenn under the <strong>#obsidianweave</strong> topic.",
     "install.title": "Installation",
