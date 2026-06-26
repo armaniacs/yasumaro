@@ -17,11 +17,19 @@ All notable changes to this project will be documented in this file.
 
 ## [6.3.3] - 2026-06-27
 
+### Added / 追加
+
+- **GitHub Pages にデモ動画を埋め込み** — YouTube 動画 `https://youtu.be/uHoiOYJhaB8`（ダッシュボードの履歴タブ紹介）をランディングページに埋め込み。「How it works」と「インストール」の間に Demo セクションを追加
+
+### Fixed / 修正
+
+- **GitHub Pages の News セクションを削除** — `data-i18n` キーが未登録だったためプレースホルダー（`NEWS.TITLE` 等）がそのまま表示されていた問題を修正。セクション・ナビリンク・未使用 i18n キーを削除
+
 ### Documentation / ドキュメント
 
 - **README.md に Chrome Web Store バッジを追加** — タイトル直下に CWS / GitHub のリンクバッジを表示。インストールセクションを「Chrome Web Store からインストール（推奨）」と「ソースからビルド（開発者向け）」の2方式に再編
 - **docs/SETUP_GUIDE.md に CWS インストールを追加** — ステップ3に Chrome Web Store からのインストールを最優先の方法として追加
-- **docs/index.html を CWS 公開済みの状態に更新** — インストール手順をソースビルド → CWS に変更。News セクションを追加。バージョンバッジを v6.0 → v6.3 に更新
+- **docs/index.html を CWS 公開済みの状態に更新** — インストール手順をソースビルド → CWS に変更。バージョンバッジを v6.0 → v6.3 に更新
 
 ## [6.3.2] - 2026-06-22
 
