@@ -36,6 +36,13 @@
 *   **ローカルLLM**: キー不要の場合が多いですが、サーバーを起動しておく必要があります（例: `ollama serve`）。
 
 ### ステップ3: Chrome拡張機能のインストール
+
+#### 方法A: Chrome Web Store からインストール（推奨）
+1. [Chrome Web Store の Yasumaro ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) を開きます。
+2. 「Chrome に追加」ボタンをクリックします。
+3. 確認ダイアログで「拡張機能を追加」をクリックします。
+
+#### 方法B: ソースからビルド（開発者向け）
 1. `chrome://extensions` を開きます。
 2. 右上の「デベロッパーモード」をオンにします。
 3. 「パッケージ化されていない拡張機能を読み込む」をクリックし、`dist/chromium-mv3` フォルダを選択します。
@@ -243,6 +250,13 @@ ollama list
 *   **Local LLM**: No API key needed (start your server, e.g., `ollama serve`)
 
 ### Step 3: Install Chrome Extension
+
+#### Option A: Install from Chrome Web Store (Recommended)
+1. Open the [Yasumaro page on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc).
+2. Click "Add to Chrome".
+3. Click "Add extension" in the confirmation dialog.
+
+#### Option B: Build from Source (For Developers)
 1. Open `chrome://extensions`.
 2. Enable "Developer mode" (top right).
 3. Click "Load unpacked" and select the `dist/chromium-mv3` folder.
