@@ -89,12 +89,6 @@ export async function ensureSession(): Promise<boolean | { success: false; error
 
     if (!ai) {
         console.error("Offscreen: 'ai' object not found in window, globalThis, or self.");
-        console.log("Offscreen: Scope dump:", {
-            hasWindow: typeof window !== 'undefined',
-            hasSelf: typeof self !== 'undefined',
-            hasGlobalThis: typeof globalThis !== 'undefined',
-            windowKeys: typeof window !== 'undefined' ? Object.keys(window).filter(k => k.includes('ai') || k.includes('model')) : []
-        });
         return { success: false, error: "'ai' object not found (Prompt API missing). Check flags." };
     }
 
@@ -116,7 +110,6 @@ export async function ensureSession(): Promise<boolean | { success: false; error
 重要なポイントのみを抽出し、個人情報や機密情報は含めないでください。
 改行しないでください。`
         });
-        console.log("Offscreen: Session created successfully.");
         return true;
     } catch (error: unknown) {
         console.error('Offscreen: Failed to create session', error);

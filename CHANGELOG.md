@@ -15,6 +15,17 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.4] - 2026-06-27
+
+### Fixed / 修正
+
+- **`fallbackTriggered` がストレージに保存されない問題を修正** — `saveMetadataStep` でデストラクチャリングと `setUrlFallbackTriggered()` の呼び出しが欠落しており、ダッシュボードのフォールバック表示が常に非表示になっていた問題を修正。併せて `fallbackTriggered` を常に書き込むよう変更し（`!!fallbackTriggered`）、再処理時にフラグが `true` に固定される問題も解消
+- **`recordingLogic.ts` の dead import を削除** — パイプライン移行後も残っていた `setUrlFallbackTriggered` の未使用 import を削除
+- **`navigation.ts` のデバッグ用 `console.log` を削除** — ポップアップ初期化時に出力される `[Navigation]` プレフィックス付きのデバッグログ 9 行を削除
+- **`offscreen.ts` / `sqlite.ts` のデバッグ用 `console.log` を削除** — OPFS/SQLite 初期化時および Session 作成時のデバッグログを削除
+
+---
+
 ## [6.3.3] - 2026-06-27
 
 ### Added / 追加

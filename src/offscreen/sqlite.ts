@@ -146,25 +146,21 @@ function sendToOpfsWorker(type: string, payload?: unknown): Promise<unknown> {
 async function initOpfsWorker(): Promise<boolean> {
   try {
     if (!isOpfsAvailable()) {
-      console.log('OPFS: not available (missing getDirectory or createSyncAccessHandle)');
       return false;
     }
 
     if (!canCreateWorker()) {
-      console.log('OPFS: Worker constructor not available');
       return false;
     }
 
     opfsWorker = createOpfsWorker();
     if (!opfsWorker) {
-      console.log('OPFS: failed to create Worker');
       return false;
     }
 
     // Send INIT to the worker
     const result = await sendToOpfsWorker('INIT') as { initialized: boolean } | undefined;
     if (result?.initialized) {
-      console.log('OPFS: Worker initialized successfully');
       return true;
     }
 
@@ -210,13 +206,11 @@ async function _doInit(): Promise<boolean> {
     // 1. Try OPFS Worker first (preferred — persistent, fast)
     const opfsOk = await initOpfsWorker();
     if (opfsOk) {
-      console.log('SQLite: using OPFS Worker (OPFSCoopSyncVFS + FTS5)');
       fts5Available = true; // new engine includes FTS5
       return true;
     }
 
     // 2. Try IDBBatchAtomicVFS (IndexedDB) as fallback
-    console.log('SQLite: OPFS not available, trying IDBBatchAtomicVFS');
 
     // Load the SQLite WASM module (async build for IDB VFS compatibility)
     const asyncModule = await SQLiteESMFactory();
@@ -286,8 +280,6 @@ async function _doInit(): Promise<boolean> {
       compileOptions.push(String(row[0]));
     });
     cachedCompileOptions = compileOptions;
-    console.log('SQLite compile options:', compileOptions.filter(o => o.includes('FTS') || o.includes('VFS')));
-
     // Enable WAL mode for better concurrent read performance
     await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
     await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
@@ -295,7 +287,6 @@ async function _doInit(): Promise<boolean> {
     // Attempt migration from fallback storage if it has data
     await tryMigrateFallbackToSqlite();
 
-    console.log('SQLite: using IDBBatchAtomicVFS (IndexedDB)');
     return true;
   } catch (error) {
     lastInitError = errorMessage(error);
