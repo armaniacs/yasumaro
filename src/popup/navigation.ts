@@ -49,8 +49,6 @@ export function showMainScreen(): void {
  * Open the SQLite history dashboard in a new tab.
  */
 export function openHistory(): void {
-  console.log('[Navigation] openHistory called - opening SQLite history');
-
   clearAutoCloseTimer();
 
   const historyUrl = chrome.runtime.getURL('options.html?tab=sqlite-history');
@@ -60,8 +58,6 @@ export function openHistory(): void {
 }
 
 export function showSettingsScreen(): void {
-  console.log('[Navigation] showSettingsScreen called - opening dashboard');
-
   // 【タイマークリア】: ダッシュボードを開く前に自動クローズタイマーを解放
   clearAutoCloseTimer();
 
@@ -82,8 +78,6 @@ export function showSettingsScreen(): void {
  * 🟢 要求定義（tdd-requirements.md 32-33行目、初期画面がメイン画面）
  */
 export function init(): void {
-  console.log('[Navigation] Initializing navigation...');
-
   // 【アクセシビリティ改善】htmlのlangとdir属性をユーザーロケールに基づいて設定
   setHtmlLangAndDir();
 
@@ -91,9 +85,6 @@ export function init(): void {
   // 【設計方針】: 毎回のDOMクエリを避けるために先に取得
   const menuBtn = document.getElementById('menuBtn');
   const backBtn = document.getElementById('backBtn');
-
-  console.log('[Navigation] Menu button found:', !!menuBtn);
-  console.log('[Navigation] Back button found:', !!backBtn);
 
   // 【イベントリスナー設定】: ボタンクリック時の画面遷移を設定 🟢
   if (menuBtn) {
@@ -104,17 +95,12 @@ export function init(): void {
     if (historyBtn) {
       historyBtn.addEventListener('click', openHistory);
     }
-    console.log('[Navigation] Event listener attached to menu button');
-  } else {
-    // console.error('[Navigation] Menu button not found! Cannot attach event listener.');
   }
 
   if (backBtn) {
     backBtn.addEventListener('click', showMainScreen);
-    console.log('[Navigation] Event listener attached to back button');
   }
 
   // 【初期表示】: デフォルト画面を表示 🟢
   showMainScreen();
-  console.log('[Navigation] Initialization complete');
 }

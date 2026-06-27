@@ -32,7 +32,8 @@ import {
   setUrlAiDuration,
   setUrlObsidianDuration,
   setUrlExtractedSentencesBytes,
-  setUrlExtractedSentencesOriginalBytes
+  setUrlExtractedSentencesOriginalBytes,
+  setUrlFallbackTriggered
 } from '../../../utils/storageUrls.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
@@ -57,7 +58,8 @@ export const saveMetadataStep: PipelineStepFunction = async (
     aiSummaryCleansedBytes,
     aiSummaryCleansedElements,
     aiSummaryCleansedReason,
-    aiSummaryCleansedReasons
+    aiSummaryCleansedReasons,
+    fallbackTriggered
   } = data;
 
   const results: { success: string[]; failed: string[] } = { success: [], failed: [] };
@@ -164,6 +166,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
   if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
     await save('aiSummaryCleansedReasons', setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons));
   }
+  await save('fallbackTriggered', setUrlFallbackTriggered(url, !!fallbackTriggered));
 
   // Save L0 extracted sentences bytes (if L0 extraction was used)
   if (extractedSentencesBytes !== undefined) {
