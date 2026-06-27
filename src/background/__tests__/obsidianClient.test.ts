@@ -402,6 +402,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('Endpoint not found');
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('http://127.0.0.1:27123/'),
+        expect.any(Object)
+      );
     });
 
     it('overrideで500の場合は接続エラーを返す', async () => {
@@ -419,6 +423,18 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('Connection failed');
+    });
+
+    it('overrideで無効なプロトコルの場合はエラーを返す', async () => {
+      const result = await obsidianClient.testConnection({
+        protocol: 'ftp',
+        port: 27123,
+        apiKey: 'test_key'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Protocol must be "http" or "https"');
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -514,8 +530,8 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       }, 20000);
     });
 
-  describe('enforceHttps', () => {
-    it('HTTP接続をHTTPSに強制変換する', async () => {
+  describe('protocol handling', () => {
+    it('HTTP設定ではHTTP接続をそのまま使用する', async () => {
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -530,7 +546,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       global.fetch.mockImplementation((url, options) => {
-        if (url.startsWith('https://')) {
+        if (url.startsWith('http://')) {
           if (options.method === 'GET') {
             return Promise.resolve({
               ok: true,
@@ -546,9 +562,20 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
       expect(global.fetch).toHaveBeenCalled();
       const calledUrl = global.fetch.mock.calls[0][0];
-      expect(calledUrl).toContain('https://');
+      expect(calledUrl).toContain('http://');
 
       global.fetch.mockRestore();
+    });
+
+    it('無効なプロトコル設定は拒否する', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'ftp',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      await expect(obsidianClient._getConfig()).rejects.toThrow('Protocol must be "http" or "https"');
     });
   });
   describe('testConnection override defaults to https', () => {
