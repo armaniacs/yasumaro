@@ -1,6 +1,11 @@
 name: Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  issues: write
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -8,19 +13,30 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
-        with: { node-version: 24, cache: 'npm' }
+        with: { node-version: '24', cache: 'npm' }
 
       - run: npm ci
 
-      - name: Unit tests (type-check + jest)
-        run: npm run validate
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Type check
+        id: type-check
+        run: npm run type-check
+
+      - name: Run tests
+        id: run-tests
+        run: npm test
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -30,6 +46,55 @@ jobs:
 
       - name: Extension E2E tests
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx playwright test --grep @extension
+
+      - name: Comment PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.startsWith('### Validation Results')
+            );
+
+            const typeCheckOk = steps['type-check'].outcome === 'success';
+            const testsOk = steps['run-tests'].outcome === 'success';
+            const result = typeCheckOk && testsOk ? '✅ All checks passed!' : '❌ Some checks failed.';
+
+            const body = [
+              '### Validation Results',
+              '',
+              '**Status:** ' + result,
+              '',
+              '| Check | Status |',
+              '|-------|--------|',
+              '| Type Check | ' + steps['type-check'].outcome + ' |',
+              '| Tests | ' + steps['run-tests'].outcome + ' |',
+              '',
+              '[View details in the logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')',
+            ].join('\n');
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

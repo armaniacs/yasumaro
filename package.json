@@ -60,7 +60,7 @@
     "typescript": "^5.9.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4",
-    "wxt": "^0.20.25"
+    "wxt": "^0.20.27"
   },
   "dependencies": {
     "@subframe7536/sqlite-wasm": "^1.1.1",

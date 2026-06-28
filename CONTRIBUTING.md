@@ -36,7 +36,21 @@ npm install
 npm test
 ```
 
-### テスト
+### CI パイプライン
+
+このプロジェクトには以下の2つの CI ワークフローが定義されています：
+
+| ワークフロー | トリガー | 内容 |
+|------------|---------|------|
+| **ci.yml** | PR（main宛て）/ main への push | `npm run validate`（type-check + test）+ `npm run build` |
+| **tests.yml** | PR（全ブランチ） | `npm run type-check` + `npm test` + Playwright E2E テスト（`@extension` タグ） + PR コメント投稿 |
+
+- テスト実行前に `npm ci` で依存関係をインストールします
+- すべて Node.js 24 上で実行されます
+- PR 作成時・更新時は `tests.yml` がテスト結果を PR コメントとして自動投稿します（既存コメントは上書き更新されます）
+- PR 作成時は type-check、test、E2E テスト、PR コメントが1つのワークフローで直列実行され、重複は発生しません
+- `tests.yml` の E2E テスト（Playwright）は `xvfb-run` でヘッドレス実行されます
+- テスト成果物（Playwright レポート）は7日間保持されます
 
 #### テストの実行
 
@@ -461,7 +475,21 @@ npm install
 npm test
 ```
 
-### Testing
+### CI Pipeline
+
+This project defines two CI workflows:
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **ci.yml** | PR (against main) / push to main | `npm run validate` (type-check + test) + `npm run build` |
+| **tests.yml** | PR (all branches) | `npm run type-check` + `npm test` + Playwright E2E tests (`@extension` tag) + PR comment posting |
+
+- Dependencies are installed via `npm ci` before running tests
+- All workflows run on Node.js 24
+- On PR creation/update, `tests.yml` automatically posts test results as a PR comment (existing comments are updated in-place)
+- On PR, all checks (type-check, test, E2E, PR comment) run sequentially in a single workflow — no duplicate executions
+- E2E tests (Playwright) in `tests.yml` run headlessly via `xvfb-run`
+- Test artifacts (Playwright reports) are retained for 7 days
 
 #### Running Tests
 
