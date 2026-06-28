@@ -1,6 +1,7 @@
 # 定期メンテナンス計画 / Routine Maintenance Plan
 
 **作成**: 2026-06-29
+**最終更新**: 2026-06-29
 **対象**: v6.3.7 以降の安定稼働維持
 
 ---
@@ -24,6 +25,7 @@ npm audit
 npm view wxt version
 ```
 
+**最終確認**: 2026-06-29 — wxt@0.20.27 が最新。変化なし。
 **トリガー**: `wxt` が `web-ext-run` の依存を更新したバージョンをリリースしたとき。
 
 ---
@@ -41,6 +43,7 @@ npm view wxt version
 - [ ] a11y ジョブが正しく並列実行されているか
 - [ ] SHA ピン留め後に Dependabot が PR を作成しているか
 
+**最終確認**: 2026-06-29 — 全5WFで mutable tag ゼロ。Dependabot weekly 設定済み。a11y ジョブ正常。PR コメント機能正常。
 **次回の CI ワークフロー更新時**:
 - Dependabot が自動生成した PR のマージ
 - アクションの SHA が自動更新されていることの確認
@@ -63,6 +66,23 @@ npm outdated | grep -v '# maybe'
 | `@axe-core/playwright` | 新ルール・改善が入る可能性 |
 | `svelte` / `tailwindcss` | offscreen で使用中 |
 | `playwright` | E2E テスト基盤 |
+
+**最終実行**: 2026-06-29 — `npm update` 実行。以下のパッケージが更新され、テスト通過（5936 passed）。
+- `@playwright/test`: 1.59.1 → 1.61.1
+- `@rollup/plugin-commonjs`: 29.0.2 → 29.0.3
+- `@subframe7536/sqlite-wasm`: 1.1.1 → 1.2.0
+- `@tailwindcss/vite`: 4.3.0 → 4.3.1
+- `@types/chrome`: 0.1.42 → 0.1.43
+- `@types/node`: 25.6.2 → 25.9.4
+- `@vitest/coverage-v8`: 4.1.5 → 4.1.9
+- `happy-dom`: 20.9.0 → 20.10.6
+- `tailwindcss`: 4.3.0 → 4.3.1
+- `vitest`: 4.1.5 → 4.1.9
+
+**次回要検討（メジャーバージョン）**:
+- `typescript`: 5.9.3 → 6.0.3（TS 6、breaking changes の可能性あり）
+- `@types/chrome`: 0.1.43 → 0.2.0
+- `@types/node`: 25.9.4 → 26.0.1
 
 ---
 
