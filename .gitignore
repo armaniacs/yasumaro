@@ -43,6 +43,8 @@ dev-docs/blog-*
 !docs/.nojekyll
 
 # Allow GitHub Actions workflow files (not matched by .* above)
+!/.github/
+!/.github/workflows/
 !/.github/workflows/*.yml
 !/.github/workflows/*.yaml
 
