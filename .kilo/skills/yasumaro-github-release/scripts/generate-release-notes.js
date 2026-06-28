@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const ROOT = resolve(__dirname, '../../..');
+const ROOT = resolve(__dirname, '../../../..');
 const CHANGELOG_PATH = resolve(ROOT, 'CHANGELOG.md');
 const PACKAGE_PATH = resolve(ROOT, 'package.json');
 
@@ -24,11 +24,11 @@ function extractEntry(changelog, version) {
   }
 
   const start = match.index + match[0].length;
-  const nextHeaderMatch = changelog.match(/^## \[/gm);
+  const nextHeaders = changelog.matchAll(/^## \[/gm);
   let end = changelog.length;
-  for (const nm of nextHeaderMatch || []) {
-    if (changelog.indexOf(nm) > start) {
-      end = changelog.indexOf(nm);
+  for (const nm of nextHeaders) {
+    if (nm.index > start) {
+      end = nm.index;
       break;
     }
   }
