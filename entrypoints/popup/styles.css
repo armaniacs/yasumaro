@@ -686,6 +686,25 @@ select:focus-visible {
   display: block;
 }
 
+/* =============================================================================
+   Inline Field Warning (e.g. HTTP protocol warning)
+   ============================================================================= */
+
+.field-warning {
+  font-size: 12px;
+  color: var(--color-warning-text, #92400e);
+  background: var(--color-warning-bg, #fef3c7);
+  border: 1px solid var(--color-warning-border, #fde68a);
+  margin-top: var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 4px);
+  animation: fadeIn var(--transition) ease;
+}
+
+.field-warning.hidden {
+  display: none;
+}
+
 input[aria-invalid="true"],
 textarea[aria-invalid="true"],
 select[aria-invalid="true"] {

@@ -163,6 +163,17 @@ export async function handleSaveAndTest(
         return;
     }
 
+    // HTTP プロトコルが選択されている場合、確認ダイアログを表示
+    const protocolValue = protocolInput.value.trim().toLowerCase();
+    if (protocolValue === 'http') {
+        const confirmed = confirm(getMessage('confirmProtocolHttp'));
+        if (!confirmed) {
+            statusDiv.textContent = '';
+            statusDiv.className = '';
+            return;
+        }
+    }
+
     const newSettings = extractSettingsFromInputs(settingsMapping);
 
     // Merge with current settings

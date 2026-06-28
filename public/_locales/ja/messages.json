@@ -557,6 +557,12 @@
   "errorProtocol": {
     "message": "エラー: プロトコルは\"http\"または\"https\"である必要があります。"
   },
+  "warningProtocolHttp": {
+    "message": "注意: HTTPを使用するとAPIキーとデータが平文で送信されます。ローカルネットワークが信頼できない場合はHTTPSを推奨します。"
+  },
+  "confirmProtocolHttp": {
+    "message": "プロトコルに「http」が設定されています。APIキーとデータが平文で送信されることを理解した上で保存しますか？"
+  },
   "errorPort": {
     "message": "エラー: ポートは1から65535の間の数値である必要があります。"
   },

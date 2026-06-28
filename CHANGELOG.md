@@ -15,6 +15,35 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.7] - 2026-06-28
+
+### Fixed / 修正
+
+- **Obsidian REST API のプロトコル設定が HTTP でも強制的に HTTPS にアップグレードされていた問題を修正** — 従来、ユーザーがプロトコル設定で `http` を選択していても `enforceHttps()` 関数がすべてのリクエストを強制的に `https` に書き換えていました。HTTP のみで Listen している Obsidian Local REST API 環境では接続できない問題がありました。本リリースでは:
+  - `enforceHttps()` を削除し、プロトコル設定をそのまま尊重するよう変更
+  - `_validateProtocol()` を追加し、設定値が `http` / `https` / 未設定（デフォルトで `https`）のいずれかであることを検証
+  - 不正なプロトコル値（`ftp` など）はエラーとして拒否
+
+  > この修正は [bootjp](https://github.com/bootjp) さんからのコントリビューション（[#5](https://github.com/armaniacs/yasumaro/pull/5)）が基になっています。ありがとうございました！
+
+### Changed / 変更
+
+- **プロトコル設定で `http` を選択した場合の警告表示を追加** — ダッシュボード / ポップアップの設定画面でプロトコルに `http` を入力した際、APIキーとデータが平文で送信されることを注意喚起するアンバー色のインライン警告を表示
+- **`http` 選択時にバックグラウンドで WARN ログを出力** — `_validateProtocol()` が `http` を検出した場合、`LogType.WARN` で平文送信の注意をログに記録
+
+### Security / セキュリティ
+
+- **HTTP 使用時のセキュリティリスクを明示化** — 従来は HTTP 設定でも強制的に HTTPS にアップグレードされていたため、ユーザーは HTTP のリスクに気づけませんでした。今回の変更により、HTTP を選択したユーザーには UI 警告とログの両方で注意を促します
+- **`_validateProtocol` に型ガードを追加** — `typeof protocol !== 'string'` のチェックを先頭に挿入し、非文字列（配列など）が `String()` 経由で不正にプロトコルとして受理される経路を塞ぐ（Checking Team: Medium#1）
+- **HTTP 保存時の確認ダイアログを追加** — ダッシュボード・ポップップの両方で、プロトコルに `http` が設定された状態で保存ボタンをクリックした際、確認ダイアログを表示して明示的な同意を取得してから保存を実行する（Checking Team: Medium#2）
+
+### Chores / その他
+
+- **Checking Team レビュー（セキュリティ + ドキュメント）** — Red Team / Blue Team / Documentation Architect の3名がレビューを実施。スコア 97/100（S）。Medium 指摘 2 件を修正。
+- **i18n キー `confirmProtocolHttp` を追加** — HTTP プロトコル保存時の確認ダイアログ用メッセージを日英で追加
+
+---
+
 ## [6.3.6] - 2026-06-28
 
 ### Added / 追加

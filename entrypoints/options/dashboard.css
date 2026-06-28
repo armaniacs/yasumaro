@@ -470,6 +470,20 @@ textarea[aria-invalid="true"]:focus {
   display: block;
 }
 
+.field-warning {
+  font-size: 12px;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.field-warning.hidden {
+  display: none;
+}
+
 .help-text {
   font-size: 12px;
   color: var(--color-text-muted);

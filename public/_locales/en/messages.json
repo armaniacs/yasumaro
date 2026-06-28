@@ -557,6 +557,12 @@
   "errorProtocol": {
     "message": "Error: Protocol must be \"http\" or \"https\"."
   },
+  "warningProtocolHttp": {
+    "message": "Warning: HTTP sends API key and data in plaintext. Use HTTPS for encrypted communication, especially on untrusted networks."
+  },
+  "confirmProtocolHttp": {
+    "message": "Protocol is set to \"http\". Your API key and data will be sent in plaintext. Save anyway?"
+  },
   "errorPort": {
     "message": "Error: Port must be a number between 1 and 65535."
   },
