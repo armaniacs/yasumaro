@@ -1508,6 +1508,9 @@
   "obsidianEnabledHelp": {
     "message": "When OFF, records are saved to SQLite only."
   },
+  "obsidianSetupGuideLink": {
+    "message": "View Obsidian Setup Guide (opens in new tab)"
+  },
   "advancedSettings": {
     "message": "Advanced Settings (Protocol / Port / Daily Note Path)"
   },

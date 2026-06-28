@@ -22,10 +22,12 @@
     - ローカルLLM (Ollama, LM Studioなど)
 
 ### ステップ1: Obsidianのセットアップ
-1. **Local REST APIプラグインのインストール**
-   - 設定 → コミュニティプラグイン → 閲覧 → 「Local REST API」を検索してインストール・有効化。
-2. **APIキーをコピー**
-   - 設定 → Local REST API → 「API Key」をコピーして控えておきます。
+
+詳細な手順（スクリーンショット付き・トラブルシューティング含む）は [Obsidian連携ガイド](OBSIDIAN_SETUP_GUIDE.md) を参照してください。
+
+概要:
+1. **Local REST APIプラグインをインストール・有効化**: 設定 → コミュニティプラグイン → 閲覧 → 「Local REST API」を検索
+2. **APIキーをコピー**: 設定 → Local REST API → 「API Key」をコピー
 
 ### ステップ2: AI APIキーの取得
 使用したいAIに合わせてAPIキーを取得してください。
@@ -237,10 +239,12 @@ ollama list
     - Local LLM (Ollama, LM Studio, etc.)
 
 ### Step 1: Obsidian Setup
-1. **Install Local REST API Plugin**
-   - Settings → Community Plugins → Browse → Search "Local REST API", install and enable.
-2. **Copy API Key**
-   - Settings → Local REST API → Copy the "API Key".
+
+For detailed instructions with screenshots and troubleshooting, see the [Obsidian Integration Guide](OBSIDIAN_SETUP_GUIDE.md).
+
+Summary:
+1. **Install and enable Local REST API Plugin**: Settings → Community Plugins → Browse → Search "Local REST API"
+2. **Copy API Key**: Settings → Local REST API → Copy the "API Key"
 
 ### Step 2: Get AI API Key
 *   **Groq (Recommended)**: https://console.groq.com/keys
