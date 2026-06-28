@@ -1,4 +1,6 @@
-# OPFS + FTS5 両立化 Implementation Plan
+# OPFS + FTS5 両立化 Implementation Plan (ARCHIVED)
+
+> **Status (2026-06-29):** この計画は **完了** しました。`@subframe7536/sqlite-wasm@^1.1.1` の導入、`sqliteEngine.ts` / `opfsMigrationV2.ts` の作成、`opfsWorker.ts` への FTS5 検索（SEARCH メッセージ）の実装、ユニットテスト・E2Eテストの追加まで、計画された全タスクが実装されました。現在のバージョン v6.3.7 で FTS5 全文検索は正常に動作しています。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
