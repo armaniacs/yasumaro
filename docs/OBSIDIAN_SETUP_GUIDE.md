@@ -6,149 +6,99 @@
 
 ## 日本語
 
-### 目次
+Yasumaro が Obsidian に Web ページの情報を自動保存するには、Obsidian 側で Local REST API プラグインをセットアップし、Yasumaro ダッシュボードに API キーを登録する必要があります。このガイドでは、その手順をスクリーンショット付きで解説します。
 
-1. [前提条件](#前提条件)
-2. [Local REST API with MCP プラグインのインストール](#local-rest-api-with-mcp-プラグインのインストール)
-3. [APIキーのコピー](#apiキーのコピー)
-4. [プロトコルとポートの確認](#プロトコルとポートの確認)
-5. [Daily Note Pathの設定](#daily-note-pathの設定)
-6. [Yasumaroダッシュボードへの入力と接続テスト](#yasumaroダッシュボードへの入力と接続テスト)
-7. [トラブルシューティング](#トラブルシューティング)
-
----
+**所要時間**: 約5〜10分
 
 ### 前提条件
 
-このガイドを始める前に、以下がそろっていることを確認してください。
-
-| 必要なもの | 確認方法 |
-| :--- | :--- |
-| **Obsidian** がインストール済み | アプリが起動できる |
-| **Obsidian Vault** が作成済み | Obsidianを開くとファイル一覧が表示される |
-| **Yasumaro** が Chrome にインストール済み | ツールバーに Yasumaro のアイコンが表示される |
-| **Google Chrome** ブラウザを使用中 | — |
-
-Obsidianをまだインストールしていない場合は [obsidian.md](https://obsidian.md/) からダウンロードしてください。Yasumaroのインストールは [Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) から行えます。
+- [Obsidian](https://obsidian.md/) がインストール済みであること
+- Obsidian Vault が作成済みであること（Obsidian 初回起動時に作成されます）
+- [Yasumaro Chrome 拡張機能](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) がインストール済みであること
+- Google Chrome ブラウザを使用していること
 
 ---
 
-### Local REST API with MCP プラグインのインストール
+### 1. Local REST API プラグインのインストール
 
-YasumaroがObsidianにアクセスするには、Obsidian側に **Local REST API** プラグインが必要です。これはObsidianの公式コミュニティプラグインとして提供されています。
+Obsidian のコミュニティプラグインストアから Local REST API プラグインをインストールします。
 
-> **プラグイン名について**: このプラグインは以前「Local REST API」という名称でしたが、現在は **「Local REST API with MCP」** に改名されています（[GitHubリポジトリ](https://github.com/coddingtonbear/obsidian-local-rest-api)）。プラグイン一覧では新しい名称で検索してください。
+1. Obsidian を開き、左下の **設定 ⚙️** をクリックします。
+2. 左サイドバーから **コミュニティプラグイン** → **閲覧** をクリックします。
+3. 検索バーに `Local REST API` と入力します。
 
-**手順:**
+   ![TODO: プラグイン検索画面のスクリーンショット](images/obsidian-plugin-search.png)
 
-1. Obsidianを開き、左下の **設定（歯車アイコン）** をクリックします
+4. 「Local REST API」プラグインの **インストール** をクリックします。
+5. インストール完了後、**有効化** をクリックします。
 
-2. 左メニューから **「コミュニティプラグイン」** を選択します
-
-3. 初回の場合は「制限モードをオフにする」ボタンが表示されます。クリックして有効化します
-
-   > コミュニティプラグインを使用するためにこの操作が必要です。公式のObsidianコミュニティが管理するプラグインのみを対象としています。
-
-4. **「閲覧」** ボタンをクリックして、プラグイン一覧を開きます
-
-5. 検索欄に **「Local REST API with MCP」** と入力します
-
-6. **「Local REST API with MCP」**（作者: Adam Coddington）をクリックし、**「インストール」** を押します
-
-   ![Local REST APIのインストール確認画面](./images/obsidian-plugin-install.png)
-
-7. インストール完了後、**「有効化」** をクリックします
-
-   > 有効化しないと Yasumaro からアクセスできません。インストール直後に有効化を忘れがちなので注意してください。
+   ![TODO: インストール完了・有効化画面のスクリーンショット](images/obsidian-plugin-installed.png)
 
 ---
 
-### APIキーのコピー
+### 2. API キーのコピー
 
-プラグインが有効化されると、固有のAPIキーが自動生成されます。
+プラグインが生成する API キーをコピーします。このキーは Yasumaro と Obsidian の間の認証に使われます。
 
-**手順:**
+1. Obsidian 設定の左サイドバーに **Local REST API** が追加されていることを確認します。
+2. **Local REST API** をクリックします。
+3. **API Key** フィールドの値をコピーします（`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` 形式の UUID です）。
 
-1. Obsidianの **設定** を開きます
+   ![TODO: APIキー表示画面のスクリーンショット](images/obsidian-api-key.png)
 
-2. 左メニューの下部（「コミュニティプラグイン」の下）に **「Local REST API with MCP」** が表示されています。クリックします
-
-3. **「API Key」** は、"Bearer abcdefg....." のように 表示されています。冒頭の "Bearer " 部分を除いた場所がAPIキーになります。
-
-   ![Local REST APIの設定画面。](./images/obsidian-api-key.png)
-
-   > APIキーは他人に教えないでください。このキーを持っている人は、あなたのObsidian Vaultを読み書きできます。
+> **注意**: API キーは機密情報です。第三者と共有しないでください。キーが漏洩した場合は、プラグイン設定画面の **Regenerate API Key** ボタンで再生成できます。
 
 ---
 
-### プロトコルとポートの確認
+### 3. プロトコルとポートの確認
 
-Local REST APIプラグインはデフォルトで以下の設定で動作します。
+デフォルトの設定でほとんどの場合問題なく動作します。以下のデフォルト値を確認してください。
 
-| 設定 | デフォルト値 | 変更が必要なケース |
-| :--- | :--- | :--- |
-| **プロトコル** | `https` | 自己署名証明書エラーを回避したい場合は `http`（後述の注意事項あり）|
-| **ポート** | `27124` | 他のアプリとポートが競合している場合のみ変更 |
+| 項目 | デフォルト値 | 備考 |
+|------|------------|------|
+| **Protocol** | `https` | セキュリティのため https 推奨 |
+| **Port** | `27124` | https のデフォルトポート |
+| **HTTP Port** | `27123` | http 使用時のみ |
 
-**基本的にはデフォルト（https / 27124）のままで問題ありません。** Yasumaroダッシュボードのデフォルト値もこれに合わせています。
-
-> **注意:** プロトコルを `http` に設定すると、Obsidian APIキーとデータがローカルネットワーク上で平文で送信されます。v6.3.7 以降では、`http` を選択した場合にダッシュボードとポップアップの設定画面に警告（アンバー色のバナー）が表示されます。信頼できないネットワーク環境では HTTPS の使用を推奨します。
-
-ポートを変更した場合は、Obsidianの「Local REST API」設定画面でも同じポート番号に変更してください。
-
----
-
-### Daily Note Pathの設定
-
-YasumaroはObsidianの **デイリーノート** に記録を追記します。デイリーノートが保存されているフォルダのパスを設定する必要があります。
-
-**確認方法:**
-
-Obsidianで「デイリーノート」プラグインの設定を開き、「新しいノートの保存場所」に表示されているフォルダ名を確認します。
-
-**設定例:**
-
-| Vault内のフォルダ構成 | Daily Note Path に入力する値 |
-| :--- | :--- |
-| Vault直下（フォルダなし） | （空欄のまま） |
-| `Journal/` フォルダ内 | `Journal` |
-| `092.Daily/` フォルダ内 | `092.Daily` |
-| `Notes/Daily/` フォルダ内 | `Notes/Daily` |
-| `raw/2026-01/` フォルダ内 | `raw/2026-01` |
-
-> Yasumaroは `{Daily Note Path}/{YYYY-MM-DD}.md` の形式でファイルを作成・追記します。日付ファイルが存在しない場合は自動的に作成されます。
-
-![Obsidianのデイリーノートプラグイン設定画面](./images/obsidian-daily-notes.png) 
-
-この例では、 `raw/2026-01/2026-06-28.md` というファイルが作成されます。
+**設定変更が必要なケース**:
+- ポート `27124` が他のアプリケーションと競合している場合のみ変更してください
+- ほとんどの環境ではデフォルトのまま使用できます
 
 ---
 
-### Yasumaroダッシュボードへの入力と接続テスト
+### 4. Daily Note Path の設定
 
-準備が整ったので、Yasumaroに設定を入力します。
+Yasumaro が Web ページの記録を保存する場所を設定します。
 
-![Yasumaroダッシュボードの設定画面](./images/yasumaro-setup.png)
+1. Obsidian 設定 → **Local REST API** を開きます。
+2. **Daily Note Path** フィールドに、あなたの Vault 内の日次ノート（Daily Note）のパスを入力します。
 
-**手順:**
+例:
 
-1. Chrome ツールバーの Yasumaro アイコンをクリックし、右上の **⚙ アイコン** からダッシュボードを開きます
+| Vault 構成 | Daily Note Path の値 |
+|-----------|-------------------|
+| 標準の Daily Notes（`DailyNotes/2026-06-29.md`） | `DailyNotes` |
+| `Journal` フォルダに日付形式で保存 | `Journal` |
+| `092.Daily` フォルダ | `092.Daily` |
 
-2. **「初期設定」** パネルを確認します。「Obsidian を使う」を選択します。
+パスの形式は、あなたの Daily Note プラグインの設定に合わせてください。Obsidian 標準の Daily Note プラグインを使用している場合、設定画面で「新建作成場所」に指定したフォルダ名を入力します。
 
-3. **「Obsidian API Key」** フィールドに、手順2でコピーしたAPIキーを貼り付けます
+---
 
-4. 必要に応じて **「詳細設定」** を開き、以下を確認します
-   - **プロトコル**: `https`（デフォルト）
-   - **ポート**: `27124`（デフォルト）
-   - **デイリーノートのパス**: 手順4で確認したフォルダパス
+### 5. Yasumaro ダッシュボードへの入力と接続テスト
 
-5. **「保存する」** をクリックします
+1. Chrome で Yasumaro 拡張機能のアイコンを右クリック → **オプション** を選択してダッシュボードを開きます。
+2. 「初期設定」パネルで **Obsidian を使う** チェックボックスをオンにします。
+3. 以下の項目を入力します:
 
-6. **「Obsidian テスト」** ボタンをクリックして接続を確認します
+   | フィールド | 値 |
+   |----------|-----|
+   | **Obsidian の URL** | `https://127.0.0.1:27124`（デフォルト） |
+   | **Obsidian API Key** | 手順2でコピーした API キー |
+   | **Daily Note Path** | 手順4で設定したパス（例: `DailyNotes`） |
 
-   - ✅ 「接続成功」と表示されれば完了です
-   - ❌ エラーが表示された場合は[トラブルシューティング](#トラブルシューティング)を参照してください
+4. **接続テスト** ボタンをクリックします。
+5. ✓ 接続成功と表示されれば完了です。
 
 ---
 
@@ -156,244 +106,186 @@ Obsidianで「デイリーノート」プラグインの設定を開き、「新
 
 #### 証明書エラー（self-signed certificate）
 
-`https` プロトコルで接続すると、Obsidian Local REST APIが自己署名証明書を使用しているため、初回はChromeが接続を拒否する場合があります。
+Local REST API プラグインはデフォルトで自己署名証明書を使用するため、初回接続時に Chrome が証明書を警告することがあります。
 
-**対処法A（推奨）: Chromeで証明書を一度許可する**
+**対処手順（macOS / Windows 共通）**:
 
-> この操作は **Obsidian Local REST API（ローカル環境のみ）** に対して行うものです。一般的なWebサイトの証明書警告を無視することとは異なります。
+1. Chrome で `https://127.0.0.1:27124` を開きます。
+2. 「この接続ではプライバシーが保護されません」という警告画面が表示されます。
+3. **「詳細設定」** をクリックします。
+4. **「127.0.0.1 にアクセスする（安全でない）」** をクリックします。
 
-1. Chrome で `https://127.0.0.1:27124` を新しいタブで開きます
-2. 「接続がプライベートではありません」などの警告が表示されます
-3. **「詳細設定」** をクリックし、**「127.0.0.1 にアクセスする（安全でない）」** をクリックします
-4. JSONデータが表示されれば証明書の許可は完了です
-5. Yasumaroダッシュボードに戻り、再度「Obsidian テスト」を実行します
+これで Chrome がこのローカル証明書を記憶し、以降の Yasumaro からの接続が許可されます。
 
-**対処法B: httpに切り替える**
+> **重要**: この操作は Obsidian Local REST API というローカル環境限定のツールに対するものです。インターネット上の一般 Web サイトの証明書警告を無視することは**絶対にしないでください**。
 
-証明書許可がうまくいかない場合は、`http` に変更することで回避できます。ただし、HTTP を使用すると APIキーとデータが平文で送信されるため、v6.3.7 以降では設定画面に警告が表示されます。
+**どうしても証明書エラーが解消しない場合**:
+- Yasumaro ダッシュボードでプロトコルを `http` に変更し、ポートを `27123` に切り替えてください（http は証明書検証を行いません）
+- ただし http 通信は暗号化されないため、ローカルネットワークのセキュリティに注意してください
 
-1. Yasumaroダッシュボードの「詳細設定」でプロトコルを `http` に変更します（警告が表示されます）
-2. ポートは `27123`（httpのデフォルト）に変更します
-3. Obsidianの「Local REST API」設定でも同じポートになっているか確認します
+#### 接続タイムアウト
 
-> **セキュリティ補足:** HTTP はローカルネットワーク内でのみ通信し、インターネット経由での送信は行われません。ただし、同一ネットワーク上の他の機器から通信を傍受されるリスクがあります。自宅などの信頼できるネットワークでは問題になりにくいですが、公共Wi-Fiなどでは注意してください。
+`接続テスト` でタイムアウトする場合:
 
----
+1. Obsidian が起動していることを確認してください。
+2. Local REST API プラグインが有効化されていることを確認してください。
+3. URL とポート番号が正しいことを確認してください（デフォルト: `https://127.0.0.1:27124`）。
+4. ファイアウォールがポート `27124` をブロックしていないか確認してください。
 
-#### 接続タイムアウト / 接続できない
+#### Daily Note Path が正しく認識されない
 
-- **Obsidianが起動しているか確認**: Local REST APIはObsidianが起動している間だけ動作します
-- **Local REST APIプラグインが有効化されているか確認**: 設定→コミュニティプラグインで「有効化済みプラグイン」に表示されているか確認します
-- **ポート番号が一致しているか確認**: Yasumaroの設定とObsidianのLocal REST API設定のポートが同じか確認します
-
----
-
-#### Daily Note Pathが正しく認識されない
-
-- パスの先頭と末尾にスラッシュ（`/`）を付けないでください
-  - ✅ 正しい: `Journal`
-  - ❌ 間違い: `/Journal/`
-- Vault直下に保存している場合は空欄のままにしてください
-- フォルダ名は大文字・小文字を区別します。Obsidian内のフォルダ名と完全に一致させてください
+1. Obsidian の Daily Note プラグイン設定で「新建作成場所」を確認してください。
+2. Vault のルートからの相対パスであることを確認してください（先頭の `/` は不要です）。
+3. 日本語のフォルダ名を使用している場合、フォルダ名が正しいか確認してください。
 
 ---
 
-完全なセットアップ手順（AI設定・ドメインフィルターなど）は [SETUP_GUIDE.md](SETUP_GUIDE.md) を参照してください。
+### 参考リンク
+
+- [Local REST API プラグイン（GitHub）](https://github.com/coddingtonbear/obsidian-local-rest-api)
+- [Yasumaro Chrome Web Store ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)
+- [Yasumaro GitHub リポジトリ](https://github.com/armaniacs/yasumaro)
 
 ---
 
 ## English
 
-### Table of Contents
+To enable Yasumaro to automatically save web page information to Obsidian, you need to set up the Local REST API plugin in Obsidian and register the API key in the Yasumaro dashboard. This guide walks through each step with screenshots.
 
-1. [Prerequisites](#prerequisites)
-2. [Install Local REST API with MCP Plugin](#install-local-rest-api-with-mcp-plugin)
-3. [Copy the API Key](#copy-the-api-key)
-4. [Verify Protocol and Port](#verify-protocol-and-port)
-5. [Set Daily Note Path](#set-daily-note-path)
-6. [Enter Settings in Yasumaro and Test Connection](#enter-settings-in-yasumaro-and-test-connection)
-7. [Troubleshooting](#troubleshooting)
-
----
+**Estimated time**: ~5-10 minutes
 
 ### Prerequisites
 
-Before starting this guide, make sure you have the following:
-
-| Requirement | How to verify |
-| :--- | :--- |
-| **Obsidian** installed | The app launches successfully |
-| **Obsidian Vault** created | Files are shown when Obsidian opens |
-| **Yasumaro** installed in Chrome | Yasumaro icon is visible in the toolbar |
-| **Google Chrome** browser | — |
-
-If you haven't installed Obsidian yet, download it from [obsidian.md](https://obsidian.md/). Install Yasumaro from the [Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc).
+- [Obsidian](https://obsidian.md/) installed
+- An Obsidian Vault created (created on first launch)
+- [Yasumaro Chrome Extension](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) installed
+- Google Chrome browser
 
 ---
 
-### Install Local REST API with MCP Plugin
+### 1. Install the Local REST API Plugin
 
-Yasumaro needs the **Local REST API** plugin installed in Obsidian to communicate with it. This plugin is available in Obsidian's official community plugin directory.
+Install the Local REST API plugin from the Obsidian community plugin store.
 
-> **Note on plugin name**: This plugin was previously named "Local REST API" but has since been renamed to **"Local REST API with MCP"** ([GitHub repository](https://github.com/coddingtonbear/obsidian-local-rest-api)). Search for the new name in the plugin directory.
+1. Open Obsidian and click **Settings ⚙️** in the bottom-left corner.
+2. In the left sidebar, go to **Community Plugins** → **Browse**.
+3. Type `Local REST API` in the search bar.
 
-**Steps:**
+   ![TODO: Screenshot of plugin search](images/obsidian-plugin-search.png)
 
-1. Open Obsidian and click the **Settings (gear icon)** at the bottom left
+4. Click **Install** on the "Local REST API" plugin.
+5. After installation, click **Enable**.
 
-2. In the left menu, select **"Community plugins"**
-
-3. If this is your first time, you'll see a "Turn off restricted mode" button. Click it to enable community plugins
-
-   > This step is required to use community plugins. It only applies to plugins managed by the official Obsidian community.
-
-4. Click the **"Browse"** button to open the plugin directory
-
-5. Type **"Local REST API with MCP"** in the search box
-
-   ![TODO: Screenshot — Plugin search with "Local REST API with MCP" entered](./images/obsidian-plugin-search.png)
-
-6. Click **"Local REST API with MCP"** (by Adam Coddington) and press **"Install"**
-
-   ![TODO: Screenshot — Local REST API install confirmation screen](./images/obsidian-plugin-install.png)
-
-7. After installation, click **"Enable"**
-
-   > The plugin must be enabled for Yasumaro to connect. It's easy to forget this step right after installing.
+   ![TODO: Screenshot of installed plugin](images/obsidian-plugin-installed.png)
 
 ---
 
-### Copy the API Key
+### 2. Copy the API Key
 
-Once the plugin is enabled, a unique API key is automatically generated.
+Copy the API key generated by the plugin. This key authenticates communication between Yasumaro and Obsidian.
 
-**Steps:**
+1. Confirm that **Local REST API** now appears in the left sidebar of Obsidian settings.
+2. Click **Local REST API**.
+3. Copy the value in the **API Key** field (a UUID in `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` format).
 
-1. Open Obsidian **Settings**
+   ![TODO: Screenshot of API key display](images/obsidian-api-key.png)
 
-2. In the left menu, below "Community plugins", click **"Local REST API with MCP"**
-
-3. Find the **"API Key"** field and click the copy icon on the right
-
-   ![TODO: Screenshot — Local REST API settings screen showing the API key and copy button](./images/obsidian-api-key.png)
-
-   > Keep this API key private. Anyone who has it can read and write to your Obsidian Vault. Avoid exposing it during screen shares or in screenshots you publish.
+> **Note**: The API key is sensitive information. Do not share it with third parties. If the key is leaked, you can regenerate it using the **Regenerate API Key** button in the plugin settings.
 
 ---
 
-### Verify Protocol and Port
+### 3. Verify Protocol and Port
 
-The Local REST API plugin uses the following defaults:
+The default settings work for most cases. Verify these default values:
 
-| Setting | Default | When to change |
-| :--- | :--- | :--- |
-| **Protocol** | `https` | Switch to `http` if you get a self-signed certificate error (see warning below) |
-| **Port** | `27124` | Only if another app conflicts with this port |
+| Setting | Default Value | Notes |
+|---------|--------------|-------|
+| **Protocol** | `https` | https recommended for security |
+| **Port** | `27124` | Default port for https |
+| **HTTP Port** | `27123` | Only when using http |
 
-**In most cases, leave these at the defaults (https / 27124).** Yasumaro's dashboard defaults match these values.
-
-> **Note:** Setting the protocol to `http` sends your Obsidian API key and data as plaintext over the local network. Starting from v6.3.7, Yasumaro shows an amber warning banner in both the dashboard and popup settings when `http` is selected. Use HTTPS on untrusted networks.
-
-If you change the port, update the same setting in Obsidian's Local REST API configuration.
-
----
-
-### Set Daily Note Path
-
-Yasumaro appends records to your Obsidian **Daily Notes**. You need to specify the folder where your daily notes are stored.
-
-**How to find it:**
-
-Open Obsidian's "Daily notes" core plugin settings and check the "New file location" field.
-
-**Examples:**
-
-| Vault folder structure | Value to enter in Daily Note Path |
-| :--- | :--- |
-| Vault root (no subfolder) | (leave empty) |
-| `Journal/` folder | `Journal` |
-| `092.Daily/` folder | `092.Daily` |
-| `Notes/Daily/` folder | `Notes/Daily` |
-| `raw/2026-01/` folder | `raw/2026-01` |
-
-![Obsidian Daily Notes plugin settings screen](./images/obsidian-daily-notes.png)
-
-> Yasumaro creates or appends to `{Daily Note Path}/{YYYY-MM-DD}.md`. The file is created automatically if it doesn't exist.
+**When to change settings**:
+- Only change if port `27124` conflicts with another application
+- Most environments can use the defaults
 
 ---
 
-### Enter Settings in Yasumaro and Test Connection
+### 4. Configure Daily Note Path
 
-Now enter your settings in Yasumaro.
+Set the location where Yasumaro saves web page records.
 
-![Yasumaro config screen](./images/yasumaro-setup.png)
+1. Go to Obsidian Settings → **Local REST API**.
+2. In the **Daily Note Path** field, enter the path to your daily notes within your Vault.
 
-**Steps:**
+Examples:
 
-1. Click the Yasumaro icon in the Chrome toolbar, then click the **⚙ icon** (top right) to open the dashboard
+| Vault Structure | Daily Note Path Value |
+|----------------|----------------------|
+| Standard Daily Notes (`DailyNotes/2026-06-29.md`) | `DailyNotes` |
+| `Journal` folder with date format | `Journal` |
+| `092.Daily` folder | `092.Daily` |
 
-2. Go to the **"General Settings"** panel
+Match the path to your Daily Note plugin settings. If using Obsidian's built-in Daily Notes plugin, enter the folder name specified in the "New file location" setting.
 
-3. Paste the API key you copied in step 2 into the **"Obsidian API Key"** field
+---
 
-4. If needed, open **"Advanced Settings"** and confirm:
-   - **Protocol**: `https` (default)
-   - **Port**: `27124` (default)
-   - **Daily Note Path**: the folder path from step 4
+### 5. Configure Yasumaro Dashboard and Test Connection
 
-5. Click **"Save"**
+1. Right-click the Yasumaro extension icon in Chrome → select **Options** to open the dashboard.
+2. In the "Initial Settings" panel, check **Use Obsidian**.
+3. Enter the following:
 
-6. Click **"Test Obsidian"** to verify the connection
+   | Field | Value |
+   |-------|-------|
+   | **Obsidian URL** | `https://127.0.0.1:27124` (default) |
+   | **Obsidian API Key** | The API key copied in step 2 |
+   | **Daily Note Path** | The path configured in step 4 (e.g., `DailyNotes`) |
 
-   - ✅ "Connection successful" means you're all set
-   - ❌ If an error appears, see [Troubleshooting](#troubleshooting) below
+4. Click **Test Connection**.
+5. You should see ✓ Connection successful.
 
 ---
 
 ### Troubleshooting
 
-#### Certificate Error (self-signed certificate)
+#### Certificate Error (Self-Signed Certificate)
 
-When using `https`, Chrome may block the connection on first use because Obsidian Local REST API uses a self-signed certificate.
+The Local REST API plugin uses a self-signed certificate by default, which may trigger a Chrome certificate warning on the first connection.
 
-**Fix A (recommended): Allow the certificate in Chrome once**
+**Steps to resolve (macOS / Windows)**:
 
-> This applies only to the **Obsidian Local REST API (local environment)**. This is not the same as ignoring certificate warnings on general websites.
+1. Open `https://127.0.0.1:27124` in Chrome.
+2. You will see a "Your connection is not private" warning.
+3. Click **Advanced**.
+4. Click **Proceed to 127.0.0.1 (unsafe)**.
 
-1. Open `https://127.0.0.1:27124` in a new Chrome tab
-2. You'll see a "Your connection is not private" warning
-3. Click **"Advanced"**, then click **"Proceed to 127.0.0.1 (unsafe)"**
-4. If you see JSON data, the certificate is now trusted
-5. Return to the Yasumaro dashboard and run "Test Obsidian" again
+This tells Chrome to trust this local certificate for future connections from Yasumaro.
 
-**Fix B: Switch to http**
+> **Important**: This action is specific to the Obsidian Local REST API, a local-only tool. **Never** ignore certificate warnings for general websites on the internet.
 
-If Fix A doesn't work, you can avoid the certificate issue by switching to `http`. Note that HTTP sends your API key and data as plaintext — Yasumaro v6.3.7+ shows a warning banner when `http` is selected.
+**If the certificate error persists**:
+- Switch the protocol to `http` and port to `27123` in the Yasumaro dashboard (http does not perform certificate validation)
+- Note that http traffic is unencrypted, so be mindful of local network security
 
-1. In Yasumaro's "Advanced Settings", change the protocol to `http` (a warning banner will appear)
-2. Change the port to `27123` (the default http port for Local REST API)
-3. Confirm the same port is set in Obsidian's Local REST API settings
+#### Connection Timeout
 
-> **Security note:** HTTP communicates only within your local network — data never traverses the internet. However, other devices on the same network could potentially intercept the traffic. This is generally not a concern on trusted home networks, but exercise caution on public Wi-Fi.
+If the test connection times out:
 
----
-
-#### Connection Timeout / Cannot Connect
-
-- **Check that Obsidian is running**: Local REST API only works while Obsidian is open
-- **Check that the plugin is enabled**: Go to Settings → Community plugins and confirm "Local REST API" appears under "Enabled plugins"
-- **Check that ports match**: Confirm the port in Yasumaro and the port in Obsidian's Local REST API settings are identical
-
----
+1. Ensure Obsidian is running.
+2. Verify the Local REST API plugin is enabled.
+3. Check that the URL and port are correct (default: `https://127.0.0.1:27124`).
+4. Check if a firewall is blocking port `27124`.
 
 #### Daily Note Path Not Recognized
 
-- Do not add leading or trailing slashes
-  - ✅ Correct: `Journal`
-  - ❌ Wrong: `/Journal/`
-- If your notes are in the vault root, leave the field empty
-- Folder names are case-sensitive. Match the exact capitalization used in Obsidian
+1. Check the "New file location" setting in Obsidian's Daily Notes plugin configuration.
+2. Ensure the path is relative to the Vault root (no leading `/`).
+3. If using Japanese folder names, verify the folder name is correct.
 
 ---
 
-For the full setup guide (AI provider settings, domain filters, etc.), see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+### Reference Links
+
+- [Local REST API Plugin (GitHub)](https://github.com/coddingtonbear/obsidian-local-rest-api)
+- [Yasumaro on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)
+- [Yasumaro GitHub Repository](https://github.com/armaniacs/yasumaro)
