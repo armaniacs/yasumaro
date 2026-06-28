@@ -35,6 +35,14 @@ vi.mock('../../../../utils/storageUrls.js', () => ({
   setUrlAiSummaryCleansedBytes: vi.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedElements: vi.fn().mockResolvedValue(undefined),
   setUrlAiSummaryCleansedReason: vi.fn().mockResolvedValue(undefined),
+  setUrlAiSummaryCleansedReasons: vi.fn().mockResolvedValue(undefined),
+  setUrlAiProvider: vi.fn().mockResolvedValue(undefined),
+  setUrlAiModel: vi.fn().mockResolvedValue(undefined),
+  setUrlAiDuration: vi.fn().mockResolvedValue(undefined),
+  setUrlObsidianDuration: vi.fn().mockResolvedValue(undefined),
+  setUrlExtractedSentencesBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlExtractedSentencesOriginalBytes: vi.fn().mockResolvedValue(undefined),
+  setUrlFallbackTriggered: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { saveMetadataStep } from '../saveMetadataStep.js';
