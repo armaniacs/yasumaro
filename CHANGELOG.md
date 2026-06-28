@@ -15,6 +15,14 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.9] - 2026-06-29
+
+### Chores / その他
+
+- **ルート `plans/` を整理** — 5件のレビューレポートを `dev-docs/plans/archive-old/` に移動。ルート `plans/` ディレクトリを削除し、全計画系ファイルを `dev-docs/` 配下に統一
+
+---
+
 ## [6.3.8] - 2026-06-29
 
 ### Added / 追加
