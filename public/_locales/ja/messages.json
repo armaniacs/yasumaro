@@ -2742,5 +2742,9 @@
   },
   "sqliteAlertMessage": {
     "message": "履歴データベースの初期化に繰り返し失敗しています。設定の「診断」パネルを確認してください。"
+  },
+  "previewContent": {
+    "message": "プレビュー内容",
+    "description": "プレビューコンテンツテキストエリアのaria-label"
   }
 }

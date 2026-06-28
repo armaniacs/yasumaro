@@ -39,13 +39,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      grep: /^(?!.*@(?:interaction|extension))/,
+      grep: /^(?!.*@(?:interaction|extension|a11y))/,
       use: { ...devices['Desktop Chrome'] },
     },
 
     {
       name: 'firefox',
-      grep: /^(?!.*@(?:interaction|extension))/,
+      grep: /^(?!.*@(?:interaction|extension|a11y))/,
       use: { ...devices['Desktop Firefox'] },
     },
 
@@ -59,6 +59,21 @@ export default defineConfig({
       retries: 0,
       workers: 1,
       use: { 
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+      },
+    },
+
+    {
+      name: 'a11y',
+      testDir: './e2e',
+      grep: /@a11y/,  // Only run accessibility tests
+      timeout: 60_000,
+      expect: { timeout: 15_000 },
+      fullyParallel: false,
+      retries: 1,
+      workers: 1,
+      use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
       },
