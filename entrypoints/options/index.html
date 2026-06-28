@@ -196,8 +196,9 @@
           <div class="advanced-details-content">
             <div class="form-group">
               <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
-              <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError">
+              <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError protocolWarning">
               <div id="protocolError" class="field-error" role="alert"></div>
+              <div id="protocolWarning" class="field-warning hidden" role="alert"></div>
             </div>
 
             <div class="form-group">

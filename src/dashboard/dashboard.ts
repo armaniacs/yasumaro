@@ -403,6 +403,20 @@ export async function handleSaveOnly(): Promise<void> {
     return;
   }
 
+  // HTTP プロトコルが選択されている場合、確認ダイアログを表示
+  const protocolValue = el.protocolInput?.value?.trim().toLowerCase();
+  if (protocolValue === 'http') {
+    const confirmed = await showConfirmDialog({
+      title: getMessage('warningTitle') || 'Warning',
+      message: getMessage('confirmProtocolHttp'),
+      confirmLabel: getMessage('save') || 'Save',
+      cancelLabel: getMessage('cancel') || 'Cancel'
+    });
+    if (!confirmed) {
+      return;
+    }
+  }
+
   const newSettings = extractSettingsFromInputs(getSettingsMapping());
 
   // Convert retention select values: "" → null, numeric string → number

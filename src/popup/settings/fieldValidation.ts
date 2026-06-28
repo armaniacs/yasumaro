@@ -48,17 +48,47 @@ export function clearAllFieldErrors(pairs: ErrorPair[]): void {
 }
 
 /**
+ * プロトコルの警告を表示（HTTP選択時のセキュリティ注意喚起）
+ * @param {string} message - 警告メッセージ
+ */
+export function showProtocolWarning(message: string): void {
+    const warningEl = document.getElementById('protocolWarning');
+    if (warningEl) {
+        warningEl.textContent = message;
+        warningEl.classList.remove('hidden');
+    }
+}
+
+/**
+ * プロトコルの警告をクリア
+ */
+export function clearProtocolWarning(): void {
+    const warningEl = document.getElementById('protocolWarning');
+    if (warningEl) {
+        warningEl.textContent = '';
+        warningEl.classList.add('hidden');
+    }
+}
+
+/**
  * プロトコルフィールドのバリデーション
  * @param {HTMLInputElement} input - 入力要素
  * @returns {boolean} 有効な場合はtrue
  */
 export function validateProtocol(input: HTMLInputElement): boolean {
     const v = input.value.trim().toLowerCase();
-    if (v !== 'http' && v !== 'https') {
+
+    // エラークリア（警告は個別に制御）
+    clearFieldError(input, 'protocolError');
+    clearProtocolWarning();
+
+    if (v === 'http') {
+        // HTTPは有効だが、セキュリティ上の注意を促す
+        showProtocolWarning(getMessage('warningProtocolHttp'));
+    } else if (v !== 'https') {
         setFieldError(input, 'protocolError', getMessage('errorProtocol'));
         return false;
     }
-    clearFieldError(input, 'protocolError');
     return true;
 }
 

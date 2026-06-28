@@ -33,6 +33,8 @@ const DEFAULT_PORT = '27123';
 const MAX_QUEUE_SIZE = 50;
 const MUTEX_TIMEOUT_MS = 30000; // 30秒
 
+type ObsidianProtocol = 'http' | 'https';
+
 /**
  * Mutexのインスタンス（クロージャ経由で共有）
  * 日次ノートごとではなく、全体的な書き込み操作をシリアライズ
@@ -58,24 +60,6 @@ export interface ObsidianClientOptions {
 }
 
 /**
- * HTTP → HTTPS 強制変換
- * Obsidian Local REST API への安全な接続を保証する
- * @param {string} url - リクエストURL
- * @returns {string} HTTPS URL
- */
-function enforceHttps(url: string): string {
-    if (url.startsWith('http://')) {
-        const httpsUrl = url.replace(/^http:\/\//, 'https://');
-        addLog(LogType.WARN, 'HTTP detected, upgrading to HTTPS for secure connection', {
-            original: url,
-            upgraded: httpsUrl
-        });
-        return httpsUrl;
-    }
-    return url;
-}
-
-/**
  * Problem #1: タイムアウト付きfetchのラッパー関数
  * @param {string} url - リクエストURL
  * @param {object} options - fetchオプション
@@ -83,15 +67,14 @@ function enforceHttps(url: string): string {
  * @throws {Error} タイムアウト時にエラーをスロー
  */
 async function _fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
-    const secureUrl = enforceHttps(url);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-        addLog(LogType.ERROR, `Obsidian request timed out after ${FETCH_TIMEOUT_MS}ms`, { url: secureUrl });
+        addLog(LogType.ERROR, `Obsidian request timed out after ${FETCH_TIMEOUT_MS}ms`, { url });
     }, FETCH_TIMEOUT_MS);
 
     try {
-        const response = await fetch(secureUrl, { ...options, signal: controller.signal });
+        const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
         return response;
     } catch (error: unknown) {
@@ -123,7 +106,7 @@ export class ObsidianClient {
         const settings = await getSettings();
 
         const s = settings as Record<string, unknown>;
-        const protocol = String(s[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'https') || 'https';
+        const protocol = this._validateProtocol(s[StorageKeys.OBSIDIAN_PROTOCOL] as string | undefined | null);
         const rawPort = (s[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT) as string | number;
         const port = this._validatePort(rawPort);
         const apiKey = s[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
@@ -154,6 +137,35 @@ export class ObsidianClient {
             },
             settings
         };
+    }
+
+    /**
+     * プロトコルの検証
+     * @param {string|undefined|null} protocol - Obsidian Local REST API のプロトコル
+     * @returns {'http'|'https'} 有効なプロトコル
+     * @throws {Error} プロトコルが無効な場合
+     */
+    _validateProtocol(protocol: string | undefined | null): ObsidianProtocol {
+        if (protocol === undefined || protocol === null || protocol === '') {
+            return 'https';
+        }
+
+        if (typeof protocol !== 'string') {
+            return 'https';
+        }
+
+        const normalized = protocol.trim().toLowerCase();
+        if (normalized !== 'http' && normalized !== 'https') {
+            throw new Error('Protocol must be "http" or "https".');
+        }
+
+        if (normalized === 'http') {
+            addLog(LogType.WARN, 'HTTP protocol selected — API key and data will be sent in plaintext over the local network. Use HTTPS for encrypted communication.', {
+                protocol: normalized
+            });
+        }
+
+        return normalized;
     }
 
     /**
@@ -273,7 +285,7 @@ export class ObsidianClient {
             let baseUrl: string;
             let headers: HeadersInit;
             if (override) {
-                const protocol = override.protocol || 'https';
+                const protocol = this._validateProtocol(override.protocol);
                 const port = this._validatePort(override.port);
                 const apiKey = override.apiKey;
                 if (!apiKey) {

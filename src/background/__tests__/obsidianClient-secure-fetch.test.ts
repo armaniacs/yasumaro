@@ -1,7 +1,7 @@
 /**
  * obsidianClient-secure-fetch.test.ts
- * HTTPS通信の強制に関するテスト
- * HTTP URLが自動的にHTTPSに変換されることを検証
+ * Obsidian Local REST API のプロトコル設定に関するテスト
+ * HTTP/HTTPS の選択が通信時に尊重されることを検証
  */
 
 import { ObsidianClient } from '../obsidianClient.js';
@@ -9,7 +9,7 @@ import * as storage from '../../utils/storage.js';
 
 vi.mock('../../utils/storage.js');
 
-describe('ObsidianClient: HTTPS通信の強制', () => {
+describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
   let obsidianClient: ObsidianClient;
 
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
     };
   });
 
-  describe('_fetchExistingContent - HTTPS強制', () => {
+  describe('_fetchExistingContent - プロトコル設定', () => {
     beforeEach(() => {
       global.fetch = vi.fn();
     });
@@ -70,7 +70,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
       );
     });
 
-    it('HTTP URLがHTTPSに変換されること', async () => {
+    it('HTTP URLがHTTPのまま使用されること', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -91,9 +91,8 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
 
       expect(result).toBe('Existing content');
 
-      // fetchがHTTPSで呼ばれていること
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://127.0.0.1:27123/vault/test.md',
+        'http://127.0.0.1:27123/vault/test.md',
         expect.objectContaining({
           method: 'GET',
           headers: expect.any(Object)
@@ -110,7 +109,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
     });
   });
 
-  describe('_writeContent - HTTPS強制', () => {
+  describe('_writeContent - プロトコル設定', () => {
     beforeEach(() => {
       global.fetch = vi.fn();
     });
@@ -139,7 +138,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
       );
     });
 
-    it('HTTP URLで_writeContentが呼ばれてもHTTPSに変換される', async () => {
+    it('HTTP URLで_writeContentが呼ばれた場合はHTTPのまま使用される', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       global.fetch.mockResolvedValue({
         ok: true
@@ -150,7 +149,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
       }, 'Test content');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://127.0.0.1:27123/vault/test.md',
+        'http://127.0.0.1:27123/vault/test.md',
         expect.objectContaining({
           method: 'PUT',
           headers: expect.any(Object),
@@ -160,7 +159,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
     });
   });
 
-  describe('testConnection - HTTPS強制', () => {
+  describe('testConnection - プロトコル設定', () => {
     beforeEach(() => {
       global.fetch = vi.fn();
     });
@@ -189,7 +188,7 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
   });
 
   describe('プロトコル設定の検証', () => {
-    it('設定にhttpが含まれている場合でもHTTPSに変換される', async () => {
+    it('設定にhttpが含まれている場合はHTTPでfetchされる', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -210,13 +209,27 @@ describe('ObsidianClient: HTTPS通信の強制', () => {
         { 'Authorization': 'Bearer test_key' }
       );
 
-      // HTTP ではなく HTTPS で fetch されること
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://127.0.0.1:27123/vault/test.md',
+        'http://127.0.0.1:27123/vault/test.md',
         expect.any(Object)
       );
 
       (global.fetch as vi.Mock).mockRestore();
+    });
+
+    it('無効なプロトコル設定は拒否される', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'ftp',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const result = await obsidianClient.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Protocol must be "http" or "https"');
     });
   });
 });

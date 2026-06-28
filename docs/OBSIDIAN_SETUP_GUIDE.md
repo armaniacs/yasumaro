@@ -87,10 +87,12 @@ Local REST APIプラグインはデフォルトで以下の設定で動作しま
 
 | 設定 | デフォルト値 | 変更が必要なケース |
 | :--- | :--- | :--- |
-| **プロトコル** | `https` | 自己署名証明書エラーを回避したい場合は `http` |
+| **プロトコル** | `https` | 自己署名証明書エラーを回避したい場合は `http`（後述の注意事項あり）|
 | **ポート** | `27124` | 他のアプリとポートが競合している場合のみ変更 |
 
 **基本的にはデフォルト（https / 27124）のままで問題ありません。** Yasumaroダッシュボードのデフォルト値もこれに合わせています。
+
+> **注意:** プロトコルを `http` に設定すると、Obsidian APIキーとデータがローカルネットワーク上で平文で送信されます。v6.3.7 以降では、`http` を選択した場合にダッシュボードとポップアップの設定画面に警告（アンバー色のバナー）が表示されます。信頼できないネットワーク環境では HTTPS の使用を推奨します。
 
 ポートを変更した場合は、Obsidianの「Local REST API」設定画面でも同じポート番号に変更してください。
 
@@ -168,11 +170,13 @@ Obsidianで「デイリーノート」プラグインの設定を開き、「新
 
 **対処法B: httpに切り替える**
 
-証明書許可がうまくいかない場合は、`http` に変更することで回避できます。
+証明書許可がうまくいかない場合は、`http` に変更することで回避できます。ただし、HTTP を使用すると APIキーとデータが平文で送信されるため、v6.3.7 以降では設定画面に警告が表示されます。
 
-1. Yasumaroダッシュボードの「詳細設定」でプロトコルを `http` に変更します
+1. Yasumaroダッシュボードの「詳細設定」でプロトコルを `http` に変更します（警告が表示されます）
 2. ポートは `27123`（httpのデフォルト）に変更します
 3. Obsidianの「Local REST API」設定でも同じポートになっているか確認します
+
+> **セキュリティ補足:** HTTP はローカルネットワーク内でのみ通信し、インターネット経由での送信は行われません。ただし、同一ネットワーク上の他の機器から通信を傍受されるリスクがあります。自宅などの信頼できるネットワークでは問題になりにくいですが、公共Wi-Fiなどでは注意してください。
 
 ---
 
@@ -283,10 +287,12 @@ The Local REST API plugin uses the following defaults:
 
 | Setting | Default | When to change |
 | :--- | :--- | :--- |
-| **Protocol** | `https` | Switch to `http` if you get a self-signed certificate error |
+| **Protocol** | `https` | Switch to `http` if you get a self-signed certificate error (see warning below) |
 | **Port** | `27124` | Only if another app conflicts with this port |
 
 **In most cases, leave these at the defaults (https / 27124).** Yasumaro's dashboard defaults match these values.
+
+> **Note:** Setting the protocol to `http` sends your Obsidian API key and data as plaintext over the local network. Starting from v6.3.7, Yasumaro shows an amber warning banner in both the dashboard and popup settings when `http` is selected. Use HTTPS on untrusted networks.
 
 If you change the port, update the same setting in Obsidian's Local REST API configuration.
 
@@ -362,11 +368,13 @@ When using `https`, Chrome may block the connection on first use because Obsidia
 
 **Fix B: Switch to http**
 
-If Fix A doesn't work, you can avoid the certificate issue by switching to `http`.
+If Fix A doesn't work, you can avoid the certificate issue by switching to `http`. Note that HTTP sends your API key and data as plaintext — Yasumaro v6.3.7+ shows a warning banner when `http` is selected.
 
-1. In Yasumaro's "Advanced Settings", change the protocol to `http`
+1. In Yasumaro's "Advanced Settings", change the protocol to `http` (a warning banner will appear)
 2. Change the port to `27123` (the default http port for Local REST API)
 3. Confirm the same port is set in Obsidian's Local REST API settings
+
+> **Security note:** HTTP communicates only within your local network — data never traverses the internet. However, other devices on the same network could potentially intercept the traffic. This is generally not a concern on trusted home networks, but exercise caution on public Wi-Fi.
 
 ---
 
