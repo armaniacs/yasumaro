@@ -1,4 +1,12 @@
-# Svelte + Tailwind Migration Implementation Plan
+# Svelte + Tailwind Migration Implementation Plan (ARCHIVED)
+
+> **Status (2026-06-29):** この計画は **中断・凍結** されました。
+>
+> **経緯:** Phase 1（E2Eテスト）と Phase 2（Svelte + Tailwind 環境構築）は完了したが、Phase 3（UIのSvelte移行）は着手されなかった。Popup（`entrypoints/popup/index.html`、829行）と Dashboard/Options（`entrypoints/options/index.html`、1683行）は vanilla HTML + TypeScript のままである。Svelte は offscreen document（`src/offscreen/App.svelte`、12行）でのみ利用されている。
+>
+> **中断理由:** 実装コストに対して得られる価値が見合わないと判断された。Popup/Dashboard を Svelte に書き換えると数千行の書き換えと E2E テストのメンテナンスが必要になる一方、現状の vanilla 実装で v6.3.7 まで安定したリリースを継続できている。Svelte は offscreen document（シンプルな画面）に限定して導入し、それが適切なスコープと判断された。
+>
+> **残骸:** `svelte.config.js`、`@sveltejs/vite-plugin-svelte`、`@tailwindcss/vite`、`svelte`、`tailwindcss` のパッケージと設定は残っているが、offscreen 以外では使われていない。削除しても問題ないが、将来 offscreen を拡張する際に再利用可能。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
