@@ -332,6 +332,7 @@ MIT License
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
 - [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - セットアップガイド
+- [OBSIDIAN_SETUP_GUIDE.md](docs/OBSIDIAN_SETUP_GUIDE.md) - Obsidian連携ガイド（スクリーンショット付き・トラブルシューティング含む）
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [LICENSE.md](LICENSE.md) - ライセンス詳細
 - [PRIVACY.md](docs/PRIVACY.md) - プライバシーポリシー
@@ -343,6 +344,7 @@ MIT License
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
 - [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - Setup Guide
+- [OBSIDIAN_SETUP_GUIDE.md](docs/OBSIDIAN_SETUP_GUIDE.md) - Obsidian Integration Guide (with screenshots and troubleshooting)
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
 - [LICENSE.md](LICENSE.md) - License Details
 - [PRIVACY.md](docs/PRIVACY.md) - Privacy Policy

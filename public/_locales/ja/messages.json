@@ -1505,6 +1505,9 @@
   "obsidianEnabledHelp": {
     "message": "OFF の場合、記録は SQLite のみに保存されます。"
   },
+  "obsidianSetupGuideLink": {
+    "message": "Obsidian設定ガイドを見る（新しいタブで開きます）"
+  },
   "advancedSettings": {
     "message": "詳細設定（Protocol / Port / Daily Note Path）"
   },

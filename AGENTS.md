@@ -276,6 +276,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 |----------|----------|---------|
 | README.md | Bilingual (JP/EN) | Quick start guide, features overview |
 | docs/SETUP_GUIDE.md | Bilingual (JP/EN) | Detailed step-by-step instructions |
+| docs/OBSIDIAN_SETUP_GUIDE.md | Bilingual (JP/EN) | Obsidian integration guide with screenshots and troubleshooting |
 | docs/PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
 | docs/USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
 | docs/PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |

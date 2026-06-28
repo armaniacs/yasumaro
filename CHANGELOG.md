@@ -15,6 +15,16 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.5] - 2026-06-28
+
+### Added / 追加
+
+- **Obsidian連携セットアップガイドを追加** — `docs/OBSIDIAN_SETUP_GUIDE.md` を新規作成。Local REST API with MCP プラグインのインストール・APIキーのコピー・Daily Note Path の設定・接続テストの手順を日英バイリンガルで詳説。証明書エラーや Daily Note Path 設定ミスなどのトラブルシューティングも含む
+- **ダッシュボードに Obsidian 設定ガイドリンクを追加** — 「Obsidian API Key」入力欄の直下に `docs/OBSIDIAN_SETUP_GUIDE.md` へのリンクを追加。初回設定時に迷わず手順を参照できるよう UX を改善
+- **docs/SETUP_GUIDE.md の Obsidian セクションを簡略化** — Step 1 を OBSIDIAN_SETUP_GUIDE.md への参照に置き換え、重複コンテンツを排除（Single Source of Truth）
+
+---
+
 ## [6.3.4] - 2026-06-27
 
 ### Fixed / 修正
