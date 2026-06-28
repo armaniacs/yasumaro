@@ -505,9 +505,12 @@
          <span data-i18n="install.cta.primary">Chrome Web Store からインストール</span>
        </a>
        <a class="btn-secondary" href="https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md">
-         <span data-i18n="install.cta.secondary">詳細セットアップガイド →</span>
-       </a>
-     </div>
+          <span data-i18n="install.cta.secondary">詳細セットアップガイド →</span>
+        </a>
+        <a class="btn-secondary" href="https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md">
+          📖 <span data-i18n="install.cta.obsidian">Obsidian連携ガイド →</span>
+        </a>
+      </div>
   </div>
 </section>
 
@@ -549,6 +552,7 @@ const TRANSLATIONS = {
     "install.sub": "Chrome Web Store から直接インストールするか、ソースからビルドして使用できます。",
     "install.cta.primary": "Chrome Web Store からインストール",
     "install.cta.secondary": "詳細セットアップガイド →",
+    "install.cta.obsidian": "Obsidian連携ガイド →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "プライバシー",
     "meta.title": "Yasumaro — ブラウザ閲覧履歴をAI要約付きでObsidian / SQLite / Markdown へ",
@@ -578,6 +582,7 @@ const TRANSLATIONS = {
     "install.sub": "Install directly from Chrome Web Store, or build from source.",
     "install.cta.primary": "Install from Chrome Web Store",
     "install.cta.secondary": "Detailed setup guide →",
+    "install.cta.obsidian": "Obsidian Setup Guide →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "Privacy",
     "meta.title": "Yasumaro — Save browsing history to Obsidian / SQLite / Markdown with AI summaries",
@@ -636,13 +641,13 @@ const PROVIDERS = {
 const STEPS = {
   ja: [
     { title: "拡張機能をインストール", desc: "GitHubからリポジトリをクローンし、<code>npm run build</code>でビルド。Chromeの「パッケージ化されていない拡張機能を読み込む」で<code>dist/chromium-mv3</code>を選択します。" },
-    { title: "保存先とAIの設定", desc: "保存先（Obsidian / SQLite / Markdown のいずれか）とAIプロバイダーを選択し、APIキーを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールとAPIキーの設定が必要です。" },
+    { title: "保存先とAIの設定", desc: "保存先（Obsidian / SQLite / Markdown のいずれか）とAIプロバイダーを選択し、APIキーを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールとAPIキーの設定が必要です（<a href=\"https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md\">詳しい手順はこちら</a>）。" },
     { title: "ブラウジングするだけ", desc: "5秒以上滞在し、50%以上スクロールしたページが自動で検出・要約・保存されます。ノートに履歴が積み上がっていきます。" },
     { title: "必要に応じて手動記録", desc: "ツールバーの「今すぐ記録」ボタンで任意のページも即座に保存できます。ドメインフィルター設定で記録するサイトを細かく制御することもできます。" },
   ],
   en: [
     { title: "Install the extension", desc: "Clone the repo and run <code>npm run build</code>. In Chrome, go to <code>chrome://extensions</code>, enable Developer mode, click 'Load unpacked', and select <code>dist/chromium-mv3</code>." },
-    { title: "Configure Storage & AI", desc: "Pick your storage (Obsidian / SQLite / Markdown) and AI provider, then enter the API keys. For Obsidian, install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a> and enter its API key." },
+    { title: "Configure Storage & AI", desc: "Pick your storage (Obsidian / SQLite / Markdown) and AI provider, then enter the API keys. For Obsidian, install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a> and enter its API key (<a href=\"https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md\">detailed guide</a>)." },
     { title: "Just browse the web", desc: "Any page you read for 5+ seconds with 50%+ scroll depth is automatically detected, summarized, and saved to your chosen storage." },
     { title: "Manual recording when needed", desc: "Use the 'Record Now' button in the toolbar popup to save any page instantly. Fine-tune what gets recorded with the domain filter settings." },
   ]
@@ -651,13 +656,13 @@ const STEPS = {
 const INSTALL_STEPS = {
   ja: [
     { title: "Chrome Web Store からインストール", body: "Google Chrome Web Store から直接インストールできます。<a href='https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc' target='_blank' style='margin-left:0.5rem;color:var(--purple-light);'>ストアページを開く →</a>" },
-    { title: "保存先とAIの設定", body: "拡張機能の設定画面で保存先（Obsidian / SQLite / Markdown）とAIプロバイダーを選択し、APIキーを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールも必要です。" },
+    { title: "保存先とAIの設定", body: "拡張機能の設定画面で保存先（Obsidian / SQLite / Markdown）とAIプロバイダーを選択し、APIキーを入力します。Obsidianを選ぶ場合は <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API プラグイン</a> のインストールも必要です（<a href=\"https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md\">詳しい手順はこちら</a>）。" },
     { title: "ブラウジングするだけ", body: "5秒以上滞在し、50%以上スクロールしたページが自動で検出・要約・保存されます。ノートに履歴が積み上がっていきます。" },
     { title: "必要に応じて手動記録", body: "ツールバーの「今すぐ記録」ボタンで任意のページも即座に保存できます。ドメインフィルター設定で記録するサイトを細かく制御することもできます。" },
   ],
   en: [
     { title: "Install from Chrome Web Store", body: "Install directly from the Chrome Web Store.<a href='https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc' target='_blank' style='margin-left:0.5rem;color:var(--purple-light);'>Open store page →</a>" },
-    { title: "Configure Storage & AI", body: "In the extension settings, pick your storage (Obsidian / SQLite / Markdown) and AI provider, then enter the API keys. For Obsidian, also install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a>." },
+    { title: "Configure Storage & AI", body: "In the extension settings, pick your storage (Obsidian / SQLite / Markdown) and AI provider, then enter the API keys. For Obsidian, also install the <a href=\"https://github.com/coddingtonbear/obsidian-local-rest-api\">Local REST API plugin</a> (<a href=\"https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md\">setup guide</a>)." },
     { title: "Just browse the web", body: "Any page you read for 5+ seconds with 50%+ scroll depth is automatically detected, summarized, and saved to your chosen storage." },
     { title: "Manual recording when needed", body: "Use the 'Record Now' button in the toolbar popup to save any page instantly. Fine-tune what gets recorded with the domain filter settings." },
   ]

@@ -54,7 +54,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
 
 ### 必要なもの
-- [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)
+- [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)（セットアップ手順は [Obsidian連携ガイド](docs/OBSIDIAN_SETUP_GUIDE.md) を参照）
 - AIプロバイダー（以下のいずれか）
    - [Groq](https://console.groq.com/keys)（無料枠あり・推奨）
    - [Google Gemini API キー](https://aistudio.google.com/app/apikey)（無料枠あり）
@@ -121,7 +121,7 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 1. ツールバーの拡張機能アイコンをクリックします。
 2. メイン画面の右上にある「⚙」アイコンをクリックしてダッシュボード（設定画面）を開きます。
 3. 以下の設定を入力してください：
-   - **Obsidian API Key**: ObsidianのLocal REST API設定で取得したキー
+   - **Obsidian API Key**: ObsidianのLocal REST API設定で取得したキー（詳細な設定手順は [Obsidian連携ガイド](docs/OBSIDIAN_SETUP_GUIDE.md) を参照）
    - **Protocol/Port**: Obsidian Local REST APIのプロトコルとポート（通常はhttps/27124）
    - **Daily Notes Path**: デイリーノートの保存先フォルダ（例: `092.Daily`）
    - **AI Provider**: 使用するAIサービスを選択（Gemini、OpenAI互換など）
@@ -217,7 +217,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
 
 ### Requirements
-- [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api)
+- [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)
 - An AI provider (choose one):
    - [Groq](https://console.groq.com/keys) (free tier available, recommended)
    - [Google Gemini API key](https://aistudio.google.com/app/apikey) (free tier available)
@@ -283,7 +283,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 1. Click the extension icon in your toolbar
 2. Click the "⚙" icon in the top right to open the Dashboard (settings)
 3. Configure settings:
-   - **Obsidian API Key**: Key from Obsidian's Local REST API settings
+   - **Obsidian API Key**: Key from Obsidian's Local REST API settings (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for detailed setup instructions)
    - **Protocol/Port**: Obsidian Local REST API protocol and port (usually https/27124)
    - **Daily Notes Path**: Folder path for daily notes (e.g., `092.Daily`)
    - **AI Provider**: Select your preferred AI service (Gemini, OpenAI Compatible, etc.)
