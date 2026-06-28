@@ -15,6 +15,19 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.6] - 2026-06-28
+
+### Added / 追加
+
+- **README.md に Obsidian連携ガイドへのリンクを追加** — 「必要なもの」と「設定」の該当箇所に `docs/OBSIDIAN_SETUP_GUIDE.md` へのリンクを追加（日英）。初めて Obsidian を設定するユーザーが迷わず詳細ガイドにたどり着けるよう導線を強化
+- **ランディングページに Obsidian連携ガイドリンクを追加** — `docs/index.html`（GitHub Pages）のインストールセクションに「Obsidian連携ガイド」ボタンを追加。How it works とインストール手順の説明文にもリンクを設置。Obsidian 連携を希望するユーザーがワンクリックでガイドを参照可能に
+
+### Fixed / 修正
+
+- **generate-release-notes.js のパス解決と indexOf バグを修正** — `.kilo/skills/yasumaro-github-release/scripts/` 内のルートパスが1階層不足していた問題と、`extractEntry()` で `changelog.indexOf(nm)` が常に最初の `## [` を見つけるバグを `matchAll` + `.index` に修正
+
+---
+
 ## [6.3.5] - 2026-06-28
 
 ### Added / 追加
