@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed / 修正
 
 - **generate-release-notes.js のパス解決と indexOf バグを修正** — `.kilo/skills/yasumaro-github-release/scripts/` 内のルートパスが1階層不足していた問題と、`extractEntry()` で `changelog.indexOf(nm)` が常に最初の `## [` を見つけるバグを `matchAll` + `.index` に修正
+- **saveMetadataStep.test.ts のモック不足を修正** — `saveMetadataStep.ts` が `setUrlFallbackTriggered` を含む 8 つの `setUrl*` 関数を新たにインポートしていたが、テストモックに未定義だったため全 10 テストが失敗。モックファクトリに不足エクスポートを追加し、全テストをパスに回復
 
 ---
 
