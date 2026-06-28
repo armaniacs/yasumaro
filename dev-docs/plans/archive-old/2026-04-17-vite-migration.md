@@ -1,4 +1,6 @@
-# Vite Migration Implementation Plan
+# Vite Migration Implementation Plan (ARCHIVED)
+
+> **Status (2026-06-29):** この計画は **完了済み／上書き済み** です。手動 Vite 構成は後に **wxt**（Vite ベースの Chrome 拡張ビルドツール）に置き換えられ、`wxt.config.ts` が `vite.config.ts` を置き換えました。`build:tsc` スクリプトも削除され、ビルドは `wxt build` 一本に統一されています。現在のビルド設定は `wxt.config.ts` を参照してください。
 
 > **IMPORTANT: Vite Version Requirement** - This project MUST use Vite 8.0.x. Do NOT use Vite 7.x or lower.
 
@@ -92,15 +94,16 @@ dist/
 - [x] Full test suite passes (3489 passed, 15 skipped)
 - [x] Note: Exact file paths differ from tsc build (flat vs subdirectories)
 
-### Task 6: Verify Extension in Chrome
+### Task 6: Verify Extension in Chrome ✓ (Superseded by wxt)
 
-- [ ] Not explicitly tested - tests pass, assume functional
-- Note: The extension should load correctly as all required files are present
+- [x] Not explicitly tested at plan time, but v6.3.7 released and in production use
+- Note: wxt adoption made this verification redundant
 
-### Task 7: Full Switch (Optional - NOT DONE)
+### Task 7: Full Switch ✓ (Superseded by wxt)
 
-- [ ] Skipped - kept build:tsc as backup for safety
-- The tsc build can be removed once Vite build is proven in production use
+- [x] Skipped in original plan, but later completed when wxt replaced both manual Vite config AND tsc backup
+- `build:tsc` removed; `npm run build` now runs `wxt build` exclusively
+- Current config: `wxt.config.ts` (not `vite.config.ts`)
 
 ---
 
