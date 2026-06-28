@@ -15,6 +15,32 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.3.8] - 2026-06-29
+
+### Added / 追加
+
+- **CI: GitHub Actions を SHA ピン留め** — 全5ワークフロー・10種類のアクションを immutable SHA で固定。サプライチェーン攻撃対策（PBI-02）
+- **CI: Dependabot 設定を追加** — `.github/dependabot.yml` に weekly スケジュールで github-actions エコシステムの自動更新を設定（PBI-02）
+- **CI: axe-core アクセシビリティチェック導入** — `@axe-core/playwright` を導入し、E2E テストに `@a11y` タグ付きの WCAG 2.0 A/AA テスト 5 件を追加。CI の `tests.yml` に a11y ジョブを追加（PBI-03）
+- **docs: 定例メンテナンス計画を追加** — `dev-docs/plans/2026-06-29-maintenance-plan.md` を作成。npm 脆弱性モニタリング・CI パイプライン確認・依存関係更新の手順を定義
+
+### Fixed / 修正
+
+- **CI: validate.yml を tests.yml に統合** — PR 作成時に type-check + test が3重実行されていた問題を解消。validate.yml を削除し、PR コメント機能を tests.yml に移植（PBI-01）
+- **CI: Playwright ブラウザキャッシュを追加** — `actions/cache@v4` で `~/.cache/ms-playwright` をキャッシュし CI 時間を短縮（PBI-01）
+- **CI: `ubuntu-latest` を `ubuntu-24.04` に固定** — OS バージョンによる CI 結果の変動を防止（PBI-01, Checking Team）
+- **a11y: ポップアップの WCAG 違反 2 件を修正** — `#btnRequestAllUrls` に `aria-label` 追加、`#previewContent` textarea にラベル追加。i18n キー `previewContent` を日英で追加（PBI-03, Checking Team）
+
+### Changed / 変更
+
+- **docs: OBSIDIAN_SETUP_GUIDE.md を全面更新** — セクション構成・トラブルシューティング・プロトコル/ポート参照を PBI 仕様に合わせて整理
+- **docs: CONTRIBUTING.md に CI パイプライン節を追加** — ワークフロー一覧と実行条件を日英で記載
+- **docs: `docs/superpowers/` を `dev-docs/superpowers/` に移動** — 全12件の参照パスを修正
+- **chore: 全完了 PBI を `dev-docs/plans/archive-old/` にアーカイブ** — 6件の CI-PBI + 全 `tobe-yasumaro` 計画群 + `superpowers/` 内の全計画/設計書
+- **chore: 依存関係更新** — `npm update` で10パッケージを更新。テスト 5936 passed を確認
+
+---
+
 ## [6.3.7] - 2026-06-28
 
 ### Fixed / 修正
