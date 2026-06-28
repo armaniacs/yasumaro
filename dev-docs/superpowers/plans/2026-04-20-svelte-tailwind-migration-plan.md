@@ -296,7 +296,7 @@ npm run test:e2e
 
 ## Execution Options
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-20-svelte-tailwind-migration-plan.md`. Two execution options:**
+**Plan complete and saved to `dev-docs/superpowers/plans/2026-04-20-svelte-tailwind-migration-plan.md`. Two execution options:**
 
 1. **Subagent-Driven (recommended)** - dispatch fresh subagent per task
 2. **Inline Execution** - execute tasks in this session

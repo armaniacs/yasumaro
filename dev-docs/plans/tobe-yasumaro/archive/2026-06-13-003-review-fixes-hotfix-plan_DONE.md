@@ -1406,4 +1406,4 @@ See dev-docs/plans/tobe-yasumaro/2026-06-13-002-review-fixes-design.md for desig
 
 ## 次のフェーズ
 
-この Hotfix マージ後、**通常 8 トラック計画**（v5.x.1〜v5.x.3）に進む。別途 `docs/superpowers/plans/2026-06-13-review-fixes-normal-tracks.md` として作成予定。
+この Hotfix マージ後、**通常 8 トラック計画**（v5.x.1〜v5.x.3）に進む。別途 `dev-docs/superpowers/plans/2026-06-13-review-fixes-normal-tracks.md` として作成予定。
