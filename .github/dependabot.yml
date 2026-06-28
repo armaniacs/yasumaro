@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # SHA pinning: Dependabot will update the commit hash automatically
+    # when a new version of an action is released.
+    open-pull-requests-limit: 10

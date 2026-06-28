@@ -2765,5 +2765,9 @@
   },
   "sqliteAlertMessage": {
     "message": "History database initialization has failed repeatedly. Check the Diagnostics panel in settings."
+  },
+  "previewContent": {
+    "message": "Preview content",
+    "description": "aria-label for the preview content textarea"
   }
 }
