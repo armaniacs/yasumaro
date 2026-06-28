@@ -21,6 +21,12 @@ function buildDom() {
     <details id="obsidianSettingsDetails">
       <summary>Obsidian Settings</summary>
       <input id="apiKey" />
+      <div class="help-text">
+        <a id="obsidianSetupGuideLink"
+           href="https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md"
+           target="_blank" rel="noopener noreferrer"
+           data-i18n="obsidianSetupGuideLink">Obsidian設定ガイドを見る（新しいタブで開きます）</a>
+      </div>
       <input id="protocol" value="https" />
       <input id="port" value="27124" />
       <input id="dailyPath" />
@@ -195,6 +201,14 @@ describe('Dashboard — obsidianEnabledInput', () => {
     await loadGeneralSettings();
 
     expect(details.open).toBe(true);
+  });
+
+  it('Obsidian有効時にガイドリンクが表示されていること', () => {
+    const link = document.getElementById('obsidianSetupGuideLink');
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute('href')).toContain('OBSIDIAN_SETUP_GUIDE.md');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('loadGeneralSettings sets details.open based on checkbox state (unchecked)', async () => {
