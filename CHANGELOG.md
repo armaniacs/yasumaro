@@ -15,6 +15,22 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.4.1] - 2026-07-01
+
+### Changed / 変更
+
+- **docs: FAQ.md を新規作成** — よくある質問43問を日英バイラル形式で整理。7カテゴリ（基本・インストール、Obsidian連携、AI設定、プライバシーとデータ、記録の動作、トラブルシューティング、その他の機能）
+- **docs: GitHub Pages ランディングページに FAQ セクションを追加** — 日英10問のアコーディオン式FAQ・「すべての質問を見る」リンクをindex.htmlに追加。navにFAQリンクを追加
+- **docs: README.md にFAQリンクを追加** — 日英両セクションのドキュメント一覧の先頭にFAQ.mdへのリンクを追加
+- **docs: OBSIDIAN_SETUP_GUIDE.md の日本語セクションを全面改稿** — 箇条書きを廃止し流れる文章に。なぜLocal REST APIが必要か・証明書の役割・Obsidianの起動要否など周辺事情を加筆
+- **docs: STORAGE_MODES.md の開発者向け技術情報を削除** — ユーザー向けドキュメントに不要な ADRリンク・ライブラリ名・IndexedDB 中間フォールバック詳細を除去
+- **docs: CLEANSING_ORDER.md の図説を簡略化** — フロー図の変数名ブラケット・バイト計測フィールドテーブル（6行）を削除しユーザー向けに整理
+- **docs: PORT_MIGRATION.md・UBLOCK_MIGRATION.md を削除** — v5以前の移行ガイドを廃止（自動移行済み。OpenSSL/mkcert手順はLocal REST APIの自動証明書生成と矛盾するため削除）
+- **docs: USER-GUIDE-UBLOCK-IMPORT.md のナビゲーション手順を修正** — 旧UI「☰メニュー→設定」を現行UI「⚙アイコン」に更新。削除済みUBLOCK_MIGRATION.md へのリンクをインライン説明に置換
+- **docs: AGENTS.md の古い参照を削除** — 削除済み UBLOCK_MIGRATION.md のエントリを開発者ドキュメント表から削除
+
+---
+
 ## [6.4.0] - 2026-07-01
 
 ### Infrastructure / インフラ更新
