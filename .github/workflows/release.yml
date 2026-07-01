@@ -80,15 +80,19 @@ jobs:
             exit 1
           fi
 
-          PUBLISH_RESULT=$(curl -s -X POST \
+          PUBLISH_RESPONSE=$(curl -s -X POST \
             "https://www.googleapis.com/chromewebstore/v1.1/items/${EXTENSION_ID}/publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',['UNKNOWN'])[0])")
+            -H "Content-Length: 0")
+
+          echo "Publish response: ${PUBLISH_RESPONSE}"
+
+          PUBLISH_RESULT=$(echo "${PUBLISH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
 
           echo "Publish result: ${PUBLISH_RESULT}"
-          if [ "${PUBLISH_RESULT}" != "OK" ]; then
+          # OK = published, IN_REVIEW = under Google review (treated as success)
+          if [ "${PUBLISH_RESULT}" != "OK" ] && [ "${PUBLISH_RESULT}" != "IN_REVIEW" ]; then
             echo "Publish failed with result: ${PUBLISH_RESULT}"
             exit 1
           fi
