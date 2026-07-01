@@ -291,7 +291,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 | dev-docs/ERROR_CODES.md | English | Structured error code definitions |
 | CONTRIBUTING.md | Bilingual (JP/EN) | Development & contribution guide |
 | AGENTS.md | English | This file - agent-specific guidance |
-| UBLOCK_MIGRATION.md | Bilingual (JP/EN) | Migration guide |
+
 
 ### i18n Guidelines
 
