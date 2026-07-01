@@ -365,6 +365,36 @@
       font-size: 0.88em;
     }
 
+    /* ── FAQ ── */
+    .faq-section { background: var(--obsidian-mid); }
+    .faq-list { display: flex; flex-direction: column; gap: 0; margin-top: 2rem; border: 1px solid var(--obsidian-light); border-radius: var(--radius); overflow: hidden; }
+    .faq-item { border-bottom: 1px solid var(--obsidian-light); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 1.1rem 1.4rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: rgba(255,255,255,0.04); }
+    .faq-q .chevron { font-size: 0.8rem; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+    .faq-q[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .faq-a { display: none; padding: 0 1.4rem 1.1rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; }
+    .faq-a a { color: var(--purple-light); }
+    .faq-q[aria-expanded="true"] + .faq-a { display: block; }
+    .faq-more { margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
+    .faq-more a { color: var(--purple-light); font-weight: 600; }
+
     /* ── Footer ── */
     footer {
       padding: 2.5rem 1.5rem;
@@ -400,6 +430,7 @@
     <a href="#how" data-i18n="nav.how">使い方</a>
 
     <a href="#install" data-i18n="nav.install">インストール</a>
+    <a href="#faq" data-i18n="nav.faq">FAQ</a>
   </div>
   <div class="nav-right">
     <div class="lang-toggle" role="group" aria-label="Language">
@@ -514,6 +545,18 @@
   </div>
 </section>
 
+<!-- FAQ -->
+<section id="faq" class="faq-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 data-i18n="faq.title">よくある質問</h2>
+      <p data-i18n="faq.sub">よく寄せられる質問に答えます。</p>
+    </div>
+    <div id="faq-list" class="faq-list"></div>
+    <p class="faq-more"><a id="faq-link" href="https://github.com/armaniacs/yasumaro/blob/main/docs/FAQ.md" data-i18n="faq.more">全ての質問を見る →</a></p>
+  </div>
+</section>
+
 <!-- Footer -->
 <footer>
   <span data-i18n="footer.copy">© 2026 Yasumaro — MIT License</span>
@@ -555,6 +598,10 @@ const TRANSLATIONS = {
     "install.cta.obsidian": "Obsidian連携ガイド →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "プライバシー",
+    "nav.faq": "FAQ",
+    "faq.title": "よくある質問",
+    "faq.sub": "利用前の疑問から設定トラブルまで、よく寄せられる質問をまとめています。",
+    "faq.more": "すべての質問を見る →",
     "meta.title": "Yasumaro — ブラウザ閲覧履歴をAI要約付きでObsidian / SQLite / Markdown へ",
     "meta.desc": "ブラウザで読んだページをAIが自動要約し、Obsidian / SQLite / Markdown など好みの保存先に記録するChrome拡張機能。Groq・Gemini・OpenAI・Anthropic・ローカルLLM対応。",
   },
@@ -585,6 +632,10 @@ const TRANSLATIONS = {
     "install.cta.obsidian": "Obsidian Setup Guide →",
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "Privacy",
+    "nav.faq": "FAQ",
+    "faq.title": "Frequently Asked Questions",
+    "faq.sub": "Answers to common questions, from first setup to troubleshooting.",
+    "faq.more": "See all FAQs →",
     "meta.title": "Yasumaro — Save browsing history to Obsidian / SQLite / Markdown with AI summaries",
     "meta.desc": "A Chrome extension that auto-summarizes web pages with AI and saves them to Obsidian, SQLite, Markdown, or your storage of choice. Supports Groq, Gemini, OpenAI, Anthropic, and local LLMs.",
   }
@@ -750,6 +801,110 @@ function renderDemo() {
   document.getElementById('demo-note').innerHTML = DEMO_NOTE[currentLang];
 }
 
+const FAQ_ITEMS = {
+  ja: [
+    {
+      q: "Yasumaro とは何ですか？",
+      a: "閲覧したウェブページを自動検出し、AI要約を付けて Obsidian・SQLite・Markdown ファイルなどに保存する Chrome 拡張機能です。"
+    },
+    {
+      q: "Obsidian がなくても使えますか？",
+      a: "はい。SQLite（OPFS）やローカル Markdown ファイルへの保存も選択できます。Obsidian は必須ではありません。"
+    },
+    {
+      q: "AI 機能は必須ですか？APIキーがないと使えませんか？",
+      a: "AIは任意です。APIキーを設定しなくても、タイトル・URL・閲覧時間などのメタデータだけを記録できます。"
+    },
+    {
+      q: "どのAIプロバイダーに対応していますか？",
+      a: "Groq・Gemini・OpenAI・Anthropic・OpenAI互換API（Ollama、LM Studio など）に対応しています。ローカルLLMも利用可能です。"
+    },
+    {
+      q: "データはどこに保存されますか？外部サーバーに送られますか？",
+      a: "すべてのデータはユーザーのデバイス内で処理されます。AI要約を利用する場合のみ、選択したAIプロバイダーのAPIに送信されます。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>プライバシーポリシー</a> を参照してください。"
+    },
+    {
+      q: "Obsidian に接続できず「証明書エラー」が出ます。",
+      a: "Obsidian Local REST API プラグインの HTTPS を有効にした場合、自己署名証明書が使用されます。Chrome で <code>https://127.0.0.1:27124</code> を開いて証明書を手動で許可してください。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidianセットアップガイド</a> を参照してください。"
+    },
+    {
+      q: "個人情報（PII）が記録されないか心配です。",
+      a: "PII マスク機能があり、氏名・メールアドレス・電話番号などを自動的に置換できます。銀行・メールなどのプライベートページは自動検出し確認ダイアログを表示します。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md'>PIIマスク機能ガイド</a> へ。"
+    },
+    {
+      q: "特定のサイトを記録しないようにしたい。",
+      a: "ドメインフィルター機能でブラックリストを設定できます。uBlock Origin 形式のフィルターリストのインポートにも対応しています。"
+    },
+    {
+      q: "手動でページを記録することはできますか？",
+      a: "はい。拡張機能のポップアップにある「今すぐ記録」ボタンから即座に記録できます。ブラックリストドメインも「それでも記録」で上書き可能です。"
+    },
+    {
+      q: "Obsidian が起動していないと記録されませんか？",
+      a: "Obsidian 保存モードを使う場合、Obsidian アプリが起動していて Local REST API プラグインが有効になっている必要があります。SQLite や Markdown モードでは不要です。"
+    },
+  ],
+  en: [
+    {
+      q: "What is Yasumaro?",
+      a: "A Chrome extension that automatically detects web pages you actually read and saves them — with AI summaries — to Obsidian, SQLite, or local Markdown files."
+    },
+    {
+      q: "Can I use it without Obsidian?",
+      a: "Yes. You can choose SQLite (OPFS) or local Markdown files as your storage backend. Obsidian is not required."
+    },
+    {
+      q: "Is AI required? What if I don't have an API key?",
+      a: "AI is entirely optional. Without an API key, Yasumaro still records metadata such as title, URL, and time spent."
+    },
+    {
+      q: "Which AI providers are supported?",
+      a: "Groq, Gemini, OpenAI, Anthropic, and any OpenAI-compatible API (Ollama, LM Studio, etc.). Local LLMs are fully supported."
+    },
+    {
+      q: "Where is my data stored? Is anything sent to external servers?",
+      a: "All data is processed on your device. Content is sent to the AI provider's API only if you have configured one. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>Privacy Policy</a> for details."
+    },
+    {
+      q: "I get a certificate error when connecting to Obsidian.",
+      a: "When HTTPS is enabled in the Obsidian Local REST API plugin, a self-signed certificate is used. Open <code>https://127.0.0.1:27124</code> in Chrome and manually trust the certificate. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidian Setup Guide</a> for step-by-step instructions."
+    },
+    {
+      q: "I'm worried about personal information (PII) being recorded.",
+      a: "Yasumaro has a built-in PII masking feature that replaces names, email addresses, phone numbers, etc. Private pages such as banking and email are auto-detected and show a confirmation dialog. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md'>PII Feature Guide</a>."
+    },
+    {
+      q: "How do I stop certain sites from being recorded?",
+      a: "Use the domain filter to configure a blacklist. You can also import uBlock Origin-format filter lists directly."
+    },
+    {
+      q: "Can I record a page manually?",
+      a: "Yes. Click the 'Record Now' button in the extension popup to record any page instantly. Blacklisted domains can be overridden with 'Record Anyway'."
+    },
+    {
+      q: "Does Obsidian need to be running for recording to work?",
+      a: "Only when using the Obsidian storage mode — Obsidian must be open with the Local REST API plugin active. SQLite and Markdown modes work independently."
+    },
+  ]
+};
+
+function renderFAQ() {
+  const items = FAQ_ITEMS[currentLang];
+  document.getElementById('faq-list').innerHTML = items.map((item, i) => `
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" onclick="toggleFAQ(this)">
+        <span>${item.q}</span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="faq-a" id="faq-a-${i}">${item.a}</div>
+    </div>`).join('');
+}
+
+function toggleFAQ(btn) {
+  const expanded = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!expanded));
+}
+
 function renderAll() {
   renderText();
   renderFeatures();
@@ -757,6 +912,7 @@ function renderAll() {
   renderSteps();
   renderInstallSteps();
   renderDemo();
+  renderFAQ();
 
   document.documentElement.lang = currentLang;
   document.title = t('meta.title');
