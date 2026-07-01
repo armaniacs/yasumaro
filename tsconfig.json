@@ -22,15 +22,6 @@
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
-        "baseUrl": ".",
-        "paths": {
-            "src/*": [
-                "src/*"
-            ],
-            "@/*": [
-                "src/*"
-            ]
-        },
         "types": [
           "chrome",
           "vitest",

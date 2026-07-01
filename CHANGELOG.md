@@ -15,11 +15,11 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
-## [6.3.9] - 2026-06-29
+## [6.4.0] - 2026-07-01
 
-### Chores / その他
+### Infrastructure / インフラ更新
 
-- **ルート `plans/` を整理** — 5件のレビューレポートを `dev-docs/plans/archive-old/` に移動。ルート `plans/` ディレクトリを削除し、全計画系ファイルを `dev-docs/` 配下に統一
+- **TypeScript 5.9.3 → 6.0.3 にアップグレード** — 非推奨となった `tsconfig.json` の `baseUrl` / `paths` 設定を削除（コード内で未使用のため）。5936 tests passing を確認
 
 ---
 
