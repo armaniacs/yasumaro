@@ -58,6 +58,7 @@ video-*/
 # Build artifacts
 coverage/
 *.zip
+*.crx
 *.tar.gz
 yasumaro-*.zip
 

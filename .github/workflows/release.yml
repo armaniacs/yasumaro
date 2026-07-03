@@ -35,12 +35,21 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Build for Chrome
         run: npx wxt zip -b chrome
+      - name: Sign CRX with private key
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
+          npx crx3 dist/chrome-mv3/ \
+            --key /tmp/private.pem \
+            --crx dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
+          rm /tmp/private.pem
       - name: Build for Firefox
         run: npx wxt zip -b firefox
       - name: Build for Edge
         run: npx wxt zip -b edge
       - name: List output archives
-        run: ls -la dist/*.zip
+        run: ls -la dist/*.zip dist/*.crx
       - name: Create Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
@@ -51,7 +60,10 @@ jobs:
 
             See [CHANGELOG.md](https://github.com/armaniacs/Yasumaro/blob/main/CHANGELOG.md) for details.
           files: |
-            dist/*.zip
+            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip
+            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
+            dist/yasumaro-${{ steps.version.outputs.version }}-firefox.zip
+            dist/yasumaro-${{ steps.version.outputs.version }}-edge.zip
           draft: false
           prerelease: false
 
@@ -61,7 +73,7 @@ jobs:
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          ZIP_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip
+          ZIP_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
         run: |
           ACCESS_TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
             -d "client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&refresh_token=${REFRESH_TOKEN}&grant_type=refresh_token" \

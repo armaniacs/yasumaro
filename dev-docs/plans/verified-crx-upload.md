@@ -33,28 +33,27 @@ Chrome Web Store の「検証済みCRXアップロード」を有効化し、CI/
 
 ### 3. release.yml に署名ステップを追加
 
-`npx wxt zip -b chrome` でZIPを生成した後、以下の手順でCRXに変換・署名する：
+`npx wxt zip -b chrome` でZIPを生成した後、`dist/chrome-mv3/` ディレクトリを `crx3` で署名する：
 
 ```yaml
-- name: Sign CRX with private key
-  env:
-    CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
-  run: |
-    echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
-    # WXT が生成した ZIP を CRX に変換・署名
-    npx crx pack dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip \
-      --private-key /tmp/private.pem \
-      --output dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
-    rm /tmp/private.pem
+      - name: Sign CRX with private key
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
+          npx crx3 dist/chrome-mv3/ \
+            --key /tmp/private.pem \
+            --crx dist/yasumaro-\${{ steps.version.outputs.version }}-chrome.crx
+          rm /tmp/private.pem
 ```
+
+> **備考**: `crx3` npm パッケージ（v2.0.0）を使用。`crx`（v5.0.1）は deprecated のため非推奨。WXT に CRX 署名機能は組み込まれていない。
 
 そして Chrome Web Store API へのアップロードを ZIP → CRX に変更：
 
 ```yaml
 ZIP_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx  # .zip → .crx
 ```
-
-> **注意**: CRX 署名ツールの選定は要検証。`crx` npm パッケージ、`chrome-webstore-upload` の対応状況などを確認すること。WXT に CRX 署名機能が組み込まれている場合はそちらを優先。
 
 ### 4. 動作確認
 
