@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.4.2` リリース。次の安定化リリースは `v6.4.x` となる。
+> - 現時点では `v6.5.0` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,26 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.0] - 2026-07-04
+
+### Fixed / 修正
+
+- **本番コードから `any` 型を全 8 箇所排除** — 型健全性を損なう `any` の使用を徹底的に排除。各修正方針は以下の通り:
+  - `extractor.ts`: `throttle` のジェネリック制約 `(...args: any[])` → `(...args: unknown[])` に置換
+  - `sqlite.ts`: `type WaSqliteAPI = any` を削除し、wa-sqlite の `SQLiteAPI` 型（グローバル宣言）を直接採用。併せて `SqliteValue` 型を `SQLiteCompatibleType` に合わせて `bigint` / `Array<number>` を追加。`IDBBatchAtomicVFS` のシグネチャ差異には明示的なキャストで対応
+  - `sqlite.ts`: `typeof (globalThis as any).Worker` を `'Worker' in globalThis` に変更（`in` 演算子による型安全な存在確認）
+  - `retryHelper.ts`: `#sendOnce(): Promise<any>` → `Promise<unknown>` に変更。呼び出し元で `as ServiceWorkerResponse` キャスト済み
+  - `ublockMatcher.ts`: `Record<string, any>` を具体型 `UblockRuleOptions` interface（`domains`, `negatedDomains`, `thirdParty`, `firstParty`）に置換。`evaluateOptions` 内の型安全性も向上
+  - `interfaces/index.ts`: `IRecordingLogic.record()` の `Record<string, any>` → `Record<string, unknown>`。`IPrivacyPipeline.process()` の `Record<string, any>` → 新設の `PipelineProcessOptions` interface に置換
+  - `ProviderStrategy.ts`: `as Record<string, any>` → `as Record<string, ProviderSpecificSettings> | undefined` に変更。ネストされたプロパティへのアクセスをオプショナルチェーンで型安全に
+- **CI: release.yml の Chrome Web Store アップロードファイルを修正** — CWS API が `.zip` を要求するのに対し `.crx` を指定していたため `FAILURE` していた問題を修正
+
+### Changed / 変更
+
+- **JSDoc コメント内の `any` 表記を修正** — `piiSanitizer.ts`, `logger.ts` の JSDoc 型表記を実際のシグネチャに合わせて更新
+
+---
 
 ## [6.4.4] - 2026-07-04
 

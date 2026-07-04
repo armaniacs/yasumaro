@@ -14,10 +14,9 @@ import { StorageKeys } from '../utils/storage/types.js';
 
 // The wa-sqlite package uses ambient type declarations for SQLiteAPI and SQLiteCompatibleType
 // that are not directly exported. We define local aliases for the types we need.
+// SQLiteCompatibleType from wa-sqlite: number | string | Uint8Array | Array<number> | bigint | null
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type SqliteValue = number | string | Uint8Array | null;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type WaSqliteAPI = any;
+type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
 
 /** Column names allowed in ORDER BY clauses (prevents SQL injection). */
 const ALLOWED_ORDER_COLUMNS = [
@@ -44,7 +43,7 @@ import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sql
 // ============================================================================
 
 let dbHandle: number | null = null;
-let sqlite3: WaSqliteAPI | null = null;
+let sqlite3: SQLiteAPI | null = null;
 let initPromise: Promise<boolean> | null = null;
 let usingFallbackStorage = false;
 let fallbackStorage: FallbackStorage | null = null;
@@ -74,7 +73,7 @@ function isOpfsAvailable(): boolean {
 
 function canCreateWorker(): boolean {
   try {
-    return typeof (globalThis as any).Worker !== 'undefined';
+    return 'Worker' in globalThis;
   } catch {
     return false;
   }
@@ -230,7 +229,9 @@ async function _doInit(): Promise<boolean> {
       (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
     }
 
-    sqlite3.vfs_register(vfs, true);
+    // IDBBatchAtomicVFS の xRead シグネチャが SQLiteVFS と異なる場合があるためキャスト
+    // wa-sqlite の example VFS と本体の型定義のバージョン差異によるもの
+    sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
 
     // Open the database on IndexedDB
     dbHandle = await sqlite3.open_v2(

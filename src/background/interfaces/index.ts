@@ -134,7 +134,16 @@ export interface IRecordingLogic {
      * @param url - 記録するURL
      * @param options - 記録オプション
      */
-    record(url: string, options?: Record<string, any>): Promise<{ success: boolean, message: string }>;
+    record(url: string, options?: Record<string, unknown>): Promise<{ success: boolean, message: string }>;
+}
+
+/**
+ * プライバシーパイプラインのオプション
+ */
+export interface PipelineProcessOptions {
+    previewOnly?: boolean;
+    alreadyProcessed?: boolean;
+    tagSummaryMode?: boolean;
 }
 
 /**
@@ -143,11 +152,9 @@ export interface IRecordingLogic {
  */
 export interface IPrivacyPipeline {
     /**
-     * コンテンツをパイプラインで処理する
-     * @param content - 処理するコンテンツ
-     * @param options - 処理オプション
+     * プライバシーパイプラインのオプション
      */
-    process(content: string, options?: Record<string, any>): Promise<{ summary: string, preview?: string }>;
+    process(content: string, options?: PipelineProcessOptions): Promise<{ summary: string, preview?: string }>;
 }
 
 /**

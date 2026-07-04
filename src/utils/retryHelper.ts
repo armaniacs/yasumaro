@@ -146,9 +146,9 @@ export class ChromeMessageSender {
      * メッセージを1回だけ送信（リトライなし）
      * @private
      * @param {Message} message
-     * @returns {Promise<any>}
+     * @returns {Promise<unknown>}
      */
-    #sendOnce(message: Message): Promise<any> {
+    #sendOnce(message: Message): Promise<unknown> {
         return new Promise((resolve, reject) => {
             if (!chrome?.runtime?.sendMessage) {
                 reject(new Error('Extension context invalidated'));
