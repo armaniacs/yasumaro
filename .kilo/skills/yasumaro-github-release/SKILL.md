@@ -18,6 +18,7 @@ mistakes that have happened in the past:
 - Linking to the old repository **"armaniacs/obsidian-weave"**
 - Forgetting to update `CHANGELOG.md`
 - Publishing a release with mismatched version numbers
+- Forgetting to update the GitHub Pages version badge in `docs/index.html`
 
 ## Brand Guardrails
 
@@ -70,6 +71,11 @@ Run these steps before creating the tag or release:
    - If there are uncommitted changes relevant to the release, commit them.
    - Never create a release tag on a dirty working tree unless the user explicitly says to.
 
+5. **GitHub Pages version badge**
+   - Read `docs/index.html` and find the version badge (`<span class="badge">vX.Y.Z</span>`).
+   - Ensure it matches the version you are about to release.
+   - If it is outdated, update it and commit the change before tagging.
+
 ## Release Workflow
 
 Follow these steps in order:
@@ -110,6 +116,7 @@ in `CHANGELOG.md`.
 - Do not create a tag before committing pending changes.
 - Do not ignore version-consistency test failures.
 - Do not add extra narrative to the release body that is not in `CHANGELOG.md`.
+- Do not forget to update the GitHub Pages version badge (`docs/index.html`) — it is a hardcoded string that does not auto-update.
 
 ## After Release
 
@@ -118,5 +125,7 @@ Verify the release by opening `https://github.com/armaniacs/yasumaro/releases/ta
 - The release title says "Yasumaro v..."
 - The CHANGELOG link points to `armaniacs/Yasumaro`
 - The body contains the correct changelog entry
+
+Also open `https://armaniacs.github.io/yasumaro/` and verify the version badge in the nav bar shows the correct version.
 
 If anything is wrong, delete and recreate the release with the corrected notes.

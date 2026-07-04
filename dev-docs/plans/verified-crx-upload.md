@@ -11,7 +11,7 @@ Chrome Web Store の「検証済みCRXアップロード」を有効化し、CI/
 
 ## 現状（2026-07-01 時点）
 
-- RSA 鍵ペアを生成済み（ローカルに `yasumaro-private.pem` / `yasumaro-public.pem`）
+- RSA 鍵ペアを生成済み（秘密鍵は `~/Secrets/obsidian-smart-history/yasumaro-private.pem` に保管〔2026-07-04 リポジトリ直下から退避〕、公開鍵はリポジトリ直下 `yasumaro-public.pem`）
 - Chrome Web Store ダッシュボードの「有効にする」ボタンは審査中のためグレーアウト中
 - 審査完了待ち（contextMenus パーミッションの正当な理由を提出済み）
 

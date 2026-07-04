@@ -15,6 +15,16 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.4.3] - 2026-07-04
+
+### Documentation / ドキュメント
+
+- **docs: TRUST_DOMAIN_GUIDE.md を新規作成** — Yasumaro のドメイン信頼度判定機能を日英バイリンガルで詳細解説。Trust Level、3-Step Verification、Safety Mode、Alert Settings、カスタムリスト、Tranco 更新、プライバシー・セキュリティ、トラブルシューティングを網羅
+- **docs: TRUST_DOMAIN_GUIDE.md の LOCKED レベル説明を修正** — スキーマ上は存在するが、現時点の通常判定フローでは返されない将来拡張用レベルであることを正確に記載
+- **blog: Zenn 向け記事を新規作成** — `articles/domain-trust-evaluation.md` を追加。ユーザー向けの使い方と開発者向けの設計思想を両方含めた形式
+
+---
+
 ## [6.4.2] - 2026-07-04
 
 ### Added / 追加
