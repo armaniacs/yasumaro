@@ -28,6 +28,7 @@ import { ModelsDevDialog } from './models-dev-dialog.js';
 import { CSPSettings } from './cspSettings.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from './masterPassword.js';
+import { queryLogs } from './dashboardSqliteService.js';
 import { initExportImport } from './exportImport.js';
 import { initDomainFilterTagUI } from './domainFilterTagUI.js';
 import { initTagsPanel } from './tagsPanel.js';
@@ -195,6 +196,11 @@ let _domElements: {
   sqliteRetentionDaysSelect: HTMLSelectElement | null;
   sqliteMaxRecordsSelect: HTMLSelectElement | null;
   purgeNowBtn: HTMLButtonElement | null;
+  localMarkdownExportEnabledInput: HTMLInputElement | null;
+  localMarkdownExportAutoEnabledInput: HTMLInputElement | null;
+  localMarkdownExportPathInput: HTMLInputElement | null;
+  localMarkdownExportSettingsDiv: HTMLElement | null;
+  testLocalMarkdownBtn: HTMLButtonElement | null;
 } | null = null;
 
 export function resetDashboardElements(): void {
@@ -239,6 +245,11 @@ export function getDashboardElements() {
       sqliteRetentionDaysSelect: document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null,
       sqliteMaxRecordsSelect: document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null,
       purgeNowBtn: document.getElementById('purgeNowBtn') as HTMLButtonElement | null,
+      localMarkdownExportEnabledInput: document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null,
+      localMarkdownExportAutoEnabledInput: document.getElementById('localMarkdownExportAutoEnabled') as HTMLInputElement | null,
+      localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
+      localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
+      testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
     };
   }
   return _domElements ?? {
@@ -254,6 +265,9 @@ export function getDashboardElements() {
     providerModelInput: null, saveBtn: null,
     testObsidianBtn: null, testAiBtn: null, statusDiv: null, statusTopDiv: null,
     sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
+    localMarkdownExportEnabledInput: null, localMarkdownExportAutoEnabledInput: null,
+    localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
+    testLocalMarkdownBtn: null,
   };
 }
 
@@ -296,6 +310,9 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
     [StorageKeys.SQLITE_RETENTION_DAYS]: el.sqliteRetentionDaysSelect,
     [StorageKeys.SQLITE_MAX_RECORDS]: el.sqliteMaxRecordsSelect,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: el.localMarkdownExportAutoEnabledInput,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,
   };
 }
 
@@ -322,6 +339,12 @@ export async function loadGeneralSettings(): Promise<void> {
   const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
   if (details && el.obsidianEnabledInput) {
     details.open = el.obsidianEnabledInput.checked;
+  }
+
+  // Sync Local Markdown Export settings visibility with checkbox
+  const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
+  if (localExportSettingsDiv && el.localMarkdownExportEnabledInput) {
+    localExportSettingsDiv.classList.toggle('hidden', !el.localMarkdownExportEnabledInput.checked);
   }
 
   // Load openai-compatible provider selection
@@ -504,6 +527,300 @@ export async function handleTestAi(): Promise<void> {
     syncStatusToTop();
   } finally {
     el.testAiBtn.disabled = false;
+  }
+}
+
+export async function handleTestLocalMarkdown(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.testLocalMarkdownBtn || !el.statusTopDiv) return;
+
+  el.statusTopDiv.innerHTML = '';
+  el.statusTopDiv.className = '';
+  el.statusTopDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+
+  el.testLocalMarkdownBtn.disabled = true;
+  try {
+    // Save current settings first
+    const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const currentSettings = await getSettings();
+    const mergedSettings = { ...currentSettings, ...newSettings };
+    await saveSettingsWithAllowedUrls(mergedSettings);
+
+    // Check if enabled
+    const localExportEnabled = mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
+    if (!localExportEnabled) {
+      el.statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
+      el.statusTopDiv.className = 'error';
+      return;
+    }
+
+    // Create test content
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
+
+    // Download test file
+    const exportPath = (mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const blob = new Blob([testContent], { type: 'text/markdown' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    await chrome.downloads.download({
+      url: blobUrl,
+      filename: `${exportPath}/test-${date}.md`,
+      saveAs: false,
+      conflictAction: 'overwrite'
+    });
+
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+    el.statusTopDiv.textContent = getMessage('testLocalMarkdownSuccess') || 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました';
+    el.statusTopDiv.className = 'success';
+  } catch (e) {
+    el.statusTopDiv.textContent = getMessage('testLocalMarkdownError') || 'ローカルMarkdown書き出しテストに失敗しました';
+    el.statusTopDiv.className = 'error';
+  } finally {
+    el.testLocalMarkdownBtn.disabled = false;
+  }
+}
+
+/**
+ * Format a single browsing log entry as markdown
+ */
+function formatEntryToMarkdown(entry: { title?: string | null; url: string; summary?: string | null; created_at: number }): string {
+  const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const title = entry.title || entry.url || 'Untitled';
+  const summary = (entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+  return `- ${timestamp} [${title}](${entry.url})\n    - ${summary}`;
+}
+
+/**
+ * Get local date string (YYYY-MM-DD) from timestamp
+ */
+function getLocalDateString(timestamp: number): string {
+  const d = new Date(timestamp);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Handle manual local markdown export with date range
+ */
+export async function handleManualLocalMarkdownExport(): Promise<void> {
+  const startDateInput = document.getElementById('localExportStartDate') as HTMLInputElement | null;
+  const endDateInput = document.getElementById('localExportEndDate') as HTMLInputElement | null;
+  const exportBtn = document.getElementById('localExportManualBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('localExportManualStatus') as HTMLElement | null;
+
+  if (!exportBtn || !statusEl) return;
+
+  exportBtn.disabled = true;
+  statusEl.textContent = '';
+  statusEl.className = '';
+
+  try {
+    const settings = await getSettings();
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+
+    // Parse date range (YYYY-MM-DD format from date input)
+    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
+    const endDate = endDateInput?.value || startDate;
+
+    // Create timestamps at start of start date and end of end date in local timezone
+    const since = new Date(startDate + 'T00:00:00').getTime();
+    const until = new Date(endDate + 'T23:59:59').getTime();
+
+    statusEl.textContent = '查询中...';
+
+    // Query SQLite for records in date range
+    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
+
+    if (!result || result.rows.length === 0) {
+      statusEl.textContent = '指定期間に記録がありません。';
+      statusEl.className = 'error';
+      return;
+    }
+
+    // Group entries by local date
+    const entriesByDate = new Map<string, typeof result.rows>();
+    for (const row of result.rows) {
+      const date = getLocalDateString(row.created_at);
+      if (!entriesByDate.has(date)) {
+        entriesByDate.set(date, []);
+      }
+      entriesByDate.get(date)!.push(row);
+    }
+
+    // Generate markdown for each date
+    let totalFiles = 0;
+    for (const [date, entries] of entriesByDate) {
+      const header = `# ${date}`;
+      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
+
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      await chrome.downloads.download({
+        url: blobUrl,
+        filename: `${exportPath}/${date}.md`,
+        saveAs: false,
+        conflictAction: 'overwrite'
+      });
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      totalFiles++;
+    }
+
+    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.className = 'success';
+  } catch (e) {
+    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
+    statusEl.className = 'error';
+  } finally {
+    exportBtn.disabled = false;
+  }
+}
+
+/**
+ * Handle local markdown export from Export Logs panel (date range)
+ */
+export async function handleExportLocalMarkdown(): Promise<void> {
+  const startDateInput = document.getElementById('exportLocalStartDate') as HTMLInputElement | null;
+  const endDateInput = document.getElementById('exportLocalEndDate') as HTMLInputElement | null;
+  const exportBtn = document.getElementById('exportLocalMarkdownBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('exportLocalMarkdownStatus') as HTMLElement | null;
+
+  if (!exportBtn || !statusEl) return;
+
+  exportBtn.disabled = true;
+  statusEl.textContent = '';
+  statusEl.className = '';
+
+  try {
+    const settings = await getSettings();
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+
+    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
+    const endDate = endDateInput?.value || startDate;
+
+    const since = new Date(startDate + 'T00:00:00').getTime();
+    const until = new Date(endDate + 'T23:59:59').getTime();
+
+    statusEl.textContent = '查询中...';
+
+    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
+
+    if (!result || result.rows.length === 0) {
+      statusEl.textContent = '指定期間に記録がありません。';
+      statusEl.className = 'error';
+      return;
+    }
+
+    const entriesByDate = new Map<string, typeof result.rows>();
+    for (const row of result.rows) {
+      const date = getLocalDateString(row.created_at);
+      if (!entriesByDate.has(date)) {
+        entriesByDate.set(date, []);
+      }
+      entriesByDate.get(date)!.push(row);
+    }
+
+    let totalFiles = 0;
+    for (const [date, entries] of entriesByDate) {
+      const header = `# ${date}`;
+      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
+
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      await chrome.downloads.download({
+        url: blobUrl,
+        filename: `${exportPath}/${date}.md`,
+        saveAs: false,
+        conflictAction: 'overwrite'
+      });
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      totalFiles++;
+    }
+
+    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.className = 'success';
+  } catch (e) {
+    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
+    statusEl.className = 'error';
+  } finally {
+    exportBtn.disabled = false;
+  }
+}
+
+/**
+ * Handle local markdown export from History panel (all records)
+ */
+export async function handleHistoryExportLocalMarkdown(): Promise<void> {
+  const exportBtn = document.getElementById('historyExportLocalMarkdownBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('historyExportLocalMarkdownStatus') as HTMLElement | null;
+
+  if (!exportBtn || !statusEl) return;
+
+  exportBtn.disabled = true;
+  statusEl.textContent = '';
+  statusEl.className = '';
+
+  try {
+    const settings = await getSettings();
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+
+    statusEl.textContent = '查询中...';
+
+    const result = await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
+
+    if (!result || result.rows.length === 0) {
+      statusEl.textContent = 'エクスポートする記録がありません。';
+      statusEl.className = 'error';
+      return;
+    }
+
+    const entriesByDate = new Map<string, typeof result.rows>();
+    for (const row of result.rows) {
+      const date = getLocalDateString(row.created_at);
+      if (!entriesByDate.has(date)) {
+        entriesByDate.set(date, []);
+      }
+      entriesByDate.get(date)!.push(row);
+    }
+
+    let totalFiles = 0;
+    for (const [date, entries] of entriesByDate) {
+      const header = `# ${date}`;
+      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
+
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      await chrome.downloads.download({
+        url: blobUrl,
+        filename: `${exportPath}/${date}.md`,
+        saveAs: false,
+        conflictAction: 'overwrite'
+      });
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      totalFiles++;
+    }
+
+    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.className = 'success';
+  } catch (e) {
+    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
+    statusEl.className = 'error';
+  } finally {
+    exportBtn.disabled = false;
   }
 }
 
@@ -695,6 +1012,9 @@ function initExportLogsPanel(): void {
       showStatus(`Export failed: ${err}`, true);
     }
   });
+
+  // Local Markdown export from Export Logs panel
+  document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
 }
 
 // ============================================================================
@@ -747,6 +1067,15 @@ function initExportLogsPanel(): void {
   if (obsidianEnabledInput && obsidianDetails) {
     obsidianEnabledInput.addEventListener('change', () => {
       obsidianDetails.open = obsidianEnabledInput.checked;
+    });
+  }
+
+  // Local Markdown Export enabled checkbox → settings visibility
+  const localExportEnabledInput = document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null;
+  const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
+  if (localExportEnabledInput && localExportSettingsDiv) {
+    localExportEnabledInput.addEventListener('change', () => {
+      localExportSettingsDiv.classList.toggle('hidden', !localExportEnabledInput.checked);
     });
   }
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
@@ -865,6 +1194,8 @@ function initExportLogsPanel(): void {
       await handleTestAi();
     });
 
+    document.getElementById('testLocalMarkdownBtnBottom')?.addEventListener('click', handleTestLocalMarkdown);
+
     el.purgeNowBtn?.addEventListener('click', async () => {
       await handlePurgeNow();
     });
@@ -903,6 +1234,10 @@ function initExportLogsPanel(): void {
     bindTopButton('saveTop', handleSaveOnly);
     bindTopButton('testObsidianBtnTop', handleTestObsidian);
     bindTopButton('testAiBtnTop', handleTestAi);
+    bindTopButton('testLocalMarkdownBtnTop', handleTestLocalMarkdown);
+
+    // Manual local markdown export button
+    document.getElementById('localExportManualBtn')?.addEventListener('click', handleManualLocalMarkdownExport);
   }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
@@ -913,6 +1248,9 @@ function initExportLogsPanel(): void {
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
+
+  // History panel local markdown export button
+  document.getElementById('historyExportLocalMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
 
   console.log('[Dashboard] Initialization complete');

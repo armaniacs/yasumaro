@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.1` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.2` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,38 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.2] - 2026-07-05
+
+### Added / 追加
+
+- **ローカル Markdown 書き出し機能を追加** — PBI #07: Obsidian REST API を導入せずに、閲覧履歴を日次 Markdown ファイルとしてブラウザのダウンロードフォルダに保存する機能
+  - **パイプラインステップ**: `saveLocalMarkdownStep`（Step 9）を新規追加。BEST_EFFORT 戦略で Obsidian と独立動作
+  - **自動書き出し**: 記録条件を満たしたページの記録時に、日次ファイルを自動ダウンロード
+  - **手動エクスポート**: 開始日/終了日を指定して SQLite 履歴を Markdown に変換。ダッシュボード「初期設定」「ログをエキスポート」「履歴」の3箇所から利用可能
+  - **2段階トグル設計**: 「書き出す」（機能ON/OFF）と「自動で書き出す」（自動書き出しON/OFF）を分離。手動のみの利用にも対応
+  - **テストボタン**: ダッシュボードの上部・下部ボタン行に「ローカルMarkdownテスト」を配置。テスト用 Markdown ファイルをダウンロード
+  - **ファイル形式**: `~/Downloads/Yasumaro/YYYY-MM-DD.md`。`conflictAction: 'overwrite'` で日次ファイルを上書き
+  - **ローカルタイムゾーン対応**: 日付のグループ化・ファイル名生成をローカルタイムゾーンで処理
+
+### Changed / 変更
+
+- **ダッシュボード設定パネルに「ローカル Markdown 書き出し」セクションを追加** — 初期設定パネルにトグル・フォルダ設定・手動エクスポート UI を追加
+- **「ログをエキスポート」「履歴」パネルに Markdown 書き出しボタンを追加** — 既存パネルからもローカル Markdown 書き出しが可能に
+- **ダッシュボードの英語 i18n 不足キーを補完** — Export Logs パネル、Recording Conditions パネルのボタン・説明文に `data-i18n` 属性を追加。動的レンダリングで `getMessage()` を直接使用するよう修正
+- **`downloads` 権限を追加** — `chrome.downloads.download()` の使用に必要な権限を `wxt.config.ts` に追加
+
+### Fixed / 修正
+
+- **`URL.createObjectURL` が Service Worker で使用できない問題を修正** — data URL 方式に変更して `chrome.downloads.download()` に対応
+- **日付のタイムゾーンずれを修正** — `saveLocalMarkdownStep` と `handleManualLocalMarkdownExport` で `toISOString()`（UTC）からローカルタイムゾーンの日付生成に変更
+
+### Documentation / ドキュメント
+
+- **`docs/MARKDOWN_DOWNLOAD.md` を新規作成** — ローカル Markdown 書き出しの日英ユーザーガイド。動作モード、設定方法、ファイル形式、トラブルシューティングを網羅
+- **`docs/FAQ.md` に Q44・Q45 を追加** — Obsidian なしでの Markdown 書き出し、ダウンロード通知の非表示化方法を日英で追加
+
+---
 
 ## [6.5.1] - 2026-07-04
 

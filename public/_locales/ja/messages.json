@@ -1514,6 +1514,30 @@
   "obsidianSetupGuideLink": {
     "message": "Obsidian設定ガイドを見る（新しいタブで開きます）"
   },
+  "localMarkdownExportSection": {
+    "message": "ローカル Markdown 書き出し"
+  },
+  "localMarkdownExportEnabledLabel": {
+    "message": "ローカル Markdown に書き出す"
+  },
+  "localMarkdownExportEnabledHelp": {
+    "message": "閲覧履歴を日次 Markdown ファイルとしてブラウザのダウンロードフォルダに保存します（例: ~/Downloads/Yasumaro/）。"
+  },
+  "localMarkdownExportAutoEnabledLabel": {
+    "message": "記録時に自動で書き出す"
+  },
+  "localMarkdownExportAutoEnabledHelp": {
+    "message": "ページが記録されるたびに日次ファイルを自動ダウンロードします。オフの場合でも手動エクスポートは利用可能です。"
+  },
+  "localMarkdownExportPathLabel": {
+    "message": "書き出しフォルダ"
+  },
+  "localMarkdownExportPathHelp": {
+    "message": "ダウンロードフォルダ内のフォルダ名（デフォルト: Yasumaro）"
+  },
+  "localMarkdownExportPathPlaceholder": {
+    "message": "Yasumaro"
+  },
   "ublockImportGuideLink": {
     "message": "uBlockインポート機能のユーザーガイドを見る（新しいタブで開きます）"
   },
@@ -1592,6 +1616,21 @@
   },
   "testAiBtn": {
     "message": "AI テスト"
+  },
+  "testLocalMarkdownBtn": {
+    "message": "ローカルMarkdownテスト"
+  },
+  "testLocalMarkdownSuccess": {
+    "message": "ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました"
+  },
+  "testLocalMarkdownDisabled": {
+    "message": "ローカルMarkdown書き出しが無効です。まず有効にしてください。"
+  },
+  "testLocalMarkdownError": {
+    "message": "ローカルMarkdown書き出しテストに失敗しました"
+  },
+  "localExportManualBtn": {
+    "message": "エクスポート"
   },
   "tagEditTitle": {
     "message": "タグを編集"
@@ -2666,6 +2705,33 @@
   },
   "exportLogsTab": {
     "message": "ログをエクスポート"
+  },
+  "exportLogsDesc": {
+    "message": "ブラウジング履歴を JSON、Markdown、CSV、または SQLite データベースファイルとしてエクスポートします。"
+  },
+  "exportJsonBtn": {
+    "message": "JSON としてエクスポート (.json)"
+  },
+  "exportJsonDesc": {
+    "message": "全フィールドを含む JSON 形式。再インポート可能です。"
+  },
+  "exportMarkdownBtn": {
+    "message": "Markdown としてエクスポート (.md)"
+  },
+  "exportMarkdownDesc": {
+    "message": "YAML フロントマット付きの Obsidian 互換 Markdown。"
+  },
+  "exportCsvBtn": {
+    "message": "CSV としてエクスポート (.csv)"
+  },
+  "exportCsvDesc": {
+    "message": "Excel 互換の UTF-8 BOM CSV。"
+  },
+  "exportDbBtn": {
+    "message": "データベースとしてエクスポート (.db)"
+  },
+  "exportDbDesc": {
+    "message": "SQLite データベースファイル。OPFS ストレージ使用時のみ利用可能。"
   },
   "sqliteHistoryDescription": {
     "message": "SQLite に保存されたブラウジング履歴を検索・管理できます。AI要約の閲覧、スター・削除、選択した記事の Obsidian への追記が可能です。"

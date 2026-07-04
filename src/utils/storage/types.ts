@@ -185,6 +185,10 @@ export const StorageKeys = {
     // SQLite retention policy (null = unlimited / no purge)
     SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
     SQLITE_MAX_RECORDS: 'sqlite_max_records',
+    // Local Markdown export settings
+    LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
+    LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
+    LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -330,6 +334,9 @@ export interface StorageKeyValues {
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
     [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;
     [StorageKeys.SQLITE_MAX_RECORDS]: number | null;
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: boolean;
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: boolean;
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: string;
 }
 
 // 厳格な Settings 型

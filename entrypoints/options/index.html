@@ -164,6 +164,7 @@
           <button id="saveTop" class="btn-primary" data-i18n="saveBtn">保存する</button>
           <button id="testObsidianBtnTop" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
           <button id="testAiBtnTop" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
+          <button id="testLocalMarkdownBtnTop" class="secondary-btn" data-i18n="testLocalMarkdownBtn">ローカルMarkdownテスト</button>
           <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
         </div>
         <div id="statusTop" aria-live="polite"></div>
@@ -213,6 +214,48 @@
             </div>
           </div>
         </details>
+
+        <!-- ローカル Markdown 書き出しセクション -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
+
+          <div class="form-group">
+            <input type="checkbox" id="localMarkdownExportEnabled" aria-describedby="localMarkdownExportEnabledHelp">
+            <label for="localMarkdownExportEnabled" class="inline-label" data-i18n="localMarkdownExportEnabledLabel">ローカル Markdown に書き出す</label>
+            <div id="localMarkdownExportEnabledHelp" class="help-text" data-i18n="localMarkdownExportEnabledHelp">閲覧履歴を Markdown ファイルとしてブラウザのダウンロードフォルダに保存します（例: ~/Downloads/Yasumaro/）。</div>
+          </div>
+
+          <div id="localMarkdownExportSettings" class="hidden">
+            <div class="form-group">
+              <input type="checkbox" id="localMarkdownExportAutoEnabled" aria-describedby="localMarkdownExportAutoEnabledHelp">
+              <label for="localMarkdownExportAutoEnabled" class="inline-label" data-i18n="localMarkdownExportAutoEnabledLabel">記録時に自動で書き出す</label>
+              <div id="localMarkdownExportAutoEnabledHelp" class="help-text" data-i18n="localMarkdownExportAutoEnabledHelp">ページが記録されるたびに日次ファイルを自動ダウンロードします。オフの場合でも手動エクスポートは利用可能です。</div>
+            </div>
+
+            <div class="form-group">
+              <label for="localMarkdownExportPath" data-i18n="localMarkdownExportPathLabel">書き出しフォルダ</label>
+              <input type="text" id="localMarkdownExportPath" data-i18n-input-placeholder="localMarkdownExportPathPlaceholder">
+              <div class="help-text" data-i18n="localMarkdownExportPathHelp">ダウンロードフォルダ内のフォルダ名（デフォルト: Yasumaro）</div>
+            </div>
+
+            <!-- 手動エクスポート -->
+            <div class="form-group" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border, #e2e8f0);">
+              <label style="font-weight: 600;">手動エクスポート（日付範囲指定）</label>
+              <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+                <div>
+                  <label for="localExportStartDate" style="font-size: 0.875rem;">開始日</label>
+                  <input type="date" id="localExportStartDate">
+                </div>
+                <div>
+                  <label for="localExportEndDate" style="font-size: 0.875rem;">終了日</label>
+                  <input type="date" id="localExportEndDate">
+                </div>
+                <button id="localExportManualBtn" class="secondary-btn" style="margin-top: 16px;" data-i18n="localExportManualBtn">エクスポート</button>
+              </div>
+              <div id="localExportManualStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
+            </div>
+          </div>
+        </div>
 
         <!-- AI プロバイダーセクション -->
         <div id="aiProviderSection" class="settings-section">
@@ -373,6 +416,7 @@
           <button id="save" class="btn-primary" data-i18n="saveBtn">保存する</button>
           <button id="testObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
           <button id="testAiBtn" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
+          <button id="testLocalMarkdownBtnBottom" class="secondary-btn" data-i18n="testLocalMarkdownBtn">ローカルMarkdownテスト</button>
           <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
         </div>
         <div id="status" aria-live="polite"></div>
@@ -1338,6 +1382,12 @@
 
         <div id="historyStats" class="history-stats"></div>
         <div id="historyList" class="history-list" aria-live="polite"></div>
+
+        <!-- Local Markdown Export -->
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border, #e2e8f0); display: flex; align-items: center; gap: 12px;">
+          <button id="historyExportLocalMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">すべて Markdown に書き出す</button>
+          <span id="historyExportLocalMarkdownStatus" class="status-message" aria-live="polite"></span>
+        </div>
       </section>
 
       <!-- Recording Conditions Panel -->
@@ -1353,26 +1403,44 @@
       <section id="panel-export-logs" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
         <p class="panel-description" data-i18n="exportLogsDesc">
-          Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file. Data is sourced from the local SQLite database.
+          Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file.
         </p>
         <div id="export-logs-container">
           <div class="form-group">
-            <button id="export-json-btn" class="btn-primary">Export as JSON (.json)</button>
-            <p class="field-description">JSON format with all fields. Can be re-imported.</p>
+            <button id="export-json-btn" class="btn-primary" data-i18n="exportJsonBtn">Export as JSON (.json)</button>
+            <p class="field-description" data-i18n="exportJsonDesc">JSON format with all fields. Can be re-imported.</p>
           </div>
           <div class="form-group">
-            <button id="export-markdown-btn" class="btn-primary">Export as Markdown (.md)</button>
-            <p class="field-description">Obsidian-compatible Markdown with YAML frontmatter.</p>
+            <button id="export-markdown-btn" class="btn-primary" data-i18n="exportMarkdownBtn">Export as Markdown (.md)</button>
+            <p class="field-description" data-i18n="exportMarkdownDesc">Obsidian-compatible Markdown with YAML frontmatter.</p>
           </div>
           <div class="form-group">
-            <button id="export-csv-btn" class="btn-primary">Export as CSV (.csv)</button>
-            <p class="field-description">UTF-8 BOM CSV for Excel compatibility.</p>
+            <button id="export-csv-btn" class="btn-primary" data-i18n="exportCsvBtn">Export as CSV (.csv)</button>
+            <p class="field-description" data-i18n="exportCsvDesc">UTF-8 BOM CSV for Excel compatibility.</p>
           </div>
           <div class="form-group">
-            <button id="export-db-btn" class="btn-primary">Export as Database (.db)</button>
-            <p class="field-description">Raw SQLite database file. Only available with OPFS storage.</p>
+            <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">Export as Database (.db)</button>
+            <p class="field-description" data-i18n="exportDbDesc">Raw SQLite database file. Only available with OPFS storage.</p>
           </div>
           <div id="export-status" class="save-success" style="display:none"></div>
+        </div>
+
+        <!-- Local Markdown Export Section -->
+        <div class="settings-section" style="margin-top: 16px;">
+          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
+          <p class="field-description" data-i18n="exportLocalMarkdownDesc">日付範囲を指定して、閲覧履歴を Markdown ファイルとしてダウンロードします。</p>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+            <div>
+              <label for="exportLocalStartDate" style="font-size: 0.875rem;" data-i18n="startDate">開始日</label>
+              <input type="date" id="exportLocalStartDate">
+            </div>
+            <div>
+              <label for="exportLocalEndDate" style="font-size: 0.875rem;" data-i18n="endDate">終了日</label>
+              <input type="date" id="exportLocalEndDate">
+            </div>
+            <button id="exportLocalMarkdownBtn" class="secondary-btn" style="margin-top: 16px;" data-i18n="localExportManualBtn">エクスポート</button>
+          </div>
+          <div id="exportLocalMarkdownStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
         </div>
       </section>
 

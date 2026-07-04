@@ -229,6 +229,14 @@ HTTP に切り替えた場合、ポートも `27124` から `27123` に変更す
 
 大量のドメインをブラックリストに一括登録するためです。既存の uBlock Origin フィルターや Steven Black の hosts リストをそのままインポートでき、記録したくないサイトを効率よく管理できます。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
+**Q44. Obsidian なしで Markdown に書き出せますか？**
+
+できます。ダッシュボードの「初期設定」→「ローカル Markdown 書き出し」を ON にすると、ページが記録されるたびに `~/Downloads/Yasumaro/YYYY-MM-DD.md` に日次ファイルが自動ダウンロードされます。開始日・終了日を指定した手動エクスポートも可能です。詳細は [ローカル Markdown 書き出しガイド](MARKDOWN_DOWNLOAD.md) をご覧ください。
+
+**Q45. 自動書き出しのたびにダウンロード通知が表示されるのがうっさいです。**
+
+ブラウザの設定で非表示にできます。Chrome の場合は `chrome://settings/downloads` を開き、「ダウンロードが完了したとき、ダウンロード一覧を表示する」のトグルを OFF にしてください。Edge の場合は `edge://settings/downloads` で同様の設定があります。ダウンロード自体は正常に行われます。
+
 ---
 
 ## English
@@ -452,3 +460,11 @@ Entries older than the configured period (30–365 days) or beyond the maximum c
 **Q43. I heard I can import uBlock Origin filter lists—what is that for?**
 
 It lets you bulk-register large numbers of domains into the blacklist. You can import existing uBlock Origin filter lists or Steven Black's hosts-format lists directly, making it easy to manage sites you don't want recorded. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
+
+**Q44. Can I export to Markdown without Obsidian?**
+
+Yes. Toggle "Export to Local Markdown" ON in the dashboard under "Initial Setup" → "Local Markdown Export". Each time a page is recorded, a daily file (`~/Downloads/Yasumaro/YYYY-MM-DD.md`) is automatically downloaded. Manual export with a date range is also available. See the [Local Markdown Export Guide](MARKDOWN_DOWNLOAD.md) for details.
+
+**Q45. The download notification appears every time auto export fires—it's annoying.**
+
+You can hide it in your browser settings. In Chrome, open `chrome://settings/downloads` and toggle off "Show downloads when they're done". In Edge, open `edge://settings/downloads` for a similar setting. Downloads will still work normally.

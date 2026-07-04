@@ -19,6 +19,9 @@ vi.stubGlobal('chrome', {
       set: mockStorageSet,
     },
   },
+  i18n: {
+    getMessage: vi.fn().mockReturnValue(''),
+  },
 } as any);
 
 // ---------------------------------------------------------------------------

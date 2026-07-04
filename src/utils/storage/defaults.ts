@@ -140,4 +140,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: false,
     [StorageKeys.SQLITE_RETENTION_DAYS]: null,
     [StorageKeys.SQLITE_MAX_RECORDS]: null,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: false,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: false,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro',
 };

@@ -18,6 +18,7 @@ import {
   extractSentencesStep,
   formatMarkdownStep,
   saveToObsidianStep,
+  saveLocalMarkdownStep,
   saveMetadataStep,
   saveSqliteStep
 } from './steps/index.js';
@@ -111,6 +112,11 @@ export class RecordingPipeline {
         name: 'saveObsidian',
         errorStrategy: ErrorStrategy.BEST_EFFORT,
         execute: this.createSaveToObsidianStep()
+      },
+      {
+        name: 'saveLocalMarkdown',
+        errorStrategy: ErrorStrategy.BEST_EFFORT,
+        execute: saveLocalMarkdownStep
       },
       {
         name: 'saveSqlite',
@@ -355,6 +361,7 @@ export class RecordingPipeline {
       cleansedTokens: privacyResult?.cleansedTokens,
       aiDuration,
       obsidianDuration: context.obsidianDuration,
+      localMarkdownDuration: context.localMarkdownDuration,
       title: data.title,
       url: data.url
     };
