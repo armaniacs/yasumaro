@@ -15,6 +15,14 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.4.4] - 2026-07-04
+
+### Changed / 変更
+
+- **docs: Zenn 向け記事を削除** — `articles/domain-trust-evaluation.md` を削除し、`CHANGELOG.md` の 6.4.3 エントリからも参照を除去
+
+---
+
 ## [6.4.3] - 2026-07-04
 
 ### Documentation / ドキュメント
