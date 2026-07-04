@@ -26,7 +26,7 @@ function buildDom() {
         </label>
         <button type="button" id="sqlite-clear-selection" class="secondary-btn" data-i18n="historyClearSelection">Clear Selection</button>
         <span id="sqlite-selection-count" class="sqlite-selection-count" aria-live="polite">0 selected</span>
-        <button type="button" id="sqlite-append-obsidian" class="primary-btn" data-i18n="historyAppendToObsidian">Append to Obsidian</button>
+        <button type="button" id="sqlite-append-obsidian" class="btn-primary" data-i18n="historyAppendToObsidian">Append to Obsidian</button>
       </div>
       <div id="sqlite-entry-list" class="sqlite-entry-list"></div>
       <div id="sqlite-pagination" class="sqlite-pagination"></div>
