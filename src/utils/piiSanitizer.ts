@@ -128,7 +128,7 @@ function validateInputSize(text: string): { valid: boolean; error?: string } {
  * タイムアウト付きで関数を実行する
  * @param {Function} fn - 実行する関数
  * @param {number} timeout - タイムアウト時間（ミリ秒）
- * @returns {Promise<any>} 関数の実行結果
+ * @returns {Promise<T>} 関数の実行結果
  */
 async function executeWithTimeout<T>(fn: () => T, timeout: number): Promise<T> {
     return new Promise((resolve, reject) => {

@@ -493,7 +493,7 @@ function checkVisitConditions(): void {
  * @param fn - Throttle対象の関数
  * @returns Throttle化された関数
  */
-function throttle<T extends (...args: any[]) => void>(fn: T): T {
+function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
     let lastCall = 0;
     let rafId: number | null = null;
     let lastArgs: Parameters<T> | null = null;

@@ -20,6 +20,13 @@ export interface AISummaryResult {
     model?: string;         // 使用したAIモデル名
 }
 
+/**
+ * プロバイダー別の設定構造
+ */
+interface ProviderSpecificSettings {
+    maxTokens?: number;
+}
+
 export abstract class AIProviderStrategy {
     protected settings: Settings;
 
@@ -63,9 +70,10 @@ export abstract class AIProviderStrategy {
         const providerId = this.getProviderId();
 
         // 1. プロバイダー別設定を確認
-        const providerSettings = this.settings[`providers`] as Record<string, any>;
-        if (providerSettings && providerSettings[providerId] && providerSettings[providerId].maxTokens) {
-            return validateMaxTokens(providerSettings[providerId].maxTokens, providerId);
+        const providerSettings = this.settings[`providers`] as Record<string, ProviderSpecificSettings> | undefined;
+        const providerConfig = providerSettings?.[providerId];
+        if (providerConfig?.maxTokens) {
+            return validateMaxTokens(providerConfig.maxTokens, providerId);
         }
 
         // 2. グローバル設定を確認

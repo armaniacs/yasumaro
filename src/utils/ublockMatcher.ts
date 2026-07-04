@@ -5,9 +5,20 @@
 import { extractDomain, matchesPattern } from './domainUtils.js';
 import type { UblockRules, UblockRule } from './types.js';
 
+/**
+ * uBlock ルールオプションの型定義
+ * evaluateOptions で使用されるプロパティを明示的に定義
+ */
+interface UblockRuleOptions {
+  domains?: string[];
+  negatedDomains?: string[];
+  thirdParty?: boolean;
+  firstParty?: boolean;
+}
+
 interface RuleWithDomain {
   domain: string;
-  options: Record<string, any>;
+  options: UblockRuleOptions;
 }
 
 /**
@@ -48,7 +59,7 @@ class RuleIndex {
         // Normalize to RuleWithDomain
         const ruleObj: RuleWithDomain = {
           domain: rule.domain,
-          options: rule.options || {}
+          options: (rule.options || {}) as UblockRuleOptions
         };
 
         if (rule.domain.includes('*')) {
@@ -86,7 +97,7 @@ class RuleIndex {
         if (!rule.domain) continue;
         const ruleObj: RuleWithDomain = {
           domain: rule.domain,
-          options: rule.options || {}
+          options: (rule.options || {}) as UblockRuleOptions
         };
 
         if (rule.domain.includes('*')) {

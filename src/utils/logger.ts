@@ -244,10 +244,10 @@ export function clearPendingLogs(): void {
 /**
  * ログの詳細情報をサニタイズする（PII検出とマスキング）
  * 【深度制限と循環参照保護】
- * @param {Record<string, any>} details - サニタイズ対象の詳細情報
+ * @param {Record<string, unknown>} details - サニタイズ対象の詳細情報
  * @param {WeakSet<object>} [visitedObjects] - 循環参照検出用WeakSet
  * @param {number} [depth] - 現在の再帰深度
- * @returns {Record<string, any>} サニタイズ済みの詳細情報
+ * @returns {Record<string, unknown>} サニタイズ済みの詳細情報
  */
 async function sanitizeLogDetails(
     details: Record<string, unknown>,
@@ -490,7 +490,7 @@ function createStructuredLog<T extends object = Record<string, unknown>>(
 /**
  * 構造化されたINFOログを出力する
  * @param {string} message - メッセージ
- * @param {Record<string, any>} details - 詳細情報
+ * @param {Record<string, unknown>} details - 詳細情報
  * @param {string} [source] - ログ出力元モジュール
  */
 export async function logInfo<T extends object = Record<string, unknown>>(
