@@ -1517,6 +1517,30 @@
   "obsidianSetupGuideLink": {
     "message": "View Obsidian Setup Guide (opens in new tab)"
   },
+  "localMarkdownExportSection": {
+    "message": "Local Markdown Export"
+  },
+  "localMarkdownExportEnabledLabel": {
+    "message": "Export to Local Markdown"
+  },
+  "localMarkdownExportEnabledHelp": {
+    "message": "Save browsing history as daily Markdown files to your browser's downloads folder (e.g., ~/Downloads/Yasumaro/)."
+  },
+  "localMarkdownExportAutoEnabledLabel": {
+    "message": "Auto-export on recording"
+  },
+  "localMarkdownExportAutoEnabledHelp": {
+    "message": "Automatically download a daily file each time a page is recorded. You can still use manual export when this is off."
+  },
+  "localMarkdownExportPathLabel": {
+    "message": "Export Folder"
+  },
+  "localMarkdownExportPathHelp": {
+    "message": "Folder name inside your downloads folder (default: Yasumaro)"
+  },
+  "localMarkdownExportPathPlaceholder": {
+    "message": "Yasumaro"
+  },
   "ublockImportGuideLink": {
     "message": "View uBlock Import User Guide (opens in new tab)"
   },
@@ -1594,6 +1618,21 @@
   },
   "testAiBtn": {
     "message": "Test AI"
+  },
+  "testLocalMarkdownBtn": {
+    "message": "Test Local Markdown"
+  },
+  "testLocalMarkdownSuccess": {
+    "message": "Local Markdown export test: File downloaded successfully"
+  },
+  "testLocalMarkdownDisabled": {
+    "message": "Local Markdown export is disabled. Enable it first."
+  },
+  "testLocalMarkdownError": {
+    "message": "Local Markdown export test failed"
+  },
+  "localExportManualBtn": {
+    "message": "Export"
   },
   "tagEditTitle": {
     "message": "Edit Tags"
@@ -2668,6 +2707,33 @@
   },
   "exportLogsTab": {
     "message": "Export Logs"
+  },
+  "exportLogsDesc": {
+    "message": "Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file."
+  },
+  "exportJsonBtn": {
+    "message": "Export as JSON (.json)"
+  },
+  "exportJsonDesc": {
+    "message": "JSON format with all fields. Can be re-imported."
+  },
+  "exportMarkdownBtn": {
+    "message": "Export as Markdown (.md)"
+  },
+  "exportMarkdownDesc": {
+    "message": "Obsidian-compatible Markdown with YAML frontmatter."
+  },
+  "exportCsvBtn": {
+    "message": "Export as CSV (.csv)"
+  },
+  "exportCsvDesc": {
+    "message": "UTF-8 BOM CSV for Excel compatibility."
+  },
+  "exportDbBtn": {
+    "message": "Export as Database (.db)"
+  },
+  "exportDbDesc": {
+    "message": "Raw SQLite database file. Only available with OPFS storage."
   },
   "sqliteHistoryDescription": {
     "message": "Search and manage your browsing history stored in SQLite. View AI summaries, star/delete records, and append selected entries to Obsidian."

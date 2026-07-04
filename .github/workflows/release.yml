@@ -33,6 +33,16 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Check if minor version is even
+        id: minor_check
+        run: |
+          MINOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f2)
+          if [ $((MINOR % 2)) -eq 0 ]; then
+            echo "is_even=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_even=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Minor version: ${MINOR} (even: $((MINOR % 2 == 0)))"
       - name: Build for Chrome
         run: npx wxt zip -b chrome
       - name: Sign CRX with private key
@@ -68,6 +78,7 @@ jobs:
           prerelease: false
 
       - name: Publish to Chrome Web Store
+        if: steps.minor_check.outputs.is_even == 'true'
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}

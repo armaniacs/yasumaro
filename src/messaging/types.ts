@@ -87,6 +87,8 @@ export interface RecordingResult {
   aiDuration?: number;
   /** Obsidian保存時間 (ミリ秒) — undefined の場合は Obsidian 未保存 */
   obsidianDuration?: number;
+  /** Local Markdown保存時間 (ミリ秒) — undefined の場合はローカル書き出し未実行 */
+  localMarkdownDuration?: number;
   confirmationRequired?: boolean;
   headerValue?: string;
   message?: string;  // 後方互換性用

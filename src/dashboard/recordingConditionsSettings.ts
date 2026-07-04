@@ -6,7 +6,7 @@
 
 import { StorageKeys, getSettings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { getMessage } from '../popup/i18n.js';
+import { getMessage, applyI18n } from '../popup/i18n.js';
 
 let minVisitDuration = 5;
 let minScrollDepth = 50;
@@ -22,6 +22,9 @@ export async function initRecordingConditionsSettings(): Promise<void> {
 
   renderSettings(container);
   wireEvents(container);
+
+  // Apply i18n to dynamically rendered content
+  applyI18n(container);
 }
 
 async function loadConditionsSettings(): Promise<void> {
@@ -43,42 +46,42 @@ async function loadConditionsSettings(): Promise<void> {
 function renderSettings(container: HTMLElement): void {
   container.innerHTML = `
     <div class="settings-section">
-      <h3 class="settings-section-title" data-i18n="recordingConditionsSection">記録条件</h3>
+      <h3 class="settings-section-title">${getMessage('recordingSection') || '記録条件'}</h3>
 
       <div class="form-group">
-        <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
+        <label for="minVisitDuration">${getMessage('minVisitDuration') || 'Min Visit Duration (seconds)'}</label>
         <input type="number" id="minVisitDuration" min="1" value="${minVisitDuration}" aria-invalid="false"
           aria-describedby="minVisitDurationError">
         <div id="minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
+        <label for="minScrollDepth">${getMessage('minScrollDepth') || 'Min Scroll Depth (%)'}</label>
         <input type="number" id="minScrollDepth" min="0" max="100" value="${minScrollDepth}" aria-invalid="false"
           aria-describedby="minScrollDepthError">
         <div id="minScrollDepthError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="maxTokensPerPrompt" data-i18n="label_max_tokens">Max Tokens Per Prompt</label>
+        <label for="maxTokensPerPrompt">${getMessage('label_max_tokens') || 'Max Tokens Per Prompt'}</label>
         <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="${maxTokensPerPrompt}" aria-invalid="false"
           aria-describedby="maxTokensError maxTokensNote">
-        <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
+        <p class="help-text" id="maxTokensNote">${getMessage('note_max_tokens_cost_control') || ''}</p>
         <div id="maxTokensError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="aiTimeoutSeconds" data-i18n="label_ai_timeout">AI Timeout (seconds)</label>
+        <label for="aiTimeoutSeconds">${getMessage('label_ai_timeout') || 'AI Timeout (seconds)'}</label>
         <input type="number" id="aiTimeoutSeconds" min="10" max="600" step="10" value="${aiTimeoutSeconds || ''}" aria-invalid="false"
           aria-describedby="aiTimeoutNote" placeholder="auto">
-        <p class="help-text" id="aiTimeoutNote" data-i18n="note_ai_timeout"></p>
+        <p class="help-text" id="aiTimeoutNote">${getMessage('note_ai_timeout') || ''}</p>
       </div>
     </div>
 
     <div class="form-actions">
-      <button id="save-conditions-settings" class="btn-primary">Save</button>
+      <button id="save-conditions-settings" class="btn-primary">${getMessage('save') || 'Save'}</button>
       <span id="conditions-validation-error" class="validation-error" role="alert" style="display:none"></span>
-      <span id="conditions-save-success" class="save-success" aria-live="polite" style="display:none">Settings saved.</span>
+      <span id="conditions-save-success" class="save-success" aria-live="polite" style="display:none">${getMessage('settingsSaved') || 'Settings saved.'}</span>
     </div>
   `;
 }
