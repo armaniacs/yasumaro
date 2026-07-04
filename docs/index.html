@@ -645,24 +645,24 @@ const FEATURES = {
   ja: [
     { icon: "🤖", title: "AIによる自動要約", desc: "ページを読むだけでAIが内容を要約。Groq・Gemini・OpenAI・Anthropic・ローカルLLM（Ollama、LM Studio）に対応。" },
     { icon: "🎯", title: "スマート検出", desc: "滞在時間とスクロール深度で「実際に読んだページ」のみを保存。ウィンドウ切り替えは時間カウント外。" },
-    { icon: "📂", title: "マルチ出力に対応", desc: "Obsidian のデイリーノート、SQLite データベース、Markdown ファイルなど、好みの保存先に「🌐 ブラウザ閲覧履歴」セクションを自動管理。既存ノートには追記のみで上書きしません。" },
-    { icon: "🔒", title: "プライバシー保護", desc: "4段階のPIIマスクモード。銀行・メールなどのプライベートページは自動検出し確認ダイアログを表示。" },
-    { icon: "🌐", title: "ドメインフィルター", desc: "ホワイトリスト / ブラックリストでドメインを制御。uBlock Origin形式のフィルターリストも直接インポート可能。" },
-    { icon: "✏️", title: "AIプロンプトカスタマイズ", desc: "要約プロンプトを自由に編集・保存。5種類の組み込みプリセット（タグ付き / 箇条書き / 英語 / 技術的観点など）を搭載。" },
+    { icon: "📂", title: "マルチ出力に対応", desc: "Obsidian のデイリーノート、SQLite データベース、Markdown ファイルなど、好みの保存先に「🌐 ブラウザ閲覧履歴」セクションを自動管理。既存ノートには追記のみで上書きしません。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "ストレージモードの違いを見る →" },
+    { icon: "🔒", title: "プライバシー保護", desc: "4段階のPIIマスクモード。銀行・メールなどのプライベートページは自動検出し確認ダイアログを表示。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md", linkText: "PIIマスク機能の詳細を見る →" },
+    { icon: "🌐", title: "ドメインフィルター", desc: "ホワイトリスト / ブラックリストでドメインを制御。uBlock Origin形式のフィルターリストも直接インポート可能。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md", linkText: "uBlockインポートガイドを見る →" },
+    { icon: "✏️", title: "AIプロンプトカスタマイズ", desc: "要約プロンプトを自由に編集・保存。5種類の組み込みプリセット（タグ付き / 箇条書き / 英語 / 技術的観点など）を搭載。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md", linkText: "プロンプトカスタマイズガイドを見る →" },
     { icon: "🖱️", title: "手動記録", desc: "「今すぐ記録」ボタンで任意のページを即座に記録。ブラックリストドメインも「それでも記録」で上書き可能。" },
     { icon: "🔔", title: "ツールバーバッジ通知", desc: "自動保存完了で青い「◎」、プライバシーヘッダー検出でオレンジの「!」をアイコンに表示。ポップアップ不要で状態確認。" },
-    { icon: "🔐", title: "設定の暗号化エクスポート", desc: "マスターパスワードでAES-GCM暗号化してバックアップ。APIキーを含む設定を安全に移行できます。" },
+    { icon: "🔐", title: "設定の暗号化エクスポート", desc: "マスターパスワードでAES-GCM暗号化してバックアップ。APIキーを含む設定を安全に移行できます。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md", linkText: "プライバシーポリシーを見る →" },
   ],
   en: [
     { icon: "🤖", title: "AI-Powered Summaries", desc: "Just read a page and AI summarizes it. Supports Groq, Gemini, OpenAI, Anthropic, Ollama, LM Studio, and any OpenAI-compatible endpoint." },
     { icon: "🎯", title: "Smart Detection", desc: "Only saves pages you actually read, measured by time spent and scroll depth. Inactive windows don't count." },
-    { icon: "📂", title: "Multi-Output Storage", desc: "Save to your Obsidian daily notes, a local SQLite database, or plain Markdown files. Automatically manages a '🌐 Browser History' section and appends to existing notes without overwriting." },
-    { icon: "🔒", title: "Privacy Protection", desc: "Four PII masking levels. Private pages (banking, email, etc.) are auto-detected with a confirmation dialog before saving." },
-    { icon: "🌐", title: "Domain Filtering", desc: "Whitelist or blacklist domains. Import existing uBlock Origin format filter lists (EasyList, etc.) directly." },
-    { icon: "✏️", title: "Custom AI Prompts", desc: "Edit and save summarization prompts freely. Five built-in presets: with tags, bullet points, English summary, technical perspective, and more." },
+    { icon: "📂", title: "Multi-Output Storage", desc: "Save to your Obsidian daily notes, a local SQLite database, or plain Markdown files. Automatically manages a '🌐 Browser History' section and appends to existing notes without overwriting.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "View Storage Modes guide →" },
+    { icon: "🔒", title: "Privacy Protection", desc: "Four PII masking levels. Private pages (banking, email, etc.) are auto-detected with a confirmation dialog before saving.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md", linkText: "View PII Masking Feature Guide →" },
+    { icon: "🌐", title: "Domain Filtering", desc: "Whitelist or blacklist domains. Import existing uBlock Origin format filter lists (EasyList, etc.) directly.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md", linkText: "View uBlock Import Guide →" },
+    { icon: "✏️", title: "Custom AI Prompts", desc: "Edit and save summarization prompts freely. Five built-in presets: with tags, bullet points, English summary, technical perspective, and more.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md", linkText: "View AI Prompt Customization Guide →" },
     { icon: "🖱️", title: "Manual Recording", desc: "Record any page instantly with the 'Record Now' button. Override blacklisted domains with 'Record Anyway'." },
     { icon: "🔔", title: "Toolbar Badge Notifications", desc: "A blue '◎' badge appears on auto-save; an orange '!' appears when privacy headers are detected. No need to open the popup." },
-    { icon: "🔐", title: "Encrypted Settings Export", desc: "Back up settings with AES-GCM encryption via a master password. Safely migrate API keys and configuration across devices." },
+    { icon: "🔐", title: "Encrypted Settings Export", desc: "Back up settings with AES-GCM encryption via a master password. Safely migrate API keys and configuration across devices.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md", linkText: "View Privacy Policy →" },
   ]
 };
 
@@ -766,6 +766,7 @@ function renderFeatures() {
       <div class="feature-icon">${f.icon}</div>
       <h3>${f.title}</h3>
       <p>${f.desc}</p>
+      ${f.link ? `<p style="margin-top:0.6rem"><a href="${f.link}" target="_blank" rel="noopener noreferrer" style="font-size:0.82rem;font-weight:600;color:var(--purple-light)">${f.linkText}</a></p>` : ''}
     </div>`).join('');
 }
 

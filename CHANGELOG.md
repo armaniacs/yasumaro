@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.1.0` リリース直後。次の安定化リリースは `v6.2.x` となる。
+> - 現時点では `v6.4.2` リリース。次の安定化リリースは `v6.4.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,25 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.4.2] - 2026-07-04
+
+### Added / 追加
+
+- **CI: release.yml に CRX 署名ステップを追加** — Chrome Web Store の「検証済みCRXアップロード」に対応。`crx3` パッケージでビルドディレクトリを署名し `.crx` ファイルを生成。CWS アップロード対象を `.zip` → `.crx` に変更。GitHub Release に `.crx` ファイルも含めるよう拡張
+- **ダッシュボードにドキュメントリンクを 6 パネルに追加** — Domain Filter（uBlock）、Prompt、Content、AI Summary Cleansing、Privacy、History 各パネルに該当するユーザーガイドへのリンクを追加。ユーザーが設定時にドキュメントに迷わずたど着けるよう UX を改善
+- **GitHub Pages ランディングページにドキュメントリンクを 5 機能に追加** — Features セクションの「マルチ出力」「プライバシー保護」「ドメインフィルター」「AIプロンプト」「暗号化エクスポート」各カードに該当するユーザーガイドへのリンクを追加
+
+### Fixed / 修正
+
+- **ダッシュボードの「保存する」ボタン表示を統一** — `primary-btn` クラス（CSS ルールなし）を `btn-primary`（紫背景 + 白文字）に修正。Domain Filter / Prompt / Content / AI Summary Cleansing / Trust / Tags / CSP / Export-Import の全パネルでボタンスタイルを一貫
+
+### Changed / 変更
+
+- **`crx3` を devDependency に追加** — CRX 署名ツールのバージョンを固定し、CI で毎回 npm からダウンロードするリスクを排除
+- **`.gitignore` に `*.crx` を追加** — ローカルでの CRX 署名テスト出力を git にコミットしないよう防止
+
+---
 
 ## [6.4.1] - 2026-07-01
 

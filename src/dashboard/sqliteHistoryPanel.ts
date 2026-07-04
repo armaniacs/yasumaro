@@ -350,7 +350,7 @@ function renderState(): void {
       </label>
       <button type="button" id="sqlite-clear-selection" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
       <span id="sqlite-selection-count" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(state.selectedIds.size)])}</span>
-      <button type="button" id="sqlite-append-obsidian" class="primary-btn" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
+      <button type="button" id="sqlite-append-obsidian" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
     </div>
     <div id="sqlite-entry-list" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}

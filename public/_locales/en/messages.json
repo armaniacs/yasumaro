@@ -1517,6 +1517,24 @@
   "obsidianSetupGuideLink": {
     "message": "View Obsidian Setup Guide (opens in new tab)"
   },
+  "ublockImportGuideLink": {
+    "message": "View uBlock Import User Guide (opens in new tab)"
+  },
+  "aiPromptGuideLink": {
+    "message": "View AI Prompt Customization Guide (opens in new tab)"
+  },
+  "piiFeatureGuideLink": {
+    "message": "View PII Masking Feature Guide (opens in new tab)"
+  },
+  "cleansingOrderGuideLink": {
+    "message": "View Cleansing Processing Order (opens in new tab)"
+  },
+  "privacyPolicyLink": {
+    "message": "View Privacy Policy (opens in new tab)"
+  },
+  "storageModesGuideLink": {
+    "message": "View Storage Modes (SQLite / Obsidian) Guide (opens in new tab)"
+  },
   "advancedSettings": {
     "message": "Advanced Settings (Protocol / Port / Daily Note Path)"
   },

@@ -161,7 +161,7 @@
 
         <!-- ボタンエリア（上部） -->
         <div class="general-btn-row">
-          <button id="saveTop" class="primary-btn" data-i18n="saveBtn">保存する</button>
+          <button id="saveTop" class="btn-primary" data-i18n="saveBtn">保存する</button>
           <button id="testObsidianBtnTop" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
           <button id="testAiBtnTop" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
           <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
@@ -370,7 +370,7 @@
 
         <!-- ボタンエリア -->
         <div class="general-btn-row">
-          <button id="save" class="primary-btn" data-i18n="saveBtn">保存する</button>
+          <button id="save" class="btn-primary" data-i18n="saveBtn">保存する</button>
           <button id="testObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
           <button id="testAiBtn" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
           <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
@@ -420,7 +420,7 @@
 
         <!-- 保存エリア -->
         <div id="domainSaveArea" class="domain-save-area">
-          <button id="domainSaveBtn" class="primary-btn" data-i18n="domainSaveBtn">保存する</button>
+          <button id="domainSaveBtn" class="btn-primary" data-i18n="domainSaveBtn">保存する</button>
           <div id="domainSaveStatus" class="status-message" aria-live="polite"></div>
         </div>
 
@@ -437,6 +437,12 @@
                 Paste uBlock Origin or hosts format filters<br>
                 uBlock: ||hostname^, @@||hostname^, *, !Comments<br>
                 hosts: 0.0.0.0/127.0.0.1 hostname (#comments supported)
+              </div>
+              <div class="help-text">
+                <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   data-i18n="ublockImportGuideLink">uBlockインポート機能のユーザーガイドを見る（新しいタブで開きます）</a>
               </div>
             </div>
 
@@ -505,6 +511,12 @@
           <div class="help-text" data-i18n="promptHelp">
             The prompt will be used when generating summaries. Leave empty to use the default prompt.
           </div>
+          <div class="help-text">
+            <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md"
+               target="_blank"
+               rel="noopener noreferrer"
+               data-i18n="aiPromptGuideLink">AIプロンプトカスタマイズガイドを見る（新しいタブで開きます）</a>
+          </div>
         </div>
 
         <hr class="settings-hr">
@@ -564,6 +576,12 @@
       <section id="panel-content" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="contentTabPanelTitle">コンテンツ・クレンジング</h2>
         <p class="panel-description" data-i18n="contentTabPanelDescription">Webページから機密情報を含む可能性がある要素を自動的に削除します。</p>
+        <div class="help-text">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-i18n="piiFeatureGuideLink">PIIマスキング機能の詳細を見る（新しいタブで開きます）</a>
+        </div>
 
         <!-- Hard Strip 設定 -->
         <div class="form-group">
@@ -652,6 +670,12 @@
         </canvas>
 
         <p class="panel-description" data-i18n="aiSummaryCleansingTabPanelDescription">AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。</p>
+        <div class="help-text">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/CLEANSING_ORDER.md"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-i18n="cleansingOrderGuideLink">クレンジングの処理順序について（新しいタブで開きます）</a>
+        </div>
 
         <!-- AI要約クレンジング有効化 -->
         <div class="form-group">
@@ -1060,6 +1084,12 @@
       <!-- Privacy Settings Panel -->
       <section id="panel-privacy" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="privacyTab">Privacy</h2>
+        <div class="help-text">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-i18n="privacyPolicyLink">プライバシーポリシーを見る（新しいタブで開きます）</a>
+        </div>
 
         <div class="form-group">
           <label id="privacyModeLabel" data-i18n="privacyMode">Privacy Mode</label>
@@ -1257,7 +1287,7 @@
         </div>
 
         <div class="form-group">
-          <button id="saveTagsBtn" class="primary-btn" data-i18n="saveBtn">Save</button>
+          <button id="saveTagsBtn" class="btn-primary" data-i18n="saveBtn">Save</button>
         </div>
       </section>
 
@@ -1268,6 +1298,12 @@
         <p class="panel-description" data-i18n="historyDescription">
           URLs recorded by Yasumaro. Use the search box to filter entries. Click × to delete an individual URL.
         </p>
+        <div class="help-text">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-i18n="storageModesGuideLink">ストレージモード（SQLite / Obsidian）の違いを見る（新しいタブで開きます）</a>
+        </div>
 
         <!-- 保留中（記録できなかった）ページ -->
         <div id="pendingSection" class="pending-section" hidden>
@@ -1408,7 +1444,7 @@
         <hr class="settings-hr">
 
         <div class="csp-save-area">
-          <button id="cspSaveButton" class="primary-btn" data-i18n="cspSaveBtn">保存する</button>
+          <button id="cspSaveButton" class="btn-primary" data-i18n="cspSaveBtn">保存する</button>
           <button id="cspResetButton" class="secondary-btn" data-i18n="cspResetBtn">リセット</button>
           <div id="cspSaveMessage" class="success-message" aria-live="polite"></div>
           <div id="cspResetMessage" class="success-message" aria-live="polite"></div>
@@ -1591,7 +1627,7 @@
       </div>
       <div class="modal-footer">
         <button id="cancelPasswordBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
-        <button id="savePasswordBtn" class="primary-btn" data-i18n="save">Save</button>
+        <button id="savePasswordBtn" class="btn-primary" data-i18n="save">Save</button>
       </div>
     </div>
   </div>
@@ -1615,7 +1651,7 @@
       </div>
       <div class="modal-footer">
         <button id="cancelPasswordAuthBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
-        <button id="submitPasswordAuthBtn" class="primary-btn" data-i18n="confirm">Confirm</button>
+        <button id="submitPasswordAuthBtn" class="btn-primary" data-i18n="confirm">Confirm</button>
       </div>
     </div>
   </div>
@@ -1639,7 +1675,7 @@
       </div>
       <div class="modal-footer">
         <button id="cancelImportBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
-        <button id="confirmImportBtn" class="primary-btn" data-i18n="confirm">Import</button>
+        <button id="confirmImportBtn" class="btn-primary" data-i18n="confirm">Import</button>
       </div>
     </div>
   </div>
@@ -1672,7 +1708,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveTagEditsBtn" class="primary-btn" data-i18n="save">保存する</button>
+        <button id="saveTagEditsBtn" class="btn-primary" data-i18n="save">保存する</button>
       </div>
     </div>
   </div>
