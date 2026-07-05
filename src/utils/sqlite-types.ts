@@ -47,6 +47,8 @@ export interface QueryOptions {
   until?: number;
   /** Filter by specific IDs (targeted query, bypasses limit if set) */
   ids?: number[];
+  /** Filter by tag name (FTS5 match on tags column, without # prefix) */
+  tagFilter?: string;
 }
 
 export interface SearchResult {

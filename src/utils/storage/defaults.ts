@@ -62,6 +62,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.MP_REQUIRE_ON_IMPORT]: false,
     [StorageKeys.TAG_CATEGORIES]: [],
     [StorageKeys.TAG_SUMMARY_MODE]: false,
+    [StorageKeys.TAG_NORMALIZATION_DICT]: [],
     [StorageKeys.L0_EXTRACTIVE_ENABLED]: true,
     [StorageKeys.L0_EXTRACTIVE_TOP_K]: 10,
     [StorageKeys.L0_EXTRACTIVE_MIN_LENGTH]: 20,

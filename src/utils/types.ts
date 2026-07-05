@@ -14,6 +14,15 @@ export interface TagCategory {
 }
 
 /**
+ * タグ正規化辞書のエントリ
+ * from → to のマッピングを定義
+ */
+export interface TagNormalizationEntry {
+    from: string;
+    to: string;
+}
+
+/**
  * カスタムプロンプトのデータ構造
  */
 export interface CustomPrompt {

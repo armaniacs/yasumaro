@@ -2421,7 +2421,8 @@ details[open] .advanced-details-summary {
    var(--color-primary-bg) = #1a1025, #6b21a8 on it = 3.4:1 → FAILS
    → 明るくした purple-200 (#e9d5ff) で 12.0:1 AAA */
 @media (prefers-color-scheme: dark) {
-  .tag-badge {
+  .tag-badge,
+  .tag-filter-badge {
     color: #e9d5ff !important; /* purple-200: 12.0:1 on #1a1025 */
     background: #1a1025 !important;
     border-color: #6b21a8 !important;
@@ -3481,6 +3482,97 @@ details[open] .advanced-details-summary {
   color: var(--color-text-secondary);
   margin-top: 6px;
   line-height: 1.4;
+}
+
+/* ── Tag badges in SQLite entries ── */
+.sqlite-entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  padding: 0 12px 8px;
+}
+
+/* ── Tag filter bar ── */
+.sqlite-tag-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-top: 4px;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.tag-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b21a8;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+}
+
+.tag-filter-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  padding: 0 4px;
+  line-height: 1;
+}
+.tag-filter-clear:hover {
+  color: var(--color-danger);
+}
+
+/* ── Tag normalization dictionary UI ── */
+.norm-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.norm-entry-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.norm-entry-label {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.norm-entry-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  line-height: 1;
+}
+.norm-entry-delete:hover {
+  color: var(--color-danger);
+}
+
+.norm-arrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  user-select: none;
 }
 
 .sqlite-pagination {

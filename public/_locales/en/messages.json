@@ -2853,5 +2853,32 @@
   "previewContent": {
     "message": "Preview content",
     "description": "aria-label for the preview content textarea"
+  },
+  "tagFilterLabel": {
+    "message": "Filter:"
+  },
+  "clearTagFilter": {
+    "message": "Clear"
+  },
+  "noNormEntries": {
+    "message": "No rules configured"
+  },
+  "normEntriesTitle": {
+    "message": "Normalization Rules"
+  },
+  "tagNormalizationTitle": {
+    "message": "Tag Normalization"
+  },
+  "tagNormalizationDesc": {
+    "message": "Automatically normalize similar tags (e.g., \"Artificial Intelligence\" → \"AI\") when recording pages. Configure rules below."
+  },
+  "normFromPlaceholder": {
+    "message": "Original tag"
+  },
+  "normToPlaceholder": {
+    "message": "Normalized tag"
+  },
+  "duplicateNormEntryError": {
+    "message": "This value is already registered"
   }
 }

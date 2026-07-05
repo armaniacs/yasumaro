@@ -1,18 +1,19 @@
 /**
  * tagsPanel.ts
- * タグ設定パネルの機能を提供するモジュール
+ * Tag settings panel: categories + normalization dictionary management.
  */
 
 import { getMessage } from '../popup/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
-import type { TagCategory } from '../utils/types.js';
+import type { TagCategory, TagNormalizationEntry } from '../utils/types.js';
 
 /**
- * タグ設定パネルを初期化
+ * Initialize the tag settings panel.
  */
 export async function initTagsPanel(): Promise<void> {
+  // --- Category elements ---
   const tagSummaryModeInput = document.getElementById('tagSummaryMode') as HTMLInputElement | null;
   const defaultCategoriesList = document.getElementById('defaultCategoriesList') as HTMLElement | null;
   const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement | null;
@@ -21,12 +22,21 @@ export async function initTagsPanel(): Promise<void> {
   const userCategoriesListEl = document.getElementById('userCategoriesList') as HTMLElement | null;
   const noUserCategoriesMsg = document.getElementById('noUserCategoriesMsg') as HTMLElement | null;
 
-  // ユーザーが追加したカテゴリの状態（一時保存）
-  let userCategories: string[] = [];
+  // --- Normalization dictionary elements ---
+  const normFromInput = document.getElementById('normFromInput') as HTMLInputElement | null;
+  const normToInput = document.getElementById('normToInput') as HTMLInputElement | null;
+  const addNormEntryBtn = document.getElementById('addNormEntryBtn') as HTMLButtonElement | null;
+  const normEntriesList = document.getElementById('normEntriesList') as HTMLElement | null;
+  const noNormEntriesMsg = document.getElementById('noNormEntriesMsg') as HTMLElement | null;
 
-  /**
-   * デフォルトカテゴリを表示
-   */
+  // In-memory state
+  let userCategories: string[] = [];
+  let normalizationEntries: TagNormalizationEntry[] = [];
+
+  // ========================================================================
+  // Default categories display
+  // ========================================================================
+
   function renderDefaultCategories(): void {
     if (!defaultCategoriesList) return;
     defaultCategoriesList.innerHTML = '';
@@ -42,9 +52,10 @@ export async function initTagsPanel(): Promise<void> {
     });
   }
 
-  /**
-   * ユーザーカテゴリを表示
-   */
+  // ========================================================================
+  // User categories display
+  // ========================================================================
+
   function renderUserCategories(): void {
     if (!userCategoriesListEl || !noUserCategoriesMsg) return;
 
@@ -84,11 +95,11 @@ export async function initTagsPanel(): Promise<void> {
     });
   }
 
-  /**
-   * カテゴリを追加
-   */
+  // ========================================================================
+  // Category add logic
+  // ========================================================================
+
   const MAX_CATEGORY_NAME_LENGTH = 50;
-  // タグパース形式（`# tag | summary`）を壊す可能性のある文字を禁止
   const INVALID_CATEGORY_CHARS = /[|#\n\r]/;
 
   function addCategory(): void {
@@ -97,7 +108,6 @@ export async function initTagsPanel(): Promise<void> {
 
     if (!categoryName) return;
 
-    // 最大長チェック
     if (categoryName.length > MAX_CATEGORY_NAME_LENGTH) {
       alert(
         getMessage('categoryNameTooLong') ||
@@ -106,7 +116,6 @@ export async function initTagsPanel(): Promise<void> {
       return;
     }
 
-    // 禁止文字チェック（|や#はタグパース形式を壊す可能性があるため禁止）
     if (INVALID_CATEGORY_CHARS.test(categoryName)) {
       alert(
         getMessage('categoryNameInvalidChars') ||
@@ -115,7 +124,6 @@ export async function initTagsPanel(): Promise<void> {
       return;
     }
 
-    // 重複チェック
     const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
     if (allCategories.includes(categoryName)) {
       alert(getMessage('duplicateCategoryError') || 'このカテゴリ名は既に存在します');
@@ -127,21 +135,91 @@ export async function initTagsPanel(): Promise<void> {
     renderUserCategories();
   }
 
-  /**
-   * 設定を保存
-   */
+  // ========================================================================
+  // Normalization dictionary display
+  // ========================================================================
+
+  function renderNormalizationEntries(): void {
+    if (!normEntriesList || !noNormEntriesMsg) return;
+
+    normEntriesList.innerHTML = '';
+
+    if (normalizationEntries.length === 0) {
+      noNormEntriesMsg.hidden = false;
+      return;
+    }
+
+    noNormEntriesMsg.hidden = true;
+
+    normalizationEntries.forEach((entry, index) => {
+      const item = document.createElement('div');
+      item.className = 'norm-entry-item';
+
+      const label = document.createElement('span');
+      label.className = 'norm-entry-label';
+      label.textContent = `${entry.from} → ${entry.to}`;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'norm-entry-delete';
+      deleteBtn.textContent = '×';
+      deleteBtn.setAttribute('aria-label', `Delete mapping ${entry.from}`);
+      deleteBtn.addEventListener('click', () => {
+        normalizationEntries.splice(index, 1);
+        renderNormalizationEntries();
+      });
+
+      item.appendChild(label);
+      item.appendChild(deleteBtn);
+      normEntriesList.appendChild(item);
+    });
+  }
+
+  // ========================================================================
+  // Normalization entry add logic
+  // ========================================================================
+
+  function addNormalizationEntry(): void {
+    if (!normFromInput || !normToInput) return;
+    const from = normFromInput.value.trim();
+    const to = normToInput.value.trim();
+
+    if (!from || !to) return;
+
+    // Check for duplicates (case-insensitive, matching normalizeTags behavior)
+    const normalizedFrom = from.trim().normalize('NFKC').toLowerCase();
+    if (normalizationEntries.some(e => e.from.trim().normalize('NFKC').toLowerCase() === normalizedFrom)) {
+      alert(getMessage('duplicateNormEntryError') || 'このFrom値は既に登録されています');
+      return;
+    }
+
+    normalizationEntries.push({ from, to });
+    normFromInput.value = '';
+    normToInput.value = '';
+    renderNormalizationEntries();
+
+    // Focus back on the from input for quick entry
+    normFromInput.focus();
+  }
+
+  // ========================================================================
+  // Settings save
+  // ========================================================================
+
   async function saveTagSettings(): Promise<void> {
     const settings = await getSettings();
 
-    // タグ付き要約モード
+    // Tag summary mode
     settings[StorageKeys.TAG_SUMMARY_MODE] = tagSummaryModeInput?.checked || false;
 
-    // ユーザーカテゴリ
+    // User categories
     settings[StorageKeys.TAG_CATEGORIES] = userCategories.map((name) => ({
       name,
       isDefault: false,
       createdAt: Date.now(),
     }));
+
+    // Normalization dictionary
+    settings[StorageKeys.TAG_NORMALIZATION_DICT] = normalizationEntries;
 
     try {
       await saveSettingsWithAllowedUrls(settings);
@@ -156,31 +234,40 @@ export async function initTagsPanel(): Promise<void> {
     }
   }
 
-  /**
-   * 設定をロード
-   */
+  // ========================================================================
+  // Settings load
+  // ========================================================================
+
   async function loadTagSettings(): Promise<void> {
     const settings = await getSettings();
 
-    // タグ付き要約モード
+    // Tag summary mode
     if (tagSummaryModeInput) {
       tagSummaryModeInput.checked = (settings[StorageKeys.TAG_SUMMARY_MODE] as boolean) || false;
     }
 
-    // ユーザーカテゴリ
+    // User categories
     const savedUserCategories =
       (settings[StorageKeys.TAG_CATEGORIES] as TagCategory[] | undefined) || [];
     userCategories = savedUserCategories.filter((c) => !c.isDefault).map((c) => c.name);
     renderUserCategories();
+
+    // Normalization dictionary
+    const savedDict =
+      (settings[StorageKeys.TAG_NORMALIZATION_DICT] as TagNormalizationEntry[] | undefined) || [];
+    normalizationEntries = savedDict.map(e => ({ from: e.from, to: e.to }));
+    renderNormalizationEntries();
   }
 
-  // 初期化
+  // ========================================================================
+  // Initialization
+  // ========================================================================
+
   renderDefaultCategories();
   await loadTagSettings();
 
-  // イベントハンドラ
+  // Category event handlers
   addCategoryBtn?.addEventListener('click', addCategory);
-
   newCategoryInput?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -188,5 +275,26 @@ export async function initTagsPanel(): Promise<void> {
     }
   });
 
+  // Normalization dictionary event handlers
+  addNormEntryBtn?.addEventListener('click', addNormalizationEntry);
+  normFromInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // If "to" is empty and "from" is filled, move focus to "to"
+      if (normFromInput.value.trim() && !normToInput?.value?.trim()) {
+        normToInput?.focus();
+      } else {
+        addNormalizationEntry();
+      }
+    }
+  });
+  normToInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addNormalizationEntry();
+    }
+  });
+
+  // Main save button
   saveTagsBtn?.addEventListener('click', saveTagSettings);
 }

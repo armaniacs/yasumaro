@@ -4,7 +4,7 @@
  * デフォルトカテゴリ定義、タグパース、カテゴリバリデーション
  */
 
-import type { TagCategory } from './types.js';
+import type { TagCategory, TagNormalizationEntry } from './types.js';
 import type { Settings } from './storageSettings.js';
 
 /**
@@ -141,4 +141,76 @@ export function parseTagsFromSummary(summary: string): { tags: string[]; summary
 
     // summaryPart から最適なブロックを選択し、ノイズ行を除去して返す
     return { tags, summary: removeNoiseLines(selectBestBlock(summaryPart)) };
+}
+
+/**
+ * タグ正規化辞書を適用してタグを正規化する
+ * 前処理: trim → NFKC正規化（全角半角・大文字小文字統一）→ 辞書マッチ（最初に一致したエントリを適用）
+ *
+ * @param {string[]} tags - 正規化前のタグ配列
+ * @param {TagNormalizationEntry[]} dict - 正規化辞書エントリの配列
+ * @returns {string[]} 正規化後のタグ配列
+ */
+export function normalizeTags(tags: string[], dict: TagNormalizationEntry[]): string[] {
+    if (tags.length === 0) {
+        return tags;
+    }
+    if (dict.length === 0) {
+        return [...tags]; // Return a copy to prevent caller mutation
+    }
+
+    // 辞書を事前に正規化して Map に変換（from キーを正規化済み + 小文字化しておく）
+    const normalizationMap = new Map<string, string>();
+    for (const entry of dict) {
+        const normalizedKey = entry.from.trim().normalize('NFKC').toLowerCase();
+        // 最初に追加されたエントリを優先（重複エントリ対策）
+        if (!normalizationMap.has(normalizedKey)) {
+            normalizationMap.set(normalizedKey, entry.to);
+        }
+    }
+
+    const result: string[] = [];
+    const seen = new Set<string>();
+    for (const tag of tags) {
+        const normalized = tag.trim().normalize('NFKC').toLowerCase();
+        const replacement = normalizationMap.get(normalized) ?? tag;
+        // Deduplicate using NFKC+lowercase key to catch case-only duplicates
+        const dedupKey = replacement.trim().normalize('NFKC').toLowerCase();
+        if (!seen.has(dedupKey)) {
+            seen.add(dedupKey);
+            result.push(replacement);
+        }
+    }
+    return result;
+}
+
+/**
+ * SQLiteのtags文字列をパースしてタグ名の配列に変換する
+ * 新形式: "#tag1 #tag2"（#付きスペース区切り）
+ * 旧形式（移行済み）: "tag1, tag2"（カンマ区切り）
+ *
+ * @param {string | null} tagsStr - SQLiteから読み取ったtags文字列
+ * @returns {string[]} タグ名の配列（#なし）
+ */
+export function parseTagsForDisplay(tagsStr: string | null | undefined): string[] {
+    if (!tagsStr || tagsStr.trim().length === 0) {
+        return [];
+    }
+
+    // # が含まれている場合は #tag 形式としてパース
+    if (tagsStr.includes('#')) {
+        const tags = tagsStr
+            .split(/\s+/)
+            .map(t => t.trim())
+            .filter(t => t.startsWith('#'))
+            .map(t => t.replace(/^#+/, '')) // 先頭の#を除去（複数#にも対応）
+            .filter(t => t.length > 0);
+        if (tags.length > 0) return tags;
+    }
+
+    // フォールバック: カンマ区切りとしてパース
+    return tagsStr
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
 }

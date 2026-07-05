@@ -91,6 +91,7 @@ export async function queryLogs(options: {
   until?: number;
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
+  tagFilter?: string;
 } = {}): Promise<{ rows: BrowsingLogEntry[]; total: number } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'query', ...options });
