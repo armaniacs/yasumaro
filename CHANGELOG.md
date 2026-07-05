@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.2` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.3` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,36 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.3] - 2026-07-06
+
+### Added / 追加
+
+- **タグ正規化辞書機能** — AI が抽出したタグの表記ゆれ（例: "AI" vs "人工知能"）を保存時に自動正規化
+  - `TagNormalizationEntry` 型を新設。`from` → `to` のマッピング辞書を `StorageKeys.TAG_NORMALIZATION_DICT` に保存
+  - `normalizeTags()` 純粋関数: trim → NFKC正規化 → 大文字小文字統一 → 辞書マッチ → 重複除去
+  - `parseTagsForDisplay()` 純粋関数: SQLite の `tags` 文字列をパース（`#tag1 #tag2` 形式 + カンマ区切りフォールバック）
+  - 記録パイプライン（`privacyPipeline.ts`）に辞書適用を注入。既存タグへの遡及変更なし（新規記録のみ）
+
+- **SQLite 履歴パネルにタグバッジ表示と FTS5 サーバーサイドフィルタ** — 各エントリに `#tag` バッジを表示、クリックでタグフィルタ
+  - `QueryOptions` に `tagFilter` フィールドを追加。IDB/OPFS 両 SQL エンジンで FTS5 `MATCH` クエリを実行
+  - `offscreen.ts` の `SQLITE_QUERY` ハンドラに `tagFilter` 転送を追加
+  - 日付フィルタ・検索クエリと独立した AND 条件として動作
+
+- **ダッシュボード Tags パネルに正規化辞書管理 UI** — From/To 入力フォーム、エントリ一覧、追加/削除/保存
+
+- **i18n メッセージ 9 キーを日英に追加** — タグフィルタバー、正規化辞書 UI、重複登録エラー
+
+- **CSS スタイリング** — `.sqlite-entry-tags`、`.sqlite-tag-filter-bar`、`.tag-filter-badge`、正規化辞書 UI クラスを追加。ダークモード対応
+
+### Fixed / 修正
+
+- **FTS5 タグフィルタが短いタグ（2文字、例: "AI"）で動作しない問題を修正** — `sanitizeFtsTerm()` が `#` プレフィックスとクォートを除去し、FTS5 トリグラムトークナイザが 2 文字からトークンを生成できなかった。タグ名の FTS5 オペレーター除去に変更し、`#` プレフィックスを保持
+- **タグフィルタ適用時に日付範囲フィルタが失われる問題を修正** — タグバッジクリックとフィルタ解除時に `dateRangeFromSelected()` ヘルパーで日付範囲を伝播
+- **正規化辞書が空の時 `normalizeTags()` が元配列への参照を返す問題を修正** — シャローコピーを返すよう変更し、呼び出し元によるデータ破壊を防止
+- **タグ正規化後の重複除去が大文字小文字差異を無視しない問題を修正** — dedup キーに NFKC+toLowerCase を適用し、case-only の重複タグを除去
+
+---
 
 ## [6.5.2] - 2026-07-05
 
