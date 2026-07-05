@@ -76,6 +76,45 @@ grep -rn "catch" src/background/recordingLogic.ts
 
 - Service Worker 終了で pending がメモリから消えないよう `chrome.storage.local` に永続化する。
 
+### 調査で判明した事実（設計・実装前に必読）
+
+#### 1. 既存の pending 機構はヘッダーブロック専用であり、記録失敗はカバーしていない
+
+`src/utils/pendingStorage.ts` の `PendingPage.reason` は `'cache-control' | 'set-cookie' | 'authorization'` の閉じた union 型で、`src/background/pipeline/steps/checkPrivacyHeadersStep.ts` からのみ `addPendingPage()` が呼ばれている。これは「プライバシーヘッダーにより記録前にブロックされたページ」専用であり、実際の記録処理の失敗（本PBIの対象）は一切扱っていない。
+
+`recordingLogic.ts` 冒頭で `addPendingPage` を import しているが、実際には呼ばれていない（デッドインポート）。
+
+#### 2. `RecordingPipeline.ts` には2種類の「記録漏れ」が既に存在する
+
+`src/background/pipeline/RecordingPipeline.ts` の現状:
+
+- **FATAL/RETRY 戦略のステップ**（`domainFilter`, `permission`, `trust`, `duplicate` 等）が失敗すると `buildErrorResult()`（310-336行目）が呼ばれ、Chrome通知を出すだけで `success: false` を返す。**この失敗はどこにも永続化されず、通知を見逃すと記録漏れに気づけない。**
+- **BEST_EFFORT 戦略の `saveObsidian` ステップ**（112-115行目）が失敗しても `context.errors` に積まれるだけで、パイプライン全体は `buildResult()`（341-368行目）により `success: true` を返す。**Obsidianへの書き込みが実際には行われていないのに、UI上は成功したように見える。**
+
+この2パターンを `pipeline-error` / `obsidian-write-failed` という新しい `reason` 値として、既存の `PendingPage` 型・ストア（`osh_pending_pages`）に統合するのが本PBIの中心的な変更。
+
+#### 3. 既存の「今すぐ記録」ボタンは既にURL再取得＋パイプライン全体再実行を行っている（重要）
+
+`src/dashboard/historyPendingPanel.ts` と `src/popup/pendingPages.ts` の再記録ボタン（`executeRecord`）は、**既に** `content: ''` で `MANUAL_RECORD` メッセージを送信しており、`src/background/service-worker.ts` の `handleManualRecord()` が `manualContentFetcher.fetchContent(url)` でページ本文をURLからライブ再取得してからパイプライン全体を再実行している。
+
+つまり、失敗したページの本文やAI要約済みデータを `PendingPage` に事前保存しておく必要はない。**`pipeline-error` と `obsidian-write-failed` のどちらのケースも、既存の再記録ボタンをそのまま使い回せば「URL再取得 + パイプライン全体を再実行」で回復できる。** AI要約が再度実行される（コスト・レイテンシが再発生する）が、実装を一元化しシンプルに保つ方針とした（当初検討していた `recordingData`/`resumeData` の個別保存方式は不要と判断し廃棄）。
+
+#### 4. 詳細設計・実装計画
+
+上記の調査結果を反映した設計・実装計画を以下に作成済み:
+
+- 設計: [docs/superpowers/specs/2026-07-05-missed-record-recovery-design.md](../../docs/superpowers/specs/2026-07-05-missed-record-recovery-design.md)
+- 実装計画: [docs/superpowers/plans/2026-07-05-missed-record-recovery.md](../../docs/superpowers/plans/2026-07-05-missed-record-recovery.md)
+
+変更は以下の4タスクに分解される:
+
+1. `PendingPage` 型に `errorMessage` フィールドと `pipeline-error` / `obsidian-write-failed` reason値を追加（`src/utils/pendingStorage.ts`）
+2. `RecordingPipeline.buildErrorResult()` から `addPendingPage({ reason: 'pipeline-error', ... })` を呼ぶ
+3. `RecordingPipeline.buildResult()` で `saveObsidian` 由来のエラーのみを判定し `addPendingPage({ reason: 'obsidian-write-failed', ... })` を呼ぶ
+4. `src/dashboard/historyFilters.ts` の `renderPendingReason()` と `_locales/{ja,en}/messages.json` に新しい理由の表示ラベルを追加
+
+再記録UI（`historyPendingPanel.ts` / `pendingPages.ts`）自体の改修は不要。
+
 ## Definition of Done
 
 - [ ] 全BDDシナリオが自動テスト化されパスする
