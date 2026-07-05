@@ -608,6 +608,7 @@ export async function query(options: QueryOptions = {}): Promise<{
       limit: options.limit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
       ids: options.ids,
+      tagFilter: options.tagFilter,
     });
     if (opfsResult !== null) return { success: true, rows: opfsResult.rows, total: opfsResult.total };
 
@@ -649,6 +650,17 @@ export async function query(options: QueryOptions = {}): Promise<{
       const placeholders = options.ids.map(() => '?').join(',');
       conditions.push(`id IN (${placeholders})`);
       params.push(...options.ids);
+    }
+    if (options.tagFilter) {
+      // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
+      const cleanTag = options.tagFilter
+        .replace(/["'*^~:()+\-\\]/g, ' ')
+        .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const ftsExpr = `"#${cleanTag}"`;
+      conditions.push('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+      params.push(ftsExpr);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

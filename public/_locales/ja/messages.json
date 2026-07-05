@@ -2830,5 +2830,32 @@
   "previewContent": {
     "message": "プレビュー内容",
     "description": "プレビューコンテンツテキストエリアのaria-label"
+  },
+  "tagFilterLabel": {
+    "message": "フィルター:"
+  },
+  "clearTagFilter": {
+    "message": "クリア"
+  },
+  "noNormEntries": {
+    "message": "ルールがありません"
+  },
+  "normEntriesTitle": {
+    "message": "正規化ルール"
+  },
+  "tagNormalizationTitle": {
+    "message": "タグ正規化"
+  },
+  "tagNormalizationDesc": {
+    "message": "記録時に類似タグを自動的に正規化します（例: 「人工知能」→「AI」）。以下でルールを設定してください。"
+  },
+  "normFromPlaceholder": {
+    "message": "元のタグ"
+  },
+  "normToPlaceholder": {
+    "message": "正規化後のタグ"
+  },
+  "duplicateNormEntryError": {
+    "message": "このFrom値は既に登録されています"
   }
 }

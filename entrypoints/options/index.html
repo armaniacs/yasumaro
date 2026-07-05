@@ -1330,6 +1330,35 @@
           </div>
         </div>
 
+        <!-- Tag Normalization Dictionary -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="tagNormalizationTitle">Tag Normalization</h3>
+
+          <p class="help-text" data-i18n="tagNormalizationDesc">
+            Automatically normalize similar tags (e.g., "人工知能" → "AI") when recording pages.
+            Configure rules below: enter the original tag and its canonical form.
+          </p>
+
+          <div class="mb-8">
+            <h4 class="mb-4 category-title" data-i18n="normEntriesTitle">Normalization Rules</h4>
+            <div id="normEntriesList" class="norm-entries-list"></div>
+            <p id="noNormEntriesMsg" class="no-tags-msg" data-i18n="noNormEntries" hidden>No rules configured</p>
+
+            <div class="form-group mt-4">
+              <div class="new-category-row">
+                <input type="text" id="normFromInput" class="w-full norm-input"
+                  data-i18n-input-placeholder="normFromPlaceholder"
+                  aria-label="Original tag (From)">
+                <span class="norm-arrow">→</span>
+                <input type="text" id="normToInput" class="w-full norm-input"
+                  data-i18n-input-placeholder="normToPlaceholder"
+                  aria-label="Normalized tag (To)">
+                <button id="addNormEntryBtn" class="secondary-btn" data-i18n="add">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveTagsBtn" class="btn-primary" data-i18n="saveBtn">Save</button>
         </div>

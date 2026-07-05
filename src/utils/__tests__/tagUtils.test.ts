@@ -8,7 +8,9 @@ import {
     getDefaultCategories,
     getAllCategories,
     isValidCategory,
-    parseTagsFromSummary
+    parseTagsFromSummary,
+    normalizeTags,
+    parseTagsForDisplay,
 } from '../tagUtils.js';
 
 describe('tagUtils', () => {
@@ -246,6 +248,103 @@ describe('tagUtils', () => {
             expect(result.summary).toBe('短い説明');
             expect(result.summary).not.toContain('要約文（改行なし）');
             expect(result.summary).not.toContain('#カテゴリ1');
+        });
+    });
+
+    describe('normalizeTags', () => {
+        test('空の辞書ではタグが変更されない', () => {
+            const tags = ['AI', '人工知能'];
+            expect(normalizeTags(tags, [])).toEqual(['AI', '人工知能']);
+        });
+
+        test('空のタグ配列では空のまま', () => {
+            expect(normalizeTags([], [{ from: '人工知能', to: 'AI' }])).toEqual([]);
+        });
+
+        test('辞書に一致するタグを正規化する', () => {
+            const dict = [
+                { from: '人工知能', to: 'AI' },
+                { from: '機械学習', to: 'Machine Learning' },
+            ];
+            expect(normalizeTags(['人工知能', 'データサイエンス'], dict)).toEqual(['AI', 'データサイエンス']);
+        });
+
+        test('辞書にないタグはそのまま', () => {
+            const dict = [{ from: '人工知能', to: 'AI' }];
+            expect(normalizeTags(['データサイエンス', '機械学習'], dict)).toEqual(['データサイエンス', '機械学習']);
+        });
+
+        test('大文字小文字の違いを吸収する（NFKC正規化）', () => {
+            const dict = [{ from: 'ai', to: 'Artificial Intelligence' }];
+            expect(normalizeTags(['AI'], dict)).toEqual(['Artificial Intelligence']);
+        });
+
+        test('全角半角の違いを吸収する（NFKC正規化）', () => {
+            const dict = [{ from: 'AI', to: '人工知能' }];
+            expect(normalizeTags(['ＡＩ'], dict)).toEqual(['人工知能']);
+        });
+
+        test('前後の空白を除去してマッチングする', () => {
+            const dict = [{ from: 'AI', to: 'Artificial Intelligence' }];
+            expect(normalizeTags(['  AI  '], dict)).toEqual(['Artificial Intelligence']);
+        });
+
+        test('複数のエントリがある場合、最初に一致したものを適用する', () => {
+            const dict = [
+                { from: 'ML', to: 'Machine Learning' },
+                { from: 'ML', to: '機械学習' },
+            ];
+            expect(normalizeTags(['ML'], dict)).toEqual(['Machine Learning']);
+        });
+
+        test('to の値も正規化されうる（連鎖解決はしない）', () => {
+            // 単一パス: "人工知能" → "AI" のみ。 "AI" → "Artificial Intelligence" は適用されない
+            const dict = [
+                { from: '人工知能', to: 'AI' },
+                { from: 'AI', to: 'Artificial Intelligence' },
+            ];
+            expect(normalizeTags(['人工知能'], dict)).toEqual(['AI']);
+        });
+    });
+
+    describe('parseTagsForDisplay', () => {
+        test('null の場合は空配列を返す', () => {
+            expect(parseTagsForDisplay(null)).toEqual([]);
+        });
+
+        test('undefined の場合は空配列を返す', () => {
+            expect(parseTagsForDisplay(undefined)).toEqual([]);
+        });
+
+        test('空文字列の場合は空配列を返す', () => {
+            expect(parseTagsForDisplay('')).toEqual([]);
+        });
+
+        test('# 形式（新形式）をパースする', () => {
+            expect(parseTagsForDisplay('#AI #機械学習')).toEqual(['AI', '機械学習']);
+        });
+
+        test('# 形式の先頭スペースを無視する', () => {
+            expect(parseTagsForDisplay('  #AI  #機械学習')).toEqual(['AI', '機械学習']);
+        });
+
+        test('# 形式が空要素の場合も正しく処理する', () => {
+            expect(parseTagsForDisplay('#AI  ')).toEqual(['AI']);
+        });
+
+        test('カンマ区切り（旧形式/移行済み）をフォールバックパースする', () => {
+            expect(parseTagsForDisplay('AI, 機械学習')).toEqual(['AI', '機械学習']);
+        });
+
+        test('カンマ区切りの空白トリム', () => {
+            expect(parseTagsForDisplay('AI , 機械学習')).toEqual(['AI', '機械学習']);
+        });
+
+        test('# が含まれる場合は # 形式を優先（カンマは考慮しない）', () => {
+            // "#" を含む行はスペース分割を優先。カンマ区切りは # がない場合のみフォールバック
+            const result = parseTagsForDisplay('#AI, #機械学習');
+            expect(result).toContain('機械学習');
+            expect(result).not.toContain(''); // 空要素なし
         });
     });
 });

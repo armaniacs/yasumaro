@@ -19,6 +19,7 @@ import { retryWithExponentialBackoff } from './utils/retry.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../utils/clipboard.js';
+import { parseTagsForDisplay } from '../utils/tagUtils.js';
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +37,7 @@ interface SqliteHistoryState {
   error: string | null;
   fallbackMode: boolean;
   selectedIds: Set<number>;
+  activeTagFilter: string | null;
 }
 
 let state: SqliteHistoryState = {
@@ -48,6 +50,7 @@ let state: SqliteHistoryState = {
   error: null,
   fallbackMode: false,
   selectedIds: new Set(),
+  activeTagFilter: null,
 };
 
 // ============================================================================
@@ -77,6 +80,7 @@ async function loadData(options: {
   until?: number;
   search?: string;
   page?: number;
+  tagFilter?: string;
 } = {}): Promise<void> {
   state.loading = true;
   state.error = null;
@@ -96,6 +100,9 @@ async function loadData(options: {
 
     let result: { rows: BrowsingLogEntry[]; total: number } | null;
 
+    // Use tagFilter from options or state, preferring explicit options
+    const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
+
     if (options.search) {
       result = await searchLogs(options.search, limit, offset);
     } else {
@@ -106,6 +113,7 @@ async function loadData(options: {
         until: options.until,
         orderBy: 'created_at',
         orderDir: 'DESC',
+        tagFilter: activeTagFilter || undefined,
       });
     }
 
@@ -152,6 +160,8 @@ function updateDynamicRegions(): void {
     (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
   }
 
+  updateTagFilterBar();
+
   const listEl = document.getElementById('sqlite-entry-list');
   if (listEl) {
     if (state.loading) {
@@ -163,6 +173,39 @@ function updateDynamicRegions(): void {
 
   if (!state.loading) {
     renderPagination();
+  }
+}
+
+/** Show or hide the tag filter bar in an already-mounted panel. */
+function updateTagFilterBar(): void {
+  const searchArea = document.querySelector('.sqlite-history-search');
+  if (!searchArea) return;
+
+  const existingBar = document.getElementById('sqlite-tag-filter-bar');
+  if (state.activeTagFilter) {
+    if (!existingBar) {
+      const bar = document.createElement('div');
+      bar.id = 'sqlite-tag-filter-bar';
+      bar.className = 'sqlite-tag-filter-bar';
+      bar.setAttribute('role', 'status');
+      bar.innerHTML = `
+        <span data-i18n="tagFilterLabel">フィルター:</span>
+        <span class="tag-filter-badge">#${escapeHtml(state.activeTagFilter)}</span>
+        <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>`;
+      searchArea.appendChild(bar);
+      const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          state.activeTagFilter = null;
+          state.currentPage = 0;
+          loadData({ page: 0, ...dateRangeFromSelected() });
+        });
+      }
+    }
+  } else {
+    if (existingBar) {
+      existingBar.remove();
+    }
   }
 }
 
@@ -342,6 +385,12 @@ function renderState(): void {
       <div id="sqlite-error" class="sqlite-history-error" style="${state.error ? '' : 'display:none'}">
         ${escapeHtml(state.error || '')}
       </div>
+      ${state.activeTagFilter ? `
+      <div id="sqlite-tag-filter-bar" class="sqlite-tag-filter-bar" role="status">
+        <span data-i18n="tagFilterLabel">フィルター:</span>
+        <span class="tag-filter-badge">#${escapeHtml(state.activeTagFilter)}</span>
+        <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>
+      </div>` : ''}
     </div>
     <div id="sqlite-bulk-bar" class="sqlite-bulk-bar" style="${state.selectedIds.size > 0 ? '' : 'display:none'}">
       <label class="sqlite-bulk-select-all">
@@ -402,18 +451,42 @@ function renderState(): void {
   if (appendBtn) {
     appendBtn.addEventListener('click', handleAppendToObsidian);
   }
+
+  // Wire tag filter clear button
+  const tagFilterClear = document.getElementById('sqlite-tag-filter-clear') as HTMLButtonElement | null;
+  if (tagFilterClear) {
+    tagFilterClear.addEventListener('click', () => {
+      state.activeTagFilter = null;
+      renderState();
+    });
+  }
 }
 
 function renderEntryList(): void {
   const listEl = document.getElementById('sqlite-entry-list');
   if (!listEl) return;
 
-  if (state.entries.length === 0) {
+  // Server-side tag filter: state.entries already filtered by loadData with tagFilter
+  const displayEntries = state.entries;
+
+  if (displayEntries.length === 0) {
     listEl.innerHTML = `<div class="empty-state">${t('historyNoRecords')}</div>`;
     return;
   }
 
-  listEl.innerHTML = state.entries.map(entry => `
+  listEl.innerHTML = displayEntries.map(entry => {
+    const entryTags = parseTagsForDisplay(entry.tags);
+    const tagsHtml = entryTags.length > 0
+      ? `<div class="sqlite-entry-tags">${entryTags.map(tag => {
+          const isActive = state.activeTagFilter === tag;
+          return `<button type="button" class="tag-badge${isActive ? ' filter-active' : ''}"
+            data-tag="${escapeHtml(tag)}"
+            data-action="tag-filter"
+            aria-pressed="${isActive ? 'true' : 'false'}">#${escapeHtml(tag)}</button>`;
+        }).join('')}</div>`
+      : '';
+
+    return `
     <div class="sqlite-entry" data-id="${entry.id}">
       <div class="sqlite-entry-header">
         <input type="checkbox" class="sqlite-entry-checkbox" data-action="select"
@@ -432,8 +505,9 @@ function renderEntryList(): void {
         <span class="sqlite-entry-time">${formatTimestamp(entry.created_at)}</span>
       </div>
       ${entry.summary ? `<div class="sqlite-entry-summary">${escapeHtml(entry.summary)}</div>` : ''}
-    </div>
-  `).join('');
+      ${tagsHtml}
+    </div>`;
+  }).join('');
 
   // Wire action buttons
   listEl.querySelectorAll('[data-action="select"]').forEach((el) => {
@@ -448,18 +522,32 @@ function renderEntryList(): void {
       updateBulkBar();
     });
   });
-  listEl.querySelectorAll('[data-action="star"]').forEach((el, i) => {
-    el.addEventListener('click', () => handleToggleStar(state.entries[i].id));
+  listEl.querySelectorAll('[data-action="star"]').forEach((el) => {
+    const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
+    if (entryId) el.addEventListener('click', () => handleToggleStar(entryId));
   });
-  listEl.querySelectorAll('[data-action="delete"]').forEach((el, i) => {
-    el.addEventListener('click', () => handleDelete(state.entries[i].id));
+  listEl.querySelectorAll('[data-action="delete"]').forEach((el) => {
+    const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
+    if (entryId) el.addEventListener('click', () => handleDelete(entryId));
   });
 
-  state.entries.forEach(entry => {
+  displayEntries.forEach(entry => {
     const entryEl = listEl.querySelector(`.sqlite-entry[data-id="${entry.id}"] .sqlite-entry-header`);
     if (entryEl) {
       entryEl.appendChild(createCopyButton(entry));
     }
+  });
+
+  // Wire tag filter buttons — server-side via loadData (preserve date range)
+  listEl.querySelectorAll('[data-action="tag-filter"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const tag = (el as HTMLElement).getAttribute('data-tag');
+      if (!tag) return;
+      const newFilter = state.activeTagFilter === tag ? null : tag;
+      state.activeTagFilter = newFilter;
+      state.currentPage = 0;
+      loadData({ page: 0, tagFilter: newFilter || undefined, ...dateRangeFromSelected() });
+    });
   });
 }
 
@@ -578,16 +666,18 @@ function renderCalendarNav(): void {
   });
 }
 
+/** Compute date range from selectedDate. */
+function dateRangeFromSelected(): { since?: number; until?: number } {
+  if (!state.selectedDate) return {};
+  const date = new Date(state.selectedDate + 'T00:00:00');
+  return { since: date.getTime(), until: date.getTime() + 86400000 - 1 };
+}
+
 function reloadCurrent(): void {
   if (state.searchQuery.trim()) {
     loadData({ search: state.searchQuery, page: state.currentPage });
-  } else if (state.selectedDate) {
-    const date = new Date(state.selectedDate + 'T00:00:00');
-    const since = date.getTime();
-    const until = date.getTime() + 86400000 - 1;
-    loadData({ since, until, page: state.currentPage });
   } else {
-    loadData({ page: state.currentPage });
+    loadData({ ...dateRangeFromSelected(), page: state.currentPage });
   }
 }
 

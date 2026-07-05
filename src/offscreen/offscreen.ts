@@ -245,6 +245,7 @@ export function handleOffscreenMessage(
                     since: payload?.since != null ? Number(payload.since) : undefined,
                     until: payload?.until != null ? Number(payload.until) : undefined,
                     ids: payload?.ids != null ? payload.ids as number[] : undefined,
+                    tagFilter: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
                 };
                 const result = await sqliteQuery(options);
                 sendResponse(result);

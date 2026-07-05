@@ -1,7 +1,8 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
 import { Settings, StorageKeys } from '../utils/storage.js';
-import { parseTagsFromSummary } from '../utils/tagUtils.js';
+import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
+import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
 import type { MaskedItem } from '../messaging/types.js';
@@ -212,7 +213,10 @@ export class PrivacyPipeline {
       }
 
       const parsed = parseTagsFromSummary(sanitizedSummary);
-      tags = parsed.tags.length > 0 ? parsed.tags : undefined;
+      // Apply tag normalization dictionary (normalizeTags is a no-op for empty dict)
+      const dict = (this.settings[StorageKeys.TAG_NORMALIZATION_DICT] ?? []) as TagNormalizationEntry[];
+      const normalizedTags = normalizeTags(parsed.tags, dict);
+      tags = normalizedTags.length > 0 ? normalizedTags : undefined;
       sanitizedSummary = parsed.summary;
       sanitizedSummary = sanitizedSummary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
     }

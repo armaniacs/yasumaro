@@ -5,7 +5,7 @@
  */
 
 import type { EncryptedData } from '../typesCrypto.js';
-import type { UblockRules, Source, CustomPrompt, TagCategory } from '../types.js';
+import type { UblockRules, Source, CustomPrompt, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 
 export const StorageKeys = {
@@ -72,6 +72,7 @@ export const StorageKeys = {
     // タグ機能設定
     TAG_CATEGORIES: 'tag_categories',                  // ユーザー追加カテゴリ + デフォルト管理
     TAG_SUMMARY_MODE: 'tag_summary_mode',              // タグ付き要約を使用するか
+    TAG_NORMALIZATION_DICT: 'tag_normalization_dict',  // タグ正規化辞書
     // L0 Extractive Compression Settings
     L0_EXTRACTIVE_ENABLED: 'l0_extractive_enabled',   // L0抽出を有効化するか（デフォルト: true）
     L0_EXTRACTIVE_TOP_K: 'l0_extractive_top_k',       // 抽出する文数（デフォルト: 10）
@@ -251,6 +252,7 @@ export interface StorageKeyValues {
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;
     [StorageKeys.TAG_CATEGORIES]: TagCategory[];
     [StorageKeys.TAG_SUMMARY_MODE]: boolean;
+    [StorageKeys.TAG_NORMALIZATION_DICT]: TagNormalizationEntry[];
     [StorageKeys.L0_EXTRACTIVE_ENABLED]: boolean;
     [StorageKeys.L0_EXTRACTIVE_TOP_K]: number;
     [StorageKeys.L0_EXTRACTIVE_MIN_LENGTH]: number;

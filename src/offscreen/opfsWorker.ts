@@ -58,6 +58,7 @@ interface QueryPayload {
   orderBy?: string;
   orderDir?: string;
   ids?: number[];
+  tagFilter?: string;
 }
 
 interface SearchPayload {
@@ -290,6 +291,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   const {
     limit = 20, offset = 0, since, until, domain,
     isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
+    tagFilter,
   } = payload;
 
   // Validate sort columns
@@ -309,6 +311,17 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   if (ids !== undefined && ids.length > 0) {
     conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
     params.push(...ids);
+  }
+  if (tagFilter) {
+    // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
+    const cleanTag = tagFilter
+      .replace(/["'*^~:()+\-\\]/g, ' ')
+      .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const ftsExpr = `"#${cleanTag}"`;
+    conditions.push('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+    params.push(ftsExpr);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

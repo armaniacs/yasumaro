@@ -57,6 +57,7 @@ export async function handleDashboardSqlite(
                     until: payload.until as number | undefined,
                     orderBy: (payload.orderBy as string) || 'created_at',
                     orderDir: (payload.orderDir as 'ASC' | 'DESC') || 'DESC',
+                    tagFilter: payload.tagFilter as string | undefined,
                 });
                 return result
                     ? { success: true, rows: result.rows, total: result.total }
