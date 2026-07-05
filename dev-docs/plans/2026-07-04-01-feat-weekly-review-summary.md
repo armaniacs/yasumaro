@@ -1,62 +1,86 @@
-# PBI: 週次/月次の振り返りサマリ自動生成
+# PBI: 週次/月次の振り返りサマリ自動生成（ローカルMarkdown出力）
 
 - 親issue: [DEV-86](https://linear.app/armaniacs/issue/DEV-86)
 - 領域: A. 知識活用・検索強化
 - type: feat / 優先度: ★推奨（第一弾候補）
+- 設計ドキュメント: `docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md`
+- 関連PBI: `dev-docs/plans/2026-07-04-07-feat-local-markdown-export.md`（出力機構を再利用、完了済み）
+
+> **改訂履歴（2026-07-05）**: 当初案の「Obsidian週次ノートへの追記」を撤回し、`~/Downloads/Yasumaro/` へのローカルMarkdown出力に変更。あわせて記録処理の統計セクションをサマリに統合する。
 
 ## ユーザーストーリー
 
-Yasumaro 利用者として、1週間（または1ヶ月）に読んだページのダイジェストを Obsidian の週次ノートに自動生成してほしい。なぜなら、日々の記録が溜まるだけでは振り返りづらく、期間単位でまとめて把握できると学びの定着や情報整理に役立つから。
+Yasumaro 利用者として、1週間（または1ヶ月）に読んだページのダイジェストをローカルのMarkdownファイルとして自動生成してほしい。なぜなら、日々の記録が溜まるだけでは振り返りづらく、期間単位でまとめて把握できると学びの定着や情報整理に役立つから。また、Obsidian Local REST APIを導入していなくても振り返り機能を使えるようにしたいから。
 
 ## ビジネス価値
 
-「記録した後」の価値を最大化する差別化機能。デイリーノートの断片を週次で俯瞰でき、利用継続の動機になる。測定: 週次サマリ生成の実行回数 / 生成ノートの閲覧率。
+「記録した後」の価値を最大化する差別化機能。Obsidian REST未導入層にも届き、対象ユーザーを拡大する。デイリーの断片を週次/月次で俯瞰でき、利用継続の動機になる。測定: サマリ生成の実行回数 / 生成ファイルの利用有無。
 
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 週次サマリが週次ノートに生成される
-  Given 直近7日間に複数の閲覧履歴が記録されている
+Scenario: 週次サマリがローカルMarkdownとして生成される
+  Given 直近の週（月曜始まり）に複数の閲覧履歴が記録されている
   And   週次サマリ機能が有効に設定されている
-  When  週次サマリ生成がスケジュールに従って実行される
+  When  翌週月曜日にYasumaroが最初に動作する
   Then  対象期間の履歴を要約したダイジェストが生成される
-  And   Obsidian の週次ノートの所定セクションに追記される
+  And   ~/Downloads/Yasumaro/YYYY-week-NN.md（NNはISO週番号）として出力される
+  And   同ファイル内に対象期間の処理統計セクションが含まれる
+
+Scenario: 月次サマリがローカルMarkdownとして生成される
+  Given 直近1ヶ月間に複数の閲覧履歴が記録されている
+  And   月次サマリ機能が有効に設定されている
+  When  翌月初日にYasumaroが最初に動作する
+  Then  対象期間の履歴を要約したダイジェストが生成される
+  And   ~/Downloads/Yasumaro/YYYY-month-NN.md として出力される
+  And   同ファイル内に対象期間の処理統計セクションが含まれる
 
 Scenario: 対象期間に履歴がない場合はスキップする
-  Given 直近7日間に閲覧履歴が1件も記録されていない
-  When  週次サマリ生成が実行される
-  Then  週次ノートへの書き込みは行われない
+  Given 対象期間に閲覧履歴が1件も記録されていない
+  When  週次または月次サマリ生成が実行される
+  Then  ファイル生成もAI呼び出しも行われない
   And   空サマリを生成しない
 
-Scenario: Obsidian が未起動のときは静かにスキップする
-  Given Obsidian Local REST API が起動していない
-  When  週次サマリ生成が実行される
-  Then  エラーで停止せず処理はスキップされる
-  And   次回スケジュールで再試行される
+Scenario: 同一周期の自動生成は一度だけ行われる
+  Given 対象週（または対象月）のサマリが既に生成済みである
+  When  同じ週（または月）の間にYasumaroが再度起動する
+  Then  サマリの再生成は行われない
+
+Scenario: 手動でサマリを生成できる
+  Given 利用者がダッシュボードから週次（または月次）サマリの手動生成を実行する
+  When  対象期間に閲覧履歴が存在する
+  Then  スケジュールを待たずにサマリファイルが生成される
 ```
 
 ## 受け入れ基準
 
-- [ ] 週次・月次の周期を設定できる
-- [ ] 対象期間を SQLite の created_at で正しく抽出する
-- [ ] 生成結果が週次ノートの所定セクションに追記される
-- [ ] 履歴ゼロ件・Obsidian 未起動で例外を出さない
+- [ ] 週次・月次それぞれで自動生成が動作する（週次: 翌週月曜初回起動時、月次: 翌月初日初回起動時）
+- [ ] ダッシュボードから手動生成できる
+- [ ] 対象期間を `SavedUrlEntry.timestamp` から正しく抽出する（週次: ISO週境界、月次: 月境界）
+- [ ] 生成結果が `~/Downloads/Yasumaro/YYYY-week-NN.md` / `YYYY-month-NN.md` として出力される
+- [ ] ダイジェスト（メタ要約）と統計セクションの両方がファイルに含まれる
+- [ ] 履歴ゼロ件で例外を出さず、ファイルも生成しない
+- [ ] 同一周期内での二重自動生成が起きない
 - [ ] 要約は既存プライバシーモード設定に従う
+- [ ] `URL_RETENTION_DAYS` を35日に延長し、月次集計に必要な履歴が保持される
 
 ## テスト戦略（t_wadaスタイル）
 
 ### E2Eテスト
-- 履歴投入 → スケジュール発火 → 週次ノート追記までの一連（happy path）
+- 履歴投入 → 週/月境界を跨いだ起動 → ローカルMarkdown生成までの一連（happy path、週次/月次それぞれ）
+- 履歴投入 → ダッシュボードから手動生成 → ファイル生成
 
 ### 統合テスト
-- SQLite 期間クエリが対象期間の行のみ返す
-- `obsidianClient` の週次ノート追記コントラクト
-- `chrome.alarms` 発火 → サマリ生成ハンドラ起動
+- `SavedUrlEntry` 期間抽出クエリが対象期間の行のみ返す（週境界・月境界の境目を含む）
+- ダイジェスト生成（既存AIクライアント呼び出し）→ Markdown組み立て → `chrome.downloads` 書き出しの連携
+- `chrome.alarms`（または起動フック）発火 → サマリ生成ハンドラ起動 → 二重生成防止チェック
 
 ### 単体テスト
-- 期間境界（週の開始/終了、月末）の抽出ロジック
+- ISO週番号の算出ロジック（年またぎ、53週年を含む）
+- 月境界（月初・月末）の抽出ロジック
 - 履歴ゼロ件時のスキップ判定
-- 週次ノートパス生成（`dailyNotePathBuilder` 拡張）
+- 統計集計ロジック（合計トークン数、平均処理時間、削減率、プロバイダ/モデル別内訳、0件時のゼロ除算回避）
+- 週次/月次ファイルパス生成
 
 ## 実装アプローチ
 
@@ -70,8 +94,14 @@ Scenario: Obsidian が未起動のときは静かにスキップする
 ## 技術的考慮事項
 
 - 依存: なし（既存資産で完結）
-- 再利用: `src/background/privacyPipeline.ts`（要約）、`src/background/obsidianClient.ts`（`appendToDailyNote` の週次版）、`src/utils/dailyNotePathBuilder.ts`（週次パス対応）、`src/background/sessionAlarmsManager.ts`（alarms パターン）、SQLite 期間クエリ（`src/offscreen/sqlite.ts`）
-- Service Worker はステートレスなので状態は `chrome.storage.local` に保持
+- 再利用:
+  - `src/background/pipeline/steps/saveLocalMarkdownStep.ts`（`chrome.downloads` 書き出しパターン）
+  - 既存AIクライアント（`aiClient` 系、メタ要約生成に利用）
+  - `src/utils/storage/`（`StorageKeys`・`defaults.ts`、新規設定キー追加パターン）
+  - `src/background/sessionAlarmsManager.ts`（alarms/起動検知パターン）
+  - `src/utils/urlEntry.ts` の `SavedUrlEntry`（統計集計の元データ）
+- Service Worker はステートレスなので状態（直近生成済み週/月番号など）は `chrome.storage.local` に保持
+- Obsidian Local REST API には依存しない（未導入でも動作する）
 
 ## 実装者向け注記
 
@@ -79,16 +109,18 @@ Scenario: Obsidian が未起動のときは静かにスキップする
 
 ```bash
 grep -rni "weekly\|週次\|reviewSummary\|periodSummary" src/
-grep -rn "buildDailyNotePath" src/utils/dailyNotePathBuilder.ts
-grep -rn "appendToDailyNote" src/background/obsidianClient.ts
+grep -rn "saveLocalMarkdownStep" src/background/pipeline/steps/
+grep -rn "URL_RETENTION_DAYS" src/utils/urlEntry.ts
 ```
 
 未実装であることを確認してから着手する。
 
 ### 落とし穴
 
-- Service Worker は任意タイミングで終了する。`chrome.alarms` で起こす前提で設計し、メモリ状態に依存しない。
-- 週の開始曜日・タイムゾーン（`ja-JP`）の扱いをテストで固定する。
+- Service Worker は任意タイミングで終了する。`chrome.alarms` または起動フックで起こす前提で設計し、メモリ状態に依存しない。
+- 週の開始曜日（月曜）・ISO週番号・タイムゾーン（`ja-JP`）の扱いをテストで固定する。
+- `URL_RETENTION_DAYS` を7日→35日に延長する際、既存の7日保持を前提にしたロジック・UI・ストレージ容量への影響を洗い出す。
+- 統計セクションはサマリ生成のたびに `SavedUrlEntry` から都度集計する。専用の集計ストレージは持たない。
 
 ## Definition of Done
 
