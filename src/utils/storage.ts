@@ -779,7 +779,7 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
-export const URL_RETENTION_DAYS = 7;
+export const URL_RETENTION_DAYS = 35;
 
 export interface SavedUrlEntry {
     url: string;
