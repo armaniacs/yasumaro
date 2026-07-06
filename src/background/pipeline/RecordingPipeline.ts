@@ -361,6 +361,19 @@ export class RecordingPipeline {
       });
     }
 
+    // 記録漏れリカバリ: Obsidian書き込みのみ失敗した場合、pending に登録して再記録できるようにする
+    const obsidianError = errors.find(e => e.step === 'saveObsidian');
+    if (obsidianError) {
+      void addPendingPage({
+        url: data.url,
+        title: data.title,
+        timestamp: Date.now(),
+        reason: 'obsidian-write-failed',
+        errorMessage: obsidianError.error.message,
+        expiry: Date.now() + (24 * 60 * 60 * 1000)
+      });
+    }
+
     return {
       success: true,
       summary: privacyResult?.summary,
