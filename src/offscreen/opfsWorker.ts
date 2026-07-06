@@ -93,7 +93,7 @@ const ALLOWED_ORDER_COLUMNS = [
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const FTS_QUERY_MAX_LENGTH = 200;
 
-import { SCHEMA_SQL, FTS5_STATEMENTS } from './schema.js';
+import { SCHEMA_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -136,6 +136,7 @@ async function initSqlite(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
   await engine.exec(SCHEMA_SQL);
+  await engine.exec(AUDIT_LOG_SCHEMA_SQL);
 
   // Schema migration: add obsidian_synced column if not present
   try {

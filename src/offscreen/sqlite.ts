@@ -28,7 +28,7 @@ const ALLOWED_ORDER_COLUMNS = [
 // Schema definition (shared with opfsWorker.ts)
 // ============================================================================
 
-import { SCHEMA_SQL, FTS5_SQL } from './schema.js';
+import { SCHEMA_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
 
 const DB_FILENAME = 'yasumaro.db';
 
@@ -242,6 +242,7 @@ async function _doInit(): Promise<boolean> {
 
     // Execute schema creation
     await sqlite3.exec(dbHandle, SCHEMA_SQL);
+    await sqlite3.exec(dbHandle, AUDIT_LOG_SCHEMA_SQL);
 
     // Schema migration: add obsidian_synced column if not present (Phase 6)
     try {

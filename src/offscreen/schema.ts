@@ -83,3 +83,18 @@ export const FTS5_STATEMENTS: string[] = [
     VALUES (new.id, new.url, new.title, new.summary, new.tags);
   END`,
 ];
+
+/**
+ * Audit log for cloud AI provider send events.
+ * Records provider name, target URL, and timestamp only — never content or PII.
+ */
+export const AUDIT_LOG_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    url TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+`;
