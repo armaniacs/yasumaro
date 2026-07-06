@@ -149,4 +149,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.REVIEW_SUMMARY_ENABLED]: false,
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: '',
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: '',
+    [StorageKeys.GIST_ENABLED]: false,
+    [StorageKeys.GITHUB_PAT]: '',
+    [StorageKeys.GIST_ID]: '',
 };

@@ -73,6 +73,7 @@ const API_KEY_FIELDS: StorageKey[] = [
     StorageKeys.OPENAI_API_KEY,
     StorageKeys.OPENAI_2_API_KEY,
     StorageKeys.PROVIDER_API_KEY,
+    StorageKeys.GITHUB_PAT,
 ];
 
 // 許可するAIプロバイダードメインのホワイトリスト
