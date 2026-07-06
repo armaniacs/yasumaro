@@ -17,7 +17,7 @@ export interface TagEdge {
 }
 
 export function computeTagCooccurrence(
-  entries: Array<{ tags: string | null | undefined }>
+  entries: Array<{ tags?: string | null }>
 ): { nodes: TagNode[]; edges: TagEdge[] } {
   const nodeCounts = new Map<string, number>();
   const edgeWeights = new Map<string, number>();

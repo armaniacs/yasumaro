@@ -13,6 +13,35 @@ import { getMessage } from './i18n.js';
 const savePrivacySettingsBtn = document.getElementById('savePrivacySettings');
 const confirmCheckbox = document.getElementById('piiConfirm') as HTMLInputElement | null;
 
+/**
+ * Toggle cloud provider settings disabled state based on privacy mode.
+ * When local_only is selected, cloud provider settings are disabled.
+ */
+function toggleCloudProviderSettings(disabled: boolean): void {
+    const providerSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
+    const geminiSettings = document.getElementById('geminiSettings');
+    const openaiSettings = document.getElementById('openaiSettings');
+    const openai2Settings = document.getElementById('openai2Settings');
+
+    if (providerSelect) providerSelect.disabled = disabled;
+    if (geminiSettings) {
+        geminiSettings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
+    }
+    if (openaiSettings) {
+        openaiSettings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
+    }
+    if (openai2Settings) {
+        openai2Settings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
+    }
+
+    // Visual feedback: dim the provider section when disabled
+    const providerSection = document.getElementById('aiProvider')?.closest('.form-group')?.parentElement;
+    if (providerSection) {
+        providerSection.style.opacity = disabled ? '0.5' : '1';
+        providerSection.style.pointerEvents = disabled ? 'none' : '';
+    }
+}
+
 export function init(): void {
     // Save settings
     if (savePrivacySettingsBtn) {
@@ -21,6 +50,16 @@ export function init(): void {
 
     // Load settings
     loadPrivacySettings();
+
+    // React to privacy mode changes for cloud provider guard
+    const modeRadios = document.querySelectorAll('input[name="privacyMode"]');
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if ((radio as HTMLInputElement).checked) {
+                toggleCloudProviderSettings((radio as HTMLInputElement).value === 'local_only');
+            }
+        });
+    });
 }
 
 export async function loadPrivacySettings(): Promise<void> {
@@ -32,6 +71,9 @@ export async function loadPrivacySettings(): Promise<void> {
     if (radio) {
         radio.checked = true;
     }
+
+    // Apply cloud provider guard based on current mode
+    toggleCloudProviderSettings(mode === 'local_only');
 
     // Confirmation
     if (confirmCheckbox) {

@@ -320,6 +320,9 @@
   "modeA": {
     "message": "Mode A: Local Only"
   },
+  "modeAShort": {
+    "message": "Local Only"
+  },
   "modeADesc": {
     "message": "Summarize page content using only the browser's built-in AI, without sending data externally.\nCurrently not supported on most browsers."
   },
@@ -328,6 +331,9 @@
   },
   "modeB": {
     "message": "Mode B: Full Pipeline"
+  },
+  "modeBShort": {
+    "message": "Full Pipeline"
   },
   "modeBDesc": {
     "message": "Browser built-in AI summary → PII masking → Cloud AI refinement.\nCurrently not supported on most browsers."
@@ -338,6 +344,9 @@
   "modeC": {
     "message": "Mode C: Masked Cloud"
   },
+  "modeCShort": {
+    "message": "Masked Cloud"
+  },
   "modeCDesc": {
     "message": "Send only masked data to cloud AI (including LM Studio and Ollama).\nFor environments where browser built-in AI is not available."
   },
@@ -346,6 +355,9 @@
   },
   "modeD": {
     "message": "Mode D: Cloud Only"
+  },
+  "modeDShort": {
+    "message": "Cloud Only"
   },
   "modeDDesc": {
     "message": "Send raw text directly to cloud AI.\nPrioritize speed."

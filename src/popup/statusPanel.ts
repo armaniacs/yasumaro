@@ -22,6 +22,16 @@ function getRecordCurrentPage(): (force: boolean) => Promise<void> {
 
 export async function initStatusPanel(): Promise<void> {
   try {
+    // Show privacy mode badge
+    const settings = await getSettings();
+    const mode = (settings[StorageKeys.PRIVACY_MODE] as string) || 'full_pipeline';
+    const modeBadge = document.getElementById('statusModeBadge');
+    if (modeBadge) {
+      const modeKey = `mode${mode === 'local_only' ? 'A' : mode === 'full_pipeline' ? 'B' : mode === 'masked_cloud' ? 'C' : 'D'}Short`;
+      modeBadge.textContent = getMessage(modeKey) || mode;
+      modeBadge.className = `status-badge status-mode-badge mode-${mode}`;
+    }
+
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const currentTab = tabs[0];
 
