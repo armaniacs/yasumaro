@@ -52,6 +52,9 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 - 🔍 **SQLite 診断パネル**: 環境判定（OPFS/FTS5）、不足診断（具体的な対処提示）、コンパイルオプション表示、デバッグモード対応。設定画面の Diagnostics タブで確認可能。
 - 🛡️ **プライバシー同意フロー**: 初回起動時に同意確認を表示。3回拒否で永久非表示、その後は制限モード（記録停止）で動作。GDPRに準拠した物理削除（DELETE FROM）対応。
 - 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
+- 📊 **関連グラフ表示**（v6.5.4）: 記録したページのタグ共起関係をグラフで可視化。ノードをクリックして該当タグのページに自動フィルタ。
+- ☁️ **GitHub Gist 連携**（v6.5.4）: Obsidian と併用して GitHub Gist にクラウド同期可能。複数同期先に対応。
+- 🌐 **複数ブラウザ対応**（v6.5.4）: Chrome、Microsoft Edge、Brave など Chromium 系ブラウザをサポート。
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)（セットアップ手順は [Obsidian連携ガイド](docs/OBSIDIAN_SETUP_GUIDE.md) を参照）
