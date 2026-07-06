@@ -36,7 +36,7 @@ const DB_FILENAME = 'yasumaro.db';
 // Types
 // ============================================================================
 
-import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, QueryOptions, SearchResult, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 // ============================================================================
 // Module-level state
@@ -1335,6 +1335,101 @@ export async function backupDb(): Promise<{ success: true; data: Uint8Array } | 
     return { success: false, error: 'Binary backup requires OPFS storage. Use JSON export instead.' };
   } catch (error) {
     logError('SQLite: backupDb failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Insert an audit log entry (cloud AI provider send event).
+ * Metadata only — never content or PII.
+ */
+export async function insertAuditLog(record: AuditLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
+  try {
+    // OPFS Worker path
+    if (opfsWorker) {
+      const result = await sendToOpfsWorker('AUDIT_LOG_INSERT', record) as { id: number };
+      return { success: true, id: result.id };
+    }
+
+    if (!dbHandle && !usingFallbackStorage) {
+      await init();
+    }
+
+    if (opfsWorker) {
+      const result = await sendToOpfsWorker('AUDIT_LOG_INSERT', record) as { id: number };
+      return { success: true, id: result.id };
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    await execWithCache(
+      `INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)`,
+      [record.provider, record.url, record.created_at]
+    );
+
+    let newId = 0;
+    await execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
+      newId = Number(row[0]);
+    });
+
+    return { success: true, id: newId };
+  } catch (error) {
+    logError('SQLite: insertAuditLog failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Query audit log entries, most recent first by default.
+ */
+export async function queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<
+  { success: true; rows: AuditLogEntry[]; total: number } | { success: false; error: string }
+> {
+  try {
+    const limit = options.limit ?? 100;
+    const offset = options.offset ?? 0;
+
+    // OPFS Worker path
+    const opfsResult = await tryOpfsProxy<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>('AUDIT_LOG_QUERY', {
+      limit,
+      offset,
+    });
+    if (opfsResult !== null) {
+      return { success: true, rows: opfsResult.rows, total: opfsResult.total };
+    }
+
+    if (!dbHandle && !usingFallbackStorage) {
+      await init();
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const rows: AuditLogEntry[] = [];
+    await execWithCache(
+      `SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [limit, offset],
+      (row: SqliteValue[]) => {
+        rows.push({
+          id: Number(row[0]),
+          provider: String(row[1]),
+          url: String(row[2]),
+          created_at: Number(row[3]),
+        });
+      }
+    );
+
+    let total = 0;
+    await execWithCache('SELECT COUNT(*) FROM audit_log', [], (row: SqliteValue[]) => {
+      total = Number(row[0]);
+    });
+
+    return { success: true, rows, total };
+  } catch (error) {
+    logError('SQLite: queryAuditLog failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }

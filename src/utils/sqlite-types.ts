@@ -65,3 +65,13 @@ export interface SearchResult {
   /** FTS5 rank (relevance score) */
   rank: number;
 }
+
+export interface AuditLogRecord {
+  provider: string;
+  url: string;
+  created_at: number;
+}
+
+export interface AuditLogEntry extends AuditLogRecord {
+  id: number;
+}
