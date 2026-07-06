@@ -41,7 +41,7 @@ import type { StorageKey, StorageKeyValues, StrictSettings, Settings } from './s
 // 分離モジュールから再エクスポート（既存のインポート互換性のため）
 export { StorageKeys } from './storage/types.js';
 export { DEFAULT_SETTINGS } from './storage/defaults.js';
-export type { StorageKey, StorageKeyValues, StrictSettings, Settings } from './storage/types.js';
+export type { StorageKey, StorageKeyValues, StrictSettings, Settings, ProviderSlot } from './storage/types.js';
 
 // ストレージクォータ監視設定
 const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB (Chrome拡張機能のデフォルト)
