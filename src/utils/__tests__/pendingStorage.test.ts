@@ -121,6 +121,23 @@ describe('pendingStorage', () => {
             expect(result).toEqual([pendingPage]);
         });
 
+        it('should add a pending page with local-ai-unavailable reason', async () => {
+            const now = Date.now();
+            const pendingPage = {
+                url: 'https://example.com/ai-fail',
+                title: 'AI Fail Page',
+                timestamp: now,
+                reason: 'local-ai-unavailable' as const,
+                errorMessage: 'Local AI not ready',
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+
+            await addPendingPage(pendingPage);
+
+            const result = mockStorage['osh_pending_pages'] as unknown[];
+            expect(result).toEqual([pendingPage]);
+        });
+
         it('should exclude duplicate pages with same URL', async () => {
             const now = Date.now();
             const existingPage = {

@@ -7,7 +7,7 @@ export interface PendingPage {
   url: string;
   title: string;
   timestamp: number;
-  reason: 'cache-control' | 'set-cookie' | 'authorization' | 'pipeline-error' | 'obsidian-write-failed';
+  reason: 'cache-control' | 'set-cookie' | 'authorization' | 'pipeline-error' | 'obsidian-write-failed' | 'local-ai-unavailable';
   headerValue?: string;
   expiry: number;
   errorMessage?: string;
