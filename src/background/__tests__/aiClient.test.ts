@@ -8,6 +8,7 @@ import { AIClient } from '../aiClient.js';
 import { vi } from 'vitest';
 import * as storage from '../../utils/storage.js';
 import * as fetchModule from '../../utils/fetch.js';
+import { recordAuditLog } from '../../utils/auditLog.js';
 
 const { fetchWithRetry } = vi.mocked(fetchModule);
 // import { LocalAIClient } from '../localAiClient.js'; // Unused
@@ -28,6 +29,7 @@ vi.mock('../../utils/storage.js', () => ({
   }
 }));
 vi.mock('../localAiClient.js');
+vi.mock('../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
 describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報漏洩', () => {
   let aiClient: AIClient;
@@ -357,6 +359,38 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       expect(result).toBeDefined();
       expect(typeof result.summary).toBe('string');
+    });
+
+    it('calls recordAuditLog with the provider name and url before generating a cloud summary', async () => {
+      mockGetSettings.mockResolvedValue({
+        ai_provider: 'gemini',
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-3.1-flash-lite'
+      });
+
+      const client = new AIClient();
+      await client.generateSummary('some content', false, 'https://example.com/audit-test');
+
+      expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'gemini', url: 'https://example.com/audit-test' });
+    });
+
+    it('records audit log for each provider tried during fallback', async () => {
+      mockGetSettings.mockResolvedValue({
+        ai_provider_priority_list: [
+          { provider: 'gemini', weight: 1 },
+          { provider: 'openai', weight: 2 }
+        ],
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-3.1-flash-lite',
+        openai_api_key: 'test_key',
+        openai_model: 'gpt-3.5-turbo'
+      });
+
+      const client = new AIClient();
+      await client.generateSummary('some content', false, 'https://example.com/fallback-test');
+
+      // recordAuditLog が複数回呼ばれることを確認
+      expect(recordAuditLog).toHaveBeenCalled();
     });
   });
 

@@ -34,7 +34,7 @@ function estimateTokens(text: string): number {
 export interface IAIClient {
   getLocalAvailability(): Promise<string>;
   summarizeLocally(content: string): Promise<{ success: boolean; summary: string; sentTokens?: number; receivedTokens?: number }>;
-  generateSummary(text: string, tagSummaryMode?: boolean): Promise<AISummaryResult>;
+  generateSummary(text: string, tagSummaryMode?: boolean, url?: string): Promise<AISummaryResult>;
 }
 
 interface ISanitizers {
@@ -45,6 +45,7 @@ export interface PrivacyPipelineOptions {
   previewOnly?: boolean;
   alreadyProcessed?: boolean;
   tagSummaryMode?: boolean;
+  url?: string;
 }
 
 export interface PrivacyPipelineResult {
@@ -78,7 +79,7 @@ export class PrivacyPipeline {
   }
 
   async process(content: string, options: PrivacyPipelineOptions = {}): Promise<PrivacyPipelineResult> {
-    const { previewOnly = false, alreadyProcessed = false } = options;
+    const { previewOnly = false, alreadyProcessed = false, url = '' } = options;
 
     if (!content) {
       return { summary: 'Summary not available.' };
@@ -130,7 +131,7 @@ export class PrivacyPipeline {
 
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
-      const aiResult = await this.aiClient.generateSummary(processingText, options.tagSummaryMode);
+      const aiResult = await this.aiClient.generateSummary(processingText, options.tagSummaryMode, url);
       return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens);
     }
 
