@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite',
     [StorageKeys.OBSIDIAN_DAILY_PATH]: '092.Daily',
     [StorageKeys.AI_PROVIDER]: 'openai',
+    [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: [],
+    [StorageKeys.SUMMARY_MIN_LENGTH]: 10,
     [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1',
     [StorageKeys.OPENAI_API_KEY]: '',
     [StorageKeys.OPENAI_MODEL]: 'openai/gpt-oss-20b',
