@@ -202,6 +202,10 @@ export const StorageKeys = {
     LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
     LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
     LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    // Weekly/Monthly Review Summary settings
+    REVIEW_SUMMARY_ENABLED: 'review_summary_enabled', // 週次/月次サマリ機能の有効/無効
+    REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week', // 最終生成済みISO週（例: "2026-W27"）
+    REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month', // 最終生成済み月（例: "2026-07"）
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -353,6 +357,9 @@ export interface StorageKeyValues {
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: string;
+    [StorageKeys.REVIEW_SUMMARY_ENABLED]: boolean;
+    [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: string;
+    [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: string;
 }
 
 // 厳格な Settings 型
