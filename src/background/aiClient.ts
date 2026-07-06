@@ -1,4 +1,4 @@
-import { getSettings, StorageKeys, Settings } from '../utils/storage.js';
+import { getSettings, StorageKeys, Settings, ProviderSlot } from '../utils/storage.js';
 import { LocalAIClient, LocalAIAvailability, LocalAISummaryResult } from './localAiClient.js';
 import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
@@ -51,27 +51,70 @@ export class AIClient {
 
     /**
      * 要約を生成する
+     * 優先度1〜3位のプロバイダーを順に試行し、成功かつ最小長以上の要約が得られた時点で返す。
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         const settings = await getSettings();
-        // Settings型は StorageKeys でアクセス可能
-        const providerName = settings[StorageKeys.AI_PROVIDER] || 'gemini';
+        const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
+        const slots = this.resolveProviderSlots(settings);
 
-        const factory = this.providers.get(providerName);
-        if (!factory) {
-            addLog(LogType.ERROR, `Unknown AI Provider: ${providerName}`);
-            return { success: false, summary: "Error: AI provider configuration is missing. Please check your settings." };
+        let lastResult: AISummaryResult = {
+            success: false,
+            summary: "Error: AI provider configuration is missing. Please check your settings."
+        };
+
+        for (const slot of slots) {
+            const factory = this.providers.get(slot.provider);
+            if (!factory) {
+                addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`);
+                continue;
+            }
+
+            const effectiveSettings = this.applySlotModel(settings, slot);
+
+            try {
+                const providerInstance = factory(effectiveSettings);
+                const result = await providerInstance.generateSummary(content, tagSummaryMode);
+                if (result.success && result.summary.length >= minLength) {
+                    return result;
+                }
+                lastResult = result;
+            } catch (error: unknown) {
+                addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`);
+                lastResult = { success: false, summary: "Error: Failed to generate summary. Please try again." };
+            }
         }
 
-        try {
-            const providerInstance = factory(settings);
-            return await providerInstance.generateSummary(content, tagSummaryMode);
-        } catch (error: unknown) {
-            addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`);
-            return { success: false, summary: "Error: Failed to generate summary. Please try again." };
+        return lastResult;
+    }
+
+    /**
+     * 優先度スロットリストを解決する
+     * AI_PROVIDER_PRIORITY_LISTが空の場合は旧AI_PROVIDER単一設定を1位スロットとして扱う
+     */
+    private resolveProviderSlots(settings: Settings): ProviderSlot[] {
+        const slots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[] | undefined;
+        if (slots && slots.length > 0) {
+            return slots;
         }
+        const legacyProvider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
+        return [{ provider: legacyProvider }];
+    }
+
+    /**
+     * スロットにmodel指定がある場合、対応するプロバイダーのモデル設定キーを上書きした設定を返す
+     */
+    private applySlotModel(settings: Settings, slot: ProviderSlot): Settings {
+        if (!slot.model) {
+            return settings;
+        }
+        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
+        const modelKey = slot.provider === 'openai-compatible'
+            ? StorageKeys.PROVIDER_MODEL
+            : `${normalizedName}_model`;
+        return { ...settings, [modelKey]: slot.model };
     }
 
     /**
