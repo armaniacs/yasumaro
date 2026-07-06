@@ -4,7 +4,7 @@
  * popup.ts の設定ロジックを流用し、フルページダッシュボードとして動作する
  */
 
-import { StorageKeys, getSettings, saveSettingsWithAllowedUrls } from '../utils/storage.js';
+import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } from '../utils/storage.js';
 import { init as initDomainFilter } from '../popup/domainFilter.js';
 import { init as initPrivacySettings } from '../popup/privacySettings.js';
 import { init as initContentSettings } from '../popup/contentSettings.js';
@@ -16,7 +16,7 @@ import { getMessage } from '../popup/i18n.js';
 import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners } from '../popup/aiSummaryCleansingSettings.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../popup/privacyConsent.js';
-import { setupAIProviderChangeListener, updateAIProviderVisibility, AIProviderElements } from '../popup/settings/aiProvider.js';
+import { setupAIProviderChangeListener, updateAIProviderVisibility, updateAIProviderVisibilityMulti, AIProviderElements } from '../popup/settings/aiProvider.js';
 import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
@@ -167,6 +167,11 @@ let _domElements: {
   dailyPathInput: HTMLInputElement | null;
   obsidianEnabledInput: HTMLInputElement | null;
   aiProviderSelect: HTMLSelectElement | null;
+  aiProviderPriority1ModelInput: HTMLInputElement | null;
+  aiProviderPriority2Select: HTMLSelectElement | null;
+  aiProviderPriority2ModelInput: HTMLInputElement | null;
+  aiProviderPriority3Select: HTMLSelectElement | null;
+  aiProviderPriority3ModelInput: HTMLInputElement | null;
   geminiSettingsDiv: HTMLElement | null;
   openaiSettingsDiv: HTMLElement | null;
   openai2SettingsDiv: HTMLElement | null;
@@ -216,6 +221,11 @@ export function getDashboardElements() {
       dailyPathInput: document.getElementById('dailyPath') as HTMLInputElement | null,
       obsidianEnabledInput: document.getElementById('obsidianEnabled') as HTMLInputElement | null,
       aiProviderSelect: document.getElementById('aiProvider') as HTMLSelectElement | null,
+      aiProviderPriority1ModelInput: document.getElementById('aiProviderPriority1Model') as HTMLInputElement | null,
+      aiProviderPriority2Select: document.getElementById('aiProviderPriority2') as HTMLSelectElement | null,
+      aiProviderPriority2ModelInput: document.getElementById('aiProviderPriority2Model') as HTMLInputElement | null,
+      aiProviderPriority3Select: document.getElementById('aiProviderPriority3') as HTMLSelectElement | null,
+      aiProviderPriority3ModelInput: document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null,
       geminiSettingsDiv: document.getElementById('geminiSettings') as HTMLElement | null,
       openaiSettingsDiv: document.getElementById('openaiSettings') as HTMLElement | null,
       openai2SettingsDiv: document.getElementById('openai2Settings') as HTMLElement | null,
@@ -255,7 +265,10 @@ export function getDashboardElements() {
   return _domElements ?? {
     apiKeyInput: null, protocolInput: null, portInput: null, dailyPathInput: null,
     obsidianEnabledInput: null,
-    aiProviderSelect: null, geminiSettingsDiv: null, openaiSettingsDiv: null,
+    aiProviderSelect: null, aiProviderPriority1ModelInput: null,
+    aiProviderPriority2Select: null, aiProviderPriority2ModelInput: null,
+    aiProviderPriority3Select: null, aiProviderPriority3ModelInput: null,
+    geminiSettingsDiv: null, openaiSettingsDiv: null,
     openai2SettingsDiv: null, lmStudioSettingsDiv: null, openaiCompatibleSettingsDiv: null,
     geminiApiKeyInput: null, geminiModelInput: null, openaiBaseUrlInput: null,
     openaiApiKeyInput: null, openaiModelInput: null, openai2BaseUrlInput: null,
@@ -329,10 +342,71 @@ export function getAiProviderElements(): AIProviderElements {
   };
 }
 
+/**
+ * 優先度1〜3位のセレクト・モデル入力欄からProviderSlot[]を組み立てる
+ */
+export function collectProviderPrioritySlots(): ProviderSlot[] {
+  const el = getDashboardElements();
+  const slots: ProviderSlot[] = [];
+
+  if (el.aiProviderSelect?.value) {
+    const model = el.aiProviderPriority1ModelInput?.value.trim();
+    slots.push(model ? { provider: el.aiProviderSelect.value, model } : { provider: el.aiProviderSelect.value });
+  }
+  if (el.aiProviderPriority2Select?.value) {
+    const model = el.aiProviderPriority2ModelInput?.value.trim();
+    slots.push(model ? { provider: el.aiProviderPriority2Select.value, model } : { provider: el.aiProviderPriority2Select.value });
+  }
+  if (el.aiProviderPriority3Select?.value) {
+    const model = el.aiProviderPriority3ModelInput?.value.trim();
+    slots.push(model ? { provider: el.aiProviderPriority3Select.value, model } : { provider: el.aiProviderPriority3Select.value });
+  }
+
+  return slots;
+}
+
+/**
+ * ProviderSlot[]を優先度1〜3位のセレクト・モデル入力欄に反映する
+ */
+export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
+  const el = getDashboardElements();
+  const [slot1, slot2, slot3] = slots;
+
+  if (el.aiProviderSelect) {
+    el.aiProviderSelect.value = slot1?.provider ?? 'gemini';
+  }
+  if (el.aiProviderPriority1ModelInput) {
+    el.aiProviderPriority1ModelInput.value = slot1?.model ?? '';
+  }
+  if (el.aiProviderPriority2Select) {
+    el.aiProviderPriority2Select.value = slot2?.provider ?? '';
+  }
+  if (el.aiProviderPriority2ModelInput) {
+    el.aiProviderPriority2ModelInput.value = slot2?.model ?? '';
+  }
+  if (el.aiProviderPriority3Select) {
+    el.aiProviderPriority3Select.value = slot3?.provider ?? '';
+  }
+  if (el.aiProviderPriority3ModelInput) {
+    el.aiProviderPriority3ModelInput.value = slot3?.model ?? '';
+  }
+}
+
 export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, getSettingsMapping());
-  updateAIProviderVisibility(getAiProviderElements());
+
+  // Apply provider priority slots and update multi-provider visibility
+  const prioritySlots = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[]) ?? [];
+  applyProviderPrioritySlots(prioritySlots);
+  updateAIProviderVisibilityMulti(
+    getAiProviderElements(),
+    [
+      prioritySlots[0]?.provider ?? '',
+      prioritySlots[1]?.provider ?? '',
+      prioritySlots[2]?.provider ?? ''
+    ]
+  );
 
   // Sync Obsidian details open state with checkbox
   const el = getDashboardElements();
@@ -452,6 +526,8 @@ export async function handleSaveOnly(): Promise<void> {
 
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
+  // Add provider priority slots
+  mergedSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
   await saveSettingsWithAllowedUrls(mergedSettings);
 
   el.statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
