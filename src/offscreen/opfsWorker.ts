@@ -545,6 +545,47 @@ async function handleBackup(): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
+const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
+
+/**
+ * バイナリ .db を書き戻して履歴DBを復元する。
+ * 一時ファイルに書き込み → SQLite として開けるか検証 → 検証OKなら本番ファイルと置換。
+ * 検証に失敗した場合は一時ファイルを破棄し、本番ファイルは変更しない。
+ */
+export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
+  const root = await navigator.storage.getDirectory();
+
+  // 1. 一時ファイルに書き込む
+  const tmpHandle = await root.getFileHandle(RESTORE_TMP_FILENAME, { create: true });
+  const writable = await tmpHandle.createWritable();
+  await writable.write(data.slice() as unknown as ArrayBuffer);
+  await writable.close();
+
+  // 2. 一時ファイルが開ける有効な SQLite ファイルか検証する
+  try {
+    const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_URL);
+    await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
+    await tmpEngine.close();
+  } catch (validationError) {
+    // 検証失敗: 一時ファイルを破棄し、本番ファイルには触れない
+    await root.removeEntry(RESTORE_TMP_FILENAME).catch(() => {});
+    throw new Error(`Restore validation failed: ${errorMessage(validationError)}`);
+  }
+
+  // 3. 検証OK: 既存の engine を閉じてから本番ファイルと置換する
+  if (engine) {
+    await engine.close();
+    engine = null;
+  }
+  await root.removeEntry(DB_FILENAME).catch(() => {});
+  await (tmpHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
+
+  // 4. 復元したファイルで engine を再初期化する
+  await initSqlite();
+
+  return { restored: true };
+}
+
 async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResultRecord[]; total: number }> {
   const { searchQuery, limit = 50, offset = 0 } = payload;
   const bare = sanitizeFtsTerm(searchQuery);
@@ -715,6 +756,14 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
       case 'BACKUP': {
         if (!engine) await initSqlite();
         result = await handleBackup();
+        break;
+      }
+      case 'RESTORE': {
+        const restorePayload = payload as { data: number[] | Uint8Array };
+        const bytes = restorePayload.data instanceof Uint8Array
+          ? restorePayload.data
+          : new Uint8Array(restorePayload.data);
+        result = await handleRestore(bytes);
         break;
       }
       case 'FTS_INDEX_SIZE': {
