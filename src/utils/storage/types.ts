@@ -206,6 +206,10 @@ export const StorageKeys = {
     REVIEW_SUMMARY_ENABLED: 'review_summary_enabled', // 週次/月次サマリ機能の有効/無効
     REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week', // 最終生成済みISO週（例: "2026-W27"）
     REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month', // 最終生成済み月（例: "2026-07"）
+    // GitHub Gist sync target
+    GIST_ENABLED: 'gist_enabled',
+    GITHUB_PAT: 'github_pat',
+    GIST_ID: 'gist_id', // Gist ID for updating existing Gist
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -360,6 +364,9 @@ export interface StorageKeyValues {
     [StorageKeys.REVIEW_SUMMARY_ENABLED]: boolean;
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: string;
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: string;
+    [StorageKeys.GIST_ENABLED]: boolean;
+    [StorageKeys.GITHUB_PAT]: string | EncryptedData;
+    [StorageKeys.GIST_ID]: string;
 }
 
 // 厳格な Settings 型
