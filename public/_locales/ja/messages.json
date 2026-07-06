@@ -110,6 +110,30 @@
   "providerPriorityModelPlaceholder": {
     "message": "モデル名（省略可、デフォルト使用）"
   },
+  "reviewSummarySection": {
+    "message": "週次/月次振り返りサマリ"
+  },
+  "reviewSummaryEnabled": {
+    "message": "週次/月次サマリを自動生成する"
+  },
+  "reviewSummaryHelp": {
+    "message": "有効にすると、毎週月曜日と毎月1日に過去期間の閲覧履歴を要約したMarkdownファイルをダウンロードします。"
+  },
+  "generateWeeklySummaryBtn": {
+    "message": "今週のサマリを生成"
+  },
+  "generateMonthlySummaryBtn": {
+    "message": "今月のサマリを生成"
+  },
+  "reviewSummaryGenerated": {
+    "message": "サマリを生成しました。"
+  },
+  "reviewSummarySkipped": {
+    "message": "対象期間の履歴がないため、サマリを生成しませんでした。"
+  },
+  "reviewSummaryFailed": {
+    "message": "サマリの生成に失敗しました。"
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },

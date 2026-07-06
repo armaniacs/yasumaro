@@ -257,6 +257,27 @@
           </div>
         </div>
 
+        <!-- Review Summary Section -->
+        <div id="reviewSummarySection" class="settings-section">
+          <h3 class="settings-section-title" data-i18n="reviewSummarySection">週次/月次振り返りサマリ</h3>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="reviewSummaryEnabled">
+              <span data-i18n="reviewSummaryEnabled">週次/月次サマリを自動生成する</span>
+            </label>
+            <div class="help-text" data-i18n="reviewSummaryHelp">
+              有効にすると、毎週月曜日と毎月1日に過去期間の閲覧履歴を要約したMarkdownファイルをダウンロードします。
+            </div>
+          </div>
+
+          <div class="form-group" id="reviewSummaryManualActions">
+            <button id="generateWeeklySummaryBtn" class="secondary-btn" data-i18n="generateWeeklySummaryBtn">今週のサマリを生成</button>
+            <button id="generateMonthlySummaryBtn" class="secondary-btn" data-i18n="generateMonthlySummaryBtn">今月のサマリを生成</button>
+            <div id="reviewSummaryStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+
         <!-- AI プロバイダーセクション -->
         <div id="aiProviderSection" class="settings-section">
           <h3 class="settings-section-title" data-i18n="aiSection">AI プロバイダー</h3>

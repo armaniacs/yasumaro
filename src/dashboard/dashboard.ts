@@ -206,6 +206,11 @@ let _domElements: {
   localMarkdownExportPathInput: HTMLInputElement | null;
   localMarkdownExportSettingsDiv: HTMLElement | null;
   testLocalMarkdownBtn: HTMLButtonElement | null;
+  reviewSummaryEnabledInput: HTMLInputElement | null;
+  reviewSummaryManualActionsDiv: HTMLElement | null;
+  generateWeeklySummaryBtn: HTMLButtonElement | null;
+  generateMonthlySummaryBtn: HTMLButtonElement | null;
+  reviewSummaryStatusDiv: HTMLElement | null;
 } | null = null;
 
 export function resetDashboardElements(): void {
@@ -260,6 +265,11 @@ export function getDashboardElements() {
       localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
       localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
       testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
+      reviewSummaryEnabledInput: document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null,
+      reviewSummaryManualActionsDiv: document.getElementById('reviewSummaryManualActions') as HTMLElement | null,
+      generateWeeklySummaryBtn: document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null,
+      generateMonthlySummaryBtn: document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null,
+      reviewSummaryStatusDiv: document.getElementById('reviewSummaryStatus') as HTMLElement | null,
     };
   }
   return _domElements ?? {
@@ -281,6 +291,8 @@ export function getDashboardElements() {
     localMarkdownExportEnabledInput: null, localMarkdownExportAutoEnabledInput: null,
     localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
     testLocalMarkdownBtn: null,
+    reviewSummaryEnabledInput: null, reviewSummaryManualActionsDiv: null,
+    generateWeeklySummaryBtn: null, generateMonthlySummaryBtn: null, reviewSummaryStatusDiv: null,
   };
 }
 
@@ -326,6 +338,7 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: el.localMarkdownExportAutoEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,
+    [StorageKeys.REVIEW_SUMMARY_ENABLED]: el.reviewSummaryEnabledInput,
   };
 }
 
@@ -419,6 +432,11 @@ export async function loadGeneralSettings(): Promise<void> {
   const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
   if (localExportSettingsDiv && el.localMarkdownExportEnabledInput) {
     localExportSettingsDiv.classList.toggle('hidden', !el.localMarkdownExportEnabledInput.checked);
+  }
+
+  // Sync Review Summary manual actions visibility with checkbox
+  if (el.reviewSummaryManualActionsDiv && el.reviewSummaryEnabledInput) {
+    el.reviewSummaryManualActionsDiv.classList.toggle('hidden', !el.reviewSummaryEnabledInput.checked);
   }
 
   // Load openai-compatible provider selection
@@ -836,6 +854,61 @@ export async function handleExportLocalMarkdown(): Promise<void> {
 }
 
 /**
+ * Handle review summary manual generation
+ */
+export async function handleGenerateWeeklySummary(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.generateWeeklySummaryBtn || !el.reviewSummaryStatusDiv) return;
+
+  const btn = el.generateWeeklySummaryBtn;
+  const statusEl = el.reviewSummaryStatusDiv;
+
+  btn.disabled = true;
+  statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
+  statusEl.className = '';
+
+  try {
+    const { generateWeeklySummary } = await import('../background/reviewSummaryGenerator.js');
+    const success = await generateWeeklySummary();
+    statusEl.textContent = chrome.i18n.getMessage(
+      success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
+    ) || (success ? 'Summary generated.' : 'No history for the target period.');
+    statusEl.className = success ? 'success' : 'info';
+  } catch (e) {
+    statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
+    statusEl.className = 'error';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+export async function handleGenerateMonthlySummary(): Promise<void> {
+  const el = getDashboardElements();
+  if (!el.generateMonthlySummaryBtn || !el.reviewSummaryStatusDiv) return;
+
+  const btn = el.generateMonthlySummaryBtn;
+  const statusEl = el.reviewSummaryStatusDiv;
+
+  btn.disabled = true;
+  statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
+  statusEl.className = '';
+
+  try {
+    const { generateMonthlySummary } = await import('../background/reviewSummaryGenerator.js');
+    const success = await generateMonthlySummary();
+    statusEl.textContent = chrome.i18n.getMessage(
+      success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
+    ) || (success ? 'Summary generated.' : 'No history for the target period.');
+    statusEl.className = success ? 'success' : 'info';
+  } catch (e) {
+    statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
+    statusEl.className = 'error';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
  * Handle local markdown export from History panel (all records)
  */
 export async function handleHistoryExportLocalMarkdown(): Promise<void> {
@@ -1154,6 +1227,19 @@ function initExportLogsPanel(): void {
       localExportSettingsDiv.classList.toggle('hidden', !localExportEnabledInput.checked);
     });
   }
+
+  // Review Summary enabled checkbox → manual actions visibility
+  const reviewSummaryEnabledInput = document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null;
+  const reviewSummaryManualActionsDiv = document.getElementById('reviewSummaryManualActions') as HTMLElement | null;
+  if (reviewSummaryEnabledInput && reviewSummaryManualActionsDiv) {
+    reviewSummaryEnabledInput.addEventListener('change', () => {
+      reviewSummaryManualActionsDiv.classList.toggle('hidden', !reviewSummaryEnabledInput.checked);
+    });
+  }
+
+  // Review Summary manual generation buttons
+  document.getElementById('generateWeeklySummaryBtn')?.addEventListener('click', handleGenerateWeeklySummary);
+  document.getElementById('generateMonthlySummaryBtn')?.addEventListener('click', handleGenerateMonthlySummary);
   try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
   try { await initConsentWithdrawal(); } catch (e) { console.error('[Dashboard] initConsentWithdrawal error:', e); }
   try { await loadTrustSettings(); } catch (e) { console.error('[Dashboard] loadTrustSettings error:', e); }
