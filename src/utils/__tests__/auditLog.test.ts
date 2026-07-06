@@ -50,6 +50,18 @@ describe('auditLog', () => {
     await expect(recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' })).resolves.toBeUndefined();
   });
 
+  it('recordAuditLog logs error when insertAuditLog returns null', async () => {
+    mockInsertAuditLog.mockResolvedValue(null);
+    const { logError } = await import('../logger.js');
+
+    await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' });
+
+    expect(logError).toHaveBeenCalledWith(
+      'Failed to record audit log',
+      expect.objectContaining({ provider: 'gemini' })
+    );
+  });
+
   it('getAuditLogs delegates to SqliteClient.queryAuditLog', async () => {
     mockQueryAuditLog.mockResolvedValue({
       rows: [{ id: 1, provider: 'gemini', url: 'https://example.com', created_at: 1000 }],
