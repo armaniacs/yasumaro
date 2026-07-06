@@ -276,4 +276,32 @@ describe('SqliteClient — unit tests', () => {
       expect((globalThis as any).chrome.offscreen.createDocument).toHaveBeenCalled();
     });
   });
+
+  describe('restoreDb', () => {
+    it('sends SQLITE_RESTORE with data array and returns true on success', async () => {
+      const spy = vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: true });
+      const data = new Uint8Array([1, 2, 3]);
+
+      const result = await client.restoreDb(data);
+
+      expect(result).toBe(true);
+      expect(spy).toHaveBeenCalledWith('SQLITE_RESTORE', { data: [1, 2, 3] });
+    });
+
+    it('returns false when offscreen reports failure', async () => {
+      vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: false, error: 'boom' });
+
+      const result = await client.restoreDb(new Uint8Array([9]));
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when msgOffscreen throws', async () => {
+      vi.spyOn(client, 'msgOffscreen').mockRejectedValue(new Error('timeout'));
+
+      const result = await client.restoreDb(new Uint8Array([9]));
+
+      expect(result).toBe(false);
+    });
+  });
 });

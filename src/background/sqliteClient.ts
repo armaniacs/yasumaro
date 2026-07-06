@@ -217,6 +217,16 @@ export class SqliteClient {
     );
   }
 
+  async restoreDb(data: Uint8Array): Promise<boolean> {
+    try {
+      const res = await this.msgOffscreen('SQLITE_RESTORE', { data: Array.from(data) });
+      return Boolean(res.success);
+    } catch (error) {
+      console.error('restoreDb failed:', errorMessage(error));
+      return false;
+    }
+  }
+
   async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | null> {
     return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' }>(
       'SQLITE_STATUS',
@@ -251,6 +261,25 @@ export class SqliteClient {
       'SQLITE_PURGE',
       { retentionDays, maxRecords },
       (res) => ({ purged: Number(res.purged || 0) }),
+    );
+  }
+
+  async insertAuditLog(record: { provider: string; url: string; created_at: number }): Promise<{ id: number } | null> {
+    return this.call<{ id: number }>(
+      'SQLITE_AUDIT_LOG_INSERT',
+      record,
+      (res) => ({ id: Number(res.id) }),
+    );
+  }
+
+  async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
+    return this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>(
+      'SQLITE_AUDIT_LOG_QUERY',
+      options as unknown as Record<string, unknown>,
+      (res) => ({
+        rows: (res.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
+        total: Number(res.total || 0),
+      }),
     );
   }
 }
