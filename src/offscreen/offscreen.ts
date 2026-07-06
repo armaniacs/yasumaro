@@ -17,8 +17,11 @@ import {
   getStatus as sqliteGetStatus,
   serialize as sqliteSerialize,
   backupDb as sqliteBackupDb,
+  restoreDb as sqliteRestoreDb,
   clearAll as sqliteClearAll,
   purgeOldRecords as sqlitePurgeOldRecords,
+  insertAuditLog as sqliteInsertAuditLog,
+  queryAuditLog as sqliteQueryAuditLog,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -250,6 +253,23 @@ export function handleOffscreenMessage(
                 const result = await sqliteQuery(options);
                 sendResponse(result);
 
+            } else if (msg.type === 'SQLITE_AUDIT_LOG_INSERT') {
+                const payload = msg.payload as Record<string, unknown>;
+                const result = await sqliteInsertAuditLog({
+                    provider: String(payload.provider || ''),
+                    url: String(payload.url || ''),
+                    created_at: Number(payload.created_at || Date.now()),
+                });
+                sendResponse(result);
+
+            } else if (msg.type === 'SQLITE_AUDIT_LOG_QUERY') {
+                const payload = msg.payload as Record<string, unknown> | undefined;
+                const result = await sqliteQueryAuditLog({
+                    limit: payload?.limit != null ? Number(payload.limit) : undefined,
+                    offset: payload?.offset != null ? Number(payload.offset) : undefined,
+                });
+                sendResponse(result);
+
             } else if (msg.type === 'SQLITE_SEARCH') {
                 const searchQuery = String(msg.payload?.['query'] || '');
                 const limit = msg.payload?.['limit'] != null ? Number(msg.payload.limit) : 50;
@@ -302,6 +322,11 @@ export function handleOffscreenMessage(
                 } else {
                     sendResponse(result);
                 }
+
+            } else if (msg.type === 'SQLITE_RESTORE') {
+                const data = new Uint8Array((msg.payload?.data as number[]) || []);
+                const result = await sqliteRestoreDb(data);
+                sendResponse(result.success ? { success: true } : { success: false, error: result.error });
 
             } else if (msg.type === 'SQLITE_PURGE') {
                 const payload = msg.payload as Record<string, unknown> | undefined;

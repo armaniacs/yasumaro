@@ -1340,6 +1340,23 @@ export async function backupDb(): Promise<{ success: true; data: Uint8Array } | 
 }
 
 /**
+ * バイナリ .db を書き戻して履歴DBを復元する
+ * OPFS パスのみサポート。一時ファイル検証は opfsWorker.ts 側で行う。
+ */
+export async function restoreDb(data: Uint8Array): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const opfsResult = await tryOpfsProxy<{ restored: boolean }>('RESTORE', { data });
+    if (opfsResult && opfsResult.restored) {
+      return { success: true };
+    }
+    return { success: false, error: 'Binary restore requires OPFS storage.' };
+  } catch (error) {
+    logError('SQLite: restoreDb failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
  * Insert an audit log entry (cloud AI provider send event).
  * Metadata only — never content or PII.
  */
