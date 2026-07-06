@@ -30,10 +30,12 @@ import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from './masterPassword.js';
 import { queryLogs } from './dashboardSqliteService.js';
 import { initExportImport } from './exportImport.js';
+import { initEncryptedBackupPanel } from './encryptedBackupPanel.js';
 import { initDomainFilterTagUI } from './domainFilterTagUI.js';
 import { initTagsPanel } from './tagsPanel.js';
 import { initDomainSearchPanel } from './domainSearchPanel.js';
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
+import { initAuditLogPanel } from './auditLogPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -103,6 +105,16 @@ export function initSidebarNav(): void {
               }
             }
           }).catch(() => { /* ignore */ });
+        });
+      }
+
+      if (targetPanelId === 'panel-audit-log') {
+        requestAnimationFrame(() => {
+          try {
+            void initAuditLogPanel();
+          } catch (e) {
+            console.error('[Dashboard] initAuditLogPanel error on panel switch:', e);
+          }
         });
       }
     });
@@ -1192,6 +1204,7 @@ function initExportLogsPanel(): void {
   try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
   try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initExportImport(); } catch (e) { console.error('[Dashboard] initExportImport error:', e); }
+  try { initEncryptedBackupPanel(); } catch (e) { console.error('[Dashboard] initEncryptedBackupPanel error:', e); }
   try { initMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] initMasterPasswordSettings error:', e); }
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
   try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
@@ -1426,6 +1439,7 @@ function initExportLogsPanel(): void {
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
+  try { await initAuditLogPanel(); } catch (e) { console.error('[Dashboard] initAuditLogPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
 
   // History panel local markdown export button
