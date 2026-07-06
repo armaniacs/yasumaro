@@ -1191,6 +1191,23 @@ function initExportLogsPanel(): void {
     setupAIProviderChangeListener(aiProviderEl);
   }
 
+  // Connect priority 2/3 select change listeners for multi-provider visibility
+  const refreshMultiVisibility = (): void => {
+    const el = getDashboardElements();
+    const selected = [
+      el.aiProviderSelect?.value ?? '',
+      el.aiProviderPriority2Select?.value ?? '',
+      el.aiProviderPriority3Select?.value ?? ''
+    ];
+    updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
+  };
+
+  const el = getDashboardElements();
+  el.aiProviderSelect?.addEventListener('change', refreshMultiVisibility);
+  el.aiProviderPriority2Select?.addEventListener('change', refreshMultiVisibility);
+  el.aiProviderPriority3Select?.addEventListener('change', refreshMultiVisibility);
+  refreshMultiVisibility();
+
   // Initialize models.dev dialog
   let modelsDevDialog: ModelsDevDialog | null = null;
 
