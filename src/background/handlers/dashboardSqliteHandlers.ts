@@ -9,7 +9,7 @@ import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 export const TOKEN_REQUIRED_SUBTYPES = new Set([
-    'toggle_star', 'update', 'delete', 'migrate', 'clear_all', 'import',
+    'toggle_star', 'update', 'delete', 'migrate', 'clear_all', 'import', 'restore_db',
 ]);
 
 export const MODAL_REQUIRED_SUBTYPES = new Set([
@@ -137,6 +137,14 @@ export async function handleDashboardSqlite(
                     }
                 }
                 return { success: true, inserted, skipped, total: rows.length };
+            }
+            case 'restore_db': {
+                const data = payload.data as number[] | undefined;
+                if (!Array.isArray(data) || data.length === 0) {
+                    return { success: false, error: 'No data provided' };
+                }
+                const restored = await sqliteClient.restoreDb(new Uint8Array(data));
+                return restored ? { success: true } : { success: false, error: 'Restore failed' };
             }
             case 'status': {
                 const status = await sqliteClient.getStatus();

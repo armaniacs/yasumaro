@@ -113,3 +113,50 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     expect(result).toMatchObject({ success: false });
   });
 });
+
+describe('restore_db subtype', () => {
+  let sqliteClient: SqliteClient;
+  const VALID_TOKEN = 'test-valid-token-12345';
+
+  beforeEach(() => {
+    sqliteClient = new SqliteClient();
+    (sqliteClient as unknown as { restoreDb: ReturnType<typeof vi.fn> }).restoreDb = vi.fn().mockResolvedValue(true);
+  });
+
+  it('rejects without a valid confirmToken', async () => {
+    const result = await handleDashboardSqlite(
+      { subtype: 'restore_db', data: [1, 2, 3] },
+      sqliteClient,
+      undefined,
+      VALID_TOKEN
+    );
+
+    expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
+    expect((sqliteClient.restoreDb as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+  });
+
+  it('calls sqliteClient.restoreDb with the provided bytes when token matches', async () => {
+    const result = await handleDashboardSqlite(
+      { subtype: 'restore_db', data: [1, 2, 3], confirmToken: VALID_TOKEN },
+      sqliteClient,
+      undefined,
+      VALID_TOKEN
+    );
+
+    expect(result).toEqual({ success: true });
+    expect((sqliteClient.restoreDb as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
+  });
+
+  it('returns failure when restoreDb resolves false', async () => {
+    (sqliteClient as unknown as { restoreDb: ReturnType<typeof vi.fn> }).restoreDb = vi.fn().mockResolvedValue(false);
+
+    const result = await handleDashboardSqlite(
+      { subtype: 'restore_db', data: [1, 2, 3], confirmToken: VALID_TOKEN },
+      sqliteClient,
+      undefined,
+      VALID_TOKEN
+    );
+
+    expect(result).toEqual({ success: false, error: 'Restore failed' });
+  });
+});
