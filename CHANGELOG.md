@@ -15,6 +15,47 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.5.4] - 2026-07-07
+
+### Added / 追加
+
+- **検索結果の関連グラフ / タグクラスタ表示機能** — PBI #02: 履歴のタグ共起関係を集計し、ダッシュボードにノード（タグ）とエッジ（共起関係）からなるグラフを描画
+  - 新規モジュール `src/dashboard/tagCooccurrence.ts`：タグ共起集計ロジック（`computeTagCooccurrence()` 関数）
+  - 新規モジュール `src/dashboard/tagClusterLayout.ts`：簡易 force-directed レイアウト計算（外部ライブラリ不要）
+  - 新規モジュール `src/dashboard/tagClusterPanel.ts`：SVG描画とノードクリック時のタグフィルタ連動
+  - ノード数上限：出現回数上位50件に制限（超過時は UI に明示）
+  - エッジ：表示対象ノード間のみ描画
+  - 空状態：タグが存在しない場合は空状態メッセージを表示
+  - テスト：`src/dashboard/__tests__/tagClusterPanel.test.ts`、`tagClusterLayout.test.ts` で全機能をカバー
+
+- **GitHub Gist 連携のための SyncTarget 抽象化** — PBI #08 の基盤: 複数の同期先ターゲットに対応する抽象インターフェース
+  - 新規インターフェース `SyncTarget`：`saveHistory()`、`getHistory()` など標準メソッドを定義
+  - `ObsidianSyncTarget` の実装：既存の Obsidian Local REST API との連携を SyncTarget 型として実装
+  - `GitHubGistSyncTarget` の実装：GitHub Gist API を通じたクラウド同期を新規実装
+  - `SyncTargetRegistry`：複数の SyncTarget 登録・管理、失敗時の分離処理
+  - ダッシュボード「Gist 設定」パネル：有効化、GitHub PAT 入力、接続テストボタン
+  - ユーザー体験：Obsidian と Gist の同期を並行実行、一方の失敗が他方に影響しない設計
+
+- **Chromium ブラウザ（Edge / Brave）対応** — PBI #09: Chrome/Chromium 系ブラウザ全体への互換性拡張
+  - フィーチャ検出：`navigator.userAgentData.brands` から実行ブラウザを特定
+  - ビルドスクリプト拡張：`npm run build:edge`、`npm run build:brave` でブラウザ別パッケージ生成
+  - manifest.json の `browser_specific_settings` で各ブラウザの固有設定に対応
+
+### Fixed / 修正
+
+- **複数 AI プロバイダー設定時の UI 表示バグを修正** — プロバイダ変更時にセレクト箱の可視性を正確に制御
+
+### Changed / 変更
+
+- **ダッシュボード SQLitePanel に「関連グラフ」タブを追加** — タグクラスタ表示パネルを新規追加
+
+### Documentation / ドキュメント
+
+- **設計ドキュメント**: `docs/superpowers/specs/2026-07-06-related-graph-tag-cluster-design.md`
+- **実装計画**: `docs/superpowers/plans/2026-07-06-related-graph-tag-cluster.md`
+
+---
+
 ## [6.5.3] - 2026-07-06
 
 ### Added / 追加

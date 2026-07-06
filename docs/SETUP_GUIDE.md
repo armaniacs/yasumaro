@@ -421,3 +421,49 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 **Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy".
 
 **Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
+
+---
+
+## v6.5.4 新機能ガイド / v6.5.4 New Features Guide
+
+### 日本語
+
+#### 関連グラフ表示（PBI #02）
+`Dashboard → History → Related Graph` タブで、記録したページのタグ共起関係をグラフで可視化できます。
+- **タグをノード**、**共起関係をエッジ**として表示
+- ノードをクリックすると、そのタグを持つページに自動フィルタ
+- 出現回数上位50件のタグを表示（多数の場合は「上位N件のみ表示中」を明示）
+- 外部ライブラリ不要の軽量 SVG 描画で即座に表示
+
+#### GitHub Gist 連携（PBI #08）
+Obsidian の代わりに、または併用して GitHub Gist にクラウド同期できます。
+- `Dashboard → Sync Settings → GitHub Gist` から設定
+- **GitHub PAT（Personal Access Token）** を入力して認証
+- 「接続テスト」ボタンで接続状況を確認
+- Obsidian との同期と並行実行でき、一方の失敗が他方に影響しません
+
+#### 複数ブラウザ対応（PBI #09）
+Chrome、Microsoft Edge、Brave など、Chromium 系ブラウザで動作します。
+- `npm run build:edge`、`npm run build:brave` で各ブラウザ用にビルド可能
+- 同一のコード基盤で複数ブラウザをサポート
+
+### English
+
+#### Related Graph Display (PBI #02)
+In `Dashboard → History → Related Graph`, you can visualize the co-occurrence relationships of tags in your recorded pages as a graph.
+- **Tags as nodes**, **co-occurrence relationships as edges**
+- Click on a node to automatically filter pages with that tag
+- Displays the top 50 tags by frequency (indicates "showing top N only" if there are more)
+- Lightweight SVG rendering without external libraries for fast rendering
+
+#### GitHub Gist Integration (PBI #08)
+Sync your history to GitHub Gist instead of, or in addition to, Obsidian.
+- Configure in `Dashboard → Sync Settings → GitHub Gist`
+- Enter your **GitHub Personal Access Token (PAT)** for authentication
+- Use the "Test Connection" button to verify connectivity
+- Runs in parallel with Obsidian sync; failure in one doesn't affect the other
+
+#### Multi-Browser Support (PBI #09)
+Works on Chromium-based browsers including Chrome, Microsoft Edge, and Brave.
+- Build for specific browsers using `npm run build:edge`, `npm run build:brave`, etc.
+- Single codebase supports multiple browsers
