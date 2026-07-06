@@ -252,5 +252,47 @@ describe('PrivacyPipeline', () => {
       expect(result.summary).toContain('Error: Content blocked');
       expect(localClient.summarizeLocally).not.toHaveBeenCalled();
     });
+
+    it('does not call aiClient.generateSummary in local_only mode (no audit log recorded)', async () => {
+      const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
+      const localClient = {
+        getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+        summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'Local summary' }),
+        generateSummary: vi.fn() as any
+      };
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'sanitized', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(localOnlySettings, localClient, sanitizers);
+
+      // Mock sanitizePromptContent for input and output sanitization
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+        .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' }) // input sanitization
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' }); // output sanitization
+
+      await pipeline.process('some content', { url: 'https://example.com/local-only-test' });
+
+      expect(localClient.generateSummary).not.toHaveBeenCalled();
+    });
+
+    it('calls aiClient.generateSummary (and thus records audit log) in masked_cloud mode', async () => {
+      const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
+      const cloudClient = {
+        getLocalAvailability: vi.fn().mockResolvedValue('no'),
+        summarizeLocally: vi.fn(),
+        generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary', sentTokens: 100, receivedTokens: 50 })
+      } as any;
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'sanitized', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(maskedCloudSettings, cloudClient, sanitizers);
+
+      // Mock sanitizePromptContent for input and output sanitization
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+        .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' }) // input sanitization
+        .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' }); // output sanitization
+
+      await pipeline.process('some content', { url: 'https://example.com/masked-cloud-test' });
+
+      expect(cloudClient.generateSummary).toHaveBeenCalled();
+    });
   });
 });
