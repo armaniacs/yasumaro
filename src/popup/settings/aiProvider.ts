@@ -111,3 +111,26 @@ export function setupAIProviderChangeListener(elements: AIProviderElements): voi
         }
     });
 }
+
+/**
+ * 複数のプロバイダー選択（優先度1〜3位）に基づき、選択された全プロバイダーの設定欄を同時表示する
+ * @param {AIProviderElements} elements - DOM要素
+ * @param {string[]} selectedProviders - 選択されたプロバイダーIDのリスト（空文字列は無視）
+ */
+export function updateAIProviderVisibilityMulti(elements: AIProviderElements, selectedProviders: string[]): void {
+    const selected = new Set(selectedProviders.filter(p => p !== ''));
+
+    elements.geminiSettings.style.display = selected.has('gemini') ? 'block' : 'none';
+    elements.openaiSettings.style.display = selected.has('openai') ? 'block' : 'none';
+    elements.openai2Settings.style.display = selected.has('openai2') ? 'block' : 'none';
+
+    if (elements.lmStudioSettings) {
+        elements.lmStudioSettings.style.display = selected.has('lm-studio') ? 'block' : 'none';
+    }
+    if (elements.ollamaSettings) {
+        elements.ollamaSettings.style.display = selected.has('ollama') ? 'block' : 'none';
+    }
+    if (elements.openaiCompatibleSettings) {
+        elements.openaiCompatibleSettings.style.display = selected.has('openai-compatible') ? 'block' : 'none';
+    }
+}
