@@ -106,6 +106,13 @@ export function init(): void {
     initializeSessionAlarms();
 
     chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
+
+    // Initialize weekly/monthly review summary alarms
+    (async () => {
+      const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
+      await initializeReviewSummaryAlarms();
+      setupReviewSummaryAlarmListener();
+    })();
 }
 
 /**
