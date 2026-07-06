@@ -50,6 +50,8 @@ export function renderPendingReason(reason: string): string {
     case 'cache-control': return getMessage('pendingReasonCache') || 'Cache-Control ヘッダー';
     case 'set-cookie':    return getMessage('pendingReasonCookie') || 'Set-Cookie ヘッダー';
     case 'authorization': return getMessage('pendingReasonAuth') || 'Authorization ヘッダー';
+    case 'pipeline-error': return getMessage('pendingReasonPipelineError') || '記録処理エラー';
+    case 'obsidian-write-failed': return getMessage('pendingReasonObsidianWriteFailed') || 'Obsidian書き込み失敗';
     default:              return reason;
   }
 }

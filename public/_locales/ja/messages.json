@@ -1295,6 +1295,12 @@
   "pendingReasonAuth": {
     "message": "Authorization ヘッダー"
   },
+  "pendingReasonPipelineError": {
+    "message": "記録処理エラー"
+  },
+  "pendingReasonObsidianWriteFailed": {
+    "message": "Obsidian書き込み失敗"
+  },
   "pendingDeleteForever": {
     "message": "🗑 完全削除"
   },
