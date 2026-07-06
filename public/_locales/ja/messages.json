@@ -749,6 +749,27 @@
   "importEncryptedBackupBtn": {
     "message": "暗号化バックアップから復元"
   },
+  "gistSyncTitle": {
+    "message": "GitHub Gist 同期"
+  },
+  "gistSyncDesc": {
+    "message": "ブラウジング履歴をプライベート GitHub Gist に同期します。"
+  },
+  "gistEnabledLabel": {
+    "message": "GitHub Gist 同期を有効にする"
+  },
+  "githubPatLabel": {
+    "message": "GitHub Personal Access Token"
+  },
+  "githubPatPlaceholder": {
+    "message": "ghp_ で始まるトークンを入力"
+  },
+  "saveGistSettings": {
+    "message": "Gist 設定を保存"
+  },
+  "testGistConnection": {
+    "message": "接続テスト"
+  },
   "confirmImport": {
     "message": "設定のインポート"
   },

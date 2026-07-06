@@ -31,6 +31,7 @@ import { initMasterPasswordSettings, loadMasterPasswordSettings } from './master
 import { queryLogs } from './dashboardSqliteService.js';
 import { initExportImport } from './exportImport.js';
 import { initEncryptedBackupPanel } from './encryptedBackupPanel.js';
+import { initGistSettings } from './gistSettings.js';
 import { initDomainFilterTagUI } from './domainFilterTagUI.js';
 import { initTagsPanel } from './tagsPanel.js';
 import { initTagClusterPanel } from './tagClusterPanel.js';
@@ -1206,6 +1207,7 @@ function initExportLogsPanel(): void {
   try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
   try { initExportImport(); } catch (e) { console.error('[Dashboard] initExportImport error:', e); }
   try { initEncryptedBackupPanel(); } catch (e) { console.error('[Dashboard] initEncryptedBackupPanel error:', e); }
+  try { await initGistSettings(); } catch (e) { console.error('[Dashboard] initGistSettings error:', e); }
   try { initMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] initMasterPasswordSettings error:', e); }
   try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
   try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }

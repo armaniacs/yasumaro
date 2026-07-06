@@ -749,6 +749,27 @@
   "importEncryptedBackupBtn": {
     "message": "Restore from Encrypted Backup"
   },
+  "gistSyncTitle": {
+    "message": "GitHub Gist Sync"
+  },
+  "gistSyncDesc": {
+    "message": "Sync browsing history to a private GitHub Gist."
+  },
+  "gistEnabledLabel": {
+    "message": "Enable GitHub Gist sync"
+  },
+  "githubPatLabel": {
+    "message": "GitHub Personal Access Token"
+  },
+  "githubPatPlaceholder": {
+    "message": "Enter token starting with ghp_"
+  },
+  "saveGistSettings": {
+    "message": "Save Gist Settings"
+  },
+  "testGistConnection": {
+    "message": "Test Connection"
+  },
   "confirmImport": {
     "message": "Import Settings"
   },

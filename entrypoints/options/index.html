@@ -1752,6 +1752,28 @@
           <div id="encryptedBackupStatus" class="status-message"></div>
         </div>
 
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="gistSyncTitle">GitHub Gist Sync</h3>
+          <p class="help-text" data-i18n="gistSyncDesc">Sync browsing history to a private GitHub Gist.</p>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="gistEnabled">
+              <span data-i18n="gistEnabledLabel">Enable GitHub Gist sync</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="githubPat" data-i18n="githubPatLabel">GitHub Personal Access Token</label>
+            <input type="password" id="githubPat" class="form-input" data-i18n-input-placeholder="githubPatPlaceholder">
+          </div>
+          <div class="form-group">
+            <button id="saveGistSettingsBtn" class="btn btn-primary" data-i18n="saveGistSettings">Save Gist Settings</button>
+            <button id="testGistConnectionBtn" class="btn btn-secondary" data-i18n="testGistConnection">Test Connection</button>
+          </div>
+          <div id="gistStatus" class="status-message"></div>
+        </div>
+
         <div id="exportImportStatus" aria-live="polite"></div>
       </section>
 
