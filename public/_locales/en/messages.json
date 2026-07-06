@@ -1295,6 +1295,12 @@
   "pendingReasonAuth": {
     "message": "Authorization header"
   },
+  "pendingReasonPipelineError": {
+    "message": "Recording pipeline error"
+  },
+  "pendingReasonObsidianWriteFailed": {
+    "message": "Obsidian write failed"
+  },
   "pendingDeleteForever": {
     "message": "🗑 Delete Forever"
   },

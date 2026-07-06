@@ -78,6 +78,14 @@ describe('renderPendingReason', () => {
     expect(renderPendingReason('authorization')).toBe('i18n_pendingReasonAuth');
   });
 
+  it('returns localized pipeline-error reason', () => {
+    expect(renderPendingReason('pipeline-error')).toBe('i18n_pendingReasonPipelineError');
+  });
+
+  it('returns localized obsidian-write-failed reason', () => {
+    expect(renderPendingReason('obsidian-write-failed')).toBe('i18n_pendingReasonObsidianWriteFailed');
+  });
+
   it('returns raw reason for unknown', () => {
     expect(renderPendingReason('unknown')).toBe('unknown');
   });
