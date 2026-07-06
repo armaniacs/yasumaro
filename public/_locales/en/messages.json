@@ -1307,6 +1307,9 @@
   "pendingReasonObsidianWriteFailed": {
     "message": "Obsidian write failed"
   },
+  "pendingReasonLocalAiUnavailable": {
+    "message": "Local AI unavailable"
+  },
   "pendingDeleteForever": {
     "message": "🗑 Delete Forever"
   },

@@ -52,6 +52,7 @@ export function renderPendingReason(reason: string): string {
     case 'authorization': return getMessage('pendingReasonAuth') || 'Authorization ヘッダー';
     case 'pipeline-error': return getMessage('pendingReasonPipelineError') || '記録処理エラー';
     case 'obsidian-write-failed': return getMessage('pendingReasonObsidianWriteFailed') || 'Obsidian書き込み失敗';
+    case 'local-ai-unavailable': return getMessage('pendingReasonLocalAiUnavailable') || 'ローカルAI利用不可';
     default:              return reason;
   }
 }
