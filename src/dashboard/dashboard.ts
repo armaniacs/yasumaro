@@ -42,6 +42,7 @@ import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { initOnboardingWizard } from '../popup/onboardingWizard.js';
+import { updateProviderSettingsLayout, hideAllProviderSettings } from './aiProviderLayoutManager.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -1302,12 +1303,15 @@ function initExportLogsPanel(): void {
       el.aiProviderPriority3Select?.value ?? ''
     ];
     updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
+    // Update provider settings layout to show settings under each priority card
+    updateProviderSettingsLayout(selected);
   };
 
   const el = getDashboardElements();
   el.aiProviderSelect?.addEventListener('change', refreshMultiVisibility);
   el.aiProviderPriority2Select?.addEventListener('change', refreshMultiVisibility);
   el.aiProviderPriority3Select?.addEventListener('change', refreshMultiVisibility);
+  hideAllProviderSettings();
   refreshMultiVisibility();
 
   // Initialize models.dev dialog
