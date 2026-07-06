@@ -87,6 +87,40 @@ describe('pendingStorage', () => {
             expect(result).toEqual([pendingPage]);
         });
 
+        it('should add a pending page with pipeline-error reason and errorMessage', async () => {
+            const now = Date.now();
+            const pendingPage = {
+                url: 'https://example.com/failed-page',
+                title: 'Failed Page',
+                timestamp: now,
+                reason: 'pipeline-error' as const,
+                errorMessage: 'DOMAIN_BLOCKED',
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+
+            await addPendingPage(pendingPage);
+
+            const result = mockStorage['osh_pending_pages'] as unknown[];
+            expect(result).toEqual([pendingPage]);
+        });
+
+        it('should add a pending page with obsidian-write-failed reason and errorMessage', async () => {
+            const now = Date.now();
+            const pendingPage = {
+                url: 'https://example.com/obsidian-fail',
+                title: 'Obsidian Fail Page',
+                timestamp: now,
+                reason: 'obsidian-write-failed' as const,
+                errorMessage: 'Network timeout',
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+
+            await addPendingPage(pendingPage);
+
+            const result = mockStorage['osh_pending_pages'] as unknown[];
+            expect(result).toEqual([pendingPage]);
+        });
+
         it('should exclude duplicate pages with same URL', async () => {
             const now = Date.now();
             const existingPage = {

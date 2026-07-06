@@ -7,9 +7,10 @@ export interface PendingPage {
   url: string;
   title: string;
   timestamp: number;
-  reason: 'cache-control' | 'set-cookie' | 'authorization';
+  reason: 'cache-control' | 'set-cookie' | 'authorization' | 'pipeline-error' | 'obsidian-write-failed';
   headerValue?: string;
   expiry: number;
+  errorMessage?: string;
 }
 
 const PENDING_PAGES_KEY = 'osh_pending_pages';
