@@ -23,7 +23,10 @@ const sqliteClient = new SqliteClient();
  */
 export async function recordAuditLog({ provider, url }: { provider: string; url: string }): Promise<void> {
   try {
-    await sqliteClient.insertAuditLog({ provider, url, created_at: Date.now() });
+    const result = await sqliteClient.insertAuditLog({ provider, url, created_at: Date.now() });
+    if (result === null) {
+      logError('Failed to record audit log', { provider, error: 'insertAuditLog returned null' });
+    }
   } catch (error: unknown) {
     logError('Failed to record audit log', { provider, error: errorMessage(error) });
   }
