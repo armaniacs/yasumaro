@@ -3,6 +3,7 @@ import { LocalAIClient, LocalAIAvailability, LocalAISummaryResult } from './loca
 import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { recordAuditLog } from '../utils/auditLog.js';
 
 export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
@@ -55,7 +56,7 @@ export class AIClient {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
+    async generateSummary(content: string, tagSummaryMode: boolean = false, url: string = ''): Promise<AISummaryResult> {
         const settings = await getSettings();
         const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
         const slots = this.resolveProviderSlots(settings);
@@ -73,6 +74,8 @@ export class AIClient {
             }
 
             const effectiveSettings = this.applySlotModel(settings, slot);
+
+            void recordAuditLog({ provider: slot.provider, url });
 
             try {
                 const providerInstance = factory(effectiveSettings);
