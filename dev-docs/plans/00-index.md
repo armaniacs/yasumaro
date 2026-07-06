@@ -8,7 +8,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 00-index.md はそれぞれのファイルのステータスを一覧するためのファイルである。
 
-- 更新 2026-07-05（実装状況列を追加）
+- 更新 2026-07-06（#03・#05実装完了を反映、Phase 1完了、関連設計ドキュメント一覧を拡充）
 
 全ての完了済み計画ファイルは `dev-docs/plans/archive-old/` に移動しました。
 
@@ -27,8 +27,8 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 | Phase | 内容 | PBI | 累計pt | リリース価値 |
 |-------|------|-----|--------|-------------|
-| **1** | 基盤整備（Quick Win 3連打） | #07 → #03 → #05 | 13 | 非Obsidian層参入 + タグ品質 + AI安定性 |
-| **2** | コア価値（★3つ + B領域完結） | #01 → #04 → #06 | 34 | 週次サマリ + 重複統合 + 記録漏れ回復 |
+| **1** | 基盤整備（Quick Win 3連打） | #07 → #03 → #05 | 13 | 非Obsidian層参入 + タグ品質 + AI安定性 ✅完了 |
+| **2** | コア価値（★ + B領域完結） | #01 → ~~#04~~ → #06 | 26 | 週次サマリ + ~~重複統合~~ + 記録漏れ回復 |
 | **3** | 信頼性（D領域3つ） | #10 → #11 → #12 | 52 | 暗号化バックアップ + 監査ログ + 完全オフライン |
 | **4** | 拡張（残り） | #02 → #08 → #09 | 75 | タグ可視化 + 出力先拡張 + 他ブラウザ対応 |
 
@@ -37,8 +37,8 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 | 順位 | # | ファイル | 領域 | 優先 | pt | 選定理由 | 実装状況 |
 |------|---|---------|------|------|----|---------|---------|
 | **1** | 07 | 2026-07-04-07-feat-local-markdown-export.md | C 連携 | ★ | 5 | 最小コストで非Obsidian層にリーチ。依存ゼロ | ✅ 実装後（v6.5.2で完了。ファイル内「ステータス: 完了」・受け入れ基準全チェック済み・CHANGELOG.md記載あり） |
-| **2** | 03 | 2026-07-04-03-feat-tag-auto-clustering-normalization.md | A 知識活用 | ★ | 3 | 全PBI中最短。全タグ機能(#01/#02)の品質基盤 | ⏳ 実装前（受け入れ基準未チェック。詳細検討用に`.deep-dig.md`が作成済み） |
-| **3** | 05 | 2026-07-04-05-feat-summary-retry-fallback.md | B 記録品質 | ★ | 5 | #06/#12の前提。AI要約安定性が全機能を底上げ | ⏳ 実装前（設計・実装計画は策定済み。受け入れ基準・実装計画のTaskとも未チェック） |
+| **2** | 03 | 2026-07-04-03-feat-tag-auto-clustering-normalization.md | A 知識活用 | ★ | 3 | 全PBI中最短。全タグ機能(#01/#02)の品質基盤 | ✅ 実装後（`97f1b28`で実装済み。正規化辞書・バッジ表示・FTS5サーバーサイドフィルタ） |
+| **3** | 05 | 2026-07-04-05-feat-summary-retry-fallback.md | B 記録品質 | ★ | 5 | #06/#12の前提。AI要約安定性が全機能を底上げ | ✅ 実装後（9タスク全て完了。ProviderSlot型・フォールバックロジック・ダッシュボードUI・保存/読込・変更リスナー実装済み） |
 | **4** | 01 | 2026-07-04-01-feat-weekly-review-summary.md | A 知識活用 | ★ | 8 | 最大の"見える"価値。#03/#05完了で高品質 | ⏳ 実装前（2026-07-05に設計ドキュメント作成・PBI改訂済みだが実装未着手） |
 | ~~5~~ | 04 | 2026-07-04-04-feat-duplicate-page-merge.md | B 記録品質 | ★ | 8 | データS/N比を根本改善。基盤整備後に着手 | ❌ 実装しない（2026-07-05決定。同日内の再訪は既存の重複チェックで十分と判断） |
 | **6** | 06 | 2026-07-04-06-feat-missed-record-recovery.md | B 記録品質 | 中 | 5 | #05のpending機構を流用。B領域を完結 | ⏳ 実装前 |
@@ -53,10 +53,10 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 | ファイル | 種別 | 実装状況 |
 |---------|------|---------|
-| dev-docs/plans/2026-07-04-03-feat-tag-auto-clustering-normalization.deep-dig.md | #03の深掘りメモ | 未コミット（`??`）。#03着手前の検討資料 |
+| dev-docs/plans/2026-07-04-03-feat-tag-auto-clustering-normalization.deep-dig.md | #03の深掘りメモ | ✅ 実装完了（#03の実装に反映済み） |
 | docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md | #01の設計ドキュメント | ✅ 設計完了・ステージング済み（`A `）。#01の実装はこれから |
-| dev-docs/plans/2026-07-05-01-feat-provider-priority-fallback-design.md | #05のフォールバック設計（AIプロバイダ優先順位1〜3位） | ✅ 設計承認済み（コミット済み）。実装計画待ちの段階から実装計画作成に進んだ |
-| dev-docs/plans/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md | #05の実装計画（Task分解済み） | ⏳ 実装前（未コミット `??`。Task 1のStep 1から全て`- [ ]`未着手） |
+| dev-docs/plans/2026-07-05-01-feat-provider-priority-fallback-design.md | #05のフォールバック設計（AIプロバイダ優先順位1〜3位） | ✅ 設計承認済み（コミット済み）。実装完了 |
+| dev-docs/plans/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md | #05の実装計画（Task分解済み） | ✅ 実装完了（全9タスク完了） |
 
 ### 優先度再評価
 
@@ -68,4 +68,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 ## 関連設計ドキュメント
 
-- [2026-07-05-01-feat-provider-priority-fallback-design.md](2026-07-05-01-feat-provider-priority-fallback-design.md) — #05のフォールバック実装に先立つ、AIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画待ち
+- [2026-07-05-01-feat-provider-priority-fallback-design.md](2026-07-05-01-feat-provider-priority-fallback-design.md) — #05のAIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画作成済み
+- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
+- [2026-07-05-02-feat-encrypted-backup-design.md](2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
+- [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装未着手

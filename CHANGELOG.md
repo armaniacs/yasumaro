@@ -19,6 +19,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added / 追加
 
+- **AIプロバイダの優先順位（1〜3位）設定機能** — 1位のプロバイダーが失敗、または要約が最小長未満の場合、自動的に2位・3位のプロバイダーへフォールバック
+  - `ProviderSlot` 型を新設。`provider`（必須）と `model`（任意）を持つスロットを最大3つまで設定可能
+  - `StorageKeys.AI_PROVIDER_PRIORITY_LIST`（`ProviderSlot[]`）と `StorageKeys.SUMMARY_MIN_LENGTH`（デフォルト: 10）を追加
+  - `AIClient.generateSummary()` をスロット順に試行するフォールバックロジックに改修
+  - 既存の `AI_PROVIDER` 単一設定ユーザーは自動マイグレーションで1位スロットとして引き継ぐ
+  - ダッシュボードに優先度2位・3位のセレクトボックスとモデル名入力欄を追加
+  - 選択された全プロバイダーの設定欄を同時表示するUI
+
 - **タグ正規化辞書機能** — AI が抽出したタグの表記ゆれ（例: "AI" vs "人工知能"）を保存時に自動正規化
   - `TagNormalizationEntry` 型を新設。`from` → `to` のマッピング辞書を `StorageKeys.TAG_NORMALIZATION_DICT` に保存
   - `normalizeTags()` 純粋関数: trim → NFKC正規化 → 大文字小文字統一 → 辞書マッチ → 重複除去
