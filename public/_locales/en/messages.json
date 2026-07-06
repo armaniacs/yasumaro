@@ -95,6 +95,21 @@
   "aiProvider": {
     "message": "AI Provider"
   },
+  "aiProviderPriority1": {
+    "message": "Priority 1 (Required)"
+  },
+  "aiProviderPriority2": {
+    "message": "Priority 2 (Optional)"
+  },
+  "aiProviderPriority3": {
+    "message": "Priority 3 (Optional)"
+  },
+  "providerPriorityNone": {
+    "message": "Not set"
+  },
+  "providerPriorityModelPlaceholder": {
+    "message": "Model name (optional, uses default if empty)"
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },

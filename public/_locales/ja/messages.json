@@ -95,6 +95,21 @@
   "aiProvider": {
     "message": "AIプロバイダー"
   },
+  "aiProviderPriority1": {
+    "message": "優先度1位（必須）"
+  },
+  "aiProviderPriority2": {
+    "message": "優先度2位（任意）"
+  },
+  "aiProviderPriority3": {
+    "message": "優先度3位（任意）"
+  },
+  "providerPriorityNone": {
+    "message": "未設定"
+  },
+  "providerPriorityModelPlaceholder": {
+    "message": "モデル名（省略可、デフォルト使用）"
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },

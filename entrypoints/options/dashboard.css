@@ -459,6 +459,13 @@ textarea[aria-invalid="true"]:focus {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
+/* Priority model input */
+.priority-model-input {
+  margin-top: 6px;
+  width: 100%;
+  font-size: 12px;
+}
+
 .field-error {
   font-size: 12px;
   color: var(--color-danger);
