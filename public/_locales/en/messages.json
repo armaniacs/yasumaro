@@ -110,6 +110,30 @@
   "providerPriorityModelPlaceholder": {
     "message": "Model name (optional, uses default if empty)"
   },
+  "reviewSummarySection": {
+    "message": "Weekly/Monthly Review Summary"
+  },
+  "reviewSummaryEnabled": {
+    "message": "Auto-generate weekly/monthly summaries"
+  },
+  "reviewSummaryHelp": {
+    "message": "When enabled, downloads a Markdown summary of past browsing history every Monday and the 1st of each month."
+  },
+  "generateWeeklySummaryBtn": {
+    "message": "Generate this week's summary"
+  },
+  "generateMonthlySummaryBtn": {
+    "message": "Generate this month's summary"
+  },
+  "reviewSummaryGenerated": {
+    "message": "Summary generated."
+  },
+  "reviewSummarySkipped": {
+    "message": "No history for the target period, summary skipped."
+  },
+  "reviewSummaryFailed": {
+    "message": "Failed to generate summary."
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },
