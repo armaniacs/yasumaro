@@ -86,6 +86,10 @@ describe('renderPendingReason', () => {
     expect(renderPendingReason('obsidian-write-failed')).toBe('i18n_pendingReasonObsidianWriteFailed');
   });
 
+  it('returns localized local-ai-unavailable reason', () => {
+    expect(renderPendingReason('local-ai-unavailable')).toBe('i18n_pendingReasonLocalAiUnavailable');
+  });
+
   it('returns raw reason for unknown', () => {
     expect(renderPendingReason('unknown')).toBe('unknown');
   });
