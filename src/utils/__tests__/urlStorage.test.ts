@@ -389,11 +389,11 @@ describe('urlStorage', () => {
 
         it('removes entries older than retention days', async () => {
             const now = 1000000000000;
-            const eightDaysAgo = now - 8 * 24 * 60 * 60 * 1000;
+            const thirtySixDaysAgo = now - 36 * 24 * 60 * 60 * 1000;
             const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
 
             const existing: SavedUrlEntry[] = [
-                { url: 'https://old.com', timestamp: eightDaysAgo },
+                { url: 'https://old.com', timestamp: thirtySixDaysAgo },
                 { url: 'https://recent.com', timestamp: now - 60 * 60 * 1000 },
             ];
             await chrome.storage.local.set({ savedUrlsWithTimestamps: existing });

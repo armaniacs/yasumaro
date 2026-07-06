@@ -120,6 +120,10 @@ export function setupAIProviderChangeListener(elements: AIProviderElements): voi
 export function updateAIProviderVisibilityMulti(elements: AIProviderElements, selectedProviders: string[]): void {
     const selected = new Set(selectedProviders.filter(p => p !== ''));
 
+    if (!elements.geminiSettings || !elements.openaiSettings || !elements.openai2Settings) {
+        return;
+    }
+
     elements.geminiSettings.style.display = selected.has('gemini') ? 'block' : 'none';
     elements.openaiSettings.style.display = selected.has('openai') ? 'block' : 'none';
     elements.openai2Settings.style.display = selected.has('openai2') ? 'block' : 'none';
