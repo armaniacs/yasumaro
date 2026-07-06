@@ -4,6 +4,7 @@
  */
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
+import { addPendingPage } from '../../utils/pendingStorage.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
 import {
   truncateContentStep,
@@ -318,13 +319,23 @@ export class RecordingPipeline {
     }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
 
     // Create error notification
-    const { title } = context.data;
+    const { title, url } = context.data;
     const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon128.png',
       title: notificationTitle,
       message: `Failed to record ${title}: ${error.message}`
+    });
+
+    // 記録漏れリカバリ: pending に登録して再記録できるようにする
+    void addPendingPage({
+      url,
+      title,
+      timestamp: Date.now(),
+      reason: 'pipeline-error',
+      errorMessage: error.message,
+      expiry: Date.now() + (24 * 60 * 60 * 1000)
     });
 
     return {

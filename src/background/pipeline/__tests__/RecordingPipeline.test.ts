@@ -9,7 +9,56 @@
 
 import { vi } from 'vitest';;
 
+// Mock chrome.storage.local for pendingStorage integration
+const mockStorage: Record<string, unknown> = {};
+globalThis.chrome = {
+  ...(globalThis.chrome || {}),
+  storage: {
+    ...((globalThis.chrome as any)?.storage || {}),
+    local: {
+      get: vi.fn((keys: string | string[] | null | undefined) => {
+        if (keys === null || keys === undefined) {
+          return Promise.resolve({ ...mockStorage });
+        }
+        if (Array.isArray(keys)) {
+          const result: Record<string, unknown> = {};
+          for (const key of keys) {
+            if (key in mockStorage) {
+              result[key] = mockStorage[key];
+            }
+          }
+          return Promise.resolve(result);
+        }
+        if (typeof keys === 'string') {
+          return Promise.resolve({ [keys]: mockStorage[keys] });
+        }
+        return Promise.resolve({});
+      }),
+      set: vi.fn((items: Record<string, unknown>) => {
+        Object.assign(mockStorage, items);
+        return Promise.resolve();
+      }),
+      remove: vi.fn((keys: string | string[]) => {
+        const keysArr = Array.isArray(keys) ? keys : [keys];
+        for (const key of keysArr) {
+          delete mockStorage[key];
+        }
+        return Promise.resolve();
+      }),
+    },
+  },
+} as any;
+
 vi.mock('../../../utils/storage.js');
+vi.mock('../../../utils/errorUtils.js', () => ({
+  errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+}));
+vi.mock('../../../utils/pendingStorage.js', () => ({
+  addPendingPage: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../../utils/crypto.js', () => ({
+  hashUrl: vi.fn().mockResolvedValue('mocked-hash'),
+}));
 vi.mock('../../../utils/storageUrls.js');
 vi.mock('../../../utils/domainUtils.js');
 vi.mock('../../../utils/permissionManager.js');
@@ -30,6 +79,8 @@ vi.mock('../../obsidianClient.js');
 vi.mock('../../../utils/logger.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
@@ -81,6 +132,8 @@ function makeGetPrivacyInfo() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Clear mockStorage between tests to prevent pending entries from accumulating
+  Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
 
   // @ts-expect-error - mock
   storage.StorageKeys = {
@@ -389,6 +442,33 @@ describe('RecordingPipeline', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
+    });
+
+    it('パイプライン失敗時に pipeline-error として pending 登録される', async () => {
+      mockProcess.mockRejectedValue(new Error('Step crashed'));
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      await pipeline.execute({
+        title: 'Crash Test',
+        url: 'https://example.com/crash',
+        content: 'Content',
+      }, mockSettings);
+
+      // Import the mocked addPendingPage to verify it was called
+      const { addPendingPage } = await import('../../../utils/pendingStorage.js');
+      expect(addPendingPage).toHaveBeenCalledTimes(1);
+      expect(addPendingPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://example.com/crash',
+          reason: 'pipeline-error',
+          errorMessage: 'Step crashed',
+        })
+      );
     });
   });
 });
