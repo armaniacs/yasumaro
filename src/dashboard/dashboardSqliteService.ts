@@ -279,6 +279,23 @@ export async function backupDb(): Promise<Uint8Array | null> {
 }
 
 /**
+ * Restore the entire history database from a binary snapshot.
+ * Requires a confirmation token (destructive operation).
+ */
+export async function restoreDb(data: Uint8Array): Promise<boolean> {
+  try {
+    const response = await sendDashboardMessage(
+      { subtype: 'restore_db', data: Array.from(data) },
+      { requireConfirmToken: true }
+    );
+    return Boolean(response.success);
+  } catch (error) {
+    console.error('restoreDb failed:', error);
+    return false;
+  }
+}
+
+/**
  * Import browsing log rows into SQLite.
  */
 export async function importLogs(rows: Array<{
