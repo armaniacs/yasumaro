@@ -610,6 +610,12 @@ export async function getSettings(): Promise<Settings> {
             merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
         }
 
+        // AI_PROVIDER_PRIORITY_LIST が未設定の場合、既存の AI_PROVIDER を1位スロットとして導出（既存ユーザー向けマイグレーション）
+        if (!(StorageKeys.AI_PROVIDER_PRIORITY_LIST in filteredSettings)) {
+            const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
+            merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
+        }
+
         // 暗号化されたAPIキーを復号
         try {
             const key = await getOrCreateEncryptionKey();
@@ -668,6 +674,12 @@ export async function getSettings(): Promise<Settings> {
     if (!(StorageKeys.OBSIDIAN_ENABLED in settings)) {
         const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
         merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
+    }
+
+    // AI_PROVIDER_PRIORITY_LIST が未設定の場合、既存の AI_PROVIDER を1位スロットとして導出（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.AI_PROVIDER_PRIORITY_LIST in settings)) {
+        const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
+        merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
     }
     try {
         const key = await getOrCreateEncryptionKey();
