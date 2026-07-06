@@ -4,6 +4,8 @@ import { Settings, StorageKeys } from '../utils/storage.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
+import { addPendingPage } from '../utils/pendingStorage.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
 import type { MaskedItem } from '../messaging/types.js';
 
@@ -66,20 +68,27 @@ export interface PrivacyPipelineResult {
 }
 
 export class PrivacyPipeline {
-  private settings: Settings;
-  private aiClient: IAIClient;
-  private sanitizers: ISanitizers;
-  private mode: string;
+  constructor(
+    private settings: Settings,
+    private aiClient: IAIClient,
+    private sanitizers: ISanitizers,
+  ) {}
 
-  constructor(settings: Settings, aiClient: IAIClient, sanitizers: ISanitizers) {
-    this.settings = settings;
-    this.aiClient = aiClient;
-    this.sanitizers = sanitizers;
-    this.mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
+  private get mode(): string {
+    return (this.settings as Record<string, unknown>)[StorageKeys.PRIVACY_MODE] as string || 'full_pipeline';
   }
 
-  async process(content: string, options: PrivacyPipelineOptions = {}): Promise<PrivacyPipelineResult> {
-    const { previewOnly = false, alreadyProcessed = false, url = '' } = options;
+  async process(
+    content: string,
+    options: {
+      previewOnly?: boolean;
+      alreadyProcessed?: boolean;
+      tagSummaryMode?: boolean;
+      url?: string;
+      title?: string;
+    } = {}
+  ): Promise<PrivacyPipelineResult> {
+    const { previewOnly = false, alreadyProcessed = false, url = '', title = '' } = options;
 
     if (!content) {
       return { summary: 'Summary not available.' };
@@ -97,7 +106,9 @@ export class PrivacyPipeline {
       content,
       processingText,
       sanitizedSettings.useLocalAi,
-      originalTokens
+      originalTokens,
+      url,
+      title
     );
 
     if (localResult?.returnEarly) {
@@ -151,6 +162,8 @@ export class PrivacyPipeline {
     processingText: string,
     useLocalAi: boolean,
     originalTokens: number,
+    pageUrl: string = '',
+    pageTitle: string = '',
   ): Promise<{
     returnEarly?: boolean;
     result?: PrivacyPipelineResult;
@@ -161,7 +174,19 @@ export class PrivacyPipeline {
     }
 
     const localStatus = await this.aiClient.getLocalAvailability();
-    if (localStatus !== 'readily' && this.mode !== 'local_only') {
+    if (localStatus !== 'readily') {
+      if (this.mode === 'local_only') {
+        // 厳格オフラインモード: ローカルAIが利用不可の場合、pending に登録して記録全体を失敗扱いにする
+        void addPendingPage({
+          url: pageUrl,
+          title: pageTitle || pageUrl,
+          timestamp: Date.now(),
+          reason: 'local-ai-unavailable',
+          errorMessage: `Local AI not available (status: ${localStatus})`,
+          expiry: Date.now() + (24 * 60 * 60 * 1000)
+        });
+        throw new Error('Local AI unavailable');
+      }
       return {};
     }
 
@@ -175,6 +200,18 @@ export class PrivacyPipeline {
 
     const localResult = await this.aiClient.summarizeLocally(localSanitizeResult.sanitized);
     if (!localResult.success || !localResult.summary) {
+      if (this.mode === 'local_only') {
+        // 厳格オフラインモード: ローカルAIが失敗した場合、pending に登録して記録全体を失敗扱いにする
+        void addPendingPage({
+          url: pageUrl,
+          title: pageTitle || pageUrl,
+          timestamp: Date.now(),
+          reason: 'local-ai-unavailable',
+          errorMessage: 'Local AI summarization failed',
+          expiry: Date.now() + (24 * 60 * 60 * 1000)
+        });
+        throw new Error('Local AI unavailable');
+      }
       return {};
     }
 

@@ -89,6 +89,16 @@
           </svg>
           <span data-i18n="tagsTab">Tags</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-tag-cluster">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="8" cy="8" r="2"/>
+            <circle cx="16" cy="8" r="2"/>
+            <circle cx="12" cy="16" r="2"/>
+            <line x1="8" y1="10" x2="12" y2="14"/>
+            <line x1="16" y1="10" x2="12" y2="14"/>
+          </svg>
+          <span data-i18n="tagClusterTab">Tag Cluster</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label" data-i18n="dataSection">Data</div>
@@ -1421,6 +1431,15 @@
         <div class="form-group">
           <button id="saveTagsBtn" class="btn-primary" data-i18n="saveBtn">Save</button>
         </div>
+      </section>
+
+      <!-- Tag Cluster Panel -->
+      <section id="panel-tag-cluster" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
+        <p class="panel-description">タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。</p>
+        <div id="tagClusterEmptyState" hidden>タグ付き履歴がまだありません。</div>
+        <div id="tagClusterTruncatedNotice" hidden>タグ数が多いため、上位50件のみ表示しています。</div>
+        <svg id="tagClusterSvg" width="800" height="600"></svg>
       </section>
 
       <!-- History Panel (New) -->

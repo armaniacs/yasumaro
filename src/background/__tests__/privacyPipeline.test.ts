@@ -14,6 +14,14 @@ vi.mock('../../utils/logger.js', () => ({
   logDebug: vi.fn(),
 }));
 
+vi.mock('../../utils/pendingStorage.js', () => ({
+  addPendingPage: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../utils/errorUtils.js', () => ({
+  errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+}));
+
 // Mock promptSanitizer
 vi.mock('../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: vi.fn(() => ({
@@ -207,7 +215,7 @@ describe('PrivacyPipeline', () => {
       );
     });
 
-    it('should reach final return when local_only mode and local fails', async () => {
+    it('should throw when local_only mode and local AI is unavailable', async () => {
       const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
       const localClient = {
         getLocalAvailability: vi.fn().mockResolvedValue('no'),
@@ -225,8 +233,7 @@ describe('PrivacyPipeline', () => {
         dangerLevel: 'low'
       });
 
-      const result = await pipeline.process('content');
-      expect(result.summary).toBe('Summary not available.');
+      await expect(pipeline.process('content')).rejects.toThrow('Local AI unavailable');
     });
 
     it('should block high danger content in local_only mode', async () => {

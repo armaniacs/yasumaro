@@ -33,6 +33,7 @@ import { initExportImport } from './exportImport.js';
 import { initEncryptedBackupPanel } from './encryptedBackupPanel.js';
 import { initDomainFilterTagUI } from './domainFilterTagUI.js';
 import { initTagsPanel } from './tagsPanel.js';
+import { initTagClusterPanel } from './tagClusterPanel.js';
 import { initDomainSearchPanel } from './domainSearchPanel.js';
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initAuditLogPanel } from './auditLogPanel.js';
@@ -1438,6 +1439,7 @@ function initExportLogsPanel(): void {
   try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
+  try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); }
   try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
   try { await initAuditLogPanel(); } catch (e) { console.error('[Dashboard] initAuditLogPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
