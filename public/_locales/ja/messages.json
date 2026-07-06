@@ -731,6 +731,12 @@
   "settingsImported": {
     "message": "設定をインポートしました"
   },
+  "exportEncryptedBackupBtn": {
+    "message": "暗号化バックアップを作成"
+  },
+  "importEncryptedBackupBtn": {
+    "message": "暗号化バックアップから復元"
+  },
   "confirmImport": {
     "message": "設定のインポート"
   },

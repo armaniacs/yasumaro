@@ -137,6 +137,15 @@
           </svg>
           <span data-i18n="diagnosticsTab">Diagnostics</span>
         </button>
+        <button class="sidebar-nav-btn" data-panel="panel-audit-log">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/>
+            <polyline points="13 2 13 9 20 9"/>
+            <line x1="9" y1="14" x2="15" y2="14"/>
+            <line x1="9" y1="18" x2="15" y2="18"/>
+          </svg>
+          <span data-i18n="auditLogTab">監査ログ</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1598,6 +1607,14 @@
         </div>
       </section>
 
+      <!-- Audit Log Panel (New) -->
+      <section id="panel-audit-log" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="auditLogTab">監査ログ</h2>
+        <p class="panel-description">どのページ内容がどのAIプロバイダーへ送信されたかを一覧できます。</p>
+        <div id="auditLogEmptyState" hidden>記録された送信イベントはまだありません。</div>
+        <div id="auditLogList"></div>
+      </section>
+
       <!-- Diagnostics Panel (New) -->
       <section id="panel-diagnostics" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="diagnosticsTab">Diagnostics</h2>
@@ -1703,6 +1720,17 @@
           <button id="importLogsBtn" class="secondary-btn" data-i18n="importLogsBtn">Import Logs from JSON</button>
           <input type="file" id="importLogsFileInput" accept=".json" class="hidden" aria-hidden="true">
           <div id="importLogsProgress" class="diag-result" style="display:none" aria-live="polite"></div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
+          <h3 class="diag-section-title">暗号化バックアップ</h3>
+          <p class="help-text">パスフレーズで暗号化した履歴+設定のバックアップを作成・復元します。</p>
+          <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">暗号化バックアップを作成</button>
+          <button id="importEncryptedBackupBtn" class="secondary-btn" data-i18n="importEncryptedBackupBtn">暗号化バックアップから復元</button>
+          <input type="file" id="importEncryptedBackupFileInput" accept=".json" class="hidden" aria-hidden="true">
+          <div id="encryptedBackupStatus" class="status-message"></div>
         </div>
 
         <div id="exportImportStatus" aria-live="polite"></div>

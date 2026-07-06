@@ -731,6 +731,12 @@
   "settingsImported": {
     "message": "Settings imported successfully"
   },
+  "exportEncryptedBackupBtn": {
+    "message": "Create Encrypted Backup"
+  },
+  "importEncryptedBackupBtn": {
+    "message": "Restore from Encrypted Backup"
+  },
   "confirmImport": {
     "message": "Import Settings"
   },
