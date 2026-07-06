@@ -26,6 +26,7 @@ vi.mock('../../popup/aiSummaryCleansingSettings.js', () => ({
 vi.mock('../../popup/settings/aiProvider.js', () => ({
     setupAIProviderChangeListener: vi.fn(),
     updateAIProviderVisibility: vi.fn(),
+    updateAIProviderVisibilityMulti: vi.fn(),
 }));
 vi.mock('../../popup/settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
@@ -111,6 +112,7 @@ describe('Retention settings UI', () => {
         [StorageKeys.UBLOCK_SOURCES]: [],
         [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
         [StorageKeys.AI_PROVIDER]: 'openai',
+        [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: [],
         [StorageKeys.OBSIDIAN_ENABLED]: false,
     };
 

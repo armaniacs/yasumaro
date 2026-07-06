@@ -108,6 +108,7 @@ vi.mock('../../popup/settings/fieldValidation.js', () => ({
 vi.mock('../../popup/settings/aiProvider.js', () => ({
   setupAIProviderChangeListener: vi.fn(),
   updateAIProviderVisibility: vi.fn(),
+  updateAIProviderVisibilityMulti: vi.fn(),
   AIProviderElements: {},
 }));
 
