@@ -343,6 +343,65 @@ describe('RecordingPipeline', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('DOMAIN_BLOCKED');
     });
+
+    it('saveObsidian のみ失敗した場合、成功結果を返しつつ obsidian-write-failed として pending 登録される', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+
+      const failingObsidian = {
+        appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Obsidian API unreachable')),
+      };
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        failingObsidian as any,
+        makeAiClient() as any
+      );
+
+      const result = await pipeline.execute({
+        title: 'Obsidian Fail Test',
+        url: 'https://example.com/obsidian-fail',
+        content: 'Content',
+      }, mockSettings);
+
+      expect(result.success).toBe(true);
+
+      const { addPendingPage } = await import('../../../utils/pendingStorage.js');
+      expect(addPendingPage).toHaveBeenCalledTimes(1);
+      expect(addPendingPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://example.com/obsidian-fail',
+          reason: 'obsidian-write-failed',
+          errorMessage: 'Obsidian API unreachable',
+        })
+      );
+    });
+
+    it('saveObsidian 以外の BEST_EFFORT ステップ由来のエラーでは obsidian-write-failed としては登録されない', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const result = await pipeline.execute({
+        title: 'Other Step Fail Test',
+        url: 'https://example.com/other-step-fail',
+        content: 'Content',
+      }, mockSettings);
+
+      expect(result.success).toBe(true);
+
+      const { addPendingPage } = await import('../../../utils/pendingStorage.js');
+      expect(addPendingPage).not.toHaveBeenCalled();
+    });
   });
 
   describe('指数バックオフの上限（5000ms cap）', () => {
