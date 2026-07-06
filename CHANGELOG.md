@@ -19,6 +19,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added / 追加
 
+- **週次/月次レビューサマリ機能** — 閲覧履歴を期間単位で集約し、ローカルMarkdownファイルとして出力
+  - `src/background/reviewSummaryGenerator.ts` を新設。ISO週番号・月境界に基づく期間抽出、統計セクション生成、AIダイジェスト生成、`chrome.downloads` によるファイル出力を担当
+  - 週次: `YYYY-week-NN.md`、月次: `YYYY-month-NN.md` を `~/Downloads/Yasumaro/` へ出力
+  - `src/background/reviewSummaryAlarm.ts` を新設。毎週月曜日・毎月1日に自動生成する `chrome.alarms` スケジュールを管理
+  - ダッシュボードに「週次/月次振り返りサマリ」設定セクションと手動生成ボタンを追加
+  - `StorageKeys.REVIEW_SUMMARY_ENABLED` / `REVIEW_SUMMARY_LAST_GENERATED_WEEK` / `REVIEW_SUMMARY_LAST_GENERATED_MONTH` を追加
+  - 同一周期の二重自動生成を防止するため、最終生成済み週・月を `chrome.storage.local` に保持
+
 - **AIプロバイダの優先順位（1〜3位）設定機能** — 1位のプロバイダーが失敗、または要約が最小長未満の場合、自動的に2位・3位のプロバイダーへフォールバック
   - `ProviderSlot` 型を新設。`provider`（必須）と `model`（任意）を持つスロットを最大3つまで設定可能
   - `StorageKeys.AI_PROVIDER_PRIORITY_LIST`（`ProviderSlot[]`）と `StorageKeys.SUMMARY_MIN_LENGTH`（デフォルト: 10）を追加
@@ -47,9 +55,10 @@ All notable changes to this project will be documented in this file.
 ### Fixed / 修正
 
 - **FTS5 タグフィルタが短いタグ（2文字、例: "AI"）で動作しない問題を修正** — `sanitizeFtsTerm()` が `#` プレフィックスとクォートを除去し、FTS5 トリグラムトークナイザが 2 文字からトークンを生成できなかった。タグ名の FTS5 オペレーター除去に変更し、`#` プレフィックスを保持
-- **タグフィルタ適用時に日付範囲フィルタが失われる問題を修正** — タグバッジクリックとフィルタ解除時に `dateRangeFromSelected()` ヘルパーで日付範囲を伝播
-- **正規化辞書が空の時 `normalizeTags()` が元配列への参照を返す問題を修正** — シャローコピーを返すよう変更し、呼び出し元によるデータ破壊を防止
-- **タグ正規化後の重複除去が大文字小文字差異を無視しない問題を修正** — dedup キーに NFKC+toLowerCase を適用し、case-only の重複タグを除去
+
+### Changed / 変更
+
+- **`URL_RETENTION_DAYS` を 7 日から 35 日に延長** — 月次サマリ（過去1ヶ月分）の集計に必要な履歴を保持するため
 
 ---
 
