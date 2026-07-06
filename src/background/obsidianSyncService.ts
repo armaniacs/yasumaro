@@ -10,8 +10,9 @@ import { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
+import type { SyncTarget } from './syncTargets/SyncTarget.js';
 
-export class ObsidianSyncService {
+export class ObsidianSyncService implements SyncTarget {
   private obsidianClient: ObsidianClient;
   private sqliteClient: SqliteClient;
 
