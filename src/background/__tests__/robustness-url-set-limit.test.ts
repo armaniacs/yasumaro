@@ -36,8 +36,8 @@ describe('URLセットのサイズ制限', () => {
       expect(URL_WARNING_THRESHOLD).toBe(8000);
     });
 
-    it('URL_RETENTION_DAYSが7日として定義されている', () => {
-      expect(URL_RETENTION_DAYS).toBe(7);
+    it('URL_RETENTION_DAYSが35日として定義されている', () => {
+      expect(URL_RETENTION_DAYS).toBe(35);
     });
 
     it('警告閾値が最大サイズより小さい', () => {
@@ -95,7 +95,7 @@ describe('URLセットのサイズ制限', () => {
 
     it('URL_RETENTION_DAYSの計算が正しい', () => {
       const retentionMs = URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-      expect(retentionMs).toBe(7 * 24 * 60 * 60 * 1000); // 604800000ms
+      expect(retentionMs).toBe(35 * 24 * 60 * 60 * 1000); // 3024000000ms
     });
   });
 

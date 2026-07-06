@@ -8,7 +8,7 @@ import type { RecordType, AiSummaryCleansedReason } from './commonTypes.js';
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
 export const URL_WARNING_THRESHOLD = 8000;
-export const URL_RETENTION_DAYS = 7;
+export const URL_RETENTION_DAYS = 35;
 // contentフィールドを保持するエントリ数（最新N件のみ保持してストレージを節約）
 export const MAX_CONTENT_ENTRIES = 10;
 
