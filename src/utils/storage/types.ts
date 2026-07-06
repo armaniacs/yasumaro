@@ -8,6 +8,16 @@ import type { EncryptedData } from '../typesCrypto.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 
+/**
+ * AIプロバイダ優先度スロット
+ * provider: 既存6種のプロバイダID ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible')
+ * model: 省略時はそのプロバイダの既存モデル設定値（例: gemini_model）を使用する
+ */
+export interface ProviderSlot {
+    provider: string;
+    model?: string;
+}
+
 export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
     OBSIDIAN_PROTOCOL: 'obsidian_protocol', // 'http' or 'https'
@@ -19,6 +29,8 @@ export const StorageKeys = {
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     AI_PROVIDER: 'ai_provider',
+    AI_PROVIDER_PRIORITY_LIST: 'ai_provider_priority_list', // 優先度1〜3位のプロバイダ設定（ProviderSlot[]）
+    SUMMARY_MIN_LENGTH: 'summary_min_length', // 要約の最小文字数しきい値（デフォルト: 10）。未満の場合フォールバック対象
     OPENAI_BASE_URL: 'openai_base_url',
     OPENAI_API_KEY: 'openai_api_key',
     OPENAI_MODEL: 'openai_model',
@@ -206,6 +218,8 @@ export interface StorageKeyValues {
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
     [StorageKeys.AI_PROVIDER]: string;
+    [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: ProviderSlot[];
+    [StorageKeys.SUMMARY_MIN_LENGTH]: number;
     [StorageKeys.OPENAI_BASE_URL]: string;
     [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
     [StorageKeys.OPENAI_MODEL]: string;
