@@ -31,7 +31,9 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
     const pipelineResult = await pipeline.process(content || '', {
       previewOnly,
       alreadyProcessed,
-      tagSummaryMode
+      tagSummaryMode,
+      url: data.url,
+      title: data.title
     });
 
     const aiEndTime = performance.now();
