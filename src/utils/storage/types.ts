@@ -182,6 +182,8 @@ export const StorageKeys = {
     AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count', // 当月リクエスト数
     AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start', // レート制限ウィンドウ開始時刻
     AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count', // 現在のウィンドウ内リクエスト数
+    // Dashboard SQLite history content toggle
+    SHOW_SQLITE_CONTENT: 'show_sqlite_content',
     // Text Quality
     CONTENT_DEDUP_ENABLED: 'content_dedup_enabled',     // センテンス冗長除去（デフォルト: true）
     CONTENT_DEDUP_THRESHOLD: 'content_dedup_threshold', // Jaccard類似度閾値（デフォルト: 0.7）
@@ -198,6 +200,10 @@ export const StorageKeys = {
     // SQLite retention policy (null = unlimited / no purge)
     SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
     SQLITE_MAX_RECORDS: 'sqlite_max_records',
+    // PBI-3: content retention policy (null = unlimited / no purge)
+    CONTENT_RETENTION_DAYS: 'content_retention_days',
+    CONTENT_MAX_RECORDS: 'content_max_records',
+    CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
     // Local Markdown export settings
     LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
     LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
@@ -358,6 +364,10 @@ export interface StorageKeyValues {
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
     [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;
     [StorageKeys.SQLITE_MAX_RECORDS]: number | null;
+    [StorageKeys.CONTENT_RETENTION_DAYS]: number | null;
+    [StorageKeys.CONTENT_MAX_RECORDS]: number | null;
+    [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: boolean;
+    [StorageKeys.SHOW_SQLITE_CONTENT]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: string;

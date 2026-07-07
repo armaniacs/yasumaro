@@ -20,11 +20,13 @@ import {
   restoreDb as sqliteRestoreDb,
   clearAll as sqliteClearAll,
   purgeOldRecords as sqlitePurgeOldRecords,
+  purgeContent as sqlitePurgeContent,
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
   _resetForTesting as sqliteResetForTesting,
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 
 interface AICapabilities {
     available: 'readily' | 'after-download' | 'no';
@@ -120,6 +122,45 @@ export async function ensureSession(): Promise<boolean | { success: false; error
     }
 }
 
+// Helper: extract BrowsingLogRecord fields from an untrusted payload.
+// Explicit mapping ensures type safety and prevents SQL injection via raw spread.
+function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRecord {
+  return {
+    url: String(payload.url || ''),
+    title: payload.title != null ? String(payload.title) : null,
+    summary: payload.summary != null ? String(payload.summary) : null,
+    tags: payload.tags != null ? String(payload.tags) : null,
+    created_at: Number(payload.created_at || Date.now()),
+    domain: payload.domain != null ? String(payload.domain) : null,
+    visit_duration: payload.visit_duration != null ? Number(payload.visit_duration) : null,
+    scroll_ratio: payload.scroll_ratio != null ? Number(payload.scroll_ratio) : null,
+    is_starred: payload.is_starred != null ? Number(payload.is_starred) : 0,
+    is_deleted: payload.is_deleted != null ? Number(payload.is_deleted) : 0,
+    obsidian_synced: payload.obsidian_synced != null ? Number(payload.obsidian_synced) : 0,
+    // PBI-1: diagnostic metadata + PBI-3: content
+    content: payload.content != null ? String(payload.content) : null,
+    masked_count: payload.masked_count != null ? Number(payload.masked_count) : null,
+    cleansed_reason: payload.cleansed_reason != null ? String(payload.cleansed_reason) : null,
+    ai_provider: payload.ai_provider != null ? String(payload.ai_provider) : null,
+    ai_model: payload.ai_model != null ? String(payload.ai_model) : null,
+    ai_duration_ms: payload.ai_duration_ms != null ? Number(payload.ai_duration_ms) : null,
+    obsidian_duration_ms: payload.obsidian_duration_ms != null ? Number(payload.obsidian_duration_ms) : null,
+    sent_tokens: payload.sent_tokens != null ? Number(payload.sent_tokens) : null,
+    received_tokens: payload.received_tokens != null ? Number(payload.received_tokens) : null,
+    original_tokens: payload.original_tokens != null ? Number(payload.original_tokens) : null,
+    cleansed_tokens: payload.cleansed_tokens != null ? Number(payload.cleansed_tokens) : null,
+    page_bytes: payload.page_bytes != null ? Number(payload.page_bytes) : null,
+    candidate_bytes: payload.candidate_bytes != null ? Number(payload.candidate_bytes) : null,
+    original_bytes: payload.original_bytes != null ? Number(payload.original_bytes) : null,
+    cleansed_bytes: payload.cleansed_bytes != null ? Number(payload.cleansed_bytes) : null,
+    ai_summary_original_bytes: payload.ai_summary_original_bytes != null ? Number(payload.ai_summary_original_bytes) : null,
+    ai_summary_cleansed_bytes: payload.ai_summary_cleansed_bytes != null ? Number(payload.ai_summary_cleansed_bytes) : null,
+    extracted_sentences_bytes: payload.extracted_sentences_bytes != null ? Number(payload.extracted_sentences_bytes) : null,
+    extracted_sentences_original_bytes: payload.extracted_sentences_original_bytes != null ? Number(payload.extracted_sentences_original_bytes) : null,
+    fallback_triggered: payload.fallback_triggered != null ? Number(payload.fallback_triggered) : 0,
+  };
+}
+
 // Handle messages from the service worker
 export function handleOffscreenMessage(
     message: unknown,
@@ -200,18 +241,7 @@ export function handleOffscreenMessage(
                     return;
                 }
 
-                const record = {
-                    url: String(payload.url || ''),
-                    title: payload.title != null ? String(payload.title) : null,
-                    summary: payload.summary != null ? String(payload.summary) : null,
-                    tags: payload.tags != null ? String(payload.tags) : null,
-                    created_at: Number(payload.created_at || Date.now()),
-                    domain: payload.domain != null ? String(payload.domain) : null,
-                    visit_duration: payload.visit_duration != null ? Number(payload.visit_duration) : null,
-                    scroll_ratio: payload.scroll_ratio != null ? Number(payload.scroll_ratio) : null,
-                    is_starred: payload.is_starred != null ? Number(payload.is_starred) : 0,
-                    is_deleted: 0,
-                };
+                const record = buildRecordFromPayload(payload);
                 const result = await sqliteInsert(record);
                 sendResponse(result);
 
@@ -219,18 +249,7 @@ export function handleOffscreenMessage(
                 const payload = msg.payload as Record<string, unknown>;
                 const rawRecords = (payload.records || []) as Record<string, unknown>[];
 
-                const records = rawRecords.map((r) => ({
-                    url: String(r.url || ''),
-                    title: r.title != null ? String(r.title) : null,
-                    summary: r.summary != null ? String(r.summary) : null,
-                    tags: r.tags != null ? String(r.tags) : null,
-                    created_at: Number(r.created_at || Date.now()),
-                    domain: r.domain != null ? String(r.domain) : null,
-                    visit_duration: r.visit_duration != null ? Number(r.visit_duration) : null,
-                    scroll_ratio: r.scroll_ratio != null ? Number(r.scroll_ratio) : null,
-                    is_starred: r.is_starred != null ? Number(r.is_starred) : 0,
-                    is_deleted: 0,
-                }));
+                const records = rawRecords.map(r => buildRecordFromPayload(r));
 
                 const result = await sqliteInsertBatch(records);
                 sendResponse(result);
@@ -281,7 +300,18 @@ export function handleOffscreenMessage(
                 const payload = msg.payload as Record<string, unknown>;
                 const id = Number(payload.id);
                 const changes: Record<string, unknown> = {};
-                for (const key of ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced']) {
+                for (const key of [
+                  'url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio',
+                  'is_starred', 'is_deleted', 'obsidian_synced',
+                  // PBI-1/PBI-3: allow updating diagnostic metadata + content
+                  'content', 'masked_count', 'cleansed_reason',
+                  'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',
+                  'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
+                  'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
+                  'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
+                  'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
+                  'fallback_triggered',
+                ]) {
                     if (key in payload) {
                         changes[key] = payload[key];
                     }
@@ -333,6 +363,14 @@ export function handleOffscreenMessage(
                 const retentionDays = payload?.retentionDays != null ? Number(payload.retentionDays) : undefined;
                 const maxRecords = payload?.maxRecords != null ? Number(payload.maxRecords) : undefined;
                 const result = await sqlitePurgeOldRecords(retentionDays, maxRecords);
+                sendResponse(result);
+
+            } else if (msg.type === 'CONTENT_PURGE') {
+                const payload = msg.payload as Record<string, unknown> | undefined;
+                const retentionDays = payload?.retentionDays != null ? Number(payload.retentionDays) : undefined;
+                const maxRecords = payload?.maxRecords != null ? Number(payload.maxRecords) : undefined;
+                const includeStarred = payload?.includeStarred != null ? Boolean(payload.includeStarred) : undefined;
+                const result = await sqlitePurgeContent(retentionDays, maxRecords, includeStarred);
                 sendResponse(result);
 
             } else if (msg.type === 'SQLITE_OPFS_SPIKE') {

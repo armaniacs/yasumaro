@@ -264,6 +264,18 @@ export class SqliteClient {
     );
   }
 
+  async purgeContent(
+    retentionDays?: number,
+    maxRecords?: number,
+    includeStarred?: boolean,
+  ): Promise<{ purged: number } | null> {
+    return this.call<{ purged: number }>(
+      'CONTENT_PURGE',
+      { retentionDays, maxRecords, includeStarred },
+      (res) => ({ purged: Number(res.purged || 0) }),
+    );
+  }
+
   async insertAuditLog(record: { provider: string; url: string; created_at: number }): Promise<{ id: number } | null> {
     return this.call<{ id: number }>(
       'SQLITE_AUDIT_LOG_INSERT',

@@ -54,6 +54,27 @@ export class FallbackStorage {
         is_starred: record.is_starred ?? 0,
         is_deleted: record.is_deleted ?? 0,
         obsidian_synced: record.obsidian_synced ?? 0,
+        // PBI-1/PBI-3: diagnostic metadata + content
+        content: record.content ?? null,
+        masked_count: record.masked_count ?? null,
+        cleansed_reason: record.cleansed_reason ?? null,
+        ai_provider: record.ai_provider ?? null,
+        ai_model: record.ai_model ?? null,
+        ai_duration_ms: record.ai_duration_ms ?? null,
+        obsidian_duration_ms: record.obsidian_duration_ms ?? null,
+        sent_tokens: record.sent_tokens ?? null,
+        received_tokens: record.received_tokens ?? null,
+        original_tokens: record.original_tokens ?? null,
+        cleansed_tokens: record.cleansed_tokens ?? null,
+        page_bytes: record.page_bytes ?? null,
+        candidate_bytes: record.candidate_bytes ?? null,
+        original_bytes: record.original_bytes ?? null,
+        cleansed_bytes: record.cleansed_bytes ?? null,
+        ai_summary_original_bytes: record.ai_summary_original_bytes ?? null,
+        ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
+        extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
+        extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
+        fallback_triggered: record.fallback_triggered ?? 0,
       };
 
       const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
@@ -94,6 +115,27 @@ export class FallbackStorage {
           is_starred: record.is_starred ?? 0,
           is_deleted: record.is_deleted ?? 0,
           obsidian_synced: record.obsidian_synced ?? 0,
+          // PBI-1/PBI-3: diagnostic metadata + content
+          content: record.content ?? null,
+          masked_count: record.masked_count ?? null,
+          cleansed_reason: record.cleansed_reason ?? null,
+          ai_provider: record.ai_provider ?? null,
+          ai_model: record.ai_model ?? null,
+          ai_duration_ms: record.ai_duration_ms ?? null,
+          obsidian_duration_ms: record.obsidian_duration_ms ?? null,
+          sent_tokens: record.sent_tokens ?? null,
+          received_tokens: record.received_tokens ?? null,
+          original_tokens: record.original_tokens ?? null,
+          cleansed_tokens: record.cleansed_tokens ?? null,
+          page_bytes: record.page_bytes ?? null,
+          candidate_bytes: record.candidate_bytes ?? null,
+          original_bytes: record.original_bytes ?? null,
+          cleansed_bytes: record.cleansed_bytes ?? null,
+          ai_summary_original_bytes: record.ai_summary_original_bytes ?? null,
+          ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
+          extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
+          extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
+          fallback_triggered: record.fallback_triggered ?? 0,
         });
         insertedCount++;
       }
@@ -296,6 +338,57 @@ export class FallbackStorage {
 
       await this.saveData(data);
       return { success: true, purged };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  async purgeContent(
+    retentionDays?: number,
+    maxRecords?: number,
+    includeStarred?: boolean,
+  ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+    try {
+      const data = await this.loadData();
+      const includeAll = includeStarred === true;
+      let totalPurged = 0;
+
+      // Filter: records with non-null content
+      let candidates = data.records.filter(r => r.content != null && r.content !== undefined);
+      if (!includeAll) {
+        candidates = candidates.filter(r => r.is_starred !== 1);
+      }
+
+      // 1. Days-based
+      if (retentionDays != null && retentionDays > 0) {
+        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+        const toPurge = candidates.filter(r => r.created_at < cutoffMs);
+        for (const r of toPurge) {
+          r.content = null;
+        }
+        totalPurged += toPurge.length;
+      }
+
+      // 2. Count-based
+      if (maxRecords != null && maxRecords > 0) {
+        let remaining = data.records.filter(r => r.content != null);
+        if (!includeAll) {
+          remaining = remaining.filter(r => r.is_starred !== 1);
+        }
+        if (remaining.length > maxRecords) {
+          const excess = remaining.length - maxRecords;
+          const sorted = [...remaining].sort((a, b) => a.created_at - b.created_at);
+          const toPurge = sorted.slice(0, excess);
+          for (const r of toPurge) {
+            const record = data.records.find(rec => rec.id === r.id);
+            if (record) record.content = null;
+          }
+          totalPurged += toPurge.length;
+        }
+      }
+
+      await this.saveData(data);
+      return { success: true, purged: totalPurged };
     } catch (error) {
       return { success: false, error: String(error) };
     }
