@@ -166,6 +166,22 @@ export async function flushLogs(immediate: boolean = false): Promise<void> {
         return;
     }
 
+    // 【オフスクリーン文書対応】chrome.storage が利用できない環境（offscreen.html）では
+    // storageへの書き込みをスキップする。オフスクリーン文書からは chrome.storage に
+    // アクセスできないため、Service Worker にメッセージで転送するか console に出力する。
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+        // オフスクリーン文書など chrome.storage 未対応環境: console に出力してバッファをクリア
+        for (const log of pendingLogs) {
+            console.log(`[Logger:${log.type}] ${log.message}`, log.details || '');
+        }
+        pendingLogs = [];
+        if (flushTimer !== null) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+        return;
+    }
+
     isFlushing = true;
 
     try {

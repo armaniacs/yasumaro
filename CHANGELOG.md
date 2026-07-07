@@ -15,6 +15,17 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.5.5] - 2026-07-07
+
+### Fixed / 修正
+
+- **`chrome.storage.local` 5MB クォータ超過による設定保存失敗を修正** — `saveSettings` に自動クォータ回復機構（`purgeLegacyStorage()`）を追加。設定保存時にクォータ超過が検出されると、レガシー `savedUrlsWithTimestamps` から large metadata（content, aiSummary, tokens, bytes 等）を削除し、エントリ数を最新 500 件にトリミングしてからリトライする。本番環境で 5,237,549 / 5,242,880 bytes（99.9%）に達しているユーザーが確認されており、ダッシュボードで `Storage quota exceeded` エラーが発生していた。二重書き込み自体は維持し（フォールバックモード・レガシー履歴パネル互換性のため）、クォータ超過時の自動回復のみを保護策とする。
+
+### Documentation / ドキュメント
+
+- **ADR: `dev-docs/ADR/2026-07-07-sqlite-chrome-storage-dual-write.md` を新規作成** — SQLite と chrome.storage の二重書き込みの経緯・コードパス・維持理由、自動クォータ回復機構の設計、将来の完全 SQLite 化時に削除すべきコード一覧と判断基準を記載。
+---
+
 ## [6.5.4] - 2026-07-07
 
 ### Added / 追加
