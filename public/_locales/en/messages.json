@@ -1413,7 +1413,7 @@
     "message": "Convert history to SQLite"
   },
   "diagMigrateConfirm": {
-    "message": "Convert legacy browsing history into SQLite? The original data is kept. Continue?"
+    "message": "Convert legacy browsing history into SQLite. The original chrome.storage data is preserved (you can clean it up separately from the diagnostics panel)."
   },
   "diagMigrateConfirmLabel": {
     "message": "Convert"
@@ -1658,7 +1658,7 @@
   "recordingConditionsDesc": {
     "message": "Set thresholds for automatic recording and AI processing."
   },
-    "recordingSection": {
+  "recordingSection": {
     "message": "Recording Conditions"
   },
   "retentionPolicyTitle": {
@@ -1689,7 +1689,12 @@
     "message": "Purge now"
   },
   "purgeNowSuccess": {
-    "message": "Deleted {COUNT} record(s)"
+    "message": "Deleted $1 record(s)",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
   },
   "purgeNowSkipped": {
     "message": "No retention policy set — purge skipped"
@@ -2101,9 +2106,6 @@
   },
   "aiSummaryCleansingShortSeqCount": {
     "message": "Consecutive count threshold"
-  },
-  "aiSummaryCleansingSymbolLineDesc": {
-    "message": "Short sequence removal (remove when 5+ elements with ≤30 chars consecutive)."
   },
   "aiSummaryCleansingSymbolLineDesc": {
     "message": "Symbol-only line removal (lines with only | » ◀ ▶ etc.)."
@@ -2621,6 +2623,24 @@
   "historyAiSummaryCleansedReasonNone": {
     "message": "None"
   },
+  "historyDuration": {
+    "message": "Processing time"
+  },
+  "historyContentExtraction": {
+    "message": "Content Extraction"
+  },
+  "historyReduction": {
+    "message": "Reduced"
+  },
+  "historyBytes": {
+    "message": "Bytes"
+  },
+  "historyContentCleansing": {
+    "message": "Content Cleansing"
+  },
+  "historyAiSummaryCleansing": {
+    "message": "AI Summary Cleansing"
+  },
   "trancoUpdateNotificationTitle": {
     "message": "Tranco Trusted Domains Update"
   },
@@ -2745,7 +2765,7 @@
     "message": "Search browsing history"
   },
   "historyRecordCount": {
-    "message": "$COUNT$ records",
+    "message": "$1 records",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2760,7 +2780,7 @@
     "message": "Clear Selection"
   },
   "historySelectionCount": {
-    "message": "$COUNT$ selected",
+    "message": "$1 selected",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2775,7 +2795,7 @@
     "message": "Append selected to Obsidian"
   },
   "historyAppendSuccess": {
-    "message": "$COUNT$ records appended to Obsidian",
+    "message": "$1 records appended to Obsidian",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2967,5 +2987,82 @@
   },
   "duplicateNormEntryError": {
     "message": "This value is already registered"
+  },
+  "historyShowContent": {
+    "message": "Show content"
+  },
+  "historyHideContent": {
+    "message": "Hide content"
+  },
+  "showContentToggleLabel": {
+    "message": "Show content toggle button in list"
+  },
+  "retention7days": {
+    "message": "7 days"
+  },
+  "contentRetentionPolicyTitle": {
+    "message": "Content Retention Settings"
+  },
+  "contentRetentionPolicyDesc": {
+    "message": "Only content (page body) will be purged; records themselves are kept"
+  },
+  "contentRetentionDaysLabel": {
+    "message": "Content retention period"
+  },
+  "contentMaxRecordsLabel": {
+    "message": "Max content records"
+  },
+  "contentPurgeIncludeStarredLabel": {
+    "message": "Include starred entries in content purge"
+  },
+  "contentPurgeNowBtn": {
+    "message": "Purge content now"
+  },
+  "contentPurgeNowSuccess": {
+    "message": "Purged $1 content entries",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentPurgeNowSkipped": {
+    "message": "No content retention policy set — purge skipped"
+  },
+  "diagBackfillBtn": {
+    "message": "Backfill SQLite history metrics",
+    "description": "Button to backfill diagnostic metadata for already-migrated entries"
+  },
+  "diagBackfillDone": {
+    "message": "Backfill complete.",
+    "description": "Message shown when backfill is complete"
+  },
+  "diagBackfillFailed": {
+    "message": "Backfill failed.",
+    "description": "Message shown when backfill fails"
+  },
+  "diagCleanupBtn": {
+    "message": "Delete original chrome.storage data",
+    "description": "Button to delete original chrome.storage data after migration"
+  },
+  "diagCleanupConfirm": {
+    "message": "Delete the original chrome.storage browsing history? This is a destructive operation. The data is already copied to SQLite.",
+    "description": "Confirmation message for cleanup"
+  },
+  "diagCleanupConfirmLabel": {
+    "message": "Delete",
+    "description": "Confirm button label for cleanup"
+  },
+  "diagCleanupDone": {
+    "message": "Cleanup complete.",
+    "description": "Message shown when cleanup is complete"
+  },
+  "diagCleanupFailed": {
+    "message": "Cleanup failed.",
+    "description": "Message shown when cleanup fails"
+  },
+  "clearAllFilters": {
+    "message": "Clear filters",
+    "description": "Button label to clear all active filters (search, date, tag)"
   }
 }

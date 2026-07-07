@@ -15,6 +15,35 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
+## [6.5.6] - 2026-07-07
+
+### Added / 追加
+
+- **SQLite History パネルにメトリクス表示** — レガシーエントリ（旧バージョンのパイプラインで記録されたもの）にもトークン数、処理時間、AIプロバイダ/モデル、Content Cleansing 等のメトリクスを chrome.storage から遅延マージして自動表示。`sqliteHistoryPanel.ts` に `enrichEntryWithChromeStorage()` を追加し、SQLite エントリが診断フィールドを欠いている場合に `savedUrlsWithTimestamps` からフォールバック
+
+- **「条件をクリア」ボタン** — SQLite History パネルのカレンダークイックボタン行に、検索・日付・タグフィルタを一括クリアするボタンを追加
+
+- **メトリクス補完ボタン** — 診断パネルに「SQLite 履歴のメトリクスを補完」ボタンを追加。`backfillDiagnosticMetadata()` で chrome.storage のメトリクスを SQLite に一括書き込み
+
+- **レガシーストレージ削除ボタン** — 診断パネルに「元の chrome.storage データを削除」ボタンを追加。移行完了後の元データを明示的に削除可能に
+
+### Fixed / 修正
+
+- **マイグレーションが元データを削除していた問題を修正** — 「記録履歴を SQLite へ変換」ボタンが従来 `savedUrlsWithTimestamps` を削除していた問題を修正。移行はコピーオペレーションになり、元データは保持される。削除は「診断」パネルの「元の chrome.storage データを削除」ボタンから明示的に実行可能
+
+- **`mapLegacyEntryToRecord` が診断フィールドをマッピングしていなかった問題を修正** — 移行時にメトリクス（sent_tokens, received_tokens, ai_provider, page_bytes 等 18 フィールド）が SQLite に保存されない問題を修正。`LegacyUrlEntry` インターフェースに全診断フィールドを追加
+
+### Changed / 変更
+
+- **`formatDiagnosticMetadata` を置換** — プレーンテキストから構造化 HTML（`history-entry-tokens`, `history-entry-token-reduction`, `history-entry-ai-summary-cleansing`, `cleansing-progress-wrapper` クラス）に変更。記録履歴パネルと同一のビジュアルスタイルで表示
+
+### Tests / テスト
+
+- **`mapLegacyEntryToRecord` テスト追加** — 診断メタデータフィールドのマッピングとデフォルト値を検証するテスト 2 件を追加
+- **`sqliteHistoryPanel` レンダリングテスト追加** — `formatDiagnosticMetadataHtml` と `buildCleansingProgressBarHtml` の出力を検証するテスト 10 件を追加
+
+---
+
 ## [6.5.5] - 2026-07-07
 
 ### Fixed / 修正

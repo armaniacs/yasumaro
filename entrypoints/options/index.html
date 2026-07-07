@@ -504,6 +504,42 @@
           </div>
         </div>
 
+        <!-- コンテンツ保持設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="contentRetentionPolicyTitle">コンテンツ保持設定</h3>
+          <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">content（本文）のみを対象とし、レコード自体は削除しません</p>
+          <div class="form-group">
+            <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">content（本文）保持期間</label>
+            <select id="contentRetentionDays">
+              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="7" data-i18n="retention7days">7日</option>
+              <option value="30" data-i18n="retention30days">30日</option>
+              <option value="90" data-i18n="retention90days">90日</option>
+              <option value="180" data-i18n="retention180days">180日</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="contentMaxRecords" data-i18n="contentMaxRecordsLabel">content（本文）最大保持件数</label>
+            <select id="contentMaxRecords">
+              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="100">100</option>
+              <option value="500">500</option>
+              <option value="1000">1,000</option>
+              <option value="10000">10,000</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="contentPurgeIncludeStarred">
+              <span data-i18n="contentPurgeIncludeStarredLabel">スター付きエントリの content も削除対象にする</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <button id="contentPurgeNowBtn" class="secondary-btn" data-i18n="contentPurgeNowBtn">今すぐ content を削除</button>
+            <span id="contentPurgeNowStatus" aria-live="polite"></span>
+          </div>
+        </div>
+
         <!-- ボタンエリア -->
         <div class="general-btn-row">
           <button id="save" class="btn-primary" data-i18n="saveBtn">保存する</button>
@@ -1581,6 +1617,12 @@
         <p class="panel-description" data-i18n="sqliteHistoryDescription">
           Browsing history stored in local SQLite database. Search using FTS5 full-text search, filter by date, and manage entries.
         </p>
+        <div class="sqlite-history-settings">
+          <label class="checkbox-label">
+            <input type="checkbox" id="sqliteShowContentToggle">
+            <span data-i18n="showContentToggleLabel">一覧に本文表示ボタンを出す</span>
+          </label>
+        </div>
         <div id="sqlite-history-container">
           <p class="panel-description">Loading SQLite history…</p>
         </div>
@@ -1698,6 +1740,10 @@
           <div id="diagOpfsSpikeResult" class="diag-result" aria-live="polite"></div>
           <button id="diagMigrateBtn" class="secondary-btn" data-i18n="diagMigrateBtn">記録履歴を SQLite へ変換</button>
           <div id="diagMigrateResult" class="diag-result" aria-live="polite"></div>
+          <button id="diagBackfillBtn" class="secondary-btn" data-i18n="diagBackfillBtn">SQLite 履歴のメトリクスを補完</button>
+          <div id="diagBackfillResult" class="diag-result" aria-live="polite"></div>
+          <button id="diagCleanupBtn" class="secondary-btn" data-i18n="diagCleanupBtn">元の chrome.storage データを削除</button>
+          <div id="diagCleanupResult" class="diag-result" aria-live="polite"></div>
         </div>
 
         <!-- Compile Options (Debug Mode only) -->

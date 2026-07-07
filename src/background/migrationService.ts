@@ -38,6 +38,24 @@ export function mapLegacyEntryToRecord(entry: LegacyUrlEntry): BrowsingLogRecord
     scroll_ratio: null,
     is_starred: 0,
     is_deleted: 0,
+    content: entry.content ?? null,
+    masked_count: entry.maskedCount ?? null,
+    cleansed_reason: entry.cleansedReason ?? null,
+    ai_provider: entry.aiProvider ?? null,
+    ai_model: entry.aiModel ?? null,
+    ai_duration_ms: entry.aiDuration ?? null,
+    obsidian_duration_ms: entry.obsidianDuration ?? null,
+    sent_tokens: entry.sentTokens ?? null,
+    received_tokens: entry.receivedTokens ?? null,
+    original_tokens: entry.originalTokens ?? null,
+    cleansed_tokens: entry.cleansedTokens ?? null,
+    page_bytes: entry.pageBytes ?? null,
+    candidate_bytes: entry.candidateBytes ?? null,
+    original_bytes: entry.originalBytes ?? null,
+    cleansed_bytes: entry.cleansedBytes ?? null,
+    ai_summary_original_bytes: entry.aiSummaryOriginalBytes ?? null,
+    ai_summary_cleansed_bytes: entry.aiSummaryCleansedBytes ?? null,
+    fallback_triggered: entry.fallbackTriggered ? 1 : 0,
   };
 }
 
@@ -159,18 +177,16 @@ export class MigrationService {
         return;
       }
 
-      // Mark migration as complete
+      // Mark migration as complete (but do NOT delete original data)
+      // Original chrome.storage data is preserved so users can keep using both panels
+      // or run an explicit cleanup step from the diagnostics panel.
       await this.setMigrationStatus('completed');
       await chrome.storage.local.remove(MIGRATION_PROGRESS_KEY);
-      await chrome.storage.local.set({ legacyStoreReadOnly: true });
 
-      // Clean up legacy storage keys to free space and prevent stale reads
-      const legacyKeys = ['savedUrlsWithTimestamps', 'savedUrls'];
-      const totalBytes = (await chrome.storage.local.get(legacyKeys)).length;
-      await chrome.storage.local.remove(legacyKeys);
-      addLog(LogType.INFO, 'Migration: legacy storage keys removed', { keys: legacyKeys, totalBytes });
-
-      addLog(LogType.INFO, 'Migration: completed', { totalMigrated: entries.length });
+      addLog(LogType.INFO, 'Migration: completed (original data preserved)', {
+        totalMigrated: entries.length,
+        note: 'Use diagnostics panel to explicitly clean up legacy storage if desired.'
+      });
     } catch (error) {
       addLog(LogType.ERROR, 'Migration: failed', {
         error: errorMessage(error),
@@ -199,6 +215,117 @@ export class MigrationService {
   /** Save migration progress */
   private async setMigrationProgress(count: number): Promise<void> {
     await chrome.storage.local.set({ [MIGRATION_PROGRESS_KEY]: count });
+  }
+
+  /**
+   * Backfill diagnostic metadata for already-migrated SQLite entries
+   * that are missing metric fields. Reads from chrome.storage.local
+   * (savedUrlsWithTimestamps) and updates matching SQLite rows.
+   */
+  async backfillDiagnosticMetadata(): Promise<{ updated: number; total: number }> {
+    try {
+      const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+      const storageEntries = (result.savedUrlsWithTimestamps as LegacyUrlEntry[]) || [];
+
+      if (storageEntries.length === 0) {
+        return { updated: 0, total: 0 };
+      }
+
+      addLog(LogType.INFO, 'Backfill: starting', { storageEntries: storageEntries.length });
+
+      // Build lookup map: url+timestamp (rounded to minute) → entry
+      const storageMap = new Map<string, LegacyUrlEntry>();
+      for (const entry of storageEntries) {
+        const key = `${entry.url}|${Math.floor(entry.timestamp / 60000)}`;
+        const hasData = entry.sentTokens != null || entry.receivedTokens != null ||
+          entry.pageBytes != null || entry.aiProvider != null;
+        if (hasData) {
+          storageMap.set(key, entry);
+        }
+      }
+
+      if (storageMap.size === 0) {
+        addLog(LogType.INFO, 'Backfill: no storage entries with diagnostic data');
+        return { updated: 0, total: 0 };
+      }
+
+      // Query all non-deleted SQLite entries
+      const allResult = await this.sqliteClient.query({ limit: 50000 });
+      if (!allResult || allResult.rows.length === 0) {
+        return { updated: 0, total: 0 };
+      }
+
+      let updated = 0;
+
+      for (const sqliteRow of allResult.rows) {
+        const record = sqliteRow as BrowsingLogRecord;
+        if (record.id == null) continue;
+
+        // Skip entries that already have diagnostic data
+        if (record.sent_tokens != null || record.received_tokens != null) continue;
+
+        // Look up in storage map
+        const key = `${record.url}|${Math.floor(record.created_at / 60000)}`;
+        const entry = storageMap.get(key);
+        if (!entry) continue;
+
+        // Build update payload
+        const changes: Record<string, unknown> = {};
+        if (entry.sentTokens != null) changes.sent_tokens = entry.sentTokens;
+        if (entry.receivedTokens != null) changes.received_tokens = entry.receivedTokens;
+        if (entry.originalTokens != null) changes.original_tokens = entry.originalTokens;
+        if (entry.cleansedTokens != null) changes.cleansed_tokens = entry.cleansedTokens;
+        if (entry.pageBytes != null) changes.page_bytes = entry.pageBytes;
+        if (entry.candidateBytes != null) changes.candidate_bytes = entry.candidateBytes;
+        if (entry.originalBytes != null) changes.original_bytes = entry.originalBytes;
+        if (entry.cleansedBytes != null) changes.cleansed_bytes = entry.cleansedBytes;
+        if (entry.aiSummaryOriginalBytes != null) changes.ai_summary_original_bytes = entry.aiSummaryOriginalBytes;
+        if (entry.aiSummaryCleansedBytes != null) changes.ai_summary_cleansed_bytes = entry.aiSummaryCleansedBytes;
+        if (entry.aiProvider != null) changes.ai_provider = entry.aiProvider;
+        if (entry.aiModel != null) changes.ai_model = entry.aiModel;
+        if (entry.aiDuration != null) changes.ai_duration_ms = entry.aiDuration;
+        if (entry.obsidianDuration != null) changes.obsidian_duration_ms = entry.obsidianDuration;
+        if (entry.content != null) changes.content = entry.content;
+        if (entry.maskedCount != null) changes.masked_count = entry.maskedCount;
+        if (entry.cleansedReason != null) changes.cleansed_reason = entry.cleansedReason;
+        if (entry.fallbackTriggered != null) changes.fallback_triggered = entry.fallbackTriggered ? 1 : 0;
+
+        if (Object.keys(changes).length === 0) continue;
+
+        const ok = await this.sqliteClient.update(record.id, changes);
+        if (ok) updated++;
+      }
+
+      addLog(LogType.INFO, 'Backfill: completed', { updated, total: allResult.rows.length });
+      return { updated, total: allResult.rows.length };
+    } catch (error) {
+      addLog(LogType.ERROR, 'Backfill: failed', { error: errorMessage(error) });
+      return { updated: 0, total: 0 };
+    }
+  }
+
+  /**
+   * Explicitly clean up legacy chrome.storage keys.
+   * This is a destructive operation that should only be called
+   * after the user has confirmed they want to remove the original data.
+   * The data is already in SQLite at this point.
+   */
+  async cleanupLegacyStorage(): Promise<{ removed: string[]; totalBytes: number }> {
+    try {
+      const legacyKeys = ['savedUrlsWithTimestamps', 'savedUrls'];
+      const data = await chrome.storage.local.get(legacyKeys);
+      const totalBytes = Object.values(data).reduce(
+        (sum: number, val) => sum + (val ? JSON.stringify(val).length : 0),
+        0
+      );
+      await chrome.storage.local.remove(legacyKeys);
+      await chrome.storage.local.remove('legacyStoreReadOnly');
+      addLog(LogType.INFO, 'Cleanup: legacy storage keys removed', { keys: legacyKeys, totalBytes });
+      return { removed: legacyKeys, totalBytes };
+    } catch (error) {
+      addLog(LogType.ERROR, 'Cleanup: failed', { error: errorMessage(error) });
+      return { removed: [], totalBytes: 0 };
+    }
   }
 
   /**
@@ -328,5 +455,25 @@ interface LegacyUrlEntry {
   timestamp: number;
   tags?: string[];
   aiSummary?: string;
+  content?: string;
+  cleansedReason?: string;
+  maskedCount?: number;
+  sentTokens?: number;
+  receivedTokens?: number;
+  originalTokens?: number;
+  cleansedTokens?: number;
+  pageBytes?: number;
+  candidateBytes?: number;
+  originalBytes?: number;
+  cleansedBytes?: number;
+  aiSummaryOriginalBytes?: number;
+  aiSummaryCleansedBytes?: number;
+  aiSummaryCleansedElements?: number;
+  aiSummaryCleansedReason?: string;
+  aiProvider?: string;
+  aiModel?: string;
+  aiDuration?: number;
+  obsidianDuration?: number;
+  fallbackTriggered?: boolean;
   [key: string]: unknown;
 }

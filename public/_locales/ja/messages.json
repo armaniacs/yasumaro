@@ -1410,7 +1410,7 @@
     "message": "記録履歴を SQLite へ変換"
   },
   "diagMigrateConfirm": {
-    "message": "レガシーの記録履歴を SQLite へ変換します。元データは保持されます。実行しますか？"
+    "message": "レガシーの閲覧履歴を SQLite へ変換します。元の chrome.storage データはそのまま残ります（必要に応じて診断パネルから削除できます）。"
   },
   "diagMigrateConfirmLabel": {
     "message": "変換"
@@ -1655,7 +1655,6 @@
   "recordingConditionsDesc": {
     "message": "自動記録とAI処理の閾値を設定します。"
   },
-
   "recordingSection": {
     "message": "記録条件"
   },
@@ -1687,7 +1686,12 @@
     "message": "今すぐ削除を実行"
   },
   "purgeNowSuccess": {
-    "message": "{COUNT} 件を削除しました"
+    "message": "$1 件を削除しました",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
   },
   "purgeNowSkipped": {
     "message": "保持ポリシーが未設定のため、削除をスキップしました"
@@ -2099,9 +2103,6 @@
   },
   "aiSummaryCleansingShortSeqCount": {
     "message": "連続数閾値"
-  },
-  "aiSummaryCleansingSymbolLineDesc": {
-    "message": "短文要素の連続削除（30文字以下の要素が5つ以上連続した場合）。"
   },
   "aiSummaryCleansingSymbolLineDesc": {
     "message": "特殊記号行の削除（| » ◀ ▶ 等のみの行）。"
@@ -2619,6 +2620,24 @@
   "historyAiSummaryCleansedReasonNone": {
     "message": "なし"
   },
+  "historyDuration": {
+    "message": "処理時間"
+  },
+  "historyContentExtraction": {
+    "message": "コンテンツ抽出"
+  },
+  "historyReduction": {
+    "message": "削減"
+  },
+  "historyBytes": {
+    "message": "バイト"
+  },
+  "historyContentCleansing": {
+    "message": "Content Cleansing"
+  },
+  "historyAiSummaryCleansing": {
+    "message": "AI要約クレンジング"
+  },
   "trancoUpdateNotificationTitle": {
     "message": "Tranco信頼ドメインリストの更新"
   },
@@ -2743,7 +2762,7 @@
     "message": "閲覧履歴を検索"
   },
   "historyRecordCount": {
-    "message": "$COUNT$件",
+    "message": "$1件",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2758,7 +2777,7 @@
     "message": "選択解除"
   },
   "historySelectionCount": {
-    "message": "$COUNT$件選択中",
+    "message": "$1件選択中",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2773,7 +2792,7 @@
     "message": "選択した記事を Obsidian に追記"
   },
   "historyAppendSuccess": {
-    "message": "$COUNT$件を Obsidian に追記しました",
+    "message": "$1件を Obsidian に追記しました",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -2944,5 +2963,82 @@
   },
   "duplicateNormEntryError": {
     "message": "このFrom値は既に登録されています"
+  },
+  "historyShowContent": {
+    "message": "本文を表示"
+  },
+  "historyHideContent": {
+    "message": "本文を隠す"
+  },
+  "showContentToggleLabel": {
+    "message": "一覧に本文表示ボタンを出す"
+  },
+  "retention7days": {
+    "message": "7日"
+  },
+  "contentRetentionPolicyTitle": {
+    "message": "コンテンツ保持設定"
+  },
+  "contentRetentionPolicyDesc": {
+    "message": "content（本文）のみを対象とし、レコード自体は削除しません"
+  },
+  "contentRetentionDaysLabel": {
+    "message": "content（本文）保持期間"
+  },
+  "contentMaxRecordsLabel": {
+    "message": "content（本文）最大保持件数"
+  },
+  "contentPurgeIncludeStarredLabel": {
+    "message": "スター付きエントリの content も削除対象にする"
+  },
+  "contentPurgeNowBtn": {
+    "message": "今すぐ content を削除"
+  },
+  "contentPurgeNowSuccess": {
+    "message": "$1 件の content を削除しました",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentPurgeNowSkipped": {
+    "message": "コンテンツ保持ポリシーが未設定のため、削除をスキップしました"
+  },
+  "diagBackfillBtn": {
+    "message": "SQLite 履歴のメトリクスを補完",
+    "description": "Button to backfill diagnostic metadata for already-migrated entries"
+  },
+  "diagBackfillDone": {
+    "message": "補完完了。",
+    "description": "Message shown when backfill is complete"
+  },
+  "diagBackfillFailed": {
+    "message": "補完に失敗しました。",
+    "description": "Message shown when backfill fails"
+  },
+  "diagCleanupBtn": {
+    "message": "元の chrome.storage データを削除",
+    "description": "Button to delete original chrome.storage data after migration"
+  },
+  "diagCleanupConfirm": {
+    "message": "元の chrome.storage の閲覧履歴を削除します。これは破壊的な操作です。データはすでに SQLite にコピーされています。",
+    "description": "Confirmation message for cleanup"
+  },
+  "diagCleanupConfirmLabel": {
+    "message": "削除",
+    "description": "Confirm button label for cleanup"
+  },
+  "diagCleanupDone": {
+    "message": "削除完了。",
+    "description": "Message shown when cleanup is complete"
+  },
+  "diagCleanupFailed": {
+    "message": "削除に失敗しました。",
+    "description": "Message shown when cleanup fails"
+  },
+  "clearAllFilters": {
+    "message": "条件をクリア",
+    "description": "Button label to clear all active filters (search, date, tag)"
   }
 }

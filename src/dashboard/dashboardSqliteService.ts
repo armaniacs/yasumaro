@@ -262,6 +262,53 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
   }
 }
 
+
+/**
+ * Explicitly clean up legacy chrome.storage keys.
+ * This is a destructive operation - only call after user confirmation.
+ */
+export async function cleanupLegacyStorage(): Promise<{ removed: string[]; totalBytes: number } | null> {
+  try {
+    const response = await sendDashboardMessage(
+      { subtype: 'cleanup_legacy' },
+      { requireConfirmToken: true }
+    );
+    if (response.success) {
+      return {
+        removed: Array.isArray(response.removed) ? response.removed : [],
+        totalBytes: Number(response.totalBytes || 0),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('cleanupLegacyStorage failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Backfill diagnostic metadata for already-migrated SQLite entries
+ * that are missing metric fields (sent_tokens, page_bytes, etc.).
+ */
+export async function backfillMetadata(): Promise<{ updated: number; total: number } | null> {
+  try {
+    const response = await sendDashboardMessage(
+      { subtype: 'backfill_metadata' },
+      { requireConfirmToken: true }
+    );
+    if (response.success) {
+      return {
+        updated: Number(response.updated || 0),
+        total: Number(response.total || 0),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('backfillMetadata failed:', error);
+    return null;
+  }
+}
+
 /**
  * バイナリ .db バックアップを取得
  */
