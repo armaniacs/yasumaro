@@ -276,6 +276,38 @@ async function _doInit(): Promise<boolean> {
       console.warn('SQLite: FTS5 not available, using LIKE-based search fallback', ftsErr);
     }
 
+    // PBI-1: ALTER TABLE migration for new diagnostic metadata columns
+    const newColumns = [
+      'content TEXT',
+      'masked_count INTEGER',
+      'cleansed_reason TEXT',
+      'ai_provider TEXT',
+      'ai_model TEXT',
+      'ai_duration_ms INTEGER',
+      'obsidian_duration_ms INTEGER',
+      'sent_tokens INTEGER',
+      'received_tokens INTEGER',
+      'original_tokens INTEGER',
+      'cleansed_tokens INTEGER',
+      'page_bytes INTEGER',
+      'candidate_bytes INTEGER',
+      'original_bytes INTEGER',
+      'cleansed_bytes INTEGER',
+      'ai_summary_original_bytes INTEGER',
+      'ai_summary_cleansed_bytes INTEGER',
+      'extracted_sentences_bytes INTEGER',
+      'extracted_sentences_original_bytes INTEGER',
+      'fallback_triggered INTEGER DEFAULT 0',
+    ];
+
+    for (const colDef of newColumns) {
+      try {
+        await sqlite3.exec(dbHandle, `ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
+      } catch {
+        // Column already exists — safe to ignore
+      }
+    }
+
     // Log available extensions
     const compileOptions: string[] = [];
     await execWithCache('PRAGMA compile_options', [], (row: SqliteValue[]) => {
