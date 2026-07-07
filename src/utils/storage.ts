@@ -762,12 +762,27 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
     }
 
     // 【セキュリティ改善】保存前にクォータチェック
+    // クォータ超過時は自動的にレガシーデータをクリーンアップしてリトライ
     const currentUsage = await getStorageUsage();
     const newDataSize = estimateDataSize(toSave);
     if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
-        throw new Error(
-            `Storage quota exceeded (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
-        );
+        await logInfo('Storage quota near limit, attempting legacy cleanup', {
+            currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
+        }, 'storage.ts');
+
+        // Try to free space by cleaning up legacy savedUrlsWithTimestamps
+        const freed = await purgeLegacyStorage();
+        const afterCleanup = await getStorageUsage();
+
+        if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {
+            await logInfo('Legacy cleanup freed space, proceeding with save', {
+                freed, usageAfter: afterCleanup,
+            }, 'storage.ts');
+        } else {
+            const errorMsg = `Storage quota exceeded (current: ${afterCleanup}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`;
+            await logError(errorMsg, { freed, usageAfter: afterCleanup }, ErrorCode.STORAGE_QUOTA_EXCEEDED, 'storage.ts');
+            throw new Error(errorMsg);
+        }
     }
 
     // 楽観的ロックを使用して同時実行時の競合を防止
@@ -1062,6 +1077,86 @@ export function computeUrlsHash(urls: Set<string>): string {
     const sortedUrls = Array.from(urls).sort();
     return sortedUrls.join('|');
 }
+
+// ============================================================================
+// Legacy Storage Cleanup (quota recovery)
+// ============================================================================
+
+/** Maximum entries to keep in legacy savedUrlsWithTimestamps after cleanup. */
+const LEGACY_MAX_ENTRIES = 500;
+
+/** Fields to strip from legacy entries during cleanup (data is in SQLite). */
+const LEGACY_STRIP_FIELDS = [
+    'content', 'aiSummary', 'sentTokens', 'receivedTokens',
+    'originalTokens', 'cleansedTokens', 'pageBytes', 'candidateBytes',
+    'originalBytes', 'cleansedBytes', 'aiSummaryOriginalBytes',
+    'aiSummaryCleansedBytes', 'aiSummaryCleansedElements',
+    'aiSummaryCleansedReason', 'aiSummaryCleansedReasons',
+    'aiProvider', 'aiModel', 'aiDuration', 'obsidianDuration',
+    'extractedSentencesBytes', 'extractedSentencesOriginalBytes',
+    'fallbackTriggered',
+] as const;
+
+/**
+ * Purge legacy chrome.storage.local data to free quota space.
+ * Removes large metadata fields (content, aiSummary, etc.) from savedUrlsWithTimestamps
+ * and trims the entry count. All important data is in SQLite.
+ *
+ * @returns {Promise<number>} Estimated bytes freed
+ */
+export async function purgeLegacyStorage(): Promise<number> {
+    const before = await getStorageUsage();
+    let freed = 0;
+
+    try {
+        // 1. Clean up savedUrlsWithTimestamps: strip large fields, trim count
+        const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+
+        if (entries.length > 0) {
+            // Keep only the most recent entries, sorted by timestamp
+            let cleaned = [...entries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            // Truncate to max count
+            if (cleaned.length > LEGACY_MAX_ENTRIES) {
+                cleaned = cleaned.slice(0, LEGACY_MAX_ENTRIES);
+            }
+
+            // Strip large metadata fields (they're in SQLite)
+            cleaned = cleaned.map(entry => {
+                const stripped: SavedUrlEntry = { url: entry.url, timestamp: entry.timestamp };
+                // Preserve fields needed by legacy history panel
+                if (entry.recordType) stripped.recordType = entry.recordType;
+                if (entry.maskedCount !== undefined) stripped.maskedCount = entry.maskedCount;
+                if (entry.tags) stripped.tags = entry.tags;
+                if (entry.isTrancoDomain !== undefined) stripped.isTrancoDomain = entry.isTrancoDomain;
+                return stripped;
+            });
+
+            await chrome.storage.local.set({ savedUrlsWithTimestamps: cleaned });
+        }
+
+        // 2. Clean up legacy keys that are no longer needed
+        const legacyKeys = ['savedUrls'];
+        try {
+            await chrome.storage.local.remove(legacyKeys);
+        } catch {
+            // Ignore errors during cleanup
+        }
+
+        const after = await getStorageUsage();
+        freed = before > after ? before - after : 0;
+    } catch (err) {
+        await logError('Legacy storage cleanup failed', { error: errorMessage(err) }, ErrorCode.STORAGE_WRITE_FAILURE, 'storage.ts');
+        freed = 0;
+    }
+
+    return freed;
+}
+
+// ============================================================================
+// Legacy Storage Cleanup End
+// ============================================================================
 
 /**
  * 設定を保存し、許可されたURLのリストを再構築
