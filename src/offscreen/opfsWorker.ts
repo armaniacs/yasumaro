@@ -604,6 +604,53 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
   return { purged: totalPurged };
 }
 
+async function handleContentPurge(payload: {
+  retentionDays?: number | null;
+  maxRecords?: number | null;
+  includeStarred?: boolean | null;
+}): Promise<{ purged: number }> {
+  const starredClause = payload.includeStarred ? '' : 'AND is_starred = 0';
+  let totalPurged = 0;
+
+  // 1. Days-based
+  if (payload.retentionDays != null && payload.retentionDays > 0) {
+    const cutoffMs = Date.now() - payload.retentionDays * 24 * 60 * 60 * 1000;
+    await sqlExec(
+      `UPDATE browsing_logs SET content = NULL
+       WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
+      [cutoffMs]
+    );
+    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+  }
+
+  // 2. Count-based
+  if (payload.maxRecords != null && payload.maxRecords > 0) {
+    let count = 0;
+    await sqlQuery(
+      `SELECT COUNT(*) AS c FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
+      [],
+      (row) => { count = Number(row.c); }
+    );
+
+    if (count > payload.maxRecords) {
+      const excess = count - payload.maxRecords;
+      await sqlExec(
+        `UPDATE browsing_logs SET content = NULL
+         WHERE id IN (
+           SELECT id FROM browsing_logs
+           WHERE content IS NOT NULL ${starredClause}
+           ORDER BY created_at ASC
+           LIMIT ?
+         )`,
+        [excess]
+      );
+      totalPurged += excess;
+    }
+  }
+
+  return { purged: totalPurged };
+}
+
 async function handleClearAll(): Promise<void> {
   await sqlExec('DELETE FROM browsing_logs', []);
   if (fts5Available) {
@@ -860,6 +907,11 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
       case 'PURGE': {
         if (!engine) await initSqlite();
         result = await handlePurgeOldRecords(payload as { retentionDays: number; maxRecords: number });
+        break;
+      }
+      case 'CONTENT_PURGE': {
+        if (!engine) await initSqlite();
+        result = await handleContentPurge(payload as { retentionDays?: number; maxRecords?: number; includeStarred?: boolean });
         break;
       }
       case 'CLEAR_ALL': {

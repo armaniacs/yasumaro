@@ -33,6 +33,8 @@ All notable changes to this project will be documented in this file.
 
 - **`mapLegacyEntryToRecord` が診断フィールドをマッピングしていなかった問題を修正** — 移行時にメトリクス（sent_tokens, received_tokens, ai_provider, page_bytes 等 18 フィールド）が SQLite に保存されない問題を修正。`LegacyUrlEntry` インターフェースに全診断フィールドを追加
 
+- **「条件をクリア」ボタンがフィルタ変更時に表示されなかった問題を修正** — `updateDynamicRegions()` から `renderCalendarNav()` を呼び出すよう修正。検索・日付選択時にカレンダー領域が再描画されず、クリアボタンが非表示のままだった
+
 ### Changed / 変更
 
 - **`formatDiagnosticMetadata` を置換** — プレーンテキストから構造化 HTML（`history-entry-tokens`, `history-entry-token-reduction`, `history-entry-ai-summary-cleansing`, `cleansing-progress-wrapper` クラス）に変更。記録履歴パネルと同一のビジュアルスタイルで表示

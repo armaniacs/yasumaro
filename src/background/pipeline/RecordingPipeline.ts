@@ -176,8 +176,8 @@ export class RecordingPipeline {
         scroll_ratio: null,
         is_starred: 0,
         is_deleted: 0,
-        // PBI-1: diagnostic metadata
-        content: null,
+        // PBI-1: diagnostic metadata / PBI-3: content
+        content: data.content || null,
         cleansed_reason: data.cleansedReason || null,
         masked_count: (data.maskedCount ?? privacyResult?.maskedCount) || null,
         ai_provider: privacyResult?.aiProvider || null,
