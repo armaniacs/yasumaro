@@ -21,6 +21,26 @@ export interface BrowsingLogRecord {
   is_starred?: number;
   is_deleted?: number;
   obsidian_synced?: number;
+  content?: string | null;
+  masked_count?: number | null;
+  cleansed_reason?: string | null;
+  ai_provider?: string | null;
+  ai_model?: string | null;
+  ai_duration_ms?: number | null;
+  obsidian_duration_ms?: number | null;
+  sent_tokens?: number | null;
+  received_tokens?: number | null;
+  original_tokens?: number | null;
+  cleansed_tokens?: number | null;
+  page_bytes?: number | null;
+  candidate_bytes?: number | null;
+  original_bytes?: number | null;
+  cleansed_bytes?: number | null;
+  ai_summary_original_bytes?: number | null;
+  ai_summary_cleansed_bytes?: number | null;
+  extracted_sentences_bytes?: number | null;
+  extracted_sentences_original_bytes?: number | null;
+  fallback_triggered?: number | null;
 }
 
 // Dashboard row type derived from BrowsingLogRecord (no is_deleted, id is required)
