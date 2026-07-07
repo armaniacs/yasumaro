@@ -6,7 +6,7 @@ import { getMessage } from '../popup/i18n.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
 import { UI_COLORS } from '../constants/appConstants.js';
-import { getSqliteStatus, runOpfsSpike, migrateLogs } from './dashboardSqliteService.js';
+import { getSqliteStatus, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from './utils/retry.js';
 import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from './diagnoseDeficiencies.js';
@@ -515,7 +515,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     if (!migrateResult) return;
     const confirmed = await showConfirmDialog({
       title: getMessage('diagMigrateBtn') || 'Convert history to SQLite',
-      message: getMessage('diagMigrateConfirm') || 'Convert legacy browsing history into SQLite? The original data is kept.',
+      message: getMessage('diagMigrateConfirm') || 'Convert legacy browsing history into SQLite. The original chrome.storage data is preserved (you can clean it up separately from the diagnostics panel).',
       confirmLabel: getMessage('diagMigrateConfirmLabel') || 'Convert',
       cancelLabel: getMessage('cancel') || 'Cancel',
     });
@@ -541,6 +541,72 @@ async function initDiagnosticsPanel(): Promise<void> {
       migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
       diagMigrateBtn.disabled = false;
+    }
+  });
+
+  // Backfill diagnostic metadata (for already-migrated entries missing metrics)
+  const diagBackfillBtn = document.getElementById('diagBackfillBtn') as HTMLButtonElement | null;
+  const backfillResult = document.getElementById('diagBackfillResult') as HTMLElement | null;
+  diagBackfillBtn?.addEventListener('click', async () => {
+    if (!backfillResult) return;
+    diagBackfillBtn.disabled = true;
+    backfillResult.textContent = getMessage('testing') || 'Working...';
+    backfillResult.className = 'diag-result';
+
+    try {
+      const result = await backfillMetadata();
+      if (result) {
+        backfillResult.textContent =
+          `✓ ${getMessage('diagBackfillDone') || 'Backfill complete.'} ` +
+          `updated=${result.updated}/${result.total}`;
+        backfillResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
+      } else {
+        backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
+        backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      }
+    } catch (e) {
+      backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
+      backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+    } finally {
+      diagBackfillBtn.disabled = false;
+    }
+  });
+
+  // Cleanup legacy chrome.storage data (DESTRUCTIVE)
+  // Only call this after the user has confirmed they want to remove
+  // the original data. The data is already in SQLite.
+  const diagCleanupBtn = document.getElementById('diagCleanupBtn') as HTMLButtonElement | null;
+  const cleanupResult = document.getElementById('diagCleanupResult') as HTMLElement | null;
+  diagCleanupBtn?.addEventListener('click', async () => {
+    if (!cleanupResult) return;
+    const confirmed = await showConfirmDialog({
+      title: getMessage('diagCleanupBtn') || 'Delete legacy storage data',
+      message: getMessage('diagCleanupConfirm') || 'Delete the original chrome.storage browsing history? This is a destructive operation. The data is already copied to SQLite.',
+      confirmLabel: getMessage('diagCleanupConfirmLabel') || 'Delete',
+      cancelLabel: getMessage('cancel') || 'Cancel',
+    });
+    if (!confirmed) return;
+
+    diagCleanupBtn.disabled = true;
+    cleanupResult.textContent = getMessage('testing') || 'Working...';
+    cleanupResult.className = 'diag-result';
+
+    try {
+      const result = await cleanupLegacyStorage();
+      if (result) {
+        cleanupResult.textContent =
+          `✓ ${getMessage('diagCleanupDone') || 'Cleanup complete.'} ` +
+          `removed=${result.removed.length} keys, ${result.totalBytes} bytes freed`;
+        cleanupResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
+      } else {
+        cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
+        cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+      }
+    } catch (e) {
+      cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
+      cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+    } finally {
+      diagCleanupBtn.disabled = false;
     }
   });
 }

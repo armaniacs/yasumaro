@@ -216,6 +216,11 @@ let _domElements: {
   sqliteRetentionDaysSelect: HTMLSelectElement | null;
   sqliteMaxRecordsSelect: HTMLSelectElement | null;
   purgeNowBtn: HTMLButtonElement | null;
+  contentRetentionDaysSelect: HTMLSelectElement | null;
+  contentMaxRecordsSelect: HTMLSelectElement | null;
+  contentPurgeIncludeStarredCheckbox: HTMLInputElement | null;
+  contentPurgeNowBtn: HTMLButtonElement | null;
+  sqliteShowContentToggle: HTMLInputElement | null;
   localMarkdownExportEnabledInput: HTMLInputElement | null;
   localMarkdownExportAutoEnabledInput: HTMLInputElement | null;
   localMarkdownExportPathInput: HTMLInputElement | null;
@@ -275,11 +280,16 @@ export function getDashboardElements() {
       sqliteRetentionDaysSelect: document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null,
       sqliteMaxRecordsSelect: document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null,
       purgeNowBtn: document.getElementById('purgeNowBtn') as HTMLButtonElement | null,
+      contentRetentionDaysSelect: document.getElementById('contentRetentionDays') as HTMLSelectElement | null,
+      contentMaxRecordsSelect: document.getElementById('contentMaxRecords') as HTMLSelectElement | null,
+      contentPurgeIncludeStarredCheckbox: document.getElementById('contentPurgeIncludeStarred') as HTMLInputElement | null,
+      contentPurgeNowBtn: document.getElementById('contentPurgeNowBtn') as HTMLButtonElement | null,
       localMarkdownExportEnabledInput: document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null,
       localMarkdownExportAutoEnabledInput: document.getElementById('localMarkdownExportAutoEnabled') as HTMLInputElement | null,
       localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
       localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
       testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
+      sqliteShowContentToggle: document.getElementById('sqliteShowContentToggle') as HTMLInputElement | null,
       reviewSummaryEnabledInput: document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null,
       reviewSummaryManualActionsDiv: document.getElementById('reviewSummaryManualActions') as HTMLElement | null,
       generateWeeklySummaryBtn: document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null,
@@ -303,6 +313,9 @@ export function getDashboardElements() {
     providerModelInput: null, saveBtn: null,
     testObsidianBtn: null, testAiBtn: null, statusDiv: null, statusTopDiv: null,
     sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
+    contentRetentionDaysSelect: null, contentMaxRecordsSelect: null,
+    contentPurgeIncludeStarredCheckbox: null, contentPurgeNowBtn: null,
+    sqliteShowContentToggle: null,
     localMarkdownExportEnabledInput: null, localMarkdownExportAutoEnabledInput: null,
     localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
     testLocalMarkdownBtn: null,
@@ -350,6 +363,10 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
     [StorageKeys.SQLITE_RETENTION_DAYS]: el.sqliteRetentionDaysSelect,
     [StorageKeys.SQLITE_MAX_RECORDS]: el.sqliteMaxRecordsSelect,
+    [StorageKeys.CONTENT_RETENTION_DAYS]: el.contentRetentionDaysSelect,
+    [StorageKeys.CONTENT_MAX_RECORDS]: el.contentMaxRecordsSelect,
+    [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: el.contentPurgeIncludeStarredCheckbox,
+    [StorageKeys.SHOW_SQLITE_CONTENT]: el.sqliteShowContentToggle,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: el.localMarkdownExportAutoEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,
@@ -556,6 +573,14 @@ export async function handleSaveOnly(): Promise<void> {
   const maxRecordsRaw = newSettings[StorageKeys.SQLITE_MAX_RECORDS];
   newSettings[StorageKeys.SQLITE_MAX_RECORDS] =
     maxRecordsRaw === '' || maxRecordsRaw === undefined ? null : Number(maxRecordsRaw);
+
+  // Content retention (PBI-3) — same null handling as SQLITE_RETENTION
+  const contentDaysRaw = newSettings[StorageKeys.CONTENT_RETENTION_DAYS];
+  newSettings[StorageKeys.CONTENT_RETENTION_DAYS] =
+    contentDaysRaw === '' || contentDaysRaw === undefined ? null : Number(contentDaysRaw);
+  const contentMaxRaw = newSettings[StorageKeys.CONTENT_MAX_RECORDS];
+  newSettings[StorageKeys.CONTENT_MAX_RECORDS] =
+    contentMaxRaw === '' || contentMaxRaw === undefined ? null : Number(contentMaxRaw);
 
   const currentSettings = await getSettings();
   const mergedSettings = { ...currentSettings, ...newSettings };
@@ -1004,13 +1029,37 @@ export async function handlePurgeNow(): Promise<void> {
     if (result?.skipped) {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
-      const msg = getMessage('purgeNowSuccess') || '$COUNT$ 件を削除しました';
-      statusEl.textContent = msg.replace('{COUNT}', String(result.purged));
+      statusEl.textContent = getMessage('purgeNowSuccess', [String(result.purged)]) || `${result.purged} 件を削除しました`;
     } else {
       statusEl.textContent = result?.error ?? 'Error';
     }
   } finally {
     el.purgeNowBtn.disabled = false;
+  }
+}
+
+export async function handleContentPurgeNow(): Promise<void> {
+  const el = getDashboardElements();
+  const statusEl = document.getElementById('contentPurgeNowStatus');
+  if (!el.contentPurgeNowBtn || !statusEl) return;
+
+  el.contentPurgeNowBtn.disabled = true;
+  statusEl.textContent = '';
+  try {
+    const result = await chrome.runtime.sendMessage({
+      type: 'DASHBOARD_SQLITE',
+      payload: { subtype: 'content_purge_now' },
+    }) as { success: boolean; purged: number; skipped?: boolean; error?: string } | undefined;
+
+    if (result?.skipped) {
+      statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
+    } else if (result?.success) {
+      statusEl.textContent = getMessage('contentPurgeNowSuccess', [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
+    } else {
+      statusEl.textContent = result?.error ?? 'Error';
+    }
+  } finally {
+    el.contentPurgeNowBtn.disabled = false;
   }
 }
 
@@ -1398,6 +1447,9 @@ function initExportLogsPanel(): void {
     el.purgeNowBtn?.addEventListener('click', async () => {
       await handlePurgeNow();
     });
+    el.contentPurgeNowBtn?.addEventListener('click', async () => {
+      await handleContentPurgeNow();
+    });
 
     const syncBackdrop = () => {
       const backdropNow = document.getElementById('wizardBackdrop');
@@ -1440,7 +1492,7 @@ function initExportLogsPanel(): void {
   }
 
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
-  try { initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
+  try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
   try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
   try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }

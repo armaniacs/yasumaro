@@ -773,7 +773,11 @@ export async function query(options: QueryOptions = {}): Promise<{
       total = Number(row[0]);
     });
 
-    const selectSql = `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
+    const selectSql = `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
+         content, masked_count, cleansed_reason, ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
+         sent_tokens, received_tokens, original_tokens, cleansed_tokens,
+         page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
+         ai_summary_original_bytes, ai_summary_cleansed_bytes, extracted_sentences_bytes, extracted_sentences_original_bytes, fallback_triggered
          FROM browsing_logs ${whereClause}
          ORDER BY ${orderBy} ${orderDir}
          LIMIT ? OFFSET ?`;
@@ -791,6 +795,26 @@ export async function query(options: QueryOptions = {}): Promise<{
         scroll_ratio: row[8] != null ? Number(row[8]) : null,
         is_starred: Number(row[9]),
         is_deleted: Number(row[10]),
+        content: row[11] as string | null,
+        masked_count: row[12] != null ? Number(row[12]) : null,
+        cleansed_reason: row[13] as string | null,
+        ai_provider: row[14] as string | null,
+        ai_model: row[15] as string | null,
+        ai_duration_ms: row[16] != null ? Number(row[16]) : null,
+        obsidian_duration_ms: row[17] != null ? Number(row[17]) : null,
+        sent_tokens: row[18] != null ? Number(row[18]) : null,
+        received_tokens: row[19] != null ? Number(row[19]) : null,
+        original_tokens: row[20] != null ? Number(row[20]) : null,
+        cleansed_tokens: row[21] != null ? Number(row[21]) : null,
+        page_bytes: row[22] != null ? Number(row[22]) : null,
+        candidate_bytes: row[23] != null ? Number(row[23]) : null,
+        original_bytes: row[24] != null ? Number(row[24]) : null,
+        cleansed_bytes: row[25] != null ? Number(row[25]) : null,
+        ai_summary_original_bytes: row[26] != null ? Number(row[26]) : null,
+        ai_summary_cleansed_bytes: row[27] != null ? Number(row[27]) : null,
+        extracted_sentences_bytes: row[28] != null ? Number(row[28]) : null,
+        extracted_sentences_original_bytes: row[29] != null ? Number(row[29]) : null,
+        fallback_triggered: row[30] != null ? Number(row[30]) : null,
       });
     });
 
@@ -1235,6 +1259,96 @@ return { success: false, error: 'Database not initialized' };
     return { success: true, purged: totalPurged };
   } catch (error) {
     logError('SQLite: purgeOldRecords failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Purge content (page body) from old records based on retention policy.
+ * Sets content = NULL (does NOT delete records).
+ * Respects is_starred protection based on includeStarred flag.
+ */
+export async function purgeContent(
+  retentionDays?: number | null,
+  maxRecords?: number | null,
+  includeStarred?: boolean | null,
+): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  try {
+    const opfsResult = await tryOpfsProxy<{ purged: number }>('CONTENT_PURGE', {
+      retentionDays,
+      maxRecords,
+      includeStarred,
+    });
+    if (opfsResult !== null) return { success: true, purged: opfsResult.purged };
+
+    if (!dbHandle && !usingFallbackStorage) {
+      await init();
+    }
+
+    if (usingFallbackStorage && fallbackStorage) {
+      return fallbackStorage.purgeContent(
+        retentionDays != null ? retentionDays : undefined,
+        maxRecords != null ? maxRecords : undefined,
+        includeStarred != null ? includeStarred : undefined,
+      );
+    }
+
+    if (!dbHandle) {
+      return { success: false, error: 'Database not initialized' };
+    }
+
+    const starredClause = includeStarred ? '' : 'AND is_starred = 0';
+    let totalPurged = 0;
+
+    // 1. Days-based: NULL content on old non-starred entries
+    if (retentionDays != null && retentionDays > 0) {
+      const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      await execWithCache(
+        `UPDATE browsing_logs SET content = NULL
+         WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
+        [cutoffMs]
+      );
+
+      let changes1 = 0;
+      await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
+        changes1 = Number(row[0]);
+      });
+      totalPurged += changes1;
+    }
+
+    // 2. Count-based: NULL oldest content when over limit
+    if (maxRecords != null && maxRecords > 0) {
+      let count = 0;
+      await execWithCache(
+        `SELECT COUNT(*) FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
+        [],
+        (row: SqliteValue[]) => { count = Number(row[0]); }
+      );
+
+      if (count > maxRecords) {
+        const excess = count - maxRecords;
+        await execWithCache(
+          `UPDATE browsing_logs SET content = NULL
+           WHERE id IN (
+             SELECT id FROM browsing_logs
+             WHERE content IS NOT NULL ${starredClause}
+             ORDER BY created_at ASC
+             LIMIT ?
+           )`,
+          [excess]
+        );
+
+        let changes2 = 0;
+        await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
+          changes2 = Number(row[0]);
+        });
+        totalPurged += changes2;
+      }
+    }
+
+    return { success: true, purged: totalPurged };
+  } catch (error) {
+    logError('SQLite: purgeContent failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
   }
 }

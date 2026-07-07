@@ -821,7 +821,9 @@ export function createMessageHandler(): (
                                 inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
                             };
                         },
-                        await ensureConfirmToken()
+                        await ensureConfirmToken(),
+                        () => migrationService.backfillDiagnosticMetadata(),
+                        () => migrationService.cleanupLegacyStorage()
                     );
                     sendResponse(result);
                     return;
@@ -913,7 +915,10 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Daily purge alarm
     chrome.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name === 'yasumaro-daily-purge') {
-            handleDailyPurgeAlarm((days, max) => sqliteClient.purgeOldRecords(days, max));
+            handleDailyPurgeAlarm(
+                (days, max) => sqliteClient.purgeOldRecords(days, max),
+                (days, max, starred) => sqliteClient.purgeContent(days, max, starred),
+            );
         }
     });
 }

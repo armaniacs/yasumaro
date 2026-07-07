@@ -9,18 +9,20 @@ import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 export const TOKEN_REQUIRED_SUBTYPES = new Set([
-    'toggle_star', 'update', 'delete', 'migrate', 'clear_all', 'import', 'restore_db',
+    'toggle_star', 'update', 'delete', 'migrate', 'backfill_metadata', 'cleanup_legacy', 'clear_all', 'import', 'restore_db',
 ]);
 
 export const MODAL_REQUIRED_SUBTYPES = new Set([
-    'delete', 'migrate', 'clear_all',
+    'delete', 'migrate', 'cleanup_legacy', 'clear_all',
 ]);
 
 export async function handleDashboardSqlite(
     payload: Record<string, unknown>,
     sqliteClient: SqliteClient,
     runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
-    validConfirmToken?: string
+    validConfirmToken?: string,
+    runBackfill?: () => Promise<{ updated: number; total: number }>,
+    runCleanup?: () => Promise<{ removed: string[]; totalBytes: number }>
 ): Promise<unknown> {
     const subtype = payload.subtype as string;
 
@@ -214,12 +216,41 @@ export async function handleDashboardSqlite(
                 );
                 return { success: true, purged: result?.purged ?? 0, skipped: false };
             }
+            case 'content_purge_now': {
+                const settings = await getSettings();
+                const contentDays = settings[StorageKeys.CONTENT_RETENTION_DAYS] ?? null;
+                const contentMax  = settings[StorageKeys.CONTENT_MAX_RECORDS]    ?? null;
+                const includeStarred = settings[StorageKeys.CONTENT_PURGE_INCLUDE_STARRED] ?? false;
+                if (contentDays === null && contentMax === null) {
+                    return { success: true, purged: 0, skipped: true };
+                }
+                const result = await sqliteClient.purgeContent(
+                    contentDays !== null ? Number(contentDays) : undefined,
+                    contentMax  !== null ? Number(contentMax)  : undefined,
+                    includeStarred,
+                );
+                return { success: true, purged: result?.purged ?? 0, skipped: false };
+            }
             case 'backup_db': {
                 const data = await sqliteClient.backupDb();
                 if (data) {
                     return { success: true, data: Array.from(data) };
                 }
                 return { success: false, error: 'Backup failed' };
+            }
+            case 'backfill_metadata': {
+                if (!runBackfill) {
+                    return { success: false, error: 'Backfill not available' };
+                }
+                const backfillResult = await runBackfill();
+                return { success: true, ...backfillResult };
+            }
+            case 'cleanup_legacy': {
+                if (!runCleanup) {
+                    return { success: false, error: 'Cleanup not available' };
+                }
+                const cleanupResult = await runCleanup();
+                return { success: true, ...cleanupResult };
             }
             default:
                 return { success: false, error: `Unknown subtype: ${subtype}` };

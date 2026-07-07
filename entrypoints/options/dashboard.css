@@ -3491,6 +3491,16 @@ details[open] .advanced-details-summary {
   line-height: 1.4;
 }
 
+/* ── Diagnostic metadata (structured HTML matching left panel) ── */
+.sqlite-entry-diagnostics {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--color-bg-secondary, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm, 4px);
+}
+
 /* ── Tag badges in SQLite entries ── */
 .sqlite-entry-tags {
   display: flex;
@@ -3638,6 +3648,23 @@ details[open] .advanced-details-summary {
 
 .sqlite-calendar-quick button:hover {
   background: var(--color-primary);
+  color: #fff;
+}
+
+.sqlite-clear-filters-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--color-danger, #ef4444);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-danger, #ef4444);
+  margin-left: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sqlite-clear-filters-btn:hover {
+  background: var(--color-danger, #ef4444);
   color: #fff;
 }
 
