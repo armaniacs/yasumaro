@@ -159,7 +159,7 @@ export class RecordingPipeline {
         return context;
       }
 
-      const { data, privacyResult, obsidianDuration } = context;
+      const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
       const { url, title } = data;
 
       // Build BrowsingLogRecord from pipeline context
@@ -175,7 +175,28 @@ export class RecordingPipeline {
         visit_duration: null,
         scroll_ratio: null,
         is_starred: 0,
-        is_deleted: 0
+        is_deleted: 0,
+        // PBI-1: diagnostic metadata
+        content: null,
+        cleansed_reason: data.cleansedReason || null,
+        masked_count: (data.maskedCount ?? privacyResult?.maskedCount) || null,
+        ai_provider: privacyResult?.aiProvider || null,
+        ai_model: privacyResult?.aiModel || null,
+        ai_duration_ms: aiDuration ?? null,
+        obsidian_duration_ms: obsidianDuration ?? null,
+        sent_tokens: privacyResult?.sentTokens ?? null,
+        received_tokens: privacyResult?.receivedTokens ?? null,
+        original_tokens: privacyResult?.originalTokens ?? null,
+        cleansed_tokens: privacyResult?.cleansedTokens ?? null,
+        page_bytes: data.pageBytes ?? null,
+        candidate_bytes: data.candidateBytes ?? null,
+        original_bytes: data.originalBytes ?? null,
+        cleansed_bytes: data.cleansedBytes ?? null,
+        ai_summary_original_bytes: data.aiSummaryOriginalBytes ?? null,
+        ai_summary_cleansed_bytes: data.aiSummaryCleansedBytes ?? null,
+        extracted_sentences_bytes: extractedSentencesBytes ?? null,
+        extracted_sentences_original_bytes: extractedSentencesOriginalBytes ?? null,
+        fallback_triggered: data.fallbackTriggered ? 1 : 0,
       };
 
       // Use 0 as placeholder recordId (SQLite auto-generates real id)
