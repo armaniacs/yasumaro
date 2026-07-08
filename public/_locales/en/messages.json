@@ -1881,6 +1881,10 @@
   "consentCheckboxLabel": {
     "message": "I have read and agree to the Privacy Policy"
   },
+  "contentStorageConsentLabel": {
+    "message": "Store page content locally (masked, 7-day retention)",
+    "description": "Optional checkbox in the privacy consent modal for local content storage"
+  },
   "accept": {
     "message": "Accept & Continue"
   },

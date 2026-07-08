@@ -204,6 +204,7 @@ export const StorageKeys = {
     CONTENT_RETENTION_DAYS: 'content_retention_days',
     CONTENT_MAX_RECORDS: 'content_max_records',
     CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    CONTENT_STORAGE_ENABLED: 'content_storage_enabled',
     // Local Markdown export settings
     LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
     LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
@@ -367,6 +368,7 @@ export interface StorageKeyValues {
     [StorageKeys.CONTENT_RETENTION_DAYS]: number | null;
     [StorageKeys.CONTENT_MAX_RECORDS]: number | null;
     [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: boolean;
+    [StorageKeys.CONTENT_STORAGE_ENABLED]: boolean;
     [StorageKeys.SHOW_SQLITE_CONTENT]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: boolean;

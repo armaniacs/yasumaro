@@ -19,6 +19,9 @@ function getViewPolicyBtnEl(): HTMLAnchorElement | null {
 function getConsentCheckboxEl(): HTMLInputElement | null {
     return document.getElementById('consentCheckbox') as HTMLInputElement;
 }
+function getContentStorageCheckboxEl(): HTMLInputElement | null {
+    return document.getElementById('contentStorageConsentCheckbox') as HTMLInputElement;
+}
 function getAcceptConsentBtnEl(): HTMLButtonElement | null {
     return document.getElementById('acceptConsentBtn') as HTMLButtonElement;
 }
@@ -116,12 +119,14 @@ function showPrivacyConsentModal(): void {
     }
 
     const cb = getConsentCheckboxEl();
+    const contentCb = getContentStorageCheckboxEl();
     const acceptBtn = getAcceptConsentBtnEl();
     const policyBtn = getViewPolicyBtnEl();
     const title = getPrivacyConsentTitleEl();
 
     // 状態リセット
     if (cb) cb.checked = false;
+    if (contentCb) contentCb.checked = false;
     if (acceptBtn) acceptBtn.disabled = true;
 
     // プライバシーポリシーリンク設定
@@ -182,6 +187,12 @@ function hidePrivacyConsentModal(): void {
  */
 async function handleAcceptConsent(): Promise<void> {
     try {
+        // PBI 2026-07-09-02: persist optional local content-storage consent
+        const contentCb = getContentStorageCheckboxEl();
+        await chrome.storage.local.set({
+            [StorageKeys.CONTENT_STORAGE_ENABLED]: contentCb?.checked ?? false,
+        });
+
         await savePrivacyConsent();
         await recordPolicyVersionAcknowledgment();
         hidePrivacyConsentModal();
