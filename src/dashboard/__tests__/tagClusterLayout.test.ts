@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeLayout } from '../tagClusterLayout.js';
+import { computeLayout, computeCanvasSize } from '../tagClusterLayout.js';
 import type { TagNode, TagEdge } from '../tagCooccurrence.js';
 
 describe('computeLayout', () => {
@@ -39,5 +39,39 @@ describe('computeLayout', () => {
     const pos = positions.get('solo')!;
     expect(pos.x).toBeCloseTo(200, 0);
     expect(pos.y).toBeCloseTo(150, 0);
+  });
+});
+
+describe('computeCanvasSize', () => {
+  it('returns the base canvas size for zero nodes', () => {
+    const size = computeCanvasSize(0);
+    expect(size.width).toBe(800);
+    expect(size.height).toBe(600);
+  });
+
+  it('returns the base canvas size for a single node', () => {
+    const size = computeCanvasSize(1);
+    expect(size.width).toBe(800);
+    expect(size.height).toBe(600);
+  });
+
+  it('grows the canvas as node count increases, up to the max (50 nodes)', () => {
+    const size = computeCanvasSize(50);
+    // 400 + 50*40 = 2400 (hits MAX_CANVAS_WIDTH cap exactly)
+    expect(size.width).toBe(2400);
+    // 300 + 50*30 = 1800 (hits MAX_CANVAS_HEIGHT cap exactly)
+    expect(size.height).toBe(1800);
+  });
+
+  it('caps the canvas size for node counts beyond 50 (does not grow unbounded)', () => {
+    const size = computeCanvasSize(200);
+    expect(size.width).toBe(2400);
+    expect(size.height).toBe(1800);
+  });
+
+  it('scales up for a mid-range node count without hitting the cap', () => {
+    const size = computeCanvasSize(20);
+    expect(size.width).toBe(1200); // 400 + 20*40
+    expect(size.height).toBe(900); // 300 + 20*30
   });
 });

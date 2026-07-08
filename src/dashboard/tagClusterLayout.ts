@@ -16,6 +16,26 @@ const REPULSION = 4000;
 const ATTRACTION = 0.02;
 const DAMPING = 0.9;
 
+const BASE_CANVAS_WIDTH = 800;
+const BASE_CANVAS_HEIGHT = 600;
+const MAX_CANVAS_WIDTH = 2400;
+const MAX_CANVAS_HEIGHT = 1800;
+const PER_NODE_WIDTH = 40;
+const PER_NODE_HEIGHT = 30;
+
+/**
+ * Compute the layout coordinate space size for a given node count.
+ * Used as both computeLayout()'s width/height and the SVG viewBox size,
+ * so that nodes have room to spread out as the tag count grows instead of
+ * being crammed into a fixed 800x600 space (which previously caused nodes
+ * to overflow the panel with no way to see them, since there was no pan/zoom).
+ */
+export function computeCanvasSize(nodeCount: number): { width: number; height: number } {
+  const width = Math.min(MAX_CANVAS_WIDTH, Math.max(BASE_CANVAS_WIDTH, 400 + nodeCount * PER_NODE_WIDTH));
+  const height = Math.min(MAX_CANVAS_HEIGHT, Math.max(BASE_CANVAS_HEIGHT, 300 + nodeCount * PER_NODE_HEIGHT));
+  return { width, height };
+}
+
 export function computeLayout(
   nodes: TagNode[],
   edges: TagEdge[],

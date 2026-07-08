@@ -1499,6 +1499,11 @@
         <p class="panel-description">タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。</p>
         <div id="tagClusterEmptyState" hidden>タグ付き履歴がまだありません。</div>
         <div id="tagClusterTruncatedNotice" hidden>タグ数が多いため、上位50件のみ表示しています。</div>
+        <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+          <button type="button" id="tagClusterZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="拡大">+</button>
+          <button type="button" id="tagClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="縮小">−</button>
+          <button type="button" id="tagClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="表示をリセット">リセット</button>
+        </div>
         <svg id="tagClusterSvg" width="800" height="600"></svg>
       </section>
 

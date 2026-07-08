@@ -1812,6 +1812,22 @@
     "message": "Filter Options",
     "description": "ARIA label for history filter buttons"
   },
+  "tagClusterControlsGroup": {
+    "message": "Graph zoom controls",
+    "description": "ARIA label for the Tag Cluster pan/zoom controls button group"
+  },
+  "tagClusterZoomIn": {
+    "message": "Zoom in",
+    "description": "ARIA label for the Tag Cluster zoom-in button"
+  },
+  "tagClusterZoomOut": {
+    "message": "Zoom out",
+    "description": "ARIA label for the Tag Cluster zoom-out button"
+  },
+  "tagClusterZoomReset": {
+    "message": "Reset",
+    "description": "Label and ARIA label for the Tag Cluster reset-view button"
+  },
   "tagCategory": {
     "message": "Tag Category",
     "description": "ARIA label for tag category select"
