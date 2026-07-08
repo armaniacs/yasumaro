@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.13` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.14` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -15,7 +15,31 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
-## [6.5.13] - 2026-07-09
+## [6.5.14] - 2026-07-09
+
+### Added / 追加
+
+- **Tag Cluster ローディングラベルの i18n 化** — `tagClusterLoading.ts` のハードコード日本語を `getMessage` 経由に変更し、`_locales/{en,ja}/messages.json` に 4 キー追加
+- **ページ本文(content)の PII マスキング保存 + 初回同意** — `RecordingPipeline` で content を `sanitizeRegex` 通过後に格納し、`CONTENT_STORAGE_ENABLED` が true の場合のみ保存。プライバシー同意モーダルに内容保存チェックボックスを追加。`CONTENT_RETENTION_DAYS` のデフォルトを 7 日に変更
+- **ローカル Markdown 書き出しの idle 一括化** — `saveLocalMarkdownStep` をバッファ蓄積のみに改修し、`chrome.idle.onStateChanged` による idle 時 or 30 分ごとのアラームで 1 日分をまとめてダウンロードするフッシャーを新規実装
+
+### Fixed / 修正 (Checking Team Wave 3)
+
+- **ALTER TABLE マイグレーションのエラー握り潰しを修正** — `catch` ブロックで duplicate column 以外のエラーを `console.warn` で出力するよう変更
+- **SQLite リストア時のペイロードに 100MB サイズ上限を追加** — `SQLITE_RESTORE` ハンドラで超過時にエラーレスポンスを返す
+- **FTS5 tagFilter クエリに 200 文字の長さ制限を追加** — `query()` と `handleQuery()` の両パスでトランケート（二重防御）
+- **Offscreen メッセージハンドラの送信元検証テストを追加** — `SQLITE_UPDATE` / `SQLITE_SEARCH` の sender validation テスト 4 件を追加
+
+### Tests / テスト
+
+- `tagClusterLoading.test.ts` — ローディングラベル i18n 化の単体テスト
+- `sqlite-migration-errors.test.ts` — ALTER エラー警告テスト
+- `sqlite-tagfilter-length.test.ts` — tagFilter 長制限テスト
+- `offscreen-sqlite.test.ts` — 送信元検証テスト
+- `privacyConsentController.test.ts` — 内容保存チェックボックス永続化テスト
+- `localMarkdownIdleFlusher.test.ts` — idle/アラーム フッシャーテスト
+
+---
 
 ### Added / 追加
 
