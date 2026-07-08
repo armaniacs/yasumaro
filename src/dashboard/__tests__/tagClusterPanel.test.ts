@@ -18,6 +18,9 @@ describe('tagClusterPanel', () => {
   });
 
   it('renders nodes as SVG circles when tagged entries exist', async () => {
+    vi.spyOn(dashboardSqliteService, 'getSqliteStatus').mockResolvedValue({
+      initialized: true, path: '', fallback: false, fts5: true,
+    } as never);
     vi.spyOn(dashboardSqliteService, 'queryLogs').mockResolvedValue({
       rows: [{ id: 1, tags: '#tech #ai' } as never],
       total: 1,
@@ -31,6 +34,9 @@ describe('tagClusterPanel', () => {
   });
 
   it('shows empty state and does not throw when no tags exist', async () => {
+    vi.spyOn(dashboardSqliteService, 'getSqliteStatus').mockResolvedValue({
+      initialized: true, path: '', fallback: false, fts5: true,
+    } as never);
     vi.spyOn(dashboardSqliteService, 'queryLogs').mockResolvedValue({ rows: [], total: 0 });
 
     await expect(initTagClusterPanel()).resolves.not.toThrow();
@@ -40,6 +46,9 @@ describe('tagClusterPanel', () => {
   });
 
   it('dispatches navigate-to-tag when a node is clicked', async () => {
+    vi.spyOn(dashboardSqliteService, 'getSqliteStatus').mockResolvedValue({
+      initialized: true, path: '', fallback: false, fts5: true,
+    } as never);
     vi.spyOn(dashboardSqliteService, 'queryLogs').mockResolvedValue({
       rows: [{ id: 1, tags: '#tech' } as never],
       total: 1,
@@ -56,4 +65,20 @@ describe('tagClusterPanel', () => {
     expect(handler).toHaveBeenCalled();
     expect((handler.mock.calls[0][0] as CustomEvent).detail).toBe('tech');
   });
+
+  it('retries when SQLite is not yet initialized, then succeeds', async () => {
+    const statusSpy = vi.spyOn(dashboardSqliteService, 'getSqliteStatus')
+      .mockResolvedValueOnce({ initialized: false, path: '', fallback: false, fts5: true } as never)
+      .mockResolvedValue({ initialized: true, path: '', fallback: false, fts5: true } as never);
+    vi.spyOn(dashboardSqliteService, 'queryLogs').mockResolvedValue({
+      rows: [{ id: 1, tags: '#tech' } as never],
+      total: 1,
+    });
+
+    await initTagClusterPanel();
+
+    expect(statusSpy).toHaveBeenCalledTimes(2);
+    const svg = document.getElementById('tagClusterSvg')!;
+    expect(svg.querySelectorAll('circle').length).toBe(1);
+  }, 15000);
 });
