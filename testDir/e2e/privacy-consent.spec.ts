@@ -92,8 +92,8 @@ test.describe('Privacy Consent Modal - Controls @ui', () => {
     const modal = page.locator('#privacyConsentModal');
 
     await test.step('Verify checkbox group structure', async () => {
-      await expect(modal.locator('.consent-checkbox-group')).toBeAttached();
-      await expect(modal.locator('.checkbox-label')).toBeAttached();
+      await expect(modal.locator('.consent-checkbox-group').first()).toBeAttached();
+      await expect(modal.locator('.checkbox-label').first()).toBeAttached();
     });
 
     await test.step('Verify checkbox element', async () => {
@@ -101,7 +101,7 @@ test.describe('Privacy Consent Modal - Controls @ui', () => {
     });
 
     await test.step('Verify checkbox label text exists', async () => {
-      await expect(modal.locator('.checkbox-label span')).toBeAttached();
+      await expect(modal.locator('.checkbox-label span').first()).toBeAttached();
     });
   });
 
