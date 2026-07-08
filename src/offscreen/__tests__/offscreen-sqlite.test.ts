@@ -273,6 +273,67 @@ describe('handleOffscreenMessage - SQLite sender validation', () => {
     expect(resp.success).toBe(false);
     expect(resp.error).toContain('Forbidden');
   });
+
+  it('rejects SQLITE_UPDATE from content scripts (sender with tab)', async () => {
+    const responses: unknown[] = [];
+    const senderWithTab: chrome.runtime.MessageSender = {
+      tab: { id: 123, url: 'https://evil.com' } as chrome.tabs.Tab,
+    } as chrome.runtime.MessageSender;
+
+    handleOffscreenMessage(
+      makeMessage('SQLITE_UPDATE', { id: 1, title: 'hacked' }),
+      senderWithTab,
+      (r) => responses.push(r)
+    );
+    await vi.waitFor(() => expect(responses.length).toBe(1));
+    const resp = responses[0] as { success: boolean; error?: string };
+    expect(resp.success).toBe(false);
+    expect(resp.error).toContain('Forbidden');
+  });
+
+  it('rejects SQLITE_UPDATE from external extension (wrong sender.id)', async () => {
+    const responses: unknown[] = [];
+    const senderExternal: chrome.runtime.MessageSender = {
+      id: 'evil-extension-id',
+    } as chrome.runtime.MessageSender;
+
+    handleOffscreenMessage(
+      makeMessage('SQLITE_UPDATE', { id: 1, title: 'hacked' }),
+      senderExternal,
+      (r) => responses.push(r)
+    );
+    await vi.waitFor(() => expect(responses.length).toBe(1));
+    const resp = responses[0] as { success: boolean; error?: string };
+    expect(resp.success).toBe(false);
+    expect(resp.error).toContain('Forbidden');
+  });
+
+  it('rejects SQLITE_SEARCH from content scripts (sender with tab)', async () => {
+    const responses: unknown[] = [];
+    const senderWithTab: chrome.runtime.MessageSender = {
+      tab: { id: 123, url: 'https://evil.com' } as chrome.tabs.Tab,
+    } as chrome.runtime.MessageSender;
+
+    handleOffscreenMessage(
+      makeMessage('SQLITE_SEARCH', { query: 'test' }),
+      senderWithTab,
+      (r) => responses.push(r)
+    );
+    await vi.waitFor(() => expect(responses.length).toBe(1));
+    const resp = responses[0] as { success: boolean; error?: string };
+    expect(resp.success).toBe(false);
+    expect(resp.error).toContain('Forbidden');
+  });
+
+  it('allows SQLITE_UPDATE from service worker (no tab, correct id)', async () => {
+    const senderNoTab: chrome.runtime.MessageSender = makeSenderNoTab();
+    const result = handleOffscreenMessage(
+      makeMessage('SQLITE_UPDATE', { id: 1, title: 'valid update' }),
+      senderNoTab,
+      () => {}
+    );
+    expect(result).toBe(true);
+  });
 });
 
 describe('handleOffscreenMessage - SQLite responds with error when DB not available', () => {

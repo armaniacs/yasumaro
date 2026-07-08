@@ -218,8 +218,13 @@ async function initSqlite(): Promise<void> {
   for (const colDef of newColumns) {
     try {
       await sqlExec(`ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
-    } catch {
+    } catch (err) {
       // Column already exists — ignore
+      // Log unexpected errors (disk full, corruption, etc.) so they are surfaced
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('duplicate column name')) {
+        console.warn('OPFS Worker: unexpected ALTER TABLE error:', msg);
+      }
     }
   }
 
@@ -401,7 +406,9 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   }
   if (tagFilter) {
     // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
-    const cleanTag = tagFilter
+    // Apply length limit to prevent expensive FTS5 queries on extremely long input
+    const limitedTag = tagFilter.slice(0, FTS_QUERY_MAX_LENGTH);
+    const cleanTag = limitedTag
       .replace(/["'*^~:()+\-\\]/g, ' ')
       .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
       .replace(/\s+/g, ' ')

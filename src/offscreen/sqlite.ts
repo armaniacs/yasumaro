@@ -307,8 +307,13 @@ async function _doInit(): Promise<boolean> {
     for (const colDef of newColumns) {
       try {
         await sqlite3.exec(dbHandle, `ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
-      } catch {
+      } catch (err) {
         // Column already exists — safe to ignore
+        // Log unexpected errors (disk full, corruption, etc.) so they are surfaced
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes('duplicate column name')) {
+          console.warn('SQLite: unexpected ALTER TABLE error:', msg);
+        }
       }
     }
 
@@ -700,12 +705,15 @@ export async function query(options: QueryOptions = {}): Promise<{
   success: true; rows: BrowsingLogRecord[]; total: number
 } | { success: false; error: string }> {
   try {
+    // Apply FTS_QUERY_MAX_LENGTH limit to tagFilter before passing to either path
+    const tagFilter = options.tagFilter ? options.tagFilter.slice(0, FTS_QUERY_MAX_LENGTH) : options.tagFilter;
+
     // OPFS Worker proxy
     const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
       limit: options.limit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
       ids: options.ids,
-      tagFilter: options.tagFilter,
+      tagFilter,
     });
     if (opfsResult !== null) return { success: true, rows: opfsResult.rows, total: opfsResult.total };
 
@@ -748,9 +756,10 @@ export async function query(options: QueryOptions = {}): Promise<{
       conditions.push(`id IN (${placeholders})`);
       params.push(...options.ids);
     }
-    if (options.tagFilter) {
+    if (tagFilter) {
       // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
-      const cleanTag = options.tagFilter
+      // (length already limited above via FTS_QUERY_MAX_LENGTH)
+      const cleanTag = tagFilter
         .replace(/["'*^~:()+\-\\]/g, ' ')
         .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
         .replace(/\s+/g, ' ')

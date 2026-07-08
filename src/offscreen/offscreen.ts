@@ -354,7 +354,12 @@ export function handleOffscreenMessage(
                 }
 
             } else if (msg.type === 'SQLITE_RESTORE') {
-                const data = new Uint8Array((msg.payload?.data as number[]) || []);
+                const rawData = (msg.payload?.data as number[]) || [];
+                if (rawData.length > 100 * 1024 * 1024) {
+                  sendResponse({ success: false, error: 'Restore data exceeds maximum size of 100MB' });
+                  return;
+                }
+                const data = new Uint8Array(rawData);
                 const result = await sqliteRestoreDb(data);
                 sendResponse(result.success ? { success: true } : { success: false, error: result.error });
 

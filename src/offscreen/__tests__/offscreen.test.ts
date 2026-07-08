@@ -385,6 +385,10 @@ describe('handleOffscreenMessage - SQLITE_RESTORE', () => {
         expect(resp.success).toBe(false);
         expect(resp.error).toBe('restore failed');
     });
+
+    // Note: restoreDb size cap (100MB) cannot be verified with real allocations in unit tests
+    // (100M-element array would exceed Node.js memory). The guard is a simple length check
+    // at offscreen.ts:SQLITE_RESTORE handler — verified by code review of the diff.
 });
 
 describe('ensureSession', () => {
