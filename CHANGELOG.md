@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.3` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.9` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -15,9 +15,11 @@ All notable changes to this project will be documented in this file.
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
 
-## [6.5.6] - 2026-07-07
+## [6.5.9] - 2026-07-08
 
 ### Added / 追加
+
+- **SQLite に診断メタデータを永続化（PBI-1）** — `BrowsingLogRecord` に `sent_tokens`, `received_tokens`, `ai_provider`, `ai_model`, `page_bytes`, `processing_time_ms` 等の診断フィールドを追加。SQLite スキーマ（`schema.ts`）に該当カラムを追加し、`RecordingPipeline` → `saveSqliteStep` 経由で記録時に書き込み。`opfsWorker.ts` / `sqlite.ts` の `insert` / `batch` / `ALLOWED_ORDER_COLUMNS` を拡張
 
 - **SQLite History パネルにメトリクス表示** — レガシーエントリ（旧バージョンのパイプラインで記録されたもの）にもトークン数、処理時間、AIプロバイダ/モデル、Content Cleansing 等のメトリクスを chrome.storage から遅延マージして自動表示。`sqliteHistoryPanel.ts` に `enrichEntryWithChromeStorage()` を追加し、SQLite エントリが診断フィールドを欠いている場合に `savedUrlsWithTimestamps` からフォールバック
 
@@ -33,8 +35,6 @@ All notable changes to this project will be documented in this file.
 
 - **`mapLegacyEntryToRecord` が診断フィールドをマッピングしていなかった問題を修正** — 移行時にメトリクス（sent_tokens, received_tokens, ai_provider, page_bytes 等 18 フィールド）が SQLite に保存されない問題を修正。`LegacyUrlEntry` インターフェースに全診断フィールドを追加
 
-- **「条件をクリア」ボタンがフィルタ変更時に表示されなかった問題を修正** — `updateDynamicRegions()` から `renderCalendarNav()` を呼び出すよう修正。検索・日付選択時にカレンダー領域が再描画されず、クリアボタンが非表示のままだった
-
 ### Changed / 変更
 
 - **`formatDiagnosticMetadata` を置換** — プレーンテキストから構造化 HTML（`history-entry-tokens`, `history-entry-token-reduction`, `history-entry-ai-summary-cleansing`, `cleansing-progress-wrapper` クラス）に変更。記録履歴パネルと同一のビジュアルスタイルで表示
@@ -43,6 +43,58 @@ All notable changes to this project will be documented in this file.
 
 - **`mapLegacyEntryToRecord` テスト追加** — 診断メタデータフィールドのマッピングとデフォルト値を検証するテスト 2 件を追加
 - **`sqliteHistoryPanel` レンダリングテスト追加** — `formatDiagnosticMetadataHtml` と `buildCleansingProgressBarHtml` の出力を検証するテスト 10 件を追加
+- **PBI-1 ラウンドトリップテスト追加** — 診断メタデータフィールドの SQLite 挿入→取得の整合性を検証するテストを追加
+
+---
+
+## [6.5.8] - 2026-07-06
+
+### Added / 追加
+
+- **オフラインモード対応** — ローカル AI プロバイダー利用時にネットワーク接続が不要な `local_only` モードを追加。設定 UI ガードとプライバシーモード表示を実装
+
+- **保留ページに reason ラベルを追加** — `PendingPage` に `local-ai-unavailable`, `pipeline-error`, `obsidian-write-failed` の reason ラベルを表示。保留中のエントリがなぜ保留されているかを一覧から確認可能に
+
+- **パイプライン失敗時の自動保留登録** — `RecordingPipeline` で FATAL/RETRY 失敗時に `pipeline-error`、`saveObsidian` のみ失敗時に `obsidian-write-failed` として自動的に保留ページに登録
+
+### Fixed / 修正
+
+- **監査ログの null 応答処理を修正** — `SqliteClient` の `recordAuditLog` が null 応答を返した場合も失敗としてログに記録するよう修正
+
+---
+
+## [6.5.7] - 2026-07-06
+
+### Added / 追加
+
+- **SQLite DB 復元機能** — ダッシュボードからバックアップした `.db` ファイルを復元する機能を追加
+  - `SqliteClient.restoreDb` のメッセージ契約を追加
+  - `offscreen.ts` に `SQLITE_RESTORE` ハンドラを追加
+  - `opfsWorker.ts` に一時ファイル検証つき DB 復元処理を追加
+  - `dashboardSqliteHandlers.ts` に `restore_db` サブタイプを配線
+
+- **暗号化バックアップ機能** — 履歴 + 設定の暗号化バックアップペイロード構築・暗復号ロジックを追加。ダッシュボードに暗号化バックアップ UI を追加
+
+- **監査ログ機能** — AI 要約の生成・保存操作を監査ログに記録
+  - `audit_log` テーブルのスキーマを追加
+  - `recordAuditLog` / `getAuditLogs` を実装
+  - `aiClient.generateSummary` に監査記録フックと `url` 引数を追加
+
+---
+
+## [6.5.6] - 2026-07-06
+
+### Added / 追加
+
+- **ダッシュボードに保留ページを追加** — パイプライン失敗や Obsidian 書き込み失敗したエントリを一覧表示し、再試行可能に
+  - `PendingPage` に `pipeline-error` / `obsidian-write-failed` の reason ラベルを表示
+  - `pending一覧` に `local-ai-unavailable` ラベルを表示
+
+- **パイプライン失敗時の自動保留登録** — `RecordingPipeline` で FATAL/RETRY 失敗時に `pipeline-error`、`saveObsidian` のみ失敗時に `obsidian-write-failed` として自動的に保留ページに登録
+
+### Fixed / 修正
+
+- **AI プロバイダ設定レイアウトを改善** — 各優先度カード内に設定を表示し、複数プロバイダーの設定を直感的に管理可能に
 
 ---
 
