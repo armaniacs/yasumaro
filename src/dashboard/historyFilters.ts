@@ -10,13 +10,14 @@ export function getFilteredEntries(
 ): SavedUrlEntry[] {
   return entries.filter(function matchesAllFilters(entry): boolean {
     // Search across URL, AI summary, tags, and content
-    const matchesSearch = !searchText || 
+    const matchesSearch = !searchText ||
       entry.url.toLowerCase().includes(searchText) ||
       (entry.aiSummary || '').toLowerCase().includes(searchText) ||
       (entry.tags || []).some(tag => tag.toLowerCase().includes(searchText)) ||
       (entry.content || '').toLowerCase().includes(searchText);
     const matchesFilter = matchesFilterType(entry, activeFilter);
-    const matchesTag = !activeTagFilter || Boolean(entry.tags && entry.tags.includes(activeTagFilter));
+    // Tag matching: partial match (substring) to handle Tag Cluster filtering
+    const matchesTag = !activeTagFilter || Boolean(entry.tags && entry.tags.some(tag => tag.includes(activeTagFilter)));
     return matchesSearch && matchesFilter && matchesTag;
   });
 }
