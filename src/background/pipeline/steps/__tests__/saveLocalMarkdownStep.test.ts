@@ -2,11 +2,10 @@
  * saveLocalMarkdownStep のテスト
  *
  * 検証対象:
- * - ローカル Markdown 書き出しが有効な場合、chrome.downloads で書き出す
+ * - ローカル Markdown 書き出しが有効な場合、バッファに蓄積する（PBI 2026-07-09-03: ダウンロードはidle時）
  * - 無効な場合はスキップ
  * - markdown がない場合はスキップ
  * - 日次バッファが chrome.storage.local に蓄積されること
- * - conflictAction: 'overwrite' で既存ファイルを上書きすること
  */
 
 import { vi } from 'vitest';
@@ -125,33 +124,22 @@ describe('saveLocalMarkdownStep', () => {
     });
   });
 
-  describe('有効な場合', () => {
-    it('chrome.downloads.download が呼ばれる', async () => {
+  describe('有効な場合（バッファ蓄積のみ、ダウンロードなし）', () => {
+    it('バッファに蓄積され、ダウンロードは呼ばれない', async () => {
       const context = makeContext();
 
       await saveLocalMarkdownStep(context);
 
-      expect(mockChrome.downloads.download).toHaveBeenCalledTimes(1);
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith(
-        expect.objectContaining({
-          filename: expect.stringContaining('Yasumaro/'),
-          saveAs: false,
-          conflictAction: 'overwrite',
-        })
-      );
-    });
-
-    it('日次バッファが chrome.storage.local に蓄積される', async () => {
-      const context = makeContext();
-
-      await saveLocalMarkdownStep(context);
-
+      // バッファが保存されること
       expect(mockChrome.storage.local.set).toHaveBeenCalledTimes(1);
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
       const key = Object.keys(setCall)[0];
       expect(key).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[key]).toHaveLength(1);
       expect(setCall[key][0]).toBe(context.markdown);
+
+      // PBI 2026-07-09-03: ステップはダウンロードしない
+      expect(mockChrome.downloads.download).not.toHaveBeenCalled();
     });
 
     it('2回目の実行で既存エントリに追加される', async () => {
@@ -170,68 +158,17 @@ describe('saveLocalMarkdownStep', () => {
       expect(setCall[key]).toHaveLength(2);
     });
 
-    it('カスタムパスが使用される', async () => {
-      const context = makeContext({
-        settings: {
-          local_markdown_export_enabled: true,
-          local_markdown_export_auto_enabled: true,
-          local_markdown_export_path: 'MyNotes',
-        } as any,
-      });
-
-      await saveLocalMarkdownStep(context);
-
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith(
-        expect.objectContaining({
-          filename: expect.stringContaining('MyNotes/'),
-        })
-      );
-    });
-
-    it('パスが未設定の場合はデフォルトの Yasumaro が使用される', async () => {
-      const context = makeContext({
-        settings: { local_markdown_export_enabled: true, local_markdown_export_auto_enabled: true } as any,
-      });
-
-      await saveLocalMarkdownStep(context);
-
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith(
-        expect.objectContaining({
-          filename: expect.stringContaining('Yasumaro/'),
-        })
-      );
-    });
-
-    it('data: URL が正しく使用される', async () => {
-      const context = makeContext();
-
-      await saveLocalMarkdownStep(context);
-
-      const downloadCall = mockChrome.downloads.download.mock.calls[0][0];
-      expect(downloadCall.url).toMatch(/^data:text\/markdown;base64,/);
-    });
-
-    it('localMarkdownDuration がコンテキストに追加される', async () => {
+    it('コンテキストをそのまま返す（downloadId/duration なし）', async () => {
       const context = makeContext();
 
       const result = await saveLocalMarkdownStep(context);
 
-      expect(result).toHaveProperty('localMarkdownDuration');
-      expect(typeof result.localMarkdownDuration).toBe('number');
+      expect(result).toBe(context);
+      expect(result).not.toHaveProperty('localMarkdownDuration');
     });
   });
 
   describe('エラー処理', () => {
-    it('downloads.download が失敗してもエラーを throw しない (BEST_EFFORT)', async () => {
-      mockChrome.downloads.download.mockRejectedValueOnce(new Error('Download failed'));
-      const context = makeContext();
-
-      const result = await saveLocalMarkdownStep(context);
-
-      // BEST_EFFORT: エラーを throw せずコンテキストを返す
-      expect(result).toBe(context);
-    });
-
     it('storage.get が失敗してもエラーを throw しない', async () => {
       mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage error'));
       const context = makeContext();
@@ -252,20 +189,6 @@ describe('saveLocalMarkdownStep', () => {
       const key = Object.keys(setCall)[0];
       const dateStr = key.replace('local_export_', '');
       expect(dateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    });
-
-    it('完全な日次 Markdown が正しく生成される', async () => {
-      const context = makeContext();
-
-      await saveLocalMarkdownStep(context);
-
-      const downloadCall = mockChrome.downloads.download.mock.calls[0][0];
-      // data: URL が使用されていることを確認
-      expect(downloadCall.url).toMatch(/^data:text\/markdown;base64,/);
-      // ローカルタイムゾーンの日付が使用されることを確認
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      expect(downloadCall.filename).toBe(`Yasumaro/${today}.md`);
     });
   });
 });

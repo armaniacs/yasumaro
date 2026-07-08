@@ -107,6 +107,12 @@ export function init(): void {
 
     chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
 
+    // PBI 2026-07-09-03: defer local Markdown export to idle / periodic flush
+    (async () => {
+      const { initIdleFlush } = await import('./localMarkdownIdleFlusher.js');
+      initIdleFlush();
+    })();
+
     // Initialize weekly/monthly review summary alarms
     (async () => {
       const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
@@ -914,11 +920,17 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
 
     // Daily purge alarm
     chrome.alarms.onAlarm.addListener((alarm) => {
-        if (alarm.name === 'yasumaro-daily-purge') {
+          if (alarm.name === 'yasumaro-daily-purge') {
             handleDailyPurgeAlarm(
                 (days, max) => sqliteClient.purgeOldRecords(days, max),
                 (days, max, starred) => sqliteClient.purgeContent(days, max, starred),
             );
-        }
+          }
+          if (alarm.name === 'yasumaro-local-md-flush') {
+            void (async () => {
+              const { flushPendingExports } = await import('./localMarkdownIdleFlusher.js');
+              void flushPendingExports();
+            })();
+          }
     });
 }

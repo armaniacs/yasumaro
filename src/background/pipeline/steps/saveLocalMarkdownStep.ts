@@ -13,7 +13,7 @@ import { StorageKeys } from '../../../utils/storage.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /** Storage key prefix for daily entry buffers */
-const DAILY_BUFFER_PREFIX = 'local_export_';
+export const DAILY_BUFFER_PREFIX = 'local_export_';
 
 /**
  * Get today's date string in YYYY-MM-DD format (local timezone)
@@ -29,7 +29,7 @@ function getTodayDateString(): string {
 /**
  * Build complete daily markdown from accumulated entries
  */
-function buildDailyMarkdown(date: string, entries: string[]): string {
+export function buildDailyMarkdown(date: string, entries: string[]): string {
   const header = `# ${date}`;
   return `${header}\n\n${entries.join('\n\n')}`;
 }
@@ -70,45 +70,27 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     return context;
   }
 
-  const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-  const date = getTodayDateString();
-  const storageKey = `${DAILY_BUFFER_PREFIX}${date}`;
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const date = getTodayDateString();
+    const storageKey = `${DAILY_BUFFER_PREFIX}${date}`;
 
-  const localStart = Date.now();
-  try {
-    // Accumulate entries for the day in chrome.storage.local
-    const stored = await chrome.storage.local.get(storageKey);
-    const dailyEntries: string[] = Array.isArray(stored[storageKey]) ? stored[storageKey] : [];
-    dailyEntries.push(markdown);
-    await chrome.storage.local.set({ [storageKey]: dailyEntries });
+    try {
+      // PBI 2026-07-09-03: Buffer only. Actual download is deferred
+      // to idle / periodic flush (see localMarkdownIdleFlusher.ts).
+      const stored = await chrome.storage.local.get(storageKey);
+      const dailyEntries: string[] = Array.isArray(stored[storageKey]) ? stored[storageKey] : [];
+      dailyEntries.push(markdown);
+      await chrome.storage.local.set({ [storageKey]: dailyEntries });
 
-    // Generate complete daily markdown
-    const content = buildDailyMarkdown(date, dailyEntries);
+      addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
+        title,
+        url,
+        storageKey,
+        entryCount: dailyEntries.length
+      });
 
-    // Use data: URL (URL.createObjectURL is not available in Service Worker)
-    const base64 = btoa(unescape(encodeURIComponent(content)));
-    const dataUrl = `data:text/markdown;base64,${base64}`;
-    console.log('[LocalMD] Downloading:', { filename: `${exportPath}/${date}.md`, entryCount: dailyEntries.length });
-
-    const downloadId = await chrome.downloads.download({
-      url: dataUrl,
-      filename: `${exportPath}/${date}.md`,
-      saveAs: false,
-      conflictAction: 'overwrite'
-    });
-
-    const localDuration = Date.now() - localStart;
-    console.log('[LocalMD] SUCCESS:', { path: `${exportPath}/${date}.md`, entryCount: dailyEntries.length, downloadId });
-    addLog(LogType.INFO, 'Saved to local Markdown', {
-      title,
-      url,
-      path: `${exportPath}/${date}.md`,
-      entryCount: dailyEntries.length,
-      downloadId
-    });
-
-    return { ...context, localMarkdownDuration: localDuration };
-  } catch (error: unknown) {
+      return context;
+    } catch (error: unknown) {
     console.error('[LocalMD] FAILED:', errorMessage(error));
     addLog(LogType.ERROR, 'Failed to save to local Markdown', {
       error: errorMessage(error),
