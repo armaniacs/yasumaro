@@ -220,7 +220,6 @@ let _domElements: {
   contentMaxRecordsSelect: HTMLSelectElement | null;
   contentPurgeIncludeStarredCheckbox: HTMLInputElement | null;
   contentPurgeNowBtn: HTMLButtonElement | null;
-  sqliteShowContentToggle: HTMLInputElement | null;
   localMarkdownExportEnabledInput: HTMLInputElement | null;
   localMarkdownExportAutoEnabledInput: HTMLInputElement | null;
   localMarkdownExportPathInput: HTMLInputElement | null;
@@ -289,7 +288,6 @@ export function getDashboardElements() {
       localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
       localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
       testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
-      sqliteShowContentToggle: document.getElementById('sqliteShowContentToggle') as HTMLInputElement | null,
       reviewSummaryEnabledInput: document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null,
       reviewSummaryManualActionsDiv: document.getElementById('reviewSummaryManualActions') as HTMLElement | null,
       generateWeeklySummaryBtn: document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null,
@@ -315,7 +313,6 @@ export function getDashboardElements() {
     sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
     contentRetentionDaysSelect: null, contentMaxRecordsSelect: null,
     contentPurgeIncludeStarredCheckbox: null, contentPurgeNowBtn: null,
-    sqliteShowContentToggle: null,
     localMarkdownExportEnabledInput: null, localMarkdownExportAutoEnabledInput: null,
     localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
     testLocalMarkdownBtn: null,
@@ -366,7 +363,6 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.CONTENT_RETENTION_DAYS]: el.contentRetentionDaysSelect,
     [StorageKeys.CONTENT_MAX_RECORDS]: el.contentMaxRecordsSelect,
     [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: el.contentPurgeIncludeStarredCheckbox,
-    [StorageKeys.SHOW_SQLITE_CONTENT]: el.sqliteShowContentToggle,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: el.localMarkdownExportAutoEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,

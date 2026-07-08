@@ -2994,6 +2994,18 @@
   "historyHideContent": {
     "message": "Hide content"
   },
+  "historyShowSentData": {
+    "message": "Data sent to AI"
+  },
+  "historyHideSentData": {
+    "message": "Hide data"
+  },
+  "historyShowReceivedData": {
+    "message": "Data received from AI"
+  },
+  "historyHideReceivedData": {
+    "message": "Hide data"
+  },
   "showContentToggleLabel": {
     "message": "Show content toggle button in list"
   },

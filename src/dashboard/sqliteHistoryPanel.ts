@@ -41,7 +41,6 @@ interface SqliteHistoryState {
   fallbackMode: boolean;
   selectedIds: Set<number>;
   activeTagFilter: string | null;
-  showContent: boolean;
 }
 
 let state: SqliteHistoryState = {
@@ -55,7 +54,6 @@ let state: SqliteHistoryState = {
   fallbackMode: false,
   selectedIds: new Set(),
   activeTagFilter: null,
-  showContent: true,
 };
 
 // ============================================================================
@@ -612,14 +610,14 @@ async function renderEntryList(): Promise<void> {
         <span class="sqlite-entry-time">${formatTimestamp(entry.created_at)}</span>
       </div>
       ${diagnosticMetadataHtml ? `<div class="sqlite-entry-diagnostics">${diagnosticMetadataHtml}</div>` : ''}
-      ${entry.content != null && state.showContent ? `
+      ${entry.content != null ? `
         <button type="button" class="content-toggle-btn" data-action="content-toggle"
                 data-id="${entry.id}" aria-expanded="false" aria-controls="content-sent-${entry.id}">
           ${t('historyShowSentData') || 'AIへ送信したデータ'}
         </button>
         <div class="content-preview hidden" id="content-sent-${entry.id}">${escapeHtml(entry.content)}</div>
       ` : ''}
-      ${entry.summary != null && entry.summary.trim().length > 0 && state.showContent ? `
+      ${entry.summary != null && entry.summary.trim().length > 0 ? `
         <button type="button" class="content-toggle-btn" data-action="content-toggle"
                 data-id="${entry.id}" aria-expanded="false" aria-controls="content-received-${entry.id}">
           ${t('historyShowReceivedData') || 'AIから受信したデータ'}
@@ -873,14 +871,6 @@ async function retryInitialLoad(): Promise<void> {
   renderState();
 }
 
-async function loadContentSetting(): Promise<void> {
-  try {
-    const settings = await getSettings();
-    state.showContent = Boolean(settings[StorageKeys.SHOW_SQLITE_CONTENT]);
-  } catch {
-    state.showContent = false;
-  }
-}
 
 export async function initSqliteHistoryPanel(): Promise<void> {
   if (initCalled) return;
@@ -892,7 +882,6 @@ export async function initSqliteHistoryPanel(): Promise<void> {
     return;
   }
 
-  await loadContentSetting();
   checkFallbackStatus();
   renderState();
   retryInitialLoad();
