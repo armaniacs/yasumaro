@@ -55,7 +55,7 @@ let state: SqliteHistoryState = {
   fallbackMode: false,
   selectedIds: new Set(),
   activeTagFilter: null,
-  showContent: false,
+  showContent: true,
 };
 
 // ============================================================================

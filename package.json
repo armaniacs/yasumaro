@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.5.6",
+  "version": "6.5.9",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
