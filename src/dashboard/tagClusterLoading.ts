@@ -4,6 +4,8 @@
  * while data is fetched, analyzed, laid out, and rendered.
  */
 
+import { getMessage } from '../popup/i18n.js';
+
 interface LoadingStep {
   number: number;
   label: string;
@@ -17,10 +19,10 @@ export class TagClusterLoadingManager {
   private overlayGroup: SVGGElement | null = null;
   private currentStep = 0;
   private steps: LoadingStep[] = [
-    { number: 1, label: 'データ読み込み', completed: false },
-    { number: 2, label: 'ノード分析', completed: false },
-    { number: 3, label: 'レイアウト計算', completed: false },
-    { number: 4, label: 'グラフ描画', completed: false },
+    { number: 1, label: getMessage('tagClusterLoadingStep1'), completed: false },
+    { number: 2, label: getMessage('tagClusterLoadingStep2'), completed: false },
+    { number: 3, label: getMessage('tagClusterLoadingStep3'), completed: false },
+    { number: 4, label: getMessage('tagClusterLoadingStep4'), completed: false },
   ];
 
   constructor(svgElement: SVGSVGElement) {

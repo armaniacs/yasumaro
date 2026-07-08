@@ -1825,6 +1825,22 @@
     "message": "リセット",
     "description": "Label and ARIA label for the Tag Cluster reset-view button"
   },
+  "tagClusterLoadingStep1": {
+    "message": "データ読み込み",
+    "description": "Step 1 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep2": {
+    "message": "ノード分析",
+    "description": "Step 2 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep3": {
+    "message": "レイアウト計算",
+    "description": "Step 3 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep4": {
+    "message": "グラフ描画",
+    "description": "Step 4 label in the Tag Cluster loading overlay"
+  },
   "tagCategory": {
     "message": "タグカテゴリ",
     "description": "ARIA label for tag category select"

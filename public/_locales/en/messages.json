@@ -1828,6 +1828,22 @@
     "message": "Reset",
     "description": "Label and ARIA label for the Tag Cluster reset-view button"
   },
+  "tagClusterLoadingStep1": {
+    "message": "Loading data",
+    "description": "Step 1 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep2": {
+    "message": "Analyzing nodes",
+    "description": "Step 2 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep3": {
+    "message": "Calculating layout",
+    "description": "Step 3 label in the Tag Cluster loading overlay"
+  },
+  "tagClusterLoadingStep4": {
+    "message": "Drawing graph",
+    "description": "Step 4 label in the Tag Cluster loading overlay"
+  },
   "tagCategory": {
     "message": "Tag Category",
     "description": "ARIA label for tag category select"
