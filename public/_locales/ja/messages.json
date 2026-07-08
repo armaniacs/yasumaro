@@ -2970,6 +2970,18 @@
   "historyHideContent": {
     "message": "本文を隠す"
   },
+  "historyShowSentData": {
+    "message": "AIへ送信したデータ"
+  },
+  "historyHideSentData": {
+    "message": "データを非表示"
+  },
+  "historyShowReceivedData": {
+    "message": "AIから受信したデータ"
+  },
+  "historyHideReceivedData": {
+    "message": "データを非表示"
+  },
   "showContentToggleLabel": {
     "message": "一覧に本文表示ボタンを出す"
   },

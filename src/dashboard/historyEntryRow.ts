@@ -54,19 +54,17 @@ function makeTagBadges(
 
 function createContentToggle(
   id: string,
-  label: string,
+  showLabel: string,
+  hideLabel: string,
   content: string,
   info: HTMLElement,
 ): void {
   const toggle = document.createElement('button');
+  toggle.type = 'button';
   toggle.className = 'content-toggle-btn';
-  toggle.textContent = '📄 ';
+  toggle.textContent = showLabel;
   toggle.setAttribute('aria-expanded', 'false');
   toggle.setAttribute('aria-controls', id);
-
-  const labelEl = document.createElement('span');
-  labelEl.textContent = label;
-  toggle.appendChild(labelEl);
 
   const area = document.createElement('div');
   area.className = 'content-preview hidden';
@@ -76,7 +74,7 @@ function createContentToggle(
   toggle.addEventListener('click', function handleToggle(): void {
     const isHidden = area.classList.toggle('hidden');
     toggle.setAttribute('aria-expanded', String(!isHidden));
-    labelEl.textContent = isHidden ? label : 'データを非表示';
+    toggle.textContent = isHidden ? showLabel : hideLabel;
   });
 
   info.appendChild(toggle);
@@ -261,12 +259,24 @@ export function makeHistoryEntryRow(
 
   if (content && content.trim().length > 0) {
     const contentId = `content-entry-${start + index}`;
-    createContentToggle(contentId, 'AIへ送信したデータ', content, info);
+    createContentToggle(
+      contentId,
+      getMessage('historyShowSentData') || 'AIへ送信したデータ',
+      getMessage('historyHideSentData') || 'データを非表示',
+      content,
+      info,
+    );
   }
 
   if (aiSummary && aiSummary.trim().length > 0) {
     const summaryId = `summary-entry-${start + index}`;
-    createContentToggle(summaryId, 'AIから受信したデータ', aiSummary, info);
+    createContentToggle(
+      summaryId,
+      getMessage('historyShowReceivedData') || 'AIから受信したデータ',
+      getMessage('historyHideReceivedData') || 'データを非表示',
+      aiSummary,
+      info,
+    );
   }
 
   const deleteBtn = document.createElement('button');
