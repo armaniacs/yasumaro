@@ -4098,3 +4098,63 @@ textarea {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* =============================================================================
+   Tag Cluster SVG
+   ============================================================================= */
+
+.tag-cluster-node {
+  fill: #3b82f6;
+  stroke: #ffffff;
+  stroke-width: 2;
+  transition: fill 150ms cubic-bezier(0.4, 0, 0.2, 1), stroke-width 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tag-cluster-node:hover {
+  fill: #1d4ed8;
+  stroke-width: 2.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-node {
+    fill: #0ea5e9;
+    stroke: #0f172a;
+    stroke-width: 2;
+  }
+
+  .tag-cluster-node:hover {
+    fill: #06b6d4;
+    stroke-width: 2.5;
+  }
+}
+
+.tag-cluster-edge {
+  stroke: #cbd5e1;
+  opacity: 0.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-edge {
+    stroke: #64748b;
+    opacity: 0.5;
+  }
+}
+
+.tag-cluster-text {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #ffffff;
+  text-rendering: optimizeLegibility;
+  paint-order: stroke;
+  stroke: #1e293b;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-text {
+    fill: #f0f6fc;
+    stroke: #0f172a;
+  }
+}

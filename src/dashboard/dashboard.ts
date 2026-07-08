@@ -43,6 +43,7 @@ import { clearAllLogs } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { initOnboardingWizard } from '../popup/onboardingWizard.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from './aiProviderLayoutManager.js';
+import { initNavigation } from './navigation.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -1236,13 +1237,15 @@ function initExportLogsPanel(): void {
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
 
   initSidebarNav();
+  initNavigation();
 
   // Auto-navigate based on URL parameters
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('tab') === 'sqlite-history') {
-    const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
-    if (historyBtn) historyBtn.click();
-  }
+  // Note: sqlite-history URL param is deprecated and redirected to panel-history via navigate-to-tag event
+  // if (urlParams.get('tab') === 'sqlite-history') {
+  //   const historyBtn = document.querySelector('[data-panel="panel-history"]') as HTMLButtonElement;
+  //   if (historyBtn) historyBtn.click();
+  // }
 
   const section = urlParams.get('section');
   if (section) {
