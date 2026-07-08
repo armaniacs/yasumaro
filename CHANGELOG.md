@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.12` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.13` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,28 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.13] - 2026-07-09
+
+### Added / 追加
+
+- **Tag Cluster グラフにパン・ズーム機能** — マウスホイールズーム（カーソル中心、0.3〜3倍）、ドラッグパン、ピンチズーム、+/-/リセットボタンを実装。`viewBox` 操作による TagClusterPanZoomController を新規実装
+- **ノード数に応じてレイアウト座標空間を動的に拡大** — `computeCanvasSize` でノード数増加時にグラフがパネル幅を超えて見えなくなる不具合を解消
+
+### Fixed / 修正
+
+- **ドラッグ後のクリックで `navigate-to-tag` が誤発火** — 5px 移動閾値でドラッグとクリックを判定し誤発火を防止
+
+### Changed / 変更
+
+- **ズームボタンに i18n 対応** — `data-i18n-aria-label` を追加
+
+### Tests / テスト
+
+- **Tag Cluster パン・ズームのテストを追加** — `tagClusterPanZoom.test.ts`（297行）でホイールズーム、ドラッグパン、ピンチズーム、ボタン操作の全動作を網羅
+- **既存テストをパン・ズーム対応に更新** — `tagClusterLayout.test.ts`、`tagClusterPanel.test.ts` の座標系モック更新
+
+---
 
 ## [6.5.12] - 2026-07-08
 
