@@ -5,8 +5,9 @@
 
 import { queryLogs, getSqliteStatus } from './dashboardSqliteService.js';
 import { computeTagCooccurrence, limitToTopNodes } from './tagCooccurrence.js';
-import { computeLayout } from './tagClusterLayout.js';
+import { computeLayout, computeCanvasSize } from './tagClusterLayout.js';
 import { TagClusterLoadingManager } from './tagClusterLoading.js';
+import { TagClusterPanZoomController } from './tagClusterPanZoom.js';
 import { retryWithExponentialBackoff } from './utils/retry.js';
 import type { BrowsingLogEntry } from './dashboardSqliteService.js';
 
@@ -22,36 +23,38 @@ export function setActiveTag(tag: string | null): void {
   tagFilterState.activeTag = tag;
 }
 
+// Holds the controller across initTagClusterPanel() calls so a re-render
+// (e.g. re-opening the panel) cleans up the previous instance's listeners
+// before attaching a new one.
+let panZoomController: TagClusterPanZoomController | null = null;
+
 export async function initTagClusterPanel(): Promise<void> {
-  console.log('[tagClusterPanel] initTagClusterPanel START');
   const svg = document.getElementById('tagClusterSvg') as unknown as SVGSVGElement | null;
   const emptyState = document.getElementById('tagClusterEmptyState') as HTMLElement | null;
   const truncatedNotice = document.getElementById('tagClusterTruncatedNotice') as HTMLElement | null;
-  console.log('[tagClusterPanel] svg:', !!svg, 'emptyState:', !!emptyState);
   if (!svg) {
-    console.log('[tagClusterPanel] SVG element not found, returning');
     return;
   }
 
+  panZoomController?.cleanup();
+  panZoomController = null;
+
   while (svg.firstChild) svg.removeChild(svg.firstChild);
+  svg.removeAttribute('viewBox');
 
   const loadingManager = new TagClusterLoadingManager(svg);
   loadingManager.show();
 
   try {
-    console.log('[tagClusterPanel] calling queryLogs...');
     const rows = await loadRowsWithRetry();
-    console.log('[tagClusterPanel] queryLogs result rows:', rows.length);
 
     loadingManager.updateStep(0); // Step 1/4: データ読み込み 完了
 
     const { nodes, edges } = computeTagCooccurrence(rows);
-    console.log('[tagClusterPanel] computeTagCooccurrence nodes:', nodes.length, 'edges:', edges.length);
 
     loadingManager.updateStep(1); // Step 2/4: ノード分析 完了
 
     if (nodes.length === 0) {
-      console.log('[tagClusterPanel] no nodes, showing empty state');
       loadingManager.cleanup();
       if (emptyState) emptyState.hidden = false;
       if (truncatedNotice) truncatedNotice.hidden = true;
@@ -63,32 +66,8 @@ export async function initTagClusterPanel(): Promise<void> {
     const limited = limitToTopNodes(nodes, edges, MAX_NODES);
     if (truncatedNotice) truncatedNotice.hidden = !limited.truncated;
 
-    let width = 400;
-    let height = 300;
-    try {
-      if (svg.width && svg.width.baseVal && svg.width.baseVal.value) {
-        width = svg.width.baseVal.value;
-      } else {
-        const widthAttr = svg.getAttribute('width');
-        if (widthAttr) {
-          const parsed = parseInt(widthAttr);
-          if (!isNaN(parsed)) width = parsed;
-        }
-      }
-      if (svg.height && svg.height.baseVal && svg.height.baseVal.value) {
-        height = svg.height.baseVal.value;
-      } else {
-        const heightAttr = svg.getAttribute('height');
-        if (heightAttr) {
-          const parsed = parseInt(heightAttr);
-          if (!isNaN(parsed)) height = parsed;
-        }
-      }
-    } catch {
-      // Ignore errors, use defaults
-    }
-
-    const positions = computeLayout(limited.nodes, limited.edges, width, height);
+    const canvasSize = computeCanvasSize(limited.nodes.length);
+    const positions = computeLayout(limited.nodes, limited.edges, canvasSize.width, canvasSize.height);
 
     loadingManager.updateStep(2); // Step 3/4: レイアウト計算 完了
 
@@ -116,6 +95,7 @@ export async function initTagClusterPanel(): Promise<void> {
       circle.setAttribute('class', 'tag-cluster-node');
       circle.style.cursor = 'pointer';
       circle.addEventListener('click', () => {
+        if (panZoomController?.wasDragSuppressingClick()) return;
         navigateToHistoryWithTag(node.tag);
       });
 
@@ -138,6 +118,13 @@ export async function initTagClusterPanel(): Promise<void> {
 
     loadingManager.updateStep(3); // Step 4/4: グラフ描画 完了
     loadingManager.cleanup();
+
+    panZoomController = new TagClusterPanZoomController(svg, canvasSize, {
+      zoomInBtn: document.getElementById('tagClusterZoomIn'),
+      zoomOutBtn: document.getElementById('tagClusterZoomOut'),
+      resetBtn: document.getElementById('tagClusterZoomReset'),
+    });
+    panZoomController.attach();
   } catch (error) {
     loadingManager.cleanup();
     console.error('[tagClusterPanel] error:', error);

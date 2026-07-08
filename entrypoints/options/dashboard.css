@@ -4158,3 +4158,47 @@ textarea {
     stroke: #0f172a;
   }
 }
+
+#tagClusterSvg {
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#tagClusterSvg:active {
+  cursor: grabbing;
+}
+
+.tag-cluster-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tag-cluster-controls button {
+  padding: 4px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tag-cluster-controls button:hover {
+  background: #f1f5f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-controls button {
+    border-color: #475569;
+    background: #1e293b;
+    color: #f0f6fc;
+  }
+
+  .tag-cluster-controls button:hover {
+    background: #334155;
+  }
+}

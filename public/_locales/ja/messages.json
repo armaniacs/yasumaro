@@ -1809,6 +1809,22 @@
     "message": "フィルターオプション",
     "description": "ARIA label for history filter buttons"
   },
+  "tagClusterControlsGroup": {
+    "message": "グラフのズーム操作",
+    "description": "ARIA label for the Tag Cluster pan/zoom controls button group"
+  },
+  "tagClusterZoomIn": {
+    "message": "拡大",
+    "description": "ARIA label for the Tag Cluster zoom-in button"
+  },
+  "tagClusterZoomOut": {
+    "message": "縮小",
+    "description": "ARIA label for the Tag Cluster zoom-out button"
+  },
+  "tagClusterZoomReset": {
+    "message": "リセット",
+    "description": "Label and ARIA label for the Tag Cluster reset-view button"
+  },
   "tagCategory": {
     "message": "タグカテゴリ",
     "description": "ARIA label for tag category select"
