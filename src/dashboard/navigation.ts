@@ -8,6 +8,8 @@
  * - Keyboard navigation: Arrow Up/Down, Home, End
  */
 
+import { searchForTagInHistory } from './historyPanel.js';
+
 export function initNavigation(): void {
   let tablist = document.querySelector<HTMLElement>('[role="tablist"]');
 
@@ -69,6 +71,19 @@ export function initNavigation(): void {
       }
     });
   };
+
+  // Handle navigate-to-tag event to activate panel-sqlite-history
+  document.addEventListener('navigate-to-tag', (e: Event) => {
+    const tag = (e as CustomEvent<string>).detail;
+    const historyTabIndex = tabs.findIndex(tab => tab.getAttribute('data-panel') === 'panel-sqlite-history');
+    if (historyTabIndex >= 0) {
+      activate(historyTabIndex);
+      // After panel switch, call the search function immediately
+      if (tag) {
+        searchForTagInHistory(tag);
+      }
+    }
+  });
 
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', () => {

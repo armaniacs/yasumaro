@@ -109,15 +109,37 @@ async function loadData(options: {
     if (options.search) {
       result = await searchLogs(options.search, limit, offset);
     } else {
+      // Query without tagFilter (SQLite doesn't support it yet), then filter in JS
       result = await queryLogs({
-        limit,
-        offset,
+        limit: 1000, // Fetch more to account for filtering
+        offset: 0,
         since: options.since,
         until: options.until,
         orderBy: 'created_at',
         orderDir: 'DESC',
-        tagFilter: activeTagFilter || undefined,
       });
+
+      // Filter by tag in JavaScript if tagFilter is set
+      if (result && activeTagFilter) {
+        const filteredRows = result.rows.filter(row => {
+          // Tags are stored as comma-separated string in SQLite
+          const tagsString = row.tags || '';
+          if (typeof tagsString === 'string') {
+            // Split by comma and check if any tag includes the filter
+            return tagsString.split(',').some(tag => tag.trim().includes(activeTagFilter));
+          }
+          return false;
+        });
+        result = {
+          rows: filteredRows.slice(offset, offset + limit),
+          total: filteredRows.length,
+        };
+      } else if (result) {
+        result = {
+          rows: result.rows.slice(offset, offset + limit),
+          total: result.total,
+        };
+      }
     }
 
     if (result) {
@@ -1043,6 +1065,16 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): (.
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), ms);
   };
+}
+
+// Public function to search for a tag from Tag Cluster
+export function searchForTagInSqliteHistory(tag: string): void {
+  state.activeTagFilter = tag;
+  state.currentPage = 0;
+  // Don't use date range when filtering by tag - search across all dates
+  loadData({ page: 0, tagFilter: tag }).catch(err => {
+    console.error('[searchForTagInSqliteHistory] error:', err);
+  });
 }
 
 // Expose for dashboard integration

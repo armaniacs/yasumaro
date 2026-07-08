@@ -7,8 +7,18 @@ import { renderSkippedMode, renderPendingPage } from './historyPendingPanel.js';
 import { updateTagFilterIndicator } from './historyFilters.js';
 import { initTagEditModal, saveTagEdits } from './historyTagEditModal.js';
 import { updateCleansingStatsPanel } from './historyCleansingSync.js';
+import { searchForTagInSqliteHistory } from './sqliteHistoryPanel.js';
 
 export { showRecordError, checkServiceWorkerAlive } from './historyUtils.js';
+
+// Module-level state shared across all event handlers
+let historyPanelState: HistoryPanelState | null = null;
+let historyPanelElements: HistoryElements | null = null;
+let applyFiltersFunc: ((resetPage?: boolean) => void) | null = null;
+
+export function getHistoryPanelState(): HistoryPanelState | null {
+  return historyPanelState;
+}
 
 async function initHistoryPanel(): Promise<void> {
   const historySearchInput = document.getElementById('historySearch') as HTMLInputElement | null;
@@ -57,31 +67,38 @@ async function initHistoryPanel(): Promise<void> {
   state.pendingPages = pendingPages;
   pendingPages.forEach(p => state.pendingUrlSet.add(p.url));
 
+  // Store in module-level variable for external access
+  historyPanelState = state;
+  historyPanelElements = elements;
+
   const onTagFilterChange = (): void => {
-    applyFilters(false);
+    applyFiltersInternal(false);
     updateTagFilterIndicator(state, () => {
       state.activeTagFilter = null;
       state.historyCurrentPage = 0;
-      applyFilters(false);
+      applyFiltersInternal(false);
       updateTagFilterIndicator(state, () => { /* no-op: already cleared */ });
     });
   };
 
-  function applyFilters(resetPage = true): void {
+  function applyFiltersInternal(resetPage = true): void {
     if (!historyList) return;
 
     const searchText = (historySearchInput?.value || '').toLowerCase();
 
     if (state.activeFilter === 'skipped') {
-      renderSkippedMode(state, elements, searchText, applyFilters);
+      renderSkippedMode(state, elements, searchText, applyFiltersInternal);
       return;
     }
 
     if (resetPage) state.historyCurrentPage = 0;
 
-    renderHistoryEntries(state, elements, tagEditElements, searchText, onTagFilterChange, applyFilters);
+    renderHistoryEntries(state, elements, tagEditElements, searchText, onTagFilterChange, applyFiltersInternal);
     updateCleansingStatsPanel(state.entries);
   }
+
+  // Store for external access
+  applyFiltersFunc = applyFiltersInternal;
 
   const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string): void => {
     if (area !== 'local') return;
@@ -111,31 +128,14 @@ async function initHistoryPanel(): Promise<void> {
       );
     }
 
-    Promise.all(updatePromises).then(() => applyFilters());
+    Promise.all(updatePromises).then(() => applyFiltersInternal());
   };
   chrome.storage.onChanged.addListener(onStorageChanged);
-
-  document.addEventListener('navigate-to-tag', (e: Event) => {
-    const tag = (e as CustomEvent<string>).detail;
-    state.activeTagFilter = tag;
-    state.activeFilter = 'all';
-    state.historyCurrentPage = 0;
-    document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll<HTMLElement>('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelector<HTMLButtonElement>('[data-panel="panel-history"]')?.classList.add('active');
-    document.getElementById('panel-history')?.classList.add('active');
-    applyFilters(false);
-    updateTagFilterIndicator(state, () => {
-      state.activeTagFilter = null;
-      state.historyCurrentPage = 0;
-      applyFilters(false);
-    });
-  });
 
   historySearchInput?.addEventListener('input', () => {
     state.activeTagFilter = null;
     updateTagFilterIndicator(state, () => { /* no-op */ });
-    applyFilters();
+    applyFiltersInternal();
   });
 
   filterBtns.forEach(btn => {
@@ -146,14 +146,14 @@ async function initHistoryPanel(): Promise<void> {
       state.activeFilter = (btn.dataset['filter'] || 'all') as typeof state.activeFilter;
       state.activeTagFilter = null;
       updateTagFilterIndicator(state, () => { /* no-op */ });
-      applyFilters();
+      applyFiltersInternal();
     });
   });
 
-  initTagEditModal(state, tagEditElements, () => applyFilters(false));
+  initTagEditModal(state, tagEditElements, () => applyFiltersInternal(false));
 
   if (!pendingSection || !pendingList) {
-    applyFilters();
+    applyFiltersInternal();
     updateCleansingStatsPanel(state.entries);
     return;
   }
@@ -164,11 +164,17 @@ async function initHistoryPanel(): Promise<void> {
     pendingSection.hidden = false;
     const sortedPending = [...state.pendingPages].sort((a, b) => b.timestamp - a.timestamp);
     const pendingCurrentPageRef = { value: 0 };
-    renderPendingPage(state, elements, pendingSection, pendingList, sortedPending, pendingCurrentPageRef, applyFilters);
+    renderPendingPage(state, elements, pendingSection, pendingList, sortedPending, pendingCurrentPageRef, applyFiltersInternal);
   }
 
-  applyFilters();
+  applyFiltersInternal();
   updateCleansingStatsPanel(state.entries);
+}
+
+// Public function to search for a tag from Tag Cluster
+// Delegates to SQLite history panel since that's where the actual data is
+export function searchForTagInHistory(tag: string): void {
+  searchForTagInSqliteHistory(tag);
 }
 
 export { initHistoryPanel };
