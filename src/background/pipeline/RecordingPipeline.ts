@@ -31,6 +31,8 @@ import type { AIClient } from '../aiClient.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import { extractDomain } from '../../utils/domainUtils.js';
+import { StorageKeys } from '../../utils/storage.js';
+import { sanitizeRegex } from '../../utils/piiSanitizer.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
@@ -159,10 +161,18 @@ export class RecordingPipeline {
         return context;
       }
 
-      const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
-      const { url, title } = data;
+    const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
+    const { url, title } = data;
 
-      // Build BrowsingLogRecord from pipeline context
+    // PBI 2026-07-09-02: store page content only after PII sanitization,
+    // and only when the user has consented to local content storage.
+    const settings = context.settings as Record<string, unknown>;
+    const contentStorageEnabled = settings[StorageKeys.CONTENT_STORAGE_ENABLED] === true;
+    const storedContent = contentStorageEnabled
+      ? (await sanitizeRegex(data.content ?? '', { skipSizeLimit: true })).text || null
+      : null;
+
+    // Build BrowsingLogRecord from pipeline context
       const record: BrowsingLogRecord = {
         url,
         title: title || null,
@@ -177,7 +187,7 @@ export class RecordingPipeline {
         is_starred: 0,
         is_deleted: 0,
         // PBI-1: diagnostic metadata / PBI-3: content
-        content: data.content || null,
+        content: storedContent,
         cleansed_reason: data.cleansedReason || null,
         masked_count: (data.maskedCount ?? privacyResult?.maskedCount) || null,
         ai_provider: privacyResult?.aiProvider || null,

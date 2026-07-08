@@ -19,6 +19,7 @@ const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-id-1'));
 const mockFocusRelease = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
+const mockChromeStorageSet = vi.hoisted(() => vi.fn());
 
 vi.mock('../utils/focusTrap.js', () => ({
   focusTrapManager: {
@@ -46,7 +47,7 @@ vi.mock('../../utils/logger.js', () => ({
 vi.stubGlobal('chrome', {
   runtime: { getURL: vi.fn((path: string) => `chrome-extension://test/${path}`) },
   tabs: { create: mockChromeTabsCreate },
-  storage: { local: { get: vi.fn(), set: vi.fn() } },
+  storage: { local: { get: vi.fn(), set: mockChromeStorageSet } },
 });
 
 import {
@@ -65,6 +66,7 @@ function setupDom(): void {
       <div id="privacyConsentTitle"></div>
       <a id="viewPrivacyPolicyBtn" href="#"></a>
       <input id="consentCheckbox" type="checkbox" />
+      <input id="contentStorageConsentCheckbox" type="checkbox" />
       <button id="acceptConsentBtn" disabled>Accept</button>
       <button id="declineConsentBtn">Decline</button>
     </div>
@@ -352,9 +354,52 @@ describe('privacyConsentController', () => {
 
       await vi.waitFor(() => {
         expect(mockLogError).toHaveBeenCalledWith(
-          '[PrivacyConsent] Failed to save consent',
-          expect.anything(),
-          'INTERNAL_ERROR'
+        '[PrivacyConsent] Failed to save consent',
+        expect.anything(),
+        'INTERNAL_ERROR'
+      );
+      });
+    });
+
+    it('should persist content storage consent when checkbox is checked on accept', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockSavePrivacyConsent.mockResolvedValue(undefined);
+
+      await initPrivacyConsent();
+
+      // Enable the main consent checkbox so the accept button is enabled
+      const mainCb = document.getElementById('consentCheckbox') as HTMLInputElement;
+      mainCb!.checked = true;
+      mainCb!.dispatchEvent(new Event('change'));
+
+      const cb = document.getElementById('contentStorageConsentCheckbox') as HTMLInputElement;
+      cb!.checked = true;
+      getAcceptBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(mockChromeStorageSet).toHaveBeenCalledWith(
+          expect.objectContaining({ content_storage_enabled: true })
+        );
+      });
+    });
+
+    it('should persist content storage disabled when checkbox is unchecked on accept', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockSavePrivacyConsent.mockResolvedValue(undefined);
+
+      await initPrivacyConsent();
+
+      const mainCb = document.getElementById('consentCheckbox') as HTMLInputElement;
+      mainCb!.checked = true;
+      mainCb!.dispatchEvent(new Event('change'));
+
+      const cb = document.getElementById('contentStorageConsentCheckbox') as HTMLInputElement;
+      cb!.checked = false;
+      getAcceptBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(mockChromeStorageSet).toHaveBeenCalledWith(
+          expect.objectContaining({ content_storage_enabled: false })
         );
       });
     });

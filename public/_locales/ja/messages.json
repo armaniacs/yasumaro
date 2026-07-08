@@ -1878,6 +1878,10 @@
   "consentCheckboxLabel": {
     "message": "プライバシーポリシーを読み、同意しました"
   },
+  "contentStorageConsentLabel": {
+    "message": "ページ本文をローカルに保存（マスク済・7日間保持）",
+    "description": "Optional checkbox in the privacy consent modal for local content storage"
+  },
   "accept": {
     "message": "同意して続行"
   },
