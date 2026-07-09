@@ -857,7 +857,7 @@ async function handleSearchLike(
 // Message handler
 // ---------------------------------------------------------------------------
 
-async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
+export async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
   const { id, type, payload } = req;
 
   try {
