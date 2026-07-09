@@ -19,6 +19,7 @@ export const SCHEMA_SQL = `
     is_starred INTEGER DEFAULT 0 CHECK(is_starred IN (0, 1)),
     is_deleted INTEGER DEFAULT 0 CHECK(is_deleted IN (0, 1)),
     obsidian_synced INTEGER DEFAULT 0,
+    gist_synced INTEGER DEFAULT 0,
     content TEXT,
     masked_count INTEGER,
     cleansed_reason TEXT,
@@ -47,6 +48,87 @@ export const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_logs_active ON browsing_logs(is_deleted, created_at);
   CREATE INDEX IF NOT EXISTS idx_logs_obsidian ON browsing_logs(obsidian_synced);
 `;
+
+/**
+ * Index on gist_synced must be created AFTER the ALTER TABLE migration that
+ * adds the column, not as part of SCHEMA_SQL — on an existing DB predating
+ * this column, CREATE TABLE IF NOT EXISTS is a no-op, so bundling this index
+ * into SCHEMA_SQL would fail with "no such column: gist_synced" before the
+ * migration ever runs.
+ */
+export const GIST_SYNCED_INDEX_SQL =
+  'CREATE INDEX IF NOT EXISTS idx_logs_gist ON browsing_logs(gist_synced)';
+
+// ============================================================================
+// Shared INSERT column definitions
+// Order must match SCHEMA_SQL CREATE TABLE (excluding id which is AUTOINCREMENT)
+// and BrowsingLogRecord interface.
+// ============================================================================
+
+/** Non-PK columns in insert order — single source of truth. */
+export const COLUMN_NAMES = [
+  'url',
+  'title',
+  'summary',
+  'tags',
+  'created_at',
+  'domain',
+  'visit_duration',
+  'scroll_ratio',
+  'is_starred',
+  'is_deleted',
+  'obsidian_synced',
+  'gist_synced',
+  'content',
+  'masked_count',
+  'cleansed_reason',
+  'ai_provider',
+  'ai_model',
+  'ai_duration_ms',
+  'obsidian_duration_ms',
+  'sent_tokens',
+  'received_tokens',
+  'original_tokens',
+  'cleansed_tokens',
+  'page_bytes',
+  'candidate_bytes',
+  'original_bytes',
+  'cleansed_bytes',
+  'ai_summary_original_bytes',
+  'ai_summary_cleansed_bytes',
+  'extracted_sentences_bytes',
+  'extracted_sentences_original_bytes',
+  'fallback_triggered',
+] as const;
+
+export const INSERT_COLS = COLUMN_NAMES.join(', ');
+export const INSERT_PLACEHOLDERS = COLUMN_NAMES.map(() => '?').join(', ');
+
+/** INSERT without conflict handling (for insert()). */
+export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
+
+/**
+ * Fields allowed in UPDATE SET clauses across all backends.
+ * Must be kept in sync with the INSERT columns — any field that can be
+ * inserted should also be updatable. OPFS Worker uses a dynamic iteration
+ * of the change payload so it doesn't use this list, but the IDB-VFS and
+ * FallbackStorage paths both apply this whitelist to prevent arbitrary field updates.
+ */
+export const UPDATABLE_FIELDS = [
+  'url', 'title', 'summary', 'tags', 'domain',
+  'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
+  'obsidian_synced', 'gist_synced',
+  'content', 'masked_count', 'cleansed_reason',
+  'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',
+  'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
+  'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
+  'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
+  'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
+  'fallback_triggered',
+];
+
+/** INSERT OR IGNORE (for insertBatch() and migration). */
+export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
 /**
  * FTS5 DDL as a single string — used by sqlite.ts (IDB path) via one-shot exec().

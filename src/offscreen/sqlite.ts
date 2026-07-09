@@ -32,7 +32,7 @@ const ALLOWED_ORDER_COLUMNS = [
 // Schema definition (shared with opfsWorker.ts)
 // ============================================================================
 
-import { SCHEMA_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
+import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, UPDATABLE_FIELDS } from './schema.js';
 
 const DB_FILENAME = 'yasumaro.db';
 
@@ -244,6 +244,10 @@ async function _doInit(): Promise<boolean> {
       VFS_NAME
     );
 
+    // M32: Enable WAL mode before any schema/migration operations for journal consistency
+    await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
+    await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
+
     // Execute schema creation
     await sqlite3.exec(dbHandle, SCHEMA_SQL);
     await sqlite3.exec(dbHandle, AUDIT_LOG_SCHEMA_SQL);
@@ -254,6 +258,14 @@ async function _doInit(): Promise<boolean> {
     } catch {
       // Column already exists — that's fine
     }
+
+    // PBI-11: add gist_synced column for per-target sync flags
+    try {
+      await sqlite3.exec(dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN gist_synced INTEGER DEFAULT 0');
+    } catch {
+      // Column already exists — that's fine
+    }
+    await sqlite3.exec(dbHandle, GIST_SYNCED_INDEX_SQL);
 
     // FTS5 virtual table (optional — WASM build may not include FTS5)
     fts5Available = false;
@@ -323,10 +335,6 @@ async function _doInit(): Promise<boolean> {
       compileOptions.push(String(row[0]));
     });
     cachedCompileOptions = compileOptions;
-    // Enable WAL mode before schema/migration operations for journal consistency
-    await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
-    await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
-
     // Attempt migration from fallback storage if it has data
     await tryMigrateFallbackToSqlite();
 
@@ -371,12 +379,10 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
     }
 
     let migrated = 0;
-    const insertSql = `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, content, masked_count, cleansed_reason, ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms, sent_tokens, received_tokens, original_tokens, cleansed_tokens, page_bytes, candidate_bytes, original_bytes, cleansed_bytes, ai_summary_original_bytes, ai_summary_cleansed_bytes, extracted_sentences_bytes, extracted_sentences_original_bytes, fallback_triggered)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     for (const record of records) {
       try {
         const domain = record.domain || extractDomain(record.url);
-        await execWithCache(insertSql, [
+        await execWithCache(INSERT_IGNORE_SQL, [
           record.url,
           record.title ?? null,
           record.summary ?? null,
@@ -387,6 +393,8 @@ async function tryMigrateFallbackToSqlite(): Promise<void> {
           record.scroll_ratio ?? null,
           record.is_starred ?? 0,
           record.is_deleted ?? 0,
+          record.obsidian_synced ?? 0,
+          record.gist_synced ?? 0,
           record.content ?? null,
           record.masked_count ?? null,
           record.cleansed_reason ?? null,
@@ -562,42 +570,40 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 
     const domain = record.domain || extractDomain(record.url);
 
-    await execWithCache(
-      `INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, content, masked_count, cleansed_reason, ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms, sent_tokens, received_tokens, original_tokens, cleansed_tokens, page_bytes, candidate_bytes, original_bytes, cleansed_bytes, ai_summary_original_bytes, ai_summary_cleansed_bytes, extracted_sentences_bytes, extracted_sentences_original_bytes, fallback_triggered)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        record.url,
-        record.title ?? null,
-        record.summary ?? null,
-        record.tags ?? null,
-        record.created_at,
-        domain,
-        record.visit_duration ?? null,
-        record.scroll_ratio ?? null,
-        record.is_starred ?? 0,
-        record.is_deleted ?? 0,
-        record.content ?? null,
-        record.masked_count ?? null,
-        record.cleansed_reason ?? null,
-        record.ai_provider ?? null,
-        record.ai_model ?? null,
-        record.ai_duration_ms ?? null,
-        record.obsidian_duration_ms ?? null,
-        record.sent_tokens ?? null,
-        record.received_tokens ?? null,
-        record.original_tokens ?? null,
-        record.cleansed_tokens ?? null,
-        record.page_bytes ?? null,
-        record.candidate_bytes ?? null,
-        record.original_bytes ?? null,
-        record.cleansed_bytes ?? null,
-        record.ai_summary_original_bytes ?? null,
-        record.ai_summary_cleansed_bytes ?? null,
-        record.extracted_sentences_bytes ?? null,
-        record.extracted_sentences_original_bytes ?? null,
-        record.fallback_triggered ?? 0,
-      ]
-    );
+    await execWithCache(INSERT_SQL, [
+      record.url,
+      record.title ?? null,
+      record.summary ?? null,
+      record.tags ?? null,
+      record.created_at,
+      domain,
+      record.visit_duration ?? null,
+      record.scroll_ratio ?? null,
+      record.is_starred ?? 0,
+      record.is_deleted ?? 0,
+      record.obsidian_synced ?? 0,
+      record.gist_synced ?? 0,
+      record.content ?? null,
+      record.masked_count ?? null,
+      record.cleansed_reason ?? null,
+      record.ai_provider ?? null,
+      record.ai_model ?? null,
+      record.ai_duration_ms ?? null,
+      record.obsidian_duration_ms ?? null,
+      record.sent_tokens ?? null,
+      record.received_tokens ?? null,
+      record.original_tokens ?? null,
+      record.cleansed_tokens ?? null,
+      record.page_bytes ?? null,
+      record.candidate_bytes ?? null,
+      record.original_bytes ?? null,
+      record.cleansed_bytes ?? null,
+      record.ai_summary_original_bytes ?? null,
+      record.ai_summary_cleansed_bytes ?? null,
+      record.extracted_sentences_bytes ?? null,
+      record.extracted_sentences_original_bytes ?? null,
+      record.fallback_triggered ?? 0,
+    ]);
 
     let newId = 0;
     await execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
@@ -640,13 +646,11 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 
     try {
       let insertedCount = 0;
-      const insertSql = `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, content, masked_count, cleansed_reason, ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms, sent_tokens, received_tokens, original_tokens, cleansed_tokens, page_bytes, candidate_bytes, original_bytes, cleansed_bytes, ai_summary_original_bytes, ai_summary_cleansed_bytes, extracted_sentences_bytes, extracted_sentences_original_bytes, fallback_triggered)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
 
-        await execWithCache(insertSql, [
+        await execWithCache(INSERT_IGNORE_SQL, [
           record.url,
           record.title ?? null,
           record.summary ?? null,
@@ -657,6 +661,8 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
           record.scroll_ratio ?? null,
           record.is_starred ?? 0,
           record.is_deleted ?? 0,
+          record.obsidian_synced ?? 0,
+          record.gist_synced ?? 0,
           record.content ?? null,
           record.masked_count ?? null,
           record.cleansed_reason ?? null,
@@ -705,8 +711,9 @@ export async function query(options: QueryOptions = {}): Promise<{
     const tagFilter = options.tagFilter ? options.tagFilter.slice(0, FTS_QUERY_MAX_LENGTH) : options.tagFilter;
 
     // OPFS Worker proxy
+    const queryLimit = options.limit ?? 100;
     const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
-      limit: options.limit, offset: options.offset, since: options.since, until: options.until,
+      limit: queryLimit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
       ids: options.ids,
       tagFilter,
@@ -779,6 +786,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     });
 
     const selectSql = `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
+         obsidian_synced, gist_synced,
          content, masked_count, cleansed_reason, ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
          sent_tokens, received_tokens, original_tokens, cleansed_tokens,
          page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
@@ -800,26 +808,28 @@ export async function query(options: QueryOptions = {}): Promise<{
         scroll_ratio: row[8] != null ? Number(row[8]) : null,
         is_starred: Number(row[9]),
         is_deleted: Number(row[10]),
-        content: row[11] as string | null,
-        masked_count: row[12] != null ? Number(row[12]) : null,
-        cleansed_reason: row[13] as string | null,
-        ai_provider: row[14] as string | null,
-        ai_model: row[15] as string | null,
-        ai_duration_ms: row[16] != null ? Number(row[16]) : null,
-        obsidian_duration_ms: row[17] != null ? Number(row[17]) : null,
-        sent_tokens: row[18] != null ? Number(row[18]) : null,
-        received_tokens: row[19] != null ? Number(row[19]) : null,
-        original_tokens: row[20] != null ? Number(row[20]) : null,
-        cleansed_tokens: row[21] != null ? Number(row[21]) : null,
-        page_bytes: row[22] != null ? Number(row[22]) : null,
-        candidate_bytes: row[23] != null ? Number(row[23]) : null,
-        original_bytes: row[24] != null ? Number(row[24]) : null,
-        cleansed_bytes: row[25] != null ? Number(row[25]) : null,
-        ai_summary_original_bytes: row[26] != null ? Number(row[26]) : null,
-        ai_summary_cleansed_bytes: row[27] != null ? Number(row[27]) : null,
-        extracted_sentences_bytes: row[28] != null ? Number(row[28]) : null,
-        extracted_sentences_original_bytes: row[29] != null ? Number(row[29]) : null,
-        fallback_triggered: row[30] != null ? Number(row[30]) : null,
+        obsidian_synced: Number(row[11]),
+        gist_synced: Number(row[12]),
+        content: row[13] as string | null,
+        masked_count: row[14] != null ? Number(row[14]) : null,
+        cleansed_reason: row[15] as string | null,
+        ai_provider: row[16] as string | null,
+        ai_model: row[17] as string | null,
+        ai_duration_ms: row[18] != null ? Number(row[18]) : null,
+        obsidian_duration_ms: row[19] != null ? Number(row[19]) : null,
+        sent_tokens: row[20] != null ? Number(row[20]) : null,
+        received_tokens: row[21] != null ? Number(row[21]) : null,
+        original_tokens: row[22] != null ? Number(row[22]) : null,
+        cleansed_tokens: row[23] != null ? Number(row[23]) : null,
+        page_bytes: row[24] != null ? Number(row[24]) : null,
+        candidate_bytes: row[25] != null ? Number(row[25]) : null,
+        original_bytes: row[26] != null ? Number(row[26]) : null,
+        cleansed_bytes: row[27] != null ? Number(row[27]) : null,
+        ai_summary_original_bytes: row[28] != null ? Number(row[28]) : null,
+        ai_summary_cleansed_bytes: row[29] != null ? Number(row[29]) : null,
+        extracted_sentences_bytes: row[30] != null ? Number(row[30]) : null,
+        extracted_sentences_original_bytes: row[31] != null ? Number(row[31]) : null,
+        fallback_triggered: row[32] != null ? Number(row[32]) : null,
       });
     });
 
@@ -976,15 +986,11 @@ export async function update(id: number, changes: Partial<BrowsingLogRecord>): P
     const setClauses: string[] = [];
     const params: SqliteValue[] = [];
 
-    const updatableFields: (keyof BrowsingLogRecord)[] = [
-      'url', 'title', 'summary', 'tags', 'domain',
-      'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted'
-    ];
-
-    for (const field of updatableFields) {
-      if (field in changes) {
-        setClauses.push(`${field} = ?`);
-        params.push(changes[field] ?? null);
+    for (const field of UPDATABLE_FIELDS) {
+      const f = field as keyof BrowsingLogRecord;
+      if (f in changes) {
+        setClauses.push(`${f} = ?`);
+        params.push(changes[f] ?? null);
       }
     }
 
@@ -1572,8 +1578,35 @@ export async function restoreDb(data: Uint8Array): Promise<{ success: true } | {
 }
 
 /**
- * Insert an audit log entry (cloud AI provider send event).
- * Metadata only — never content or PII.
+ * Lightweight health check — verifies the SQLite database is reachable.
+ * Returns true if a SELECT 1 succeeds on any available backend.
+ */
+export async function sqliteHealthCheck(): Promise<boolean> {
+  if (opfsWorker) {
+    try {
+      const result = await tryOpfsProxy<{ ok: boolean }>('HEALTH_CHECK');
+      if (result !== null) return result.ok;
+    } catch {
+      return false;
+    }
+  }
+  if (usingFallbackStorage && fallbackStorage) {
+    return fallbackStorage.healthCheck();
+  }
+  if (!dbHandle || !sqlite3) {
+    return false;
+  }
+  try {
+    let ok = false;
+    await execWithCache('SELECT 1', [], () => { ok = true; });
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Insert an audit log entry for cloud AI provider send events.
  */
 export async function insertAuditLog(record: AuditLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
   try {

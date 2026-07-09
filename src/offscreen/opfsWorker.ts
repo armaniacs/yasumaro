@@ -32,6 +32,7 @@ interface BrowsingLogRecord {
   is_starred?: number;
   is_deleted?: number;
   obsidian_synced?: number;
+  gist_synced?: number;
   content?: string | null;
   masked_count?: number | null;
   cleansed_reason?: string | null;
@@ -113,7 +114,7 @@ const ALLOWED_ORDER_COLUMNS = [
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const FTS_QUERY_MAX_LENGTH = 200;
 
-import { SCHEMA_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
+import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL } from './schema.js';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -153,6 +154,19 @@ function sanitizeFtsTerm(query: string): string {
 async function initSqlite(): Promise<void> {
   if (engine !== null) return;
 
+  try {
+    await initSqliteInner();
+  } catch (err) {
+    // Reset so a future call can retry from scratch instead of being
+    // permanently stuck with a half-initialized engine (see PBI-11 postmortem:
+    // a failure here previously left `engine` non-null while migrations
+    // that depend on it, like the gist_synced column, never ran).
+    engine = null;
+    throw err;
+  }
+}
+
+async function initSqliteInner(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
   await engine.exec(SCHEMA_SQL);
@@ -164,6 +178,14 @@ async function initSqlite(): Promise<void> {
   } catch {
     // Column already exists
   }
+
+  // PBI-11: add gist_synced column for per-target sync flags
+  try {
+    await engine.exec('ALTER TABLE browsing_logs ADD COLUMN gist_synced INTEGER DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
+  await engine.exec(GIST_SYNCED_INDEX_SQL);
 
   // Try to enable FTS5 — execute each DDL statement individually because
   // @subframe7536/sqlite-wasm's run() does not support multi-statement SQL.
@@ -330,49 +352,32 @@ async function sqlQuery(
 async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> {
   const domain = record.domain || extractDomain(record.url);
 
-  await sqlExec(
-    `INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
-      content, masked_count, cleansed_reason,
-      ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
-      sent_tokens, received_tokens, original_tokens, cleansed_tokens,
-      page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
-      ai_summary_original_bytes, ai_summary_cleansed_bytes,
-      extracted_sentences_bytes, extracted_sentences_original_bytes,
-      fallback_triggered)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?,
-      ?, ?,
-      ?)`,
-    [
-      record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
-      record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
-      record.is_starred ?? 0, record.is_deleted ?? 0,
-      record.content ?? null,
-      record.masked_count ?? null,
-      record.cleansed_reason ?? null,
-      record.ai_provider ?? null,
-      record.ai_model ?? null,
-      record.ai_duration_ms ?? null,
-      record.obsidian_duration_ms ?? null,
-      record.sent_tokens ?? null,
-      record.received_tokens ?? null,
-      record.original_tokens ?? null,
-      record.cleansed_tokens ?? null,
-      record.page_bytes ?? null,
-      record.candidate_bytes ?? null,
-      record.original_bytes ?? null,
-      record.cleansed_bytes ?? null,
-      record.ai_summary_original_bytes ?? null,
-      record.ai_summary_cleansed_bytes ?? null,
-      record.extracted_sentences_bytes ?? null,
-      record.extracted_sentences_original_bytes ?? null,
-      record.fallback_triggered ?? 0,
-    ]
-  );
+  await sqlExec(INSERT_SQL, [
+    record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
+    record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
+    record.is_starred ?? 0, record.is_deleted ?? 0,
+    record.obsidian_synced ?? 0, record.gist_synced ?? 0,
+    record.content ?? null,
+    record.masked_count ?? null,
+    record.cleansed_reason ?? null,
+    record.ai_provider ?? null,
+    record.ai_model ?? null,
+    record.ai_duration_ms ?? null,
+    record.obsidian_duration_ms ?? null,
+    record.sent_tokens ?? null,
+    record.received_tokens ?? null,
+    record.original_tokens ?? null,
+    record.cleansed_tokens ?? null,
+    record.page_bytes ?? null,
+    record.candidate_bytes ?? null,
+    record.original_bytes ?? null,
+    record.cleansed_bytes ?? null,
+    record.ai_summary_original_bytes ?? null,
+    record.ai_summary_cleansed_bytes ?? null,
+    record.extracted_sentences_bytes ?? null,
+    record.extracted_sentences_original_bytes ?? null,
+    record.fallback_triggered ?? 0,
+  ]);
 
   let id = 0;
   await sqlQuery('SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
@@ -427,7 +432,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   // Select
   const rows: BrowsingLogRecord[] = [];
   await sqlQuery(
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced
+    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
      FROM browsing_logs ${where}
      ORDER BY ${orderBy} ${dir} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
@@ -445,6 +450,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
         is_starred: Number(row.is_starred),
         is_deleted: Number(row.is_deleted),
         obsidian_synced: Number(row.obsidian_synced),
+        gist_synced: Number(row.gist_synced),
       });
     }
   );
@@ -508,50 +514,33 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
     for (const record of records) {
       try {
         const domain = record.domain || extractDomain(record.url);
-        await sqlExec(
-          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
-            content, masked_count, cleansed_reason,
-            ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
-            sent_tokens, received_tokens, original_tokens, cleansed_tokens,
-            page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
-            ai_summary_original_bytes, ai_summary_cleansed_bytes,
-            extracted_sentences_bytes, extracted_sentences_original_bytes,
-            fallback_triggered)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?,
-            ?, ?,
-            ?)`,
-          [
-            record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
-            record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
-            record.is_starred ?? 0, record.is_deleted ?? 0,
-            record.content ?? null,
-            record.masked_count ?? null,
-            record.cleansed_reason ?? null,
-            record.ai_provider ?? null,
-            record.ai_model ?? null,
-            record.ai_duration_ms ?? null,
-            record.obsidian_duration_ms ?? null,
-            record.sent_tokens ?? null,
-            record.received_tokens ?? null,
-            record.original_tokens ?? null,
-            record.cleansed_tokens ?? null,
-            record.page_bytes ?? null,
-            record.candidate_bytes ?? null,
-            record.original_bytes ?? null,
-            record.cleansed_bytes ?? null,
-            record.ai_summary_original_bytes ?? null,
-            record.ai_summary_cleansed_bytes ?? null,
-            record.extracted_sentences_bytes ?? null,
-            record.extracted_sentences_original_bytes ?? null,
-            record.fallback_triggered ?? 0,
-          ]
-        );
-        await sqlQuery('SELECT changes() AS c', [], (row) => { inserted += Number(row.c); });
+        await sqlExec(INSERT_IGNORE_SQL, [
+          record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
+          record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
+          record.is_starred ?? 0, record.is_deleted ?? 0,
+          record.obsidian_synced ?? 0, record.gist_synced ?? 0,
+          record.content ?? null,
+          record.masked_count ?? null,
+          record.cleansed_reason ?? null,
+          record.ai_provider ?? null,
+          record.ai_model ?? null,
+          record.ai_duration_ms ?? null,
+          record.obsidian_duration_ms ?? null,
+          record.sent_tokens ?? null,
+          record.received_tokens ?? null,
+          record.original_tokens ?? null,
+          record.cleansed_tokens ?? null,
+          record.page_bytes ?? null,
+          record.candidate_bytes ?? null,
+          record.original_bytes ?? null,
+          record.cleansed_bytes ?? null,
+          record.ai_summary_original_bytes ?? null,
+          record.ai_summary_cleansed_bytes ?? null,
+          record.extracted_sentences_bytes ?? null,
+          record.extracted_sentences_original_bytes ?? null,
+          record.fallback_triggered ?? 0,
+        ]);
+        inserted++;
       } catch (err) {
         // Log first error for diagnosis, silently skip the rest
         if (inserted === 0 && records.indexOf(record) === 0) {
@@ -560,6 +549,8 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
       }
     }
     await sqlExec('COMMIT');
+    // M10: use local counter instead of per-row SELECT changes() (O(n) → O(1))
+    // NOTE: local counter may overcount with INSERT OR IGNORE but is sufficient for logging
   } catch (err) {
     await sqlExec('ROLLBACK');
     console.error('OPFS Worker: insertBatch transaction failed:', err);
@@ -676,7 +667,7 @@ async function handleClearAll(): Promise<void> {
 async function handleSerialize(): Promise<Uint8Array> {
   const rows: BrowsingLogRecord[] = [];
   await sqlQuery(
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced
+    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
      FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
     [],
     (row) => {
@@ -693,6 +684,7 @@ async function handleSerialize(): Promise<Uint8Array> {
         is_starred: Number(row.is_starred),
         is_deleted: Number(row.is_deleted),
         obsidian_synced: Number(row.obsidian_synced),
+        gist_synced: Number(row.gist_synced),
       });
     }
   );
@@ -950,6 +942,10 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
       }
       case 'INSERT_BATCH': {
         result = await handleInsertBatch(payload as BrowsingLogRecord[]);
+        break;
+      }
+      case 'HEALTH_CHECK': {
+        result = { ok: engine !== null };
         break;
       }
       default:
