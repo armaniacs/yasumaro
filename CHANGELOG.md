@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.14` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.15` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.15] - 2026-07-09
+
+### Chores / その他
+
+- **依存パッケージの一斉更新** — `npm update` を実行し、semver 範囲内の 10 パッケージを最新に更新（51 packages changed）。更新対象: `@subframe7536/sqlite-wasm` 1.2.0→1.3.1、`@sveltejs/vite-plugin-svelte` 7.1.2→7.2.0、`@tailwindcss/vite` 4.3.1→4.3.2、`@types/node` 25.9.4→25.9.5、`@vitest/coverage-v8` 4.1.9→4.1.10、`adm-zip` 0.5.17→0.5.18、`tailwindcss` 4.3.1→4.3.2、`typedoc` 0.28.19→0.28.20、`vite` 8.1.0→8.1.4、`vitest` 4.1.9→4.1.10
+- **バージョン更新漏れを修正** — `wxt.config.ts` の `version` フィールドが 6.5.14 のままだった問題を修正
 
 ## [6.5.14] - 2026-07-09
 
