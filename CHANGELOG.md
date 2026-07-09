@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.15` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.16` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,14 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [6.5.16] - 2026-07-09
+
+### Changed / 変更
+
+- **ダッシュボードのサイドバー項目の並び替え** — 「Data」セクション内を Tag Cluster → SQLite History → Domain Search → 監査ログの順に整理し、「記録条件」「診断」を Settings セクションに移動、「Export Logs」を Tools セクション先頭に移動
+- **ポップアップ右上ボタンの遷移先を変更** — `historyBtn` クリック時の遷移先を Data セクションの「履歴」（`panel-sqlite-history`）に変更（`src/popup/navigation.ts`, `src/dashboard/dashboard.ts`）
+- **Tools セクションの「History」ボタンを削除** — `panel-sqlite-history` に一本化するため、旧 `panel-history` へのサイドバー導線を削除（`#panel-history` パネル本体と関連 TS モジュールは実装として温存）
 
 ## [6.5.15] - 2026-07-09
 

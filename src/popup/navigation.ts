@@ -51,7 +51,7 @@ export function showMainScreen(): void {
 export function openHistory(): void {
   clearAutoCloseTimer();
 
-  const historyUrl = chrome.runtime.getURL('options.html?tab=sqlite-history');
+  const historyUrl = chrome.runtime.getURL('options.html?tab=history');
   chrome.tabs.create({ url: historyUrl });
 
   window.close();

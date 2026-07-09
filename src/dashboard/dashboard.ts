@@ -1241,11 +1241,10 @@ function initExportLogsPanel(): void {
 
   // Auto-navigate based on URL parameters
   const urlParams = new URLSearchParams(window.location.search);
-  // Note: sqlite-history URL param is deprecated and redirected to panel-history via navigate-to-tag event
-  // if (urlParams.get('tab') === 'sqlite-history') {
-  //   const historyBtn = document.querySelector('[data-panel="panel-history"]') as HTMLButtonElement;
-  //   if (historyBtn) historyBtn.click();
-  // }
+  if (urlParams.get('tab') === 'history') {
+    const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
+    if (historyBtn) historyBtn.click();
+  }
 
   const section = urlParams.get('section');
   if (section) {
