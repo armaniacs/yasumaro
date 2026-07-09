@@ -766,7 +766,7 @@ export async function handleManualLocalMarkdownExport(): Promise<void> {
     const since = new Date(startDate + 'T00:00:00').getTime();
     const until = new Date(endDate + 'T23:59:59').getTime();
 
-    statusEl.textContent = '查询中...';
+    statusEl.textContent = getMessage('searching') || 'Searching...';
 
     // Query SQLite for records in date range
     const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
@@ -842,7 +842,7 @@ export async function handleExportLocalMarkdown(): Promise<void> {
     const since = new Date(startDate + 'T00:00:00').getTime();
     const until = new Date(endDate + 'T23:59:59').getTime();
 
-    statusEl.textContent = '查询中...';
+    statusEl.textContent = getMessage('searching') || 'Searching...';
 
     const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
 
@@ -962,7 +962,7 @@ export async function handleHistoryExportLocalMarkdown(): Promise<void> {
     const settings = await getSettings();
     const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
 
-    statusEl.textContent = '查询中...';
+    statusEl.textContent = getMessage('searching') || 'Searching...';
 
     const result = await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
 

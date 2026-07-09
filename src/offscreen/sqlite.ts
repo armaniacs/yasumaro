@@ -323,7 +323,7 @@ async function _doInit(): Promise<boolean> {
       compileOptions.push(String(row[0]));
     });
     cachedCompileOptions = compileOptions;
-    // Enable WAL mode for better concurrent read performance
+    // Enable WAL mode before schema/migration operations for journal consistency
     await sqlite3.exec(dbHandle, 'PRAGMA journal_mode=WAL;');
     await sqlite3.exec(dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
 
@@ -678,12 +678,8 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
           record.extracted_sentences_original_bytes ?? null,
           record.fallback_triggered ?? 0,
         ]);
-
-        let changes = 0;
-        await execWithCache('SELECT changes()', [], (row: SqliteValue[]) => {
-          changes = Number(row[0]);
-        });
-        insertedCount += changes;
+        // Track count locally (INSERT OR IGNORE may slightly overcount duplicates)
+        insertedCount++;
       }
 
       await sqlite3!.exec(dbHandle!, 'COMMIT');

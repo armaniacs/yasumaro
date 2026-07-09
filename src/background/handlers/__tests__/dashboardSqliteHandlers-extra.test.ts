@@ -343,18 +343,25 @@ describe('handleDashboardSqlite — content_purge_now', () => {
 });
 
 describe('handleDashboardSqlite — backup_db', () => {
-  it('returns backup data as array', async () => {
+  it('rejects backup_db without confirmToken', async () => {
+    const mock = createMockSqliteClient();
+    const result = await handleDashboardSqlite({ subtype: 'backup_db' }, mock as any);
+    expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
+    expect(mock.backupDb).not.toHaveBeenCalled();
+  });
+
+  it('returns backup data as array with valid token', async () => {
     const mock = createMockSqliteClient();
     const buffer = new Uint8Array([10, 20, 30]);
     mock.backupDb.mockResolvedValue(buffer);
-    const result = await handleDashboardSqlite({ subtype: 'backup_db' }, mock as any);
+    const result = await handleDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, undefined, VALID_TOKEN);
     expect(result).toEqual({ success: true, data: [10, 20, 30] });
   });
 
   it('returns error when backupDb returns null', async () => {
     const mock = createMockSqliteClient();
     mock.backupDb.mockResolvedValue(null);
-    const result = await handleDashboardSqlite({ subtype: 'backup_db' }, mock as any);
+    const result = await handleDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, undefined, VALID_TOKEN);
     expect(result).toEqual({ success: false, error: 'Backup failed' });
   });
 });

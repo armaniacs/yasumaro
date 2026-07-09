@@ -933,6 +933,9 @@
   "errorContentEmpty": {
     "message": "ページのコンテンツが空です。"
   },
+  "searching": {
+    "message": "検索中..."
+  },
   "masterPasswordProtection": {
     "message": "マスターパスワード保護"
   },
