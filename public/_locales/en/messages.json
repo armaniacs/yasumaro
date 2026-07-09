@@ -933,6 +933,9 @@
   "errorContentEmpty": {
     "message": "The page content is empty."
   },
+  "searching": {
+    "message": "Searching..."
+  },
   "masterPasswordProtection": {
     "message": "Master Password Protection"
   },

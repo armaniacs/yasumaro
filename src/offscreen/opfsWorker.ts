@@ -503,59 +503,66 @@ async function handleFtsIndexSize(): Promise<{ count: number }> {
 async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count: number }> {
   if (!engine) await initSqlite();
   let inserted = 0;
-  for (const record of records) {
-    try {
-      const domain = record.domain || extractDomain(record.url);
-      await sqlExec(
-        `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
-          content, masked_count, cleansed_reason,
-          ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
-          sent_tokens, received_tokens, original_tokens, cleansed_tokens,
-          page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
-          ai_summary_original_bytes, ai_summary_cleansed_bytes,
-          extracted_sentences_bytes, extracted_sentences_original_bytes,
-          fallback_triggered)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?,
-          ?, ?,
-          ?)`,
-        [
-          record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
-          record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
-          record.is_starred ?? 0, record.is_deleted ?? 0,
-          record.content ?? null,
-          record.masked_count ?? null,
-          record.cleansed_reason ?? null,
-          record.ai_provider ?? null,
-          record.ai_model ?? null,
-          record.ai_duration_ms ?? null,
-          record.obsidian_duration_ms ?? null,
-          record.sent_tokens ?? null,
-          record.received_tokens ?? null,
-          record.original_tokens ?? null,
-          record.cleansed_tokens ?? null,
-          record.page_bytes ?? null,
-          record.candidate_bytes ?? null,
-          record.original_bytes ?? null,
-          record.cleansed_bytes ?? null,
-          record.ai_summary_original_bytes ?? null,
-          record.ai_summary_cleansed_bytes ?? null,
-          record.extracted_sentences_bytes ?? null,
-          record.extracted_sentences_original_bytes ?? null,
-          record.fallback_triggered ?? 0,
-        ]
-      );
-      await sqlQuery('SELECT changes() AS c', [], (row) => { inserted += Number(row.c); });
-    } catch (err) {
-      // Log first error for diagnosis, silently skip the rest
-      if (inserted === 0 && records.indexOf(record) === 0) {
-        console.error('OPFS Worker: first INSERT failed:', err, 'record:', record.url);
+  try {
+    await sqlExec('BEGIN');
+    for (const record of records) {
+      try {
+        const domain = record.domain || extractDomain(record.url);
+        await sqlExec(
+          `INSERT OR IGNORE INTO browsing_logs (url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted,
+            content, masked_count, cleansed_reason,
+            ai_provider, ai_model, ai_duration_ms, obsidian_duration_ms,
+            sent_tokens, received_tokens, original_tokens, cleansed_tokens,
+            page_bytes, candidate_bytes, original_bytes, cleansed_bytes,
+            ai_summary_original_bytes, ai_summary_cleansed_bytes,
+            extracted_sentences_bytes, extracted_sentences_original_bytes,
+            fallback_triggered)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?,
+            ?, ?,
+            ?)`,
+          [
+            record.url, record.title ?? null, record.summary ?? null, record.tags ?? null,
+            record.created_at, domain, record.visit_duration ?? null, record.scroll_ratio ?? null,
+            record.is_starred ?? 0, record.is_deleted ?? 0,
+            record.content ?? null,
+            record.masked_count ?? null,
+            record.cleansed_reason ?? null,
+            record.ai_provider ?? null,
+            record.ai_model ?? null,
+            record.ai_duration_ms ?? null,
+            record.obsidian_duration_ms ?? null,
+            record.sent_tokens ?? null,
+            record.received_tokens ?? null,
+            record.original_tokens ?? null,
+            record.cleansed_tokens ?? null,
+            record.page_bytes ?? null,
+            record.candidate_bytes ?? null,
+            record.original_bytes ?? null,
+            record.cleansed_bytes ?? null,
+            record.ai_summary_original_bytes ?? null,
+            record.ai_summary_cleansed_bytes ?? null,
+            record.extracted_sentences_bytes ?? null,
+            record.extracted_sentences_original_bytes ?? null,
+            record.fallback_triggered ?? 0,
+          ]
+        );
+        await sqlQuery('SELECT changes() AS c', [], (row) => { inserted += Number(row.c); });
+      } catch (err) {
+        // Log first error for diagnosis, silently skip the rest
+        if (inserted === 0 && records.indexOf(record) === 0) {
+          console.error('OPFS Worker: first INSERT failed:', err, 'record:', record.url);
+        }
       }
     }
+    await sqlExec('COMMIT');
+  } catch (err) {
+    await sqlExec('ROLLBACK');
+    console.error('OPFS Worker: insertBatch transaction failed:', err);
   }
   return { count: inserted };
 }
@@ -605,7 +612,8 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
        )`,
       [toDelete]
     );
-    totalPurged += toDelete;
+    // Use actual change count from SQLite
+    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
   }
 
   return { purged: totalPurged };
@@ -863,77 +871,68 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
   try {
     let result: unknown;
 
+    // Ensure engine is initialized for all operations except INIT
+    if (type !== 'INIT' && !engine) {
+      await initSqlite();
+    }
+
     switch (type) {
       case 'INIT': {
-        await initSqlite();
         result = { initialized: true };
         break;
       }
       case 'INSERT': {
-        if (!engine) await initSqlite();
         result = await handleInsert(payload as BrowsingLogRecord);
         break;
       }
       case 'QUERY': {
-        if (!engine) await initSqlite();
         result = await handleQuery(payload as QueryPayload);
         break;
       }
       case 'SEARCH': {
-        if (!engine) await initSqlite();
         result = await handleSearch(payload as SearchPayload);
         break;
       }
       case 'UPDATE': {
-        if (!engine) await initSqlite();
         await handleUpdate(payload as { id: number; changes: Record<string, SqliteValue> });
         result = { updated: true };
         break;
       }
       case 'DELETE': {
-        if (!engine) await initSqlite();
         await handleHardDelete(payload as number);
         result = { deleted: true };
         break;
       }
       case 'TOGGLE_STAR': {
-        if (!engine) await initSqlite();
         result = await handleToggleStar(payload as number);
         break;
       }
       case 'GET_COUNT': {
-        if (!engine) await initSqlite();
         result = { count: await handleGetCount() };
         break;
       }
       case 'STATUS': {
-        if (!engine) await initSqlite();
         result = await handleGetStatus();
         break;
       }
       case 'PURGE': {
-        if (!engine) await initSqlite();
         result = await handlePurgeOldRecords(payload as { retentionDays: number; maxRecords: number });
         break;
       }
       case 'CONTENT_PURGE': {
-        if (!engine) await initSqlite();
         result = await handleContentPurge(payload as { retentionDays?: number; maxRecords?: number; includeStarred?: boolean });
         break;
       }
       case 'CLEAR_ALL': {
-        if (!engine) await initSqlite();
         await handleClearAll();
         result = { cleared: true };
         break;
       }
       case 'SERIALIZE': {
-        if (!engine) await initSqlite();
         result = await handleSerialize();
         break;
       }
       case 'BACKUP': {
-        if (!engine) await initSqlite();
         result = await handleBackup();
         break;
       }
@@ -950,7 +949,6 @@ async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
         break;
       }
       case 'INSERT_BATCH': {
-        if (!engine) await initSqlite();
         result = await handleInsertBatch(payload as BrowsingLogRecord[]);
         break;
       }

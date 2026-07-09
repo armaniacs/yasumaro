@@ -29,11 +29,22 @@ export async function initAuditLogPanel(): Promise<void> {
   rows.forEach((entry) => {
     const row = document.createElement('div');
     row.className = 'audit-log-row';
-    row.innerHTML = `
-      <span class="audit-log-provider">${entry.provider}</span>
-      <span class="audit-log-url">${entry.url}</span>
-      <span class="audit-log-timestamp">${formatTimestamp(entry.created_at)}</span>
-    `;
+
+    const providerSpan = document.createElement('span');
+    providerSpan.className = 'audit-log-provider';
+    providerSpan.textContent = entry.provider;
+
+    const urlSpan = document.createElement('span');
+    urlSpan.className = 'audit-log-url';
+    urlSpan.textContent = entry.url;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'audit-log-timestamp';
+    timeSpan.textContent = formatTimestamp(entry.created_at);
+
+    row.appendChild(providerSpan);
+    row.appendChild(urlSpan);
+    row.appendChild(timeSpan);
     list.appendChild(row);
   });
 }

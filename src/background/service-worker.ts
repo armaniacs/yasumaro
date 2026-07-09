@@ -808,6 +808,11 @@ export function createMessageHandler(): (
                         sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
                         return;
                     }
+                    // Block external extensions (defense-in-depth)
+                    if (sender.id !== chrome.runtime.id) {
+                        sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from external extensions' });
+                        return;
+                    }
                     const result = await handleDashboardSqlite(
                         message.payload || {},
                         sqliteClient,

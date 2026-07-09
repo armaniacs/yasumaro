@@ -9,7 +9,7 @@ import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 export const TOKEN_REQUIRED_SUBTYPES = new Set([
-    'toggle_star', 'update', 'delete', 'migrate', 'backfill_metadata', 'cleanup_legacy', 'clear_all', 'import', 'restore_db',
+    'toggle_star', 'update', 'delete', 'migrate', 'backfill_metadata', 'cleanup_legacy', 'clear_all', 'import', 'restore_db', 'backup_db',
 ]);
 
 export const MODAL_REQUIRED_SUBTYPES = new Set([
