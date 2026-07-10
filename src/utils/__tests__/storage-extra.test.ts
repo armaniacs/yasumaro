@@ -73,6 +73,7 @@ import {
   getOrCreateHmacSecret,
   ALLOWED_AI_PROVIDER_DOMAINS,
   getSettings,
+  saveSettings,
 } from '../storage.js';
 
 import { StorageKeys } from '../storage/types.js';
@@ -267,6 +268,109 @@ describe('URL set functions', () => {
       vi.spyOn(chrome.storage.local, 'get').mockRejectedValueOnce(new Error('Storage error'));
       const freed = await purgeLegacyStorage();
       expect(freed).toBe(0);
+    });
+
+    describe('PBI 2026-07-09-10: saveSettings quota-exceeded health check integration', () => {
+      it('skips destructive legacy cleanup and fails the save when SQLite is unhealthy', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+          savedUrls: ['a', 'b'],
+        });
+        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(6 * 1024 * 1024);
+
+        await expect(
+          saveSettings({} as any, false, async () => false)
+        ).rejects.toThrow(/SQLite unhealthy|Storage quota exceeded/);
+
+        const stored = await chrome.storage.local.get(['savedUrlsWithTimestamps', 'savedUrls']);
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBe('x'.repeat(100));
+        expect(stored.savedUrls).toEqual(['a', 'b']);
+      });
+
+      it('proceeds with cleanup as before when SQLite reports healthy', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+        });
+        vi.spyOn(chrome.storage.local, 'getBytesInUse')
+          .mockResolvedValueOnce(6 * 1024 * 1024) // before cleanup: over quota
+          .mockResolvedValue(1024); // after cleanup: back under quota
+
+        await saveSettings({} as any, false, async () => true);
+
+        const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBeUndefined();
+      });
+
+      it('defaults to a SqliteClient-backed health check when none is passed, and fails safe when it cannot reach SQLite', async () => {
+        // In this unit-test environment there's no real offscreen document
+        // for SqliteClient to talk to, so the default health check reports
+        // unhealthy — the correct fail-safe behavior for an environment
+        // where SQLite genuinely can't be reached.
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+        });
+        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(6 * 1024 * 1024);
+
+        await expect(saveSettings({} as any)).rejects.toThrow();
+
+        const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBe('x'.repeat(100));
+      });
+    });
+
+    describe('PBI 2026-07-09-10: SQLite health check gate', () => {
+      it('skips cleanup and returns 0 when the health check reports unhealthy', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+          savedUrls: ['a', 'b'],
+        });
+
+        const freed = await purgeLegacyStorage(async () => false);
+
+        expect(freed).toBe(0);
+        const stored = await chrome.storage.local.get(['savedUrlsWithTimestamps', 'savedUrls']);
+        // Untouched: still has the large `content` field and the legacy `savedUrls` key.
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBe('x'.repeat(100));
+        expect(stored.savedUrls).toEqual(['a', 'b']);
+      });
+
+      it('skips cleanup when the health check itself throws', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+        });
+
+        const freed = await purgeLegacyStorage(async () => { throw new Error('offscreen unreachable'); });
+
+        expect(freed).toBe(0);
+        const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBe('x'.repeat(100));
+      });
+
+      it('proceeds with cleanup as before when the health check reports healthy', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+          savedUrls: ['a', 'b'],
+        });
+
+        const freed = await purgeLegacyStorage(async () => true);
+
+        expect(typeof freed).toBe('number');
+        const stored = await chrome.storage.local.get(['savedUrlsWithTimestamps', 'savedUrls']);
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBeUndefined();
+        expect(stored.savedUrls).toBeUndefined();
+      });
+
+      it('proceeds with cleanup when no health check is provided (backward compatible)', async () => {
+        await chrome.storage.local.set({
+          savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
+        });
+
+        const freed = await purgeLegacyStorage();
+
+        expect(typeof freed).toBe('number');
+        const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBeUndefined();
+      });
     });
   });
 

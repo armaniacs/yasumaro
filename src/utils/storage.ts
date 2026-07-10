@@ -9,7 +9,7 @@
  * - storage.ts (このファイル) - ロジック + 再エクスポート
  */
 
-import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { logInfo, logDebug, logError, logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { migrateUblockSettings } from './migration.js';
 import { calculatePasswordStrength } from './masterPassword.js';
@@ -732,7 +732,11 @@ export function clearSettingsCache(): void {
  * @param {Settings} settings - Settings to save
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
-export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: boolean = false): Promise<void> {
+export async function saveSettings(
+    settings: Settings,
+    updateAllowedUrlsFlag: boolean = false,
+    sqliteHealthCheck?: () => Promise<boolean>
+): Promise<void> {
     // 【パフォーマンス改善】設定保存時にキャッシュを無効化
     cachedSettings = null;
 
@@ -782,8 +786,13 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
             currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
         }, 'storage.ts');
 
-        // Try to free space by cleaning up legacy savedUrlsWithTimestamps
-        const freed = await purgeLegacyStorage();
+        // Try to free space by cleaning up legacy savedUrlsWithTimestamps.
+        // PBI 2026-07-09-10: when the caller doesn't supply its own health
+        // check, fall back to a default one (dynamic import to avoid a
+        // storage.ts -> sqliteClient.ts static dependency) so this safety
+        // gate is on by default rather than opt-in per call site.
+        const effectiveHealthCheck = sqliteHealthCheck ?? (await getDefaultSqliteHealthCheck());
+        const freed = await purgeLegacyStorage(effectiveHealthCheck);
         const afterCleanup = await getStorageUsage();
 
         if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {
@@ -1110,13 +1119,55 @@ const LEGACY_STRIP_FIELDS = [
 ] as const;
 
 /**
- * Purge legacy chrome.storage.local data to free quota space.
- * Removes large metadata fields (content, aiSummary, etc.) from savedUrlsWithTimestamps
- * and trims the entry count. All important data is in SQLite.
- *
- * @returns {Promise<number>} Estimated bytes freed
+ * PBI 2026-07-09-10: Lazily construct a SqliteClient-backed health check.
+ * Dynamic import keeps storage.ts free of a static dependency on
+ * sqliteClient.ts (used from Service Worker/popup/dashboard contexts alike;
+ * SqliteClient itself is message-passing based so it works from any of them).
+ * Falls back to reporting unhealthy if the client can't even be constructed.
  */
-export async function purgeLegacyStorage(): Promise<number> {
+async function getDefaultSqliteHealthCheck(): Promise<() => Promise<boolean>> {
+    try {
+        const { SqliteClient } = await import('../background/sqliteClient.js');
+        const client = new SqliteClient();
+        return () => client.isSqliteHealthy();
+    } catch {
+        return async () => false;
+    }
+}
+
+/**
+ * Clean up legacy chrome.storage.local data (savedUrlsWithTimestamps large
+ * fields, the savedUrls key) to free quota space.
+ *
+ * @param sqliteHealthCheck - PBI 2026-07-09-10: optional health check the
+ *   caller can inject (e.g. bound to `sqliteClient.isSqliteHealthy()`).
+ *   `storage.ts` itself never imports the SQLite client — it's used from
+ *   multiple contexts (Service Worker, popup, dashboard) and only the
+ *   Service Worker context has direct access to it. When provided and it
+ *   reports unhealthy (or throws), this destructive cleanup is skipped
+ *   entirely: chrome.storage.local may be the only surviving copy of the
+ *   data if SQLite is broken, so it must not be deleted in that case.
+ *   When omitted, cleanup proceeds unconditionally (existing behavior).
+ */
+export async function purgeLegacyStorage(
+    sqliteHealthCheck?: () => Promise<boolean>
+): Promise<number> {
+    if (sqliteHealthCheck) {
+        let healthy: boolean;
+        try {
+            healthy = await sqliteHealthCheck();
+        } catch (err) {
+            await logWarn('SQLite health check failed — skipping legacy purge to preserve data', {
+                error: errorMessage(err),
+            }, undefined, 'storage.ts');
+            return 0;
+        }
+        if (!healthy) {
+            await logWarn('SQLite unhealthy — skipping legacy purge to preserve data', {}, undefined, 'storage.ts');
+            return 0;
+        }
+    }
+
     const before = await getStorageUsage();
     let freed = 0;
 
