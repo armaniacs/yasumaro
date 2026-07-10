@@ -10,6 +10,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 - 更新 2026-07-06（#03・#05・#01実装完了を反映、Phase 1完了、関連設計ドキュメント一覧を拡充）
 - 更新 2026-07-06（git logに基づき #06, #10, #11実装状況を確認・更新予定）
+- 更新 2026-07-11（完了済みPBI/plan/specファイルをarchiveへ再整理。`pbi/archive/`, `docs/superpowers/archive/`, `dev-docs/specs/archive-old/` を新設）
 
 全ての完了済み計画ファイルは `dev-docs/plans/archive-old/` に移動しました。
 
@@ -98,7 +99,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 ## 関連設計ドキュメント
 
-- [2026-07-05-01-feat-provider-priority-fallback-design.md](2026-07-05-01-feat-provider-priority-fallback-design.md) — #05のAIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画作成済み
-- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
-- [2026-07-05-02-feat-encrypted-backup-design.md](2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
-- [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
+- [2026-07-05-01-feat-provider-priority-fallback-design.md](archive-old/2026-07-05-01-feat-provider-priority-fallback-design.md) — #05のAIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画作成済み
+- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](archive-old/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
+- [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
+- [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
