@@ -652,6 +652,22 @@ button#saveDomainSettings:focus {
   transform: scale(0.98);
 }
 
+/* インラインテキストリンク風ボタン（他パネルへの誘導用） */
+.link-btn {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-link, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.link-btn:hover {
+  color: var(--color-link-hover, #1d4ed8);
+}
+
 .secondary-btn:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;

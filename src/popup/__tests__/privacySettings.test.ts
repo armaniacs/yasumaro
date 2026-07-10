@@ -25,6 +25,8 @@ function setupFullDOM() {
     <input type="radio" name="autoSavePrivacyBehavior" value="confirm" />
     <button id="savePrivacySettings">Save</button>
     <div id="privacyStatus"></div>
+    <div id="piiSampleOriginal"></div>
+    <div id="piiSampleMasked"></div>
   `;
 }
 
@@ -52,6 +54,11 @@ vi.mock('../settingsUiHelper.js', () => ({
 
 vi.mock('../i18n.js', () => ({
   getMessage: (...args: any[]) => mockGetMessage(...args),
+}));
+
+const mockSanitizeRegex = vi.fn();
+vi.mock('../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: (...args: any[]) => mockSanitizeRegex(...args),
 }));
 
 describe('privacySettings', () => {
@@ -195,6 +202,40 @@ describe('privacySettings', () => {
       init();
 
       expect(mockGetSettings).toHaveBeenCalled();
+    });
+  });
+
+  describe('PII sample display (M4)', () => {
+    it('renders masked-before and masked-after sample text on init', async () => {
+      setupFullDOM();
+      mockGetSettings.mockResolvedValue({});
+      mockSanitizeRegex.mockResolvedValue({
+        text: 'Contact: [EMAIL_REDACTED]',
+        maskedItems: [{ type: 'email', original: 'user@example.com' }],
+      });
+
+      const { init } = await import('../privacySettings.js');
+      init();
+
+      await vi.waitFor(() => {
+        expect(mockSanitizeRegex).toHaveBeenCalled();
+      });
+
+      expect(document.getElementById('piiSampleMasked')?.textContent).toContain('[EMAIL_REDACTED]');
+      expect(document.getElementById('piiSampleOriginal')?.textContent?.length).toBeGreaterThan(0);
+    });
+
+    it('does not throw when sample elements are missing from the DOM', async () => {
+      document.body.innerHTML = `
+        <input type="radio" name="privacyMode" value="full_pipeline" checked />
+        <button id="savePrivacySettings">Save</button>
+        <div id="privacyStatus"></div>
+      `;
+      mockGetSettings.mockResolvedValue({});
+      mockSanitizeRegex.mockResolvedValue({ text: '', maskedItems: [] });
+
+      const { init } = await import('../privacySettings.js');
+      expect(() => init()).not.toThrow();
     });
   });
 });

@@ -2575,6 +2575,24 @@
   "dataManagementDesc": {
     "message": "拡張機能に保存されているすべてのデータを削除する権利があります（GDPR 第17条 / CCPA）。"
   },
+  "dataPortabilityDesc": {
+    "message": "また、データを可搬な形式で受け取る権利があります（GDPR 第20条）。閲覧履歴のエクスポートは下記のセクションから行えます。"
+  },
+  "dataPortabilityLink": {
+    "message": "エクスポートログ"
+  },
+  "piiSampleTitle": {
+    "message": "PIIマスキングサンプル"
+  },
+  "piiSampleDesc": {
+    "message": "クラウドAIへの送信前にマスクされる内容を示す固定の例です。実際のデータは送信されません。"
+  },
+  "piiSampleBeforeLabel": {
+    "message": "変換前:"
+  },
+  "piiSampleAfterLabel": {
+    "message": "変換後:"
+  },
   "diagProtocol": {
     "message": "プロトコル"
   },

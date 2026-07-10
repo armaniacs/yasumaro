@@ -103,6 +103,10 @@ export type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
 
+export type ConsentStateChangedMessage = {
+    type: 'CONSENT_STATE_CHANGED';
+};
+
 // ============================================================================
 // Discriminated union of all extension messages
 // ============================================================================
@@ -133,6 +137,7 @@ export type ExtensionMessage =
     | ContentCleansingExecutedMessage
     | PingMessage
     | RefreshLocalMarkdownSchedulerMessage
+    | ConsentStateChangedMessage
     | DashboardSqliteMessage;
 
 // ============================================================================
@@ -156,6 +161,7 @@ export const VALID_MESSAGE_TYPES = [
     'CONTENT_CLEANSING_EXECUTED',
     'PING', // Service Worker health check
     'REFRESH_LOCAL_MARKDOWN_SCHEDULER', // Re-run initExportScheduler() after a timing change is saved
+    'CONSENT_STATE_CHANGED', // Re-run updateConsentBadge() after accept/decline
     'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
 ] as const;
 
@@ -171,4 +177,5 @@ export const NO_PAYLOAD_TYPES = [
     'SESSION_LOCK_REQUEST',
     'PING',
     'REFRESH_LOCAL_MARKDOWN_SCHEDULER',
+    'CONSENT_STATE_CHANGED',
 ] as const;

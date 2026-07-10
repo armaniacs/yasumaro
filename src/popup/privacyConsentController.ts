@@ -159,6 +159,17 @@ function showPrivacyConsentModal(): void {
 }
 
 /**
+ * Service Workerに同意状態変更を通知し、ツールバーバッジを即座に更新させる（M3）
+ */
+function notifyConsentStateChanged(): void {
+    try {
+        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED' });
+    } catch (error) {
+        logError('[PrivacyConsent] Failed to notify consent state change', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+}
+
+/**
  * 同意モーダルを非表示にする
  */
 function hidePrivacyConsentModal(): void {
@@ -195,6 +206,7 @@ async function handleAcceptConsent(): Promise<void> {
 
         await savePrivacyConsent();
         await recordPolicyVersionAcknowledgment();
+        notifyConsentStateChanged();
         hidePrivacyConsentModal();
 
         if (onConsentCallback) {
@@ -222,6 +234,7 @@ async function handleAcceptConsent(): Promise<void> {
 async function handleDeclineConsent(): Promise<void> {
     const newCount = await incrementConsentDeniedCount();
     await recordPolicyVersionAcknowledgment();
+    notifyConsentStateChanged();
 
     hidePrivacyConsentModal();
 

@@ -680,6 +680,18 @@ export async function handleRefreshLocalMarkdownScheduler(
     sendResponse({ success: true });
 }
 
+/**
+ * Re-run updateConsentBadge() so the toolbar icon reflects the latest
+ * accept/decline decision immediately (M3).
+ */
+export async function handleConsentStateChanged(
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const { updateConsentBadge } = await import('./consentBadge.js');
+    await updateConsentBadge();
+    sendResponse({ success: true });
+}
+
 
 
 // Message Handler Factory (extracted for testability)
@@ -818,6 +830,13 @@ export function createMessageHandler(): (
                 // LOCAL_MARKDOWN_EXPORT_TIMING and re-register alarms immediately
                 if (message.type === 'REFRESH_LOCAL_MARKDOWN_SCHEDULER') {
                     await handleRefreshLocalMarkdownScheduler(sendResponse);
+                    return;
+                }
+
+                // CONSENT_STATE_CHANGED - popup asks the SW to re-read consent
+                // state and refresh the toolbar badge immediately
+                if (message.type === 'CONSENT_STATE_CHANGED') {
+                    await handleConsentStateChanged(sendResponse);
                     return;
                 }
 

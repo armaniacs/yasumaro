@@ -2578,6 +2578,24 @@
   "dataManagementDesc": {
     "message": "You have the right to delete all data stored by this extension (GDPR Art. 17 / CCPA)."
   },
+  "dataPortabilityDesc": {
+    "message": "You also have the right to receive your data in a portable format (GDPR Art. 20). Use the section below to export your browsing history."
+  },
+  "dataPortabilityLink": {
+    "message": "Export Logs"
+  },
+  "piiSampleTitle": {
+    "message": "PII Masking Sample"
+  },
+  "piiSampleDesc": {
+    "message": "This is a fixed example showing what gets redacted before cloud AI submission. No real data is sent."
+  },
+  "piiSampleBeforeLabel": {
+    "message": "Before:"
+  },
+  "piiSampleAfterLabel": {
+    "message": "After:"
+  },
   "diagProtocol": {
     "message": "Protocol"
   },
