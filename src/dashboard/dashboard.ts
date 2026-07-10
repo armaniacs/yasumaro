@@ -13,7 +13,7 @@ import { initCustomPromptManager } from '../popup/customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../popup/settingsUiHelper.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
-import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners } from '../popup/aiSummaryCleansingSettings.js';
+import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings } from '../popup/aiSummaryCleansingSettingsV2.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../popup/privacyConsent.js';
 import { setupAIProviderChangeListener, updateAIProviderVisibility, updateAIProviderVisibilityMulti, AIProviderElements } from '../popup/settings/aiProvider.js';
