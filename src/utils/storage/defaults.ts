@@ -150,6 +150,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.SHOW_SQLITE_CONTENT]: false,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: false,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: false,
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]: 'idle',
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro',
     [StorageKeys.REVIEW_SUMMARY_ENABLED]: false,
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: '',

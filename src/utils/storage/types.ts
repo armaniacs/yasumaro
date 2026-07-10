@@ -208,6 +208,7 @@ export const StorageKeys = {
     // Local Markdown export settings
     LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
     LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
+    LOCAL_MARKDOWN_EXPORT_TIMING: 'local_markdown_export_timing',
     LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
     // Weekly/Monthly Review Summary settings
     REVIEW_SUMMARY_ENABLED: 'review_summary_enabled', // 週次/月次サマリ機能の有効/無効
@@ -372,6 +373,7 @@ export interface StorageKeyValues {
     [StorageKeys.SHOW_SQLITE_CONTENT]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: boolean;
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: boolean;
+    [StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]: 'manual' | 'immediate' | 'idle' | 'daily';
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: string;
     [StorageKeys.REVIEW_SUMMARY_ENABLED]: boolean;
     [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: string;
