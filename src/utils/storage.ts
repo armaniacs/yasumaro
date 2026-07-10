@@ -9,7 +9,7 @@
  * - storage.ts (このファイル) - ロジック + 再エクスポート
  */
 
-import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { logInfo, logDebug, logError, logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { migrateUblockSettings } from './migration.js';
 import { calculatePasswordStrength } from './masterPassword.js';
@@ -61,6 +61,27 @@ export async function getStorageUsage(): Promise<number> {
  */
 function estimateDataSize(data: unknown): number {
   return new Blob([JSON.stringify(data || {})]).size;
+}
+
+/**
+ * Attempt to check SQLite health by pinging the offscreen document.
+ * Falls back to unhealthy (conservative) when the offscreen is unreachable.
+ */
+async function attemptSqliteHealthCheck(): Promise<boolean> {
+  try {
+    return await new Promise<boolean>((resolve) => {
+      const timeout = setTimeout(() => resolve(false), 3000);
+      chrome.runtime.sendMessage(
+        { type: 'SQLITE_HEALTH_CHECK', target: 'offscreen' },
+        (response: { success?: boolean } | undefined) => {
+          clearTimeout(timeout);
+          resolve(response?.success === true);
+        },
+      );
+    });
+  } catch {
+    return false;
+  }
 }
 
 // StorageKeys, StorageKey, StorageKeyValues, StrictSettings, Settings は storage/types.ts に移動済み
@@ -617,6 +638,12 @@ export async function getSettings(): Promise<Settings> {
             merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
         }
 
+        // LOCAL_MARKDOWN_EXPORT_TIMING が未設定の場合、既存の AUTO_ENABLED から導出（既存ユーザー向けマイグレーション）
+        if (!(StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING in filteredSettings)) {
+            const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
+            merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
+        }
+
         // 暗号化されたAPIキーを復号
         try {
             const key = await getOrCreateEncryptionKey();
@@ -682,6 +709,12 @@ export async function getSettings(): Promise<Settings> {
         const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
         merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
     }
+
+    // LOCAL_MARKDOWN_EXPORT_TIMING が未設定の場合、既存の AUTO_ENABLED から導出（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING in settings)) {
+        const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
+        merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
+    }
     try {
         const key = await getOrCreateEncryptionKey();
         for (const field of API_KEY_FIELDS) {
@@ -720,7 +753,7 @@ export function clearSettingsCache(): void {
  * @param {Settings} settings - Settings to save
  * @param {boolean} updateAllowedUrlsFlag - Whether to update the allowed URL list (default: false)
  */
-export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: boolean = false): Promise<void> {
+export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: boolean = false, sqliteHealthCheck?: () => Promise<boolean>): Promise<void> {
     // 【パフォーマンス改善】設定保存時にキャッシュを無効化
     cachedSettings = null;
 
@@ -769,6 +802,17 @@ export async function saveSettings(settings: Settings, updateAllowedUrlsFlag: bo
         await logInfo('Storage quota near limit, attempting legacy cleanup', {
             currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
         }, 'storage.ts');
+
+        // Check SQLite health before purging legacy data (PBI-10)
+        const healthy = sqliteHealthCheck ? await sqliteHealthCheck() : await attemptSqliteHealthCheck();
+        if (!healthy) {
+            await logWarn('SQLite unhealthy — skipping legacy purge to preserve data', {
+                currentUsage, newDataSize,
+            }, undefined, 'storage.ts');
+            const errorMsg = `Storage quota exceeded (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES}) — SQLite unhealthy, legacy data preserved`;
+            await logError(errorMsg, { freed: 0 }, ErrorCode.STORAGE_QUOTA_EXCEEDED, 'storage.ts');
+            throw new Error(errorMsg);
+        }
 
         // Try to free space by cleaning up legacy savedUrlsWithTimestamps
         const freed = await purgeLegacyStorage();

@@ -72,6 +72,7 @@ import {
   clearEncryptionKeyCache,
   getOrCreateHmacSecret,
   ALLOWED_AI_PROVIDER_DOMAINS,
+  getSettings,
 } from '../storage.js';
 
 import { StorageKeys } from '../storage/types.js';
@@ -282,6 +283,52 @@ describe('URL set functions', () => {
       const saved = await chrome.storage.local.get(['savedUrls', 'savedUrlsWithTimestamps']);
       expect(saved.savedUrls).not.toContain('https://a.com');
       expect(saved.savedUrlsWithTimestamps).toHaveLength(1);
+    });
+  });
+
+  describe('LOCAL_MARKDOWN_EXPORT_TIMING migration', () => {
+    beforeEach(() => {
+      clearSettingsCache();
+    });
+
+    it('migrates AUTO_ENABLED=true to TIMING="idle" when TIMING is unset', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: true,
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('idle');
+    });
+
+    it('migrates AUTO_ENABLED=false to TIMING="manual" when TIMING is unset', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: false,
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('manual');
+    });
+
+    it('does not override an already-set TIMING value', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: true,
+          [StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]: 'daily',
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('daily');
     });
   });
 });
