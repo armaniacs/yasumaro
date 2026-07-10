@@ -72,6 +72,7 @@ export class FallbackStorage {
         is_starred: record.is_starred ?? 0,
         is_deleted: record.is_deleted ?? 0,
         obsidian_synced: record.obsidian_synced ?? 0,
+        gist_synced: record.gist_synced ?? 0,
         // PBI-1/PBI-3: diagnostic metadata + content
         content: record.content ?? null,
         masked_count: record.masked_count ?? null,
@@ -137,6 +138,7 @@ export class FallbackStorage {
           is_starred: record.is_starred ?? 0,
           is_deleted: record.is_deleted ?? 0,
           obsidian_synced: record.obsidian_synced ?? 0,
+          gist_synced: record.gist_synced ?? 0,
           // PBI-1/PBI-3: diagnostic metadata + content
           content: record.content ?? null,
           masked_count: record.masked_count ?? null,
