@@ -44,6 +44,75 @@ describe('FallbackStorage', () => {
     });
   });
 
+  describe('concurrency (PBI 2026-07-09-13: Mutex-protected insert/insertBatch)', () => {
+    it('preserves all records when two tabs insert concurrently with distinct URLs', async () => {
+      const [r1, r2] = await Promise.all([
+        storage.insert({ url: 'https://tab-a.com', created_at: 1 }),
+        storage.insert({ url: 'https://tab-b.com', created_at: 2 }),
+      ]);
+
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true);
+      if (r1.success && r2.success) {
+        // Each concurrent insert must get a unique id — a lost update would
+        // manifest as both resolving to the same id or one being silently dropped.
+        expect(r1.id).not.toBe(r2.id);
+      }
+
+      const all = await storage.getAllRecords();
+      expect(all).toHaveLength(2);
+      const urls = all.map(r => r.url).sort();
+      expect(urls).toEqual(['https://tab-a.com', 'https://tab-b.com']);
+    });
+
+    it('preserves all records when insert and insertBatch run concurrently', async () => {
+      await Promise.all([
+        storage.insert({ url: 'https://single.com', created_at: 1 }),
+        storage.insertBatch([
+          { url: 'https://batch-a.com', created_at: 2 },
+          { url: 'https://batch-b.com', created_at: 3 },
+          { url: 'https://batch-c.com', created_at: 4 },
+        ]),
+      ]);
+
+      const all = await storage.getAllRecords();
+      expect(all).toHaveLength(4);
+      const urls = all.map(r => r.url).sort();
+      expect(urls).toEqual([
+        'https://batch-a.com',
+        'https://batch-b.com',
+        'https://batch-c.com',
+        'https://single.com',
+      ]);
+    });
+
+    it('does not lose existing records when many inserts race against each other', async () => {
+      await storage.insert({ url: 'https://existing.com', created_at: 0 });
+
+      const concurrentInserts = Array.from({ length: 10 }, (_, i) =>
+        storage.insert({ url: `https://concurrent-${i}.com`, created_at: i + 1 })
+      );
+      await Promise.all(concurrentInserts);
+
+      const all = await storage.getAllRecords();
+      // 1 pre-existing + 10 concurrent = 11 total, none lost to a race.
+      expect(all).toHaveLength(11);
+      const ids = all.map(r => r.id);
+      expect(new Set(ids).size).toBe(ids.length); // all ids unique, no overwrite
+    });
+
+    it('releases the lock after a failure so subsequent inserts still succeed', async () => {
+      vi.spyOn(chrome.storage.local, 'set').mockRejectedValueOnce(new Error('Quota exceeded'));
+
+      const failed = await storage.insert({ url: 'https://fails.com', created_at: 1 });
+      expect(failed.success).toBe(false);
+
+      // If the mutex were not released in a `finally`, this would hang or fail.
+      const succeeded = await storage.insert({ url: 'https://succeeds.com', created_at: 2 });
+      expect(succeeded.success).toBe(true);
+    });
+  });
+
   describe('insertBatch', () => {
     it('inserts multiple records and returns count', async () => {
       const records = [
