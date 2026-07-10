@@ -11,6 +11,7 @@ import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/pe
 import { RateLimiter } from '../rateLimiter.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { updateConsentBadge } from '../consentBadge.js';
 
 export interface LifecycleHandlerContext {
     /** Mutable flag — the handler may set it to true */
@@ -47,6 +48,8 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
                 );
             }
         }
+
+        await updateConsentBadge();
     }
 
     /**
@@ -54,6 +57,8 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
      */
     async function handleStartup(): Promise<void> {
         logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
+
+        await updateConsentBadge();
 
         // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
         if (ctx.isCacheInitialized.value) {

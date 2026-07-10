@@ -1344,6 +1344,25 @@
         <hr class="settings-hr">
 
         <div class="form-group">
+          <label data-i18n="piiSampleTitle">PII Masking Sample</label>
+          <p class="help-text" data-i18n="piiSampleDesc">
+            This is a fixed example showing what gets redacted before cloud AI submission. No real data is sent.
+          </p>
+          <div class="ml-24">
+            <div class="mb-4">
+              <strong data-i18n="piiSampleBeforeLabel">Before:</strong>
+              <span id="piiSampleOriginal"></span>
+            </div>
+            <div>
+              <strong data-i18n="piiSampleAfterLabel">After:</strong>
+              <span id="piiSampleMasked"></span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="form-group">
           <label data-i18n="privacyConsentStatus">Privacy Consent Status</label>
           <div id="consentStatusDisplay" class="help-text"></div>
           <button type="button" id="btnWithdrawConsent" class="btn-danger hidden"
@@ -1361,6 +1380,11 @@
           <button type="button" id="btnDeleteAllData" class="btn-danger"
             data-i18n="deleteAllData">Delete All Data</button>
           <div id="deleteAllDataStatus" class="status-message" aria-live="polite"></div>
+          <p class="help-text mt-10" data-i18n="dataPortabilityDesc">
+            You also have the right to receive your data in a portable format (GDPR Art. 20). Use the section below to export your browsing history.
+          </p>
+          <button type="button" id="btnGoToExportLogs" class="link-btn"
+            data-i18n="dataPortabilityLink">Export Logs</button>
         </div>
 
         <hr class="settings-hr">

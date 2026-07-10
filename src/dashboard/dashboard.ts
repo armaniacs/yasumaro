@@ -1387,6 +1387,11 @@ function initExportLogsPanel(): void {
     }
   });
 
+  // Data portability shortcut to the Export Logs panel (GDPR Art.20)
+  document.getElementById('btnGoToExportLogs')?.addEventListener('click', () => {
+    document.querySelector<HTMLButtonElement>('.sidebar-nav-btn[data-panel="panel-export-logs"]')?.click();
+  });
+
   const aiProviderEl = getAiProviderElements();
   if (aiProviderEl.select) {
     setupAIProviderChangeListener(aiProviderEl);

@@ -8,6 +8,10 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
+import { sanitizeRegex } from '../utils/piiSanitizer.js';
+
+/** Fixed dummy text used to preview PII masking behavior (M4). Never sent anywhere. */
+const PII_SAMPLE_TEXT = 'Contact John Smith at john.smith@example.com or 090-1234-5678.';
 
 // Elements
 const savePrivacySettingsBtn = document.getElementById('savePrivacySettings');
@@ -51,6 +55,9 @@ export function init(): void {
     // Load settings
     loadPrivacySettings();
 
+    // Render PII masking before/after sample (M4)
+    renderPiiSample();
+
     // React to privacy mode changes for cloud provider guard
     const modeRadios = document.querySelectorAll('input[name="privacyMode"]');
     modeRadios.forEach(radio => {
@@ -85,6 +92,25 @@ export async function loadPrivacySettings(): Promise<void> {
     const behaviorRadio = document.querySelector(`input[name="autoSavePrivacyBehavior"][value="${behavior}"]`) as HTMLInputElement | null;
     if (behaviorRadio) {
         behaviorRadio.checked = true;
+    }
+}
+
+/**
+ * Show a fixed dummy sample before/after PII masking, so users can see
+ * what kind of data gets redacted before cloud AI submission (M4).
+ */
+export async function renderPiiSample(): Promise<void> {
+    const originalEl = document.getElementById('piiSampleOriginal');
+    const maskedEl = document.getElementById('piiSampleMasked');
+    if (!originalEl || !maskedEl) return;
+
+    originalEl.textContent = PII_SAMPLE_TEXT;
+
+    try {
+        const result = await sanitizeRegex(PII_SAMPLE_TEXT, { skipSizeLimit: true });
+        maskedEl.textContent = result.text;
+    } catch (error) {
+        addLog(LogType.ERROR, 'Error rendering PII sample', { error: errorMessage(error) });
     }
 }
 
