@@ -222,7 +222,7 @@ let _domElements: {
   contentPurgeIncludeStarredCheckbox: HTMLInputElement | null;
   contentPurgeNowBtn: HTMLButtonElement | null;
   localMarkdownExportEnabledInput: HTMLInputElement | null;
-  localMarkdownExportAutoEnabledInput: HTMLInputElement | null;
+  localMarkdownExportTimingRadios: NodeListOf<HTMLInputElement> | null;
   localMarkdownExportPathInput: HTMLInputElement | null;
   localMarkdownExportSettingsDiv: HTMLElement | null;
   testLocalMarkdownBtn: HTMLButtonElement | null;
@@ -285,7 +285,7 @@ export function getDashboardElements() {
       contentPurgeIncludeStarredCheckbox: document.getElementById('contentPurgeIncludeStarred') as HTMLInputElement | null,
       contentPurgeNowBtn: document.getElementById('contentPurgeNowBtn') as HTMLButtonElement | null,
       localMarkdownExportEnabledInput: document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null,
-      localMarkdownExportAutoEnabledInput: document.getElementById('localMarkdownExportAutoEnabled') as HTMLInputElement | null,
+      localMarkdownExportTimingRadios: document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>,
       localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
       localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
       testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
@@ -314,7 +314,7 @@ export function getDashboardElements() {
     sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
     contentRetentionDaysSelect: null, contentMaxRecordsSelect: null,
     contentPurgeIncludeStarredCheckbox: null, contentPurgeNowBtn: null,
-    localMarkdownExportEnabledInput: null, localMarkdownExportAutoEnabledInput: null,
+    localMarkdownExportEnabledInput: null, localMarkdownExportTimingRadios: null,
     localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
     testLocalMarkdownBtn: null,
     reviewSummaryEnabledInput: null, reviewSummaryManualActionsDiv: null,
@@ -365,10 +365,34 @@ export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSele
     [StorageKeys.CONTENT_MAX_RECORDS]: el.contentMaxRecordsSelect,
     [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: el.contentPurgeIncludeStarredCheckbox,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
-    [StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED]: el.localMarkdownExportAutoEnabledInput,
     [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,
     [StorageKeys.REVIEW_SUMMARY_ENABLED]: el.reviewSummaryEnabledInput,
   };
+}
+
+/**
+ * Read the LOCAL_MARKDOWN_EXPORT_TIMING radio group's checked value.
+ * Returns undefined when no radio is checked (should not happen once
+ * loadLocalMarkdownExportTiming has run, but guards against a blank DOM).
+ */
+export function extractLocalMarkdownExportTiming(): string | undefined {
+  const el = getDashboardElements();
+  if (!el.localMarkdownExportTimingRadios) return undefined;
+  for (const radio of el.localMarkdownExportTimingRadios) {
+    if (radio.checked) return radio.value;
+  }
+  return undefined;
+}
+
+/**
+ * Apply a LOCAL_MARKDOWN_EXPORT_TIMING value to the radio group.
+ */
+export function loadLocalMarkdownExportTiming(timing: string | undefined): void {
+  const el = getDashboardElements();
+  if (!el.localMarkdownExportTimingRadios) return;
+  for (const radio of el.localMarkdownExportTimingRadios) {
+    radio.checked = radio.value === timing;
+  }
 }
 
 export function getAiProviderElements(): AIProviderElements {
@@ -437,6 +461,7 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
 export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
   loadSettingsToInputs(settings, getSettingsMapping());
+  loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
 
   // Apply provider priority slots and update multi-provider visibility
   const prioritySlots = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[]) ?? [];
@@ -562,6 +587,8 @@ export async function handleSaveOnly(): Promise<void> {
   }
 
   const newSettings = extractSettingsFromInputs(getSettingsMapping());
+  const timing = extractLocalMarkdownExportTiming();
+  if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
 
   // Convert retention select values: "" → null, numeric string → number
   const retentionDaysRaw = newSettings[StorageKeys.SQLITE_RETENTION_DAYS];
@@ -641,6 +668,8 @@ export async function handleTestAi(): Promise<void> {
   el.testAiBtn.disabled = true;
   try {
     const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const timing = extractLocalMarkdownExportTiming();
+    if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
     const currentSettings = await getSettings();
     const mergedSettings = { ...currentSettings, ...newSettings };
     await saveSettingsWithAllowedUrls(mergedSettings);
@@ -673,6 +702,8 @@ export async function handleTestLocalMarkdown(): Promise<void> {
   try {
     // Save current settings first
     const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const timing = extractLocalMarkdownExportTiming();
+    if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
     const currentSettings = await getSettings();
     const mergedSettings = { ...currentSettings, ...newSettings };
     await saveSettingsWithAllowedUrls(mergedSettings);

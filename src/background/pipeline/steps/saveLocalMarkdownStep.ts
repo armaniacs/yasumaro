@@ -15,6 +15,9 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 /** Storage key prefix for daily entry buffers */
 export const DAILY_BUFFER_PREFIX = 'local_export_';
 
+/** One-shot alarm name for the 'immediate' timing's 1-minute debounce */
+export const IMMEDIATE_FLUSH_ALARM = 'yasumaro-local-md-immediate';
+
 /**
  * Get today's date string in YYYY-MM-DD format (local timezone)
  */
@@ -56,16 +59,15 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
   // Check if local markdown export is enabled
   const settings = context.settings as Record<string, unknown>;
   const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
-  const autoExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
-  console.log('[LocalMD] Settings check:', { url, enabled: localExportEnabled, auto: autoExportEnabled });
+  const timing = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] as
+    | 'manual' | 'immediate' | 'idle' | 'daily' | undefined;
   addLog(LogType.INFO, '[LocalMD] Step fired', {
     url,
     enabled: localExportEnabled,
-    auto: autoExportEnabled,
+    timing,
     hasMarkdown: !!markdown
   });
-  if (!localExportEnabled || !autoExportEnabled) {
-    console.log('[LocalMD] Disabled, skipping:', { url, enabled: localExportEnabled, auto: autoExportEnabled });
+  if (!localExportEnabled || timing === 'manual' || !timing) {
     addLog(LogType.INFO, '[LocalMD] Disabled, skipping', { url });
     return context;
   }
@@ -81,6 +83,13 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
       const dailyEntries: string[] = Array.isArray(stored[storageKey]) ? stored[storageKey] : [];
       dailyEntries.push(markdown);
       await chrome.storage.local.set({ [storageKey]: dailyEntries });
+
+      if (timing === 'immediate') {
+        const existingAlarm = await chrome.alarms.get(IMMEDIATE_FLUSH_ALARM);
+        if (!existingAlarm) {
+          chrome.alarms.create(IMMEDIATE_FLUSH_ALARM, { delayInMinutes: 1 });
+        }
+      }
 
       addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
         title,

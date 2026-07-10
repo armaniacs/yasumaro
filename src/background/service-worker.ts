@@ -107,10 +107,10 @@ export function init(): void {
 
     chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
 
-    // PBI 2026-07-09-03: defer local Markdown export to idle / periodic flush
+    // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
     (async () => {
-      const { initIdleFlush } = await import('./localMarkdownIdleFlusher.js');
-      initIdleFlush();
+      const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+      await initExportScheduler();
     })();
 
     // Initialize weekly/monthly review summary alarms
@@ -931,10 +931,25 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
                 (days, max, starred) => sqliteClient.purgeContent(days, max, starred),
             );
           }
+          // 'yasumaro-local-md-flush' === IDLE_FALLBACK_ALARM (localMarkdownIdleFlusher.js)
           if (alarm.name === 'yasumaro-local-md-flush') {
             void (async () => {
-              const { flushPendingExports } = await import('./localMarkdownIdleFlusher.js');
-              void flushPendingExports();
+              const { flushBufferedExports } = await import('./localMarkdownExportCore.js');
+              void flushBufferedExports();
+            })();
+          }
+          // 'yasumaro-local-md-daily-flush' === DAILY_FLUSH_ALARM (localMarkdownIdleFlusher.js)
+          if (alarm.name === 'yasumaro-local-md-daily-flush') {
+            void (async () => {
+              const { flushYesterdaysExport } = await import('./localMarkdownIdleFlusher.js');
+              void flushYesterdaysExport();
+            })();
+          }
+          // 'yasumaro-local-md-immediate' === IMMEDIATE_FLUSH_ALARM (saveLocalMarkdownStep.js)
+          if (alarm.name === 'yasumaro-local-md-immediate') {
+            void (async () => {
+              const { flushBufferedExports } = await import('./localMarkdownExportCore.js');
+              void flushBufferedExports();
             })();
           }
     });

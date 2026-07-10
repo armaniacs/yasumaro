@@ -1613,11 +1613,23 @@
   "localMarkdownExportEnabledHelp": {
     "message": "閲覧履歴を日次 Markdown ファイルとしてブラウザのダウンロードフォルダに保存します（例: ~/Downloads/Yasumaro/）。"
   },
-  "localMarkdownExportAutoEnabledLabel": {
-    "message": "記録時に自動で書き出す"
+  "localMarkdownExportTimingLabel": {
+    "message": "書き出しタイミング"
   },
-  "localMarkdownExportAutoEnabledHelp": {
-    "message": "ページが記録されるたびに日次ファイルを自動ダウンロードします。オフの場合でも手動エクスポートは利用可能です。"
+  "localMarkdownExportTimingManualLabel": {
+    "message": "手動のみ（自動書き出ししない）"
+  },
+  "localMarkdownExportTimingImmediateLabel": {
+    "message": "即時（記録直後、最短1分間隔）"
+  },
+  "localMarkdownExportTimingIdleLabel": {
+    "message": "アイドル時 / 30分ごと"
+  },
+  "localMarkdownExportTimingIdleHelp": {
+    "message": "ブラウザがアイドル状態になったとき、または最大30分ごとにまとめて書き出します。"
+  },
+  "localMarkdownExportTimingDailyLabel": {
+    "message": "日付が変わったとき（前日分を回収）"
   },
   "localMarkdownExportPathLabel": {
     "message": "書き出しフォルダ"

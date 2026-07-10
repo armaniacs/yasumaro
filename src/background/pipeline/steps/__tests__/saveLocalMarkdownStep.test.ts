@@ -16,6 +16,7 @@ vi.mock('../../../../utils/storage.js', () => ({
   StorageKeys: {
     LOCAL_MARKDOWN_EXPORT_ENABLED: 'local_markdown_export_enabled',
     LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED: 'local_markdown_export_auto_enabled',
+    LOCAL_MARKDOWN_EXPORT_TIMING: 'local_markdown_export_timing',
     LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
   },
 }));
@@ -37,6 +38,10 @@ const mockChrome = {
   downloads: {
     download: vi.fn().mockResolvedValue(1),
   },
+  alarms: {
+    get: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn(),
+  },
 };
 
 // chrome グローバルを設定
@@ -52,6 +57,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
     settings: {
       local_markdown_export_enabled: true,
       local_markdown_export_auto_enabled: true,
+      local_markdown_export_timing: 'idle',
       local_markdown_export_path: 'Yasumaro',
     } as any,
     force: false,
@@ -102,20 +108,6 @@ describe('saveLocalMarkdownStep', () => {
 
     it('local_markdown_export_enabled が未設定の場合はスキップ', async () => {
       const context = makeContext({ settings: {} as any });
-
-      const result = await saveLocalMarkdownStep(context);
-
-      expect(mockChrome.downloads.download).not.toHaveBeenCalled();
-      expect(result).toBe(context);
-    });
-
-    it('local_markdown_export_auto_enabled が false の場合はスキップ', async () => {
-      const context = makeContext({
-        settings: {
-          local_markdown_export_enabled: true,
-          local_markdown_export_auto_enabled: false,
-        } as any,
-      });
 
       const result = await saveLocalMarkdownStep(context);
 
@@ -189,6 +181,69 @@ describe('saveLocalMarkdownStep', () => {
       const key = Object.keys(setCall)[0];
       const dateStr = key.replace('local_export_', '');
       expect(dateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
+  describe('即時タイミング（immediate）', () => {
+    it('timing=immediate かつ既存アラーム無しの場合、1分後のアラームを作成する', async () => {
+      const context = makeContext({
+        settings: {
+          local_markdown_export_enabled: true,
+          local_markdown_export_timing: 'immediate',
+          local_markdown_export_path: 'Yasumaro',
+        } as any,
+      });
+
+      await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.alarms.create).toHaveBeenCalledWith(
+        'yasumaro-local-md-immediate',
+        { delayInMinutes: 1 }
+      );
+    });
+
+    it('timing=immediate かつ既存アラームありの場合、アラームを作成しない（デバウンス）', async () => {
+      mockChrome.alarms.get.mockResolvedValueOnce({ name: 'yasumaro-local-md-immediate' });
+      const context = makeContext({
+        settings: {
+          local_markdown_export_enabled: true,
+          local_markdown_export_timing: 'immediate',
+          local_markdown_export_path: 'Yasumaro',
+        } as any,
+      });
+
+      await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
+    });
+
+    it('timing=idle の場合はアラームを作成しない', async () => {
+      const context = makeContext({
+        settings: {
+          local_markdown_export_enabled: true,
+          local_markdown_export_timing: 'idle',
+          local_markdown_export_path: 'Yasumaro',
+        } as any,
+      });
+
+      await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
+    });
+
+    it('timing=manual の場合はバッファに追記されない（スキップ扱い）', async () => {
+      const context = makeContext({
+        settings: {
+          local_markdown_export_enabled: true,
+          local_markdown_export_timing: 'manual',
+          local_markdown_export_path: 'Yasumaro',
+        } as any,
+      });
+
+      await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
     });
   });
 });

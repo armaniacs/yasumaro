@@ -216,6 +216,13 @@ vi.mock('../../popup/privacyConsent.js', () => ({
     hasPrivacyConsent: vi.fn().mockResolvedValue(true),
     migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(true),
 }));
+vi.mock('../localMarkdownExportCore.js', () => ({
+    flushBufferedExports: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../localMarkdownIdleFlusher.js', () => ({
+    initExportScheduler: vi.fn().mockResolvedValue(undefined),
+    flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
@@ -249,6 +256,14 @@ import type {
 
 const contextMenuClickListener = ((globalThis as any).chrome?.contextMenus?.onClicked?.addListener as ReturnType<typeof vi.fn>)?.mock?.calls?.[0]?.[0] as
     | ((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => Promise<void>)
+    | undefined;
+
+// The onAlarm listener is registered once, at module-import time, in the
+// top-level `if (typeof globalThis.chrome !== 'undefined' ...)` block in
+// service-worker.ts (not inside the exported `init()` function). Capture it
+// the same way `contextMenuClickListener` is captured above.
+const onAlarmListener = ((globalThis as any).chrome?.alarms?.onAlarm?.addListener as ReturnType<typeof vi.fn>)?.mock?.calls?.[0]?.[0] as
+    | ((alarm: chrome.alarms.Alarm) => void)
     | undefined;
 
 describe('service-worker handlers', () => {
@@ -1207,6 +1222,66 @@ describe('service-worker handlers', () => {
     describe('init', () => {
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.init).toBe('function');
+        });
+    });
+
+    describe('chrome.alarms.onAlarm dispatch', () => {
+        // Regression coverage for the alarm-name dispatch inside the top-level
+        // `chrome.alarms.onAlarm.addListener(...)` callback in service-worker.ts.
+        // That callback branches on raw string literals ('yasumaro-local-md-flush',
+        // 'yasumaro-local-md-daily-flush', 'yasumaro-local-md-immediate') with no
+        // compiler backstop tying them to the exported constants
+        // (IDLE_FALLBACK_ALARM / DAILY_FLUSH_ALARM / IMMEDIATE_FLUSH_ALARM). If any
+        // literal drifts out of sync with those constants, dispatch silently
+        // no-ops with zero test failure and zero type error unless a test like
+        // this one directly exercises the registered listener.
+
+        it.each([
+            {
+                alarmName: 'yasumaro-local-md-flush',
+                describeAs: 'IDLE_FALLBACK_ALARM',
+                getMock: async () => (await import('../localMarkdownExportCore.js')).flushBufferedExports,
+            },
+            {
+                alarmName: 'yasumaro-local-md-daily-flush',
+                describeAs: 'DAILY_FLUSH_ALARM',
+                getMock: async () => (await import('../localMarkdownIdleFlusher.js')).flushYesterdaysExport,
+            },
+            {
+                alarmName: 'yasumaro-local-md-immediate',
+                describeAs: 'IMMEDIATE_FLUSH_ALARM',
+                getMock: async () => (await import('../localMarkdownExportCore.js')).flushBufferedExports,
+            },
+        ])('dispatches $describeAs ($alarmName) to the correct handler', async ({ alarmName, getMock }) => {
+            if (!onAlarmListener) throw new Error('onAlarm listener not registered');
+
+            const targetMock = (await getMock()) as ReturnType<typeof vi.fn>;
+            targetMock.mockClear();
+
+            onAlarmListener({ name: alarmName } as chrome.alarms.Alarm);
+
+            // Dispatch is fire-and-forget (`void (async () => {...})()`), so flush
+            // the event loop before asserting the dynamically-imported handler
+            // was invoked.
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(targetMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not trigger local-markdown handlers for the daily-purge alarm', async () => {
+            if (!onAlarmListener) throw new Error('onAlarm listener not registered');
+
+            const flushBufferedExports = (await import('../localMarkdownExportCore.js')).flushBufferedExports as ReturnType<typeof vi.fn>;
+            const flushYesterdaysExport = (await import('../localMarkdownIdleFlusher.js')).flushYesterdaysExport as ReturnType<typeof vi.fn>;
+            flushBufferedExports.mockClear();
+            flushYesterdaysExport.mockClear();
+
+            onAlarmListener({ name: 'yasumaro-daily-purge' } as chrome.alarms.Alarm);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(flushBufferedExports).not.toHaveBeenCalled();
+            expect(flushYesterdaysExport).not.toHaveBeenCalled();
         });
     });
 
