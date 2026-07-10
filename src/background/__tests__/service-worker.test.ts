@@ -2057,6 +2057,23 @@ describe('service-worker handlers', () => {
 
     });
 
+    describe('handleRefreshLocalMarkdownScheduler', () => {
+        it('should be exported and be a function', () => {
+            expect(typeof serviceWorker.handleRefreshLocalMarkdownScheduler).toBe('function');
+        });
+
+        it('re-runs initExportScheduler and reports success', async () => {
+            const { initExportScheduler } = await import('../localMarkdownIdleFlusher.js');
+            vi.mocked(initExportScheduler).mockClear();
+            const sendResponse = vi.fn();
+
+            await serviceWorker.handleRefreshLocalMarkdownScheduler(sendResponse);
+
+            expect(initExportScheduler).toHaveBeenCalledTimes(1);
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+    });
+
     describe('handleTabActivated', () => {
         it('should be exported and be a function', async () => {
             const serviceWorker = await import('../service-worker.js');
@@ -2109,12 +2126,27 @@ describe('service-worker handlers', () => {
             const serviceWorker = await import('../service-worker.js');
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
-            
+
             const result = handler({ type: 'PING' }, {}, sendResponse);
             expect(result).toBe(true);
-            
+
             await new Promise(resolve => setTimeout(resolve, 10));
             expect(sendResponse).toHaveBeenCalledWith({ success: true });
+        });
+
+        it('should handle REFRESH_LOCAL_MARKDOWN_SCHEDULER', async () => {
+            const serviceWorker = await import('../service-worker.js');
+            const { initExportScheduler } = await import('../localMarkdownIdleFlusher.js');
+            vi.mocked(initExportScheduler).mockClear();
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+
+            const result = handler({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' }, {}, sendResponse);
+            expect(result).toBe(true);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+            expect(initExportScheduler).toHaveBeenCalledTimes(1);
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle ACTIVITY_UPDATE', async () => {
