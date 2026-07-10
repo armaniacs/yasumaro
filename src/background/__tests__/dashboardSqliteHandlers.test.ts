@@ -125,7 +125,7 @@ describe('restore_db subtype', () => {
 
   it('rejects without a valid confirmToken', async () => {
     const result = await handleDashboardSqlite(
-      { subtype: 'restore_db', data: [1, 2, 3] },
+      { subtype: 'restore_db', data: 'AQID' },
       sqliteClient,
       undefined,
       VALID_TOKEN
@@ -137,7 +137,7 @@ describe('restore_db subtype', () => {
 
   it('calls sqliteClient.restoreDb with the provided bytes when token matches', async () => {
     const result = await handleDashboardSqlite(
-      { subtype: 'restore_db', data: [1, 2, 3], confirmToken: VALID_TOKEN },
+      { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,
       undefined,
       VALID_TOKEN
@@ -151,7 +151,7 @@ describe('restore_db subtype', () => {
     (sqliteClient as unknown as { restoreDb: ReturnType<typeof vi.fn> }).restoreDb = vi.fn().mockResolvedValue(false);
 
     const result = await handleDashboardSqlite(
-      { subtype: 'restore_db', data: [1, 2, 3], confirmToken: VALID_TOKEN },
+      { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,
       undefined,
       VALID_TOKEN

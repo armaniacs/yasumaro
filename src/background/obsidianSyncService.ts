@@ -41,9 +41,9 @@ export class ObsidianSyncService implements SyncTarget {
    * Try to sync a log to Obsidian. Silently skips if Obsidian is not configured.
    * Returns true if synced, false if skipped or failed.
    */
-  async sync(logId: number, url: string, title: string | null, summary: string | null): Promise<boolean> {
+  async sync(logId: number, url: string, title: string | null, summary: string | null): Promise<{ success: boolean; error?: string }> {
     if (!(await this.isConfigured())) {
-      return false;
+      return { success: false };
     }
 
     try {
@@ -53,13 +53,13 @@ export class ObsidianSyncService implements SyncTarget {
       // Mark as synced in SQLite
       await this.sqliteClient.update(logId, { obsidian_synced: 1 });
       addLog(LogType.INFO, 'ObsidianSync: synced', { url, logId });
-      return true;
+      return { success: true };
     } catch (error) {
       addLog(LogType.WARN, 'ObsidianSync: failed (silent skip)', {
         error: errorMessage(error),
         url,
       });
-      return false;
+      return { success: false };
     }
   }
 
@@ -92,8 +92,8 @@ export class ObsidianSyncService implements SyncTarget {
       let syncedCount = 0;
       for (const row of unsyncedRows) {
         if (row.id === undefined) continue;
-        const synced = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-        if (synced) {
+        const result = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
+        if (result.success) {
           syncedCount++;
         }
       }

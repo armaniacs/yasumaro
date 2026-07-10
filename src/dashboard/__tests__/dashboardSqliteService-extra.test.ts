@@ -195,7 +195,7 @@ describe('dashboardSqliteService — additional exports', () => {
 
   describe('backupDb', () => {
     it('returns Uint8Array from response data', async () => {
-      givenResponse({ success: true, data: [1, 2, 3] });
+      givenResponse({ success: true, data: 'AQID' });
       const result = await backupDb();
       expect(result).toEqual(new Uint8Array([1, 2, 3]));
     });
@@ -226,12 +226,12 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toBe(true);
     });
 
-    it('sends data as array in payload', async () => {
+    it('sends data as base64 in payload', async () => {
       givenResponse({ success: true });
       await restoreDb(new Uint8Array([10, 20]));
       expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          payload: expect.objectContaining({ subtype: 'restore_db', data: [10, 20] }),
+          payload: expect.objectContaining({ subtype: 'restore_db', data: 'ChQ=' }),
         }),
       );
     });

@@ -51,10 +51,10 @@ describe('GistSyncTarget', () => {
     expect(await target.isConfigured()).toBe(true);
   });
 
-  it('sync returns false when not configured', async () => {
+  it('sync returns success false when not configured', async () => {
     vi.mocked(getSettings).mockResolvedValue({} as any);
     const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
   });
 
   it('sync creates a new Gist when no GIST_ID exists', async () => {
@@ -68,7 +68,7 @@ describe('GistSyncTarget', () => {
     } as Response);
 
     const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
     expect(saveSettings).toHaveBeenCalledWith(expect.objectContaining({ gist_id: 'new-gist-id-123' }));
     expect(mockSqliteClient.update).toHaveBeenCalled();
   });

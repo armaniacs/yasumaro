@@ -312,11 +312,28 @@ export async function backfillMetadata(): Promise<{ updated: number; total: numb
 /**
  * バイナリ .db バックアップを取得
  */
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary);
+}
+
 export async function backupDb(): Promise<Uint8Array | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'backup_db' });
     if (response.success && response.data) {
-      return new Uint8Array(response.data as number[]);
+      return base64ToBytes(response.data as string);
     }
     return null;
   } catch (error) {
@@ -332,7 +349,7 @@ export async function backupDb(): Promise<Uint8Array | null> {
 export async function restoreDb(data: Uint8Array): Promise<boolean> {
   try {
     const response = await sendDashboardMessage(
-      { subtype: 'restore_db', data: Array.from(data) },
+      { subtype: 'restore_db', data: bytesToBase64(data) },
       { requireConfirmToken: true }
     );
     return Boolean(response.success);

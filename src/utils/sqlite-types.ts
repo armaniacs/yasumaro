@@ -21,6 +21,7 @@ export interface BrowsingLogRecord {
   is_starred?: number;
   is_deleted?: number;
   obsidian_synced?: number;
+  gist_synced?: number;
   content?: string | null;
   masked_count?: number | null;
   cleansed_reason?: string | null;

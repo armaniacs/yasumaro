@@ -355,7 +355,7 @@ describe('handleDashboardSqlite — backup_db', () => {
     const buffer = new Uint8Array([10, 20, 30]);
     mock.backupDb.mockResolvedValue(buffer);
     const result = await handleDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, undefined, VALID_TOKEN);
-    expect(result).toEqual({ success: true, data: [10, 20, 30] });
+    expect(result).toEqual({ success: true, data: 'ChQe' });
   });
 
   it('returns error when backupDb returns null', async () => {

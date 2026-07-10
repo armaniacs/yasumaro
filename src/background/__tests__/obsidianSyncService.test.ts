@@ -84,16 +84,16 @@ describe('ObsidianSyncService', () => {
   });
 
   describe('sync', () => {
-    it('returns false when Obsidian is not configured', async () => {
+    it('returns success false when Obsidian is not configured', async () => {
       mockStorage['obsidian_api_key'] = '';
       const result = await service.sync(1, 'https://example.com', 'Test', null);
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
       expect(mockObsidianClient.appendToDailyNote).not.toHaveBeenCalled();
     });
 
     it('calls appendToDailyNote with markdown and updates obsidian_synced', async () => {
       const result = await service.sync(1, 'https://example.com', 'Test Page', 'A summary');
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
       expect(mockObsidianClient.appendToDailyNote).toHaveBeenCalledWith(
         '- [Test Page](https://example.com): A summary'
       );
@@ -110,7 +110,7 @@ describe('ObsidianSyncService', () => {
     it('silently skips on Obsidian API failure (does NOT throw)', async () => {
       mockObsidianClient.appendToDailyNote.mockRejectedValue(new Error('Connection refused'));
       const result = await service.sync(1, 'https://example.com', 'Test', null);
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
       // Should NOT update obsidian_synced on failure
       expect(mockSqliteClient.update).not.toHaveBeenCalled();
     });

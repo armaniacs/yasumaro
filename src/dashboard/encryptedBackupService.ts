@@ -10,6 +10,7 @@ import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils
 import type { EncryptionEnvelope } from '../utils/crypto.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';
 
 export const BACKUP_PAYLOAD_VERSION = 1;
 
@@ -111,7 +112,8 @@ export async function importEncryptedBackup(
     return { success: false, error: 'Failed to restore history database' };
   }
 
-  await saveSettings(payload.settings);
+  const sanitized = validateRestorableSettings(payload.settings as unknown as Record<string, unknown>);
+  await saveSettings(sanitized);
 
   return { success: true };
 }

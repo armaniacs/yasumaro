@@ -12,9 +12,9 @@ export interface SyncTarget {
 
   /**
    * Sync a single record to the target.
-   * Returns true if synced, false if skipped or failed.
+   * Returns success status and optional error message.
    */
-  sync(logId: number, url: string, title: string | null, summary: string | null, markdown?: string): Promise<boolean>;
+  sync(logId: number, url: string, title: string | null, summary: string | null, markdown?: string): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Process a batch of pending records and sync them.
