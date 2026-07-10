@@ -106,12 +106,12 @@ describe('GistSyncTarget - extended coverage', () => {
 
       const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
       expect(global.fetch).toHaveBeenCalledWith(
         'https://api.github.com/gists/existing-123',
         expect.objectContaining({ method: 'PATCH' }),
       );
-      expect(mockSqliteClient.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(1, { gist_synced: 1 });
       expect(saveSettings).not.toHaveBeenCalled();
     });
 
@@ -121,18 +121,20 @@ describe('GistSyncTarget - extended coverage', () => {
 
       const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
       expect(mockSqliteClient.update).not.toHaveBeenCalled();
       expect(addLog).toHaveBeenCalledWith('WARN', 'GistSync: failed (silent skip)', expect.any(Object));
     });
 
-    it('returns false when updateGist fails', async () => {
+    it('returns success false when updateGist fails', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test', gist_id: 'existing-123' } as any);
       global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response);
 
       const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
 
     it('uses provided markdown argument when given', async () => {
@@ -142,7 +144,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
       const result = await target.sync(1, 'https://example.com', 'Title', null, '# Custom markdown');
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
       const callBody = JSON.parse((global.fetch as any).mock.calls[0][1].body);
       expect(callBody.files['yasumaro-history.md'].content).toBe('# Custom markdown');
     });
@@ -174,7 +176,7 @@ describe('GistSyncTarget - extended coverage', () => {
     it('returns 0 when no unsynced rows', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
       mockSqliteClient.query.mockResolvedValue({
-        rows: [{ id: 1, url: 'https://a.com', obsidian_synced: 1 }],
+        rows: [{ id: 1, url: 'https://a.com', gist_synced: 1, obsidian_synced: 0 }],
       });
 
       const result = await target.syncBatch();
@@ -185,8 +187,8 @@ describe('GistSyncTarget - extended coverage', () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
       mockSqliteClient.query.mockResolvedValue({
         rows: [
-          { id: 1, url: 'https://a.com', title: 'A', summary: 'Sum A', obsidian_synced: 0 },
-          { id: 2, url: 'https://b.com', title: 'B', summary: null, obsidian_synced: 0 },
+          { id: 1, url: 'https://a.com', title: 'A', summary: 'Sum A', gist_synced: 0 },
+          { id: 2, url: 'https://b.com', title: 'B', summary: null, gist_synced: 0 },
         ],
       });
       global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-new' }) } as Response);

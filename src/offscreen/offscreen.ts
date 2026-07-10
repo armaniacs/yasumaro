@@ -10,6 +10,7 @@ import {
   insertBatch as sqliteInsertBatch,
   query as sqliteQuery,
   search as sqliteSearch,
+  sqliteHealthCheck,
   update as sqliteUpdate,
   hardDelete as sqliteHardDelete,
   toggleStar as sqliteToggleStar,
@@ -137,6 +138,7 @@ function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRe
     is_starred: payload.is_starred != null ? Number(payload.is_starred) : 0,
     is_deleted: payload.is_deleted != null ? Number(payload.is_deleted) : 0,
     obsidian_synced: payload.obsidian_synced != null ? Number(payload.obsidian_synced) : 0,
+    gist_synced: payload.gist_synced != null ? Number(payload.gist_synced) : 0,
     // PBI-1: diagnostic metadata + PBI-3: content
     content: payload.content != null ? String(payload.content) : null,
     masked_count: payload.masked_count != null ? Number(payload.masked_count) : null,
@@ -229,6 +231,10 @@ export function handleOffscreenMessage(
                     session = null;
                     sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
+            } else if (msg.type === 'SQLITE_HEALTH_CHECK') {
+                const ok = await sqliteHealthCheck();
+                sendResponse({ success: ok });
+
             } else if (msg.type === 'SQLITE_INIT') {
                 const ok = await sqliteInit();
                 sendResponse({ success: ok, initialized: ok });
@@ -302,7 +308,7 @@ export function handleOffscreenMessage(
                 const changes: Record<string, unknown> = {};
                 for (const key of [
                   'url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio',
-                  'is_starred', 'is_deleted', 'obsidian_synced',
+                  'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced',
                   // PBI-1/PBI-3: allow updating diagnostic metadata + content
                   'content', 'masked_count', 'cleansed_reason',
                   'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',

@@ -30,9 +30,9 @@ export class GistSyncTarget implements SyncTarget {
     }
   }
 
-  async sync(logId: number, url: string, title: string | null, summary: string | null, markdown?: string): Promise<boolean> {
+  async sync(logId: number, url: string, title: string | null, summary: string | null, markdown?: string): Promise<{ success: boolean; error?: string }> {
     if (!(await this.isConfigured())) {
-      return false;
+      return { success: false };
     }
 
     try {
@@ -50,15 +50,16 @@ export class GistSyncTarget implements SyncTarget {
         await saveSettings({ [StorageKeys.GIST_ID]: newGistId } as Partial<Settings> as Settings);
       }
 
-      await this.sqliteClient.update(logId, { obsidian_synced: 1 });
+      await this.sqliteClient.update(logId, { gist_synced: 1 });
       addLog(LogType.INFO, 'GistSync: synced', { url, logId });
-      return true;
+      return { success: true };
     } catch (error) {
+      const errMsg = errorMessage(error);
       addLog(LogType.WARN, 'GistSync: failed (silent skip)', {
-        error: errorMessage(error),
+        error: errMsg,
         url,
       });
-      return false;
+      return { success: false, error: errMsg };
     }
   }
 
@@ -78,7 +79,7 @@ export class GistSyncTarget implements SyncTarget {
         return 0;
       }
 
-      const unsyncedRows = result.rows.filter((r) => !r.obsidian_synced);
+      const unsyncedRows = result.rows.filter((r) => !r.gist_synced);
       if (unsyncedRows.length === 0) {
         return 0;
       }
@@ -86,8 +87,8 @@ export class GistSyncTarget implements SyncTarget {
       let syncedCount = 0;
       for (const row of unsyncedRows) {
         if (row.id === undefined) continue;
-        const synced = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-        if (synced) {
+        const result = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
+        if (result.success) {
           syncedCount++;
         }
       }

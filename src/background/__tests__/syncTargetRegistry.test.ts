@@ -17,7 +17,7 @@ describe('SyncTargetRegistry', () => {
     registry = new SyncTargetRegistry();
     mockTarget = {
       isConfigured: vi.fn().mockResolvedValue(true),
-      sync: vi.fn().mockResolvedValue(true),
+      sync: vi.fn().mockResolvedValue({ success: true }),
       syncBatch: vi.fn().mockResolvedValue(3),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'OK' }),
     };

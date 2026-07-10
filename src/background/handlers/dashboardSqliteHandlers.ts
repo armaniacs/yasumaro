@@ -6,6 +6,23 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys, getSettings } from '../../utils/storage.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 export const TOKEN_REQUIRED_SUBTYPES = new Set([
@@ -141,11 +158,11 @@ export async function handleDashboardSqlite(
                 return { success: true, inserted, skipped, total: rows.length };
             }
             case 'restore_db': {
-                const data = payload.data as number[] | undefined;
-                if (!Array.isArray(data) || data.length === 0) {
+                const data = payload.data as string | undefined;
+                if (typeof data !== 'string' || data.length === 0) {
                     return { success: false, error: 'No data provided' };
                 }
-                const restored = await sqliteClient.restoreDb(new Uint8Array(data));
+                const restored = await sqliteClient.restoreDb(base64ToBytes(data));
                 return restored ? { success: true } : { success: false, error: 'Restore failed' };
             }
             case 'status': {
@@ -234,7 +251,7 @@ export async function handleDashboardSqlite(
             case 'backup_db': {
                 const data = await sqliteClient.backupDb();
                 if (data) {
-                    return { success: true, data: Array.from(data) };
+                    return { success: true, data: bytesToBase64(data) };
                 }
                 return { success: false, error: 'Backup failed' };
             }

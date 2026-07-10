@@ -4,16 +4,20 @@
  * Provides the same CRUD interface as sqlite.ts but uses linear search instead of FTS5.
  */
 
+import { Mutex } from '../background/Mutex.js';
+import { UPDATABLE_FIELDS } from './schema.js';
 import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
+const QUOTA_BYTES_LIMIT = 5 * 1024 * 1024; // 5MB warning threshold
 
 interface StoredData {
   records: BrowsingLogRecord[];
 }
 
 export class FallbackStorage {
+  private readonly mutex = new Mutex();
   private async loadData(): Promise<StoredData> {
     const result = await chrome.storage.local.get(STORAGE_KEY);
     const data = result[STORAGE_KEY];
@@ -35,8 +39,22 @@ export class FallbackStorage {
     return next;
   }
 
+  private async ensureQuotaSpace(): Promise<void> {
+    const bytesInUse = await chrome.storage.local.getBytesInUse(null);
+    if (bytesInUse <= QUOTA_BYTES_LIMIT) return;
+
+    const data = await this.loadData();
+    const purgeCount = Math.max(1, Math.floor(data.records.length * 0.1));
+    const sorted = [...data.records].sort((a, b) => a.created_at - b.created_at);
+    const toRemove = new Set(sorted.slice(0, purgeCount).map(r => r.id));
+    data.records = data.records.filter(r => !toRemove.has(r.id));
+    await this.saveData(data);
+  }
+
   async insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
+    await this.mutex.acquire();
     try {
+      await this.ensureQuotaSpace();
       const data = await this.loadData();
       const id = await this.getNextId();
       const domain = record.domain || this.extractDomain(record.url);
@@ -87,11 +105,15 @@ export class FallbackStorage {
       return { success: true, id };
     } catch (error) {
       return { success: false, error: String(error) };
+    } finally {
+      this.mutex.release();
     }
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; count: number } | { success: false; error: string }> {
+    await this.mutex.acquire();
     try {
+      await this.ensureQuotaSpace();
       const data = await this.loadData();
       let insertedCount = 0;
 
@@ -144,6 +166,8 @@ export class FallbackStorage {
       return { success: true, count: insertedCount };
     } catch (error) {
       return { success: false, error: String(error) };
+    } finally {
+      this.mutex.release();
     }
   }
 
@@ -242,14 +266,10 @@ export class FallbackStorage {
         return { success: true };
       }
 
-      const updatableFields: (keyof BrowsingLogRecord)[] = [
-        'url', 'title', 'summary', 'tags', 'domain',
-        'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted'
-      ];
-
-      for (const field of updatableFields) {
-        if (field in changes) {
-          (record as unknown as Record<string, unknown>)[field] = changes[field];
+      for (const field of UPDATABLE_FIELDS) {
+        const f = field as keyof BrowsingLogRecord;
+        if (f in changes) {
+          (record as unknown as Record<string, unknown>)[f] = changes[f];
         }
       }
 
@@ -391,6 +411,15 @@ export class FallbackStorage {
       return { success: true, purged: totalPurged };
     } catch (error) {
       return { success: false, error: String(error) };
+    }
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.loadData();
+      return true;
+    } catch {
+      return false;
     }
   }
 

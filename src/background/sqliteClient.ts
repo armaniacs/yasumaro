@@ -248,6 +248,19 @@ export class SqliteClient {
   }
 
   /** Run the OPFS feasibility spike (PBI-10) in the offscreen document. */
+  /**
+   * Lightweight health check — verifies offscreen SQLite is reachable and responsive.
+   * Performs a `SELECT 1` equivalent via the offscreen document.
+   */
+  async isSqliteHealthy(): Promise<boolean> {
+    try {
+      const res = await this.msgOffscreen('SQLITE_HEALTH_CHECK', {});
+      return res.success === true;
+    } catch {
+      return false;
+    }
+  }
+
   async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
     return this.call<OpfsSpikeReport>(
       'SQLITE_OPFS_SPIKE',

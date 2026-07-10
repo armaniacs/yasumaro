@@ -56,8 +56,7 @@ export class SyncTargetRegistry {
 
     const syncPromises = configuredTargets.map(async ({ key, target }) => {
       try {
-        const synced = await target.sync(logId, url, title, summary, markdown);
-        results[key] = { success: synced };
+        results[key] = await target.sync(logId, url, title, summary, markdown);
       } catch (error) {
         results[key] = { success: false, error: String(error) };
       }
