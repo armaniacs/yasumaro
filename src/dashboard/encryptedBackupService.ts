@@ -83,7 +83,7 @@ export async function exportEncryptedBackup(password: string): Promise<Encryptio
 export async function importEncryptedBackup(
   envelope: EncryptionEnvelope,
   password: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; skippedKeys?: string[] }> {
   let json: string;
   try {
     json = await decryptEnvelope(envelope, password);
@@ -112,10 +112,12 @@ export async function importEncryptedBackup(
     return { success: false, error: 'Failed to restore history database' };
   }
 
-  const sanitized = validateRestorableSettings(payload.settings as unknown as Record<string, unknown>);
+  const { sanitized, skippedKeys } = validateRestorableSettings(
+    payload.settings as unknown as Record<string, unknown>
+  );
   await saveSettings(sanitized);
 
-  return { success: true };
+  return { success: true, skippedKeys };
 }
 
 export function isEncryptedBackupFile(data: unknown): data is EncryptionEnvelope {

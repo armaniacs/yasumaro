@@ -79,4 +79,53 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
     await expect(exportEncryptedBackup('correct-password')).rejects.toThrow();
   });
+
+  it('strips sensitive API key fields from a tampered backup before restoring', async () => {
+    const TAMPERED_SETTINGS = {
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: 'sk-attacker-key',
+      openai_api_key: 'sk-attacker-key-2',
+      github_pat: 'ghp_attackertoken',
+    } as never;
+    vi.mocked(getSettings).mockResolvedValue(TAMPERED_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue(true);
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(result.skippedKeys).toEqual(
+      expect.arrayContaining(['obsidian_api_key', 'openai_api_key', 'github_pat'])
+    );
+    const savedSettings = vi.mocked(saveSettings).mock.calls[0]![0];
+    expect(savedSettings).not.toHaveProperty('obsidian_api_key');
+    expect(savedSettings).not.toHaveProperty('openai_api_key');
+    expect(savedSettings).not.toHaveProperty('github_pat');
+    expect(savedSettings).toMatchObject({ obsidian_protocol: 'https', obsidian_port: '27124' });
+  });
+
+  it('reports skipped keys for an unknown/malformed field while restoring valid ones', async () => {
+    const MIXED_SETTINGS = {
+      obsidian_protocol: 'https',
+      sqlite_retention_days: 'not-a-number',
+      some_unknown_key: 'x',
+    } as never;
+    vi.mocked(getSettings).mockResolvedValue(MIXED_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue(true);
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(result.skippedKeys).toEqual(
+      expect.arrayContaining(['sqlite_retention_days', 'some_unknown_key'])
+    );
+    const savedSettings = vi.mocked(saveSettings).mock.calls[0]![0];
+    expect(savedSettings).toMatchObject({ obsidian_protocol: 'https' });
+    expect(savedSettings).not.toHaveProperty('sqlite_retention_days');
+    expect(savedSettings).not.toHaveProperty('some_unknown_key');
+  });
 });
