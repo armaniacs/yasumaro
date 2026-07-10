@@ -395,6 +395,23 @@ export function loadLocalMarkdownExportTiming(timing: string | undefined): void 
   }
 }
 
+/**
+ * Ask the Service Worker to re-read LOCAL_MARKDOWN_EXPORT_TIMING and
+ * re-register its alarms immediately, instead of waiting for the next
+ * (unpredictable) Service Worker restart to pick up a saved timing change.
+ * Best-effort: a failure here just means the old schedule keeps running
+ * until the next natural SW restart, so errors are swallowed.
+ */
+export function refreshLocalMarkdownScheduler(): void {
+  try {
+    // Best-effort: a failure just means the old schedule keeps running
+    // until the next natural Service Worker restart.
+    Promise.resolve(chrome.runtime.sendMessage({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' })).catch(() => {});
+  } catch {
+    // sendMessage can throw synchronously (e.g. extension context invalidated).
+  }
+}
+
 export function getAiProviderElements(): AIProviderElements {
   const el = getDashboardElements();
   return {
@@ -611,6 +628,7 @@ export async function handleSaveOnly(): Promise<void> {
   // Add provider priority slots
   mergedSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
   await saveSettingsWithAllowedUrls(mergedSettings);
+  refreshLocalMarkdownScheduler();
 
   el.statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
   el.statusDiv.className = 'success';
@@ -673,6 +691,7 @@ export async function handleTestAi(): Promise<void> {
     const currentSettings = await getSettings();
     const mergedSettings = { ...currentSettings, ...newSettings };
     await saveSettingsWithAllowedUrls(mergedSettings);
+    refreshLocalMarkdownScheduler();
 
     const aiResult = await testAiConnection();
 
@@ -707,6 +726,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     const currentSettings = await getSettings();
     const mergedSettings = { ...currentSettings, ...newSettings };
     await saveSettingsWithAllowedUrls(mergedSettings);
+    refreshLocalMarkdownScheduler();
 
     // Check if enabled
     const localExportEnabled = mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];

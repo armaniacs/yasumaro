@@ -667,6 +667,19 @@ export async function handlePing(
     sendResponse({ success: true });
 }
 
+/**
+ * Re-run initExportScheduler() so a LOCAL_MARKDOWN_EXPORT_TIMING change
+ * saved from the dashboard takes effect immediately, instead of waiting
+ * for the next (unpredictable) Service Worker restart.
+ */
+export async function handleRefreshLocalMarkdownScheduler(
+    sendResponse: (response?: unknown) => void
+): Promise<void> {
+    const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+    await initExportScheduler();
+    sendResponse({ success: true });
+}
+
 
 
 // Message Handler Factory (extracted for testability)
@@ -798,6 +811,13 @@ export function createMessageHandler(): (
                 // PING - Service Worker health check
                 if (message.type === 'PING') {
                     await handlePing(message, sendResponse);
+                    return;
+                }
+
+                // REFRESH_LOCAL_MARKDOWN_SCHEDULER - dashboard asks the SW to re-read
+                // LOCAL_MARKDOWN_EXPORT_TIMING and re-register alarms immediately
+                if (message.type === 'REFRESH_LOCAL_MARKDOWN_SCHEDULER') {
+                    await handleRefreshLocalMarkdownScheduler(sendResponse);
                     return;
                 }
 

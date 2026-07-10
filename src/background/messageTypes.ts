@@ -99,6 +99,10 @@ export type PingMessage = {
     type: 'PING';
 };
 
+export type RefreshLocalMarkdownSchedulerMessage = {
+    type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
+};
+
 // ============================================================================
 // Discriminated union of all extension messages
 // ============================================================================
@@ -128,6 +132,7 @@ export type ExtensionMessage =
     | SessionLockRequestMessage
     | ContentCleansingExecutedMessage
     | PingMessage
+    | RefreshLocalMarkdownSchedulerMessage
     | DashboardSqliteMessage;
 
 // ============================================================================
@@ -150,6 +155,7 @@ export const VALID_MESSAGE_TYPES = [
     'SESSION_LOCK_REQUEST',
     'CONTENT_CLEANSING_EXECUTED',
     'PING', // Service Worker health check
+    'REFRESH_LOCAL_MARKDOWN_SCHEDULER', // Re-run initExportScheduler() after a timing change is saved
     'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
 ] as const;
 
@@ -164,4 +170,5 @@ export const NO_PAYLOAD_TYPES = [
     'ACTIVITY_UPDATE',
     'SESSION_LOCK_REQUEST',
     'PING',
+    'REFRESH_LOCAL_MARKDOWN_SCHEDULER',
 ] as const;
