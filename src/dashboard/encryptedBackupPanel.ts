@@ -81,7 +81,13 @@ export function initEncryptedBackupPanel(): void {
       showPasswordAuthModal('import', async (password: string) => {
         const result = await importEncryptedBackup(parsed, password);
         if (result.success) {
-          setStatus('バックアップから復元しました', false);
+          const skippedCount = result.skippedKeys?.length ?? 0;
+          setStatus(
+            skippedCount > 0
+              ? `バックアップから復元しました（${skippedCount}件の設定項目は無効なためスキップされました）`
+              : 'バックアップから復元しました',
+            false
+          );
           document.dispatchEvent(new CustomEvent('reload-general-settings'));
         } else {
           setStatus(`復元に失敗しました: ${result.error}`, true);
