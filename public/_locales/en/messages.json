@@ -1616,11 +1616,23 @@
   "localMarkdownExportEnabledHelp": {
     "message": "Save browsing history as daily Markdown files to your browser's downloads folder (e.g., ~/Downloads/Yasumaro/)."
   },
-  "localMarkdownExportAutoEnabledLabel": {
-    "message": "Auto-export on recording"
+  "localMarkdownExportTimingLabel": {
+    "message": "Export timing"
   },
-  "localMarkdownExportAutoEnabledHelp": {
-    "message": "Automatically download a daily file each time a page is recorded. You can still use manual export when this is off."
+  "localMarkdownExportTimingManualLabel": {
+    "message": "Manual only (no auto-export)"
+  },
+  "localMarkdownExportTimingImmediateLabel": {
+    "message": "Immediate (right after recording, min. 1-minute interval)"
+  },
+  "localMarkdownExportTimingIdleLabel": {
+    "message": "On idle / every 30 minutes"
+  },
+  "localMarkdownExportTimingIdleHelp": {
+    "message": "Exports are batched when the browser becomes idle, or at least every 30 minutes."
+  },
+  "localMarkdownExportTimingDailyLabel": {
+    "message": "When the date changes (collects the previous day)"
   },
   "localMarkdownExportPathLabel": {
     "message": "Export Folder"

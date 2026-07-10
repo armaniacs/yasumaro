@@ -239,9 +239,19 @@
 
           <div id="localMarkdownExportSettings" class="hidden">
             <div class="form-group">
-              <input type="checkbox" id="localMarkdownExportAutoEnabled" aria-describedby="localMarkdownExportAutoEnabledHelp">
-              <label for="localMarkdownExportAutoEnabled" class="inline-label" data-i18n="localMarkdownExportAutoEnabledLabel">記録時に自動で書き出す</label>
-              <div id="localMarkdownExportAutoEnabledHelp" class="help-text" data-i18n="localMarkdownExportAutoEnabledHelp">ページが記録されるたびに日次ファイルを自動ダウンロードします。オフの場合でも手動エクスポートは利用可能です。</div>
+              <p data-i18n="localMarkdownExportTimingLabel">書き出しタイミング</p>
+              <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingManual" value="manual">
+              <label for="localMarkdownExportTimingManual" class="inline-label" data-i18n="localMarkdownExportTimingManualLabel">手動のみ（自動書き出ししない）</label>
+
+              <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingImmediate" value="immediate">
+              <label for="localMarkdownExportTimingImmediate" class="inline-label" data-i18n="localMarkdownExportTimingImmediateLabel">即時（記録直後、最短1分間隔）</label>
+
+              <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingIdle" value="idle">
+              <label for="localMarkdownExportTimingIdle" class="inline-label" data-i18n="localMarkdownExportTimingIdleLabel">アイドル時 / 30分ごと</label>
+              <div id="localMarkdownExportTimingIdleHelp" class="help-text" data-i18n="localMarkdownExportTimingIdleHelp">ブラウザがアイドル状態になったとき、または最大30分ごとにまとめて書き出します。</div>
+
+              <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingDaily" value="daily">
+              <label for="localMarkdownExportTimingDaily" class="inline-label" data-i18n="localMarkdownExportTimingDailyLabel">日付が変わったとき（前日分を回収）</label>
             </div>
 
             <div class="form-group">
