@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.16` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.17` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -14,6 +14,35 @@ All notable changes to this project will be documented in this file.
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
 
+
+## [Unreleased]
+
+### Changed / 変更
+
+- **ローカル Markdown 書き出しタイミングを4択に変更** — 「記録時に自動で書き出す」チェックボックスを廃止し、「手動のみ / 即時（記録直後・最短1分間隔） / アイドル時・30分ごと / 日付が変わったとき（前日分を回収）」の4モードから選べるラジオボタンに変更。既存ユーザーの設定は自動で「アイドル時」または「手動のみ」に移行される
+- ダッシュボードで書き出しタイミングを変更して保存すると、Service Worker の再起動を待たずに即座に新しいスケジュールが反映されるようになった
+
+### Fixed / 修正
+
+- （内部）モード切り替え直後にバックグラウンド側のアラーム登録が古いままになる不具合を修正
+
+## [6.5.17] - 2026-07-09
+
+### Fixed / 修正 (Checking Team Wave 3 + Phase 5)
+
+- **`backup_db` に確認トークン必須化** — `TOKEN_REQUIRED_SUBTYPES` に `'backup_db'` を追加し、全DBバックアップ操作に確認トークンを要求（Red Team）
+- **`DASHBOARD_SQLITE` ハンドラに sender.id 検証を追加** — defense-in-depth としてオフスクリーンドキュメントと同一パターンの送信元検証を実装（Red Team）
+- **中国語ハードコード「查询中...」を i18n 置き換え** — `src/dashboard/dashboard.ts` の3箇所を `getMessage('searching')` に変更（i18n Expert / UI Expert）
+- **`purgeOldRecords` の削除件数カウントを実削除後に修正** — `SELECT changes()` で実際の削除件数を取得（Data Integrity Expert）
+- **`auditLogPanel` の innerHTML を DOM 構築に変更** — XSS 対策として `createElement` + `textContent` を使用（Blue Team）
+- **`insertBatch` の per-row SELECT changes() を除去** — COMMIT 後に集計することで O(n) 余分クエリを削減（Tuning Expert）
+- **OPFS Worker `handleInsertBatch` にトランザクション追加** — `BEGIN`/`COMMIT` でループ全体をラップ、エラー時は `ROLLBACK`（Tuning Expert）
+- **`opfsWorker` handler の冗長な init ガードを統合** — switch 文の前で1回チェックするよう統一（Refactoring Evangelist）
+- **WAL モード設定を初期化早期に移動** — スキーマ作成前に `PRAGMA journal_mode=WAL` を実行（Data Integrity Expert）
+
+### Tested / テスト確認
+- **TypeScript 型チェック** — エラーなし
+- **全テスト** — 342 files, 6882 passed / 20 skipped
 
 ## [6.5.16] - 2026-07-09
 
