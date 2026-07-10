@@ -130,6 +130,184 @@ export const UPDATABLE_FIELDS = [
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
+// ============================================================================
+// PBI-09: Shared INSERT parameter builder
+// Single source of truth for the 30-column parameter array so sqlite.ts,
+// opfsWorker.ts, and storageFallback.ts don't each hand-write the same
+// record -> params mapping (and risk drifting out of sync on schema changes).
+// ============================================================================
+
+/**
+ * Minimal shape this builder needs from a browsing log record. Callers pass
+ * their own `BrowsingLogRecord`-shaped object; this is intentionally a
+ * structural subset so schema.ts doesn't need to import from sqlite-types.ts.
+ */
+export interface InsertableRecord {
+  url: string;
+  title?: string | null;
+  summary?: string | null;
+  tags?: string | null;
+  created_at: number;
+  visit_duration?: number | null;
+  scroll_ratio?: number | null;
+  is_starred?: number | null;
+  is_deleted?: number | null;
+  obsidian_synced?: number | null;
+  gist_synced?: number | null;
+  content?: string | null;
+  masked_count?: number | null;
+  cleansed_reason?: string | null;
+  ai_provider?: string | null;
+  ai_model?: string | null;
+  ai_duration_ms?: number | null;
+  obsidian_duration_ms?: number | null;
+  sent_tokens?: number | null;
+  received_tokens?: number | null;
+  original_tokens?: number | null;
+  cleansed_tokens?: number | null;
+  page_bytes?: number | null;
+  candidate_bytes?: number | null;
+  original_bytes?: number | null;
+  cleansed_bytes?: number | null;
+  ai_summary_original_bytes?: number | null;
+  ai_summary_cleansed_bytes?: number | null;
+  extracted_sentences_bytes?: number | null;
+  extracted_sentences_original_bytes?: number | null;
+  fallback_triggered?: number | null;
+}
+
+/**
+ * Build the parameter array for INSERT_SQL / INSERT_IGNORE_SQL, in the exact
+ * order of COLUMN_NAMES. `domain` is taken as a separate argument (rather
+ * than read from the record) because each backend resolves it differently
+ * (record.domain || extractDomain(record.url), with slightly different
+ * extractDomain implementations) — callers compute it once and pass it in.
+ */
+export function buildInsertParams(
+  record: InsertableRecord,
+  domain: string | null
+): (string | number | null)[] {
+  return [
+    record.url,
+    record.title ?? null,
+    record.summary ?? null,
+    record.tags ?? null,
+    record.created_at,
+    domain,
+    record.visit_duration ?? null,
+    record.scroll_ratio ?? null,
+    record.is_starred ?? 0,
+    record.is_deleted ?? 0,
+    record.obsidian_synced ?? 0,
+    record.gist_synced ?? 0,
+    record.content ?? null,
+    record.masked_count ?? null,
+    record.cleansed_reason ?? null,
+    record.ai_provider ?? null,
+    record.ai_model ?? null,
+    record.ai_duration_ms ?? null,
+    record.obsidian_duration_ms ?? null,
+    record.sent_tokens ?? null,
+    record.received_tokens ?? null,
+    record.original_tokens ?? null,
+    record.cleansed_tokens ?? null,
+    record.page_bytes ?? null,
+    record.candidate_bytes ?? null,
+    record.original_bytes ?? null,
+    record.cleansed_bytes ?? null,
+    record.ai_summary_original_bytes ?? null,
+    record.ai_summary_cleansed_bytes ?? null,
+    record.extracted_sentences_bytes ?? null,
+    record.extracted_sentences_original_bytes ?? null,
+    record.fallback_triggered ?? 0,
+  ];
+}
+
+/**
+ * Field values for every non-PK column, in the same defaulting semantics as
+ * buildInsertParams — `url`/`created_at` stay required and non-null (per
+ * InsertableRecord), everything else (including `domain`) is nullable.
+ */
+export interface InsertRecordFields {
+  url: string;
+  title: string | null;
+  summary: string | null;
+  tags: string | null;
+  created_at: number;
+  domain: string | null;
+  visit_duration: number | null;
+  scroll_ratio: number | null;
+  is_starred: number;
+  is_deleted: number;
+  obsidian_synced: number;
+  gist_synced: number;
+  content: string | null;
+  masked_count: number | null;
+  cleansed_reason: string | null;
+  ai_provider: string | null;
+  ai_model: string | null;
+  ai_duration_ms: number | null;
+  obsidian_duration_ms: number | null;
+  sent_tokens: number | null;
+  received_tokens: number | null;
+  original_tokens: number | null;
+  cleansed_tokens: number | null;
+  page_bytes: number | null;
+  candidate_bytes: number | null;
+  original_bytes: number | null;
+  cleansed_bytes: number | null;
+  ai_summary_original_bytes: number | null;
+  ai_summary_cleansed_bytes: number | null;
+  extracted_sentences_bytes: number | null;
+  extracted_sentences_original_bytes: number | null;
+  fallback_triggered: number;
+}
+
+/**
+ * Object-shaped counterpart to `buildInsertParams`, for backends that store
+ * plain records instead of executing SQL (storageFallback.ts). Applies the
+ * exact same defaulting rules, keyed by column name instead of positional array.
+ */
+export function buildInsertRecordFields(
+  record: InsertableRecord,
+  domain: string | null
+): InsertRecordFields {
+  return {
+    url: record.url,
+    title: record.title ?? null,
+    summary: record.summary ?? null,
+    tags: record.tags ?? null,
+    created_at: record.created_at,
+    domain,
+    visit_duration: record.visit_duration ?? null,
+    scroll_ratio: record.scroll_ratio ?? null,
+    is_starred: record.is_starred ?? 0,
+    is_deleted: record.is_deleted ?? 0,
+    obsidian_synced: record.obsidian_synced ?? 0,
+    gist_synced: record.gist_synced ?? 0,
+    content: record.content ?? null,
+    masked_count: record.masked_count ?? null,
+    cleansed_reason: record.cleansed_reason ?? null,
+    ai_provider: record.ai_provider ?? null,
+    ai_model: record.ai_model ?? null,
+    ai_duration_ms: record.ai_duration_ms ?? null,
+    obsidian_duration_ms: record.obsidian_duration_ms ?? null,
+    sent_tokens: record.sent_tokens ?? null,
+    received_tokens: record.received_tokens ?? null,
+    original_tokens: record.original_tokens ?? null,
+    cleansed_tokens: record.cleansed_tokens ?? null,
+    page_bytes: record.page_bytes ?? null,
+    candidate_bytes: record.candidate_bytes ?? null,
+    original_bytes: record.original_bytes ?? null,
+    cleansed_bytes: record.cleansed_bytes ?? null,
+    ai_summary_original_bytes: record.ai_summary_original_bytes ?? null,
+    ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
+    extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
+    extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
+    fallback_triggered: record.fallback_triggered ?? 0,
+  };
+}
+
 /**
  * FTS5 DDL as a single string — used by sqlite.ts (IDB path) via one-shot exec().
  */
