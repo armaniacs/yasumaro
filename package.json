@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.5.18",
+  "version": "6.5.20",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -31,7 +31,8 @@
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",
     "clean": "rm -rf dist",
     "capture:store-screenshots": "node scripts/capture-store-screenshots.mjs",
-    "check-htmlparser2": "node scripts/check-htmlparser2-override.js"
+    "check-htmlparser2": "node scripts/check-htmlparser2-override.js",
+    "check-bundle-size": "node scripts/check-bundle-size.mjs"
   },
   "keywords": [
     "obsidian",
@@ -72,7 +73,7 @@
     "globals": "^15.11.0"
   },
   "dependencies": {
-    "@subframe7536/sqlite-wasm": "^1.1.1",
+    "@subframe7536/sqlite-wasm": "1.3.1",
     "bloomfilter": "1.1.0",
     "wa-sqlite": "^1.0.0"
   },

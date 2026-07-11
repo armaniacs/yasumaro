@@ -24,8 +24,6 @@ const mockSaveEncryptedExportToFile = vi.hoisted(() => vi.fn());
 const mockIsEncryptedExport = vi.hoisted(() => vi.fn());
 const mockLoadDomainSettings = vi.hoisted(() => vi.fn());
 const mockLoadPrivacySettings = vi.hoisted(() => vi.fn());
-const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-export-id'));
-const mockFocusRelease = vi.hoisted(() => vi.fn());
 const mockChromeI18nGetMessage = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage.js', () => ({
@@ -68,13 +66,6 @@ vi.mock('../privacySettings.js', () => ({
   loadPrivacySettings: mockLoadPrivacySettings,
 }));
 
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: mockFocusTrap,
-    release: mockFocusRelease,
-  },
-}));
-
 vi.stubGlobal('chrome', {
   i18n: { getMessage: mockChromeI18nGetMessage },
   runtime: { getURL: vi.fn() },
@@ -86,6 +77,22 @@ import { initSettingsExportImportUi } from '../settingsExportImportUi.js';
 // Helpers
 // ============================================================================
 
+/**
+ * M21: importConfirmModal is now a native <dialog>. jsdom doesn't implement
+ * showModal()/close(), so polyfill them (close() also fires a real 'close'
+ * event, since settingsExportImportUi.ts listens for it to reset state on
+ * ESC-triggered dismissal).
+ */
+function polyfillDialogMethods(): void {
+  const modal = document.getElementById('importConfirmModal') as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 function setupDom(): void {
   document.body.innerHTML = `
     <button id="settingsMenuBtn" aria-expanded="false">Menu</button>
@@ -93,14 +100,15 @@ function setupDom(): void {
     <button id="exportSettingsBtn">Export</button>
     <button id="importSettingsBtn">Import</button>
     <input id="importFileInput" type="file" style="display:none" />
-    <div id="importConfirmModal" class="hidden" aria-hidden="true">
+    <dialog id="importConfirmModal">
       <div id="importPreview"></div>
       <button id="closeImportModalBtn">Close</button>
       <button id="cancelImportBtn">Cancel</button>
       <button id="confirmImportBtn">Confirm</button>
-    </div>
+    </dialog>
     <div id="status"></div>
   `;
+  polyfillDialogMethods();
 }
 
 function createMockFile(content: string, name = 'settings.json'): File {
@@ -134,8 +142,6 @@ describe('settingsExportImportUi', () => {
     mockIsEncryptedExport.mockReset();
     mockLoadDomainSettings.mockReset();
     mockLoadPrivacySettings.mockReset();
-    mockFocusTrap.mockClear();
-    mockFocusRelease.mockClear();
     mockChromeI18nGetMessage.mockReset();
 
     mockGetMessage.mockImplementation((key: string) => {
@@ -290,9 +296,8 @@ describe('settingsExportImportUi', () => {
     expect(preview?.textContent).toContain('Summary:');
     expect(preview?.textContent).toContain('https');
 
-    const modal = document.getElementById('importConfirmModal');
-    expect(modal?.classList.contains('hidden')).toBe(false);
-    expect(modal?.style.display).toBe('flex');
+    const modal = document.getElementById('importConfirmModal') as HTMLDialogElement;
+    expect(modal.open).toBe(true);
   });
 
   it('should reject invalid import files', async () => {
@@ -374,12 +379,12 @@ describe('settingsExportImportUi', () => {
     fileInput.dispatchEvent(new Event('change'));
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    const modal = document.getElementById('importConfirmModal');
-    expect(modal?.classList.contains('hidden')).toBe(false);
+    const modal = document.getElementById('importConfirmModal') as HTMLDialogElement;
+    expect(modal.open).toBe(true);
 
     const closeBtn = document.getElementById('closeImportModalBtn') as HTMLElement;
     closeBtn.click();
-    expect(modal?.classList.contains('hidden')).toBe(true);
+    expect(modal.open).toBe(false);
   });
 
   it('should handle encrypted import flow', async () => {

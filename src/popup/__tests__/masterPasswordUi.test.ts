@@ -34,21 +34,30 @@ vi.mock('../i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: vi.fn().mockReturnValue('trap-id'),
-    release: vi.fn(),
-  },
-}));
-
 const WAIT = { timeout: 2000, interval: 20 };
+
+/**
+ * M21: passwordModal/passwordAuthModal are now native <dialog>. jsdom
+ * doesn't implement showModal()/close(), so polyfill them (close() also
+ * fires a real 'close' event, since masterPasswordUi.ts listens for it to
+ * reset state on ESC-triggered dismissal).
+ */
+function polyfillDialogMethods(id: string): void {
+  const modal = document.getElementById(id) as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
 
 function setupDOM(): void {
   document.body.innerHTML = [
     '<input type="checkbox" id="masterPasswordEnabled" />',
     '<div id="masterPasswordOptions" class="hidden"></div>',
     '<button id="changeMasterPassword"></button>',
-    '<div id="passwordModal">',
+    '<dialog id="passwordModal">',
     '  <div id="passwordModalTitle"></div><div id="passwordModalDesc"></div>',
     '  <input id="masterPasswordInput" /><input id="masterPasswordConfirm" />',
     '  <div id="passwordStrengthError"></div><div id="passwordMatchError"></div>',
@@ -57,15 +66,17 @@ function setupDOM(): void {
     '  <button id="closePasswordModalBtn"></button>',
     '  <button id="cancelPasswordBtn"></button>',
     '  <button id="savePasswordBtn"></button>',
-    '</div>',
-    '<div id="passwordAuthModal">',
+    '</dialog>',
+    '<dialog id="passwordAuthModal">',
     '  <div id="passwordAuthModalTitle"></div><div id="passwordAuthModalDesc"></div>',
     '  <input id="masterPasswordAuthInput" /><div id="passwordAuthError"></div>',
     '  <button id="closePasswordAuthModalBtn"></button>',
     '  <button id="cancelPasswordAuthBtn"></button>',
     '  <button id="submitPasswordAuthBtn"></button>',
-    '</div>',
+    '</dialog>',
   ].join('');
+  polyfillDialogMethods('passwordModal');
+  polyfillDialogMethods('passwordAuthModal');
 }
 
 describe('masterPasswordUi', () => {
@@ -124,27 +135,22 @@ describe('masterPasswordUi', () => {
       setupDOM();
       const { showPasswordAuthModal } = await import('../masterPasswordUi.js');
 
-      const modal = document.getElementById('passwordAuthModal') as HTMLElement;
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
+      const modal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
 
       showPasswordAuthModal('export', vi.fn());
 
-      expect(modal.classList.contains('hidden')).toBe(false);
-      expect(modal.style.display).toBe('flex');
-      expect(modal.classList.contains('show')).toBe(true);
+      expect(modal.open).toBe(true);
     });
 
-    it('should set focus trap on auth modal', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+    it('calls showModal() on the auth dialog (M21: native dialog handles focus trapping)', async () => {
       setupDOM();
       const { showPasswordAuthModal } = await import('../masterPasswordUi.js');
 
-      const modal = document.getElementById('passwordAuthModal') as HTMLElement;
+      const modal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
       showPasswordAuthModal('export', vi.fn());
 
-      expect(ft.trap).toHaveBeenCalledWith(modal, expect.any(Function));
+      expect(showModalSpy).toHaveBeenCalled();
     });
 
     it('should focus the auth input', async () => {
@@ -199,13 +205,12 @@ describe('masterPasswordUi', () => {
       initMasterPasswordUi();
 
       const cb = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
-      const modal = document.getElementById('passwordModal') as HTMLElement;
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
 
       cb.checked = true;
       cb.dispatchEvent(new Event('change'));
 
-      expect(modal.classList.contains('hidden')).toBe(false);
-      expect(modal.style.display).toBe('flex');
+      expect(modal.open).toBe(true);
     });
 
     it('should requeue disabling and show auth modal when checkbox is unchecked', async () => {
@@ -219,8 +224,8 @@ describe('masterPasswordUi', () => {
 
       expect(cb.checked).toBe(true);
 
-      const authModal = document.getElementById('passwordAuthModal') as HTMLElement;
-      expect(authModal.classList.contains('hidden')).toBe(false);
+      const authModal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      expect(authModal.open).toBe(true);
     });
 
     it('should change password button show auth modal', async () => {
@@ -230,8 +235,8 @@ describe('masterPasswordUi', () => {
 
       document.getElementById('changeMasterPassword')!.click();
 
-      const authModal = document.getElementById('passwordAuthModal') as HTMLElement;
-      expect(authModal.classList.contains('hidden')).toBe(false);
+      const authModal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      expect(authModal.open).toBe(true);
     });
 
     it('should update password strength on input event', async () => {
@@ -254,14 +259,12 @@ describe('masterPasswordUi', () => {
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
 
-      const modal = document.getElementById('passwordModal') as HTMLElement;
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+      modal.open = true;
 
       document.getElementById('closePasswordModalBtn')!.click();
 
-      expect(modal.style.display).toBe('none');
-      expect(modal.classList.contains('hidden')).toBe(true);
+      expect(modal.open).toBe(false);
     });
 
     it('should close password modal on cancel button click', async () => {
@@ -271,11 +274,11 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       document.getElementById('cancelPasswordBtn')!.click();
 
-      expect(modal.style.display).toBe('none');
+      expect(modal.open).toBe(false);
     });
 
     it('should call savePassword on save button click', async () => {
@@ -300,15 +303,12 @@ describe('masterPasswordUi', () => {
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
 
-      const modal = document.getElementById('passwordModal') as HTMLElement;
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      modal.classList.add('show');
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+      modal.open = true;
 
       modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(modal.style.display).toBe('none');
-      expect(modal.classList.contains('hidden')).toBe(true);
+      expect(modal.open).toBe(false);
     });
 
     it('should not close password modal when clicking inside content', async () => {
@@ -319,12 +319,12 @@ describe('masterPasswordUi', () => {
       const modal = document.getElementById('passwordModal') as HTMLElement;
       const title = document.getElementById('passwordModalTitle') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
       modal.classList.add('show');
 
       title.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(modal.style.display).toBe('flex');
+      expect(modal.open).toBe(true);
     });
 
     it('should close auth modal on close button click', async () => {
@@ -332,14 +332,12 @@ describe('masterPasswordUi', () => {
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
 
-      const modal = document.getElementById('passwordAuthModal') as HTMLElement;
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      const modal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      modal.open = true;
 
       document.getElementById('closePasswordAuthModalBtn')!.click();
 
-      expect(modal.style.display).toBe('none');
-      expect(modal.classList.contains('hidden')).toBe(true);
+      expect(modal.open).toBe(false);
     });
 
     it('should close auth modal on cancel button click', async () => {
@@ -349,11 +347,11 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordAuthModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       document.getElementById('cancelPasswordAuthBtn')!.click();
 
-      expect(modal.style.display).toBe('none');
+      expect(modal.open).toBe(false);
     });
 
     it('should call authenticatePassword on submit button click', async () => {
@@ -418,11 +416,11 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordAuthModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
       modal.classList.add('show');
 
       modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(modal.style.display).toBe('none');
+      expect(modal.open).toBe(false);
     });
 
     it('should not close auth modal when clicking inside content', async () => {
@@ -433,10 +431,10 @@ describe('masterPasswordUi', () => {
       const modal = document.getElementById('passwordAuthModal') as HTMLElement;
       const title = document.getElementById('passwordAuthModalTitle') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       title.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(modal.style.display).toBe('flex');
+      expect(modal.open).toBe(true);
     });
 
     it('should handle missing checkbox element gracefully', async () => {
@@ -571,13 +569,13 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       (document.getElementById('masterPasswordInput') as HTMLInputElement).value = 'good';
       document.getElementById('savePasswordBtn')!.click();
 
       await vi.waitFor(() => {
-        expect(modal.style.display).toBe('none');
+        expect(modal.open).toBe(false);
       }, WAIT);
 
       expect(
@@ -641,9 +639,8 @@ describe('masterPasswordUi', () => {
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
 
-      const modal = document.getElementById('passwordAuthModal') as HTMLElement;
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      const modal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      modal.open = true;
 
       (document.getElementById('masterPasswordAuthInput') as HTMLInputElement).value = 'correct';
       document.getElementById('submitPasswordAuthBtn')!.click();
@@ -652,8 +649,7 @@ describe('masterPasswordUi', () => {
         expect(rl.resetFailedAttempts).toHaveBeenCalled();
       }, WAIT);
 
-      expect(modal.style.display).toBe('none');
-      expect(modal.classList.contains('hidden')).toBe(true);
+      expect(modal.open).toBe(false);
     });
 
     it('should call pending action after successful auth', async () => {
@@ -785,8 +781,8 @@ describe('masterPasswordUi', () => {
       cb.dispatchEvent(new Event('change'));
 
       expect(
-        (document.getElementById('passwordAuthModal') as HTMLElement).classList.contains('hidden'),
-      ).toBe(false);
+        (document.getElementById('passwordAuthModal') as HTMLDialogElement).open,
+      ).toBe(true);
       expect(cb.checked).toBe(true);
     });
 
@@ -941,20 +937,17 @@ describe('masterPasswordUi', () => {
       document.getElementById('changeMasterPassword')!.click();
 
       expect(
-        (document.getElementById('passwordAuthModal') as HTMLElement).classList.contains('hidden'),
-      ).toBe(false);
+        (document.getElementById('passwordAuthModal') as HTMLDialogElement).open,
+      ).toBe(true);
 
       (document.getElementById('masterPasswordAuthInput') as HTMLInputElement).value = 'current';
       document.getElementById('submitPasswordAuthBtn')!.click();
 
       await vi.waitFor(() => {
-        const m = document.getElementById('passwordModal') as HTMLElement;
-        expect(m.style.display).toBe('flex');
+        const m = document.getElementById('passwordModal') as HTMLDialogElement;
+        expect(m.open).toBe(true);
       }, WAIT);
 
-      expect(
-        (document.getElementById('passwordModal') as HTMLElement).classList.contains('hidden'),
-      ).toBe(false);
       expect(
         (document.getElementById('confirmPasswordGroup') as HTMLElement).classList.contains('hidden'),
       ).toBe(false);
@@ -976,8 +969,8 @@ describe('masterPasswordUi', () => {
       document.getElementById('submitPasswordAuthBtn')!.click();
 
       await vi.waitFor(() => {
-        const m = document.getElementById('passwordModal') as HTMLElement;
-        expect(m.style.display).toBe('flex');
+        const m = document.getElementById('passwordModal') as HTMLDialogElement;
+        expect(m.open).toBe(true);
       }, WAIT);
 
       (mp.validatePasswordRequirements as any).mockReturnValue(null);
@@ -995,45 +988,47 @@ describe('masterPasswordUi', () => {
   });
 
   // =========================================================================
-  // Focus trap management
+  // Native <dialog> open/close (M21: replaces focusTrapManager)
   // =========================================================================
-  describe('focus trap management', () => {
-    it('should set focus trap when showing password modal', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+  describe('native dialog open/close', () => {
+    it('calls showModal() when showing password modal', async () => {
       setupDOM();
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
+
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
 
       const cb = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
       cb.checked = true;
       cb.dispatchEvent(new Event('change'));
 
-      const modal = document.getElementById('passwordModal') as HTMLElement;
-      expect(ft.trap).toHaveBeenCalledWith(modal, expect.any(Function));
+      expect(showModalSpy).toHaveBeenCalled();
     });
 
-    it('should release focus trap on password modal close', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+    it('calls close() on password modal close', async () => {
       setupDOM();
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
+
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+      const closeSpy = vi.spyOn(modal, 'close');
 
       (document.getElementById('masterPasswordEnabled') as HTMLInputElement).checked = true;
       document.getElementById('masterPasswordEnabled')!.dispatchEvent(new Event('change'));
 
       document.getElementById('closePasswordModalBtn')!.click();
 
-      expect(ft.release).toHaveBeenCalledWith('trap-id');
+      expect(closeSpy).toHaveBeenCalled();
     });
 
-    it('should release focus trap on auth modal close', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+    it('calls close() on auth modal close', async () => {
       setupDOM();
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
+
+      const authModal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      const closeSpy = vi.spyOn(authModal, 'close');
 
       const cb = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
       cb.checked = false;
@@ -1041,7 +1036,7 @@ describe('masterPasswordUi', () => {
 
       document.getElementById('closePasswordAuthModalBtn')!.click();
 
-      expect(ft.release).toHaveBeenCalled();
+      expect(closeSpy).toHaveBeenCalled();
     });
   });
 
@@ -1102,7 +1097,7 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       const inp = document.getElementById('masterPasswordInput') as HTMLInputElement;
       const conf = document.getElementById('masterPasswordConfirm') as HTMLInputElement;
@@ -1122,7 +1117,7 @@ describe('masterPasswordUi', () => {
 
       const modal = document.getElementById('passwordAuthModal') as HTMLElement;
       modal.classList.remove('hidden');
-      modal.style.display = 'flex';
+      modal.open = true;
 
       const inp = document.getElementById('masterPasswordAuthInput') as HTMLInputElement;
       inp.value = 'auth-value';
@@ -1147,8 +1142,8 @@ describe('masterPasswordUi', () => {
       (document.getElementById('masterPasswordAuthInput') as HTMLInputElement).value = 'pass';
       document.getElementById('submitPasswordAuthBtn')!.click();
       await vi.waitFor(() => {
-        const m = document.getElementById('passwordModal') as HTMLElement;
-        expect(m.style.display).toBe('flex');
+        const m = document.getElementById('passwordModal') as HTMLDialogElement;
+        expect(m.open).toBe(true);
       }, WAIT);
 
       document.getElementById('closePasswordModalBtn')!.click();

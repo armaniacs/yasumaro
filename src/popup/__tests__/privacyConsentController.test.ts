@@ -16,17 +16,8 @@ const mockMigrateLegacyPrivacyConsent = vi.hoisted(() => vi.fn());
 const mockRecordPolicyVersionAcknowledgment = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
-const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-id-1'));
-const mockFocusRelease = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
 const mockChromeStorageSet = vi.hoisted(() => vi.fn());
-
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: mockFocusTrap,
-    release: mockFocusRelease,
-  },
-}));
 
 vi.mock('../i18n.js', () => ({
   getMessage: mockGetMessage,
@@ -60,21 +51,38 @@ import {
 // Helpers
 // ============================================================================
 
+/**
+ * M21: privacyConsentModal is now a native <dialog>. jsdom doesn't
+ * implement showModal()/close(), so polyfill them (close() also fires a
+ * real 'close' event; 'cancel' is polyfilled too so the ESC-key-blocking
+ * listener in privacyConsentController.ts has something to attach to).
+ */
+function polyfillDialogMethods(): void {
+  const modal = document.getElementById('privacyConsentModal') as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 function setupDom(): void {
   document.body.innerHTML = `
-    <div id="privacyConsentModal" class="hidden">
+    <dialog id="privacyConsentModal">
       <div id="privacyConsentTitle"></div>
       <a id="viewPrivacyPolicyBtn" href="#"></a>
       <input id="consentCheckbox" type="checkbox" />
       <input id="contentStorageConsentCheckbox" type="checkbox" />
       <button id="acceptConsentBtn" disabled>Accept</button>
       <button id="declineConsentBtn">Decline</button>
-    </div>
+    </dialog>
   `;
+  polyfillDialogMethods();
 }
 
-function getModal(): HTMLElement | null {
-  return document.getElementById('privacyConsentModal');
+function getModal(): HTMLDialogElement | null {
+  return document.getElementById('privacyConsentModal') as HTMLDialogElement | null;
 }
 
 function getCheckbox(): HTMLInputElement | null {
@@ -110,8 +118,6 @@ describe('privacyConsentController', () => {
     mockMigrateLegacyPrivacyConsent.mockReset();
     mockLogError.mockReset();
     mockGetMessage.mockReset();
-    mockFocusTrap.mockClear();
-    mockFocusRelease.mockClear();
     mockChromeTabsCreate.mockReset();
 
     mockGetMessage.mockImplementation((key: string) => {
@@ -145,9 +151,7 @@ describe('privacyConsentController', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
-      expect(modal?.style.display).toBe('flex');
-      expect(modal?.classList.contains('show')).toBe(true);
+      expect(modal?.open).toBe(true);
     });
 
     it('should not show modal when user has already consented', async () => {
@@ -156,7 +160,7 @@ describe('privacyConsentController', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(true);
+      expect(modal?.open).toBe(false);
     });
 
     it('should initialize modal state when shown', async () => {
@@ -178,13 +182,14 @@ describe('privacyConsentController', () => {
       expect(title?.textContent).toBe('Privacy Policy Consent');
     });
 
-    it('should set up focus trap when modal is shown', async () => {
+    it('calls showModal() when modal is shown (M21: native dialog handles focus trapping)', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      const modal = getModal()!;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
 
       await initPrivacyConsent();
 
-      const modal = getModal();
-      expect(mockFocusTrap).toHaveBeenCalledWith(modal, expect.any(Function));
+      expect(showModalSpy).toHaveBeenCalled();
     });
 
     it('should handle errors during initialization', async () => {
@@ -232,14 +237,13 @@ describe('privacyConsentController', () => {
       expect(acceptBtn?.disabled).toBe(true);
     });
 
-    it('should prevent modal close on outside click', () => {
-      const modal = getModal();
-      const stopPropagation = vi.fn();
-      const event = new MouseEvent('click');
-      vi.spyOn(event, 'stopPropagation').mockImplementation(stopPropagation);
+    it('prevents ESC-key close via the dialog cancel event (M21)', () => {
+      const modal = getModal()!;
+      const event = new Event('cancel', { cancelable: true });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
-      modal!.dispatchEvent(event);
-      expect(stopPropagation).toHaveBeenCalled();
+      modal.dispatchEvent(event);
+      expect(preventDefaultSpy).toHaveBeenCalled();
     });
 
     it('should open privacy policy in new tab', () => {
@@ -281,8 +285,7 @@ describe('privacyConsentController', () => {
       });
 
       const modal = getModal();
-      expect(modal?.classList.contains('show')).toBe(false);
-      expect(modal?.style.display).toBe('none');
+      expect(modal?.open).toBe(false);
     });
 
     it('should call consent callback on accept', async () => {
@@ -320,8 +323,7 @@ describe('privacyConsentController', () => {
       });
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(true);
-      expect(modal?.style.display).toBe('none');
+      expect(modal?.open).toBe(false);
     });
 
     it('should call consent callback on decline', async () => {

@@ -19,13 +19,12 @@ import {
 } from '../utils/rateLimiter.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
-import { focusTrapManager } from './utils/focusTrap.js';
 
 const masterPasswordEnabled = document.getElementById('masterPasswordEnabled') as HTMLInputElement | null;
 const masterPasswordOptions = document.getElementById('masterPasswordOptions') as HTMLElement | null;
 const changeMasterPasswordBtn = document.getElementById('changeMasterPassword') as HTMLButtonElement | null;
 
-const passwordModal = document.getElementById('passwordModal') as HTMLElement | null;
+const passwordModal = document.getElementById('passwordModal') as HTMLDialogElement | null;
 const passwordModalTitle = document.getElementById('passwordModalTitle') as HTMLElement | null;
 const passwordModalDesc = document.getElementById('passwordModalDesc') as HTMLElement | null;
 const masterPasswordInput = document.getElementById('masterPasswordInput') as HTMLInputElement | null;
@@ -39,7 +38,7 @@ const closePasswordModalBtn = document.getElementById('closePasswordModalBtn') a
 const cancelPasswordBtn = document.getElementById('cancelPasswordBtn') as HTMLButtonElement | null;
 const savePasswordBtn = document.getElementById('savePasswordBtn') as HTMLButtonElement | null;
 
-const passwordAuthModal = document.getElementById('passwordAuthModal') as HTMLElement | null;
+const passwordAuthModal = document.getElementById('passwordAuthModal') as HTMLDialogElement | null;
 const passwordAuthModalTitle = document.getElementById('passwordAuthModalTitle') as HTMLElement | null;
 const passwordAuthModalDesc = document.getElementById('passwordAuthModalDesc') as HTMLElement | null;
 const masterPasswordAuthInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement | null;
@@ -48,8 +47,6 @@ const closePasswordAuthModalBtn = document.getElementById('closePasswordAuthModa
 const cancelPasswordAuthBtn = document.getElementById('cancelPasswordAuthBtn') as HTMLButtonElement | null;
 const submitPasswordAuthBtn = document.getElementById('submitPasswordAuthBtn') as HTMLButtonElement | null;
 
-let passwordTrapId: string | null = null;
-let passwordAuthTrapId: string | null = null;
 let passwordModalMode: 'set' | 'change' = 'set';
 let pendingPasswordAction: ((password: string) => Promise<void>) | null = null;
 
@@ -94,28 +91,17 @@ function showPasswordModal(mode: 'set' | 'change' = 'set'): void {
 
     updatePasswordStrength('');
 
-    passwordModal.classList.remove('hidden');
-    passwordModal.style.display = 'flex';
-    void passwordModal.offsetHeight;
-    passwordModal.classList.add('show');
-
-    passwordTrapId = focusTrapManager.trap(passwordModal, closePasswordModal);
+    passwordModal.showModal();
 
     masterPasswordInput?.focus();
 }
 
 function closePasswordModal(): void {
-    if (!passwordModal) return;
+    passwordModal?.close();
+}
 
-    passwordModal.classList.remove('show');
-    passwordModal.style.display = 'none';
-    passwordModal.classList.add('hidden');
-
-    if (passwordTrapId) {
-        focusTrapManager.release(passwordTrapId);
-        passwordTrapId = null;
-    }
-
+/** Runs on any dialog close (button click, backdrop click, or ESC key). */
+function resetPasswordModalState(): void {
     if (masterPasswordInput) masterPasswordInput.value = '';
     if (masterPasswordConfirm) masterPasswordConfirm.value = '';
     if (passwordStrengthError) passwordStrengthError.textContent = '';
@@ -175,28 +161,17 @@ function showPasswordAuthModal(actionType: 'export' | 'import', action: (passwor
     if (masterPasswordAuthInput) masterPasswordAuthInput.value = '';
     if (passwordAuthError) passwordAuthError.textContent = '';
 
-    passwordAuthModal.classList.remove('hidden');
-    passwordAuthModal.style.display = 'flex';
-    void passwordAuthModal.offsetHeight;
-    passwordAuthModal.classList.add('show');
-
-    passwordAuthTrapId = focusTrapManager.trap(passwordAuthModal, closePasswordAuthModal);
+    passwordAuthModal.showModal();
 
     masterPasswordAuthInput?.focus();
 }
 
 function closePasswordAuthModal(): void {
-    if (!passwordAuthModal) return;
+    passwordAuthModal?.close();
+}
 
-    passwordAuthModal.classList.remove('show');
-    passwordAuthModal.style.display = 'none';
-    passwordAuthModal.classList.add('hidden');
-
-    if (passwordAuthTrapId) {
-        focusTrapManager.release(passwordAuthTrapId);
-        passwordAuthTrapId = null;
-    }
-
+/** Runs on any dialog close (button click, backdrop click, or ESC key). */
+function resetPasswordAuthModalState(): void {
     if (masterPasswordAuthInput) masterPasswordAuthInput.value = '';
     if (passwordAuthError) passwordAuthError.textContent = '';
 
@@ -321,6 +296,9 @@ function initMasterPasswordUi(): void {
                 closePasswordModal();
             }
         });
+        // ESC key fires the dialog's native close without going through
+        // closePasswordModal(), so run the same state cleanup here too.
+        passwordModal.addEventListener('close', resetPasswordModalState);
     }
 
     if (closePasswordAuthModalBtn) {
@@ -349,6 +327,9 @@ function initMasterPasswordUi(): void {
                 closePasswordAuthModal();
             }
         });
+        // ESC key fires the dialog's native close without going through
+        // closePasswordAuthModal(), so run the same state cleanup here too.
+        passwordAuthModal.addEventListener('close', resetPasswordAuthModalState);
     }
 }
 

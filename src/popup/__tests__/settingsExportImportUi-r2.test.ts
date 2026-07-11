@@ -15,8 +15,6 @@ const mockSaveEncryptedExportToFile = vi.hoisted(() => vi.fn());
 const mockIsEncryptedExport = vi.hoisted(() => vi.fn());
 const mockLoadDomainSettings = vi.hoisted(() => vi.fn());
 const mockLoadPrivacySettings = vi.hoisted(() => vi.fn());
-const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-export-r2'));
-const mockFocusRelease = vi.hoisted(() => vi.fn());
 const mockChromeI18nGetMessage = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage.js', () => ({
@@ -58,19 +56,26 @@ vi.mock('../privacySettings.js', () => ({
   loadPrivacySettings: mockLoadPrivacySettings,
 }));
 
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: mockFocusTrap,
-    release: mockFocusRelease,
-  },
-}));
-
 vi.stubGlobal('chrome', {
   i18n: { getMessage: mockChromeI18nGetMessage },
   runtime: { getURL: vi.fn() },
 });
 
 import { initSettingsExportImportUi } from '../settingsExportImportUi.js';
+
+/**
+ * M21: importConfirmModal is now a native <dialog>. jsdom doesn't implement
+ * showModal()/close(), so polyfill them.
+ */
+function polyfillDialogMethods(): void {
+  const modal = document.getElementById('importConfirmModal') as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
 
 function setupDom(): void {
   document.body.innerHTML = `
@@ -79,14 +84,15 @@ function setupDom(): void {
     <button id="exportSettingsBtn">Export</button>
     <button id="importSettingsBtn">Import</button>
     <input id="importFileInput" type="file" style="display:none" />
-    <div id="importConfirmModal" class="hidden" aria-hidden="true">
+    <dialog id="importConfirmModal">
       <div id="importPreview"></div>
       <button id="closeImportModalBtn">Close</button>
       <button id="cancelImportBtn">Cancel</button>
       <button id="confirmImportBtn">Confirm</button>
-    </div>
+    </dialog>
     <div id="status"></div>
   `;
+  polyfillDialogMethods();
 }
 
 function createMockFile(content: string, name = 'settings.json'): File {
@@ -116,8 +122,6 @@ describe('settingsExportImportUi - r2 missed branches', () => {
     mockIsEncryptedExport.mockReset();
     mockLoadDomainSettings.mockReset();
     mockLoadPrivacySettings.mockReset();
-    mockFocusTrap.mockClear();
-    mockFocusRelease.mockClear();
     mockChromeI18nGetMessage.mockReset();
 
     mockGetMessage.mockImplementation((key: string) => {
@@ -254,8 +258,8 @@ describe('settingsExportImportUi - r2 missed branches', () => {
       document.getElementById('confirmImportBtn')!.click();
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const modal = document.getElementById('importConfirmModal') as HTMLElement;
-      expect(modal.classList.contains('hidden')).toBe(true);
+      const modal = document.getElementById('importConfirmModal') as HTMLDialogElement;
+      expect(modal.open).toBe(false);
     });
   });
 
@@ -281,16 +285,19 @@ describe('settingsExportImportUi - r2 missed branches', () => {
       fileInput.dispatchEvent(new Event('change'));
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const modal = document.getElementById('importConfirmModal') as HTMLElement;
-      expect(modal.classList.contains('hidden')).toBe(false);
+      const modal = document.getElementById('importConfirmModal') as HTMLDialogElement;
+      expect(modal.open).toBe(true);
 
-      modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(modal.classList.contains('hidden')).toBe(true);
+      // Simulate a backdrop click: event.target === the dialog itself
+      const backdropClick = new MouseEvent('click', { bubbles: true });
+      Object.defineProperty(backdropClick, 'target', { value: modal });
+      modal.dispatchEvent(backdropClick);
+      expect(modal.open).toBe(false);
     });
   });
 
-  describe('import modal close button', () => {
-    it('should release focus trap on close', async () => {
+  describe('import modal close button (M21: native dialog)', () => {
+    it('calls showModal()/close() instead of the old focus-trap flow', async () => {
       mockValidateExportData.mockReturnValue(true);
       mockChromeI18nGetMessage.mockReturnValue('');
 
@@ -303,6 +310,10 @@ describe('settingsExportImportUi - r2 missed branches', () => {
       initSettingsExportImportUi(reloadFn, showPasswordAuthModal);
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      const modal = document.getElementById('importConfirmModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+      const closeSpy = vi.spyOn(modal, 'close');
+
       const fileInput = document.getElementById('importFileInput') as HTMLInputElement;
       Object.defineProperty(fileInput, 'files', {
         value: [createMockFile(fileContent)],
@@ -311,10 +322,10 @@ describe('settingsExportImportUi - r2 missed branches', () => {
       fileInput.dispatchEvent(new Event('change'));
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockFocusTrap).toHaveBeenCalled();
+      expect(showModalSpy).toHaveBeenCalled();
 
       document.getElementById('closeImportModalBtn')!.click();
-      expect(mockFocusRelease).toHaveBeenCalled();
+      expect(closeSpy).toHaveBeenCalled();
     });
   });
 

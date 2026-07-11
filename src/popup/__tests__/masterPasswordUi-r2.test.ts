@@ -29,21 +29,28 @@ vi.mock('../i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: vi.fn().mockReturnValue('trap-id'),
-    release: vi.fn(),
-  },
-}));
-
 const WAIT = { timeout: 2000, interval: 20 };
+
+/**
+ * M21: passwordModal/passwordAuthModal are now native <dialog>. jsdom
+ * doesn't implement showModal()/close(), so polyfill them.
+ */
+function polyfillDialogMethods(id: string): void {
+  const modal = document.getElementById(id) as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
 
 function setupDOM(): void {
   document.body.innerHTML = [
     '<input type="checkbox" id="masterPasswordEnabled" />',
     '<div id="masterPasswordOptions" class="hidden"></div>',
     '<button id="changeMasterPassword"></button>',
-    '<div id="passwordModal">',
+    '<dialog id="passwordModal">',
     '  <div id="passwordModalTitle"></div><div id="passwordModalDesc"></div>',
     '  <input id="masterPasswordInput" /><input id="masterPasswordConfirm" />',
     '  <div id="passwordStrengthError"></div><div id="passwordMatchError"></div>',
@@ -52,15 +59,17 @@ function setupDOM(): void {
     '  <button id="closePasswordModalBtn"></button>',
     '  <button id="cancelPasswordBtn"></button>',
     '  <button id="savePasswordBtn"></button>',
-    '</div>',
-    '<div id="passwordAuthModal">',
+    '</dialog>',
+    '<dialog id="passwordAuthModal">',
     '  <div id="passwordAuthModalTitle"></div><div id="passwordAuthModalDesc"></div>',
     '  <input id="masterPasswordAuthInput" /><div id="passwordAuthError"></div>',
     '  <button id="closePasswordAuthModalBtn"></button>',
     '  <button id="cancelPasswordAuthBtn"></button>',
     '  <button id="submitPasswordAuthBtn"></button>',
-    '</div>',
+    '</dialog>',
   ].join('');
+  polyfillDialogMethods('passwordModal');
+  polyfillDialogMethods('passwordAuthModal');
 }
 
 describe('masterPasswordUi - r2 missed branches', () => {
@@ -87,8 +96,8 @@ describe('masterPasswordUi - r2 missed branches', () => {
       document.getElementById('submitPasswordAuthBtn')!.click();
 
       await vi.waitFor(() => {
-        const modal = document.getElementById('passwordModal') as HTMLElement;
-        expect(modal.style.display).toBe('flex');
+        const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+        expect(modal.open).toBe(true);
       }, WAIT);
 
       const confirmGroup = document.getElementById('confirmPasswordGroup') as HTMLElement;
@@ -124,7 +133,7 @@ describe('masterPasswordUi - r2 missed branches', () => {
       document.getElementById('submitPasswordAuthBtn')!.click();
 
       await vi.waitFor(() => {
-        expect(document.getElementById('passwordModal')!.style.display).toBe('flex');
+        expect((document.getElementById('passwordModal') as HTMLDialogElement).open).toBe(true);
       }, WAIT);
 
       (mp.validatePasswordRequirements as any).mockReturnValue(null);
@@ -192,40 +201,44 @@ describe('masterPasswordUi - r2 missed branches', () => {
     });
   });
 
-  describe('closePasswordModal release trap', () => {
-    it('should release focus trap when closing modal', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+  describe('closePasswordModal (M21: native dialog)', () => {
+    it('calls showModal()/close() instead of the old focus-trap flow', async () => {
       setupDOM();
       const { initMasterPasswordUi } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
+
+      const modal = document.getElementById('passwordModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+      const closeSpy = vi.spyOn(modal, 'close');
 
       const cb = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
       cb.checked = true;
       cb.dispatchEvent(new Event('change'));
 
-      expect(ft.trap).toHaveBeenCalled();
+      expect(showModalSpy).toHaveBeenCalled();
 
       document.getElementById('closePasswordModalBtn')!.click();
-      expect(ft.release).toHaveBeenCalledWith('trap-id');
+      expect(closeSpy).toHaveBeenCalled();
     });
   });
 
-  describe('closePasswordAuthModal', () => {
-    it('should release focus trap and clear pending action', async () => {
-      const ft = (await import('../utils/focusTrap.js')).focusTrapManager;
-
+  describe('closePasswordAuthModal (M21: native dialog)', () => {
+    it('calls showModal()/close() and clears pending action', async () => {
       setupDOM();
       const { initMasterPasswordUi, showPasswordAuthModal } = await import('../masterPasswordUi.js');
       initMasterPasswordUi();
 
+      const modal = document.getElementById('passwordAuthModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+      const closeSpy = vi.spyOn(modal, 'close');
+
       const pendingAction = vi.fn();
       showPasswordAuthModal('export', pendingAction);
 
-      expect(ft.trap).toHaveBeenCalled();
+      expect(showModalSpy).toHaveBeenCalled();
 
       document.getElementById('closePasswordAuthModalBtn')!.click();
-      expect(ft.release).toHaveBeenCalled();
+      expect(closeSpy).toHaveBeenCalled();
     });
   });
 

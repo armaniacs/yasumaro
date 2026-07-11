@@ -9,7 +9,6 @@
  */
 
 import { getMessage } from './i18n.js';
-import { focusTrapManager } from './utils/focusTrap.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 
@@ -46,7 +45,6 @@ const PII_TYPE_LABELS: Record<string, () => string> = {
 let resolvePromise: ((result: ConfirmationResult) => void) | null = null;
 let maskedPositions: MaskedPosition[] = [];
 let currentMaskedIndex = -1;
-let previewTrapId: string | null = null;  // フォーカストラップID
 
 // PERF-007修正: ResizeObserverをモジュールレベルで保持し、メモリリークを防止
 let resizeObserver: ResizeObserver | null = null;
@@ -57,9 +55,12 @@ let modalEventListenersAttached = false;
  * 【機能概要】: 指定されたIDを持つDOM要素を取得する
  * 【実装方針】: 遅延評価アプローチにより、モジュール読み込み時のDOMアクセスを回避
  * 【テスト対応】: jest.resetModules()を使用するテスト環境でのDOMモック問題を解決
+ *
+ * M21: <dialog>要素ベースに移行。showModal()/close()がフォーカストラップ・ESC処理を
+ * ネイティブで担うため、focusTrapManagerは不要になった。
  */
-function getModal(): HTMLElement | null {
-  return document.getElementById(DOM_IDS.MODAL);
+function getModal(): HTMLDialogElement | null {
+  return document.getElementById(DOM_IDS.MODAL) as HTMLDialogElement | null;
 }
 
 function getPreviewContent(): HTMLTextAreaElement | null {
@@ -97,6 +98,14 @@ export function initializeModalEvents(): void {
     closeModalBtn.addEventListener('click', () => handleAction(false));
     cancelBtn.addEventListener('click', () => handleAction(false));
     confirmBtn.addEventListener('click', () => handleAction(true));
+    // ESC key fires the dialog's native 'cancel' event, then closes it —
+    // resolve as cancelled so callers awaiting showPreview() aren't left hanging.
+    modal.addEventListener('close', () => {
+      if (resolvePromise) {
+        resolvePromise({ confirmed: false, content: null });
+        resolvePromise = null;
+      }
+    });
     modalEventListenersAttached = true;
   }
 
@@ -249,14 +258,8 @@ export function showPreview(
     buildMaskNavigation(navAnchor || modalBody);
   }
 
-  // モーダル表示（トランジション付き）
-  modal.style.display = 'flex';
-  // Force reflow for CSS transition
-  void modal.offsetHeight;
-  modal.classList.add('show');
-
-  // フォーカストラップ設定（共通モジュールを使用）
-  previewTrapId = focusTrapManager.trap(modal, () => handleAction(false));
+  // モーダル表示（ネイティブ<dialog>: showModal()がフォーカストラップ・ESC処理を担う）
+  modal.showModal();
 
   // マスク箇所がある場合、最初の箇所へ自動ジャンプ
   if (maskedPositions.length > 0) {
@@ -300,23 +303,20 @@ function handleAction(confirmed: boolean): void {
     return;
   }
 
-  // フォーカストラップ解放（共通モジュールを使用）
-  if (previewTrapId) {
-    focusTrapManager.release(previewTrapId);
-    previewTrapId = null;
-  }
+  // modal.close() fires the 'close' event synchronously (which also resolves
+  // resolvePromise, as a fallback for ESC-key dismissal). Null it out first so
+  // that fallback becomes a no-op, then resolve with the real outcome here.
+  const resolve = resolvePromise;
+  resolvePromise = null;
 
-  modal.classList.remove('show');
-  modal.style.display = 'none';
+  modal.close();
   resetBodyWidth();
   const content = previewContent.value;
 
-  resolvePromise({
+  resolve({
     confirmed,
     content: confirmed ? content : null
   });
-
-  resolvePromise = null;
 }
 
 /**

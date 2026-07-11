@@ -21,7 +21,6 @@ import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 import { loadDomainSettings } from './domainFilter.js';
 import { loadPrivacySettings } from './privacySettings.js';
-import { focusTrapManager } from './utils/focusTrap.js';
 
 // DOM Elements (lazily resolved for testability)
 function getSettingsMenuBtnEl(): HTMLButtonElement | null { return document.getElementById('settingsMenuBtn') as HTMLButtonElement; }
@@ -29,13 +28,11 @@ function getSettingsMenuEl(): HTMLElement | null { return document.getElementByI
 function getExportSettingsBtnEl(): HTMLButtonElement | null { return document.getElementById('exportSettingsBtn') as HTMLButtonElement; }
 function getImportSettingsBtnEl(): HTMLButtonElement | null { return document.getElementById('importSettingsBtn') as HTMLButtonElement; }
 function getImportFileInputEl(): HTMLInputElement | null { return document.getElementById('importFileInput') as HTMLInputElement; }
-function getImportConfirmModalEl(): HTMLElement | null { return document.getElementById('importConfirmModal') as HTMLElement; }
+function getImportConfirmModalEl(): HTMLDialogElement | null { return document.getElementById('importConfirmModal') as HTMLDialogElement; }
 function getCloseImportModalBtnEl(): HTMLButtonElement | null { return document.getElementById('closeImportModalBtn') as HTMLButtonElement; }
 function getCancelImportBtnEl(): HTMLButtonElement | null { return document.getElementById('cancelImportBtn') as HTMLButtonElement; }
 function getConfirmImportBtnEl(): HTMLButtonElement | null { return document.getElementById('confirmImportBtn') as HTMLButtonElement; }
 function getImportPreviewEl(): HTMLElement | null { return document.getElementById('importPreview') as HTMLElement; }
-
-let importTrapId: string | null = null;
 
 let pendingImportData: Settings | null = null;
 let pendingImportJson: string | null = null;
@@ -156,16 +153,7 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
 
             showImportPreview(parsed);
 
-            const importConfirmModal = getImportConfirmModalEl();
-            if (importConfirmModal) {
-                importConfirmModal.classList.remove('hidden');
-                importConfirmModal.style.display = 'flex';
-                void importConfirmModal.offsetHeight;
-                importConfirmModal.classList.add('show');
-                importConfirmModal.setAttribute('aria-hidden', 'false');
-
-                importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
-            }
+            getImportConfirmModalEl()?.showModal();
 
         } catch (error: unknown) {
             logError('Import error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE);
@@ -206,23 +194,17 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
             closeImportModal();
         }
     });
+
+    // ESC key fires the dialog's native close without going through
+    // closeImportModal(), so run the same state cleanup here too.
+    importConfirmModalOnClick?.addEventListener('close', resetImportState);
 }
 
 function closeImportModal(): void {
-    const importConfirmModal = getImportConfirmModalEl();
-    if (importConfirmModal) {
-        importConfirmModal.setAttribute('aria-hidden', 'true');
+    getImportConfirmModalEl()?.close();
+}
 
-        if (importTrapId) {
-            focusTrapManager.release(importTrapId);
-            importTrapId = null;
-        }
-
-        importConfirmModal.classList.remove('show');
-        importConfirmModal.style.display = 'none';
-        importConfirmModal.classList.add('hidden');
-    }
-
+function resetImportState(): void {
     pendingImportData = null;
     pendingImportJson = null;
     const importPreview = getImportPreviewEl();

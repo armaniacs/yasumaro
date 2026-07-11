@@ -7,8 +7,6 @@ const mockMigrateLegacyPrivacyConsent = vi.hoisted(() => vi.fn());
 const mockRecordPolicyVersionAcknowledgment = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
-const mockFocusTrap = vi.hoisted(() => vi.fn(() => 'trap-id-r2'));
-const mockFocusRelease = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
 
 const storageData: Record<string, any> = {};
@@ -24,13 +22,6 @@ const mockChromeStorageGet = vi.hoisted(() => vi.fn(async (key: string | string[
 }));
 const mockChromeStorageSet = vi.hoisted(() => vi.fn(async (items: Record<string, any>) => {
   Object.assign(storageData, items);
-}));
-
-vi.mock('../utils/focusTrap.js', () => ({
-  focusTrapManager: {
-    trap: mockFocusTrap,
-    release: mockFocusRelease,
-  },
 }));
 
 vi.mock('../i18n.js', () => ({
@@ -66,21 +57,36 @@ import {
   setConsentCallback,
 } from '../privacyConsentController.js';
 
+/**
+ * M21: privacyConsentModal is now a native <dialog>. jsdom doesn't
+ * implement showModal()/close(), so polyfill them.
+ */
+function polyfillDialogMethods(): void {
+  const modal = document.getElementById('privacyConsentModal') as any;
+  if (!modal) return;
+  modal.showModal = function () { this.open = true; };
+  modal.close = function () {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 function setupDom(): void {
   document.body.innerHTML = `
-    <div id="privacyConsentModal" class="hidden">
+    <dialog id="privacyConsentModal">
       <div id="privacyConsentTitle"></div>
       <a id="viewPrivacyPolicyBtn" href="#"></a>
       <input id="consentCheckbox" type="checkbox" />
       <input id="contentStorageConsentCheckbox" type="checkbox" />
       <button id="acceptConsentBtn" disabled>Accept</button>
       <button id="declineConsentBtn">Decline</button>
-    </div>
+    </dialog>
   `;
+  polyfillDialogMethods();
 }
 
-function getModal(): HTMLElement | null {
-  return document.getElementById('privacyConsentModal');
+function getModal(): HTMLDialogElement | null {
+  return document.getElementById('privacyConsentModal') as HTMLDialogElement | null;
 }
 
 function getCheckbox(): HTMLInputElement | null {
@@ -103,8 +109,6 @@ describe('privacyConsentController - r2 missed branches', () => {
     mockMigrateLegacyPrivacyConsent.mockReset();
     mockLogError.mockReset();
     mockGetMessage.mockReset();
-    mockFocusTrap.mockClear();
-    mockFocusRelease.mockClear();
     mockChromeTabsCreate.mockReset();
     mockChromeStorageGet.mockClear();
     mockChromeStorageSet.mockClear();
@@ -133,8 +137,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
-      expect(modal?.style.display).toBe('flex');
+      expect(modal?.open).toBe(true);
       expect(mockChromeStorageSet).toHaveBeenCalledWith(
         expect.objectContaining({ privacy_consent_denied_count: 0 })
       );
@@ -149,7 +152,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
+      expect(modal?.open).toBe(true);
     });
 
     it('should hide modal when denied 3+ times within 30 days', async () => {
@@ -160,7 +163,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(true);
+      expect(modal?.open).toBe(false);
     });
 
     it('should show modal when denied 3+ times but 30 days have passed', async () => {
@@ -172,7 +175,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
+      expect(modal?.open).toBe(true);
     });
 
     it('should show modal when lastDenialTime is null despite 3+ denials', async () => {
@@ -183,7 +186,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
+      expect(modal?.open).toBe(true);
     });
   });
 
@@ -195,7 +198,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await initPrivacyConsent();
 
       const modal = getModal();
-      expect(modal?.classList.contains('hidden')).toBe(false);
+      expect(modal?.open).toBe(true);
       mockChromeStorageGet.mockRestore();
     });
   });
@@ -282,14 +285,17 @@ describe('privacyConsentController - r2 missed branches', () => {
     });
   });
 
-  describe('hidePrivacyConsentModal - focus trap release', () => {
-    it('should release focus trap when hiding modal', async () => {
+  describe('hidePrivacyConsentModal (M21: native dialog)', () => {
+    it('calls showModal()/close() instead of the old focus-trap flow', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      const modal = getModal()!;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+      const closeSpy = vi.spyOn(modal, 'close');
 
       setupPrivacyConsentListeners();
       await initPrivacyConsent();
 
-      expect(mockFocusTrap).toHaveBeenCalled();
+      expect(showModalSpy).toHaveBeenCalled();
 
       const cb = getCheckbox()!;
       cb.checked = true;
@@ -301,7 +307,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(mockFocusRelease).toHaveBeenCalled();
+        expect(closeSpy).toHaveBeenCalled();
       });
     });
   });

@@ -3,15 +3,14 @@
  * プライバシーポリシー同意モーダルUIコントローラー
  */
 
-import { focusTrapManager } from './utils/focusTrap.js';
 import { getMessage } from './i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { StorageKeys } from '../utils/storage.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
-function getModalEl(): HTMLElement | null {
-    return document.getElementById('privacyConsentModal');
+function getModalEl(): HTMLDialogElement | null {
+    return document.getElementById('privacyConsentModal') as HTMLDialogElement | null;
 }
 function getViewPolicyBtnEl(): HTMLAnchorElement | null {
     return document.getElementById('viewPrivacyPolicyBtn') as HTMLAnchorElement;
@@ -33,7 +32,6 @@ function getPrivacyConsentTitleEl(): HTMLElement | null {
 }
 
 // State
-let consentTrapId: string | null = null;
 let onConsentCallback: ((consented: boolean) => void) | null = null;
 
 /**
@@ -143,16 +141,8 @@ function showPrivacyConsentModal(): void {
         title.textContent = getMessage('privacyConsentTitle') || 'Privacy Policy Consent';
     }
 
-    // モーダル表示
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    void modal.offsetHeight; // リフロー強制
-    modal.classList.add('show');
-
-    // フォーカストラップ設定（ESCで閉じない）
-    consentTrapId = focusTrapManager.trap(modal, () => {
-        // ESC押下時は何もしない（同意が必要）
-    });
+    // モーダル表示（ESCで閉じない: 'cancel'イベントをpreventDefaultする）
+    modal.showModal();
 
     // チェックボックスにフォーカス
     cb?.focus();
@@ -176,15 +166,7 @@ function hidePrivacyConsentModal(): void {
     const modal = getModalEl();
     if (!modal) return;
 
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-    modal.classList.add('hidden');
-
-    // フォーカストラップ解放
-    if (consentTrapId) {
-        focusTrapManager.release(consentTrapId);
-        consentTrapId = null;
-    }
+    modal.close();
 
     // 状態リセット
     const cb = getConsentCheckboxEl();
@@ -279,10 +261,10 @@ export function setupPrivacyConsentListeners(): void {
         declineBtn.addEventListener('click', handleDeclineConsent);
     }
 
-    // 外部クリックで閉じない（明示的なアクションを要求）
+    // ESCキーで閉じない（同意の明示的なアクションを要求）
     if (modal) {
-        modal.addEventListener('click', (e: MouseEvent) => {
-            e.stopPropagation();
+        modal.addEventListener('cancel', (e: Event) => {
+            e.preventDefault();
         });
     }
 
