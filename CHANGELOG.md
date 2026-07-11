@@ -17,6 +17,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.23] - 2026-07-12
+
+### Fixed / 修正
+
+- **WCAG a11y 違反を修正** — `aria-hidden="true"` の非表示タブパネル（`#domainPanel`, `#promptPanel`, `#privacyPanel`）に `inert` 属性を追加し、フォーカス可能要素がアクセシビリティツリーに露出しないよう対応。`initTabNavigation()` と `showTab()` にタブ切り替え時の `inert` 設定/解除ロジックを追加
+- **`#importFileInput` の ARIA 違反を修正** — `<div role="menu">` 内に `<input>` が存在した違反を解消するため要素をメニュー外に移動し、ラベルなしフォーム要素の違反対策として `aria-label` を追加
+- **Privacy Consent Modal の `<dialog>` に ARIA 属性を追加** — `role="dialog"` と `aria-modal="true"` を明示的に設定
+- **E2E テストの互換性を修正** — Privacy Consent Modal のテストを `<dialog>` 移行後の DOM 構造（`modal-dialog` クラス、`not.toBeVisible()` チェック）に更新。Domain Filter テストをダッシュボード遷移変更（`showSettingsScreen()` が新規タブを開くようになった）に合わせて `page.evaluate()` ベースに修正
+
+### Changed / 変更
+
+- **a11y E2E テストの設定画面遷移を修正** — `showSettingsScreen()` が新規タブを開くようになったため、`page.evaluate()` で直接 `#settingsScreen` を表示するよう変更
+
+## [6.5.22] - 2026-07-12
+
+### Refactored / リファクタリング
+
+- **storage.tsを4モジュールに分割** — 1364行・38 exportの単一ファイルだった`src/utils/storage.ts`を`encryptionSession.ts`（暗号化セッション）、`settingsStore.ts`（設定ストア）、`savedUrlStore.ts`（保存URLストア）、`domainFilterCache.ts`（ドメインフィルタキャッシュ）の4モジュールに分割。`storage.ts`は後方互換のための再エクスポート層として維持し、既存75箇所のimport文は変更不要（M34）
+- **sqlite.tsを4モジュールに分割** — 1594行・22 exportの単一ファイルだった`src/offscreen/sqlite.ts`を`sqliteEngineContext.ts`（エンジン状態・初期化）、`recordsRepo.ts`（レコードCRUD・FTS5検索）、`dbMaintenance.ts`（保持期間パージ・バックアップ/リストア）、`auditLogRepo.ts`（監査ログ）の4モジュールに分割。`sqlite.ts`は後方互換のための再エクスポート層として維持（M35）
+- **sqliteHistoryPanelの再描画をrefresh()に統一** — state変更後の再描画判断が20箇所超のハンドラに個別に散在していた問題を解消。`updateDynamicRegions()`に漏れていた`updateBulkBar()`呼び出しを追加し、「条件をクリア」ボタンの二重再描画も解消（M36）
+- **dashboard SQLite通信をDiscriminated Unionで型安全化** — 新規`dashboardSqliteProtocol.ts`でsubtype別のリクエスト/レスポンスをDiscriminated Unionとして定義。`payload.x as T`キャストの塊だった`dashboardSqliteHandlers.ts` / `dashboardSqliteService.ts` / `dashboard.ts`を型安全化。新規subtype追加時に送受信両側の対応をコンパイラが保証する（M36）
+
+### Fixed / 修正
+
+- **`aiSummaryCleansingSettingsV2.ts`のgit管理漏れを修正** — 既存のソースファイルだがgit add漏れによりコミットされていなかったファイルを追跡対象に追加
+- **`confirm_token`サブタイプが常にUnknown subtypeエラーになるバグを修正** — `dashboardSqliteHandlers.ts`で`case 'confirm_token'`がハンドリングされておらず、分割前から存在していた潜在バグを解消
+
+## [6.5.21] - 2026-07-11
+
 ### Changed / 変更
 
 - **クエリ結果件数に強制上限を追加** — `query()`/`search()`/`queryAuditLog()`に`MAX_QUERY_LIMIT=100000`のハード上限を導入し、呼び出し元が極端に大きいlimitを指定しても全件をJSメモリに一度にロードしないよう保護（M13）

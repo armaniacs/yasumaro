@@ -18,8 +18,8 @@ test.describe('Privacy Consent Modal - Structure @ui @a11y', () => {
       await expect(modal).toHaveId('privacyConsentModal');
     });
 
-    await test.step('Verify modal has overlay class', async () => {
-      await expect(modal).toHaveClass(/modal-overlay/);
+    await test.step('Verify modal has dialog class', async () => {
+      await expect(modal).toHaveClass(/modal-dialog/);
     });
   });
 
@@ -34,8 +34,8 @@ test.describe('Privacy Consent Modal - Structure @ui @a11y', () => {
   test('modal is hidden initially', async ({ popupPage: page }) => {
     const modal = page.locator('#privacyConsentModal');
 
-    await expect(modal).toHaveClass(/hidden/);
     await expect(modal).toBeAttached();
+    await expect(modal).not.toBeVisible();
   });
 });
 
