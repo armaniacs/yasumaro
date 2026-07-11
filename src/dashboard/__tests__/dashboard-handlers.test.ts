@@ -16,12 +16,22 @@ import {
     handleTestAi,
     initSidebarNav,
     getSettingsMapping,
+    handleManualLocalMarkdownExport,
+    handleExportLocalMarkdown,
+    handleHistoryExportLocalMarkdown,
 } from '../dashboard.js';
 import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 
 // Capture variables for assertions
 let lastSavedSettings: unknown = null;
 let getSavedUrlEntriesCallCount = 0;
+const mockQueryLogs = vi.fn();
+const mockDownload = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../dashboardSqliteService.js', () => ({
+    queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
+    clearAllLogs: vi.fn(),
+}));
 
 vi.stubGlobal('chrome', {
     i18n: {
@@ -30,7 +40,11 @@ vi.stubGlobal('chrome', {
     },
     runtime: { sendMessage: vi.fn().mockResolvedValue({}) },
     storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn().mockResolvedValue(undefined) } },
+    downloads: { download: (...args: unknown[]) => mockDownload(...args) },
 });
+
+URL.createObjectURL = vi.fn(() => 'blob:mock');
+URL.revokeObjectURL = vi.fn();
 
 function buildDom() {
     document.body.innerHTML = `
@@ -87,6 +101,16 @@ function buildDom() {
         <div id="breakingChangesModal"></div>
         <button id="closeBreakingChangesModalBtn"></button>
         <button id="dismissBreakingChangesModalBtn"></button>
+        <input id="localExportStartDate" value="2026-01-01" />
+        <input id="localExportEndDate" value="2026-01-02" />
+        <button id="localExportManualBtn"></button>
+        <div id="localExportManualStatus"></div>
+        <input id="exportLocalStartDate" value="2026-01-01" />
+        <input id="exportLocalEndDate" value="2026-01-02" />
+        <button id="exportLocalMarkdownBtn"></button>
+        <div id="exportLocalMarkdownStatus"></div>
+        <button id="historyExportLocalMarkdownBtn"></button>
+        <div id="historyExportLocalMarkdownStatus"></div>
     `;
 }
 
@@ -175,7 +199,7 @@ vi.mock('../../popup/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 
-vi.mock('../../popup/aiSummaryCleansingSettings.js', () => ({
+vi.mock('../../popup/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),
@@ -478,5 +502,76 @@ describe('initSidebarNav – AI Summary Cleansing panel', () => {
         await new Promise(r => setTimeout(r, 10));
         expect(() => {}).not.toThrow();
         raf.mockRestore();
+    });
+});
+
+describe('exportLocalMarkdownCore behavior parity (M15)', () => {
+    beforeEach(() => {
+        buildDom();
+        resetDashboardElements();
+        vi.clearAllMocks();
+        mockQueryLogs.mockReset();
+        mockDownload.mockReset().mockResolvedValue(undefined);
+    });
+
+    it('handleManualLocalMarkdownExport queries by date range and shows date-range empty message', async () => {
+        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+
+        await handleManualLocalMarkdownExport();
+
+        expect(mockQueryLogs).toHaveBeenCalledWith(
+            expect.objectContaining({ orderBy: 'created_at', orderDir: 'ASC', limit: 10000 })
+        );
+        expect(mockQueryLogs.mock.calls[0][0]).toHaveProperty('since');
+        expect(mockQueryLogs.mock.calls[0][0]).toHaveProperty('until');
+        expect(document.getElementById('localExportManualStatus')?.textContent).toBe('指定期間に記録がありません。');
+    });
+
+    it('handleExportLocalMarkdown uses its own DOM element IDs and date-range query', async () => {
+        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+
+        await handleExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenCalledWith(
+            expect.objectContaining({ orderBy: 'created_at', orderDir: 'ASC', limit: 10000 })
+        );
+        expect(document.getElementById('exportLocalMarkdownStatus')?.textContent).toBe('指定期間に記録がありません。');
+    });
+
+    it('handleHistoryExportLocalMarkdown queries full history (no date range) and shows its own empty message', async () => {
+        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe('エクスポートする記録がありません。');
+    });
+
+    it('downloads one file per distinct date and reports the count', async () => {
+        mockQueryLogs.mockResolvedValue({
+            rows: [
+                { id: 1, url: 'https://example.com/1', title: 'A', summary: 'S1', created_at: new Date(2026, 0, 1, 9, 0, 0).getTime() },
+                { id: 2, url: 'https://example.com/2', title: 'B', summary: 'S2', created_at: new Date(2026, 0, 2, 9, 0, 0).getTime() },
+                { id: 3, url: 'https://example.com/3', title: 'C', summary: 'S3', created_at: new Date(2026, 0, 2, 15, 0, 0).getTime() },
+            ],
+            total: 3,
+        });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockDownload).toHaveBeenCalledTimes(2);
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+            '3件の記録を2ファイルにエクスポートしました。'
+        );
+    });
+
+    it('shows an error message and re-enables the button when queryLogs rejects', async () => {
+        mockQueryLogs.mockRejectedValue(new Error('boom'));
+        const btn = document.getElementById('historyExportLocalMarkdownBtn') as HTMLButtonElement;
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toContain('boom');
+        expect(btn.disabled).toBe(false);
     });
 });

@@ -112,9 +112,8 @@ const ALLOWED_ORDER_COLUMNS = [
 ] as const;
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
-const FTS_QUERY_MAX_LENGTH = 200;
 
-import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
+import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from './schema.js';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -123,29 +122,6 @@ import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQ
 let engine: SqliteEngine | null = null;
 let cachedCompileOptions: string[] | null = null;
 let fts5Available = false;
-
-// ---------------------------------------------------------------------------
-// FTS query sanitization
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the sanitized bare term (no surrounding quotes).
- * Used for length-checking before deciding FTS5 vs LIKE.
- */
-function sanitizeFtsTerm(query: string): string {
-  if (!query) return '';
-
-  // Limit input length to prevent DoS via extremely long queries
-  const truncated = query.slice(0, FTS_QUERY_MAX_LENGTH);
-
-  // Whitelist: only allow alphanumeric, CJK characters, and spaces
-  // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
-  // and special character injection (*, ", ~, ^, :, (, ), +, -)
-  return truncated
-    .replace(/[^A-Za-z0-9぀-ゟ゠-ヿ一-鿿㐀-䶿\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 // ---------------------------------------------------------------------------
 // Init helpers

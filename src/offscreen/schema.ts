@@ -378,3 +378,36 @@ export const AUDIT_LOG_SCHEMA_SQL = `
 
   CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 `;
+
+// ============================================================================
+// Shared query utilities (M16)
+// ============================================================================
+// sqlite.ts (IDB path) and opfsWorker.ts (OPFS Worker path) had identical
+// copies of sanitizeFtsTerm. Full Strategy-pattern unification of the two
+// backends' CRUD logic isn't practical — they use different async
+// execution models (direct calls vs Worker message passing), and their
+// ALLOWED_ORDER_COLUMNS lists differ (sqlite.ts allows more columns) — but
+// this backend-agnostic FTS sanitizer is safe to share.
+
+export const FTS_QUERY_MAX_LENGTH = 200;
+
+/**
+ * Sanitize user input for FTS5 query syntax.
+ * Uses a whitelist approach to prevent SQL injection via FTS5 operators.
+ * Returns the sanitized bare term (no surrounding quotes) — used for
+ * length-checking before deciding FTS5 vs LIKE.
+ */
+export function sanitizeFtsTerm(query: string): string {
+  if (!query) return '';
+
+  // Limit input length to prevent DoS via extremely long queries
+  const truncated = query.slice(0, FTS_QUERY_MAX_LENGTH);
+
+  // Whitelist: only allow alphanumeric, CJK characters, and spaces
+  // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
+  // and special character injection (*, ", ~, ^, :, (, ), +, -)
+  return truncated
+    .replace(/[^A-Za-z0-9぀-ゟ゠-ヿ一-鿿㐀-䶿\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
