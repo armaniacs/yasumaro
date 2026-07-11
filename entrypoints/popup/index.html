@@ -215,8 +215,8 @@
       <div id="settingsMenu" class="dropdown-menu hidden" role="menu">
         <button id="exportSettingsBtn" role="menuitem" data-i18n="exportSettings">Export</button>
         <button id="importSettingsBtn" role="menuitem" data-i18n="importSettings">Import</button>
-        <input type="file" id="importFileInput" accept=".json" class="hidden" aria-hidden="true">
       </div>
+      <input type="file" id="importFileInput" accept=".json" class="hidden" aria-label="Import settings file">
     </header>
 
     <!-- Tab Navigation -->
@@ -363,7 +363,7 @@
     </div>
 
     <!-- Domain Filter Panel -->
-    <div id="domainPanel" class="tab-panel" role="tabpanel" aria-labelledby="domainTab" aria-hidden="true">
+    <div id="domainPanel" class="tab-panel" role="tabpanel" aria-labelledby="domainTab" aria-hidden="true" inert>
       <div class="form-group">
         <label id="domainFilterModeLabel" data-i18n="domainFilterMode">Domain Filter Mode</label>
         <div class="radio-group" role="radiogroup" aria-labelledby="domainFilterModeLabel">
@@ -484,7 +484,7 @@
     </div>
 
     <!-- Custom Prompt Panel -->
-    <div id="promptPanel" class="tab-panel" role="tabpanel" aria-labelledby="promptTab" aria-hidden="true">
+    <div id="promptPanel" class="tab-panel" role="tabpanel" aria-labelledby="promptTab" aria-hidden="true" inert>
       <div class="form-group">
         <label data-i18n="promptDescription">Customize the AI summary prompt. Use {{content}} as a placeholder for the page content.</label>
         <div class="help-text" data-i18n="promptHelp">
@@ -548,7 +548,7 @@
     </div>
 
     <!-- Privacy Settings Panel -->
-    <div id="privacyPanel" class="tab-panel" role="tabpanel" aria-labelledby="privacyTab" aria-hidden="true">
+    <div id="privacyPanel" class="tab-panel" role="tabpanel" aria-labelledby="privacyTab" aria-hidden="true" inert>
 
       <div class="form-group">
         <label id="privacyModeLabel" data-i18n="privacyMode">Privacy Mode</label>
@@ -782,7 +782,7 @@
   </dialog>
 
   <!-- Privacy Consent Modal -->
-  <dialog id="privacyConsentModal" class="modal-dialog" aria-labelledby="privacyConsentTitle">
+  <dialog id="privacyConsentModal" class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
     <div class="modal-content privacy-consent-content">
       <div class="modal-header">
         <img src="../icons/icon48.png" width="24" height="24" alt="Yasumaro" class="modal-logo">

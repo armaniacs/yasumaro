@@ -161,6 +161,11 @@ function showTab(tabName: 'general' | 'domain' | 'prompt' | 'privacy'): void {
             panel.classList.toggle('active', isActive);
             panel.removeAttribute('style');
             panel.setAttribute('aria-hidden', String(!isActive));
+            if (isActive) {
+                panel.removeAttribute('inert');
+            } else {
+                panel.setAttribute('inert', '');
+            }
         }
     });
 

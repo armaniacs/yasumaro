@@ -56,13 +56,22 @@ export function initTabNavigation(): void {
                     panel.classList.add('active');
                     panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'false');
+                    panel.removeAttribute('inert');
                 } else {
                     panel.classList.remove('active');
                     panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'true');
+                    panel.setAttribute('inert', '');
                 }
             });
         });
+    });
+
+    // Set inert on initially hidden panels for a11y compliance
+    tabPanels.forEach(panel => {
+        if (!panel.classList.contains('active')) {
+            panel.setAttribute('inert', '');
+        }
     });
 }
 
