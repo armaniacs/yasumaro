@@ -218,6 +218,11 @@ export const StorageKeys = {
     GIST_ENABLED: 'gist_enabled',
     GITHUB_PAT: 'github_pat',
     GIST_ID: 'gist_id', // Gist ID for updating existing Gist
+    // Legacy dual-write end-condition flag (M9)
+    // When false, the chrome.storage.local legacy write (saveMetadataStep) is
+    // skipped, leaving SQLite as the single source of truth.
+    // Default: true (legacy dual-write behavior preserved).
+    LEGACY_DUAL_WRITE_ENABLED: 'legacy_dual_write_enabled',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -381,6 +386,7 @@ export interface StorageKeyValues {
     [StorageKeys.GIST_ENABLED]: boolean;
     [StorageKeys.GITHUB_PAT]: string | EncryptedData;
     [StorageKeys.GIST_ID]: string;
+    [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型
