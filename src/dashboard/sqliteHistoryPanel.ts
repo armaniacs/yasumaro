@@ -77,6 +77,27 @@ function getMonthDateRange(year: number, month: number): { since: number; until:
 // Data loading
 // ============================================================================
 
+/**
+ * Re-render everything that can change as a result of a state mutation
+ * (entry list, pagination, calendar nav, bulk-selection bar, tag filter bar,
+ * count/error text). Every handler that mutates `state` should call this
+ * once afterward instead of hand-picking which render*()/update*() functions
+ * apply — that per-handler judgment call was the actual source of drift
+ * (e.g. a handler updating the entry list but forgetting pagination).
+ *
+ * Bug fix note: do NOT rebuild the whole panel (which recreates the search
+ * <input> and resets the caret to the start) on every keystroke. When the
+ * panel is already mounted, update only the dynamic regions and keep the
+ * input intact.
+ */
+function refresh(): void {
+  if (isPanelMounted()) {
+    updateDynamicRegions();
+  } else {
+    renderState();
+  }
+}
+
 async function loadData(options: {
   limit?: number;
   since?: number;
@@ -87,14 +108,7 @@ async function loadData(options: {
 } = {}): Promise<void> {
   state.loading = true;
   state.error = null;
-  // Bug fix: do NOT rebuild the whole panel (which recreates the search <input>
-  // and resets the caret to the start) on every keystroke. When the panel is
-  // already mounted, update only the dynamic regions and keep the input intact.
-  if (isPanelMounted()) {
-    updateDynamicRegions();
-  } else {
-    renderState();
-  }
+  refresh();
 
   try {
     const page = options.page ?? state.currentPage;
@@ -158,11 +172,7 @@ async function loadData(options: {
     state.total = 0;
   } finally {
     state.loading = false;
-    if (isPanelMounted()) {
-      updateDynamicRegions();
-    } else {
-      renderState();
-    }
+    refresh();
   }
 }
 
@@ -186,6 +196,7 @@ function updateDynamicRegions(): void {
   }
 
   updateTagFilterBar();
+  updateBulkBar();
 
   // Re-render calendar nav so the "clear filters" button shows/hides
   renderCalendarNav();
@@ -247,7 +258,7 @@ async function handleToggleStar(id: number): Promise<void> {
     // Update the entry in local state
     const entry = state.entries.find(e => e.id === id);
     if (entry) entry.is_starred = result.is_starred;
-    renderEntryList();
+    refresh();
   }
 }
 
@@ -265,8 +276,7 @@ async function handleDelete(id: number): Promise<void> {
     state.entries = state.entries.filter(e => e.id !== id);
     state.total = Math.max(0, state.total - 1);
     state.selectedIds.delete(id);
-    renderEntryList();
-    updateBulkBar();
+    refresh();
   }
 }
 
@@ -344,8 +354,7 @@ async function handleAppendToObsidian(): Promise<void> {
 
   if (result.success) {
     state.selectedIds.clear();
-    updateBulkBar();
-    renderEntryList();
+    refresh();
     chrome.notifications?.create({
       type: 'basic',
       iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
@@ -463,16 +472,14 @@ function renderState(): void {
       } else {
         state.selectedIds.clear();
       }
-      updateBulkBar();
-      renderEntryList();
+      refresh();
     });
   }
 
   if (clearSelectionBtn) {
     clearSelectionBtn.addEventListener('click', () => {
       state.selectedIds.clear();
-      updateBulkBar();
-      renderEntryList();
+      refresh();
     });
   }
 
@@ -485,7 +492,7 @@ function renderState(): void {
   if (tagFilterClear) {
     tagFilterClear.addEventListener('click', () => {
       state.activeTagFilter = null;
-      renderState();
+      refresh();
     });
   }
 }
@@ -812,9 +819,9 @@ function renderCalendarNav(): void {
     const searchInput = document.getElementById('sqlite-search-input') as HTMLInputElement | null;
     if (searchInput) searchInput.value = '';
 
+    // loadData() calls refresh() internally, which already re-renders the
+    // calendar nav — no need to call renderCalendarNav()/renderState() here too.
     loadData({ page: 0 });
-    renderCalendarNav();
-    renderState();
   });
 
   // Render days of the month

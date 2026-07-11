@@ -40,6 +40,7 @@ import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initAuditLogPanel } from './auditLogPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
+import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { initOnboardingWizard } from '../popup/onboardingWizard.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from './aiProviderLayoutManager.js';
@@ -990,14 +991,14 @@ export async function handlePurgeNow(): Promise<void> {
     const result = await chrome.runtime.sendMessage({
       type: 'DASHBOARD_SQLITE',
       payload: { subtype: 'purge_now' },
-    }) as { success: boolean; purged: number; skipped?: boolean; error?: string } | undefined;
+    }) as DashboardSqliteResponseFor<'purge_now'> | undefined;
 
-    if (result?.skipped) {
+    if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
       statusEl.textContent = getMessage('purgeNowSuccess', [String(result.purged)]) || `${result.purged} 件を削除しました`;
     } else {
-      statusEl.textContent = result?.error ?? 'Error';
+      statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
   } finally {
     el.purgeNowBtn.disabled = false;
@@ -1015,14 +1016,14 @@ export async function handleContentPurgeNow(): Promise<void> {
     const result = await chrome.runtime.sendMessage({
       type: 'DASHBOARD_SQLITE',
       payload: { subtype: 'content_purge_now' },
-    }) as { success: boolean; purged: number; skipped?: boolean; error?: string } | undefined;
+    }) as DashboardSqliteResponseFor<'content_purge_now'> | undefined;
 
-    if (result?.skipped) {
+    if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
       statusEl.textContent = getMessage('contentPurgeNowSuccess', [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
     } else {
-      statusEl.textContent = result?.error ?? 'Error';
+      statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
   } finally {
     el.contentPurgeNowBtn.disabled = false;

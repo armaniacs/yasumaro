@@ -4,18 +4,10 @@
  * The service worker's DASHBOARD_SQLITE handler proxies requests to SqliteClient.
  */
 
+import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
-
-interface DashboardResponse<T = unknown> {
-  success: boolean;
-  error?: string;
-  rows?: T[];
-  total?: number;
-  count?: number;
-  is_starred?: number;
-  [key: string]: unknown;
-}
 
 /**
  * Send a DASHBOARD_SQLITE message to the service worker.
@@ -43,15 +35,15 @@ async function getConfirmToken(): Promise<string | null> {
   return null;
 }
 
-async function withConfirmToken(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken?: string }> {
   const confirmToken = await getConfirmToken();
   return confirmToken ? { ...payload, confirmToken } : payload;
 }
 
-async function sendDashboardMessage(
-  payload: Record<string, unknown>,
+async function sendDashboardMessage<T extends DashboardSqliteRequest>(
+  payload: T,
   options: { requireConfirmToken?: boolean } = {}
-): Promise<DashboardResponse> {
+): Promise<DashboardSqliteResponseFor<T['subtype']>> {
   const messagePayload = options.requireConfirmToken
     ? await withConfirmToken(payload)
     : payload;
