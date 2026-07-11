@@ -28,11 +28,15 @@ vi.mock('../aiClient.js', () => ({
   },
 }));
 
-vi.mock('../sqliteClient.js', () => ({
-  SqliteClient: class MockSqliteClient {
+vi.mock('../sqliteClient.js', () => {
+  class MockSqliteClient {
     query = mockQuery;
-  },
-}));
+  }
+  return {
+    SqliteClient: MockSqliteClient,
+    getSharedSqliteClient: () => new MockSqliteClient(),
+  };
+});
 
 import { generateWeeklySummary, generateMonthlySummary, generateStatsSection, generateReviewMarkdown } from '../reviewSummaryGenerator.js';
 import { getSettings } from '../../utils/storage.js';

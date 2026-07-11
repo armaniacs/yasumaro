@@ -2,6 +2,7 @@ import { withOptimisticLock } from '../../../utils/optimisticLock.js';
 import type { SqliteClient } from '../../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import { addLog, LogType } from '../../../utils/logger.js';
+import { enqueuePendingRecord } from '../../pendingSqliteQueue.js';
 
 export interface SaveSqliteStepParams {
   recordId: string | number;
@@ -22,6 +23,8 @@ export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void
 
     const insertResult = await params.sqliteClient.insert(params.record);
     if (!insertResult) {
+      // SQLite unavailable/failing: queue the record instead of losing it (M14).
+      await enqueuePendingRecord(params.record);
       throw new Error(`SQLite insert returned null for url=${params.record.url}`);
     }
     if (params.obsidianSynced !== undefined) {

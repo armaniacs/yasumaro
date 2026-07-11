@@ -21,7 +21,7 @@ import {
     clearSettingsCache
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
-import { SqliteClient } from './sqliteClient.js';
+import { getSharedSqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
@@ -182,7 +182,7 @@ export async function ensureConfirmToken(): Promise<string> {
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
-const sqliteClient = new SqliteClient();
+const sqliteClient = getSharedSqliteClient();
 const recordingLogic = new RecordingLogic(obsidian, aiClient, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
@@ -913,6 +913,7 @@ export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 const _lifecycleHandlers = createLifecycleHandlers({
     isCacheInitialized: { get value() { return isCacheInitialized; }, set value(v: boolean) { isCacheInitialized = v; } },
     rateLimiter,
+    sqliteClient,
 });
 export const handleInstalled = _lifecycleHandlers.handleInstalled;
 export const handleStartup = _lifecycleHandlers.handleStartup;

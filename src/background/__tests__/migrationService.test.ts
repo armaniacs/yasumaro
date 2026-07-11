@@ -137,7 +137,11 @@ describe('MigrationService', () => {
     ];
 
     // Insert fails
-    sendMessageMock.mockResolvedValue({ success: false, error: 'Insert failed' });
+    sendMessageMock.mockImplementation(
+      (_msg: unknown, callback: (response: unknown) => void) => {
+        callback({ success: false, error: 'Insert failed' });
+      }
+    );
 
     await service.run();
 
@@ -190,7 +194,11 @@ describe('MigrationService', () => {
 
     // Simulate restart — remaining entry should be retried
     sendMessageMock.mockClear();
-    sendMessageMock.mockResolvedValue({ success: true, count: 1 });
+    sendMessageMock.mockImplementation(
+      (_msg: unknown, callback: (response: unknown) => void) => {
+        callback({ success: true, count: 1 });
+      }
+    );
 
     // Reset status but keep same data + progress from first run
     mockStorage['yasumaro_migration_status'] = null;
