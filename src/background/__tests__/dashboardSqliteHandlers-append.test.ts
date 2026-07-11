@@ -91,8 +91,11 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when ids is not an array', async () => {
+    // Intentionally malformed payload — verifies the runtime Array.isArray
+    // guard, which is reachable in practice via the chrome.runtime.onMessage
+    // wire (see the cast in service-worker.ts).
     const result = await handleDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: 'not-an-array' },
+      { subtype: 'append_to_obsidian', ids: 'not-an-array' } as any,
       mockSqliteClient as any
     );
 
@@ -101,7 +104,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when ids is undefined', async () => {
     const result = await handleDashboardSqlite(
-      { subtype: 'append_to_obsidian' },
+      { subtype: 'append_to_obsidian' } as any,
       mockSqliteClient as any
     );
 

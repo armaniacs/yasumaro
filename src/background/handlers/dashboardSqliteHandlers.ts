@@ -5,6 +5,10 @@ import { logError, logInfo, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys, getSettings } from '../../utils/storage.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
+import { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
+
+export { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES };
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -25,26 +29,18 @@ function base64ToBytes(b64: string): Uint8Array {
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
-export const TOKEN_REQUIRED_SUBTYPES = new Set([
-    'toggle_star', 'update', 'delete', 'migrate', 'backfill_metadata', 'cleanup_legacy', 'clear_all', 'import', 'restore_db', 'backup_db',
-]);
-
-export const MODAL_REQUIRED_SUBTYPES = new Set([
-    'delete', 'migrate', 'cleanup_legacy', 'clear_all',
-]);
-
 export async function handleDashboardSqlite(
-    payload: Record<string, unknown>,
+    payload: DashboardSqliteRequest & { confirmToken?: string },
     sqliteClient: SqliteClient,
     runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
     validConfirmToken?: string,
     runBackfill?: () => Promise<{ updated: number; total: number }>,
     runCleanup?: () => Promise<{ removed: string[]; totalBytes: number }>
 ): Promise<unknown> {
-    const subtype = payload.subtype as string;
+    const subtype = payload.subtype;
 
     if (TOKEN_REQUIRED_SUBTYPES.has(subtype)) {
-        const providedToken = payload.confirmToken as string | undefined;
+        const providedToken = payload.confirmToken;
         if (!providedToken || providedToken !== validConfirmToken) {
             logError(
                 'Dashboard SQLite: token mismatch',
@@ -57,6 +53,12 @@ export async function handleDashboardSqlite(
 
     try {
         switch (subtype) {
+            case 'confirm_token': {
+                if (!validConfirmToken) {
+                    return { success: false, error: 'Confirm token not available' };
+                }
+                return { success: true, confirmToken: validConfirmToken };
+            }
             case 'migrate': {
                 if (!runMigration) {
                     return { success: false, error: 'Migration not available' };
@@ -68,15 +70,15 @@ export async function handleDashboardSqlite(
             }
             case 'query': {
                 const result = await sqliteClient.query({
-                    limit: (payload.limit as number) ?? 100,
-                    offset: (payload.offset as number) ?? 0,
-                    domain: payload.domain as string | undefined,
-                    isStarred: payload.isStarred as boolean | undefined,
-                    since: payload.since as number | undefined,
-                    until: payload.until as number | undefined,
-                    orderBy: (payload.orderBy as string) || 'created_at',
-                    orderDir: (payload.orderDir as 'ASC' | 'DESC') || 'DESC',
-                    tagFilter: payload.tagFilter as string | undefined,
+                    limit: payload.limit ?? 100,
+                    offset: payload.offset ?? 0,
+                    domain: payload.domain,
+                    isStarred: payload.isStarred,
+                    since: payload.since,
+                    until: payload.until,
+                    orderBy: payload.orderBy || 'created_at',
+                    orderDir: payload.orderDir || 'DESC',
+                    tagFilter: payload.tagFilter,
                 });
                 return result
                     ? { success: true, rows: result.rows, total: result.total }
@@ -84,30 +86,30 @@ export async function handleDashboardSqlite(
             }
             case 'search': {
                 const result = await sqliteClient.search(
-                    payload.query as string || '',
-                    (payload.limit as number) ?? 50,
-                    (payload.offset as number) ?? 0
+                    payload.query || '',
+                    payload.limit ?? 50,
+                    payload.offset ?? 0
                 );
                 return result
                     ? { success: true, rows: result.rows, total: result.total }
                     : { success: false, error: 'Search failed' };
             }
             case 'toggle_star': {
-                const result = await sqliteClient.toggleStar(payload.id as number);
+                const result = await sqliteClient.toggleStar(payload.id);
                 return result ?? { success: false, error: 'Toggle star failed' };
             }
             case 'delete': {
-                const result = await sqliteClient.delete(payload.id as number);
+                const result = await sqliteClient.delete(payload.id);
                 return { success: result };
             }
             case 'update': {
-                const changes = (payload.changes || {}) as Record<string, unknown>;
+                const changes = payload.changes || {};
                 const invalidKeys = Object.keys(changes).filter((k) => !ALLOWED_UPDATE_FIELDS.includes(k));
                 if (invalidKeys.length > 0) {
                     return { success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` };
                 }
                 const result = await sqliteClient.update(
-                    payload.id as number,
+                    payload.id,
                     changes
                 );
                 return { success: result };
@@ -121,11 +123,7 @@ export async function handleDashboardSqlite(
                 return { success: ok };
             }
             case 'import': {
-                const rows = payload.rows as Array<{
-                    url: string; title?: string; summary?: string; tags?: string;
-                    created_at: number; domain?: string; visit_duration?: number;
-                    scroll_ratio?: number; is_starred?: number; is_deleted?: number;
-                }> | undefined;
+                const rows = payload.rows;
                 if (!Array.isArray(rows) || rows.length === 0) {
                     return { success: false, error: 'No rows provided' };
                 }
@@ -158,7 +156,7 @@ export async function handleDashboardSqlite(
                 return { success: true, inserted, skipped, total: rows.length };
             }
             case 'restore_db': {
-                const data = payload.data as string | undefined;
+                const data = payload.data;
                 if (typeof data !== 'string' || data.length === 0) {
                     return { success: false, error: 'No data provided' };
                 }
@@ -180,7 +178,7 @@ export async function handleDashboardSqlite(
                     : { success: false, error: 'OPFS spike failed' };
             }
             case 'append_to_obsidian': {
-                const ids = payload.ids as number[] | undefined;
+                const ids = payload.ids;
                 if (!Array.isArray(ids) || ids.length === 0) {
                     return { success: false, error: 'No IDs provided' };
                 }

@@ -211,8 +211,11 @@ describe('handleDashboardSqlite — import', () => {
 
   it('returns error when rows is not an array', async () => {
     const mock = createMockSqliteClient();
+    // Intentionally malformed payload — verifies the runtime Array.isArray
+    // guard, which is reachable in practice via the chrome.runtime.onMessage
+    // wire (see the cast in service-worker.ts).
     const result = await handleDashboardSqlite(
-      { subtype: 'import', rows: 'not-an-array', ...TK() },
+      { subtype: 'import', rows: 'not-an-array', ...TK() } as any,
       mock as any,
       undefined,
       VALID_TOKEN
@@ -456,7 +459,10 @@ describe('handleDashboardSqlite — migrate', () => {
 describe('handleDashboardSqlite — unknown subtype', () => {
   it('returns error for unknown subtype', async () => {
     const mock = createMockSqliteClient();
-    const result = await handleDashboardSqlite({ subtype: 'nonexistent' }, mock as any);
+    // Intentionally an invalid subtype not in DashboardSqliteRequest — verifies the
+    // runtime default branch, which is reachable in practice via the
+    // chrome.runtime.onMessage wire (see the cast in service-worker.ts).
+    const result = await handleDashboardSqlite({ subtype: 'nonexistent' } as any, mock as any);
     expect(result).toEqual({ success: false, error: expect.stringContaining('Unknown subtype') });
   });
 });

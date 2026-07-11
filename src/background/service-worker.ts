@@ -37,6 +37,7 @@ import { updateActivity, initialize as initializeSessionAlarms } from './session
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
 import { encodeUrlSafeBase64 } from './handlers/urlNotificationHandlers.js';
 import { handleDashboardSqlite } from './handlers/dashboardSqliteHandlers.js';
+import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { hasPrivacyConsent, migrateLegacyPrivacyConsent } from '../popup/privacyConsent.js';
 import { RateLimiter } from './rateLimiter.js';
@@ -853,7 +854,10 @@ export function createMessageHandler(): (
                         return;
                     }
                     const result = await handleDashboardSqlite(
-                        message.payload || {},
+                        // message.payload crosses the chrome.runtime.onMessage wire — no
+                        // runtime validation happens here, so this cast is the one place
+                        // the protocol's type safety necessarily ends.
+                        (message.payload || {}) as DashboardSqliteRequest & { confirmToken?: string },
                         sqliteClient,
                         async () => {
                             // Reset progress for manual re-run via diagnostics panel
