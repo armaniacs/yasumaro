@@ -185,6 +185,11 @@ export const StorageKeys = {
     // SQLite retention policy (null = unlimited / no purge)
     SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
     SQLITE_MAX_RECORDS: 'sqlite_max_records',
+    // Legacy dual-write end-condition flag (M9)
+    // When false, the chrome.storage.local legacy write (saveMetadataStep) is
+    // skipped, leaving SQLite as the single source of truth.
+    // Default: true (legacy dual-write behavior preserved).
+    LEGACY_DUAL_WRITE_ENABLED: 'legacy_dual_write_enabled',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -330,6 +335,7 @@ export interface StorageKeyValues {
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
     [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;
     [StorageKeys.SQLITE_MAX_RECORDS]: number | null;
+    [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型

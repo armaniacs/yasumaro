@@ -8,6 +8,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { withOptimisticLock } from '../../../utils/optimisticLock.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import {
   setUrlRecordType,
   setUrlMaskedCount,
@@ -61,6 +62,17 @@ export const saveMetadataStep: PipelineStepFunction = async (
     aiSummaryCleansedReasons,
     fallbackTriggered
   } = data;
+
+  // M9: Legacy dual-write end-condition flag.
+  // When disabled (LEGACY_DUAL_WRITE_ENABLED === false), skip ALL chrome.storage.local
+  // legacy writes here. The record is still persisted to SQLite via saveSqliteStep,
+  // so SQLite remains the single source of truth and no redundant chrome.storage
+  // write occurs. Default is true (legacy dual-write behavior preserved).
+  const legacyDualWriteEnabled =
+    (context.settings?.[StorageKeys.LEGACY_DUAL_WRITE_ENABLED] as boolean | undefined) !== false;
+  if (!legacyDualWriteEnabled) {
+    return context;
+  }
 
   const results: { success: string[]; failed: string[] } = { success: [], failed: [] };
 
