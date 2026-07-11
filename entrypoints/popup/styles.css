@@ -869,6 +869,25 @@ input[type="checkbox"]:focus {
   transform: scale(1) translateY(0);
 }
 
+/* Native <dialog>-based modal (M21): showModal()/close() handle backdrop,
+   focus trapping, and ESC — no JS-managed overlay or focusTrapManager needed. */
+.modal-dialog {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: none;
+  max-height: none;
+}
+
+.modal-dialog::backdrop {
+  background: var(--color-overlay);
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog .modal-content {
+  transform: none;
+}
+
 .modal-header {
   padding: var(--space-5);
   border-bottom: 1px solid var(--color-border-light);

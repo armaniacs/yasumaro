@@ -37,19 +37,6 @@ vi.mock('../i18n.js', () => ({
   }),
 }));
 
-vi.mock('../utils/focusTrap.js', () => {
-  const trapFn = vi.fn(() => 'mock-trap-id');
-  const releaseFn = vi.fn();
-  (globalThis as any).__spMockTrap = trapFn;
-  (globalThis as any).__spMockRelease = releaseFn;
-  return {
-    focusTrapManager: {
-      trap: trapFn,
-      release: releaseFn,
-    },
-  };
-});
-
 import {
   showPreview,
   initializeModalEvents,
@@ -58,19 +45,16 @@ import {
   jumpToPrevMasked,
 } from '../sanitizePreview.js';
 
-function getMockTrap(): vi.Mock {
-  return (globalThis as any).__spMockTrap;
-}
-function getMockRelease(): vi.Mock {
-  return (globalThis as any).__spMockRelease;
-}
-
 /**
- * テスト用DOMモーダル構造を構築
+ * テスト用DOMモーダル構造を構築（M21: <dialog>要素ベース）
+ * jsdomはHTMLDialogElement.showModal/closeを実装していないため、
+ * privatePageDialog.test.tsと同じパターンでポリフィルする。
+ * close()はネイティブに'close'イベントを発火するため、ポリフィルでも
+ * 明示的にdispatchEventする（sanitizePreview.tsのcloseリスナーが依存する）。
  */
 function setupModalDOM(): void {
   document.body.innerHTML = `
-    <div id="confirmationModal" style="display:none;">
+    <dialog id="confirmationModal">
       <div class="modal-body">
         <div id="cleansingInfo" class="hidden">
           <span id="cleansingBadge"></span>
@@ -81,16 +65,24 @@ function setupModalDOM(): void {
       <button id="closeModalBtn">×</button>
       <button id="cancelPreviewBtn">Cancel</button>
       <button id="confirmPreviewBtn">Confirm</button>
-    </div>
+    </dialog>
   `;
+
+  const dialog = document.getElementById('confirmationModal') as any;
+  if (dialog) {
+    dialog.showModal = function () {
+      this.open = true;
+    };
+    dialog.close = function () {
+      this.open = false;
+      this.dispatchEvent(new Event('close'));
+    };
+  }
 }
 
 describe('sanitizePreview', () => {
   beforeEach(() => {
     setupModalDOM();
-    getMockTrap().mockClear();
-    getMockTrap().mockReturnValue('mock-trap-id');
-    getMockRelease().mockClear();
   });
 
   afterEach(() => {
@@ -116,13 +108,12 @@ describe('sanitizePreview', () => {
     });
 
     test('モーダルを表示し、プレビューコンテンツを設定する', async () => {
-      const modal = document.getElementById('confirmationModal') as HTMLElement;
+      const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
 
       const promise = showPreview('Hello World');
 
-      expect(modal.style.display).toBe('flex');
-      expect(modal.classList.contains('show')).toBe(true);
+      expect(modal.open).toBe(true);
       expect(textarea.value).toBe('Hello World');
 
       const confirmBtn = document.getElementById('confirmPreviewBtn') as HTMLButtonElement;
@@ -184,24 +175,30 @@ describe('sanitizePreview', () => {
       expect(result.content).toBeNull();
     });
 
-    test('フォーカストラップが設定される', async () => {
+    test('showModal()を呼び出す（M21: ネイティブdialogがフォーカストラップ・ESC処理を担う）', async () => {
+      const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+
       const promise = showPreview('content');
 
-      expect(getMockTrap()).toHaveBeenCalledTimes(1);
+      expect(showModalSpy).toHaveBeenCalledTimes(1);
 
       const confirmBtn = document.getElementById('confirmPreviewBtn') as HTMLButtonElement;
       confirmBtn.click();
       await promise;
     });
 
-    test('フォーカストラップが解放される', async () => {
+    test('ESCキー相当のdialog close（cancel）でconfirmed=falseにresolveする', async () => {
+      const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+
       const promise = showPreview('content');
 
-      const confirmBtn = document.getElementById('confirmPreviewBtn') as HTMLButtonElement;
-      confirmBtn.click();
-      await promise;
+      // Simulate the browser's native ESC-triggered close (fires 'close' without our buttons)
+      modal.close();
 
-      expect(getMockRelease()).toHaveBeenCalledWith('mock-trap-id');
+      const result = await promise;
+      expect(result.confirmed).toBe(false);
+      expect(result.content).toBeNull();
     });
 
     test('マスクされたアイテムがある場合、ステータスメッセージを表示する', async () => {

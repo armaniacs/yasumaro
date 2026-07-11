@@ -45,6 +45,8 @@ jobs:
           echo "Minor version: ${MINOR} (even: $((MINOR % 2 == 0)))"
       - name: Build for Chrome
         run: npx wxt zip -b chrome
+      - name: Check bundle size (M26)
+        run: npm run check-bundle-size -- chrome-mv3
       - name: Sign CRX with private key
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}

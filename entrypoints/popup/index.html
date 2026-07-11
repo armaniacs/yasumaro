@@ -656,7 +656,7 @@
   </main>
 
   <!-- Password Setup Modal -->
-  <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+  <dialog id="passwordModal" class="modal-dialog" aria-labelledby="passwordModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="passwordModalTitle" data-i18n="setMasterPassword">Set Master Password</h3>
@@ -688,10 +688,10 @@
         <button id="savePasswordBtn" class="btn-confirm" data-i18n="save">Save</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <!-- Password Auth Modal -->
-  <div id="passwordAuthModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordAuthModalTitle">
+  <dialog id="passwordAuthModal" class="modal-dialog" aria-labelledby="passwordAuthModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="passwordAuthModalTitle" data-i18n="enterMasterPassword">Enter Master Password</h3>
@@ -712,10 +712,10 @@
         <button id="submitPasswordAuthBtn" class="btn-confirm" data-i18n="confirm">Confirm</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <!-- Confirmation Modal -->
-  <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmContent">
+  <dialog id="confirmationModal" class="modal-dialog" aria-labelledby="confirmContent">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="confirmContent" data-i18n="confirmContent">Review Content</h3>
@@ -739,11 +739,10 @@
         <button id="confirmPreviewBtn" class="btn-confirm" data-i18n="sendBtn">Send</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <!-- Import Confirmation Modal -->
-  <div id="importConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true"
-    aria-labelledby="importConfirmTitle">
+  <dialog id="importConfirmModal" class="modal-dialog" aria-labelledby="importConfirmTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>
@@ -763,7 +762,7 @@
         <button id="confirmImportBtn" class="btn-confirm" data-i18n="confirmImport">Import</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <!-- Private Page Confirmation Dialog -->
   <dialog id="private-page-dialog" class="private-page-dialog">
@@ -783,7 +782,7 @@
   </dialog>
 
   <!-- Privacy Consent Modal -->
-  <div id="privacyConsentModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
+  <dialog id="privacyConsentModal" class="modal-dialog" aria-labelledby="privacyConsentTitle">
     <div class="modal-content privacy-consent-content">
       <div class="modal-header">
         <img src="../icons/icon48.png" width="24" height="24" alt="Yasumaro" class="modal-logo">
@@ -829,7 +828,7 @@
         <button id="acceptConsentBtn" class="btn-confirm" disabled data-i18n="accept">Accept & Continue</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <script type="module" src="./main.ts"></script>
 </body>
