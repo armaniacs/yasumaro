@@ -4,7 +4,7 @@
  * Metadata only (provider, url, timestamp) — never content or PII.
  */
 
-import { SqliteClient } from '../background/sqliteClient.js';
+import { getSharedSqliteClient } from '../background/sqliteClient.js';
 import { logError } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 
@@ -15,7 +15,7 @@ export interface AuditLogEntry {
   created_at: number;
 }
 
-const sqliteClient = new SqliteClient();
+const sqliteClient = getSharedSqliteClient();
 
 /**
  * Record that content was sent to a cloud AI provider.

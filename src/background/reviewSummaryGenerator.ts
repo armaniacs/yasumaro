@@ -8,14 +8,14 @@
 
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { AIClient } from './aiClient.js';
-import { SqliteClient } from './sqliteClient.js';
+import { getSharedSqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 
 type ReviewLogEntry = BrowsingLogRecord & { id: number };
 
-const sqliteClient = new SqliteClient();
+const sqliteClient = getSharedSqliteClient();
 
 /**
  * ISO週番号を取得する

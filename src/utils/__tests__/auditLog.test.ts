@@ -16,6 +16,7 @@ vi.mock('../../background/sqliteClient.js', () => {
 
   return {
     SqliteClient: MockSqliteClient,
+    getSharedSqliteClient: () => new MockSqliteClient(),
   };
 });
 

@@ -10,6 +10,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logWarn, logInfo, ErrorCode } from '../utils/logger.js';
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 import { FallbackStorage } from './storageFallback.js';
+import { LruCache } from './lruCache.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
 // The wa-sqlite package uses ambient type declarations for SQLiteAPI and SQLiteCompatibleType
@@ -32,7 +33,7 @@ const ALLOWED_ORDER_COLUMNS = [
 // Schema definition (shared with opfsWorker.ts)
 // ============================================================================
 
-import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, UPDATABLE_FIELDS, buildInsertParams } from './schema.js';
+import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, UPDATABLE_FIELDS, buildInsertParams, FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from './schema.js';
 
 const DB_FILENAME = 'yasumaro.db';
 
@@ -61,7 +62,12 @@ let opfsRequestId = 0;
 const opfsPending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
 
 const PREPARED_STMT_CACHE_MAX_SIZE = 50;
-const preparedStmtCache = new Map<string, number>();
+const preparedStmtCache = new LruCache<string, number>(PREPARED_STMT_CACHE_MAX_SIZE, (_key, stmt) => {
+  sqlite3?.finalize(stmt).catch(() => {});
+});
+
+/** Hard cap on query()/search() result size, so a caller can't force the entire table into JS memory at once (M13). */
+const MAX_QUERY_LIMIT = 100000;
 
 // ============================================================================
 // OPFS Worker Proxy
@@ -415,17 +421,6 @@ async function getOrPrepare(sql: string): Promise<number> {
     if (!prepared) throw new Error(`Failed to prepare: ${sql}`);
     const stmt = prepared.stmt;
 
-    if (preparedStmtCache.size >= PREPARED_STMT_CACHE_MAX_SIZE) {
-      const oldestKey = preparedStmtCache.keys().next().value;
-      if (oldestKey !== undefined) {
-        const oldestStmt = preparedStmtCache.get(oldestKey);
-        if (oldestStmt !== undefined) {
-          await sqlite3!.finalize(oldestStmt);
-        }
-        preparedStmtCache.delete(oldestKey);
-      }
-    }
-
     preparedStmtCache.set(sql, stmt);
     return stmt;
   } finally {
@@ -612,7 +607,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     const tagFilter = options.tagFilter ? options.tagFilter.slice(0, FTS_QUERY_MAX_LENGTH) : options.tagFilter;
 
     // OPFS Worker proxy
-    const queryLimit = options.limit ?? 100;
+    const queryLimit = Math.min(options.limit ?? 100, MAX_QUERY_LIMIT);
     const opfsResult = await tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', {
       limit: queryLimit, offset: options.offset, since: options.since, until: options.until,
       domain: options.domain, isStarred: options.isStarred, orderBy: options.orderBy, orderDir: options.orderDir,
@@ -626,7 +621,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     }
 
     if (usingFallbackStorage && fallbackStorage) {
-      return fallbackStorage.query(options);
+      return fallbackStorage.query({ ...options, limit: queryLimit });
     }
 
     if (!dbHandle) {
@@ -677,7 +672,7 @@ export async function query(options: QueryOptions = {}): Promise<{
     const orderBy = options.orderBy && ALLOWED_ORDER_COLUMNS.includes(options.orderBy as typeof ALLOWED_ORDER_COLUMNS[number])
       ? options.orderBy : 'created_at';
     const orderDir = options.orderDir === 'ASC' ? 'ASC' : 'DESC';
-    const limit = options.limit ?? 100;
+    const limit = queryLimit;
     const offset = options.offset ?? 0;
 
     const countSql = `SELECT COUNT(*) FROM browsing_logs ${whereClause}`;
@@ -747,6 +742,7 @@ export async function query(options: QueryOptions = {}): Promise<{
 export async function search(searchQuery: string, limit: number = 50, offset: number = 0): Promise<{
   success: true; rows: SearchResult[]; total: number
 } | { success: false; error: string }> {
+  limit = Math.min(limit, MAX_QUERY_LIMIT);
   try {
     // OPFS Worker: real FTS5 search via the worker's SEARCH handler.
     const opfsResult = await tryOpfsProxy<{ rows: SearchResult[]; total: number }>('SEARCH', {
@@ -1342,31 +1338,6 @@ function extractDomain(url: string): string {
   }
 }
 
-/**
- * Sanitize user input for FTS5 query syntax.
- * Uses a whitelist approach to prevent SQL injection via FTS5 operators.
- */
-const FTS_QUERY_MAX_LENGTH = 200;
-
-/**
- * Returns the sanitized bare term (no surrounding quotes).
- * Used for length-checking before deciding FTS5 vs LIKE.
- */
-function sanitizeFtsTerm(query: string): string {
-  if (!query) return '';
-
-  // Limit input length to prevent DoS via extremely long queries
-  const truncated = query.slice(0, FTS_QUERY_MAX_LENGTH);
-
-  // Whitelist: only allow alphanumeric, CJK characters, and spaces
-  // This prevents FTS5 operator injection (OR, AND, NOT, NEAR, etc.)
-  // and special character injection (*, ", ~, ^, :, (, ), +, -)
-  return truncated
-    .replace(/[^A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 // ============================================================================
 // Export
 // ============================================================================
@@ -1554,7 +1525,7 @@ export async function queryAuditLog(options: { limit?: number; offset?: number }
   { success: true; rows: AuditLogEntry[]; total: number } | { success: false; error: string }
 > {
   try {
-    const limit = options.limit ?? 100;
+    const limit = Math.min(options.limit ?? 100, MAX_QUERY_LIMIT);
     const offset = options.offset ?? 0;
 
     // OPFS Worker path

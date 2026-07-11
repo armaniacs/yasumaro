@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.18` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.20` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -17,11 +17,41 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed / 変更
+
+- **クエリ結果件数に強制上限を追加** — `query()`/`search()`/`queryAuditLog()`に`MAX_QUERY_LIMIT=100000`のハード上限を導入し、呼び出し元が極端に大きいlimitを指定しても全件をJSメモリに一度にロードしないよう保護（M13）
+- **SqliteClientをシングルトン化** — `getSharedSqliteClient()`を新設し、`service-worker.ts`/`auditLog.ts`/`reviewSummaryGenerator.ts`が独立に持っていたSqliteClientインスタンスを単一の共有インスタンスに統一。Offscreen Documentのライフサイクル管理が一本化された（M8）
+- **Offscreen Documentへのリクエストを直列化** — `SqliteClient.msgOffscreen()`に既存のMutexを適用し、複数タブからの同時記録リクエストがOffscreen Document側で競合しないよう保護（M7）
+- **Offscreen Document接続エラー時の自動リトライを追加** — モバイル環境などでOffscreen Documentが休止から復帰する際の接続エラーを検知し、1回だけ自動的に再接続・再送信するようになった（M12）
+
+### Added / 追加
+
+- **SQLite書き込み失敗時の保留キューを追加** — SQLiteが一時的に利用不可な間に記録が失敗すると、これまではレコードが完全に失われていた。`pendingSqliteQueue.ts`を新設し、失敗したレコードを`chrome.storage.local`に保留、Service Worker再起動時に自動で再投入するようになった（M14）
+
+## [6.5.20] - 2026-07-11
+
 ### Added / 追加
 
 - **未同意状態をツールバーバッジで可視化** — プライバシー同意を拒否している間、拡張機能アイコンに警告バッジが表示されるようになった（Checking Team M3）
 - **プライバシー設定画面にPIIマスキングサンプルを追加** — クラウドAI送信前にどのようなデータが匿名化されるか、固定サンプルで確認できるようになった（Checking Team M4）
 - **ダッシュボードのデータ管理セクションにポータビリティ権の導線を追加** — データ削除ボタンに加え、エクスポートログパネルへのショートカットと説明文を追加（Checking Team M6）
+- **デュアルライト終了条件フラグを追加** — `LEGACY_DUAL_WRITE_ENABLED` 設定キーを追加。`false` 時に `chrome.storage.local` へのレガシー二重書き込みをスキップし、SQLite を単一の情報源とする移行を可能にした（M9）
+
+### Fixed / 修正
+
+- **i18nキー `confirm` を `confirmImport` にリネーム** — キー名が実際の用途（インポート確認ダイアログ）と一致するよう修正。日英の messages.json および HTML の data-i18n 参照を全て更新（M22）
+- **ダッシュボードHTMLの初期lang属性を修正** — `html lang="en"` を `html lang=""` に変更し、JS側の動的設定と競合しないよう修正（M20）
+- **データ集約パネルの最大幅制限を分離** — 共通 `.panel` クラスの `max-width: 680px` からデータ集約パネル（履歴・SQLite履歴）を `.panel.data-panel` として分離し、`max-width: 1100px` を設定。設定パネルは従来の 680px を維持（M31）
+
+### Changed / 変更
+
+- **ESLint を導入** — `@typescript-eslint` ルールセットで `no-unused-vars` を有効化。`package.json` の `lint` スクリプトを `tsc --noEmit` から `eslint .` に変更（M25、既存コードの警告解消は別スコープ）
+- **プリペアドステートメントキャッシュをLRU戦略に変更** — `src/offscreen/lruCache.ts` を新設し、単純な挿入順（FIFO）退避から、アクセス頻度を考慮したLRU（least-recently-used）退避に変更。頻繁に使われるクエリがキャッシュから追い出されにくくなった（M33）
+- **`@subframe7536/sqlite-wasm` のバージョンをピン留め** — `^1.1.1` から解決済みバージョン `1.3.1` に固定し、意図しない自動アップデートによるサプライチェーンリスクを低減（M27）
+
+### CI
+
+- **`npm audit` の定期実行を追加** — `.github/workflows/security-audit.yml` を新設し、毎週月曜（手動実行も可）に依存ライブラリの既知脆弱性を検出するワークフローを追加（M27）
 
 ## [6.5.18] - 2026-07-11
 

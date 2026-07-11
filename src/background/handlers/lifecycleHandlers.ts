@@ -12,11 +12,14 @@ import { RateLimiter } from '../rateLimiter.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { updateConsentBadge } from '../consentBadge.js';
+import { flushPendingRecords } from '../pendingSqliteQueue.js';
+import type { SqliteClient } from '../sqliteClient.js';
 
 export interface LifecycleHandlerContext {
     /** Mutable flag — the handler may set it to true */
     isCacheInitialized: { value: boolean };
     rateLimiter: RateLimiter;
+    sqliteClient: SqliteClient;
 }
 
 export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
@@ -59,6 +62,19 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
         logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
 
         await updateConsentBadge();
+
+        // Retry records that failed to insert while SQLite was unavailable (M14).
+        // Runs regardless of cache-init state, since it's independent of it.
+        try {
+            await flushPendingRecords(ctx.sqliteClient);
+        } catch (error) {
+            logWarn(
+                'Pending SQLite queue flush failed on startup',
+                { error: errorMessage(error) },
+                undefined,
+                'service-worker'
+            );
+        }
 
         // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
         if (ctx.isCacheInitialized.value) {

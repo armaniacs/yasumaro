@@ -9,6 +9,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
+import { Mutex } from './Mutex.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
@@ -42,10 +43,17 @@ export class SqliteClient {
   private creatingOffscreenPromise: Promise<void> | null;
   /** Cached knowledge that the offscreen document is alive. Reset on error. */
   private offscreenAlive: boolean;
+  /**
+   * Serializes requests to the offscreen document (M7). The offscreen
+   * document processes one SQLite operation at a time; without this,
+   * overlapping requests from multiple tabs would race each other.
+   */
+  private readonly requestQueue: Mutex;
 
   constructor() {
     this.creatingOffscreenPromise = null;
     this.offscreenAlive = false;
+    this.requestQueue = new Mutex({ maxQueueSize: 200, timeoutMs: MESSAGE_TIMEOUT_MS * 2 });
   }
 
   /**
@@ -82,40 +90,62 @@ export class SqliteClient {
   }
 
   /**
+   * Send a single message to the offscreen document and await the response.
+   * Does not retry — callers needing reconnect-on-failure should use msgOffscreen().
+   */
+  private async sendOnce(type: string, payload: Record<string, unknown>): Promise<OffscreenResponse> {
+    await this.ensureOffscreenDocument();
+    return new Promise<OffscreenResponse>((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        fn();
+      };
+      const timeoutId = setTimeout(() => {
+        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`)));
+      }, MESSAGE_TIMEOUT_MS);
+
+      chrome.runtime.sendMessage(
+        { type, target: 'offscreen', payload },
+        (response: OffscreenResponse) => {
+          if (chrome.runtime.lastError) {
+            settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
+          } else if (response && response.error) {
+            settle(() => reject(new Error(response.error)));
+          } else {
+            settle(() => resolve(response));
+          }
+        }
+      );
+    });
+  }
+
+  /**
    * Send a message to the offscreen document and await the response.
+   *
+   * Retries once on failure (M12): a mobile Chrome offscreen document can be
+   * suspended between requests, so the first attempt after idle may fail
+   * with a connection error. Resetting offscreenAlive and recreating the
+   * document lets the retry succeed instead of surfacing a transient error.
    */
   async msgOffscreen(type: string, payload: Record<string, unknown> = {}): Promise<OffscreenResponse> {
+    await this.requestQueue.acquire();
     try {
-      await this.ensureOffscreenDocument();
-      return await new Promise<OffscreenResponse>((resolve, reject) => {
-        let settled = false;
-        const settle = (fn: () => void) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeoutId);
-          fn();
-        };
-        const timeoutId = setTimeout(() => {
-          settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`)));
-        }, MESSAGE_TIMEOUT_MS);
-
-        chrome.runtime.sendMessage(
-          { type, target: 'offscreen', payload },
-          (response: OffscreenResponse) => {
-            if (chrome.runtime.lastError) {
-              settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
-            } else if (response && response.error) {
-              settle(() => reject(new Error(response.error)));
-            } else {
-              settle(() => resolve(response));
-            }
-          }
-        );
-      });
+      try {
+        return await this.sendOnce(type, payload);
+      } catch (firstError) {
+        this.offscreenAlive = false;
+        addLog(LogType.WARN, `SqliteClient: '${type}' failed, retrying once`, { error: errorMessage(firstError) });
+        return await this.sendOnce(type, payload);
+      }
     } catch (error) {
       // Reset the cached alive flag so the next call re-checks the document.
       this.offscreenAlive = false;
       throw error;
+    } finally {
+      this.requestQueue.release();
     }
   }
 
@@ -307,4 +337,24 @@ export class SqliteClient {
       }),
     );
   }
+}
+
+// ============================================================================
+// Shared instance (M8)
+// ============================================================================
+
+let sharedInstance: SqliteClient | null = null;
+
+/**
+ * Returns a single, shared SqliteClient instance for the Service Worker
+ * context. Each SqliteClient tracks offscreen-document lifecycle state
+ * (`offscreenAlive`); independent instances would each redundantly check
+ * and race to create the offscreen document. Callers that previously did
+ * `new SqliteClient()` at module scope should use this instead.
+ */
+export function getSharedSqliteClient(): SqliteClient {
+  if (!sharedInstance) {
+    sharedInstance = new SqliteClient();
+  }
+  return sharedInstance;
 }
