@@ -28,6 +28,17 @@ All notable changes to this project will be documented in this file.
 
 - **SQLite書き込み失敗時の保留キューを追加** — SQLiteが一時的に利用不可な間に記録が失敗すると、これまではレコードが完全に失われていた。`pendingSqliteQueue.ts`を新設し、失敗したレコードを`chrome.storage.local`に保留、Service Worker再起動時に自動で再投入するようになった（M14）
 
+### Refactored / リファクタリング
+
+- **ダッシュボードの3つのMarkdownエクスポート関数を統合** — `handleManualLocalMarkdownExport`/`handleExportLocalMarkdown`/`handleHistoryExportLocalMarkdown`のほぼ同一だったロジックを`exportLocalMarkdownCore()`に集約。既存の関数シグネチャ・呼び出し元は変更なし（M15）
+- **sqlite.ts/opfsWorker.ts間で重複していたFTS5サニタイズロジックを共通化** — 完全一致していた`sanitizeFtsTerm()`/`FTS_QUERY_MAX_LENGTH`を`schema.ts`に集約。両バックエンドの非同期実行モデルが異なるため完全なStrategyパターン統合は見送り、安全に共有できる部分のみ抽出（M16）
+- **CSPドメインリストを共通定数から自動生成** — `src/utils/cspDomains.ts`を新設し、`wxt.config.ts`の`host_permissions`/`optional_host_permissions`/CSP文字列すべてを単一のドメイン配列から生成するよう変更。新しいAIプロバイダドメインを追加する際に複数箇所を編集する必要がなくなった（M24）
+- **全モーダルをネイティブ`<dialog>`要素に統一** — `confirmationModal`/`importConfirmModal`/`passwordModal`/`passwordAuthModal`/`privacyConsentModal`の5モーダル全てを`<div>`+`focusTrapManager`から`<dialog>`+ネイティブ`showModal()`/`close()`に変更。フォーカストラップ・ESCキー処理をブラウザ標準機構に委譲（同意モーダルは引き続きESCで閉じない仕様を維持）（M21）
+
+### Added / 追加
+
+- **リリースビルドにバンドルサイズ検証を追加** — `scripts/check-bundle-size.mjs`を新設し、Chrome向けビルド直後に15MB上限のサイズチェックを実行。想定外のバンドル肥大化をリリース前に検知できるようになった（M26）
+
 ## [6.5.20] - 2026-07-11
 
 ### Added / 追加

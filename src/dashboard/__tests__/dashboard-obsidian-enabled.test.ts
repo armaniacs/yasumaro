@@ -131,7 +131,7 @@ vi.mock('../../popup/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
 }));
 
-vi.mock('../../popup/aiSummaryCleansingSettings.js', () => ({
+vi.mock('../../popup/aiSummaryCleansingSettingsV2.js', () => ({
   getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
   applyAiSummaryCleansingSettingsToUI: vi.fn(),
   setupAiSummaryCleansingEventListeners: vi.fn(),
