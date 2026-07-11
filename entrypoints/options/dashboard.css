@@ -348,6 +348,12 @@ a:hover {
   max-width: 680px;
 }
 
+/* データ集約パネル（履歴・SQLite履歴など）は一覧表示のため広い幅を許可する。
+   コンテンツ（設定）パネルは従来どおり 680px を維持する。 */
+.panel.data-panel {
+  max-width: 1100px;
+}
+
 .panel.active {
   display: block;
 }
