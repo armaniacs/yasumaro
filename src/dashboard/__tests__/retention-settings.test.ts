@@ -18,7 +18,7 @@ vi.mock('../../popup/privacySettings.js', () => ({ init: vi.fn() }));
 vi.mock('../../popup/contentSettings.js', () => ({ init: vi.fn() }));
 vi.mock('../../popup/trustSettings.js', () => ({ init: vi.fn(), loadTrustSettings: vi.fn() }));
 vi.mock('../../popup/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../../popup/aiSummaryCleansingSettings.js', () => ({
+vi.mock('../../popup/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),

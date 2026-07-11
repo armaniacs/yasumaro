@@ -61,7 +61,7 @@ import {
   getAiSummaryCleansingSettingsFromUI,
   updateAiSummaryCleansingCheckboxStates,
   setupAiSummaryCleansingEventListeners,
-} from '../aiSummaryCleansingSettings.js';
+} from '../aiSummaryCleansingSettingsV2.js';
 
 const mockGetSettings = vi.mocked(storage.getSettings);
 const mockSaveSettings = vi.mocked(storage.saveSettings);

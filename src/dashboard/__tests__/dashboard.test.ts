@@ -156,7 +156,7 @@ vi.mock('../constants/appConstants.js', () => ({
     },
 }));
 
-vi.mock('../popup/aiSummaryCleansingSettings.js', () => ({
+vi.mock('../popup/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),
