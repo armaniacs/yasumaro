@@ -791,13 +791,27 @@ function getLocalDateString(timestamp: number): string {
 }
 
 /**
- * Handle manual local markdown export with date range
+ * Options for exportLocalMarkdownCore, parameterizing the three near-identical
+ * local Markdown export handlers (M15).
  */
-export async function handleManualLocalMarkdownExport(): Promise<void> {
-  const startDateInput = document.getElementById('localExportStartDate') as HTMLInputElement | null;
-  const endDateInput = document.getElementById('localExportEndDate') as HTMLInputElement | null;
-  const exportBtn = document.getElementById('localExportManualBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('localExportManualStatus') as HTMLElement | null;
+interface LocalMarkdownExportOptions {
+  /** Element IDs for the date-range inputs, or null for a full-history export (no range). */
+  dateRange: { startDateId: string; endDateId: string } | null;
+  exportBtnId: string;
+  statusElId: string;
+  /** Status message shown when the query returns zero rows. */
+  emptyMessage: string;
+}
+
+/**
+ * Shared implementation behind handleManualLocalMarkdownExport(),
+ * handleExportLocalMarkdown(), and handleHistoryExportLocalMarkdown().
+ * Queries SQLite for the given (or full) date range, groups results by
+ * local date, and downloads one Markdown file per date.
+ */
+async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Promise<void> {
+  const exportBtn = document.getElementById(options.exportBtnId) as HTMLButtonElement | null;
+  const statusEl = document.getElementById(options.statusElId) as HTMLElement | null;
 
   if (!exportBtn || !statusEl) return;
 
@@ -809,21 +823,27 @@ export async function handleManualLocalMarkdownExport(): Promise<void> {
     const settings = await getSettings();
     const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
 
-    // Parse date range (YYYY-MM-DD format from date input)
-    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
-    const endDate = endDateInput?.value || startDate;
-
-    // Create timestamps at start of start date and end of end date in local timezone
-    const since = new Date(startDate + 'T00:00:00').getTime();
-    const until = new Date(endDate + 'T23:59:59').getTime();
-
     statusEl.textContent = getMessage('searching') || 'Searching...';
 
-    // Query SQLite for records in date range
-    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
+    const result = options.dateRange
+      ? await (async () => {
+          const startDateInput = document.getElementById(options.dateRange!.startDateId) as HTMLInputElement | null;
+          const endDateInput = document.getElementById(options.dateRange!.endDateId) as HTMLInputElement | null;
+
+          // Parse date range (YYYY-MM-DD format from date input)
+          const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
+          const endDate = endDateInput?.value || startDate;
+
+          // Create timestamps at start of start date and end of end date in local timezone
+          const since = new Date(startDate + 'T00:00:00').getTime();
+          const until = new Date(endDate + 'T23:59:59').getTime();
+
+          return queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
+        })()
+      : await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
 
     if (!result || result.rows.length === 0) {
-      statusEl.textContent = '指定期間に記録がありません。';
+      statusEl.textContent = options.emptyMessage;
       statusEl.className = 'error';
       return;
     }
@@ -869,76 +889,27 @@ export async function handleManualLocalMarkdownExport(): Promise<void> {
 }
 
 /**
+ * Handle manual local markdown export with date range
+ */
+export async function handleManualLocalMarkdownExport(): Promise<void> {
+  return exportLocalMarkdownCore({
+    dateRange: { startDateId: 'localExportStartDate', endDateId: 'localExportEndDate' },
+    exportBtnId: 'localExportManualBtn',
+    statusElId: 'localExportManualStatus',
+    emptyMessage: '指定期間に記録がありません。',
+  });
+}
+
+/**
  * Handle local markdown export from Export Logs panel (date range)
  */
 export async function handleExportLocalMarkdown(): Promise<void> {
-  const startDateInput = document.getElementById('exportLocalStartDate') as HTMLInputElement | null;
-  const endDateInput = document.getElementById('exportLocalEndDate') as HTMLInputElement | null;
-  const exportBtn = document.getElementById('exportLocalMarkdownBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('exportLocalMarkdownStatus') as HTMLElement | null;
-
-  if (!exportBtn || !statusEl) return;
-
-  exportBtn.disabled = true;
-  statusEl.textContent = '';
-  statusEl.className = '';
-
-  try {
-    const settings = await getSettings();
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-
-    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
-    const endDate = endDateInput?.value || startDate;
-
-    const since = new Date(startDate + 'T00:00:00').getTime();
-    const until = new Date(endDate + 'T23:59:59').getTime();
-
-    statusEl.textContent = getMessage('searching') || 'Searching...';
-
-    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
-
-    if (!result || result.rows.length === 0) {
-      statusEl.textContent = '指定期間に記録がありません。';
-      statusEl.className = 'error';
-      return;
-    }
-
-    const entriesByDate = new Map<string, typeof result.rows>();
-    for (const row of result.rows) {
-      const date = getLocalDateString(row.created_at);
-      if (!entriesByDate.has(date)) {
-        entriesByDate.set(date, []);
-      }
-      entriesByDate.get(date)!.push(row);
-    }
-
-    let totalFiles = 0;
-    for (const [date, entries] of entriesByDate) {
-      const header = `# ${date}`;
-      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
-
-      const blob = new Blob([content], { type: 'text/markdown' });
-      const blobUrl = URL.createObjectURL(blob);
-
-      await chrome.downloads.download({
-        url: blobUrl,
-        filename: `${exportPath}/${date}.md`,
-        saveAs: false,
-        conflictAction: 'overwrite'
-      });
-
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      totalFiles++;
-    }
-
-    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
-    statusEl.className = 'success';
-  } catch (e) {
-    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
-    statusEl.className = 'error';
-  } finally {
-    exportBtn.disabled = false;
-  }
+  return exportLocalMarkdownCore({
+    dateRange: { startDateId: 'exportLocalStartDate', endDateId: 'exportLocalEndDate' },
+    exportBtnId: 'exportLocalMarkdownBtn',
+    statusElId: 'exportLocalMarkdownStatus',
+    emptyMessage: '指定期間に記録がありません。',
+  });
 }
 
 /**
@@ -1000,65 +971,12 @@ export async function handleGenerateMonthlySummary(): Promise<void> {
  * Handle local markdown export from History panel (all records)
  */
 export async function handleHistoryExportLocalMarkdown(): Promise<void> {
-  const exportBtn = document.getElementById('historyExportLocalMarkdownBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('historyExportLocalMarkdownStatus') as HTMLElement | null;
-
-  if (!exportBtn || !statusEl) return;
-
-  exportBtn.disabled = true;
-  statusEl.textContent = '';
-  statusEl.className = '';
-
-  try {
-    const settings = await getSettings();
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-
-    statusEl.textContent = getMessage('searching') || 'Searching...';
-
-    const result = await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
-
-    if (!result || result.rows.length === 0) {
-      statusEl.textContent = 'エクスポートする記録がありません。';
-      statusEl.className = 'error';
-      return;
-    }
-
-    const entriesByDate = new Map<string, typeof result.rows>();
-    for (const row of result.rows) {
-      const date = getLocalDateString(row.created_at);
-      if (!entriesByDate.has(date)) {
-        entriesByDate.set(date, []);
-      }
-      entriesByDate.get(date)!.push(row);
-    }
-
-    let totalFiles = 0;
-    for (const [date, entries] of entriesByDate) {
-      const header = `# ${date}`;
-      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
-
-      const blob = new Blob([content], { type: 'text/markdown' });
-      const blobUrl = URL.createObjectURL(blob);
-
-      await chrome.downloads.download({
-        url: blobUrl,
-        filename: `${exportPath}/${date}.md`,
-        saveAs: false,
-        conflictAction: 'overwrite'
-      });
-
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      totalFiles++;
-    }
-
-    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
-    statusEl.className = 'success';
-  } catch (e) {
-    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
-    statusEl.className = 'error';
-  } finally {
-    exportBtn.disabled = false;
-  }
+  return exportLocalMarkdownCore({
+    dateRange: null,
+    exportBtnId: 'historyExportLocalMarkdownBtn',
+    statusElId: 'historyExportLocalMarkdownStatus',
+    emptyMessage: 'エクスポートする記録がありません。',
+  });
 }
 
 export async function handlePurgeNow(): Promise<void> {
@@ -1316,6 +1234,35 @@ function initExportLogsPanel(): void {
     const aiSummaryCleansingSettings = await getAiSummaryCleansingSettings();
     applyAiSummaryCleansingSettingsToUI(aiSummaryCleansingSettings);
     setupAiSummaryCleansingEventListeners();
+    
+    // Direct slider initialization - inline to avoid module caching issues
+    console.log('[Dashboard] Setting up slider listeners inline');
+    const sliderConfigs = [
+      { sliderId: 'ai-summary-cleansing-link-ratio-threshold', valueId: 'link-ratio-threshold-value', settingKey: 'linkRatioThreshold' },
+      { sliderId: 'ai-summary-cleansing-short-text-threshold', valueId: 'short-text-threshold-value', settingKey: 'shortTextThreshold' },
+      { sliderId: 'ai-summary-cleansing-short-seq-count', valueId: 'short-seq-count-value', settingKey: 'shortSeqCount' },
+      { sliderId: 'ai-summary-cleansing-link-para-threshold', valueId: 'link-para-threshold-value', settingKey: 'linkParaThreshold' }
+    ];
+
+    for (const config of sliderConfigs) {
+      const slider = document.getElementById(config.sliderId) as HTMLInputElement;
+      const valueDisplay = document.getElementById(config.valueId) as HTMLElement;
+      
+      if (slider && valueDisplay) {
+        slider.addEventListener('input', () => {
+          valueDisplay.textContent = slider.value;
+        });
+        
+        slider.addEventListener('change', async () => {
+          const settings = await getAiSummaryCleansingSettings();
+          const s = settings as unknown as Record<string, number>;
+          s[config.settingKey] = parseInt(slider.value, 10);
+          await saveAiSummaryCleansingSettings(settings);
+          console.log(`[Dashboard] Saved ${config.settingKey}:`, slider.value);
+        });
+      }
+    }
+    console.log('[Dashboard] Slider listeners setup complete');
   } catch (e) { console.error('[Dashboard] initAiSummaryCleansingSettings error:', e); }
 
   try {
