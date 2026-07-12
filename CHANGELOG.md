@@ -17,7 +17,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [6.5.23] - 2026-07-12
+## [6.5.24] - 2026-07-12
+
+### Documentation / ドキュメント
+
+- **README.md を刷新** — フォークの理由・プロジェクト継続の動機を書き下ろし、機能一覧を拡充。CWS リンクの配置を改善
+- **ランディングページ (`docs/index.html`) を改修** — ヒーローセクションに Chrome Web Store ボタンを追加（プライマリ）、GitHub リンクをセカンダリに変更。FAQ をカテゴリ別アコーディオンに整理し、セクション文言を調整
+- **新規ユーザーガイド 6 件を追加** — AI Summary (`AI_SUMMARY_GUIDE.md`)、Audit Log (`AUDIT_LOG_GUIDE.md`)、GitHub Gist Sync (`GITHUB_GIST_SYNC_GUIDE.md`)、Recording Conditions (`RECORDING_CONDITIONS.md`)、Tag Cluster (`TAG_CLUSTER_GUIDE.md`)、Toolbar Badge (`TOOLBAR_BADGE_GUIDE.md`)
+- **ブログ記事 2 件を追加** — `getting-started-with-yasumaro.md`（はじめてのYasumaro、Obsidianなしで使う入門記事）、`v6_0-to-v6_5-diff.md`（v6.0〜v6.5.23 の差分振り返り）
+- **ブログ記事の命名由来を修正** — 太安万侶（おおのやすまろ）に由来する正しい語源説明に更新
+- **CONTRIBUTING.md の AI プロバイダー追加手順を更新** — cspDomains.ts 一元管理（M24）に合わせて 4 ファイル → 3 ファイルに手順を簡略化
+- **FAQ.md** — 表現のブラッシュアップ、構成の整理
+- **PERMISSIONS.md** — 対象バージョン・権限説明を更新
+- **`docs/STORE_ASSETS.md` を `dev-docs/store-assets/` に移動**
 
 ### Fixed / 修正
 

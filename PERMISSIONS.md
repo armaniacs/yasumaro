@@ -4,8 +4,8 @@
 
 **目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。Chrome Web Store 審査プロセスにおいて、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
 
-**Last Updated / 最終更新日**: 2026-06-20
-**Target Version / 対象バージョン**: v6.0.4
+**Last Updated / 最終更新日**: 2026-07-12
+**Target Version / 対象バージョン**: v6.5.24
 
 ---
 
@@ -24,6 +24,7 @@
 | `activeTab` | required | Popup "Record Now" + manual content fetch | Yes |
 | `favicon` | required | Popup current page + dashboard/history favicon display | Yes |
 | `contextMenus` | required | `src/background/service-worker.ts` (manual record trigger) | Yes |
+| `downloads` | required | `src/background/pipeline/steps/saveLocalMarkdownStep.ts` (local Markdown export) | Yes |
 
 ---
 
@@ -75,6 +76,33 @@
 
 ---
 
+## 11. `downloads`
+
+**Why we need it / なぜ必要か**
+
+- Obsidian を使わずに閲覧履歴を利用できる「ローカル Markdown 書き出し」機能のため。閲覧記録を日次の Markdown ファイルとしてブラウザのダウンロードフォルダ（デフォルト: `~/Downloads/Yasumaro/`）に保存する
+- ダッシュボードの「初期設定」→「ローカル Markdown 書き出し」で ON にしたユーザーのみが対象。デフォルトは OFF
+
+**What it enables / 有効化される機能**
+
+- `chrome.downloads.download()` による日次 Markdown ファイル（`YYYY-MM-DD.md`）の書き出し（`conflictAction: 'overwrite'`）
+- 書き出しタイミングは「手動のみ / 即時 / アイドル時・30分ごと / 日付が変わったとき」から選択可能
+- ダッシュボードの「履歴」「ログをエキスポート」パネルからの手動 Markdown エクスポート
+
+**Privacy safeguards / プライバシー保護**
+
+- 機能自体がオプトイン（デフォルト OFF）
+- ダウンロード先はユーザーのローカルファイルシステムのみで、外部送信は行わない
+- ダウンロードしたファイル一覧の読み取りや、他の拡張機能・サイトが行ったダウンロードへのアクセスは行わない
+
+**Code references / コード参照**
+
+- `src/background/pipeline/steps/saveLocalMarkdownStep.ts`
+- `src/background/localMarkdownIdleFlusher.ts`
+- `docs/MARKDOWN_DOWNLOAD.md`（ユーザー向けガイド）
+
+---
+
 ## Permissions We Do NOT Request / 要求しないパーミッション
 
 以下は明示的に要求**しない**パーミッションです。透明性のため記載します:
@@ -84,7 +112,6 @@
 | `cookies` | セッション管理は外部サービス（AI / Obsidian）が担当。当拡張は Cookie にアクセスしない |
 | `history` | 閲覧履歴の記録は独自 SQLite で完結。`chrome.history` API は使用しない |
 | `bookmarks` | ブックマーク機能なし |
-| `downloads` | ファイルのダウンロード操作は行わない（エクスポートは `chrome.runtime.getURL` 経由） |
 | `geolocation` | 地理位置情報は一切使用しない |
 | `clipboardRead` / `clipboardWrite` | クリップボード操作は限定的なエクスポート機能のみ（`navigator.clipboard.writeText` で Web API 経由） |
 | `nativeMessaging` | 外部アプリとの連携なし（Obsidian は REST API） |
@@ -109,4 +136,5 @@
 
 ## Update History / 更新履歴
 
+- **2026-07-12**: `downloads` パーミッションを追加（ローカル Markdown 書き出し機能、v6.5.14）。実装との乖離を修正
 - **2026-06-17**: 初版作成（v6.0.0 Chrome Web Store 初回公開向け）

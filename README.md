@@ -18,16 +18,22 @@
 ### 概要
 ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するChrome拡張機能です。
 
-### オリジナルの Obsidian Smart History の紹介
-オリジナルは https://note.com/izuru_tcnkc/n/nd0a758483901 で紹介されている記事です。
+### オリジナルの Obsidian Smart History について
+Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)で紹介されている Obsidian Smart History をフォークして作成しました。シンプルながら実用的なアイデアを形にしてくれたオリジナル作者に感謝します。
 
-Yasumaroは、オリジナルの Obsidian Smart History をフォークして作成したものです。
+### なぜこのプロジェクトを続けているのか
 
-### フォークの理由
-オリジナルからフォークさせた一番の理由は、OpenAI互換APIをサポートすることでした。つまり、GroqやOllama、さくらのAIエンジンなども使えるようになりました。
-多くをサポートしていますがAPIを追加したい場合は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+フォークの最初のきっかけは、ごく単純な不満でした。オリジナルはGemini APIのみに対応しており、GroqやOllama、さくらのAIエンジンといったOpenAI互換APIを使いたい自分には合わなかったのです。まずはそこを直すつもりでした。
+
+ただ、実際に自分で毎日使い始めると、次から次へと「ここが気になる」が出てきました。手動で今すぐ記録したい、プライベートなページはうっかり残したくない、Obsidianを開いていなくても記録だけは止めたくない——そのひとつひとつに手を入れているうちに、気づけば当初の目的だったAPI対応は全体のごく一部になっていました。
+
+いまのYasumaroは、閲覧履歴をSQLite（OPFS + FTS5）にローカル保存する基盤を持ち、Obsidianを一切セットアップしなくてもMarkdownファイルとして記録を残せます。PIIマスキングやプライベートページの自動検出、監査ログといったプライバシー機能も、実際に自分が「これがないと怖くて使えない」と感じた部分から生まれたものです。日々の変更履歴は [CHANGELOG.md](CHANGELOG.md) にすべて残しています。
+
+自分自身が毎日使うツールだからこそ、手を抜きたくない。それが今もこのプロジェクトを続けている一番の理由です。もし同じように「閲覧履歴を、AIの手を借りて残しておきたい」と思ったことがあるなら、ぜひ使ってみてください。新しいAPIプロバイダーを追加したい場合は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ### 特徴
+無料・オープンソースで、これだけの機能が使えます。
+
 - 🤖 **AIによる要約**: OpenAI互換APIまたはGemini APIを使用して、ウェブページの内容を簡潔に要約します（Groq、OpenAI、Anthropic、ローカルLLM等に対応）。
 - 📝 **Obsidian連携**: 閲覧履歴を直接Obsidianのデイリーノートに保存します。
 - 🎯 **スマート検出**: 実際に読んだページのみを保存します（滞在時間とスクロール深度に基づきます）。
@@ -64,7 +70,6 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
    - [OpenAI](https://platform.openai.com/api-keys)
    - [Anthropic (Claude)](https://console.anthropic.com/)
    - Ollama などのローカルLLM（APIキー不要）
-
 
 ### インストール方法
 
@@ -157,7 +162,6 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 
 詳細な使い方は [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) を参照してください。
 
-
 ### Obsidianへの追加の仕組み（`src/background/obsidianClient.ts`）
 
 **方式: Read-Modify-Write（読み込み → 加工 → 書き込み）**
@@ -178,7 +182,6 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 
 > **注意**: ファイル全体を取得して書き直す方式のため、Obsidian 側でまさにその瞬間に同じファイルを編集していると、競合により更新内容が失われるリスクがわずかにあります（通常の使用では稀です）。
 
-
 ---
 
 ## English
@@ -187,13 +190,21 @@ Yasumaroは、オリジナルの Obsidian Smart History をフォークして作
 A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
 ### About the Original — Obsidian Smart History
-Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901).
+Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901). Credit goes to the original author for a simple, genuinely useful idea.
 
-### Why This Fork?
-The primary motivation was to add OpenAI-compatible API support — enabling Groq, Ollama, Sakura AI Engine, and many other providers alongside the original Gemini support.
-If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md).
+### Why I Keep Building This
+
+The fork started from a small frustration: the original only supported Gemini, and I wanted to use OpenAI-compatible APIs like Groq, Ollama, and Sakura AI Engine. That was the whole plan.
+
+Then I actually started using it every day, and one small annoyance led to another. I wanted to record a page right now, not wait for the auto-detection. I didn't want private pages accidentally saved. I wanted history to keep working even when Obsidian wasn't open. Fixing each of those, one at a time, quietly turned the original API-compatibility goal into a small fraction of what the project became.
+
+Today, Yasumaro persists your browsing history locally in SQLite (OPFS + FTS5), and can write daily Markdown files without any Obsidian setup at all. The privacy features — PII masking, automatic private-page detection, the audit log — all came from moments where I thought "I wouldn't trust this without that." Every change along the way is recorded in [CHANGELOG.md](CHANGELOG.md).
+
+I use this tool myself, every day, so I don't want to cut corners on it. That's really the whole reason I keep working on it. If you've ever wanted your browsing history to turn into something worth keeping, with a little help from AI, give it a try. If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Features
+Free and open source, with all of the following built in.
+
 - 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using OpenAI-compatible APIs or Google's Gemini API (supports Groq, OpenAI, Anthropic, local LLMs, and more)
 - 📝 **Obsidian Integration**: Saves browsing history directly to your Obsidian daily notes
 - 🎯 **Smart Detection**: Only saves pages you actually read (based on scroll depth and time spent)
@@ -356,3 +367,12 @@ MIT License
 - [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
 - [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) - AI Prompt Customization Guide
 - [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) - uBlock Filter Import Guide
+
+---
+
+## 応援する / Support My Work
+
+このプロジェクトが役に立ったら、コーヒーをおごっていただけると嬉しいです！
+If you find this project useful, consider buying me a coffee!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-orange?style=flat-square&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/yasumaro)

@@ -63,13 +63,29 @@
 - 記録されるとChrome通知とステータスメッセージで確認できます
 
 #### ダッシュボードへのアクセス
-右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。ダッシュボードには以下のタブがあります：
+右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。ダッシュボードは左サイドバーのナビゲーションで構成されており、3つのセクションに分かれています：
 
-- **一般 (General)**: Obsidian接続設定、AIプロバイダー設定
-- **ドメインフィルター (Domain Filter)**: ホワイトリスト/ブラックリストの管理
-- **AIプロンプト (AI Prompt)**: カスタムプロンプトの作成・管理
-- **プライバシー (Privacy)**: PIIマスク設定、プライベートページ検出の動作設定、マスターパスワード保護
-- **履歴 (History)**: 記録済みURLの一覧確認・管理
+**Settings セクション**
+- **初期設定**: Obsidian接続設定、AIプロバイダー設定、ローカル Markdown 書き出し設定
+- **Domain Filter**: ホワイトリスト/ブラックリストの管理
+- **Prompt**: カスタムプロンプトの作成・管理
+- **Privacy**: PIIマスク設定、プライベートページ検出の動作設定、マスターパスワード保護
+- **Content** / **AI Summary Cleansing**: 保存前・要約前のコンテンツクレンジング設定
+- **Trust**: ドメイン信頼度判定の設定
+- **CSP**: AIプロバイダーの許可ドメイン確認
+- **Tags**: タグ管理
+- **Recording Conditions**: 記録条件（滞在時間・スクロール深度）の設定
+- **Diagnostics**: SQLite環境の診断
+
+**Data セクション**
+- **Tag Cluster**: タグの関連性をグラフで可視化
+- **SQLite History**: 記録済みURLの一覧確認・全文検索・管理（旧称「履歴」に相当）
+- **Domain Search**: ドメイン単位での履歴検索
+- **監査ログ**: AI要約の生成・保存操作の記録
+
+**Tools セクション**
+- **Export Logs**: 履歴のエクスポート（JSON/Markdown/CSV/DB）
+- **Export/Import**: 設定のエクスポート・インポート
 
 #### 1. Obsidian設定
 *   **Obsidian API Key**: ステップ1でコピーしたキーを入力。
@@ -279,13 +295,29 @@ Click the extension icon to open the main screen.
 - Chrome notifications and status messages confirm successful recording
 
 #### Accessing the Dashboard
-Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Dashboard has the following tabs:
+Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Dashboard is organized as a left sidebar with three sections:
 
-- **General**: Obsidian connection settings and AI provider settings
+**Settings section**
+- **Initial Setup**: Obsidian connection settings, AI provider settings, and local Markdown export settings
 - **Domain Filter**: Manage whitelist/blacklist rules
-- **AI Prompt**: Create and manage custom prompts
+- **Prompt**: Create and manage custom prompts
 - **Privacy**: PII masking settings, private page detection behavior, and master password protection
-- **History**: View and manage recorded URL history
+- **Content** / **AI Summary Cleansing**: Content cleansing settings applied before saving / before AI summarization
+- **Trust**: Domain trust evaluation settings
+- **CSP**: View allowed AI provider domains
+- **Tags**: Tag management
+- **Recording Conditions**: Configure recording thresholds (visit duration, scroll depth)
+- **Diagnostics**: SQLite environment diagnostics
+
+**Data section**
+- **Tag Cluster**: Visualize tag relationships as a graph
+- **SQLite History**: View, full-text search, and manage recorded URL history (formerly labeled "History")
+- **Domain Search**: Search history by domain
+- **Audit Log**: Records of AI summary generation/save operations
+
+**Tools section**
+- **Export Logs**: Export history (JSON/Markdown/CSV/DB)
+- **Export/Import**: Export and import settings
 
 #### 1. Obsidian Settings
 *   **Obsidian API Key**: Paste the key from Step 1.
@@ -424,46 +456,46 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 
 ---
 
-## v6.5.4 新機能ガイド / v6.5.4 New Features Guide
+## その他の機能 / Additional Features
 
 ### 日本語
 
-#### 関連グラフ表示（PBI #02）
+#### 関連グラフ表示
 `Dashboard → History → Related Graph` タブで、記録したページのタグ共起関係をグラフで可視化できます。
 - **タグをノード**、**共起関係をエッジ**として表示
 - ノードをクリックすると、そのタグを持つページに自動フィルタ
 - 出現回数上位50件のタグを表示（多数の場合は「上位N件のみ表示中」を明示）
 - 外部ライブラリ不要の軽量 SVG 描画で即座に表示
 
-#### GitHub Gist 連携（PBI #08）
+#### GitHub Gist 連携
 Obsidian の代わりに、または併用して GitHub Gist にクラウド同期できます。
 - `Dashboard → Sync Settings → GitHub Gist` から設定
 - **GitHub PAT（Personal Access Token）** を入力して認証
 - 「接続テスト」ボタンで接続状況を確認
 - Obsidian との同期と並行実行でき、一方の失敗が他方に影響しません
 
-#### 複数ブラウザ対応（PBI #09）
+#### 複数ブラウザ対応
 Chrome、Microsoft Edge、Brave など、Chromium 系ブラウザで動作します。
 - `npm run build:edge`、`npm run build:brave` で各ブラウザ用にビルド可能
 - 同一のコード基盤で複数ブラウザをサポート
 
 ### English
 
-#### Related Graph Display (PBI #02)
+#### Related Graph Display
 In `Dashboard → History → Related Graph`, you can visualize the co-occurrence relationships of tags in your recorded pages as a graph.
 - **Tags as nodes**, **co-occurrence relationships as edges**
 - Click on a node to automatically filter pages with that tag
 - Displays the top 50 tags by frequency (indicates "showing top N only" if there are more)
 - Lightweight SVG rendering without external libraries for fast rendering
 
-#### GitHub Gist Integration (PBI #08)
+#### GitHub Gist Integration
 Sync your history to GitHub Gist instead of, or in addition to, Obsidian.
 - Configure in `Dashboard → Sync Settings → GitHub Gist`
 - Enter your **GitHub Personal Access Token (PAT)** for authentication
 - Use the "Test Connection" button to verify connectivity
 - Runs in parallel with Obsidian sync; failure in one doesn't affect the other
 
-#### Multi-Browser Support (PBI #09)
+#### Multi-Browser Support
 Works on Chromium-based browsers including Chrome, Microsoft Edge, and Brave.
 - Build for specific browsers using `npm run build:edge`, `npm run build:brave`, etc.
 - Single codebase supports multiple browsers
