@@ -72,7 +72,7 @@ export function getBrowserLocale(): string {
         const lang = navigator.language || ('userLanguage' in navigator ? (navigator as unknown as { userLanguage: string }).userLanguage : null) || 'ja';
         const locale = resolveLocaleWithFallback(lang);
         return locale;
-    } catch (e) {
+    } catch (_e) {
         console.warn('[customPromptUtils] Failed to detect browser locale, using default: ja');
         return 'ja';
     }

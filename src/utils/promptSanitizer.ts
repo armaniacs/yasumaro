@@ -227,7 +227,7 @@ export function sanitizePromptContent(content: string): SanitizeResult {
 
   // 0. 前処理: HTMLエンティティデコードとUnicode正規化（エンコード回避対策）
   const decodedContent = decodeHtmlEntities(sanitized);
-  const normalizedContent = normalizeUnicode(decodedContent);
+  const _normalizedContent = normalizeUnicode(decodedContent);
 
   // デコード後のコンテンツでもチェック（エンコード回避対策）
   if (decodedContent !== sanitized) {
@@ -239,7 +239,7 @@ export function sanitizePromptContent(content: string): SanitizeResult {
     // グローバルマッチ処理
     let match;
     const regex = new RegExp(pattern.source, 'gi');
-    let lastIndex = 0;
+    let _lastIndex = 0;
 
     while ((match = regex.exec(sanitized)) !== null) {
       const [fullMatch] = match;
@@ -252,7 +252,7 @@ export function sanitizePromptContent(content: string): SanitizeResult {
         sanitized = sanitized.replace(fullMatch, '[FILTERED]');
       }
 
-      lastIndex = index + fullMatch.length;
+      _lastIndex = index + fullMatch.length;
     }
   }
 

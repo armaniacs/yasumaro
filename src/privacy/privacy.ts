@@ -172,7 +172,7 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const md = await res.text();
         content.innerHTML = renderMarkdown(md);
-    } catch (e) {
+    } catch (_e) {
         content.innerHTML = '<p class="error">プライバシーポリシーの読み込みに失敗しました。</p>';
     }
 }

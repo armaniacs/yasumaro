@@ -35,8 +35,8 @@ const cancelPasswordBtn = document.getElementById('cancelPasswordBtn') as HTMLBu
 const savePasswordBtn = document.getElementById('savePasswordBtn') as HTMLButtonElement | null;
 
 const passwordAuthModal = document.getElementById('passwordAuthModal') as HTMLElement | null;
-const passwordAuthModalTitle = document.getElementById('passwordAuthModalTitle') as HTMLElement | null;
-const passwordAuthModalDesc = document.getElementById('passwordAuthModalDesc') as HTMLElement | null;
+const _passwordAuthModalTitle = document.getElementById('passwordAuthModalTitle') as HTMLElement | null;
+const _passwordAuthModalDesc = document.getElementById('passwordAuthModalDesc') as HTMLElement | null;
 const masterPasswordAuthInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement | null;
 const passwordAuthError = document.getElementById('passwordAuthError') as HTMLElement | null;
 const closePasswordAuthModalBtn = document.getElementById('closePasswordAuthModalBtn') as HTMLButtonElement | null;

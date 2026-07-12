@@ -96,7 +96,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     if (substitutions) {
       try {
         args = JSON.parse(substitutions);
-      } catch (e) {
+      } catch (_e) {
         // 不正なJSONは無視
       }
     }

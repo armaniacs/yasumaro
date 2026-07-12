@@ -1,6 +1,6 @@
 // Navigation functions for popup UI
 
-import { getScreenState, setScreenState, SCREEN_STATES } from './screenState.js';
+import { setScreenState, SCREEN_STATES } from './screenState.js';
 import { clearAutoCloseTimer } from './autoClose.js';
 import { setHtmlLangAndDir } from './i18n.js';
 

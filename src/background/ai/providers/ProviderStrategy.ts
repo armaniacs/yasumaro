@@ -4,7 +4,7 @@
  */
 
 import { Settings, StorageKeys } from '../../../utils/storage.js';
-import { validateMaxTokens, getGlobalMaxTokens } from '../../../utils/aiLimits.js';
+import { validateMaxTokens } from '../../../utils/aiLimits.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;

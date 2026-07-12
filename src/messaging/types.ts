@@ -293,7 +293,7 @@ export function extractMessageContent(sender: chrome.runtime.MessageSender): Mes
 
   // VALID_VISIT, CHECK_DOMAIN are only allowed from Content Scripts
   // Returns true if sender is a content script (all of tab, tab.id, tab.url exist)
-  const isContentScriptSender = !!(sender.tab && sender.tab.id && sender.tab.url);
+  const _isContentScriptSender = !!(sender.tab && sender.tab.id && sender.tab.url);
 
   return {
     tabId,

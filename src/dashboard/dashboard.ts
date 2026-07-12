@@ -16,7 +16,7 @@ import { getMessage } from '../popup/i18n.js';
 import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings } from '../popup/aiSummaryCleansingSettingsV2.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../popup/privacyConsent.js';
-import { setupAIProviderChangeListener, updateAIProviderVisibility, updateAIProviderVisibilityMulti, AIProviderElements } from '../popup/settings/aiProvider.js';
+import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti, AIProviderElements } from '../popup/settings/aiProvider.js';
 import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
@@ -667,7 +667,7 @@ export async function handleTestObsidian(): Promise<void> {
 
     el.statusDiv.className = obsidianResult.success ? 'success' : 'error';
     syncStatusToTop();
-  } catch (e) {
+  } catch (_e) {
     el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
     el.statusDiv.className = 'error';
     syncStatusToTop();
@@ -701,7 +701,7 @@ export async function handleTestAi(): Promise<void> {
 
     el.statusDiv.className = aiResult.success ? 'success' : 'error';
     syncStatusToTop();
-  } catch (e) {
+  } catch (_e) {
     el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
     el.statusDiv.className = 'error';
     syncStatusToTop();
@@ -759,7 +759,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
 
     el.statusTopDiv.textContent = getMessage('testLocalMarkdownSuccess') || 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました';
     el.statusTopDiv.className = 'success';
-  } catch (e) {
+  } catch (_e) {
     el.statusTopDiv.textContent = getMessage('testLocalMarkdownError') || 'ローカルMarkdown書き出しテストに失敗しました';
     el.statusTopDiv.className = 'error';
   } finally {
@@ -934,7 +934,7 @@ export async function handleGenerateWeeklySummary(): Promise<void> {
       success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
     ) || (success ? 'Summary generated.' : 'No history for the target period.');
     statusEl.className = success ? 'success' : 'info';
-  } catch (e) {
+  } catch (_e) {
     statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
     statusEl.className = 'error';
   } finally {
@@ -960,7 +960,7 @@ export async function handleGenerateMonthlySummary(): Promise<void> {
       success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
     ) || (success ? 'Summary generated.' : 'No history for the target period.');
     statusEl.className = success ? 'success' : 'info';
-  } catch (e) {
+  } catch (_e) {
     statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
     statusEl.className = 'error';
   } finally {
@@ -1378,7 +1378,7 @@ function initExportLogsPanel(): void {
         onSave: async (providerId, baseUrl, apiKey, model) => {
           // Update UI
           selectedProviderInfoDiv?.classList.remove('hidden');
-          const providerData = JSON.parse(JSON.stringify({ id: providerId, baseUrl, hasKey: !!apiKey, model }));
+          const _providerData = JSON.parse(JSON.stringify({ id: providerId, baseUrl, hasKey: !!apiKey, model }));
           providerInfoDisplayDiv!.textContent = `${providerId} (${baseUrl})${model ? ` - ${model}` : ''}`;
 
           // Update input values

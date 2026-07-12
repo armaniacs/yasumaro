@@ -14,7 +14,6 @@ import {
     decryptData,
     deriveKey
 } from './crypto.js';
-import type { StorageKeys } from './storage.js';
 
 // パスワード強度レベル
 export enum PasswordStrength {
@@ -182,7 +181,7 @@ export async function changeMasterPassword(
     newPassword: string,
     getStorageFn: (keys: string[]) => Promise<Record<string, unknown>>,
     setStorageFn: (key: string, value: unknown) => Promise<void>,
-    reencryptFn: (encryptedData: EncryptedData | null, newKey: CryptoKey) => Promise<void>
+    _reencryptFn: (encryptedData: EncryptedData | null, newKey: CryptoKey) => Promise<void>
 ): Promise<{ success: boolean; error?: string }> {
     try {
         // 古いパスワード検証

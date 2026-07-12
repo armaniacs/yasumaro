@@ -10,12 +10,9 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
-    getAllowedUrls,
     getSettings,
     buildAllowedUrls,
-    saveSettingsWithAllowedUrls,
     migrateToSingleSettingsObject,
-    updateDomainFilterCache,
     lockSession,
     StorageKeys,
     clearSettingsCache
@@ -24,14 +21,11 @@ import { isDomainAllowed } from '../utils/domainUtils.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
-import { createErrorResponse, convertKnownErrorMessage } from '../utils/errorMessages.js';
+import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
-import {
-    cleanupOldDeniedEntries,
-    cleanupDismissedEntries
-} from '../utils/permissionManager.js';
+
 
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
@@ -39,12 +33,11 @@ import { encodeUrlSafeBase64 } from './handlers/urlNotificationHandlers.js';
 import { handleDashboardSqlite } from './handlers/dashboardSqliteHandlers.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
-import { hasPrivacyConsent, migrateLegacyPrivacyConsent } from '../popup/privacyConsent.js';
+import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
 import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
-import { extractMainContent } from '../utils/contentExtractor.js';
 import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ONLY_TYPES,

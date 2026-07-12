@@ -6,7 +6,7 @@
  * 🟢 信頼性レベル: plan/UII/10-data-structures.md に記載されるデータ構造
  */
 
-import { DEFAULT_METADATA, NULL_RULE_ID, RULE_TYPES, RuleType } from './constants.js';
+import { DEFAULT_METADATA, NULL_RULE_ID } from './constants.js';
 import { parseRuleOptions, OptionValues } from './options.js';
 
 export { parseDomainList } from './options.js';

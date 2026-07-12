@@ -8,7 +8,6 @@ import type {
   BloomFilterData,
   JpAnchorConfig,
   SensitiveDomainsConfig,
-  TrancoConfig,
   TrustDatabase,
 } from './trustDbSchema.js';
 import type { DeepReadonly } from '../typeUtils.js';

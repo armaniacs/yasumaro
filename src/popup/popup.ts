@@ -5,11 +5,11 @@
 
 import { logError, ErrorCode } from '../utils/logger.js';
 import { init as initNavigation } from './navigation.js';
-import { init as initDomainFilter, loadDomainSettings } from './domainFilter.js';
-import { init as initPrivacySettings, loadPrivacySettings } from './privacySettings.js';
+import { init as initDomainFilter } from './domainFilter.js';
+import { init as initPrivacySettings } from './privacySettings.js';
 import { initCustomPromptManager } from './customPromptManager.js';
 import { setupAIProviderChangeListener } from './settings/aiProvider.js';
-import { setupAllFieldValidations, clearAllFieldErrors } from './settings/fieldValidation.js';
+import { setupAllFieldValidations } from './settings/fieldValidation.js';
 import { setupSaveButtonListener } from './settings/settingsSaver.js';
 import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 
@@ -161,7 +161,7 @@ export async function initPopup(): Promise<void> {
     const el = getSettingsFormElements();
     const aiProviderEl = getAiProviderElements();
     const settingsMap = getSettingsMapping();
-    const errors = getErrorPairs();
+    const _errors = getErrorPairs();
 
     // AI provider change listener
     if (aiProviderEl.select) {

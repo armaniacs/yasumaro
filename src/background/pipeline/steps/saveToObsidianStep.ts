@@ -8,7 +8,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import { StorageKeys } from '../../../utils/storage.js';
-import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import type { RecordingContext } from '../types.js';
 
 /**
  * Save formatted markdown to Obsidian daily note

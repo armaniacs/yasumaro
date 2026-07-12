@@ -5,7 +5,7 @@ import type { HistoryPanelState, HistoryElements, TagEditElements } from './hist
 import { renderHistoryEntries } from './historyRenderer.js';
 import { renderSkippedMode, renderPendingPage } from './historyPendingPanel.js';
 import { updateTagFilterIndicator } from './historyFilters.js';
-import { initTagEditModal, saveTagEdits } from './historyTagEditModal.js';
+import { initTagEditModal } from './historyTagEditModal.js';
 import { updateCleansingStatsPanel } from './historyCleansingSync.js';
 import { searchForTagInSqliteHistory } from './sqliteHistoryPanel.js';
 
@@ -13,8 +13,8 @@ export { showRecordError, checkServiceWorkerAlive } from './historyUtils.js';
 
 // Module-level state shared across all event handlers
 let historyPanelState: HistoryPanelState | null = null;
-let historyPanelElements: HistoryElements | null = null;
-let applyFiltersFunc: ((resetPage?: boolean) => void) | null = null;
+let _historyPanelElements: HistoryElements | null = null;
+let _applyFiltersFunc: ((resetPage?: boolean) => void) | null = null;
 
 export function getHistoryPanelState(): HistoryPanelState | null {
   return historyPanelState;
@@ -69,7 +69,7 @@ async function initHistoryPanel(): Promise<void> {
 
   // Store in module-level variable for external access
   historyPanelState = state;
-  historyPanelElements = elements;
+  _historyPanelElements = elements;
 
   const onTagFilterChange = (): void => {
     applyFiltersInternal(false);
@@ -98,7 +98,7 @@ async function initHistoryPanel(): Promise<void> {
   }
 
   // Store for external access
-  applyFiltersFunc = applyFiltersInternal;
+  _applyFiltersFunc = applyFiltersInternal;
 
   const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string): void => {
     if (area !== 'local') return;

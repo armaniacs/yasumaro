@@ -21,7 +21,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
         const settings = await getSettings();
         const currentVersion = settings[StorageKeys.TRANCO_VERSION] as string | null;
         const grantedVersion = settings[StorageKeys.TRANCO_CONSENT_GRANTED] as string | null;
-        const deniedReason = settings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] as string | null;
+        const _deniedReason = settings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] as string | null;
         const deniedTimestamp = settings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] as number | null;
 
         if (!currentVersion) {

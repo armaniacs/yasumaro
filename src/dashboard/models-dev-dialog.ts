@@ -3,14 +3,13 @@
  * Dialog for selecting models.dev OpenAI-compatible providers
  */
 
-import type { ModelsDevData, ModelsDevProvider, ModelsDevModel } from '../utils/modelsDevApi.js';
+import type { ModelsDevProvider, ModelsDevModel } from '../utils/modelsDevApi.js';
 import {
     loadModelsDevData,
-    formatContextLimit,
     getApiKeyEnvName,
     getApiKeyUrl,
 } from '../utils/modelsDevApi.js';
-import { StorageKeys, saveSettings, getSettings, Settings } from '../utils/storage.js';
+import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { applyI18n } from '../popup/i18n.js';
 
 interface DialogOptions {

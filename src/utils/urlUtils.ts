@@ -14,7 +14,7 @@ export function normalizeUrl(url: string): string {
     let parsedUrl: URL;
     try {
         parsedUrl = new URL(url);
-    } catch (e) {
+    } catch (_e) {
         throw new Error('Invalid URL');
     }
     // 末尾のスラッシュを削除

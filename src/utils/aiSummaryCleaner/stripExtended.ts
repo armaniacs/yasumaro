@@ -723,7 +723,7 @@ export function stripAuthorMetaElements(element: Element): number {
         }
     });
 
-    for (const elem of elementsToRemove) {
+    for (const _elem of elementsToRemove) {
         removedCount++;
     }
     return removedCount;

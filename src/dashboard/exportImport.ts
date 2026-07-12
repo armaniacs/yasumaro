@@ -3,7 +3,7 @@
  * Settings export/import and log import functionality for the dashboard
  */
 
-import { getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
+import { getSettings, Settings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../popup/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
@@ -18,7 +18,6 @@ import {
   importEncryptedSettings,
   saveEncryptedExportToFile,
   isEncryptedExport,
-  EncryptedExportData,
   ExportFileData
 } from '../utils/settingsExportImport.js';
 import { loadDomainSettings } from '../popup/domainFilter.js';
@@ -43,7 +42,7 @@ const importPreview = document.getElementById('importPreview') as HTMLElement | 
 
 // State
 let importTrapId: string | null = null;
-let pendingImportData: Settings | null = null;
+let _pendingImportData: Settings | null = null;
 let pendingImportJson: string | null = null;
 
 export function closeImportModal(): void {
@@ -57,7 +56,7 @@ export function closeImportModal(): void {
     importConfirmModal.style.display = 'none';
     importConfirmModal.classList.add('hidden');
   }
-  pendingImportData = null;
+  _pendingImportData = null;
   pendingImportJson = null;
   if (importPreview) importPreview.textContent = '';
 }
@@ -166,7 +165,7 @@ export function initExportImport(): void {
         return;
       }
 
-      pendingImportData = parsed.settings;
+      _pendingImportData = parsed.settings;
       pendingImportJson = text;
       showImportPreview(parsed);
 

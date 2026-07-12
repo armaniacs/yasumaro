@@ -21,7 +21,7 @@ export function calculateTextScore(element: Element): number {
     let pCount = 0;
     let hCount = 0;
     let listCount = 0;
-    let linkCount = 0;
+    let _linkCount = 0;
     let linkTextLength = 0;
 
     const walker = document.createTreeWalker(
@@ -42,7 +42,7 @@ export function calculateTextScore(element: Element): number {
         } else if (tag === 'ul' || tag === 'ol') {
             listCount++;
         } else if (tag === 'a') {
-            linkCount++;
+            _linkCount++;
             linkTextLength += ('innerText' in elem ? (elem as HTMLElement).innerText?.length : null) || elem.textContent?.length || 0;
         }
 

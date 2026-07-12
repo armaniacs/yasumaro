@@ -1,6 +1,6 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import { RecordingLogic } from './recordingLogic.js';
-import { logInfo, logDebug, logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { logInfo, logDebug, logError, ErrorCode } from '../utils/logger.js';
 import { hashUrl } from '../utils/crypto.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { errorMessage } from '../utils/errorUtils.js';

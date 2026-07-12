@@ -1,4 +1,4 @@
-import { logWarn, logDebug } from '../utils/logger.js';
+import { logWarn } from '../utils/logger.js';
 import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';

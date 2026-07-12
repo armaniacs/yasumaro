@@ -5,7 +5,6 @@ import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 import { addPendingPage } from '../utils/pendingStorage.js';
-import { errorMessage } from '../utils/errorUtils.js';
 import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
 import type { MaskedItem } from '../messaging/types.js';
 

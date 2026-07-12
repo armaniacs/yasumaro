@@ -8,7 +8,7 @@
  * 🟢 信頼性レベル: plan/UII/02-phase2-parser.md および plan/UII/10-data-structures.md に基づく実装
  */
 
-import { DEFAULT_METADATA, RULE_TYPES, RuleType } from './constants.js';
+import { DEFAULT_METADATA, RULE_TYPES } from './constants.js';
 import { errorMessage } from '../errorUtils.js';
 import { isValidString, isCommentLine, isEmptyLine, validateDomain, isValidRulePattern } from './validation.js';
 import { createEmptyRuleset, generateRuleId, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, UblockRules } from './transform.js';
@@ -22,7 +22,7 @@ import {
     getFromCache,
     hasCacheKey
 } from './cache.js';
-import { parseDomainList, parseOptions, parseRuleOptions, OptionValues } from './options.js';
+import { parseDomainList, parseOptions, parseRuleOptions } from './options.js';
 
 // Re-export constants
 export * as CONSTANTS from './constants.js';

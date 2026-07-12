@@ -73,7 +73,7 @@ export function buildAllowedUrls(
             try {
                 const parsed = new URL(source.url);
                 allowedUrls.add(normalizeUrl(parsed.origin));
-            } catch (e) {
+            } catch (_e) {
                 // 無効なURLは無視
             }
         }

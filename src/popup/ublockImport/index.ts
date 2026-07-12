@@ -9,7 +9,7 @@ import { fetchFromUrl } from './urlFetcher.js';
 import { isValidUrl } from './validation.js';
 import { rebuildRulesFromSources, previewUblockFilter } from './rulesBuilder.js';
 import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings } from './sourceManager.js';
-import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard, buildUblockFormat } from './uiRenderer.js';
+import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../settingsUiHelper.js';
 import { LogType, addLog } from '../../utils/logger.js';
 import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
@@ -313,6 +313,7 @@ async function handleSaveUblockSettings(): Promise<void> {
 
   // 3. 入力がある場合、新規ソースとして保存/更新
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sources, action, ruleCount } = await saveUblockSettings(text, currentSourceUrl);
 
     renderSourceList(

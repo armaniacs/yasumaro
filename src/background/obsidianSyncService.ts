@@ -120,7 +120,7 @@ export class ObsidianSyncService implements SyncTarget {
     }
 
     try {
-      const result = await this.obsidianClient.testConnection();
+      const _result = await this.obsidianClient.testConnection();
       return { success: true, message: 'Connected successfully' };
     } catch (error) {
       return {

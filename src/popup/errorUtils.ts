@@ -67,7 +67,7 @@ function isSystemError(error: unknown): error is SystemError {
   return hasSource(error) && error.source === 'system';
 }
 
-function isKnownError(error: unknown): error is KnownError {
+function _isKnownError(error: unknown): error is KnownError {
   return isObsidianError(error) || isAiError(error) || isNetworkError(error) || isUserError(error) || isSystemError(error);
 }
 

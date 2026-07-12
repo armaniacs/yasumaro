@@ -17,6 +17,7 @@ export function stripPiiFromMaskedItems(items: (string | MaskedItem)[]): (string
       return item;
     }
     // originalフィールドを削除した新しいオブジェクトを作成
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { original, ...strippedItem } = item;
     return strippedItem;
   });
@@ -28,6 +29,7 @@ export function stripPiiFromMaskedItems(items: (string | MaskedItem)[]): (string
  * @returns originalフィールドが削除されたMaskedItem
  */
 export function stripPiiFromMaskedItem(item: MaskedItem): Omit<MaskedItem, 'original'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { original, ...strippedItem } = item;
   return strippedItem;
 }

@@ -62,7 +62,7 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
  * @param {Map<string, number>} urlMap - URLからタイムスタンプへのマップ
  * @param {string} [urlToAdd] - 追加/更新するURL（現在のタイムスタンプ付き）（オプション）
  */
-export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
+export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, _urlToAdd: string | null = null): Promise<void> {
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用

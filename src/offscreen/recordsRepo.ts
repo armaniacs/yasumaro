@@ -516,16 +516,16 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
       return { success: false, error: 'Database not initialized' };
     }
 
-    let count = 0;
+    let _count = 0;
     await engine.execWithCache(
       'SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0',
       [],
       (row: SqliteValue[]) => {
-        count = Number(row[0]);
+        _count = Number(row[0]);
       }
     );
 
-    return { success: true, count };
+    return { success: true, count: _count };
   } catch (error) {
     logError('SQLite: getCount failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
     return { success: false, error: errorMessage(error) };
@@ -561,12 +561,12 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
       }
     }
 
-    let count = 0;
+    let _count = 0;
     await engine.execWithCache(
       'SELECT COUNT(*) FROM browsing_logs',
       [],
       (row: SqliteValue[]) => {
-        count = Number(row[0]);
+        _count = Number(row[0]);
       }
     );
 

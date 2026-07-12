@@ -17,6 +17,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.25] - 2026-07-12
+
+### Changed / 変更
+
+- **npm 依存パッケージを更新** — `@types/node` 25.9.5→26.1.1、`@types/chrome` 0.1.43→0.2.2、`adm-zip` 0.5.18→0.6.0、`eslint` 9.39.5→10.7.0、`globals` 15.15.0→17.7.0
+
+### Security / セキュリティ
+
+- **間接依存の脆弱性 7 件を overrides で修正** — `shell-quote` (critical 3件)、`tmp` (high 2件)、`uuid` (moderate 2件) を最新版に強制解決
+
+### Chores / その他
+
+- **ESLint 10 移行に伴う未使用変数 210 件を修正** — 全ファイルで `@typescript-eslint/no-unused-vars` エラーを解消。`eslint.config.js` に `caughtErrorsIgnorePattern: '^_'` を追加
+- **TypeScript 7 へのアップデートは見送り** — `@typescript-eslint` 8.63 が TS 6.1 未満のみサポートのため
+
 ## [6.5.24] - 2026-07-12
 
 ### Documentation / ドキュメント

@@ -59,7 +59,7 @@ export async function encodeUrlSafeBase64(
     const signature = await generateHmacSignature(url, hmacKey);
 
     return `${prefix}${urlB64}.${signature}`;
-  } catch (error) {
+  } catch (_error) {
     throw new Error('encodeUrlSafeBase64: Failed to encode URL');
   }
 }

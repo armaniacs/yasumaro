@@ -1,4 +1,4 @@
-import { showPreview, initializeModalEvents } from './sanitizePreview.js';
+import { initializeModalEvents } from './sanitizePreview.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { isRecordable } from './tabUtils.js';
 import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn, handleRecordNowClick } from './recordCurrentPage.js';

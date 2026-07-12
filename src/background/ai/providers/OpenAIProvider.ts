@@ -10,7 +10,7 @@ import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;

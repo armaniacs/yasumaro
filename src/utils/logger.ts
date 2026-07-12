@@ -161,7 +161,7 @@ export interface LogEntry {
  * 【パフォーマンス改善】保留中のログをstorageにフラッシュする
  * @param {boolean} immediate - trueの場合は即時フラッシュ（テスト用）
  */
-export async function flushLogs(immediate: boolean = false): Promise<void> {
+export async function flushLogs(_immediate: boolean = false): Promise<void> {
     if (isFlushing || pendingLogs.length === 0) {
         return;
     }
@@ -604,6 +604,7 @@ export async function logSanitize<T extends object = Record<string, unknown>>(
  */
 async function writeStructuredLog(entry: LogEntry): Promise<void> {
     try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, timestamp, type, message, errorCode, source, details } = entry;
 
         // 既存のaddLog関数を使用（entryを分割して渡す）

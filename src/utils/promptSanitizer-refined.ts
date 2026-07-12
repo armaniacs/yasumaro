@@ -4,7 +4,6 @@
  * 誤検知率80% → 目標<20%
  */
 
-import { logDebug } from './logger.js';
 
 /**
  * プロンプトインジェクションの危険度レベル
@@ -191,7 +190,7 @@ export function sanitizePromptContentRefined(content: string): SanitizeResult {
 
   // 前処理
   const decodedContent = decodeHtmlEntities(sanitized);
-  const normalizedContent = normalizeUnicode(decodedContent);
+  const _normalizedContent = normalizeUnicode(decodedContent);
 
   // 高リスクパターン検出（精緻化）
   for (const pattern of REFINED_INJECTION_PATTERNS) {

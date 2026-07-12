@@ -10,7 +10,6 @@ import { sendMessageWithRetry } from '../utils/retryHelper.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from './mainTypes.js';
-import { setCurrentPendingSave } from './privatePageDialog.js';
 import { copyTextToClipboard } from '../utils/clipboard.js';
 import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
@@ -122,7 +121,7 @@ function showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'er
   }, 2000);
 }
 
-function resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
+function _resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
   isAwaitingForceConfirm = false;
   void resetRecordButton(btn);
 }
@@ -451,7 +450,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     }
 
     const settings = await getSettings();
-    const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
+    const _usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
     showSpinner(getMessage('fetchingContent'));
     let contentResponse: ContentResponse;
@@ -465,7 +464,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
       if (chrome.runtime.lastError) {
         throw new Error(chrome.runtime.lastError.message);
       }
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       let hasPermission = false;
       try {
         hasPermission = await chrome.permissions.contains({ origins: ['<all_urls>'] });
@@ -484,7 +483,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
           func: () => document.body?.innerText || ''
         });
         contentResponse = { content: results?.[0]?.result || '' };
-      } catch (e2: unknown) {
+      } catch (_e2: unknown) {
         if (force) {
           contentResponse = { content: '' };
         } else {

@@ -509,7 +509,7 @@ function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
         }
 
         // 前回の呼び出しから十分時間が経過しているか確認
-        const timeSinceLastCall = now - lastCall;
+        const _timeSinceLastCall = now - lastCall;
         const THROTTLE_DELAY = 100; // 100ms
 
         rafId = requestAnimationFrame(() => {

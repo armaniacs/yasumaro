@@ -4,7 +4,6 @@
  */
 
 import { isValidUrl } from './validation.js';
-import { previewUblockFilter } from './rulesBuilder.js';
 import { getMessage } from '../i18n.js';
 
 interface Source {
@@ -235,7 +234,7 @@ export function exportSimpleFormat(sources: Source[]): string {
 export function copyToClipboard(text: string): Promise<boolean> {
   return navigator.clipboard.writeText(text).then(() => {
     return true;
-  }).catch(err => {
+  }).catch(_err => {
     throw new Error(getMessage('clipboardCopyFailed'));
   });
 }

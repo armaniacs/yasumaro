@@ -98,7 +98,7 @@ export function initDomainSearchPanel(): void {
         resultEl.className = 'domain-search-result visible blocked';
         resultEl.textContent = `✗ ${domain} — ${getMessage('domainBlocked') || 'Blocked (will not be recorded)'}`;
       }
-    } catch (e) {
+    } catch (_e) {
       resultEl.className = 'domain-search-result visible info';
       resultEl.textContent = getMessage('checkError') || 'Error checking domain.';
     }

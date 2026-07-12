@@ -5,11 +5,10 @@
 
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { extractDomain, parseDomainList, validateDomainList } from '../utils/domainUtils.js';
+import { parseDomainList, validateDomainList } from '../utils/domainUtils.js';
 // @ts-ignore: ublockImport/index.js might not be converted yet or type definitions missing
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 

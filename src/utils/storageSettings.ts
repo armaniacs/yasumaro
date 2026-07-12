@@ -6,7 +6,7 @@
 
 import { encryptApiKey, decryptApiKey, isEncrypted } from './crypto.js';
 import { withOptimisticLock } from './optimisticLock.js';
-import { DEFAULT_SETTINGS as STORAGE_DEFAULT_SETTINGS, type Settings as StorageSettings } from './storage.js';
+import { DEFAULT_SETTINGS as STORAGE_DEFAULT_SETTINGS } from './storage.js';
 import type {
     UblockRules,
     Source,

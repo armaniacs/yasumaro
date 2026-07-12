@@ -326,7 +326,7 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
  * @param enabled AI要約クレンジングが有効かどうか
  */
 export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
-    const fieldset = document.getElementById('aiSummaryCleansingFieldset') as HTMLFieldSetElement;
+    const _fieldset = document.getElementById('aiSummaryCleansingFieldset') as HTMLFieldSetElement;
     const altCheckbox = document.getElementById('ai-summary-cleansing-alt') as HTMLInputElement;
     const metadataCheckbox = document.getElementById('ai-summary-cleansing-metadata') as HTMLInputElement;
     const adsCheckbox = document.getElementById('ai-summary-cleansing-ads') as HTMLInputElement;

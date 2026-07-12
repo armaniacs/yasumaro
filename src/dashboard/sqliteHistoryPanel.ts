@@ -9,7 +9,6 @@ import {
   searchLogs,
   toggleStar,
   deleteLog,
-  getLogCount,
   getSqliteStatus,
   appendToLogs,
 } from './dashboardSqliteService.js';
@@ -22,7 +21,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { formatEntryToMarkdown } from '../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../utils/clipboard.js';
 import { parseTagsForDisplay } from '../utils/tagUtils.js';
-import { getSettings, StorageKeys } from '../utils/storage.js';
+
 
 const PAGE_SIZE = 20;
 
@@ -67,7 +66,7 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function getMonthDateRange(year: number, month: number): { since: number; until: number } {
+function _getMonthDateRange(year: number, month: number): { since: number; until: number } {
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
   return { since: start.getTime(), until: end.getTime() };
@@ -534,7 +533,7 @@ async function getChromeStorageLookup(): Promise<Map<string, SavedUrlEntry> | nu
 /**
  * Invalidate the chrome.storage cache (call when storage changes).
  */
-function invalidateChromeStorageCache(): void {
+function _invalidateChromeStorageCache(): void {
   chromeStorageCache = null;
 }
 
@@ -1062,7 +1061,7 @@ function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
  * @deprecated Use formatDiagnosticMetadataHtml instead. Kept only for test
  * backward-compatibility.
  */
-function formatDiagnosticMetadata(entry: BrowsingLogEntry): string {
+function _formatDiagnosticMetadata(entry: BrowsingLogEntry): string {
   return formatDiagnosticMetadataHtml(entry);
 }
 
