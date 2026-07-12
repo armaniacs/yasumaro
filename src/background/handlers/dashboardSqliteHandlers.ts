@@ -80,9 +80,10 @@ export async function handleDashboardSqlite(
                     orderDir: payload.orderDir || 'DESC',
                     tagFilter: payload.tagFilter,
                 });
-                return result
-                    ? { success: true, rows: result.rows, total: result.total }
-                    : { success: false, error: 'Query failed' };
+                if (result === null) {
+                    return { success: false, error: sqliteClient.lastError || 'Query failed' };
+                }
+                return { success: true, rows: result.rows, total: result.total };
             }
             case 'search': {
                 const result = await sqliteClient.search(
@@ -90,17 +91,24 @@ export async function handleDashboardSqlite(
                     payload.limit ?? 50,
                     payload.offset ?? 0
                 );
-                return result
-                    ? { success: true, rows: result.rows, total: result.total }
-                    : { success: false, error: 'Search failed' };
+                if (result === null) {
+                    return { success: false, error: sqliteClient.lastError || 'Search failed' };
+                }
+                return { success: true, rows: result.rows, total: result.total };
             }
             case 'toggle_star': {
                 const result = await sqliteClient.toggleStar(payload.id);
-                return result ?? { success: false, error: 'Toggle star failed' };
+                if (!result) {
+                    return { success: false, error: sqliteClient.lastError || 'Toggle star failed' };
+                }
+                return result;
             }
             case 'delete': {
-                const result = await sqliteClient.delete(payload.id);
-                return { success: result };
+                const ok = await sqliteClient.delete(payload.id);
+                if (!ok) {
+                    return { success: false, error: sqliteClient.lastError || 'Delete failed' };
+                }
+                return { success: true };
             }
             case 'update': {
                 const changes = payload.changes || {};
@@ -108,19 +116,28 @@ export async function handleDashboardSqlite(
                 if (invalidKeys.length > 0) {
                     return { success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` };
                 }
-                const result = await sqliteClient.update(
+                const ok = await sqliteClient.update(
                     payload.id,
                     changes
                 );
-                return { success: result };
+                if (!ok) {
+                    return { success: false, error: sqliteClient.lastError || 'Update failed' };
+                }
+                return { success: true };
             }
             case 'get_count': {
                 const count = await sqliteClient.getCount();
-                return { success: true, count: count ?? 0 };
+                if (count === null) {
+                    return { success: true, count: 0 };
+                }
+                return { success: true, count };
             }
             case 'clear_all': {
                 const ok = await sqliteClient.clearAll();
-                return { success: ok };
+                if (!ok) {
+                    return { success: false, error: sqliteClient.lastError || 'Clear all failed' };
+                }
+                return { success: true };
             }
             case 'import': {
                 const rows = payload.rows;
@@ -167,15 +184,15 @@ export async function handleDashboardSqlite(
                 const status = await sqliteClient.getStatus();
                 if (status) {
                     return { success: true, ...status };
-                } else {
-                    return { success: false, error: 'Status check failed' };
                 }
+                return { success: false, error: sqliteClient.lastError || 'Status check failed' };
             }
             case 'opfs_spike': {
                 const report = await sqliteClient.runOpfsSpike();
-                return report
-                    ? { success: true, report }
-                    : { success: false, error: 'OPFS spike failed' };
+                if (report) {
+                    return { success: true, report };
+                }
+                return { success: false, error: sqliteClient.lastError || 'OPFS spike failed' };
             }
             case 'append_to_obsidian': {
                 const ids = payload.ids;
@@ -225,11 +242,14 @@ export async function handleDashboardSqlite(
                 if (days === null && max === null) {
                     return { success: true, purged: 0, skipped: true };
                 }
-                const result = await sqliteClient.purgeOldRecords(
+                const purgedResult = await sqliteClient.purgeOldRecords(
                     days !== null ? Number(days) : undefined,
                     max  !== null ? Number(max)  : undefined,
                 );
-                return { success: true, purged: result?.purged ?? 0, skipped: false };
+                if (purgedResult === null) {
+                    return { success: false, error: sqliteClient.lastError || 'Purge failed' };
+                }
+                return { success: true, purged: purgedResult.purged, skipped: false };
             }
             case 'content_purge_now': {
                 const settings = await getSettings();
@@ -239,19 +259,22 @@ export async function handleDashboardSqlite(
                 if (contentDays === null && contentMax === null) {
                     return { success: true, purged: 0, skipped: true };
                 }
-                const result = await sqliteClient.purgeContent(
+                const contentResult = await sqliteClient.purgeContent(
                     contentDays !== null ? Number(contentDays) : undefined,
                     contentMax  !== null ? Number(contentMax)  : undefined,
                     includeStarred,
                 );
-                return { success: true, purged: result?.purged ?? 0, skipped: false };
+                if (contentResult === null) {
+                    return { success: false, error: sqliteClient.lastError || 'Content purge failed' };
+                }
+                return { success: true, purged: contentResult.purged, skipped: false };
             }
             case 'backup_db': {
                 const data = await sqliteClient.backupDb();
                 if (data) {
                     return { success: true, data: bytesToBase64(data) };
                 }
-                return { success: false, error: 'Backup failed' };
+                return { success: false, error: sqliteClient.lastError || 'Backup failed' };
             }
             case 'backfill_metadata': {
                 if (!runBackfill) {

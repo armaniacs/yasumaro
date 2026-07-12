@@ -114,7 +114,7 @@ async function loadData(options: {
     const limit = PAGE_SIZE;
     const offset = page * limit;
 
-    let result: { rows: BrowsingLogEntry[]; total: number } | null;
+    let result: { rows: BrowsingLogEntry[]; total: number } | { error: string } | null;
 
     // Use tagFilter from options or state, preferring explicit options
     const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
@@ -133,7 +133,7 @@ async function loadData(options: {
       });
 
       // Filter by tag in JavaScript if tagFilter is set
-      if (result && activeTagFilter) {
+      if (result && !('error' in result) && activeTagFilter) {
         const filteredRows = result.rows.filter(row => {
           // Tags are stored as comma-separated string in SQLite
           const tagsString = row.tags || '';
@@ -147,7 +147,7 @@ async function loadData(options: {
           rows: filteredRows.slice(offset, offset + limit),
           total: filteredRows.length,
         };
-      } else if (result) {
+      } else if (result && !('error' in result)) {
         result = {
           rows: result.rows.slice(offset, offset + limit),
           total: result.total,
@@ -155,15 +155,19 @@ async function loadData(options: {
       }
     }
 
-    if (result) {
+    if (result === null) {
+      state.error = t('historyLoadError');
+      state.entries = [];
+      state.total = 0;
+    } else if ('error' in result) {
+      state.error = result.error;
+      state.entries = [];
+      state.total = 0;
+    } else {
       state.entries = result.rows;
       state.total = result.total;
       // Reset selection when entries change (search, pagination, date)
       state.selectedIds.clear();
-    } else {
-      state.error = t('historyLoadError');
-      state.entries = [];
-      state.total = 0;
     }
   } catch (err) {
     state.error = `Error: ${errorMessage(err)}`;
