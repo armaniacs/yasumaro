@@ -32,7 +32,7 @@ const PREPARED_STMT_CACHE_MAX_SIZE = 50;
  * A single module-level instance (`engine`, below) is shared by all repos —
  * this mirrors the original sqlite.ts, which had this state at module scope.
  */
-class SqliteEngineContext {
+export class SqliteEngineContext {
   dbHandle: number | null = null;
   sqlite3: SQLiteAPI | null = null;
   initPromise: Promise<boolean> | null = null;
