@@ -69,6 +69,11 @@ interface SearchResultRecord {
   rank: number;
 }
 
+interface AuditLogQueryPayload {
+  limit?: number;
+  offset?: number;
+}
+
 interface QueryPayload {
   limit?: number;
   offset?: number;
@@ -484,6 +489,40 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
   return { count: inserted };
 }
 
+async function handleAuditLogInsert(record: { provider: string; url: string; created_at: number }): Promise<{ id: number }> {
+  await sqlExec(
+    'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)',
+    [record.provider, record.url, record.created_at],
+  );
+  let id = 0;
+  await sqlQuery('SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
+  return { id };
+}
+
+async function handleAuditLogQuery(payload: AuditLogQueryPayload): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }> {
+  const limit = Math.min(payload.limit ?? 100, 1000);
+  const offset = payload.offset ?? 0;
+
+  const rows: Array<{ id: number; provider: string; url: string; created_at: number }> = [];
+  await sqlQuery(
+    'SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    [limit, offset],
+    (row) => {
+      rows.push({
+        id: Number(row.id),
+        provider: String(row.provider),
+        url: String(row.url),
+        created_at: Number(row.created_at),
+      });
+    },
+  );
+
+  let total = 0;
+  await sqlQuery('SELECT COUNT(*) AS c FROM audit_log', [], (row) => { total = Number(row.c); });
+
+  return { rows, total };
+}
+
 async function handleGetStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }> {
   if (!engine) {
     return { initialized: false, path: DB_FILENAME, fallback: false, fts5: false, count: 0 };
@@ -872,6 +911,14 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
       }
       case 'HEALTH_CHECK': {
         result = { ok: engine !== null };
+        break;
+      }
+      case 'AUDIT_LOG_INSERT': {
+        result = await handleAuditLogInsert(payload as { provider: string; url: string; created_at: number });
+        break;
+      }
+      case 'AUDIT_LOG_QUERY': {
+        result = await handleAuditLogQuery(payload as AuditLogQueryPayload);
         break;
       }
       default:

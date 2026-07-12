@@ -17,6 +17,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.26] - 2026-07-12
+
+### Fixed / 修正
+
+- **監査ログ（Audit Log）が全く記録されなかった問題を修正** — `opfsWorker.ts` に `AUDIT_LOG_INSERT` / `AUDIT_LOG_QUERY` のメッセージハンドラが存在せず、OPFS Worker 経由の監査ログ書き込み・読み取りがすべて `Unknown worker type` エラーでサイレントに失敗していた。`handleAuditLogInsert()` / `handleAuditLogQuery()` を新規実装し、スイッチ文に case を追加（862ced4）
+
 ## [6.5.25] - 2026-07-12
 
 ### Changed / 変更
