@@ -3,7 +3,7 @@
  * 設定の保存と保存後の接続テストを行う
  */
 
-import { saveSettingsWithAllowedUrls, getSettings, Settings } from '../../utils/storage.js';
+import { saveSettingsWithAllowedUrls, getSettings } from '../../utils/storage.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { extractSettingsFromInputs } from '../settingsUiHelper.js';
 import { getMessage } from '../i18n.js';
@@ -194,7 +194,7 @@ export async function handleSaveAndTest(
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // 保存後の確認
-    const verifySettings = await getSettings();
+    const _verifySettings = await getSettings();
 
     const port = parseInt(portInput.value.trim(), 10);
     const result = await runConnectionTest();

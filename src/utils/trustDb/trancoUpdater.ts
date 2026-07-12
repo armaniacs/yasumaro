@@ -170,7 +170,7 @@ export class TrancoUpdater {
 
     for (const line of lines) {
       // CSV 形式: rank,domain
-      const [rank, domain] = line.split(',');
+      const [_rank, domain] = line.split(',');
       if (domain && domains.length < limit) {
         const trimmedDomain = domain.trim().toLowerCase();
         if (this.isValidDomain(trimmedDomain)) {
@@ -210,7 +210,7 @@ export class TrancoUpdater {
   /**
    * Tranco 更新が必要か確認
    */
-  async isUpdateNeeded(tier: TrancoTier): Promise<boolean> {
+  async isUpdateNeeded(_tier: TrancoTier): Promise<boolean> {
     const db = getTrustDb();
     await db.initialize();
 

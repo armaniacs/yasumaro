@@ -407,7 +407,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
         : getMessage('testComplete') || 'Test complete.';
       connectionResult.style.color = obsidian?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-    } catch (e) {
+    } catch (_e) {
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
       connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -433,7 +433,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         ? `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`
         : getMessage('testComplete') || 'Test complete.';
       connectionResult.style.color = ai?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-    } catch (e) {
+    } catch (_e) {
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
       connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -468,7 +468,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         sqliteResult.textContent = `✗ ${testResult.error || 'SQLite test failed.'}`;
         sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
       }
-    } catch (e) {
+    } catch (_e) {
       sqliteResult.textContent = getMessage('testError') || 'Connection test failed.';
       sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -500,7 +500,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         opfsSpikeResult.textContent = '✗ OPFS spike returned no report.';
         opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
       }
-    } catch (e) {
+    } catch (_e) {
       opfsSpikeResult.textContent = getMessage('testError') || 'Spike failed.';
       opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -536,7 +536,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
         migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
       }
-    } catch (e) {
+    } catch (_e) {
       migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
       migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -564,7 +564,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
         backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
       }
-    } catch (e) {
+    } catch (_e) {
       backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
       backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {
@@ -602,7 +602,7 @@ async function initDiagnosticsPanel(): Promise<void> {
         cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
         cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
       }
-    } catch (e) {
+    } catch (_e) {
       cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
       cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
     } finally {

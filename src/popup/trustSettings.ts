@@ -9,7 +9,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
 import { getTrustDb } from '../utils/trustDb/trustDb.js';
 import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
-import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from './i18n.js';
 import { getTrustChecker } from '../utils/trustChecker.js';
 

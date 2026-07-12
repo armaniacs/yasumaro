@@ -114,7 +114,7 @@ export function sanitizePathSegment(pathSegment: string): string {
     // セグメントが許可された文字のみで構成されているか確認
     // （スラッシュは区切り文字として別途許可）
     for (const char of segment) {
-      const charCode = char.charCodeAt(0);
+      const _charCode = char.charCodeAt(0);
       const isAlphanumeric = /[a-zA-Z0-9_\-]/.test(char);
       const isSpace = char === ' ';
       const isJapanese = /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/.test(char);

@@ -54,7 +54,7 @@ export function renderSkippedMode(
   state: HistoryPanelState,
   elements: HistoryElements,
   searchText: string,
-  onApplyFilters: () => void,
+  _onApplyFilters: () => void,
 ): void {
   if (!elements.historyList) return;
 

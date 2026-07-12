@@ -6,7 +6,7 @@
 import { addLog, LogType } from '../../../utils/logger.js';
 import { StorageKeys } from '../../../utils/storage.js';
 import { addPendingPage } from '../../../utils/pendingStorage.js';
-import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { redactHeaderValue } from '../../../utils/redaction.js';
 

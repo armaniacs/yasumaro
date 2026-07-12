@@ -11,7 +11,6 @@
 import { PATTERNS, RULE_TYPES, PREFIXES, RuleType } from './constants.js';
 import { isValidString, validateDomain } from './validation.js';
 import { buildRuleObject, generateRuleId, UblockRule } from './transform.js';
-import { parseRuleOptions } from './options.js';
 
 // ============================================================================
 // ルール解析ヘルパー関数

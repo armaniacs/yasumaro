@@ -70,7 +70,7 @@ export function formatDate(date?: Date | string | number, options?: Intl.DateTim
       // Intl APIが未対応の場合のフォールバック
       return targetDate.toISOString().split('T')[0];
     }
-  } catch (e) {
+  } catch (_e) {
     // フォーマット失敗時のフォールバック
     return targetDate.toISOString();
   }
@@ -87,7 +87,7 @@ function isValidTimeZone(): boolean {
     const testDate = new Date();
     new Intl.DateTimeFormat('en-US', { year: 'numeric' }).format(testDate);
     return true;
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -122,7 +122,7 @@ export function formatDateTime(date?: Date | string | number, options?: Intl.Dat
       // Intl APIが未対応の場合のフォールバック
       return targetDate.toISOString();
     }
-  } catch (e) {
+  } catch (_e) {
     // フォーマット失敗時のフォールバック
     return targetDate.toISOString();
   }

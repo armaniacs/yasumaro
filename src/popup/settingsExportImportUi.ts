@@ -3,7 +3,7 @@
  * 設定メニュー切替・エクスポート/インポート UI・インポート確認モーダル
  */
 
-import { getSettings, saveSettingsWithAllowedUrls, Settings } from '../utils/storage.js';
+import { getSettings, Settings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import {
@@ -34,7 +34,7 @@ function getCancelImportBtnEl(): HTMLButtonElement | null { return document.getE
 function getConfirmImportBtnEl(): HTMLButtonElement | null { return document.getElementById('confirmImportBtn') as HTMLButtonElement; }
 function getImportPreviewEl(): HTMLElement | null { return document.getElementById('importPreview') as HTMLElement; }
 
-let pendingImportData: Settings | null = null;
+let _pendingImportData: Settings | null = null;
 let pendingImportJson: string | null = null;
 
 type ReloadFn = () => Promise<void>;
@@ -148,7 +148,7 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
                 return;
             }
 
-            pendingImportData = parsed.settings;
+            _pendingImportData = parsed.settings;
             pendingImportJson = text;
 
             showImportPreview(parsed);
@@ -205,7 +205,7 @@ function closeImportModal(): void {
 }
 
 function resetImportState(): void {
-    pendingImportData = null;
+    _pendingImportData = null;
     pendingImportJson = null;
     const importPreview = getImportPreviewEl();
     if (importPreview) {

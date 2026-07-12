@@ -7,8 +7,6 @@ import type {
   TrustResult,
   TrustDatabase,
   TrancoConfig,
-  JpAnchorConfig,
-  SensitiveDomainsConfig
 } from './trustDbSchema.js';
 import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from './bloomFilter.js';
@@ -26,7 +24,7 @@ const STORAGE_KEY_TRANCO_VERSION = 'tranco_version';
 const STORAGE_KEY_TRANCO_DOMAINS = 'tranco_domains';
 
 // 30日（ミリ秒）- 同意拒否後の再確認間隔
-const CONSENT_RETRY_DAYS = 30;
+const _CONSENT_RETRY_DAYS = 30;
 
 // JP-Anchor プリセット TLD
 const JP_ANCHOR_TLDS_PRESET = ['.go.jp', '.ac.jp', '.lg.jp'] as const;

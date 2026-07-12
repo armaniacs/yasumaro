@@ -169,7 +169,7 @@ function updateCleansingInfo(
   cleansingInfo.classList.remove('hidden');
 
   let badgeText = '';
-  let badgeClass = '';
+  let _badgeClass = '';
   switch (cleansedReason) {
     case 'hard':
       badgeText = getMessage('cleansedBadgeHard') || '🧹 Hard';

@@ -13,7 +13,6 @@ import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { getSettings, StorageKeys } from './storage.js';
 import { logDebug, logWarn } from './logger.js';
 import { errorMessage } from './errorUtils.js';
-import { TIMEOUTS } from '../constants/appConstants.js';
 
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
@@ -422,12 +421,12 @@ export async function fetchWithRetry(
   } = retryOptions;
 
   let lastError: Error | null = null;
-  let lastResponse: Response | null = null;
+  let _lastResponse: Response | null = null;
 
   for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
     try {
       const response = await fetchWithTimeout(url, options, options.timeoutMs || 30000);
-      lastResponse = response;
+      _lastResponse = response;
 
       // レスポンスが正常な場合は返却
       if (response.ok) {
@@ -450,7 +449,7 @@ export async function fetchWithRetry(
         throw attemptError;
       }
     } catch (error: unknown) {
-      lastResponse = null;
+      _lastResponse = null;
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // リトライ条件チェック

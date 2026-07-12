@@ -515,7 +515,7 @@ export function extractMainContent(
                 cleansedBytes = originalBytes;
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // エラー時は安全なフォールバック
         content = document.body?.innerText || '';
     }

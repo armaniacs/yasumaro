@@ -72,7 +72,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     return context;
   }
 
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const _exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
     const date = getTodayDateString();
     const storageKey = `${DAILY_BUFFER_PREFIX}${date}`;
 

@@ -3,7 +3,7 @@
 // This module is used by domainUtils.js to extend domain filtering with uBlock rules.
 
 import { extractDomain, matchesPattern } from './domainUtils.js';
-import type { UblockRules, UblockRule } from './types.js';
+import type { UblockRules } from './types.js';
 
 /**
  * uBlock ルールオプションの型定義
@@ -214,7 +214,7 @@ export async function isUrlBlocked(url: string, ublockRules: UblockRules, contex
  * @param {UblockMatcherContext} context - Matching context.
  * @returns {boolean} - true if the rule matches the URL.
  */
-function matchRule(urlDomain: string, rule: RuleWithDomain, context: UblockMatcherContext): boolean {
+function _matchRule(urlDomain: string, rule: RuleWithDomain, context: UblockMatcherContext): boolean {
   // Basic domain pattern match (supports wildcards via matchesPattern).
   if (!matchesPattern(urlDomain, rule.domain)) {
     return false;

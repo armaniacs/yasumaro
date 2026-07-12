@@ -13,7 +13,7 @@ export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): v
   _recordCurrentPage = fn;
 }
 
-function getRecordCurrentPage(): (force: boolean) => Promise<void> {
+function _getRecordCurrentPage(): (force: boolean) => Promise<void> {
   if (!_recordCurrentPage) {
     throw new Error('recordCurrentPage not initialized. Call setRecordCurrentPageFn first.');
   }

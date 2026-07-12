@@ -212,7 +212,7 @@ export async function decrypt(ciphertext: string, iv: string, key: CryptoKey): P
 
         const decoder = new TextDecoder();
         return decoder.decode(plaintextBuffer);
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
         throw new Error('Decryption failed: Invalid key or corrupted data');
     }
 }
@@ -470,7 +470,7 @@ export async function verifyHmacSignature(data: string, signature: string, key: 
             result |= sig8[i] ^ comp8[i];
         }
         return result === 0;
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
         return false;
     }
 }

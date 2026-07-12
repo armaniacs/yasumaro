@@ -4,7 +4,7 @@
  * 記録フローでのドメイン信頼度判定と警告判定
  */
 
-import type { TrustResult, AlertSettings, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
+import type { TrustResult, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
 import { getTrustDb } from './trustDb/trustDb.js';
 import { StorageKeys } from './storage.js';
 import { logInfo, logDebug, logWarn } from './logger.js';
@@ -217,7 +217,7 @@ export class TrustChecker {
    * 記録をブロックすべきか判定
    * 注: バッジ表示仕様ではブロックは行わないが、将来の機能拡張のため実装
    */
-  private shouldBlockRecording(trustResult: TrustResult, showAlert: boolean): boolean {
+  private shouldBlockRecording(trustResult: TrustResult, _showAlert: boolean): boolean {
     // 現在の仕様では、バッジ表示のみでブロックは行わない
     // ただし、LOCKEDレベルのドメインは常にブロックする
     if (trustResult.level === 'locked') {
@@ -234,7 +234,7 @@ export class TrustChecker {
   /**
    * ブロック理由を取得
    */
-  private getBlockReason(trustResult: TrustResult, showAlert: boolean): string {
+  private getBlockReason(trustResult: TrustResult, _showAlert: boolean): string {
     const { level, category } = trustResult;
 
     if (level === 'unverified') {

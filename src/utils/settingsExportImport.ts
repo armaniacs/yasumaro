@@ -5,7 +5,7 @@
 
 import { getSettings, saveSettings, getOrCreateHmacSecret, Settings } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
-import { hashPasswordWithPBKDF2, verifyPasswordWithPBKDF2, generateSalt } from './crypto.js';
+import { generateSalt } from './crypto.js';
 import { API_KEY_FIELDS } from './storageSettings.js';
 import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';

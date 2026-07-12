@@ -64,7 +64,7 @@ export function startAutoCloseTimer(delayMs: number = DEFAULT_AUTO_CLOSE_DELAY_M
     try {
       // 【実処理実行】: ポップアップを閉じる
       window.close();
-    } catch (error) {
+    } catch (_error) {
       // 【エラー捕捉】: window.closeがブラウザでブロックされた場合
       // 【サイレントフェール】: 例外をスローせずに処理を継続
       // 【ユーザビリティ】: エラーメッセージ表示によるユーザー体験の悪化を回避

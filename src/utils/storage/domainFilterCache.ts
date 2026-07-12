@@ -66,7 +66,7 @@ export function normalizeDomainUrl(url: string): string | null {
         }
 
         return hostname;
-    } catch (e) {
+    } catch (_e) {
         return null;
     }
 }
@@ -109,7 +109,7 @@ export async function updateDomainFilterCache(settings: Settings): Promise<void>
         }
         // uBlockフォーマットの算出は複雑で、ここでは単純なシンプル形式のみキャッシュ
     } else if (mode === 'blacklist') {
-        const blacklist = (settings[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
+        const _blacklist = (settings[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
         const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
         if (simpleEnabled) {
             // ブラックリストモードでは「許可ドメイン」キャッシュは空

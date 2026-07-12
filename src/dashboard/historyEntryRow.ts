@@ -7,7 +7,7 @@ import { openTagEditModal } from './historyTagEditModal.js';
 import { getCachedMessage } from './historyState.js';
 import type { HistoryPanelState, TagEditElements } from './historyState.js';
 
-const cleanseReasonLabels: Record<string, string> = {
+const _cleanseReasonLabels: Record<string, string> = {
   alt:      getCachedMessage('historyAiSummaryCleansedReasonAlt', '画像alt属性'),
   metadata: getCachedMessage('historyAiSummaryCleansedReasonMetadata', 'メタデータ'),
   ads:      getCachedMessage('historyAiSummaryCleansedReasonAds', '広告'),

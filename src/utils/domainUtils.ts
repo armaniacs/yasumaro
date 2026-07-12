@@ -42,7 +42,7 @@ export function extractDomain(url: string): string | null {
         }
 
         return hostname;
-    } catch (e) {
+    } catch (_e) {
         return null;
     }
 }

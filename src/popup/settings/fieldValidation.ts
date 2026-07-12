@@ -174,7 +174,7 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
 
         clearFieldError(input, 'baseUrlError');
         return true;
-    } catch (e) {
+    } catch (_e) {
         setFieldError(input, 'baseUrlError', getMessage('errorInvalidUrl') || 'Invalid URL format');
         return false;
     }

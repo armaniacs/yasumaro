@@ -130,7 +130,7 @@ function validateInputSize(text: string): { valid: boolean; error?: string } {
  * @param {number} timeout - タイムアウト時間（ミリ秒）
  * @returns {Promise<T>} 関数の実行結果
  */
-async function executeWithTimeout<T>(fn: () => T, timeout: number): Promise<T> {
+async function _executeWithTimeout<T>(fn: () => T, timeout: number): Promise<T> {
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
             reject(new Error(`Operation timed out after ${timeout}ms`));
@@ -217,7 +217,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
 
     const startTime = Date.now();
     try {
-        const maskedItems: MaskedItem[] = [];
+        const _maskedItems: MaskedItem[] = [];
         const replacements: Replacement[] = [];
 
         // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン

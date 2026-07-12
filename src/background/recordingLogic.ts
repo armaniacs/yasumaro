@@ -1,34 +1,17 @@
 // src/background/recordingLogic.ts
-import { PrivacyPipeline, PrivacyPipelineOptions, PrivacyPipelineResult } from './privacyPipeline.js';
-import { NotificationHelper } from './notificationHelper.js';
+import { PrivacyPipeline } from './privacyPipeline.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { isDomainAllowed, isDomainInList, extractDomain } from '../utils/domainUtils.js';
-import { sanitizeRegex } from '../utils/piiSanitizer.js';
-import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, saveSettings, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, Settings } from '../utils/storage.js';
-import { setUrlRecordType, setUrlMaskedCount, setUrlTags, setUrlContent, setUrlAiSummary, setUrlSentTokens, setUrlReceivedTokens, setUrlOriginalTokens, setUrlCleansedTokens, setUrlPageBytes, setUrlCandidateBytes, setUrlOriginalBytes, setUrlCleansedBytes, setUrlAiSummaryOriginalBytes, setUrlAiSummaryCleansedBytes, setUrlAiSummaryCleansedElements, setUrlAiSummaryCleansedReason, setUrlAiSummaryCleansedReasons, setUrlAiProvider, setUrlAiModel, setUrlAiDuration, setUrlObsidianDuration } from '../utils/storageUrls.js';
+import { getSettings, getSavedUrlsWithTimestamps, Settings } from '../utils/storage.js';
 import type { RecordType } from '../utils/commonTypes.js';
-import { getUserLocale } from '../utils/localeUtils.js';
-import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
-import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { isPrivateIpAddress } from '../utils/fetch.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import type { SqliteClient } from './sqliteClient.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../utils/privacyChecker.js';
-import { normalizeJapaneseSummary } from '../utils/summaryNormalizer.js';
-import { addPendingPage, PendingPage } from '../utils/pendingStorage.js';
 import { SessionStore, SESSION_KEYS } from './sessionStore.js';
-// P0: host_permissions チェック（Top 1000プリセット + 拒否記録）
-import { getPermissionManager } from '../utils/permissionManager.js';
-
-// Trust domain checker（3段階警告）
-import { TrustChecker } from '../utils/trustChecker.js';
-import type { TrustCheckResult } from '../utils/trustChecker.js';
-
-// RecordingResult, MaskedItem 型 - messaging/types.tsからインポート
-import type { RecordingResult, MaskedItem } from '../messaging/types.js';
-import { redactHeaderValue } from '../utils/redaction.js';
+// RecordingResult 型 - messaging/types.tsからインポート
+import type { RecordingResult } from '../messaging/types.js';
 
 // RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
 import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
@@ -56,46 +39,6 @@ const MAX_RECORD_SIZE = 64 * 1024; // 64KB
 // @param {number} maxSize - 最大サイズのバイト数（デフォルト: MAX_RECORD_SIZE）
 // @returns {string} 切り詰められたコンテンツ（元のサイズ以下の場合はそのまま）
 // @see PII_FEATURE_GUIDE.md - コンテンツサイズ制限の詳細
-
-/**
- * プライバシーチェック結果の型
- * Note: Uses same shape as RecordingResult for compatibility
- */
-interface PrivacyCheckResult {
-  success: boolean;
-  error?: string;
-  reason?: string;
-  confirmationRequired?: boolean;
-  skipped?: boolean;
-  summary?: string;
-  title?: string;
-  url?: string;
-}
-
-/**
- * 重複チェック結果の型
- */
-interface DuplicateCheckResult {
-  success: boolean;
-  skipped?: boolean;
-  reason?: string;
-  error?: string;
-}
-
-/**
- * Trustチェック結果の型（trustChecker.tsのTrustCheckResult互換）
- */
-interface TrustDomainCheckResult {
-  canProceed: boolean;
-  trustResult: {
-    level: string;
-    source?: string;
-    reason?: string;
-    category?: string;
-  };
-  showAlert: boolean;
-  reason?: string;
-}
 
 export function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
   // 【修正】TextEncoderを使用して正確なUTF-8バイト数を計算

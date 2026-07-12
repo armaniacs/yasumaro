@@ -271,7 +271,7 @@ export class FallbackStorage {
       const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
       let purged = 0;
 
-      const before = data.records.length;
+      const _before = data.records.length;
       data.records = data.records.filter(r => {
         if (r.is_starred === 1 || r.is_deleted === 1) return true;
         if (r.created_at < cutoffMs) {

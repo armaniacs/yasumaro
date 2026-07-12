@@ -1,4 +1,3 @@
-import { getSettings, saveSettings } from './storage.js';
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './crypto.js';

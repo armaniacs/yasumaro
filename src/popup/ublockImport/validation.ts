@@ -140,7 +140,7 @@ function hasStrictValidUrlStructure(url: string): boolean {
     }
 
     return true;
-  } catch (e) {
+  } catch (_e) {
     // URL.parseが失敗した場合、無効なURLとみなす
     return false;
   }
