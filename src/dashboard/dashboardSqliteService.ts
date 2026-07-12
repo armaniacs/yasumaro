@@ -84,12 +84,13 @@ export async function queryLogs(options: {
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
-} = {}): Promise<{ rows: BrowsingLogEntry[]; total: number } | null> {
+} = {}): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'query', ...options });
     if (response.success) {
       return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
     }
+    console.warn('queryLogs failed:', response.error);
     return null;
   } catch (error) {
     console.error('queryLogs failed:', error);
@@ -104,12 +105,13 @@ export async function searchLogs(
   query: string,
   limit = 50,
   offset = 0
-): Promise<{ rows: BrowsingLogEntry[]; total: number } | null> {
+): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
     if (response.success) {
       return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
     }
+    console.warn('searchLogs failed:', response.error);
     return null;
   } catch (error) {
     console.error('searchLogs failed:', error);

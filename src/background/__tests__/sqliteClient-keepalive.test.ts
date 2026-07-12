@@ -11,6 +11,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
 
