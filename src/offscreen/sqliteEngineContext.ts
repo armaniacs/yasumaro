@@ -14,6 +14,8 @@ import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 import { FallbackStorage } from './storageFallback.js';
 import { LruCache } from './lruCache.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { NoopBackend } from './StorageBackend.js';
+import type { StorageBackend } from './StorageBackend.js';
 import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -41,6 +43,8 @@ export class SqliteEngineContext {
   lastInitError: string | null = null;
   fts5Available = false;
   cachedCompileOptions: string[] | null = null;
+
+  private _backend: StorageBackend | null = null;
 
   // OPFS Worker state
   opfsWorker: Worker | null = null;
@@ -476,9 +480,53 @@ export class SqliteEngineContext {
     return 'none';
   }
 
+  async getBackend(): Promise<StorageBackend> {
+    if (this._backend) return this._backend;
+
+    // Try OPFS Worker first
+    try {
+      const { OpfsWorkerBackend } = await import('./OpfsWorkerBackend.js');
+      this._backend = new OpfsWorkerBackend(this);
+      return this._backend;
+    } catch {
+      // fall through
+    }
+
+    // Try IDB VFS
+    try {
+      if (!this.usingFallbackStorage) {
+        await this.init();
+        if (this.dbHandle) {
+          const { IdbVfsBackend } = await import('./IdbVfsBackend.js');
+          this._backend = new IdbVfsBackend(this);
+          return this._backend;
+        }
+      }
+    } catch {
+      // fall through
+    }
+
+    // Try Fallback
+    if (this.fallbackStorage) {
+      const { FallbackStorageAdapter } = await import('./FallbackStorageAdapter.js');
+      this._backend = new FallbackStorageAdapter(this.fallbackStorage);
+      return this._backend;
+    }
+
+    // Null Object — never throw
+    this._backend = new NoopBackend();
+    return this._backend;
+  }
+
+  /** Reset backend selection (used by resetForTesting / offscreen recreate). */
+  resetBackend(): void {
+    this._backend = null;
+  }
+
   /** Reset the module state for testing. */
   resetForTesting(): void {
     this.clearPreparedStmtCache();
+    this.resetBackend();
     this.dbHandle = null;
     this.sqlite3 = null;
     this.initPromise = null;
