@@ -192,7 +192,9 @@ WCAG 2.1 Level AA準拠を目指してください：
 
 ### セキュリティとAIプロバイダーの追加
 
-この拡張機能は、ユーザー設定のURLへのアクセスを制限する動的URL検証機能を備えています。新しいAIプロバイダーを追加する場合は、以下の **4つのファイル** を同時に更新してください。1つでも漏れると、そのプロバイダーへの通信がブロックされます。
+この拡張機能は、ユーザー設定のURLへのアクセスを制限する動的URL検証機能を備えています。新しいAIプロバイダーを追加する場合は、以下の **3つのファイル** を同時に更新してください。1つでも漏れると、そのプロバイダーへの通信がブロックされます。
+
+`wxt.config.ts` の `host_permissions` と CSP の `connect-src` は `src/utils/cspDomains.ts` の `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` から自動生成されるため（M24）、`wxt.config.ts` 自体を手で編集する必要はありません。
 
 #### 追加手順
 
@@ -205,23 +207,19 @@ WCAG 2.1 Level AA準拠を目指してください：
    'deepseek.com',  // DeepSeek
    ```
 
-2. **CSPの更新** (`wxt.config.ts`):
-    - `content_security_policy.extension_pages` 内の `connect-src` にドメインを追加します。
+2. **host_permissions / CSPの更新** (`src/utils/cspDomains.ts`):
+   - 常時許可するプロバイダーは `AI_PROVIDER_HOST_PERMISSIONS` に、オプトイン的なプロバイダー（Optional host permission経由）は `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` に追加します。
+   - ここに追加するだけで `wxt.config.ts` の `host_permissions` と CSP の `connect-src` の両方に自動反映されます。
 
     ```typescript
-    // wxt.config.ts の content_security_policy.extension_pages
-    "connect-src": "... https://deepseek.com ..."
+    // src/utils/cspDomains.ts
+    export const AI_PROVIDER_HOST_PERMISSIONS = [
+      // ...
+      'https://deepseek.com/*',
+    ] as const;
     ```
 
-3. **host_permissionsの更新** (`wxt.config.ts`):
-    - `host_permissions` 配列にワイルドカードURLを追加します。
-
-    ```typescript
-    // wxt.config.ts の host_permissions
-    "https://deepseek.com/*"
-    ```
-
-4. **ドキュメントの更新** (`docs/SETUP_GUIDE.md`):
+3. **ドキュメントの更新** (`docs/SETUP_GUIDE.md`):
    - 日英両方の「💡 サポートされているAIプロバイダー」テーブルに行を追加します。
 
    ```markdown
@@ -631,7 +629,9 @@ Aim for WCAG 2.1 Level AA compliance:
 
 ### Security and Adding AI Providers
 
-This extension features dynamic URL validation to restrict access to user-configured URLs. To add a new AI provider, you must update **4 files simultaneously**. Missing any one of them will cause connections to that provider to be blocked.
+This extension features dynamic URL validation to restrict access to user-configured URLs. To add a new AI provider, you must update **3 files simultaneously**. Missing any one of them will cause connections to that provider to be blocked.
+
+`wxt.config.ts`'s `host_permissions` and the CSP `connect-src` are auto-generated from `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` in `src/utils/cspDomains.ts` (M24), so you no longer need to edit `wxt.config.ts` directly.
 
 #### Steps to Add a Provider
 
@@ -644,23 +644,19 @@ This extension features dynamic URL validation to restrict access to user-config
    'deepseek.com',  // DeepSeek
    ```
 
-2. **Update CSP** (`wxt.config.ts`):
-    - Add the domain to `connect-src` in `content_security_policy.extension_pages`.
+2. **Update host_permissions / CSP** (`src/utils/cspDomains.ts`):
+   - Add always-granted providers to `AI_PROVIDER_HOST_PERMISSIONS`, and opt-in providers to `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`.
+   - Adding an entry here automatically updates both `wxt.config.ts`'s `host_permissions` and the CSP `connect-src`.
 
     ```typescript
-    // wxt.config.ts content_security_policy.extension_pages
-    "connect-src": "... https://deepseek.com ..."
+    // src/utils/cspDomains.ts
+    export const AI_PROVIDER_HOST_PERMISSIONS = [
+      // ...
+      'https://deepseek.com/*',
+    ] as const;
     ```
 
-3. **Update host_permissions** (`wxt.config.ts`):
-    - Add a wildcard URL to the `host_permissions` array.
-
-    ```typescript
-    // wxt.config.ts host_permissions
-    "https://deepseek.com/*"
-    ```
-
-4. **Update Documentation** (`docs/SETUP_GUIDE.md`):
+3. **Update Documentation** (`docs/SETUP_GUIDE.md`):
    - Add a row to the "Supported AI Providers" table in both the Japanese and English sections.
 
    ```markdown

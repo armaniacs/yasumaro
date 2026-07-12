@@ -166,6 +166,9 @@
       gap: 0.5rem;
     }
     .btn-secondary:hover { background: rgba(255,255,255,0.08); text-decoration: none; }
+    .hero-actions-secondary { display: flex; justify-content: center; margin-top: 0.9rem; }
+    .hero-link { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
+    .hero-link:hover { color: var(--purple-light); }
 
     /* ── Demo visual ── */
     .demo-wrap {
@@ -367,7 +370,17 @@
 
     /* ── FAQ ── */
     .faq-section { background: var(--obsidian-mid); }
-    .faq-list { display: flex; flex-direction: column; gap: 0; margin-top: 2rem; border: 1px solid var(--obsidian-light); border-radius: var(--radius); overflow: hidden; }
+    .faq-list { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
+    .faq-category-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--purple-light);
+      margin-bottom: 0.6rem;
+      padding-left: 0.2rem;
+    }
+    .faq-category-items { border: 1px solid var(--obsidian-light); border-radius: var(--radius); overflow: hidden; }
     .faq-item { border-bottom: 1px solid var(--obsidian-light); }
     .faq-item:last-child { border-bottom: none; }
     .faq-q {
@@ -447,11 +460,17 @@
   <h1 data-i18n-html="hero.h1">読んだページを<br /><span>AI要約</span>付きで<br />Obsidian / SQLite / Markdown へ</h1>
   <p data-i18n="hero.desc">ブラウザで閲覧したウェブページを自動的に検出し、AIが要約して Obsidian・SQLite・Markdown など好みの保存先に記録します。知識の蓄積を、手間なく続けられます。</p>
   <div class="hero-actions">
-    <a class="btn-primary" href="https://github.com/armaniacs/yasumaro">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    <a class="btn-primary" href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener noreferrer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zM3.87 8.29h7.17a4.5 4.5 0 00-.85 2.61 4.53 4.53 0 001.02 2.85l-3.11 5.4A9.95 9.95 0 012 12a9.9 9.9 0 011.87-5.71h.01zM12 16.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm.85-13.47a9.96 9.96 0 018.5 6.6h-7.19a4.5 4.5 0 00-3.28-2.15L8.4 2.53A9.9 9.9 0 0112.85 3.03zM6.62 20.06l3.11-5.39a4.5 4.5 0 004.66-.51l3.15 5.45A9.95 9.95 0 0112 22a9.9 9.9 0 01-5.38-1.94z"/></svg>
+      <span data-i18n="hero.cta.cws">Chrome Web Storeで入手</span>
+    </a>
+    <a class="btn-secondary" href="https://github.com/armaniacs/yasumaro">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       <span data-i18n="hero.cta.primary">GitHubで見る</span>
     </a>
-    <a class="btn-secondary" href="#how">
+  </div>
+  <div class="hero-actions-secondary">
+    <a class="hero-link" href="#how">
       <span data-i18n="hero.cta.secondary">使い方を見る →</span>
     </a>
   </div>
@@ -465,9 +484,7 @@
         <div class="demo-dot g"></div>
         <span style="color:#585b70; font-size:0.8rem; margin-left:0.5rem;">2026-05-10.md — Obsidian / Markdown</span>
       </div>
-      <div class="demo-note" id="demo-note">
-        <!-- rendered by JS -->
-      </div>
+      <div class="demo-note" id="demo-note"></div>
     </div>
   </div>
 </section>
@@ -476,11 +493,9 @@
 <section id="features">
   <div class="container">
     <div class="section-label">Features</div>
-    <h2 class="section-title" data-i18n="features.title">必要な機能が、すべて揃っています</h2>
+    <h2 class="section-title" data-i18n="features.title">読んだページを、忘れないための機能を揃えました</h2>
     <p class="section-sub" data-i18n="features.sub">自動保存からプライバシー保護まで、日常的な知識管理を強力にサポートします。</p>
-    <div class="features-grid" id="features-grid">
-      <!-- rendered by JS -->
-    </div>
+    <div class="features-grid" id="features-grid"></div>
   </div>
 </section>
 
@@ -490,9 +505,7 @@
     <div class="section-label">AI Providers</div>
     <h2 class="section-title" data-i18n="providers.title">多彩なAIプロバイダーに対応</h2>
     <p class="section-sub" data-i18n="providers.sub">OpenAI互換APIをサポートするため、クラウド・ローカル問わず幅広いLLMを利用できます。</p>
-    <div class="providers-grid" id="providers-grid">
-      <!-- rendered by JS -->
-    </div>
+    <div class="providers-grid" id="providers-grid"></div>
   </div>
 </section>
 
@@ -502,9 +515,7 @@
     <div class="section-label">How it works</div>
     <h2 class="section-title" data-i18n="how.title">シンプルな4ステップ</h2>
     <p class="section-sub" data-i18n="how.sub">セットアップが完了したら、あとは普通にブラウジングするだけです。</p>
-<div class="steps" id="steps-grid">
-       <!-- rendered by JS -->
-     </div>
+<div class="steps" id="steps-grid"></div>
    </div>
  </section>
 
@@ -527,9 +538,7 @@
     <div class="section-label">Installation</div>
     <h2 class="section-title" data-i18n="install.title">インストール方法</h2>
     <p class="section-sub" data-i18n="install.sub">Chrome Web Store から直接インストールするか、ソースからビルドして使用できます。</p>
-    <div class="install-steps" id="install-steps">
-      <!-- rendered by JS -->
-    </div>
+    <div class="install-steps" id="install-steps"></div>
 <div style="margin-top:2.5rem; display:flex; gap:1rem; flex-wrap:wrap;">
        <a class="btn-primary" href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener">
          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
@@ -566,6 +575,7 @@
     <a href="privacy.html" data-i18n="footer.privacy">プライバシー</a>
     <a href="https://zenn.dev/topics/obsidianweave">Zenn</a>
     <a href="https://github.com/armaniacs/yasumaro/blob/main/CONTRIBUTING.md">Contributing</a>
+    <a href="https://www.buymeacoffee.com/yasumaro" target="_blank" rel="noopener noreferrer">☕ Buy Me A Coffee</a>
   </div>
 </footer>
 
@@ -579,9 +589,10 @@ const TRANSLATIONS = {
     "hero.eyebrow": "Chrome 拡張機能 — 無料 / オープンソース",
     "hero.h1": "読んだページを<br /><span>AI要約</span>付きで<br />Obsidian / SQLite / Markdown へ",
     "hero.desc": "ブラウザで閲覧したウェブページを自動的に検出し、AIが要約して Obsidian・SQLite・Markdown など好みの保存先に記録します。知識の蓄積を、手間なく続けられます。",
+    "hero.cta.cws": "Chrome Web Storeで入手",
     "hero.cta.primary": "GitHubで見る",
     "hero.cta.secondary": "使い方を見る →",
-    "features.title": "必要な機能が、すべて揃っています",
+    "features.title": "読んだページを、忘れないための機能を揃えました",
     "features.sub": "自動保存からプライバシー保護まで、日常的な知識管理を強力にサポートします。",
     "providers.title": "多彩なAIプロバイダーに対応",
     "providers.sub": "OpenAI互換APIをサポートするため、クラウド・ローカル問わず幅広いLLMを利用できます。",
@@ -599,6 +610,7 @@ const TRANSLATIONS = {
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "プライバシー",
     "nav.faq": "FAQ",
+    "nav.cws": "Chrome Web Store",
     "faq.title": "よくある質問",
     "faq.sub": "利用前の疑問から設定トラブルまで、よく寄せられる質問をまとめています。",
     "faq.more": "すべての質問を見る →",
@@ -613,9 +625,10 @@ const TRANSLATIONS = {
     "hero.eyebrow": "Chrome Extension — Free & Open Source",
     "hero.h1": "Save every page you read<br />to Obsidian / SQLite / Markdown<br />with <span>AI summaries</span>",
     "hero.desc": "Automatically detects pages you actually read in your browser, generates AI summaries, and saves them to Obsidian, SQLite, Markdown, or your storage of choice — building your knowledge base effortlessly.",
+    "hero.cta.cws": "Get it on Chrome Web Store",
     "hero.cta.primary": "View on GitHub",
     "hero.cta.secondary": "See how it works →",
-    "features.title": "Everything you need, built in",
+    "features.title": "Built so nothing you read gets forgotten",
     "features.sub": "From automatic saving to privacy protection, Yasumaro powers your daily knowledge management.",
     "providers.title": "Works with your favorite AI",
     "providers.sub": "Full OpenAI-compatible API support means you can use cloud or local LLMs of your choice.",
@@ -633,6 +646,7 @@ const TRANSLATIONS = {
     "footer.copy": "© 2026 Yasumaro — MIT License",
     "footer.privacy": "Privacy",
     "nav.faq": "FAQ",
+    "nav.cws": "Chrome Web Store",
     "faq.title": "Frequently Asked Questions",
     "faq.sub": "Answers to common questions, from first setup to troubleshooting.",
     "faq.more": "See all FAQs →",
@@ -643,26 +657,34 @@ const TRANSLATIONS = {
 
 const FEATURES = {
   ja: [
-    { icon: "🤖", title: "AIによる自動要約", desc: "ページを読むだけでAIが内容を要約。Groq・Gemini・OpenAI・Anthropic・ローカルLLM（Ollama、LM Studio）に対応。" },
-    { icon: "🎯", title: "スマート検出", desc: "滞在時間とスクロール深度で「実際に読んだページ」のみを保存。ウィンドウ切り替えは時間カウント外。" },
-    { icon: "📂", title: "マルチ出力に対応", desc: "Obsidian のデイリーノート、SQLite データベース、Markdown ファイルなど、好みの保存先に「🌐 ブラウザ閲覧履歴」セクションを自動管理。既存ノートには追記のみで上書きしません。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "ストレージモードの違いを見る →" },
+    { icon: "🤖", title: "AIによる自動要約", desc: "ページを読むだけでAIが内容を要約。Groq・Gemini・OpenAI・Anthropic・ローカルLLM（Ollama、LM Studio）に対応。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md", linkText: "AI自動要約ガイドを見る →" },
+    { icon: "🎯", title: "スマート検出", desc: "滞在時間とスクロール深度で「実際に読んだページ」のみを保存。ウィンドウ切り替えは時間カウント外。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/RECORDING_CONDITIONS.md", linkText: "スマート検出の仕組みを見る →" },
+    { icon: "📂", title: "マルチ出力に対応", desc: "Obsidian のデイリーノートに「🌐 ブラウザ閲覧履歴」セクションを自動管理し、既存ノートには追記のみで上書きしません。SQLite データベースへの保存も標準で並行実行されます。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "ストレージモードの違いを見る →" },
+    { icon: "📝", title: "Obsidian不要のMarkdown書き出し", desc: "Obsidianを導入していなくても、ブラウザのダウンロードフォルダに日次のMarkdownファイルを自動保存できます。書き出しタイミングは手動のみ・即時・アイドル時・日付が変わったときの4種類から選択可能。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md", linkText: "ローカルMarkdown書き出しガイドを見る →" },
     { icon: "🔒", title: "プライバシー保護", desc: "4段階のPIIマスクモード。銀行・メールなどのプライベートページは自動検出し確認ダイアログを表示。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md", linkText: "PIIマスク機能の詳細を見る →" },
     { icon: "🌐", title: "ドメインフィルター", desc: "ホワイトリスト / ブラックリストでドメインを制御。uBlock Origin形式のフィルターリストも直接インポート可能。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md", linkText: "uBlockインポートガイドを見る →" },
     { icon: "✏️", title: "AIプロンプトカスタマイズ", desc: "要約プロンプトを自由に編集・保存。5種類の組み込みプリセット（タグ付き / 箇条書き / 英語 / 技術的観点など）を搭載。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md", linkText: "プロンプトカスタマイズガイドを見る →" },
-    { icon: "🖱️", title: "手動記録", desc: "「今すぐ記録」ボタンで任意のページを即座に記録。ブラックリストドメインも「それでも記録」で上書き可能。" },
-    { icon: "🔔", title: "ツールバーバッジ通知", desc: "自動保存完了で青い「◎」、プライバシーヘッダー検出でオレンジの「!」をアイコンに表示。ポップアップ不要で状態確認。" },
+    { icon: "🖱️", title: "手動記録", desc: "「今すぐ記録」ボタンで任意のページを即座に記録。ブラックリストドメインも「それでも記録」で上書き可能。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md#手動記録機能", linkText: "手動記録機能の詳細を見る →" },
+    { icon: "🔔", title: "ツールバーバッジ通知", desc: "自動保存完了で青い「◎」、プライバシーヘッダー検出でオレンジの「!」をアイコンに表示。ポップアップ不要で状態確認。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/TOOLBAR_BADGE_GUIDE.md", linkText: "ツールバーバッジガイドを見る →" },
     { icon: "🔐", title: "設定の暗号化エクスポート", desc: "マスターパスワードでAES-GCM暗号化してバックアップ。APIキーを含む設定を安全に移行できます。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md", linkText: "プライバシーポリシーを見る →" },
+    { icon: "🕸️", title: "タグの関連グラフ表示", desc: "記録したページに付いたタグ同士の関連性をグラフで可視化。ノードをクリックすると該当タグで履歴を絞り込み、マウスホイールでのズームやドラッグでのパンにも対応。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/TAG_CLUSTER_GUIDE.md", linkText: "Tag Clusterガイドを見る →" },
+    { icon: "📋", title: "監査ログで操作を追跡", desc: "AI要約の生成・保存操作を記録し、いつ何が送信されたかを後から確認できます。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/AUDIT_LOG_GUIDE.md", linkText: "監査ログガイドを見る →" },
+    { icon: "☁️", title: "GitHub Gistとの同期", desc: "Obsidianの代わりに、または併用してGitHub Gistにクラウド同期できます。GitHub PAT（Personal Access Token）で認証し、Obsidian連携とは独立して並行動作します。", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/GITHUB_GIST_SYNC_GUIDE.md", linkText: "GitHub Gist連携ガイドを見る →" },
   ],
   en: [
-    { icon: "🤖", title: "AI-Powered Summaries", desc: "Just read a page and AI summarizes it. Supports Groq, Gemini, OpenAI, Anthropic, Ollama, LM Studio, and any OpenAI-compatible endpoint." },
-    { icon: "🎯", title: "Smart Detection", desc: "Only saves pages you actually read, measured by time spent and scroll depth. Inactive windows don't count." },
-    { icon: "📂", title: "Multi-Output Storage", desc: "Save to your Obsidian daily notes, a local SQLite database, or plain Markdown files. Automatically manages a '🌐 Browser History' section and appends to existing notes without overwriting.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "View Storage Modes guide →" },
+    { icon: "🤖", title: "AI-Powered Summaries", desc: "Just read a page and AI summarizes it. Supports Groq, Gemini, OpenAI, Anthropic, Ollama, LM Studio, and any OpenAI-compatible endpoint.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md", linkText: "View AI Summarization guide →" },
+    { icon: "🎯", title: "Smart Detection", desc: "Only saves pages you actually read, measured by time spent and scroll depth. Inactive windows don't count.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/RECORDING_CONDITIONS.md", linkText: "View how Smart Detection works →" },
+    { icon: "📂", title: "Multi-Output Storage", desc: "Automatically manages a '🌐 Browser History' section in your Obsidian daily notes and appends to existing notes without overwriting. Also saves in parallel to a local SQLite database by default.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md", linkText: "View Storage Modes guide →" },
+    { icon: "📝", title: "Local Markdown Export Without Obsidian", desc: "Even without Obsidian installed, save daily Markdown files directly to your browser's download folder. Choose from four export timings: manual only, immediate, idle/every 30 min, or on date change.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md", linkText: "View Local Markdown Export guide →" },
     { icon: "🔒", title: "Privacy Protection", desc: "Four PII masking levels. Private pages (banking, email, etc.) are auto-detected with a confirmation dialog before saving.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md", linkText: "View PII Masking Feature Guide →" },
     { icon: "🌐", title: "Domain Filtering", desc: "Whitelist or blacklist domains. Import existing uBlock Origin format filter lists (EasyList, etc.) directly.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md", linkText: "View uBlock Import Guide →" },
     { icon: "✏️", title: "Custom AI Prompts", desc: "Edit and save summarization prompts freely. Five built-in presets: with tags, bullet points, English summary, technical perspective, and more.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md", linkText: "View AI Prompt Customization Guide →" },
-    { icon: "🖱️", title: "Manual Recording", desc: "Record any page instantly with the 'Record Now' button. Override blacklisted domains with 'Record Anyway'." },
-    { icon: "🔔", title: "Toolbar Badge Notifications", desc: "A blue '◎' badge appears on auto-save; an orange '!' appears when privacy headers are detected. No need to open the popup." },
+    { icon: "🖱️", title: "Manual Recording", desc: "Record any page instantly with the 'Record Now' button. Override blacklisted domains with 'Record Anyway'.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md#manual-recording-feature", linkText: "View Manual Recording details →" },
+    { icon: "🔔", title: "Toolbar Badge Notifications", desc: "A blue '◎' badge appears on auto-save; an orange '!' appears when privacy headers are detected. No need to open the popup.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/TOOLBAR_BADGE_GUIDE.md", linkText: "View Toolbar Badge guide →" },
     { icon: "🔐", title: "Encrypted Settings Export", desc: "Back up settings with AES-GCM encryption via a master password. Safely migrate API keys and configuration across devices.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md", linkText: "View Privacy Policy →" },
+    { icon: "🕸️", title: "Tag Relationship Graph", desc: "Visualize how tags on your recorded pages relate to each other as a graph. Click a node to filter history by that tag, with mouse-wheel zoom and drag-to-pan support.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/TAG_CLUSTER_GUIDE.md", linkText: "View Tag Cluster guide →" },
+    { icon: "📋", title: "Audit Log for Traceability", desc: "Records every AI summary generation and save operation, so you can review what was sent and when.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/AUDIT_LOG_GUIDE.md", linkText: "View Audit Log guide →" },
+    { icon: "☁️", title: "GitHub Gist Sync", desc: "Sync your history to GitHub Gist instead of, or alongside, Obsidian. Authenticate with a GitHub PAT (Personal Access Token); runs independently in parallel with Obsidian sync.", link: "https://github.com/armaniacs/yasumaro/blob/main/docs/GITHUB_GIST_SYNC_GUIDE.md", linkText: "View GitHub Gist Sync guide →" },
   ]
 };
 
@@ -730,7 +752,7 @@ const DEMO_NOTE = {
 <div class="hl-muted">&nbsp;&nbsp;閲覧: 15:10 | 滞在: 12分</div>
 <div>&nbsp;&nbsp;TypeScriptを使ったObsidianプラグインの基本構造と、ライフサイクルフックの説明。</div>
 <br/>
-<div class="hl-muted"><!-- auto-generated by Yasumaro v6.3 --></div>`,
+<div class="hl-muted"><!-- auto-generated by Yasumaro v6.5.23 --></div>`,
   en: `<div class="hl-heading"># 🌐 Browser History</div>
 <br/>
 <div>- <span class="hl-link">[[Claude 4.0 Released]]</span> <span class="hl-tag">#AI #LLM #Anthropic</span></div>
@@ -741,7 +763,7 @@ const DEMO_NOTE = {
 <div class="hl-muted">&nbsp;&nbsp;Visited: 3:10 PM | Time spent: 12 min</div>
 <div>&nbsp;&nbsp;Explains the basic structure of an Obsidian plugin in TypeScript and its lifecycle hooks.</div>
 <br/>
-<div class="hl-muted"><!-- auto-generated by Yasumaro v6.3 --></div>`,
+<div class="hl-muted"><!-- auto-generated by Yasumaro v6.5.23 --></div>`,
 };
 
 let currentLang = (navigator.language || 'ja').startsWith('ja') ? 'ja' : 'en';
@@ -802,103 +824,257 @@ function renderDemo() {
   document.getElementById('demo-note').innerHTML = DEMO_NOTE[currentLang];
 }
 
+const FAQ_CATEGORIES_JA = ["基本・インストール", "Obsidian 連携", "AI 設定", "プライバシーとデータ", "記録の動作", "トラブルシューティング", "その他の機能"];
+const FAQ_CATEGORIES_EN = ["Basics & Installation", "Obsidian Integration", "AI Settings", "Privacy & Data", "Recording Behavior", "Troubleshooting", "Other Features"];
+
 const FAQ_ITEMS = {
   ja: [
     {
+      category: "基本・インストール",
+      q: "Yasumaro という名前の由来は何ですか？",
+      a: "『古事記』の編纂者、太安万侶（おおのやすまろ）に由来します。稗田阿礼が暗誦した膨大な記憶を文字に起こし、口承の言葉を永続的な記録へと変えた人物です。この拡張機能も同じように、ブラウザで目にした一時的なページを自動で記録に変え、あとから振り返れる形で残します。"
+    },
+    {
+      category: "基本・インストール",
       q: "Yasumaro とは何ですか？",
       a: "閲覧したウェブページを自動検出し、AI要約を付けて Obsidian・SQLite・Markdown ファイルなどに保存する Chrome 拡張機能です。"
     },
     {
+      category: "基本・インストール",
+      q: "Chrome 以外のブラウザでも使えますか？",
+      a: "Yasumaro は Chrome Web Store に公開されており、Chrome にそのままインストールできます。加えて Microsoft Edge や Brave など Chromium 系ブラウザでも動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Chrome Web Store 経由でない場合は <code>npm run build:edge</code>、<code>npm run build:brave</code> で各ブラウザ用にビルドできます。"
+    },
+    {
+      category: "Obsidian 連携",
       q: "Obsidian がなくても使えますか？",
-      a: "はい。SQLite（OPFS）やローカル Markdown ファイルへの保存も選択できます。Obsidian は必須ではありません。"
+      a: "はい。SQLite（OPFS）やローカル Markdown ファイルへの保存も選択できます。Obsidian は必須ではありません。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md'>ローカルMarkdown書き出しガイド</a> を参照してください。"
     },
     {
-      q: "AI 機能は必須ですか？APIキーがないと使えませんか？",
-      a: "AIは任意です。APIキーを設定しなくても、タイトル・URL・閲覧時間などのメタデータだけを記録できます。"
+      category: "Obsidian 連携",
+      q: "Obsidian との連携に必要なものは何ですか？",
+      a: "Obsidian 本体と、Local REST API というコミュニティプラグインが必要です。プラグインを有効化すると発行される API キーを Yasumaro ダッシュボードに登録します。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidian連携ガイド</a> を参照してください。"
     },
     {
-      q: "どのAIプロバイダーに対応していますか？",
-      a: "Groq・Gemini・OpenAI・Anthropic・OpenAI互換API（Ollama、LM Studio など）に対応しています。ローカルLLMも利用可能です。"
-    },
-    {
-      q: "データはどこに保存されますか？外部サーバーに送られますか？",
-      a: "すべてのデータはユーザーのデバイス内で処理されます。AI要約を利用する場合のみ、選択したAIプロバイダーのAPIに送信されます。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>プライバシーポリシー</a> を参照してください。"
-    },
-    {
+      category: "Obsidian 連携",
       q: "Obsidian に接続できず「証明書エラー」が出ます。",
       a: "Obsidian Local REST API プラグインの HTTPS を有効にした場合、自己署名証明書が使用されます。Chrome で <code>https://127.0.0.1:27124</code> を開いて証明書を手動で許可してください。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidianセットアップガイド</a> を参照してください。"
     },
     {
+      category: "Obsidian 連携",
+      q: "Obsidian が起動していないと記録されませんか？",
+      a: "Obsidian 保存モードを使う場合、Obsidian アプリが起動していて Local REST API プラグインが有効になっている必要があります。SQLite や Markdown モードでは不要です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md'>ストレージモードガイド</a> を参照してください。"
+    },
+    {
+      category: "AI 設定",
+      q: "AI 機能は必須ですか？APIキーがないと使えませんか？",
+      a: "AIは任意です。APIキーを設定しなくても、タイトル・URL・閲覧時間などのメタデータだけを記録できます。"
+    },
+    {
+      category: "AI 設定",
+      q: "どのAIプロバイダーに対応していますか？",
+      a: "Groq・Gemini・OpenAI・Anthropic・OpenAI互換API（Ollama、LM Studio など）に対応しています。ローカルLLMも利用可能です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI自動要約ガイド</a> を参照してください。"
+    },
+    {
+      category: "AI 設定",
+      q: "AIプロバイダーの優先度設定（1〜3位）とは何ですか？",
+      a: "1位のプロバイダーで要約に失敗した場合、自動的に2位、3位のプロバイダーへ切り替えて再試行する機能です。ローカルLLMをメインにしつつ、失敗時のみクラウドAIにフォールバックするといった構成も可能です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI自動要約ガイド</a> を参照してください。"
+    },
+    {
+      category: "プライバシーとデータ",
+      q: "データはどこに保存されますか？外部サーバーに送られますか？",
+      a: "すべてのデータはユーザーのデバイス内で処理されます。AI要約を利用する場合のみ、選択したAIプロバイダーのAPIに送信されます。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>プライバシーポリシー</a> を参照してください。"
+    },
+    {
+      category: "プライバシーとデータ",
       q: "個人情報（PII）が記録されないか心配です。",
       a: "PII マスク機能があり、氏名・メールアドレス・電話番号などを自動的に置換できます。銀行・メールなどのプライベートページは自動検出し確認ダイアログを表示します。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md'>PIIマスク機能ガイド</a> へ。"
     },
     {
+      category: "プライバシーとデータ",
+      q: "APIキーは安全に保管されますか？",
+      a: "はい。API キーは Chrome のローカルストレージに保存される前に、AES-GCM（PBKDF2 鍵導出）で自動的に暗号化されます。ユーザーが何か設定する必要はありません。さらに高いセキュリティを求める場合は、「マスターパスワード保護」を有効にすることで、暗号化キー自体をパスワードから導出させることができます。"
+    },
+    {
+      category: "記録の動作",
       q: "特定のサイトを記録しないようにしたい。",
-      a: "ドメインフィルター機能でブラックリストを設定できます。uBlock Origin 形式のフィルターリストのインポートにも対応しています。"
+      a: "ドメインフィルター機能でブラックリストを設定できます。uBlock Origin 形式のフィルターリストのインポートにも対応しています。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md'>uBlockインポートガイド</a> を参照してください。"
     },
     {
+      category: "記録の動作",
       q: "手動でページを記録することはできますか？",
-      a: "はい。拡張機能のポップアップにある「今すぐ記録」ボタンから即座に記録できます。ブラックリストドメインも「それでも記録」で上書き可能です。"
+      a: "はい。拡張機能のポップアップにある「今すぐ記録」ボタンから即座に記録できます。ブラックリストドメインも「それでも記録」で上書き可能です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md#手動記録機能'>セットアップガイドの手動記録機能</a> を参照してください。"
     },
     {
-      q: "Obsidian が起動していないと記録されませんか？",
-      a: "Obsidian 保存モードを使う場合、Obsidian アプリが起動していて Local REST API プラグインが有効になっている必要があります。SQLite や Markdown モードでは不要です。"
+      category: "記録の動作",
+      q: "同じページが何度も記録されてしまいます。",
+      a: "手動記録は意図的に重複チェックを行っていないため、同じページを何度でも記録できます。自動記録では通常、同一ページの重複は抑制されます。意図せず何度も記録されてしまう場合は、手動記録を繰り返していないか確認してみてください。"
+    },
+    {
+      category: "トラブルシューティング",
+      q: "ページを開いても自動記録が全く実行されません。",
+      a: "以下を確認してください。(1) ドメインフィルターでそのドメインがブラックリストに入っていないか。(2) 滞在時間やスクロール深度の閾値を満たしているか。(3) プライベートページ検出でスキップされていないか（History タブの「Skipped」フィルターで確認）。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/RECORDING_CONDITIONS.md'>スマート検出ガイド</a> を参照してください。"
+    },
+    {
+      category: "トラブルシューティング",
+      q: "ダッシュボードに「簡易ストレージモードで動作中」という黄色いバナーが表示されています。",
+      a: "お使いの環境で OPFS（SQLite の保存先）が使用できないため、chrome.storage.local へのフォールバックが有効になっています。保存件数が数百件に制限されます。Chrome のバージョンアップで OPFS が使えるようになると、自動的にデータが移行されます。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md'>ストレージモードについて</a> をご覧ください。"
+    },
+    {
+      category: "その他の機能",
+      q: "履歴の全文検索はどう使いますか？",
+      a: "ダッシュボードの History タブの検索ボックスにキーワードを入力すると、URL・タイトル・AI 要約の全体を SQLite FTS5 で高速検索できます。日本語にも対応しています。"
+    },
+    {
+      category: "その他の機能",
+      q: "FTS5 とは何ですか？",
+      a: "SQLite に組み込まれている全文検索エンジンです。URLやタイトルを1文字ずつ愚直に比較していく方法（LIKE検索）とは異なり、あらかじめ単語の出現位置を索引化しておくことで、記録件数が増えても検索速度が落ちにくいという特徴があります。Yasumaro では履歴のURL・タイトル・AI要約をこのFTS5用のテーブルに登録しており、日本語を含むキーワード検索を高速に行えます。"
+    },
+    {
+      category: "その他の機能",
+      q: "スター機能は何のためにありますか？",
+      a: "よく参照するページにスターを付けておくと、後から素早く見つけられます。また、スター付きのエントリは保持ポリシーによる自動削除の対象外になります。"
+    },
+    {
+      category: "その他の機能",
+      q: "Markdown 書き出しのたびにダウンロード通知が表示されるのが気になります。",
+      a: "ブラウザの設定で非表示にできます。Chrome の場合は <code>chrome://settings/downloads</code> を開き、「ダウンロードが完了したとき、ダウンロード一覧を表示する」のトグルを OFF にしてください。ダウンロード自体は正常に行われます。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md'>ローカルMarkdown書き出しガイド</a> を参照してください。"
     },
   ],
   en: [
     {
+      category: "Basics & Installation",
+      q: "Where does the name 'Yasumaro' come from?",
+      a: "It's named after Ō no Yasumaro, the compiler of the Kojiki, Japan's oldest chronicle. He transcribed the vast oral memory recited by Hieda no Are into writing, turning spoken words into a permanent record. This extension does the same thing: it turns the fleeting pages you browse into a lasting record you can look back on later."
+    },
+    {
+      category: "Basics & Installation",
       q: "What is Yasumaro?",
       a: "A Chrome extension that automatically detects web pages you actually read and saves them — with AI summaries — to Obsidian, SQLite, or local Markdown files."
     },
     {
+      category: "Basics & Installation",
+      q: "Does it work on browsers other than Chrome?",
+      a: "Yasumaro is published on the Chrome Web Store and installs directly into Chrome. It also works on other Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. If you're not installing from the Chrome Web Store, use <code>npm run build:edge</code> or <code>npm run build:brave</code> to build for each browser."
+    },
+    {
+      category: "Obsidian Integration",
       q: "Can I use it without Obsidian?",
-      a: "Yes. You can choose SQLite (OPFS) or local Markdown files as your storage backend. Obsidian is not required."
+      a: "Yes. You can choose SQLite (OPFS) or local Markdown files as your storage backend. Obsidian is not required. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md'>Local Markdown Export guide</a> for details."
     },
     {
-      q: "Is AI required? What if I don't have an API key?",
-      a: "AI is entirely optional. Without an API key, Yasumaro still records metadata such as title, URL, and time spent."
+      category: "Obsidian Integration",
+      q: "What do I need to integrate with Obsidian?",
+      a: "Obsidian itself, plus the Local REST API community plugin. Once enabled, the plugin issues an API key that you register in the Yasumaro dashboard. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidian Setup Guide</a> for details."
     },
     {
-      q: "Which AI providers are supported?",
-      a: "Groq, Gemini, OpenAI, Anthropic, and any OpenAI-compatible API (Ollama, LM Studio, etc.). Local LLMs are fully supported."
-    },
-    {
-      q: "Where is my data stored? Is anything sent to external servers?",
-      a: "All data is processed on your device. Content is sent to the AI provider's API only if you have configured one. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>Privacy Policy</a> for details."
-    },
-    {
+      category: "Obsidian Integration",
       q: "I get a certificate error when connecting to Obsidian.",
       a: "When HTTPS is enabled in the Obsidian Local REST API plugin, a self-signed certificate is used. Open <code>https://127.0.0.1:27124</code> in Chrome and manually trust the certificate. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md'>Obsidian Setup Guide</a> for step-by-step instructions."
     },
     {
+      category: "Obsidian Integration",
+      q: "Does Obsidian need to be running for recording to work?",
+      a: "Only when using the Obsidian storage mode — Obsidian must be open with the Local REST API plugin active. SQLite and Markdown modes work independently. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md'>Storage Modes Guide</a> for details."
+    },
+    {
+      category: "AI Settings",
+      q: "Is AI required? What if I don't have an API key?",
+      a: "AI is entirely optional. Without an API key, Yasumaro still records metadata such as title, URL, and time spent."
+    },
+    {
+      category: "AI Settings",
+      q: "Which AI providers are supported?",
+      a: "Groq, Gemini, OpenAI, Anthropic, and any OpenAI-compatible API (Ollama, LM Studio, etc.). Local LLMs are fully supported. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI Summarization Guide</a> for details."
+    },
+    {
+      category: "AI Settings",
+      q: "What is the AI provider priority setting (ranks 1–3)?",
+      a: "If the rank-1 provider fails to summarize, Yasumaro automatically falls back to the rank-2 and rank-3 providers. This lets you run a local LLM as your primary provider and fall back to a cloud AI only on failure. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI Summarization Guide</a> for details."
+    },
+    {
+      category: "Privacy & Data",
+      q: "Where is my data stored? Is anything sent to external servers?",
+      a: "All data is processed on your device. Content is sent to the AI provider's API only if you have configured one. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md'>Privacy Policy</a> for details."
+    },
+    {
+      category: "Privacy & Data",
       q: "I'm worried about personal information (PII) being recorded.",
       a: "Yasumaro has a built-in PII masking feature that replaces names, email addresses, phone numbers, etc. Private pages such as banking and email are auto-detected and show a confirmation dialog. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md'>PII Feature Guide</a>."
     },
     {
+      category: "Privacy & Data",
+      q: "Is my API key stored securely?",
+      a: "Yes. API keys are automatically encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage, with no setup required. For even stronger protection, enable 'Master Password Protection' to derive the encryption key from your own password."
+    },
+    {
+      category: "Recording Behavior",
       q: "How do I stop certain sites from being recorded?",
-      a: "Use the domain filter to configure a blacklist. You can also import uBlock Origin-format filter lists directly."
+      a: "Use the domain filter to configure a blacklist. You can also import uBlock Origin-format filter lists directly. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md'>uBlock Import Guide</a> for details."
     },
     {
+      category: "Recording Behavior",
       q: "Can I record a page manually?",
-      a: "Yes. Click the 'Record Now' button in the extension popup to record any page instantly. Blacklisted domains can be overridden with 'Record Anyway'."
+      a: "Yes. Click the 'Record Now' button in the extension popup to record any page instantly. Blacklisted domains can be overridden with 'Record Anyway'. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md#manual-recording-feature'>Manual Recording section of the Setup Guide</a> for details."
     },
     {
-      q: "Does Obsidian need to be running for recording to work?",
-      a: "Only when using the Obsidian storage mode — Obsidian must be open with the Local REST API plugin active. SQLite and Markdown modes work independently."
+      category: "Recording Behavior",
+      q: "The same page keeps getting recorded multiple times.",
+      a: "Manual recording has no duplicate check by design, so the same page can be recorded any number of times. Automatic recording normally suppresses duplicates of the same page. If you're seeing unexpected repeats, check whether you've been using manual recording repeatedly."
+    },
+    {
+      category: "Troubleshooting",
+      q: "Automatic recording never happens, even after opening a page.",
+      a: "Check the following: (1) whether the domain is on your blacklist, (2) whether you met the visit duration and scroll depth thresholds, (3) whether the page was skipped by private page detection (check the 'Skipped' filter in the History tab). See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/RECORDING_CONDITIONS.md'>Smart Detection guide</a> for details."
+    },
+    {
+      category: "Troubleshooting",
+      q: "The dashboard shows a yellow 'Running in fallback storage mode' banner.",
+      a: "OPFS (where SQLite is stored) is unavailable in your environment, so Yasumaro has fallen back to chrome.storage.local, which limits storage to a few hundred records. Once your Chrome version supports OPFS, your data will be migrated automatically. See <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md'>About Storage Modes</a> for details."
+    },
+    {
+      category: "Other Features",
+      q: "How do I use full-text search on my history?",
+      a: "Type keywords into the search box on the dashboard's History tab to search across URLs, titles, and AI summaries using SQLite FTS5. Japanese text is fully supported."
+    },
+    {
+      category: "Other Features",
+      q: "What is FTS5?",
+      a: "FTS5 is the full-text search engine built into SQLite. Unlike naively comparing text character by character (a LIKE-based search), it pre-builds an index of where words appear, so search speed stays fast even as your history grows. Yasumaro registers each record's URL, title, and AI summary in an FTS5-backed table, enabling fast keyword search — including Japanese text."
+    },
+    {
+      category: "Other Features",
+      q: "What is the star feature for?",
+      a: "Star pages you reference often so you can find them quickly later. Starred entries are also exempt from automatic deletion under your retention policy."
+    },
+    {
+      category: "Other Features",
+      q: "The download notification appears every time Markdown export runs — it's annoying.",
+      a: "You can hide it in your browser settings. In Chrome, open <code>chrome://settings/downloads</code> and toggle off 'Show downloads when they're done'. Downloads still work normally. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md'>Local Markdown Export guide</a> for details."
     },
   ]
 };
 
 function renderFAQ() {
   const items = FAQ_ITEMS[currentLang];
-  document.getElementById('faq-list').innerHTML = items.map((item, i) => `
+  const categories = currentLang === 'ja' ? FAQ_CATEGORIES_JA : FAQ_CATEGORIES_EN;
+  let globalIndex = 0;
+  const html = categories.map(category => {
+    const categoryItems = items.filter(item => item.category === category);
+    if (categoryItems.length === 0) return '';
+    const itemsHtml = categoryItems.map(item => {
+      const i = globalIndex++;
+      return `
     <div class="faq-item">
       <button class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" onclick="toggleFAQ(this)">
         <span>${item.q}</span>
         <span class="chevron">▼</span>
       </button>
       <div class="faq-a" id="faq-a-${i}">${item.a}</div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
+    return `<div class="faq-category"><h3 class="faq-category-title">${category}</h3><div class="faq-category-items">${itemsHtml}</div></div>`;
+  }).join('');
+  document.getElementById('faq-list').innerHTML = html;
 }
 
 function toggleFAQ(btn) {
