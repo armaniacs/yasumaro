@@ -31,6 +31,8 @@ All notable changes to this project will be documented in this file.
 - **PERMISSIONS.md** — 対象バージョン・権限説明を更新
 - **`docs/STORE_ASSETS.md` を `dev-docs/store-assets/` に移動**
 
+## [6.5.23] - 2026-07-12
+
 ### Fixed / 修正
 
 - **WCAG a11y 違反を修正** — `aria-hidden="true"` の非表示タブパネル（`#domainPanel`, `#promptPanel`, `#privacyPanel`）に `inert` 属性を追加し、フォーカス可能要素がアクセシビリティツリーに露出しないよう対応。`initTabNavigation()` と `showTab()` にタブ切り替え時の `inert` 設定/解除ロジックを追加
