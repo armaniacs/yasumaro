@@ -4,7 +4,7 @@
  * Note: Recording triggers (scroll/time/snapshot) are no longer configurable.
  */
 
-import { StorageKeys, getSettings } from '../utils/storage.js';
+import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage, applyI18n } from '../popup/i18n.js';
 
@@ -125,8 +125,9 @@ function wireEvents(container: HTMLElement): void {
     }
 
     try {
-      // Save recording conditions
-      await chrome.storage.local.set({
+      // Save recording conditions via saveSettings so values are written
+      // to the 'settings' object, matching what getSettings reads.
+      await saveSettings({
         [StorageKeys.MIN_VISIT_DURATION]: minVisitVal,
         [StorageKeys.MIN_SCROLL_DEPTH]: minScrollVal,
         [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensVal,
