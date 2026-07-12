@@ -180,6 +180,7 @@ export class SqliteClient {
       if (!res?.success) {
         const msg = res?.error || `${type} failed`;
         recordSqliteFailure(type, msg);
+        logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
         return { success: false, error: categorizeError(msg) };
       }
       recordSqliteSuccess();

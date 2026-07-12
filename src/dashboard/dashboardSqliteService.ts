@@ -91,7 +91,7 @@ export async function queryLogs(options: {
       return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
     }
     console.warn('queryLogs failed:', response.error);
-    return null;
+    return { error: String(response.error || 'Query failed') };
   } catch (error) {
     console.error('queryLogs failed:', error);
     return null;
@@ -112,7 +112,7 @@ export async function searchLogs(
       return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
     }
     console.warn('searchLogs failed:', response.error);
-    return null;
+    return { error: String(response.error || 'Search failed') };
   } catch (error) {
     console.error('searchLogs failed:', error);
     return null;

@@ -176,7 +176,7 @@ describe('handleDashboardSqlite — get_count', () => {
     const mock = createMockSqliteClient();
     mock.getCount.mockResolvedValue(null);
     const result = await handleDashboardSqlite({ subtype: 'get_count' }, mock as any);
-    expect(result).toEqual({ success: true, count: 0 });
+    expect(result).toEqual({ success: false, error: 'Get count failed' });
   });
 });
 

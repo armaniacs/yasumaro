@@ -128,7 +128,7 @@ export async function handleDashboardSqlite(
             case 'get_count': {
                 const count = await sqliteClient.getCount();
                 if (count === null) {
-                    return { success: true, count: 0 };
+                    return { success: false, error: sqliteClient.lastError || 'Get count failed' };
                 }
                 return { success: true, count };
             }
@@ -169,6 +169,9 @@ export async function handleDashboardSqlite(
                             skipped++;
                         }
                     }
+                }
+                if (sqliteClient.lastError) {
+                    return { success: false, error: sqliteClient.lastError };
                 }
                 return { success: true, inserted, skipped, total: rows.length };
             }
