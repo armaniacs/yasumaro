@@ -17,6 +17,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.27] - 2026-07-13
+
+### Refactored / リファクタリング
+
+- **SQLiteレイヤーのアーキテクチャ深化** — 5つの構造的改善により保守性・テスト容易性・エラー可視性を向上
+  - **3バックエンド分岐をStorageBackendアダプタに統一** — `recordsRepo.ts` / `dbMaintenance.ts` / `auditLogRepo.ts` から約842行の重複分岐ロジックを削除。`StorageBackend` インターフェース + `OpfsWorkerBackend` / `IdbVfsBackend` / `FallbackStorageAdapter` / `NoopBackend` の4実装に集約。バックエンド選択は `SqliteEngineContext.getBackend()` で遅延初期化・1回限り
+  - **エラー伝播の構造化** — `SqliteClient.call()` が `null` ではなく `CallResult<T>` を返すよう変更し、タイムアウト・offscreen喪失・クォータ超過・SQLiteエラーを分類。ダッシュボードUIまで具体的なエラーメッセージが伝播
+  - **opfsWorker.ts の型重複を解消** — インラインの `BrowsingLogRecord` 等の型定義（56行）を削除し、共有 `sqlite-types.ts` からのインポートに統一
+  - **マイグレーションロジックを共有モジュール化** — `sqliteEngineContext._doInit()` と `opfsWorker.initSqliteInner()` に重複していたALTER TABLEループ・FTS5セットアップを `migrations.ts` の `runMigrations()` に統合
+  - **sqliteHistoryPanel.ts のテスタビリティ向上** — `renderCalendarNav()` / `renderEntryList()` / `renderPagination()` / `updateBulkBar()` をグローバルstate/DOMからパラメータ化し、単体テスト可能に
+
+### Documentation / ドキュメント
+
+- **設計ドキュメント5件を追加** — `docs/superpowers/specs/2026-07-13-*.md`
+- **深掘りインタビュー記録** — `dev-docs/ADR/2026-07-13-sqlite-architecture-deep-dig.md`
+
 ## [6.5.26] - 2026-07-12
 
 ### Fixed / 修正
