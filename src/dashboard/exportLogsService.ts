@@ -12,7 +12,7 @@ import { queryLogs, backupDb } from './dashboardSqliteService.js';
 
 async function queryAllData() {
   const result = await queryLogs({ limit: 10000, orderBy: 'created_at', orderDir: 'DESC' });
-  return result?.rows || [];
+  return (result && 'rows' in result ? result.rows : []);
 }
 
 export async function exportMarkdown(ids?: number[]): Promise<string> {

@@ -379,6 +379,41 @@ export const AUDIT_LOG_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 `;
 
+/** Columns added via ALTER TABLE migration (idempotent). */
+export const MIGRATION_COLUMNS = [
+  'content TEXT',
+  'masked_count INTEGER',
+  'cleansed_reason TEXT',
+  'ai_provider TEXT',
+  'ai_model TEXT',
+  'ai_duration_ms INTEGER',
+  'obsidian_duration_ms INTEGER',
+  'sent_tokens INTEGER',
+  'received_tokens INTEGER',
+  'original_tokens INTEGER',
+  'cleansed_tokens INTEGER',
+  'page_bytes INTEGER',
+  'candidate_bytes INTEGER',
+  'original_bytes INTEGER',
+  'cleansed_bytes INTEGER',
+  'ai_summary_original_bytes INTEGER',
+  'ai_summary_cleansed_bytes INTEGER',
+  'extracted_sentences_bytes INTEGER',
+  'extracted_sentences_original_bytes INTEGER',
+  'fallback_triggered INTEGER DEFAULT 0',
+] as const;
+
+/** Ordered sequence of one-off migrations. */
+export interface MigrationStep {
+  sql: string;
+  id: string;
+}
+
+export const MIGRATION_SEQUENCE: readonly MigrationStep[] = [
+  { sql: 'ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0', id: 'obsidian_synced' },
+  { sql: 'ALTER TABLE browsing_logs ADD COLUMN gist_synced INTEGER DEFAULT 0', id: 'gist_synced' },
+] as const;
+
 // ============================================================================
 // Shared query utilities (M16)
 // ============================================================================

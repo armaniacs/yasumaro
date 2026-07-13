@@ -60,11 +60,11 @@ describe('dashboardSqliteService', () => {
       );
     });
 
-    it('returns null on failed response', async () => {
+    it('returns error object on failed response', async () => {
       givenResponse({ success: false, error: 'DB error' });
 
       const result = await queryLogs();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'DB error' });
     });
 
     it('returns null on rejection', async () => {
