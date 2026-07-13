@@ -10,6 +10,7 @@ import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/sett
 import { getMessage } from '../popup/i18n.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
+import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { queryLogs } from './dashboardSqliteService.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
@@ -182,14 +183,13 @@ export async function loadGeneralSettings(): Promise<void> {
   // Apply provider priority slots and update multi-provider visibility
   const prioritySlots = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[]) ?? [];
   applyProviderPrioritySlots(prioritySlots);
-  updateAIProviderVisibilityMulti(
-    getAiProviderElements(),
-    [
-      prioritySlots[0]?.provider ?? '',
-      prioritySlots[1]?.provider ?? '',
-      prioritySlots[2]?.provider ?? ''
-    ]
-  );
+  const selectedProviders = [
+    prioritySlots[0]?.provider ?? '',
+    prioritySlots[1]?.provider ?? '',
+    prioritySlots[2]?.provider ?? ''
+  ];
+  updateAIProviderVisibilityMulti(getAiProviderElements(), selectedProviders);
+  updateProviderSettingsLayout(selectedProviders);
 
   // Sync Obsidian details open state with checkbox
   const obsidianEnabledInput = document.getElementById('obsidianEnabled') as HTMLInputElement | null;
