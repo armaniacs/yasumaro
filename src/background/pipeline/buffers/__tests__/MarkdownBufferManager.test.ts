@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import type { Mock } from 'vitest';
 
 const mockStorage: Record<string, unknown> = {};
 const mockChrome = {
@@ -83,7 +82,8 @@ describe('MarkdownBufferManager', () => {
 
     it('merges with existing entries in storage (append mode)', async () => {
       const existingEntry = makeEntry({ url: 'https://existing.com', markdown: '- Existing' });
-      const dateKey = 'local_export_' + new Date().toISOString().slice(0, 10);
+      const today = new Date();
+      const dateKey = `local_export_${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       mockStorage[dateKey] = [existingEntry];
 
       const newEntry = makeEntry({ url: 'https://new.com', markdown: '- New' });
