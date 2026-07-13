@@ -6,8 +6,11 @@ import { createAuditLogPanel } from './panels/asyncData/auditLogPanel.js';
 import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js';
 import { createTagClusterPanel } from './panels/asyncData/tagClusterPanel.js';
 import { createHistoryPanel } from './panels/asyncData/historyPanel.js';
+import { createSqliteHistoryPanel } from './panels/asyncData/sqliteHistoryPanel.js';
+import { setRegistry } from './panels/registryContext.js';
 
 export const registry = new NavigationRegistry();
+setRegistry(registry);
 const bootstrapper = new DashboardBootstrapper(registry);
 
 bootstrapper.registerPanels([
@@ -17,6 +20,7 @@ bootstrapper.registerPanels([
   createDomainSearchPanel(),
   createTagClusterPanel(),
   createHistoryPanel(),
+  createSqliteHistoryPanel(),
 ]);
 
 const sidebar = document.getElementById('sidebar');

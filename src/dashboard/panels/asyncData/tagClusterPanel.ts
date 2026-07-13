@@ -11,6 +11,7 @@ import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type AsyncDataPanel } from '../types.js';
+import { getRegistry } from '../registryContext.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -136,7 +137,11 @@ export function createTagClusterPanel(): AsyncDataPanel {
 }
 
 function navigateToHistoryWithTag(tag: string): void {
-  document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
+  try {
+    getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag });
+  } catch {
+    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
+  }
 }
 
 async function loadRowsWithRetry(): Promise<BrowsingLogEntry[]> {

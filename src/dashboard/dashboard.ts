@@ -21,7 +21,7 @@ import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 // historyPanel migrated to AsyncDataPanel
-import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
+// sqliteHistoryPanel migrated to AsyncDataPanel
 import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
 import { exportMarkdown, exportCsv, exportJson, exportDb, downloadText, downloadBlob } from './exportLogsService.js';
 import { ModelsDevDialog } from './models-dev-dialog.js';
@@ -1486,7 +1486,7 @@ function initExportLogsPanel(): void {
   }
 
   // try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); } // migrated to AsyncDataPanel
-  try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
+  // try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); } // migrated to AsyncDataPanel
   try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
   // try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); } // migrated to DiagnosticPanel
   // try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); } // migrated to AsyncDataPanel
