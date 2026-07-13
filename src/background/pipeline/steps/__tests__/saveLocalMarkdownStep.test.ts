@@ -128,7 +128,7 @@ describe('saveLocalMarkdownStep', () => {
       const key = Object.keys(setCall)[0];
       expect(key).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[key]).toHaveLength(1);
-      expect(setCall[key][0]).toBe(context.markdown);
+      expect(setCall[key][0].markdown).toBe(context.markdown);
 
       // PBI 2026-07-09-03: ステップはダウンロードしない
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
@@ -184,8 +184,8 @@ describe('saveLocalMarkdownStep', () => {
     });
   });
 
-  describe('即時タイミング（immediate）', () => {
-    it('timing=immediate かつ既存アラーム無しの場合、1分後のアラームを作成する', async () => {
+  describe('flushスケジュール', () => {
+    it('timing=immediate の場合、日次アラームを作成する', async () => {
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -197,27 +197,12 @@ describe('saveLocalMarkdownStep', () => {
       await saveLocalMarkdownStep(context);
 
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
-        'yasumaro-local-md-immediate',
-        { delayInMinutes: 1 }
+        'yasumaro-local-md-daily',
+        { periodInMinutes: 1440 }
       );
     });
 
-    it('timing=immediate かつ既存アラームありの場合、アラームを作成しない（デバウンス）', async () => {
-      mockChrome.alarms.get.mockResolvedValueOnce({ name: 'yasumaro-local-md-immediate' });
-      const context = makeContext({
-        settings: {
-          local_markdown_export_enabled: true,
-          local_markdown_export_timing: 'immediate',
-          local_markdown_export_path: 'Yasumaro',
-        } as any,
-      });
-
-      await saveLocalMarkdownStep(context);
-
-      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
-    });
-
-    it('timing=idle の場合はアラームを作成しない', async () => {
+    it('timing=idle の場合も日次アラームを作成する', async () => {
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -228,7 +213,10 @@ describe('saveLocalMarkdownStep', () => {
 
       await saveLocalMarkdownStep(context);
 
-      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
+      expect(mockChrome.alarms.create).toHaveBeenCalledWith(
+        'yasumaro-local-md-daily',
+        { periodInMinutes: 1440 }
+      );
     });
 
     it('timing=manual の場合はバッファに追記されない（スキップ扱い）', async () => {

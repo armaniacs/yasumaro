@@ -29,10 +29,7 @@ import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
-import { extractDomain } from '../../utils/domainUtils.js';
-import { StorageKeys } from '../../utils/storage.js';
-import { sanitizeRegex } from '../../utils/piiSanitizer.js';
+import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
@@ -161,63 +158,15 @@ export class RecordingPipeline {
         return context;
       }
 
-    const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
-    const { url, title } = data;
-
-    // PBI 2026-07-09-02: store page content only after PII sanitization,
-    // and only when the user has consented to local content storage.
-    const settings = context.settings as Record<string, unknown>;
-    const contentStorageEnabled = settings[StorageKeys.CONTENT_STORAGE_ENABLED] === true;
-    const storedContent = contentStorageEnabled
-      ? (await sanitizeRegex(data.content ?? '', { skipSizeLimit: true })).text || null
-      : null;
-
-    // Build BrowsingLogRecord from pipeline context
-      const record: BrowsingLogRecord = {
-        url,
-        title: title || null,
-        summary: privacyResult?.summary || null,
-        tags: privacyResult?.tags && privacyResult.tags.length > 0
-          ? privacyResult.tags.map(t => `#${t}`).join(' ')
-          : null,
-        created_at: Date.now(),
-        domain: extractDomain(url) || null,
-        visit_duration: null,
-        scroll_ratio: null,
-        is_starred: 0,
-        is_deleted: 0,
-        // PBI-1: diagnostic metadata / PBI-3: content
-        content: storedContent,
-        cleansed_reason: data.cleansedReason || null,
-        masked_count: (data.maskedCount ?? privacyResult?.maskedCount) || null,
-        ai_provider: null as null | string,
-        ai_model: null as null | string,
-        ai_duration_ms: aiDuration ?? null,
-        obsidian_duration_ms: obsidianDuration ?? null,
-        sent_tokens: null as null | number,
-        received_tokens: null as null | number,
-        original_tokens: privacyResult?.originalTokens ?? null,
-        cleansed_tokens: privacyResult?.cleansedTokens ?? null,
-        page_bytes: data.pageBytes ?? null,
-        candidate_bytes: data.candidateBytes ?? null,
-        original_bytes: data.originalBytes ?? null,
-        cleansed_bytes: data.cleansedBytes ?? null,
-        ai_summary_original_bytes: data.aiSummaryOriginalBytes ?? null,
-        ai_summary_cleansed_bytes: data.aiSummaryCleansedBytes ?? null,
-        extracted_sentences_bytes: extractedSentencesBytes ?? null,
-        extracted_sentences_original_bytes: extractedSentencesOriginalBytes ?? null,
-        fallback_triggered: data.fallbackTriggered ? 1 : 0,
-      };
-
-      // Use 0 as placeholder recordId (SQLite auto-generates real id)
+      const record = mapToBrowsingLogRecord(context);
       await saveSqliteStep({
         recordId: 0,
         record,
         sqliteClient: this.sqliteClient,
-        obsidianSynced: obsidianDuration !== undefined ? true : undefined
+        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined
       });
 
-      addLog(LogType.INFO, 'Saved to SQLite', { url, title });
+      addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title });
       return context;
     };
   }
