@@ -42,11 +42,9 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
 
     mockAIClient = {
       // @ts-expect-error - vi.fn() type narrowing issue
-      getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+      getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
       // @ts-expect-error - vi.fn() type narrowing issue
-      summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
-      // @ts-expect-error - vi.fn() type narrowing issue
-      generateSummary: vi.fn().mockResolvedValue('Test summary')
+      generateSummary: vi.fn().mockResolvedValue({ summary: 'Test summary' })
     } as any;
 
     recordingLogic = new RecordingLogic(mockObsidian, mockAIClient);

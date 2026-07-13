@@ -19,13 +19,10 @@ describe('RecordingLogic', () => {
   const mockAiClient = {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
+    getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
-    generateSummary: vi.fn().mockResolvedValue('Cloud summary')
+    generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   };
 
   beforeEach(() => {

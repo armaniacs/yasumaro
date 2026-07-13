@@ -137,12 +137,6 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
 
   // Save tokens
-  if (privacyResult?.sentTokens !== undefined) {
-    await save('sentTokens', setUrlSentTokens(url, privacyResult.sentTokens));
-  }
-  if (privacyResult?.receivedTokens !== undefined) {
-    await save('receivedTokens', setUrlReceivedTokens(url, privacyResult.receivedTokens));
-  }
   if (privacyResult?.originalTokens !== undefined) {
     await save('originalTokens', setUrlOriginalTokens(url, privacyResult.originalTokens));
   }
@@ -186,14 +180,6 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
   if (extractedSentencesOriginalBytes !== undefined) {
     await save('extractedSentencesOriginalBytes', setUrlExtractedSentencesOriginalBytes(url, extractedSentencesOriginalBytes));
-  }
-
-  // Save AI provider and model
-  if (privacyResult?.aiProvider !== undefined) {
-    await save('aiProvider', setUrlAiProvider(url, privacyResult.aiProvider));
-  }
-  if (privacyResult?.aiModel !== undefined) {
-    await save('aiModel', setUrlAiModel(url, privacyResult.aiModel));
   }
 
   // Save AI processing duration
