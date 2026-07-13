@@ -3,6 +3,7 @@ import { type Panel, type PanelInitMap } from './types.js';
 export class NavigationRegistry {
   private panels = new Map<string, Panel>();
   private activePanelId: string | null = null;
+  private mountedPanels = new Set<string>();
 
   register(panel: Panel): void {
     if (this.panels.has(panel.id)) {
@@ -25,7 +26,10 @@ export class NavigationRegistry {
       throw new Error(`Panel "${panelId}" is not registered`);
     }
 
-    if (this.activePanelId === panelId) return;
+    if (this.activePanelId === panelId) {
+      (panel as { onActivate?(init?: Record<string, unknown>): void }).onActivate?.(init);
+      return;
+    }
 
     if (this.activePanelId) {
       const current = this.panels.get(this.activePanelId);
@@ -33,6 +37,14 @@ export class NavigationRegistry {
     }
 
     this.activePanelId = panelId;
+
+    if (!this.mountedPanels.has(panelId)) {
+      const container = document.getElementById(panelId);
+      if (container) {
+        panel.mount(container);
+      }
+      this.mountedPanels.add(panelId);
+    }
 
     (panel as { onActivate?(init?: Record<string, unknown>): void }).onActivate?.(init);
 
