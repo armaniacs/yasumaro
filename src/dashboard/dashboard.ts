@@ -20,7 +20,7 @@ import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti, AIProvi
 import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
-import { initHistoryPanel } from './historyPanel.js';
+// historyPanel migrated to AsyncDataPanel
 import { initSqliteHistoryPanel } from './sqliteHistoryPanel.js';
 import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
 import { exportMarkdown, exportCsv, exportJson, exportDb, downloadText, downloadBlob } from './exportLogsService.js';
@@ -1485,7 +1485,7 @@ function initExportLogsPanel(): void {
     document.getElementById('localExportManualBtn')?.addEventListener('click', handleManualLocalMarkdownExport);
   }
 
-  try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
+  // try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); } // migrated to AsyncDataPanel
   try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
   try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
   // try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); } // migrated to DiagnosticPanel

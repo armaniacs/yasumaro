@@ -5,6 +5,7 @@ import { createExportLogsPanel } from './panels/diagnostic/exportLogsPanel.js';
 import { createAuditLogPanel } from './panels/asyncData/auditLogPanel.js';
 import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js';
 import { createTagClusterPanel } from './panels/asyncData/tagClusterPanel.js';
+import { createHistoryPanel } from './panels/asyncData/historyPanel.js';
 
 export const registry = new NavigationRegistry();
 const bootstrapper = new DashboardBootstrapper(registry);
@@ -15,6 +16,7 @@ bootstrapper.registerPanels([
   createAuditLogPanel(),
   createDomainSearchPanel(),
   createTagClusterPanel(),
+  createHistoryPanel(),
 ]);
 
 const sidebar = document.getElementById('sidebar');
