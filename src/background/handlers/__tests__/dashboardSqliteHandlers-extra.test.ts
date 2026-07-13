@@ -109,7 +109,7 @@ describe('handleDashboardSqlite — delete', () => {
     const mock = createMockSqliteClient();
     mock.delete.mockResolvedValue(false);
     const result = await handleDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, undefined, VALID_TOKEN);
-    expect(result).toEqual({ success: false });
+    expect(result).toEqual({ success: false, error: 'Delete failed' });
   });
 });
 
@@ -160,7 +160,7 @@ describe('handleDashboardSqlite — update', () => {
       undefined,
       VALID_TOKEN
     );
-    expect(result).toEqual({ success: false });
+    expect(result).toEqual({ success: false, error: 'Update failed' });
   });
 });
 
@@ -176,7 +176,7 @@ describe('handleDashboardSqlite — get_count', () => {
     const mock = createMockSqliteClient();
     mock.getCount.mockResolvedValue(null);
     const result = await handleDashboardSqlite({ subtype: 'get_count' }, mock as any);
-    expect(result).toEqual({ success: true, count: 0 });
+    expect(result).toEqual({ success: false, error: 'Get count failed' });
   });
 });
 
@@ -296,7 +296,7 @@ describe('handleDashboardSqlite — purge_now', () => {
     mock.purgeOldRecords.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
     const result = await handleDashboardSqlite({ subtype: 'purge_now' }, mock as any);
-    expect(result).toEqual({ success: true, purged: 0, skipped: false });
+    expect(result).toEqual({ success: false, error: 'Purge failed' });
   });
 
   it('purges with only days configured', async () => {
@@ -341,7 +341,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
     mock.purgeContent.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
     const result = await handleDashboardSqlite({ subtype: 'content_purge_now' }, mock as any);
-    expect(result).toEqual({ success: true, purged: 0, skipped: false });
+    expect(result).toEqual({ success: false, error: 'Content purge failed' });
   });
 });
 

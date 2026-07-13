@@ -114,7 +114,7 @@ async function loadData(options: {
     const limit = PAGE_SIZE;
     const offset = page * limit;
 
-    let result: { rows: BrowsingLogEntry[]; total: number } | null;
+    let result: { rows: BrowsingLogEntry[]; total: number } | { error: string } | null;
 
     // Use tagFilter from options or state, preferring explicit options
     const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
@@ -133,7 +133,7 @@ async function loadData(options: {
       });
 
       // Filter by tag in JavaScript if tagFilter is set
-      if (result && activeTagFilter) {
+      if (result && !('error' in result) && activeTagFilter) {
         const filteredRows = result.rows.filter(row => {
           // Tags are stored as comma-separated string in SQLite
           const tagsString = row.tags || '';
@@ -147,7 +147,7 @@ async function loadData(options: {
           rows: filteredRows.slice(offset, offset + limit),
           total: filteredRows.length,
         };
-      } else if (result) {
+      } else if (result && !('error' in result)) {
         result = {
           rows: result.rows.slice(offset, offset + limit),
           total: result.total,
@@ -155,15 +155,19 @@ async function loadData(options: {
       }
     }
 
-    if (result) {
+    if (result === null) {
+      state.error = t('historyLoadError');
+      state.entries = [];
+      state.total = 0;
+    } else if ('error' in result) {
+      state.error = result.error;
+      state.entries = [];
+      state.total = 0;
+    } else {
       state.entries = result.rows;
       state.total = result.total;
       // Reset selection when entries change (search, pagination, date)
       state.selectedIds.clear();
-    } else {
-      state.error = t('historyLoadError');
-      state.entries = [];
-      state.total = 0;
     }
   } catch (err) {
     state.error = `Error: ${errorMessage(err)}`;
@@ -195,23 +199,40 @@ function updateDynamicRegions(): void {
   }
 
   updateTagFilterBar();
-  updateBulkBar();
 
-  // Re-render calendar nav so the "clear filters" button shows/hides
-  renderCalendarNav();
+  const calContainer = document.getElementById('sqlite-calendar-nav');
+  if (calContainer) {
+    renderCalendarNav(calContainer, state.selectedDate,
+      { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
+      {
+        onDateSelect: (d) => handleDateSelect(d),
+        onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.currentPage = 0; loadData({ since, until }); },
+        onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.currentPage = 0; loadData(); },
+      }
+    );
+  }
 
-  const listEl = document.getElementById('sqlite-entry-list');
-  if (listEl) {
+  const listContainer = document.getElementById('sqlite-entry-list');
+  if (listContainer) {
     if (state.loading) {
-      listEl.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
+      listContainer.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
     } else {
-      renderEntryList();
+      renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, null, {
+        onToggleStar: (id) => handleToggleStar(id),
+        onDelete: (id) => handleDelete(id),
+        onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries, bulkCallbacks); },
+        onTagFilterClick: (tag) => { state.activeTagFilter = state.activeTagFilter === tag ? null : tag; state.currentPage = 0; loadData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+        onContentToggle: (controlsId) => handleContentToggle(controlsId),
+      });
     }
   }
 
   if (!state.loading) {
-    renderPagination();
+    const pagContainer = document.getElementById('sqlite-pagination');
+    if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state.currentPage = page; reloadCurrent(); });
   }
+
+  updateBulkBar(state.selectedIds, state.entries, bulkCallbacks);
 }
 
 /** Show or hide the tag filter bar in an already-mounted panel. */
@@ -311,26 +332,34 @@ function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
   return button;
 }
 
-function updateBulkBar(): void {
+function updateBulkBar(
+  selectedIds: Set<number>,
+  entries: BrowsingLogEntry[],
+  _callbacks: {
+    onSelectAll: (checked: boolean) => void;
+    onClear: () => void;
+    onAppend: () => void;
+  }
+): void {
   const bar = document.getElementById('sqlite-bulk-bar');
   const selectAll = document.getElementById('sqlite-select-all') as HTMLInputElement | null;
   const countEl = document.getElementById('sqlite-selection-count');
   const appendBtn = document.getElementById('sqlite-append-obsidian') as HTMLButtonElement | null;
 
   if (bar) {
-    bar.style.display = state.selectedIds.size > 0 ? '' : 'none';
+    bar.style.display = selectedIds.size > 0 ? '' : 'none';
   }
 
   if (selectAll) {
-    selectAll.checked = state.entries.length > 0 && state.selectedIds.size === state.entries.length;
+    selectAll.checked = entries.length > 0 && selectedIds.size === entries.length;
   }
 
   if (countEl) {
-    countEl.textContent = t('historySelectionCount', [String(state.selectedIds.size)]);
+    countEl.textContent = t('historySelectionCount', [String(selectedIds.size)]);
   }
 
   if (appendBtn) {
-    appendBtn.disabled = state.selectedIds.size === 0;
+    appendBtn.disabled = selectedIds.size === 0;
   }
 }
 
@@ -392,6 +421,40 @@ async function handleDateSelect(dateStr: string): Promise<void> {
   await loadData({ since, until });
 }
 
+function handleContentToggle(controlsId: string): void {
+  const area = document.getElementById(controlsId);
+  if (!area) return;
+  const isHidden = area.classList.toggle('hidden');
+  const btn = document.querySelector(`[aria-controls="${controlsId}"]`) as HTMLButtonElement | null;
+  if (!btn) return;
+  btn.setAttribute('aria-expanded', String(!isHidden));
+  if (controlsId.startsWith('content-sent-')) {
+    btn.textContent = isHidden ? (t('historyShowSentData') || 'AIへ送信したデータ') : (t('historyHideSentData') || 'データを非表示');
+  } else if (controlsId.startsWith('content-received-')) {
+    btn.textContent = isHidden ? (t('historyShowReceivedData') || 'AIから受信したデータ') : (t('historyHideReceivedData') || 'データを非表示');
+  } else {
+    btn.textContent = isHidden ? t('historyShowContent') : t('historyHideContent');
+  }
+}
+
+const bulkCallbacks = {
+  onSelectAll: (checked: boolean) => {
+    if (checked) {
+      state.entries.forEach(e => state.selectedIds.add(e.id));
+    } else {
+      state.selectedIds.clear();
+    }
+    updateBulkBar(state.selectedIds, state.entries, bulkCallbacks);
+  },
+  onClear: () => {
+    state.selectedIds.clear();
+    updateBulkBar(state.selectedIds, state.entries, bulkCallbacks);
+  },
+  onAppend: () => {
+    handleAppendToObsidian();
+  },
+};
+
 // ============================================================================
 // Rendering
 // ============================================================================
@@ -444,9 +507,31 @@ function renderState(): void {
   `;
 
   if (!state.loading) {
-    renderEntryList();
-    renderPagination();
-    renderCalendarNav();
+    const calContainer = document.getElementById('sqlite-calendar-nav');
+    if (calContainer) {
+      renderCalendarNav(calContainer, state.selectedDate,
+        { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
+        {
+          onDateSelect: (d) => handleDateSelect(d),
+          onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.currentPage = 0; loadData({ since, until }); },
+          onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.currentPage = 0; loadData(); },
+        }
+      );
+    }
+
+    const listContainer = document.getElementById('sqlite-entry-list');
+    if (listContainer) {
+      renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, null, {
+        onToggleStar: (id) => handleToggleStar(id),
+        onDelete: (id) => handleDelete(id),
+        onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries, bulkCallbacks); },
+        onTagFilterClick: (tag) => { state.activeTagFilter = state.activeTagFilter === tag ? null : tag; state.currentPage = 0; loadData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+        onContentToggle: (controlsId) => handleContentToggle(controlsId),
+      });
+    }
+
+    const pagContainer = document.getElementById('sqlite-pagination');
+    if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state.currentPage = page; reloadCurrent(); });
   }
 
   // Wire search input
@@ -583,33 +668,36 @@ function enrichEntryWithChromeStorage(
   };
 }
 
-async function renderEntryList(): Promise<void> {
-  const listEl = document.getElementById('sqlite-entry-list');
-  if (!listEl) return;
-
-  // Server-side tag filter: state.entries already filtered by loadData with tagFilter
-  const displayEntries = state.entries;
+function renderEntryList(
+  container: HTMLElement,
+  entries: BrowsingLogEntry[],
+  selectedIds: Set<number>,
+  activeTagFilter: string | null,
+  enrichmentMap: Map<string, SavedUrlEntry> | null,
+  callbacks: {
+    onToggleStar: (id: number) => void | Promise<void>;
+    onDelete: (id: number) => void | Promise<void>;
+    onSelectionChange: (id: number, selected: boolean) => void;
+    onTagFilterClick: (tag: string) => void;
+    onContentToggle: (controlsId: string) => void;
+  }
+): void {
+  const displayEntries = entries;
 
   if (displayEntries.length === 0) {
-    listEl.innerHTML = `<div class="empty-state">${t('historyNoRecords')}</div>`;
+    container.innerHTML = `<div class="empty-state">${t('historyNoRecords')}</div>`;
     return;
   }
 
-  // Enrich entries with chrome.storage data if they lack diagnostic metadata.
-  // This is a lazy merge: entries already in SQLite with metrics are unchanged.
-  // Entries missing metrics are enriched from the most recent chrome.storage
-  // state. This handles the case where the SQLite entry was created by an
-  // older version of the pipeline that did not save diagnostic fields.
-  const enrichmentMap = await getChromeStorageLookup();
   const enrichedEntries = enrichmentMap
     ? displayEntries.map(e => enrichEntryWithChromeStorage(e, enrichmentMap))
     : displayEntries;
 
-  listEl.innerHTML = enrichedEntries.map(entry => {
+  container.innerHTML = enrichedEntries.map(entry => {
     const entryTags = parseTagsForDisplay(entry.tags);
     const tagsHtml = entryTags.length > 0
       ? `<div class="sqlite-entry-tags">${entryTags.map(tag => {
-          const isActive = state.activeTagFilter === tag;
+          const isActive = activeTagFilter === tag;
           return `<button type="button" class="tag-badge${isActive ? ' filter-active' : ''}"
             data-tag="${escapeHtml(tag)}"
             data-action="tag-filter"
@@ -623,7 +711,7 @@ async function renderEntryList(): Promise<void> {
     <div class="sqlite-entry" data-id="${entry.id}">
       <div class="sqlite-entry-header">
         <input type="checkbox" class="sqlite-entry-checkbox" data-action="select"
-               data-id="${entry.id}" ${state.selectedIds.has(entry.id) ? 'checked' : ''}
+               data-id="${entry.id}" ${selectedIds.has(entry.id) ? 'checked' : ''}
                aria-label="${t('historySelectRecord')}">
         <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
                 data-action="star" title="${t('historyToggleStar')}"
@@ -657,109 +745,92 @@ async function renderEntryList(): Promise<void> {
   }).join('');
 
   // Wire action buttons
-  listEl.querySelectorAll('[data-action="select"]').forEach((el) => {
+  container.querySelectorAll('[data-action="select"]').forEach((el) => {
     const id = Number((el as HTMLElement).getAttribute('data-id'));
     el.addEventListener('change', () => {
       const checkbox = el as HTMLInputElement;
-      if (checkbox.checked) {
-        state.selectedIds.add(id);
-      } else {
-        state.selectedIds.delete(id);
-      }
-      updateBulkBar();
+      callbacks.onSelectionChange(id, checkbox.checked);
     });
   });
-  listEl.querySelectorAll('[data-action="star"]').forEach((el) => {
+  container.querySelectorAll('[data-action="star"]').forEach((el) => {
     const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (entryId) el.addEventListener('click', () => handleToggleStar(entryId));
+    if (entryId) el.addEventListener('click', () => callbacks.onToggleStar(entryId));
   });
-  listEl.querySelectorAll('[data-action="delete"]').forEach((el) => {
+  container.querySelectorAll('[data-action="delete"]').forEach((el) => {
     const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (entryId) el.addEventListener('click', () => handleDelete(entryId));
+    if (entryId) el.addEventListener('click', () => callbacks.onDelete(entryId));
   });
 
   displayEntries.forEach(entry => {
-    const entryEl = listEl.querySelector(`.sqlite-entry[data-id="${entry.id}"] .sqlite-entry-header`);
+    const entryEl = container.querySelector(`.sqlite-entry[data-id="${entry.id}"] .sqlite-entry-header`);
     if (entryEl) {
       entryEl.appendChild(createCopyButton(entry));
     }
   });
 
-  // Wire tag filter buttons — server-side via loadData (preserve date range)
-  listEl.querySelectorAll('[data-action="content-toggle"]').forEach((el) => {
+  // Wire content toggle buttons
+  container.querySelectorAll('[data-action="content-toggle"]').forEach((el) => {
     el.addEventListener('click', () => {
       const controlsId = el.getAttribute('aria-controls');
       if (!controlsId) return;
-      const area = document.getElementById(controlsId);
-      if (!area) return;
-      const isHidden = area.classList.toggle('hidden');
-      el.setAttribute('aria-expanded', String(!isHidden));
-      const btn = el as HTMLButtonElement;
-      if (controlsId.startsWith('content-sent-')) {
-        btn.textContent = isHidden ? (t('historyShowSentData') || 'AIへ送信したデータ') : (t('historyHideSentData') || 'データを非表示');
-      } else if (controlsId.startsWith('content-received-')) {
-        btn.textContent = isHidden ? (t('historyShowReceivedData') || 'AIから受信したデータ') : (t('historyHideReceivedData') || 'データを非表示');
-      } else {
-        btn.textContent = isHidden ? t('historyShowContent') : t('historyHideContent');
-      }
+      callbacks.onContentToggle(controlsId);
     });
   });
 
-  listEl.querySelectorAll('[data-action="tag-filter"]').forEach((el) => {
+  // Wire tag filter buttons
+  container.querySelectorAll('[data-action="tag-filter"]').forEach((el) => {
     el.addEventListener('click', () => {
       const tag = (el as HTMLElement).getAttribute('data-tag');
       if (!tag) return;
-      const newFilter = state.activeTagFilter === tag ? null : tag;
-      state.activeTagFilter = newFilter;
-      state.currentPage = 0;
-      loadData({ page: 0, tagFilter: newFilter || undefined, ...dateRangeFromSelected() });
+      callbacks.onTagFilterClick(tag);
     });
   });
 }
 
-function renderPagination(): void {
-  const pagEl = document.getElementById('sqlite-pagination');
-  if (!pagEl) return;
-
-  const totalPages = Math.ceil(state.total / PAGE_SIZE);
+function renderPagination(
+  container: HTMLElement,
+  currentPage: number,
+  total: number,
+  pageSize: number,
+  onPageChange: (page: number) => void
+): void {
+  const totalPages = Math.ceil(total / pageSize);
   if (totalPages <= 1) {
-    pagEl.innerHTML = '';
+    container.innerHTML = '';
     return;
   }
 
-  pagEl.innerHTML = `
-    <button ${state.currentPage === 0 ? 'disabled' : ''} data-page="prev">${t('historyPrev')}</button>
-    <span>${t('historyPageInfo', [String(state.currentPage + 1), String(totalPages)])}</span>
-    <button ${state.currentPage >= totalPages - 1 ? 'disabled' : ''} data-page="next">${t('historyNext')}</button>
+  container.innerHTML = `
+    <button ${currentPage === 0 ? 'disabled' : ''} data-page="prev">${t('historyPrev')}</button>
+    <span>${t('historyPageInfo', [String(currentPage + 1), String(totalPages)])}</span>
+    <button ${currentPage >= totalPages - 1 ? 'disabled' : ''} data-page="next">${t('historyNext')}</button>
   `;
 
-  pagEl.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
-    state.currentPage--;
-    reloadCurrent();
-  });
-  pagEl.querySelector('[data-page="next"]')?.addEventListener('click', () => {
-    state.currentPage++;
-    reloadCurrent();
-  });
+  container.querySelector('[data-page="prev"]')?.addEventListener('click', () => onPageChange(currentPage - 1));
+  container.querySelector('[data-page="next"]')?.addEventListener('click', () => onPageChange(currentPage + 1));
 }
 
-function renderCalendarNav(): void {
-  const navEl = document.getElementById('sqlite-calendar-nav');
-  if (!navEl) return;
-
+function renderCalendarNav(
+  container: HTMLElement,
+  selectedDate: string | null,
+  options: { searchQuery: string; activeTagFilter: string | null },
+  callbacks: {
+    onDateSelect: (d: string) => void;
+    onRangeSelect: (since: number, until: number) => void;
+    onClearFilters: () => void;
+  }
+): void {
   const now = new Date();
-  const currentMonth = state.selectedDate
-    ? new Date(state.selectedDate + 'T00:00:00')
+  const currentMonth = selectedDate
+    ? new Date(selectedDate + 'T00:00:00')
     : now;
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
-  // Determine if any filter is active
-  const hasActiveFilters = Boolean(state.searchQuery.trim()) || state.selectedDate != null || state.activeTagFilter != null;
+  const hasActiveFilters = Boolean(options.searchQuery.trim()) || selectedDate != null || options.activeTagFilter != null;
 
-  // Generate quick date buttons: today, yesterday, this week, and month days
-  navEl.innerHTML = `
+  container.innerHTML = `
     <div class="sqlite-calendar-quick">
       <button data-date="${formatDate(now)}">${t('historyToday')}</button>
       <button data-date="${formatDate(new Date(now.getTime() - 86400000))}">${t('historyYesterday')}</button>
@@ -776,68 +847,51 @@ function renderCalendarNav(): void {
   `;
 
   // Quick buttons
-  navEl.querySelectorAll('[data-date]').forEach(el => {
+  container.querySelectorAll('[data-date]').forEach(el => {
     el.addEventListener('click', () => {
       const date = (el as HTMLElement).dataset.date!;
       const range = (el as HTMLElement).dataset.range;
       if (range) {
         const d = new Date(date + 'T00:00:00');
         const since = d.getTime() - (Number(range) * 86400000);
-        state.selectedDate = null;
-        state.searchQuery = '';
-        state.currentPage = 0;
-        loadData({ since, until: d.getTime() + 86400000 - 1 });
+        callbacks.onRangeSelect(since, d.getTime() + 86400000 - 1);
       } else {
-        handleDateSelect(date);
+        callbacks.onDateSelect(date);
       }
     });
   });
 
   // Month nav
-  navEl.querySelector('[data-month-prev]')?.addEventListener('click', () => {
+  container.querySelector('[data-month-prev]')?.addEventListener('click', () => {
     const d = new Date(year, month - 1, 1);
-    state.selectedDate = formatDate(d);
-    renderCalendarNav();
-    handleDateSelect(state.selectedDate!);
+    callbacks.onDateSelect(formatDate(d));
   });
-  navEl.querySelector('[data-month-next]')?.addEventListener('click', () => {
+  container.querySelector('[data-month-next]')?.addEventListener('click', () => {
     const d = new Date(year, month + 1, 1);
-    state.selectedDate = formatDate(d);
-    renderCalendarNav();
-    handleDateSelect(state.selectedDate!);
+    callbacks.onDateSelect(formatDate(d));
   });
 
   // Clear all filters button
-  navEl.querySelector('#sqlite-clear-all-filters')?.addEventListener('click', () => {
-    state.searchQuery = '';
-    state.selectedDate = null;
-    state.activeTagFilter = null;
-    state.currentPage = 0;
-
-    // Also clear the search input
+  container.querySelector('#sqlite-clear-all-filters')?.addEventListener('click', () => {
     const searchInput = document.getElementById('sqlite-search-input') as HTMLInputElement | null;
     if (searchInput) searchInput.value = '';
-
-    // loadData() calls refresh() internally, which already re-renders the
-    // calendar nav — no need to call renderCalendarNav()/renderState() here too.
-    loadData({ page: 0 });
+    callbacks.onClearFilters();
   });
 
   // Render days of the month
-  const daysEl = document.getElementById('sqlite-calendar-days');
+  const daysEl = container.querySelector('#sqlite-calendar-days');
   if (!daysEl) return;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
 
   let daysHtml = '';
-  // Empty cells for days before the 1st
   for (let i = 0; i < firstDay; i++) {
     daysHtml += '<span class="day empty" aria-hidden="true"></span>';
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const isSelected = dateStr === state.selectedDate;
+    const isSelected = dateStr === selectedDate;
     const isToday = dateStr === formatDate(now);
     const dateLabel = `${year}${t('historyDateYear')}${month + 1}${t('historyDateMonth')}${d}${t('historyDateDay')}`;
     daysHtml += `<button type="button" class="day${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}"
@@ -847,7 +901,7 @@ function renderCalendarNav(): void {
 
   daysEl.querySelectorAll('.day:not(.empty)').forEach(el => {
     el.addEventListener('click', () => {
-      handleDateSelect((el as HTMLElement).dataset.date!);
+      callbacks.onDateSelect((el as HTMLElement).dataset.date!);
     });
   });
 }

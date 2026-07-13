@@ -14,7 +14,10 @@ import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 import { FallbackStorage } from './storageFallback.js';
 import { LruCache } from './lruCache.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
+import { NoopBackend } from './StorageBackend.js';
+import type { StorageBackend } from './StorageBackend.js';
+import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
+import { runMigrations, type MigrationEngine } from './migrations.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
@@ -32,7 +35,7 @@ const PREPARED_STMT_CACHE_MAX_SIZE = 50;
  * A single module-level instance (`engine`, below) is shared by all repos —
  * this mirrors the original sqlite.ts, which had this state at module scope.
  */
-class SqliteEngineContext {
+export class SqliteEngineContext {
   dbHandle: number | null = null;
   sqlite3: SQLiteAPI | null = null;
   initPromise: Promise<boolean> | null = null;
@@ -41,6 +44,8 @@ class SqliteEngineContext {
   lastInitError: string | null = null;
   fts5Available = false;
   cachedCompileOptions: string[] | null = null;
+
+  private _backend: StorageBackend | null = null;
 
   // OPFS Worker state
   opfsWorker: Worker | null = null;
@@ -254,82 +259,19 @@ class SqliteEngineContext {
       await this.sqlite3.exec(this.dbHandle, SCHEMA_SQL);
       await this.sqlite3.exec(this.dbHandle, AUDIT_LOG_SCHEMA_SQL);
 
-      // Schema migration: add obsidian_synced column if not present (Phase 6)
-      try {
-        await this.sqlite3.exec(this.dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
-      } catch {
-        // Column already exists — that's fine
-      }
-
-      // PBI-11: add gist_synced column for per-target sync flags
-      try {
-        await this.sqlite3.exec(this.dbHandle, 'ALTER TABLE browsing_logs ADD COLUMN gist_synced INTEGER DEFAULT 0');
-      } catch {
-        // Column already exists — that's fine
-      }
-      await this.sqlite3.exec(this.dbHandle, GIST_SYNCED_INDEX_SQL);
-
-      // FTS5 virtual table (optional — WASM build may not include FTS5)
-      this.fts5Available = false;
-      try {
-        await this.sqlite3.exec(this.dbHandle, FTS5_SQL);
-        this.fts5Available = true;
-
-        // I2: If base table has rows but FTS index is empty, rebuild the index.
-        // This handles the case where rows existed before FTS triggers were added.
-        try {
-          let baseCount = 0;
-          await this.execWithCache('SELECT COUNT(*) FROM browsing_logs', [], (row: SqliteValue[]) => { baseCount = Number(row[0]); });
-          let ftsCount = 0;
-          await this.execWithCache('SELECT COUNT(*) FROM browsing_logs_fts', [], (row: SqliteValue[]) => { ftsCount = Number(row[0]); });
-          if (baseCount > 0 && ftsCount === 0) {
-            console.info('SQLite IDB: FTS index empty, rebuilding...');
-            await this.sqlite3.exec(this.dbHandle, "INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')");
-            console.info('SQLite IDB: FTS index rebuild complete');
-          }
-        } catch (rebuildErr) {
-          console.warn('SQLite IDB: FTS rebuild check failed:', rebuildErr);
-        }
-      } catch (ftsErr) {
-        console.warn('SQLite: FTS5 not available, using LIKE-based search fallback', ftsErr);
-      }
-
-      // PBI-1: ALTER TABLE migration for new diagnostic metadata columns
-      const newColumns = [
-        'content TEXT',
-        'masked_count INTEGER',
-        'cleansed_reason TEXT',
-        'ai_provider TEXT',
-        'ai_model TEXT',
-        'ai_duration_ms INTEGER',
-        'obsidian_duration_ms INTEGER',
-        'sent_tokens INTEGER',
-        'received_tokens INTEGER',
-        'original_tokens INTEGER',
-        'cleansed_tokens INTEGER',
-        'page_bytes INTEGER',
-        'candidate_bytes INTEGER',
-        'original_bytes INTEGER',
-        'cleansed_bytes INTEGER',
-        'ai_summary_original_bytes INTEGER',
-        'ai_summary_cleansed_bytes INTEGER',
-        'extracted_sentences_bytes INTEGER',
-        'extracted_sentences_original_bytes INTEGER',
-        'fallback_triggered INTEGER DEFAULT 0',
-      ];
-
-      for (const colDef of newColumns) {
-        try {
-          await this.sqlite3.exec(this.dbHandle, `ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
-        } catch (err) {
-          // Column already exists — safe to ignore
-          // Log unexpected errors (disk full, corruption, etc.) so they are surfaced
-          const msg = err instanceof Error ? err.message : String(err);
-          if (!msg.includes('duplicate column name')) {
-            console.warn('SQLite: unexpected ALTER TABLE error:', msg);
-          }
-        }
-      }
+      // Run schema migrations through shared migration engine
+      const idbEngine: MigrationEngine = {
+        exec: async (sql) => {
+          await this.execWithCache(sql, []);
+        },
+        queryValue: async (sql) => {
+          let val: number | null = null;
+          await this.execWithCache(sql, [], (row: SqliteValue[]) => { val = Number(row[0]); });
+          return val;
+        },
+      };
+      const { fts5Available } = await runMigrations(idbEngine);
+      this.fts5Available = fts5Available;
 
       // Log available extensions
       const compileOptions: string[] = [];
@@ -476,9 +418,53 @@ class SqliteEngineContext {
     return 'none';
   }
 
+  async getBackend(): Promise<StorageBackend> {
+    if (this._backend) return this._backend;
+
+    // Try OPFS Worker first
+    try {
+      const { OpfsWorkerBackend } = await import('./OpfsWorkerBackend.js');
+      this._backend = new OpfsWorkerBackend(this);
+      return this._backend;
+    } catch {
+      // fall through
+    }
+
+    // Try IDB VFS
+    try {
+      if (!this.usingFallbackStorage) {
+        await this.init();
+        if (this.dbHandle) {
+          const { IdbVfsBackend } = await import('./IdbVfsBackend.js');
+          this._backend = new IdbVfsBackend(this);
+          return this._backend;
+        }
+      }
+    } catch {
+      // fall through
+    }
+
+    // Try Fallback
+    if (this.fallbackStorage) {
+      const { FallbackStorageAdapter } = await import('./FallbackStorageAdapter.js');
+      this._backend = new FallbackStorageAdapter(this.fallbackStorage);
+      return this._backend;
+    }
+
+    // Null Object — never throw
+    this._backend = new NoopBackend();
+    return this._backend;
+  }
+
+  /** Reset backend selection (used by resetForTesting / offscreen recreate). */
+  resetBackend(): void {
+    this._backend = null;
+  }
+
   /** Reset the module state for testing. */
   resetForTesting(): void {
     this.clearPreparedStmtCache();
+    this.resetBackend();
     this.dbHandle = null;
     this.sqlite3 = null;
     this.initPromise = null;

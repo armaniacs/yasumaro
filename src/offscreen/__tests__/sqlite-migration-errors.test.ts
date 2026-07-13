@@ -91,7 +91,7 @@ describe('ALTER TABLE migration error handling', () => {
     vi.unstubAllGlobals();
   });
 
-  it('logs a warning for non-duplicate-column ALTER TABLE errors', async () => {
+  it('re-throws non-duplicate-column ALTER TABLE errors through runMigrations()', async () => {
     // Make ALTER TABLE throw a "disk full" type error
     mockExec.mockImplementation(async (_db: unknown, sql: string) => {
       if (sql.includes('ALTER TABLE')) {
@@ -101,19 +101,22 @@ describe('ALTER TABLE migration error handling', () => {
     });
 
     const { init, _resetForTesting } = await import('../sqlite.js');
-    const { resetTestingState } = await import('../offscreen.js');
 
     // Reset module state
     _resetForTesting?.();
 
-    // Run init — it will fail OPFS Worker path, then attempt IDB path with mocked wa-sqlite
+    // Run init — it will fail OPFS Worker path, then attempt IDB path with mocked wa-sqlite.
+    // runMigrations() re-throws non-duplicate ALTER TABLE errors, which causes IDB path
+    // to fail and ultimately fall back to storage.
     const result = await init();
 
-    // Should have logged the ALTER TABLE error via console.warn
-    expect(warnSpy).toHaveBeenCalledWith(
+    // The error is re-thrown by runMigrations(), not logged via console.warn
+    expect(warnSpy).not.toHaveBeenCalledWith(
       expect.stringContaining('unexpected ALTER TABLE error'),
-      expect.stringContaining('disk I/O error')
+      expect.anything()
     );
+    // Init will fail to fully initialize SQLite and fall back to storage
+    expect(result).toBe(false);
   });
 
   it('does NOT log for duplicate column name errors (expected during migration)', async () => {

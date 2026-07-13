@@ -52,6 +52,12 @@ export {
   queryAuditLog,
 } from './auditLogRepo.js';
 
+export { NoopBackend } from './StorageBackend.js';
+export type { StorageBackend, StatusResult } from './StorageBackend.js';
+export { OpfsWorkerBackend } from './OpfsWorkerBackend.js';
+export { IdbVfsBackend } from './IdbVfsBackend.js';
+export { FallbackStorageAdapter } from './FallbackStorageAdapter.js';
+
 /** Reset the module state for testing. */
 export function _resetForTesting(): void {
   engine.resetForTesting();

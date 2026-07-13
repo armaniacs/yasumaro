@@ -150,7 +150,7 @@ async function loadRowsWithRetry(): Promise<BrowsingLogEntry[]> {
         return null; // Not ready yet — retry
       }
       const queryResult = await queryLogs({ limit: 10000 });
-      return queryResult?.rows ?? [];
+      return (queryResult && 'rows' in queryResult ? queryResult.rows : null) ?? [];
     },
     { label: 'tagCluster', maxAttempts: 4 }
   );

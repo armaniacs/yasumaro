@@ -6,7 +6,7 @@
  * Pattern: src/background/localAiClient.ts
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { addLog, LogType, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
 import { Mutex } from './Mutex.js';
@@ -35,6 +35,24 @@ interface OffscreenResponse {
   [key: string]: unknown;
 }
 
+type CallResult<T> = { success: true; data: T } | { success: false; error: string };
+
+function categorizeError(msg: string): string {
+  if (msg.includes('timed out') || msg.includes('Timeout')) {
+    return 'SQLite request timed out. The database may still be initializing.';
+  }
+  if (msg.includes('offscreen') || msg.includes('offscreenDocument')) {
+    return 'Database connection lost. Please reload the extension.';
+  }
+  if (msg.includes('quota') || msg.includes('QuotaExceededError')) {
+    return 'Storage quota exceeded. Some older records may have been removed.';
+  }
+  if (msg.includes('SQLITE_') || msg.includes('disk I/O')) {
+    return `Database error: ${msg}`;
+  }
+  return `Unexpected error: ${msg}`;
+}
+
 // ============================================================================
 // SqliteClient
 // ============================================================================
@@ -49,6 +67,9 @@ export class SqliteClient {
    * overlapping requests from multiple tabs would race each other.
    */
   private readonly requestQueue: Mutex;
+
+  /** Last categorized error from call(). Read by dashboard handlers. */
+  lastError: string | null = null;
 
   constructor() {
     this.creatingOffscreenPromise = null;
@@ -153,44 +174,65 @@ export class SqliteClient {
     type: string,
     payload: Record<string, unknown> = {},
     transform?: (res: OffscreenResponse) => T,
-  ): Promise<T | null> {
+  ): Promise<CallResult<T>> {
     try {
-      const response = await this.msgOffscreen(type, payload);
-      if (response?.success) {
-        recordSqliteSuccess();
-        return transform ? transform(response) : (response as unknown as T);
+      const res = await this.msgOffscreen(type, payload);
+      if (!res?.success) {
+        const msg = res?.error || `${type} failed`;
+        recordSqliteFailure(type, msg);
+        logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+        return { success: false, error: categorizeError(msg) };
       }
-      recordSqliteFailure(type, response?.error || 'unknown');
-      return null;
-    } catch (error: unknown) {
-      addLog(LogType.ERROR, `SqliteClient: ${type} failed`, { error: errorMessage(error) });
-      recordSqliteFailure(type, errorMessage(error));
-      return null;
+      recordSqliteSuccess();
+      return { success: true, data: transform ? transform(res) : (res as unknown as T) };
+    } catch (error) {
+      const msg = errorMessage(error);
+      recordSqliteFailure(type, msg);
+      logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+      return { success: false, error: categorizeError(msg) };
     }
   }
 
   async init(): Promise<boolean> {
-    return (await this.call<void>('SQLITE_INIT')) !== null;
+    const result = await this.call('SQLITE_INIT');
+    if (!result.success) {
+      this.lastError = result.error;
+      return false;
+    }
+    this.lastError = null;
+    return true;
   }
 
   async insert(record: BrowsingLogRecord): Promise<{ id: number } | null> {
-    return this.call<{ id: number }>(
+    const result = await this.call<{ id: number }>(
       'SQLITE_INSERT',
       record as unknown as Record<string, unknown>,
       (res) => ({ id: Number(res.id) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null> {
-    return this.call<{ count: number }>(
+    const result = await this.call<{ count: number }>(
       'SQLITE_INSERT_BATCH',
       { records: records as unknown as Record<string, unknown>[] },
       (res) => ({ count: Number(res.count) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async query<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<{ rows: T[]; total: number } | null> {
-    return this.call<{ rows: T[]; total: number }>(
+    const result = await this.call<{ rows: T[]; total: number }>(
       'SQLITE_QUERY',
       options as unknown as Record<string, unknown>,
       (res) => ({
@@ -198,10 +240,16 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async search(query: string, limit = 50, offset = 0): Promise<{ rows: SearchResult[]; total: number } | null> {
-    return this.call<{ rows: SearchResult[]; total: number }>(
+    const result = await this.call<{ rows: SearchResult[]; total: number }>(
       'SQLITE_SEARCH',
       { query, limit, offset },
       (res) => ({
@@ -209,42 +257,84 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async update(id: number, changes: Partial<Record<string, unknown>>): Promise<boolean> {
-    return (await this.call<void>('SQLITE_UPDATE', { id, ...changes })) !== null;
+    const result = await this.call('SQLITE_UPDATE', { id, ...changes });
+    if (!result.success) {
+      this.lastError = result.error;
+      return false;
+    }
+    this.lastError = null;
+    return true;
   }
 
   async delete(id: number): Promise<boolean> {
-    return (await this.call<void>('SQLITE_DELETE', { id })) !== null;
+    const result = await this.call('SQLITE_DELETE', { id });
+    if (!result.success) {
+      this.lastError = result.error;
+      return false;
+    }
+    this.lastError = null;
+    return true;
   }
 
   async toggleStar(id: number): Promise<{ is_starred: number } | null> {
-    return this.call<{ is_starred: number }>(
+    const result = await this.call<{ is_starred: number }>(
       'SQLITE_TOGGLE_STAR',
       { id },
       (res) => ({ is_starred: Number(res.is_starred) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async getCount(): Promise<number | null> {
-    return this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
+    const result = await this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async exportDb(): Promise<Uint8Array | null> {
-    return this.call<Uint8Array>(
+    const result = await this.call<Uint8Array>(
       'SQLITE_EXPORT',
       {},
       (res) => new Uint8Array(res.data as number[]),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async backupDb(): Promise<Uint8Array | null> {
-    return this.call<Uint8Array>(
+    const result = await this.call<Uint8Array>(
       'SQLITE_BACKUP',
       {},
       (res) => new Uint8Array(res.data as number[]),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async restoreDb(data: Uint8Array): Promise<boolean> {
@@ -258,7 +348,7 @@ export class SqliteClient {
   }
 
   async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | null> {
-    return this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' }>(
+    const result = await this.call<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' }>(
       'SQLITE_STATUS',
       {},
       (res) => ({
@@ -271,10 +361,22 @@ export class SqliteClient {
         compileOptionsSource: res.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
       }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async clearAll(): Promise<boolean> {
-    return (await this.call<void>('SQLITE_CLEAR_ALL')) !== null;
+    const result = await this.call('SQLITE_CLEAR_ALL');
+    if (!result.success) {
+      this.lastError = result.error;
+      return false;
+    }
+    this.lastError = null;
+    return true;
   }
 
   /** Run the OPFS feasibility spike (PBI-10) in the offscreen document. */
@@ -292,19 +394,31 @@ export class SqliteClient {
   }
 
   async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
-    return this.call<OpfsSpikeReport>(
+    const result = await this.call<OpfsSpikeReport>(
       'SQLITE_OPFS_SPIKE',
       {},
       (res) => res.report as OpfsSpikeReport,
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
-    return this.call<{ purged: number }>(
+    const result = await this.call<{ purged: number }>(
       'SQLITE_PURGE',
       { retentionDays, maxRecords },
       (res) => ({ purged: Number(res.purged || 0) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async purgeContent(
@@ -312,23 +426,35 @@ export class SqliteClient {
     maxRecords?: number,
     includeStarred?: boolean,
   ): Promise<{ purged: number } | null> {
-    return this.call<{ purged: number }>(
+    const result = await this.call<{ purged: number }>(
       'CONTENT_PURGE',
       { retentionDays, maxRecords, includeStarred },
       (res) => ({ purged: Number(res.purged || 0) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async insertAuditLog(record: { provider: string; url: string; created_at: number }): Promise<{ id: number } | null> {
-    return this.call<{ id: number }>(
+    const result = await this.call<{ id: number }>(
       'SQLITE_AUDIT_LOG_INSERT',
       record,
       (res) => ({ id: Number(res.id) }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 
   async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
-    return this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>(
+    const result = await this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>(
       'SQLITE_AUDIT_LOG_QUERY',
       options as unknown as Record<string, unknown>,
       (res) => ({
@@ -336,6 +462,12 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+    if (!result.success) {
+      this.lastError = result.error;
+      return null;
+    }
+    this.lastError = null;
+    return result.data;
   }
 }
 
