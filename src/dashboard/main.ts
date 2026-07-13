@@ -50,3 +50,6 @@ const sidebar = document.getElementById('sidebar');
 if (sidebar) {
   bootstrapper.wireSidebar(sidebar);
 }
+
+// Start with default panel
+bootstrapper.start('panel-general');
