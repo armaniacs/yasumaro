@@ -2,8 +2,7 @@ import { type AIService, type AISummaryOptions, type AISummaryResult, type AISum
 
 interface LocalAIServiceConfig {
   localAiClient: {
-    summarizeLocally(content: string): Promise<{ summary?: string }>;
-    getLocalAvailability(): Promise<boolean>;
+    summarize(content: string): Promise<{ summary?: string }>;
   };
   ensureOffscreenDocument?(): Promise<void>;
 }
@@ -15,7 +14,7 @@ export class LocalAIService implements AIService {
     if (this.config.ensureOffscreenDocument) {
       await this.config.ensureOffscreenDocument();
     }
-    const result = await this.config.localAiClient.summarizeLocally(content);
+    const result = await this.config.localAiClient.summarize(content);
     return { summary: result.summary ?? '', usedLocal: true };
   }
 

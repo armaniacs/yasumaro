@@ -5,6 +5,10 @@ import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { AIClient } from './aiClient.js';
+import { FallbackAIService } from './ai/FallbackAIService.js';
+import { RemoteAIService } from './ai/RemoteAIService.js';
+import { LocalAIService } from './ai/LocalAIService.js';
+import { LocalAIClient } from './localAiClient.js';
 import { SessionStore } from './sessionStore.js';
 
 export interface BackgroundServices {
@@ -27,8 +31,16 @@ export function createBackgroundServices(): BackgroundServices {
   const rateLimiter = new RateLimiter(sessionStore);
   const manualContentFetcher = new ManualContentFetcher();
   const aiClient = new AIClient();
+  const localClient = new LocalAIClient();
+  const aiService = new FallbackAIService({
+    local: new LocalAIService({
+      localAiClient: localClient,
+      ensureOffscreenDocument: () => localClient.ensureOffscreenDocument(),
+    }),
+    remote: new RemoteAIService({ aiClient }),
+  });
 
-  const recordingLogic = new RecordingLogic(obsidian, aiClient, undefined, sqliteClient);
+  const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 
   return {
     obsidian,
