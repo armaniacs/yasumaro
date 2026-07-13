@@ -9,12 +9,10 @@
 
 import { describe, it, expect, vi, beforeEach, mocked } from 'vitest';
 import {
-    resetDashboardElements,
     loadGeneralSettings,
     handleSaveOnly,
     handleTestObsidian,
     handleTestAi,
-    initSidebarNav,
     handleManualLocalMarkdownExport,
     handleExportLocalMarkdown,
     handleHistoryExportLocalMarkdown,
@@ -265,7 +263,6 @@ async function mocked(modulePath: string) {
 describe('loadGeneralSettings', () => {
     beforeEach(() => {
         buildDom();
-        resetDashboardElements();
         vi.clearAllMocks();
         lastSavedSettings = null;
         getSavedUrlEntriesCallCount = 0;
@@ -294,7 +291,6 @@ describe('loadGeneralSettings', () => {
 describe('handleSaveOnly', () => {
     beforeEach(() => {
         buildDom();
-        resetDashboardElements();
         vi.clearAllMocks();
         lastSavedSettings = null;
         getSavedUrlEntriesCallCount = 0;
@@ -315,7 +311,6 @@ describe('handleSaveOnly', () => {
 
     it('returns early when statusDiv is missing', async () => {
         document.getElementById('status')!.remove();
-        resetDashboardElements();
         lastSavedSettings = null;
         await handleSaveOnly();
         expect(lastSavedSettings).toBeNull();
@@ -333,7 +328,6 @@ describe('handleSaveOnly', () => {
 describe('handleTestObsidian', () => {
     beforeEach(() => {
         buildDom();
-        resetDashboardElements();
         vi.clearAllMocks();
         lastSavedSettings = null;
         getSavedUrlEntriesCallCount = 0;
@@ -378,7 +372,6 @@ describe('handleTestObsidian', () => {
 
     it('returns early when button missing', async () => {
         document.getElementById('testObsidianBtn')!.remove();
-        resetDashboardElements();
         await expect(handleTestObsidian()).resolves.toBeUndefined();
     });
 });
@@ -386,7 +379,6 @@ describe('handleTestObsidian', () => {
 describe('handleTestAi', () => {
     beforeEach(() => {
         buildDom();
-        resetDashboardElements();
         vi.clearAllMocks();
         lastSavedSettings = null;
         getSavedUrlEntriesCallCount = 0;
@@ -431,78 +423,15 @@ describe('handleTestAi', () => {
 
     it('returns early when button missing', async () => {
         document.getElementById('testAiBtn')!.remove();
-        resetDashboardElements();
         await expect(handleTestAi()).resolves.toBeUndefined();
     });
 });
 
-describe('initSidebarNav – AI Summary Cleansing panel', () => {
-    beforeEach(() => {
-        document.querySelectorAll('.sidebar-nav-btn').forEach(el => el.remove());
-        document.querySelectorAll('.panel').forEach(el => el.remove());
-        document.querySelectorAll('#cleansingStatsSummary').forEach(el => el.remove());
-        document.querySelectorAll('#cleansingFunnelChart').forEach(el => el.remove());
 
-        const btn = document.createElement('button');
-        btn.className = 'sidebar-nav-btn';
-        btn.setAttribute('data-panel', 'panel-ai-summary-cleansing');
-        document.body.appendChild(btn);
-
-        const panel = document.createElement('div');
-        panel.id = 'panel-ai-summary-cleansing';
-        panel.className = 'panel';
-        document.body.appendChild(panel);
-
-        const summary = document.createElement('div');
-        summary.id = 'cleansingStatsSummary';
-        document.body.appendChild(summary);
-
-        const chart = document.createElement('canvas');
-        chart.id = 'cleansingFunnelChart';
-        document.body.appendChild(chart);
-
-        resetDashboardElements();
-        vi.clearAllMocks();
-        lastSavedSettings = null;
-        getSavedUrlEntriesCallCount = 0;
-    });
-
-    it('hides chart when count is 0', async () => {
-        const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 0; });
-        initSidebarNav();
-        document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
-        await new Promise(r => setTimeout(r, 10));
-        expect((document.getElementById('cleansingFunnelChart') as HTMLCanvasElement).style.display).toBe('none');
-        raf.mockRestore();
-    });
-
-    it('shows and renders chart when count > 0', async () => {
-        const { computeCleansingStats } = await import('../cleansingStatsView.js');
-        vi.mocked(computeCleansingStats).mockReturnValueOnce({ count: 5 });
-
-        const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 0; });
-        initSidebarNav();
-        document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
-        await new Promise(r => setTimeout(r, 10));
-        expect((document.getElementById('cleansingFunnelChart') as HTMLCanvasElement).style.display).toBe('block');
-        raf.mockRestore();
-    });
-
-    it('handles missing summary element gracefully', async () => {
-        document.getElementById('cleansingStatsSummary')!.remove();
-        const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 0; });
-        initSidebarNav();
-        document.querySelector<HTMLButtonElement>('[data-panel="panel-ai-summary-cleansing"]')!.click();
-        await new Promise(r => setTimeout(r, 10));
-        expect(() => {}).not.toThrow();
-        raf.mockRestore();
-    });
-});
 
 describe('exportLocalMarkdownCore behavior parity (M15)', () => {
     beforeEach(() => {
         buildDom();
-        resetDashboardElements();
         vi.clearAllMocks();
         mockQueryLogs.mockReset();
         mockDownload.mockReset().mockResolvedValue(undefined);

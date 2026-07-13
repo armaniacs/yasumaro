@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  resetDashboardElements,
   loadGeneralSettings,
 } from '../dashboard.js';
 
@@ -176,7 +175,6 @@ async function mocked(modulePath: string) {
 describe('Dashboard — obsidianEnabledInput', () => {
   beforeEach(() => {
     buildDom();
-    resetDashboardElements();
     vi.clearAllMocks();
   });
 

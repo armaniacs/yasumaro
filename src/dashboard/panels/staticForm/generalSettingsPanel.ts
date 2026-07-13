@@ -4,7 +4,7 @@ import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../../../
 import { getMessage } from '../../../popup/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
-  loadGeneralSettings, getDashboardElements,
+  loadGeneralSettings,
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
   handlePurgeNow, handleContentPurgeNow, handleManualLocalMarkdownExport,
   handleGenerateWeeklySummary, handleGenerateMonthlySummary,
@@ -60,20 +60,21 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       }
 
       const refreshMultiVisibility = (): void => {
-        const el = getDashboardElements();
+        const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
+        const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
+        const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
         const selected = [
-          el.aiProviderSelect?.value ?? '',
-          el.aiProviderPriority2Select?.value ?? '',
-          el.aiProviderPriority3Select?.value ?? ''
+          aiProviderSelect?.value ?? '',
+          aiProviderPriority2Select?.value ?? '',
+          aiProviderPriority3Select?.value ?? ''
         ];
         updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
         updateProviderSettingsLayout(selected);
       };
 
-      const el = getDashboardElements();
-      el.aiProviderSelect?.addEventListener('change', refreshMultiVisibility);
-      el.aiProviderPriority2Select?.addEventListener('change', refreshMultiVisibility);
-      el.aiProviderPriority3Select?.addEventListener('change', refreshMultiVisibility);
+      document.getElementById('aiProvider')?.addEventListener('change', refreshMultiVisibility);
+      document.getElementById('aiProviderPriority2')?.addEventListener('change', refreshMultiVisibility);
+      document.getElementById('aiProviderPriority3')?.addEventListener('change', refreshMultiVisibility);
       hideAllProviderSettings();
       refreshMultiVisibility();
 
@@ -114,8 +115,10 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       bindTopButton('testLocalMarkdownBtnTop', handleTestLocalMarkdown);
       bindTopButton('localExportManualBtn', handleManualLocalMarkdownExport);
 
-      const el2 = getDashboardElements();
-      setupAllFieldValidations(el2.protocolInput, el2.portInput);
+      setupAllFieldValidations(
+        document.getElementById('protocol') as HTMLInputElement | null,
+        document.getElementById('port') as HTMLInputElement | null,
+      );
 
       const openModelsDevDialogBtn = container.querySelector('#openModelsDevDialogBtn') as HTMLButtonElement;
       const selectedProviderInfoDiv = container.querySelector('#selectedProviderInfo') as HTMLElement;
@@ -128,9 +131,10 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
             onSave: async (providerId, baseUrl, apiKey, model) => {
               selectedProviderInfoDiv?.classList.remove('hidden');
               providerInfoDisplayDiv!.textContent = `${providerId} (${baseUrl})${model ? ` - ${model}` : ''}`;
-              const el3 = getDashboardElements();
-              if (el3.providerApiKeyInput) el3.providerApiKeyInput.value = apiKey;
-              if (el3.providerModelInput) el3.providerModelInput.value = model;
+              const providerApiKeyInput = document.getElementById('providerApiKey') as HTMLInputElement | null;
+              const providerModelInput = document.getElementById('providerModel') as HTMLInputElement | null;
+              if (providerApiKeyInput) providerApiKeyInput.value = apiKey;
+              if (providerModelInput) providerModelInput.value = model;
               const settings2 = await getSettings();
               settings2[StorageKeys.PROVIDER_TYPE] = providerId;
               settings2[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
@@ -145,34 +149,33 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       });
 
       container.querySelector('#lmStudioPresetBtn')?.addEventListener('click', () => {
-        const el3 = getDashboardElements();
-        if (el3.providerBaseUrlInput) el3.providerBaseUrlInput.value = 'http://localhost:1234/v1';
-        if (el3.statusDiv) {
-          el3.statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
-          el3.statusDiv.className = 'status-success';
+        const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
+        const statusDiv = document.getElementById('status') as HTMLElement | null;
+        if (providerBaseUrlInput) providerBaseUrlInput.value = 'http://localhost:1234/v1';
+        if (statusDiv) {
+          statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
+          statusDiv.className = 'status-success';
           syncStatusToTop();
         }
       });
 
       container.querySelector('#ollamaPresetBtn')?.addEventListener('click', () => {
-        const el3 = getDashboardElements();
-        if (el3.providerBaseUrlInput) el3.providerBaseUrlInput.value = 'http://localhost:11434/v1';
-        if (el3.statusDiv) {
-          el3.statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
-          el3.statusDiv.className = 'status-success';
+        const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
+        const statusDiv = document.getElementById('status') as HTMLElement | null;
+        if (providerBaseUrlInput) providerBaseUrlInput.value = 'http://localhost:11434/v1';
+        if (statusDiv) {
+          statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
+          statusDiv.className = 'status-success';
           syncStatusToTop();
         }
       });
 
-      {
-        const el3 = getDashboardElements();
-        el3.saveBtn?.addEventListener('click', handleSaveOnly);
-        el3.testObsidianBtn?.addEventListener('click', handleTestObsidian);
-        el3.testAiBtn?.addEventListener('click', handleTestAi);
-        container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', handleTestLocalMarkdown);
-        el3.purgeNowBtn?.addEventListener('click', handlePurgeNow);
-        el3.contentPurgeNowBtn?.addEventListener('click', handleContentPurgeNow);
-      }
+      document.getElementById('save')?.addEventListener('click', handleSaveOnly);
+      document.getElementById('testObsidianBtn')?.addEventListener('click', handleTestObsidian);
+      document.getElementById('testAiBtn')?.addEventListener('click', handleTestAi);
+      container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', handleTestLocalMarkdown);
+      document.getElementById('purgeNowBtn')?.addEventListener('click', handlePurgeNow);
+      document.getElementById('contentPurgeNowBtn')?.addEventListener('click', handleContentPurgeNow);
     },
     async refresh() {
       const container = panelContainer;
