@@ -921,6 +921,23 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
         result = await handleAuditLogQuery(payload as AuditLogQueryPayload);
         break;
       }
+      // WARNING: SQL_EXEC / SQL_QUERY accept raw SQL strings.
+      // Use ONLY for schema migrations (MigrationEngine). Never expose to user input.
+      // Regular CRUD operations MUST use typed operation messages (INSERT, QUERY, etc.).
+      case 'SQL_EXEC': {
+        const { sql, params = [] } = payload as { sql: string; params: SqliteValue[] };
+        await initSqlite();
+        await engine!.exec(sql, params);
+        result = { changes: 0 };
+        break;
+      }
+      case 'SQL_QUERY': {
+        const { sql, params = [] } = payload as { sql: string; params: SqliteValue[] };
+        await initSqlite();
+        const rows = await engine!.query(sql, params);
+        result = { rows };
+        break;
+      }
       default:
         return { id, success: false, error: `Unknown worker type: ${type}` };
     }
