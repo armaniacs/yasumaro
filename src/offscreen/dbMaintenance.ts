@@ -38,7 +38,7 @@ export async function purgeContent(
   includeStarred?: boolean | null,
 ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
-  return backend.purgeContent(retentionDays, maxRecords, includeStarred);
+  return backend.purgeContent(retentionDays ?? undefined, maxRecords ?? undefined, includeStarred ?? undefined);
 }
 
 /**
