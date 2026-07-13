@@ -118,31 +118,6 @@ export interface ConsentStateChangedHandlerDeps {
   updateConsentBadge: () => Promise<void>;
 }
 
-export interface DashboardSqliteHandlerDeps {
-  sqliteClient: {
-    query: (params: Record<string, unknown>) => Promise<{ rows: unknown[]; total: number } | null>;
-    search: (query: string, limit: number, offset: number) => Promise<{ rows: unknown[]; total: number } | null>;
-    toggleStar: (id: number) => Promise<unknown>;
-    delete: (id: number) => Promise<boolean>;
-    update: (id: number, changes: Record<string, unknown>) => Promise<boolean>;
-    getCount: () => Promise<number | null>;
-    clearAll: () => Promise<boolean>;
-    insert: (record: Record<string, unknown>) => Promise<{ id: number } | null>;
-    restoreDb: (data: Uint8Array) => Promise<boolean>;
-    getStatus: () => Promise<Record<string, unknown> | null>;
-    runOpfsSpike: () => Promise<Record<string, unknown> | null>;
-    purgeOldRecords: (days?: number, max?: number) => Promise<{ purged: number } | null>;
-    purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<{ purged: number } | null>;
-    backupDb: () => Promise<Uint8Array | null>;
-    lastError: string | null;
-  };
-  runMigration: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>;
-  getConfirmToken: () => Promise<string>;
-  runBackfill: () => Promise<{ updated: number; total: number }>;
-  runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
-  formatEntriesToMarkdown: (entries: unknown[]) => string | null;
-}
-
 // ============================================================================
 // Factory functions
 // ============================================================================

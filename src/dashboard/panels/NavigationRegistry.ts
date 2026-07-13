@@ -49,7 +49,9 @@ export class NavigationRegistry {
     (panel as { onActivate?(init?: Record<string, unknown>): void }).onActivate?.(init);
 
     if (panel.category === 'async-data') {
-      void (panel as { loadData(): Promise<void> }).loadData();
+      (panel as { loadData(): Promise<void> }).loadData().catch((err: unknown) => {
+        console.error(`[NavigationRegistry] loadData failed for panel "${panelId}":`, err);
+      });
     }
   }
 
