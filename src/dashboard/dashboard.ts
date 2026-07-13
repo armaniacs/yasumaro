@@ -291,7 +291,7 @@ export function getDashboardElements() {
  * Sync status display between top and bottom status divs.
  * Copies the content and class from the bottom status div to the top status div.
  */
-function syncStatusToTop(): void {
+export function syncStatusToTop(): void {
   const el = getDashboardElements();
   if (el.statusTopDiv && el.statusDiv) {
     el.statusTopDiv.innerHTML = el.statusDiv.innerHTML;

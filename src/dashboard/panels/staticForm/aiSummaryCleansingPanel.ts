@@ -9,10 +9,12 @@ import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../../cleansingStatsView.js';
 
 export function createAiSummaryCleansingPanel(): StaticFormPanel {
+  let panelContainer: HTMLElement | null = null;
   return {
     id: 'panel-ai-summary-cleansing',
     category: 'static-form',
     async mount(container) {
+      panelContainer = container;
       const aiSummaryCleansingSettings = await getAiSummaryCleansingSettings();
       applyAiSummaryCleansingSettingsToUI(aiSummaryCleansingSettings);
       setupAiSummaryCleansingEventListeners();
@@ -41,7 +43,7 @@ export function createAiSummaryCleansingPanel(): StaticFormPanel {
       }
     },
     async refresh() {
-      const container = document.getElementById('panel-ai-summary-cleansing');
+      const container = panelContainer;
       if (container) {
         const settings = await getAiSummaryCleansingSettings();
         applyAiSummaryCleansingSettingsToUI(settings);

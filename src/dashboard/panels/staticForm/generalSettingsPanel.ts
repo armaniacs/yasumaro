@@ -8,7 +8,7 @@ import {
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
   handlePurgeNow, handleContentPurgeNow, handleManualLocalMarkdownExport,
   handleGenerateWeeklySummary, handleGenerateMonthlySummary,
-  getAiProviderElements,
+  getAiProviderElements, syncStatusToTop,
 } from '../../dashboard.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
 import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../../popup/settings/aiProvider.js';
@@ -17,10 +17,12 @@ import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
 
 export function createGeneralSettingsPanel(): StaticFormPanel {
+  let panelContainer: HTMLElement | null = null;
   return {
     id: 'panel-general',
     category: 'static-form',
     async mount(container) {
+      panelContainer = container;
       const settings = await getSettings();
       loadSettingsToInputs(container, settings);
       await loadGeneralSettings();
@@ -148,6 +150,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
         if (el3.statusDiv) {
           el3.statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
           el3.statusDiv.className = 'status-success';
+          syncStatusToTop();
         }
       });
 
@@ -157,6 +160,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
         if (el3.statusDiv) {
           el3.statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
           el3.statusDiv.className = 'status-success';
+          syncStatusToTop();
         }
       });
 
@@ -171,7 +175,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       }
     },
     async refresh() {
-      const container = document.getElementById('panel-general');
+      const container = panelContainer;
       if (container) {
         const settings = await getSettings();
         loadSettingsToInputs(container, settings);
