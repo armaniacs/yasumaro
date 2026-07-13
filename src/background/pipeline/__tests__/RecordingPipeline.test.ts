@@ -109,13 +109,9 @@ const mockSettings = {
 
 function makeAiClient() {
   return {
-    getLocalAvailability: vi.fn<() => Promise<string>>().mockResolvedValue('unavailable'),
-    summarizeLocally: vi.fn(),
+    getSupportedModes: vi.fn<() => string[]>().mockReturnValue(['full_pipeline']),
     generateSummary: vi.fn<() => Promise<any>>().mockResolvedValue({
-      success: true,
       summary: 'AI summary',
-      sentTokens: 100,
-      receivedTokens: 50,
     }),
   };
 }

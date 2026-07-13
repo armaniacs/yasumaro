@@ -24,10 +24,6 @@ function makePrivacyResult(overrides: Partial<PrivacyPipelineResult> = {}): Priv
     summary: 'AI generated summary',
     tags: ['tech', 'test'],
     maskedCount: 3,
-    aiProvider: 'openai',
-    aiModel: 'gpt-4',
-    sentTokens: 150,
-    receivedTokens: 50,
     originalTokens: 200,
     cleansedTokens: 180,
     ...overrides,
@@ -209,12 +205,12 @@ describe('mapToBrowsingLogRecord', () => {
       expect(record.cleansed_reason).toBe('hard');
     });
 
-    it('maps ai_provider and ai_model from privacyResult', () => {
+    it('ai_provider and ai_model are always null (not set by PrivacyPipeline anymore)', () => {
       const context = makeContext({ privacyResult: makePrivacyResult() });
       const record = mapToBrowsingLogRecord(context);
 
-      expect(record.ai_provider).toBe('openai');
-      expect(record.ai_model).toBe('gpt-4');
+      expect(record.ai_provider).toBeNull();
+      expect(record.ai_model).toBeNull();
     });
 
     it('maps ai_duration_ms and obsidian_duration_ms', () => {
@@ -232,12 +228,12 @@ describe('mapToBrowsingLogRecord', () => {
       expect(record.ai_duration_ms).toBeNull();
     });
 
-    it('maps token fields from privacyResult', () => {
+    it('maps token fields from privacyResult (sent/received always null)', () => {
       const context = makeContext({ privacyResult: makePrivacyResult() });
       const record = mapToBrowsingLogRecord(context);
 
-      expect(record.sent_tokens).toBe(150);
-      expect(record.received_tokens).toBe(50);
+      expect(record.sent_tokens).toBeNull();
+      expect(record.received_tokens).toBeNull();
       expect(record.original_tokens).toBe(200);
       expect(record.cleansed_tokens).toBe(180);
     });

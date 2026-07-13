@@ -4,7 +4,7 @@
  * 修正された問題:
  *   aiClient が null として PrivacyPipeline に渡されていたため
  *   AI要約が常に "Summary not available." になっていた。
- *   context.aiClient を使用するよう修正済み。
+ *   context.aiService を使用するよう修正済み。
  */
 
 import { vi } from 'vitest';;
@@ -49,30 +49,28 @@ describe('processPrivacyPipelineStep', () => {
     });
   });
 
-  describe('aiClient の受け渡し（回帰テスト: null問題）', () => {
-    it('context.aiClient を PrivacyPipeline コンストラクタに渡す', async () => {
-      const mockAiClient = {
-        getLocalAvailability: vi.fn(),
-        summarizeLocally: vi.fn(),
+  describe('aiService の受け渡し（回帰テスト: null問題）', () => {
+    it('context.aiService を PrivacyPipeline コンストラクタに渡す', async () => {
+      const mockAiService = {
+        getSupportedModes: vi.fn(),
         generateSummary: vi.fn(),
       };
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 
-      const context = makeContext({ aiClient: mockAiClient as any });
+      const context = makeContext({ aiService: mockAiService as any });
       await processPrivacyPipelineStep(context);
 
-      // PrivacyPipeline が aiClient を受け取っていることを確認
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
         context.settings,
-        mockAiClient,
-        expect.any(Object)  // sanitizers
+        mockAiService,
+        expect.any(Object)
       );
     });
 
-    it('aiClient が null の場合も PrivacyPipeline に null を渡す（クラッシュしない）', async () => {
+    it('aiService が null の場合も PrivacyPipeline に null を渡す（クラッシュしない）', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
-      const context = makeContext({ aiClient: null });
+      const context = makeContext({ aiService: null });
       await expect(processPrivacyPipelineStep(context)).resolves.toBeDefined();
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
@@ -82,10 +80,10 @@ describe('processPrivacyPipelineStep', () => {
       );
     });
 
-    it('aiClient が undefined の場合も PrivacyPipeline に undefined を渡す', async () => {
+    it('aiService が undefined の場合も PrivacyPipeline に undefined を渡す', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
-      const context = makeContext({ aiClient: undefined });
+      const context = makeContext({ aiService: undefined });
       await expect(processPrivacyPipelineStep(context)).resolves.toBeDefined();
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
@@ -102,9 +100,9 @@ describe('processPrivacyPipelineStep', () => {
         summary: 'Generated summary',
         maskedCount: 2,
       });
-      const mockAiClient = { generateSummary: vi.fn() };
+      const mockAiService = { generateSummary: vi.fn(), getSupportedModes: vi.fn() };
 
-      const context = makeContext({ aiClient: mockAiClient as any });
+      const context = makeContext({ aiService: mockAiService as any });
       const result = await processPrivacyPipelineStep(context);
 
       expect(result.privacyResult?.summary).toBe('Generated summary');
@@ -114,7 +112,7 @@ describe('processPrivacyPipelineStep', () => {
     it('summary が返されない場合は "Summary not available." にフォールバック', async () => {
       mockProcess.mockResolvedValue({ maskedCount: 0 });
 
-      const context = makeContext({ aiClient: null });
+      const context = makeContext({ aiService: null });
       const result = await processPrivacyPipelineStep(context);
 
       expect(result.sanitizedSummary).toBe('Summary not available.');
@@ -130,10 +128,10 @@ describe('processPrivacyPipelineStep', () => {
         maskedCount: 1,
         maskedItems: [{ type: 'email' }],
       });
-      const mockAiClient = { generateSummary: vi.fn() };
+      const mockAiService = { generateSummary: vi.fn(), getSupportedModes: vi.fn() };
 
       const context = makeContext({
-        aiClient: mockAiClient as any,
+        aiService: mockAiService as any,
         data: {
           title: 'Test',
           url: 'https://example.com',
@@ -160,7 +158,7 @@ describe('processPrivacyPipelineStep', () => {
       });
 
       const context = makeContext({
-        aiClient: null,
+        aiService: null,
         data: {
           title: 'Test',
           url: 'https://example.com',
@@ -181,7 +179,7 @@ describe('processPrivacyPipelineStep', () => {
       mockProcess.mockRejectedValue(new Error('AI service unavailable'));
 
       const context = makeContext({
-        aiClient: null,
+        aiService: null,
         data: {
           title: 'Test',
           url: 'https://example.com',
@@ -199,7 +197,7 @@ describe('processPrivacyPipelineStep', () => {
     it('previewOnly でない時のエラーは再スロー', async () => {
       mockProcess.mockRejectedValue(new Error('Network error'));
 
-      const context = makeContext({ aiClient: null });
+      const context = makeContext({ aiService: null });
 
       await expect(processPrivacyPipelineStep(context)).rejects.toThrow('Network error');
     });

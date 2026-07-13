@@ -51,12 +51,8 @@ export interface PrivacyPipelineResult {
   maskedCount?: number;
   maskedItems?: (string | MaskedItem)[];
   tags?: string[];
-  sentTokens?: number;
-  receivedTokens?: number;
   originalTokens?: number;
   cleansedTokens?: number;
-  aiProvider?: string;
-  aiModel?: string;
 }
 
 export class PrivacyPipeline {
