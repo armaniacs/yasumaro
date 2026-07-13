@@ -54,7 +54,8 @@ const ALLOWED_ORDER_COLUMNS = [
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 
-import { SCHEMA_SQL, GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from './schema.js';
+import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from './schema.js';
+import { runMigrations, type MigrationEngine } from './migrations.js';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -89,83 +90,18 @@ async function initSqliteInner(): Promise<void> {
   await engine.exec(SCHEMA_SQL);
   await engine.exec(AUDIT_LOG_SCHEMA_SQL);
 
-  // Schema migration: add obsidian_synced column if not present
-  try {
-    await engine.exec('ALTER TABLE browsing_logs ADD COLUMN obsidian_synced INTEGER DEFAULT 0');
-  } catch {
-    // Column already exists
-  }
-
-  // PBI-11: add gist_synced column for per-target sync flags
-  try {
-    await engine.exec('ALTER TABLE browsing_logs ADD COLUMN gist_synced INTEGER DEFAULT 0');
-  } catch {
-    // Column already exists
-  }
-  await engine.exec(GIST_SYNCED_INDEX_SQL);
-
-  // Try to enable FTS5 — execute each DDL statement individually because
-  // @subframe7536/sqlite-wasm's run() does not support multi-statement SQL.
-  fts5Available = false;
-  try {
-    for (const stmt of FTS5_STATEMENTS) {
-      await engine.exec(stmt);
-    }
-    fts5Available = true;
-
-    // I2: If base table has rows but FTS index is empty, rebuild the index.
-    // This handles the case where rows existed before FTS triggers were added.
-    try {
-      const baseCount = Number(await engine.queryValue('SELECT COUNT(*) AS c FROM browsing_logs') ?? 0);
-      const ftsCount = Number(await engine.queryValue('SELECT COUNT(*) AS c FROM browsing_logs_fts') ?? 0);
-      if (baseCount > 0 && ftsCount === 0) {
-        console.info('OPFS Worker: FTS index empty, rebuilding...');
-        await engine.exec("INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')");
-        console.info('OPFS Worker: FTS index rebuild complete');
-      }
-    } catch (rebuildErr) {
-      console.warn('OPFS Worker: FTS rebuild check failed:', errorMessage(rebuildErr));
-    }
-  } catch (err) {
-    console.warn('OPFS Worker: FTS5 unavailable, falling back to LIKE search:', errorMessage(err));
-  }
-
-  // PBI-1: ALTER TABLE migration for new columns
-  const newColumns = [
-    'content TEXT',
-    'masked_count INTEGER',
-    'cleansed_reason TEXT',
-    'ai_provider TEXT',
-    'ai_model TEXT',
-    'ai_duration_ms INTEGER',
-    'obsidian_duration_ms INTEGER',
-    'sent_tokens INTEGER',
-    'received_tokens INTEGER',
-    'original_tokens INTEGER',
-    'cleansed_tokens INTEGER',
-    'page_bytes INTEGER',
-    'candidate_bytes INTEGER',
-    'original_bytes INTEGER',
-    'cleansed_bytes INTEGER',
-    'ai_summary_original_bytes INTEGER',
-    'ai_summary_cleansed_bytes INTEGER',
-    'extracted_sentences_bytes INTEGER',
-    'extracted_sentences_original_bytes INTEGER',
-    'fallback_triggered INTEGER DEFAULT 0',
-  ];
-
-  for (const colDef of newColumns) {
-    try {
-      await sqlExec(`ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
-    } catch (err) {
-      // Column already exists — ignore
-      // Log unexpected errors (disk full, corruption, etc.) so they are surfaced
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('duplicate column name')) {
-        console.warn('OPFS Worker: unexpected ALTER TABLE error:', msg);
-      }
-    }
-  }
+  // Run schema migrations through shared migration engine
+  const workerEngine: MigrationEngine = {
+    exec: async (sql) => {
+      await engine!.exec(sql);
+    },
+    queryValue: async (sql) => {
+      const v = await engine!.queryValue(sql);
+      return v !== undefined ? Number(v) : null;
+    },
+  };
+  const { fts5Available: fts } = await runMigrations(workerEngine);
+  fts5Available = fts;
 
   // Cache compile options for diagnostics
   const opts = await engine.query('PRAGMA compile_options');
