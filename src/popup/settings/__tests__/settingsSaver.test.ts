@@ -14,7 +14,6 @@ import {
 } from '../settingsSaver.js';
 
 import { getSettings, saveSettingsWithAllowedUrls } from '../../../utils/storage.js';
-import { extractSettingsFromInputs } from '../../settingsUiHelper.js';
 import { clearAllFieldErrors, validateAllFields } from '../fieldValidation.js';
 
 import { STATUS_COLORS } from '../../../constants/appConstants.js';
@@ -23,10 +22,6 @@ import { STATUS_COLORS } from '../../../constants/appConstants.js';
 vi.mock('../../../utils/storage.js', () => ({
     getSettings: vi.fn(),
     saveSettingsWithAllowedUrls: vi.fn(),
-}));
-
-vi.mock('../../settingsUiHelper.js', () => ({
-    extractSettingsFromInputs: vi.fn(),
 }));
 
 vi.mock('../../i18n.js', () => ({
@@ -47,51 +42,47 @@ vi.mock('../fieldValidation.js', () => ({
     validateAllFields: vi.fn(() => true),
 }));
 
-vi.mock('../settingsUiHelper.js', () => ({
-    extractSettingsFromInputs: vi.fn(),
-}));
-
-vi.mock('../i18n.js', () => ({
-    getMessage: vi.fn((key: string) => {
-        const messages: Record<string, string> = {
-            testingConnection: 'Testing connection...',
-            connectionSuccess: 'Success!',
-            acceptCertificate: 'Click here to accept self-signed certificate',
-            errorProtocol: 'Error: Protocol must be "http" or "https".',
-            saveError: 'Save error',
-        };
-        return messages[key] || key;
-    }),
-}));
-
-vi.mock('./fieldValidation.js', () => ({
-    clearAllFieldErrors: vi.fn(),
-    validateAllFields: vi.fn(() => true),
-}));
-
 function createMockInputs() {
-    const protocolInput = document.createElement('input');
-    protocolInput.value = 'https';
-    const portInput = document.createElement('input');
-    portInput.value = '27123';
-    const minVisitDurationInput = document.createElement('input');
-    minVisitDurationInput.value = '5';
-    const minScrollDepthInput = document.createElement('input');
-    minScrollDepthInput.value = '50';
-    const maxTokensInput = document.createElement('input');
-    maxTokensInput.value = '1000';
-    return {
-        protocolInput,
-        portInput,
-        minVisitDurationInput,
-        minScrollDepthInput,
-        maxTokensInput,
-    };
+  const panel = document.createElement('div');
+  panel.id = 'generalPanel';
+  const protocolInput = document.createElement('input');
+  protocolInput.value = 'https';
+  protocolInput.setAttribute('data-storage-key', 'obsidian_protocol');
+  const portInput = document.createElement('input');
+  portInput.value = '27123';
+  portInput.setAttribute('data-storage-key', 'obsidian_port');
+  const minVisitDurationInput = document.createElement('input');
+  minVisitDurationInput.value = '5';
+  minVisitDurationInput.setAttribute('data-storage-key', 'min_visit_duration');
+  minVisitDurationInput.type = 'number';
+  const minScrollDepthInput = document.createElement('input');
+  minScrollDepthInput.value = '50';
+  minScrollDepthInput.setAttribute('data-storage-key', 'min_scroll_depth');
+  minScrollDepthInput.type = 'number';
+  const maxTokensInput = document.createElement('input');
+  maxTokensInput.value = '1000';
+  maxTokensInput.setAttribute('data-storage-key', 'max_tokens_per_prompt');
+  maxTokensInput.type = 'number';
+  panel.append(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensInput);
+  document.body.appendChild(panel);
+  return {
+    protocolInput,
+    portInput,
+    minVisitDurationInput,
+    minScrollDepthInput,
+    maxTokensInput,
+  };
+}
+
+function cleanupMockInputs(): void {
+  const panel = document.getElementById('generalPanel');
+  if (panel) panel.remove();
 }
 
 describe('settingsSaver', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        cleanupMockInputs();
         global.chrome = {
             runtime: {
                 sendMessage: vi.fn(),
@@ -397,7 +388,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -417,7 +407,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -440,7 +429,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -453,7 +441,6 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({ existing: 'value' });
-            (extractSettingsFromInputs as any).mockReturnValue({ newSetting: 'value' });
             (saveSettingsWithAllowedUrls as any).mockResolvedValue(undefined);
             (global.chrome.runtime.sendMessage as any).mockResolvedValue({
                 obsidian: { success: true, message: 'OK' },
@@ -467,11 +454,12 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
-            expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith({ existing: 'value', newSetting: 'value' });
+            expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+                expect.objectContaining({ existing: 'value', obsidian_protocol: 'https', obsidian_port: '27123' })
+            );
             expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'TEST_CONNECTIONS', payload: {} });
             expect(statusDiv.className).toBe('success');
         });
@@ -482,7 +470,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             const testError = new Error('Save failed');
             (saveSettingsWithAllowedUrls as any).mockRejectedValue(testError);
 
@@ -493,7 +481,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -507,7 +494,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockRejectedValue('String error');
 
             await handleSaveAndTest(
@@ -517,7 +504,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -532,7 +518,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockResolvedValue(undefined);
             (global.chrome.runtime.sendMessage as any).mockResolvedValue({
                 obsidian: { success: false, message: 'Failed to fetch' },
@@ -546,7 +532,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -561,7 +546,6 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({ oldKey: 'oldValue' });
-            (extractSettingsFromInputs as any).mockReturnValue({ newKey: 'newValue' });
             (saveSettingsWithAllowedUrls as any).mockResolvedValue(undefined);
             (global.chrome.runtime.sendMessage as any).mockResolvedValue({
                 obsidian: { success: true, message: 'OK' },
@@ -575,14 +559,12 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
-            expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith({
-                oldKey: 'oldValue',
-                newKey: 'newValue',
-            });
+            expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+                expect.objectContaining({ oldKey: 'oldValue', obsidian_protocol: 'https', obsidian_port: '27123' })
+            );
         });
 
         it('should call getSettings twice (before save and verification)', async () => {
@@ -591,7 +573,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockResolvedValue(undefined);
             (global.chrome.runtime.sendMessage as any).mockResolvedValue({
                 obsidian: { success: true, message: 'OK' },
@@ -605,7 +587,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -629,8 +610,7 @@ describe('settingsSaver', () => {
                 inputs.portInput,
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
-                inputs.maxTokensInput,
-                {}
+                inputs.maxTokensInput
             );
 
             expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function));
@@ -676,7 +656,6 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
             (saveSettingsWithAllowedUrls as any).mockRejectedValue(null);
 
             await handleSaveAndTest(
@@ -686,7 +665,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -700,7 +678,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockRejectedValue(undefined);
 
             await handleSaveAndTest(
@@ -710,7 +688,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -724,7 +701,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockRejectedValue(0);
 
             await handleSaveAndTest(
@@ -734,7 +711,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -748,7 +724,7 @@ describe('settingsSaver', () => {
 
             (validateAllFields as any).mockReturnValue(true);
             (getSettings as any).mockResolvedValue({});
-            (extractSettingsFromInputs as any).mockReturnValue({});
+
             (saveSettingsWithAllowedUrls as any).mockRejectedValue({ code: 'ECONNREFUSED' });
 
             await handleSaveAndTest(
@@ -758,7 +734,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             );
 
@@ -781,7 +756,6 @@ describe('settingsSaver', () => {
                 inputs.minVisitDurationInput,
                 inputs.minScrollDepthInput,
                 inputs.maxTokensInput,
-                {},
                 validateAllFields as any
             )).rejects.toThrow('Storage error');
 

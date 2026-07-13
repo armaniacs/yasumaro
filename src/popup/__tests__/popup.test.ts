@@ -98,7 +98,6 @@ vi.mock('../settingsForm.js', () => ({
         maxTokensPerPromptInput: null, saveBtn: null, statusDiv: null,
         ollamaPresetBtn: null,
     }),
-    getSettingsMapping: vi.fn().mockReturnValue({}),
     getAiProviderElements: vi.fn().mockReturnValue({
         select: null, geminiSettings: null, openaiSettings: null, openai2Settings: null
     }),
