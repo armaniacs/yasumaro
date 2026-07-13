@@ -15,7 +15,6 @@ import {
     handleTestObsidian,
     handleTestAi,
     initSidebarNav,
-    getSettingsMapping,
     handleManualLocalMarkdownExport,
     handleExportLocalMarkdown,
     handleHistoryExportLocalMarkdown,
@@ -52,35 +51,36 @@ function buildDom() {
         <button class="sidebar-nav-btn" data-panel="panel-ai-summary-cleansing"></button>
         <div id="panel1" class="panel"></div>
         <div id="panel-ai-summary-cleansing" class="panel"></div>
-        <input id="apiKey" />
-        <input id="protocol" value="https" />
-        <input id="port" value="27124" />
-        <input id="dailyPath" />
-        <select id="aiProvider"></select>
+        <div id="panel-general" class="panel">
+        <input id="apiKey" data-storage-key="obsidian_api_key" />
+        <input id="protocol" value="https" data-storage-key="obsidian_protocol" />
+        <input id="port" value="27124" data-storage-key="obsidian_port" />
+        <input id="dailyPath" data-storage-key="obsidian_daily_path" />
+        <select id="aiProvider" data-storage-key="ai_provider"></select>
         <div id="geminiSettings"></div>
         <div id="openaiSettings"></div>
         <div id="openai2Settings"></div>
         <div id="lm-studioSettings"></div>
         <div id="openai-compatibleSettings"></div>
-        <input id="geminiApiKey" />
-        <input id="geminiModel" />
-        <input id="openaiBaseUrl" />
-        <input id="openaiApiKey" />
-        <input id="openaiModel" />
-        <input id="openai2BaseUrl" />
-        <input id="openai2ApiKey" />
-        <input id="openai2Model" />
-        <input id="lmStudioBaseUrl" />
-        <input id="lmStudioModel" />
+        <input id="geminiApiKey" data-storage-key="gemini_api_key" />
+        <input id="geminiModel" data-storage-key="gemini_model" />
+        <input id="openaiBaseUrl" data-storage-key="openai_base_url" />
+        <input id="openaiApiKey" data-storage-key="openai_api_key" />
+        <input id="openaiModel" data-storage-key="openai_model" />
+        <input id="openai2BaseUrl" data-storage-key="openai_2_base_url" />
+        <input id="openai2ApiKey" data-storage-key="openai_2_api_key" />
+        <input id="openai2Model" data-storage-key="openai_2_model" />
+        <input id="lmStudioBaseUrl" data-storage-key="lm_studio_base_url" />
+        <input id="lmStudioModel" data-storage-key="lm_studio_model" />
         <div id="ollamaSettings"></div>
-        <input id="ollamaBaseUrl" />
-        <input id="ollamaModel" />
-        <input id="providerBaseUrl" />
-        <input id="providerApiKey" />
-        <input id="providerModel" />
-        <input id="minVisitDuration" />
-        <input id="minScrollDepth" />
-        <input id="maxTokensPerPrompt" />
+        <input id="ollamaBaseUrl" data-storage-key="ollama_base_url" />
+        <input id="ollamaModel" data-storage-key="ollama_model" />
+        <input id="providerBaseUrl" data-storage-key="provider_base_url" />
+        <input id="providerApiKey" data-storage-key="provider_api_key" />
+        <input id="providerModel" data-storage-key="provider_model" />
+        <input id="minVisitDuration" data-storage-key="min_visit_duration" />
+        <input id="minScrollDepth" data-storage-key="min_scroll_depth" />
+        <input id="maxTokensPerPrompt" data-storage-key="max_tokens_per_prompt" />
         <input id="aiTimeoutSeconds" />
         <button id="save"></button>
         <button id="testObsidianBtn"></button>
@@ -111,6 +111,7 @@ function buildDom() {
         <div id="exportLocalMarkdownStatus"></div>
         <button id="historyExportLocalMarkdownBtn"></button>
         <div id="historyExportLocalMarkdownStatus"></div>
+        </div>
     `;
 }
 
@@ -406,14 +407,7 @@ describe('handleTestAi', () => {
     geminiInput.value = 'test-key';
     modelInput.value = 'gemini-2.0-flash';
 
-    const mapping = getSettingsMapping();
-    const geminiKey = mapping['gemini_api_key'] as HTMLInputElement | null;
-    expect(geminiKey).not.toBeNull();
-    expect(geminiKey!.value).toBe('test-key');
-
     const expectedSettings = { gemini_api_key: 'test-key', gemini_model: 'gemini-2.0-flash' };
-    const helper = await mocked('../../popup/settingsUiHelper.js');
-    helper.extractSettingsFromInputs.mockReturnValueOnce(expectedSettings);
 
     await handleTestAi();
 

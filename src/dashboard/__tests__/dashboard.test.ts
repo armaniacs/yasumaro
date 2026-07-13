@@ -222,7 +222,6 @@ import {
     testAiConnection,
     resetDashboardElements,
     getDashboardElements,
-    getSettingsMapping,
     getAiProviderElements,
 } from '../dashboard.js';
 
@@ -535,25 +534,6 @@ describe('getDashboardElements', () => {
         expect(elements).toHaveProperty('openai2SettingsDiv');
         expect(elements).toHaveProperty('lmStudioSettingsDiv');
         expect(elements).toHaveProperty('ollamaSettingsDiv');
-    });
-});
-
-describe('getSettingsMapping', () => {
-    it('returns a mapping object with all settings keys', () => {
-        resetDashboardElements();
-        const mapping = getSettingsMapping();
-
-        expect(mapping).toBeInstanceOf(Object);
-        expect(Object.keys(mapping).length).toBeGreaterThan(0);
-    });
-
-    it('contains mapping entries', () => {
-        resetDashboardElements();
-        const mapping = getSettingsMapping();
-
-        // Just verify it has keys and they map to something (input, select, or null)
-        const keys = Object.keys(mapping);
-        expect(keys.length).toBeGreaterThan(5); // Should have multiple settings
     });
 });
 

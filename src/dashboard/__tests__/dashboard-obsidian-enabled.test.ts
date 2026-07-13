@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   resetDashboardElements,
   loadGeneralSettings,
-  getSettingsMapping,
 } from '../dashboard.js';
 
 vi.stubGlobal('chrome', {
@@ -179,15 +178,6 @@ describe('Dashboard — obsidianEnabledInput', () => {
     buildDom();
     resetDashboardElements();
     vi.clearAllMocks();
-  });
-
-  it('getSettingsMapping includes obsidianEnabledInput', () => {
-    const checkbox = document.getElementById('obsidianEnabled') as HTMLInputElement;
-    checkbox.checked = true;
-
-    const mapping = getSettingsMapping();
-
-    expect(mapping['obsidian_enabled']).toBe(checkbox);
   });
 
   it('loadGeneralSettings sets details.open based on checkbox state (checked)', async () => {

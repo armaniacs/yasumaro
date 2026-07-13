@@ -10,7 +10,7 @@ import { init as initPrivacySettings } from '../popup/privacySettings.js';
 import { init as initContentSettings } from '../popup/contentSettings.js';
 import { init as initTrustSettings, loadTrustSettings } from '../popup/trustSettings.js';
 import { initCustomPromptManager } from '../popup/customPromptManager.js';
-import { loadSettingsToInputs, extractSettingsFromInputs } from '../popup/settingsUiHelper.js';
+import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
 import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings } from '../popup/aiSummaryCleansingSettingsV2.js';
@@ -325,41 +325,7 @@ function syncStatusToTop(): void {
   }
 }
 
-export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSelectElement | null> {
-  const el = getDashboardElements();
-  return {
-    [StorageKeys.OBSIDIAN_API_KEY]: el.apiKeyInput,
-    [StorageKeys.OBSIDIAN_PROTOCOL]: el.protocolInput,
-    [StorageKeys.OBSIDIAN_PORT]: el.portInput,
-    [StorageKeys.OBSIDIAN_DAILY_PATH]: el.dailyPathInput,
-    [StorageKeys.OBSIDIAN_ENABLED]: el.obsidianEnabledInput,
-    [StorageKeys.AI_PROVIDER]: el.aiProviderSelect,
-    [StorageKeys.GEMINI_API_KEY]: el.geminiApiKeyInput,
-    [StorageKeys.GEMINI_MODEL]: el.geminiModelInput,
-    [StorageKeys.OPENAI_BASE_URL]: el.openaiBaseUrlInput,
-    [StorageKeys.OPENAI_API_KEY]: el.openaiApiKeyInput,
-    [StorageKeys.OPENAI_MODEL]: el.openaiModelInput,
-    [StorageKeys.OPENAI_2_BASE_URL]: el.openai2BaseUrlInput,
-    [StorageKeys.OPENAI_2_API_KEY]: el.openai2ApiKeyInput,
-    [StorageKeys.OPENAI_2_MODEL]: el.openai2ModelInput,
-    [StorageKeys.LM_STUDIO_BASE_URL]: el.lmStudioBaseUrlInput,
-    [StorageKeys.LM_STUDIO_MODEL]: el.lmStudioModelInput,
-    [StorageKeys.OLLAMA_BASE_URL]: el.ollamaBaseUrlInput,
-    [StorageKeys.OLLAMA_MODEL]: el.ollamaModelInput,
-    [StorageKeys.PROVIDER_TYPE]: null,
-    [StorageKeys.PROVIDER_BASE_URL]: el.providerBaseUrlInput,
-    [StorageKeys.PROVIDER_API_KEY]: el.providerApiKeyInput,
-    [StorageKeys.PROVIDER_MODEL]: el.providerModelInput,
-    [StorageKeys.SQLITE_RETENTION_DAYS]: el.sqliteRetentionDaysSelect,
-    [StorageKeys.SQLITE_MAX_RECORDS]: el.sqliteMaxRecordsSelect,
-    [StorageKeys.CONTENT_RETENTION_DAYS]: el.contentRetentionDaysSelect,
-    [StorageKeys.CONTENT_MAX_RECORDS]: el.contentMaxRecordsSelect,
-    [StorageKeys.CONTENT_PURGE_INCLUDE_STARRED]: el.contentPurgeIncludeStarredCheckbox,
-    [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: el.localMarkdownExportEnabledInput,
-    [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: el.localMarkdownExportPathInput,
-    [StorageKeys.REVIEW_SUMMARY_ENABLED]: el.reviewSummaryEnabledInput,
-  };
-}
+const SETTINGS_FORM_SELECTOR = '#panel-general';
 
 /**
  * Read the LOCAL_MARKDOWN_EXPORT_TIMING radio group's checked value.
@@ -468,7 +434,7 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
 
 export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
-  loadSettingsToInputs(settings, getSettingsMapping());
+  loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings);
   loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
 
   // Apply provider priority slots and update multi-provider visibility
@@ -594,7 +560,7 @@ export async function handleSaveOnly(): Promise<void> {
     }
   }
 
-  const newSettings = extractSettingsFromInputs(getSettingsMapping());
+  const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
   const timing = extractLocalMarkdownExportTiming();
   if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
 
@@ -676,7 +642,7 @@ export async function handleTestAi(): Promise<void> {
 
   el.testAiBtn.disabled = true;
   try {
-    const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
     const timing = extractLocalMarkdownExportTiming();
     if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
     const currentSettings = await getSettings();
@@ -711,7 +677,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
   el.testLocalMarkdownBtn.disabled = true;
   try {
     // Save current settings first
-    const newSettings = extractSettingsFromInputs(getSettingsMapping());
+    const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
     const timing = extractLocalMarkdownExportTiming();
     if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
     const currentSettings = await getSettings();
