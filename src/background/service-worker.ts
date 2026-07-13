@@ -1,5 +1,9 @@
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import { FallbackAIService } from './ai/FallbackAIService.js';
+import { RemoteAIService } from './ai/RemoteAIService.js';
+import { LocalAIService } from './ai/LocalAIService.js';
+import { LocalAIClient } from './localAiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
@@ -176,8 +180,16 @@ export async function ensureConfirmToken(): Promise<string> {
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
+const localClient = new LocalAIClient();
+const aiService = new FallbackAIService({
+  local: new LocalAIService({
+    localAiClient: localClient,
+    ensureOffscreenDocument: () => localClient.ensureOffscreenDocument(),
+  }),
+  remote: new RemoteAIService({ aiClient }),
+});
 const sqliteClient = getSharedSqliteClient();
-const recordingLogic = new RecordingLogic(obsidian, aiClient, undefined, sqliteClient);
+const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
 // Import RecordingPipeline
@@ -423,7 +435,7 @@ export async function handleManualRecord(
     const pipeline = new RecordingPipeline(
         recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
         obsidian,
-        aiClient,
+        aiService,
         sqliteClient
     );
 
@@ -478,7 +490,7 @@ export async function handleSaveRecord(
     const pipeline = new RecordingPipeline(
         recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
         obsidian,
-        aiClient,
+        aiService,
         sqliteClient
     );
 

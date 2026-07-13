@@ -20,12 +20,15 @@ import { AIClient } from './aiClient.js';
 import { SqliteClient } from './sqliteClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { PrivacyPipeline } from './privacyPipeline.js';
+import { RemoteAIService } from './ai/RemoteAIService.js';
+import type { AIService } from './ai/AIService.js';
 
 export interface ServiceWorkerDependencies {
     tabCache?: TabCache;
     mutex?: Mutex;
     obsidianClient?: ObsidianClient | null;
     aiClient?: AIClient | null;
+    aiService?: AIService | null;
     sqliteClient?: SqliteClient | null;
     recordingLogic?: RecordingLogic | null;
     privacyPipeline?: PrivacyPipeline | null;
@@ -53,14 +56,14 @@ export class ServiceWorkerContext {
      */
     constructor(dependencies: ServiceWorkerDependencies = {}) {
         this.dependencies = {
-            // デフォルト実装を使用（またはカスタム実装を注入）
             tabCache: dependencies.tabCache || new TabCache(),
             mutex: dependencies.mutex || new Mutex(),
-            obsidianClient: dependencies.obsidianClient || null, // 遅延初期化
-            aiClient: dependencies.aiClient || null, // 遅延初期化
-            sqliteClient: dependencies.sqliteClient || null, // 遅延初期化
-            recordingLogic: dependencies.recordingLogic || null, // 遅延初期化
-            privacyPipeline: dependencies.privacyPipeline || null // 遅延初期化
+            obsidianClient: dependencies.obsidianClient || null,
+            aiClient: dependencies.aiClient || null,
+            aiService: dependencies.aiService || null,
+            sqliteClient: dependencies.sqliteClient || null,
+            recordingLogic: dependencies.recordingLogic || null,
+            privacyPipeline: dependencies.privacyPipeline || null
         };
     }
 
@@ -110,9 +113,11 @@ export class ServiceWorkerContext {
      */
     getRecordingLogic(): RecordingLogic {
         if (!this.dependencies.recordingLogic) {
+            const aiService = this.dependencies.aiService
+                ?? new RemoteAIService({ aiClient: this.dependencies.aiClient || this.getAIClient() });
             this.dependencies.recordingLogic = new RecordingLogic(
                 this.dependencies.obsidianClient || this.getObsidianClient(),
-                this.dependencies.aiClient || this.getAIClient(),
+                aiService,
                 this.dependencies.privacyPipeline || this.getPrivacyPipeline(),
                 this.dependencies.sqliteClient || this.getSqliteClient()
             );

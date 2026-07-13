@@ -27,7 +27,7 @@ import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
-import type { AIClient } from '../aiClient.js';
+import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import { extractDomain } from '../../utils/domainUtils.js';
@@ -48,18 +48,18 @@ export class RecordingPipeline {
   private steps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private obsidian: ObsidianClient;
-  private aiClient: AIClient | null;
+  private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
     obsidian: ObsidianClient,
-    aiClient: AIClient | null = null,
+    aiService: AIService | null = null,
     sqliteClient: SqliteClient | null = null
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
     this.obsidian = obsidian;
-    this.aiClient = aiClient;
+    this.aiService = aiService;
     this.sqliteClient = sqliteClient;
 
     // Define pipeline steps with their error strategies
@@ -231,7 +231,7 @@ export class RecordingPipeline {
       data,
       settings,
       force: data.force || false,
-      aiClient: this.aiClient,
+      aiService: this.aiService,
       errors: [],
       // alreadyProcessed 時にプレビューから AI 処理時間を伝播
       aiDuration: data.aiDuration
