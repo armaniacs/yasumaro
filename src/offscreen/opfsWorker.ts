@@ -14,84 +14,20 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { migrateOldOpfsDb } from './opfsMigrationV2.js';
 import { readOldDbRecords, deleteOldDbFile } from './opfsMigrationV2Reader.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import type { BrowsingLogRecord, SearchResult, QueryOptions } from '../utils/sqlite-types.js';
 
 // ---------------------------------------------------------------------------
-// Types (worker-internal — mirrors BrowsingLogRecord / QueryOptions / SearchResult)
+// Types
 // ---------------------------------------------------------------------------
-
-interface BrowsingLogRecord {
-  id?: number;
-  url: string;
-  title?: string | null;
-  summary?: string | null;
-  tags?: string | null;
-  created_at: number;
-  domain?: string | null;
-  visit_duration?: number | null;
-  scroll_ratio?: number | null;
-  is_starred?: number;
-  is_deleted?: number;
-  obsidian_synced?: number;
-  gist_synced?: number;
-  content?: string | null;
-  masked_count?: number | null;
-  cleansed_reason?: string | null;
-  ai_provider?: string | null;
-  ai_model?: string | null;
-  ai_duration_ms?: number | null;
-  obsidian_duration_ms?: number | null;
-  sent_tokens?: number | null;
-  received_tokens?: number | null;
-  original_tokens?: number | null;
-  cleansed_tokens?: number | null;
-  page_bytes?: number | null;
-  candidate_bytes?: number | null;
-  original_bytes?: number | null;
-  cleansed_bytes?: number | null;
-  ai_summary_original_bytes?: number | null;
-  ai_summary_cleansed_bytes?: number | null;
-  extracted_sentences_bytes?: number | null;
-  extracted_sentences_original_bytes?: number | null;
-  fallback_triggered?: number;
-}
-
-interface SearchResultRecord {
-  id: number;
-  url: string;
-  title: string | null;
-  summary: string | null;
-  tags: string | null;
-  created_at: number;
-  domain: string | null;
-  visit_duration: number | null;
-  scroll_ratio: number | null;
-  is_starred: number;
-  rank: number;
-}
 
 interface AuditLogQueryPayload {
   limit?: number;
   offset?: number;
 }
 
-interface QueryPayload {
-  limit?: number;
-  offset?: number;
-  since?: number;
-  until?: number;
-  domain?: string;
-  isStarred?: number;
-  orderBy?: string;
-  orderDir?: string;
-  ids?: number[];
-  tagFilter?: string;
-}
-
-interface SearchPayload {
-  searchQuery: string;
-  limit?: number;
-  offset?: number;
-}
+// Worker-internal types (not in shared types):
+type QueryPayload = QueryOptions & { ids?: number[]; tagFilter?: string; isStarred?: number };
+type SearchPayload = { searchQuery: string; limit?: number; offset?: number };
 
 interface RequestMessage {
   id: number;
@@ -725,7 +661,7 @@ export async function handleRestore(data: Uint8Array): Promise<{ restored: true 
   return { restored: true };
 }
 
-async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResultRecord[]; total: number }> {
+async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
   const { searchQuery, limit = 50, offset = 0 } = payload;
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
@@ -740,7 +676,7 @@ async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResul
 
 async function handleSearchFts(
   sanitizedQuery: string, limit: number, offset: number
-): Promise<{ rows: SearchResultRecord[]; total: number }> {
+): Promise<{ rows: SearchResult[]; total: number }> {
   let total = 0;
   await sqlQuery(
     `SELECT COUNT(*) AS c FROM browsing_logs_fts
@@ -750,7 +686,7 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
     (row) => { total = Number(row.c); }
   );
 
-  const rows: SearchResultRecord[] = [];
+  const rows: SearchResult[] = [];
   await sqlQuery(
     `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
      FROM browsing_logs_fts
@@ -780,7 +716,7 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
 
 async function handleSearchLike(
   rawQuery: string, limit: number, offset: number
-): Promise<{ rows: SearchResultRecord[]; total: number }> {
+): Promise<{ rows: SearchResult[]; total: number }> {
   const like = `%${rawQuery}%`;
   const conditions = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
   const params: SqliteValue[] = [like, like, like, like];
@@ -792,7 +728,7 @@ async function handleSearchLike(
     (row) => { total = Number(row.c); }
   );
 
-  const rows: SearchResultRecord[] = [];
+  const rows: SearchResult[] = [];
   await sqlQuery(
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
      FROM browsing_logs WHERE ${conditions}
