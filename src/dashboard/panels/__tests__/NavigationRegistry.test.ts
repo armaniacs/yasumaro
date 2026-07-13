@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry';
 import { type AsyncDataPanel, type StaticFormPanel } from '../types';
 
@@ -53,14 +54,14 @@ describe('NavigationRegistry', () => {
     expect(registry.activeId).toBe('panel-b');
   });
 
-  it('navigate to same panel does nothing', () => {
+  it('navigate to same panel calls onActivate with new init', () => {
     const panel = mockAsyncPanel({ id: 'panel-a' });
     registry.register(panel);
     registry.navigate('panel-a');
     vi.clearAllMocks();
-    registry.navigate('panel-a');
+    registry.navigate('panel-a', { searchTag: 'AI' });
     expect(panel.onDeactivate).not.toHaveBeenCalled();
-    expect(panel.onActivate).not.toHaveBeenCalled();
+    expect(panel.onActivate).toHaveBeenCalledWith({ searchTag: 'AI' });
   });
 
   it('navigate throws on unregistered panel', () => {
@@ -84,5 +85,60 @@ describe('NavigationRegistry', () => {
     registry.register(panel);
     registry.navigate('panel-form');
     expect(registry.activeId).toBe('panel-form');
+  });
+
+  describe('mount behavior', () => {
+    let container: HTMLElement;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      container.id = 'panel-a';
+      document.body.appendChild(container);
+    });
+
+    afterEach(() => {
+      document.body.removeChild(container);
+    });
+
+    it('calls mount with the container element on first navigate', () => {
+      const panel = mockAsyncPanel({ id: 'panel-a' });
+      registry.register(panel);
+      registry.navigate('panel-a');
+      expect(panel.mount).toHaveBeenCalledTimes(1);
+      expect(panel.mount).toHaveBeenCalledWith(container);
+    });
+
+    it('does not call mount again on subsequent navigate to same panel', () => {
+      const panel = mockAsyncPanel({ id: 'panel-a' });
+      registry.register(panel);
+      registry.navigate('panel-a');
+      vi.clearAllMocks();
+      registry.navigate('panel-a', { searchTag: 'AI' });
+      expect(panel.mount).not.toHaveBeenCalled();
+    });
+
+    it('calls mount for each panel only once', () => {
+      const containerB = document.createElement('div');
+      containerB.id = 'panel-b';
+      document.body.appendChild(containerB);
+
+      const panelA = mockAsyncPanel({ id: 'panel-a' });
+      const panelB = mockAsyncPanel({ id: 'panel-b' });
+      registry.register(panelA);
+      registry.register(panelB);
+
+      registry.navigate('panel-a');
+      expect(panelA.mount).toHaveBeenCalledTimes(1);
+      expect(panelA.mount).toHaveBeenCalledWith(container);
+
+      registry.navigate('panel-b');
+      expect(panelB.mount).toHaveBeenCalledTimes(1);
+      expect(panelB.mount).toHaveBeenCalledWith(containerB);
+
+      registry.navigate('panel-a');
+      expect(panelA.mount).toHaveBeenCalledTimes(1);
+
+      document.body.removeChild(containerB);
+    });
   });
 });
