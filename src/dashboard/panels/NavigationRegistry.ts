@@ -1,4 +1,4 @@
-import { type Panel } from './types.js';
+import { type Panel, type PanelInitMap } from './types.js';
 
 export class NavigationRegistry {
   private panels = new Map<string, Panel>();
@@ -12,6 +12,14 @@ export class NavigationRegistry {
   }
 
   navigate(panelId: string, init?: Record<string, unknown>): void {
+    this.#navigateInternal(panelId, init);
+  }
+
+  navigateTyped<K extends keyof PanelInitMap>(panelId: K, init?: PanelInitMap[K]): void {
+    this.#navigateInternal(panelId, init);
+  }
+
+  #navigateInternal(panelId: string, init?: Record<string, unknown>): void {
     const panel = this.panels.get(panelId);
     if (!panel) {
       throw new Error(`Panel "${panelId}" is not registered`);
