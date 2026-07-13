@@ -34,7 +34,7 @@ import { initEncryptedBackupPanel } from './encryptedBackupPanel.js';
 import { initGistSettings } from './gistSettings.js';
 import { initDomainFilterTagUI } from './domainFilterTagUI.js';
 import { initTagsPanel } from './tagsPanel.js';
-import { initTagClusterPanel } from './tagClusterPanel.js';
+// tagClusterPanel migrated to AsyncDataPanel
 // domainSearchPanel migrated to AsyncDataPanel
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
@@ -1491,7 +1491,7 @@ function initExportLogsPanel(): void {
   // try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); } // migrated to DiagnosticPanel
   // try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); } // migrated to AsyncDataPanel
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
-  try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); }
+  // try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); } // migrated to AsyncDataPanel
   // try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); } // migrated to DiagnosticPanel
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
 
