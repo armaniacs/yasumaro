@@ -27,7 +27,7 @@ export class DashboardBootstrapper {
     });
   }
 
-  async start(defaultPanelId?: string): Promise<void> {
+  start(defaultPanelId?: string): void {
     if (defaultPanelId) {
       this.registry.navigate(defaultPanelId);
     }
