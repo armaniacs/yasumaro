@@ -4117,7 +4117,6 @@ details[open] > .priority-details-summary {
 .priority-provider-name:empty {
   display: none;
 }
-}
 
 /* Priority provider settings containers */
 #priority1ProviderSettings,
