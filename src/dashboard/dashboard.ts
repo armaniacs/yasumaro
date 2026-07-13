@@ -5,45 +5,19 @@
  */
 
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } from '../utils/storage.js';
-import { init as initDomainFilter } from '../popup/domainFilter.js';
-import { init as initPrivacySettings } from '../popup/privacySettings.js';
-import { init as initContentSettings } from '../popup/contentSettings.js';
-import { init as initTrustSettings, loadTrustSettings } from '../popup/trustSettings.js';
-import { initCustomPromptManager } from '../popup/customPromptManager.js';
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
-import { getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI, setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings } from '../popup/aiSummaryCleansingSettingsV2.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
-import { getPrivacyConsent, withdrawPrivacyConsent } from '../popup/privacyConsent.js';
-import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti, AIProviderElements } from '../popup/settings/aiProvider.js';
-import { setupAllFieldValidations } from '../popup/settings/fieldValidation.js';
+import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
-import { getSavedUrlEntries } from '../utils/storageUrls.js';
-// historyPanel migrated to AsyncDataPanel
-// sqliteHistoryPanel migrated to AsyncDataPanel
-import { initRecordingConditionsSettings } from './recordingConditionsSettings.js';
-import { exportMarkdown, exportCsv, exportJson, exportDb, downloadText, downloadBlob } from './exportLogsService.js';
-import { ModelsDevDialog } from './models-dev-dialog.js';
-import { CSPSettings } from './cspSettings.js';
-import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
-import { initMasterPasswordSettings, loadMasterPasswordSettings } from './masterPassword.js';
 import { queryLogs } from './dashboardSqliteService.js';
-import { initExportImport } from './exportImport.js';
-import { initEncryptedBackupPanel } from './encryptedBackupPanel.js';
-import { initGistSettings } from './gistSettings.js';
-import { initDomainFilterTagUI } from './domainFilterTagUI.js';
-import { initTagsPanel } from './tagsPanel.js';
-// tagClusterPanel migrated to AsyncDataPanel
-// domainSearchPanel migrated to AsyncDataPanel
-import { initDiagnosticsPanel } from './diagnosticsPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
-import { clearAllLogs } from './dashboardSqliteService.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
-import { initOnboardingWizard } from '../popup/onboardingWizard.js';
-import { updateProviderSettingsLayout, hideAllProviderSettings } from './aiProviderLayoutManager.js';
 import { initNavigation } from './navigation.js';
+import { getSavedUrlEntries } from '../utils/storageUrls.js';
+import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
 
 // ============================================================================
 // Sidebar Navigation
@@ -1051,109 +1025,7 @@ export function setHtmlLangDir(): void {
   document.documentElement.dir = rtlLanguages.includes(langCode) ? 'rtl' : 'ltr';
 }
 
-async function initConsentWithdrawal(): Promise<void> {
-    const display = document.getElementById('consentStatusDisplay');
-    const btn = document.getElementById('btnWithdrawConsent');
-    const statusEl = document.getElementById('withdrawConsentStatus');
 
-    const state = await getPrivacyConsent();
-    if (display) {
-        display.textContent = state.hasConsented
-            ? chrome.i18n.getMessage('consented') || `Consented (${state.consentDate || ''})`
-            : chrome.i18n.getMessage('notConsented') || 'Not consented';
-    }
-    if (btn) {
-        btn.classList.toggle('hidden', !state.hasConsented);
-    }
-    if (btn) {
-        btn.addEventListener('click', async () => {
-            const ok = await withdrawPrivacyConsent();
-            if (statusEl) {
-                statusEl.textContent = ok
-                    ? 'Consent withdrawn. Recording will stop.'
-                    : 'Failed to withdraw consent.';
-                statusEl.style.color = ok ? 'var(--color-success-text)' : 'var(--color-error)';
-            }
-            if (display) {
-                display.textContent = 'Not consented';
-            }
-            if (btn) {
-                btn.classList.add('hidden');
-            }
-        });
-    }
-}
-
-// ============================================================================
-// Export Logs Panel
-// ============================================================================
-
-function initExportLogsPanel(): void {
-  const jsonBtn = document.getElementById('export-json-btn');
-  const mdBtn = document.getElementById('export-markdown-btn');
-  const csvBtn = document.getElementById('export-csv-btn');
-  const statusEl = document.getElementById('export-status');
-
-  const showStatus = (msg: string, isError = false) => {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.style.display = '';
-    statusEl.style.color = isError ? 'var(--color-error)' : 'var(--color-success-text)';
-    setTimeout(() => { statusEl!.style.display = 'none'; }, 3000);
-  };
-
-  jsonBtn?.addEventListener('click', async () => {
-    try {
-      showStatus('Exporting JSON…');
-      const blob = await exportJson();
-      downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.json`);
-      showStatus('JSON export completed.');
-    } catch (err) {
-      showStatus(`Export failed: ${err}`, true);
-    }
-  });
-
-  mdBtn?.addEventListener('click', async () => {
-    try {
-      showStatus('Exporting Markdown…');
-      const md = await exportMarkdown();
-      downloadText(md, `yasumaro_export_${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
-      showStatus('Markdown export completed.');
-    } catch (err) {
-      showStatus(`Export failed: ${err}`, true);
-    }
-  });
-
-  csvBtn?.addEventListener('click', async () => {
-    try {
-      showStatus('Exporting CSV…');
-      const blob = await exportCsv();
-      downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
-      showStatus('CSV export completed.');
-    } catch (err) {
-      showStatus(`Export failed: ${err}`, true);
-    }
-  });
-
-  const dbBtn = document.getElementById('export-db-btn');
-  dbBtn?.addEventListener('click', async () => {
-    try {
-      showStatus('Exporting database…');
-      const blob = await exportDb();
-      if (blob) {
-        downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.db`);
-        showStatus('Database export completed.');
-      } else {
-        showStatus('Binary export requires OPFS storage. Use JSON export instead.', true);
-      }
-    } catch (err) {
-      showStatus(`Export failed: ${err}`, true);
-    }
-  });
-
-  // Local Markdown export from Export Logs panel
-  document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
-}
 
 // ============================================================================
 // Dashboard Initialization
@@ -1167,7 +1039,6 @@ function initExportLogsPanel(): void {
   initSidebarNav();
   initNavigation();
 
-  // Auto-navigate based on URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'history') {
     const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
@@ -1179,298 +1050,13 @@ function initExportLogsPanel(): void {
     openSettingsPanel(section);
   }
 
-  try { initDomainFilter(); } catch (e) { console.error('[Dashboard] initDomainFilter error:', e); }
-  try { await initDomainFilterTagUI(); } catch (e) { console.error('[Dashboard] initDomainFilterTagUI error:', e); }
-  try { initExportImport(); } catch (e) { console.error('[Dashboard] initExportImport error:', e); }
-  try { initEncryptedBackupPanel(); } catch (e) { console.error('[Dashboard] initEncryptedBackupPanel error:', e); }
-  try { await initGistSettings(); } catch (e) { console.error('[Dashboard] initGistSettings error:', e); }
-  try { initMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] initMasterPasswordSettings error:', e); }
-  try { initPrivacySettings(); } catch (e) { console.error('[Dashboard] initPrivacySettings error:', e); }
-  try { initContentSettings(); } catch (e) { console.error('[Dashboard] initContentSettings error:', e); }
-  try { initTrustSettings(); } catch (e) { console.error('[Dashboard] initTrustSettings error:', e); }
-  try { await CSPSettings.loadCSPSettings(); } catch (e) { console.error('[Dashboard] loadCSPSettings error:', e); }
-  try {
-    const aiSummaryCleansingSettings = await getAiSummaryCleansingSettings();
-    applyAiSummaryCleansingSettingsToUI(aiSummaryCleansingSettings);
-    setupAiSummaryCleansingEventListeners();
-    
-    // Direct slider initialization - inline to avoid module caching issues
-    console.log('[Dashboard] Setting up slider listeners inline');
-    const sliderConfigs = [
-      { sliderId: 'ai-summary-cleansing-link-ratio-threshold', valueId: 'link-ratio-threshold-value', settingKey: 'linkRatioThreshold' },
-      { sliderId: 'ai-summary-cleansing-short-text-threshold', valueId: 'short-text-threshold-value', settingKey: 'shortTextThreshold' },
-      { sliderId: 'ai-summary-cleansing-short-seq-count', valueId: 'short-seq-count-value', settingKey: 'shortSeqCount' },
-      { sliderId: 'ai-summary-cleansing-link-para-threshold', valueId: 'link-para-threshold-value', settingKey: 'linkParaThreshold' }
-    ];
-
-    for (const config of sliderConfigs) {
-      const slider = document.getElementById(config.sliderId) as HTMLInputElement;
-      const valueDisplay = document.getElementById(config.valueId) as HTMLElement;
-      
-      if (slider && valueDisplay) {
-        slider.addEventListener('input', () => {
-          valueDisplay.textContent = slider.value;
-        });
-        
-        slider.addEventListener('change', async () => {
-          const settings = await getAiSummaryCleansingSettings();
-          const s = settings as unknown as Record<string, number>;
-          s[config.settingKey] = parseInt(slider.value, 10);
-          await saveAiSummaryCleansingSettings(settings);
-          console.log(`[Dashboard] Saved ${config.settingKey}:`, slider.value);
-        });
-      }
-    }
-    console.log('[Dashboard] Slider listeners setup complete');
-  } catch (e) { console.error('[Dashboard] initAiSummaryCleansingSettings error:', e); }
-
-  try {
-    const settings = await getSettings();
-    initCustomPromptManager(settings);
-  } catch (e) { console.error('[Dashboard] initCustomPromptManager error:', e); }
-
-  try { await loadGeneralSettings(); } catch (e) { console.error('[Dashboard] loadGeneralSettings error:', e); }
-
-  // Obsidian enabled checkbox → details open/close
-  const obsidianEnabledInput = document.getElementById('obsidianEnabled') as HTMLInputElement | null;
-  const obsidianDetails = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
-  if (obsidianEnabledInput && obsidianDetails) {
-    obsidianEnabledInput.addEventListener('change', () => {
-      obsidianDetails.open = obsidianEnabledInput.checked;
-    });
-  }
-
-  // Local Markdown Export enabled checkbox → settings visibility
-  const localExportEnabledInput = document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null;
-  const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
-  if (localExportEnabledInput && localExportSettingsDiv) {
-    localExportEnabledInput.addEventListener('change', () => {
-      localExportSettingsDiv.classList.toggle('hidden', !localExportEnabledInput.checked);
-    });
-  }
-
-  // Review Summary enabled checkbox → manual actions visibility
-  const reviewSummaryEnabledInput = document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null;
-  const reviewSummaryManualActionsDiv = document.getElementById('reviewSummaryManualActions') as HTMLElement | null;
-  if (reviewSummaryEnabledInput && reviewSummaryManualActionsDiv) {
-    reviewSummaryEnabledInput.addEventListener('change', () => {
-      reviewSummaryManualActionsDiv.classList.toggle('hidden', !reviewSummaryEnabledInput.checked);
-    });
-  }
-
-  // Review Summary manual generation buttons
-  document.getElementById('generateWeeklySummaryBtn')?.addEventListener('click', handleGenerateWeeklySummary);
-  document.getElementById('generateMonthlySummaryBtn')?.addEventListener('click', handleGenerateMonthlySummary);
-  try { await loadMasterPasswordSettings(); } catch (e) { console.error('[Dashboard] loadMasterPasswordSettings error:', e); }
-  try { await initConsentWithdrawal(); } catch (e) { console.error('[Dashboard] initConsentWithdrawal error:', e); }
-  try { await loadTrustSettings(); } catch (e) { console.error('[Dashboard] loadTrustSettings error:', e); }
-
-  // Data erasure button (GDPR Art.17)
-  document.getElementById('btnDeleteAllData')?.addEventListener('click', async () => {
-    const confirmed = await showConfirmDialog({
-      title: chrome.i18n.getMessage('confirmClearAllTitle') || 'Delete All History',
-      message: chrome.i18n.getMessage('confirmClearAllMessage') || chrome.i18n.getMessage('deleteAllDataConfirm') || 'This will permanently delete all stored data. Continue?',
-      confirmLabel: chrome.i18n.getMessage('confirmDelete') || 'Delete',
-      cancelLabel: chrome.i18n.getMessage('cancel') || 'Cancel',
-      dangerous: true,
-    });
-    if (!confirmed) return;
-    try {
-      await chrome.storage.local.clear();
-      const sqliteResult = await clearAllLogs();
-      if (!sqliteResult) {
-        const statusEl = document.getElementById('deleteAllDataStatus');
-        if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
-        return;
-      }
-      const statusEl = document.getElementById('deleteAllDataStatus');
-      if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataSuccess');
-      setTimeout(() => window.location.reload(), 2000);
-    } catch (e) {
-      console.error('[Dashboard] Failed to delete all data:', e);
-      const statusEl = document.getElementById('deleteAllDataStatus');
-      if (statusEl) statusEl.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to delete all data. Please try again.';
-    }
-  });
-
-  // Data portability shortcut to the Export Logs panel (GDPR Art.20)
-  document.getElementById('btnGoToExportLogs')?.addEventListener('click', () => {
-    document.querySelector<HTMLButtonElement>('.sidebar-nav-btn[data-panel="panel-export-logs"]')?.click();
-  });
-
-  const aiProviderEl = getAiProviderElements();
-  if (aiProviderEl.select) {
-    setupAIProviderChangeListener(aiProviderEl);
-  }
-
-  // Connect priority 2/3 select change listeners for multi-provider visibility
-  const refreshMultiVisibility = (): void => {
-    const el = getDashboardElements();
-    const selected = [
-      el.aiProviderSelect?.value ?? '',
-      el.aiProviderPriority2Select?.value ?? '',
-      el.aiProviderPriority3Select?.value ?? ''
-    ];
-    updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
-    // Update provider settings layout to show settings under each priority card
-    updateProviderSettingsLayout(selected);
-  };
-
-  const el = getDashboardElements();
-  el.aiProviderSelect?.addEventListener('change', refreshMultiVisibility);
-  el.aiProviderPriority2Select?.addEventListener('change', refreshMultiVisibility);
-  el.aiProviderPriority3Select?.addEventListener('change', refreshMultiVisibility);
-  hideAllProviderSettings();
-  refreshMultiVisibility();
-
-  // Initialize models.dev dialog
-  let modelsDevDialog: ModelsDevDialog | null = null;
-
-  const openModelsDevDialogBtn = document.getElementById('openModelsDevDialogBtn') as HTMLButtonElement;
-  const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement;
-  const providerInfoDisplayDiv = document.getElementById('providerInfoDisplay') as HTMLElement;
-
-  openModelsDevDialogBtn?.addEventListener('click', async () => {
-    if (!modelsDevDialog) {
-      modelsDevDialog = new ModelsDevDialog({
-        onSave: async (providerId, baseUrl, apiKey, model) => {
-          // Update UI
-          selectedProviderInfoDiv?.classList.remove('hidden');
-          const _providerData = JSON.parse(JSON.stringify({ id: providerId, baseUrl, hasKey: !!apiKey, model }));
-          providerInfoDisplayDiv!.textContent = `${providerId} (${baseUrl})${model ? ` - ${model}` : ''}`;
-
-          // Update input values
-          const el = getDashboardElements();
-          if (el.providerApiKeyInput) el.providerApiKeyInput.value = apiKey;
-          if (el.providerModelInput) el.providerModelInput.value = model;
-
-          // Store in settings
-          const settings = await getSettings();
-          settings[StorageKeys.PROVIDER_TYPE] = providerId;
-          settings[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
-          settings[StorageKeys.PROVIDER_API_KEY] = apiKey;
-          settings[StorageKeys.PROVIDER_MODEL] = model;
-          await saveSettingsWithAllowedUrls(settings);
-        },
-        onCancel: () => {
-          console.log('[Dashboard] Provider dialog cancelled');
-        }
-      });
-    }
-    await modelsDevDialog.show();
-  });
-  // LM Studio preset button
-  const lmStudioPresetBtn = document.getElementById('lmStudioPresetBtn') as HTMLButtonElement;
-  lmStudioPresetBtn?.addEventListener('click', () => {
-    const el = getDashboardElements();
-    if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:1234/v1';
-    if (el.statusDiv) {
-      el.statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
-      el.statusDiv.className = 'status-success';
-      syncStatusToTop();
-    }
-  });
-  // Ollama preset button
-  const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
-  ollamaPresetBtn?.addEventListener('click', () => {
-    const el = getDashboardElements();
-    if (el.providerBaseUrlInput) el.providerBaseUrlInput.value = 'http://localhost:11434/v1';
-    if (el.statusDiv) {
-      el.statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
-      el.statusDiv.className = 'status-success';
-      syncStatusToTop();
-    }
-  });
-  {
-    const el = getDashboardElements();
-    setupAllFieldValidations(el.protocolInput, el.portInput);
-  }
-
-  // 保存ボタン（テストなし）
-  {
-    const el = getDashboardElements();
-    el.saveBtn?.addEventListener('click', async () => {
-      await handleSaveOnly();
-    });
-
-    // 接続テストボタン（保存なし）
-    el.testObsidianBtn?.addEventListener('click', async () => {
-      await handleTestObsidian();
-    });
-
-    el.testAiBtn?.addEventListener('click', async () => {
-      await handleTestAi();
-    });
-
-    document.getElementById('testLocalMarkdownBtnBottom')?.addEventListener('click', handleTestLocalMarkdown);
-
-    el.purgeNowBtn?.addEventListener('click', async () => {
-      await handlePurgeNow();
-    });
-    el.contentPurgeNowBtn?.addEventListener('click', async () => {
-      await handleContentPurgeNow();
-    });
-
-    const syncBackdrop = () => {
-      const backdropNow = document.getElementById('wizardBackdrop');
-      const wizardNow = document.getElementById('onboardingWizard');
-      if (backdropNow) backdropNow.style.display = wizardNow?.classList.contains('hidden') ? 'none' : 'block';
-    };
-    // Observe wizard class changes to keep backdrop in sync
-    const observeWizard = () => {
-      const wizardEl = document.getElementById('onboardingWizard');
-      const backdropEl = document.getElementById('wizardBackdrop');
-      if (wizardEl && backdropEl) {
-        const obs = new MutationObserver(syncBackdrop);
-        obs.observe(wizardEl, { attributes: true, attributeFilter: ['class'] });
-      }
-    };
-
-    const reopenWizard = () => {
-      const wizard = document.getElementById('onboardingWizard');
-      if (wizard) {
-        delete wizard.dataset.initialized;
-      }
-      initOnboardingWizard(true);
-      observeWizard();
-      syncBackdrop();
-    };
-    document.getElementById('reopenWizardBtn')?.addEventListener('click', reopenWizard);
-    document.getElementById('reopenWizardBtnTop')?.addEventListener('click', reopenWizard);
-
-    // Bind top button row to the same handlers as the bottom row
-    const bindTopButton = (id: string, handler: () => void) => {
-      document.getElementById(id)?.addEventListener('click', () => handler());
-    };
-    bindTopButton('saveTop', handleSaveOnly);
-    bindTopButton('testObsidianBtnTop', handleTestObsidian);
-    bindTopButton('testAiBtnTop', handleTestAi);
-    bindTopButton('testLocalMarkdownBtnTop', handleTestLocalMarkdown);
-
-    // Manual local markdown export button
-    document.getElementById('localExportManualBtn')?.addEventListener('click', handleManualLocalMarkdownExport);
-  }
-
-  // try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); } // migrated to AsyncDataPanel
-  // try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); } // migrated to AsyncDataPanel
-  try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
-  // try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); } // migrated to DiagnosticPanel
-  // try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); } // migrated to AsyncDataPanel
-  try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
-  // try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); } // migrated to AsyncDataPanel
-  // try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); } // migrated to DiagnosticPanel
-  try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
-
-  // History panel local markdown export button
   document.getElementById('historyExportLocalMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
 
   console.log('[Dashboard] Initialization complete');
 })();
 
-// Export for testability
 export function initDashboard(): void {
-  // This function can be called in tests to initialize the dashboard
-  // In production, the IIFE above calls this automatically
+  // Can be called in tests to initialize dashboard
 }
 

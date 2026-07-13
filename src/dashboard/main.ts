@@ -7,6 +7,17 @@ import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js
 import { createTagClusterPanel } from './panels/asyncData/tagClusterPanel.js';
 import { createHistoryPanel } from './panels/asyncData/historyPanel.js';
 import { createSqliteHistoryPanel } from './panels/asyncData/sqliteHistoryPanel.js';
+import { createGeneralSettingsPanel } from './panels/staticForm/generalSettingsPanel.js';
+import { createDomainFilterPanel } from './panels/staticForm/domainFilterPanel.js';
+import { createPromptSettingsPanel } from './panels/staticForm/promptSettingsPanel.js';
+import { createPrivacySettingsPanel } from './panels/staticForm/privacySettingsPanel.js';
+import { createContentSettingsPanel } from './panels/staticForm/contentSettingsPanel.js';
+import { createAiSummaryCleansingPanel } from './panels/staticForm/aiSummaryCleansingPanel.js';
+import { createTrustSettingsPanel } from './panels/staticForm/trustSettingsPanel.js';
+import { createCspSettingsPanel } from './panels/staticForm/cspSettingsPanel.js';
+import { createTagsSettingsPanel } from './panels/staticForm/tagsSettingsPanel.js';
+import { createRecordingConditionsPanel } from './panels/staticForm/recordingConditionsPanel.js';
+import { createExportImportPanel } from './panels/staticForm/exportImportPanel.js';
 import { setRegistry } from './panels/registryContext.js';
 
 export const registry = new NavigationRegistry();
@@ -21,6 +32,18 @@ bootstrapper.registerPanels([
   createTagClusterPanel(),
   createHistoryPanel(),
   createSqliteHistoryPanel(),
+  // StaticFormPanels
+  createGeneralSettingsPanel(),
+  createDomainFilterPanel(),
+  createPromptSettingsPanel(),
+  createPrivacySettingsPanel(),
+  createContentSettingsPanel(),
+  createAiSummaryCleansingPanel(),
+  createTrustSettingsPanel(),
+  createCspSettingsPanel(),
+  createTagsSettingsPanel(),
+  createRecordingConditionsPanel(),
+  createExportImportPanel(),
 ]);
 
 const sidebar = document.getElementById('sidebar');
