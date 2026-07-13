@@ -605,7 +605,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
 
-            const promise = serviceWorker.handleSessionLockRequest(message, sendResponse);
+            const promise = serviceWorker.handleSessionLockRequest(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             // lockSession が解決する前は sendResponse されていない
             expect(sendResponse).not.toHaveBeenCalled();
@@ -1521,7 +1521,7 @@ describe('service-worker handlers', () => {
                 text: vi.fn().mockResolvedValue('filter content'),
             });
 
-            await serviceWorker.handleFetchUrl(message, sendResponse);
+            await serviceWorker.handleFetchUrl(message, {} as chrome.runtime.MessageSender, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, data: 'filter content', contentType: 'text/plain' })
             );
@@ -1534,7 +1534,7 @@ describe('service-worker handlers', () => {
             // @ts-expect-error - vi.fn() type narrowing
             fetchUtils.fetchWithTimeout.mockRejectedValue(new Error('Network error'));
 
-            await serviceWorker.handleFetchUrl(message, sendResponse);
+            await serviceWorker.handleFetchUrl(message, {} as chrome.runtime.MessageSender, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false })
             );
@@ -1553,7 +1553,7 @@ describe('service-worker handlers', () => {
                 text: vi.fn().mockResolvedValue('Not Found'),
             });
 
-            await serviceWorker.handleFetchUrl(message, sendResponse);
+            await serviceWorker.handleFetchUrl(message, {} as chrome.runtime.MessageSender, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false })
             );
@@ -1739,7 +1739,7 @@ describe('service-worker handlers', () => {
                 payload: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 0 }
             } as SaveRecordMessage;
 
-            await serviceWorker.handleSaveRecord(message, sendResponse);
+            await serviceWorker.handleSaveRecord(message, {} as chrome.runtime.MessageSender, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
@@ -1766,7 +1766,7 @@ describe('service-worker handlers', () => {
                 });
             });
 
-            await serviceWorker.handleSaveRecord(message, sendResponse);
+            await serviceWorker.handleSaveRecord(message, {} as chrome.runtime.MessageSender, sendResponse);
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true })
             );
@@ -1916,7 +1916,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: TestConnectionsMessage = { type: 'TEST_CONNECTIONS' };
 
-            await serviceWorker.handleTestConnections(message, sendResponse);
+            await serviceWorker.handleTestConnections(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -1937,7 +1937,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: TestObsidianMessage = { type: 'TEST_OBSIDIAN', payload: {} };
 
-            await serviceWorker.handleTestObsidian(message, sendResponse);
+            await serviceWorker.handleTestObsidian(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, obsidian: expect.any(Object) })
@@ -1951,7 +1951,7 @@ describe('service-worker handlers', () => {
                 payload: { apiKey: 'override-key' }
             };
 
-            await serviceWorker.handleTestObsidian(message, sendResponse);
+            await serviceWorker.handleTestObsidian(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, obsidian: expect.any(Object) })
@@ -1968,7 +1968,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: TestAiMessage = { type: 'TEST_AI' };
 
-            await serviceWorker.handleTestAi(message, sendResponse);
+            await serviceWorker.handleTestAi(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, ai: expect.any(Object) })
@@ -1987,7 +1987,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
 
-            await serviceWorker.handleGetPrivacyCache(message, sendResponse);
+            await serviceWorker.handleGetPrivacyCache(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, cache: expect.any(Array) })
@@ -2000,7 +2000,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
 
-            await serviceWorker.handleGetPrivacyCache(message, sendResponse);
+            await serviceWorker.handleGetPrivacyCache(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, cache: [] })
@@ -2017,7 +2017,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: ActivityUpdateMessage = { type: 'ACTIVITY_UPDATE' };
 
-            await serviceWorker.handleActivityUpdate(message, sendResponse);
+            await serviceWorker.handleActivityUpdate(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sessionAlarmsManager.updateActivity).toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
@@ -2033,7 +2033,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
 
-            await serviceWorker.handleSessionLockRequest(message, sendResponse);
+            await serviceWorker.handleSessionLockRequest(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(storage.lockSession).toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
@@ -2049,7 +2049,7 @@ describe('service-worker handlers', () => {
             const sendResponse = vi.fn();
             const message: PingMessage = { type: 'PING' };
 
-            await serviceWorker.handlePing(message, sendResponse);
+            await serviceWorker.handlePing(message, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
@@ -2067,7 +2067,7 @@ describe('service-worker handlers', () => {
             vi.mocked(initExportScheduler).mockClear();
             const sendResponse = vi.fn();
 
-            await serviceWorker.handleRefreshLocalMarkdownScheduler(sendResponse);
+            await serviceWorker.handleRefreshLocalMarkdownScheduler({} as any, {} as chrome.runtime.MessageSender, sendResponse);
 
             expect(initExportScheduler).toHaveBeenCalledTimes(1);
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));

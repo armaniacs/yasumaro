@@ -13,8 +13,9 @@ import { join } from 'path';
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
-    // After PBI-104 refactor: handleDashboardSqlite is in dashboardSqliteHandlers.ts
-    // The sender.tab guard is enforced at the call site in service-worker.ts
+    // After PBI-104 refactor and task-11: handleDashboardSqlite is a factory-created
+    // handler registered in MessageHandlerRegistry. The sender.tab guard is enforced
+    // inside the handleDashboardSqlite function in service-worker.ts.
     let serviceWorkerSource: string;
     let handlerSource: string;
 
@@ -24,34 +25,38 @@ describe('SQLite Security & Data Integrity', () => {
     });
 
     it('should reject DASHBOARD_SQLITE calls from content scripts (sender.tab present) for ALL subtypes', () => {
-      // The guard lives in service-worker.ts at the call site
+      // The guard lives inside the handleDashboardSqlite function in service-worker.ts
       const dashboardSqliteBlock = serviceWorkerSource.match(
-        /if\s*\(\s*message\.type\s*===\s*['"]DASHBOARD_SQLITE['"]\s*\)[\s\S]*?return;\s*\}/
+        /export\s+const\s+handleDashboardSqlite\s*=\s*\(\([\s\S]*?return\s+(?:false|true)\s*;?\s*\}\)[\s\S]*?as\s+unknown\s+as\s+MessageHandler/
       );
       expect(dashboardSqliteBlock).toBeTruthy();
       const block = dashboardSqliteBlock![0];
 
       const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\b/.test(block);
       expect(hasEarlySenderGuard).toBe(true);
+
+      // The guard must check sender.url for chrome-extension:// origin
+      const hasUrlCheck = /sender\.url/.test(block);
+      expect(hasUrlCheck).toBe(true);
     });
 
     it('should NOT have subtype-specific sender.tab checks (unified guard)', () => {
-      // The extracted handler in dashboardSqliteHandlers.ts should NOT contain sender.tab checks
-      // because the guard is unified at the service-worker call site
+      // dashboardSqliteHandlers.ts should NOT contain sender.tab checks
+      // because the guard is unified in the service-worker handler wrapper
       const hasSenderTabInHandler = handlerSource.includes('sender.tab');
       expect(hasSenderTabInHandler).toBe(false);
     });
 
     it('should have sender.tab guard BEFORE any SQLite operation', () => {
-      // In service-worker.ts, the sender.tab check must come before handleDashboardSqlite call
-      const dashboardSection = serviceWorkerSource.match(
-        /message\.type\s*===\s*['"]DASHBOARD_SQLITE['"][\s\S]*?handleDashboardSqlite/
+      // In service-worker.ts, the sender.tab check must come before _dashboardSqliteHandler call
+      const guardSection = serviceWorkerSource.match(
+        /export\s+const\s+handleDashboardSqlite\s*=\s*\(\([\s\S]*?\)\s*as\s+unknown\s+as\s+MessageHandler/
       );
-      expect(dashboardSection).toBeTruthy();
-      const section = dashboardSection![0];
+      expect(guardSection).toBeTruthy();
+      const section = guardSection![0];
 
       const guardPos = section.indexOf('sender.tab');
-      const callPos = section.indexOf('handleDashboardSqlite');
+      const callPos = section.indexOf('dashboardSqliteHandler');
 
       expect(guardPos).toBeGreaterThan(-1);
       expect(callPos).toBeGreaterThan(-1);

@@ -8,7 +8,6 @@ import { RecordingLogic } from './recordingLogic.js';
 import { TabCache } from './tabCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
-import { validateUrlForFilterImport, fetchWithTimeout } from '../utils/fetch.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers } from './handlers/lifecycleHandlers.js';
@@ -24,46 +23,45 @@ import {
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
-import { isSecureUrl, sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
-
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
-import { encodeUrlSafeBase64 } from './handlers/urlNotificationHandlers.js';
-import { handleDashboardSqlite } from './handlers/dashboardSqliteHandlers.js';
-import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
-import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
-import { setUrlContent, setUrlCleansedReason } from '../utils/storageUrls.js';
-import { stripPiiFromMaskedItems } from '../utils/piiStripper.js';
+import { formatEntriesToMarkdown } from '../dashboard/obsidianFormatter.js';
 import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ONLY_TYPES,
     NO_PAYLOAD_TYPES
 } from './messageTypes.js';
-import type {
-    ExtensionMessage,
-    ValidVisitMessage,
-    FetchUrlMessage,
-    ManualRecordMessage,
-    PreviewRecordMessage,
-    SaveRecordMessage,
-    ContentCleansingExecutedMessage,
-    CheckDomainMessage,
-    TestConnectionsMessage,
-    TestObsidianMessage,
-    TestAiMessage,
-    GetPrivacyCacheMessage,
-    ActivityUpdateMessage,
-    SessionLockRequestMessage,
-    PingMessage
-} from './messageTypes.js';
+import type { ExtensionMessage } from './messageTypes.js';
+import { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
+import type { MessageHandler } from './handlers/MessageHandlerRegistry.js';
+import {
+    createValidVisitHandler,
+    createFetchUrlHandler,
+    createManualRecordHandler,
+    createSaveRecordHandler,
+    createContentCleansingExecutedHandler,
+    createCheckDomainHandler,
+    createTestConnectionsHandler,
+    createTestObsidianHandler,
+    createTestAiHandler,
+    createGetPrivacyCacheHandler,
+    createActivityUpdateHandler,
+    createSessionLockRequestHandler,
+    createPingHandler,
+    createRefreshLocalMarkdownSchedulerHandler,
+    createConsentStateChangedHandler,
+} from './handlers/messageHandlers.js';
+import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
+import { createNotificationHandlers } from './handlers/notificationHandlers.js';
+import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -221,486 +219,188 @@ export function resetManualRecordCache(): void {
 }
 
 // ============================================================================
-// Extracted Message Handlers (for testability)
+// Message Handler Registry
 // ============================================================================
 
-async function isRecordingAllowed(): Promise<boolean> {
-    return hasPrivacyConsent();
-}
+const registry = new MessageHandlerRegistry();
 
-/**
- * Handle VALID_VISIT message from Content Script.
- * Processes automatic visit recording, updates tab cache, and manages badges.
- */
-export async function handleValidVisit(
-    message: ValidVisitMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    if (!sender.tab) {
-        sendResponse(INVALID_SENDER_ERROR);
-        return;
-    }
+const _manualRecordDeps = {
+  isRecordingAllowed: () => hasPrivacyConsent(),
+  checkRateLimit: (sender: import('./rateLimiter.js').MessageSenderLike | undefined, settings: Record<string, unknown>) => rateLimiter.check(sender, settings),
+  fetchContent: (url: string) => manualContentFetcher.fetchContent(url),
+  getPrivacyInfoWithCache: (url: string) => recordingLogic.getPrivacyInfoWithCache(url),
+  obsidian,
+  aiService,
+  sqliteClient,
+  getSettings: () => getSettings(),
+  setUrlContent: async (url: string, content: string) => {
+    const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
+    await setUrl(url, content);
+  },
+};
 
-    if (!(await isRecordingAllowed())) {
-        sendResponse({ success: false, reason: 'privacy_consent_required' });
-        return;
-    }
+const _saveRecordDeps = {
+  isRecordingAllowed: () => hasPrivacyConsent(),
+  getPrivacyInfoWithCache: (url: string) => recordingLogic.getPrivacyInfoWithCache(url),
+  obsidian,
+  aiService,
+  sqliteClient,
+  getSettings: () => getSettings(),
+  setUrlContent: async (url: string, content: string) => {
+    const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
+    await setUrl(url, content);
+  },
+};
 
-    // 【パフォーマンス改善】: 直接キャッシュにタブを追加
-    tabCache.add(sender.tab);
+export const handleValidVisit = createValidVisitHandler({
+  isRecordingAllowed: () => hasPrivacyConsent(),
+  cacheTab: tabCache.add.bind(tabCache),
+  updateCachedTab: tabCache.update.bind(tabCache),
+  recordVisit: (data) => recordingLogic.record(data),
+  addBadgeTab: (tabId) => { autoSavedBadgeTabs.add(tabId); },
+  hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
+}) as unknown as MessageHandler;
+registry.register('VALID_VISIT', handleValidVisit);
 
-    const result = await recordingLogic.record({
-        title: sender.tab.title || '',
-        url: sender.tab.url || '',
-        content: message.payload?.content || '',
-        skipDuplicateCheck: false,
-        recordType: 'auto',
-        pageBytes: message.payload?.pageBytes,
-        candidateBytes: message.payload?.candidateBytes,
-        originalBytes: message.payload?.originalBytes,
-        cleansedBytes: message.payload?.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons
-    });
+export const handleFetchUrl = createFetchUrlHandler({
+  getSettings: () => getSettings(),
+  buildAllowedUrls: (settings) => buildAllowedUrls(settings),
+}) as unknown as MessageHandler;
+registry.register('FETCH_URL', handleFetchUrl);
 
-    // 【パフォーマンス改善】: 直接キャッシュを更新
-    if (sender.tab.id) {
-        tabCache.update(sender.tab.id, {
-            title: sender.tab.title || '',
-            url: sender.tab.url || '',
-            content: message.payload?.content || '',
-            isValidVisit: true
-        });
-    }
+export const handleManualRecord = createManualRecordHandler(_manualRecordDeps) as unknown as MessageHandler;
+registry.register('MANUAL_RECORD', handleManualRecord);
 
-    // 自動保存成功時: 青色バッジ ◎ を表示（タブを離れるまで継続）
-    // スキップされた場合は表示しない
-    if (result.success && !result.skipped && sender.tab.id) {
-        const savedTabId = sender.tab.id;
-        autoSavedBadgeTabs.add(savedTabId);
-        chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
-        chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
-    }
+export const handlePreviewRecord = createManualRecordHandler(_manualRecordDeps) as unknown as MessageHandler;
+registry.register('PREVIEW_RECORD', handlePreviewRecord);
 
-    // 自動保存モード confirm: ボタン付き通知で保存確認を促す
-    if (result.confirmationRequired) {
-        const url = sender.tab.url || '';
-        const title = sender.tab.title || url;
-        const reason = result.reason || 'cache-control';
-        const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
-        const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
-        // URLをBase64エンコードして通知IDに埋め込む（URLsafe base64 + HMAC署名）
-        try {
-            const notificationId = await encodeUrlSafeBase64(url);
-            NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
-        } catch (error) {
-            await logWarn(
-                'Failed to encode URL for notification',
-                { error: errorMessage(error) },
-                ErrorCode.CRYPTO_HMAC_FAILURE,
-                'service-worker'
-            );
-        }
-    }
+export const handleSaveRecord = createSaveRecordHandler(_saveRecordDeps) as unknown as MessageHandler;
+registry.register('SAVE_RECORD', handleSaveRecord);
 
-    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
+export const handleContentCleansingExecuted = createContentCleansingExecutedHandler({
+  hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
+}) as unknown as MessageHandler;
+registry.register('CONTENT_CLEANSING_EXECUTED', handleContentCleansingExecuted);
 
-    sendResponse(result);
-}
+export const handleCheckDomain = createCheckDomainHandler({
+  isDomainAllowed: (url) => isDomainAllowed(url),
+}) as unknown as MessageHandler;
+registry.register('CHECK_DOMAIN', handleCheckDomain);
 
-/**
- * Handle FETCH_URL message from Popup.
- * Fetches URL content with CORS bypass for filter import.
- */
-export async function handleFetchUrl(
-    message: FetchUrlMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    try {
-        // SSRF対策: 内部ネットワークブロック
-        validateUrlForFilterImport(message.payload.url);
+export const handleTestConnections = createTestConnectionsHandler({
+  testObsidian: () => obsidian.testConnection(),
+  testAi: () => aiClient.testConnection(),
+}) as unknown as MessageHandler;
+registry.register('TEST_CONNECTIONS', handleTestConnections);
 
-        // 許可されたURLのリストを動的に構築（Deadlock回避）
-        const settings = await getSettings();
-        const allowedUrls = buildAllowedUrls(settings);
+export const handleTestObsidian = createTestObsidianHandler({
+  testConnection: (override?: { apiKey?: string }) => obsidian.testConnection(override),
+}) as unknown as MessageHandler;
+registry.register('TEST_OBSIDIAN', handleTestObsidian);
 
-        const response = await fetchWithTimeout(message.payload.url, {
-            method: 'GET',
-            cache: 'no-cache',
-            allowedUrls // 最新の動的URL検証リストを使用
-        });
+export const handleTestAi = createTestAiHandler({
+  clearSettingsCache: () => clearSettingsCache(),
+  testConnection: () => aiClient.testConnection(),
+}) as unknown as MessageHandler;
+registry.register('TEST_AI', handleTestAi);
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+export const handleGetPrivacyCache = createGetPrivacyCacheHandler({
+  getPrivacyCache: () => RecordingLogic.cacheState.privacyCache,
+}) as unknown as MessageHandler;
+registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache);
 
-        const contentType = response.headers.get('content-type');
-        const text = await response.text();
+export const handleActivityUpdate = createActivityUpdateHandler({
+  updateActivity: () => updateActivity(),
+}) as unknown as MessageHandler;
+registry.register('ACTIVITY_UPDATE', handleActivityUpdate);
 
-        sendResponse({ success: true, data: text, contentType });
-    } catch (error) {
-        await logError(
-            'Fetch URL Error',
-            {
-                url: message.payload?.url,
-                error: errorMessage(error)
-            },
-            ErrorCode.API_REQUEST_FAILURE,
-            'service-worker'
-        );
-        // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
-        sendResponse(createErrorResponse(error, { url: message.payload?.url }));
-    }
-}
+export const handleSessionLockRequest = createSessionLockRequestHandler({
+  lockSession: () => lockSession(),
+}) as unknown as MessageHandler;
+registry.register('SESSION_LOCK_REQUEST', handleSessionLockRequest);
 
-/**
- * Handle MANUAL_RECORD or PREVIEW_RECORD message from Popup.
- * Processes manual recording with optional AI summarization.
- */
-export async function handleManualRecord(
-    message: ManualRecordMessage | PreviewRecordMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    if (!(await isRecordingAllowed())) {
-        sendResponse({ success: false, reason: 'privacy_consent_required' });
-        return;
-    }
+export const handlePing = createPingHandler({}) as unknown as MessageHandler;
+registry.register('PING', handlePing);
 
-    let content = message.payload.content;
-    const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
-    const settings = await getSettings();
-
-    // URLバリデーション - http/httpsのみ許可
-    if (!isSecureUrl(message.payload.url)) {
-        await logWarn(
-            'Blocked MANUAL_RECORD with insecure URL',
-            { url: message.payload.url, type: message.type },
-            undefined,
-            'service-worker'
-        );
-        sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
-        return;
-    }
-
-    // skipAi操作のレート制限
-    if (skipAi) {
-        const rateLimitResult = await rateLimiter.check(sender, settings);
-        if (!rateLimitResult.allowed) {
-            sendResponse({ success: false, error: rateLimitResult.error });
-            return;
-        }
-    }
-
-    // 【プライバシー（v4.2.1）】コンテンツフェッチ設定のチェック
-    const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
-    const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
-
-    // contentが空でskipAiでない場合、タブからページ本文を取得（明示的同意が必要）
-    // Google Sitesなどの特殊的なサイトではコンテンツが取得できない場合がある
-    const isGoogleSites = message.payload.url.includes('sites.google.com');
-    if (!content && !skipAi) {
-        // Google SitesではCSPの問題でコンテンツが取得できない場合がある
-        // force=true の場合はスキップして続行
-        if (isGoogleSites && message.payload.force) {
-            await logDebug('Google Sites detected with force flag, skipping content fetch', { url: sanitizedUrl }, 'service-worker');
-            // 空のコンテンツで続行
-        } else {
-            if (!autoContentFetchEnabled && !message.payload.force) {
-                // 通常フローではコンテンツフェッチ無効を通知して終了
-                await logDebug(
-                    'Content fetch disabled (AUTO_CONTENT_FETCH_ENABLED=false)',
-                    { url: sanitizedUrl },
-                    'service-worker'
-                );
-                sendResponse({
-                    success: true,
-                    warning: 'Content fetch is disabled. Enable it in settings or provide content directly.'
-                });
-                return;
-            }
-
-            content = await manualContentFetcher.fetchContent(message.payload.url);
-        }
-    }
-
-    // Use RecordingPipeline for manual recording
-    const pipeline = new RecordingPipeline(
-        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
-        obsidian,
-        aiService,
-        sqliteClient
-    );
-
-    const result = await pipeline.execute({
-        title: message.payload.title,
-        url: message.payload.url,
-        content,
-        force: message.payload.force,
-        skipDuplicateCheck: true,
-        previewOnly: message.type === 'PREVIEW_RECORD',
-        recordType: 'manual',
-        skipAi,
-        pageBytes: message.payload.pageBytes,
-        candidateBytes: message.payload.candidateBytes,
-        originalBytes: message.payload.originalBytes,
-        cleansedBytes: message.payload.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
-    }, settings);
-
-    // コンテンツを記録履歴に保存（成功時のみ）
-    if (result.success) {
-        await setUrlContent(message.payload.url, content);
-    }
-
-    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
-
-    sendResponse(result);
-}
-
-/**
- * Handle SAVE_RECORD message from Popup.
- * Saves a confirmed record after preview.
- */
-export async function handleSaveRecord(
-    message: SaveRecordMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    if (!(await isRecordingAllowed())) {
-        sendResponse({ success: false, reason: 'privacy_consent_required' });
-        return;
-    }
-
-    const settings = await getSettings();
-    // Use RecordingPipeline for saving confirmed record
-    const pipeline = new RecordingPipeline(
-        recordingLogic.getPrivacyInfoWithCache.bind(recordingLogic),
-        obsidian,
-        aiService,
-        sqliteClient
-    );
-
-    const result = await pipeline.execute({
-        title: message.payload.title,
-        url: message.payload.url,
-        content: message.payload.content,
-        skipDuplicateCheck: true,
-        alreadyProcessed: true,
-        force: message.payload.force,
-        recordType: 'manual',
-        maskedCount: message.payload.maskedCount,
-        aiDuration: message.payload.aiDuration,
-        pageBytes: message.payload.pageBytes,
-        candidateBytes: message.payload.candidateBytes,
-        originalBytes: message.payload.originalBytes,
-        cleansedBytes: message.payload.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons
-    }, settings);
-
-    // コンテンツを記録履歴に保存（成功時のみ）
-    if (result.success && message.payload.content) {
-        await setUrlContent(message.payload.url, message.payload.content);
-    }
-
-    // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-        result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
-
-    sendResponse(result);
-}
-
-/**
- * Handle CONTENT_CLEANSING_EXECUTED message from Content Script.
- * Updates badge to show cleansing count, sets timeout to clear badge,
- * and records cleansing reason in storage.
- */
-export async function handleContentCleansingExecuted(
-    message: ContentCleansingExecutedMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
-    const tabId = sender.tab!.id!;
-
-    chrome.action.setBadgeText({ text: `C${totalRemoved || 0}`, tabId });
-    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
-
-    setTimeout(() => {
-        if (!autoSavedBadgeTabs.has(tabId)) {
-            chrome.action.setBadgeText({ text: '', tabId });
-        }
-    }, 3000);
-
-    if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
-        const hardEnabled = (hardStripRemoved ?? 0) > 0;
-        const keywordEnabled = (keywordStripRemoved ?? 0) > 0;
-        let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
-        if (hardEnabled && !keywordEnabled) {
-            cleansedReason = 'hard';
-        } else if (!hardEnabled && keywordEnabled) {
-            cleansedReason = 'keyword';
-        }
-        await setUrlCleansedReason(sender.tab.url, cleansedReason);
-    }
-
-    sendResponse({ success: true });
-}
-
-/**
- * Handle CHECK_DOMAIN message from Content Script.
- * Checks if the sender's URL is in the allowed domain list.
- */
-export async function handleCheckDomain(
-    message: CheckDomainMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const url = sender.tab?.url || '';
-    const allowed = url ? await isDomainAllowed(url) : false;
-    sendResponse({ success: true, allowed });
-}
-
-/**
- * Handle TEST_CONNECTIONS message from Popup.
- * Tests both Obsidian and AI provider connections.
- */
-export async function handleTestConnections(
-    message: TestConnectionsMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const obsidianResult = await obsidian.testConnection();
-    const aiResult = await aiClient.testConnection();
-    sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
-}
-
-/**
- * Handle TEST_OBSIDIAN message from Popup.
- * Tests Obsidian connection only, optionally with an API key override.
- */
-export async function handleTestObsidian(
-    message: TestObsidianMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const override = message.payload?.apiKey ? message.payload : undefined;
-    const obsidianResult = await obsidian.testConnection(override);
-    sendResponse({ success: true, obsidian: obsidianResult });
-}
-
-/**
- * Handle TEST_AI message from Popup.
- * Tests AI provider connection only.
- */
-export async function handleTestAi(
-    message: TestAiMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    // Force clear settings cache to ensure we read fresh settings
-    clearSettingsCache();
-    const aiResult = await aiClient.testConnection();
-    sendResponse({ success: true, ai: aiResult });
-}
-
-/**
- * Handle GET_PRIVACY_CACHE message from Popup.
- * Returns the privacy cache contents for the status panel.
- */
-export async function handleGetPrivacyCache(
-    message: GetPrivacyCacheMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    const cache = RecordingLogic.cacheState.privacyCache;
-    await logDebug('GET_PRIVACY_CACHE requested', { cacheSize: cache?.size || 0 }, 'service-worker');
-    if (cache) {
-        const cacheArray = Array.from(cache.entries());
-        await logDebug('Sending cache entries to popup', { count: cacheArray.length }, 'service-worker');
-        sendResponse({ success: true, cache: cacheArray });
-    } else {
-        await logDebug('No cache available, sending empty array', undefined, 'service-worker');
-        sendResponse({ success: true, cache: [] });
-    }
-}
-
-/**
- * Handle ACTIVITY_UPDATE message from Popup.
- * Updates session activity timestamp.
- */
-export async function handleActivityUpdate(
-    message: ActivityUpdateMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    await updateActivity();
-    sendResponse({ success: true });
-}
-
-/**
- * Handle SESSION_LOCK_REQUEST message.
- * Locks the current session.
- */
-export async function handleSessionLockRequest(
-    message: SessionLockRequestMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    await lockSession();
-    sendResponse({ success: true });
-}
-
-/**
- * Handle PING message for Service Worker health check.
- */
-export async function handlePing(
-    _message: PingMessage,
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
-    sendResponse({ success: true });
-}
-
-/**
- * Re-run initExportScheduler() so a LOCAL_MARKDOWN_EXPORT_TIMING change
- * saved from the dashboard takes effect immediately, instead of waiting
- * for the next (unpredictable) Service Worker restart.
- */
-export async function handleRefreshLocalMarkdownScheduler(
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
+export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSchedulerHandler({
+  initExportScheduler: async () => {
     const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
     await initExportScheduler();
-    sendResponse({ success: true });
-}
+  },
+}) as unknown as MessageHandler;
+registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handleRefreshLocalMarkdownScheduler);
 
-/**
- * Re-run updateConsentBadge() so the toolbar icon reflects the latest
- * accept/decline decision immediately (M3).
- */
-export async function handleConsentStateChanged(
-    sendResponse: (response?: unknown) => void
-): Promise<void> {
+export const handleConsentStateChanged = createConsentStateChangedHandler({
+  updateConsentBadge: async () => {
     const { updateConsentBadge } = await import('./consentBadge.js');
     await updateConsentBadge();
-    sendResponse({ success: true });
-}
+  },
+}) as unknown as MessageHandler;
+registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged);
 
+const _dashboardSqliteHandler = createDashboardSqliteHandler({
+  query: (params) => sqliteClient.query(params as any),
+  search: (query, limit, offset) => sqliteClient.search(query, limit, offset),
+  toggleStar: (id) => sqliteClient.toggleStar(id),
+  delete: (id) => sqliteClient.delete(id),
+  update: (id, changes) => sqliteClient.update(id, changes),
+  getCount: () => sqliteClient.getCount(),
+  clearAll: () => sqliteClient.clearAll(),
+  insert: (record) => sqliteClient.insert(record as any),
+  restoreDb: (data) => sqliteClient.restoreDb(data),
+  getStatus: () => sqliteClient.getStatus(),
+  runOpfsSpike: () => sqliteClient.runOpfsSpike() as Promise<Record<string, unknown> | null>,
+  purgeOldRecords: (days, max) => sqliteClient.purgeOldRecords(days, max),
+  purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
+  backupDb: () => sqliteClient.backupDb(),
+  lastError: sqliteClient.lastError,
+  runMigration: async () => {
+    await chrome.storage.local.remove([
+      'yasumaro_migration_status',
+      'yasumaro_migration_progress',
+    ]);
+    const beforeCount = await sqliteClient.getCount();
+    await migrationService.run();
+    const afterCount = await sqliteClient.getCount();
+    return {
+      success: true,
+      count: afterCount ?? 0,
+      read: 0,
+      inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
+    };
+  },
+  getConfirmToken: () => ensureConfirmToken(),
+  runBackfill: () => migrationService.backfillDiagnosticMetadata(),
+  runCleanup: () => migrationService.cleanupLegacyStorage(),
+  getSettings: () => getSettings(),
+  formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
+  appendToDailyNote: async (markdown) => {
+    const obsidianClient = new ObsidianClient();
+    await obsidianClient.appendToDailyNote(markdown);
+  },
+});
 
+export const handleDashboardSqlite = ((message: Record<string, unknown>, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): boolean => {
+  if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
+    sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
+    return false;
+  }
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from external extensions' });
+    return false;
+  }
+  (async () => {
+    const result = await _dashboardSqliteHandler(
+      (message.payload || {}) as DashboardSqliteRequest & { confirmToken?: string },
+    );
+    sendResponse(result);
+  })();
+  return true;
+}) as unknown as MessageHandler;
+registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
 
-// Message Handler Factory (extracted for testability)
+// ============================================================================
+// Message Handler (wraps registry with validation)
 // ============================================================================
 
 /**
@@ -715,10 +415,6 @@ export function createMessageHandler(): (
     return (rawMessage: unknown, sender, sendResponse) => {
         const process = async () => {
             try {
-                // 【パフォーマンス改善】: メッセージハンドラ関数をインライン化
-                // TabCache初期化を必要な場合のみ実行
-
-                // Message payload structure validation
                 if (!rawMessage || typeof rawMessage !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
                     return;
@@ -728,7 +424,6 @@ export function createMessageHandler(): (
                     sendResponse(INVALID_MESSAGE_ERROR);
                     return;
                 }
-                // CHECK_DOMAIN、GET_PRIVACY_CACHE、ACTIVITY_UPDATE、SESSION_LOCK_REQUEST は payload 不要
                 if (!NO_PAYLOAD_TYPES.includes(msg.type as typeof NO_PAYLOAD_TYPES[number])) {
                     if (msg.payload === undefined || typeof msg.payload !== 'object') {
                         sendResponse(INVALID_MESSAGE_ERROR);
@@ -736,159 +431,25 @@ export function createMessageHandler(): (
                     }
                 }
 
-                // Cast to discriminated union for type-safe narrowing in handlers
                 const message = rawMessage as ExtensionMessage;
 
-                // Sender validation: Content Script only message types
                 if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type as typeof CONTENT_SCRIPT_ONLY_TYPES[number])) {
                     if (!sender.tab || !sender.tab.id || !sender.tab.url) {
                         sendResponse(INVALID_SENDER_ERROR);
                         return;
                     }
-                    // 【Code Review #2】: フラグ設定を削除（簡素化）
                 }
 
-                // 【パフォーマンス改善】: 必要な場合のみTabCache初期化
-                // messages that don't need tab cache: TEST_CONNECTIONS, TEST_OBSIDIAN, TEST_AI, CHECK_DOMAIN
                 if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'TEST_OBSIDIAN' && message.type !== 'TEST_AI' && message.type !== 'CHECK_DOMAIN') {
                     await tabCache.initialize();
                 }
 
-                // Content Cleansing executed notification (Content Script only)
-                if (message.type === 'CONTENT_CLEANSING_EXECUTED' && sender.tab && sender.tab?.id) {
-                    await handleContentCleansingExecuted(message, sender, sendResponse);
+                if (message.type === 'CONTENT_CLEANSING_EXECUTED' && !sender.tab?.id) {
+                    sendResponse(null);
                     return;
                 }
 
-                // Domain Check (Content Script only: loader が extractor を inject する前に確認)
-                if (message.type === 'CHECK_DOMAIN' && sender.tab) {
-                    await handleCheckDomain(message, sender, sendResponse);
-                    return;
-                }
-
-                // Automatic Visit Processing (Content Script only)
-                if (message.type === 'VALID_VISIT' && sender.tab) {
-                    await handleValidVisit(message, sender, sendResponse);
-                    return;
-                }
-
-                // Fetch URL Content (CORS Bypass for Popup)
-                if (message.type === 'FETCH_URL') {
-                    await handleFetchUrl(message, sendResponse);
-                    return;
-                }
-
-                // Connection Test (Obsidian + AI)
-                if (message.type === 'TEST_CONNECTIONS') {
-                    await handleTestConnections(message, sendResponse);
-                    return;
-                }
-
-                // Obsidian のみ接続テスト
-                if (message.type === 'TEST_OBSIDIAN') {
-                    await handleTestObsidian(message, sendResponse);
-                    return;
-                }
-
-                // AI のみ接続テスト
-                if (message.type === 'TEST_AI') {
-                    await handleTestAi(message, sendResponse);
-                    return;
-                }
-
-                // Get Privacy Cache (for Popup status panel)
-                if (message.type === 'GET_PRIVACY_CACHE') {
-                    await handleGetPrivacyCache(message, sendResponse);
-                    return;
-                }
-
-                // Manual Record Processing & Preview
-                if (message.type === 'MANUAL_RECORD' || message.type === 'PREVIEW_RECORD') {
-                    await handleManualRecord(message, sender, sendResponse);
-                    return;
-                }
-
-                // Save Confirmed Record (Post-Preview)
-                if (message.type === 'SAVE_RECORD') {
-                    await handleSaveRecord(message, sendResponse);
-                    return;
-                }
-
-                // Activity Update (Popupからのアクティビティ通知)
-                if (message.type === 'ACTIVITY_UPDATE') {
-                    await handleActivityUpdate(message, sendResponse);
-                    return;
-                }
-
-                // Session Lock Request (from sessionAlarmsManager.ts)
-                if (message.type === 'SESSION_LOCK_REQUEST') {
-                    await handleSessionLockRequest(message, sendResponse);
-                    return;
-                }
-
-                // PING - Service Worker health check
-                if (message.type === 'PING') {
-                    await handlePing(message, sendResponse);
-                    return;
-                }
-
-                // REFRESH_LOCAL_MARKDOWN_SCHEDULER - dashboard asks the SW to re-read
-                // LOCAL_MARKDOWN_EXPORT_TIMING and re-register alarms immediately
-                if (message.type === 'REFRESH_LOCAL_MARKDOWN_SCHEDULER') {
-                    await handleRefreshLocalMarkdownScheduler(sendResponse);
-                    return;
-                }
-
-                // CONSENT_STATE_CHANGED - popup asks the SW to re-read consent
-                // state and refresh the toolbar badge immediately
-                if (message.type === 'CONSENT_STATE_CHANGED') {
-                    await handleConsentStateChanged(sendResponse);
-                    return;
-                }
-
-                // DASHBOARD_SQLITE - Dashboard SQLite operations (from options page or dashboard)
-                if (message.type === 'DASHBOARD_SQLITE') {
-                    // Allow from extension pages (options.html, dashboard), block from content scripts
-                    if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
-                        sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
-                        return;
-                    }
-                    // Block external extensions (defense-in-depth)
-                    if (sender.id !== chrome.runtime.id) {
-                        sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from external extensions' });
-                        return;
-                    }
-                    const result = await handleDashboardSqlite(
-                        // message.payload crosses the chrome.runtime.onMessage wire — no
-                        // runtime validation happens here, so this cast is the one place
-                        // the protocol's type safety necessarily ends.
-                        (message.payload || {}) as DashboardSqliteRequest & { confirmToken?: string },
-                        sqliteClient,
-                        async () => {
-                            // Reset progress for manual re-run via diagnostics panel
-                            await chrome.storage.local.remove([
-                                'yasumaro_migration_status',
-                                'yasumaro_migration_progress',
-                            ]);
-                            const beforeCount = await sqliteClient.getCount();
-                            await migrationService.run();
-                            const afterCount = await sqliteClient.getCount();
-                            return {
-                                success: true,
-                                count: afterCount ?? 0,
-                                read: 0,
-                                inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
-                            };
-                        },
-                        await ensureConfirmToken(),
-                        () => migrationService.backfillDiagnosticMetadata(),
-                        () => migrationService.cleanupLegacyStorage()
-                    );
-                    sendResponse(result);
-                    return;
-                }
-
-                sendResponse(null);
+                return registry.dispatch(msg.type as string, msg, sender, sendResponse);
             } catch (error) {
                 logError(
                     'Service Worker Error',
@@ -896,13 +457,12 @@ export function createMessageHandler(): (
                     ErrorCode.INTERNAL_ERROR,
                     'service-worker'
                 );
-                // P2: 技術情報漏洩対策 - ユーザー向けメッセージに変換
                 sendResponse(createErrorResponse(error));
             }
         };
 
         process();
-        return true; // Keep port open for async response
+        return true;
     };
 }
 
@@ -932,7 +492,9 @@ export const handleStartup = _lifecycleHandlers.handleStartup;
 // ============================================================================
 export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
 
-const _notificationHandlers = createNotificationHandlers(recordingLogic);
+const _notificationHandlers = createNotificationHandlers({
+  record: (data) => recordingLogic.record(data),
+});
 export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 
@@ -941,7 +503,25 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 // ============================================================================
 
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
-const _contextClickHandler = createContextClickHandler({ handleManualRecord });
+const _contextClickHandler = createContextClickHandler({
+  handleManualRecord: async (message, sender, sendResponse) => {
+    const handler = createManualRecordHandler({
+      isRecordingAllowed: () => hasPrivacyConsent(),
+      checkRateLimit: (sender, settings) => rateLimiter.check(sender, settings),
+      fetchContent: (url) => manualContentFetcher.fetchContent(url),
+      getPrivacyInfoWithCache: (url) => recordingLogic.getPrivacyInfoWithCache(url),
+      obsidian,
+      aiService,
+      sqliteClient,
+      getSettings: () => getSettings(),
+      setUrlContent: async (url, content) => {
+        const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
+        await setUrl(url, content);
+      },
+    });
+    await handler(message, sender, sendResponse);
+  },
+});
 
 // ============================================================================
 // Module-level initialization - register all Chrome event listeners directly
@@ -963,7 +543,6 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.runtime.onStartup.addListener(handleStartup);
 
     // Context menu for manual recording
-    // Registered on install/update; context menu items persist across service worker restarts.
     chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
 
     chrome.contextMenus.onClicked.addListener(_contextClickHandler);
@@ -980,21 +559,18 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
                 (days, max, starred) => sqliteClient.purgeContent(days, max, starred),
             );
           }
-          // 'yasumaro-local-md-flush' === IDLE_FALLBACK_ALARM (localMarkdownIdleFlusher.js)
           if (alarm.name === 'yasumaro-local-md-flush') {
             void (async () => {
               const { flushBufferedExports } = await import('./localMarkdownExportCore.js');
               void flushBufferedExports();
             })();
           }
-          // 'yasumaro-local-md-daily-flush' === DAILY_FLUSH_ALARM (localMarkdownIdleFlusher.js)
           if (alarm.name === 'yasumaro-local-md-daily-flush') {
             void (async () => {
               const { flushYesterdaysExport } = await import('./localMarkdownIdleFlusher.js');
               void flushYesterdaysExport();
             })();
           }
-          // 'yasumaro-local-md-immediate' === IMMEDIATE_FLUSH_ALARM (saveLocalMarkdownStep.js)
           if (alarm.name === 'yasumaro-local-md-immediate') {
             void (async () => {
               const { flushBufferedExports } = await import('./localMarkdownExportCore.js');
