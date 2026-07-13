@@ -843,15 +843,17 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
         })()
       : await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
 
-    if (!result || result.rows.length === 0) {
+    if (!result || !('rows' in result) || result.rows.length === 0) {
       statusEl.textContent = options.emptyMessage;
       statusEl.className = 'error';
       return;
     }
 
+    const { rows } = result;
+
     // Group entries by local date
-    const entriesByDate = new Map<string, typeof result.rows>();
-    for (const row of result.rows) {
+    const entriesByDate = new Map<string, typeof rows>();
+    for (const row of rows) {
       const date = getLocalDateString(row.created_at);
       if (!entriesByDate.has(date)) {
         entriesByDate.set(date, []);
@@ -879,7 +881,7 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
       totalFiles++;
     }
 
-    statusEl.textContent = `${result.rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.textContent = `${'rows' in result ? result.rows.length : 0}件の記録を${totalFiles}ファイルにエクスポートしました。`;
     statusEl.className = 'success';
   } catch (e) {
     statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;

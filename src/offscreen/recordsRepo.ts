@@ -53,7 +53,9 @@ export async function search(searchQuery: string, limit: number = 50, offset: nu
 } | { success: false; error: string }> {
   limit = Math.min(limit, MAX_QUERY_LIMIT);
   const backend = await engine.getBackend();
-  return backend.search(searchQuery, limit, offset);
+  const result = await backend.search(searchQuery, limit, offset);
+  if (!result.success) return result;
+  return { success: true, rows: result.rows as unknown as SearchResult[], total: result.total };
 }
 
 /**
@@ -92,11 +94,11 @@ export async function getCount(): Promise<{ success: true; count: number } | { s
 /**
  * Check if the database is initialized and accessible.
  */
-export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | { success: false; error: string }> {
+export async function getStatus(): Promise<{ success: true; initialized: boolean; path: string; fallback: boolean; initError?: string; fts5: boolean; supportsBinaryBackup: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | { success: false; error: string }> {
   const backend = await engine.getBackend();
   const result = await backend.getStatus();
-  if (!result.success) return result;
-  return { ...result, path: DB_FILENAME };
+  if ('error' in result) return result;
+  return { success: true, ...result, path: DB_FILENAME };
 }
 
 /**
