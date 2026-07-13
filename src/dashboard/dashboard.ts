@@ -37,7 +37,6 @@ import { initTagsPanel } from './tagsPanel.js';
 import { initTagClusterPanel } from './tagClusterPanel.js';
 import { initDomainSearchPanel } from './domainSearchPanel.js';
 import { initDiagnosticsPanel } from './diagnosticsPanel.js';
-import { initAuditLogPanel } from './auditLogPanel.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import { clearAllLogs } from './dashboardSqliteService.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
@@ -113,15 +112,6 @@ export function initSidebarNav(): void {
         });
       }
 
-      if (targetPanelId === 'panel-audit-log') {
-        requestAnimationFrame(() => {
-          try {
-            void initAuditLogPanel();
-          } catch (e) {
-            console.error('[Dashboard] initAuditLogPanel error on panel switch:', e);
-          }
-        });
-      }
     });
 
     btn.addEventListener('keydown', (e) => {
@@ -1503,7 +1493,6 @@ function initExportLogsPanel(): void {
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); }
   // try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); } // migrated to DiagnosticPanel
-  try { await initAuditLogPanel(); } catch (e) { console.error('[Dashboard] initAuditLogPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
 
   // History panel local markdown export button
