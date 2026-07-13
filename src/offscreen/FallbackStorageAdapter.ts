@@ -71,7 +71,7 @@ export class FallbackStorageAdapter implements StorageBackend {
   }
 
   async getStatus(): Promise<BackendOrError<StatusResult>> {
-    return { success: true as const, initialized: true, fallback: true, fts5: false, supportsBinaryBackup: false } as unknown as BackendOrError<StatusResult>;
+    return { initialized: true, fallback: true, fts5: false, supportsBinaryBackup: false };
   }
 
   async insertAuditLog(_record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {

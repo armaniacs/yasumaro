@@ -82,7 +82,7 @@ export class OpfsWorkerBackend implements StorageBackend {
   async getStatus(): Promise<BackendOrError<StatusResult>> {
     const result = await this.engine.tryOpfsProxy<StatusResult>('STATUS');
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
-    return { success: true as const, ...result } as unknown as BackendOrError<StatusResult>;
+    return result;
   }
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
