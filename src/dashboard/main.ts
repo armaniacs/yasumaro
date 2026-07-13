@@ -3,6 +3,7 @@ import { DashboardBootstrapper } from './panels/DashboardBootstrapper.js';
 import { createDiagnosticsPanel } from './panels/diagnostic/diagnosticsPanel.js';
 import { createExportLogsPanel } from './panels/diagnostic/exportLogsPanel.js';
 import { createAuditLogPanel } from './panels/asyncData/auditLogPanel.js';
+import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js';
 
 export const registry = new NavigationRegistry();
 const bootstrapper = new DashboardBootstrapper(registry);
@@ -11,6 +12,7 @@ bootstrapper.registerPanels([
   createDiagnosticsPanel(),
   createExportLogsPanel(),
   createAuditLogPanel(),
+  createDomainSearchPanel(),
 ]);
 
 const sidebar = document.getElementById('sidebar');
