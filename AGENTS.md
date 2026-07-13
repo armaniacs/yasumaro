@@ -352,7 +352,7 @@ When making architectural changes that affect documentation (e.g., TypeScript mi
 ### TypeScript-Specific Notes
 
 For projects using TypeScript with ESM:
-- Source files: `.ts` / `.test.ts`
+- Source files: `.ts` extension for source and tests
 - Import statements: Use `.js` extension (TypeScript ESM resolution spec)
 - Documentation: Reference `.ts` file names, explain `.js` in imports
 
