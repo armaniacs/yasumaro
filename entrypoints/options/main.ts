@@ -3,3 +3,4 @@
  */
 import '../../src/popup/i18n.js';
 import '../../src/dashboard/dashboard.js';
+import '../../src/dashboard/main.js';

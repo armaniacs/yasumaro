@@ -1498,11 +1498,11 @@ function initExportLogsPanel(): void {
   try { await initHistoryPanel(); } catch (e) { console.error('[Dashboard] initHistoryPanel error:', e); }
   try { await initSqliteHistoryPanel(); } catch (e) { console.error('[Dashboard] initSqliteHistoryPanel error:', e); }
   try { await initRecordingConditionsSettings(); } catch (e) { console.error('[Dashboard] initRecordingConditionsSettings error:', e); }
-  try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); }
+  // try { initExportLogsPanel(); } catch (e) { console.error('[Dashboard] initExportLogsPanel error:', e); } // migrated to DiagnosticPanel
   try { await initDomainSearchPanel(); } catch (e) { console.error('[Dashboard] initDomainSearchPanel error:', e); }
   try { await initTagsPanel(); } catch (e) { console.error('[Dashboard] initTagsPanel error:', e); }
   try { await initTagClusterPanel(); } catch (e) { console.error('[Dashboard] initTagClusterPanel error:', e); }
-  try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); }
+  // try { await initDiagnosticsPanel(); } catch (e) { console.error('[Dashboard] initDiagnosticsPanel error:', e); } // migrated to DiagnosticPanel
   try { await initAuditLogPanel(); } catch (e) { console.error('[Dashboard] initAuditLogPanel error:', e); }
   try { await showBreakingChangesModal(); } catch (e) { console.error('[Dashboard] showBreakingChangesModal error:', e); }
 
