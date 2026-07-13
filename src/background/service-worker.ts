@@ -59,6 +59,10 @@ import {
     createRefreshLocalMarkdownSchedulerHandler,
     createConsentStateChangedHandler,
 } from './handlers/messageHandlers.js';
+import type {
+    ManualRecordHandlerDeps,
+    SaveRecordHandlerDeps,
+} from './handlers/messageHandlers.js';
 import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
@@ -182,7 +186,7 @@ const localClient = new LocalAIClient();
 const aiService = new FallbackAIService({
   local: new LocalAIService({
     localAiClient: localClient,
-    ensureOffscreenDocument: () => localClient.ensureOffscreenDocument(),
+    ensureOffscreenDocument: localClient.ensureOffscreenDocument.bind(localClient),
   }),
   remote: new RemoteAIService({ aiClient }),
 });
@@ -224,7 +228,7 @@ export function resetManualRecordCache(): void {
 
 const registry = new MessageHandlerRegistry();
 
-const _manualRecordDeps = {
+const _manualRecordDeps: ManualRecordHandlerDeps = {
   isRecordingAllowed: () => hasPrivacyConsent(),
   checkRateLimit: (sender: import('./rateLimiter.js').MessageSenderLike | undefined, settings: Record<string, unknown>) => rateLimiter.check(sender, settings),
   fetchContent: (url: string) => manualContentFetcher.fetchContent(url),
@@ -239,7 +243,7 @@ const _manualRecordDeps = {
   },
 };
 
-const _saveRecordDeps = {
+const _saveRecordDeps: SaveRecordHandlerDeps = {
   isRecordingAllowed: () => hasPrivacyConsent(),
   getPrivacyInfoWithCache: (url: string) => recordingLogic.getPrivacyInfoWithCache(url),
   obsidian,
