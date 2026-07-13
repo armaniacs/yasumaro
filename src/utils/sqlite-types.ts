@@ -44,8 +44,8 @@ export interface BrowsingLogRecord {
   fallback_triggered?: number | null;
 }
 
-// Dashboard row type derived from BrowsingLogRecord (no is_deleted, id is required)
-export type BrowsingLogEntry = Omit<BrowsingLogRecord, 'is_deleted'> & { id: number };
+// Dashboard row type derived from BrowsingLogRecord (id is required)
+export type BrowsingLogEntry = BrowsingLogRecord & { id: number };
 
 export interface QueryOptions {
   /** Maximum number of rows to return */

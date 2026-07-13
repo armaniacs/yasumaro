@@ -325,14 +325,13 @@ export class IdbVfsBackend implements StorageBackend {
   async getStatus(): Promise<BackendOrError<StatusResult>> {
     this.ensureDb();
     return {
-      success: true as const,
       initialized: true,
       fallback: false,
       fts5: this.engine.fts5Available,
       supportsBinaryBackup: false,
       compileOptions: this.engine.cachedCompileOptions ?? undefined,
       compileOptionsSource: 'idb',
-    } as unknown as BackendOrError<StatusResult>;
+    };
   }
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
@@ -406,6 +405,7 @@ export class IdbVfsBackend implements StorageBackend {
       visit_duration: row[7] != null ? Number(row[7]) : null,
       scroll_ratio: row[8] != null ? Number(row[8]) : null,
       is_starred: Number(row[9]),
+      is_deleted: Number(row[10]),
       obsidian_synced: Number(row[11]),
       gist_synced: Number(row[12]),
       content: row[13] != null ? String(row[13]) : null,

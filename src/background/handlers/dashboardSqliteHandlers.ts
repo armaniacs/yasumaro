@@ -170,7 +170,7 @@ export async function handleDashboardSqlite(
                         }
                     }
                 }
-                if (sqliteClient.lastError) {
+                if (sqliteClient.lastError && inserted === 0) {
                     return { success: false, error: sqliteClient.lastError };
                 }
                 return { success: true, inserted, skipped, total: rows.length };
