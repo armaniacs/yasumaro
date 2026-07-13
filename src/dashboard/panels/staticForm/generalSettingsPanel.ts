@@ -70,6 +70,20 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
         ];
         updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
         updateProviderSettingsLayout(selected);
+        updatePrioritySummaryNames(selected);
+      };
+
+      // Update <summary> provider names dynamically
+      const updatePrioritySummaryNames = (selected: string[]): void => {
+        const selects = ['aiProvider', 'aiProviderPriority2', 'aiProviderPriority3'];
+        selects.forEach((id, index) => {
+          const select = document.getElementById(id) as HTMLSelectElement | null;
+          const summaryName = document.querySelector(`.priority-provider-name[data-priority="${index + 1}"]`) as HTMLElement | null;
+          if (select && summaryName) {
+            const option = select.options[select.selectedIndex];
+            summaryName.textContent = option.value ? `— ${option.text}` : '';
+          }
+        });
       };
 
       document.getElementById('aiProvider')?.addEventListener('change', refreshMultiVisibility);

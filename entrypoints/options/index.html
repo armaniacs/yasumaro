@@ -305,69 +305,87 @@
           <h3 class="settings-section-title" data-i18n="aiSection">AI プロバイダー</h3>
 
           <!-- Priority 1 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority1">優先度1位（必須）</h4>
-            <div class="form-group">
-              <label for="aiProvider" class="sr-only">AIプロバイダー</label>
-              <select id="aiProvider" data-storage-key="ai_provider">
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details" open>
+            <summary class="priority-details-summary">
+              <span class="priority-number">1</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority1">優先度1位（必須）</span>
+              <span class="priority-provider-name" data-priority="1"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProvider" class="sr-only">AIプロバイダー</label>
+                <select id="aiProvider" data-storage-key="ai_provider">
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority1ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority1Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority1Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority1ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority1Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority1Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Priority 2 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority2">優先度2位（任意）</h4>
-            <div class="form-group">
-              <label for="aiProviderPriority2" class="sr-only">AIプロバイダー</label>
-              <select id="aiProviderPriority2">
-                <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details">
+            <summary class="priority-details-summary">
+              <span class="priority-number">2</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority2">優先度2位（任意）</span>
+              <span class="priority-provider-name" data-priority="2"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProviderPriority2" class="sr-only">AIプロバイダー</label>
+                <select id="aiProviderPriority2">
+                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority2ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority2Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority2Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority2ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority2Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority2Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Priority 3 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority3">優先度3位（任意）</h4>
-            <div class="form-group">
-              <label for="aiProviderPriority3" class="sr-only">AIプロバイダー</label>
-              <select id="aiProviderPriority3">
-                <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details">
+            <summary class="priority-details-summary">
+              <span class="priority-number">3</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority3">優先度3位（任意）</span>
+              <span class="priority-provider-name" data-priority="3"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProviderPriority3" class="sr-only">AIプロバイダー</label>
+                <select id="aiProviderPriority3">
+                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority3ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority3Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority3Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority3ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority3Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority3Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Gemini Settings -->
           <div id="geminiSettings">
