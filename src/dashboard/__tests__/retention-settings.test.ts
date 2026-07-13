@@ -54,7 +54,6 @@ vi.mock('../../utils/storage.js', async (importOriginal) => {
 });
 
 import {
-    resetDashboardElements,
     loadGeneralSettings,
 } from '../dashboard.js';
 import { StorageKeys } from '../../utils/storage.js';
@@ -82,7 +81,6 @@ function buildRetentionDom() {
 describe('Retention settings UI', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        resetDashboardElements();
         buildRetentionDom();
     });
 

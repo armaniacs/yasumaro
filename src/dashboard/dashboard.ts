@@ -15,97 +15,6 @@ import { queryLogs } from './dashboardSqliteService.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
-import { initNavigation } from './navigation.js';
-import { getSavedUrlEntries } from '../utils/storageUrls.js';
-import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from './cleansingStatsView.js';
-
-// ============================================================================
-// Sidebar Navigation
-// ============================================================================
-
-export function initSidebarNav(): void {
-  const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
-  const panels = document.querySelectorAll<HTMLElement>('.panel');
-
-  const sidebarNav = document.querySelector<HTMLElement>('.sidebar-nav');
-  if (sidebarNav) {
-    sidebarNav.setAttribute('role', 'tablist');
-    sidebarNav.setAttribute('aria-orientation', 'vertical');
-  }
-
-  navBtns.forEach((btn, idx) => {
-    btn.setAttribute('role', 'tab');
-    if (!btn.id) btn.id = `sidebar-tab-${idx}`;
-    const panelId = btn.getAttribute('data-panel');
-    if (panelId) btn.setAttribute('aria-controls', panelId);
-  });
-
-  panels.forEach(panel => {
-    panel.setAttribute('role', 'tabpanel');
-    const controllingBtn = document.querySelector<HTMLButtonElement>(`[data-panel="${panel.id}"]`);
-    if (controllingBtn) panel.setAttribute('aria-labelledby', controllingBtn.id);
-  });
-
-  const activateBtn = (index: number): void => {
-    navBtns.forEach((b, i) => {
-      const selected = i === index;
-      b.setAttribute('aria-selected', String(selected));
-      b.setAttribute('tabindex', selected ? '0' : '-1');
-      if (selected) b.classList.add('active');
-      else b.classList.remove('active');
-    });
-    const targetPanelId = navBtns[index]?.getAttribute('data-panel');
-    panels.forEach(panel => {
-      if (panel.id === targetPanelId) panel.classList.add('active');
-      else panel.classList.remove('active');
-    });
-  };
-
-  navBtns.forEach((btn, i) => {
-    btn.addEventListener('click', () => {
-      activateBtn(i);
-      const targetPanelId = btn.getAttribute('data-panel');
-
-      if (targetPanelId === 'panel-ai-summary-cleansing') {
-        requestAnimationFrame(() => {
-          getSavedUrlEntries().then(panelEntries => {
-            const summaryEl = document.getElementById('cleansingStatsSummary') as HTMLElement | null;
-            const chartEl = document.getElementById('cleansingFunnelChart') as HTMLCanvasElement | null;
-            if (!summaryEl) return;
-            const stats = computeCleansingStats(panelEntries);
-            renderStatsSummary(summaryEl, stats);
-            if (chartEl) {
-              if (stats.count === 0) {
-                chartEl.style.display = 'none';
-              } else {
-                chartEl.style.display = 'block';
-                renderFunnelChart(chartEl, stats);
-              }
-            }
-          }).catch(() => { /* ignore */ });
-        });
-      }
-
-    });
-
-    btn.addEventListener('keydown', (e) => {
-      const key = e.key;
-      let targetIndex: number | null = null;
-      if (key === 'ArrowDown') targetIndex = (i + 1) % navBtns.length;
-      else if (key === 'ArrowUp') targetIndex = (i - 1 + navBtns.length) % navBtns.length;
-      else if (key === 'Home') targetIndex = 0;
-      else if (key === 'End') targetIndex = navBtns.length - 1;
-      if (targetIndex !== null) {
-        e.preventDefault();
-        navBtns[targetIndex]!.focus();
-        activateBtn(targetIndex);
-      }
-    });
-  });
-
-  const activeIndex = Array.from(navBtns).findIndex(b => b.classList.contains('active'));
-  activateBtn(activeIndex >= 0 ? activeIndex : 0);
-}
 
 export function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -136,169 +45,6 @@ export function openSettingsPanel(section: string): void {
   }
 }
 
-// ============================================================================
-// DOM Elements - General Settings Form (Lazy Initialization)
-// ============================================================================
-// Elements are fetched lazily to support testability (jsdom sets up DOM after import).
-
-let _domElements: {
-  apiKeyInput: HTMLInputElement | null;
-  protocolInput: HTMLInputElement | null;
-  portInput: HTMLInputElement | null;
-  dailyPathInput: HTMLInputElement | null;
-  obsidianEnabledInput: HTMLInputElement | null;
-  aiProviderSelect: HTMLSelectElement | null;
-  aiProviderPriority1ModelInput: HTMLInputElement | null;
-  aiProviderPriority2Select: HTMLSelectElement | null;
-  aiProviderPriority2ModelInput: HTMLInputElement | null;
-  aiProviderPriority3Select: HTMLSelectElement | null;
-  aiProviderPriority3ModelInput: HTMLInputElement | null;
-  geminiSettingsDiv: HTMLElement | null;
-  openaiSettingsDiv: HTMLElement | null;
-  openai2SettingsDiv: HTMLElement | null;
-  lmStudioSettingsDiv: HTMLElement | null;
-  openaiCompatibleSettingsDiv: HTMLElement | null;
-  geminiApiKeyInput: HTMLInputElement | null;
-  geminiModelInput: HTMLInputElement | null;
-  openaiBaseUrlInput: HTMLInputElement | null;
-  openaiApiKeyInput: HTMLInputElement | null;
-  openaiModelInput: HTMLInputElement | null;
-  openai2BaseUrlInput: HTMLInputElement | null;
-  openai2ApiKeyInput: HTMLInputElement | null;
-  openai2ModelInput: HTMLInputElement | null;
-  lmStudioBaseUrlInput: HTMLInputElement | null;
-  lmStudioModelInput: HTMLInputElement | null;
-  ollamaSettingsDiv: HTMLElement | null;
-  ollamaBaseUrlInput: HTMLInputElement | null;
-  ollamaModelInput: HTMLInputElement | null;
-  providerBaseUrlInput: HTMLInputElement | null;
-  providerApiKeyInput: HTMLInputElement | null;
-  providerModelInput: HTMLInputElement | null;
-  saveBtn: HTMLButtonElement | null;
-  testObsidianBtn: HTMLButtonElement | null;
-  testAiBtn: HTMLButtonElement | null;
-  statusDiv: HTMLElement | null;
-  statusTopDiv: HTMLElement | null;
-  sqliteRetentionDaysSelect: HTMLSelectElement | null;
-  sqliteMaxRecordsSelect: HTMLSelectElement | null;
-  purgeNowBtn: HTMLButtonElement | null;
-  contentRetentionDaysSelect: HTMLSelectElement | null;
-  contentMaxRecordsSelect: HTMLSelectElement | null;
-  contentPurgeIncludeStarredCheckbox: HTMLInputElement | null;
-  contentPurgeNowBtn: HTMLButtonElement | null;
-  localMarkdownExportEnabledInput: HTMLInputElement | null;
-  localMarkdownExportTimingRadios: NodeListOf<HTMLInputElement> | null;
-  localMarkdownExportPathInput: HTMLInputElement | null;
-  localMarkdownExportSettingsDiv: HTMLElement | null;
-  testLocalMarkdownBtn: HTMLButtonElement | null;
-  reviewSummaryEnabledInput: HTMLInputElement | null;
-  reviewSummaryManualActionsDiv: HTMLElement | null;
-  generateWeeklySummaryBtn: HTMLButtonElement | null;
-  generateMonthlySummaryBtn: HTMLButtonElement | null;
-  reviewSummaryStatusDiv: HTMLElement | null;
-} | null = null;
-
-export function resetDashboardElements(): void {
-  _domElements = null;
-}
-
-export function getDashboardElements() {
-  if (!_domElements && typeof document !== 'undefined') {
-    _domElements = {
-      apiKeyInput: document.getElementById('apiKey') as HTMLInputElement | null,
-      protocolInput: document.getElementById('protocol') as HTMLInputElement | null,
-      portInput: document.getElementById('port') as HTMLInputElement | null,
-      dailyPathInput: document.getElementById('dailyPath') as HTMLInputElement | null,
-      obsidianEnabledInput: document.getElementById('obsidianEnabled') as HTMLInputElement | null,
-      aiProviderSelect: document.getElementById('aiProvider') as HTMLSelectElement | null,
-      aiProviderPriority1ModelInput: document.getElementById('aiProviderPriority1Model') as HTMLInputElement | null,
-      aiProviderPriority2Select: document.getElementById('aiProviderPriority2') as HTMLSelectElement | null,
-      aiProviderPriority2ModelInput: document.getElementById('aiProviderPriority2Model') as HTMLInputElement | null,
-      aiProviderPriority3Select: document.getElementById('aiProviderPriority3') as HTMLSelectElement | null,
-      aiProviderPriority3ModelInput: document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null,
-      geminiSettingsDiv: document.getElementById('geminiSettings') as HTMLElement | null,
-      openaiSettingsDiv: document.getElementById('openaiSettings') as HTMLElement | null,
-      openai2SettingsDiv: document.getElementById('openai2Settings') as HTMLElement | null,
-      lmStudioSettingsDiv: document.getElementById('lm-studioSettings') as HTMLElement | null,
-      openaiCompatibleSettingsDiv: document.getElementById('openai-compatibleSettings') as HTMLElement | null,
-      geminiApiKeyInput: document.getElementById('geminiApiKey') as HTMLInputElement | null,
-      geminiModelInput: document.getElementById('geminiModel') as HTMLInputElement | null,
-      openaiBaseUrlInput: document.getElementById('openaiBaseUrl') as HTMLInputElement | null,
-      openaiApiKeyInput: document.getElementById('openaiApiKey') as HTMLInputElement | null,
-      openaiModelInput: document.getElementById('openaiModel') as HTMLInputElement | null,
-      openai2BaseUrlInput: document.getElementById('openai2BaseUrl') as HTMLInputElement | null,
-      openai2ApiKeyInput: document.getElementById('openai2ApiKey') as HTMLInputElement | null,
-      openai2ModelInput: document.getElementById('openai2Model') as HTMLInputElement | null,
-      lmStudioBaseUrlInput: document.getElementById('lmStudioBaseUrl') as HTMLInputElement | null,
-      lmStudioModelInput: document.getElementById('lmStudioModel') as HTMLInputElement | null,
-      ollamaSettingsDiv: document.getElementById('ollamaSettings') as HTMLElement | null,
-      ollamaBaseUrlInput: document.getElementById('ollamaBaseUrl') as HTMLInputElement | null,
-      ollamaModelInput: document.getElementById('ollamaModel') as HTMLInputElement | null,
-      providerBaseUrlInput: document.getElementById('providerBaseUrl') as HTMLInputElement | null,
-      providerApiKeyInput: document.getElementById('providerApiKey') as HTMLInputElement | null,
-      providerModelInput: document.getElementById('providerModel') as HTMLInputElement | null,
-      saveBtn: document.getElementById('save') as HTMLButtonElement | null,
-      testObsidianBtn: document.getElementById('testObsidianBtn') as HTMLButtonElement | null,
-      testAiBtn: document.getElementById('testAiBtn') as HTMLButtonElement | null,
-      statusDiv: document.getElementById('status') as HTMLElement | null,
-      statusTopDiv: document.getElementById('statusTop') as HTMLElement | null,
-      sqliteRetentionDaysSelect: document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null,
-      sqliteMaxRecordsSelect: document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null,
-      purgeNowBtn: document.getElementById('purgeNowBtn') as HTMLButtonElement | null,
-      contentRetentionDaysSelect: document.getElementById('contentRetentionDays') as HTMLSelectElement | null,
-      contentMaxRecordsSelect: document.getElementById('contentMaxRecords') as HTMLSelectElement | null,
-      contentPurgeIncludeStarredCheckbox: document.getElementById('contentPurgeIncludeStarred') as HTMLInputElement | null,
-      contentPurgeNowBtn: document.getElementById('contentPurgeNowBtn') as HTMLButtonElement | null,
-      localMarkdownExportEnabledInput: document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null,
-      localMarkdownExportTimingRadios: document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>,
-      localMarkdownExportPathInput: document.getElementById('localMarkdownExportPath') as HTMLInputElement | null,
-      localMarkdownExportSettingsDiv: document.getElementById('localMarkdownExportSettings') as HTMLElement | null,
-      testLocalMarkdownBtn: document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null,
-      reviewSummaryEnabledInput: document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null,
-      reviewSummaryManualActionsDiv: document.getElementById('reviewSummaryManualActions') as HTMLElement | null,
-      generateWeeklySummaryBtn: document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null,
-      generateMonthlySummaryBtn: document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null,
-      reviewSummaryStatusDiv: document.getElementById('reviewSummaryStatus') as HTMLElement | null,
-    };
-  }
-  return _domElements ?? {
-    apiKeyInput: null, protocolInput: null, portInput: null, dailyPathInput: null,
-    obsidianEnabledInput: null,
-    aiProviderSelect: null, aiProviderPriority1ModelInput: null,
-    aiProviderPriority2Select: null, aiProviderPriority2ModelInput: null,
-    aiProviderPriority3Select: null, aiProviderPriority3ModelInput: null,
-    geminiSettingsDiv: null, openaiSettingsDiv: null,
-    openai2SettingsDiv: null, lmStudioSettingsDiv: null, openaiCompatibleSettingsDiv: null,
-    geminiApiKeyInput: null, geminiModelInput: null, openaiBaseUrlInput: null,
-    openaiApiKeyInput: null, openaiModelInput: null, openai2BaseUrlInput: null,
-    openai2ApiKeyInput: null, openai2ModelInput: null, lmStudioBaseUrlInput: null,
-    lmStudioModelInput: null, ollamaSettingsDiv: null, ollamaBaseUrlInput: null,
-    ollamaModelInput: null, providerBaseUrlInput: null, providerApiKeyInput: null,
-    providerModelInput: null, saveBtn: null,
-    testObsidianBtn: null, testAiBtn: null, statusDiv: null, statusTopDiv: null,
-    sqliteRetentionDaysSelect: null, sqliteMaxRecordsSelect: null, purgeNowBtn: null,
-    contentRetentionDaysSelect: null, contentMaxRecordsSelect: null,
-    contentPurgeIncludeStarredCheckbox: null, contentPurgeNowBtn: null,
-    localMarkdownExportEnabledInput: null, localMarkdownExportTimingRadios: null,
-    localMarkdownExportPathInput: null, localMarkdownExportSettingsDiv: null,
-    testLocalMarkdownBtn: null,
-    reviewSummaryEnabledInput: null, reviewSummaryManualActionsDiv: null,
-    generateWeeklySummaryBtn: null, generateMonthlySummaryBtn: null, reviewSummaryStatusDiv: null,
-  };
-}
-
-/**
- * Sync status display between top and bottom status divs.
- * Copies the content and class from the bottom status div to the top status div.
- */
-export function syncStatusToTop(): void {
-  const el = getDashboardElements();
-  if (el.statusTopDiv && el.statusDiv) {
-    el.statusTopDiv.innerHTML = el.statusDiv.innerHTML;
-    el.statusTopDiv.className = el.statusDiv.className;
-  }
-}
-
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
 /**
@@ -307,9 +53,9 @@ const SETTINGS_FORM_SELECTOR = '#panel-general';
  * loadLocalMarkdownExportTiming has run, but guards against a blank DOM).
  */
 export function extractLocalMarkdownExportTiming(): string | undefined {
-  const el = getDashboardElements();
-  if (!el.localMarkdownExportTimingRadios) return undefined;
-  for (const radio of el.localMarkdownExportTimingRadios) {
+  const radios = document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>;
+  if (!radios.length) return undefined;
+  for (const radio of radios) {
     if (radio.checked) return radio.value;
   }
   return undefined;
@@ -319,9 +65,9 @@ export function extractLocalMarkdownExportTiming(): string | undefined {
  * Apply a LOCAL_MARKDOWN_EXPORT_TIMING value to the radio group.
  */
 export function loadLocalMarkdownExportTiming(timing: string | undefined): void {
-  const el = getDashboardElements();
-  if (!el.localMarkdownExportTimingRadios) return;
-  for (const radio of el.localMarkdownExportTimingRadios) {
+  const radios = document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>;
+  if (!radios.length) return;
+  for (const radio of radios) {
     radio.checked = radio.value === timing;
   }
 }
@@ -343,16 +89,28 @@ export function refreshLocalMarkdownScheduler(): void {
   }
 }
 
+/**
+ * Sync status display between top and bottom status divs.
+ * Copies the content and class from the bottom status div to the top status div.
+ */
+export function syncStatusToTop(): void {
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
+  if (statusTopDiv && statusDiv) {
+    statusTopDiv.innerHTML = statusDiv.innerHTML;
+    statusTopDiv.className = statusDiv.className;
+  }
+}
+
 export function getAiProviderElements(): AIProviderElements {
-  const el = getDashboardElements();
   return {
-    select: el.aiProviderSelect as HTMLSelectElement,
-    geminiSettings: el.geminiSettingsDiv as HTMLElement,
-    openaiSettings: el.openaiSettingsDiv as HTMLElement,
-    openai2Settings: el.openai2SettingsDiv as HTMLElement,
-    lmStudioSettings: el.lmStudioSettingsDiv ?? undefined,
-    ollamaSettings: el.ollamaSettingsDiv ?? undefined,
-    openaiCompatibleSettings: el.openaiCompatibleSettingsDiv ?? undefined
+    select: document.getElementById('aiProvider') as HTMLSelectElement,
+    geminiSettings: document.getElementById('geminiSettings') as HTMLElement,
+    openaiSettings: document.getElementById('openaiSettings') as HTMLElement,
+    openai2Settings: document.getElementById('openai2Settings') as HTMLElement,
+    lmStudioSettings: (document.getElementById('lm-studioSettings') as HTMLElement) ?? undefined,
+    ollamaSettings: (document.getElementById('ollamaSettings') as HTMLElement) ?? undefined,
+    openaiCompatibleSettings: (document.getElementById('openai-compatibleSettings') as HTMLElement) ?? undefined
   };
 }
 
@@ -360,20 +118,25 @@ export function getAiProviderElements(): AIProviderElements {
  * 優先度1〜3位のセレクト・モデル入力欄からProviderSlot[]を組み立てる
  */
 export function collectProviderPrioritySlots(): ProviderSlot[] {
-  const el = getDashboardElements();
+  const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
+  const aiProviderPriority1ModelInput = document.getElementById('aiProviderPriority1Model') as HTMLInputElement | null;
+  const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
+  const aiProviderPriority2ModelInput = document.getElementById('aiProviderPriority2Model') as HTMLInputElement | null;
+  const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
+  const aiProviderPriority3ModelInput = document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null;
   const slots: ProviderSlot[] = [];
 
-  if (el.aiProviderSelect?.value) {
-    const model = el.aiProviderPriority1ModelInput?.value.trim();
-    slots.push(model ? { provider: el.aiProviderSelect.value, model } : { provider: el.aiProviderSelect.value });
+  if (aiProviderSelect?.value) {
+    const model = aiProviderPriority1ModelInput?.value.trim();
+    slots.push(model ? { provider: aiProviderSelect.value, model } : { provider: aiProviderSelect.value });
   }
-  if (el.aiProviderPriority2Select?.value) {
-    const model = el.aiProviderPriority2ModelInput?.value.trim();
-    slots.push(model ? { provider: el.aiProviderPriority2Select.value, model } : { provider: el.aiProviderPriority2Select.value });
+  if (aiProviderPriority2Select?.value) {
+    const model = aiProviderPriority2ModelInput?.value.trim();
+    slots.push(model ? { provider: aiProviderPriority2Select.value, model } : { provider: aiProviderPriority2Select.value });
   }
-  if (el.aiProviderPriority3Select?.value) {
-    const model = el.aiProviderPriority3ModelInput?.value.trim();
-    slots.push(model ? { provider: el.aiProviderPriority3Select.value, model } : { provider: el.aiProviderPriority3Select.value });
+  if (aiProviderPriority3Select?.value) {
+    const model = aiProviderPriority3ModelInput?.value.trim();
+    slots.push(model ? { provider: aiProviderPriority3Select.value, model } : { provider: aiProviderPriority3Select.value });
   }
 
   return slots;
@@ -383,26 +146,31 @@ export function collectProviderPrioritySlots(): ProviderSlot[] {
  * ProviderSlot[]を優先度1〜3位のセレクト・モデル入力欄に反映する
  */
 export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
-  const el = getDashboardElements();
   const [slot1, slot2, slot3] = slots;
+  const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
+  const aiProviderPriority1ModelInput = document.getElementById('aiProviderPriority1Model') as HTMLInputElement | null;
+  const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
+  const aiProviderPriority2ModelInput = document.getElementById('aiProviderPriority2Model') as HTMLInputElement | null;
+  const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
+  const aiProviderPriority3ModelInput = document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null;
 
-  if (el.aiProviderSelect) {
-    el.aiProviderSelect.value = slot1?.provider ?? 'gemini';
+  if (aiProviderSelect) {
+    aiProviderSelect.value = slot1?.provider ?? 'gemini';
   }
-  if (el.aiProviderPriority1ModelInput) {
-    el.aiProviderPriority1ModelInput.value = slot1?.model ?? '';
+  if (aiProviderPriority1ModelInput) {
+    aiProviderPriority1ModelInput.value = slot1?.model ?? '';
   }
-  if (el.aiProviderPriority2Select) {
-    el.aiProviderPriority2Select.value = slot2?.provider ?? '';
+  if (aiProviderPriority2Select) {
+    aiProviderPriority2Select.value = slot2?.provider ?? '';
   }
-  if (el.aiProviderPriority2ModelInput) {
-    el.aiProviderPriority2ModelInput.value = slot2?.model ?? '';
+  if (aiProviderPriority2ModelInput) {
+    aiProviderPriority2ModelInput.value = slot2?.model ?? '';
   }
-  if (el.aiProviderPriority3Select) {
-    el.aiProviderPriority3Select.value = slot3?.provider ?? '';
+  if (aiProviderPriority3Select) {
+    aiProviderPriority3Select.value = slot3?.provider ?? '';
   }
-  if (el.aiProviderPriority3ModelInput) {
-    el.aiProviderPriority3ModelInput.value = slot3?.model ?? '';
+  if (aiProviderPriority3ModelInput) {
+    aiProviderPriority3ModelInput.value = slot3?.model ?? '';
   }
 }
 
@@ -424,21 +192,24 @@ export async function loadGeneralSettings(): Promise<void> {
   );
 
   // Sync Obsidian details open state with checkbox
-  const el = getDashboardElements();
+  const obsidianEnabledInput = document.getElementById('obsidianEnabled') as HTMLInputElement | null;
   const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
-  if (details && el.obsidianEnabledInput) {
-    details.open = el.obsidianEnabledInput.checked;
+  if (details && obsidianEnabledInput) {
+    details.open = obsidianEnabledInput.checked;
   }
 
   // Sync Local Markdown Export settings visibility with checkbox
+  const localMarkdownExportEnabledInput = document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null;
   const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
-  if (localExportSettingsDiv && el.localMarkdownExportEnabledInput) {
-    localExportSettingsDiv.classList.toggle('hidden', !el.localMarkdownExportEnabledInput.checked);
+  if (localExportSettingsDiv && localMarkdownExportEnabledInput) {
+    localExportSettingsDiv.classList.toggle('hidden', !localMarkdownExportEnabledInput.checked);
   }
 
   // Sync Review Summary manual actions visibility with checkbox
-  if (el.reviewSummaryManualActionsDiv && el.reviewSummaryEnabledInput) {
-    el.reviewSummaryManualActionsDiv.classList.toggle('hidden', !el.reviewSummaryEnabledInput.checked);
+  const reviewSummaryManualActionsDiv = document.getElementById('reviewSummaryManualActions') as HTMLElement | null;
+  const reviewSummaryEnabledInput = document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null;
+  if (reviewSummaryManualActionsDiv && reviewSummaryEnabledInput) {
+    reviewSummaryManualActionsDiv.classList.toggle('hidden', !reviewSummaryEnabledInput.checked);
   }
 
   // Load openai-compatible provider selection
@@ -480,13 +251,14 @@ export function createConnectionStatusElement(label: string, result: { success: 
 }
 
 export async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
-  const el = getDashboardElements();
+  const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
+  const portInput = document.getElementById('port') as HTMLInputElement | null;
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_OBSIDIAN',
     payload: apiKey
       ? {
-          protocol: el.protocolInput?.value?.trim(),
-          port: el.portInput?.value?.trim(),
+          protocol: protocolInput?.value?.trim(),
+          port: portInput?.value?.trim(),
           apiKey: apiKey,
         }
       : {}
@@ -505,23 +277,25 @@ export async function testAiConnection(): Promise<{ success: boolean; message: s
 }
 
 export async function handleSaveOnly(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.statusDiv) return;
-  el.statusDiv.textContent = '';
-  el.statusDiv.className = '';
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  if (!statusDiv) return;
+  statusDiv.textContent = '';
+  statusDiv.className = '';
 
+  const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
+  const portInput = document.getElementById('port') as HTMLInputElement | null;
   const errorPairs: ErrorPair[] = [
-    [el.protocolInput, 'protocolError'],
-    [el.portInput, 'portError'],
+    [protocolInput, 'protocolError'],
+    [portInput, 'portError'],
   ];
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(el.protocolInput, el.portInput)) {
+  if (!validateAllFields(protocolInput, portInput)) {
     return;
   }
 
   // HTTP プロトコルが選択されている場合、確認ダイアログを表示
-  const protocolValue = el.protocolInput?.value?.trim().toLowerCase();
+  const protocolValue = protocolInput?.value?.trim().toLowerCase();
   if (protocolValue === 'http') {
     const confirmed = await showConfirmDialog({
       title: getMessage('warningTitle') || 'Warning',
@@ -561,60 +335,65 @@ export async function handleSaveOnly(): Promise<void> {
   await saveSettingsWithAllowedUrls(mergedSettings);
   refreshLocalMarkdownScheduler();
 
-  el.statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
-  el.statusDiv.className = 'success';
+  statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
+  statusDiv.className = 'success';
   syncStatusToTop();
 }
 
 export async function handleTestObsidian(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.testObsidianBtn || !el.statusDiv) return;
+  const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  if (!testObsidianBtn || !statusDiv) return;
 
-  el.statusDiv.innerHTML = '';
-  el.statusDiv.className = '';
-  el.statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  statusDiv.innerHTML = '';
+  statusDiv.className = '';
+  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  el.testObsidianBtn.disabled = true;
+  testObsidianBtn.disabled = true;
   try {
-    const typedApiKey = el.apiKeyInput?.value?.trim();
+    const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
+    const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
+    const typedApiKey = apiKeyInput?.value?.trim();
     const obsidianResult = await testObsidianConnection(typedApiKey || '');
 
-    el.statusDiv.innerHTML = '';
-    el.statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    statusDiv.innerHTML = '';
+    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
 
     // HTTPS証明書警告
-    if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && el.protocolInput?.value === 'https') {
-      const port = parseInt(el.portInput?.value?.trim() || '0', 10);
+    if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && protocolInput?.value === 'https') {
+      const portInput = document.getElementById('port') as HTMLInputElement | null;
+      const port = parseInt(portInput?.value?.trim() || '0', 10);
       const url = `https://127.0.0.1:${port}/`;
       const link = document.createElement('a');
       link.href = url;
       link.target = '_blank';
       link.textContent = getMessage('acceptCertificate') || '証明書を承認する';
       link.rel = 'noopener noreferrer';
-      el.statusDiv.appendChild(document.createElement('br'));
-      el.statusDiv.appendChild(link);
+      statusDiv.appendChild(document.createElement('br'));
+      statusDiv.appendChild(link);
     }
 
-    el.statusDiv.className = obsidianResult.success ? 'success' : 'error';
+    statusDiv.className = obsidianResult.success ? 'success' : 'error';
     syncStatusToTop();
   } catch (_e) {
-    el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
-    el.statusDiv.className = 'error';
+    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    statusDiv.className = 'error';
     syncStatusToTop();
   } finally {
-    el.testObsidianBtn.disabled = false;
+    testObsidianBtn.disabled = false;
   }
 }
 
 export async function handleTestAi(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.testAiBtn || !el.statusDiv) return;
+  const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  if (!testAiBtn || !statusDiv) return;
 
-  el.statusDiv.innerHTML = '';
-  el.statusDiv.className = '';
-  el.statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  statusDiv.innerHTML = '';
+  statusDiv.className = '';
+  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  el.testAiBtn.disabled = true;
+  testAiBtn.disabled = true;
   try {
     const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
     const timing = extractLocalMarkdownExportTiming();
@@ -626,29 +405,30 @@ export async function handleTestAi(): Promise<void> {
 
     const aiResult = await testAiConnection();
 
-    el.statusDiv.innerHTML = '';
-    el.statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    statusDiv.innerHTML = '';
+    statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
 
-    el.statusDiv.className = aiResult.success ? 'success' : 'error';
+    statusDiv.className = aiResult.success ? 'success' : 'error';
     syncStatusToTop();
   } catch (_e) {
-    el.statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
-    el.statusDiv.className = 'error';
+    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    statusDiv.className = 'error';
     syncStatusToTop();
   } finally {
-    el.testAiBtn.disabled = false;
+    testAiBtn.disabled = false;
   }
 }
 
 export async function handleTestLocalMarkdown(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.testLocalMarkdownBtn || !el.statusTopDiv) return;
+  const testLocalMarkdownBtn = document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null;
+  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
+  if (!testLocalMarkdownBtn || !statusTopDiv) return;
 
-  el.statusTopDiv.innerHTML = '';
-  el.statusTopDiv.className = '';
-  el.statusTopDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  statusTopDiv.innerHTML = '';
+  statusTopDiv.className = '';
+  statusTopDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
 
-  el.testLocalMarkdownBtn.disabled = true;
+  testLocalMarkdownBtn.disabled = true;
   try {
     // Save current settings first
     const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
@@ -662,8 +442,8 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     // Check if enabled
     const localExportEnabled = mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
     if (!localExportEnabled) {
-      el.statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
-      el.statusTopDiv.className = 'error';
+      statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
+      statusTopDiv.className = 'error';
       return;
     }
 
@@ -687,13 +467,13 @@ export async function handleTestLocalMarkdown(): Promise<void> {
 
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-    el.statusTopDiv.textContent = getMessage('testLocalMarkdownSuccess') || 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました';
-    el.statusTopDiv.className = 'success';
+    statusTopDiv.textContent = getMessage('testLocalMarkdownSuccess') || 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました';
+    statusTopDiv.className = 'success';
   } catch (_e) {
-    el.statusTopDiv.textContent = getMessage('testLocalMarkdownError') || 'ローカルMarkdown書き出しテストに失敗しました';
-    el.statusTopDiv.className = 'error';
+    statusTopDiv.textContent = getMessage('testLocalMarkdownError') || 'ローカルMarkdown書き出しテストに失敗しました';
+    statusTopDiv.className = 'error';
   } finally {
-    el.testLocalMarkdownBtn.disabled = false;
+    testLocalMarkdownBtn.disabled = false;
   }
 }
 
@@ -849,11 +629,9 @@ export async function handleExportLocalMarkdown(): Promise<void> {
  * Handle review summary manual generation
  */
 export async function handleGenerateWeeklySummary(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.generateWeeklySummaryBtn || !el.reviewSummaryStatusDiv) return;
-
-  const btn = el.generateWeeklySummaryBtn;
-  const statusEl = el.reviewSummaryStatusDiv;
+  const btn = document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
+  if (!btn || !statusEl) return;
 
   btn.disabled = true;
   statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
@@ -875,11 +653,9 @@ export async function handleGenerateWeeklySummary(): Promise<void> {
 }
 
 export async function handleGenerateMonthlySummary(): Promise<void> {
-  const el = getDashboardElements();
-  if (!el.generateMonthlySummaryBtn || !el.reviewSummaryStatusDiv) return;
-
-  const btn = el.generateMonthlySummaryBtn;
-  const statusEl = el.reviewSummaryStatusDiv;
+  const btn = document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
+  if (!btn || !statusEl) return;
 
   btn.disabled = true;
   statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
@@ -913,11 +689,11 @@ export async function handleHistoryExportLocalMarkdown(): Promise<void> {
 }
 
 export async function handlePurgeNow(): Promise<void> {
-  const el = getDashboardElements();
+  const purgeNowBtn = document.getElementById('purgeNowBtn') as HTMLButtonElement | null;
   const statusEl = document.getElementById('purgeNowStatus');
-  if (!el.purgeNowBtn || !statusEl) return;
+  if (!purgeNowBtn || !statusEl) return;
 
-  el.purgeNowBtn.disabled = true;
+  purgeNowBtn.disabled = true;
   statusEl.textContent = '';
   try {
     const result = await chrome.runtime.sendMessage({
@@ -933,16 +709,16 @@ export async function handlePurgeNow(): Promise<void> {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
   } finally {
-    el.purgeNowBtn.disabled = false;
+    purgeNowBtn.disabled = false;
   }
 }
 
 export async function handleContentPurgeNow(): Promise<void> {
-  const el = getDashboardElements();
+  const contentPurgeNowBtn = document.getElementById('contentPurgeNowBtn') as HTMLButtonElement | null;
   const statusEl = document.getElementById('contentPurgeNowStatus');
-  if (!el.contentPurgeNowBtn || !statusEl) return;
+  if (!contentPurgeNowBtn || !statusEl) return;
 
-  el.contentPurgeNowBtn.disabled = true;
+  contentPurgeNowBtn.disabled = true;
   statusEl.textContent = '';
   try {
     const result = await chrome.runtime.sendMessage({
@@ -958,7 +734,7 @@ export async function handleContentPurgeNow(): Promise<void> {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
   } finally {
-    el.contentPurgeNowBtn.disabled = false;
+    contentPurgeNowBtn.disabled = false;
   }
 }
 
@@ -1035,9 +811,6 @@ export function setHtmlLangDir(): void {
   console.log('[Dashboard] Starting initialization...');
 
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
-
-  initSidebarNav();
-  initNavigation();
 
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'history') {
