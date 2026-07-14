@@ -120,6 +120,11 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]: false,
+    // Category B: Site-Type Specific Patterns — default true for new users (existing users migrated to false)
+    [StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA]: true,
+    [StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE]: true,
+    [StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE]: true,
+    [StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE]: true,
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 70,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,
