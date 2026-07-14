@@ -50,13 +50,15 @@ import {
     stripJPLayoutPatterns,
     stripJPNavigationPatterns,
     stripAuthorMetaElements,
+    stripAffiliateElements,
+    stripSpeechBubbles,
 } from './stripExtended.js';
 
 // 型とパターンを再エクスポート
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
 export { countAISummaryTargets } from './countTargets.js';
-export { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES } from './patterns.js';
-export { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement } from './helpers.js';
+export { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES, GUTENBERG_STRUCTURAL_PATTERNS } from './patterns.js';
+export { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
 export { markBodyElements, unmarkBodyElements, isBodyProtected } from './bodyProtection.js';
 
 /**
@@ -98,6 +100,9 @@ export function cleanseAISummaryContent(
         jpLayoutEnabled = false,
         jpNavigationEnabled = false,
         authorEnabled = false,
+        // Category A: WordPress Theme Specific Patterns
+        affiliateEnabled = false,
+        speechBubbleEnabled = false,
         // Body protection options
         bodyProtectionEnabled = true,
         bodyProtectionThreshold = 200,
@@ -140,6 +145,8 @@ export function cleanseAISummaryContent(
     let jpLayoutRemoved = 0;
     let jpNavigationRemoved = 0;
     let authorRemoved = 0;
+    let affiliateRemoved = 0;
+    let speechBubbleRemoved = 0;
 
     // Step 1: 本文要素にマーキング（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
@@ -253,6 +260,15 @@ export function cleanseAISummaryContent(
         authorRemoved = stripAuthorMetaElements(element);
     }
 
+    // Category A: WordPress Theme Specific Patterns
+    if (affiliateEnabled) {
+        affiliateRemoved = stripAffiliateElements(element);
+    }
+
+    if (speechBubbleEnabled) {
+        speechBubbleRemoved = stripSpeechBubbles(element);
+    }
+
     // Step 3: マーカーを除去（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
         unmarkBodyElements(element);
@@ -267,7 +283,8 @@ export function cleanseAISummaryContent(
         snsPromoRemoved + popupRemoved + platformRemoved +
         textDensityRemoved + shortSeqRemoved + symbolLineRemoved +
         linkParaRemoved + enhancedHiddenRemoved + emptyElemRemoved +
-        jpLayoutRemoved + jpNavigationRemoved + authorRemoved;
+        jpLayoutRemoved + jpNavigationRemoved + authorRemoved +
+        affiliateRemoved + speechBubbleRemoved;
 
     logDebug('AI Summary Cleansing executed', {
         totalRemoved: total,
@@ -305,6 +322,8 @@ export function cleanseAISummaryContent(
             jpLayout: jpLayoutRemoved,
             jpNavigation: jpNavigationRemoved,
             author: authorRemoved,
+            affiliate: affiliateRemoved,
+            speechBubble: speechBubbleRemoved,
         }
     }, 'aiSummaryCleaner');
 
@@ -337,6 +356,8 @@ export function cleanseAISummaryContent(
         jpLayoutRemoved,
         jpNavigationRemoved,
         authorRemoved,
+        affiliateRemoved,
+        speechBubbleRemoved,
         totalRemoved: total,
         bytesBefore,
         bytesAfter

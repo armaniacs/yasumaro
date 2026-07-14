@@ -158,6 +158,9 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_JP_LAYOUT: 'ai_summary_cleansing_jp_layout', // JP BEM系レイアウトパターン（デフォルト: false）
     AI_SUMMARY_CLEANSING_JP_NAVIGATION: 'ai_summary_cleansing_jp_navigation', // JP ナビ・剰利用語（デフォルト: false）
     AI_SUMMARY_CLEANSING_AUTHOR: 'ai_summary_cleansing_author', // 執筆者・メタ情報（デフォルト: false）
+    // Category A: WordPress Theme Specific Patterns
+    AI_SUMMARY_CLEANSING_AFFILIATE: 'ai_summary_cleansing_affiliate', // アフィリエイト要素プレーンテキスト化（デフォルト: false）
+    AI_SUMMARY_CLEANSING_SPEECH_BUBBLE: 'ai_summary_cleansing_speech_bubble', // 吹き出し要素クレンジング（デフォルト: false）
     // Body protection settings (Readability score)
     AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED: 'ai_summary_cleansing_body_protection_enabled', // 本文保護機能（デフォルト: true）
     AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD: 'ai_summary_cleansing_body_protection_threshold', // 本文スコア閾値（デフォルト: 200）
@@ -194,6 +197,7 @@ export const StorageKeys = {
     // SQLite migration tracking
     YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | null
     YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress', // 移行済み件数（再開用）
+    MIGRATION_JP_LAYOUT_DEFAULT_DONE: 'migration_jp_layout_default_done', // Category A jpLayout デフォルト移行完了フラグ
     // OPFS fallback mode tracking
     OPFS_FALLBACK_MODE: 'opfs_fallback_mode', // true when OPFS is unavailable and using chrome.storage.local fallback
     OPFS_MIGRATION_V2_DONE: 'opfs_migration_v2_done', // true when AccessHandlePoolVFS→OPFSCoopSyncVFS migration completed
@@ -341,6 +345,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: number;
@@ -367,6 +373,7 @@ export interface StorageKeyValues {
     [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: number;
     [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | null;
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
+    [StorageKeys.MIGRATION_JP_LAYOUT_DEFAULT_DONE]: boolean;
     [StorageKeys.OPFS_FALLBACK_MODE]: boolean;
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
     [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;

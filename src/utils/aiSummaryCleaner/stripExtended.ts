@@ -1,10 +1,11 @@
 /**
  * AI要約クレンジング — 拡張_strip関数群
  * 追加の6オプション（固定・推薦・ページネーション・SNSプロモ・ポップアップ・プラットフォーム）+
- * 9オプション（テキスト密度・短文連続・記号行・リンクのみ段落・非表示強化・空要素・JPレイアウト・JPナビ・著者メタ）
+ * 9オプション（テキスト密度・短文連続・記号行・リンクのみ段落・非表示強化・空要素・JPレイアウト・JPナビ・著者メタ）+
+ * 2オプション（アフィリエイトプレーンテキスト化・吹き出しクレンジング）
  */
 
-import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement } from './helpers.js';
+import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
 
 /**
  * 固定要素を削除（position:fixed/sticky）
@@ -623,6 +624,40 @@ export function stripJPLayoutPatterns(element: Element, customPatterns: string[]
         'c-button', 'c-label', 'c-card',
         'common-footer', 'common-header', 'sub-column',
         'ly-', 'el-',
+        // A-1: WordPress Theme Specific Classes
+        // SWELL (Japan #1 theme)
+        'swell-toc', 'p-postList', 'c-shareBtns', 'p-relatedPosts', 'c-widget',
+        'swell-block-', 'swell-block-check', 'swell-block-quote',
+        // Cocoon (Free theme #1)
+        'author-box', 'author-box-label', 'sns-share', 'related-entry-card',
+        'toc', 'toc-box', 'sidebar', 'sns-follow-buttons', 'article-outer',
+        // SANGO / JIN
+        'entry-card', 'post-list', 'sidebar-widget', 'author-block', 'share-btn',
+        'entry-utility', 'cat-links', 'tag-links', 'wp-post-image', 'post-thumbnail',
+        // Snow Monkey
+        'sm-related-posts', 'sm-author-profile', 'sm-widget', 'sm-entry-summary',
+        // STINGER
+        'stinger', 'stingerV8',
+        // A-3: Stealth Marketing Disclosure
+        'ad-disclosure', 'promotion-note', 'pr-disclosure',
+        'disclosure-area', 'sponsor-info-wrapper', 'pr-note',
+        'promotion-content', 'sponsored-content-label',
+        // A-4: Japanese Recommend Ad Engines
+        'popin_recommend', 'popin_recommend_container', 'popin-recommend',
+        'logly-lift', 'logly-lift-widget', 'logly-widget',
+        'uzou-recommend', 'uzou-widget', 'uzou-recommendation',
+        'outbrain_carousels', 'outbrain-widget', 'taboola-placeholder',
+        'taboola-unit', 'taboola-container',
+        // A-5: Gutenberg Decorative/UI Blocks
+        'wp-block-button', 'wp-block-separator', 'wp-block-spacer',
+        'wp-block-pullquote', 'wp-block-image', 'wp-block-list',
+        'wp-block-quote', 'wp-block-code',
+        // A-6: Japanese Blog UI Components
+        'pagetop', 'page-top', 'to-top', 'go-top', 'btn-pagetop', 'back-to-top',
+        'drawer-menu', 'sp-menu', 'hamburger', 'toggle-menu', 'mobile-menu', 'menu-drawer',
+        'toc-container', 'rtoc-box', 'toc_list',
+        'table-of-contents', 'toc-wrapper', 'toc_title',
+        'access-counter', 'accesscount', 'pv-counter', 'page-counter',
         ...customPatterns
     ];
 
@@ -723,8 +758,140 @@ export function stripAuthorMetaElements(element: Element): number {
         }
     });
 
-    for (const _elem of elementsToRemove) {
-        removedCount++;
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) { removedCount++; }
     }
     return removedCount;
+}
+
+/**
+ * アフィリエイトプラグイン要素をプレーンテキスト化（A-2）
+ * Rinker / カエレバ / もしも / ポチップの商品ボックスから
+ * 商品名と価格テキストのみを抽出し、要素全体をテキストノードに差し替える
+ * @param element - クレンジング対象のルート要素
+ * @returns 処理した要素の数
+ */
+export function stripAffiliateElements(element: Element): number {
+    let processedCount = 0;
+    const elementsToProcess: Element[] = [];
+    const counted = new Set<Element>();
+
+    const patterns = [
+        // Rinker (SWELL bundled) — container-level only
+        'yyi-rinker-contents', 'yyi-rinker-box',
+        // カエレバ / ヨマレバ
+        'kaerebalink-box', 'yomerebalink-box', 'booklink-box',
+        // もしもアフィリエイト
+        'moshimo-style-single', 'moshimo-style', 'moshimo-affiliate',
+        // ポチップ (Pochipp)
+        'pochipp-box', 'pochi-contents', 'pochipp-card',
+    ];
+
+    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+        // Skip elements whose ancestor already matched (process only top-level containers)
+        if (counted.has(elem)) return;
+        // Check if any ancestor of this element is already in the counted set
+        let ancestor = elem.parentElement;
+        let hasMatchingAncestor = false;
+        while (ancestor && ancestor !== element) {
+            if (counted.has(ancestor)) {
+                hasMatchingAncestor = true;
+                break;
+            }
+            ancestor = ancestor.parentElement;
+        }
+        if (!hasMatchingAncestor) {
+            elementsToProcess.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToProcess) {
+        // Extract product name and price text, skip other noise
+        const textParts: string[] = [];
+        const titleEl = elem.querySelector('.yyi-rinker-title, .kaerebalink-name, [class*="title"]');
+        const textEl = elem.querySelector('.yyi-rinker-text, [class*="detail"], [class*="text"]');
+        const priceEl = elem.querySelector('[class*="price"], [class*="yen"], [class*="cost"]');
+
+        if (titleEl?.textContent?.trim()) textParts.push(titleEl.textContent.trim());
+        if (textEl?.textContent?.trim()) textParts.push(textEl.textContent.trim());
+        if (priceEl?.textContent?.trim()) textParts.push(priceEl.textContent.trim());
+
+        const extractedText = textParts.join(' | ');
+
+        if (extractedText) {
+            if (safeReplaceWithText(elem, extractedText)) { processedCount++; }
+        } else {
+            // No extractable text found, remove entirely
+            if (safeRemoveElement(elem)) { processedCount++; }
+        }
+    }
+    return processedCount;
+}
+
+/**
+ * 吹き出し（会話風）要素をクレンジング（A-7）
+ * キャラ名・アバター部分を削除し、発言テキストのみを保持する
+ * @param element - クレンジング対象のルート要素
+ * @returns 処理した吹き出しコンテナの数
+ */
+export function stripSpeechBubbles(element: Element): number {
+    let processedCount = 0;
+
+    const CONTAINER_SELECTORS = [
+        '.speech-balloon', '.balloon-box', '.talk-balloon',
+        '.balloon', '.talk-box', '.chat-bubble',
+        '.comment-balloon', '.message-balloon',
+    ];
+
+    const META_PATTERNS = [
+        'balloon-meta', 'balloon-avatar', 'talk-name',
+        'balloon-icon', 'character-name', 'talk-avatar',
+        'comment-name', 'speaker-name', 'chara-name',
+    ];
+
+    const TEXT_PATTERNS = [
+        'balloon-text', 'talk-comment', 'comment-text',
+        'balloon-body', 'talk-body', 'speech-text',
+    ];
+
+    const metaSelector = buildClassIdSelectors(META_PATTERNS);
+    const textSelector = buildClassIdSelectors(TEXT_PATTERNS);
+
+    const containers = element.querySelectorAll(CONTAINER_SELECTORS.join(', '));
+
+    containers.forEach(container => {
+        // Remove character names and avatars
+        const metaElements = container.querySelectorAll(metaSelector);
+        metaElements.forEach(meta => {
+            safeRemoveElement(meta);
+        });
+
+        // Keep speech text — extract and replace container with text
+        let speechText = '';
+        const textElements = container.querySelectorAll(textSelector);
+        if (textElements.length > 0) {
+            const parts: string[] = [];
+            textElements.forEach(el => {
+                const t = (el.textContent || '').trim();
+                if (t) parts.push(t);
+            });
+            speechText = parts.join(' ');
+        }
+
+        if (speechText) {
+            if (safeReplaceWithText(container as Element, speechText)) { processedCount++; }
+        } else {
+            // No speech text matched — fallback: extract all text from the balloon
+            const fallbackText = (container.textContent || '').trim();
+            if (fallbackText) {
+                if (safeReplaceWithText(container as Element, fallbackText)) { processedCount++; }
+            } else {
+                // Empty balloon, remove entirely
+                if (safeRemoveElement(container as Element)) { processedCount++; }
+            }
+        }
+    });
+
+    return processedCount;
 }

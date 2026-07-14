@@ -115,9 +115,11 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: false,
+    [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: true,  // Category A: default true for new users (existing users migrated to false)
     [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: false,
+    [StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE]: false,
+    [StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]: false,
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 70,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,

@@ -13,6 +13,7 @@ import {
   isLikelyAd,
   isLikelyPopup,
   isPlatformNoise,
+  safeReplaceWithText,
 } from '../helpers.js';
 
 describe('aiSummaryCleaner/helpers', () => {
@@ -276,6 +277,64 @@ describe('aiSummaryCleaner/helpers', () => {
       const el = document.createElement('div');
       el.className = 'header loaded';
       expect(isPlatformNoise(el)).toBe(false);
+    });
+  });
+
+  describe('safeReplaceWithText', () => {
+    it('replaces element with text node and returns true', () => {
+      const parent = document.createElement('div');
+      parent.innerHTML = '<span id="target">Old text</span>';
+      const el = parent.querySelector('#target')!;
+      const result = safeReplaceWithText(el, 'New text');
+      expect(result).toBe(true);
+      expect(parent.querySelector('#target')).toBeNull();
+      expect(parent.textContent).toBe('New text');
+    });
+
+    it('returns false when element is body protected (direct)', () => {
+      const el = document.createElement('div');
+      el.setAttribute('data-ow-body-protected', 'true');
+      el.innerHTML = '<span id="child">Text</span>';
+      const child = el.querySelector('#child')!;
+      const result = safeReplaceWithText(child, 'Replaced');
+      expect(result).toBe(false);
+      expect(el.querySelector('#child')).not.toBeNull();
+    });
+
+    it('returns false when ancestor is body protected', () => {
+      const ancestor = document.createElement('div');
+      ancestor.setAttribute('data-ow-body-protected', 'true');
+      ancestor.innerHTML = '<span id="child">Content</span>';
+      const child = ancestor.querySelector('#child')!;
+      const result = safeReplaceWithText(child, 'Replaced');
+      expect(result).toBe(false);
+      expect(ancestor.querySelector('#child')).not.toBeNull();
+    });
+
+    it('handles empty string text', () => {
+      const parent = document.createElement('div');
+      parent.innerHTML = '<span id="target">Old</span>';
+      const el = parent.querySelector('#target')!;
+      const result = safeReplaceWithText(el, '');
+      expect(result).toBe(true);
+      expect(parent.querySelector('#target')).toBeNull();
+      expect(parent.textContent).toBe('');
+    });
+
+    it('preserves sibling elements when replacing', () => {
+      const parent = document.createElement('div');
+      parent.innerHTML = 'before<span id="target">x</span>after';
+      const el = parent.querySelector('#target')!;
+      const result = safeReplaceWithText(el, 'MID');
+      expect(result).toBe(true);
+      expect(parent.innerHTML).toBe('beforeMIDafter');
+    });
+
+    it('returns true for non-protected element', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Plain text';
+      const result = safeReplaceWithText(el, 'Replaced');
+      expect(result).toBe(true);
     });
   });
 });

@@ -62,6 +62,8 @@ const RESTORABLE_KEYS = new Set<string>([
   'ai_summary_cleansing_jp_layout',
   'ai_summary_cleansing_jp_navigation',
   'ai_summary_cleansing_author',
+  'ai_summary_cleansing_affiliate',
+  'ai_summary_cleansing_speech_bubble',
   'ai_summary_cleansing_body_protection_enabled',
   'ai_summary_cleansing_body_protection_threshold',
   'ai_summary_cleansing_link_ratio_threshold',
@@ -262,7 +264,8 @@ const CLEANSING_BOOLEAN_KEYS = [
   'ai_summary_cleansing_symbol_line', 'ai_summary_cleansing_link_para',
   'ai_summary_cleansing_enhanced_hidden', 'ai_summary_cleansing_empty_elem',
   'ai_summary_cleansing_jp_layout', 'ai_summary_cleansing_jp_navigation',
-  'ai_summary_cleansing_author', 'ai_summary_cleansing_body_protection_enabled',
+  'ai_summary_cleansing_author', 'ai_summary_cleansing_affiliate',
+  'ai_summary_cleansing_speech_bubble', 'ai_summary_cleansing_body_protection_enabled',
 ];
 
 // Numeric cleansing keys with range validation

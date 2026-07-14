@@ -31,11 +31,14 @@ export interface AiSummaryCleanseOptions {
     symbolLineEnabled?: boolean;      // 特殊記号行の削除（デフォルト: false）
     linkParaEnabled?: boolean;        // リンクのみ段落の削除（デフォルト: false）
     linkParaThreshold?: number;       // リンクのみ段落閾値（デフォルト: 50）
-    enhancedHiddenEnabled?: boolean;  // 非表示要素強化削除（デフォルト: true）
-    emptyElemEnabled?: boolean;       // 空要素の削除（デフォルト: true）
+    enhancedHiddenEnabled?: boolean;  // 非表示要素強化削除（デフォルト: false）
+    emptyElemEnabled?: boolean;       // 空要素の削除（デフォルト: false）
     jpLayoutEnabled?: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
     jpNavigationEnabled?: boolean;     // JP ナビ頻出語（デフォルト: false）
     authorEnabled?: boolean;         // 執筆者・メタ情報（デフォルト: false）
+    // Category A: WordPress Theme Specific Patterns
+    affiliateEnabled?: boolean;       // アフィリエイト要素のプレーンテキスト化（デフォルト: false）
+    speechBubbleEnabled?: boolean;    // 吹き出し要素のクレンジング（デフォルト: false）
     // Body protection options
     bodyProtectionEnabled?: boolean;   // 本文保護機能（デフォルト: true）
     bodyProtectionThreshold?: number;  // 本文スコア閾値（デフォルト: 200）
@@ -80,6 +83,9 @@ export interface AiSummaryCleanseResult {
     jpLayoutRemoved?: number;            // JP BEMレイアウト削除数
     jpNavigationRemoved?: number;       // JP ナビ削除数
     authorRemoved?: number;              // 執筆者・メタ削除数
+    // Category A: WordPress Theme Specific Patterns
+    affiliateRemoved?: number;           // アフィリエイト要素処理数
+    speechBubbleRemoved?: number;        // 吹き出し要素処理数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数

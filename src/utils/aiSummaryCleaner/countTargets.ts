@@ -5,7 +5,7 @@
 
 import { escapeCssSelector } from '../cssUtils.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
-import { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES } from './patterns.js';
+import { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES, GUTENBERG_STRUCTURAL_PATTERNS } from './patterns.js';
 import { CARD_PATTERNS } from './stripCore.js';
 
 /**
@@ -30,6 +30,10 @@ export function countAISummaryTargets(
         skipLinkEnabled = false,
         cardEnabled = false,
         linkDensityEnabled = false,
+        // Category A: Japanese WordPress patterns
+        jpLayoutEnabled = false,
+        affiliateEnabled = false,
+        speechBubbleEnabled = false,
     } = options;
 
     let altCount = 0;
@@ -43,6 +47,9 @@ export function countAISummaryTargets(
     let skipLinkCount = 0;
     let cardCount = 0;
     let linkDensityCount = 0;
+    let jpLayoutCount = 0;
+    let affiliateCount = 0;
+    let speechBubbleCount = 0;
     
     // 画像alt属性カウント
     if (altEnabled) {
@@ -300,8 +307,87 @@ export function countAISummaryTargets(
         });
     }
 
+    // Category A: Japanese WordPress Theme Patterns
+    if (jpLayoutEnabled) {
+        const counted = new Set<Element>();
+        const jpLayoutPatterns = [
+            'l-footer', 'l-header', 'l-sidebar', 'l-wrapper',
+            'p-entry__footer', 'p-entry__header', 'p-entry__body',
+            'c-button', 'c-label', 'c-card',
+            'common-footer', 'common-header', 'sub-column',
+            'ly-', 'el-',
+            // A-1: WordPress Themes
+            'swell-toc', 'p-postList', 'c-shareBtns', 'p-relatedPosts', 'c-widget',
+            'swell-block-', 'swell-block-check', 'swell-block-quote',
+            'author-box', 'author-box-label', 'sns-share', 'related-entry-card',
+            'toc', 'toc-box', 'sidebar', 'sns-follow-buttons', 'article-outer',
+            'entry-card', 'post-list', 'sidebar-widget', 'author-block', 'share-btn',
+            'entry-utility', 'cat-links', 'tag-links', 'wp-post-image', 'post-thumbnail',
+            'sm-related-posts', 'sm-author-profile', 'sm-widget', 'sm-entry-summary',
+            'stinger', 'stingerV8',
+            // A-3: Stealth Marketing Disclosure
+            'ad-disclosure', 'promotion-note', 'pr-disclosure',
+            'disclosure-area', 'sponsor-info-wrapper', 'pr-note',
+            'promotion-content', 'sponsored-content-label',
+            // A-4: Japanese Recommend Ad Engines
+            'popin_recommend', 'popin_recommend_container', 'popin-recommend',
+            'logly-lift', 'logly-lift-widget', 'logly-widget',
+            'uzou-recommend', 'uzou-widget', 'uzou-recommendation',
+            'outbrain_carousels', 'outbrain-widget', 'taboola-placeholder',
+            'taboola-unit', 'taboola-container',
+            // A-5: Gutenberg Decorative/UI Blocks
+            'wp-block-button', 'wp-block-separator', 'wp-block-spacer',
+            'wp-block-pullquote', 'wp-block-image', 'wp-block-list',
+            'wp-block-quote', 'wp-block-code',
+            // A-6: Japanese Blog UI Components
+            'pagetop', 'page-top', 'to-top', 'go-top', 'btn-pagetop', 'back-to-top',
+            'drawer-menu', 'sp-menu', 'hamburger', 'toggle-menu', 'mobile-menu', 'menu-drawer',
+            'toc-container', 'rtoc-box', 'toc_list',
+            'table-of-contents', 'toc-wrapper', 'toc_title',
+            'access-counter', 'accesscount', 'pv-counter', 'page-counter',
+        ];
+        for (const pattern of jpLayoutPatterns) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { jpLayoutCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { jpLayoutCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (affiliateEnabled) {
+        const counted = new Set<Element>();
+        const affiliatePatterns = [
+            'yyi-rinker-contents', 'yyi-rinker-box', 'yyi-rinker-title', 'yyi-rinker-text',
+            'kaerebalink-box', 'kaerebalink-name', 'yomerebalink-box', 'booklink-box',
+            'moshimo-style-single', 'moshimo-style', 'moshimo-affiliate',
+            'pochipp-box', 'pochi-contents', 'pochipp-card', 'pochipp-btn',
+        ];
+        for (const pattern of affiliatePatterns) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { affiliateCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { affiliateCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (speechBubbleEnabled) {
+        const bubbleSelectors = [
+            '.speech-balloon', '.balloon-box', '.talk-balloon',
+            '.balloon', '.talk-box', '.chat-bubble',
+            '.comment-balloon', '.message-balloon',
+        ];
+        speechBubbleCount = element.querySelectorAll(bubbleSelectors.join(', ')).length;
+    }
+
     const total = altCount + metadataCount + adsCount + navCount + socialCount +
-        deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount + linkDensityCount;
+        deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount + linkDensityCount +
+        jpLayoutCount + affiliateCount + speechBubbleCount;
 
     return {
         altRemoved: altCount,
@@ -329,9 +415,11 @@ export function countAISummaryTargets(
         linkParaRemoved: 0,
         enhancedHiddenRemoved: 0,
         emptyElemRemoved: 0,
-        jpLayoutRemoved: 0,
+        jpLayoutRemoved: jpLayoutCount,
         jpNavigationRemoved: 0,
         authorRemoved: 0,
+        affiliateRemoved: affiliateCount,
+        speechBubbleRemoved: speechBubbleCount,
         totalRemoved: total,
         bytesBefore: 0,
         bytesAfter: 0

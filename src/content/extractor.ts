@@ -81,6 +81,8 @@ let aiSummaryCleansingEmptyElem = false;
 let aiSummaryCleansingJpLayout = false;
 let aiSummaryCleansingJpNavigation = false;
 let aiSummaryCleansingAuthor = false;
+let aiSummaryCleansingAffiliate = false;
+let aiSummaryCleansingSpeechBubble = false;
 // Threshold settings
 let aiSummaryCleansingLinkRatioThreshold = 70;
 let aiSummaryCleansingShortTextThreshold = 30;
@@ -174,6 +176,8 @@ export function extractPageContent(): string {
         jpLayoutEnabled: aiSummaryCleansingJpLayout,
         jpNavigationEnabled: aiSummaryCleansingJpNavigation,
         authorEnabled: aiSummaryCleansingAuthor,
+        affiliateEnabled: aiSummaryCleansingAffiliate,
+        speechBubbleEnabled: aiSummaryCleansingSpeechBubble,
         // Threshold settings
         linkRatioThreshold: aiSummaryCleansingLinkRatioThreshold,
         shortTextThreshold: aiSummaryCleansingShortTextThreshold,
@@ -381,6 +385,12 @@ function loadSettings(): Promise<void> {
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] !== undefined) {
                 aiSummaryCleansingAuthor = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE] !== undefined) {
+                aiSummaryCleansingAffiliate = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] !== undefined) {
+                aiSummaryCleansingSpeechBubble = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]);
             }
             // Threshold settings (with bounds validation)
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
