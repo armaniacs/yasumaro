@@ -23,6 +23,8 @@ import {
   stripJPLayoutPatterns,
   stripJPNavigationPatterns,
   stripAuthorMetaElements,
+  stripAffiliateElements,
+  stripSpeechBubbles,
 } from '../stripExtended.js';
 
 describe('aiSummaryCleaner/stripExtended', () => {
@@ -580,6 +582,178 @@ describe('aiSummaryCleaner/stripExtended', () => {
       root.innerHTML = '<p>Normal content</p>';
       const count = stripAuthorMetaElements(root);
       expect(count).toBe(0);
+    });
+  });
+
+  describe('stripAffiliateElements', () => {
+    it('strips Rinker box and extracts title + text + price', () => {
+      root.innerHTML = '<div class="yyi-rinker-contents"><div class="yyi-rinker-title">商品A</div><div class="yyi-rinker-text">説明文</div><div class="yyi-rinker-price">1,980円</div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('.yyi-rinker-contents')).toBeNull();
+      expect(root.textContent).toContain('商品A');
+      expect(root.textContent).toContain('説明文');
+      expect(root.textContent).toContain('1,980円');
+    });
+
+    it('strips Rinker box with title only', () => {
+      root.innerHTML = '<div class="yyi-rinker-contents"><div class="yyi-rinker-title">商品B</div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toBe('商品B');
+    });
+
+    it('strips Kaereba box and extracts name', () => {
+      root.innerHTML = '<div class="kaerebalink-box"><div class="kaerebalink-name">商品C</div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toBe('商品C');
+    });
+
+    it('strips Pochipp box', () => {
+      root.innerHTML = '<div class="pochipp-box"><div class="pochipp-title">商品D</div><div class="pochipp-price">1,500円</div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toContain('商品D');
+      expect(root.textContent).toContain('1,500円');
+    });
+
+    it('removes empty affiliate box entirely', () => {
+      root.innerHTML = '<div class="yyi-rinker-contents"><div class="irrelevant"> </div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('.yyi-rinker-contents')).toBeNull();
+    });
+
+    it('leaves non-affiliate content untouched', () => {
+      root.innerHTML = '<p>Normal article text</p>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(0);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('handles multiple affiliate boxes', () => {
+      root.innerHTML = '<div class="yyi-rinker-contents"><div class="yyi-rinker-title">A</div></div><p>content</p><div class="kaerebalink-box"><div class="kaerebalink-name">B</div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(2);
+      expect(root.querySelector('p')).not.toBeNull();
+      expect(root.querySelector('.yyi-rinker-contents')).toBeNull();
+      expect(root.querySelector('.kaerebalink-box')).toBeNull();
+    });
+
+    it('respects body protection', () => {
+      root.innerHTML = '<div data-ow-body-protected="true"><div class="yyi-rinker-contents"><div class="yyi-rinker-title">Protected</div></div></div>';
+      const count = stripAffiliateElements(root);
+      expect(count).toBe(0);
+      expect(root.querySelector('.yyi-rinker-contents')).not.toBeNull();
+    });
+  });
+
+  describe('stripSpeechBubbles', () => {
+    it('removes meta and avatar, keeps speech text', () => {
+      root.innerHTML = '<div class="speech-balloon"><div class="balloon-meta"><div class="character-name">山田</div></div><div class="balloon-text">こんにちは！</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toContain('こんにちは！');
+      expect(root.textContent).not.toContain('山田');
+    });
+
+    it('removes talk-name and keeps talk-comment', () => {
+      root.innerHTML = '<div class="talk-balloon"><div class="talk-name">Taro</div><div class="talk-comment">This is a comment!</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toBe('This is a comment!');
+    });
+
+    it('handles chat-bubble container', () => {
+      root.innerHTML = '<div class="chat-bubble"><div class="speaker-name">User</div><div class="speech-text">Hello</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toBe('Hello');
+    });
+
+    it('joins multiple text elements', () => {
+      root.innerHTML = '<div class="speech-balloon"><div class="balloon-text">First.</div><div class="balloon-text">Second.</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toContain('First.');
+      expect(root.textContent).toContain('Second.');
+    });
+
+    it('falls back to all text when no text pattern matches', () => {
+      root.innerHTML = '<div class="balloon-box"><div class="balloon-meta">名無し</div><div>直接発言</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+      expect(root.textContent).toContain('直接発言');
+    });
+
+    it('removes empty balloon entirely', () => {
+      root.innerHTML = '<div class="speech-balloon"> </div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(1);
+    });
+
+    it('leaves non-balloon content untouched', () => {
+      root.innerHTML = '<p>Normal article text</p>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(0);
+    });
+
+    it('handles multiple balloons', () => {
+      root.innerHTML = '<div class="speech-balloon"><div class="balloon-text">One</div></div><p>text</p><div class="talk-balloon"><div class="talk-comment">Two</div></div>';
+      const count = stripSpeechBubbles(root);
+      expect(count).toBe(2);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+  });
+
+  describe('stripJPLayoutPatterns — Category A extended patterns', () => {
+    it('removes SWELL theme classes', () => {
+      root.innerHTML = '<div class="swell-toc">TOC</div><div class="p-postlist">List</div><div class="c-sharebtns">Share</div><p>Content</p>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(3);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes Cocoon theme classes', () => {
+      root.innerHTML = '<div class="author-box">Author</div><div class="sns-share">Share</div><div id="toc">TOC</div>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(3);
+    });
+
+    it('removes A-3 disclosure patterns', () => {
+      root.innerHTML = '<div class="pr-disclosure">PR</div><div class="promotion-note">Promo</div><div id="sponsored-content-label">Sponsor</div>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(3);
+    });
+
+    it('removes A-4 recommend ad engine patterns', () => {
+      root.innerHTML = '<div class="popin_recommend">P</div><div id="logly-lift">L</div><div class="taboola-container">T</div>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(3);
+    });
+
+    it('removes A-5 Gutenberg decorative blocks', () => {
+      root.innerHTML = '<div class="wp-block-button">Btn</div><div class="wp-block-spacer"></div><div class="wp-block-quote">Q</div><p>Content</p>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(3);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes A-6 Japanese blog UI components', () => {
+      root.innerHTML = '<div class="pagetop">Top</div><div class="drawer-menu">Menu</div><div id="toc-container">TOC</div><div class="access-counter">123</div><p>Content</p>';
+      const count = stripJPLayoutPatterns(root);
+      expect(count).toBe(4);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+  });
+
+  describe('stripAuthorMetaElements — body protection verification', () => {
+    it('returns 0 when ancestor is body protected', () => {
+      root.innerHTML = '<div data-ow-body-protected="true"><div class="author-profile">Author</div><p>Content</p></div>';
+      const count = stripAuthorMetaElements(root);
+      expect(count).toBe(0);
+      expect(root.querySelector('.author-profile')).not.toBeNull();
     });
   });
 });

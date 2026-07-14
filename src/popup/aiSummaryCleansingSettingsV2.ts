@@ -43,6 +43,9 @@ export interface AiSummaryCleansingSettings {
     jpLayoutEnabled: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
     jpNavigationEnabled: boolean;     // JP ナビ頻出語（デフォルト: false）
     authorEnabled: boolean;         // 執筆者・メタ情報（デフォルト: false）
+    // Category A: WordPress Theme Specific Patterns
+    affiliateEnabled: boolean;      // アフィリエイト要素プレーンテキスト化（デフォルト: false）
+    speechBubbleEnabled: boolean;   // 吹き出し要素クレンジング（デフォルト: false）
     // Body protection settings
     bodyProtectionEnabled: boolean;  // 本文保護機能（デフォルト：true）
     bodyProtectionThreshold: number; // 本文スコア閾値（デフォルト：200）
@@ -87,7 +90,9 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         emptyElemEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM] ?? true,
         jpLayoutEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] ?? false,
         jpNavigationEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] ?? false,
-    authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false,
+        authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false,
+        affiliateEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE] ?? false,
+        speechBubbleEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] ?? false,
     // Body protection
     bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
     bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200
@@ -133,6 +138,8 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT] = settings.jpLayoutEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION] = settings.jpNavigationEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] = settings.authorEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE] = settings.affiliateEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] = settings.speechBubbleEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     await saveSettings(currentSettings);
@@ -172,6 +179,8 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const jpLayoutCheckbox = document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement;
     const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
+    const affiliateCheckbox = document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement;
+    const speechBubbleCheckbox = document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement;
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
     const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
@@ -205,6 +214,8 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (jpLayoutCheckbox) jpLayoutCheckbox.checked = settings.jpLayoutEnabled;
     if (jpNavigationCheckbox) jpNavigationCheckbox.checked = settings.jpNavigationEnabled;
     if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
+    if (affiliateCheckbox) affiliateCheckbox.checked = settings.affiliateEnabled;
+    if (speechBubbleCheckbox) speechBubbleCheckbox.checked = settings.speechBubbleEnabled;
     // Body protection (dashboard)
     if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
     if (bodyProtectionThresholdSlider) {
@@ -316,6 +327,8 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         jpLayoutEnabled: (document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement)?.checked ?? false,
         jpNavigationEnabled: (document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement)?.checked ?? false,
         authorEnabled: (document.getElementById('ai-summary-cleansing-author') as HTMLInputElement)?.checked ?? false,
+        affiliateEnabled: (document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement)?.checked ?? false,
+        speechBubbleEnabled: (document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement)?.checked ?? false,
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10)
     };
@@ -354,6 +367,8 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const jpLayoutCheckbox = document.getElementById('ai-summary-cleansing-jp-layout') as HTMLInputElement;
     const jpNavigationCheckbox = document.getElementById('ai-summary-cleansing-jp-navigation') as HTMLInputElement;
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
+    const affiliateCheckbox = document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement;
+    const speechBubbleCheckbox = document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement;
 
     // fieldset.disabled = !enabled; // Do not disable fieldset as it contains the main toggle checkbox
 
@@ -383,6 +398,8 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (jpLayoutCheckbox) jpLayoutCheckbox.disabled = !enabled;
     if (jpNavigationCheckbox) jpNavigationCheckbox.disabled = !enabled;
     if (authorCheckbox) authorCheckbox.disabled = !enabled;
+    if (affiliateCheckbox) affiliateCheckbox.disabled = !enabled;
+    if (speechBubbleCheckbox) speechBubbleCheckbox.disabled = !enabled;
     // Body protection is independent of cleansing enabled/disabled
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
@@ -446,7 +463,10 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-empty-elem',
         'ai-summary-cleansing-jp-layout',
         'ai-summary-cleansing-jp-navigation',
-        'ai-summary-cleansing-author'
+        'ai-summary-cleansing-author',
+        // Category A: WordPress Theme Specific Patterns
+        'ai-summary-cleansing-affiliate',
+        'ai-summary-cleansing-speech-bubble'
     ];
 
     for (const id of checkboxes) {

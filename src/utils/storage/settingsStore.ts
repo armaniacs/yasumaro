@@ -6,7 +6,7 @@
 
 import { logInfo, logDebug, logError, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
-import { migrateUblockSettings } from '../migration.js';
+import { migrateUblockSettings, migrateJpLayoutDefault } from '../migration.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { normalizeUrl } from '../urlUtils.js';
@@ -290,6 +290,9 @@ export async function getSettings(): Promise<Settings> {
         const afterMigration = await chrome.storage.local.get(keysToGet);
         settings = { ...settings, ...afterMigration }; // マイグレーション後の値をマージ
     }
+
+    // Category A: jpLayout デフォルト移行（既存ユーザーは明示的 false を保存）
+    await migrateJpLayoutDefault();
 
     // Tranco バージョン初期化（Phase 1）
     try {

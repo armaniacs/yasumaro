@@ -88,6 +88,19 @@ export const LEGAL_TEXT_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * Gutenberg 構造ブロック — 削除すると記事本文の意味が変わる破壊的なブロック
+ * deepEnabled (デフォルト OFF) でのみ削除
+ */
+export const GUTENBERG_STRUCTURAL_PATTERNS = [
+    'wp-block-group',
+    'wp-block-columns',
+    'wp-block-table',
+    'wp-block-gallery',
+    'wp-block-embed',
+    'wp-block-cover',
+];
+
+/**
  * ディープクレンジング対象のクラス/IDパターン
  */
 export const DEEP_CLASS_PATTERNS = [
@@ -130,7 +143,9 @@ export const DEEP_CLASS_PATTERNS = [
     // マーケティング
     'offer', 'campaign', 'lead-capture', 'download-link', 'banner-area', 'promotion', 'ad-slot',
     // 日本語BEM系
-    'l-footer', 'l-header', 'l-sidebar', 'p-entry__footer', 'p-entry__header', 'c-button', 'c-label', 'common-footer', 'sub-column'
+    'l-footer', 'l-header', 'l-sidebar', 'p-entry__footer', 'p-entry__header', 'c-button', 'c-label', 'common-footer', 'sub-column',
+    // Gutenberg 構造ブロック（Category A-5 structural）
+    ...GUTENBERG_STRUCTURAL_PATTERNS
 ];
 
 /**

@@ -21,6 +21,22 @@ export function safeRemoveElement(element: Element): boolean {
 }
 
 /**
+ * 要素をテキストノードに差し替える（本文保護チェック付き）
+ * アフィリエイト要素や吹き出しなど、要素自体はノイズだが中のテキストは保持したい場合に使用
+ * @param element 差し替え対象の要素
+ * @param text 差し替え後のテキスト
+ * @returns 差し替えに成功したかどうか（本文保護によりスキップされた場合はfalse）
+ */
+export function safeReplaceWithText(element: Element, text: string): boolean {
+    if (isBodyProtected(element)) {
+        return false;
+    }
+    const textNode = document.createTextNode(text);
+    element.replaceWith(textNode);
+    return true;
+}
+
+/**
  * パターン配列から [class*="..."], [id*="..."] を結合したCSSセレクター文字列を生成する
  */
 export function buildClassIdSelectors(patterns: string[]): string {
