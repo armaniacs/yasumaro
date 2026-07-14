@@ -17,6 +17,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.28] - 2026-07-14
+
+### Refactored / リファクタリング
+
+- **ダッシュボード Panel 抽象の導入** — 18 パネルを 3 カテゴリ（AsyncDataPanel / StaticFormPanel / DiagnosticPanel）の型付き interface に移行。NavigationRegistry + DashboardBootstrapper でパネルのライフサイクルを管理。1521 行の `dashboard.ts` をモジュール分割（C1）
+- **HTML `data-storage-key` convention の導入** — `getSettingsMapping()` の手動マッピングを廃止。全 settings input に `data-storage-key` 属性を追加し、`loadSettingsToInputs` / `extractSettingsFromInputs` を汎用ユーティリティ化（C2）
+- **AI Client interface の統一** — 3 つの互換性のない interface 形状を単一の `AIService` interface に統合。`RemoteAIService` / `LocalAIService`（offscreen lifecycle 所有）/ `FallbackAIService`（local→remote フォールバック）を新設。dead `interfaces/index.ts`（207 行）を削除（C3）
+- **Service Worker handler の依存絞り込み** — 15 の handler を singleton 丸ごと注入から method-level DI に変更。15 分岐 if-else を `MessageHandlerRegistry` で置換。`createBackgroundServices()` で明示的コンポジション（C4）
+- **Pipeline mapper 抽出** — 30 フィールドの `BrowsingLogRecord` マッピングを `BrowsingLogRecordMapper` 純粋関数に抽出。`chrome.alarms` / `chrome.storage` の concern を `MarkdownBufferManager` に抽出（C5）
+
+### Added / 追加
+
+- **AI プロバイダー設定をアコーディオン化** — 3 つの優先度セクションを `<details>` 要素に変更。デフォルトは 1 位のみ展開。プロバイダー選択変更時に `<summary>` にプロバイダー名を動的表示
+
+### CI / テスト
+
+- **OPFS+FTS5 E2E テストをスキップ** — ローカル / CI 両環境で不安定なため、`test.skip` で無効化
+- **Extension E2E テストにリトライを追加** — `retries: 0` → `retries: 2`
+- **`github-script` の `steps` 参照を環境変数に修正** — `process.env.TYPE_CHECK_OUTCOME` 等に変更
+- **`tests.yml` に `pull-requests: write` 権限を追加** — PR コメント作成に必要な権限
+
+### Documentation / ドキュメント
+
+- **設計ドキュメント 5 件を追加** — `dev-docs/superpowers/specs/2026-07-13-*.md`
+- **AI プロバイダーアコーディオン設計書を追加** — `dev-docs/superpowers/specs/2026-07-14-ai-provider-accordion-design.md`
+- **深掘りインタビュー記録** — `dev-docs/ADR/2026-07-13-architecture-phase2-deep-dig.md`
+- **実装計画** — `dev-docs/superpowers/plans/2026-07-13-architecture-phase2-implementation.md`
+
 ## [6.5.27] - 2026-07-13
 
 ### Refactored / リファクタリング
