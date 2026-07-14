@@ -2,7 +2,13 @@ import { type AIService, type AISummaryOptions, type AISummaryResult, type AISum
 
 interface RemoteAIServiceConfig {
   aiClient: {
-    generateSummary(content: string, tagSummaryMode?: boolean, url?: string): Promise<{ summary: string }>;
+    generateSummary(content: string, tagSummaryMode?: boolean, url?: string): Promise<{
+      summary: string;
+      sentTokens?: number;
+      receivedTokens?: number;
+      providerName?: string;
+      model?: string;
+    }>;
   };
 }
 
@@ -15,7 +21,13 @@ export class RemoteAIService implements AIService {
       options?.tagSummaryMode,
       options?.url,
     );
-    return { summary: result.summary };
+    return {
+      summary: result.summary,
+      sentTokens: result.sentTokens,
+      receivedTokens: result.receivedTokens,
+      providerName: result.providerName,
+      modelName: result.model,
+    };
   }
 
   getSupportedModes(): AISummaryMode[] {
