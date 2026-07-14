@@ -361,12 +361,20 @@ export class SqliteClient {
         compileOptionsSource: res.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
       }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
+    if (result.success) {
+      this.lastError = null;
+      return result.data;
     }
-    this.lastError = null;
-    return result.data;
+    // Even on failure, return diagnostic info so the UI can display it
+    this.lastError = result.error;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: result.error || 'Unknown error',
+      compileOptionsSource: undefined,
+    };
   }
 
   async clearAll(): Promise<boolean> {

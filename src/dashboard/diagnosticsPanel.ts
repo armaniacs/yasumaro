@@ -221,7 +221,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     // detectLiveVfsStrategy may fail in some environments
   }
 
-  let sqliteStatus: Awaited<ReturnType<typeof getSqliteStatus>> = null;
+  let sqliteStatus: { initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string } | null = null;
 
   if (sqliteStats) {
     // Retry with exponential backoff: SQLite may not be initialized yet

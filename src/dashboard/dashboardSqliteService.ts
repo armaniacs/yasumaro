@@ -259,8 +259,9 @@ export async function getLogCount(): Promise<number> {
 
 /**
  * Get SQLite status including fallback mode flag.
+ * Returns diagnostic info even on failure so the UI can display it.
  */
-export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string } | null> {
+export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string }> {
   try {
     const response = await sendDashboardMessage({ subtype: 'status' });
     if (response.success) {
@@ -274,10 +275,21 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
         initError: response.initError ? String(response.initError) : undefined,
       };
     }
-    return null;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: String(response.error || 'Failed to get SQLite status'),
+    };
   } catch (error) {
-    console.error('getSqliteStatus failed:', error);
-    return null;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
