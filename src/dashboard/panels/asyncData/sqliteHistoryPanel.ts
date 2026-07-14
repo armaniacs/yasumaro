@@ -173,6 +173,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isMounted = false;
+  let currentEnrichmentMap: Map<string, SavedUrlEntry> | null = null;
 
   let chromeStorageCache: { map: Map<string, SavedUrlEntry>; builtAt: number } | null = null;
   const CHROME_STORAGE_CACHE_TTL_MS = 5000;
@@ -506,6 +507,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       state.total = 0;
     } finally {
       state.loading = false;
+      currentEnrichmentMap = await getChromeStorageLookup();
       refresh();
     }
   }
@@ -571,7 +573,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       if (state.loading) {
         listContainer.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
       } else {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, null, {
+        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, currentEnrichmentMap, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
           onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
@@ -893,7 +895,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       const listContainer = document.getElementById('sqlite-entry-list');
       if (listContainer) {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, null, {
+        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, currentEnrichmentMap, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
           onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
@@ -1001,6 +1003,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       isMounted = true;
       await checkFallbackStatus();
+      currentEnrichmentMap = await getChromeStorageLookup();
       renderState();
       void retryInitialLoad();
     },
