@@ -193,12 +193,17 @@ describe('SqliteClient — unit tests', () => {
       });
     });
 
-    it('returns null on failure', async () => {
-      setupChromeMock({ success: false });
+    it('returns diagnostic info on failure', async () => {
+      setupChromeMock({ success: false, error: 'OPFS Worker unavailable' });
 
       const result = await client.getStatus();
 
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.initialized).toBe(false);
+      expect(result!.path).toBe('');
+      expect(result!.fallback).toBe(false);
+      expect(result!.fts5).toBe(false);
+      expect(result!.initError).toContain('OPFS Worker unavailable');
     });
   });
 
