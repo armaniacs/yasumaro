@@ -17,6 +17,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.29] - 2026-07-14
+
+### Fixed / 修正
+
+- **サイドバークリックでパネル表示が切り替わらない問題を修正** — `NavigationRegistry` が CSS の `.panel` / `.panel.active` クラス切り替えを行っていなかったため、すべてのパネルが `display: none` のまま。パネル切替時に `classList.add('active')` / `classList.remove('active')` を追加。`DashboardBootstrapper.wireSidebar` でサイドバーボタンの `active` クラスも切り替え
+- **SQLite の `getBackend()` が `NoopBackend` を誤返していたバグを修正** — `sqliteEngineContext.getBackend()` が OPFS Worker の初期化状態を確認せずに常に `OpfsWorkerBackend` を返し、次に `init()` 完了前にフォールバック判定が行われ `NoopBackend` に到達していた。`getBackend()` の先頭で `init()` の完了を保証し、`opfsWorker` が null の場合は IDB VFS に確実にフォールバック
+- **OPFS Worker 初期化時のクリティカル通知を抑制** — `sqliteAlert.ts` に初期化中 30 秒間の寛容期間を導入。`OPFS Worker unavailable` / `timed out` / `offscreen` エラーは初期化完了後にのみアラートを発火
+- **C3 リファクタリングで失われた AI トークン情報の伝播チェーンを復元** — `AISummaryResult` に `sentTokens` / `receivedTokens` / `providerName` / `modelName` を追加。`RemoteAIService` が AIClient からトークン情報を返すよう修正。`PrivacyPipelineResult` に同フィールドを追加。`RecordingPipeline.buildResult()` が `privacyResult` からトークン情報を通す。`saveMetadataStep` が `chrome.storage` に保存。`BrowsingLogRecordMapper` がマッピング
+- **SQLite History パネルで診断メタデータが非表示だった問題を修正** — Panel Abstraction 移行時に `renderEntryList()` の enrichment map 引数に `null` がハードコードされており、`chrome.storage` の診断情報が UI に渡されていなかった。`loadData()` / `fetchData()` で enrichment map を読み込みキャッシュ
+- **ダッシュボード起動時にパネルが初期化されなかった問題を修正** — `main.ts` に `bootstrapper.start('panel-general')` の呼び出しを追加
+- **プロバイダー設定がアコーディ内に正しく配置されなかった問題を修正** — `dashboard.ts` で `updateProviderSettingsLayout` の呼び出しを追加
+- **`getStatus()` 失敗時に診断情報が消えていた問題を修正** — `sqliteClient.getStatus()` が失敗時でも `{ initialized: false, initError: "..." }` を返すよう変更。`getSqliteStatus()` も同様に診断情報を返す
+- **`queryLogs` / `searchLogs` に SQLite 未初期化時のリトライ機構を追加** — 初回失敗時に 1 秒待機してリトライし、初期化タイミングの不整合を吸収
+- **`package-lock.json` のバージョン同期** — `6.5.28` → `6.5.29`
+
+### CI / テスト
+
+- **`tests.yml` に `pull-requests: write` 権限を追加** — PR コメント作成に必要な権限
+- **`github-script` の `steps` 参照を環境変数に修正** — `process.env.TYPE_CHECK_OUTCOME` 等に変更
+- **`AGENTS.md` の `.test.ts` 参照を修正** — Documentation Path Consistency Test のパスエラー解消
+
 ## [6.5.28] - 2026-07-14
 
 ### Refactored / リファクタリング
