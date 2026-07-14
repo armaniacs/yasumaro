@@ -421,13 +421,20 @@ export class SqliteEngineContext {
   async getBackend(): Promise<StorageBackend> {
     if (this._backend) return this._backend;
 
-    // Try OPFS Worker first
-    try {
-      const { OpfsWorkerBackend } = await import('./OpfsWorkerBackend.js');
-      this._backend = new OpfsWorkerBackend(this);
-      return this._backend;
-    } catch {
-      // fall through
+    // Ensure initialization has been attempted
+    if (!this.opfsWorker && !this.dbHandle && !this.usingFallbackStorage) {
+      await this.init();
+    }
+
+    // Try OPFS Worker only if it was successfully initialized
+    if (this.opfsWorker) {
+      try {
+        const { OpfsWorkerBackend } = await import('./OpfsWorkerBackend.js');
+        this._backend = new OpfsWorkerBackend(this);
+        return this._backend;
+      } catch {
+        // fall through
+      }
     }
 
     // Try IDB VFS

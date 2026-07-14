@@ -10,6 +10,10 @@ export interface AISummaryResult {
   summary: string;
   tags?: string[];
   usedLocal?: boolean;
+  sentTokens?: number;
+  receivedTokens?: number;
+  providerName?: string;
+  modelName?: string;
 }
 
 export interface AIService {

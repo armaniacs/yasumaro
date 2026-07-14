@@ -178,7 +178,7 @@ export class SqliteClient {
     try {
       const res = await this.msgOffscreen(type, payload);
       if (!res?.success) {
-        const msg = res?.error || `${type} failed`;
+        const msg = String(res?.error || `${type} failed`);
         recordSqliteFailure(type, msg);
         logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
         return { success: false, error: categorizeError(msg) };
@@ -361,12 +361,20 @@ export class SqliteClient {
         compileOptionsSource: res.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
       }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
+    if (result.success) {
+      this.lastError = null;
+      return result.data;
     }
-    this.lastError = null;
-    return result.data;
+    // Even on failure, return diagnostic info so the UI can display it
+    this.lastError = result.error;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: result.error || 'Unknown error',
+      compileOptionsSource: undefined,
+    };
   }
 
   async clearAll(): Promise<boolean> {

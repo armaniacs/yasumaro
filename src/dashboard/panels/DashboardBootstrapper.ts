@@ -19,6 +19,12 @@ export class DashboardBootstrapper {
       const panelId = btn.getAttribute('data-panel');
       if (!panelId) return;
 
+      // Update sidebar active state
+      sidebar.querySelectorAll('.sidebar-nav-btn.active').forEach((el) => {
+        el.classList.remove('active');
+      });
+      btn.classList.add('active');
+
       try {
         this.registry.navigate(panelId);
       } catch {

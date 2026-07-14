@@ -134,16 +134,24 @@ describe('dashboardSqliteService — additional exports', () => {
       });
     });
 
-    it('returns null on failed response', async () => {
-      givenResponse({ success: false });
+    it('returns diagnostic info on failed response', async () => {
+      givenResponse({ success: false, error: 'Query failed' });
       const result = await getSqliteStatus();
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        initialized: false, path: '', fallback: false, fts5: false,
+        compileOptions: undefined, compileOptionsSource: undefined,
+        initError: 'Query failed',
+      });
     });
 
-    it('returns null on rejection', async () => {
+    it('returns diagnostic info on rejection', async () => {
       givenLastError('Timeout');
       const result = await getSqliteStatus();
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        initialized: false, path: '', fallback: false, fts5: false,
+        compileOptions: undefined, compileOptionsSource: undefined,
+        initError: 'Timeout',
+      });
     });
   });
 

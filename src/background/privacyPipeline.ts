@@ -53,6 +53,10 @@ export interface PrivacyPipelineResult {
   tags?: string[];
   originalTokens?: number;
   cleansedTokens?: number;
+  sentTokens?: number;
+  receivedTokens?: number;
+  providerName?: string;
+  modelName?: string;
 }
 
 export class PrivacyPipeline {
@@ -238,6 +242,10 @@ export class PrivacyPipeline {
       tags,
       originalTokens,
       cleansedTokens,
+      sentTokens: aiResult.sentTokens,
+      receivedTokens: aiResult.receivedTokens,
+      providerName: aiResult.providerName,
+      modelName: aiResult.modelName,
     };
   }
 

@@ -174,6 +174,20 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
   await save('fallbackTriggered', setUrlFallbackTriggered(url, !!fallbackTriggered));
 
+  // Save AI token counts from PrivacyPipeline result (new: tokens were lost during C3 refactoring)
+  if (privacyResult?.sentTokens !== undefined) {
+    await save('sentTokens', setUrlSentTokens(url, privacyResult.sentTokens));
+  }
+  if (privacyResult?.receivedTokens !== undefined) {
+    await save('receivedTokens', setUrlReceivedTokens(url, privacyResult.receivedTokens));
+  }
+  if (privacyResult?.providerName !== undefined) {
+    await save('aiProvider', setUrlAiProvider(url, privacyResult.providerName));
+  }
+  if (privacyResult?.modelName !== undefined) {
+    await save('aiModel', setUrlAiModel(url, privacyResult.modelName));
+  }
+
   // Save L0 extracted sentences bytes (if L0 extraction was used)
   if (extractedSentencesBytes !== undefined) {
     await save('extractedSentencesBytes', setUrlExtractedSentencesBytes(url, extractedSentencesBytes));
