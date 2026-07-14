@@ -421,6 +421,11 @@ export class SqliteEngineContext {
   async getBackend(): Promise<StorageBackend> {
     if (this._backend) return this._backend;
 
+    // Ensure initialization has been attempted
+    if (!this.opfsWorker && !this.dbHandle && !this.usingFallbackStorage) {
+      await this.init();
+    }
+
     // Try OPFS Worker only if it was successfully initialized
     if (this.opfsWorker) {
       try {
