@@ -639,7 +639,7 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
     await writeStructuredLog(entry);
 
-    console.error(`[CRITICAL:${errorCode}] ${message}`, details);
+    console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details)}`);
 
     const now = Date.now();
     if (now - lastCriticalNotificationTime < CRITICAL_NOTIFICATION_COOLDOWN_MS) {
