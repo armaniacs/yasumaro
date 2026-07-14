@@ -90,10 +90,10 @@ export async function queryLogs(options: {
     if (response.success) {
       return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
     }
-    console.warn('queryLogs failed:', response.error);
+    console.warn('queryLogs failed:', String(response.error || 'Unknown error'));
     return { error: String(response.error || 'Query failed') };
   } catch (error) {
-    console.error('queryLogs failed:', error);
+    console.error('queryLogs failed:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
