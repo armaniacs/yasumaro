@@ -140,7 +140,6 @@ export async function handleSaveAndTest(
     minVisitDurationInput: HTMLInputElement,
     minScrollDepthInput: HTMLInputElement,
     maxTokensPerPromptInput: HTMLInputElement,
-    settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement>,
     validateFn: (p1: HTMLInputElement, p2: HTMLInputElement, p3: HTMLInputElement, p4: HTMLInputElement, p5: HTMLInputElement) => boolean
 ): Promise<void> {
     console.log('[SettingsSaver] handleSaveAndTest called');
@@ -174,7 +173,8 @@ export async function handleSaveAndTest(
         }
     }
 
-    const newSettings = extractSettingsFromInputs(settingsMapping);
+    const form = document.getElementById('generalPanel');
+    const newSettings = form ? extractSettingsFromInputs(form) : {};
 
     // Merge with current settings
     const currentSettings = await getSettings();
@@ -219,8 +219,7 @@ export function setupSaveButtonListener(
     portInput: HTMLInputElement,
     minVisitDurationInput: HTMLInputElement,
     minScrollDepthInput: HTMLInputElement,
-    maxTokensPerPromptInput: HTMLInputElement,
-    settingsMapping: Record<string, HTMLInputElement | HTMLSelectElement>
+    maxTokensPerPromptInput: HTMLInputElement
 ): () => void {
     const handler = async () => {
         await handleSaveAndTest(
@@ -230,7 +229,6 @@ export function setupSaveButtonListener(
             minVisitDurationInput,
             minScrollDepthInput,
             maxTokensPerPromptInput,
-            settingsMapping,
             (p1, p2, p3, p4, p5) => {
                 // デフォルトバリデーション
                 return validateAllFields(p1, p2, p3, p4, p5);

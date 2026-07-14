@@ -11,30 +11,18 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import { MarkdownBufferManager } from '../buffers/MarkdownBufferManager.js';
+import type { MarkdownEntry } from '../buffers/MarkdownBufferManager.js';
 
 /** Storage key prefix for daily entry buffers */
 export const DAILY_BUFFER_PREFIX = 'local_export_';
 
-/** One-shot alarm name for the 'immediate' timing's 1-minute debounce */
-export const IMMEDIATE_FLUSH_ALARM = 'yasumaro-local-md-immediate';
-
-/**
- * Get today's date string in YYYY-MM-DD format (local timezone)
- */
-function getTodayDateString(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 /**
  * Build complete daily markdown from accumulated entries
  */
-export function buildDailyMarkdown(date: string, entries: string[]): string {
+export function buildDailyMarkdown(date: string, entries: MarkdownEntry[]): string {
   const header = `# ${date}`;
-  return `${header}\n\n${entries.join('\n\n')}`;
+  return `${header}\n\n${entries.map(e => e.markdown).join('\n\n')}`;
 }
 
 /**
@@ -72,30 +60,21 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     return context;
   }
 
-    const _exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-    const date = getTodayDateString();
-    const storageKey = `${DAILY_BUFFER_PREFIX}${date}`;
-
     try {
-      // PBI 2026-07-09-03: Buffer only. Actual download is deferred
-      // to idle / periodic flush (see localMarkdownIdleFlusher.ts).
-      const stored = await chrome.storage.local.get(storageKey);
-      const dailyEntries: string[] = Array.isArray(stored[storageKey]) ? stored[storageKey] : [];
-      dailyEntries.push(markdown);
-      await chrome.storage.local.set({ [storageKey]: dailyEntries });
+      const markdownBuffer = new MarkdownBufferManager();
 
-      if (timing === 'immediate') {
-        const existingAlarm = await chrome.alarms.get(IMMEDIATE_FLUSH_ALARM);
-        if (!existingAlarm) {
-          chrome.alarms.create(IMMEDIATE_FLUSH_ALARM, { delayInMinutes: 1 });
-        }
-      }
+      markdownBuffer.add({
+        url,
+        title: title || '',
+        visitedAt: Date.now(),
+        markdown,
+      });
+      await markdownBuffer.flush();
+      markdownBuffer.scheduleDailyFlush();
 
       addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
         title,
         url,
-        storageKey,
-        entryCount: dailyEntries.length
       });
 
       return context;

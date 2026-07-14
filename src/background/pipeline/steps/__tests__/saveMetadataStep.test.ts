@@ -116,8 +116,6 @@ describe('saveMetadataStep', () => {
       expect(storageUrls.setUrlContent).toHaveBeenCalledWith('https://example.com/page', 'Page content');
       expect(storageUrls.setUrlTags).toHaveBeenCalledWith('https://example.com/page', ['tag1']);
       expect(storageUrls.setUrlAiSummary).toHaveBeenCalledWith('https://example.com/page', 'AI summary');
-      expect(storageUrls.setUrlSentTokens).toHaveBeenCalledWith('https://example.com/page', 100);
-      expect(storageUrls.setUrlReceivedTokens).toHaveBeenCalledWith('https://example.com/page', 50);
       expect(storageUrls.setUrlOriginalTokens).toHaveBeenCalledWith('https://example.com/page', 200);
       expect(storageUrls.setUrlCleansedTokens).toHaveBeenCalledWith('https://example.com/page', 150);
       expect(storageUrls.setUrlPageBytes).toHaveBeenCalledWith('https://example.com/page', 1000);
@@ -173,14 +171,15 @@ describe('saveMetadataStep', () => {
       expect(storageUrls.setUrlAiSummary).not.toHaveBeenCalled();
     });
 
-    it('sentTokens が undefined の場合は setUrlSentTokens を呼ばない', async () => {
+    it('sentTokens/receivedTokens are never saved (removed from PrivacyPipeline)', async () => {
       const context = makeContext({
-        privacyResult: { summary: '', maskedCount: 0, sentTokens: undefined } as any,
+        privacyResult: { summary: '', maskedCount: 0 } as any,
       });
 
       await saveMetadataStep(context);
 
       expect(storageUrls.setUrlSentTokens).not.toHaveBeenCalled();
+      expect(storageUrls.setUrlReceivedTokens).not.toHaveBeenCalled();
     });
   });
 

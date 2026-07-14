@@ -5,7 +5,7 @@ import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
 import { addPendingPage } from '../utils/pendingStorage.js';
-import type { AISummaryResult } from './ai/providers/ProviderStrategy.js';
+import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
 
 /**
@@ -31,13 +31,6 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-// Temporary interface until AIClient is converted
-export interface IAIClient {
-  getLocalAvailability(): Promise<string>;
-  summarizeLocally(content: string): Promise<{ success: boolean; summary: string; sentTokens?: number; receivedTokens?: number }>;
-  generateSummary(text: string, tagSummaryMode?: boolean, url?: string): Promise<AISummaryResult>;
-}
-
 interface ISanitizers {
   sanitizeRegex(text: string): Promise<{ text: string; maskedItems: MaskedItem[] }>;
 }
@@ -58,18 +51,14 @@ export interface PrivacyPipelineResult {
   maskedCount?: number;
   maskedItems?: (string | MaskedItem)[];
   tags?: string[];
-  sentTokens?: number;
-  receivedTokens?: number;
   originalTokens?: number;
   cleansedTokens?: number;
-  aiProvider?: string;
-  aiModel?: string;
 }
 
 export class PrivacyPipeline {
   constructor(
     private settings: Settings,
-    private aiClient: IAIClient,
+    private aiService: AIService,
     private sanitizers: ISanitizers,
   ) {}
 
@@ -141,7 +130,11 @@ export class PrivacyPipeline {
 
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
-      const aiResult = await this.aiClient.generateSummary(processingText, options.tagSummaryMode, url);
+      const aiResult = await this.aiService.generateSummary(processingText, {
+        mode: 'full_pipeline',
+        tagSummaryMode: options.tagSummaryMode,
+        url,
+      });
       return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens);
     }
 
@@ -172,23 +165,6 @@ export class PrivacyPipeline {
       return {};
     }
 
-    const localStatus = await this.aiClient.getLocalAvailability();
-    if (localStatus !== 'readily') {
-      if (this.mode === 'local_only') {
-        // 厳格オフラインモード: ローカルAIが利用不可の場合、pending に登録して記録全体を失敗扱いにする
-        void addPendingPage({
-          url: pageUrl,
-          title: pageTitle || pageUrl,
-          timestamp: Date.now(),
-          reason: 'local-ai-unavailable',
-          errorMessage: `Local AI not available (status: ${localStatus})`,
-          expiry: Date.now() + (24 * 60 * 60 * 1000)
-        });
-        throw new Error('Local AI unavailable');
-      }
-      return {};
-    }
-
     const localSanitizeResult = sanitizePromptContent(content);
     if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
       addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
@@ -197,10 +173,9 @@ export class PrivacyPipeline {
       return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
     }
 
-    const localResult = await this.aiClient.summarizeLocally(localSanitizeResult.sanitized);
-    if (!localResult.success || !localResult.summary) {
+    const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only' });
+    if (!localResult.summary) {
       if (this.mode === 'local_only') {
-        // 厳格オフラインモード: ローカルAIが失敗した場合、pending に登録して記録全体を失敗扱いにする
         void addPendingPage({
           url: pageUrl,
           title: pageTitle || pageUrl,
@@ -250,7 +225,6 @@ export class PrivacyPipeline {
       }
 
       const parsed = parseTagsFromSummary(sanitizedSummary);
-      // Apply tag normalization dictionary (normalizeTags is a no-op for empty dict)
       const dict = (this.settings[StorageKeys.TAG_NORMALIZATION_DICT] ?? []) as TagNormalizationEntry[];
       const normalizedTags = normalizeTags(parsed.tags, dict);
       tags = normalizedTags.length > 0 ? normalizedTags : undefined;
@@ -262,12 +236,8 @@ export class PrivacyPipeline {
       summary: sanitizedSummary,
       maskedCount,
       tags,
-      sentTokens: aiResult.sentTokens,
-      receivedTokens: aiResult.receivedTokens,
       originalTokens,
       cleansedTokens,
-      aiProvider: aiResult.providerName,
-      aiModel: aiResult.model,
     };
   }
 

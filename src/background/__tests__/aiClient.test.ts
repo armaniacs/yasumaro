@@ -309,21 +309,6 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
   });
 
-  describe('summarizeLocally', () => {
-    it('localAiClient.summarize を委譲する', async () => {
-      // localAiClient はモックされているので undefined が返るが、呼び出し自体を確認
-      const result = await aiClient.summarizeLocally('test content');
-      // モック環境では undefined でも、エラーなく完了することが重要
-      expect(() => aiClient.summarizeLocally('test')).not.toThrow();
-    });
-  });
-
-  describe('getLocalAvailability', () => {
-    it('localAiClient.getAvailability を委譲する', async () => {
-      expect(() => aiClient.getLocalAvailability()).not.toThrow();
-    });
-  });
-
   describe('generateSummary - 正常系', () => {
     beforeEach(() => {
       global.fetch = vi.fn();

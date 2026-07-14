@@ -6,7 +6,7 @@
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
-import type { AIClient } from '../aiClient.js';
+import type { AIService } from '../ai/AIService.js';
 
 // Constants
 export const MAX_RECORD_SIZE = 64 * 1024; // 64KB
@@ -67,7 +67,7 @@ export interface RecordingContext {
   data: RecordingData;
   settings: Settings;
   force: boolean;
-  aiClient?: AIClient | null;
+  aiService?: AIService | null;
 
   // Intermediate results (cached for performance)
   truncatedContent?: string;

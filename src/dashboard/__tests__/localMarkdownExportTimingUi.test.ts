@@ -4,7 +4,7 @@
  */
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming, resetDashboardElements } from '../dashboard.js';
+import { extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming } from '../dashboard.js';
 
 function renderRadios(): void {
   document.body.innerHTML = `
@@ -13,7 +13,6 @@ function renderRadios(): void {
     <input type="radio" name="localMarkdownExportTiming" id="r3" value="idle">
     <input type="radio" name="localMarkdownExportTiming" id="r4" value="daily">
   `;
-  resetDashboardElements();
 }
 
 describe('LOCAL_MARKDOWN_EXPORT_TIMING radio group', () => {

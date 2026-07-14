@@ -7,7 +7,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     getSettingsFormElements,
-    getSettingsMapping,
     getAiProviderElements,
     getErrorPairs,
     load,
@@ -49,8 +48,11 @@ vi.mock('../settings/aiProvider.js', () => ({
     AIProviderElements: {},
 }));
 
-vi.mock('../settingsUiHelper.js', () => ({
+vi.mock('../../utils/settingsFormBinding.js', () => ({
     loadSettingsToInputs: vi.fn(),
+}));
+
+vi.mock('../settingsUiHelper.js', () => ({
     showStatus: vi.fn(),
 }));
 
@@ -62,6 +64,7 @@ describe('settingsForm', () => {
     beforeEach(() => {
         // Reset DOM and cache
         document.body.innerHTML = `
+            <div id="generalPanel">
             <input id="apiKey" type="password" />
             <input id="protocol" type="text" value="https" />
             <input id="port" type="number" value="8080" />
@@ -87,6 +90,7 @@ describe('settingsForm', () => {
             <button id="save">Save</button>
             <div id="status"></div>
             <button id="ollamaPresetBtn">Ollama Preset</button>
+            </div>
         `;
         resetSettingsFormElements();
         vi.clearAllMocks();
@@ -121,34 +125,6 @@ describe('settingsForm', () => {
             expect(elements.apiKeyInput).toBeInstanceOf(HTMLInputElement);
             expect(elements.protocolInput).toBeNull();
             expect(elements.portInput).toBeNull();
-        });
-    });
-
-    describe('getSettingsMapping', () => {
-        it('should return mapping with correct StorageKeys', () => {
-            const mapping = getSettingsMapping();
-
-            expect(mapping[StorageKeys.OBSIDIAN_API_KEY]).toBeInstanceOf(HTMLInputElement);
-            expect(mapping[StorageKeys.OBSIDIAN_PROTOCOL]).toBeInstanceOf(HTMLInputElement);
-            expect(mapping[StorageKeys.OBSIDIAN_PORT]).toBeInstanceOf(HTMLInputElement);
-            expect(mapping[StorageKeys.OBSIDIAN_DAILY_PATH]).toBeInstanceOf(HTMLInputElement);
-            expect(mapping[StorageKeys.AI_PROVIDER]).toBeInstanceOf(HTMLSelectElement);
-        });
-
-        it('should include all required keys', () => {
-            const mapping = getSettingsMapping();
-
-            expect(mapping[StorageKeys.GEMINI_API_KEY]).toBeDefined();
-            expect(mapping[StorageKeys.GEMINI_MODEL]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_BASE_URL]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_API_KEY]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_MODEL]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_2_BASE_URL]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_2_API_KEY]).toBeDefined();
-            expect(mapping[StorageKeys.OPENAI_2_MODEL]).toBeDefined();
-            expect(mapping[StorageKeys.MIN_VISIT_DURATION]).toBeDefined();
-            expect(mapping[StorageKeys.MIN_SCROLL_DEPTH]).toBeDefined();
-            expect(mapping[StorageKeys.MAX_TOKENS_PER_PROMPT]).toBeDefined();
         });
     });
 
@@ -190,7 +166,7 @@ describe('settingsForm', () => {
     describe('load', () => {
         it('should call getSettings and loadSettingsToInputs', async () => {
             const { getSettings } = await import('../../utils/storage.js');
-            const { loadSettingsToInputs } = await import('../settingsUiHelper.js');
+            const { loadSettingsToInputs } = await import('../../utils/settingsFormBinding.js');
 
             const mockSettings = {
                 obsidian_api_key: 'test-key',
@@ -202,7 +178,7 @@ describe('settingsForm', () => {
             await load();
 
             expect(getSettings).toHaveBeenCalled();
-            expect(loadSettingsToInputs).toHaveBeenCalledWith(mockSettings, expect.any(Object));
+            expect(loadSettingsToInputs).toHaveBeenCalledWith(expect.any(HTMLElement), mockSettings);
         });
 
         it('should call updateAIProviderVisibility', async () => {

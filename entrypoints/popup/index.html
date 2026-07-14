@@ -236,32 +236,32 @@
 
       <div class="form-group">
         <label for="apiKey" data-i18n="obsidianApiKey">Obsidian API Key</label>
-        <input type="password" id="apiKey" data-i18n-input-placeholder="apiKeyPlaceholder">
+        <input type="password" id="apiKey" data-storage-key="obsidian_api_key" data-i18n-input-placeholder="apiKeyPlaceholder">
       </div>
 
       <div class="form-group">
         <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
-        <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError protocolWarning">
+        <input type="text" id="protocol" data-storage-key="obsidian_protocol" value="https" aria-invalid="false" aria-describedby="protocolError protocolWarning">
         <div id="protocolError" class="field-error" role="alert"></div>
         <div id="protocolWarning" class="field-warning hidden" role="alert"></div>
       </div>
 
       <div class="form-group">
         <label for="port" data-i18n="port">Port</label>
-        <input type="text" id="port" value="27123" aria-invalid="false" aria-describedby="portError">
+        <input type="text" id="port" data-storage-key="obsidian_port" value="27123" aria-invalid="false" aria-describedby="portError">
         <div id="portError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
         <label for="dailyPath" data-i18n="dailyNotePath">Daily Note Path</label>
-        <input type="text" id="dailyPath" data-i18n-input-placeholder="dailyNotePathPlaceholder">
+        <input type="text" id="dailyPath" data-storage-key="obsidian_daily_path" data-i18n-input-placeholder="dailyNotePathPlaceholder">
       </div>
 
       <hr class="settings-hr">
 
       <div class="form-group">
         <label for="aiProvider" data-i18n="aiProvider">AI Provider</label>
-        <select id="aiProvider">
+        <select id="aiProvider" data-storage-key="ai_provider">
           <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
           <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
           <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
@@ -272,12 +272,12 @@
       <div id="geminiSettings">
         <div class="form-group">
           <label for="geminiApiKey" data-i18n="geminiApiKey">Gemini API Key</label>
-          <input type="password" id="geminiApiKey" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
+          <input type="password" id="geminiApiKey" data-storage-key="gemini_api_key" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
           <label for="geminiModel" data-i18n="modelName">Model Name (e.g. gemini-3.1-flash-lite)</label>
-          <input type="text" id="geminiModel" value="gemini-3.1-flash-lite">
+          <input type="text" id="geminiModel" data-storage-key="gemini_model" value="gemini-3.1-flash-lite">
         </div>
       </div>
 
@@ -285,17 +285,17 @@
       <div id="openaiSettings" class="openai-settings">
         <div class="form-group">
           <label for="openaiBaseUrl" data-i18n="baseUrl">Base URL</label>
-          <input type="text" id="openaiBaseUrl" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
+          <input type="text" id="openaiBaseUrl" data-storage-key="openai_base_url" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
         </div>
 
         <div class="form-group">
           <label for="openaiApiKey" data-i18n="aiApiKey">API Key</label>
-          <input type="password" id="openaiApiKey" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
+          <input type="password" id="openaiApiKey" data-storage-key="openai_api_key" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
           <label for="openaiModel" data-i18n="modelName">Model Name</label>
-          <input type="text" id="openaiModel" data-i18n-input-placeholder="openaiModelPlaceholder">
+          <input type="text" id="openaiModel" data-storage-key="openai_model" data-i18n-input-placeholder="openaiModelPlaceholder">
         </div>
       </div>
 
@@ -303,31 +303,31 @@
       <div id="openai2Settings" class="openai-settings">
         <div class="form-group">
           <label for="openai2BaseUrl" data-i18n="baseUrl">Base URL</label>
-          <input type="text" id="openai2BaseUrl" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
+          <input type="text" id="openai2BaseUrl" data-storage-key="openai_2_base_url" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
           <button type="button" id="ollamaPresetBtn" class="small-btn" data-i18n="ollamaPreset">Ollama</button>
         </div>
 
         <div class="form-group">
           <label for="openai2ApiKey" data-i18n="aiApiKey">API Key</label>
-          <input type="password" id="openai2ApiKey" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
+          <input type="password" id="openai2ApiKey" data-storage-key="openai_2_api_key" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
         </div>
 
         <div class="form-group">
           <label for="openai2Model" data-i18n="modelName">Model Name</label>
-          <input type="text" id="openai2Model" data-i18n-input-placeholder="openai2ModelPlaceholder">
+          <input type="text" id="openai2Model" data-storage-key="openai_2_model" data-i18n-input-placeholder="openai2ModelPlaceholder">
         </div>
       </div>
 
       <div class="form-group">
         <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
-        <input type="number" id="minVisitDuration" min="1" value="5" aria-invalid="false"
+        <input type="number" id="minVisitDuration" data-storage-key="min_visit_duration" min="1" value="5" aria-invalid="false"
           aria-describedby="minVisitDurationError">
         <div id="minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
         <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
-        <input type="number" id="minScrollDepth" min="0" max="100" value="50" aria-invalid="false"
+        <input type="number" id="minScrollDepth" data-storage-key="min_scroll_depth" min="0" max="100" value="50" aria-invalid="false"
           aria-describedby="minScrollDepthError">
         <div id="minScrollDepthError" class="field-error" role="alert"></div>
       </div>
@@ -336,7 +336,7 @@
 
       <div class="form-group">
         <label for="maxTokensPerPrompt" data-i18n="label_max_tokens">Max Tokens Per Prompt</label>
-        <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" aria-invalid="false"
+        <input type="number" id="maxTokensPerPrompt" data-storage-key="max_tokens_per_prompt" min="10" max="16000" step="100" value="1000" aria-invalid="false"
           aria-describedby="maxTokensError maxTokensNote">
         <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
         <div id="maxTokensError" class="field-error" role="alert"></div>
@@ -347,7 +347,7 @@
       <div class="form-group">
         <label data-i18n="bodyProtectionSection">Body Protection</label>
         <div class="mb-8">
-          <input type="checkbox" id="popup-body-protection-enabled" aria-describedby="popupBodyProtectionDesc">
+          <input type="checkbox" id="popup-body-protection-enabled" data-storage-key="ai_summary_cleansing_body_protection_enabled" aria-describedby="popupBodyProtectionDesc">
           <label for="popup-body-protection-enabled" class="inline-label" data-i18n="aiSummaryCleansingBodyProtectionEnabledDesc">Protect main article body if cleansing score drops below threshold.</label>
         </div>
         <div class="threshold-slider" id="popupBodyProtectionThresholdGroup">

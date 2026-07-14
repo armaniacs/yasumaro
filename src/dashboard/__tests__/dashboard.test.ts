@@ -24,10 +24,6 @@ vi.stubGlobal('chrome', {
 
 // Setup minimal DOM BEFORE importing dashboard
 document.body.innerHTML = `
-    <button class="sidebar-nav-btn" data-panel="panel1"></button>
-    <button class="sidebar-nav-btn" data-panel="panel2"></button>
-    <div id="panel1" class="panel"></div>
-    <div id="panel2" class="panel"></div>
     <input id="apiKey" />
     <input id="protocol" />
     <input id="port" />
@@ -162,10 +158,6 @@ vi.mock('../popup/aiSummaryCleansingSettingsV2.js', () => ({
     setupAiSummaryCleansingEventListeners: vi.fn(),
 }));
 
-vi.mock('../utils/storageUrls.js', () => ({
-    getSavedUrlEntries: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('../popup/domainFilter.js', () => ({ init: vi.fn() }));
 vi.mock('../popup/privacySettings.js', () => ({ init: vi.fn() }));
 vi.mock('../popup/contentSettings.js', () => ({ init: vi.fn() }));
@@ -215,14 +207,10 @@ vi.mock('../popup/privacyConsent.js', () => ({
 // Import after mocks
 import {
     initDashboard,
-    initSidebarNav,
     createConnectionStatusElement,
     setHtmlLangDir,
     testObsidianConnection,
     testAiConnection,
-    resetDashboardElements,
-    getDashboardElements,
-    getSettingsMapping,
     getAiProviderElements,
 } from '../dashboard.js';
 
@@ -232,80 +220,12 @@ describe('dashboard.ts exports', () => {
         expect(() => initDashboard()).not.toThrow();
     });
 
-    it('exports initSidebarNav', () => {
-        expect(typeof initSidebarNav).toBe('function');
-    });
-
     it('exports createConnectionStatusElement', () => {
         expect(typeof createConnectionStatusElement).toBe('function');
     });
 
     it('exports setHtmlLangDir', () => {
         expect(typeof setHtmlLangDir).toBe('function');
-    });
-});
-
-describe('initSidebarNav', () => {
-    beforeEach(() => {
-        document.querySelectorAll('.sidebar-nav-btn').forEach(el => el.remove());
-        document.querySelectorAll('.panel').forEach(el => el.remove());
-
-        ['panel1', 'panel2'].forEach(panelId => {
-            const btn = document.createElement('button');
-            btn.className = 'sidebar-nav-btn';
-            btn.setAttribute('data-panel', panelId);
-            document.body.appendChild(btn);
-
-            const panel = document.createElement('div');
-            panel.id = panelId;
-            panel.className = 'panel';
-            document.body.appendChild(panel);
-        });
-
-        resetDashboardElements();
-        initSidebarNav();
-    });
-
-    it('switches active panel on nav button click', () => {
-        const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
-        const panels = document.querySelectorAll<HTMLElement>('.panel');
-
-        navBtns[0].click();
-
-        expect(navBtns[0].classList.contains('active')).toBe(true);
-        expect(navBtns[1].classList.contains('active')).toBe(false);
-        expect(panels[0].classList.contains('active')).toBe(true);
-        expect(panels[1].classList.contains('active')).toBe(false);
-    });
-
-    it('switches to second panel on second button click', () => {
-        const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
-        const panels = document.querySelectorAll<HTMLElement>('.panel');
-
-        navBtns[1].click();
-
-        expect(navBtns[1].classList.contains('active')).toBe(true);
-        expect(panels[1].classList.contains('active')).toBe(true);
-    });
-
-    it('removes active class from all buttons when switching panels', () => {
-        const navBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-nav-btn');
-
-        navBtns[0].click();
-        navBtns[1].click();
-
-        expect(navBtns[0].classList.contains('active')).toBe(false);
-        expect(navBtns[1].classList.contains('active')).toBe(true);
-    });
-
-    it('does nothing when nav button has no data-panel', () => {
-        const btn = document.createElement('button');
-        btn.className = 'sidebar-nav-btn';
-        document.body.appendChild(btn);
-        initSidebarNav();
-
-        expect(() => btn.click()).not.toThrow();
-        document.body.removeChild(btn);
     });
 });
 
@@ -506,60 +426,8 @@ describe('testAiConnection', () => {
     });
 });
 
-describe('getDashboardElements', () => {
-    it('returns an object with expected properties', () => {
-        resetDashboardElements();
-        const elements = getDashboardElements();
-
-        expect(elements).toHaveProperty('apiKeyInput');
-        expect(elements).toHaveProperty('protocolInput');
-        expect(elements).toHaveProperty('portInput');
-        expect(elements).toHaveProperty('dailyPathInput');
-        expect(elements).toHaveProperty('aiProviderSelect');
-    });
-
-    it('returns cached elements on subsequent calls', () => {
-        resetDashboardElements();
-        const elements1 = getDashboardElements();
-        const elements2 = getDashboardElements();
-
-        expect(elements1).toBe(elements2);
-    });
-
-    it('returns all provider settings properties', () => {
-        resetDashboardElements();
-        const elements = getDashboardElements();
-
-        expect(elements).toHaveProperty('geminiSettingsDiv');
-        expect(elements).toHaveProperty('openaiSettingsDiv');
-        expect(elements).toHaveProperty('openai2SettingsDiv');
-        expect(elements).toHaveProperty('lmStudioSettingsDiv');
-        expect(elements).toHaveProperty('ollamaSettingsDiv');
-    });
-});
-
-describe('getSettingsMapping', () => {
-    it('returns a mapping object with all settings keys', () => {
-        resetDashboardElements();
-        const mapping = getSettingsMapping();
-
-        expect(mapping).toBeInstanceOf(Object);
-        expect(Object.keys(mapping).length).toBeGreaterThan(0);
-    });
-
-    it('contains mapping entries', () => {
-        resetDashboardElements();
-        const mapping = getSettingsMapping();
-
-        // Just verify it has keys and they map to something (input, select, or null)
-        const keys = Object.keys(mapping);
-        expect(keys.length).toBeGreaterThan(5); // Should have multiple settings
-    });
-});
-
 describe('getAiProviderElements', () => {
     it('returns AI provider elements object', () => {
-        resetDashboardElements();
         const elements = getAiProviderElements();
 
         expect(elements).toHaveProperty('select');
@@ -569,23 +437,9 @@ describe('getAiProviderElements', () => {
     });
 
     it('returns select element as HTMLSelectElement', () => {
-        resetDashboardElements();
         const elements = getAiProviderElements();
 
         // The select element may be null in jsdom, just verify it's either a select or null
         expect(elements.select === null || elements.select instanceof HTMLSelectElement).toBe(true);
-    });
-});
-
-describe('resetDashboardElements', () => {
-    it('clears cached elements', () => {
-        resetDashboardElements();
-        const elements1 = getDashboardElements();
-
-        resetDashboardElements();
-        const elements2 = getDashboardElements();
-
-        // Both should work independently after reset
-        expect(elements1).not.toBe(elements2);
     });
 });

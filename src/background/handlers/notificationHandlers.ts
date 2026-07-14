@@ -3,7 +3,7 @@ import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import type { RecordingLogic } from '../recordingLogic.js';
+import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
 const BLOCKED_URL_SCHEMES = ['javascript:', 'data:', 'file:', 'vbscript:', 'about:'];
@@ -26,7 +26,11 @@ export function isValidNotificationUrl(url: string): boolean {
     }
 }
 
-export function createNotificationHandlers(recordingLogic: RecordingLogic) {
+export interface NotificationHandlersDeps {
+  record: (data: RecordingData) => Promise<RecordingResult>;
+}
+
+export function createNotificationHandlers(deps: NotificationHandlersDeps) {
     async function onButtonClicked(notificationId: string, buttonIndex: number): Promise<void> {
         try {
             if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) return;
@@ -36,7 +40,7 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
                     'Failed to clear notification',
                     { notificationId, error: errorMessage(e) },
                     ErrorCode.UNKNOWN_ERROR,
-                    'service-worker'
+                    'service-worker',
                 );
             });
 
@@ -52,7 +56,7 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
                     'Invalid URL decoded from notification ID',
                     { urlHash: url.substring(0, 10) + '...' },
                     ErrorCode.INVALID_INPUT,
-                    'service-worker'
+                    'service-worker',
                 );
                 return;
             }
@@ -61,13 +65,13 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
                 const pages = await getPendingPages();
                 const page = pages.find(p => p.url === url);
                 if (page) {
-                    await recordingLogic.record({
+                    await deps.record({
                         title: page.title,
                         url: page.url,
                         content: '',
                         force: true,
                         skipDuplicateCheck: true,
-                        recordType: 'auto'
+                        recordType: 'auto',
                     });
                 }
             }
@@ -78,10 +82,10 @@ export function createNotificationHandlers(recordingLogic: RecordingLogic) {
                 {
                     notificationId: notificationId.substring(0, 20) + '...',
                     buttonIndex,
-                    error: errorMessage(error)
+                    error: errorMessage(error),
                 },
                 ErrorCode.INTERNAL_ERROR,
-                'service-worker'
+                'service-worker',
             );
         }
     }

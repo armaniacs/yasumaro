@@ -166,9 +166,8 @@ function makeMockObsidian() {
 
 function makeMockAiClient() {
   return {
-    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
-    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    generateSummary: vi.fn().mockResolvedValue('Cloud summary'),
+    getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
+    generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   } as any;
 }
 
@@ -275,13 +274,9 @@ const mockSettings = {
 
 function makeAiClient() {
   return {
-    getLocalAvailability: vi.fn<() => Promise<string>>().mockResolvedValue('unavailable'),
-    summarizeLocally: vi.fn(),
+    getSupportedModes: vi.fn<() => string[]>().mockReturnValue(['full_pipeline']),
     generateSummary: vi.fn<() => Promise<any>>().mockResolvedValue({
-      success: true,
       summary: 'AI summary',
-      sentTokens: 100,
-      receivedTokens: 50,
     }),
   };
 }

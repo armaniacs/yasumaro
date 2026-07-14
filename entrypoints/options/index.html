@@ -186,14 +186,14 @@
           <h3 class="settings-section-title" data-i18n="obsidianSection">Obsidian 接続</h3>
 
           <div class="form-group">
-            <input type="checkbox" id="obsidianEnabled" aria-describedby="obsidianEnabledHelp">
+            <input type="checkbox" id="obsidianEnabled" data-storage-key="obsidian_enabled" aria-describedby="obsidianEnabledHelp">
             <label for="obsidianEnabled" class="inline-label" data-i18n="obsidianEnabledLabel">Obsidian を使う</label>
             <div id="obsidianEnabledHelp" class="help-text" data-i18n="obsidianEnabledHelp">OFF の場合、記録は SQLite のみに保存されます。</div>
           </div>
 
           <div class="form-group">
             <label for="apiKey" data-i18n="obsidianApiKey">Obsidian API Key</label>
-            <input type="password" id="apiKey" data-i18n-input-placeholder="apiKeyPlaceholder">
+            <input type="password" id="apiKey" data-storage-key="obsidian_api_key" data-i18n-input-placeholder="apiKeyPlaceholder">
             <div class="help-text">
               <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md"
                  target="_blank"
@@ -209,20 +209,20 @@
           <div class="advanced-details-content">
             <div class="form-group">
               <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
-              <input type="text" id="protocol" value="https" aria-invalid="false" aria-describedby="protocolError protocolWarning">
+              <input type="text" id="protocol" data-storage-key="obsidian_protocol" value="https" aria-invalid="false" aria-describedby="protocolError protocolWarning">
               <div id="protocolError" class="field-error" role="alert"></div>
               <div id="protocolWarning" class="field-warning hidden" role="alert"></div>
             </div>
 
             <div class="form-group">
               <label for="port" data-i18n="port">Port</label>
-              <input type="text" id="port" value="27124" aria-invalid="false" aria-describedby="portError">
+              <input type="text" id="port" data-storage-key="obsidian_port" value="27124" aria-invalid="false" aria-describedby="portError">
               <div id="portError" class="field-error" role="alert"></div>
             </div>
 
             <div class="form-group">
               <label for="dailyPath" data-i18n="dailyNotePath">Daily Note Path</label>
-              <input type="text" id="dailyPath" data-i18n-input-placeholder="dailyNotePathPlaceholder">
+              <input type="text" id="dailyPath" data-storage-key="obsidian_daily_path" data-i18n-input-placeholder="dailyNotePathPlaceholder">
             </div>
           </div>
         </details>
@@ -232,7 +232,7 @@
           <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
 
           <div class="form-group">
-            <input type="checkbox" id="localMarkdownExportEnabled" aria-describedby="localMarkdownExportEnabledHelp">
+            <input type="checkbox" id="localMarkdownExportEnabled" data-storage-key="local_markdown_export_enabled" aria-describedby="localMarkdownExportEnabledHelp">
             <label for="localMarkdownExportEnabled" class="inline-label" data-i18n="localMarkdownExportEnabledLabel">ローカル Markdown に書き出す</label>
             <div id="localMarkdownExportEnabledHelp" class="help-text" data-i18n="localMarkdownExportEnabledHelp">閲覧履歴を Markdown ファイルとしてブラウザのダウンロードフォルダに保存します（例: ~/Downloads/Yasumaro/）。</div>
           </div>
@@ -256,7 +256,7 @@
 
             <div class="form-group">
               <label for="localMarkdownExportPath" data-i18n="localMarkdownExportPathLabel">書き出しフォルダ</label>
-              <input type="text" id="localMarkdownExportPath" data-i18n-input-placeholder="localMarkdownExportPathPlaceholder">
+              <input type="text" id="localMarkdownExportPath" data-storage-key="local_markdown_export_path" data-i18n-input-placeholder="localMarkdownExportPathPlaceholder">
               <div class="help-text" data-i18n="localMarkdownExportPathHelp">ダウンロードフォルダ内のフォルダ名（デフォルト: Yasumaro）</div>
             </div>
 
@@ -285,7 +285,7 @@
 
           <div class="form-group">
             <label class="checkbox-label">
-              <input type="checkbox" id="reviewSummaryEnabled">
+              <input type="checkbox" id="reviewSummaryEnabled" data-storage-key="review_summary_enabled">
               <span data-i18n="reviewSummaryEnabled">週次/月次サマリを自動生成する</span>
             </label>
             <div class="help-text" data-i18n="reviewSummaryHelp">
@@ -305,75 +305,93 @@
           <h3 class="settings-section-title" data-i18n="aiSection">AI プロバイダー</h3>
 
           <!-- Priority 1 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority1">優先度1位（必須）</h4>
-            <div class="form-group">
-              <label for="aiProvider" class="sr-only">AIプロバイダー</label>
-              <select id="aiProvider">
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details" open>
+            <summary class="priority-details-summary">
+              <span class="priority-number">1</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority1">優先度1位（必須）</span>
+              <span class="priority-provider-name" data-priority="1"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProvider" class="sr-only">AIプロバイダー</label>
+                <select id="aiProvider" data-storage-key="ai_provider">
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority1ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority1Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority1Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority1ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority1Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority1Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Priority 2 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority2">優先度2位（任意）</h4>
-            <div class="form-group">
-              <label for="aiProviderPriority2" class="sr-only">AIプロバイダー</label>
-              <select id="aiProviderPriority2">
-                <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details">
+            <summary class="priority-details-summary">
+              <span class="priority-number">2</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority2">優先度2位（任意）</span>
+              <span class="priority-provider-name" data-priority="2"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProviderPriority2" class="sr-only">AIプロバイダー</label>
+                <select id="aiProviderPriority2">
+                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority2ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority2Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority2Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority2ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority2Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority2Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Priority 3 Provider -->
-          <div class="priority-provider-card">
-            <h4 class="priority-label" data-i18n="aiProviderPriority3">優先度3位（任意）</h4>
-            <div class="form-group">
-              <label for="aiProviderPriority3" class="sr-only">AIプロバイダー</label>
-              <select id="aiProviderPriority3">
-                <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
-                <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
-                <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
-                <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
-                <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
-                <option value="ollama" data-i18n-opt="ollama">Ollama</option>
-                <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
-              </select>
+          <details class="priority-details">
+            <summary class="priority-details-summary">
+              <span class="priority-number">3</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority3">優先度3位（任意）</span>
+              <span class="priority-provider-name" data-priority="3"></span>
+            </summary>
+            <div class="priority-details-content">
+              <div class="form-group">
+                <label for="aiProviderPriority3" class="sr-only">AIプロバイダー</label>
+                <select id="aiProviderPriority3">
+                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
+                  <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
+                  <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
+                  <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
+                  <option value="ollama" data-i18n-opt="ollama">Ollama</option>
+                  <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                </select>
+              </div>
+              <div id="priority3ProviderSettings"></div>
+              <div class="form-group">
+                <label for="aiProviderPriority3Model" class="sr-only">モデル名</label>
+                <input type="text" id="aiProviderPriority3Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
+              </div>
             </div>
-            <div id="priority3ProviderSettings"></div>
-            <div class="form-group">
-              <label for="aiProviderPriority3Model" class="sr-only">モデル名</label>
-              <input type="text" id="aiProviderPriority3Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
-            </div>
-          </div>
+          </details>
 
           <!-- Gemini Settings -->
           <div id="geminiSettings">
             <div class="form-group">
               <label for="geminiApiKey" data-i18n="geminiApiKey">Gemini API Key</label>
-              <input type="password" id="geminiApiKey" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
+              <input type="password" id="geminiApiKey" data-storage-key="gemini_api_key" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
               <div class="help-text">
                 <span data-i18n="geminiApiKeyHelp">Google AI Studio で取得できます。</span>
                 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" data-i18n="apiKeyCreateLink">APIキーを作成 →</a>
@@ -382,7 +400,7 @@
 
             <div class="form-group">
               <label for="geminiModel" data-i18n="modelName">Model Name (e.g. gemini-3.1-flash-lite)</label>
-              <input type="text" id="geminiModel" value="gemini-3.1-flash-lite">
+              <input type="text" id="geminiModel" data-storage-key="gemini_model" value="gemini-3.1-flash-lite">
             </div>
           </div>
 
@@ -390,17 +408,17 @@
           <div id="openaiSettings" class="openai-settings">
             <div class="form-group">
               <label for="openaiBaseUrl" data-i18n="baseUrl">Base URL</label>
-              <input type="text" id="openaiBaseUrl" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
+              <input type="text" id="openaiBaseUrl" data-storage-key="openai_base_url" data-i18n-input-placeholder="openaiBaseUrlPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="openaiApiKey" data-i18n="aiApiKey">API Key</label>
-              <input type="password" id="openaiApiKey" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
+              <input type="password" id="openaiApiKey" data-storage-key="openai_api_key" data-i18n-input-placeholder="openaiApiKeyPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="openaiModel" data-i18n="modelName">Model Name</label>
-              <input type="text" id="openaiModel" data-i18n-input-placeholder="openaiModelPlaceholder">
+              <input type="text" id="openaiModel" data-storage-key="openai_model" data-i18n-input-placeholder="openaiModelPlaceholder">
             </div>
           </div>
 
@@ -408,17 +426,17 @@
           <div id="openai2Settings" class="openai-settings">
             <div class="form-group">
               <label for="openai2BaseUrl" data-i18n="baseUrl">Base URL</label>
-              <input type="text" id="openai2BaseUrl" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
+              <input type="text" id="openai2BaseUrl" data-storage-key="openai_2_base_url" data-i18n-input-placeholder="openai2BaseUrlPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="openai2ApiKey" data-i18n="aiApiKey">API Key</label>
-              <input type="password" id="openai2ApiKey" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
+              <input type="password" id="openai2ApiKey" data-storage-key="openai_2_api_key" data-i18n-input-placeholder="openai2ApiKeyPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="openai2Model" data-i18n="modelName">Model Name</label>
-              <input type="text" id="openai2Model" data-i18n-input-placeholder="openai2ModelPlaceholder">
+              <input type="text" id="openai2Model" data-storage-key="openai_2_model" data-i18n-input-placeholder="openai2ModelPlaceholder">
             </div>
           </div>
 
@@ -426,12 +444,12 @@
           <div id="lm-studioSettings" class="openai-settings">
             <div class="form-group">
               <label for="lmStudioBaseUrl" data-i18n="baseUrl">Base URL</label>
-              <input type="text" id="lmStudioBaseUrl" data-i18n-input-placeholder="lmStudioBaseUrlPlaceholder">
+              <input type="text" id="lmStudioBaseUrl" data-storage-key="lm_studio_base_url" data-i18n-input-placeholder="lmStudioBaseUrlPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="lmStudioModel" data-i18n="modelName">Model Name</label>
-              <input type="text" id="lmStudioModel" data-i18n-input-placeholder="lmStudioModelPlaceholder">
+              <input type="text" id="lmStudioModel" data-storage-key="lm_studio_model" data-i18n-input-placeholder="lmStudioModelPlaceholder">
             </div>
           </div>
 
@@ -439,12 +457,12 @@
           <div id="ollamaSettings" class="openai-settings">
             <div class="form-group">
               <label for="ollamaBaseUrl" data-i18n="baseUrl">Base URL</label>
-              <input type="text" id="ollamaBaseUrl" data-i18n-input-placeholder="ollamaBaseUrlPlaceholder">
+              <input type="text" id="ollamaBaseUrl" data-storage-key="ollama_base_url" data-i18n-input-placeholder="ollamaBaseUrlPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="ollamaModel" data-i18n="modelName">Model Name</label>
-              <input type="text" id="ollamaModel" data-i18n-input-placeholder="ollamaModelPlaceholder">
+              <input type="text" id="ollamaModel" data-storage-key="ollama_model" data-i18n-input-placeholder="ollamaModelPlaceholder">
             </div>
           </div>
 
@@ -462,19 +480,19 @@
 
             <div class="form-group">
               <label for="providerBaseUrl" data-i18n="baseUrl">Base URL</label>
-              <input type="text" id="providerBaseUrl" data-i18n-input-placeholder="providerBaseUrlPlaceholder">
+              <input type="text" id="providerBaseUrl" data-storage-key="provider_base_url" data-i18n-input-placeholder="providerBaseUrlPlaceholder">
               <button type="button" id="lmStudioPresetBtn" class="small-btn" data-i18n="lmStudioPreset">LM Studio</button>
               <button type="button" id="ollamaPresetBtn" class="small-btn" data-i18n="ollamaPreset">Ollama</button>
             </div>
 
             <div class="form-group">
               <label for="providerApiKey" data-i18n="apiKey">API Key</label>
-              <input type="password" id="providerApiKey" data-i18n-input-placeholder="providerApiKeyPlaceholder">
+              <input type="password" id="providerApiKey" data-storage-key="provider_api_key" data-i18n-input-placeholder="providerApiKeyPlaceholder">
             </div>
 
             <div class="form-group">
               <label for="providerModel" data-i18n="modelName">Model Name (optional)</label>
-              <input type="text" id="providerModel" data-i18n-input-placeholder="providerModelPlaceholder">
+              <input type="text" id="providerModel" data-storage-key="provider_model" data-i18n-input-placeholder="providerModelPlaceholder">
             </div>
           </div>
         </div>
@@ -484,7 +502,7 @@
           <h3 class="settings-section-title" data-i18n="retentionPolicyTitle">閲覧履歴 保持ポリシー</h3>
           <div class="form-group">
             <label for="sqliteRetentionDays" data-i18n="retentionDaysLabel">保持期間</label>
-            <select id="sqliteRetentionDays">
+            <select id="sqliteRetentionDays" data-storage-key="sqlite_retention_days">
               <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
               <option value="30" data-i18n="retention30days">30日</option>
               <option value="90" data-i18n="retention90days">90日</option>
@@ -494,7 +512,7 @@
           </div>
           <div class="form-group">
             <label for="sqliteMaxRecords" data-i18n="maxRecordsLabel">最大件数</label>
-            <select id="sqliteMaxRecords">
+            <select id="sqliteMaxRecords" data-storage-key="sqlite_max_records">
               <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
               <option value="1000">1,000</option>
               <option value="10000">10,000</option>
@@ -513,7 +531,7 @@
           <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">content（本文）のみを対象とし、レコード自体は削除しません</p>
           <div class="form-group">
             <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">content（本文）保持期間</label>
-            <select id="contentRetentionDays">
+            <select id="contentRetentionDays" data-storage-key="content_retention_days">
               <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
               <option value="7" data-i18n="retention7days">7日</option>
               <option value="30" data-i18n="retention30days">30日</option>
@@ -523,7 +541,7 @@
           </div>
           <div class="form-group">
             <label for="contentMaxRecords" data-i18n="contentMaxRecordsLabel">content（本文）最大保持件数</label>
-            <select id="contentMaxRecords">
+            <select id="contentMaxRecords" data-storage-key="content_max_records">
               <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
               <option value="100">100</option>
               <option value="500">500</option>
@@ -533,7 +551,7 @@
           </div>
           <div class="form-group">
             <label class="checkbox-label">
-              <input type="checkbox" id="contentPurgeIncludeStarred">
+              <input type="checkbox" id="contentPurgeIncludeStarred" data-storage-key="content_purge_include_starred">
               <span data-i18n="contentPurgeIncludeStarredLabel">スター付きエントリの content も削除対象にする</span>
             </label>
           </div>

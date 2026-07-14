@@ -151,9 +151,8 @@ function makeMockObsidian() {
 
 function makeMockAiClient() {
   return {
-    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
-    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    generateSummary: vi.fn().mockResolvedValue('Cloud summary'),
+    getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
+    generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   } as any;
 }
 
@@ -633,13 +632,13 @@ describe('RecordingLogic - constructor', () => {
     expect((logic as any).mode).toBeNull();
   });
 
-  test('stores obsidian and aiClient references', () => {
+  test('stores obsidian and aiService references', () => {
     const obsidian = makeMockObsidian();
     const aiClient = makeMockAiClient();
     const logic = new RecordingLogic(obsidian, aiClient);
 
     expect((logic as any).obsidian).toBe(obsidian);
-    expect((logic as any).aiClient).toBe(aiClient);
+    expect((logic as any).aiService).toBe(aiClient);
   });
 });
 
