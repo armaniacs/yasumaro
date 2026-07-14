@@ -34,9 +34,16 @@ export class NavigationRegistry {
     if (this.activePanelId) {
       const current = this.panels.get(this.activePanelId);
       (current as { onDeactivate?(): void } | undefined)?.onDeactivate?.();
+      // Hide previous panel
+      const prevEl = document.getElementById(this.activePanelId);
+      prevEl?.classList.remove('active');
     }
 
     this.activePanelId = panelId;
+
+    // Show new panel
+    const newEl = document.getElementById(panelId);
+    newEl?.classList.add('active');
 
     if (!this.mountedPanels.has(panelId)) {
       const container = document.getElementById(panelId);

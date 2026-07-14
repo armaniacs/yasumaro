@@ -73,6 +73,7 @@ export interface DateCount {
 
 /**
  * Query browsing logs with date range and filters.
+ * Retries once on first failure to handle SQLite initialization timing.
  */
 export async function queryLogs(options: {
   limit?: number;
@@ -85,38 +86,62 @@ export async function queryLogs(options: {
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
 } = {}): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'query', ...options });
-    if (response.success) {
-      return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await sendDashboardMessage({ subtype: 'query', ...options });
+      if (response.success) {
+        return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+      }
+      // On first failure, wait briefly for SQLite to initialize and retry
+      if (attempt === 0 && response.error && String(response.error).includes('Query failed')) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      console.warn('queryLogs failed:', String(response.error || 'Unknown error'));
+      return { error: String(response.error || 'Query failed') };
+    } catch (error) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      console.error('queryLogs failed:', error instanceof Error ? error.message : String(error));
+      return null;
     }
-    console.warn('queryLogs failed:', response.error);
-    return { error: String(response.error || 'Query failed') };
-  } catch (error) {
-    console.error('queryLogs failed:', error);
-    return null;
   }
+  return { error: 'Query failed' };
 }
 
 /**
  * FTS5 full-text search.
+ * Retries once on first failure to handle SQLite initialization timing.
  */
 export async function searchLogs(
   query: string,
   limit = 50,
   offset = 0
 ): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
-    if (response.success) {
-      return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
+      if (response.success) {
+        return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+      }
+      if (attempt === 0 && response.error && String(response.error).includes('Search failed')) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      console.warn('searchLogs failed:', String(response.error || 'Unknown error'));
+      return { error: String(response.error || 'Search failed') };
+    } catch (error) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      console.error('searchLogs failed:', error instanceof Error ? error.message : String(error));
+      return null;
     }
-    console.warn('searchLogs failed:', response.error);
-    return { error: String(response.error || 'Search failed') };
-  } catch (error) {
-    console.error('searchLogs failed:', error);
-    return null;
   }
+  return { error: 'Search failed' };
 }
 
 /**
@@ -234,8 +259,9 @@ export async function getLogCount(): Promise<number> {
 
 /**
  * Get SQLite status including fallback mode flag.
+ * Returns diagnostic info even on failure so the UI can display it.
  */
-export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string } | null> {
+export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string }> {
   try {
     const response = await sendDashboardMessage({ subtype: 'status' });
     if (response.success) {
@@ -249,10 +275,21 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
         initError: response.initError ? String(response.initError) : undefined,
       };
     }
-    return null;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: String(response.error || 'Failed to get SQLite status'),
+    };
   } catch (error) {
-    console.error('getSqliteStatus failed:', error);
-    return null;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
