@@ -69,9 +69,8 @@ function makeMockObsidian() {
 
 function makeMockAiClient() {
   return {
-    getLocalAvailability: vi.fn().mockResolvedValue('readily'),
-    summarizeLocally: vi.fn().mockResolvedValue({ success: true, summary: 'test' }),
-    generateSummary: vi.fn().mockResolvedValue('Cloud summary'),
+    getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
+    generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   };
 }
 

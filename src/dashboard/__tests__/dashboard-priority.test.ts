@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectProviderPrioritySlots, applyProviderPrioritySlots, resetDashboardElements } from '../dashboard.js';
+import { collectProviderPrioritySlots, applyProviderPrioritySlots } from '../dashboard.js';
 
 const ALL_OPTIONS = `
   <option value="">未設定</option>
@@ -22,7 +22,6 @@ describe('AIプロバイダ優先度スロットのDOM連携', () => {
       <select id="aiProviderPriority3">${ALL_OPTIONS}</select>
       <input id="aiProviderPriority3Model" />
     `;
-    resetDashboardElements();
   });
 
   it('1位のみ選択されている場合、長さ1の配列を返す', () => {

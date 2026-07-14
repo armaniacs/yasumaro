@@ -54,57 +54,34 @@ vi.mock('../../utils/storage.js', async (importOriginal) => {
 });
 
 import {
-    resetDashboardElements,
     loadGeneralSettings,
-    getSettingsMapping,
 } from '../dashboard.js';
 import { StorageKeys } from '../../utils/storage.js';
 
 function buildRetentionDom() {
     document.body.innerHTML = `
-        <select id="sqliteRetentionDays">
+        <div id="panel-general">
+        <select id="sqliteRetentionDays" data-storage-key="sqlite_retention_days">
             <option value="">unlimited</option>
             <option value="30">30</option>
             <option value="90">90</option>
             <option value="180">180</option>
             <option value="365">365</option>
         </select>
-        <select id="sqliteMaxRecords">
+        <select id="sqliteMaxRecords" data-storage-key="sqlite_max_records">
             <option value="">unlimited</option>
-            <option value="1000">1000</option>
-            <option value="10000">10000</option>
-            <option value="100000">100000</option>
+            <option value="1000">1,000</option>
+            <option value="10000">10,000</option>
+            <option value="100000">100,000</option>
         </select>
-        <button id="purgeNowBtn"></button>
-        <input id="apiKey" /><input id="protocol" value="https" /><input id="port" value="27124" />
-        <input id="dailyPath" /><input id="obsidianEnabled" type="checkbox" />
-        <select id="aiProvider"></select>
-        <div id="geminiSettings"></div><div id="openaiSettings"></div>
-        <div id="openai2Settings"></div><div id="lm-studioSettings"></div>
-        <div id="openai-compatibleSettings"></div><div id="ollamaSettings"></div>
-        <input id="geminiApiKey" /><input id="geminiModel" />
-        <input id="openaiBaseUrl" /><input id="openaiApiKey" /><input id="openaiModel" />
-        <input id="openai2BaseUrl" /><input id="openai2ApiKey" /><input id="openai2Model" />
-        <input id="lmStudioBaseUrl" /><input id="lmStudioModel" />
-        <input id="ollamaBaseUrl" /><input id="ollamaModel" />
-        <input id="providerBaseUrl" /><input id="providerApiKey" /><input id="providerModel" />
-        <button id="save"></button>
-        <button id="testObsidianBtn"></button><button id="testAiBtn"></button>
-        <div id="status"></div>
+        </div>
     `;
 }
 
 describe('Retention settings UI', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        resetDashboardElements();
         buildRetentionDom();
-    });
-
-    it('getSettingsMapping includes sqlite_retention_days and sqlite_max_records', () => {
-        const mapping = getSettingsMapping();
-        expect(mapping[StorageKeys.SQLITE_RETENTION_DAYS]).not.toBeUndefined();
-        expect(mapping[StorageKeys.SQLITE_MAX_RECORDS]).not.toBeUndefined();
     });
 
     const baseSettings = {

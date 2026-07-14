@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: write
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -78,6 +79,9 @@ jobs:
       - name: Comment PR with results
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          TYPE_CHECK_OUTCOME: ${{ steps.type-check.outcome }}
+          TESTS_OUTCOME: ${{ steps.run-tests.outcome }}
         with:
           script: |
             const { data: comments } = await github.rest.issues.listComments({
@@ -91,8 +95,8 @@ jobs:
               comment.body.startsWith('### Validation Results')
             );
 
-            const typeCheckOk = steps['type-check'].outcome === 'success';
-            const testsOk = steps['run-tests'].outcome === 'success';
+            const typeCheckOk = process.env.TYPE_CHECK_OUTCOME === 'success';
+            const testsOk = process.env.TESTS_OUTCOME === 'success';
             const result = typeCheckOk && testsOk ? '✅ All checks passed!' : '❌ Some checks failed.';
 
             const body = [
@@ -102,8 +106,8 @@ jobs:
               '',
               '| Check | Status |',
               '|-------|--------|',
-              '| Type Check | ' + steps['type-check'].outcome + ' |',
-              '| Tests | ' + steps['run-tests'].outcome + ' |',
+              '| Type Check | ' + process.env.TYPE_CHECK_OUTCOME + ' |',
+              '| Tests | ' + process.env.TESTS_OUTCOME + ' |',
               '',
               '[View details in the logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')',
             ].join('\n');

@@ -3,9 +3,10 @@
  * 設定フォームの DOM 要素参照・マッピング・読み込みロジック
  */
 
-import { StorageKeys, getSettings } from '../utils/storage.js';
+import { getSettings } from '../utils/storage.js';
+import { loadSettingsToInputs } from '../utils/settingsFormBinding.js';
+import { showStatus } from './settingsUiHelper.js';
 import { updateAIProviderVisibility, AIProviderElements } from './settings/aiProvider.js';
-import { loadSettingsToInputs, showStatus } from './settingsUiHelper.js';
 import { getMessage } from './i18n.js';
 
 // ============================================================================
@@ -80,28 +81,6 @@ export function getSettingsFormElements() {
     };
 }
 
-export function getSettingsMapping(): Record<string, HTMLInputElement | HTMLSelectElement | null> {
-    const el = getSettingsFormElements();
-    return {
-        [StorageKeys.OBSIDIAN_API_KEY]: el.apiKeyInput,
-        [StorageKeys.OBSIDIAN_PROTOCOL]: el.protocolInput,
-        [StorageKeys.OBSIDIAN_PORT]: el.portInput,
-        [StorageKeys.OBSIDIAN_DAILY_PATH]: el.dailyPathInput,
-        [StorageKeys.AI_PROVIDER]: el.aiProviderSelect,
-        [StorageKeys.GEMINI_API_KEY]: el.geminiApiKeyInput,
-        [StorageKeys.GEMINI_MODEL]: el.geminiModelInput,
-        [StorageKeys.OPENAI_BASE_URL]: el.openaiBaseUrlInput,
-        [StorageKeys.OPENAI_API_KEY]: el.openaiApiKeyInput,
-        [StorageKeys.OPENAI_MODEL]: el.openaiModelInput,
-        [StorageKeys.OPENAI_2_BASE_URL]: el.openai2BaseUrlInput,
-        [StorageKeys.OPENAI_2_API_KEY]: el.openai2ApiKeyInput,
-        [StorageKeys.OPENAI_2_MODEL]: el.openai2ModelInput,
-        [StorageKeys.MIN_VISIT_DURATION]: el.minVisitDurationInput,
-        [StorageKeys.MIN_SCROLL_DEPTH]: el.minScrollDepthInput,
-        [StorageKeys.MAX_TOKENS_PER_PROMPT]: el.maxTokensPerPromptInput
-    };
-}
-
 export function getAiProviderElements(): AIProviderElements {
     const el = getSettingsFormElements();
     return {
@@ -125,7 +104,10 @@ export function getErrorPairs(): [HTMLInputElement | null, string][] {
 
 export async function load(): Promise<void> {
     const settings = await getSettings();
-    loadSettingsToInputs(settings, getSettingsMapping());
+    const form = document.getElementById('generalPanel');
+    if (form) {
+        loadSettingsToInputs(form, settings);
+    }
     updateAIProviderVisibility(getAiProviderElements());
 }
 
@@ -140,4 +122,4 @@ export function setupOllamaPresetListener(): void {
 }
 
 // No module-level DOM element exports to avoid testability issues.
-// Use getSettingsFormElements(), getSettingsMapping(), getAiProviderElements(), getErrorPairs() instead.
+// Use getSettingsFormElements(), getAiProviderElements(), getErrorPairs() instead.

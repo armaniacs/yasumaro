@@ -15,7 +15,6 @@ import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConse
 
 import {
     getSettingsFormElements,
-    getSettingsMapping,
     getAiProviderElements,
     getErrorPairs,
     load,
@@ -160,7 +159,6 @@ export async function initPopup(): Promise<void> {
 
     const el = getSettingsFormElements();
     const aiProviderEl = getAiProviderElements();
-    const settingsMap = getSettingsMapping();
     const _errors = getErrorPairs();
 
     // AI provider change listener
@@ -186,8 +184,7 @@ export async function initPopup(): Promise<void> {
             el.portInput,
             el.minVisitDurationInput,
             el.minScrollDepthInput,
-            el.maxTokensPerPromptInput,
-            settingsMap as Record<string, HTMLInputElement | HTMLSelectElement>
+            el.maxTokensPerPromptInput
         );
     }
 
