@@ -25,7 +25,12 @@ import {
   stripAuthorMetaElements,
   stripAffiliateElements,
   stripSpeechBubbles,
+  stripNewsMediaPatterns,
+  stripEcSitePatterns,
+  stripQaSitePatterns,
+  stripVideoSitePatterns,
 } from '../stripExtended.js';
+import { NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from '../patterns.js';
 
 describe('aiSummaryCleaner/stripExtended', () => {
   let root: HTMLElement;
@@ -754,6 +759,164 @@ describe('aiSummaryCleaner/stripExtended', () => {
       const count = stripAuthorMetaElements(root);
       expect(count).toBe(0);
       expect(root.querySelector('.author-profile')).not.toBeNull();
+    });
+  });
+
+  describe('stripNewsMediaPatterns', () => {
+    it('removes comment section elements', () => {
+      root.innerHTML = '<div class="yahoo-comment">Comments</div><p>Article body</p>';
+      const count = stripNewsMediaPatterns(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes related article card elements', () => {
+      root.innerHTML = '<div class="related-article-card">Read also</div><p>Article body</p>';
+      const count = stripNewsMediaPatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes article credit elements', () => {
+      root.innerHTML = '<div class="byline-source">配信：共同通信</div><p>Article body</p>';
+      const count = stripNewsMediaPatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes live timestamp elements', () => {
+      root.innerHTML = '<div class="update-timeline">19:32 更新</div><p>Article body</p>';
+      const count = stripNewsMediaPatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('does not remove normal article content', () => {
+      root.innerHTML = '<p>This is a normal news article paragraph.</p>';
+      const count = stripNewsMediaPatterns(root);
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('stripEcSitePatterns', () => {
+    it('removes review list elements', () => {
+      root.innerHTML = '<div class="review-list">Reviews (1,234)</div><p>Product description</p>';
+      const count = stripEcSitePatterns(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes variation selector elements', () => {
+      root.innerHTML = '<div class="color-swatch">Color options</div><p>Product description</p>';
+      const count = stripEcSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes frequently bought together elements', () => {
+      root.innerHTML = '<div class="frequently-bought">Frequently bought together</div><p>Product description</p>';
+      const count = stripEcSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes shipping badge elements', () => {
+      root.innerHTML = '<div class="free-shipping">送料無料</div><p>Product description</p>';
+      const count = stripEcSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('does not remove normal product description', () => {
+      root.innerHTML = '<p>This is a normal product description paragraph.</p>';
+      const count = stripEcSitePatterns(root);
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('stripQaSitePatterns', () => {
+    it('removes best answer badge elements', () => {
+      root.innerHTML = '<div class="best-answer-badge">ベストアンサー</div><p>回答本文です</p>';
+      const count = stripQaSitePatterns(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes related question list elements', () => {
+      root.innerHTML = '<div class="related-question-list">この質問も見られています</div><p>回答本文です</p>';
+      const count = stripQaSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes answerer profile elements', () => {
+      root.innerHTML = '<div class="answerer-rank">回答数123</div><p>回答本文です</p>';
+      const count = stripQaSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes helpful count button elements', () => {
+      root.innerHTML = '<button class="helpful-count">いいね(45)</button><p>回答本文です</p>';
+      const count = stripQaSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('does not remove normal answer content', () => {
+      root.innerHTML = '<p>This is a normal Q&A answer paragraph.</p>';
+      const count = stripQaSitePatterns(root);
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('stripVideoSitePatterns', () => {
+    it('removes nico comment elements', () => {
+      root.innerHTML = '<div class="nico-comment">弾幕コメント</div><p>Video description</p>';
+      const count = stripVideoSitePatterns(root);
+      expect(count).toBe(1);
+      expect(root.querySelector('p')).not.toBeNull();
+    });
+
+    it('removes tag cloud elements', () => {
+      root.innerHTML = '<div class="tag-cloud">タグ一覧</div><p>Video description</p>';
+      const count = stripVideoSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes related video card elements', () => {
+      root.innerHTML = '<div class="related-video-card">関連動画</div><p>Video description</p>';
+      const count = stripVideoSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('removes view count badge elements', () => {
+      root.innerHTML = '<div class="view-count-badge">再生回数 6.7万回</div><p>Video description</p>';
+      const count = stripVideoSitePatterns(root);
+      expect(count).toBe(1);
+    });
+
+    it('does not remove normal video description', () => {
+      root.innerHTML = '<p>This is a normal video description paragraph.</p>';
+      const count = stripVideoSitePatterns(root);
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('Category B patterns do not overlap with existing generic patterns', () => {
+    it('NEWS_MEDIA_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
+      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
+      const overlaps = NEWS_MEDIA_PATTERNS.filter(p => genericWords.includes(p));
+      expect(overlaps).toEqual([]);
+    });
+
+    it('EC_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
+      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
+      const overlaps = EC_SITE_PATTERNS.filter(p => genericWords.includes(p));
+      expect(overlaps).toEqual([]);
+    });
+
+    it('QA_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
+      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
+      const overlaps = QA_SITE_PATTERNS.filter(p => genericWords.includes(p));
+      expect(overlaps).toEqual([]);
+    });
+
+    it('VIDEO_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
+      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
+      const overlaps = VIDEO_SITE_PATTERNS.filter(p => genericWords.includes(p));
+      expect(overlaps).toEqual([]);
     });
   });
 });

@@ -39,6 +39,11 @@ export interface AiSummaryCleanseOptions {
     // Category A: WordPress Theme Specific Patterns
     affiliateEnabled?: boolean;       // アフィリエイト要素のプレーンテキスト化（デフォルト: false）
     speechBubbleEnabled?: boolean;    // 吹き出し要素のクレンジング（デフォルト: false）
+    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+    newsMediaEnabled?: boolean;       // ニュースメディア固有パターン（デフォルト: false）
+    ecSiteEnabled?: boolean;          // EC・通販固有パターン（デフォルト: false）
+    qaSiteEnabled?: boolean;          // Q&A・知恵袋固有パターン（デフォルト: false）
+    videoSiteEnabled?: boolean;       // 動画プラットフォーム固有パターン（デフォルト: false）
     // Body protection options
     bodyProtectionEnabled?: boolean;   // 本文保護機能（デフォルト: true）
     bodyProtectionThreshold?: number;  // 本文スコア閾値（デフォルト: 200）
@@ -86,6 +91,11 @@ export interface AiSummaryCleanseResult {
     // Category A: WordPress Theme Specific Patterns
     affiliateRemoved?: number;           // アフィリエイト要素処理数
     speechBubbleRemoved?: number;        // 吹き出し要素処理数
+    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+    newsMediaRemoved?: number;        // ニュースメディア固有パターン削除数
+    ecSiteRemoved?: number;           // EC・通販固有パターン削除数
+    qaSiteRemoved?: number;           // Q&A・知恵袋固有パターン削除数
+    videoSiteRemoved?: number;        // 動画プラットフォーム固有パターン削除数
     totalRemoved: number;           // 合計削除数
     bytesBefore: number;            // クレンジング前のバイト数
     bytesAfter: number;             // クレンジング後のバイト数

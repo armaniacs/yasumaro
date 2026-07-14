@@ -158,3 +158,63 @@ export const DEEP_ROLES = [
     'search',
     'toolbar'
 ];
+
+/**
+ * B-1: ニュースメディア固有パターン
+ * コメント欄・関連記事カード・記者クレジット・速報タイムライン
+ */
+export const NEWS_MEDIA_PATTERNS = [
+    // コメント欄・リアクション欄
+    'disqus', 'yahoo-comment', 'comment-count',
+    // 関連記事カード群
+    'related-article-card', 'article-ranking', 'read-also',
+    // 記者・配信元クレジット表記
+    'article-credit', 'byline-source', 'delivery-source',
+    // 速報・更新タイムライン表示
+    'live-timestamp', 'update-timeline', 'breaking-badge',
+];
+
+/**
+ * B-2: EC・通販固有パターン
+ * レビュー・バリエーション選択・関連購入・送料バッジ
+ */
+export const EC_SITE_PATTERNS = [
+    // レビュー・星評価欄
+    'review-list', 'star-rating', 'review-count', 'rating-star',
+    // バリエーション選択UI（色・サイズ・数量）
+    'variation-selector', 'color-swatch', 'size-selector', 'quantity-selector',
+    // 一緒に買われている商品
+    'frequently-bought', 'also-bought', 'bought-together',
+    // 送料・在庫・ポイント情報バッジ
+    'shipping-badge', 'stock-badge', 'point-badge', 'free-shipping',
+];
+
+/**
+ * B-3: Q&A・知恵袋固有パターン
+ * ベストアンサー・関連質問・回答者プロフィール・いいねボタン
+ */
+export const QA_SITE_PATTERNS = [
+    // ベストアンサー・解決済みマーク
+    'best-answer-badge', 'resolved-mark', 'solved-badge',
+    // 関連質問一覧
+    'related-question-list', 'similar-question',
+    // 回答者プロフィール・ランクバッジ
+    'answerer-profile', 'answerer-rank', 'responder-badge',
+    // 覚えておき・いいね数ボタン
+    'helpful-count', 'good-answer-button',
+];
+
+/**
+ * B-4: 動画プラットフォーム固有パターン
+ * コメント弾幕・タグクラウド・関連動画・再生数バッジ
+ */
+export const VIDEO_SITE_PATTERNS = [
+    // コメント弾幕・実況テキスト
+    'nico-comment', 'danmaku', 'comment-flow',
+    // タグクラウド・フォルダータグ
+    'tag-cloud', 'folder-tag', 'video-tag-list',
+    // 関連動画・次の動画カード一覧
+    'related-video-card', 'next-video-list',
+    // 再生回数・マイリスト登録数・会員限定バッジ
+    'view-count-badge', 'mylist-count', 'member-only-badge',
+];

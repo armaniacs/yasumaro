@@ -52,6 +52,10 @@ import {
     stripAuthorMetaElements,
     stripAffiliateElements,
     stripSpeechBubbles,
+    stripNewsMediaPatterns,
+    stripEcSitePatterns,
+    stripQaSitePatterns,
+    stripVideoSitePatterns,
 } from './stripExtended.js';
 
 // 型とパターンを再エクスポート
@@ -103,6 +107,11 @@ export function cleanseAISummaryContent(
         // Category A: WordPress Theme Specific Patterns
         affiliateEnabled = false,
         speechBubbleEnabled = false,
+        // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+        newsMediaEnabled = false,
+        ecSiteEnabled = false,
+        qaSiteEnabled = false,
+        videoSiteEnabled = false,
         // Body protection options
         bodyProtectionEnabled = true,
         bodyProtectionThreshold = 200,
@@ -147,6 +156,10 @@ export function cleanseAISummaryContent(
     let authorRemoved = 0;
     let affiliateRemoved = 0;
     let speechBubbleRemoved = 0;
+    let newsMediaRemoved = 0;
+    let ecSiteRemoved = 0;
+    let qaSiteRemoved = 0;
+    let videoSiteRemoved = 0;
 
     // Step 1: 本文要素にマーキング（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
@@ -269,6 +282,23 @@ export function cleanseAISummaryContent(
         speechBubbleRemoved = stripSpeechBubbles(element);
     }
 
+    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+    if (newsMediaEnabled) {
+        newsMediaRemoved = stripNewsMediaPatterns(element);
+    }
+
+    if (ecSiteEnabled) {
+        ecSiteRemoved = stripEcSitePatterns(element);
+    }
+
+    if (qaSiteEnabled) {
+        qaSiteRemoved = stripQaSitePatterns(element);
+    }
+
+    if (videoSiteEnabled) {
+        videoSiteRemoved = stripVideoSitePatterns(element);
+    }
+
     // Step 3: マーカーを除去（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
         unmarkBodyElements(element);
@@ -284,7 +314,8 @@ export function cleanseAISummaryContent(
         textDensityRemoved + shortSeqRemoved + symbolLineRemoved +
         linkParaRemoved + enhancedHiddenRemoved + emptyElemRemoved +
         jpLayoutRemoved + jpNavigationRemoved + authorRemoved +
-        affiliateRemoved + speechBubbleRemoved;
+        affiliateRemoved + speechBubbleRemoved +
+        newsMediaRemoved + ecSiteRemoved + qaSiteRemoved + videoSiteRemoved;
 
     logDebug('AI Summary Cleansing executed', {
         totalRemoved: total,
@@ -324,6 +355,10 @@ export function cleanseAISummaryContent(
             author: authorRemoved,
             affiliate: affiliateRemoved,
             speechBubble: speechBubbleRemoved,
+            newsMedia: newsMediaRemoved,
+            ecSite: ecSiteRemoved,
+            qaSite: qaSiteRemoved,
+            videoSite: videoSiteRemoved,
         }
     }, 'aiSummaryCleaner');
 
@@ -358,6 +393,10 @@ export function cleanseAISummaryContent(
         authorRemoved,
         affiliateRemoved,
         speechBubbleRemoved,
+        newsMediaRemoved,
+        ecSiteRemoved,
+        qaSiteRemoved,
+        videoSiteRemoved,
         totalRemoved: total,
         bytesBefore,
         bytesAfter

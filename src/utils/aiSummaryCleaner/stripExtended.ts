@@ -6,6 +6,7 @@
  */
 
 import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
+import { NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from './patterns.js';
 
 /**
  * 固定要素を削除（position:fixed/sticky）
@@ -894,4 +895,100 @@ export function stripSpeechBubbles(element: Element): number {
     });
 
     return processedCount;
+}
+
+/**
+ * ニュースメディア固有パターンを削除（Category B-1）
+ * コメント欄・関連記事カード・記者クレジット・速報タイムライン
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+export function stripNewsMediaPatterns(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    element.querySelectorAll(buildClassIdSelectors(NEWS_MEDIA_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) { removedCount++; }
+    }
+    return removedCount;
+}
+
+/**
+ * EC・通販固有パターンを削除（Category B-2）
+ * レビュー・バリエーション選択・関連購入・送料バッジ
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+export function stripEcSitePatterns(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    element.querySelectorAll(buildClassIdSelectors(EC_SITE_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) { removedCount++; }
+    }
+    return removedCount;
+}
+
+/**
+ * Q&A・知恵袋固有パターンを削除（Category B-3）
+ * ベストアンサー・関連質問・回答者プロフィール・いいねボタン
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+export function stripQaSitePatterns(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    element.querySelectorAll(buildClassIdSelectors(QA_SITE_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) { removedCount++; }
+    }
+    return removedCount;
+}
+
+/**
+ * 動画プラットフォーム固有パターンを削除（Category B-4）
+ * コメント弾幕・タグクラウド・関連動画・再生数バッジ
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
+export function stripVideoSitePatterns(element: Element): number {
+    let removedCount = 0;
+    const elementsToRemove: Element[] = [];
+    const counted = new Set<Element>();
+
+    element.querySelectorAll(buildClassIdSelectors(VIDEO_SITE_PATTERNS)).forEach(elem => {
+        if (!counted.has(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
+        }
+    });
+
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) { removedCount++; }
+    }
+    return removedCount;
 }

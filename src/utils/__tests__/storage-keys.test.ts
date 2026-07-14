@@ -30,6 +30,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.YASUMARO_MIGRATION_STATUS,
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,
       StorageKeys.MIGRATION_JP_LAYOUT_DEFAULT_DONE,
+      StorageKeys.MIGRATION_CATEGORY_B_DEFAULT_DONE,
       StorageKeys.RECORDING_TRIGGERS,
       StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
       StorageKeys.OPFS_FALLBACK_MODE,
