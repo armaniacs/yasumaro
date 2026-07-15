@@ -2179,6 +2179,12 @@
   "aiSummaryCleansingAuthorDesc": {
     "message": "執筆者・メタ情報（author-profile、post-date、tag-list等）。"
   },
+  "aiSummaryCleansingAffiliateDesc": {
+    "message": "アフィリエイト要素のプレーンテキスト化（Rinker、カエレバ、もしも、ポチップ等。商品名・価格のみ残す）"
+  },
+  "aiSummaryCleansingSpeechBubbleDesc": {
+    "message": "吹き出し要素のクレンジング（キャラ名・アバター削除、発言テキストのみ保持）"
+  },
   "aiSummaryCleansingNewsMediaDesc": {
     "message": "ニュースメディア固有パターン（コメント欄・関連記事カード・記者クレジット等）。"
   },

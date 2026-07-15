@@ -2182,6 +2182,12 @@
   "aiSummaryCleansingAuthorDesc": {
     "message": "Author and meta info (author-profile, post-date, tag-list, etc.)."
   },
+  "aiSummaryCleansingAffiliateDesc": {
+    "message": "Convert affiliate elements to plain text (Rinker, Kaereba, Moshimo, Pochipp, etc.; keep only product name and price)."
+  },
+  "aiSummaryCleansingSpeechBubbleDesc": {
+    "message": "Cleanse speech bubble elements (remove character names and avatars; keep only spoken text)."
+  },
   "aiSummaryCleansingNewsMediaDesc": {
     "message": "News media specific patterns (comment sections, related article cards, byline credits, etc.)."
   },
