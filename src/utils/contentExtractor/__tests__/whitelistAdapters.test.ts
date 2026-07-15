@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { WHITELIST_ADAPTERS, matchWhitelistAdapter, extractWhitelistedContent } from '../whitelistAdapters.js';
 
 describe('WHITELIST_ADAPTERS definitions', () => {
-  it('defines exactly 6 adapters', () => {
-    expect(WHITELIST_ADAPTERS).toHaveLength(6);
+  it('defines exactly 8 adapters', () => {
+    expect(WHITELIST_ADAPTERS).toHaveLength(8);
   });
 
   it('each adapter has required fields', () => {
@@ -34,6 +34,22 @@ describe('WHITELIST_ADAPTERS definitions', () => {
     const novel = WHITELIST_ADAPTERS.find(a => a.name === 'novel-site');
     expect(novel).toBeDefined();
     expect(novel?.domains).toEqual(expect.arrayContaining(['syosetu.com', 'kakuyomu.jp']));
+  });
+
+  it('includes the hatena-bookmark adapter', () => {
+    const hatena = WHITELIST_ADAPTERS.find(a => a.name === 'hatena-bookmark');
+    expect(hatena).toBeDefined();
+    expect(hatena?.domains).toContain('b.hatena.ne.jp');
+    expect(hatena?.contentSelectors).toContain('.entry-comment-text');
+    expect(hatena?.metadataPatterns).toEqual([]);
+  });
+
+  it('includes the tabelog adapter with rating/date metadata patterns', () => {
+    const tabelog = WHITELIST_ADAPTERS.find(a => a.name === 'tabelog');
+    expect(tabelog).toBeDefined();
+    expect(tabelog?.domains).toContain('tabelog.com');
+    expect(tabelog?.contentSelectors).toContain('.rvw-item__rvw-comment');
+    expect(tabelog?.metadataPatterns?.length).toBe(2);
   });
 });
 
@@ -75,6 +91,16 @@ describe('matchWhitelistAdapter', () => {
     expect(adapter?.name).toBe('togetter');
     document.body.innerHTML = '';
   });
+
+  it('matches hatena-bookmark by exact hostname', () => {
+    const adapter = matchWhitelistAdapter('b.hatena.ne.jp', document.body);
+    expect(adapter?.name).toBe('hatena-bookmark');
+  });
+
+  it('matches tabelog by exact hostname', () => {
+    const adapter = matchWhitelistAdapter('tabelog.com', document.body);
+    expect(adapter?.name).toBe('tabelog');
+  });
 });
 
 describe('extractWhitelistedContent', () => {
@@ -108,6 +134,68 @@ describe('extractWhitelistedContent', () => {
     expect(result).toContain('これは本文です');
     expect(result).not.toContain('@some_user');
     expect(result).not.toContain('RT(123)');
+    document.body.innerHTML = '';
+  });
+
+  it('uses default metadata patterns when adapter.metadataPatterns is undefined', () => {
+    document.body.innerHTML = `<div class="tweet_body">本文です @some_user RT(5)</div>`;
+    const togetter = WHITELIST_ADAPTERS.find(a => a.name === 'togetter')!;
+    expect(togetter.metadataPatterns).toBeUndefined();
+    const result = extractWhitelistedContent(document.body, togetter);
+    expect(result).toContain('本文です');
+    expect(result).not.toContain('@some_user');
+    expect(result).not.toContain('RT(5)');
+    document.body.innerHTML = '';
+  });
+
+  it('applies adapter-specific metadataPatterns instead of the default when specified', () => {
+    document.body.innerHTML = `<div class="custom-review">とても美味しい ★4.5 でした</div>`;
+    const customAdapter = {
+      name: 'test-custom',
+      domains: [],
+      detectSelector: '.custom-review',
+      contentSelectors: ['.custom-review'],
+      metadataPatterns: [/★\s*[\d.]+/g],
+    };
+    const result = extractWhitelistedContent(document.body, customAdapter);
+    expect(result).toContain('とても美味しい');
+    expect(result).toContain('でした');
+    expect(result).not.toContain('★4.5');
+    document.body.innerHTML = '';
+  });
+
+  it('applies no metadata removal when adapter.metadataPatterns is an empty array', () => {
+    document.body.innerHTML = `<div class="custom-comment">@mention はそのまま残る RT(1) も残る</div>`;
+    const customAdapter = {
+      name: 'test-no-strip',
+      domains: [],
+      detectSelector: '.custom-comment',
+      contentSelectors: ['.custom-comment'],
+      metadataPatterns: [],
+    };
+    const result = extractWhitelistedContent(document.body, customAdapter);
+    expect(result).toContain('@mention はそのまま残る');
+    expect(result).toContain('RT(1) も残る');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts hatena-bookmark comment text without metadata stripping', () => {
+    document.body.innerHTML = `<div class="entry-comment-text">これは@mentionを含むコメントです RT(9)も含む</div>`;
+    const hatena = WHITELIST_ADAPTERS.find(a => a.name === 'hatena-bookmark')!;
+    const result = extractWhitelistedContent(document.body, hatena);
+    expect(result).toContain('@mentionを含むコメントです');
+    expect(result).toContain('RT(9)も含む');
+    document.body.innerHTML = '';
+  });
+
+  it('strips star rating and visit date metadata from tabelog review text', () => {
+    document.body.innerHTML = `<div class="rvw-item__rvw-comment">とても美味しかったです ★4.5 2026/3/15訪問 また行きたい</div>`;
+    const tabelog = WHITELIST_ADAPTERS.find(a => a.name === 'tabelog')!;
+    const result = extractWhitelistedContent(document.body, tabelog);
+    expect(result).toContain('とても美味しかったです');
+    expect(result).toContain('また行きたい');
+    expect(result).not.toContain('★4.5');
+    expect(result).not.toContain('2026/3/15訪問');
     document.body.innerHTML = '';
   });
 });
