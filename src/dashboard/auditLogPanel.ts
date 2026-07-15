@@ -3,7 +3,7 @@
  * Displays cloud AI provider send events (audit log) in the dashboard.
  */
 
-import { getAuditLogs } from '../utils/auditLog.js';
+import { queryAuditLogs } from './dashboardSqliteService.js';
 import { getMessage } from '../popup/i18n.js';
 
 function formatTimestamp(ms: number): string {
@@ -15,7 +15,8 @@ export async function initAuditLogPanel(): Promise<void> {
   const emptyState = document.getElementById('auditLogEmptyState') as HTMLElement | null;
   if (!list) return;
 
-  const { rows } = await getAuditLogs({ limit: 100, offset: 0 });
+  const result = await queryAuditLogs({ limit: 100, offset: 0 });
+  const rows = result?.rows ?? [];
 
   list.innerHTML = '';
 

@@ -1770,8 +1770,36 @@
       <section id="panel-audit-log" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="auditLogTab">監査ログ</h2>
         <p class="panel-description">どのページ内容がどのAIプロバイダーへ送信されたかを一覧できます。</p>
-        <div id="auditLogEmptyState" hidden>記録された送信イベントはまだありません。</div>
-        <div id="auditLogList"></div>
+
+        <div class="audit-log-toolbar">
+          <input type="text" id="auditLogSearch" class="audit-log-search-input"
+            placeholder="プロバイダーまたはURLで検索..."
+            aria-label="監査ログを検索">
+          <select id="auditLogProviderFilter" class="audit-log-provider-filter" aria-label="プロバイダーでフィルタ">
+            <option value="">すべてのプロバイダー</option>
+          </select>
+          <span id="auditLogCount" class="audit-log-count" aria-live="polite"></span>
+        </div>
+
+        <div id="auditLogEmptyState" class="audit-log-empty" hidden>記録された送信イベントはまだありません。</div>
+        <div id="auditLogTableWrapper" class="audit-log-table-wrapper">
+          <table id="auditLogTable" class="audit-log-table" role="grid">
+            <thead>
+              <tr>
+                <th class="audit-log-th" data-sort="provider" scope="col" aria-sort="none">
+                  <button type="button" class="audit-log-sort-btn">プロバイダー <span class="sort-icon" aria-hidden="true"></span></button>
+                </th>
+                <th class="audit-log-th" data-sort="url" scope="col" aria-sort="none">
+                  <button type="button" class="audit-log-sort-btn">URL <span class="sort-icon" aria-hidden="true"></span></button>
+                </th>
+                <th class="audit-log-th" data-sort="created_at" scope="col" aria-sort="descending">
+                  <button type="button" class="audit-log-sort-btn">送信日時 <span class="sort-icon" aria-hidden="true"></span></button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="auditLogBody"></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Diagnostics Panel (New) -->

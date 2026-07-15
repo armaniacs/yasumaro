@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.20` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.31` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -19,8 +19,33 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- （次のリリース用の変更はここに追記）
+
+## [6.5.31] - 2026-07-16
+
+### Fixed / 修正
+
+- **監査ログがダッシュボードで表示されなかった問題を修正** — `auditLogPanel` がダッシュボード（options ページ）から直接 `SqliteClient` を呼んでいたが、ダッシュボードコンテキストでは `chrome.offscreen` API が利用不可のため `ensureOffscreenDocument()` が失敗し、クエリがサイレントにエラーになっていた。他のダッシュボードパネルと同様に `DASHBOARD_SQLITE` メッセージをサービスワーカー経由で中継する `audit_log_query` subtype を追加し、`dashboardSqliteService.ts` 経由のクエリに変更
+
+### Added / 追加
+
+- **監査ログパネルを表形式にリニューアル** — プレーンリストから `<table>` ベースのUIに変更。プロバイダー・URL・送信日時の3カラム表示、ヘッダークリックによるソート（昇順/降順トグル）、プロバイダードロップダウンフィルタ、テキスト検索、件数表示を追加。ダークモード対応
+- **監査ログのURLクリックで履歴パネルにジャンプ** — 監査ログのURL列をクリックすると、そのドメイン名で履歴パネルが開き検索が実行される。FTS5 trigramトークナイザーの制約上、URL全文ではなくドメイン名をクエリとして使用
+
+### Chores / その他
+
+- **`package.json` / `wxt.config.ts` のバージョン同步** — `6.5.30` → `6.5.31`
+
+## [6.5.30] - 2026-07-15
+
+### Added
+
 - AI要約クレンジングにCategory B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加
 - ドメイン別ホワイトリスト抽出モードを追加（Togetter・5chまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・なろう/カクヨム・クックパッド/クラシル対応）
+
+### Chores / その他
+
+- **`package-lock.json` のバージョン同期** — `6.5.29` → `6.5.30`
 
 ## [6.5.29] - 2026-07-14
 

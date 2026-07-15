@@ -378,6 +378,7 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler({
   runCleanup: () => migrationService.cleanupLegacyStorage(),
   getSettings: () => getSettings(),
   formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
+  queryAuditLog: (options) => sqliteClient.queryAuditLog(options),
   appendToDailyNote: async (markdown) => {
     const obsidianClient = new ObsidianClient();
     await obsidianClient.appendToDailyNote(markdown);
