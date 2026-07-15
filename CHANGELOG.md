@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.31` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.32` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -17,9 +17,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.32] - 2026-07-16
+
 ### Added
 
-- ドメイン別ホワイトリスト抽出モードにはてなブックマーク・食べログアダプタを追加
+- **AI要約クレンジング Category B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加** — `newsMediaEnabled`/`ecSiteEnabled`/`qaSiteEnabled`/`videoSiteEnabled` の4オプションを新設。コメント欄・関連記事カード・記者クレジット（ニュース）、レビュー欄・バリエーション選択UI・関連購入商品（EC）、ベストアンサーバッジ・関連質問一覧（Q&A）、コメント弾幕・タグクラウド・関連動画（動画）等を削除。新規ユーザーはデフォルト有効、既存ユーザーはマイグレーションで無効維持
+- **ドメイン別ホワイトリスト抽出モードを実装** — Togetter・5ちゃんねるまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・小説投稿サイト（なろう/カクヨム）・レシピサイト（クックパッド/クラシル）・はてなブックマーク・食べログ向けに、周辺ノイズ比率が極端に高いページから特定クラス/IDの本文のみを狙い撃ちで抽出する新モードを追加。ドメイン一致またはDOM構造検知で自動発動し、0件抽出時は既存の削除方式に自動フォールバック。全体トグル1つで一括制御可能
+- `countTargets.ts` に Category B（News/EC/QA/Video）のカウント対応を追加
+- Category A（affiliate/speech-bubble）チェックボックスに `data-i18n` 属性と日英i18nメッセージを追加
+
+### Changed
+
+- Category B パターンの陰性テストを部分文字列一致で強化し、既知の重複パターンをホワイトリスト化
+
+### Docs
+
+- AI要約クレンジングガイド（`docs/AI_SUMMARY_GUIDE.md`, `docs/CLEANSING_ORDER.md`）に日本語サイト特化オプション（Category A/B）とドメイン別ホワイトリスト抽出モードの説明を追加
 
 ## [6.5.31] - 2026-07-16
 
