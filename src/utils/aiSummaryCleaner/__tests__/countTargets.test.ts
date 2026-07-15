@@ -180,3 +180,129 @@ describe('countAISummaryTargets - link density', () => {
     expect(result.linkDensityRemoved ?? 0).toBe(0);
   });
 });
+
+describe('countAISummaryTargets - Category B site-type patterns', () => {
+  it('counts news media elements when newsMediaEnabled is true', () => {
+    document.body.innerHTML = `
+      <div>
+        <div class="related-article-card">Related</div>
+        <div class="byline-source">Byline</div>
+        <p>Content</p>
+      </div>
+    `;
+    const result = countAISummaryTargets(document.body, {
+      newsMediaEnabled: true,
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.newsMediaRemoved ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns 0 for news media elements when newsMediaEnabled is false', () => {
+    document.body.innerHTML = '<div class="related-article-card">Related</div>';
+    const result = countAISummaryTargets(document.body, {
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.newsMediaRemoved ?? 0).toBe(0);
+  });
+
+  it('counts EC site elements when ecSiteEnabled is true', () => {
+    document.body.innerHTML = `
+      <div>
+        <div class="review-list">Reviews</div>
+        <div class="free-shipping">Shipping</div>
+        <p>Content</p>
+      </div>
+    `;
+    const result = countAISummaryTargets(document.body, {
+      ecSiteEnabled: true,
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.ecSiteRemoved ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns 0 for EC site elements when ecSiteEnabled is false', () => {
+    document.body.innerHTML = '<div class="review-list">Reviews</div>';
+    const result = countAISummaryTargets(document.body, {
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.ecSiteRemoved ?? 0).toBe(0);
+  });
+
+  it('counts QA site elements when qaSiteEnabled is true', () => {
+    document.body.innerHTML = `
+      <div>
+        <div class="best-answer-badge">Best</div>
+        <div class="related-question-list">Related</div>
+        <p>Content</p>
+      </div>
+    `;
+    const result = countAISummaryTargets(document.body, {
+      qaSiteEnabled: true,
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.qaSiteRemoved ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns 0 for QA site elements when qaSiteEnabled is false', () => {
+    document.body.innerHTML = '<div class="best-answer-badge">Best</div>';
+    const result = countAISummaryTargets(document.body, {
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.qaSiteRemoved ?? 0).toBe(0);
+  });
+
+  it('counts video site elements when videoSiteEnabled is true', () => {
+    document.body.innerHTML = `
+      <div>
+        <div class="nico-comment">Comment</div>
+        <div class="related-video-card">Related</div>
+        <p>Content</p>
+      </div>
+    `;
+    const result = countAISummaryTargets(document.body, {
+      videoSiteEnabled: true,
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.videoSiteRemoved ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns 0 for video site elements when videoSiteEnabled is false', () => {
+    document.body.innerHTML = '<div class="nico-comment">Comment</div>';
+    const result = countAISummaryTargets(document.body, {
+      altEnabled: false,
+      metadataEnabled: false,
+      adsEnabled: false,
+      navEnabled: false,
+      socialEnabled: false,
+    });
+    expect(result.videoSiteRemoved ?? 0).toBe(0);
+  });
+});

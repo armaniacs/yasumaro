@@ -5,7 +5,10 @@
 
 import { escapeCssSelector } from '../cssUtils.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
-import { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES, GUTENBERG_STRUCTURAL_PATTERNS } from './patterns.js';
+import {
+    AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES,
+    GUTENBERG_STRUCTURAL_PATTERNS, NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS
+} from './patterns.js';
 import { CARD_PATTERNS } from './stripCore.js';
 
 /**
@@ -34,6 +37,11 @@ export function countAISummaryTargets(
         jpLayoutEnabled = false,
         affiliateEnabled = false,
         speechBubbleEnabled = false,
+        // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+        newsMediaEnabled = false,
+        ecSiteEnabled = false,
+        qaSiteEnabled = false,
+        videoSiteEnabled = false,
     } = options;
 
     let altCount = 0;
@@ -50,6 +58,10 @@ export function countAISummaryTargets(
     let jpLayoutCount = 0;
     let affiliateCount = 0;
     let speechBubbleCount = 0;
+    let newsMediaCount = 0;
+    let ecSiteCount = 0;
+    let qaSiteCount = 0;
+    let videoSiteCount = 0;
     
     // 画像alt属性カウント
     if (altEnabled) {
@@ -385,9 +397,63 @@ export function countAISummaryTargets(
         speechBubbleCount = element.querySelectorAll(bubbleSelectors.join(', ')).length;
     }
 
+    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+    if (newsMediaEnabled) {
+        const counted = new Set<Element>();
+        for (const pattern of NEWS_MEDIA_PATTERNS) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { newsMediaCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { newsMediaCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (ecSiteEnabled) {
+        const counted = new Set<Element>();
+        for (const pattern of EC_SITE_PATTERNS) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { ecSiteCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { ecSiteCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (qaSiteEnabled) {
+        const counted = new Set<Element>();
+        for (const pattern of QA_SITE_PATTERNS) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { qaSiteCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { qaSiteCount++; counted.add(elem); }
+            });
+        }
+    }
+
+    if (videoSiteEnabled) {
+        const counted = new Set<Element>();
+        for (const pattern of VIDEO_SITE_PATTERNS) {
+            const kw = escapeCssSelector(pattern.toLowerCase());
+            element.querySelectorAll(`[class*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { videoSiteCount++; counted.add(elem); }
+            });
+            element.querySelectorAll(`[id*="${kw}"]`).forEach(elem => {
+                if (!counted.has(elem)) { videoSiteCount++; counted.add(elem); }
+            });
+        }
+    }
+
     const total = altCount + metadataCount + adsCount + navCount + socialCount +
         deepCount + jsonLdCount + lazyLoadCount + skipLinkCount + cardCount + linkDensityCount +
-        jpLayoutCount + affiliateCount + speechBubbleCount;
+        jpLayoutCount + affiliateCount + speechBubbleCount +
+        newsMediaCount + ecSiteCount + qaSiteCount + videoSiteCount;
 
     return {
         altRemoved: altCount,
@@ -420,6 +486,11 @@ export function countAISummaryTargets(
         authorRemoved: 0,
         affiliateRemoved: affiliateCount,
         speechBubbleRemoved: speechBubbleCount,
+        // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+        newsMediaRemoved: newsMediaCount,
+        ecSiteRemoved: ecSiteCount,
+        qaSiteRemoved: qaSiteCount,
+        videoSiteRemoved: videoSiteCount,
         totalRemoved: total,
         bytesBefore: 0,
         bytesAfter: 0
