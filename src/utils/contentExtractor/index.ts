@@ -61,7 +61,7 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false, textDensityEnabled = false, shortSeqEnabled = false, symbolLineEnabled = false, linkParaEnabled = false, enhancedHiddenEnabled = false, emptyElemEnabled = false, jpLayoutEnabled = false, jpNavigationEnabled = false, authorEnabled = false, affiliateEnabled = false, speechBubbleEnabled = false, linkRatioThreshold = 70, shortTextThreshold = 30, shortSeqCount = 5, linkParaThreshold = 50, customPatterns = [] } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false, textDensityEnabled = false, shortSeqEnabled = false, symbolLineEnabled = false, linkParaEnabled = false, enhancedHiddenEnabled = false, emptyElemEnabled = false, jpLayoutEnabled = false, jpNavigationEnabled = false, authorEnabled = false, affiliateEnabled = false, speechBubbleEnabled = false, newsMediaEnabled = false, ecSiteEnabled = false, qaSiteEnabled = false, videoSiteEnabled = false, linkRatioThreshold = 70, shortTextThreshold = 30, shortSeqCount = 5, linkParaThreshold = 50, customPatterns = [] } = aiSummaryCleanseOptions;
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -206,6 +206,10 @@ export function extractMainContent(
                         authorEnabled,
                         affiliateEnabled,
                         speechBubbleEnabled,
+                        newsMediaEnabled,
+                        ecSiteEnabled,
+                        qaSiteEnabled,
+                        videoSiteEnabled,
                         // Threshold settings
                         linkRatioThreshold,
                         shortTextThreshold,
@@ -288,6 +292,10 @@ export function extractMainContent(
                         authorEnabled,
                         affiliateEnabled,
                         speechBubbleEnabled,
+                        newsMediaEnabled,
+                        ecSiteEnabled,
+                        qaSiteEnabled,
+                        videoSiteEnabled,
                         linkRatioThreshold,
                         shortTextThreshold,
                         shortSeqCount,
@@ -439,6 +447,10 @@ export function extractMainContent(
                         authorEnabled,
                         affiliateEnabled,
                         speechBubbleEnabled,
+                        newsMediaEnabled,
+                        ecSiteEnabled,
+                        qaSiteEnabled,
+                        videoSiteEnabled,
                         // Threshold settings
                         linkRatioThreshold,
                         shortTextThreshold,
@@ -603,6 +615,10 @@ export function extractMainContent(
                 authorEnabled,
                 affiliateEnabled,
                 speechBubbleEnabled,
+                newsMediaEnabled,
+                ecSiteEnabled,
+                qaSiteEnabled,
+                videoSiteEnabled,
             });
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
             // カウント結果に応じて理由を設定（0件の場合は'none'のまま）

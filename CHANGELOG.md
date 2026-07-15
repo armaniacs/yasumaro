@@ -17,6 +17,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- AI要約クレンジングにCategory B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加
+
 ## [6.5.29] - 2026-07-14
 
 ### Fixed / 修正

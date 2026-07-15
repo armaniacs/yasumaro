@@ -80,3 +80,6 @@ _locales/*/*.bak*
 
 # subagent-driven-development scratch (progress ledger, task briefs/reports)
 .superpowers/
+
+# Graphify outputs
+graphify-out/
