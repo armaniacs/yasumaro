@@ -2194,6 +2194,9 @@
   "aiSummaryCleansingVideoSiteDesc": {
     "message": "Video platform specific patterns (comment overlays, tag clouds, related videos, etc.)."
   },
+  "whitelistExtractionEnabledDesc": {
+    "message": "Domain whitelist extraction mode (dramatically improves noise removal accuracy for Togetter, 5ch matome blogs, Q&A sites, novel platforms, etc.)."
+  },
   "bodyProtectionSection": {
     "message": "Body Protection"
   },

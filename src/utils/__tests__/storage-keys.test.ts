@@ -34,6 +34,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.RECORDING_TRIGGERS,
       StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
       StorageKeys.OPFS_FALLBACK_MODE,
+      StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {

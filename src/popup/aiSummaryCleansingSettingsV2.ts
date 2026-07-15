@@ -51,6 +51,8 @@ export interface AiSummaryCleansingSettings {
     ecSiteEnabled: boolean;         // EC・通販固有パターン（デフォルト: true）
     qaSiteEnabled: boolean;         // Q&A・知恵袋固有パターン（デフォルト: true）
     videoSiteEnabled: boolean;      // 動画プラットフォーム固有パターン（デフォルト: true）
+    // Domain Whitelist Extraction Mode
+    whitelistExtractionEnabled: boolean; // ホワイトリスト抽出モード（デフォルト: true）
     // Body protection settings
     bodyProtectionEnabled: boolean;  // 本文保護機能（デフォルト：true）
     bodyProtectionThreshold: number; // 本文スコア閾値（デフォルト：200）
@@ -102,6 +104,7 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         ecSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE] ?? true,
         qaSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] ?? true,
         videoSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] ?? true,
+        whitelistExtractionEnabled: settings[StorageKeys.WHITELIST_EXTRACTION_ENABLED] ?? true,
     // Body protection
     bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
     bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200
@@ -153,6 +156,7 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE] = settings.ecSiteEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] = settings.qaSiteEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] = settings.videoSiteEnabled;
+    currentSettings[StorageKeys.WHITELIST_EXTRACTION_ENABLED] = settings.whitelistExtractionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     await saveSettings(currentSettings);
@@ -198,6 +202,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const ecSiteCheckbox = document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement;
     const qaSiteCheckbox = document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement;
     const videoSiteCheckbox = document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement;
+    const whitelistExtractionCheckbox = document.getElementById('whitelist-extraction-enabled') as HTMLInputElement;
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
     const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
@@ -237,6 +242,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (ecSiteCheckbox) ecSiteCheckbox.checked = settings.ecSiteEnabled;
     if (qaSiteCheckbox) qaSiteCheckbox.checked = settings.qaSiteEnabled;
     if (videoSiteCheckbox) videoSiteCheckbox.checked = settings.videoSiteEnabled;
+    if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;
     // Body protection (dashboard)
     if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
     if (bodyProtectionThresholdSlider) {
@@ -354,6 +360,7 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         ecSiteEnabled: (document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement)?.checked ?? true,
         qaSiteEnabled: (document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement)?.checked ?? true,
         videoSiteEnabled: (document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement)?.checked ?? true,
+        whitelistExtractionEnabled: (document.getElementById('whitelist-extraction-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10)
     };
@@ -398,6 +405,7 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const ecSiteCheckbox = document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement;
     const qaSiteCheckbox = document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement;
     const videoSiteCheckbox = document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement;
+    const whitelistExtractionCheckbox = document.getElementById('whitelist-extraction-enabled') as HTMLInputElement;
 
     // fieldset.disabled = !enabled; // Do not disable fieldset as it contains the main toggle checkbox
 
@@ -433,6 +441,7 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (ecSiteCheckbox) ecSiteCheckbox.disabled = !enabled;
     if (qaSiteCheckbox) qaSiteCheckbox.disabled = !enabled;
     if (videoSiteCheckbox) videoSiteCheckbox.disabled = !enabled;
+    if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.disabled = !enabled;
     // Body protection is independent of cleansing enabled/disabled
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
@@ -504,7 +513,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-news-media',
         'ai-summary-cleansing-ec-site',
         'ai-summary-cleansing-qa-site',
-        'ai-summary-cleansing-video-site'
+        'ai-summary-cleansing-video-site',
+        // Domain Whitelist Extraction Mode
+        'whitelist-extraction-enabled'
     ];
 
     for (const id of checkboxes) {

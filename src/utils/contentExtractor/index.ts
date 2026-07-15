@@ -19,6 +19,7 @@ import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult } from './types.js';
 import { findMainContentCandidates } from './scoring.js';
 import { extractTextFromElement } from './textExtraction.js';
+import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAdapters.js';
 
 // パブリックAPIを再エクスポート
 export type { ExtractResult } from './types.js';
@@ -55,7 +56,7 @@ function getByteSize(str: string): number {
  */
 export function extractMainContent(
     maxChars: number = 10000,
-    cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean; returnInfo?: boolean } = { cleanseEnabled: false },
+    cleanseOptions: CleanseOptions & { cleanseEnabled?: boolean; returnInfo?: boolean; whitelistExtractionEnabled?: boolean } = { cleanseEnabled: false },
     aiSummaryCleanseOptions: AiSummaryCleanseOptions & { aiSummaryCleanseEnabled?: boolean } = { aiSummaryCleanseEnabled: false },
     dedupOptions: { dedupEnabled?: boolean; dedupThreshold?: number } = {}
 ): ExtractResult | string {
@@ -80,6 +81,27 @@ export function extractMainContent(
      let fallbackReason: ExtractResult['fallbackReason'] = undefined; // フォールバック理由（triggered時のみ設定）
 
     try {
+        // ホワイトリスト抽出モード判定: ドメイン一致 or DOM構造検知
+        if (document.body && cleanseOptions.whitelistExtractionEnabled !== false) {
+            const adapter = matchWhitelistAdapter(window.location.hostname, document.body);
+            if (adapter) {
+                const whitelistedText = extractWhitelistedContent(document.body, adapter);
+                if (whitelistedText.length > 0) {
+                    const truncated = whitelistedText.length > maxChars
+                        ? whitelistedText.slice(0, maxChars)
+                        : whitelistedText;
+                    if (cleanseOptions.returnInfo) {
+                        return {
+                            content: truncated,
+                            whitelistAdapterUsed: adapter.name,
+                        };
+                    }
+                    return truncated;
+                }
+                // 0件抽出 — 通常のブラックリスト方式へフォールバック（whitelistFallbackTriggeredは returnInfo 時のみ記録）
+            }
+        }
+
         // findMainContentCandidates() 前のbody全体のバイト数を計測（textContentベース、全バイト数と単位統一）
         if (document.body) {
             pageBytes = getByteSize(document.body.textContent || '');

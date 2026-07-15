@@ -36,4 +36,6 @@ export interface ExtractResult {
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
     fallbackTriggered?: boolean;          // フォールバックが発動したか
     fallbackReason?: FallbackReason;      // フォールバック発動理由（triggered 時のみ）
+    whitelistAdapterUsed?: string;       // 発動したホワイトリストアダプタ名（未発動時はundefined）
+    whitelistFallbackTriggered?: boolean; // ホワイトリスト抽出0件によりブラックリスト方式にフォールバックしたか
 }

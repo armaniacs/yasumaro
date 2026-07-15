@@ -88,6 +88,8 @@ let aiSummaryCleansingNewsMedia = true;
 let aiSummaryCleansingEcSite = true;
 let aiSummaryCleansingQaSite = true;
 let aiSummaryCleansingVideoSite = true;
+// Domain Whitelist Extraction Mode
+let whitelistExtractionEnabled = true;
 // Threshold settings
 let aiSummaryCleansingLinkRatioThreshold = 70;
 let aiSummaryCleansingShortTextThreshold = 30;
@@ -148,7 +150,8 @@ export function extractPageContent(): string {
         hardStripEnabled: contentStripHardEnabled,
         keywordStripEnabled: contentStripKeywordEnabled,
         keywords: contentStripKeywords,
-        returnInfo: true
+        returnInfo: true,
+        whitelistExtractionEnabled
     };
     // AI要約クレンジングオプション（ストレージから取得）
     const aiSummaryCleanseOptions = {
@@ -412,6 +415,9 @@ function loadSettings(): Promise<void> {
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] !== undefined) {
                 aiSummaryCleansingVideoSite = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE]);
+            }
+            if (s[StorageKeys.WHITELIST_EXTRACTION_ENABLED] !== undefined) {
+                whitelistExtractionEnabled = Boolean(s[StorageKeys.WHITELIST_EXTRACTION_ENABLED]);
             }
             // Threshold settings (with bounds validation)
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {

@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - AI要約クレンジングにCategory B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加
+- ドメイン別ホワイトリスト抽出モードを追加（Togetter・5chまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・なろう/カクヨム・クックパッド/クラシル対応）
 
 ## [6.5.29] - 2026-07-14
 
