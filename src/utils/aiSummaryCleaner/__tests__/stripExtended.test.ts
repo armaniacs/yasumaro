@@ -895,28 +895,59 @@ describe('aiSummaryCleaner/stripExtended', () => {
   });
 
   describe('Category B patterns do not overlap with existing generic patterns', () => {
+    const genericWords = ['ranking', 'related', 'card', 'comment', 'author', 'byline'];
+
     it('NEWS_MEDIA_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
-      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
       const overlaps = NEWS_MEDIA_PATTERNS.filter(p => genericWords.includes(p));
       expect(overlaps).toEqual([]);
     });
 
     it('EC_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
-      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
       const overlaps = EC_SITE_PATTERNS.filter(p => genericWords.includes(p));
       expect(overlaps).toEqual([]);
     });
 
     it('QA_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
-      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
       const overlaps = QA_SITE_PATTERNS.filter(p => genericWords.includes(p));
       expect(overlaps).toEqual([]);
     });
 
     it('VIDEO_SITE_PATTERNS does not contain generic words already in CARD_PATTERNS or DEEP_CLASS_PATTERNS', () => {
-      const genericWords = ['ranking', 'related', 'card', 'comment', 'author'];
       const overlaps = VIDEO_SITE_PATTERNS.filter(p => genericWords.includes(p));
       expect(overlaps).toEqual([]);
+    });
+
+    it('NEWS_MEDIA_PATTERNS substring overlaps are known and documented', () => {
+      const knownOverlaps = ['yahoo-comment', 'comment-count', 'related-article-card', 'article-ranking', 'byline-source'];
+      const substringOverlaps = NEWS_MEDIA_PATTERNS.filter(p =>
+        genericWords.some(word => p.includes(word))
+      );
+      // 既知の重複のみであることを確認（未知の新規重複が紛れ込んでいないかのガード）
+      expect(substringOverlaps.sort()).toEqual(knownOverlaps.sort());
+    });
+
+    it('EC_SITE_PATTERNS substring overlaps are known and documented', () => {
+      const knownOverlaps: string[] = [];
+      const substringOverlaps = EC_SITE_PATTERNS.filter(p =>
+        genericWords.some(word => p.includes(word))
+      );
+      expect(substringOverlaps.sort()).toEqual(knownOverlaps.sort());
+    });
+
+    it('QA_SITE_PATTERNS substring overlaps are known and documented', () => {
+      const knownOverlaps = ['related-question-list'];
+      const substringOverlaps = QA_SITE_PATTERNS.filter(p =>
+        genericWords.some(word => p.includes(word))
+      );
+      expect(substringOverlaps.sort()).toEqual(knownOverlaps.sort());
+    });
+
+    it('VIDEO_SITE_PATTERNS substring overlaps are known and documented', () => {
+      const knownOverlaps = ['nico-comment', 'comment-flow', 'related-video-card'];
+      const substringOverlaps = VIDEO_SITE_PATTERNS.filter(p =>
+        genericWords.some(word => p.includes(word))
+      );
+      expect(substringOverlaps.sort()).toEqual(knownOverlaps.sort());
     });
   });
 });
