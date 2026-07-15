@@ -6,7 +6,7 @@
 
 import { logInfo, logDebug, logError, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
-import { migrateUblockSettings, migrateJpLayoutDefault, migrateCategoryBDefault } from '../migration.js';
+import { migrateUblockSettings, migrateJpLayoutDefault, migrateCategoryBDefault, migrateWhitelistExtractionDefault } from '../migration.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { normalizeUrl } from '../urlUtils.js';
@@ -296,6 +296,9 @@ export async function getSettings(): Promise<Settings> {
 
     // Category B: newsMedia/ecSite/qaSite/videoSite デフォルト移行（既存ユーザーは明示的 false を保存）
     await migrateCategoryBDefault();
+
+    // Domain Whitelist Extraction Mode デフォルト移行（既存ユーザーは明示的 false を保存）
+    await migrateWhitelistExtractionDefault();
 
     // Tranco バージョン初期化（Phase 1）
     try {

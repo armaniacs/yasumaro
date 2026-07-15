@@ -2191,6 +2191,9 @@
   "aiSummaryCleansingVideoSiteDesc": {
     "message": "動画プラットフォーム固有パターン（コメント弾幕・タグクラウド・関連動画等）。"
   },
+  "whitelistExtractionEnabledDesc": {
+    "message": "ドメイン別ホワイトリスト抽出モード（Togetter・5chまとめ・知恵袋・小説投稿サイト等でノイズ除去精度を大幅向上）。"
+  },
   "bodyProtectionSection": {
     "message": "本文保護（Body Protection）"
   },

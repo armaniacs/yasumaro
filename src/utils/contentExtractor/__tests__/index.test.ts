@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractMainContent, isExcludedElement, isAsianContentElement, calculateTextScore } from '../index.js';
 
 beforeEach(() => {
@@ -1887,4 +1887,73 @@ describe('extractMainContent - bodyProtection v5.1.19 integration', () => {
         expect((result.content as string).length).toBeGreaterThan(300);
         expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
     });
+});
+
+describe('extractMainContent — whitelist extraction mode', () => {
+  const originalHostname = window.location.hostname;
+
+  function setHostname(hostname: string) {
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, hostname },
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  afterEach(() => {
+    setHostname(originalHostname);
+    document.body.innerHTML = '';
+  });
+
+  it('uses whitelist extraction when hostname matches togetter.com', () => {
+    setHostname('togetter.com');
+    document.body.innerHTML = `
+      <div class="tweet_body">これはツイート本文です。十分な長さのテキストを含みます。</div>
+      <div class="item_text">まとめ主のコメントです。</div>
+      <nav>ノイズナビゲーション</nav>
+      <div class="ad-banner">広告バナー</div>
+    `;
+    const result = extractMainContent(10000, {}, {}, {}) as string;
+    expect(result).toContain('これはツイート本文です');
+    expect(result).toContain('まとめ主のコメントです');
+    expect(result).not.toContain('ノイズナビゲーション');
+    expect(result).not.toContain('広告バナー');
+  });
+
+  it('falls back to blacklist extraction when whitelist adapter matches but yields 0 elements', () => {
+    setHostname('togetter.com');
+    document.body.innerHTML = `
+      <article>
+        <h1>Fallback Article</h1>
+        <p>This is fallback content because no .tweet_body elements exist on this page.</p>
+      </article>
+    `;
+    const result = extractMainContent(10000, {}, {}, {}) as string;
+    expect(result).toContain('Fallback Article');
+  });
+
+  it('does not use whitelist extraction for unrelated domains without matching DOM structure', () => {
+    setHostname('example.com');
+    document.body.innerHTML = `
+      <article>
+        <h1>Normal Article</h1>
+        <p>This is a normal article on an unrelated domain with sufficient content length.</p>
+      </article>
+    `;
+    const result = extractMainContent(10000, {}, {}, {}) as string;
+    expect(result).toContain('Normal Article');
+  });
+
+  it('skips whitelist extraction when whitelistExtractionEnabled is false', () => {
+    setHostname('togetter.com');
+    document.body.innerHTML = `
+      <article>
+        <h1>Should use blacklist path</h1>
+        <div class="tweet_body">This would be picked up by whitelist mode if enabled.</div>
+        <p>Sufficient additional article content to pass scoring thresholds for extraction.</p>
+      </article>
+    `;
+    const result = extractMainContent(10000, { whitelistExtractionEnabled: false }, {}, {}) as string;
+    expect(result).toContain('Should use blacklist path');
+  });
 });

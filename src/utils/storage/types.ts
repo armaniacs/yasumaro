@@ -176,6 +176,9 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD: 'ai_summary_cleansing_link_para_threshold', // リンクのみ段落閾値（デフォルト: 50）
     // Custom pattern settings
     AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
+    // Domain Whitelist Extraction Mode
+    WHITELIST_EXTRACTION_ENABLED: 'whitelist_extraction_enabled', // ホワイトリスト抽出モード有効フラグ（デフォルト: true、新規ユーザーのみ）
+    MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE: 'migration_whitelist_extraction_default_done', // 既存ユーザー移行完了フラグ
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -364,6 +367,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
+    [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: boolean;
+    [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;
     [StorageKeys.TRANCO_VERSION]: string;
     [StorageKeys.TRANCO_DOMAINS]: string[];
     [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: string | null;

@@ -302,3 +302,38 @@ export async function migrateCategoryBDefault(): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Whitelist Extraction デフォルト移行
+ * 既存ユーザー（すでにインストール済み）には whitelistExtractionEnabled を明示的に false に設定し、
+ * 挙動が突然変わるのを防ぐ。新規ユーザーは DEFAULT_SETTINGS から true を取得する。
+ * @returns 移行が実行された場合は true
+ */
+export async function migrateWhitelistExtractionDefault(): Promise<boolean> {
+  const MIGRATION_DONE_KEY = 'migration_whitelist_extraction_default_done';
+  const WHITELIST_KEY = 'whitelist_extraction_enabled';
+
+  const result = await chrome.storage.local.get([MIGRATION_DONE_KEY, WHITELIST_KEY]);
+
+  if (result[MIGRATION_DONE_KEY]) {
+    return false;
+  }
+
+  const hasExistingSetting = result[WHITELIST_KEY] !== undefined;
+
+  if (!hasExistingSetting) {
+    const allKeys = await chrome.storage.local.get(null);
+    const hasAnyExistingSetting = Object.keys(allKeys).some(k =>
+      k !== MIGRATION_DONE_KEY && k !== WHITELIST_KEY
+    );
+
+    if (hasAnyExistingSetting) {
+      await chrome.storage.local.set({ [WHITELIST_KEY]: false });
+      console.log('[Migration] Whitelist extraction default: existing user → set to false');
+    }
+  }
+
+  await chrome.storage.local.set({ [MIGRATION_DONE_KEY]: true });
+
+  return true;
+}
