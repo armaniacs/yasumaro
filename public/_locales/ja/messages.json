@@ -2179,6 +2179,18 @@
   "aiSummaryCleansingAuthorDesc": {
     "message": "執筆者・メタ情報（author-profile、post-date、tag-list等）。"
   },
+  "aiSummaryCleansingNewsMediaDesc": {
+    "message": "ニュースメディア固有パターン（コメント欄・関連記事カード・記者クレジット等）。"
+  },
+  "aiSummaryCleansingEcSiteDesc": {
+    "message": "EC・通販固有パターン（レビュー・バリエーション選択・関連購入等）。"
+  },
+  "aiSummaryCleansingQaSiteDesc": {
+    "message": "Q&A・知恵袋固有パターン（ベストアンサー・関連質問・回答者情報等）。"
+  },
+  "aiSummaryCleansingVideoSiteDesc": {
+    "message": "動画プラットフォーム固有パターン（コメント弾幕・タグクラウド・関連動画等）。"
+  },
   "bodyProtectionSection": {
     "message": "本文保護（Body Protection）"
   },

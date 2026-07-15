@@ -46,6 +46,11 @@ export interface AiSummaryCleansingSettings {
     // Category A: WordPress Theme Specific Patterns
     affiliateEnabled: boolean;      // アフィリエイト要素プレーンテキスト化（デフォルト: false）
     speechBubbleEnabled: boolean;   // 吹き出し要素クレンジング（デフォルト: false）
+    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+    newsMediaEnabled: boolean;      // ニュースメディア固有パターン（デフォルト: true）
+    ecSiteEnabled: boolean;         // EC・通販固有パターン（デフォルト: true）
+    qaSiteEnabled: boolean;         // Q&A・知恵袋固有パターン（デフォルト: true）
+    videoSiteEnabled: boolean;      // 動画プラットフォーム固有パターン（デフォルト: true）
     // Body protection settings
     bodyProtectionEnabled: boolean;  // 本文保護機能（デフォルト：true）
     bodyProtectionThreshold: number; // 本文スコア閾値（デフォルト：200）
@@ -93,6 +98,10 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         authorEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] ?? false,
         affiliateEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE] ?? false,
         speechBubbleEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] ?? false,
+        newsMediaEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA] ?? true,
+        ecSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE] ?? true,
+        qaSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] ?? true,
+        videoSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] ?? true,
     // Body protection
     bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
     bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200
@@ -140,6 +149,10 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR] = settings.authorEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE] = settings.affiliateEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] = settings.speechBubbleEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA] = settings.newsMediaEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE] = settings.ecSiteEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] = settings.qaSiteEnabled;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] = settings.videoSiteEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     await saveSettings(currentSettings);
@@ -181,6 +194,10 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
     const affiliateCheckbox = document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement;
     const speechBubbleCheckbox = document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement;
+    const newsMediaCheckbox = document.getElementById('ai-summary-cleansing-news-media') as HTMLInputElement;
+    const ecSiteCheckbox = document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement;
+    const qaSiteCheckbox = document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement;
+    const videoSiteCheckbox = document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement;
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
     const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
@@ -216,6 +233,10 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (authorCheckbox) authorCheckbox.checked = settings.authorEnabled;
     if (affiliateCheckbox) affiliateCheckbox.checked = settings.affiliateEnabled;
     if (speechBubbleCheckbox) speechBubbleCheckbox.checked = settings.speechBubbleEnabled;
+    if (newsMediaCheckbox) newsMediaCheckbox.checked = settings.newsMediaEnabled;
+    if (ecSiteCheckbox) ecSiteCheckbox.checked = settings.ecSiteEnabled;
+    if (qaSiteCheckbox) qaSiteCheckbox.checked = settings.qaSiteEnabled;
+    if (videoSiteCheckbox) videoSiteCheckbox.checked = settings.videoSiteEnabled;
     // Body protection (dashboard)
     if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
     if (bodyProtectionThresholdSlider) {
@@ -329,6 +350,10 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         authorEnabled: (document.getElementById('ai-summary-cleansing-author') as HTMLInputElement)?.checked ?? false,
         affiliateEnabled: (document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement)?.checked ?? false,
         speechBubbleEnabled: (document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement)?.checked ?? false,
+        newsMediaEnabled: (document.getElementById('ai-summary-cleansing-news-media') as HTMLInputElement)?.checked ?? true,
+        ecSiteEnabled: (document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement)?.checked ?? true,
+        qaSiteEnabled: (document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement)?.checked ?? true,
+        videoSiteEnabled: (document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement)?.checked ?? true,
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10)
     };
@@ -369,6 +394,10 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     const authorCheckbox = document.getElementById('ai-summary-cleansing-author') as HTMLInputElement;
     const affiliateCheckbox = document.getElementById('ai-summary-cleansing-affiliate') as HTMLInputElement;
     const speechBubbleCheckbox = document.getElementById('ai-summary-cleansing-speech-bubble') as HTMLInputElement;
+    const newsMediaCheckbox = document.getElementById('ai-summary-cleansing-news-media') as HTMLInputElement;
+    const ecSiteCheckbox = document.getElementById('ai-summary-cleansing-ec-site') as HTMLInputElement;
+    const qaSiteCheckbox = document.getElementById('ai-summary-cleansing-qa-site') as HTMLInputElement;
+    const videoSiteCheckbox = document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement;
 
     // fieldset.disabled = !enabled; // Do not disable fieldset as it contains the main toggle checkbox
 
@@ -400,6 +429,10 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (authorCheckbox) authorCheckbox.disabled = !enabled;
     if (affiliateCheckbox) affiliateCheckbox.disabled = !enabled;
     if (speechBubbleCheckbox) speechBubbleCheckbox.disabled = !enabled;
+    if (newsMediaCheckbox) newsMediaCheckbox.disabled = !enabled;
+    if (ecSiteCheckbox) ecSiteCheckbox.disabled = !enabled;
+    if (qaSiteCheckbox) qaSiteCheckbox.disabled = !enabled;
+    if (videoSiteCheckbox) videoSiteCheckbox.disabled = !enabled;
     // Body protection is independent of cleansing enabled/disabled
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
@@ -466,7 +499,12 @@ export function setupAiSummaryCleansingEventListeners(): void {
         'ai-summary-cleansing-author',
         // Category A: WordPress Theme Specific Patterns
         'ai-summary-cleansing-affiliate',
-        'ai-summary-cleansing-speech-bubble'
+        'ai-summary-cleansing-speech-bubble',
+        // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+        'ai-summary-cleansing-news-media',
+        'ai-summary-cleansing-ec-site',
+        'ai-summary-cleansing-qa-site',
+        'ai-summary-cleansing-video-site'
     ];
 
     for (const id of checkboxes) {

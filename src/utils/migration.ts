@@ -254,3 +254,51 @@ export async function migrateJpLayoutDefault(): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Category B デフォルト移行
+ * 既存ユーザー（すでにインストール済み）には newsMediaEnabled 等4フラグを明示的に false に設定し、
+ * 挙動が突然変わるのを防ぐ。新規ユーザーは DEFAULT_SETTINGS から true を取得する。
+ * @returns 移行が実行された場合は true
+ */
+export async function migrateCategoryBDefault(): Promise<boolean> {
+  const MIGRATION_DONE_KEY = 'migration_category_b_default_done';
+  const CATEGORY_B_KEYS = [
+    'ai_summary_cleansing_news_media',
+    'ai_summary_cleansing_ec_site',
+    'ai_summary_cleansing_qa_site',
+    'ai_summary_cleansing_video_site',
+  ];
+
+  const result = await chrome.storage.local.get([MIGRATION_DONE_KEY, ...CATEGORY_B_KEYS]);
+
+  // Already migrated — nothing to do
+  if (result[MIGRATION_DONE_KEY]) {
+    return false;
+  }
+
+  const hasExistingCategoryBSetting = CATEGORY_B_KEYS.some(k => result[k] !== undefined);
+
+  if (!hasExistingCategoryBSetting) {
+    // No prior Category B setting — distinguish new install from existing user
+    // by checking if any OTHER setting keys exist in storage (indicating prior use)
+    const allKeys = await chrome.storage.local.get(null);
+    const hasAnyExistingSetting = Object.keys(allKeys).some(k =>
+      k !== MIGRATION_DONE_KEY && !CATEGORY_B_KEYS.includes(k)
+    );
+
+    if (hasAnyExistingSetting) {
+      // Existing user who never touched Category B → preserve old behavior (false)
+      const falseSettings = Object.fromEntries(CATEGORY_B_KEYS.map(k => [k, false]));
+      await chrome.storage.local.set(falseSettings);
+      console.log('[Migration] Category B default: existing user → set to false');
+    }
+    // Else: fresh install with no storage yet → leave alone, DEFAULT_SETTINGS (true) applies
+  }
+  // Else: user already set Category B explicitly → respect their choice, don't overwrite
+
+  // Mark migration as done
+  await chrome.storage.local.set({ [MIGRATION_DONE_KEY]: true });
+
+  return true;
+}

@@ -83,6 +83,11 @@ let aiSummaryCleansingJpNavigation = false;
 let aiSummaryCleansingAuthor = false;
 let aiSummaryCleansingAffiliate = false;
 let aiSummaryCleansingSpeechBubble = false;
+// Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+let aiSummaryCleansingNewsMedia = true;
+let aiSummaryCleansingEcSite = true;
+let aiSummaryCleansingQaSite = true;
+let aiSummaryCleansingVideoSite = true;
 // Threshold settings
 let aiSummaryCleansingLinkRatioThreshold = 70;
 let aiSummaryCleansingShortTextThreshold = 30;
@@ -178,6 +183,10 @@ export function extractPageContent(): string {
         authorEnabled: aiSummaryCleansingAuthor,
         affiliateEnabled: aiSummaryCleansingAffiliate,
         speechBubbleEnabled: aiSummaryCleansingSpeechBubble,
+        newsMediaEnabled: aiSummaryCleansingNewsMedia,
+        ecSiteEnabled: aiSummaryCleansingEcSite,
+        qaSiteEnabled: aiSummaryCleansingQaSite,
+        videoSiteEnabled: aiSummaryCleansingVideoSite,
         // Threshold settings
         linkRatioThreshold: aiSummaryCleansingLinkRatioThreshold,
         shortTextThreshold: aiSummaryCleansingShortTextThreshold,
@@ -391,6 +400,18 @@ function loadSettings(): Promise<void> {
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE] !== undefined) {
                 aiSummaryCleansingSpeechBubble = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA] !== undefined) {
+                aiSummaryCleansingNewsMedia = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE] !== undefined) {
+                aiSummaryCleansingEcSite = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] !== undefined) {
+                aiSummaryCleansingQaSite = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE]);
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] !== undefined) {
+                aiSummaryCleansingVideoSite = Boolean(s[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE]);
             }
             // Threshold settings (with bounds validation)
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {

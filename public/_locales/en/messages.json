@@ -2182,6 +2182,18 @@
   "aiSummaryCleansingAuthorDesc": {
     "message": "Author and meta info (author-profile, post-date, tag-list, etc.)."
   },
+  "aiSummaryCleansingNewsMediaDesc": {
+    "message": "News media specific patterns (comment sections, related article cards, byline credits, etc.)."
+  },
+  "aiSummaryCleansingEcSiteDesc": {
+    "message": "E-commerce specific patterns (reviews, variation selectors, frequently bought together, etc.)."
+  },
+  "aiSummaryCleansingQaSiteDesc": {
+    "message": "Q&A site specific patterns (best answer badges, related questions, answerer profiles, etc.)."
+  },
+  "aiSummaryCleansingVideoSiteDesc": {
+    "message": "Video platform specific patterns (comment overlays, tag clouds, related videos, etc.)."
+  },
   "bodyProtectionSection": {
     "message": "Body Protection"
   },
