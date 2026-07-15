@@ -56,7 +56,8 @@ export type DashboardSqliteRequest =
     }
   | { subtype: 'append_to_obsidian'; ids: number[] }
   | { subtype: 'purge_now' }
-  | { subtype: 'content_purge_now' };
+  | { subtype: 'content_purge_now' }
+  | { subtype: 'audit_log_query'; limit?: number; offset?: number };
 
 export type DashboardSqliteSubtype = DashboardSqliteRequest['subtype'];
 
@@ -110,5 +111,6 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'append_to_obsidian' ? { success: true; appended: number } :
       S extends 'purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'content_purge_now' ? { success: true; purged: number; skipped: boolean } :
+      S extends 'audit_log_query' ? { success: true; rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } :
       never
     );

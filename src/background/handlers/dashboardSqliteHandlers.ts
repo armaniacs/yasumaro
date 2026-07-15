@@ -51,6 +51,7 @@ export interface DashboardSqliteHandlerDeps {
   getConfirmToken: () => Promise<string>;
   runBackfill: () => Promise<{ updated: number; total: number }>;
   runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
+  queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null>;
 }
 
 export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
@@ -265,6 +266,16 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           }
           return { success: true, purged: purgedResult.purged, skipped: false };
         }
+        case 'audit_log_query': {
+          const result = await deps.queryAuditLog({
+            limit: payload.limit,
+            offset: payload.offset,
+          });
+          if (result === null) {
+            return { success: false, error: deps.lastError || 'Audit log query failed' };
+          }
+          return { success: true, rows: result.rows, total: result.total };
+        }
         case 'content_purge_now': {
           const settings = await deps.getSettings();
           const contentDays = settings[StorageKeys.CONTENT_RETENTION_DAYS] ?? null;
@@ -353,6 +364,7 @@ export async function handleDashboardSqlite(
     runCleanup: runCleanup ?? (async () => { throw new Error('Cleanup not available'); }),
     getSettings: () => getSettings(),
     formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
+    queryAuditLog: (options) => sqliteClient.queryAuditLog(options),
     appendToDailyNote: async (markdown) => {
       const obsidianClient = new ObsidianClient();
       await obsidianClient.appendToDailyNote(markdown);

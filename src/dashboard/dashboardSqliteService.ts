@@ -433,3 +433,26 @@ export async function appendToLogs(ids: number[]): Promise<{ success: boolean; a
     return null;
   }
 }
+
+/**
+ * Query audit log entries (cloud AI provider send events).
+ * Read-only on SQLite — no confirm token needed.
+ */
+export async function queryAuditLogs(
+  options: { limit?: number; offset?: number } = {}
+): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'audit_log_query', ...options });
+    if (response.success) {
+      return {
+        rows: (response.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
+        total: Number(response.total || 0),
+      };
+    }
+    console.warn('queryAuditLogs failed:', String(response.error || 'Unknown error'));
+    return null;
+  } catch (error) {
+    console.error('queryAuditLogs failed:', error);
+    return null;
+  }
+}
