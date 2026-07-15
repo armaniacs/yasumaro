@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- （次のリリース用の変更はここに追記）
+- ドメイン別ホワイトリスト抽出モードにはてなブックマーク・食べログアダプタを追加
 
 ## [6.5.31] - 2026-07-16
 

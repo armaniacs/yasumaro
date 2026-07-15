@@ -14,6 +14,8 @@ export interface WhitelistAdapter {
     contentSelectors: string[];
     /** contentSelectors内でさらに除外したい要素（メタ情報等） */
     excludeSelectors?: string[];
+    /** サイト固有のメタデータ除去パターン。未指定時は既存デフォルト（@username/RT）を適用。空配列は「除去処理なし」を明示 */
+    metadataPatterns?: RegExp[];
 }
 
 export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
@@ -52,6 +54,20 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
         domains: ['cookpad.com', 'kurashiru.com'],
         detectSelector: '.ingredient',
         contentSelectors: ['.ingredient', '.step'],
+    },
+    {
+        name: 'hatena-bookmark',
+        domains: ['b.hatena.ne.jp'],
+        detectSelector: '.entry-comment-text',
+        contentSelectors: ['.entry-comment-text'],
+        metadataPatterns: [],
+    },
+    {
+        name: 'tabelog',
+        domains: ['tabelog.com'],
+        detectSelector: '.rvw-item__rvw-comment',
+        contentSelectors: ['.rvw-item__rvw-comment'],
+        metadataPatterns: [/★\s*[\d.]+/g, /\d{4}\/\d{1,2}\/\d{1,2}訪問/g],
     },
 ];
 
@@ -98,14 +114,21 @@ const USERNAME_MENTION_PATTERN = /@[A-Za-z0-9_]+/g;
 const RETWEET_COUNT_PATTERN = /RT\(\d+\)/g;
 
 /**
- * 抽出後テキストからメタデータ文字列（メンション・リツイート数）を除去する
+ * 既定のメタデータ除去パターン（Togetter等、metadataPatterns未指定のアダプタに適用）
  */
-function stripExtractionMetadata(text: string): string {
-    return text
-        .replace(USERNAME_MENTION_PATTERN, '')
-        .replace(RETWEET_COUNT_PATTERN, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+const DEFAULT_METADATA_PATTERNS: RegExp[] = [USERNAME_MENTION_PATTERN, RETWEET_COUNT_PATTERN];
+
+/**
+ * 抽出後テキストからメタデータ文字列を除去する
+ * @param text - 除去対象のテキスト
+ * @param patterns - 適用する正規表現パターンの配列
+ */
+function stripExtractionMetadata(text: string, patterns: RegExp[]): string {
+    let result = text;
+    for (const pattern of patterns) {
+        result = result.replace(pattern, '');
+    }
+    return result.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -123,11 +146,15 @@ export function extractWhitelistedContent(root: Element, adapter: WhitelistAdapt
         return '';
     }
 
+    const patterns = adapter.metadataPatterns !== undefined
+        ? adapter.metadataPatterns
+        : DEFAULT_METADATA_PATTERNS;
+
     const parts: string[] = [];
     elements.forEach(elem => {
         const text = (elem.textContent || '').trim();
         if (text) {
-            parts.push(stripExtractionMetadata(text));
+            parts.push(stripExtractionMetadata(text, patterns));
         }
     });
 
