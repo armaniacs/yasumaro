@@ -76,10 +76,20 @@ vi.mock('../storage.js', () => ({
         obsidian_api_key: 'obs_key',
         gemini_api_key: 'gem_key',
         openai_api_key: 'oai_key',
-        openai_2_api_key: 'oai2_key'
+        openai_2_api_key: 'oai2_key',
+        provider_api_key: 'provider_key',
+        github_pat: 'ghp_test_pat'
     })),
     saveSettings: vi.fn(async () => {}),
     getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+    API_KEY_FIELDS: [
+        'obsidian_api_key',
+        'gemini_api_key',
+        'openai_api_key',
+        'openai_2_api_key',
+        'provider_api_key',
+        'github_pat'
+    ],
     Settings: {}
 }));
 
@@ -479,6 +489,21 @@ describe('settingsExportImport', () => {
             expect(result.encryptedData?.iv).toBeDefined();
             expect(result.encryptedData?.hmac).toBeDefined();
             expect(result.encryptedData?.salt).toBeDefined();
+        });
+
+        test('provider_api_key と github_pat がエクスポートから除外される', async () => {
+            const result = await exportEncryptedSettings('master_password');
+
+            expect(result.success).toBe(true);
+            const ciphertext = result.encryptedData!.ciphertext;
+            const decrypted = JSON.parse(
+                Buffer.from(ciphertext.substring(4), 'base64').toString()
+            );
+
+            expect(decrypted.settings.provider_api_key).toBeUndefined();
+            expect(decrypted.settings.github_pat).toBeUndefined();
+            expect(decrypted.settings.obsidian_api_key).toBeUndefined();
+            expect(decrypted.settings.gemini_api_key).toBeUndefined();
         });
 
         test('エラー発生時にsuccess=falseとエラーメッセージを返す', async () => {
