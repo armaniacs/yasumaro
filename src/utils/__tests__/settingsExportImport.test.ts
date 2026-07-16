@@ -112,11 +112,6 @@ vi.mock('../crypto.js', () => ({
     generateSalt: vi.fn(() => new Uint8Array(16).fill(42))
 }));
 
-// storageSettings モック
-vi.mock('../storageSettings.js', () => ({
-    API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key']
-}));
-
 import {
     EXPORT_VERSION,
     validateExportData,
