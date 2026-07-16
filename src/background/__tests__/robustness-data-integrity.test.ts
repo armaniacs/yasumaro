@@ -23,7 +23,15 @@ vi.mock('../../utils/storage.ts', () => {
       PRIVACY_MODE: 'PRIVACY_MODE'
     },
     DEFAULT_SETTINGS: {},
-    MAX_URL_SET_SIZE: 10000
+    MAX_URL_SET_SIZE: 10000,
+    API_KEY_FIELDS: [
+      'obsidian_api_key',
+      'gemini_api_key',
+      'openai_api_key',
+      'openai_2_api_key',
+      'provider_api_key',
+      'github_pat'
+    ]
   };
 });
 vi.mock('../privacyPipeline.ts');

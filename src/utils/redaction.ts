@@ -4,7 +4,7 @@
  * APIキー、パスワードなどの機密情報をログ出力から保護
  */
 
-import { API_KEY_FIELDS } from './storageSettings.js';
+import { API_KEY_FIELDS } from './storage.js';
 
 const MAX_RECURSION_DEPTH = 100;
 
