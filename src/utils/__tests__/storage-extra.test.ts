@@ -44,6 +44,9 @@ vi.mock('../masterPassword.js', () => ({
 
 vi.mock('../migration.js', () => ({
   migrateUblockSettings: vi.fn(() => Promise.resolve(false)),
+  migrateJpLayoutDefault: vi.fn(() => Promise.resolve(false)),
+  migrateCategoryBDefault: vi.fn(() => Promise.resolve(false)),
+  migrateWhitelistExtractionDefault: vi.fn(() => Promise.resolve(false)),
 }));
 
 vi.mock('../urlUtils.js', () => ({
@@ -195,6 +198,136 @@ describe('URL set functions', () => {
     it('is a function that does not throw', () => {
       expect(typeof clearSettingsCache).toBe('function');
       expect(() => clearSettingsCache()).not.toThrow();
+    });
+  });
+
+  describe('getSettings - encrypted API key handling', () => {
+    beforeEach(() => {
+      clearSettingsCache();
+    });
+
+    it('decrypts an encrypted API key field', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.OBSIDIAN_API_KEY]: 'encrypted:secret-value',
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('decrypted-key');
+    });
+
+    it('falls back to an empty string when decryption fails', async () => {
+      const { decryptApiKey } = await import('../crypto.js');
+      vi.mocked(decryptApiKey).mockRejectedValueOnce(new Error('Decryption failed'));
+
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.OBSIDIAN_API_KEY]: 'encrypted:broken-value',
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('');
+    });
+
+    it('returns a plaintext (unencrypted) API key unchanged', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: {
+          [StorageKeys.OBSIDIAN_API_KEY]: 'plain-key-not-encrypted',
+        },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('plain-key-not-encrypted');
+    });
+  });
+
+  describe('getSettings - in-memory cache', () => {
+    beforeEach(() => {
+      clearSettingsCache();
+    });
+
+    it('returns the cached value on a second call within the TTL without re-reading the settings key', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: { [StorageKeys.OBSIDIAN_PORT]: '27123' },
+      });
+
+      await getSettings();
+      const getSpy = vi.spyOn(chrome.storage.local, 'get');
+      getSpy.mockClear();
+
+      const result = await getSettings();
+
+      const readSettingsKey = getSpy.mock.calls.some(
+        (call) => Array.isArray(call[0]) && call[0].includes('settings')
+      );
+      expect(readSettingsKey).toBe(false);
+      expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
+
+      getSpy.mockRestore();
+    });
+
+    it('re-reads storage after clearSettingsCache is called', async () => {
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: { [StorageKeys.OBSIDIAN_PORT]: '27123' },
+      });
+      await getSettings();
+
+      clearSettingsCache();
+      await chrome.storage.local.set({
+        settings_migrated: true,
+        settings: { [StorageKeys.OBSIDIAN_PORT]: '27999' },
+      });
+
+      const result = await getSettings();
+
+      expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27999');
+    });
+  });
+
+  describe('getSettings - pre-migration settings object precedence', () => {
+    beforeEach(() => {
+      clearSettingsCache();
+    });
+
+    it('prefers the settings object over legacy individual keys when not yet migrated', async () => {
+      // settings_migrated is not set → legacy (pre-migration) path
+      await chrome.storage.local.set({
+        [StorageKeys.OBSIDIAN_PORT]: '27123',
+        [StorageKeys.OBSIDIAN_PROTOCOL]: 'http',
+        settings: {
+          [StorageKeys.OBSIDIAN_PORT]: '27999',
+          [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
+        },
+      });
+
+      const result = await getSettings();
+
+      expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27999');
+      expect(result[StorageKeys.OBSIDIAN_PROTOCOL]).toBe('https');
+    });
+  });
+
+  describe('saveSettings - empty API key handling', () => {
+    it('does not encrypt an empty API key value', async () => {
+      const { encryptApiKey } = await import('../crypto.js');
+      vi.mocked(encryptApiKey).mockClear();
+
+      await saveSettings({
+        [StorageKeys.OBSIDIAN_API_KEY]: '',
+        [StorageKeys.OBSIDIAN_PORT]: '27123',
+      } as any);
+
+      expect(encryptApiKey).not.toHaveBeenCalled();
     });
   });
 
