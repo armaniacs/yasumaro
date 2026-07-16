@@ -5,7 +5,7 @@
  */
 
 import type { TagCategory, TagNormalizationEntry } from './types.js';
-import type { Settings } from './storageSettings.js';
+import type { Settings } from './storage.js';
 
 /**
  * デフォルトカテゴリ定数
