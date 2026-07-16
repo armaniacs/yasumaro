@@ -42,6 +42,7 @@ export {
 
 export {
     ALLOWED_AI_PROVIDER_DOMAINS,
+    API_KEY_FIELDS,
     isDomainInWhitelist,
     migrateToSingleSettingsObject,
     getSettings,
