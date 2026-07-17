@@ -1409,6 +1409,12 @@
   "diagSqliteCheckFailed": {
     "message": "Failed to check SQLite status."
   },
+  "auditLogTab": {
+    "message": "Audit Log"
+  },
+  "auditLogDownloadTsv": {
+    "message": "Download as TSV"
+  },
   "testSqliteBtn": {
     "message": "Test SQLite"
   },
