@@ -28,6 +28,8 @@ import {
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { StorageKeys } from '../utils/storage/types.js';
+import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 
 interface AICapabilities {
     available: 'readily' | 'after-download' | 'no';
@@ -163,6 +165,218 @@ function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRe
   };
 }
 
+// Dispatch a SqliteMessage (SW↔offscreen, see src/messaging/sqliteMessages.ts) to
+// the matching sqlite.js handler and respond via sendResponse.
+async function handleSqliteMessage(
+    msg: SqliteMessage,
+    sendResponse: (response: unknown) => void
+): Promise<void> {
+    switch (msg.type) {
+        case 'SQLITE_HEALTH_CHECK': {
+            const ok = await sqliteHealthCheck();
+            sendResponse({ success: ok });
+            break;
+        }
+        case 'SQLITE_INIT': {
+            const ok = await sqliteInit();
+            sendResponse({ success: ok, initialized: ok });
+            break;
+        }
+        case 'SQLITE_INSERT': {
+            const payload = msg.payload;
+
+            if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
+                sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
+                break;
+            }
+
+            const record = buildRecordFromPayload(payload);
+            const result = await sqliteInsert(record);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_INSERT_BATCH': {
+            const rawRecords = msg.payload.records || [];
+            const records = rawRecords.map(r => buildRecordFromPayload(r));
+            const result = await sqliteInsertBatch(records);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_QUERY': {
+            const payload = msg.payload;
+            const options = {
+                limit: payload?.limit != null ? Number(payload.limit) : undefined,
+                offset: payload?.offset != null ? Number(payload.offset) : undefined,
+                orderBy: payload?.orderBy != null ? String(payload.orderBy) : undefined,
+                orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
+                domain: payload?.domain != null ? String(payload.domain) : undefined,
+                isStarred: payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
+                excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
+                since: payload?.since != null ? Number(payload.since) : undefined,
+                until: payload?.until != null ? Number(payload.until) : undefined,
+                ids: payload?.ids != null ? payload.ids as number[] : undefined,
+                tagFilter: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
+            };
+            const result = await sqliteQuery(options);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_AUDIT_LOG_INSERT': {
+            const payload = msg.payload;
+            const result = await sqliteInsertAuditLog({
+                provider: String(payload.provider || ''),
+                url: String(payload.url || ''),
+                created_at: Number(payload.created_at || Date.now()),
+            });
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_AUDIT_LOG_QUERY': {
+            const payload = msg.payload;
+            const result = await sqliteQueryAuditLog({
+                limit: payload?.limit != null ? Number(payload.limit) : undefined,
+                offset: payload?.offset != null ? Number(payload.offset) : undefined,
+            });
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_SEARCH': {
+            const searchQuery = String(msg.payload.query || '');
+            const limit = msg.payload.limit != null ? Number(msg.payload.limit) : 50;
+            const offset = msg.payload.offset != null ? Number(msg.payload.offset) : 0;
+            const result = await sqliteSearch(searchQuery, limit, offset);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_UPDATE': {
+            const payload = msg.payload;
+            const id = Number(payload.id);
+            const changes: Record<string, unknown> = {};
+            for (const key of [
+              'url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio',
+              'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced',
+              // PBI-1/PBI-3: allow updating diagnostic metadata + content
+              'content', 'masked_count', 'cleansed_reason',
+              'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',
+              'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
+              'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
+              'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
+              'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
+              'fallback_triggered',
+            ]) {
+                if (key in payload) {
+                    changes[key] = payload[key];
+                }
+            }
+            const result = await sqliteUpdate(id, changes);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_DELETE': {
+            const id = Number(msg.payload.id);
+            const result = await sqliteHardDelete(id);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_TOGGLE_STAR': {
+            const id = Number(msg.payload.id);
+            const result = await sqliteToggleStar(id);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_COUNT': {
+            const result = await sqliteGetCount();
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_STATUS': {
+            const result = await sqliteGetStatus();
+            if (result.success) {
+              // Augment status with OPFS migration state from chrome.storage.local
+              // (the migration runs inside the Worker which writes flags to storage).
+              try {
+                const items = await chrome.storage.local.get([
+                  StorageKeys.OPFS_MIGRATION_V2_DONE,
+                  StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
+                  StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
+                  StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
+                ]);
+                sendResponse({
+                  ...result,
+                  opfsMigrationV2Done: items[StorageKeys.OPFS_MIGRATION_V2_DONE] ?? false,
+                  opfsMigrationV2LastAttemptedAt: items[StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT] ?? null,
+                  opfsMigrationV2CompletedAt: items[StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT] ?? null,
+                  opfsMigrationV2RecordCount: items[StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT] ?? 0,
+                });
+              } catch {
+                // chrome.storage may be unavailable; omit migration fields
+                sendResponse(result);
+              }
+            } else {
+              sendResponse(result);
+            }
+            break;
+        }
+        case 'SQLITE_CLEAR_ALL': {
+            const result = await sqliteClearAll();
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_EXPORT': {
+            const result = await sqliteSerialize();
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_BACKUP': {
+            const result = await sqliteBackupDb();
+            if (result.success && result.data instanceof Uint8Array) {
+                sendResponse({ success: true, data: Array.from(result.data) });
+            } else {
+                sendResponse(result);
+            }
+            break;
+        }
+        case 'SQLITE_RESTORE': {
+            const rawData = msg.payload.data || [];
+            if (rawData.length > 100 * 1024 * 1024) {
+                sendResponse({ success: false, error: 'Restore data exceeds maximum size of 100MB' });
+                break;
+            }
+            const data = new Uint8Array(rawData);
+            const result = await sqliteRestoreDb(data);
+            sendResponse(result.success ? { success: true } : { success: false, error: result.error });
+            break;
+        }
+        case 'SQLITE_PURGE': {
+            const payload = msg.payload;
+            const result = await sqlitePurgeOldRecords(payload?.retentionDays, payload?.maxRecords);
+            sendResponse(result);
+            break;
+        }
+        case 'CONTENT_PURGE': {
+            const payload = msg.payload;
+            const result = await sqlitePurgeContent(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
+            sendResponse(result);
+            break;
+        }
+        case 'SQLITE_OPFS_SPIKE': {
+            // OPFS feasibility spike (PBI-10). Runs 案A (Worker + AccessHandlePoolVFS),
+            // the only viable path since createSyncAccessHandle is Worker-only.
+            const { runOpfsSpikeA } = await import('./opfsSpike.js');
+            const report = await runOpfsSpikeA();
+            sendResponse({ success: true, report });
+            break;
+        }
+        default: {
+            // Exhaustiveness check: if a new SqliteMessage variant is added without
+            // a case above, this line fails to type-check.
+            const _exhaustive: never = msg;
+            console.warn(`Offscreen: Unknown SQLite message type ${(_exhaustive as SqliteMessage).type}`);
+            sendResponse({ success: false, error: 'Unknown message type' });
+        }
+    }
+}
+
 // Handle messages from the service worker
 export function handleOffscreenMessage(
     message: unknown,
@@ -178,7 +392,7 @@ export function handleOffscreenMessage(
     // or from external extensions.
     // Content scripts can send CHECK_AVAILABILITY and SUMMARIZE (Prompt API)
     // but NOT SQLITE_* operations.
-    const isSqliteMessage = typeof msg.type === 'string' && msg.type.startsWith('SQLITE_');
+    const isSqliteMessage = isSqliteMessageType(msg.type);
     if (isSqliteMessage) {
       // Block content scripts (which have a tab)
       if (_sender.tab) {
@@ -231,165 +445,12 @@ export function handleOffscreenMessage(
                     session = null;
                     sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
-            } else if (msg.type === 'SQLITE_HEALTH_CHECK') {
-                const ok = await sqliteHealthCheck();
-                sendResponse({ success: ok });
-
-            } else if (msg.type === 'SQLITE_INIT') {
-                const ok = await sqliteInit();
-                sendResponse({ success: ok, initialized: ok });
-
-            } else if (msg.type === 'SQLITE_INSERT') {
-                const payload = msg.payload as Record<string, unknown>;
-
-                if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
-                    sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
-                    return;
-                }
-
-                const record = buildRecordFromPayload(payload);
-                const result = await sqliteInsert(record);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_INSERT_BATCH') {
-                const payload = msg.payload as Record<string, unknown>;
-                const rawRecords = (payload.records || []) as Record<string, unknown>[];
-
-                const records = rawRecords.map(r => buildRecordFromPayload(r));
-
-                const result = await sqliteInsertBatch(records);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_QUERY') {
-                const payload = msg.payload as Record<string, unknown> | undefined;
-                const options = {
-                    limit: payload?.limit != null ? Number(payload.limit) : undefined,
-                    offset: payload?.offset != null ? Number(payload.offset) : undefined,
-                    orderBy: payload?.orderBy != null ? String(payload.orderBy) : undefined,
-                    orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
-                    domain: payload?.domain != null ? String(payload.domain) : undefined,
-                    isStarred: payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
-                    excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
-                    since: payload?.since != null ? Number(payload.since) : undefined,
-                    until: payload?.until != null ? Number(payload.until) : undefined,
-                    ids: payload?.ids != null ? payload.ids as number[] : undefined,
-                    tagFilter: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
-                };
-                const result = await sqliteQuery(options);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_AUDIT_LOG_INSERT') {
-                const payload = msg.payload as Record<string, unknown>;
-                const result = await sqliteInsertAuditLog({
-                    provider: String(payload.provider || ''),
-                    url: String(payload.url || ''),
-                    created_at: Number(payload.created_at || Date.now()),
-                });
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_AUDIT_LOG_QUERY') {
-                const payload = msg.payload as Record<string, unknown> | undefined;
-                const result = await sqliteQueryAuditLog({
-                    limit: payload?.limit != null ? Number(payload.limit) : undefined,
-                    offset: payload?.offset != null ? Number(payload.offset) : undefined,
-                });
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_SEARCH') {
-                const searchQuery = String(msg.payload?.['query'] || '');
-                const limit = msg.payload?.['limit'] != null ? Number(msg.payload.limit) : 50;
-                const offset = msg.payload?.['offset'] != null ? Number(msg.payload.offset) : 0;
-                const result = await sqliteSearch(searchQuery, limit, offset);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_UPDATE') {
-                const payload = msg.payload as Record<string, unknown>;
-                const id = Number(payload.id);
-                const changes: Record<string, unknown> = {};
-                for (const key of [
-                  'url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio',
-                  'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced',
-                  // PBI-1/PBI-3: allow updating diagnostic metadata + content
-                  'content', 'masked_count', 'cleansed_reason',
-                  'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',
-                  'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
-                  'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
-                  'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
-                  'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
-                  'fallback_triggered',
-                ]) {
-                    if (key in payload) {
-                        changes[key] = payload[key];
-                    }
-                }
-                const result = await sqliteUpdate(id, changes);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_DELETE') {
-                const id = Number(msg.payload?.['id']);
-                const result = await sqliteHardDelete(id);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_TOGGLE_STAR') {
-                const id = Number(msg.payload?.['id']);
-                const result = await sqliteToggleStar(id);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_COUNT') {
-                const result = await sqliteGetCount();
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_STATUS') {
-                const result = await sqliteGetStatus();
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_CLEAR_ALL') {
-                const result = await sqliteClearAll();
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_EXPORT') {
-                const result = await sqliteSerialize();
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_BACKUP') {
-                const result = await sqliteBackupDb();
-                if (result.success && result.data instanceof Uint8Array) {
-                    sendResponse({ success: true, data: Array.from(result.data) });
-                } else {
-                    sendResponse(result);
-                }
-
-            } else if (msg.type === 'SQLITE_RESTORE') {
-                const rawData = (msg.payload?.data as number[]) || [];
-                if (rawData.length > 100 * 1024 * 1024) {
-                  sendResponse({ success: false, error: 'Restore data exceeds maximum size of 100MB' });
-                  return;
-                }
-                const data = new Uint8Array(rawData);
-                const result = await sqliteRestoreDb(data);
-                sendResponse(result.success ? { success: true } : { success: false, error: result.error });
-
-            } else if (msg.type === 'SQLITE_PURGE') {
-                const payload = msg.payload as Record<string, unknown> | undefined;
-                const retentionDays = payload?.retentionDays != null ? Number(payload.retentionDays) : undefined;
-                const maxRecords = payload?.maxRecords != null ? Number(payload.maxRecords) : undefined;
-                const result = await sqlitePurgeOldRecords(retentionDays, maxRecords);
-                sendResponse(result);
-
-            } else if (msg.type === 'CONTENT_PURGE') {
-                const payload = msg.payload as Record<string, unknown> | undefined;
-                const retentionDays = payload?.retentionDays != null ? Number(payload.retentionDays) : undefined;
-                const maxRecords = payload?.maxRecords != null ? Number(payload.maxRecords) : undefined;
-                const includeStarred = payload?.includeStarred != null ? Boolean(payload.includeStarred) : undefined;
-                const result = await sqlitePurgeContent(retentionDays, maxRecords, includeStarred);
-                sendResponse(result);
-
-            } else if (msg.type === 'SQLITE_OPFS_SPIKE') {
-                // OPFS feasibility spike (PBI-10). Runs 案A (Worker + AccessHandlePoolVFS),
-                // the only viable path since createSyncAccessHandle is Worker-only.
-                const { runOpfsSpikeA } = await import('./opfsSpike.js');
-                const report = await runOpfsSpikeA();
-                sendResponse({ success: true, report });
+            } else if (isSqliteMessage) {
+                // Cast is safe: isSqliteMessage narrowed msg.type via isSqliteMessageType
+                // above, so msg.type is a known SqliteMessageType at this point. Payload
+                // shape itself is not runtime-validated here (same trust boundary as
+                // before this refactor: the sender is verified to be our own SW).
+                await handleSqliteMessage(msg as SqliteMessage, sendResponse);
 
             } else {
                 console.warn(`Offscreen: Unknown message type ${msg.type}`);
