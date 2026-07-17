@@ -512,12 +512,13 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     }
   }
 
-  function updateTagFilterBar(): void {
-    const searchArea = container?.querySelector('.sqlite-history-search');
-    if (!searchArea) return;
-
-    const existingBar = document.getElementById('sqlite-tag-filter-bar');
-    if (state.activeTagFilter) {
+  function updateTagFilterBar(
+    containerEl: HTMLElement,
+    activeTagFilter: string | null,
+    onClear: () => void,
+  ): void {
+    const existingBar = containerEl.querySelector('#sqlite-tag-filter-bar') as HTMLElement | null;
+    if (activeTagFilter) {
       if (!existingBar) {
         const bar = document.createElement('div');
         bar.id = 'sqlite-tag-filter-bar';
@@ -525,16 +526,12 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         bar.setAttribute('role', 'status');
         bar.innerHTML = `
           <span data-i18n="tagFilterLabel">\u30D5\u30A3\u30EB\u30BF\u30FC:</span>
-          <span class="tag-filter-badge">#${escapeHtml(state.activeTagFilter)}</span>
+          <span class="tag-filter-badge">#${escapeHtml(activeTagFilter)}</span>
           <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">\u2715</button>`;
-        searchArea.appendChild(bar);
+        containerEl.appendChild(bar);
         const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
         if (clearBtn) {
-          clearBtn.addEventListener('click', () => {
-            state.activeTagFilter = null;
-            state.currentPage = 0;
-            void fetchData({ page: 0, ...dateRangeFromSelected() });
-          });
+          clearBtn.addEventListener('click', onClear);
         }
       }
     } else {
@@ -554,7 +551,18 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
     }
 
-    updateTagFilterBar();
+    const searchArea = container?.querySelector('.sqlite-history-search');
+    if (searchArea) {
+      updateTagFilterBar(
+        searchArea as HTMLElement,
+        state.activeTagFilter,
+        () => {
+          state.activeTagFilter = null;
+          state.currentPage = 0;
+          void fetchData({ page: 0, ...dateRangeFromSelected() });
+        },
+      );
+    }
 
     const calContainer = document.getElementById('sqlite-calendar-nav');
     if (calContainer) {

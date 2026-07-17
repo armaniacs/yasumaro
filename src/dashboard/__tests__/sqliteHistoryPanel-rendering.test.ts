@@ -3,11 +3,34 @@
  * sqliteHistoryPanel-rendering.test.ts
  * Tests for the diagnostic metadata rendering in sqliteHistoryPanel
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { _test } from '../sqliteHistoryPanel.js';
 import type { BrowsingLogEntry } from '../dashboardSqliteService.js';
 
-const { formatDiagnosticMetadataHtml, buildCleansingProgressBarHtml } = _test;
+const { formatDiagnosticMetadataHtml, buildCleansingProgressBarHtml, updateTagFilterBar, renderCalendarNav } = _test;
+
+// Mock chrome.i18n.getMessage for tests that render HTML
+beforeEach(() => {
+  (globalThis as any).chrome = {
+    i18n: {
+      getMessage: vi.fn((key: string) => {
+        const defaults: Record<string, string> = {
+          historyToday: 'Today',
+          historyYesterday: 'Yesterday',
+          historyLast7Days: 'Last 7 days',
+          historyLast30Days: 'Last 30 days',
+          clearAllFilters: 'Clear all filters',
+          historyDateYear: '年',
+          historyDateMonth: '月',
+          historyDateDay: '日',
+          clearTagFilter: 'Clear tag filter',
+        };
+        return defaults[key] || key;
+      }),
+    },
+    runtime: { getURL: vi.fn((p: string) => p) },
+  };
+});
 
 describe('formatDiagnosticMetadataHtml', () => {
   it('returns empty string when no metric data is present', () => {
@@ -160,5 +183,82 @@ describe('buildCleansingProgressBarHtml', () => {
     const html = buildCleansingProgressBarHtml(entry);
     expect(html).toContain('cleansing-progress-wrapper');
     expect(html).toContain('cleansing-progress-bar');
+  });
+});
+
+describe('updateTagFilterBar', () => {
+  it('removes existing bar when activeTagFilter is null', () => {
+    const container = document.createElement('div');
+    const existingBar = document.createElement('div');
+    existingBar.id = 'sqlite-tag-filter-bar';
+    container.appendChild(existingBar);
+
+    updateTagFilterBar(container, null, vi.fn());
+
+    expect(container.querySelector('#sqlite-tag-filter-bar')).toBeNull();
+  });
+
+  it('creates tag filter bar when activeTagFilter is set', () => {
+    const container = document.createElement('div');
+    updateTagFilterBar(container, 'test-tag', vi.fn());
+
+    const bar = container.querySelector('#sqlite-tag-filter-bar');
+    expect(bar).not.toBeNull();
+    expect(bar!.textContent).toContain('test-tag');
+  });
+
+  it('calls onClear when clear button is clicked', () => {
+    const container = document.createElement('div');
+    const onClear = vi.fn();
+    updateTagFilterBar(container, 'test-tag', onClear);
+
+    const clearBtn = container.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement;
+    expect(clearBtn).not.toBeNull();
+    clearBtn.click();
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
+  it('does not recreate bar if active tag is unchanged', () => {
+    const container = document.createElement('div');
+    updateTagFilterBar(container, 'tag1', vi.fn());
+    const firstBar = container.querySelector('#sqlite-tag-filter-bar');
+    updateTagFilterBar(container, 'tag1', vi.fn());
+    const secondBar = container.querySelector('#sqlite-tag-filter-bar');
+    expect(secondBar).toBe(firstBar);
+  });
+});
+
+describe('renderCalendarNav', () => {
+  it('renders calendar with month heading', () => {
+    const container = document.createElement('div');
+    renderCalendarNav(container, '2026-07-13',
+      { searchQuery: '', activeTagFilter: null },
+      { onDateSelect: vi.fn(), onRangeSelect: vi.fn(), onClearFilters: vi.fn() },
+    );
+
+    expect(container.querySelector('.sqlite-calendar-days')).not.toBeNull();
+    expect(container.textContent).toContain('2026-07');
+  });
+
+  it('shows clear filters button when date filter is active', () => {
+    const container = document.createElement('div');
+    renderCalendarNav(container, '2026-07-13',
+      { searchQuery: '', activeTagFilter: null },
+      { onDateSelect: vi.fn(), onRangeSelect: vi.fn(), onClearFilters: vi.fn() },
+    );
+
+    const clearBtn = container.querySelector('#sqlite-clear-all-filters');
+    expect(clearBtn).not.toBeNull();
+  });
+
+  it('hides clear filters button when no filters are active', () => {
+    const container = document.createElement('div');
+    renderCalendarNav(container, null,
+      { searchQuery: '', activeTagFilter: null },
+      { onDateSelect: vi.fn(), onRangeSelect: vi.fn(), onClearFilters: vi.fn() },
+    );
+
+    const clearBtn = container.querySelector('#sqlite-clear-all-filters');
+    expect(clearBtn).toBeNull();
   });
 });

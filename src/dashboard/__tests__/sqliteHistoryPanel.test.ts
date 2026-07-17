@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 // These are exported via `_test` for testing purposes
 import { _test } from '../sqliteHistoryPanel.js';
 
-const { formatDate, escapeHtml } = _test;
+const { formatDate, escapeHtml, formatDiagnosticMetadataHtml, buildCleansingProgressBarHtml, enrichEntryWithChromeStorage, _getMonthDateRange } = _test;
 
 describe('sqliteHistoryPanel utilities', () => {
   describe('formatDate', () => {
@@ -57,6 +57,24 @@ describe('sqliteHistoryPanel utilities', () => {
       const input = '<a href="test" onclick="alert(\'xss\')">&</a>';
       const output = '&lt;a href=&quot;test&quot; onclick=&quot;alert(&#039;xss&#039;)&quot;&gt;&amp;&lt;/a&gt;';
       expect(escapeHtml(input)).toBe(output);
+    });
+  });
+
+  describe('_getMonthDateRange', () => {
+    it('returns correct since/until for January 2026', () => {
+      const range = _getMonthDateRange(2026, 0); // January
+      expect(range.since).toBe(new Date(2026, 0, 1).getTime());
+      expect(range.until).toBe(new Date(2026, 0, 31, 23, 59, 59, 999).getTime());
+    });
+
+    it('handles February in a non-leap year', () => {
+      const range = _getMonthDateRange(2025, 1); // February 2025
+      expect(range.until).toBe(new Date(2025, 1, 28, 23, 59, 59, 999).getTime());
+    });
+
+    it('handles February in a leap year', () => {
+      const range = _getMonthDateRange(2024, 1); // February 2024 (leap year)
+      expect(range.until).toBe(new Date(2024, 1, 29, 23, 59, 59, 999).getTime());
     });
   });
 });

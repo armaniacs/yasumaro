@@ -198,7 +198,18 @@ function updateDynamicRegions(): void {
     (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
   }
 
-  updateTagFilterBar();
+  const searchArea = document.querySelector('.sqlite-history-search');
+  if (searchArea) {
+    updateTagFilterBar(
+      searchArea as HTMLElement,
+      state.activeTagFilter,
+      () => {
+        state.activeTagFilter = null;
+        state.currentPage = 0;
+        loadData({ page: 0, ...dateRangeFromSelected() });
+      },
+    );
+  }
 
   const calContainer = document.getElementById('sqlite-calendar-nav');
   if (calContainer) {
@@ -236,12 +247,13 @@ function updateDynamicRegions(): void {
 }
 
 /** Show or hide the tag filter bar in an already-mounted panel. */
-function updateTagFilterBar(): void {
-  const searchArea = document.querySelector('.sqlite-history-search');
-  if (!searchArea) return;
-
-  const existingBar = document.getElementById('sqlite-tag-filter-bar');
-  if (state.activeTagFilter) {
+function updateTagFilterBar(
+  container: HTMLElement,
+  activeTagFilter: string | null,
+  onClear: () => void,
+): void {
+  const existingBar = container.querySelector('#sqlite-tag-filter-bar') as HTMLElement | null;
+  if (activeTagFilter) {
     if (!existingBar) {
       const bar = document.createElement('div');
       bar.id = 'sqlite-tag-filter-bar';
@@ -249,16 +261,12 @@ function updateTagFilterBar(): void {
       bar.setAttribute('role', 'status');
       bar.innerHTML = `
         <span data-i18n="tagFilterLabel">フィルター:</span>
-        <span class="tag-filter-badge">#${escapeHtml(state.activeTagFilter)}</span>
+        <span class="tag-filter-badge">#${escapeHtml(activeTagFilter)}</span>
         <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>`;
-      searchArea.appendChild(bar);
+      container.appendChild(bar);
       const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
       if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-          state.activeTagFilter = null;
-          state.currentPage = 0;
-          loadData({ page: 0, ...dateRangeFromSelected() });
-        });
+        clearBtn.addEventListener('click', onClear);
       }
     }
   } else {
@@ -1138,4 +1146,4 @@ export function searchForTagInSqliteHistory(tag: string): void {
 }
 
 // Expose for dashboard integration
-export const _test = { formatDate, escapeHtml, formatDiagnosticMetadataHtml, buildCleansingProgressBarHtml };
+export const _test = { formatDate, escapeHtml, formatDiagnosticMetadataHtml, buildCleansingProgressBarHtml, enrichEntryWithChromeStorage, _getMonthDateRange, updateTagFilterBar, renderCalendarNav, renderEntryList, renderPagination, updateBulkBar };

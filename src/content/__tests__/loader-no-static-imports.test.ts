@@ -34,6 +34,11 @@ describe('loader.ts - Content Script 静的インポート禁止', () => {
             if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
                 return false;
             }
+            // "import type" は TypeScript コンパイル時に完全に消去されるため許容
+            // (PBI-02-3: graphify 依存エッジ化のために import type を使用)
+            if (/^import\s+type\s+/.test(trimmed)) {
+                return false;
+            }
             // "import " で始まる行がトップレベルの静的 import
             return /^import\s+/.test(trimmed);
         });
