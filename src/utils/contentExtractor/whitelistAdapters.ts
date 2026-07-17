@@ -85,6 +85,27 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
         excludeSelectors: ['.story-sns-top', '.story-sns-btm', '.story-tag', '.pagination', '#related_stories', '.ad-txt', '.story-video-btm', '.story-photo-btm'],
         metadataPatterns: [],
     },
+    {
+        name: 'nhk-news',
+        domains: ['www3.nhk.or.jp', 'nhk.or.jp'],
+        detectSelector: 'article',
+        contentSelectors: ['article'],
+        metadataPatterns: [],
+    },
+    {
+        name: 'qiita',
+        domains: ['qiita.com'],
+        detectSelector: '#article-body',
+        contentSelectors: ['#article-body'],
+        metadataPatterns: [],
+    },
+    {
+        name: 'zenn',
+        domains: ['zenn.dev'],
+        detectSelector: '.znc-Either',
+        contentSelectors: ['.znc-Either'],
+        metadataPatterns: [],
+    },
 ];
 
 /**
