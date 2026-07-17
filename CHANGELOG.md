@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.35` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.36` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -16,6 +16,22 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [6.5.36] - 2026-07-18
+
+### Added / 追加
+
+- **監査ログの TSV ダウンロード機能** — 監査ログパネルのテーブル UI（検索・フィルタ・ソート）を撤去し、「ログをエキスポート」パネルに「監査ログ TSV ダウンロード」セクションとして統合。`toTsvString()` で `AuditLogEntry[]` → TSV 変換し、`Blob` + `<a download>` パターンでファイルダウンロード。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv`、`created_at` は ISO 8601 形式
+
+- **Wikipedia ドメイン別ホワイトリスト抽出アダプター** — `wikipedia.org`（全言語版）向けに `div.mw-parser-output` からの記事本文抽出を追加。`[編集]` リンク・参照リスト・ナビゲーションボックス・TOC を `excludeSelectors` で除外。`excludeSelectors` 機能は既存インターフェースに定義されていたが未実装だったため、新規実装して全アダプタで利用可能に
+
+### Changed / 変更
+
+- **ダッシュボード「ログをエクスポート」パネルのスタイル統一** — 各エクスポートボタン+説明文を `settings-section` で囲み、ローカル Markdown 書き出し・監査ログ セクションと同じ見た目に統一
+
+### Refactored / リファクタリング
+
+- **監査ログパネルを廃止** — 単独パネル (`panel-audit-log`)・サイドバー項目・レガシー `auditLogPanel.ts` を削除。`asyncData/auditLogPanel.ts` は `toTsvString()` のみに簡素化。HTML/CSS からテーブル用スタイルを削除し約 250 行を削減
 
 ## [6.5.35] - 2026-07-17
 
