@@ -251,6 +251,8 @@ describe('extractWhitelistedContent', () => {
         <p>さらに詳しく報道します。</p>
       </article>`;
     const nhk = WHITELIST_ADAPTERS.find(a => a.name === 'nhk-news')!;
+    expect(nhk.domains).toContain('www3.nhk.or.jp');
+    expect(nhk.domains).toContain('news.web.nhk');
     const result = extractWhitelistedContent(document.body, nhk);
     expect(result).toContain('NHKの記事本文です');
     expect(result).toContain('さらに詳しく報道します');

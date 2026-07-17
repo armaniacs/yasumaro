@@ -87,7 +87,7 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
     },
     {
         name: 'nhk-news',
-        domains: ['www3.nhk.or.jp', 'nhk.or.jp'],
+        domains: ['www3.nhk.or.jp', 'nhk.or.jp', 'news.web.nhk'],
         detectSelector: 'article',
         contentSelectors: ['article'],
         metadataPatterns: [],
