@@ -77,6 +77,14 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
         excludeSelectors: ['.mw-editsection', '.reflist', '.navbox', '.sistersitebox', '.noprint', '.mw-empty-elt', '.toc'],
         metadataPatterns: [],
     },
+    {
+        name: 'cnn-jp',
+        domains: ['cnn.co.jp'],
+        detectSelector: '#leaf-body',
+        contentSelectors: ['#leaf-body'],
+        excludeSelectors: ['.story-sns-top', '.story-sns-btm', '.story-tag', '.pagination', '#related_stories', '.ad-txt', '.story-video-btm', '.story-photo-btm'],
+        metadataPatterns: [],
+    },
 ];
 
 /**

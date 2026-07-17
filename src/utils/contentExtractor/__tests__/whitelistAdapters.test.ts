@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { WHITELIST_ADAPTERS, matchWhitelistAdapter, extractWhitelistedContent } from '../whitelistAdapters.js';
 
 describe('WHITELIST_ADAPTERS definitions', () => {
-  it('defines exactly 9 adapters', () => {
-    expect(WHITELIST_ADAPTERS).toHaveLength(9);
+  it('defines exactly 10 adapters', () => {
+    expect(WHITELIST_ADAPTERS).toHaveLength(10);
   });
 
   it('each adapter has required fields', () => {
@@ -219,6 +219,27 @@ describe('extractWhitelistedContent', () => {
     expect(result).not.toContain('出典');
     expect(result).not.toContain('関連プロジェクト');
     expect(result).not.toContain('目次');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts CNN.co.jp article body and excludes sidebar/social/navigation', () => {
+    document.body.innerHTML = `
+      <div id="leaf-body">
+        <p>CNNの記事本文です。世界の最新ニュースがここにあります。</p>
+        <p>さらに詳しく解説します。</p>
+      </div>
+      <div class="story-sns-top">SNS</div>
+      <div class="story-tag">タグ</div>
+      <div class="pagination">ページネーション</div>
+      <div id="related_stories">関連記事</div>`;
+    const cnn = WHITELIST_ADAPTERS.find(a => a.name === 'cnn-jp')!;
+    const result = extractWhitelistedContent(document.body, cnn);
+    expect(result).toContain("CNNの記事本文です");
+    expect(result).toContain("さらに詳しく解説します");
+    expect(result).not.toContain('SNS');
+    expect(result).not.toContain('タグ');
+    expect(result).not.toContain('ページネーション');
+    expect(result).not.toContain('関連記事');
     document.body.innerHTML = '';
   });
 });
