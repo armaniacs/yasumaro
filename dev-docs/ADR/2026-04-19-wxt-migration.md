@@ -91,6 +91,15 @@ dist/chromium-mv3/
 | `chrome.runtime.getURL('privacy/privacy.html')` | `chrome.runtime.getURL('permissions.html')` |
 | `chrome.offscreen.createDocument({ url: 'src/offscreen/offscreen.html' })` | `url: 'offscreen.html'` |
 
+## Implements
+
+- `src/background/service-worker.ts`
+- `src/content/loader.ts`
+- `src/content/extractor.ts`
+- `src/offscreen/offscreen.ts`
+- `src/offscreen/offscreen.html`
+- `wxt.config.ts`
+
 ## Related
 
 - [WXT Documentation](https://wxt.dev/)

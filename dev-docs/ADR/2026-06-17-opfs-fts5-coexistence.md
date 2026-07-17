@@ -94,6 +94,21 @@ SW (sqliteClient.ts) ── sendMessage(SQLITE_*) ──> offscreen (sqliteEngin
 
 ICU・形態素解析は現バンドル WASM に非搭載で、採用にはライブラリ変更・スパイクのやり直しが必要なため見送った。
 
+## Implements
+
+- `src/offscreen/sqlite.ts`
+- `src/offscreen/sqliteEngineContext.ts`
+- `src/offscreen/recordsRepo.ts`
+- `src/offscreen/dbMaintenance.ts`
+- `src/offscreen/auditLogRepo.ts`
+- `src/offscreen/sqliteEngine.ts`
+- `src/offscreen/opfsWorker.ts`
+- `src/offscreen/opfsMigrationV2.ts`
+- `src/offscreen/opfsMigrationV2Reader.ts`
+- `src/messaging/sqliteMessages.ts`
+- `src/utils/storage/types.ts`
+- `src/utils/storage/defaults.ts`
+
 ## Related
 
 - [ADR-013: WXT への移行](./2026-04-19-wxt-migration.md)（manifest / web_accessible_resources は `wxt.config.ts` が生成）

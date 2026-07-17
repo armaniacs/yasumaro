@@ -90,7 +90,7 @@ registerDefaultProviders(): void {
 
 **Target achieved: ≤ 5 files**
 
-## References
+## Implements
 
 - `src/background/aiClient.ts` - Provider factory
 - `src/background/ai/providers/ProviderStrategy.ts` - Base class
