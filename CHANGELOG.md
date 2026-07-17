@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.36` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.37` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -16,6 +16,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [6.5.37] - 2026-07-18
 
 ### Added / 追加
 
