@@ -17,6 +17,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added / 追加
+
+- **CNN.co.jp ドメイン別ホワイトリスト抽出アダプター** — `cnn.co.jp` 向けに `#leaf-body` からの記事本文抽出を追加。SNS シェアボタン・タグ・ページネーション・関連記事・動画/写真セクションを `excludeSelectors` で除外
+
 ## [6.5.36] - 2026-07-18
 
 ### Added / 追加
