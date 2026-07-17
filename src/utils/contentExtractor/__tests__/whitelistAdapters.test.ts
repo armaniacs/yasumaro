@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { WHITELIST_ADAPTERS, matchWhitelistAdapter, extractWhitelistedContent } from '../whitelistAdapters.js';
 
 describe('WHITELIST_ADAPTERS definitions', () => {
-  it('defines exactly 10 adapters', () => {
-    expect(WHITELIST_ADAPTERS).toHaveLength(10);
+  it('defines exactly 13 adapters', () => {
+    expect(WHITELIST_ADAPTERS).toHaveLength(13);
   });
 
   it('each adapter has required fields', () => {
@@ -239,6 +239,51 @@ describe('extractWhitelistedContent', () => {
     expect(result).not.toContain('SNS');
     expect(result).not.toContain('タグ');
     expect(result).not.toContain('ページネーション');
+    expect(result).not.toContain('関連記事');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts NHK article body via article tag', () => {
+    document.body.innerHTML = `
+      <article>
+        <h1>NHK ニュース見出し</h1>
+        <p>これはNHKの記事本文です。国内の最新ニュースがここにあります。</p>
+        <p>さらに詳しく報道します。</p>
+      </article>`;
+    const nhk = WHITELIST_ADAPTERS.find(a => a.name === 'nhk-news')!;
+    const result = extractWhitelistedContent(document.body, nhk);
+    expect(result).toContain('NHKの記事本文です');
+    expect(result).toContain('さらに詳しく報道します');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts Qiita article body via #article-body', () => {
+    document.body.innerHTML = `
+      <div id="article-body">
+        <h2>はじめに</h2>
+        <p>Qiitaの記事本文です。技術的な内容がここにあります。</p>
+        <pre><code>const x = 1;</code></pre>
+      </div>
+      <div class="side-">サイドバー</div>`;
+    const qiita = WHITELIST_ADAPTERS.find(a => a.name === 'qiita')!;
+    const result = extractWhitelistedContent(document.body, qiita);
+    expect(result).toContain('Qiitaの記事本文です');
+    expect(result).toContain('const x = 1');
+    expect(result).not.toContain('サイドバー');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts Zenn article body via .znc-Either', () => {
+    document.body.innerHTML = `
+      <div class="znc-Either">
+        <p>Zennの記事本文です。技術記事がここにあります。</p>
+        <p>コードと解説を含みます。</p>
+      </div>
+      <div class="related">関連記事</div>`;
+    const zenn = WHITELIST_ADAPTERS.find(a => a.name === 'zenn')!;
+    const result = extractWhitelistedContent(document.body, zenn);
+    expect(result).toContain('Zennの記事本文です');
+    expect(result).toContain('コードと解説を含みます');
     expect(result).not.toContain('関連記事');
     document.body.innerHTML = '';
   });
