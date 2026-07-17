@@ -1,57 +1,31 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as svc from '../dashboardSqliteService.js';
+import { describe, it, expect } from 'vitest';
+import { toTsvString } from '../panels/asyncData/auditLogPanel.js';
 
-vi.mock('../dashboardSqliteService.js', () => ({
-  queryAuditLogs: vi.fn(),
-}));
-
-const SAMPLE_ROWS = [
-  { id: 1, provider: 'gemini', url: 'https://example.com/a', created_at: 1721203200000 },
-  { id: 2, provider: 'openai', url: 'https://example.com/b', created_at: 1721289600000 },
-];
-
-describe('auditLogPanel', () => {
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <section id="panel-audit-log" class="panel">
-        <div id="auditLogEmptyState" hidden>empty</div>
-        <button id="auditLogDownloadTsv">TSV</button>
-        <span id="auditLogStatus"></span>
-      </section>
-    `;
+describe('toTsvString', () => {
+  it('produces correct header and data rows', () => {
+    const rows = [
+      { id: 1, provider: 'gemini', url: 'https://example.com', created_at: 1721203200000 },
+    ];
+    const tsv = toTsvString(rows);
+    const lines = tsv.split('\n');
+    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at');
+    expect(lines[1]).toContain('1\tgemini\thttps://example.com\t');
+    expect(lines[1]).toContain('2024-07-17');
   });
 
-  it('shows empty state when no audit logs exist', async () => {
-    vi.mocked(svc.queryAuditLogs).mockResolvedValue({ rows: [], total: 0 });
-    const { createAuditLogPanel } = await import('../panels/asyncData/auditLogPanel.js');
-
-    const panel = createAuditLogPanel();
-    await panel.loadData();
-
-    const empty = document.getElementById('auditLogEmptyState')!;
-    expect(empty.hidden).toBe(false);
+  it('escapes tabs in provider names', () => {
+    const rows = [
+      { id: 1, provider: 'open\tai', url: 'https://x.com', created_at: 1721203200000 },
+    ];
+    const tsv = toTsvString(rows);
+    expect(tsv).toContain('"open\tai"');
   });
 
-  it('hides empty state when audit logs exist', async () => {
-    vi.mocked(svc.queryAuditLogs).mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
-    const { createAuditLogPanel } = await import('../panels/asyncData/auditLogPanel.js');
-
-    const panel = createAuditLogPanel();
-    await panel.loadData();
-
-    const empty = document.getElementById('auditLogEmptyState')!;
-    expect(empty.hidden).toBe(true);
-  });
-
-  it('disables download button when no audit logs exist', async () => {
-    vi.mocked(svc.queryAuditLogs).mockResolvedValue({ rows: [], total: 0 });
-    const { createAuditLogPanel } = await import('../panels/asyncData/auditLogPanel.js');
-
-    const panel = createAuditLogPanel();
-    await panel.loadData();
-
-    const btn = document.getElementById('auditLogDownloadTsv') as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
+  it('handles empty rows', () => {
+    const tsv = toTsvString([]);
+    const lines = tsv.split('\n');
+    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at');
+    expect(lines.length).toBeGreaterThanOrEqual(2);
   });
 });

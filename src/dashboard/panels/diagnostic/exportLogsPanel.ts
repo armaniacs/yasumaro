@@ -1,5 +1,7 @@
 import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob } from '../../exportLogsService.js';
 import { type DiagnosticPanel } from '../types.js';
+import { queryAuditLogs } from '../../dashboardSqliteService.js';
+import { toTsvString } from '../asyncData/auditLogPanel.js';
 
 export function createExportLogsPanel(): DiagnosticPanel {
   return {
@@ -67,6 +69,33 @@ export function createExportLogsPanel(): DiagnosticPanel {
           showStatus(`Export failed: ${err}`, true);
         }
       });
+
+      // Audit Log TSV Export
+      const auditTsvBtn = container.querySelector('#auditLogDownloadTsv') as HTMLButtonElement | null;
+      const auditStatusEl = container.querySelector('#auditLogStatus') as HTMLElement | null;
+
+      if (auditTsvBtn) {
+        auditTsvBtn.addEventListener('click', async () => {
+          auditTsvBtn.disabled = true;
+          if (auditStatusEl) auditStatusEl.textContent = '取得中...';
+          try {
+            const result = await queryAuditLogs({ limit: 100000, offset: 0 });
+            const rows = result?.rows ?? [];
+            if (rows.length === 0) {
+              if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
+              return;
+            }
+            const tsv = toTsvString(rows);
+            const filename = `yasumaro-audit-log-${new Date().toISOString().split('T')[0]}.tsv`;
+            downloadText(tsv, filename, 'text/tab-separated-values');
+            if (auditStatusEl) auditStatusEl.textContent = `${rows.length} 件をダウンロードしました`;
+          } catch (err) {
+            if (auditStatusEl) auditStatusEl.textContent = `エラー: ${String(err)}`;
+          } finally {
+            auditTsvBtn.disabled = false;
+          }
+        });
+      }
     },
     async refresh() {
       // no dynamic data to refresh
