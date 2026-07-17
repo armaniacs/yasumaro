@@ -261,7 +261,19 @@ export async function getLogCount(): Promise<number> {
  * Get SQLite status including fallback mode flag.
  * Returns diagnostic info even on failure so the UI can display it.
  */
-export async function getSqliteStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string }> {
+export async function getSqliteStatus(): Promise<{
+  initialized: boolean;
+  path: string;
+  fallback: boolean;
+  fts5: boolean;
+  compileOptions?: string[];
+  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
+  initError?: string;
+  opfsMigrationV2Done?: boolean;
+  opfsMigrationV2LastAttemptedAt?: string | null;
+  opfsMigrationV2CompletedAt?: string | null;
+  opfsMigrationV2RecordCount?: number;
+}> {
   try {
     const response = await sendDashboardMessage({ subtype: 'status' });
     if (response.success) {
@@ -273,6 +285,10 @@ export async function getSqliteStatus(): Promise<{ initialized: boolean; path: s
         compileOptions: Array.isArray(response.compileOptions) ? response.compileOptions : undefined,
         compileOptionsSource: response.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
         initError: response.initError ? String(response.initError) : undefined,
+        opfsMigrationV2Done: response.opfsMigrationV2Done,
+        opfsMigrationV2LastAttemptedAt: response.opfsMigrationV2LastAttemptedAt ?? null,
+        opfsMigrationV2CompletedAt: response.opfsMigrationV2CompletedAt ?? null,
+        opfsMigrationV2RecordCount: response.opfsMigrationV2RecordCount ?? 0,
       };
     }
     return {

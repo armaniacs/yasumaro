@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.32` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.34` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -17,13 +17,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.34] - 2026-07-17
+
+### Refactored / リファクタリング
+
+- **SW↔offscreen 間 SQLite メッセージ型を単一ソース化** — `src/messaging/sqliteMessages.ts` を新設し、`SqliteMessage` discriminated union を定義。`sqliteClient.ts` と `offscreen.ts` が共通の型ソースを参照するようになり、typo によるプロトコル不整合がコンパイルエラーで検出可能になった。`offscreen.ts` の約180行の if-else チェーンを exhaustive switch に置換し、未知メッセージ型に対してクラッシュせずログ記録するように改善（[PBI: 2026-07-16-05](pbi/2026-07-16-05-fix-sqlite-message-type-unification.md)）
+
+- **IDB フォールバックパスを `@subframe7536/sqlite-wasm` へ移行** — `sqliteEngineContext.ts` の IDB VFS 初期化を旧 `wa-sqlite`（`IDBBatchAtomicVFS`）から `@subframe7536/sqlite-wasm`（`useIdbStorage`）に置換。`IdbVfsBackend.ts` を新設し `StorageBackend` インターフェース準拠の完全な実装を提供。既存ユーザーの旧 wa-sqlite IDB データベースは検出時に自動バックアップ→移行し、FTS5 検索も IDB フォールバックパスで引き続き利用可能。`wa-sqlite` は旧 DB の一回限り移行用の動的 import のみに限定（[PBI: 2026-07-16-06](pbi/2026-07-16-06-fix-idb-fallback-subframe7536-migration.md)）
+
+### Added / 追加
+
+- **ダッシュボード診断パネルに OPFS 移行状態を表示** — `OPFS_MIGRATION_V2_DONE`、試行日時、完了日時、移行レコード数を `chrome.storage.local` に記録し、ダッシュボードの SQLite 診断パネルに「OPFS データ移行」行として表示。移行完了済みか未完了かを一目で確認可能になった（[PBI: 2026-07-17-08](pbi/2026-07-17-08-dashboard-opfs-migration-status.md)）
+
 ### Fixed / 修正
 
 - **ログ出力・設定エクスポートで動的プロバイダーAPIキーとGitHub PATがマスク・除外対象から漏れていた問題を修正** — 設定管理モジュールの新旧統合（`storageSettings.ts` 廃止）に伴い、機密フィールド一覧（`API_KEY_FIELDS`）を新系統の6フィールド版（`provider_api_key`・`github_pat` を含む）に一本化。これまで `provider_api_key`（動的プロバイダー用APIキー）と `github_pat`（Gistバックアップ用GitHub PAT）は、コンソールログのマスキング処理および設定エクスポート時のAPIキー除外処理の対象に含まれていなかった
+- **AI要約クレンジングの開発者向け改善4項目に対応** — ストレージデフォルト値コメントを実装値（`true`）に修正しコードとドキュメントの整合性を確保。`buildClassIdSelectors` のセレクター文字列をモジュールレベルでキャッシュ化し、ページロードごとの再計算を排除。過剰削減フォールバック閾値（比率・絶対バイト数）を設定可能化し、ダッシュボードにスライダーUIを追加。パターンマッチングの誤検出防止のための単体テストを追加
 
 ### Changed / 変更
 
 - 旧設定管理モジュール `src/utils/storageSettings.ts` を廃止し、`src/utils/storage/`（新系統）に統合。`Settings` 型・`API_KEY_FIELDS` 定数の単一ソース化（[ADR 2026-03-20](dev-docs/ADR/2026-03-20-default-settings-single-source.md) の残タスクを完了）
+
+### Docs / ドキュメント
+
+- **AI要約クレンジング設定 Canvas ファイルを追加** — `docs/ai-summary-cleansing-settings.canvas` を新規作成
+- **ADR-014（OPFS/FTS5 共存）を現状化** — `sqlite.ts` の4モジュール分割、`sqliteEngine.ts` と `sqliteEngineContext.ts` の責務分担、`sqliteMessages.ts` の追加を反映。（[ADR](dev-docs/ADR/2026-06-17-opfs-fts5-coexistence.md) / [PBI: 2026-07-16-04](pbi/2026-07-16-04-fix-adr014-file-references.md)）
+- **opfsMigrationV2 除去可否の判断を文書化** — 意思決定PBI。経過期間1ヶ月では未移行リスクを否定できず「計測基盤を先に作る」と判断。6ヶ月経過後（2026-12-17）に除去を再判断。（[PBI: 2026-07-16-07](pbi/2026-07-16-07-decide-opfs-migration-v2-removal.md)）
+- **知識グラフ深掘りブログ記事 2 件を追加** — `architecture-knowledge-graph-deep-dive.md`、`offscreen-opfs-sqlite-coexistence-deep-dive.md`
 
 ## [6.5.32] - 2026-07-16
 

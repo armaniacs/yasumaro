@@ -118,7 +118,7 @@ export async function serialize(): Promise<{ success: true; data: Uint8Array } |
     const opfsResult = await engine.tryOpfsProxy<Uint8Array>('SERIALIZE');
     if (opfsResult !== null) return { success: true, data: opfsResult };
 
-    if (!engine.dbHandle && !engine.usingFallbackStorage) {
+    if (!engine.idbEngine && !engine.usingFallbackStorage) {
       await engine.init();
     }
 

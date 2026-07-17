@@ -1400,6 +1400,9 @@
   "diagSqliteFts5": {
     "message": "FTS5 Search"
   },
+  "diagOpfsMigrationV2": {
+    "message": "OPFS Data Migration"
+  },
   "diagSqliteChecking": {
     "message": "Checking SQLite status..."
   },

@@ -232,6 +232,23 @@ describe('handleOffscreenMessage - unknown type', () => {
         expect(resp.success).toBe(false);
         expect(resp.error).toBe('Unknown message type');
     });
+
+    it('returns error and does not crash for an unregistered SQLITE_-prefixed type', async () => {
+        // isSqliteMessageType() must reject types that merely look like SQLite
+        // messages (SQLITE_ prefix) but are not in the SqliteMessage union —
+        // these fall through to the same "Unknown message type" path as any
+        // other unrecognized type, not into handleSqliteMessage's switch.
+        const responses: unknown[] = [];
+        handleOffscreenMessage(
+            makeMessage('SQLITE_NOT_A_REAL_TYPE'),
+            {} as chrome.runtime.MessageSender,
+            (r) => responses.push(r)
+        );
+        await vi.waitFor(() => expect(responses.length).toBe(1));
+        const resp = responses[0] as { success: boolean; error: string };
+        expect(resp.success).toBe(false);
+        expect(resp.error).toBe('Unknown message type');
+    });
 });
 
 describe('getAI', () => {

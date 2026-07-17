@@ -102,6 +102,11 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
         compileOptions?: string[];
         compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
         initError?: string;
+        // OPFS migration status (PBI: 2026-07-17-08)
+        opfsMigrationV2Done?: boolean;
+        opfsMigrationV2LastAttemptedAt?: string | null;
+        opfsMigrationV2CompletedAt?: string | null;
+        opfsMigrationV2RecordCount?: number;
       } :
       S extends 'cleanup_legacy' ? { success: true; removed: string[]; totalBytes: number } :
       S extends 'backfill_metadata' ? { success: true; updated: number; total: number } :

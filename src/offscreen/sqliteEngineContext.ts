@@ -1,43 +1,57 @@
 /**
  * sqliteEngineContext.ts
  * Shared SQLite engine state and low-level plumbing (OPFS Worker proxying,
- * IDB/wa-sqlite initialization, prepared-statement cache, fallback storage)
+ * IDB initialization via @subframe7536/sqlite-wasm, fallback storage)
  * used by recordsRepo.ts, dbMaintenance.ts, and auditLogRepo.ts.
  * Split out of sqlite.ts (PBI: sqlite.ts deepening).
+ *
+ * IDB fallback path migrated from wa-sqlite's IDBBatchAtomicVFS to
+ * @subframe7536/sqlite-wasm's useIdbStorage (PBI: 2026-07-16-06). See
+ * createIdbEngine() in sqliteEngine.ts for why the IndexedDB database name
+ * must now equal DB_FILENAME (the old VFS_NAME/DB_FILENAME split is gone).
  */
 
-import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
-import * as SQLite from 'wa-sqlite';
 import { errorMessage } from '../utils/errorUtils.js';
-import { logError, logInfo, ErrorCode } from '../utils/logger.js';
-import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
+import { logError, logInfo, logWarn, ErrorCode } from '../utils/logger.js';
 import { FallbackStorage } from './storageFallback.js';
-import { LruCache } from './lruCache.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { NoopBackend } from './StorageBackend.js';
 import type { StorageBackend } from './StorageBackend.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
-import { runMigrations, type MigrationEngine } from './migrations.js';
+import { runMigrations } from './migrations.js';
+import { createIdbEngine, type SqliteEngine, type SqliteRow } from './sqliteEngine.js';
+import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
 
 export const DB_FILENAME = 'yasumaro.db';
 
+const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;
+
+/** Columns selected by the pre-migration backup / post-migration restore, in order. */
+const MIGRATION_BACKUP_COLUMNS = [
+  'url', 'title', 'summary', 'tags', 'created_at', 'domain', 'visit_duration',
+  'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced',
+] as const;
+
+interface MigrationBackupPayload {
+  version: 1;
+  createdAt: number;
+  records: BrowsingLogRecord[];
+}
+
 /** Hard cap on query()/search() result size, so a caller can't force the entire table into JS memory at once (M13). */
 export const MAX_QUERY_LIMIT = 100000;
 
-const PREPARED_STMT_CACHE_MAX_SIZE = 50;
-
 /**
- * Owns all mutable engine state (db handle, OPFS worker, fallback storage,
- * prepared-statement cache) and the low-level helpers that operate on it.
- * A single module-level instance (`engine`, below) is shared by all repos —
- * this mirrors the original sqlite.ts, which had this state at module scope.
+ * Owns all mutable engine state (IDB engine handle, OPFS worker, fallback
+ * storage) and the low-level helpers that operate on it. A single
+ * module-level instance (`engine`, below) is shared by all repos — this
+ * mirrors the original sqlite.ts, which had this state at module scope.
  */
 export class SqliteEngineContext {
-  dbHandle: number | null = null;
-  sqlite3: SQLiteAPI | null = null;
+  /** Non-null once the IDB fallback path (@subframe7536/sqlite-wasm) is initialized. */
+  idbEngine: SqliteEngine | null = null;
   initPromise: Promise<boolean> | null = null;
   usingFallbackStorage = false;
   fallbackStorage: FallbackStorage | null = null;
@@ -51,10 +65,6 @@ export class SqliteEngineContext {
   opfsWorker: Worker | null = null;
   opfsRequestId = 0;
   opfsPending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
-
-  preparedStmtCache = new LruCache<string, number>(PREPARED_STMT_CACHE_MAX_SIZE, (_key, stmt) => {
-    this.sqlite3?.finalize(stmt).catch(() => {});
-  });
 
   // ==========================================================================
   // OPFS Worker Proxy
@@ -203,7 +213,7 @@ export class SqliteEngineContext {
    */
   async init(): Promise<boolean> {
     if (this.opfsWorker) return true;
-    if (this.dbHandle) return true;
+    if (this.idbEngine) return true;
     if (this.usingFallbackStorage) return false;
     if (this.initPromise) return this.initPromise;
 
@@ -220,65 +230,46 @@ export class SqliteEngineContext {
         return true;
       }
 
-      // 2. Try IDBBatchAtomicVFS (IndexedDB) as fallback
+      // 2. IndexedDB VFS as fallback (@subframe7536/sqlite-wasm).
+      // If a pre-existing wa-sqlite IDBBatchAtomicVFS database is detected
+      // (old IDB database name 'idb-batch-atomic'), back it up to
+      // chrome.storage.local before opening it under the new engine, since
+      // the migration renames the IndexedDB database (see migrateIdbIfNeeded).
+      await this.migrateIdbIfNeeded();
 
-      // Load the SQLite WASM module (async build for IDB VFS compatibility)
-      const asyncModule = await SQLiteESMFactory();
-
-      // Compatibility shim for wa-sqlite npm wrapper (v1.0.0)
-      if (!asyncModule.registerVFS && typeof asyncModule.vfs_register === 'function') {
-        asyncModule.registerVFS = asyncModule.vfs_register;
-      }
-
-      this.sqlite3 = SQLite.Factory(asyncModule);
-
-      const VFS_NAME = 'idb-batch-atomic';
-      const vfs = new IDBBatchAtomicVFS(VFS_NAME);
-
-      // Compatibility shim for v1.0.0 IDBBatchAtomicVFS
-      if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
-        (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
-      }
-
-      // IDBBatchAtomicVFS の xRead シグネチャが SQLiteVFS と異なる場合があるためキャスト
-      // wa-sqlite の example VFS と本体の型定義のバージョン差異によるもの
-      this.sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-
-      // Open the database on IndexedDB
-      this.dbHandle = await this.sqlite3.open_v2(
-        DB_FILENAME,
-        SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
-        VFS_NAME
-      );
+      this.idbEngine = await createIdbEngine(DB_FILENAME, IDB_WASM_URL);
 
       // M32: Enable WAL mode before any schema/migration operations for journal consistency
-      await this.sqlite3.exec(this.dbHandle, 'PRAGMA journal_mode=WAL;');
-      await this.sqlite3.exec(this.dbHandle, 'PRAGMA wal_autocheckpoint=1000;');
+      await this.idbEngine.exec('PRAGMA journal_mode=WAL;');
+      await this.idbEngine.exec('PRAGMA wal_autocheckpoint=1000;');
 
       // Execute schema creation
-      await this.sqlite3.exec(this.dbHandle, SCHEMA_SQL);
-      await this.sqlite3.exec(this.dbHandle, AUDIT_LOG_SCHEMA_SQL);
+      await this.idbEngine.exec(SCHEMA_SQL);
+      await this.idbEngine.exec(AUDIT_LOG_SCHEMA_SQL);
 
       // Run schema migrations through shared migration engine
-      const idbEngine: MigrationEngine = {
-        exec: async (sql) => {
-          await this.execWithCache(sql, []);
-        },
+      const idbEngine = this.idbEngine;
+      const { fts5Available } = await runMigrations({
+        exec: (sql) => idbEngine.exec(sql),
         queryValue: async (sql) => {
-          let val: number | null = null;
-          await this.execWithCache(sql, [], (row: SqliteValue[]) => { val = Number(row[0]); });
-          return val;
+          const value = await idbEngine.queryValue(sql);
+          return value != null ? Number(value) : null;
         },
-      };
-      const { fts5Available } = await runMigrations(idbEngine);
+      });
       this.fts5Available = fts5Available;
 
       // Log available extensions
       const compileOptions: string[] = [];
-      await this.execWithCache('PRAGMA compile_options', [], (row: SqliteValue[]) => {
-        compileOptions.push(String(row[0]));
-      });
+      const rows = await this.idbEngine.query('PRAGMA compile_options');
+      for (const row of rows) {
+        compileOptions.push(String(Object.values(row)[0]));
+      }
       this.cachedCompileOptions = compileOptions;
+
+      // Restore from the pre-migration backup if verification found a mismatch
+      // (migrateIdbIfNeeded leaves the backup in place only on failure).
+      await this.restoreFromMigrationBackupIfPresent();
+
       // Attempt migration from fallback storage if it has data
       await this.tryMigrateFallbackToSqlite();
 
@@ -286,8 +277,7 @@ export class SqliteEngineContext {
     } catch (error) {
       this.lastInitError = errorMessage(error);
       console.error('SQLite: init failed', error);
-      this.dbHandle = null;
-      this.sqlite3 = null;
+      this.idbEngine = null;
       this.initPromise = null;
 
       // If OPFS Worker was created but failed, clean it up
@@ -300,6 +290,199 @@ export class SqliteEngineContext {
       this.fallbackStorage = new FallbackStorage();
       try { await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true }); } catch { /* offscreen context */ }
       return false;
+    }
+  }
+
+  // ==========================================================================
+  // Migration: wa-sqlite IDBBatchAtomicVFS → @subframe7536 IDB VFS
+  // ==========================================================================
+
+  /**
+   * Detect a pre-existing wa-sqlite IndexedDB database (old database name
+   * 'idb-batch-atomic') and, if found, back its records up to
+   * chrome.storage.local before this init proceeds to open DB_FILENAME under
+   * the new engine. useIdbStorage's automatic onupgradeneeded migration
+   * (verified in the PBI 2026-07-16-06 E2E spike) only fires if the
+   * IndexedDB database name matches DB_FILENAME — the old wa-sqlite setup
+   * used a distinct name ('idb-batch-atomic'), so there is nothing to migrate
+   * unless that old database is still present under its old name.
+   */
+  private async migrateIdbIfNeeded(): Promise<void> {
+    const OLD_IDB_NAME = 'idb-batch-atomic';
+    try {
+      const done = await this.isIdbMigrationDone();
+      if (done) return;
+
+      const databases = await indexedDB.databases?.() ?? [];
+      const oldDbExists = databases.some((d) => d.name === OLD_IDB_NAME);
+      if (!oldDbExists) {
+        await this.setIdbMigrationDone();
+        return;
+      }
+
+      await this.backupOldWaSqliteIdb(OLD_IDB_NAME);
+    } catch (error) {
+      logWarn(
+        'SQLite: IDB migration pre-check failed, proceeding without backup',
+        { error: errorMessage(error) },
+        ErrorCode.STORAGE_MIGRATION_FAILURE,
+        'sqlite'
+      );
+    }
+  }
+
+  private async isIdbMigrationDone(): Promise<boolean> {
+    try {
+      const items = await chrome.storage.local.get(StorageKeys.IDB_MIGRATION_V2_DONE);
+      return items[StorageKeys.IDB_MIGRATION_V2_DONE] === true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async setIdbMigrationDone(): Promise<void> {
+    try { await chrome.storage.local.set({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true }); } catch { /* offscreen context */ }
+  }
+
+  /**
+   * Read all records from the old wa-sqlite IDBBatchAtomicVFS database and
+   * save them to chrome.storage.local as a JSON snapshot, so they can be
+   * restored if the new engine's post-migration record count doesn't match.
+   * Dynamically imports wa-sqlite — this is the ONLY place it is still
+   * referenced from sqliteEngineContext.ts, isolated to the one-time backup
+   * path so the module is not loaded once migration is done.
+   */
+  private async backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
+    const [{ default: SQLiteESMFactory }, SQLite, { IDBBatchAtomicVFS }] = await Promise.all([
+      import('wa-sqlite/dist/wa-sqlite-async.mjs'),
+      import('wa-sqlite'),
+      import('wa-sqlite/src/examples/IDBBatchAtomicVFS.js'),
+    ]);
+
+    const asyncModule = await SQLiteESMFactory();
+    if (!asyncModule.registerVFS && typeof asyncModule.vfs_register === 'function') {
+      asyncModule.registerVFS = asyncModule.vfs_register;
+    }
+    const sqlite3 = SQLite.Factory(asyncModule);
+    const vfs = new IDBBatchAtomicVFS(oldIdbName);
+    if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
+      (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
+    }
+    sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
+
+    let dbHandle: number | null = null;
+    try {
+      dbHandle = await sqlite3.open_v2(
+        DB_FILENAME,
+        SQLite.SQLITE_OPEN_READWRITE,
+        oldIdbName
+      );
+
+      const records: BrowsingLogRecord[] = [];
+      await sqlite3.exec(
+        dbHandle,
+        `SELECT ${MIGRATION_BACKUP_COLUMNS.join(', ')} FROM browsing_logs`,
+        (row) => {
+          const [url, title, summary, tags, created_at, domain, visit_duration,
+            scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced] = row;
+          records.push({
+            url: String(url), title: title != null ? String(title) : null,
+            summary: summary != null ? String(summary) : null,
+            tags: tags != null ? String(tags) : null,
+            created_at: Number(created_at), domain: domain != null ? String(domain) : null,
+            visit_duration: visit_duration != null ? Number(visit_duration) : null,
+            scroll_ratio: scroll_ratio != null ? Number(scroll_ratio) : null,
+            is_starred: Number(is_starred), is_deleted: Number(is_deleted),
+            obsidian_synced: Number(obsidian_synced), gist_synced: Number(gist_synced),
+          });
+        }
+      );
+
+      const payload: MigrationBackupPayload = { version: 1, createdAt: Date.now(), records };
+      await chrome.storage.local.set({ [StorageKeys.IDB_MIGRATION_BACKUP]: JSON.stringify(payload) });
+      logInfo(
+        `SQLite: backed up ${records.length} records before IDB engine migration`,
+        { count: records.length },
+        'sqlite'
+      );
+    } finally {
+      if (dbHandle !== null) {
+        await sqlite3.close(dbHandle).catch(() => {});
+      }
+      // Critical: the old VFS's IndexedDB connection MUST be closed, or the
+      // new engine's indexedDB.open(DB_FILENAME, N) upgrade below hangs
+      // indefinitely (verified in the E2E spike for this PBI).
+      await (vfs as unknown as { close: () => Promise<void> }).close().catch(() => {});
+    }
+  }
+
+  /**
+   * After the new IDB engine (@subframe7536) has initialized, verify the
+   * migration by comparing record counts against the pre-migration backup.
+   * On success, clear the backup and mark migration done. On mismatch or if
+   * the new DB is unexpectedly empty, restore from the backup via
+   * INSERT OR IGNORE (idempotent) and leave the backup in place for the next
+   * init attempt, and do NOT mark migration done — this init run's caller
+   * may still succeed at the record level even though the migration itself
+   * needs re-verification.
+   */
+  private async restoreFromMigrationBackupIfPresent(): Promise<void> {
+    let backupJson: string | undefined;
+    try {
+      const items = await chrome.storage.local.get(StorageKeys.IDB_MIGRATION_BACKUP);
+      const value = items[StorageKeys.IDB_MIGRATION_BACKUP];
+      backupJson = typeof value === 'string' ? value : undefined;
+    } catch {
+      return;
+    }
+    if (!backupJson) {
+      await this.setIdbMigrationDone();
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(backupJson) as MigrationBackupPayload;
+      const expectedCount = payload.records.length;
+
+      let actualCount = 0;
+      await this.execWithCache('SELECT COUNT(*) FROM browsing_logs', [], (row) => { actualCount = Number(row[0]); });
+
+      if (actualCount >= expectedCount && expectedCount > 0) {
+        // Migration succeeded (useIdbStorage's built-in upgrade preserved
+        // the records) — safe to discard the backup.
+        await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+        await this.setIdbMigrationDone();
+        logInfo('SQLite: IDB migration verified, backup cleared', { expectedCount, actualCount }, 'sqlite');
+        return;
+      }
+
+      // Mismatch: restore from backup via idempotent INSERT OR IGNORE.
+      let restored = 0;
+      for (const record of payload.records) {
+        try {
+          const domain = record.domain || extractDomain(record.url);
+          await this.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
+          restored++;
+        } catch {
+          // Skip rows that fail to insert; do not abort the whole restore.
+        }
+      }
+      logWarn(
+        'SQLite: IDB migration record count mismatch, restored from backup',
+        { expectedCount, actualCount, restored },
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
+      // Intentionally leave the backup in chrome.storage.local and the
+      // IDB_MIGRATION_V2_DONE flag unset, so the next init retries
+      // verification instead of silently accepting a partial migration.
+    } catch (error) {
+      logError(
+        'SQLite: failed to process IDB migration backup',
+        { error: errorMessage(error) },
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
     }
   }
 
@@ -318,7 +501,7 @@ export class SqliteEngineContext {
         return;
       }
 
-      if (!this.dbHandle || !this.sqlite3) {
+      if (!this.idbEngine) {
         return;
       }
 
@@ -343,68 +526,39 @@ export class SqliteEngineContext {
   }
 
   // ==========================================================================
-  // Prepared Statement Cache
+  // SQL Execution (IDB engine)
   // ==========================================================================
 
-  private async getOrPrepare(sql: string): Promise<number> {
-    const cached = this.preparedStmtCache.get(sql);
-    if (cached !== undefined) {
-      await this.sqlite3!.reset(cached);
-      return cached;
-    }
-
-    const str = this.sqlite3!.str_new(this.dbHandle!, sql);
-    try {
-      const prepared = await this.sqlite3!.prepare_v2(this.dbHandle!, this.sqlite3!.str_value(str));
-      if (!prepared) throw new Error(`Failed to prepare: ${sql}`);
-      const stmt = prepared.stmt;
-
-      this.preparedStmtCache.set(sql, stmt);
-      return stmt;
-    } finally {
-      this.sqlite3!.str_finish(str);
-    }
-  }
-
+  /**
+   * Execute SQL against the IDB engine (@subframe7536/sqlite-wasm), invoking
+   * callback once per result row with column values in SELECT order.
+   * Named execWithCache for compatibility with existing callers
+   * (IdbVfsBackend.ts, recordsRepo.ts) — @subframe7536 has no
+   * prepared-statement cache API, so this now calls exec()/query() directly.
+   */
   async execWithCache(
     sql: string,
     params: SqliteValue[] = [],
     callback?: (row: SqliteValue[]) => void
   ): Promise<void> {
-    const stmt = await this.getOrPrepare(sql);
-
-    if (params.length > 0) {
-      this.sqlite3!.bind_collection(stmt, params);
+    if (!callback) {
+      await this.idbEngine!.exec(sql, params);
+      return;
     }
-
-    try {
-      if (callback) {
-        while (await this.sqlite3!.step(stmt) === SQLite.SQLITE_ROW) {
-          callback(this.sqlite3!.row(stmt));
-        }
-      } else {
-        await this.sqlite3!.step(stmt);
-      }
-    } finally {
-      await this.sqlite3!.reset(stmt);
+    const rows = await this.idbEngine!.query(sql, params);
+    for (const row of rows) {
+      callback(Object.values(row as SqliteRow) as SqliteValue[]);
     }
-  }
-
-  private clearPreparedStmtCache(): void {
-    for (const stmt of this.preparedStmtCache.values()) {
-      this.sqlite3?.finalize(stmt).catch(() => {});
-    }
-    this.preparedStmtCache.clear();
   }
 
   /**
    * Ensure a storage backend is initialized and return the appropriate handler.
-   * Priority: OPFS Worker > IDBBatchAtomicVFS > FallbackStorage
+   * Priority: OPFS Worker > IDB VFS > FallbackStorage
    */
   async ensureBackend(): Promise<'opfs' | 'idb' | 'fallback' | 'none'> {
     // Already initialized?
     if (this.opfsWorker) return 'opfs';
-    if (this.dbHandle) return 'idb';
+    if (this.idbEngine) return 'idb';
     if (this.usingFallbackStorage && this.fallbackStorage) return 'fallback';
 
     // Try to initialize
@@ -412,7 +566,7 @@ export class SqliteEngineContext {
 
     // Re-check after init
     if (this.opfsWorker) return 'opfs';
-    if (this.dbHandle) return 'idb';
+    if (this.idbEngine) return 'idb';
     if (this.usingFallbackStorage && this.fallbackStorage) return 'fallback';
 
     return 'none';
@@ -422,7 +576,7 @@ export class SqliteEngineContext {
     if (this._backend) return this._backend;
 
     // Ensure initialization has been attempted
-    if (!this.opfsWorker && !this.dbHandle && !this.usingFallbackStorage) {
+    if (!this.opfsWorker && !this.idbEngine && !this.usingFallbackStorage) {
       await this.init();
     }
 
@@ -441,7 +595,7 @@ export class SqliteEngineContext {
     try {
       if (!this.usingFallbackStorage) {
         await this.init();
-        if (this.dbHandle) {
+        if (this.idbEngine) {
           const { IdbVfsBackend } = await import('./IdbVfsBackend.js');
           this._backend = new IdbVfsBackend(this);
           return this._backend;
@@ -470,10 +624,8 @@ export class SqliteEngineContext {
 
   /** Reset the module state for testing. */
   resetForTesting(): void {
-    this.clearPreparedStmtCache();
     this.resetBackend();
-    this.dbHandle = null;
-    this.sqlite3 = null;
+    this.idbEngine = null;
     this.initPromise = null;
     this.usingFallbackStorage = false;
     this.fallbackStorage = null;
