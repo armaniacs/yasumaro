@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 
 - **CNN.co.jp ドメイン別ホワイトリスト抽出アダプター** — `cnn.co.jp` 向けに `#leaf-body` からの記事本文抽出を追加。SNS シェアボタン・タグ・ページネーション・関連記事・動画/写真セクションを `excludeSelectors` で除外
 
-- **NHK / Qiita / Zenn ドメイン別ホワイトリスト抽出アダプター** — `nhk.or.jp`（`article` タグ）、`qiita.com`（`#article-body`）、`zenn.dev`（`.znc-Either`）から記事本文を抽出するアダプターを追加
+- **NHK / Qiita / Zenn ドメイン別ホワイトリスト抽出アダプター** — `nhk.or.jp` / `www3.nhk.or.jp` / `news.web.nhk`（`article` タグ）、`qiita.com`（`#article-body`）、`zenn.dev`（`.znc-Either`）から記事本文を抽出するアダプターを追加
 
 ## [6.5.36] - 2026-07-18
 
