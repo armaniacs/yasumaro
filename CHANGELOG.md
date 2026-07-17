@@ -17,6 +17,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed / 修正
+
+- **ログ出力・設定エクスポートで動的プロバイダーAPIキーとGitHub PATがマスク・除外対象から漏れていた問題を修正** — 設定管理モジュールの新旧統合（`storageSettings.ts` 廃止）に伴い、機密フィールド一覧（`API_KEY_FIELDS`）を新系統の6フィールド版（`provider_api_key`・`github_pat` を含む）に一本化。これまで `provider_api_key`（動的プロバイダー用APIキー）と `github_pat`（Gistバックアップ用GitHub PAT）は、コンソールログのマスキング処理および設定エクスポート時のAPIキー除外処理の対象に含まれていなかった
+
+### Changed / 変更
+
+- 旧設定管理モジュール `src/utils/storageSettings.ts` を廃止し、`src/utils/storage/`（新系統）に統合。`Settings` 型・`API_KEY_FIELDS` 定数の単一ソース化（[ADR 2026-03-20](dev-docs/ADR/2026-03-20-default-settings-single-source.md) の残タスクを完了）
+
 ## [6.5.32] - 2026-07-16
 
 ### Added
