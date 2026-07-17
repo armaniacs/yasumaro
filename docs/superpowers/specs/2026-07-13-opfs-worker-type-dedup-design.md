@@ -1,8 +1,8 @@
 # Design: opfsWorker.ts Type and Migration Deduplication
 
 **Date:** 2026-07-13
+**Status:** Implemented (2026-07-13) — v6.5.27
 **PBI:** [2026-07-13-02-fix-opfs-worker-type-dedup](../pbi/2026-07-13-02-fix-opfs-worker-type-dedup.md)
-**Status:** Draft
 **Depends on:** PBI #1 (StorageBackend Adapter)
 
 ---

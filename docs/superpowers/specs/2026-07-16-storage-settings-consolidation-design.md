@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-16
 **PBI:** [2026-07-16-02-fix-architecture-knowledge-graph-findings](../../../pbi/2026-07-16-02-fix-architecture-knowledge-graph-findings.md) （PBI-1のみ）
-**Status:** Draft
+**Status:** Implemented (2026-07-16) — v6.5.33
 **Depends on:** ADR [2026-03-20-default-settings-single-source](../../../dev-docs/ADR/2026-03-20-default-settings-single-source.md)
 
 ---

@@ -1,8 +1,8 @@
 # Design: Shared Migration Module
 
 **Date:** 2026-07-13
+**Status:** Implemented (2026-07-13) — v6.5.27
 **PBI:** [2026-07-13-05-fix-shared-migration-module](../pbi/2026-07-13-05-fix-shared-migration-module.md)
-**Status:** Draft
 **Depends on:** PBI #1 (StorageBackend Adapter)
 
 ---
