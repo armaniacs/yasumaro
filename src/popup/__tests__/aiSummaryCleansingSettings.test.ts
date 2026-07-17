@@ -1,6 +1,6 @@
 /**
  * aiSummaryCleansingSettings.test.ts
- * Tests for src/popup/aiSummaryCleansingSettings.ts
+ * Tests for src/popup/aiSummaryCleansingSettingsV2.ts
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
