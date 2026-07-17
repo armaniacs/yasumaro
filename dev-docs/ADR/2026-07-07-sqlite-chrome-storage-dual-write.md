@@ -202,3 +202,12 @@ if (!legacyDualWriteEnabled) {
 ### 終了トリガー（このフラグを恒久的に除去する条件）
 
 「削除トリガー」（ADR 末尾）が全て満たされた時点で、本フラグと `saveMetadataStep` のレガシー書き込み、および `purgeLegacyStorage()` を一括削除できる。それまではデフォルト `true` のまま運用し、段階的に `false` への移行を検証する。
+
+## Implements
+
+- `src/utils/storage/types.ts` (`LEGACY_DUAL_WRITE_ENABLED` キー)
+- `src/utils/storage/defaults.ts`
+- `src/utils/storage.ts`
+- `src/background/pipeline/steps/saveMetadataStep.ts`
+- `src/utils/storageUrls.ts`
+- `src/offscreen/storageFallback.ts`

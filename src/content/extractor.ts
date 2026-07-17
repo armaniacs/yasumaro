@@ -13,6 +13,10 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+
+// Type-only import to establish graphify edge between content script and
+// the service worker's message type definitions (PBI-02-3).
+import type { ValidVisitMessage } from '../background/messageTypes.js';
 import { StorageKeys } from '../utils/storage.js';
 
 interface OWTestState {

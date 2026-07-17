@@ -2,8 +2,11 @@
  * logger.ts
  * Structured Logging Utility with Error Codes
  * Stores logs in chrome.storage.local with 7-day retention policy.
+ *
+ * @module logger
+ * @requires ./piiSanitizer.js — sanitizeLogDetails uses sanitizeRegex from piiSanitizer
+ *   to mask API keys and other sensitive values before log output.
  */
-
 import { sanitizeRegex } from './piiSanitizer.js';
 
 // エラーコード定義（SRE/Logging改善 #8）

@@ -20,6 +20,7 @@ describe('getSettings key refinement', () => {
     expect(settings).not.toHaveProperty('another_junk');
     // 暗号化用・ランタイムフラグ等の内部キーはgetSettings()の返却値に含まれない
     const internalKeys: StorageKeys[] = [
+      StorageKeys.IDB_MIGRATION_BACKUP,
       StorageKeys.ENCRYPTION_SALT,
       StorageKeys.ENCRYPTION_SECRET,
       StorageKeys.HMAC_SECRET,

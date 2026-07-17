@@ -1,37 +1,24 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Track exec calls to control behavior per SQL statement
+// Track exec calls to control behavior per SQL statement (IDB engine path,
+// used after OPFS Worker fails). Mirrors sqliteEngine.ts's SqliteEngine
+// interface (exec/query/queryValue/close) — see PBI 2026-07-16-06.
 const mockExec = vi.fn();
-let mockDbHandle = {};
 
-// Mock wa-sqlite (IDB path will use this after OPFS Worker fails)
-vi.mock('wa-sqlite/dist/wa-sqlite-async.mjs', () => ({
-  default: vi.fn().mockResolvedValue({
-    exec: mockExec,
-    open_v2: vi.fn().mockResolvedValue({}),
-    vfs_register: vi.fn(),
+vi.mock('../sqliteEngine.js', () => ({
+  createIdbEngine: vi.fn().mockImplementation(() => Promise.resolve({
+    exec: (sql: string) => mockExec(sql),
+    query: vi.fn().mockResolvedValue([]),
+    queryValue: vi.fn().mockResolvedValue(null),
     close: vi.fn().mockResolvedValue(undefined),
-  }),
+  })),
+  createEngine: vi.fn(),
 }));
 
-vi.mock('wa-sqlite', () => ({
-  SQLITE_OPEN_CREATE: 4,
-  SQLITE_OPEN_READWRITE: 2,
-  Factory: vi.fn().mockImplementation((mod: unknown) => mod),
-}));
-
-// Mock IDBBatchAtomicVFS
-vi.mock('wa-sqlite/src/examples/IDBBatchAtomicVFS.js', () => ({
-  default: class MockVFS {
-    name = 'mock-vfs';
-    constructor(_name: string) {}
-  },
-  IDBBatchAtomicVFS: class MockVFS {
-    name = 'mock-vfs';
-    constructor(_name: string) {}
-  },
-}));
+// migrateIdbIfNeeded() dynamically imports wa-sqlite only when an old IDB
+// database is detected; indexedDB.databases() below returns [] so these
+// dynamic imports are never reached in this test file's scenarios.
 
 // Mock storageFallback since init() may reference it
 vi.mock('../storageFallback.js', () => ({

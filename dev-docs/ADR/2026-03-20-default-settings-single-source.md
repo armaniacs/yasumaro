@@ -142,4 +142,11 @@ const DEFAULT_SETTINGS: Settings = {
 
 3. **警告とエラーメッセージ**
    - 接続失敗時に「ポート番号が変更されました」警告を表示
-   - 復旧手順を提供する
+    - 復旧手順を提供する
+
+## Implements
+
+- `src/utils/storage/types.ts` (Settings 型・StorageKeys の単一ソース)
+- `src/utils/storage/defaults.ts` (DEFAULT_SETTINGS の単一ソース)
+- `src/utils/storage/settingsStore.ts` (getSettings/saveSettings)
+- ~~`src/utils/storageSettings.ts`~~ (v6.5.33 で廃止・削除。全利用者を上記3ファイルに移行済み)

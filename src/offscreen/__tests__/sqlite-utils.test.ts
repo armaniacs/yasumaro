@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // We test the sanitizeFtsQuery function indirectly by importing from sqlite.ts.
 // Since sqlite.ts imports wa-sqlite WASM which can't run in Node.js, we test
@@ -15,6 +15,15 @@ import { describe, it, expect } from 'vitest';
 // doesn't cause an error in the message handler (it should pass through
 // to the sqlite module which will fail with 'DB not initialized' rather
 // than crashing).
+
+// The IDB fallback path now goes through @subframe7536/sqlite-wasm's
+// Emscripten WASM loader, which cannot fetch a real .wasm binary in jsdom
+// and aborts asynchronously outside the normal Promise chain. Mock it so
+// init() falls through to chrome.storage.local fallback deterministically.
+vi.mock('../sqliteEngine.js', () => ({
+  createIdbEngine: vi.fn().mockRejectedValue(new Error('WASM unavailable in test env')),
+  createEngine: vi.fn(),
+}));
 
 import { handleOffscreenMessage, _resetSqliteForTesting } from '../offscreen.js';
 

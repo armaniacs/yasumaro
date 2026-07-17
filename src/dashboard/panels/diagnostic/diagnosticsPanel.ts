@@ -130,7 +130,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
     }
 
     // SQLite status
-    let sqliteStatus: { initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string } | null = null;
+    let sqliteStatus: { initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string; opfsMigrationV2Done?: boolean; opfsMigrationV2LastAttemptedAt?: string | null; opfsMigrationV2CompletedAt?: string | null; opfsMigrationV2RecordCount?: number } | null = null;
     if (sqliteStats) {
       try {
         sqliteStatus = await retryWithExponentialBackoff(
@@ -149,6 +149,25 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
             : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
           sqliteStats.appendChild(makeStatRow(getMessage('diagSqliteFallback') || 'Fallback Mode', fallbackText));
           sqliteStats.appendChild(makeStatRow(getMessage('diagSqliteFts5') || 'FTS5 Search', sqliteStatus.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
+
+          // OPFS migration status (PBI: 2026-07-17-08)
+          if (sqliteStatus.opfsMigrationV2Done !== undefined) {
+            const migrationLabel = getMessage('diagOpfsMigrationV2') || 'OPFS Data Migration';
+            if (sqliteStatus.opfsMigrationV2Done) {
+              const completed = sqliteStatus.opfsMigrationV2CompletedAt
+                ? ` (${new Date(sqliteStatus.opfsMigrationV2CompletedAt).toLocaleString()})`
+                : '';
+              const count = sqliteStatus.opfsMigrationV2RecordCount
+                ? ` — ${sqliteStatus.opfsMigrationV2RecordCount} records`
+                : '';
+              sqliteStats.appendChild(makeStatRow(migrationLabel, `✓ Completed${completed}${count}`));
+            } else if (sqliteStatus.opfsMigrationV2LastAttemptedAt) {
+              const attempted = new Date(sqliteStatus.opfsMigrationV2LastAttemptedAt).toLocaleString();
+              sqliteStats.appendChild(makeStatRow(migrationLabel, `⏳ Pending (last attempt: ${attempted})`));
+            } else {
+              sqliteStats.appendChild(makeStatRow(migrationLabel, '⏳ Pending'));
+            }
+          }
 
           if (sqliteStatus.compileOptionsSource) {
             sqliteStats.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', sqliteStatus.compileOptionsSource));

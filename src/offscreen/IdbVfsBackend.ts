@@ -15,7 +15,7 @@ export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineContext) {}
 
   private ensureDb(): void {
-    if (!this.engine.dbHandle) throw new Error('IDB VFS database not initialized');
+    if (!this.engine.idbEngine) throw new Error('IDB VFS database not initialized');
   }
 
   async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
