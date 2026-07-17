@@ -1,5 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// The IDB fallback path (used when OPFS Worker is unavailable, as in this
+// jsdom test env) now goes through @subframe7536/sqlite-wasm's Emscripten
+// WASM loader, which cannot fetch a real .wasm binary here and aborts
+// asynchronously outside the normal Promise chain. Mock it so init()
+// reliably falls through to chrome.storage.local fallback, matching this
+// suite's intent (SQLite WASM unavailable -> error responses).
+vi.mock('../sqliteEngine.js', () => ({
+  createIdbEngine: vi.fn().mockRejectedValue(new Error('WASM unavailable in test env')),
+  createEngine: vi.fn(),
+}));
+
 import { handleOffscreenMessage, _resetSqliteForTesting } from '../offscreen.js';
 
 const EXTENSION_ID = 'test-extension-id';
