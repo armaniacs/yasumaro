@@ -11,6 +11,10 @@
 
 const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(e);
 
+// Type-only import to establish graphify edge between content script and
+// the service worker's message type definitions (PBI-02-3).
+import type { CheckDomainMessage } from '../background/messageTypes.js';
+
 // StorageKeys（簡易版 - content script で使用するもののみ）
 const StorageKeys = {
     DOMAIN_FILTER_CACHE: 'domain_filter_cache',
