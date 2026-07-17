@@ -137,6 +137,12 @@ async function runMigrationV2(): Promise<void> {
     const chromeStorageAvailable =
       typeof chrome !== 'undefined' && chrome.storage?.local !== undefined;
 
+    // Record attempt timestamp
+    const now = new Date().toISOString();
+    if (chromeStorageAvailable) {
+      chrome.storage.local.set({ [StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT]: now });
+    }
+
     const result = await migrateOldOpfsDb({
       isMigrationDone: async () => {
         if (!chromeStorageAvailable) return false; // rely on old-dir absence check
@@ -156,6 +162,15 @@ async function runMigrationV2(): Promise<void> {
       insertBatch: handleInsertBatch,
       deleteOldDb: deleteOldDbFile,
     });
+
+    // Record completion metadata after the orchestrator finishes
+    if (!result.skipped && !result.error && chromeStorageAvailable) {
+      const completedAt = new Date().toISOString();
+      chrome.storage.local.set({
+        [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: completedAt,
+        [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: result.migrated,
+      });
+    }
 
     if (result.skipped) {
       // Already done — nothing to log

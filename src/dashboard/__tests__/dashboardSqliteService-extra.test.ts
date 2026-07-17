@@ -122,6 +122,10 @@ describe('dashboardSqliteService — additional exports', () => {
         initialized: true, path: '/db.sqlite3', fallback: false, fts5: true,
         compileOptions: ['WASM', 'FTS5'], compileOptionsSource: 'opfs-worker',
         initError: undefined,
+        opfsMigrationV2Done: undefined,
+        opfsMigrationV2LastAttemptedAt: null,
+        opfsMigrationV2CompletedAt: null,
+        opfsMigrationV2RecordCount: 0,
       });
     });
 
@@ -131,6 +135,10 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual({
         initialized: false, path: '', fallback: true, fts5: false,
         compileOptions: undefined, compileOptionsSource: undefined, initError: undefined,
+        opfsMigrationV2Done: undefined,
+        opfsMigrationV2LastAttemptedAt: null,
+        opfsMigrationV2CompletedAt: null,
+        opfsMigrationV2RecordCount: 0,
       });
     });
 
