@@ -210,6 +210,12 @@ export const StorageKeys = {
     // OPFS fallback mode tracking
     OPFS_FALLBACK_MODE: 'opfs_fallback_mode', // true when OPFS is unavailable and using chrome.storage.local fallback
     OPFS_MIGRATION_V2_DONE: 'opfs_migration_v2_done', // true when AccessHandlePoolVFS→OPFSCoopSyncVFS migration completed
+    OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT: 'opfs_migration_v2_last_attempted_at', // ISO timestamp of last migration attempt
+    OPFS_MIGRATION_V2_COMPLETED_AT: 'opfs_migration_v2_completed_at', // ISO timestamp when migration finished
+    OPFS_MIGRATION_V2_RECORD_COUNT: 'opfs_migration_v2_record_count', // number of records migrated
+    // IDB fallback path: wa-sqlite → @subframe7536/sqlite-wasm migration (PBI: 2026-07-16-06)
+    IDB_MIGRATION_V2_DONE: 'idb_migration_v2_done', // true when wa-sqlite IDBBatchAtomicVFS→@subframe7536 IDB VFS migration completed
+    IDB_MIGRATION_BACKUP: 'idb_migration_backup', // temporary JSON snapshot of records, written before migration and cleared on success
     // SQLite retention policy (null = unlimited / no purge)
     SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
     SQLITE_MAX_RECORDS: 'sqlite_max_records',
@@ -392,6 +398,11 @@ export interface StorageKeyValues {
     [StorageKeys.MIGRATION_CATEGORY_B_DEFAULT_DONE]: boolean;
     [StorageKeys.OPFS_FALLBACK_MODE]: boolean;
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: boolean;
+    [StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT]: string | null;
+    [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: string | null;
+    [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: number;
+    [StorageKeys.IDB_MIGRATION_V2_DONE]: boolean;
+    [StorageKeys.IDB_MIGRATION_BACKUP]: string | null;
     [StorageKeys.SQLITE_RETENTION_DAYS]: number | null;
     [StorageKeys.SQLITE_MAX_RECORDS]: number | null;
     [StorageKeys.CONTENT_RETENTION_DAYS]: number | null;

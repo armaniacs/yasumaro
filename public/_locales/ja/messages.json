@@ -1400,6 +1400,9 @@
   "diagSqliteFts5": {
     "message": "FTS5 検索"
   },
+  "diagOpfsMigrationV2": {
+    "message": "OPFS データ移行"
+  },
   "diagSqliteCheckFailed": {
     "message": "SQLite 状態の確認に失敗しました。"
   },
