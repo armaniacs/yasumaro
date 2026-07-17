@@ -175,6 +175,18 @@ export function calculateReadabilityScore(element: Element): number {
 
 4. **フォールバックの閾値をユーザー設定可能にする**。20% という値はサイトによっては厳しすぎます。「クレンジングを強めにしたい」と思って設定を ON にしたのに、フォールバックで全部戻ってしまうのは本末転倒です。
 
+#### 追記: 上記4件、実際に対応しました
+
+この記事を書いたあと、4件とも実装に着手しました。着手前に既存コードを再確認したところ、記事の指摘の一部に誤りがあったので、それも含めて報告します。
+
+1. **デフォルト値とコメントの不一致**: `deepEnabled` / `linkDensityEnabled` はコメント側を実装（`true`）に合わせて修正しました。一方、記事で指摘した `enhancedHiddenEnabled` / `emptyElemEnabled` は再調査の結果、実際にはコメントも `false` で実装と一致しており、記事の誤りでした（お詫びして訂正します）。`extractor.ts` のモジュール初期値（`let deepEnabled = false` 等）は「storage読み込み完了までの一時値」であり、storageのデフォルトと一致させる設計ではないため、その旨をコメントで明示しました。
+
+2. **パターンリストの単体テスト**: 既存の `helpers.test.ts` には `isLikelyAd()` 等の誤検出防止テストが実はすでに多数あったため、パターン配列（`AD_CLASS_PATTERNS` 等）を `buildClassIdSelectors()` 経由で実際のDOM要素にマッチさせる統合的なテストを新規に追加しました。`address-book` のようなクラス名が `ad-` パターンに誤爆しないことなどを検証しています。
+
+3. **querySelectorAll の集約パス**: 「全34関数を書き換えて1回のDOM走査に集約する」という全面リファクタは、実測データがない状態で着手するとリスクがリターンに見合わないと判断し、見送りました。代わりに `buildClassIdSelectors()` が返すセレクター文字列を、不変パターンに限ってモジュール読み込み時に一度だけ構築してキャッシュする、という小規模な改善に絞りました。`querySelectorAll` の呼び出し回数自体は変わりませんが、毎回の文字列組み立て・エスケープ処理の重複コストは解消されています（ユーザー設定で動的に変わるカスタムパターンを含む箇所はキャッシュ対象から除外）。
+
+4. **フォールバック閾値の設定可能化**: `AI_SUMMARY_CLEANSING_FALLBACK_RATIO`（デフォルト20%）・`AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES`（デフォルト300バイト）を新設し、ダッシュボードの「AI要約クレンジング」設定パネルにスライダーを追加しました。ノイズの多いサイトでクレンジング効果が打ち消されてしまう問題に対して、ユーザー自身が閾値を調整できるようになりました。
+
 ---
 
 ### ユーザーの方向け: 今日からできること
@@ -349,6 +361,18 @@ After five rounds of code study, my honest take is that this cleansing system is
 3. **Consider a consolidated DOM pass**. Collect all candidates in one traversal, then sort by type, instead of 21+ independent `querySelectorAll` calls.
 
 4. **Make fallback thresholds user-configurable**. 20% works for most sites, but users who explicitly enable more cleansing toggles might want tighter control.
+
+#### Update: We Actually Fixed All Four
+
+After writing this article, we went ahead and implemented all four items. Re-checking the code before starting turned up an error in one of the original findings, which we're correcting here too.
+
+1. **Default value / comment mismatch**: We aligned the comments for `deepEnabled` / `linkDensityEnabled` with the actual implementation (`true`). However, `enhancedHiddenEnabled` / `emptyElemEnabled`, which the article originally flagged, turned out on re-inspection to already have matching comments and implementation (both `false`) — that part of the article was wrong, and we apologize for the error. We also added a comment to the module-level initial values in `extractor.ts` (e.g. `let deepEnabled = false`) clarifying that these are temporary placeholders until `chrome.storage` loads, and are not meant to match the storage defaults by design.
+
+2. **Unit tests for pattern lists**: It turned out `helpers.test.ts` already had a fair number of false-positive-prevention tests for functions like `isLikelyAd()`. What was missing was an integration-style test that applies pattern arrays (e.g. `AD_CLASS_PATTERNS`) to real DOM elements via `buildClassIdSelectors()`. We added that, verifying for example that a class name like `address-book` doesn't false-positive against the `ad-` pattern.
+
+3. **Consolidated querySelectorAll pass**: We decided against the full rewrite (restructuring all 34 functions into a single DOM traversal) — without measured performance data, the risk didn't seem to justify the payoff. Instead we made a smaller, targeted fix: caching the selector strings that `buildClassIdSelectors()` builds from immutable patterns, computed once at module load instead of rebuilt on every call. The number of `querySelectorAll` calls is unchanged, but the redundant string-building and escaping work is gone. Functions that use dynamic, user-configurable custom patterns were excluded from this caching.
+
+4. **Configurable fallback thresholds**: We added `AI_SUMMARY_CLEANSING_FALLBACK_RATIO` (default 20%) and `AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES` (default 300 bytes) as new settings, with sliders in the dashboard's AI Summary Cleansing panel. Users can now tune these thresholds themselves on noise-heavy sites where the fallback was neutralizing the cleansing effect.
 
 ---
 
