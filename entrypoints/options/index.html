@@ -132,15 +132,6 @@
           </svg>
           <span data-i18n="domainSearchTab">Domain Search</span>
         </button>
-        <button class="sidebar-nav-btn" data-panel="panel-audit-log">
-          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/>
-            <polyline points="13 2 13 9 20 9"/>
-            <line x1="9" y1="14" x2="15" y2="14"/>
-            <line x1="9" y1="18" x2="15" y2="18"/>
-          </svg>
-          <span data-i18n="auditLogTab">監査ログ</span>
-        </button>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1687,6 +1678,16 @@
           </div>
           <div id="exportLocalMarkdownStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
         </div>
+
+        <!-- Audit Log TSV Export -->
+        <div class="settings-section" style="margin-top: 16px;">
+          <h3 class="settings-section-title" data-i18n="auditLogTab">監査ログ</h3>
+          <p class="field-description">どのページ内容がどのAIプロバイダーへ送信されたかの履歴を TSV ファイルとしてダウンロードします。</p>
+          <div class="audit-log-download-section">
+            <button type="button" id="auditLogDownloadTsv" class="btn-primary" data-i18n="auditLogDownloadTsv">TSV でダウンロード</button>
+            <span id="auditLogStatus" class="audit-log-status" aria-live="polite"></span>
+          </div>
+        </div>
       </section>
 
       <!-- SQLite History Panel -->
@@ -1763,20 +1764,6 @@
           <button id="cspResetButton" class="secondary-btn" data-i18n="cspResetBtn">リセット</button>
           <div id="cspSaveMessage" class="success-message" aria-live="polite"></div>
           <div id="cspResetMessage" class="success-message" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <!-- Audit Log Panel -->
-      <section id="panel-audit-log" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="auditLogTab">監査ログ</h2>
-        <p class="panel-description">どのページ内容がどのAIプロバイダーへ送信されたかの一覧を TSV ファイルとしてダウンロードできます。</p>
-
-        <div id="auditLogEmptyState" class="audit-log-empty" hidden>記録された送信イベントはまだありません。</div>
-        <div class="audit-log-download-section">
-          <button type="button" id="auditLogDownloadTsv" class="audit-log-download-btn" aria-label="監査ログを TSV でダウンロード">
-            <span data-i18n="auditLogDownloadTsv">TSV でダウンロード</span>
-          </button>
-          <span id="auditLogStatus" class="audit-log-status" aria-live="polite"></span>
         </div>
       </section>
 
