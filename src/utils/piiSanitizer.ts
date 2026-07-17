@@ -147,7 +147,7 @@ async function _executeWithTimeout<T>(fn: () => T, timeout: number): Promise<T> 
     });
 }
 
-interface SanitizeOptions {
+export interface SanitizeOptions {
     timeout?: number;
     skipSizeLimit?: boolean;
 }
