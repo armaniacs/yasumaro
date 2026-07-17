@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.37` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.38` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -16,6 +16,18 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [6.5.38] - 2026-07-18
+
+### Fixed / 修正
+
+- **`matchWhitelistAdapter()` が汎用 `article` タグに誤マッチしていた問題を修正** — ドメインを持つアダプタ（`nhk-news`）の `detectSelector: 'article'` が、テスト環境の `<article>` 要素を含む全ページで誤発動。第2パス（DOM構造検出）でドメインを持つアダプタは特定セレクタ（`.`, `#`, `[` を含むもの）のみマッチするよう変更。汎用タグ名セレクタは不要なホワイトリスト抽出の早期リターンを防ぐ（54件のテスト失敗を解消）
+- **`convertFallbackRecord()` に不足していた 20+ フィールドを追加** — `gist_synced`、`content`、`masked_count`、`cleansed_reason`、`ai_provider`、`ai_model`、`ai_duration_ms`、`obsidian_duration_ms`、`sent_tokens`、`received_tokens`、`original_tokens`、`cleansed_tokens`、`page_bytes`、`candidate_bytes`、`original_bytes`、`cleansed_bytes`、`ai_summary_original_bytes`、`ai_summary_cleansed_bytes`、`extracted_sentences_bytes`、`extracted_sentences_original_bytes`、`fallback_triggered` のマッピングを追加（フォールバックデータの欠損を防止）
+- **`IdbVfsBackend` に ORDER BY インジェクション対策を追加** — `ALLOWED_ORDER_COLUMNS` / `ALLOWED_ORDER_DIRECTIONS` による許可リスト検証を実装。無効な値はエラーレスポンスを返す
+
+### Refactored / リファクタリング
+
+- **`aiSummaryCleansingSettings.ts`（V1）を削除** — 後方互換のため残していた旧モジュールを完全に除去。全参照を `aiSummaryCleansingSettingsV2.ts` に統一し、テストの参照パスも更新
 
 ## [6.5.37] - 2026-07-18
 
