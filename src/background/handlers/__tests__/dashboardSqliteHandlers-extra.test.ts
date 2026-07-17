@@ -22,6 +22,14 @@ vi.mock('../../../utils/storage.js', () => ({
   },
   getSettings: vi.fn(),
   DEFAULT_SETTINGS: {} as any,
+  API_KEY_FIELDS: [
+    'obsidian_api_key',
+    'gemini_api_key',
+    'openai_api_key',
+    'openai_2_api_key',
+    'provider_api_key',
+    'github_pat',
+  ],
 }));
 
 import { handleDashboardSqlite } from '../dashboardSqliteHandlers.js';

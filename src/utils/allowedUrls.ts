@@ -6,7 +6,7 @@
 import { normalizeUrl } from './urlUtils.js';
 import { errorMessage } from './errorUtils.js';
 import type { Source } from './types.js';
-import type { Settings } from './storageSettings.js';
+import type { Settings } from './storage.js';
 
 /**
  * 設定から許可されたURLのリストを構築

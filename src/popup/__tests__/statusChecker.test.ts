@@ -82,6 +82,14 @@ vi.mock('../../utils/storage.js', () => {
     DEFAULT_SETTINGS: {},
     getSettings: mockGetSettings,
     getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps,
+    API_KEY_FIELDS: [
+      'obsidian_api_key',
+      'gemini_api_key',
+      'openai_api_key',
+      'openai_2_api_key',
+      'provider_api_key',
+      'github_pat'
+    ],
   };
 });
 
