@@ -1406,6 +1406,12 @@
   "diagSqliteCheckFailed": {
     "message": "SQLite 状態の確認に失敗しました。"
   },
+  "auditLogTab": {
+    "message": "監査ログ"
+  },
+  "auditLogDownloadTsv": {
+    "message": "TSV でダウンロード"
+  },
   "testSqliteBtn": {
     "message": "SQLite テスト"
   },

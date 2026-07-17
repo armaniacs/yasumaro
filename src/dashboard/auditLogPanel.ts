@@ -1,53 +1,70 @@
 /**
  * auditLogPanel.ts
- * Displays cloud AI provider send events (audit log) in the dashboard.
+ * Legacy audit log panel — simplified to TSV download only.
  */
 
 import { queryAuditLogs } from './dashboardSqliteService.js';
-import { getMessage } from '../popup/i18n.js';
 
-function formatTimestamp(ms: number): string {
-  return new Date(ms).toLocaleString();
+function todayYyyyMmDd(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export async function initAuditLogPanel(): Promise<void> {
-  const list = document.getElementById('auditLogList');
+  const downloadBtn = document.getElementById('auditLogDownloadTsv') as HTMLButtonElement | null;
   const emptyState = document.getElementById('auditLogEmptyState') as HTMLElement | null;
-  if (!list) return;
+  const statusEl = document.getElementById('auditLogStatus') as HTMLElement | null;
 
-  const result = await queryAuditLogs({ limit: 100, offset: 0 });
-  const rows = result?.rows ?? [];
+  if (!downloadBtn) return;
 
-  list.innerHTML = '';
+  const result = await queryAuditLogs({ limit: 1, offset: 0 });
+  const total = result?.total ?? 0;
 
-  if (rows.length === 0) {
+  if (total === 0) {
     if (emptyState) emptyState.hidden = false;
+    downloadBtn.disabled = true;
     return;
   }
 
   if (emptyState) emptyState.hidden = true;
 
-  rows.forEach((entry) => {
-    const row = document.createElement('div');
-    row.className = 'audit-log-row';
+  downloadBtn.addEventListener('click', async () => {
+    downloadBtn.disabled = true;
+    if (statusEl) statusEl.textContent = '取得中...';
 
-    const providerSpan = document.createElement('span');
-    providerSpan.className = 'audit-log-provider';
-    providerSpan.textContent = entry.provider;
+    try {
+      const data = await queryAuditLogs({ limit: 100000, offset: 0 });
+      const rows = data?.rows ?? [];
 
-    const urlSpan = document.createElement('span');
-    urlSpan.className = 'audit-log-url';
-    urlSpan.textContent = entry.url;
+      if (rows.length === 0) {
+        if (statusEl) statusEl.textContent = 'データがありません';
+        downloadBtn.disabled = false;
+        return;
+      }
 
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'audit-log-timestamp';
-    timeSpan.textContent = formatTimestamp(entry.created_at);
+      // Build TSV
+      const header = 'id\tprovider\turl\tcreated_at';
+      const lines = rows.map((r) =>
+        `${r.id}\t${r.provider}\t${r.url}\t${new Date(r.created_at).toISOString()}`
+      );
+      const tsv = header + '\n' + lines.join('\n') + '\n';
 
-    row.appendChild(providerSpan);
-    row.appendChild(urlSpan);
-    row.appendChild(timeSpan);
-    list.appendChild(row);
+      const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `yasumaro-audit-log-${todayYyyyMmDd()}.tsv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      if (statusEl) statusEl.textContent = `${rows.length} 件をダウンロードしました`;
+    } catch (err) {
+      if (statusEl) statusEl.textContent = `エラー: ${String(err)}`;
+    } finally {
+      downloadBtn.disabled = false;
+    }
   });
 }
-
-void getMessage; // reserved for future i18n labels (provider/url/timestamp column headers)
