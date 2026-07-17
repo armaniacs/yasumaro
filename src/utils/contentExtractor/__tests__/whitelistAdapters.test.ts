@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { WHITELIST_ADAPTERS, matchWhitelistAdapter, extractWhitelistedContent } from '../whitelistAdapters.js';
 
 describe('WHITELIST_ADAPTERS definitions', () => {
-  it('defines exactly 8 adapters', () => {
-    expect(WHITELIST_ADAPTERS).toHaveLength(8);
+  it('defines exactly 9 adapters', () => {
+    expect(WHITELIST_ADAPTERS).toHaveLength(9);
   });
 
   it('each adapter has required fields', () => {
@@ -196,6 +196,29 @@ describe('extractWhitelistedContent', () => {
     expect(result).toContain('また行きたい');
     expect(result).not.toContain('★4.5');
     expect(result).not.toContain('2026/3/15訪問');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts Wikipedia article body and excludes navigation/edit links', () => {
+    document.body.innerHTML = `
+      <div id="mw-content-text">
+        <div class="mw-parser-output">
+          <p>これはWikipediaの記事本文です。非常に有用な情報が含まれています。</p>
+          <div class="toc">目次</div>
+          <p>さらに続きの記事本文があります。独自研究なしで記述されています。</p>
+          <div class="mw-editsection">[編集]</div>
+          <div class="reflist">[1] 出典</div>
+          <div class="navbox">関連プロジェクト</div>
+        </div>
+      </div>`;
+    const wikipedia = WHITELIST_ADAPTERS.find(a => a.name === 'wikipedia')!;
+    const result = extractWhitelistedContent(document.body, wikipedia);
+    expect(result).toContain('これはWikipediaの記事本文です');
+    expect(result).toContain('さらに続きの記事本文があります');
+    expect(result).not.toContain('[編集]');
+    expect(result).not.toContain('出典');
+    expect(result).not.toContain('関連プロジェクト');
+    expect(result).not.toContain('目次');
     document.body.innerHTML = '';
   });
 });
