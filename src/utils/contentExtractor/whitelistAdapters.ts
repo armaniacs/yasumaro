@@ -69,6 +69,14 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
         contentSelectors: ['.rvw-item__rvw-comment'],
         metadataPatterns: [/★\s*[\d.]+/g, /\d{4}\/\d{1,2}\/\d{1,2}訪問/g],
     },
+    {
+        name: 'wikipedia',
+        domains: ['wikipedia.org'],
+        detectSelector: '#mw-content-text',
+        contentSelectors: ['div.mw-parser-output'],
+        excludeSelectors: ['.mw-editsection', '.reflist', '.navbox', '.sistersitebox', '.noprint', '.mw-empty-elt', '.toc'],
+        metadataPatterns: [],
+    },
 ];
 
 /**
@@ -150,9 +158,16 @@ export function extractWhitelistedContent(root: Element, adapter: WhitelistAdapt
         ? adapter.metadataPatterns
         : DEFAULT_METADATA_PATTERNS;
 
+    const excludeSelector = adapter.excludeSelectors?.join(', ') || '';
+
     const parts: string[] = [];
     elements.forEach(elem => {
-        const text = (elem.textContent || '').trim();
+        // Clone the element to avoid mutating the live DOM when excluding sub-elements
+        const clone = elem.cloneNode(true) as Element;
+        if (excludeSelector) {
+            clone.querySelectorAll(excludeSelector).forEach(excluded => excluded.remove());
+        }
+        const text = (clone.textContent || '').trim();
         if (text) {
             parts.push(stripExtractionMetadata(text, patterns));
         }
