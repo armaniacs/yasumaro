@@ -17,6 +17,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Refactored / リファクタリング
+
+- **sqliteHistoryPanel の関数シグネチャを引数化** — `updateTagFilterBar()` の global state/document 依存を除去し `(container, activeTagFilter, onClear)` の3引数化。`renderCalendarNav` / `renderEntryList` / `renderPagination` / `updateBulkBar` は既に引数化済みのため変更不要。`_getMonthDateRange` / `updateTagFilterBar` / `renderCalendarNav` を `_test` エクスポート経由で単体テスト可能にし、11 件のテストを追加（[PBI: 2026-07-13-03](pbi/2026-07-13-03-fix-sqlite-history-panel-deepening.md)）
+
+### Docs / ドキュメント
+
+- **ADR の implements トレーサビリティ改善** — 主要5 ADR に `## Implements` セクションを追加し、コード↔ドキュメント間の参照を明示化。`npm run lint:adr-links` で全33 ADR の参照パスを自動検証可能に
+- **Content Script 注入フロー可視化** — `dev-docs/content-script-injection-flow.md` を新設し、loader.ts → extractor.ts → service-worker.ts の注入経路とメッセージ型一覧を記載
+
+### Added / 追加
+
+- **知識グラフ依存エッジの可視化改善** — `src/content/loader.ts` / `src/content/extractor.ts` に `import type` を追加し content script ↔ SW 間のメッセージ型依存を graphify で捕捉可能に。`src/utils/piiSanitizer.ts` の `SanitizeOptions` を export し `logger.ts` との依存エッジを確立
+
+### Changed / 変更
+
+- `loader-no-static-imports` テストで TypeScript の `import type`（コンパイル時消去・ランタイム影響なし）を許可
+
+### Docs / ドキュメント
+
+- **ADR の implements トレーサビリティ改善** — 主要5 ADR に `## Implements` セクションを追加し、コード↔ドキュメント間の参照を明示化。`npm run lint:adr-links` で全33 ADR の参照パスを自動検証可能に
+- **Content Script 注入フロー可視化** — `dev-docs/content-script-injection-flow.md` を新設し、loader.ts → extractor.ts → service-worker.ts の注入経路とメッセージ型一覧を記載
+- **sqliteHistoryPanel 深化の設計ドキュメント完了** — [設計スペック](docs/superpowers/specs/2026-07-13-sqlite-history-panel-deepening-design.md) の全項目を実装済みとしてマーク
+
 ## [6.5.34] - 2026-07-17
 
 ### Refactored / リファクタリング

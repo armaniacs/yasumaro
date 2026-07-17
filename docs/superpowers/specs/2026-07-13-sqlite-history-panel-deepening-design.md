@@ -1,8 +1,8 @@
 # Design: sqliteHistoryPanel.ts Deepening — Function Signature Parameterization
 
 **Date:** 2026-07-13
+**Status:** Implemented (2026-07-17)
 **PBI:** [2026-07-13-03-fix-sqlite-history-panel-deepening](../pbi/2026-07-13-03-fix-sqlite-history-panel-deepening.md)
-**Status:** Draft (revised after deep dig — 2026-07-13)
 
 ---
 

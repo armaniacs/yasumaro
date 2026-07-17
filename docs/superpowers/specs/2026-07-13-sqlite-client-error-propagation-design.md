@@ -1,8 +1,8 @@
 # Design: sqliteClient.call() Error Propagation
 
 **Date:** 2026-07-13
+**Status:** Implemented (2026-07-13) — v6.5.27
 **PBI:** [2026-07-13-04-fix-sqlite-client-error-propagation](../pbi/2026-07-13-04-fix-sqlite-client-error-propagation.md)
-**Status:** Draft
 
 ---
 
