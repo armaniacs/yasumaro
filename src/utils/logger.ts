@@ -4,10 +4,12 @@
  * Stores logs in chrome.storage.local with 7-day retention policy.
  *
  * @module logger
- * @requires ./piiSanitizer.js — sanitizeLogDetails uses sanitizeRegex from piiSanitizer
- *   to mask API keys and other sensitive values before log output.
+ * @requires ./piiSanitizer.js — sanitizeLogDetails uses sanitizeRegex to mask
+ *   API keys and other sensitive values before log output.
+ *   See also: import type { SanitizeOptions } below for graphify edge.
  */
 import { sanitizeRegex } from './piiSanitizer.js';
+import type { SanitizeOptions } from './piiSanitizer.js';
 
 // エラーコード定義（SRE/Logging改善 #8）
 export const ErrorCode = {
