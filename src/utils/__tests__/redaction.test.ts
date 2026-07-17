@@ -113,6 +113,20 @@ describe('redactSensitiveData', () => {
     expect(result.hmac_secret).toBe('[REDACTED]');
     expect(result.normal).toBe('value');
   });
+
+  it('provider_api_key フィールドを検出する', () => {
+    const data = { provider_api_key: 'dynamic_secret', normal: 'value' };
+    const result = redactSensitiveData(data) as Record<string, unknown>;
+    expect(result.provider_api_key).toBe('[REDACTED]');
+    expect(result.normal).toBe('value');
+  });
+
+  it('github_pat フィールドを検出する', () => {
+    const data = { github_pat: 'ghp_secret123', normal: 'value' };
+    const result = redactSensitiveData(data) as Record<string, unknown>;
+    expect(result.github_pat).toBe('[REDACTED]');
+    expect(result.normal).toBe('value');
+  });
 });
 
 describe('consoleSecureError', () => {

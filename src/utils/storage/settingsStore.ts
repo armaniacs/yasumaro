@@ -20,7 +20,7 @@ import type { StorageKey, StorageKeyValues, Settings } from './types.js';
 export { purgeLegacyStorage } from './savedUrlStore.js';
 
 // 暗号化対象のAPIキーフィールド
-const API_KEY_FIELDS: StorageKey[] = [
+export const API_KEY_FIELDS: StorageKey[] = [
     StorageKeys.OBSIDIAN_API_KEY,
     StorageKeys.GEMINI_API_KEY,
     StorageKeys.OPENAI_API_KEY,

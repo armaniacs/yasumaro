@@ -3,10 +3,9 @@
  * Settings export and import functionality
  */
 
-import { getSettings, saveSettings, getOrCreateHmacSecret, Settings } from './storage.js';
+import { getSettings, saveSettings, getOrCreateHmacSecret, Settings, API_KEY_FIELDS } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto.js';
 import { generateSalt } from './crypto.js';
-import { API_KEY_FIELDS } from './storageSettings.js';
 import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 
@@ -57,9 +56,9 @@ function sanitizeSettingsForExport(settings: Settings): Settings {
  */
 async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Settings> {
   const existingSettings = await getSettings();
-  const merged = { ...importedSettings };
+  const merged: Settings = { ...importedSettings };
   for (const field of API_KEY_FIELDS) {
-    merged[field] = existingSettings[field];
+    (merged as Record<string, unknown>)[field] = existingSettings[field];
   }
   return merged;
 }
