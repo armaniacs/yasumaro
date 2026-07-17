@@ -79,7 +79,7 @@ const DEFAULT_SETTINGS: Settings = {
 - [x] テスト確認 (98件全パス)
 - [ ] マイグレーション実装（旧設定 → StorageKeys）
 - [ ] テスト追加（マイグレーション検証）
-- [ ] Linkage: `storageSettings.ts`使用コード修正
+- [x] Linkage: `storageSettings.ts`使用コード修正
 - [ ] 統合テスト実行・検証
 - [ ] ドキュメント更新
 - [ ] リリースノート記載（破壊的変更の警告を含める）
@@ -88,7 +88,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 - **Proposed**: 2026-03-20
 - **Approved**: 2026-03-20
-- **Implemented**: Phase 2（単一ソース化 - 完了） / Phase 3（マイグレーション強化 - 待機中）
+- **Implemented**: Phase 2（単一ソース化 - 完了） / Phase 3（storageSettings.ts 廃止・API_KEY_FIELDS 6フィールド化 - 完了、2026-07-16） / マイグレーション強化 - 待機中
 - **Superseded By** -
 
 ## Implementation Summary
