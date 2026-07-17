@@ -1637,26 +1637,26 @@
 
       <!-- Export Logs Panel -->
       <section id="panel-export-logs" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
+        <h2 class="panel-title" data-i18n="exportLogsTab">ログをエクスポート</h2>
         <p class="panel-description" data-i18n="exportLogsDesc">
-          Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file.
+          ブラウジング履歴を JSON、Markdown、CSV、または SQLite データベースファイルとしてエクスポートします。
         </p>
         <div id="export-logs-container">
-          <div class="form-group">
-            <button id="export-json-btn" class="btn-primary" data-i18n="exportJsonBtn">Export as JSON (.json)</button>
-            <p class="field-description" data-i18n="exportJsonDesc">JSON format with all fields. Can be re-imported.</p>
+          <div class="settings-section">
+            <button id="export-json-btn" class="btn-primary" data-i18n="exportJsonBtn">JSON としてエクスポート (.json)</button>
+            <p class="field-description" data-i18n="exportJsonDesc">全フィールドを含む JSON 形式。再インポート可能です。</p>
           </div>
-          <div class="form-group">
-            <button id="export-markdown-btn" class="btn-primary" data-i18n="exportMarkdownBtn">Export as Markdown (.md)</button>
-            <p class="field-description" data-i18n="exportMarkdownDesc">Obsidian-compatible Markdown with YAML frontmatter.</p>
+          <div class="settings-section">
+            <button id="export-markdown-btn" class="btn-primary" data-i18n="exportMarkdownBtn">Markdown としてエクスポート (.md)</button>
+            <p class="field-description" data-i18n="exportMarkdownDesc">YAML フロントマット付きの Obsidian 互換 Markdown。</p>
           </div>
-          <div class="form-group">
-            <button id="export-csv-btn" class="btn-primary" data-i18n="exportCsvBtn">Export as CSV (.csv)</button>
-            <p class="field-description" data-i18n="exportCsvDesc">UTF-8 BOM CSV for Excel compatibility.</p>
+          <div class="settings-section">
+            <button id="export-csv-btn" class="btn-primary" data-i18n="exportCsvBtn">CSV としてエクスポート (.csv)</button>
+            <p class="field-description" data-i18n="exportCsvDesc">Excel 互換の UTF-8 BOM CSV。</p>
           </div>
-          <div class="form-group">
-            <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">Export as Database (.db)</button>
-            <p class="field-description" data-i18n="exportDbDesc">Raw SQLite database file. Only available with OPFS storage.</p>
+          <div class="settings-section">
+            <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">データベースとしてエクスポート (.db)</button>
+            <p class="field-description" data-i18n="exportDbDesc">SQLite データベースファイル。OPFS ストレージ使用時のみ利用可能。</p>
           </div>
           <div id="export-status" class="save-success" style="display:none"></div>
         </div>
