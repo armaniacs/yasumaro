@@ -16,7 +16,11 @@ const MAX_PENDING_RECORDS = 500;
 
 interface SqliteClientLike {
   insert(record: BrowsingLogRecord): Promise<{ id: number } | null>;
+  insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null>;
 }
+
+/** Number of records to insert in a single offscreen round-trip. */
+const BATCH_SIZE = 50;
 
 async function loadQueue(): Promise<BrowsingLogRecord[]> {
   const result = await chrome.storage.local.get(PENDING_SQLITE_RECORDS_KEY);
@@ -50,22 +54,37 @@ export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<v
 }
 
 /**
- * Retry every queued record. Records that succeed are removed from the
- * queue; records that fail again stay queued for the next flush.
+ * Split an array into chunks of at most `size` items.
+ * Exported for unit testing.
+ */
+export function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * Retry every queued record in chunks. Records from chunks that succeed
+ * are removed from the queue; records from chunks that fail stay queued
+ * for the next flush.
  */
 export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
   const queue = await loadQueue();
   if (queue.length === 0) return;
 
   const stillPending: BrowsingLogRecord[] = [];
-  for (const record of queue) {
+  const chunks = chunkArray(queue, BATCH_SIZE);
+
+  for (const chunk of chunks) {
     try {
-      const result = await sqliteClient.insert(record);
+      const result = await sqliteClient.insertBatch(chunk);
       if (!result) {
-        stillPending.push(record);
+        stillPending.push(...chunk);
       }
     } catch {
-      stillPending.push(record);
+      stillPending.push(...chunk);
     }
   }
 
