@@ -44,7 +44,7 @@ vi.mock('../settingsUiHelper.js', () => ({
   showStatus: mockShowStatus,
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 

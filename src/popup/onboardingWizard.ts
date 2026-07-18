@@ -2,7 +2,7 @@ import { getSettings, saveSettings } from '../utils/storage.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { focusTrapManager } from './utils/focusTrap.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { applyI18n, getMessage } from './i18n.js';
+import { applyI18n, getMessage } from '../utils/i18n.js';
 
 export type WizardType = 'obsidian' | 'sqlite' | 'minimal';
 

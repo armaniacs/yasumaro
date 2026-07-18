@@ -18,7 +18,7 @@ import {
     ExportFileData
 } from '../utils/settingsExportImport.js';
 import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { loadDomainSettings } from './domainFilter.js';
 import { loadPrivacySettings } from './privacySettings.js';
 

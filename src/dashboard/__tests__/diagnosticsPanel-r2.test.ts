@@ -13,7 +13,7 @@ import { initDiagnosticsPanel } from '../diagnosticsPanel.js';
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => key,
 }));
 

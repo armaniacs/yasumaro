@@ -1,4 +1,4 @@
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';

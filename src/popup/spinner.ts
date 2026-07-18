@@ -4,7 +4,7 @@
  * UF-403 Loading Spinner Feature
  */
 
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 /**
  * Show loading spinner

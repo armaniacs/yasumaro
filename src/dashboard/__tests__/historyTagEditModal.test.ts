@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key) => key),
 }));
 

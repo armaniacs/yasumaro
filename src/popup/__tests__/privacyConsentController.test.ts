@@ -19,7 +19,7 @@ const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
 const mockChromeStorageSet = vi.hoisted(() => vi.fn());
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 

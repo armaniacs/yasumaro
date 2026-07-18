@@ -7,7 +7,7 @@ import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 
 /** Fixed dummy text used to preview PII masking behavior (M4). Never sent anywhere. */

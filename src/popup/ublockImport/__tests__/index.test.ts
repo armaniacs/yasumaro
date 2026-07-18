@@ -68,7 +68,7 @@ vi.mock('../../../utils/storage.js', () => ({
   saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string, subs?: Record<string, string>) => {
     const msgs: Record<string, string> = {
       fileLoaded: 'Loaded "{filename}"',

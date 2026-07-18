@@ -30,7 +30,7 @@ vi.mock('../settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 

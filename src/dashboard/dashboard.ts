@@ -7,7 +7,7 @@
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } from '../utils/storage.js';
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';

@@ -4,7 +4,7 @@
  */
 
 import { isValidUrl } from './validation.js';
-import { getMessage } from '../i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 
 interface Source {

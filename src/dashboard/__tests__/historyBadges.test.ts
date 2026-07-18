@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge } from '../historyBadges.js';
 
-vi.mock('../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => key,
 }));
 

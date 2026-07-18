@@ -5,7 +5,7 @@
 
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls } from '../utils/storage.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 async function initTrancoUpdateNotification(): Promise<void> {
     const banner = document.getElementById('trancoUpdateBanner');

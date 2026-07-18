@@ -1,6 +1,9 @@
 /**
  * i18nヘルパー
  * Chrome Extensionのi18n APIを使用して翻訳を適用する
+ *
+ * popup と options（dashboard）で重複していた i18n 処理を統合した共通モジュール。
+ * 型シグネチャ、置換処理、フォールバック挙動は popup 版の挙動を採用している。
  */
 
 /**
@@ -9,14 +12,14 @@
  * @param {Object} substitutions - 置換パラメータ（オプション）
  * @returns {string} 翻訳された文字列
  */
-export function getMessage(key: string, substitutions: any = null): string {
+export function getMessage(key: string, substitutions: string | Array<string | number> | Record<string, string | number> | null = null): string {
   const message = chrome.i18n.getMessage(key);
   if (!message) return "";
 
   if (substitutions && typeof substitutions === 'object' && !Array.isArray(substitutions)) {
     // Handle named substitutions (e.g. {count: 5})
     return message.replace(/\{(\w+)\}/g, (match, p1) => {
-      return substitutions[p1] !== undefined ? substitutions[p1] : match;
+      return substitutions[p1] !== undefined ? String(substitutions[p1]) : match;
     });
   }
 
@@ -32,7 +35,7 @@ export function getMessage(key: string, substitutions: any = null): string {
 }
 
 // getUserLocaleとisRTLをlocaleUtilsから再エクスポート
-import { getUserLocale, isRTL } from '../utils/localeUtils.js';
+import { getUserLocale, isRTL } from './localeUtils.js';
 export { getUserLocale, isRTL };
 
 /**
@@ -102,6 +105,10 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     }
 
     const translatedText = getMessage(key, args);
+
+    // Guard: if translation is empty (key missing from messages.json),
+    // preserve the original HTML fallback text
+    if (!translatedText) return;
 
     if (htmlEl.tagName === 'INPUT' || htmlEl.tagName === 'TEXTAREA') {
       // 入力要素のプレースホルダー

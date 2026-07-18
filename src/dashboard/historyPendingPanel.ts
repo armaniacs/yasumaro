@@ -1,4 +1,4 @@
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { removePendingPages } from '../utils/pendingStorage.js';
 import type { PendingPage } from '../utils/pendingStorage.js';
 import { renderPendingReason } from './historyFilters.js';
