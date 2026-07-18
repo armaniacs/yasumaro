@@ -16,11 +16,10 @@
 
 | # | PBI | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| 1 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
-| 2 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
+| 1 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
 
 **所見**:
-- #1〜2（🔴あり）は最後に回す。特に#2（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
+- #1（🔴あり）は最後に回す。SessionStore 移行は容量制限・offscreen アクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを推奨
 
 ---
 
@@ -33,7 +32,6 @@
 データ整合性・移行:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | M10 | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり（バッチ化で「一部成功」ハンドリングが失われるリスク。PBI内で部分成功を維持する設計を明記済み） |
 
 ストレージ・パフォーマンス:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -98,12 +96,13 @@ UI・ドキュメント:
 - 2026-07-18-16-feat-plural-locale-support.md
 - 2026-07-18-36-feat-automate-third-party-notices.md
 - 2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md
+- 2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md
 - 2026-07-18-StorageBackend設計ドキュメント更新
 
 ## 集計
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 2 |
-| アーカイブ済み | 58 |
-| **合計（archive除く）** | 2 |
+| ⬜ 未着手 | 1 |
+| アーカイブ済み | 59 |
+| **合計（archive除く）** | 1 |
