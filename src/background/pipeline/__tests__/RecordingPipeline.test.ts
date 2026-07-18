@@ -94,7 +94,7 @@ import * as permissionManager from '../../../utils/permissionManager.js';
 import * as logger from '../../../utils/logger.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import { RecordingPipeline } from '../RecordingPipeline.js';
+import { RecordingPipeline, createRecordingPipeline } from '../RecordingPipeline.js';
 
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
 
@@ -524,6 +524,35 @@ describe('RecordingPipeline', () => {
           errorMessage: 'Step crashed',
         })
       );
+    });
+  });
+
+  describe('createRecordingPipeline ファクトリ', () => {
+    it('渡された依存関係を使って RecordingPipeline インスタンスを生成する', () => {
+      const getPrivacyInfo = makeGetPrivacyInfo();
+      const obsidian = makeObsidian() as any;
+      const aiService = makeAiClient() as any;
+      const sqliteClient = { query: vi.fn() } as any;
+
+      const pipeline = createRecordingPipeline({
+        getPrivacyInfoWithCache: getPrivacyInfo,
+        obsidian,
+        aiService,
+        sqliteClient,
+      });
+
+      expect(pipeline).toBeInstanceOf(RecordingPipeline);
+    });
+
+    it('aiService と sqliteClient を省略しても RecordingPipeline を生成する', () => {
+      const pipeline = createRecordingPipeline({
+        getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        obsidian: makeObsidian() as any,
+        aiService: null,
+        sqliteClient: null,
+      });
+
+      expect(pipeline).toBeInstanceOf(RecordingPipeline);
     });
   });
 });

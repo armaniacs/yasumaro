@@ -14,7 +14,7 @@ import { SessionStore, SESSION_KEYS } from './sessionStore.js';
 import type { RecordingResult } from '../messaging/types.js';
 
 // RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
-import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -392,13 +392,13 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    // Delegate to RecordingPipeline
-    const pipeline = new RecordingPipeline(
-      this.getPrivacyInfoWithCache.bind(this),
-      this.obsidian,
-      this.aiService,
-      this.sqliteClient
-    );
+    // Delegate to RecordingPipeline via factory
+    const pipeline = createRecordingPipeline({
+      getPrivacyInfoWithCache: this.getPrivacyInfoWithCache.bind(this),
+      obsidian: this.obsidian,
+      aiService: this.aiService,
+      sqliteClient: this.sqliteClient
+    });
 
     // Get settings with cache
     const settings = await this.getSettingsWithCache();
