@@ -81,6 +81,7 @@ import {
 
 import { StorageKeys } from '../storage/types.js';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
+import { STORAGE_QUOTA_BYTES } from '../storage/quota.js';
 
 describe('isDomainInWhitelist', () => {
   it('returns true for exact match in whitelist', () => {
@@ -404,12 +405,17 @@ describe('URL set functions', () => {
     });
 
     describe('PBI 2026-07-09-10: saveSettings quota-exceeded health check integration', () => {
+      beforeEach(() => {
+        // Simulate an extension without unlimitedStorage so the quota check runs.
+        (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
+      });
+
       it('skips destructive legacy cleanup and fails the save when SQLite is unhealthy', async () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
           savedUrls: ['a', 'b'],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(6 * 1024 * 1024);
+        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(
           saveSettings({} as any, false, async () => false)
@@ -425,7 +431,7 @@ describe('URL set functions', () => {
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
         vi.spyOn(chrome.storage.local, 'getBytesInUse')
-          .mockResolvedValueOnce(6 * 1024 * 1024) // before cleanup: over quota
+          .mockResolvedValueOnce(STORAGE_QUOTA_BYTES + 1024 * 1024) // before cleanup: over quota
           .mockResolvedValue(1024); // after cleanup: back under quota
 
         await saveSettings({} as any, false, async () => true);
@@ -442,7 +448,7 @@ describe('URL set functions', () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(6 * 1024 * 1024);
+        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(saveSettings({} as any)).rejects.toThrow();
 
