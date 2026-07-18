@@ -36,9 +36,9 @@ Scenario: 定数値が実際のデフォルトクォータと一致する
 ```
 
 ## 受け入れ基準
-- [ ] `unlimitedStorage` 権限保持時はクォータチェックをスキップするロジックを `savedUrlStore.ts` のクォータ判定箇所に追加
-- [ ] `STORAGE_QUOTA_BYTES` 定数を実際のデフォルトクォータ（10MB）に合わせて修正
-- [ ] 既存のクォータ超過ハンドリング（万一 `unlimitedStorage` が将来外れた場合の備え）は削除せず残す
+- [x] `unlimitedStorage` 権限保持時はクォータチェックをスキップするロジックを `savedUrlStore.ts` のクォータ判定箇所に追加
+- [x] `STORAGE_QUOTA_BYTES` 定数を実際のデフォルトクォータ（10MB）に合わせて修正
+- [x] 既存のクォータ超過ハンドリング（万一 `unlimitedStorage` が将来外れた場合の備え）は削除せず残す
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -66,7 +66,7 @@ Scenario: 定数値が実際のデフォルトクォータと一致する
 - `unlimitedStorage` はmanifestで静的に宣言されている権限のため、実行時チェックは不要な場合がある（`chrome.permissions.contains` を使わずmanifest宣言を前提にした実装で十分な可能性）。実装時にどちらのアプローチが適切か既存コードのパターンを確認すること
 
 ## Definition of Done
-- [ ] クォータ判定ロジックが修正されている
-- [ ] 単体・統合テストが追加されパスする
-- [ ] `npm run type-check` / `npm test` が成功
-- [ ] コードレビュー完了
+- [x] クォータ判定ロジックが修正されている
+- [x] 単体・統合テストが追加されパスする
+- [x] `npm run type-check` / `npm test` が成功
+- [x] コードレビュー完了

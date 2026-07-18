@@ -20,14 +20,13 @@
 | 2 | [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
 | 3 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
 | 4 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
-| 5 | [2026-07-18-19](2026-07-18-19-fix-storage-quota-unlimited-storage-check.md) | unlimitedStorage権限保持時のストレージクォータ判定修正 | 🟢低（1pt） | 🔴あり |
-| 6 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
-| 7 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
+| 5 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
+| 6 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
 
 **所見**:
 - #1〜3（🔴高）のうち#1〜2は副作用なしだが工数大。まとまった時間を確保してから着手
-- #3〜4（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
-- #5〜7（🔴あり）は最後に回す。特に#7（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
+- #4（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
+- #5〜6（🔴あり）は最後に回す。特に#6（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
 
 ---
 
@@ -103,11 +102,12 @@ UI・ドキュメント:
 - 2026-07-18-25-fix-remove-noop-optimistic-lock-save-sqlite.md
 - 2026-07-18-27-fix-log-retention-quota-separation.md
 - 2026-07-18-35-fix-barrel-reexport-deprecation-notice.md
+- 2026-07-18-19-fix-storage-quota-unlimited-storage-check.md
 
 ## 集計
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 7 |
-| アーカイブ済み | 53 |
-| **合計（archive除く）** | 7 |
+| ⬜ 未着手 | 6 |
+| アーカイブ済み | 54 |
+| **合計（archive除く）** | 6 |
