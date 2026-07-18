@@ -4,7 +4,22 @@
  * privacy.ts のユニットテスト
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../popup/i18n.js', () => ({
+    applyI18n: vi.fn(),
+    setHtmlLangAndDir: vi.fn(),
+    translatePageTitle: vi.fn(),
+    getMessage: vi.fn((key: string) => {
+        const messages: Record<string, string> = {
+            loading: 'Loading...',
+            privacyPolicyTitle: 'Privacy Policy — Yasumaro',
+            privacyPolicyLoadError: 'Failed to load the privacy policy.',
+        };
+        return messages[key] || key;
+    }),
+}));
+
 import {
     escapeHtml,
     renderMarkdown,
@@ -336,7 +351,7 @@ describe('loadPrivacyPolicy', () => {
         await loadPrivacyPolicy('content');
 
         expect(document.getElementById('content')?.innerHTML).toContain('error');
-        expect(document.getElementById('content')?.innerHTML).toContain('読み込みに失敗しました');
+        expect(document.getElementById('content')?.innerHTML).toContain('Failed to load the privacy policy.');
     });
 
     it('should handle network error', async () => {
