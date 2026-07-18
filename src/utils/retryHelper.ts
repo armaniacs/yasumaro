@@ -46,6 +46,8 @@ const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
     maxDelay: MAX_RETRY_DELAY_MS
 };
 
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+
 /**
  * メッセージ構造（Service Worker通信用）
  */
@@ -53,6 +55,7 @@ export interface Message {
     type: string;
     payload?: unknown;
     target?: string;
+    protocolVersion?: number;
 }
 
 /**
@@ -154,7 +157,11 @@ export class ChromeMessageSender {
                 reject(new Error('Extension context invalidated'));
                 return;
             }
-            chrome.runtime.sendMessage(message, (response) => {
+            const enrichedMessage = {
+                ...message,
+                protocolVersion: message.protocolVersion ?? CURRENT_PROTOCOL_VERSION,
+            };
+            chrome.runtime.sendMessage(enrichedMessage, (response) => {
                 // ChromeのlastErrorチェック
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));

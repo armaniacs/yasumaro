@@ -6,6 +6,7 @@
 import { getMessage } from './i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { StorageKeys } from '../utils/storage.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
@@ -153,7 +154,7 @@ function showPrivacyConsentModal(): void {
  */
 function notifyConsentStateChanged(): void {
     try {
-        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED' });
+        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
     } catch (error) {
         logError('[PrivacyConsent] Failed to notify consent state change', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }

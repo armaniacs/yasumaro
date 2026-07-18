@@ -101,6 +101,7 @@ export interface RecordingResult {
 }
 
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 /**
  * PIIマスキング結果
@@ -150,7 +151,7 @@ export interface RecordingData {
 /**
  * Service Worker 宛てのリクエストメッセージ型
  */
-export type ServiceWorkerRequest =
+export type ServiceWorkerRequest = (
   | { type: 'VALID_VISIT'; payload: { content: string; pageBytes?: number; candidateBytes?: number; originalBytes?: number; cleansedBytes?: number; aiSummaryOriginalBytes?: number; aiSummaryCleansedBytes?: number; aiSummaryCleansedElements?: number; aiSummaryCleansedReason?: string; aiSummaryCleansedReasons?: string[] } }
   | { type: 'CHECK_DOMAIN'; payload: never }
   | { type: 'GET_CONTENT'; payload: never }
@@ -164,7 +165,8 @@ export type ServiceWorkerRequest =
   | { type: 'GET_PRIVACY_CACHE'; payload: never }
   | { type: 'ACTIVITY_UPDATE'; payload: never }
   | { type: 'SESSION_LOCK_REQUEST'; payload: never }
-  | { type: 'CONTENT_CLEANSING_EXECUTED'; payload: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } };
+  | { type: 'CONTENT_CLEANSING_EXECUTED'; payload: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } }
+) & { protocolVersion: number };
 
 // ============================================================================
 // Response メッセージ型定義
@@ -333,7 +335,7 @@ export async function sendServiceWorkerMessage<T extends ServiceWorkerRequest['t
   type: T,
   payload: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const response = await chrome.runtime.sendMessage({ type, payload } as unknown);
+  const response = await chrome.runtime.sendMessage({ type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown);
 
   if (isErrorResponse(response)) {
     throw new Error(response.error);
@@ -361,8 +363,8 @@ export async function sendFromPopup<T extends ServiceWorkerRequest['type']>(
 ): Promise<ResponseForType<T>> {
   const response = await chrome.runtime.sendMessage(
     payload !== undefined
-      ? { type, payload } as unknown
-      : { type } as unknown
+      ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown
+      : { type, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown
   );
 
   if (isErrorResponse(response)) {

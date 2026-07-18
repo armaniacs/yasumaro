@@ -14,6 +14,7 @@
 
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
 import { logSanitize, logDebug } from '../logger.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult } from './types.js';
@@ -171,6 +172,7 @@ export function extractMainContent(
                         console.log('[ContentExtractor] Sending CONTENT_CLEANSING_EXECUTED message');
                         void chrome.runtime.sendMessage({
                             type: 'CONTENT_CLEANSING_EXECUTED',
+                            protocolVersion: CURRENT_PROTOCOL_VERSION,
                             payload: {
                                 hardStripRemoved: cleanseResult.hardStripRemoved,
                                 keywordStripRemoved: cleanseResult.keywordStripRemoved,
