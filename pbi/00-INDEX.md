@@ -19,17 +19,16 @@
 | 1 | [2026-07-18-16](2026-07-18-16-feat-plural-locale-support.md) | 複数形・数量表現のロケール対応 | 🔴高（3pt） | 🟢なし |
 | 2 | [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
 | 3 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
-| 4 | [2026-07-18-31](2026-07-18-31-fix-wa-sqlite-exact-version-pin.md) | wa-sqlite依存を完全固定バージョンへ変更 | 🟢低（1pt） | 🟡軽微 |
-| 5 | [2026-07-18-29](2026-07-18-29-fix-optimistic-lock-cas-reverification.md) | optimisticLock CAS操作の書き込み後再検証ステップ追加 | 🟡中（2pt） | 🟡軽微 |
-| 6 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
-| 7 | [2026-07-18-19](2026-07-18-19-fix-storage-quota-unlimited-storage-check.md) | unlimitedStorage権限保持時のストレージクォータ判定修正 | 🟢低（1pt） | 🔴あり |
-| 8 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
-| 9 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
+| 4 | [2026-07-18-29](2026-07-18-29-fix-optimistic-lock-cas-reverification.md) | optimisticLock CAS操作の書き込み後再検証ステップ追加 | 🟡中（2pt） | 🟡軽微 |
+| 5 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
+| 6 | [2026-07-18-19](2026-07-18-19-fix-storage-quota-unlimited-storage-check.md) | unlimitedStorage権限保持時のストレージクォータ判定修正 | 🟢低（1pt） | 🔴あり |
+| 7 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
+| 8 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
 
 **所見**:
 - #1〜3（🔴高）のうち#1〜2は副作用なしだが工数大。まとまった時間を確保してから着手
-- #4〜6（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
-- #7〜9（🔴あり）は最後に回す。特に#9（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
+- #3〜5（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
+- #6〜8（🔴あり）は最後に回す。特に#8（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
 
 ---
 
@@ -60,7 +59,6 @@
 サプライチェーン・依存関係:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-18-31](2026-07-18-31-fix-wa-sqlite-exact-version-pin.md) | M29 | wa-sqlite依存を完全固定バージョンへ変更 | 🟢低（1pt） | 🟡軽微（package-lock.jsonが既に事実上固定。npm ci運用なら実害小） |
 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | M28 | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
 
 DX・保守性:
@@ -79,6 +77,7 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-18-31-fix-wa-sqlite-exact-version-pin.md
 - 2026-07-18-11-fix-consent-state-changed-sender-validation.md
 - 2026-07-18-26-feat-mobile-offscreen-queue-limit.md
 - 2026-07-18-32-fix-recording-pipeline-factory-extraction.md
@@ -110,6 +109,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 9 |
-| アーカイブ済み | 51 |
-| **合計（archive除く）** | 9 |
+| ⬜ 未着手 | 8 |
+| アーカイブ済み | 52 |
+| **合計（archive除く）** | 8 |
