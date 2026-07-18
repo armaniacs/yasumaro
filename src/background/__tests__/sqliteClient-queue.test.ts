@@ -25,6 +25,23 @@ vi.mock('../sqliteAlert.js', () => ({
 }));
 
 import { SqliteClient } from '../sqliteClient.js';
+import { Mutex } from '../Mutex.js';
+
+function setUserAgent(value: string): void {
+  Object.defineProperty(navigator, 'userAgent', {
+    value,
+    configurable: true,
+    writable: true,
+  });
+}
+
+function createSqliteClient(): SqliteClient {
+  return new SqliteClient();
+}
+
+function getRequestQueueMaxSize(client: SqliteClient): number {
+  return ((client as unknown as { requestQueue: Mutex }).requestQueue).getMaxQueueSize();
+}
 
 describe('SqliteClient — request queue (M7)', () => {
   let client: SqliteClient;
@@ -76,5 +93,17 @@ describe('SqliteClient — request queue (M7)', () => {
     await p2;
 
     expect(maxConcurrent).toBe(1);
+  });
+
+  it('uses maxQueueSize 200 on desktop user agents', () => {
+    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
+    const testClient = createSqliteClient();
+    expect(getRequestQueueMaxSize(testClient)).toBe(200);
+  });
+
+  it('uses maxQueueSize 50 on mobile user agents', () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
+    const testClient = createSqliteClient();
+    expect(getRequestQueueMaxSize(testClient)).toBe(50);
   });
 });

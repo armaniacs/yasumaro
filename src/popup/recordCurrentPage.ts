@@ -6,6 +6,7 @@ import { startAutoCloseTimer } from './autoClose.js';
 import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, formatSuccessMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -167,7 +168,7 @@ async function forceRecord(
 
     const result = previewSave.result;
     if (previewSave.success && result) {
-      chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
+      chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch(() => {});
 
       const totalDuration = performance.now() - startTime;
       const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
@@ -542,7 +543,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
 
     hideSpinner();
 
-    chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch(() => {});
 
     const totalDuration = performance.now() - startTime;
     const message = formatSuccessMessage(totalDuration, result?.aiDuration, result?.obsidianDuration !== undefined);

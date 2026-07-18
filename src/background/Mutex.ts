@@ -136,4 +136,11 @@ export class Mutex {
     getQueueSize(): number {
         return this.queue.size;
     }
+
+    /**
+     * キュー上限サイズを取得
+     */
+    getMaxQueueSize(): number {
+        return this.maxQueueSize;
+    }
 }

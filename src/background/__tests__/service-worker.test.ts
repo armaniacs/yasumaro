@@ -253,6 +253,7 @@ import type {
     SessionLockRequestMessage,
     PingMessage,
 } from '../messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../messageTypes.js';
 
 const contextMenuClickListener = ((globalThis as any).chrome?.contextMenus?.onClicked?.addListener as ReturnType<typeof vi.fn>)?.mock?.calls?.[0]?.[0] as
     | ((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => Promise<void>)
@@ -389,6 +390,30 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false, error: 'Invalid message' })
             );
+        });
+
+        it('should log warning but continue when protocolVersion mismatches', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message = {
+                type: 'PING',
+                protocolVersion: CURRENT_PROTOCOL_VERSION + 999,
+            };
+
+            handler(message as any, {} as any, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(logWarn).toHaveBeenCalledWith(
+                'Protocol version mismatch detected',
+                expect.objectContaining({
+                    expected: CURRENT_PROTOCOL_VERSION,
+                    actual: CURRENT_PROTOCOL_VERSION + 999,
+                    type: 'PING',
+                }),
+                ErrorCode.INTERNAL_ERROR,
+                'service-worker'
+            );
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle CONTENT_CLEANSING_EXECUTED message', async () => {

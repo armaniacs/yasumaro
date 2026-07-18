@@ -538,9 +538,13 @@ export function createRefreshLocalMarkdownSchedulerHandler(deps: RefreshLocalMar
 export function createConsentStateChangedHandler(deps: ConsentStateChangedHandlerDeps) {
   return async (
     _message: Record<string, unknown>,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ success: false, error: 'CONSENT_STATE_CHANGED is not allowed from external extensions' });
+      return;
+    }
     await deps.updateConsentBadge();
     sendResponse({ success: true });
   };

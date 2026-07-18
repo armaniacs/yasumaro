@@ -9,6 +9,7 @@
  */
 
 import { getMessage } from './i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 
@@ -324,7 +325,7 @@ function handleAction(confirmed: boolean): void {
  */
 function buildMaskStatusText(maskedItems: (string | MaskedItem)[] | null, maskedCount: number): string {
   if (!Array.isArray(maskedItems) || maskedItems.length === 0) {
-    return getMessage('maskStatusCount', { count: maskedCount });
+    return getMessage(getPluralKey('maskStatusCount', maskedCount), { count: maskedCount });
   }
 
   // 種別ごとに件数を集計
@@ -338,7 +339,7 @@ function buildMaskStatusText(maskedItems: (string | MaskedItem)[] | null, masked
 
   // const itemsLabel = getMessage('items'); // Unused
   const details = Object.entries(typeCounts)
-    .map(([label, count]) => `${label}${getMessage('itemsCount', { count })}`)
+    .map(([label, count]) => `${label}${getMessage(getPluralKey('itemsCount', count), { count })}`)
     .join(getMessage('items'));
 
   return getMessage('maskStatusDetails', { details });

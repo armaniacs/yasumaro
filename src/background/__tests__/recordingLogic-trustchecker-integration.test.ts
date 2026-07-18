@@ -30,7 +30,7 @@ describe('RecordingLogic - TrustChecker Integration', () => {
       );
 
       // Extract the key sections
-      const pipelineIndex = recordingLogicSource.indexOf('new RecordingPipeline');
+      const pipelineIndex = recordingLogicSource.indexOf('createRecordingPipeline');
       const executeIndex = recordingLogicSource.indexOf('pipeline.execute');
 
       // Verify pipeline is created and executed

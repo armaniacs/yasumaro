@@ -132,7 +132,18 @@ export function matchWhitelistAdapter(hostname: string, root: Element): Whitelis
     }
 
     for (const adapter of WHITELIST_ADAPTERS) {
-        if (root.querySelector(adapter.detectSelector)) {
+        // For adapters with explicit domains, only match by DOM structure if the detectSelector
+        // is specific enough (contains `.`, `#`, `[`, or `:`) to avoid false positives from
+        // generic tag-name selectors like `article`. Bare tag selectors are too broad and would
+        // match on unrelated pages.
+        if (adapter.domains.length > 0 && /[.#\[]/.test(adapter.detectSelector)) {
+            if (root.querySelector(adapter.detectSelector)) {
+                return adapter;
+            }
+            continue;
+        }
+        // Domain-less adapters (e.g. 5ch-matome) always match by DOM structure alone
+        if (adapter.domains.length === 0 && root.querySelector(adapter.detectSelector)) {
             return adapter;
         }
     }

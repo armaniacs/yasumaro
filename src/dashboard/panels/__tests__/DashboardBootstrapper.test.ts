@@ -67,4 +67,41 @@ describe('DashboardBootstrapper', () => {
     div.click();
     expect(registry.activeId).toBeNull();
   });
+
+  it('wireSidebar toggles aria-selected when switching tabs', () => {
+    const panelA: StaticFormPanel = {
+      id: 'panel-a', category: 'static-form',
+      mount: vi.fn().mockResolvedValue(undefined),
+      refresh: vi.fn().mockResolvedValue(undefined),
+    };
+    const panelB: StaticFormPanel = {
+      id: 'panel-b', category: 'static-form',
+      mount: vi.fn().mockResolvedValue(undefined),
+      refresh: vi.fn().mockResolvedValue(undefined),
+    };
+    bootstrapper.registerPanels([panelA, panelB]);
+
+    const btnA = document.createElement('button');
+    btnA.className = 'sidebar-nav-btn';
+    btnA.setAttribute('data-panel', 'panel-a');
+    btnA.setAttribute('aria-selected', 'true');
+    const btnB = document.createElement('button');
+    btnB.className = 'sidebar-nav-btn';
+    btnB.setAttribute('data-panel', 'panel-b');
+    btnB.setAttribute('aria-selected', 'false');
+    sidebar.appendChild(btnA);
+    sidebar.appendChild(btnB);
+
+    bootstrapper.wireSidebar(sidebar);
+
+    btnB.click();
+    expect(btnA.getAttribute('aria-selected')).toBe('false');
+    expect(btnB.getAttribute('aria-selected')).toBe('true');
+    expect(btnA.classList.contains('active')).toBe(false);
+    expect(btnB.classList.contains('active')).toBe(true);
+
+    btnA.click();
+    expect(btnA.getAttribute('aria-selected')).toBe('true');
+    expect(btnB.getAttribute('aria-selected')).toBe('false');
+  });
 });

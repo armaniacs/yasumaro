@@ -7,6 +7,7 @@
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
+import { CURRENT_PROTOCOL_VERSION } from './messageTypes.js';
 
 // 定数
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
@@ -128,7 +129,7 @@ async function lockSession(): Promise<void> {
         await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
         // マスターパスワードキャッシュはstorage.tsで管理されるため、
         // 通知メッセージを送信してstorage.tsにロックをさせる
-        chrome.runtime.sendMessage({ type: 'SESSION_LOCK_REQUEST' }).catch(() => {
+        chrome.runtime.sendMessage({ type: 'SESSION_LOCK_REQUEST', protocolVersion: CURRENT_PROTOCOL_VERSION }).catch(() => {
             // 送信失敗は無視
         });
     } catch (error) {

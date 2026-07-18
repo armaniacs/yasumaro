@@ -57,12 +57,11 @@ export class PermissionManager {
   private async updateDeniedDomains(
     updater: (domains: Record<string, DeniedDomainData>) => Record<string, DeniedDomainData>
   ): Promise<void> {
-    await withOptimisticLock(
+    await withOptimisticLock<Record<string, DeniedDomainData>>(
       StorageKeys.DENIED_DOMAINS,
-      async () => {
-        const deniedDomains = await this.getDeniedDomains();
-        const updated = updater(deniedDomains);
-        await this.saveDeniedDomains(updated);
+      (current) => {
+        const deniedDomains = current || {};
+        return updater(deniedDomains);
       }
     );
   }

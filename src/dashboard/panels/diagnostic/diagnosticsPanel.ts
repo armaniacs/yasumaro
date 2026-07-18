@@ -1,4 +1,5 @@
 import { getMessage } from '../../../popup/i18n.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../../../utils/storage.js';
 import { getSavedUrlCount } from '../../../utils/storageUrls.js';
 import { UI_COLORS } from '../../../constants/appConstants.js';
@@ -319,6 +320,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         try {
           const testResult = await chrome.runtime.sendMessage({
             type: 'TEST_OBSIDIAN',
+            protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: {}
           }) as { obsidian?: { success: boolean; message: string } };
 
@@ -345,6 +347,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         try {
           const testResult = await chrome.runtime.sendMessage({
             type: 'TEST_AI',
+            protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: {}
           }) as { ai?: { success: boolean; message: string } };
 
@@ -371,6 +374,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         try {
           const testResult = await chrome.runtime.sendMessage({
             type: 'DASHBOARD_SQLITE',
+            protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: { subtype: 'status' }
           }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string; fts5?: boolean };
 

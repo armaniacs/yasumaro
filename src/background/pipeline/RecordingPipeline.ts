@@ -33,6 +33,29 @@ import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
+ * Dependencies required to build a RecordingPipeline instance.
+ */
+export interface RecordingPipelineDeps {
+  getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
+  obsidian: ObsidianClient;
+  aiService: AIService | null;
+  sqliteClient: SqliteClient | null;
+}
+
+/**
+ * Factory function that creates a fully configured RecordingPipeline.
+ * Centralizes instance creation so callers do not need to invoke `new` directly.
+ */
+export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingPipeline {
+  return new RecordingPipeline(
+    deps.getPrivacyInfoWithCache,
+    deps.obsidian,
+    deps.aiService,
+    deps.sqliteClient
+  );
+}
+
+/**
  * Delay helper for retry strategy
  */
 const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));

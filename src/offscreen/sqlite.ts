@@ -17,12 +17,15 @@
 
 import { engine } from './sqliteEngineContext.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export { engine as sqliteEngine } from './sqliteEngineContext.js';
 
+/** @deprecated Use engine.init() from sqliteEngineContext.js directly. */
 export async function init(): Promise<boolean> {
   return engine.init();
 }
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
   insert,
   insertBatch,
@@ -37,6 +40,7 @@ export {
   serialize,
 } from './recordsRepo.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
   purgeOldRecords,
   purgeContent,
@@ -47,18 +51,25 @@ export {
   sqliteHealthCheck,
 } from './dbMaintenance.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
   insertAuditLog,
   queryAuditLog,
 } from './auditLogRepo.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
+/** @deprecated Use direct module imports instead (see file header). */
 export { NoopBackend } from './StorageBackend.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export type { StorageBackend, StatusResult } from './StorageBackend.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export { OpfsWorkerBackend } from './OpfsWorkerBackend.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export { IdbVfsBackend } from './IdbVfsBackend.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export { FallbackStorageAdapter } from './FallbackStorageAdapter.js';
 
-/** Reset the module state for testing. */
+/** @deprecated Use engine.resetForTesting() from sqliteEngineContext.js directly. */
 export function _resetForTesting(): void {
   engine.resetForTesting();
 }
