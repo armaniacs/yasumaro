@@ -17,6 +17,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.39] - 2026-07-18
+
+### Fixed / 修正
+
+- **`uuid` の overrides レンジを修正** — `package.json` の `overrides` で `uuid` を `>=11.1.1` としていたのを `^11.1.1` に変更。`>=` 指定による意図しないメジャーアップデートを防止
+- **`GET_CONTENT` メッセージハンドラに送信元検証を追加** — `src/content/extractor.ts` で `sender.id !== chrome.runtime.id` の場合にエラーを返すよう修正。defense-in-depth の一環
+- **`options` ページの `lang` 属性を修正** — `entrypoints/options/index.html` の `lang=""` を `lang="en"` に変更
+- **ポップアップの最小幅をレスポンシブ化** — `entrypoints/popup/styles.css` の固定幅 `width: 360px` を `min-width: 360px; max-width: 100vw` に変更
+- **IDB 移行バックアップのカラム不整合を修正** — `src/offscreen/sqliteEngineContext.ts` の `MIGRATION_BACKUP_COLUMNS` を動的な `[...COLUMN_NAMES]`（32 カラム）に拡張し、`mapMigrationBackupRow()` を追加。スキーマ追加後も列数ズレで復元が失敗しにくくした
+
+### Changed / 変更
+
+- **ログ保持期間と最大件数を短縮** — `src/utils/logger.ts` の `RETENTION_DAYS` を 7 日から 3 日に、`MAX_LOGS` を 1000 件から 500 件に変更
+- **ログ ID フォールバックを CSPRNG に変更** — `src/utils/logger.ts` で `Math.random()` ベースの ID 生成を `crypto.getRandomValues()` に置換
+
+### Removed / 削除
+
+- **レガシー履歴パネルを削除** — 使用されなくなった `src/dashboard/sqliteHistoryPanel.ts`、`src/dashboard/historyPanel.ts`、および関連テスト 5 ファイルを削除
+- **`saveSqliteStep` から不要な楽観的ロック呼び出しを削除** — no-op になっていた `withOptimisticLock` の呼び出しと import を除去
+
+### Deprecated / 非推奨
+
+- **barrel 再エクスポートに `@deprecated` を付与** — `src/utils/storage.ts` と `src/offscreen/sqlite.ts` の後方互換再エクスポートに JSDoc `@deprecated` を追加。新規コードでは分割モジュールを直接インポートすることを推奨
+
+### Accessibility / アクセシビリティ
+
+- **ポップアップパネル切替時のフォーカス移動を追加** — `src/popup/popup.ts` でタブ/パネル切替後、新しくアクティブになったパネル内の最初のフォーカス可能要素にフォーカスを移動
+
 ## [6.5.38] - 2026-07-18
 
 ### Fixed / 修正
