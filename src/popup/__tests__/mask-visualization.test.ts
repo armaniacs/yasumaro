@@ -62,7 +62,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const modal = document.getElementById('confirmationModal');
       const statusMessage = document.getElementById('maskStatusMessage');
 
-      expect(statusMessage.textContent).toBe("Masked E-mail1 items");
+      expect(statusMessage.textContent).toBe("Masked E-mail1 item");
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
@@ -78,7 +78,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       const statusMessage = document.getElementById('maskStatusMessage');
 
-      expect(statusMessage.textContent).toBe("Masked Bank Account Number1 items, Phone Number1 items");
+      expect(statusMessage.textContent).toBe("Masked Bank Account Number1 item, Phone Number1 item");
     });
   });
 
@@ -357,7 +357,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const maskStatusMessage = document.getElementById('maskStatusMessage');
       expect(maskStatusMessage).toBeDefined();
       expect(maskStatusMessage.className).toBe('mask-status-message');
-      expect(maskStatusMessage.textContent).toBe('Masked E-mail1 items');
+      expect(maskStatusMessage.textContent).toBe('Masked E-mail1 item');
     });
   });
 

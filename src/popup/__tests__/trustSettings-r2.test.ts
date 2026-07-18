@@ -70,6 +70,8 @@ vi.mock('../i18n.js', () => ({
       trancoTierTop10k: 'Top 10,000',
       trancoTierTop100k: 'Top 100,000',
       trancoStatusFormat: 'Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}',
+      trancoStatusFormat_one: 'Domain: {count} | Tier: {tier} | Last updated: {lastUpdated}',
+      trancoStatusFormat_other: 'Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}',
       jpAnchorAdded: 'TLD added',
       sensitiveAdded: 'Domain added',
       whitelistAdded: 'Domain added',

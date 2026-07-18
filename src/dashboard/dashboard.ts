@@ -8,6 +8,7 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } f
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
@@ -704,7 +705,7 @@ export async function handlePurgeNow(): Promise<void> {
     if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
-      statusEl.textContent = getMessage('purgeNowSuccess', [String(result.purged)]) || `${result.purged} 件を削除しました`;
+      statusEl.textContent = getMessage(getPluralKey('purgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件を削除しました`;
     } else {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
@@ -729,7 +730,7 @@ export async function handleContentPurgeNow(): Promise<void> {
     if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
-      statusEl.textContent = getMessage('contentPurgeNowSuccess', [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
+      statusEl.textContent = getMessage(getPluralKey('contentPurgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
     } else {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }

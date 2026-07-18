@@ -29,29 +29,18 @@ global.chrome = {
 // Mock i18n.js to properly handle substitutions
 vi.mock('../i18n.js', () => ({
   getMessage: vi.fn((key: string, substitutions?: any) => {
-    switch (key) {
-      case 'timeJustNow':
-        return 'たった今';
-      case 'timeMinutesAgo':
-        if (substitutions?.count !== undefined) {
-          return `${substitutions.count}分前`;
-        }
-        return 'N分前';
-      case 'timeHoursAgo':
-        if (substitutions?.count !== undefined) {
-          return `${substitutions.count}時間前`;
-        }
-        return 'N時間前';
-      case 'timeYesterday':
-        return '昨日';
-      case 'timeDaysAgo':
-        if (substitutions?.count !== undefined) {
-          return `${substitutions.count}日前`;
-        }
-        return 'N日前';
-      default:
-        return key;
+    if (key === 'timeJustNow') return 'たった今';
+    if (key === 'timeYesterday') return '昨日';
+    if (key.startsWith('timeMinutesAgo')) {
+      return substitutions?.count !== undefined ? `${substitutions.count}分前` : 'N分前';
     }
+    if (key.startsWith('timeHoursAgo')) {
+      return substitutions?.count !== undefined ? `${substitutions.count}時間前` : 'N時間前';
+    }
+    if (key.startsWith('timeDaysAgo')) {
+      return substitutions?.count !== undefined ? `${substitutions.count}日前` : 'N日前';
+    }
+    return key;
   })
 }));
 

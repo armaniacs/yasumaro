@@ -257,8 +257,9 @@ describe('ublockImport - UIRenderer Module', () => {
 
       updatePreviewUI(result);
 
-      const ruleLabel = document.querySelector('[data-i18n="ruleCount"]');
+      const ruleLabel = document.querySelector('[data-i18n="ruleCount_other"]');
       expect(ruleLabel).not.toBeNull();
+      expect(ruleLabel.getAttribute('data-i18n')).toBe('ruleCount_other');
       expect(ruleLabel.getAttribute('data-i18n-args')).toBe(JSON.stringify({ count: 5 }));
     });
   });

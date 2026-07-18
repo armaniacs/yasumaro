@@ -11,6 +11,7 @@ import { getTrustDb } from '../utils/trustDb/trustDb.js';
 import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from './i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { getTrustChecker } from '../utils/trustChecker.js';
 
 // ============================================================================
@@ -100,11 +101,10 @@ function updateTrancoStatus(status: {
   };
   const tierLabel = tierObj[status.tier as TrancoTier] || status.tier || '';
 
-  trancoStatusDiv.textContent = getMessage('trancoStatusFormat')
-    ?.replace('{count}', count.toString())
-    .replace('{tier}', tierLabel)
-    .replace('{lastUpdated}', lastUpdated)
-    || `Domains: ${count} | Tier: ${tierLabel} | Last updated: ${lastUpdated}`;
+  trancoStatusDiv.textContent = getMessage(
+    getPluralKey('trancoStatusFormat', count),
+    { count, tier: tierLabel, lastUpdated }
+  ) || `Domains: ${count} | Tier: ${tierLabel} | Last updated: ${lastUpdated}`;
   trancoStatusDiv.className = 'status-message';
 }
 
