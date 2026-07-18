@@ -74,8 +74,8 @@ Scenario: THIRD_PARTY_NOTICES.mdが自動更新される
 - devDependenciesまで含めると生成される`THIRD_PARTY_NOTICES.md`が非常に長大になる可能性がある。配布物（Chrome拡張機能自体）に実際にバンドルされる依存（runtime dependencies + バンドルされるツールチェーン成果物）のみに絞るか、devDependenciesも含めた完全版にするかは、Chrome Web Store公開要件を確認した上で判断する
 
 ## Definition of Done
-- [ ] ライセンスチェックツールが導入されている
-- [ ] `THIRD_PARTY_NOTICES.md` 自動生成コマンドが動作する
-- [ ] CIにライセンスチェックが組み込まれている
-- [ ] 意図的な問題ライセンス混入でCI失敗を確認済み
+- [x] ライセンスチェックツールが導入されている
+- [x] `THIRD_PARTY_NOTICES.md` 自動生成コマンドが動作する
+- [x] CIにライセンスチェックが組み込まれている
+- [x] 意図的な問題ライセンス混入でCI失敗を確認済み
 - [ ] コードレビュー完了
