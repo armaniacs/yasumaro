@@ -1,4 +1,5 @@
 import { getMessage } from './i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
@@ -48,17 +49,17 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
     timeAgo = getMessage('timeJustNow') || 'たった今';
   } else if (diff < 60 * 60 * 1000) {
     const minutes = Math.floor(diff / (60 * 1000));
-    const msg = getMessage('timeMinutesAgo', { count: minutes });
+    const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
     timeAgo = msg || `${minutes}分前`;
   } else if (diff < 24 * 60 * 60 * 1000) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
-    const msg = getMessage('timeHoursAgo', { count: hours });
+    const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
     timeAgo = msg || `${hours}時間前`;
   } else if (diff < 48 * 60 * 60 * 1000) {
     timeAgo = getMessage('timeYesterday') || '昨日';
   } else {
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-    const msg = getMessage('timeDaysAgo', { count: days });
+    const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });
     timeAgo = msg || `${days}日前`;
   }
 

@@ -9,6 +9,8 @@ vi.mock('../../popup/i18n.js', () => ({
       'domainTagInvalidError': 'Invalid domain',
       'domainTagDuplicateError': 'Duplicate domain',
       'domainTagCount': '{count} items',
+      'domainTagCount_one': '1 item',
+      'domainTagCount_other': '{count} items',
     };
     return messages[key] || key;
   }),
@@ -248,7 +250,7 @@ describe('initDomainFilterTagUI', () => {
 
     it('tagCount shows count for non-empty list', () => {
       const tagCount = document.getElementById('domainTagCount')!;
-      expect(tagCount.textContent).toBe('1 items');
+      expect(tagCount.textContent).toBe('1 item');
     });
 
     it('tagCount is empty for empty list after removing all domains', () => {
