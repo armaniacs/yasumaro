@@ -1,4 +1,4 @@
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getFilteredEntries } from './historyFilters.js';
 import { makeHistoryEntryRow } from './historyEntryRow.js';
 import { createPaginationControls } from './historyUtils.js';

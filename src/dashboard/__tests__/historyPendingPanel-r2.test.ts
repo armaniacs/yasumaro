@@ -14,7 +14,7 @@ const mockCheckServiceWorkerAlive = vi.fn().mockResolvedValue(true);
 const mockCreatePaginationControls = vi.fn();
 const mockRemovePendingPages = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key) => key),
 }));
 

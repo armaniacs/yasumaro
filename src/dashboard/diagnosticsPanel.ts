@@ -2,7 +2,7 @@
 // Diagnostics Panel
 // ============================================================================
 
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';

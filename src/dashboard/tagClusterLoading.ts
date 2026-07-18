@@ -4,7 +4,7 @@
  * while data is fetched, analyzed, laid out, and rendered.
  */
 
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 interface LoadingStep {
   number: number;

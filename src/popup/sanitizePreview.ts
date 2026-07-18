@@ -8,7 +8,7 @@
  * 🟢 青信号: Refactorフェーズ対応 - 定数化・JSDoc充実化・関数分割実装
  */
 
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';

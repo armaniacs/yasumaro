@@ -31,7 +31,7 @@ vi.mock('../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 

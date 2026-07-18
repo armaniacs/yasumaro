@@ -1,6 +1,6 @@
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
 

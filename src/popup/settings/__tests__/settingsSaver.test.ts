@@ -25,7 +25,7 @@ vi.mock('../../../utils/storage.js', () => ({
     saveSettingsWithAllowedUrls: vi.fn(),
 }));
 
-vi.mock('../../i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => {
         const messages: Record<string, string> = {
             testingConnection: 'Testing connection...',

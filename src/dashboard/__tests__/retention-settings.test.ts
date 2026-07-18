@@ -12,7 +12,7 @@ vi.stubGlobal('chrome', {
     storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn().mockResolvedValue(undefined) } },
 });
 
-vi.mock('../../popup/i18n.js', () => ({ getMessage: vi.fn((k: string) => k) }));
+vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((k: string) => k) }));
 vi.mock('../../popup/domainFilter.js', () => ({ init: vi.fn() }));
 vi.mock('../../popup/privacySettings.js', () => ({ init: vi.fn() }));
 vi.mock('../../popup/contentSettings.js', () => ({ init: vi.fn() }));

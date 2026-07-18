@@ -9,7 +9,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 // モジュールモック - jest.mock はファイル先頭にホイストされる
 // ファクトリ内で直接 vi.fn() を作成し、globalThis 経由で後からアクセスする
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string, substitutions?: Record<string, unknown>) => {
     const messages: Record<string, string> = {
       piiCreditCard: 'Credit Card Number',

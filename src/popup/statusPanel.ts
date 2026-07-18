@@ -1,6 +1,6 @@
 import { checkPageStatus, StatusInfo } from './statusChecker.js';
 import { getSettings, saveSettings, StorageKeys } from '../utils/storage.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getCurrentTab } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';

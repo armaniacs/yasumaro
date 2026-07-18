@@ -12,7 +12,7 @@ const { getMessage } = vi.hoisted(() => ({
   getMessage: vi.fn((key: string) => key),
 }));
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage,
 }));
 

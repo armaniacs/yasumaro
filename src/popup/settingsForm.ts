@@ -7,7 +7,7 @@ import { getSettings } from '../utils/storage.js';
 import { loadSettingsToInputs } from '../utils/settingsFormBinding.js';
 import { showStatus } from './settingsUiHelper.js';
 import { updateAIProviderVisibility, AIProviderElements } from './settings/aiProvider.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 // ============================================================================
 // Lazy DOM Element Access (for testability)

@@ -12,7 +12,7 @@ import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 import { openTagEditModal } from '../historyTagEditModal.js';
 import { removeSavedUrl } from '../../utils/storageUrls.js';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key, subs) => subs ? `${key}:${subs}` : key),
 }));
 

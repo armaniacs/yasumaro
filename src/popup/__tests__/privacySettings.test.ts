@@ -52,7 +52,7 @@ vi.mock('../settingsUiHelper.js', () => ({
   showStatus: (...args: any[]) => mockShowStatus(...args),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: (...args: any[]) => mockGetMessage(...args),
 }));
 

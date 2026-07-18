@@ -1,4 +1,4 @@
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import type { CleansedReason } from '../utils/storageUrls.js';
 

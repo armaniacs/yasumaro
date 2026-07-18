@@ -66,7 +66,7 @@ vi.mock('../settingsUiHelper.js', () => ({
   showStatus: mockShowStatus,
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       whitelistLabel: 'Whitelist (1 domain per line)',

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
@@ -290,7 +290,7 @@ describe('masterPassword-r2 — password strength text fallback', () => {
   it('uses result.text when getMessage returns falsy for strength level', async () => {
     const mockGetMessage = vi.fn();
     // Override the i18n mock temporarily
-    const i18nModule = await import('../../popup/i18n.js');
+    const i18nModule = await import('../../utils/i18n.js');
     vi.mocked(i18nModule.getMessage).mockReturnValue('' as any);
 
     vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 90, level: 'strong', text: 'Strong' });

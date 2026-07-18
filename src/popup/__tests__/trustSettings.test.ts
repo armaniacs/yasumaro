@@ -73,7 +73,7 @@ vi.mock('../../utils/logger.js', () => ({
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       trancoUpdating: 'Updating...',

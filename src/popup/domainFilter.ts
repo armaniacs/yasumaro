@@ -10,7 +10,7 @@ import { parseDomainList, validateDomainList } from '../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 // Elements
 const generalTabBtn = document.getElementById('generalTab');

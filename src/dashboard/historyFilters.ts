@@ -1,4 +1,4 @@
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import type { HistoryPanelState, FilterType } from './historyState.js';
 
