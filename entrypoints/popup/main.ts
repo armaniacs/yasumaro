@@ -4,7 +4,7 @@
  */
 
 import './styles.css';
-import '../../src/popup/i18n';
+import '../../src/utils/i18n';
 import '../../src/popup/navigation';
 import '../../src/popup/main';
 import '../../src/popup/popup';
