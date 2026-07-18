@@ -118,11 +118,15 @@ vi.mock('../../utils/storageUrls.ts', () => ({
 }));
 
 // Pipeline steps mock
-vi.mock('../pipeline/RecordingPipeline.ts', () => ({
-  RecordingPipeline: vi.fn().mockImplementation(function(this: any) {
+vi.mock('../pipeline/RecordingPipeline.ts', () => {
+  const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
     this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
-  }),
-}));
+  });
+  return {
+    RecordingPipeline,
+    createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
+  };
+});
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { RecordingLogic, truncateContentSize } from '../recordingLogic.ts';
