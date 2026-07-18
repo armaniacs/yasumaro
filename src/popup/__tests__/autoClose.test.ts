@@ -11,7 +11,7 @@
 import { vi } from 'vitest';
 
 // Mock i18n before importing autoClose.js
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;

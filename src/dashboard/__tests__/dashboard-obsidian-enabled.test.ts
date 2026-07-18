@@ -125,7 +125,7 @@ vi.mock('../../constants/appConstants.js', () => ({
   STATUS_COLORS: { SUCCESS: '#22c55e', ERROR: '#ef4444' },
 }));
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
 }));
 

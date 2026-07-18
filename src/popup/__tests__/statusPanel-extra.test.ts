@@ -38,7 +38,7 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-vi.mock('../i18n.js', () => ({ getMessage: mockGetMessage }));
+vi.mock('../../utils/i18n.js', () => ({ getMessage: mockGetMessage }));
 
 vi.mock('../../utils/permissionManager.js', () => ({
   isAllUrlsPermitted: mockIsAllUrlsPermitted,

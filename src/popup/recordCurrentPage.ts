@@ -5,7 +5,7 @@ import { showSpinner, hideSpinner } from './spinner.js';
 import { startAutoCloseTimer } from './autoClose.js';
 import { getCurrentTab, isRecordable } from './tabUtils.js';
 import { showError, formatSuccessMessage } from './errorUtils.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { sendMessageWithRetry } from '../utils/retryHelper.js';
 import { getSavedUrlEntries } from '../utils/storageUrls.js';

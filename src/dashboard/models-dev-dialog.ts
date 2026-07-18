@@ -10,7 +10,7 @@ import {
     getApiKeyUrl,
 } from '../utils/modelsDevApi.js';
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
-import { applyI18n } from '../popup/i18n.js';
+import { applyI18n } from '../utils/i18n.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;

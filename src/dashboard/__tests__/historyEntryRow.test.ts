@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { makeHistoryEntryRow } from '../historyEntryRow.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
-import { getMessage } from '../../popup/i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 import { removeSavedUrl } from '../../utils/storageUrls.js';
 import { makeCleansingProgressBar } from '../cleansingStatsView.js';
 import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge } from '../historyBadges.js';
 import { openTagEditModal } from '../historyTagEditModal.js';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key, subs) => subs ? `${key}:${subs}` : key),
 }));
 

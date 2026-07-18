@@ -24,7 +24,7 @@ const mockChromeStorageSet = vi.hoisted(() => vi.fn(async (items: Record<string,
   Object.assign(storageData, items);
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 

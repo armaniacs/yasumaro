@@ -2,7 +2,7 @@ import type { PendingSave } from './mainTypes.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { getSettings, saveSettings, StorageKeys } from '../utils/storage.js';
 import { startAutoCloseTimer } from './autoClose.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 export let currentPendingSave: PendingSave | null = null;
 

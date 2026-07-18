@@ -17,7 +17,7 @@ import {
 import { StorageKeys, getSettings } from '../../utils/storage.js';
 import { updateAIProviderVisibility } from '../settings/aiProvider.js';
 import { loadSettingsToInputs, showStatus } from '../settingsUiHelper.js';
-import { getMessage } from '../i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 
 // Mock dependencies - must be before imports
 vi.mock('../../utils/storage.js', () => ({
@@ -56,7 +56,7 @@ vi.mock('../settingsUiHelper.js', () => ({
     showStatus: vi.fn(),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 

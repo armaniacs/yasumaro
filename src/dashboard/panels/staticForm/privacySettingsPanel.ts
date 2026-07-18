@@ -3,7 +3,7 @@ import { getSettings } from '../../../utils/storage.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../../popup/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
-import { getMessage } from '../../../popup/i18n.js';
+import { getMessage } from '../../../utils/i18n.js';
 
 export function createPrivacySettingsPanel(): StaticFormPanel {
   return {

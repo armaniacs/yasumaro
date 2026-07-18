@@ -7,7 +7,7 @@ import { saveSettingsWithAllowedUrls, getSettings } from '../../utils/storage.js
 import { errorMessage } from '../../utils/errorUtils.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { extractSettingsFromInputs } from '../settingsUiHelper.js';
-import { getMessage } from '../i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from './fieldValidation.js';
 import { STATUS_COLORS } from '../../constants/appConstants.js';
 

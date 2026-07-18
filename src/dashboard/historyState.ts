@@ -1,6 +1,6 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import type { PendingPage } from '../utils/pendingStorage.js';
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 export const HISTORY_PAGE_SIZE = 10;
 

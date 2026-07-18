@@ -1,7 +1,7 @@
 import { type StaticFormPanel } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../../../utils/storage.js';
-import { getMessage } from '../../../popup/i18n.js';
+import { getMessage } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
   loadGeneralSettings,

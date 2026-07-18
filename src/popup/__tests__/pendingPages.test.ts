@@ -7,7 +7,7 @@ vi.mock('../../utils/pendingStorage.js', () => ({
     savePendingPages: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 

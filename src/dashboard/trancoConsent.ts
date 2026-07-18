@@ -2,7 +2,7 @@
 // Tranco Consent Panel
 // ============================================================================
 
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 

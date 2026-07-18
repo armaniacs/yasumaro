@@ -27,7 +27,7 @@ global.chrome = {
 } as any;
 
 // Mock i18n.js to properly handle substitutions
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string, substitutions?: any) => {
     if (key === 'timeJustNow') return 'たった今';
     if (key === 'timeYesterday') return '昨日';

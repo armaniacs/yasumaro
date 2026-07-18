@@ -18,7 +18,7 @@ import {
     resetFailedAttempts
 } from '../utils/rateLimiter.js';
 import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 const masterPasswordEnabled = document.getElementById('masterPasswordEnabled') as HTMLInputElement | null;
 const masterPasswordOptions = document.getElementById('masterPasswordOptions') as HTMLElement | null;

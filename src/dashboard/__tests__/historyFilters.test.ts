@@ -7,7 +7,7 @@ import {
 } from '../historyFilters.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => `i18n_${key}`,
 }));
 

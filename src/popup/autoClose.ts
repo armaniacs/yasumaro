@@ -1,7 +1,7 @@
 // Auto-close functionality after successful recording
 
 import { getScreenState } from './screenState.js';
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 
 /**
  * 【定数定義群】: タイマー関連の各種設定値

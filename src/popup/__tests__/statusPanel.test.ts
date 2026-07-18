@@ -59,7 +59,7 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 
