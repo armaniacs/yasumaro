@@ -16,17 +16,16 @@
 
 | # | PBI | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| 1 | [2026-07-18-16](2026-07-18-16-feat-plural-locale-support.md) | 複数形・数量表現のロケール対応 | 🔴高（3pt） | 🟢なし |
-| 2 | [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
-| 3 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
-| 4 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
-| 5 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
-| 6 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
+| 1 | [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
+| 2 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
+| 3 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
+| 4 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
+| 5 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
 
 **所見**:
-- #1〜3（🔴高）のうち#1〜2は副作用なしだが工数大。まとまった時間を確保してから着手
-- #4（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
-- #5〜6（🔴あり）は最後に回す。特に#6（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
+- #1〜2（🔴高）は副作用なしだが工数大。まとまった時間を確保してから着手
+- #3（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
+- #4〜5（🔴あり）は最後に回す。特に#5（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
 
 ---
 
@@ -103,11 +102,12 @@ UI・ドキュメント:
 - 2026-07-18-27-fix-log-retention-quota-separation.md
 - 2026-07-18-35-fix-barrel-reexport-deprecation-notice.md
 - 2026-07-18-19-fix-storage-quota-unlimited-storage-check.md
+- 2026-07-18-16-feat-plural-locale-support.md
 
 ## 集計
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 6 |
-| アーカイブ済み | 54 |
-| **合計（archive除く）** | 6 |
+| ⬜ 未着手 | 5 |
+| アーカイブ済み | 55 |
+| **合計（archive除く）** | 5 |
