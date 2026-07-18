@@ -11,6 +11,14 @@ export class DashboardBootstrapper {
   }
 
   wireSidebar(sidebar: HTMLElement): void {
+    const updateActiveTab = (activeBtn: HTMLElement): void => {
+      sidebar.querySelectorAll('.sidebar-nav-btn').forEach((el) => {
+        const isActive = el === activeBtn;
+        el.classList.toggle('active', isActive);
+        el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    };
+
     sidebar.addEventListener('click', (e: Event) => {
       const target = e.target as HTMLElement;
       const btn = target.closest<HTMLElement>('[data-panel]');
@@ -19,11 +27,8 @@ export class DashboardBootstrapper {
       const panelId = btn.getAttribute('data-panel');
       if (!panelId) return;
 
-      // Update sidebar active state
-      sidebar.querySelectorAll('.sidebar-nav-btn.active').forEach((el) => {
-        el.classList.remove('active');
-      });
-      btn.classList.add('active');
+      // Update sidebar active state and ARIA selection
+      updateActiveTab(btn);
 
       try {
         this.registry.navigate(panelId);
