@@ -11,7 +11,7 @@ import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { normalizeUrl } from '../urlUtils.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
-import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES } from './quota.js';
+import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import { purgeLegacyStorage } from './savedUrlStore.js';
 import { StorageKeys } from './types.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
@@ -429,31 +429,34 @@ export async function saveSettings(
     }
 
     // 【セキュリティ改善】保存前にクォータチェック
-    // クォータ超過時は自動的にレガシーデータをクリーンアップしてリトライ
-    const currentUsage = await getStorageUsage();
-    const newDataSize = estimateDataSize(toSave);
-    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
-        await logInfo('Storage quota near limit, attempting legacy cleanup', {
-            currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
-        }, 'storage/settingsStore.ts');
-
-        // Try to free space by cleaning up legacy savedUrlsWithTimestamps.
-        // PBI 2026-07-09-10: when the caller doesn't supply its own health
-        // check, fall back to a default one (dynamic import to avoid a
-        // settingsStore.ts -> sqliteClient.ts static dependency) so this
-        // safety gate is on by default rather than opt-in per call site.
-        const effectiveHealthCheck = sqliteHealthCheck ?? (await getDefaultSqliteHealthCheck());
-        const freed = await purgeLegacyStorage(effectiveHealthCheck);
-        const afterCleanup = await getStorageUsage();
-
-        if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {
-            await logInfo('Legacy cleanup freed space, proceeding with save', {
-                freed, usageAfter: afterCleanup,
+    // unlimitedStorage 権限がある場合は chrome.storage.local の実質的な上限がないためスキップ
+    if (!(await hasUnlimitedStorage())) {
+        // クォータ超過時は自動的にレガシーデータをクリーンアップしてリトライ
+        const currentUsage = await getStorageUsage();
+        const newDataSize = estimateDataSize(toSave);
+        if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
+            await logInfo('Storage quota near limit, attempting legacy cleanup', {
+                currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
             }, 'storage/settingsStore.ts');
-        } else {
-            const errorMsg = `Storage quota exceeded (current: ${afterCleanup}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`;
-            await logError(errorMsg, { freed, usageAfter: afterCleanup }, ErrorCode.STORAGE_QUOTA_EXCEEDED, 'storage/settingsStore.ts');
-            throw new Error(errorMsg);
+
+            // Try to free space by cleaning up legacy savedUrlsWithTimestamps.
+            // PBI 2026-07-09-10: when the caller doesn't supply its own health
+            // check, fall back to a default one (dynamic import to avoid a
+            // settingsStore.ts -> sqliteClient.ts static dependency) so this
+            // safety gate is on by default rather than opt-in per call site.
+            const effectiveHealthCheck = sqliteHealthCheck ?? (await getDefaultSqliteHealthCheck());
+            const freed = await purgeLegacyStorage(effectiveHealthCheck);
+            const afterCleanup = await getStorageUsage();
+
+            if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {
+                await logInfo('Legacy cleanup freed space, proceeding with save', {
+                    freed, usageAfter: afterCleanup,
+                }, 'storage/settingsStore.ts');
+            } else {
+                const errorMsg = `Storage quota exceeded (current: ${afterCleanup}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`;
+                await logError(errorMsg, { freed, usageAfter: afterCleanup }, ErrorCode.STORAGE_QUOTA_EXCEEDED, 'storage/settingsStore.ts');
+                throw new Error(errorMsg);
+            }
         }
     }
 
