@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 // ============================================================================
@@ -339,6 +340,7 @@ describe('appendToLogs', () => {
 
     expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith({
       type: 'DASHBOARD_SQLITE',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { subtype: 'append_to_obsidian', ids: [1, 2, 3] },
     });
   });

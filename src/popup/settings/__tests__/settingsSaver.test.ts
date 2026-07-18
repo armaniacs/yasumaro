@@ -17,6 +17,7 @@ import { getSettings, saveSettingsWithAllowedUrls } from '../../../utils/storage
 import { clearAllFieldErrors, validateAllFields } from '../fieldValidation.js';
 
 import { STATUS_COLORS } from '../../../constants/appConstants.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 
 // Mock dependencies
 vi.mock('../../../utils/storage.js', () => ({
@@ -105,6 +106,7 @@ describe('settingsSaver', () => {
 
             expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({
                 type: 'TEST_CONNECTIONS',
+                protocolVersion: CURRENT_PROTOCOL_VERSION,
                 payload: {},
             });
             expect(result).toEqual({
@@ -460,7 +462,7 @@ describe('settingsSaver', () => {
             expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
                 expect.objectContaining({ existing: 'value', obsidian_protocol: 'https', obsidian_port: '27123' })
             );
-            expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'TEST_CONNECTIONS', payload: {} });
+            expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'TEST_CONNECTIONS', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} });
             expect(statusDiv.className).toBe('success');
         });
 

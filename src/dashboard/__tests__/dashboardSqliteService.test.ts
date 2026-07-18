@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 /**
  * Mock chrome.runtime.sendMessage to return a controlled Promise response.
@@ -56,7 +57,7 @@ describe('dashboardSqliteService', () => {
       await queryLogs({ limit: 10, offset: 0 });
 
       expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
-        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'query', limit: 10, offset: 0 } },
+        { type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: { subtype: 'query', limit: 10, offset: 0 } },
       );
     });
 
