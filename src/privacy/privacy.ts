@@ -3,6 +3,8 @@
  * PRIVACY.md をフェッチしてブラウザ内でレンダリングする
  */
 
+import { applyI18n, setHtmlLangAndDir, translatePageTitle, getMessage } from '../popup/i18n.js';
+
 /**
  * HTMLエスケープ処理
  * @param text エスケープするテキスト
@@ -173,11 +175,14 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
         const md = await res.text();
         content.innerHTML = renderMarkdown(md);
     } catch (_e) {
-        content.innerHTML = '<p class="error">プライバシーポリシーの読み込みに失敗しました。</p>';
+        content.innerHTML = `<p class="error">${getMessage('privacyPolicyLoadError') || 'Failed to load the privacy policy.'}</p>`;
     }
 }
 
-// 自动初期化（後方互換性のため維持）
+// Initialize i18n and load the policy when the DOM is ready.
 document.addEventListener('DOMContentLoaded', () => {
+    setHtmlLangAndDir();
+    applyI18n();
+    translatePageTitle('privacyPolicyTitle');
     loadPrivacyPolicy().catch(console.error);
 });

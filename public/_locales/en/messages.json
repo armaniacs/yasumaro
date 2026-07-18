@@ -1902,6 +1902,12 @@
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
   },
+  "privacyPolicyTitle": {
+    "message": "Privacy Policy — Yasumaro"
+  },
+  "privacyPolicyLoadError": {
+    "message": "Failed to load the privacy policy."
+  },
   "consentCheckboxLabel": {
     "message": "I have read and agree to the Privacy Policy"
   },
