@@ -14,6 +14,7 @@
  * 各モジュールから直接importすることを推奨する。
  */
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
     encryptEnvelope,
     decryptEnvelope,
@@ -21,12 +22,17 @@ export {
     isEncryptionEnvelope,
     CURRENT_ENVELOPE_VERSION,
 } from './crypto.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export type { EncryptionEnvelope } from './crypto.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export { StorageKeys } from './storage/types.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export { DEFAULT_SETTINGS } from './storage/defaults.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export type { StorageKey, StorageKeyValues, StrictSettings, Settings, ProviderSlot } from './storage/types.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
     getOrCreateEncryptionKey,
     isMasterPasswordEnabled,
@@ -40,6 +46,7 @@ export {
     getOrCreateHmacSecret,
 } from './storage/encryptionSession.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
     ALLOWED_AI_PROVIDER_DOMAINS,
     API_KEY_FIELDS,
@@ -55,6 +62,7 @@ export {
     purgeLegacyStorage,
 } from './storage/settingsStore.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
     MAX_URL_SET_SIZE,
     URL_WARNING_THRESHOLD,
@@ -68,8 +76,10 @@ export {
     isUrlSaved,
     getSavedUrlCount,
 } from './storage/savedUrlStore.js';
+/** @deprecated Use direct module imports instead (see file header). */
 export type { SavedUrlEntry } from './storage/savedUrlStore.js';
 
+/** @deprecated Use direct module imports instead (see file header). */
 export {
     getDomainFilterCacheSync,
     isDomainFilterCacheValid,
@@ -82,4 +92,5 @@ export {
  * ストレージ使用量を取得
  * @returns {Promise<number>} 使用量（バイト）
  */
+/** @deprecated Use direct module imports instead (see file header). */
 export { getStorageUsage } from './storage/quota.js';
