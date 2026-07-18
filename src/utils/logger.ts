@@ -1,7 +1,7 @@
 /**
  * logger.ts
  * Structured Logging Utility with Error Codes
- * Stores logs in chrome.storage.local with 7-day retention policy.
+ * Stores logs in chrome.storage.local with 3-day retention policy.
  *
  * @module logger
  * @requires ./piiSanitizer.js — sanitizeLogDetails uses sanitizeRegex to mask
@@ -95,8 +95,8 @@ export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
 export type ErrorCodePattern = `${string}_${string}_${number}`;
 
 const LOG_STORAGE_KEY = 'sanitization_logs';
-const RETENTION_DAYS = 7;
-const MAX_LOGS = 1000; // Prevent unlimited growth
+const RETENTION_DAYS = 3;
+const MAX_LOGS = 500; // Prevent unlimited growth
 
 // 【セキュリティ強化】log sanitizationへの深度制限と循環参照保護
 const MAX_RECURSION_DEPTH = 100; // redaction.tsと整合
@@ -422,7 +422,9 @@ export async function addLog<T extends object = Record<string, unknown>>(type: L
         }
 
         const entry: LogEntry = {
-            id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+            id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : (() => { const a = new Uint32Array(2); crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })(),
             timestamp: Date.now(),
             type,
             message,

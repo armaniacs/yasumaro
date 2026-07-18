@@ -1,9 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/optimisticLock.js', () => ({
-  withOptimisticLock: vi.fn(),
-}));
-
 vi.mock('../../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
@@ -12,7 +8,6 @@ vi.mock('../../../utils/logger.js', () => ({
 import { saveSqliteStep } from '../steps/saveSqliteStep.js';
 import type { SqliteClient } from '../../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
-import { withOptimisticLock } from '../../../utils/optimisticLock.js';
 
 function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
   return {
@@ -22,17 +17,13 @@ function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
   } as unknown as SqliteClient;
 }
 
-describe('saveSqliteStep — Optimistic Lock (H5)', () => {
+describe('saveSqliteStep', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('wraps insert + update in withOptimisticLock', async () => {
+  it('calls insert and update directly (no optimistic lock)', async () => {
     const mockSqlite = makeMockSqlite();
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
 
     await saveSqliteStep({
       recordId: 1,
@@ -41,11 +32,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
       obsidianSynced: true,
     });
 
-    expect(withOptimisticLock).toHaveBeenCalledWith(
-      expect.stringContaining('sqlite-write'),
-      expect.any(Function),
-      expect.objectContaining({ maxRetries: 3, initialDelay: 100 })
-    );
     expect(mockSqlite.insert).toHaveBeenCalled();
     expect(mockSqlite.update).toHaveBeenCalled();
   });
@@ -53,10 +39,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
   it('does not write to old chrome.storage.savedUrlsWithTimestamps', async () => {
     const setSpy = vi.spyOn(chrome.storage.local, 'set');
     const mockSqlite = makeMockSqlite();
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
 
     await saveSqliteStep({
       recordId: 1,
@@ -75,10 +57,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
   it('skips update when obsidianSynced is undefined', async () => {
     const mockSqlite = makeMockSqlite();
 
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
-
     await saveSqliteStep({
       recordId: 1,
       record: { url: 'https://x.com', created_at: 100 },
@@ -91,10 +69,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
 
   it('calls update with obsidian_synced=1 when obsidianSynced is true', async () => {
     const mockSqlite = makeMockSqlite();
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
 
     await saveSqliteStep({
       recordId: 1,
@@ -109,10 +83,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
   it('calls update with obsidian_synced=0 when obsidianSynced is false', async () => {
     const mockSqlite = makeMockSqlite();
 
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
-
     await saveSqliteStep({
       recordId: 1,
       record: { url: 'https://x.com', created_at: 100 },
@@ -123,50 +93,10 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
     expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 0 });
   });
 
-  it('throws when withOptimisticLock fails', async () => {
-    const mockSqlite = makeMockSqlite();
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('ConflictError')
-    );
-
-    await expect(
-      saveSqliteStep({
-        recordId: 1,
-        record: { url: 'https://x.com', created_at: 100 },
-        sqliteClient: mockSqlite,
-      })
-    ).rejects.toThrow('ConflictError');
-
-    expect(mockSqlite.insert).not.toHaveBeenCalled();
-  });
-
-  it('uses url and created_at in lock key', async () => {
-    const mockSqlite = makeMockSqlite();
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
-
-    await saveSqliteStep({
-      recordId: 1,
-      record: { url: 'https://example.com/page', created_at: 1234567890 },
-      sqliteClient: mockSqlite,
-    });
-
-    const lockKey = (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(lockKey).toContain('https://example.com/page');
-    expect(lockKey).toContain('1234567890');
-  });
-
   it('throws when insert returns null', async () => {
     const mockSqlite = makeMockSqlite({
       insert: vi.fn().mockResolvedValue(null),
     });
-
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
 
     await expect(
       saveSqliteStep({
@@ -185,10 +115,6 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
       insert: vi.fn().mockResolvedValue(null),
     });
 
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
-
     await expect(
       saveSqliteStep({
         recordId: 1,
@@ -202,16 +128,12 @@ describe('saveSqliteStep — Optimistic Lock (H5)', () => {
   });
 });
 
-describe('saveSqliteStep — PBI-1 diagnostic metadata', () => {
+describe('saveSqliteStep — diagnostic metadata', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('passes full diagnostic metadata to insert', async () => {
-    (withOptimisticLock as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_key: string, fn: (v: number) => number) => fn(0)
-    );
-
     const mockInsert = vi.fn().mockResolvedValue({ id: 42 });
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     const mockClient = { insert: mockInsert, update: mockUpdate } as unknown as SqliteClient;

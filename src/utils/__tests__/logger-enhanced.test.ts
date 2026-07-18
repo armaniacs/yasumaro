@@ -240,6 +240,79 @@ describe('Logger - Enhanced Coverage', () => {
             expect(logs.some((l: any) => l.message === 'Old log')).toBe(false);
             expect(logs.some((l: any) => l.message === 'New log')).toBe(true);
         });
+
+        // PBI #6: ログ保持期間を3日、MAX_LOGSを500に短縮
+        test('4日より古いログが削除される（3日保持ポリシー）', async () => {
+            const oldTimestamp = Date.now() - (4 * 24 * 60 * 60 * 1000); // 4 days ago
+            const oldLog = {
+                id: 'old-log-4d',
+                timestamp: oldTimestamp,
+                type: 'INFO' as const,
+                message: '4 day old log',
+                details: {}
+            };
+            await chrome.storage.local.set({ sanitization_logs: [oldLog] });
+
+            await logger.addLog('INFO', 'New log', {});
+            await logger.flushLogs(true);
+
+            const logs = await logger.getLogs();
+            expect(logs.some((l: any) => l.message === '4 day old log')).toBe(false);
+            expect(logs.some((l: any) => l.message === 'New log')).toBe(true);
+        });
+
+        test('MAX_LOGSを超えると古いログが切り詰められる', async () => {
+            // Create 501 entries — exceeds target MAX_LOGS=500
+            const logs = Array.from({ length: 501 }, (_, i) => ({
+                id: `log-${i}`,
+                timestamp: Date.now() - (600 - i) * 1000,
+                type: 'INFO' as const,
+                message: `Log ${i}`,
+                details: {}
+            }));
+            await chrome.storage.local.set({ sanitization_logs: logs });
+
+            await logger.addLog('INFO', 'Final log', {});
+            await logger.flushLogs(true);
+
+            const result = await logger.getLogs();
+            expect(result.length).toBeLessThanOrEqual(500);
+        });
+    });
+
+    // PBI #3: CSPRNGフォールバック
+    describe('CSPRNG Fallback - Log ID Generation', () => {
+        test('crypto.randomUUIDが利用不可の場合、Math.randomではなくcrypto.getRandomValuesを使用する', async () => {
+            // Override crypto.randomUUID to undefined to simulate unavailable environment
+            // (delete may not work on @peculiar/webcrypto — use defineProperty instead)
+            const originalRandomUUID = (globalThis.crypto as any).randomUUID;
+            Object.defineProperty(globalThis.crypto, 'randomUUID', {
+                value: undefined,
+                writable: true,
+                configurable: true,
+            });
+
+            const mathRandomSpy = vi.spyOn(Math, 'random');
+
+            await logger.addLog('INFO', 'CSPRNG fallback test', {});
+            await logger.flushLogs(true);
+
+            const logs = await logger.getLogs();
+            expect(logs.length).toBe(1);
+            expect(logs[0].id).toBeDefined();
+            expect(typeof logs[0].id).toBe('string');
+            expect(logs[0].id.length).toBeGreaterThan(0);
+            // Math.random should NOT be called — this is the RED assertion
+            expect(mathRandomSpy).not.toHaveBeenCalled();
+
+            // Restore
+            Object.defineProperty(globalThis.crypto, 'randomUUID', {
+                value: originalRandomUUID,
+                writable: true,
+                configurable: true,
+            });
+            mathRandomSpy.mockRestore();
+        });
     });
 
     describe('ErrorCode Constants', () => {
