@@ -5,6 +5,7 @@
  */
 
 import { logInfo, logDebug } from '../logger.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { calculatePasswordStrength } from '../masterPassword.js';
 import {
     generateSalt,
@@ -243,7 +244,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 
     if (isValid) {
         // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
-        chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', payload: {} }).catch((error) => {
+        chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch((error) => {
             // 送信失敗は無視（Service Workerが起動していない可能性）
             logDebug('Failed to send activity update', { error: error.message }, 'storage/encryptionSession.ts');
         });

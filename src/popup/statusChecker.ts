@@ -5,6 +5,7 @@ import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainU
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { hashUrl } from '../utils/crypto.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 export interface StatusInfo {
   domainFilter: {
@@ -147,7 +148,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     type PrivacyInfo = { isPrivate?: boolean; reason?: 'cache-control' | 'set-cookie' | 'authorization'; headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } };
     let privacyInfo: PrivacyInfo | null = null;
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE' });
+      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE', protocolVersion: CURRENT_PROTOCOL_VERSION });
       await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
 
       if (response && response.success && response.cache) {

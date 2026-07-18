@@ -5,6 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
@@ -52,7 +53,7 @@ async function sendDashboardMessage<T extends DashboardSqliteRequest>(
   // The callback-based API can silently fail with chrome.runtime.lastError
   // when the service worker responds async via sendResponse().
   return Promise.race([
-    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: messagePayload }),
+    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: messagePayload }),
     new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT);
     }),

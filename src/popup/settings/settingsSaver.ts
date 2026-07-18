@@ -5,6 +5,7 @@
 
 import { saveSettingsWithAllowedUrls, getSettings } from '../../utils/storage.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { extractSettingsFromInputs } from '../settingsUiHelper.js';
 import { getMessage } from '../i18n.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from './fieldValidation.js';
@@ -29,6 +30,7 @@ interface TestResponse {
 export async function runConnectionTest(): Promise<ConnectionTestResult> {
     const testResult = await chrome.runtime.sendMessage({
         type: 'TEST_CONNECTIONS',
+        protocolVersion: CURRENT_PROTOCOL_VERSION,
         payload: {}
     }) as TestResponse;
 

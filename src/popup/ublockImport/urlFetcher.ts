@@ -5,6 +5,7 @@
 
 import { isValidUrl } from './validation.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { LogType } from '../../utils/logger.js';
 import { addLog } from '../../utils/logger.js';
 
@@ -22,6 +23,7 @@ export async function fetchFromUrl(url: string): Promise<string> {
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_URL',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { url }
     });
 

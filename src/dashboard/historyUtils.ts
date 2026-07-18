@@ -1,4 +1,5 @@
 import { getMessage } from '../popup/i18n.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { TIMEOUTS } from '../constants/appConstants.js';
 
 export function createPaginationControls(
@@ -42,6 +43,7 @@ export async function sendMessageWithTimeout(payload: {
   const timeoutMs = 20000;
   const messagePromise = chrome.runtime.sendMessage({
     type: 'MANUAL_RECORD',
+    protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload,
   });
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -69,7 +71,7 @@ export function showRecordError(info: HTMLElement, error: unknown): void {
 
 export async function checkServiceWorkerAlive(): Promise<boolean> {
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'PING' });
+    const response = await chrome.runtime.sendMessage({ type: 'PING', protocolVersion: CURRENT_PROTOCOL_VERSION });
     return response?.success === true;
   } catch (error) {
     console.error('[Dashboard] Service Worker not responding:', error);
