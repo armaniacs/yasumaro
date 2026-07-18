@@ -3,7 +3,7 @@
  * プライバシーポリシー同意モーダルUIコントローラー
  */
 
-import { getMessage } from './i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from './privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';

@@ -4,7 +4,7 @@
  * 設定フォームの各入力フィールドのバリデーションを行う
  */
 
-import { getMessage } from '../i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 
 export type ErrorPair = [HTMLInputElement | null, string];
 

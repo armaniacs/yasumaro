@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
     applyI18n: vi.fn(),
     setHtmlLangAndDir: vi.fn(),
     translatePageTitle: vi.fn(),

@@ -59,7 +59,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   applyI18n: vi.fn(),
   getMessage: vi.fn((key: string) => {
     const messages: Record<string, string> = {
@@ -423,7 +423,7 @@ describe('customPromptManager - r2 missed branches', () => {
 
   describe('createDefaultPromptItem locale branch', () => {
     it('should render default with English locale when getMessage returns undefined', async () => {
-      const { getMessage } = await import('../i18n.js');
+      const { getMessage } = await import('../../utils/i18n.js');
       (getMessage as any).mockImplementation((key: string) => {
         if (key === 'locale') return undefined;
         if (key === 'defaultPrompt') return 'Default';
@@ -444,7 +444,7 @@ describe('customPromptManager - r2 missed branches', () => {
     });
 
     it('should render default with Japanese locale via getMessage', async () => {
-      const { getMessage } = await import('../i18n.js');
+      const { getMessage } = await import('../../utils/i18n.js');
       (getMessage as any).mockImplementation((key: string) => {
         if (key === 'locale') return 'ja';
         if (key === 'defaultPrompt') return '\u30c7\u30d5\u30a9\u30eb\u30c8';

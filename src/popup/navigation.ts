@@ -2,7 +2,7 @@
 
 import { setScreenState, SCREEN_STATES } from './screenState.js';
 import { clearAutoCloseTimer } from './autoClose.js';
-import { setHtmlLangAndDir } from './i18n.js';
+import { setHtmlLangAndDir } from '../utils/i18n.js';
 
 /**
  * 【機能概要】: メイン画面を表示し、設定画面を非表示にする

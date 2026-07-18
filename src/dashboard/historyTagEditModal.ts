@@ -1,4 +1,4 @@
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getAllCategories } from '../utils/tagUtils.js';
 import { getSettings } from '../utils/storage.js';

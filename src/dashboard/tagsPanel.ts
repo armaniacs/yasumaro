@@ -3,7 +3,7 @@
  * Tag settings panel: categories + normalization dictionary management.
  */
 
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';

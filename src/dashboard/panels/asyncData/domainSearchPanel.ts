@@ -1,4 +1,4 @@
-import { getMessage } from '../../../popup/i18n.js';
+import { getMessage } from '../../../utils/i18n.js';
 import { getSettings, StorageKeys } from '../../../utils/storage.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
 import type { Settings } from '../../../utils/storage.js';

@@ -24,7 +24,7 @@ vi.mock('../autoClose.js', () => ({
   startAutoCloseTimer: vi.fn(),
 }));
 
-vi.mock('../i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key) => {
     const messages = {
       saveSuccess: 'Saved to Obsidian',

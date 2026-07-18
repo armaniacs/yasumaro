@@ -194,7 +194,7 @@ vi.mock('../../constants/appConstants.js', () => ({
     TIMEOUTS: { ERROR_MESSAGE_DISPLAY: 5000 },
 }));
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 

@@ -13,7 +13,7 @@ import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpl
 import { showStatus } from '../settingsUiHelper.js';
 import { LogType, addLog } from '../../utils/logger.js';
 import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
-import { getMessage } from '../i18n.js';
+import { getMessage } from '../../utils/i18n.js';
 
 // グローバル状態
 let dropZoneActive = false;

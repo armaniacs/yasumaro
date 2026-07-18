@@ -166,7 +166,7 @@ vi.mock('../popup/trustSettings.js', () => ({
     loadTrustSettings: vi.fn(),
 }));
 vi.mock('../popup/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../popup/i18n.js', () => ({ getMessage: vi.fn((key: string) => key) }));
+vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((key: string) => key) }));
 vi.mock('./historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },

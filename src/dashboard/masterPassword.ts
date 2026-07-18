@@ -3,7 +3,7 @@
  * Master password settings management for the dashboard
  */
 
-import { getMessage } from '../popup/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import {
   setMasterPassword,

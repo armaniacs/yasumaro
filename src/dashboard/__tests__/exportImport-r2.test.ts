@@ -14,7 +14,7 @@ vi.mock('../../utils/storage.js', () => ({
   saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../popup/i18n.js', () => ({
+vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
