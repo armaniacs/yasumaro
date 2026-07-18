@@ -16,14 +16,13 @@
 
 | # | PBI | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| 1 | [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
-| 2 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
+| 1 | [2026-07-18-36](2026-07-18-36-feat-automate-third-party-notices.md) | THIRD_PARTY_NOTICESを自動生成する仕組みをCIに導入 | 🔴高（3pt） | 🟢なし |
 | 3 | [2026-07-18-30](2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md) | popup/optionsに重複するi18n.tsを共通モジュールへ統合 | 🔴高（3pt） | 🟡軽微 |
 | 4 | [2026-07-18-28](2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md) | pendingSqliteQueueをチャンク単位のバッチINSERTに変更 | 🟡中（2pt） | 🔴あり |
 | 5 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
 
 **所見**:
-- #1〜2（🔴高）は副作用なしだが工数大。まとまった時間を確保してから着手
+- #1（🔴高）は副作用なしだが工数大。まとまった時間を確保してから着手
 - #3（🟡軽微）は着手前にPBI内「実装者向け注記」の要検証点を必ず読むこと
 - #4〜5（🔴あり）は最後に回す。特に#5（SessionStore移行）は容量制限・offscreenアクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを挟むことを推奨
 
@@ -60,7 +59,6 @@
 DX・保守性:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-18-33](2026-07-18-33-feat-message-protocol-versioning.md) | L11 | Content-SWメッセージプロトコルにprotocolVersionを追加 | 🔴高（3pt） | 🟢なし |
 
 UI・ドキュメント:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -73,6 +71,7 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-18-33-feat-message-protocol-versioning.md
 - 2026-07-18-29-fix-optimistic-lock-cas-reverification.md
 - 2026-07-18-31-fix-wa-sqlite-exact-version-pin.md
 - 2026-07-18-11-fix-consent-state-changed-sender-validation.md
@@ -108,6 +107,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 5 |
-| アーカイブ済み | 55 |
-| **合計（archive除く）** | 5 |
+| ⬜ 未着手 | 4 |
+| アーカイブ済み | 56 |
+| **合計（archive除く）** | 4 |
