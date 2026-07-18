@@ -207,6 +207,77 @@ describe('withOptimisticLock', () => {
             }
         });
 
+        it('書き込み後の再検証でバージョン不一致を検出する', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            const setupOriginalGet = originalGet;
+            let callCount = 0;
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    // initial read
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    // pre-write verify: passes
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 3) {
+                    // post-write verify: another process overwrote
+                    return { testKey: ['modified'], testKey_version: 10 };
+                }
+                return setupOriginalGet.call(chrome.storage.local, keys);
+            });
+
+            await expect(
+                withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+            ).rejects.toThrow(ConflictError);
+        });
+
+        it('書き込み後の再検証で値の不一致を検出する', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            const setupOriginalGet = originalGet;
+            let callCount = 0;
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 3) {
+                    // version matches but value differs
+                    return { testKey: ['tampered'], testKey_version: 1 };
+                }
+                return setupOriginalGet.call(chrome.storage.local, keys);
+            });
+
+            await expect(
+                withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+            ).rejects.toThrow(ConflictError);
+        });
+
+        it('書き込み後の再検証が成功する', async () => {
+            await chrome.storage.local.set({ testKey: ['initial'] });
+
+            const setupOriginalGet = originalGet;
+            let callCount = 0;
+            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+                callCount++;
+                if (callCount === 1) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                } else if (callCount === 2) {
+                    return { testKey: ['initial'], testKey_version: 0 };
+                }
+                // 3回目以降（post-write verify含む）: 実際のストレージ値を返す
+                return setupOriginalGet.call(chrome.storage.local, keys);
+            });
+
+            const result = await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
+
+            expect(result).toEqual(['initial', 'item']);
+            const stored = await chrome.storage.local.get('testKey');
+            expect(stored.testKey).toEqual(['initial', 'item']);
+        });
+
         it('競合が統計に記録される', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
@@ -308,14 +379,15 @@ describe('withOptimisticLock', () => {
             let getCallCount = 0;
             chrome.storage.local.get = vi.fn(async () => {
                 getCallCount++;
-                // retryCount * 2回までは競合を返す（verify checkも含む）
-                if (getCallCount <= retryCount * 2) {
+                // 各試行は initial read + pre-write verify + post-write verify の3回 get を行う。
+                // retryCount 回の試行が競合した後、次の試行で成功させる。
+                if (getCallCount <= retryCount * 3) {
                     return { testKey: ['modified'], testKey_version: getCallCount * 10 };
                 }
                 // その後は、実際の値を返す（CAS成功）
                 return {
                     testKey: testKeyState,
-                    testKey_version: successVersion
+                    testKey_version: testKeyVersion
                 };
             });
 

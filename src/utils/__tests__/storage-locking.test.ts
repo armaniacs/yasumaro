@@ -147,9 +147,10 @@ describe('saveSettings - 楽観的ロック', () => {
 
         await Promise.all(saves);
 
-        // 最後のポート番号が設定されているか確認
+        // いずれかの保存値が設定されているか確認（厳密なCASでは最後に成功した書き込みが勝つ）
         const result = await getSettings();
-        expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27132');
+        const savedPorts = Array.from({ length: 10 }, (_, i) => `271${23 + i}`);
+        expect(savedPorts).toContain(result[StorageKeys.OBSIDIAN_PORT]);
     });
 
     it('updateAllowedUrlsFlag=trueで許可URLリストを正しく更新する', async () => {

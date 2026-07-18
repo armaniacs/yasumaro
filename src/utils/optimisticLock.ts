@@ -165,6 +165,21 @@ async function performCasUpdate<T>(
         [key]: newValue,
         [`${key}_version`]: newVersion
     });
+
+    // 書き込み後の再検証: 他プロセスが割り込んでいないか確認
+    const postWriteResult = await chrome.storage.local.get([key, `${key}_version`]);
+    const postWriteVersion = postWriteResult[`${key}_version`] as number || INITIAL_VERSION;
+    const postWriteValue = postWriteResult[key] as T;
+
+    const versionMatches = postWriteVersion === newVersion;
+    const valueMatches = JSON.stringify(postWriteValue) === JSON.stringify(newValue);
+
+
+
+    if (!versionMatches || !valueMatches) {
+        conflictStats.totalConflicts++;
+        throw new ConflictError(key, newVersion, postWriteVersion);
+    }
 }
 
 /**
