@@ -56,6 +56,10 @@ export function initTabNavigation(): void {
                     panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'false');
                     panel.removeAttribute('inert');
+                    const focusTarget = panel.querySelector<HTMLElement>(
+                        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                    );
+                    focusTarget?.focus();
                 } else {
                     panel.classList.remove('active');
                     panel.removeAttribute('style');

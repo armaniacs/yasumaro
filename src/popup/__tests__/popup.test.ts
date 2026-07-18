@@ -284,6 +284,24 @@ describe('initTabNavigation', () => {
         expect(tabPanels[1].classList.contains('active')).toBe(true);
         expect(tabPanels[1].getAttribute('aria-hidden')).toBe('false');
     });
+
+    it('moves focus to first focusable element in newly active panel', () => {
+        const tabBtns = document.querySelectorAll<HTMLButtonElement>('#tabList .tab-btn');
+        const panel2 = document.getElementById('panel2');
+        const input = document.createElement('input');
+        input.id = 'panel2-input';
+        panel2?.appendChild(input);
+
+        tabBtns[1].click();
+
+        // RED: current code does not move focus
+        expect(document.activeElement).toBe(input);
+    });
+
+    it('does not throw when active panel has no focusable element', () => {
+        const tabBtns = document.querySelectorAll<HTMLButtonElement>('#tabList .tab-btn');
+        expect(() => tabBtns[1].click()).not.toThrow();
+    });
 });
 
 describe('setHtmlLangDir', () => {

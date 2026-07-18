@@ -896,6 +896,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
         if (typeof message !== 'object' || message === null || !('type' in message)) return;
         const msg = message as ContentMessage;
         if (msg.type === 'GET_CONTENT') {
+            if (sender.id !== chrome.runtime.id) return;
             const content = extractPageContent();
             sendResponse({
                 content,
