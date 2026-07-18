@@ -1899,6 +1899,12 @@
   "viewFullPolicy": {
     "message": "プライバシーポリシー全文を表示"
   },
+  "privacyPolicyTitle": {
+    "message": "プライバシーポリシー — Yasumaro"
+  },
+  "privacyPolicyLoadError": {
+    "message": "プライバシーポリシーの読み込みに失敗しました。"
+  },
   "consentCheckboxLabel": {
     "message": "プライバシーポリシーを読み、同意しました"
   },

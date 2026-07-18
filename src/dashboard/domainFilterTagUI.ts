@@ -1,4 +1,5 @@
 import { getMessage } from '../popup/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { loadDomainSettings } from '../popup/domainFilter.js';
 
 /**
@@ -70,8 +71,7 @@ export async function initDomainFilterTagUI(): Promise<void> {
     if (!tagList || !tagCount) return;
     const domains = getDomains(mode);
     tagCount.textContent = domains.length > 0
-      ? (getMessage('domainTagCount') || '{count} 件')
-          .replace('{count}', String(domains.length))
+      ? (getMessage(getPluralKey('domainTagCount', domains.length), { count: domains.length }) || '{count} 件')
       : '';
 
     tagList.innerHTML = '';

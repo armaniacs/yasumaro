@@ -1,6 +1,6 @@
 /**
- * aiSummaryCleansingSettings.ts
- * AI要約クレンジング設定の管理
+ * aiSummaryCleansingSettingsV2.ts
+ * AI要約クレンジング設定の管理（V2 — 後方互換のためV1は削除済み）
  */
 
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';

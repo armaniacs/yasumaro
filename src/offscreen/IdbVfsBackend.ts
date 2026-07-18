@@ -11,6 +11,13 @@ import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } fr
 import { sanitizeFtsTerm } from './schema.js';
 import { extractDomain } from './sqliteEngineContext.js';
 
+const ALLOWED_ORDER_COLUMNS = [
+  'id', 'url', 'title', 'summary', 'tags', 'created_at',
+  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
+] as const;
+
+const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
+
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineContext) {}
 
@@ -65,8 +72,16 @@ export class IdbVfsBackend implements StorageBackend {
     if (options.isStarred != null) { conditions.push('is_starred = ?'); params.push(options.isStarred ? 1 : 0); }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Validate ORDER BY to prevent SQL injection
     const orderBy = options.orderBy || 'created_at';
-    const orderDir = options.orderDir || 'DESC';
+    if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
+      return { success: false, error: `Invalid orderBy: ${orderBy}` };
+    }
+    const orderDir = (options.orderDir || 'DESC').toUpperCase();
+    if (!ALLOWED_ORDER_DIRECTIONS.includes(orderDir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
+      return { success: false, error: `Invalid orderDir: ${orderDir}` };
+    }
 
     const rows: BrowsingLogEntry[] = [];
     await this.engine.execWithCache(

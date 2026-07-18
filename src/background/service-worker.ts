@@ -37,7 +37,8 @@ import { formatEntriesToMarkdown } from '../dashboard/obsidianFormatter.js';
 import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ONLY_TYPES,
-    NO_PAYLOAD_TYPES
+    NO_PAYLOAD_TYPES,
+    CURRENT_PROTOCOL_VERSION,
 } from './messageTypes.js';
 import type { ExtensionMessage } from './messageTypes.js';
 import { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
@@ -434,6 +435,15 @@ export function createMessageHandler(): (
                         sendResponse(INVALID_MESSAGE_ERROR);
                         return;
                     }
+                }
+
+                if (msg.protocolVersion !== CURRENT_PROTOCOL_VERSION) {
+                    logWarn(
+                        'Protocol version mismatch detected',
+                        { expected: CURRENT_PROTOCOL_VERSION, actual: msg.protocolVersion, type: msg.type },
+                        ErrorCode.INTERNAL_ERROR,
+                        'service-worker'
+                    );
                 }
 
                 const message = rawMessage as ExtensionMessage;

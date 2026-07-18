@@ -2009,6 +2009,59 @@ describe('message handler - GET_CONTENT response building', () => {
     });
 });
 
+describe('message handler - GET_CONTENT sender validation', () => {
+    let listener: (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => boolean | void;
+
+    beforeAll(async () => {
+        // Ensure globalThis.chrome is the same mock and re-import to register the listener
+        vi.resetModules();
+        (globalThis as any).chrome = chromeMock;
+        await import('../extractor.js');
+        const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls.length).toBeGreaterThan(0);
+        listener = calls[0][0];
+    });
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <article>
+                <h1>Test Article</h1>
+                <p>Content for sender validation test.</p>
+            </article>
+        `;
+        (global as any).chrome.runtime.id = 'test-extension-id';
+    });
+
+    afterEach(() => {
+        (global as any).chrome.runtime.id = undefined;
+    });
+
+    it('rejects GET_CONTENT messages from external senders', () => {
+        const sendResponse = vi.fn();
+
+        listener(
+            { type: 'GET_CONTENT' },
+            { id: 'external-extension-id' } as chrome.runtime.MessageSender,
+            sendResponse
+        );
+
+        // RED: current code does not validate sender.id, so sendResponse WILL be called
+        expect(sendResponse).not.toHaveBeenCalled();
+    });
+
+    it('processes GET_CONTENT messages from the same extension', () => {
+        const sendResponse = vi.fn();
+
+        listener(
+            { type: 'GET_CONTENT' },
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
+            sendResponse
+        );
+
+        expect(sendResponse).toHaveBeenCalled();
+    });
+});
+
 describe('checkVisitConditions - scroll tracking', () => {
     beforeEach(() => {
         document.body.innerHTML = '';

@@ -1,4 +1,3 @@
-import { withOptimisticLock } from '../../../utils/optimisticLock.js';
 import type { SqliteClient } from '../../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import { addLog, LogType } from '../../../utils/logger.js';
@@ -12,15 +11,7 @@ export interface SaveSqliteStepParams {
 }
 
 export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void> {
-  const lockKey = `sqlite-write-${params.record.url}-${params.record.created_at}`;
-
   try {
-    await withOptimisticLock<number>(
-      lockKey,
-      (currentValue) => (currentValue || 0) + 1,
-      { maxRetries: 3, initialDelay: 100 }
-    );
-
     const insertResult = await params.sqliteClient.insert(params.record);
     if (!insertResult) {
       // SQLite unavailable/failing: queue the record instead of losing it (M14).

@@ -17,6 +17,7 @@ import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { type AsyncDataPanel } from '../types.js';
 import { getRegistry } from '../registryContext.js';
+import { getPluralKey } from '../../../utils/i18nPlural.js';
 
 const PAGE_SIZE = 20;
 
@@ -359,7 +360,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         type: 'basic',
         iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
         title: t('historyAppendToObsidian'),
-        message: t('historyAppendSuccess', [String(ids.length)]),
+        message: t(getPluralKey('historyAppendSuccess', ids.length), [String(ids.length)]),
       });
     } else {
       chrome.notifications?.create({
@@ -543,7 +544,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   function updateDynamicRegions(): void {
     const countEl = container?.querySelector('.sqlite-history-count');
-    if (countEl) countEl.textContent = t('historyRecordCount', [String(state.total)]);
+    if (countEl) countEl.textContent = t(getPluralKey('historyRecordCount', state.total), [String(state.total)]);
 
     const errorEl = document.getElementById('sqlite-error');
     if (errorEl) {
@@ -855,7 +856,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       ${fallbackBanner}
       <div class="sqlite-history-header">
         <h3 data-i18n="sqliteHistoryTitle">SQLite History</h3>
-        <span class="sqlite-history-count">${t('historyRecordCount', [String(state.total)])}</span>
+        <span class="sqlite-history-count">${t(getPluralKey('historyRecordCount', state.total), [String(state.total)])}</span>
       </div>
       <div class="sqlite-history-search">
         <input type="text" id="sqlite-search-input"

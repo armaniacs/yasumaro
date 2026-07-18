@@ -15,6 +15,11 @@ const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(
 // the service worker's message type definitions (PBI-02-3).
 import type { CheckDomainMessage } from '../background/messageTypes.js';
 
+// Content Script entry point runs without ESM module support, so we cannot
+// import CURRENT_PROTOCOL_VERSION statically. Keep this in sync with
+// src/background/messageTypes.ts.
+const CURRENT_PROTOCOL_VERSION = 1;
+
 // StorageKeys（簡易版 - content script で使用するもののみ）
 const StorageKeys = {
     DOMAIN_FILTER_CACHE: 'domain_filter_cache',
@@ -217,7 +222,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
     let lastError: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
-            response = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN' });
+            response = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
             if (response) break;
         } catch (e) {
             lastError = e;

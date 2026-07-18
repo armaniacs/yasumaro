@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.37` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.38` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -16,6 +16,46 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [6.5.39] - 2026-07-18
+
+### Fixed / 修正
+
+- **`uuid` の overrides レンジを修正** — `package.json` の `overrides` で `uuid` を `>=11.1.1` としていたのを `^11.1.1` に変更。`>=` 指定による意図しないメジャーアップデートを防止
+- **`GET_CONTENT` メッセージハンドラに送信元検証を追加** — `src/content/extractor.ts` で `sender.id !== chrome.runtime.id` の場合にエラーを返すよう修正。defense-in-depth の一環
+- **`options` ページの `lang` 属性を修正** — `entrypoints/options/index.html` の `lang=""` を `lang="en"` に変更
+- **ポップアップの最小幅をレスポンシブ化** — `entrypoints/popup/styles.css` の固定幅 `width: 360px` を `min-width: 360px; max-width: 100vw` に変更
+- **IDB 移行バックアップのカラム不整合を修正** — `src/offscreen/sqliteEngineContext.ts` の `MIGRATION_BACKUP_COLUMNS` を動的な `[...COLUMN_NAMES]`（32 カラム）に拡張し、`mapMigrationBackupRow()` を追加。スキーマ追加後も列数ズレで復元が失敗しにくくした
+
+### Changed / 変更
+
+- **ログ保持期間と最大件数を短縮** — `src/utils/logger.ts` の `RETENTION_DAYS` を 7 日から 3 日に、`MAX_LOGS` を 1000 件から 500 件に変更
+- **ログ ID フォールバックを CSPRNG に変更** — `src/utils/logger.ts` で `Math.random()` ベースの ID 生成を `crypto.getRandomValues()` に置換
+
+### Removed / 削除
+
+- **レガシー履歴パネルを削除** — 使用されなくなった `src/dashboard/sqliteHistoryPanel.ts`、`src/dashboard/historyPanel.ts`、および関連テスト 5 ファイルを削除
+- **`saveSqliteStep` から不要な楽観的ロック呼び出しを削除** — no-op になっていた `withOptimisticLock` の呼び出しと import を除去
+
+### Deprecated / 非推奨
+
+- **barrel 再エクスポートに `@deprecated` を付与** — `src/utils/storage.ts` と `src/offscreen/sqlite.ts` の後方互換再エクスポートに JSDoc `@deprecated` を追加。新規コードでは分割モジュールを直接インポートすることを推奨
+
+### Accessibility / アクセシビリティ
+
+- **ポップアップパネル切替時のフォーカス移動を追加** — `src/popup/popup.ts` でタブ/パネル切替後、新しくアクティブになったパネル内の最初のフォーカス可能要素にフォーカスを移動
+
+## [6.5.38] - 2026-07-18
+
+### Fixed / 修正
+
+- **`matchWhitelistAdapter()` が汎用 `article` タグに誤マッチしていた問題を修正** — ドメインを持つアダプタ（`nhk-news`）の `detectSelector: 'article'` が、テスト環境の `<article>` 要素を含む全ページで誤発動。第2パス（DOM構造検出）でドメインを持つアダプタは特定セレクタ（`.`, `#`, `[` を含むもの）のみマッチするよう変更。汎用タグ名セレクタは不要なホワイトリスト抽出の早期リターンを防ぐ（54件のテスト失敗を解消）
+- **`convertFallbackRecord()` に不足していた 20+ フィールドを追加** — `gist_synced`、`content`、`masked_count`、`cleansed_reason`、`ai_provider`、`ai_model`、`ai_duration_ms`、`obsidian_duration_ms`、`sent_tokens`、`received_tokens`、`original_tokens`、`cleansed_tokens`、`page_bytes`、`candidate_bytes`、`original_bytes`、`cleansed_bytes`、`ai_summary_original_bytes`、`ai_summary_cleansed_bytes`、`extracted_sentences_bytes`、`extracted_sentences_original_bytes`、`fallback_triggered` のマッピングを追加（フォールバックデータの欠損を防止）
+- **`IdbVfsBackend` に ORDER BY インジェクション対策を追加** — `ALLOWED_ORDER_COLUMNS` / `ALLOWED_ORDER_DIRECTIONS` による許可リスト検証を実装。無効な値はエラーレスポンスを返す
+
+### Refactored / リファクタリング
+
+- **`aiSummaryCleansingSettings.ts`（V1）を削除** — 後方互換のため残していた旧モジュールを完全に除去。全参照を `aiSummaryCleansingSettingsV2.ts` に統一し、テストの参照パスも更新
 
 ## [6.5.37] - 2026-07-18
 

@@ -8,6 +8,7 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } f
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../popup/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
@@ -15,6 +16,7 @@ import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { queryLogs } from './dashboardSqliteService.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 
 export function openSettingsPanel(section: string): void {
@@ -84,7 +86,7 @@ export function refreshLocalMarkdownScheduler(): void {
   try {
     // Best-effort: a failure just means the old schedule keeps running
     // until the next natural Service Worker restart.
-    Promise.resolve(chrome.runtime.sendMessage({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' })).catch(() => {});
+    Promise.resolve(chrome.runtime.sendMessage({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', protocolVersion: CURRENT_PROTOCOL_VERSION })).catch(() => {});
   } catch {
     // sendMessage can throw synchronously (e.g. extension context invalidated).
   }
@@ -255,6 +257,7 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
   const portInput = document.getElementById('port') as HTMLInputElement | null;
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_OBSIDIAN',
+    protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload: apiKey
       ? {
           protocol: protocolInput?.value?.trim(),
@@ -270,6 +273,7 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
 export async function testAiConnection(): Promise<{ success: boolean; message: string }> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
+    protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload: {}
   }) as { ai?: { success: boolean; message: string } };
 
@@ -698,13 +702,14 @@ export async function handlePurgeNow(): Promise<void> {
   try {
     const result = await chrome.runtime.sendMessage({
       type: 'DASHBOARD_SQLITE',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { subtype: 'purge_now' },
     }) as DashboardSqliteResponseFor<'purge_now'> | undefined;
 
     if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
-      statusEl.textContent = getMessage('purgeNowSuccess', [String(result.purged)]) || `${result.purged} 件を削除しました`;
+      statusEl.textContent = getMessage(getPluralKey('purgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件を削除しました`;
     } else {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }
@@ -723,13 +728,14 @@ export async function handleContentPurgeNow(): Promise<void> {
   try {
     const result = await chrome.runtime.sendMessage({
       type: 'DASHBOARD_SQLITE',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { subtype: 'content_purge_now' },
     }) as DashboardSqliteResponseFor<'content_purge_now'> | undefined;
 
     if (result?.success && result.skipped) {
       statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
     } else if (result?.success) {
-      statusEl.textContent = getMessage('contentPurgeNowSuccess', [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
+      statusEl.textContent = getMessage(getPluralKey('contentPurgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
     } else {
       statusEl.textContent = result?.success === false ? result.error : 'Error';
     }

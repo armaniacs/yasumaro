@@ -31,6 +31,39 @@ Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)
 
 自分自身が毎日使うツールだからこそ、手を抜きたくない。それが今もこのプロジェクトを続けている一番の理由です。もし同じように「閲覧履歴を、AIの手を借りて残しておきたい」と思ったことがあるなら、ぜひ使ってみてください。新しいAPIプロバイダーを追加したい場合は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
+### アーキテクチャ
+
+Yasumaro は Manifest V3 Chrome 拡張機能として、以下のコンポーネントで構成されています。
+
+```mermaid
+flowchart LR
+    User([ユーザー / ブラウザ])
+    CS[Content Script]
+    SW[Service Worker]
+    Popup[Popup UI]
+    Dashboard[Dashboard]
+    Offscreen[Offscreen Document]
+    SQLite[(ローカル SQLite<br/>OPFS / IDB)]
+    Obsidian[Obsidian Local REST API]
+    AI[AI プロバイダー API]
+
+    User -->|閲覧| CS
+    CS -->|ページ情報| SW
+    SW -->|記録 / 問い合わせ| Offscreen
+    Offscreen -->|永続化| SQLite
+    SW -->|追記| Obsidian
+    Offscreen -->|要約| AI
+    User -->|設定| Popup
+    Popup -->|開く| Dashboard
+    Dashboard -->|問い合わせ / 設定| SW
+```
+
+- **Content Script**: ページ滞在時間やスクロール深度を測定し、記録対象ページを Service Worker へ通知します。
+- **Service Worker**: 拡張機能の中心です。メッセージの中継、記録パイプラインの起動、Obsidian / SQLite との連携を行います。
+- **Offscreen Document**: SQLite や AI 要約など、Service Worker では実行できない DOM / Web API が必要な処理を担当します。
+- **Popup / Dashboard**: ユーザー設定、履歴検索、診断情報などの UI を提供します。
+- **Obsidian Local REST API**: 既存のデイリーノートへ追記する際に使用されます（任意）。
+
 ### 特徴
 無料・オープンソースで、これだけの機能が使えます。
 
@@ -202,6 +235,39 @@ Today, Yasumaro persists your browsing history locally in SQLite (OPFS + FTS5), 
 
 I use this tool myself, every day, so I don't want to cut corners on it. That's really the whole reason I keep working on it. If you've ever wanted your browsing history to turn into something worth keeping, with a little help from AI, give it a try. If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Architecture
+
+Yasumaro is built as a Manifest V3 Chrome extension with the following components:
+
+```mermaid
+flowchart LR
+    User([User / Browser])
+    CS[Content Script]
+    SW[Service Worker]
+    Popup[Popup UI]
+    Dashboard[Dashboard]
+    Offscreen[Offscreen Document]
+    SQLite[(Local SQLite<br/>OPFS / IDB)]
+    Obsidian[Obsidian Local REST API]
+    AI[AI Provider APIs]
+
+    User -->|browse| CS
+    CS -->|page info| SW
+    SW -->|record / query| Offscreen
+    Offscreen -->|persist| SQLite
+    SW -->|append| Obsidian
+    Offscreen -->|summarize| AI
+    User -->|configure| Popup
+    Popup -->|open| Dashboard
+    Dashboard -->|query / settings| SW
+```
+
+- **Content Script**: Measures dwell time and scroll depth, then notifies the Service Worker of recordable pages.
+- **Service Worker**: The extension core. It relays messages, starts the recording pipeline, and coordinates Obsidian / SQLite access.
+- **Offscreen Document**: Handles DOM / Web API operations that a Service Worker cannot perform, such as SQLite queries and AI summarization.
+- **Popup / Dashboard**: Provides the settings UI, history search, and diagnostics.
+- **Obsidian Local REST API**: Used when appending to existing daily notes (optional).
+
 ### Features
 Free and open source, with all of the following built in.
 
@@ -332,10 +398,33 @@ For detailed usage instructions, please refer to [USER-GUIDE-UBLOCK-IMPORT.md](d
 
 ---
 
-## Privacy / プライバシー
-データはすべてローカルに保存されます。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照してください。
+## Privacy & Security / プライバシーとセキュリティ
 
-All data is stored locally. See [PRIVACY.md](docs/PRIVACY.md) for details.
+Yasumaro は、閲覧履歴を AI に送信する前にプライバシーを保護することを最重視しています。
+
+### 日本語
+
+- **PII マスキング**: 氏名、メールアドレス、電話番号、クレジットカード番号などの個人情報を、AI 送信前に自動でマスクします。
+- **ローカル処理優先**: 履歴の保存、検索、要約の履歴管理はローカルの SQLite（OPFS + FTS5）で行います。Obsidian 連携も任意です。
+- **API キー暗号化**: PBKDF2 + AES-GCM で API キーを暗号化し、`chrome.storage.local` に保存します。
+- **プライベートページ検出**: 銀行、メール、管理画面などのプライベートページを自動検出し、保存前に確認ダイアログを表示します。
+- **監査ログ**: いつ、どの AI プロバイダーに、どの URL の要約を送信したかを記録します。
+- **プライバシー同意フロー**: 初回起動時に同意を取得。3 回拒否すると制限モードで動作します。
+- **GDPR 対応**: データ削除は物理削除（`DELETE FROM`）で実行します。
+
+詳細は [PRIVACY.md](docs/PRIVACY.md) と [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) を参照してください。
+
+### English
+
+- **PII Masking**: Automatically masks personal information such as names, emails, phone numbers, and credit card numbers before sending to AI providers.
+- **Local-First Processing**: History storage, search, and summary history are managed in a local SQLite database (OPFS + FTS5). Obsidian integration is optional.
+- **API Key Encryption**: API keys are encrypted with PBKDF2 + AES-GCM and stored in `chrome.storage.local`.
+- **Private Page Detection**: Automatically detects private pages such as banking, email, and admin panels, and shows a confirmation dialog before saving.
+- **Audit Log**: Records when, which AI provider, and which URL summary was sent.
+- **Privacy Consent Flow**: Requests consent on first launch. After 3 declines, the extension runs in restricted mode.
+- **GDPR Compliance**: Data deletion is performed via physical deletion (`DELETE FROM`).
+
+See [PRIVACY.md](docs/PRIVACY.md) and [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) for details.
 
 ## License / ライセンス
 MIT License

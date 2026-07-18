@@ -4,6 +4,7 @@
  * Unit tests for historyUtils.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 // Setup chrome mock
 vi.stubGlobal('chrome', {
@@ -151,7 +152,7 @@ describe('checkServiceWorkerAlive', () => {
         const result = await checkServiceWorkerAlive();
 
         expect(result).toBe(true);
-        expect(sendMessage).toHaveBeenCalledWith({ type: 'PING' });
+        expect(sendMessage).toHaveBeenCalledWith({ type: 'PING', protocolVersion: CURRENT_PROTOCOL_VERSION });
     });
 
     it('returns false when service worker throws error', async () => {

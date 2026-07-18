@@ -430,6 +430,10 @@ export class MigrationService {
 
 /**
  * フォールバックデータを BrowsingLogRecord 形式に変換
+ *
+ * Maps all fields from the stored record (which was originally converted
+ * via buildInsertRecordFields in schema.ts) with proper null/default handling.
+ * Must stay in sync with all 31 fields of InsertRecordFields/schema.ts.
  */
 function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
   return {
@@ -444,6 +448,27 @@ function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
     is_starred: record.is_starred ?? 0,
     is_deleted: record.is_deleted ?? 0,
     obsidian_synced: record.obsidian_synced ?? 0,
+    gist_synced: record.gist_synced ?? 0,
+    content: record.content ?? null,
+    masked_count: record.masked_count ?? null,
+    cleansed_reason: record.cleansed_reason ?? null,
+    ai_provider: record.ai_provider ?? null,
+    ai_model: record.ai_model ?? null,
+    ai_duration_ms: record.ai_duration_ms ?? null,
+    obsidian_duration_ms: record.obsidian_duration_ms ?? null,
+    sent_tokens: record.sent_tokens ?? null,
+    received_tokens: record.received_tokens ?? null,
+    original_tokens: record.original_tokens ?? null,
+    cleansed_tokens: record.cleansed_tokens ?? null,
+    page_bytes: record.page_bytes ?? null,
+    candidate_bytes: record.candidate_bytes ?? null,
+    original_bytes: record.original_bytes ?? null,
+    cleansed_bytes: record.cleansed_bytes ?? null,
+    ai_summary_original_bytes: record.ai_summary_original_bytes ?? null,
+    ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
+    extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
+    extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
+    fallback_triggered: record.fallback_triggered ?? 0,
   };
 }
 

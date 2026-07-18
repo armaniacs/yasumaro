@@ -1,7 +1,7 @@
 /**
  * logger.ts
  * Structured Logging Utility with Error Codes
- * Stores logs in chrome.storage.local with 7-day retention policy.
+ * Stores logs in chrome.storage.local with 3-day retention policy.
  *
  * @module logger
  * @requires ./piiSanitizer.js — sanitizeLogDetails uses sanitizeRegex to mask
@@ -95,8 +95,8 @@ export type ErrorCodeValues = typeof ErrorCode[keyof typeof ErrorCode];
 export type ErrorCodePattern = `${string}_${string}_${number}`;
 
 const LOG_STORAGE_KEY = 'sanitization_logs';
-const RETENTION_DAYS = 7;
-const MAX_LOGS = 1000; // Prevent unlimited growth
+const RETENTION_DAYS = 3;
+const MAX_LOGS = 500; // Prevent unlimited growth
 
 // 【セキュリティ強化】log sanitizationへの深度制限と循環参照保護
 const MAX_RECURSION_DEPTH = 100; // redaction.tsと整合
@@ -422,7 +422,9 @@ export async function addLog<T extends object = Record<string, unknown>>(type: L
         }
 
         const entry: LogEntry = {
-            id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+            id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : (() => { const a = new Uint32Array(2); crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })(),
             timestamp: Date.now(),
             type,
             message,
@@ -482,6 +484,58 @@ function pruneLogs(logs: LogEntry[]): LogEntry[] {
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
 
 /**
+ * Extract a short file name from an import.meta.url-style URL.
+ * Strips query strings/fragments, removes the `.js` extension, and returns
+ * the last path segment. Falls back to the original URL on parse errors.
+ */
+export function extractSourceFromImportMetaUrl(url: string): string {
+    try {
+        const parsed = new URL(url);
+        const filename = parsed.pathname.split('/').pop() || 'unknown';
+        return filename.replace(/\.(js|ts)$/i, '') || 'unknown';
+    } catch {
+        const fallback = url.split('/').pop() || 'unknown';
+        return fallback.replace(/\.(js|ts)$/i, '') || 'unknown';
+    }
+}
+
+/**
+ * Resolve the `source` field for a log entry.
+ * If an explicit source is provided, it is returned unchanged.
+ * Otherwise, the caller location is inferred from `Error.stack`.
+ *
+ * Note: after bundling, stack frames may point to chunk files rather than
+ * original source files. The returned value is still useful for tracing but
+ * may not match the TypeScript source name.
+ */
+export function resolveLogSource(source?: string): string | undefined {
+    if (source !== undefined) {
+        return source;
+    }
+
+    const stack = new Error().stack || '';
+    const lines = stack.split('\n');
+
+    for (const line of lines) {
+        // Skip frames that are part of this logger module.
+        if (line.includes('/logger.ts') || line.includes('\\logger.ts')) {
+            continue;
+        }
+
+        // Match common stack frame shapes:
+        //   at functionName (file:///path/to/file.ts:123:45)
+        //   at file:///path/to/file.ts:123:45
+        //   at functionName (/path/to/file.ts:123:45)
+        const match = line.match(/at\s+(?:[^\s(]+\s+)?\(?([^\s)]+?):\d+(?::\d+)?\)?$/);
+        if (match) {
+            return extractSourceFromImportMetaUrl(match[1]);
+        }
+    }
+
+    return 'unknown';
+}
+
+/**
  * 構造化されたログエントリを作成する（内部関数）
  * @param {LogTypeValues} type - ログタイプ
  * @param {string} message - メッセージ
@@ -519,7 +573,7 @@ export async function logInfo<T extends object = Record<string, unknown>>(
     details: T = {} as T,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
+    const entry = createStructuredLog(LogType.INFO, message, details, undefined, resolveLogSource(source));
     await writeStructuredLog(entry);
 }
 
@@ -536,7 +590,7 @@ export async function logWarn<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, source);
+    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
 }
 
@@ -553,7 +607,7 @@ export async function logError<T extends object = Record<string, unknown>>(
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.errorにも出力
@@ -577,7 +631,7 @@ export async function logDebug<T extends object = Record<string, unknown>>(
     if (!isDevelopment()) {
         return;
     }
-    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, source);
+    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, resolveLogSource(source));
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.debugにも出力
@@ -599,7 +653,7 @@ export async function logSanitize<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
+    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
 }
 
@@ -641,7 +695,7 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
 
     console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details)}`);

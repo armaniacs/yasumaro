@@ -290,10 +290,28 @@
   "ruleCount": {
     "message": "Rules: {count}"
   },
+  "ruleCount_one": {
+    "message": "Rule: {count}"
+  },
+  "ruleCount_other": {
+    "message": "Rules: {count}"
+  },
   "exceptionCount": {
     "message": "Exceptions: {count}"
   },
+  "exceptionCount_one": {
+    "message": "Exception: {count}"
+  },
+  "exceptionCount_other": {
+    "message": "Exceptions: {count}"
+  },
   "errorCount": {
+    "message": "Errors: {count}"
+  },
+  "errorCount_one": {
+    "message": "Error: {count}"
+  },
+  "errorCount_other": {
     "message": "Errors: {count}"
   },
   "export": {
@@ -474,7 +492,23 @@
     "message": "{count} days ago",
     "description": "Relative time: X days ago"
   },
+  "timeDaysAgo_one": {
+    "message": "1 day ago",
+    "description": "Relative time: 1 day ago"
+  },
+  "timeDaysAgo_other": {
+    "message": "{count} days ago",
+    "description": "Relative time: X days ago"
+  },
   "timeHoursAgo": {
+    "message": "{count} hours ago",
+    "description": "Relative time: X hours ago"
+  },
+  "timeHoursAgo_one": {
+    "message": "1 hour ago",
+    "description": "Relative time: 1 hour ago"
+  },
+  "timeHoursAgo_other": {
     "message": "{count} hours ago",
     "description": "Relative time: X hours ago"
   },
@@ -483,6 +517,14 @@
     "description": "Relative time: just now"
   },
   "timeMinutesAgo": {
+    "message": "{count} minutes ago",
+    "description": "Relative time: X minutes ago"
+  },
+  "timeMinutesAgo_one": {
+    "message": "1 minute ago",
+    "description": "Relative time: 1 minute ago"
+  },
+  "timeMinutesAgo_other": {
     "message": "{count} minutes ago",
     "description": "Relative time: X minutes ago"
   },
@@ -638,10 +680,22 @@
   "maskStatusCount": {
     "message": "Masked {count} items of personal information"
   },
+  "maskStatusCount_one": {
+    "message": "Masked 1 item of personal information"
+  },
+  "maskStatusCount_other": {
+    "message": "Masked {count} items of personal information"
+  },
   "maskStatusDetails": {
     "message": "Masked {details}"
   },
   "itemsCount": {
+    "message": "{count} items"
+  },
+  "itemsCount_one": {
+    "message": "1 item"
+  },
+  "itemsCount_other": {
     "message": "{count} items"
   },
   "items": {
@@ -1286,6 +1340,12 @@
   "maskedBadgeTitle": {
     "message": "Masked {count} personal info item(s) before sending to AI"
   },
+  "maskedBadgeTitle_one": {
+    "message": "Masked 1 personal info item before sending to AI"
+  },
+  "maskedBadgeTitle_other": {
+    "message": "Masked {count} personal info items before sending to AI"
+  },
   "cleansedBadgeHard": {
     "message": "🧹 Hard"
   },
@@ -1586,6 +1646,12 @@
   "domainTagCount": {
     "message": "{count} domains"
   },
+  "domainTagCount_one": {
+    "message": "1 domain"
+  },
+  "domainTagCount_other": {
+    "message": "{count} domains"
+  },
   "domainTagInvalidError": {
     "message": "Invalid domain format."
   },
@@ -1714,6 +1780,22 @@
   },
   "purgeNowSuccess": {
     "message": "Deleted $1 record(s)",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "purgeNowSuccess_one": {
+    "message": "Deleted $1 record",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "purgeNowSuccess_other": {
+    "message": "Deleted $1 records",
     "placeholders": {
       "content": {
         "content": "$1"
@@ -1901,6 +1983,12 @@
   },
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
+  },
+  "privacyPolicyTitle": {
+    "message": "Privacy Policy — Yasumaro"
+  },
+  "privacyPolicyLoadError": {
+    "message": "Failed to load the privacy policy."
   },
   "consentCheckboxLabel": {
     "message": "I have read and agree to the Privacy Policy"
@@ -2291,6 +2379,12 @@
     "message": "Not updated"
   },
   "trancoStatusFormat": {
+    "message": "Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}"
+  },
+  "trancoStatusFormat_one": {
+    "message": "Domain: {count} | Tier: {tier} | Last updated: {lastUpdated}"
+  },
+  "trancoStatusFormat_other": {
     "message": "Domains: {count} | Tier: {tier} | Last updated: {lastUpdated}"
   },
   "trancoUpdateInProgress": {
@@ -2695,6 +2789,12 @@
   "historyAiSummaryCleansedElements": {
     "message": "AI Summary Cleansing: {count} elements removed"
   },
+  "historyAiSummaryCleansedElements_one": {
+    "message": "AI Summary Cleansing: 1 element removed"
+  },
+  "historyAiSummaryCleansedElements_other": {
+    "message": "AI Summary Cleansing: {count} elements removed"
+  },
   "historyAiSummaryCleansedReason": {
     "message": "AI Summary Cleansing Reason"
   },
@@ -2872,6 +2972,24 @@
       }
     }
   },
+  "historyRecordCount_one": {
+    "message": "$1 record",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "historyRecordCount_other": {
+    "message": "$1 records",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
   "historySelectAll": {
     "message": "Select All"
   },
@@ -2894,6 +3012,24 @@
     "message": "Append selected to Obsidian"
   },
   "historyAppendSuccess": {
+    "message": "$1 records appended to Obsidian",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyAppendSuccess_one": {
+    "message": "$1 record appended to Obsidian",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "historyAppendSuccess_other": {
     "message": "$1 records appended to Obsidian",
     "placeholders": {
       "count": {
@@ -3130,6 +3266,22 @@
     "message": "Purge content now"
   },
   "contentPurgeNowSuccess": {
+    "message": "Purged $1 content entries",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentPurgeNowSuccess_one": {
+    "message": "Purged $1 content entry",
+    "placeholders": {
+      "content": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentPurgeNowSuccess_other": {
     "message": "Purged $1 content entries",
     "placeholders": {
       "content": {

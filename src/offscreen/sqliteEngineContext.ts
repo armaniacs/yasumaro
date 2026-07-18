@@ -17,7 +17,7 @@ import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { NoopBackend } from './StorageBackend.js';
 import type { StorageBackend } from './StorageBackend.js';
-import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
+import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams, COLUMN_NAMES } from './schema.js';
 import { runMigrations } from './migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from './sqliteEngine.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
@@ -29,10 +29,57 @@ export const DB_FILENAME = 'yasumaro.db';
 const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;
 
 /** Columns selected by the pre-migration backup / post-migration restore, in order. */
-const MIGRATION_BACKUP_COLUMNS = [
-  'url', 'title', 'summary', 'tags', 'created_at', 'domain', 'visit_duration',
-  'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced',
-] as const;
+const MIGRATION_BACKUP_COLUMNS = [...COLUMN_NAMES];
+
+function mapMigrationBackupRow(row: SqliteValue[]): BrowsingLogRecord {
+  const idx = (name: typeof COLUMN_NAMES[number]) => COLUMN_NAMES.indexOf(name);
+  const getString = (name: typeof COLUMN_NAMES[number]): string | null => {
+    const v = row[idx(name)];
+    return v != null ? String(v) : null;
+  };
+  const getNumber = (name: typeof COLUMN_NAMES[number]): number | null => {
+    const v = row[idx(name)];
+    return v != null ? Number(v) : null;
+  };
+  const getInt = (name: typeof COLUMN_NAMES[number]): number => {
+    const v = row[idx(name)];
+    return v != null ? Number(v) : 0;
+  };
+  return {
+    url: String(row[idx('url')]),
+    title: getString('title'),
+    summary: getString('summary'),
+    tags: getString('tags'),
+    created_at: Number(row[idx('created_at')]),
+    domain: getString('domain'),
+    visit_duration: getNumber('visit_duration'),
+    scroll_ratio: getNumber('scroll_ratio'),
+    is_starred: getInt('is_starred'),
+    is_deleted: getInt('is_deleted'),
+    obsidian_synced: getInt('obsidian_synced'),
+    gist_synced: getInt('gist_synced'),
+    content: getString('content'),
+    masked_count: getNumber('masked_count'),
+    cleansed_reason: getString('cleansed_reason'),
+    ai_provider: getString('ai_provider'),
+    ai_model: getString('ai_model'),
+    ai_duration_ms: getNumber('ai_duration_ms'),
+    obsidian_duration_ms: getNumber('obsidian_duration_ms'),
+    sent_tokens: getNumber('sent_tokens'),
+    received_tokens: getNumber('received_tokens'),
+    original_tokens: getNumber('original_tokens'),
+    cleansed_tokens: getNumber('cleansed_tokens'),
+    page_bytes: getNumber('page_bytes'),
+    candidate_bytes: getNumber('candidate_bytes'),
+    original_bytes: getNumber('original_bytes'),
+    cleansed_bytes: getNumber('cleansed_bytes'),
+    ai_summary_original_bytes: getNumber('ai_summary_original_bytes'),
+    ai_summary_cleansed_bytes: getNumber('ai_summary_cleansed_bytes'),
+    extracted_sentences_bytes: getNumber('extracted_sentences_bytes'),
+    extracted_sentences_original_bytes: getNumber('extracted_sentences_original_bytes'),
+    fallback_triggered: getInt('fallback_triggered'),
+  };
+}
 
 interface MigrationBackupPayload {
   version: 1;
@@ -383,18 +430,7 @@ export class SqliteEngineContext {
         dbHandle,
         `SELECT ${MIGRATION_BACKUP_COLUMNS.join(', ')} FROM browsing_logs`,
         (row) => {
-          const [url, title, summary, tags, created_at, domain, visit_duration,
-            scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced] = row;
-          records.push({
-            url: String(url), title: title != null ? String(title) : null,
-            summary: summary != null ? String(summary) : null,
-            tags: tags != null ? String(tags) : null,
-            created_at: Number(created_at), domain: domain != null ? String(domain) : null,
-            visit_duration: visit_duration != null ? Number(visit_duration) : null,
-            scroll_ratio: scroll_ratio != null ? Number(scroll_ratio) : null,
-            is_starred: Number(is_starred), is_deleted: Number(is_deleted),
-            obsidian_synced: Number(obsidian_synced), gist_synced: Number(gist_synced),
-          });
+          records.push(mapMigrationBackupRow(row));
         }
       );
 

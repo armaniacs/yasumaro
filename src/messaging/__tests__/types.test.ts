@@ -16,6 +16,7 @@ import {
     sendFromContentScript,
     sendFromPopup,
 } from '../types.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 describe('messaging/types: isMaskedItem', () => {
     it('returns false for null', () => {
@@ -331,7 +332,7 @@ describe('messaging/types: sendFromPopup', () => {
         (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
 
         await sendFromPopup('TEST_CONNECTIONS');
-        expect(sendMessageMock).toHaveBeenCalledWith({ type: 'TEST_CONNECTIONS' });
+        expect(sendMessageMock).toHaveBeenCalledWith({ type: 'TEST_CONNECTIONS', protocolVersion: CURRENT_PROTOCOL_VERSION });
     });
 
     it('sends message with payload when provided', async () => {
@@ -339,7 +340,7 @@ describe('messaging/types: sendFromPopup', () => {
         (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
 
         await sendFromPopup('VALID_VISIT', { content: 'hi' });
-        expect(sendMessageMock).toHaveBeenCalledWith({ type: 'VALID_VISIT', payload: { content: 'hi' } });
+        expect(sendMessageMock).toHaveBeenCalledWith({ type: 'VALID_VISIT', payload: { content: 'hi' }, protocolVersion: CURRENT_PROTOCOL_VERSION });
     });
 
     it('throws on error response', async () => {

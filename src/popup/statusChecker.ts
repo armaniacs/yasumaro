@@ -1,9 +1,11 @@
 import { getMessage } from './i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { hashUrl } from '../utils/crypto.js';
+import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 export interface StatusInfo {
   domainFilter: {
@@ -48,17 +50,17 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
     timeAgo = getMessage('timeJustNow') || 'たった今';
   } else if (diff < 60 * 60 * 1000) {
     const minutes = Math.floor(diff / (60 * 1000));
-    const msg = getMessage('timeMinutesAgo', { count: minutes });
+    const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
     timeAgo = msg || `${minutes}分前`;
   } else if (diff < 24 * 60 * 60 * 1000) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
-    const msg = getMessage('timeHoursAgo', { count: hours });
+    const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
     timeAgo = msg || `${hours}時間前`;
   } else if (diff < 48 * 60 * 60 * 1000) {
     timeAgo = getMessage('timeYesterday') || '昨日';
   } else {
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-    const msg = getMessage('timeDaysAgo', { count: days });
+    const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });
     timeAgo = msg || `${days}日前`;
   }
 
@@ -146,7 +148,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     type PrivacyInfo = { isPrivate?: boolean; reason?: 'cache-control' | 'set-cookie' | 'authorization'; headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } };
     let privacyInfo: PrivacyInfo | null = null;
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE' });
+      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE', protocolVersion: CURRENT_PROTOCOL_VERSION });
       await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
 
       if (response && response.success && response.cache) {

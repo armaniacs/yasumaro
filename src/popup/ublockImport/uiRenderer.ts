@@ -5,6 +5,7 @@
 
 import { isValidUrl } from './validation.js';
 import { getMessage } from '../i18n.js';
+import { getPluralKey } from '../../utils/i18nPlural.js';
 
 interface Source {
   url: string;
@@ -166,10 +167,12 @@ export function updatePreviewUI(result: PreviewResult | string): void {
       [errorCountEl, 'errorCount', result.errorCount],
     ];
     labelPairs.forEach(([el, key, count]) => {
+      const pluralKey = getPluralKey(key, count);
       const labelSpan = el.parentElement?.querySelector(`[data-i18n="${key}"]`);
       if (labelSpan) {
+        labelSpan.setAttribute('data-i18n', pluralKey);
         labelSpan.setAttribute('data-i18n-args', JSON.stringify({ count }));
-        labelSpan.textContent = getMessage(key, { count });
+        labelSpan.textContent = getMessage(pluralKey, { count });
       }
     });
 

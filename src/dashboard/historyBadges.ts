@@ -1,4 +1,5 @@
 import { getMessage } from '../popup/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
 import type { CleansedReason } from '../utils/storageUrls.js';
 
 export function makeRecordTypeBadge(recordType?: string): HTMLElement {
@@ -20,7 +21,7 @@ export function makeMaskBadge(maskedCount: number | undefined): HTMLSpanElement 
   const label = getMessage('maskedBadge', { count: String(maskedCount) }) || `🔒 ${maskedCount}`;
   badge.textContent = label;
   badge.title =
-    getMessage('maskedBadgeTitle', { count: String(maskedCount) }) ||
+    getMessage(getPluralKey('maskedBadgeTitle', maskedCount), { count: String(maskedCount) }) ||
     `${maskedCount}件の個人情報をマスクしてAIに送信しました`;
   return badge;
 }

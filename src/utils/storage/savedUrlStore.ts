@@ -5,7 +5,7 @@
  */
 
 import { withOptimisticLock } from '../optimisticLock.js';
-import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES } from './quota.js';
+import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 
 // URL set size limit constants
 export const MAX_URL_SET_SIZE = 10000;
@@ -81,12 +81,15 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
     const urlArray = Array.from(urlSet);
 
     // 【セキュリティ改善】保存前にクォータチェック
-    const currentUsage = await getStorageUsage();
-    const newDataSize = estimateDataSize(urlArray);
-    if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
-        throw new Error(
-            `Storage quota exceeded for saved URLs (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
-        );
+    // unlimitedStorage 権限がある場合は chrome.storage.local の実質的な上限がないためスキップ
+    if (!(await hasUnlimitedStorage())) {
+        const currentUsage = await getStorageUsage();
+        const newDataSize = estimateDataSize(urlArray);
+        if (currentUsage + newDataSize > STORAGE_QUOTA_BYTES) {
+            throw new Error(
+                `Storage quota exceeded for saved URLs (current: ${currentUsage}, new: ${newDataSize}, limit: ${STORAGE_QUOTA_BYTES})`
+            );
+        }
     }
 
     // 楽観的ロックで安全に保存

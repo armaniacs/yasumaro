@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 const LOADER_PATH = '../loader.js';
 
@@ -197,7 +198,7 @@ describe('loader.ts', () => {
       });
       sendMessageSpy.mockResolvedValue({ allowed: true });
       await importLoader('https://example.com/page');
-      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN' });
+      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
@@ -259,7 +260,7 @@ describe('loader.ts', () => {
       setStorageData({});
       sendMessageSpy.mockResolvedValue({ allowed: true });
       await importLoader('https://example.com/page');
-      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN' });
+      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
@@ -271,7 +272,7 @@ describe('loader.ts', () => {
       });
       sendMessageSpy.mockResolvedValue({ allowed: true });
       await importLoader('https://example.com/page');
-      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN' });
+      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
@@ -279,7 +280,7 @@ describe('loader.ts', () => {
       setStorageData({});
       sendMessageSpy.mockResolvedValue({ allowed: false });
       await importLoader('https://example.com/page');
-      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN' });
+      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).not.toHaveBeenCalled();
     });
 
@@ -288,7 +289,7 @@ describe('loader.ts', () => {
       // Default mock returns undefined (no Promise) → 3 immediate retries, no delay
       await importLoader('https://example.com/page');
       expect(sendMessageSpy).toHaveBeenCalledTimes(3);
-      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN' });
+      expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Domain check failed: no response from service worker',

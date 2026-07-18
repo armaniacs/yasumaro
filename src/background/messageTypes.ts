@@ -8,6 +8,16 @@
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 
 // ============================================================================
+// Protocol version
+// ============================================================================
+
+/**
+ * Current Content-SW message protocol version.
+ * Bump this when the message schema changes in a backward-incompatible way.
+ */
+export const CURRENT_PROTOCOL_VERSION = 1;
+
+// ============================================================================
 // Reusable payload fragments
 // ============================================================================
 
@@ -120,7 +130,7 @@ export type DashboardSqliteMessage = {
     payload?: Record<string, unknown>;
 };
 
-export type ExtensionMessage =
+export type ExtensionMessage = (
     | ValidVisitMessage
     | CheckDomainMessage
     | GetContentMessage
@@ -138,7 +148,8 @@ export type ExtensionMessage =
     | PingMessage
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
-    | DashboardSqliteMessage;
+    | DashboardSqliteMessage
+) & { protocolVersion: number };
 
 // ============================================================================
 // Runtime constants (kept for backward compatibility and runtime checks)
