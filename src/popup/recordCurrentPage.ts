@@ -326,7 +326,6 @@ async function runPreviewAndSave(options: PreviewSaveOptions): Promise<PreviewSa
       content: finalContent,
       force: force,
       maskedCount: previewResponse.maskedCount,
-      aiDuration: previewResponse.aiDuration,
       pageBytes: byteStats?.pageBytes,
       candidateBytes: byteStats?.candidateBytes,
       originalBytes: byteStats?.originalBytes,

@@ -44,10 +44,12 @@ Scenario: 容量制限内でセッションデータが正常動作する
 ```
 
 ## 受け入れ基準
-- [ ] `SessionStore` のバックエンドを `chrome.storage.local` から `chrome.storage.session` に変更
-- [ ] offscreen documentからのアクセスが必要な場合、`chrome.storage.session.setAccessLevel()` を適切に設定
-- [ ] 既存の `chrome.storage.local` 内の `sw:` プレフィクスデータに対する移行またはクリーンアップ処理を実装
-- [ ] 容量制限（~1MB）を超えるデータ量が想定されないことを確認、または超過時のフォールバックを用意
+- [x] `SessionStore` のバックエンドを `chrome.storage.local` から `chrome.storage.session` に変更
+- [x] offscreen documentからのアクセスが必要な場合、`chrome.storage.session.setAccessLevel()` を適切に設定
+  - 確認結果: `SessionStore` は Service Worker 内のみで使用され、offscreen からの参照はないため `setAccessLevel` は不要
+- [x] 既存の `chrome.storage.local` 内の `sw:` プレフィクスデータに対する移行またはクリーンアップ処理を実装
+- [x] 容量制限（~1MB）を超えるデータ量が想定されないことを確認、または超過時のフォールバックを用意
+  - クォータ超過時はリトライせず、メモリ内にデータを保持するフォールバックを実装
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -79,8 +81,8 @@ Scenario: 容量制限内でセッションデータが正常動作する
 - 旧データ移行を省略すると、アップデート後にユーザーの `chrome.storage.local` に残留した `sw:` データがゴミとして残り続ける
 
 ## Definition of Done
-- [ ] `SessionStore` が `chrome.storage.session` を使用するよう変更されている
-- [ ] 旧データ移行/クリーンアップが実装されている
-- [ ] 単体・統合テストが追加されパスする
+- [x] `SessionStore` が `chrome.storage.session` を使用するよう変更されている
+- [x] 旧データ移行/クリーンアップが実装されている
+- [x] 単体・統合テストが追加されパスする
 - [ ] 実機Chromeでセッションクリア動作を確認
 - [ ] コードレビュー完了

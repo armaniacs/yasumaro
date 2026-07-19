@@ -10,16 +10,7 @@
 
 ## 未着手 ⬜
 
-### 着手順（難易度 × 副作用による優先順位）
-
-方針: 「低難易度・副作用なし」から着手し、実害リスクのあるものは検証コストを見込んだ上で後回しにする。
-
-| # | PBI | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-| 1 | [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり |
-
-**所見**:
-- #1（🔴あり）は最後に回す。SessionStore 移行は容量制限・offscreen アクセス設定・旧データ移行の3点が未解決のため、着手前に設計レビューを推奨
+未着手のPBIはありません。
 
 ---
 
@@ -37,7 +28,6 @@
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
 | [2026-07-18-19](2026-07-18-19-fix-storage-quota-unlimited-storage-check.md) | M7 | unlimitedStorage権限保持時のストレージクォータ判定修正 | 🟢低（1pt） | 🔴あり（`unlimitedStorage`権限で実質無害だが、値変更時はメモリ/パフォーマンス面の別制約に注意） |
-| [2026-07-18-20](2026-07-18-20-fix-session-store-storage-backend.md) | M9 | SessionStoreのバックエンドをchrome.storage.sessionに変更 | 🔴高（3pt） | 🔴あり（`chrome.storage.session`の容量制限、offscreenからのアクセス設定、旧データ移行が必要） |
 
 アクセシビリティ・i18n:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -63,6 +53,8 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-19-01-fix-ai-duration-measurement.md
+- 2026-07-18-20-fix-session-store-storage-backend.md
 - 2026-07-18-33-feat-message-protocol-versioning.md
 - 2026-07-18-29-fix-optimistic-lock-cas-reverification.md
 - 2026-07-18-31-fix-wa-sqlite-exact-version-pin.md
@@ -103,6 +95,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1 |
-| アーカイブ済み | 59 |
-| **合計（archive除く）** | 1 |
+| ⬜ 未着手 | 0 |
+| アーカイブ済み | 61 |
+| **合計（archive除く）** | 0 |

@@ -71,7 +71,7 @@ export type PreviewRecordMessage = {
 
 export type SaveRecordMessage = {
     type: 'SAVE_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number; aiDuration?: number } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number } & ByteStatsPayload;
 };
 
 export type TestConnectionsMessage = {

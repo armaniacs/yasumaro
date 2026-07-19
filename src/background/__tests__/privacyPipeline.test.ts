@@ -290,4 +290,83 @@ describe('PrivacyPipeline', () => {
       expect(mockCloudService.generateSummary).toHaveBeenCalled();
     });
   });
+
+  describe('aiCallDurationMs（クラウドAI要約の実処理時間）', () => {
+    it('クラウドAI呼び出し(L3)が実行された場合、その所要時間を aiCallDurationMs として返す', async () => {
+      const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
+      const DELAY_MS = 30;
+      const mockCloudService = {
+        getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
+        generateSummary: vi.fn().mockImplementation(
+          () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Cloud summary' }), DELAY_MS))
+        )
+      } as any;
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'sanitized', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(maskedCloudSettings, mockCloudService, sanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+        sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low'
+      });
+
+      const result = await pipeline.process('content');
+
+      expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
+    });
+
+    it('previewOnly=true の場合、クラウドAI呼び出し前に早期returnするため aiCallDurationMs は含まれない', async () => {
+      const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+        .mockReturnValueOnce({ sanitized: 'Original content', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
+
+      const result = await pipeline.process('Original content', { previewOnly: true });
+
+      expect(result.aiCallDurationMs).toBeUndefined();
+    });
+
+    it('local_onlyモード（クラウドAI未使用）の場合、aiCallDurationMs は含まれない', async () => {
+      const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
+      const mockLocalService = {
+        getSupportedModes: vi.fn().mockReturnValue(['local_only']),
+        generateSummary: vi.fn().mockResolvedValue({ summary: 'Local summary' }),
+      };
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'ignored', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(localOnlySettings, mockLocalService, sanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+        .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
+
+      const result = await pipeline.process('content');
+
+      expect(result.aiCallDurationMs).toBeUndefined();
+    });
+
+    it('alreadyProcessed=true でもクラウドAIは実際に呼ばれ、その実測時間が返る', async () => {
+      const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
+      const DELAY_MS = 20;
+      const mockCloudService = {
+        getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
+        generateSummary: vi.fn().mockImplementation(
+          () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Cloud summary' }), DELAY_MS))
+        )
+      } as any;
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'sanitized', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(maskedCloudSettings, mockCloudService, sanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+        sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low'
+      });
+
+      const result = await pipeline.process('content', { alreadyProcessed: true });
+
+      expect(mockCloudService.generateSummary).toHaveBeenCalled();
+      expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
+    });
+  });
 });
