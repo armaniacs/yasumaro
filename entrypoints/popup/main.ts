@@ -4,8 +4,18 @@
  */
 
 import './styles.css';
-import '../../src/utils/i18n';
+import { applyI18n, setHtmlLangAndDir } from '../../src/utils/i18n-dom.js';
 import '../../src/popup/navigation';
 import '../../src/popup/main';
 import '../../src/popup/popup';
 import '../../src/popup/domainFilter';
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setHtmlLangAndDir();
+    applyI18n();
+  });
+} else {
+  setHtmlLangAndDir();
+  applyI18n();
+}
