@@ -10,9 +10,7 @@
 
 ## 未着手 ⬜
 
-| PBI | タイトル | 難易度 | 副作用 |
-|---|---|---|---|
-| [2026-07-19-01](2026-07-19-01-fix-ai-duration-measurement.md) | AI処理時間（aiDuration）計測ロジックの修正 | 🟡中（2pt） | 🟢なし（表示・保存データの正確性を修正するのみ） |
+未着手のPBIはありません。
 
 ---
 
@@ -55,6 +53,7 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-19-01-fix-ai-duration-measurement.md
 - 2026-07-18-20-fix-session-store-storage-backend.md
 - 2026-07-18-33-feat-message-protocol-versioning.md
 - 2026-07-18-29-fix-optimistic-lock-cas-reverification.md
@@ -96,6 +95,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1 |
-| アーカイブ済み | 60 |
-| **合計（archive除く）** | 1 |
+| ⬜ 未着手 | 0 |
+| アーカイブ済み | 61 |
+| **合計（archive除く）** | 0 |
