@@ -61,6 +61,9 @@
 - 自動記録の条件を満たさなくても、任意のタイミングでページを記録できます
 - 重複チェックがないため、同じページを何度でも記録可能です
 - 記録されるとChrome通知とステータスメッセージで確認できます
+- ステータスメッセージには「AI要約を記録しました (6.0秒 / AI: 2.2秒)」のように処理時間が表示されます
+  - 最初の秒数（例: 6.0秒）は、記録開始から完了までの合計時間です。ページ本文の取得、PIIマスキング、AI要約、Obsidian/ローカルへの保存まで、一連の処理全体にかかった時間を表します
+  - 「AI: 」に続く秒数（例: 2.2秒）は、そのうちAIプロバイダーへの要約リクエスト1回分にかかった時間です。クラウドAI（Masked Cloud / Full Pipelineモード）を使う設定の場合のみ表示され、ローカルAIのみを使う設定（Local Onlyモード）では表示されません
 
 #### ダッシュボードへのアクセス
 右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。ダッシュボードは左サイドバーのナビゲーションで構成されており、3つのセクションに分かれています：
@@ -293,6 +296,9 @@ Click the extension icon to open the main screen.
 - Record any page at any time, regardless of automatic recording conditions
 - No duplicate URL restrictions - record the same page multiple times
 - Chrome notifications and status messages confirm successful recording
+- The status message shows processing time, e.g. "AI summary recorded (6.0s / AI: 2.2s)"
+  - The first number (e.g. 6.0s) is the total time from starting the recording to completion — covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage
+  - The number after "AI: " (e.g. 2.2s) is the time spent on a single summarization request to the AI provider. It only appears when a cloud AI mode is configured (Masked Cloud / Full Pipeline); it does not appear in Local Only mode, which uses no cloud AI
 
 #### Accessing the Dashboard
 Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Dashboard is organized as a left sidebar with three sections:
