@@ -80,6 +80,10 @@ import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.
 export function init(): void {
     // Migration (already async, run at startup)
     runMigration();
+    // SessionStore backend migration: sw: keys from chrome.storage.local -> chrome.storage.session
+    SessionStore.migrateFromLocalStorage().catch((err) => {
+        logError('SessionStore migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+    });
     // SQLite data migration from chrome.storage.local
     migrationService.run().catch((err) => {
         logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
