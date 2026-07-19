@@ -343,6 +343,11 @@ describe('recordCurrentPage — preview flow', () => {
     expect(sendMessageWithRetry).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'SAVE_RECORD' })
     );
+    // aiDuration はプレビュー由来の誤った値を伝播させず、SAVE_RECORD側で実測させるためpayloadに含めない
+    const saveRecordCall = (sendMessageWithRetry as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([msg]) => msg.type === 'SAVE_RECORD'
+    );
+    expect(saveRecordCall?.[0].payload).not.toHaveProperty('aiDuration');
   });
 
   it('cancels when preview is cancelled', async () => {

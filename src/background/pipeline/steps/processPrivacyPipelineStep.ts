@@ -26,9 +26,6 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
 
   const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;
 
-  // Measure AI processing time
-  const aiStartTime = performance.now();
-
   try {
     const pipelineResult = await pipeline.process(content || '', {
       previewOnly,
@@ -38,9 +35,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       title: data.title
     });
 
-    const aiEndTime = performance.now();
-    // alreadyProcessed 時はプレビューから伝播した aiDuration を保持
-    const aiDuration = !alreadyProcessed ? aiEndTime - aiStartTime : context.aiDuration;
+    // クラウドAI要約(L3)が実際に呼ばれた場合のみ実測値が入る
+    const aiDuration = pipelineResult.aiCallDurationMs;
 
     if (previewOnly) {
       // Return preview result

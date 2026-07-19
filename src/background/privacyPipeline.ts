@@ -57,6 +57,8 @@ export interface PrivacyPipelineResult {
   receivedTokens?: number;
   providerName?: string;
   modelName?: string;
+  /** クラウドAI要約(L3)の実呼び出し時間 (ミリ秒) — クラウドAIが呼ばれた場合のみセットされる */
+  aiCallDurationMs?: number;
 }
 
 export class PrivacyPipeline {
@@ -134,12 +136,14 @@ export class PrivacyPipeline {
 
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
+      const aiCallStart = performance.now();
       const aiResult = await this.aiService.generateSummary(processingText, {
         mode: 'full_pipeline',
         tagSummaryMode: options.tagSummaryMode,
         url,
       });
-      return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens);
+      const aiCallDurationMs = performance.now() - aiCallStart;
+      return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens, aiCallDurationMs);
     }
 
     return { summary: 'Summary not available.', originalTokens, cleansedTokens };
@@ -214,6 +218,7 @@ export class PrivacyPipeline {
     maskedCount: number,
     originalTokens: number,
     cleansedTokens: number,
+    aiCallDurationMs: number,
   ): PrivacyPipelineResult {
     let sanitizedSummary = aiResult.summary || '';
     let tags: string[] | undefined;
@@ -246,6 +251,7 @@ export class PrivacyPipeline {
       receivedTokens: aiResult.receivedTokens,
       providerName: aiResult.providerName,
       modelName: aiResult.modelName,
+      aiCallDurationMs,
     };
   }
 

@@ -205,8 +205,6 @@ export class RecordingPipeline {
       force: data.force || false,
       aiService: this.aiService,
       errors: [],
-      // alreadyProcessed 時にプレビューから AI 処理時間を伝播
-      aiDuration: data.aiDuration
     };
 
     // Execute each step
