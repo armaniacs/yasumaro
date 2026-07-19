@@ -44,15 +44,15 @@ Scenario: local_onlyモードではAI処理時間欄の扱いが従来通り
 ```
 
 ## 受け入れ基準
-- [ ] `PrivacyPipeline.process()`が、クラウドAI要約呼び出し（`aiService.generateSummary()`のL3呼び出し）の直前直後を`performance.now()`で計測し、`PrivacyPipelineResult.aiCallDurationMs`として返す
-- [ ] `previewOnly=true`の場合、クラウドAI要約が呼ばれないため`aiCallDurationMs`は含まれない（`undefined`）
-- [ ] `processPrivacyPipelineStep.ts`が`pipelineResult.aiCallDurationMs`をそのまま`aiDuration`として使用し、`aiStartTime`/`aiEndTime`によるstep側の計測、および`alreadyProcessed`分岐での値の使い回しロジックを削除している
-- [ ] popup（`recordCurrentPage.ts`）から`SAVE_RECORD`payloadへの`aiDuration`伝播が削除されている
-- [ ] `messageHandlers.ts`の`SAVE_RECORD`ハンドラ、`RecordingPipeline.execute()`の初期context伝播から`aiDuration`受け渡しが削除されている
-- [ ] 不要になった型定義（`RecordingData.aiDuration`、`SaveRecordMessage.payload.aiDuration`、`PreviewResponse.aiDuration`）が削除されている
+- [x] `PrivacyPipeline.process()`が、クラウドAI要約呼び出し（`aiService.generateSummary()`のL3呼び出し）の直前直後を`performance.now()`で計測し、`PrivacyPipelineResult.aiCallDurationMs`として返す
+- [x] `previewOnly=true`の場合、クラウドAI要約が呼ばれないため`aiCallDurationMs`は含まれない（`undefined`）
+- [x] `processPrivacyPipelineStep.ts`が`pipelineResult.aiCallDurationMs`をそのまま`aiDuration`として使用し、`aiStartTime`/`aiEndTime`によるstep側の計測、および`alreadyProcessed`分岐での値の使い回しロジックを削除している
+- [x] popup（`recordCurrentPage.ts`）から`SAVE_RECORD`payloadへの`aiDuration`伝播が削除されている
+- [x] `messageHandlers.ts`の`SAVE_RECORD`ハンドラ、`RecordingPipeline.execute()`の初期context伝播から`aiDuration`受け渡しが削除されている
+- [x] 不要になった型定義（`RecordingData.aiDuration`、`SaveRecordMessage.payload.aiDuration`、`PreviewResponse.aiDuration`）が削除されている
 - [ ] Masked Cloud / Full Pipelineモードで実際に記録し、popup成功メッセージの「AI: X」がクラウドAI要約APIの体感所要時間と一致することを手動確認済み
 - [ ] SQLite保存の`ai_duration_ms`、履歴パネル表示（`historyEntryRow.ts`）にも正しい実測値が反映されることを確認済み
-- [ ] 既存テストスイート（`npm validate`）が全てパスする
+- [x] 既存テストスイート（`npm validate`）が全てパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -122,9 +122,9 @@ grep -rn "aiDuration" src --include="*.ts" | grep -v __tests__
 - テスト更新時、`aiStartTime`/`aiEndTime`をモックしていた既存テストがあれば、`performance.now()`呼び出し回数・タイミングの前提が変わるため注意深く書き直すこと
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テスト（統合・単体）として実装されパスする
-- [ ] `npm validate`（型チェック＋テスト）が全てパスする
+- [x] 全BDDシナリオが自動テスト（統合・単体）として実装されパスする
+- [x] `npm validate`（型チェック＋テスト）が全てパスする
 - [ ] Masked Cloudモードでの手動記録テストで、表示されるAI処理時間が体感時間と一致することを確認
 - [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後、不要な型定義・コメントの残骸がないか最終確認）
+- [x] リファクタリング完了（グリーン後、不要な型定義・コメントの残骸がないか最終確認）
 - [ ] 本PBIファイルを`.plan/archived/`（または`pbi/archive/`）へ移動し、`00-INDEX.md`を更新
