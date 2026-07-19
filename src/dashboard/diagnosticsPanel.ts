@@ -6,6 +6,7 @@ import { getMessage } from '../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
+import { getMonthlyUsage } from '../utils/aiUsageTracker.js';
 import { UI_COLORS } from '../constants/appConstants.js';
 import { getSqliteStatus, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -151,6 +152,21 @@ async function initDiagnosticsPanel(): Promise<void> {
           key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel,
           !key
         ));
+      }
+
+      // Monthly AI cost tracking (cloud API calls + tokens)
+      try {
+        const usage = await getMonthlyUsage();
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagAiApiCalls') || 'Monthly API Calls',
+          String(usage.requestCount)
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagAiTotalTokens') || 'Monthly Total Tokens',
+          String(usage.tokensSent + usage.tokensReceived)
+        ));
+      } catch {
+        // Best-effort display; ignore storage read failures
       }
     }
   } catch {

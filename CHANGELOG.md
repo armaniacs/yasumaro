@@ -36,6 +36,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.42] - 2026-07-20
+
+このリリースは同日の PBI 実装を反映したものです。
+
+This release incorporates the PBI implemented on the same day.
+
+### Added / 追加
+
+- **EU圏PIIパターンをサニタイザーに追加** — `src/utils/piiSanitizer.ts` に IBAN（ドイツ/フランス/イタリア/スペイン/オランダ）、ドイツ税ID（Steuerliche Identifikationsnummer）、フランスINSEE番号、イタリアCodice Fiscale、スペインDNI/NIE を追加
+- **暗号化設定画面に平文保存リスクの警告を追加** — マスターパスワード未設定時に「APIキーは chrome.storage.local に平文で保存されます」と表示し、マスターパスワード設定ボタンを追加
+- **ダッシュボード診断パネルに月間AI使用量を表示** — 今月のAPI呼び出し回数と合計トークン消費量を診断パネルに追加
+
+### Changed / 変更
+
+- **クレジットカード・US電話番号パターンを精密化** — 区切り文字を必須にし、純粋な数字列（EU税ID等）への誤検知を抑制
+
+### Tests / テスト
+
+- **`piiSanitizer.test.ts`** — EU圏PIIパターン6種のマスクテストと既存パターンへの回帰テストを追加
+- **`masterPassword.test.ts`** — マスターパスワード未設定時の警告表示テストを追加
+- **`diagnosticsPanel.test.ts`** — 月間AI使用量表示テストを追加
+
 ## [6.5.41] - 2026-07-20
 
 ### Fixed / 修正

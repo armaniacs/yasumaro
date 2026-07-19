@@ -945,6 +945,12 @@
   "enableMasterPassword": {
     "message": "マスターパスワード保護を有効にする"
   },
+  "masterPasswordWarning": {
+    "message": "マスターパスワードが未設定のため、APIキーは chrome.storage.local に平文で保存されます。"
+  },
+  "masterPasswordWarningSetNow": {
+    "message": "マスターパスワードを設定して暗号化"
+  },
   "encryptApiKeys": {
     "message": "ストレージ内のAPIキーを暗号化"
   },
@@ -2652,6 +2658,12 @@
   },
   "diagBaseUrl": {
     "message": "ベース URL"
+  },
+  "diagAiApiCalls": {
+    "message": "今月のAPI呼び出し回数"
+  },
+  "diagAiTotalTokens": {
+    "message": "今月の合計トークン消費量"
   },
   "defaultValue": {
     "message": "(デフォルト)"

@@ -34,6 +34,10 @@ vi.mock('../../utils/storage.js', () => ({
     OPENAI_2_BASE_URL: 'openai_2_base_url',
     OPENAI_2_API_KEY: 'openai_2_api_key',
     OPENAI_2_MODEL: 'openai_2_model',
+    AI_USAGE_MONTH: 'ai_usage_month',
+    AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+    AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+    AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
   },
 }));
 

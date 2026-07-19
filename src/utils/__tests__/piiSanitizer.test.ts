@@ -511,6 +511,87 @@ describe('piiSanitizer', () => {
       expect(result.text).toBe('電話: [MASKED:phoneJp]');
       expect(result.maskedItems[0].type).toBe('phoneJp');
     });
+
+    test('EU IBAN（ドイツ）を検出してマスクできる', async () => {
+      const text = 'IBAN: DE89370400440532013000';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IBAN: [MASKED:iban]');
+      expect(result.maskedItems[0].type).toBe('iban');
+      expect(result.maskedItems[0].original).toBe('DE89370400440532013000');
+    });
+
+    test('EU IBAN（フランス）を検出してマスクできる', async () => {
+      const text = 'IBAN: FR1420041010050500013M02606';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IBAN: [MASKED:iban]');
+      expect(result.maskedItems[0].type).toBe('iban');
+    });
+
+    test('EU IBAN（イタリア）を検出してマスクできる', async () => {
+      const text = 'IBAN: IT60X0542811101000000123456';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IBAN: [MASKED:iban]');
+      expect(result.maskedItems[0].type).toBe('iban');
+    });
+
+    test('EU IBAN（スペイン）を検出してマスクできる', async () => {
+      const text = 'IBAN: ES9121000418450200051332';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IBAN: [MASKED:iban]');
+      expect(result.maskedItems[0].type).toBe('iban');
+    });
+
+    test('EU IBAN（オランダ）を検出してマスクできる', async () => {
+      const text = 'IBAN: NL91ABNA0417164300';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('IBAN: [MASKED:iban]');
+      expect(result.maskedItems[0].type).toBe('iban');
+    });
+
+    test('ドイツ税ID（Steuerliche Identifikationsnummer）を検出してマスクできる', async () => {
+      const text = '税ID: 12345678901';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('税ID: [MASKED:deTaxId]');
+      expect(result.maskedItems[0].type).toBe('deTaxId');
+    });
+
+    test('フランスINSEE番号を検出してマスクできる', async () => {
+      const text = 'INSEE: 123456789012345';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('INSEE: [MASKED:frInsee]');
+      expect(result.maskedItems[0].type).toBe('frInsee');
+    });
+
+    test('イタリア税コード（Codice Fiscale）を検出してマスクできる', async () => {
+      const text = 'Codice Fiscale: RSSMRA85T10A562S';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('Codice Fiscale: [MASKED:itCodiceFiscale]');
+      expect(result.maskedItems[0].type).toBe('itCodiceFiscale');
+    });
+
+    test('スペインDNIを検出してマスクできる', async () => {
+      const text = 'DNI: 12345678A';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('DNI: [MASKED:esDni]');
+      expect(result.maskedItems[0].type).toBe('esDni');
+    });
+
+    test('スペインNIEを検出してマスクできる', async () => {
+      const text = 'NIE: X1234567A';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('NIE: [MASKED:esNie]');
+      expect(result.maskedItems[0].type).toBe('esNie');
+    });
+
+    test('EU PII追加後も既存の日本・米国パターンは影響を受けない', async () => {
+      const text = 'メール: user@example.com, 電話: 090-1234-5678, SSN: 123-45-6789';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+      expect(result.text).toBe('メール: [MASKED:email], 電話: [MASKED:phoneJp], SSN: [MASKED:ssn]');
+      const types = result.maskedItems.map(i => i.type);
+      expect(types).toContain('email');
+      expect(types).toContain('phoneJp');
+      expect(types).toContain('ssn');
+    });
   });
 
   describe('sanitizeRegex - 出力サイズ制限・切り詰め', () => {

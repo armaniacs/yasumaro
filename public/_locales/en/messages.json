@@ -999,6 +999,12 @@
   "enableMasterPassword": {
     "message": "Enable master password protection"
   },
+  "masterPasswordWarning": {
+    "message": "API keys are stored in chrome.storage.local because no master password is set."
+  },
+  "masterPasswordWarningSetNow": {
+    "message": "Set master password to encrypt"
+  },
   "encryptApiKeys": {
     "message": "Encrypt API keys in storage"
   },
@@ -2743,6 +2749,12 @@
   },
   "diagBaseUrl": {
     "message": "Base URL"
+  },
+  "diagAiApiCalls": {
+    "message": "Monthly API Calls"
+  },
+  "diagAiTotalTokens": {
+    "message": "Monthly Total Tokens"
   },
   "defaultValue": {
     "message": "(default)"

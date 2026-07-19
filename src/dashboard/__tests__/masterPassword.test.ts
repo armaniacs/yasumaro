@@ -126,6 +126,7 @@ describe('loadMasterPasswordSettings', () => {
     document.body.innerHTML = [
       '<input type="checkbox" id="masterPasswordEnabled" />',
       '<div id="masterPasswordOptions"></div>',
+      '<div id="masterPasswordWarning" class="field-warning hidden"></div>',
     ].join('\n');
     vi.resetModules();
     const { loadMasterPasswordSettings } = await import('../masterPassword.js');
@@ -134,8 +135,26 @@ describe('loadMasterPasswordSettings', () => {
 
     const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
     const options = document.getElementById('masterPasswordOptions')!;
+    const warning = document.getElementById('masterPasswordWarning')!;
     expect(checkbox.checked).toBe(false);
     expect(options.classList.contains('hidden')).toBe(true);
+    expect(warning.classList.contains('hidden')).toBe(false);
+  });
+
+  it('should hide warning when password is set', async () => {
+    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    document.body.innerHTML = [
+      '<input type="checkbox" id="masterPasswordEnabled" />',
+      '<div id="masterPasswordOptions"></div>',
+      '<div id="masterPasswordWarning" class="field-warning hidden"></div>',
+    ].join('\n');
+    vi.resetModules();
+    const { loadMasterPasswordSettings } = await import('../masterPassword.js');
+
+    await loadMasterPasswordSettings();
+
+    const warning = document.getElementById('masterPasswordWarning')!;
+    expect(warning.classList.contains('hidden')).toBe(true);
   });
 });
 
