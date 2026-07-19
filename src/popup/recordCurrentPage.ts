@@ -122,11 +122,6 @@ function showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'er
   }, 2000);
 }
 
-function _resetRecordButtonAndClearFlag(btn: HTMLButtonElement): void {
-  isAwaitingForceConfirm = false;
-  void resetRecordButton(btn);
-}
-
 async function forceRecord(
   recordBtn: HTMLButtonElement,
   tab: chrome.tabs.Tab,

@@ -13,13 +13,6 @@ export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): v
   _recordCurrentPage = fn;
 }
 
-function _getRecordCurrentPage(): (force: boolean) => Promise<void> {
-  if (!_recordCurrentPage) {
-    throw new Error('recordCurrentPage not initialized. Call setRecordCurrentPageFn first.');
-  }
-  return _recordCurrentPage;
-}
-
 export async function initStatusPanel(): Promise<void> {
   try {
     // Show privacy mode badge (best-effort, guard against test environments)

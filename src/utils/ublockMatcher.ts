@@ -208,28 +208,6 @@ export async function isUrlBlocked(url: string, ublockRules: UblockRules, contex
 }
 
 /**
- * Evaluate a single rule against a domain.
- * @param {string} urlDomain - Domain extracted from the URL.
- * @param {RuleWithDomain} rule - A rule object produced by ublockParser.js.
- * @param {UblockMatcherContext} context - Matching context.
- * @returns {boolean} - true if the rule matches the URL.
- */
-function _matchRule(urlDomain: string, rule: RuleWithDomain, context: UblockMatcherContext): boolean {
-  // Basic domain pattern match (supports wildcards via matchesPattern).
-  if (!matchesPattern(urlDomain, rule.domain)) {
-    return false;
-  }
-
-  // Evaluate optional rule options if present.
-  if (rule.options && Object.keys(rule.options).length > 0) {
-    return evaluateOptions(rule, context);
-  }
-
-  // No options → rule matches.
-  return true;
-}
-
-/**
  * Evaluate rule options such as $domain, $~domain, $3p, $1p, $important.
  * The implementation covers the most common options required for UF‑103.
  * @param {RuleWithDomain} rule - Rule object with an `options` field.
