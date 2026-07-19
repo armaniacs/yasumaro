@@ -124,29 +124,6 @@ function validateInputSize(text: string): { valid: boolean; error?: string } {
     return { valid: true };
 }
 
-/**
- * タイムアウト付きで関数を実行する
- * @param {Function} fn - 実行する関数
- * @param {number} timeout - タイムアウト時間（ミリ秒）
- * @returns {Promise<T>} 関数の実行結果
- */
-async function _executeWithTimeout<T>(fn: () => T, timeout: number): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            reject(new Error(`Operation timed out after ${timeout}ms`));
-        }, timeout);
-
-        try {
-            const result = fn();
-            clearTimeout(timer);
-            resolve(result);
-        } catch (error) {
-            clearTimeout(timer);
-            reject(error);
-        }
-    });
-}
-
 export interface SanitizeOptions {
     timeout?: number;
     skipSizeLimit?: boolean;

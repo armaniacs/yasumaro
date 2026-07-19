@@ -19,10 +19,6 @@ export let tagFilterState = {
   activeTag: null as string | null,
 };
 
-export function setActiveTag(tag: string | null): void {
-  tagFilterState.activeTag = tag;
-}
-
 // Holds the controller across initTagClusterPanel() calls so a re-render
 // (e.g. re-opening the panel) cleans up the previous instance's listeners
 // before attaching a new one.
