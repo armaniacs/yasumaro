@@ -320,16 +320,6 @@ export function sanitizePromptContent(content: string): SanitizeResult {
 }
 
 /**
- * コンテンツの危険度を確認する
- * @param {string} content - 確認するコンテンツ
- * @returns {DangerLevelValues} 危険度レベル
- */
-export function checkContentDangerLevel(content: string): DangerLevelValues {
-  const result = sanitizePromptContent(content);
-  return result.dangerLevel;
-}
-
-/**
  * 検出された警告をログ用にフォーマット
  * @param {string[]} warnings - 警告メッセージ配列
  * @returns {string} フォーマットされたメッセージ
