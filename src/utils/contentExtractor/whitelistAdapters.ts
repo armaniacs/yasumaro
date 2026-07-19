@@ -106,6 +106,14 @@ export const WHITELIST_ADAPTERS: WhitelistAdapter[] = [
         contentSelectors: ['.znc-Either'],
         metadataPatterns: [],
     },
+    {
+        name: 'anond',
+        domains: ['anond.hatelabo.jp'],
+        detectSelector: 'div.section',
+        contentSelectors: ['div.section'],
+        excludeSelectors: ['.sectionfooter', '.share-button', '.ad-in-entry-block'],
+        metadataPatterns: [],
+    },
 ];
 
 /**
