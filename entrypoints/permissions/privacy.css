@@ -72,3 +72,19 @@ hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
 strong { color: #f1f5f9; }
 .loading { color: var(--text-muted); }
 .error { color: #f87171; }
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --accent: #7c3aed;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --border: #e2e8f0;
+    --code-bg: #f1f5f9;
+    --link: #6d28d9;
+  }
+  code { color: #5b21b6; }
+  strong { color: #0f172a; }
+  .error { color: #dc2626; }
+}

@@ -56,8 +56,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
     if (sqliteStats) { sqliteStats.innerHTML = ''; sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...'; }
     if (diagDeficiencyStats) diagDeficiencyStats.innerHTML = '';
     if (diagCompileOptionsStats) diagCompileOptionsStats.innerHTML = '';
-    if (compileOptionsSection) compileOptionsSection.style.display = debugMode ? '' : 'none';
-    if (diagDivergenceWarning) diagDivergenceWarning.style.display = 'none';
+    if (compileOptionsSection) compileOptionsSection.classList.toggle('hidden', !debugMode);
+    if (diagDivergenceWarning) diagDivergenceWarning.classList.add('hidden');
 
     // Obsidian / AI settings
     try {
@@ -251,7 +251,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       const offscreenUsesFallback = sqliteStatus.fallback;
       const dashboardDetectsOpfs = dashboardVfsStrategy !== 'fallback';
       if (offscreenUsesFallback && dashboardDetectsOpfs) {
-        diagDivergenceWarning.style.display = '';
+        diagDivergenceWarning.classList.remove('hidden');
       }
     }
 

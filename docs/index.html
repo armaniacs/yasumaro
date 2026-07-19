@@ -435,7 +435,7 @@
 <nav>
   <span class="nav-logo">
     Yasumaro
-    <span class="badge">v6.5.41</span>
+    <span class="badge" id="version-badge">v6.5.41</span>
   </span>
   <div class="nav-center">
     <a href="#features" data-i18n="nav.features">機能</a>
@@ -447,8 +447,8 @@
   </div>
   <div class="nav-right">
     <div class="lang-toggle" role="group" aria-label="Language">
-      <button class="lang-btn active" id="btn-ja" onclick="setLang('ja')">JA</button>
-      <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn active" id="btn-ja">JA</button>
+      <button class="lang-btn" id="btn-en">EN</button>
     </div>
     <a class="nav-cta" href="https://github.com/armaniacs/yasumaro">GitHub</a>
   </div>
@@ -1065,7 +1065,7 @@ function renderFAQ() {
       const i = globalIndex++;
       return `
     <div class="faq-item">
-      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" onclick="toggleFAQ(this)">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}">
         <span>${item.q}</span>
         <span class="chevron">▼</span>
       </button>
@@ -1112,6 +1112,24 @@ try {
 } catch(_) {}
 
 renderAll();
+
+// Attach listeners instead of inline event handlers
+document.getElementById('btn-ja').addEventListener('click', () => setLang('ja'));
+document.getElementById('btn-en').addEventListener('click', () => setLang('en'));
+
+document.getElementById('faq-list').addEventListener('click', (e) => {
+  const btn = e.target.closest('.faq-q');
+  if (btn) toggleFAQ(btn);
+});
+
+// Fetch the latest version badge dynamically; falls back to the static HTML on error
+fetch('version.json')
+  .then(r => r.json())
+  .then(data => {
+    const badge = document.getElementById('version-badge');
+    if (badge && data.version) badge.textContent = 'v' + data.version;
+  })
+  .catch(() => {});
 </script>
 </body>
 </html>

@@ -17,9 +17,9 @@ export function createExportLogsPanel(): DiagnosticPanel {
       const showStatus = (msg: string, isError = false) => {
         if (!statusEl) return;
         statusEl.textContent = msg;
-        statusEl.style.display = '';
+        statusEl.classList.remove('hidden');
         statusEl.style.color = isError ? 'var(--color-error)' : 'var(--color-success-text)';
-        setTimeout(() => { statusEl!.style.display = 'none'; }, 3000);
+        setTimeout(() => { statusEl!.classList.add('hidden'); }, 3000);
       };
 
       jsonBtn?.addEventListener('click', async () => {
