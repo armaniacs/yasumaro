@@ -1956,4 +1956,29 @@ describe('extractMainContent — whitelist extraction mode', () => {
     const result = extractMainContent(10000, { whitelistExtractionEnabled: false }, {}, {}) as string;
     expect(result).toContain('Should use blacklist path');
   });
+
+  it('uses whitelist extraction when hostname matches anond.hatelabo.jp and excludes reactions/hotentries', () => {
+    setHostname('anond.hatelabo.jp');
+    document.body.innerHTML = `
+      <div class="day"><div class="body">
+        <div class="section">
+          <p>百合系の作品が中高年のオタクにヒットしてるのって、自分がまだ若い頃なら主人公の男に感情移入できたけど、中高年になると感情移入できなくなったからだと思う。</p>
+          <p class="sectionfooter">Permalink | 記事への反応(12) | 14:59</p>
+          <p class="share-button">ツイート シェア</p>
+        </div>
+      </div></div>
+      <div class="refererlist">
+        <ul><li><div class="box-curve"><p>感情よりケツに移入しろ</p></div></li></ul>
+      </div>
+      <div class="hotentries-wrapper">
+        <h2 class="title">人気エントリ</h2>
+        <ul><li><a href="/x">別の記事タイトル</a></li></ul>
+      </div>
+    `;
+    const result = extractMainContent(10000, {}, {}, {}) as string;
+    expect(result).toContain('百合系の作品が中高年のオタクにヒットしてるのって');
+    expect(result).not.toContain('感情よりケツに移入しろ');
+    expect(result).not.toContain('別の記事タイトル');
+    expect(result).not.toContain('Permalink');
+  });
 });
