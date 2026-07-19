@@ -441,13 +441,15 @@ export function createMessageHandler(): (
                     }
                 }
 
-                if (msg.protocolVersion !== CURRENT_PROTOCOL_VERSION) {
+                if (msg.protocolVersion !== undefined && msg.protocolVersion !== CURRENT_PROTOCOL_VERSION) {
                     logWarn(
-                        'Protocol version mismatch detected',
+                        'Protocol version mismatch - message rejected',
                         { expected: CURRENT_PROTOCOL_VERSION, actual: msg.protocolVersion, type: msg.type },
                         ErrorCode.INTERNAL_ERROR,
                         'service-worker'
                     );
+                    sendResponse({ success: false, error: 'Protocol version mismatch' } as never);
+                    return;
                 }
 
                 const message = rawMessage as ExtensionMessage;

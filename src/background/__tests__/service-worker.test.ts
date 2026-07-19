@@ -392,7 +392,7 @@ describe('service-worker handlers', () => {
             );
         });
 
-        it('should log warning but continue when protocolVersion mismatches', async () => {
+        it('should reject messages with non-matching protocolVersion', async () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             const message = {
@@ -404,7 +404,7 @@ describe('service-worker handlers', () => {
             await new Promise(resolve => setTimeout(resolve, 50));
 
             expect(logWarn).toHaveBeenCalledWith(
-                'Protocol version mismatch detected',
+                'Protocol version mismatch - message rejected',
                 expect.objectContaining({
                     expected: CURRENT_PROTOCOL_VERSION,
                     actual: CURRENT_PROTOCOL_VERSION + 999,
@@ -413,7 +413,7 @@ describe('service-worker handlers', () => {
                 ErrorCode.INTERNAL_ERROR,
                 'service-worker'
             );
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Protocol version mismatch' });
         });
 
         it('should handle CONTENT_CLEANSING_EXECUTED message', async () => {

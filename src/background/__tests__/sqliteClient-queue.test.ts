@@ -26,6 +26,7 @@ vi.mock('../sqliteAlert.js', () => ({
 
 import { SqliteClient } from '../sqliteClient.js';
 import { Mutex } from '../Mutex.js';
+import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
 function setUserAgent(value: string): void {
   Object.defineProperty(navigator, 'userAgent', {
@@ -72,6 +73,7 @@ describe('SqliteClient — request queue (M7)', () => {
             callback({ success: true, rows: [], total: 0 });
           });
         }),
+        getPlatformInfo: vi.fn().mockResolvedValue({ os: 'desktop' }),
         lastError: undefined as { message: string } | undefined,
       },
     };
@@ -102,7 +104,9 @@ describe('SqliteClient — request queue (M7)', () => {
   });
 
   it('uses maxQueueSize 50 on mobile user agents', () => {
+    resetPlatformOsCache();
     setUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
+    (globalThis as any).chrome.runtime.getPlatformInfo = vi.fn().mockResolvedValue({ os: 'android' });
     const testClient = createSqliteClient();
     expect(getRequestQueueMaxSize(testClient)).toBe(50);
   });

@@ -698,7 +698,15 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
 
-    console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details)}`);
+    console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details, (key, value) => {
+        if (typeof value === 'string' && value.length > 128) {
+            return value.slice(0, 128) + '...[truncated]';
+        }
+        if (typeof value === 'string' && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value) && value.length > 40) {
+            return value.slice(0, 8) + '...[redacted]';
+        }
+        return value;
+    })}`);
 
     const now = Date.now();
     if (now - lastCriticalNotificationTime < CRITICAL_NOTIFICATION_COOLDOWN_MS) {
