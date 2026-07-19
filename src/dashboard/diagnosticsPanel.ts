@@ -200,7 +200,7 @@ async function initDiagnosticsPanel(): Promise<void> {
   }
   // Show/hide debug sections based on debugMode
   if (compileOptionsSection) {
-    compileOptionsSection.style.display = debugMode ? '' : 'none';
+    compileOptionsSection.classList.toggle('hidden', !debugMode);
   }
 
   // Debug mode toggle handler
@@ -209,7 +209,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     diagDebugModeToggle.setAttribute('aria-checked', String(isOn));
     await chrome.storage.local.set({ debugMode: isOn });
     if (compileOptionsSection) {
-      compileOptionsSection.style.display = isOn ? '' : 'none';
+      compileOptionsSection.classList.toggle('hidden', !isOn);
     }
   });
 
@@ -387,7 +387,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     const dashboardDetectsOpfs = dashboardVfsStrategy !== 'fallback';
 
     if (offscreenUsesFallback && dashboardDetectsOpfs) {
-      diagDivergenceWarning.style.display = '';
+      diagDivergenceWarning.classList.remove('hidden');
     }
   }
 

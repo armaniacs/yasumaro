@@ -99,7 +99,7 @@ function buildDom(): void {
     <button id="exportSettingsBtn">Export</button>
     <button id="importSettingsBtn">Import</button>
     <input type="file" id="importFileInput" />
-    <div id="importConfirmModal" class="hidden" style="display:none"></div>
+    <div id="importConfirmModal" class="hidden"></div>
     <div id="importPreview"></div>
     <button id="closeImportModalBtn"></button>
     <button id="cancelImportBtn"></button>
@@ -302,7 +302,7 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
       <button id="exportSettingsBtn">Export</button>
       <button id="importSettingsBtn">Import</button>
       <input type="file" id="importFileInput" />
-      <div id="importConfirmModal" class="hidden" style="display:none"></div>
+      <div id="importConfirmModal" class="hidden"></div>
       <div id="importPreview"></div>
       <button id="closeImportModalBtn"></button>
       <button id="cancelImportBtn"></button>
@@ -338,7 +338,7 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
       <button id="exportSettingsBtn">Export</button>
       <button id="importSettingsBtn">Import</button>
       <input type="file" id="importFileInput" />
-      <div id="importConfirmModal" class="hidden" style="display:none"></div>
+      <div id="importConfirmModal" class="hidden"></div>
       <button id="closeImportModalBtn"></button>
       <button id="cancelImportBtn"></button>
       <button id="confirmImportBtn"></button>
@@ -418,7 +418,7 @@ describe('exportImport-r2 — closeImportModal trap management', () => {
       <button id="exportSettingsBtn">Export</button>
       <button id="importSettingsBtn">Import</button>
       <input type="file" id="importFileInput" />
-      <div id="importConfirmModal" class="hidden" style="display:none"></div>
+      <div id="importConfirmModal" class="hidden"></div>
       <div id="importPreview"></div>
       <button id="closeImportModalBtn"></button>
       <button id="cancelImportBtn"></button>

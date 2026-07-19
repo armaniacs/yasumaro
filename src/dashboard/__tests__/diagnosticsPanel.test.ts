@@ -116,7 +116,7 @@ function setupDOM(includeConnectionResult = true): void {
     <button id="diagMigrateBtn"></button>
     <div id="diagMigrateResult"></div>
     <details id="diagCompileOptionsSection"></details>
-    <div id="diagDivergenceWarning" style="display: none;"></div>
+    <div id="diagDivergenceWarning" class="hidden"></div>
   `;
 }
 
@@ -743,14 +743,14 @@ describe('BDD: SQLite capability matrix — debug mode', () => {
     mockStorageLocalGet.mockResolvedValue({ debugMode: false });
     await initDiagnosticsPanel();
     const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
-    expect(section.style.display).toBe('none');
+    expect(section.classList.contains('hidden')).toBe(true);
   });
 
   it('shows compile options section when debug mode is ON', async () => {
     mockStorageLocalGet.mockResolvedValue({ debugMode: true });
     await initDiagnosticsPanel();
     const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
-    expect(section.style.display).toBe('');
+    expect(section.classList.contains('hidden')).toBe(false);
   });
 
   it('toggles debug mode and persists to chrome.storage.local', async () => {
@@ -795,7 +795,7 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning');
-    expect(warning!.style.display).toBe('none');
+    expect(warning!.classList.contains('hidden')).toBe(true);
   });
 
   it('shows divergence warning only when offscreen uses fallback but dashboard detects OPFS', async () => {
@@ -813,6 +813,6 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning');
-    expect(warning!.style.display).not.toBe('none');
+    expect(warning!.classList.contains('hidden')).toBe(false);
   });
 });

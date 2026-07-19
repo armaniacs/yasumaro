@@ -361,14 +361,14 @@ describe('diagnosticsPanel-r2 — Debug mode toggle branches', () => {
     await initDiagnosticsPanel();
     const toggle = document.getElementById('diagDebugModeToggle') as HTMLInputElement;
     const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
-    expect(section.style.display).toBe('none');
+    expect(section.classList.contains('hidden')).toBe(true);
 
     toggle.checked = true;
     toggle.dispatchEvent(new Event('change'));
     await vi.waitFor(() => {
       expect(mockStorageLocalSet).toHaveBeenCalledWith({ debugMode: true });
     });
-    expect(section.style.display).toBe('');
+    expect(section.classList.contains('hidden')).toBe(false);
   });
 });
 
@@ -481,7 +481,7 @@ describe('diagnosticsPanel-r2 — Divergence detection branches', () => {
       <div id="diagObsidianSettings"></div>
       <div id="diagAiSettings"></div>
       <div id="diagSqliteStats"></div>
-      <div id="diagDivergenceWarning" style="display: none;"></div>
+      <div id="diagDivergenceWarning" class="hidden"></div>
       <div id="diagExtInfo"></div>
     `;
     mockDetectLiveVfsStrategy.mockReturnValue({
@@ -497,14 +497,14 @@ describe('diagnosticsPanel-r2 — Divergence detection branches', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning') as HTMLElement;
-    expect(warning.style.display).toBe('');
+    expect(warning.classList.contains('hidden')).toBe(false);
   });
 
   it('keeps divergence warning hidden when both offscreen and dashboard agree', async () => {
     document.body.innerHTML = `
       <div id="diagObsidianSettings"></div>
       <div id="diagAiSettings"></div>
-      <div id="diagDivergenceWarning" style="display: none;"></div>
+      <div id="diagDivergenceWarning" class="hidden"></div>
       <div id="diagExtInfo"></div>
     `;
     mockDetectLiveVfsStrategy.mockReturnValue({
@@ -520,7 +520,7 @@ describe('diagnosticsPanel-r2 — Divergence detection branches', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning') as HTMLElement;
-    expect(warning.style.display).toBe('none');
+    expect(warning.classList.contains('hidden')).toBe(true);
   });
 
   it('keeps divergence warning hidden when diagDivergenceWarning element is missing', async () => {
@@ -542,7 +542,7 @@ describe('diagnosticsPanel-r2 — Divergence detection branches', () => {
     document.body.innerHTML = `
       <div id="diagObsidianSettings"></div>
       <div id="diagAiSettings"></div>
-      <div id="diagDivergenceWarning" style="display: none;"></div>
+      <div id="diagDivergenceWarning" class="hidden"></div>
       <div id="diagExtInfo"></div>
     `;
     mockDetectLiveVfsStrategy.mockImplementation(() => { throw new Error('no caps'); });
