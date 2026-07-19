@@ -3,7 +3,8 @@
  * PRIVACY.md をフェッチしてブラウザ内でレンダリングする
  */
 
-import { applyI18n, setHtmlLangAndDir, translatePageTitle, getMessage } from '../utils/i18n.js';
+import { getMessage } from '../utils/i18n.js';
+import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-dom.js';
 
 /**
  * HTMLエスケープ処理

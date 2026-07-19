@@ -18,7 +18,8 @@ import {
     getPresetPrompt,
     getPromptDisplayName
 } from '../utils/customPromptUtils.js';
-import { applyI18n, getMessage } from '../utils/i18n.js';
+import { getMessage } from '../utils/i18n.js';
+import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from './errorUtils.js';
 
 // Prompt ID prefix constants

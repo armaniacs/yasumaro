@@ -33,7 +33,6 @@
 |---|---|---|---|---|
 | [2026-07-20-01](2026-07-20-01-fix-message-type-unification.md) | セキュリティ | メッセージング型定義のSSOT化・sender.id検証・Pipeline重複解消 | 🔴高（5pt） | 🟢なし |
 | [2026-07-20-02](2026-07-20-02-fix-session-store-resilience.md) | ストレージ | SessionStore 耐久性向上（fallback/waitForFlush/suspend/クォータ） | 🔴高（5pt） | 🟡軽微 |
-| [2026-07-20-03](2026-07-20-03-fix-i18n-module-separation.md) | 保守性 | i18n モジュールの副作用除去とDOM関数分離 | 🟡中（3pt） | 🟢なし |
 | [2026-07-20-04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 保守性 | Content Extractor グローバル状態を CleansingConfig に集約 | 🟡中（3pt） | 🟢なし |
 | [2026-07-20-05](2026-07-20-05-fix-ui-css-touchups.md) | UI | UI/CSS 修正（inline style/light mode/docs index） | 🟡中（3pt） | 🟢なし |
 | [2026-07-20-06](2026-07-20-06-fix-security-privacy-extensions.md) | セキュリティ | PII EUカバレッジ・暗号化キーUX・AIコスト追跡 | 🔴高（5pt） | 🟢なし |
@@ -84,6 +83,7 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-03-fix-i18n-module-separation.md
 - 2026-07-20-07-fix-data-integrity-cleanup.md
 - 2026-07-20-08-fix-changelog-release-note-guidelines.md
 - 2026-07-19-02-fix-anond-whitelist-adapter.md
@@ -129,6 +129,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 8 |
-| アーカイブ済み | 64 |
-| **合計（archive除く）** | 8 |
+| ⬜ 未着手 | 7 |
+| アーカイブ済み | 65 |
+| **合計（archive除く）** | 7 |
