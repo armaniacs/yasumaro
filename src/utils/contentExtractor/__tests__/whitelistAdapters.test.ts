@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { WHITELIST_ADAPTERS, matchWhitelistAdapter, extractWhitelistedContent } from '../whitelistAdapters.js';
 
 describe('WHITELIST_ADAPTERS definitions', () => {
-  it('defines exactly 13 adapters', () => {
-    expect(WHITELIST_ADAPTERS).toHaveLength(13);
+  it('defines exactly 14 adapters', () => {
+    expect(WHITELIST_ADAPTERS).toHaveLength(14);
   });
 
   it('each adapter has required fields', () => {
@@ -50,6 +50,13 @@ describe('WHITELIST_ADAPTERS definitions', () => {
     expect(tabelog?.domains).toContain('tabelog.com');
     expect(tabelog?.contentSelectors).toContain('.rvw-item__rvw-comment');
     expect(tabelog?.metadataPatterns?.length).toBe(2);
+  });
+
+  it('includes the anond adapter with correct domain', () => {
+    const anond = WHITELIST_ADAPTERS.find(a => a.name === 'anond');
+    expect(anond).toBeDefined();
+    expect(anond?.domains).toContain('anond.hatelabo.jp');
+    expect(anond?.contentSelectors).toContain('div.section');
   });
 });
 
@@ -100,6 +107,11 @@ describe('matchWhitelistAdapter', () => {
   it('matches tabelog by exact hostname', () => {
     const adapter = matchWhitelistAdapter('tabelog.com', document.body);
     expect(adapter?.name).toBe('tabelog');
+  });
+
+  it('matches anond by exact hostname', () => {
+    const adapter = matchWhitelistAdapter('anond.hatelabo.jp', document.body);
+    expect(adapter?.name).toBe('anond');
   });
 });
 
@@ -287,6 +299,49 @@ describe('extractWhitelistedContent', () => {
     expect(result).toContain('Zennの記事本文です');
     expect(result).toContain('コードと解説を含みます');
     expect(result).not.toContain('関連記事');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts anond article body and excludes reactions/hotentries/ads/footer', () => {
+    document.body.innerHTML = `
+      <div class="day"><div class="body">
+        <div class="section">
+          <p>百合系の作品が中高年のオタクにヒットしてるのって、自分がまだ若い頃なら主人公の男に感情移入できたけど、中高年になると感情移入できなくなったからだと思う。</p>
+          <p class="sectionfooter">Permalink | 記事への反応(12) | 14:59</p>
+          <p class="share-button">ツイート シェア</p>
+          <div class="ad-in-entry-block" id="rectangle-middle"></div>
+        </div>
+      </div></div>
+      <div class="refererlist">
+        <ul><li><div class="box-curve"><p>感情よりケツに移入しろ</p></div></li></ul>
+      </div>
+      <div class="hotentries-wrapper">
+        <h2 class="title">人気エントリ</h2>
+        <ul><li><a href="/x">別の記事タイトル</a></li></ul>
+      </div>`;
+    const anond = WHITELIST_ADAPTERS.find(a => a.name === 'anond')!;
+    const result = extractWhitelistedContent(document.body, anond);
+    expect(result).toContain('百合系の作品が中高年のオタクにヒットしてるのって');
+    expect(result).not.toContain('感情よりケツに移入しろ');
+    expect(result).not.toContain('別の記事タイトル');
+    expect(result).not.toContain('Permalink');
+    expect(result).not.toContain('ツイート');
+    document.body.innerHTML = '';
+  });
+
+  it('extracts short single-sentence anond post without dropping to empty', () => {
+    document.body.innerHTML = `
+      <div class="section">
+        <p>日本三大ガキといえば、メスガキ、生牡蠣、あとひとつは？</p>
+        <p class="sectionfooter">Permalink | 記事への反応(16) | 20:40</p>
+      </div>
+      <div class="refererlist">
+        <ul><li><div class="box-curve"><p>長いコメントがここに何個も続く想定のテキストです。本文よりずっと長い。</p></div></li></ul>
+      </div>`;
+    const anond = WHITELIST_ADAPTERS.find(a => a.name === 'anond')!;
+    const result = extractWhitelistedContent(document.body, anond);
+    expect(result).toContain('日本三大ガキといえば');
+    expect(result).not.toContain('長いコメントがここに何個も続く');
     document.body.innerHTML = '';
   });
 });
