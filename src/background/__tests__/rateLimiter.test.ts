@@ -93,6 +93,59 @@ describe('RateLimiter', () => {
     const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
     expect(result.allowed).toBe(true);
   });
+
+  it('initialize skips expired entries', async () => {
+    const expired = [['origin:https://example.com', { count: 5, resetTime: Date.now() - 1000 }]] as [string, unknown][];
+    (sessionStore.get as ReturnType<typeof vi.fn>).mockResolvedValue(expired);
+
+    await rateLimiter.initialize();
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('initialize keeps valid entries and enforces their limit', async () => {
+    const valid = [['origin:https://example.com', { count: 5, resetTime: Date.now() + 60000 }]] as [string, unknown][];
+    (sessionStore.get as ReturnType<typeof vi.fn>).mockResolvedValue(valid);
+
+    await rateLimiter.initialize();
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('reload replaces current state with persisted state', async () => {
+    await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    const reloaded = [['origin:https://other.com', { count: 5, resetTime: Date.now() + 60000 }]] as [string, unknown][];
+    (sessionStore.get as ReturnType<typeof vi.fn>).mockResolvedValue(reloaded);
+
+    await rateLimiter.reload();
+    const exampleResult = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    const otherResult = await rateLimiter.check({ url: 'https://other.com/page' }, settings);
+    expect(exampleResult.allowed).toBe(true);
+    expect(otherResult.allowed).toBe(false);
+  });
+
+  it('reload skips expired entries', async () => {
+    const expired = [['origin:https://example.com', { count: 5, resetTime: Date.now() - 1000 }]] as [string, unknown][];
+    (sessionStore.get as ReturnType<typeof vi.fn>).mockResolvedValue(expired);
+
+    await rateLimiter.reload();
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('resets count when previous window has expired', async () => {
+    const past = Date.now() - 1000;
+    const future = Date.now() + 60000;
+    const expired = [['origin:https://example.com', { count: 5, resetTime: past }]] as [string, unknown][];
+    (sessionStore.get as ReturnType<typeof vi.fn>).mockResolvedValue(expired);
+
+    await rateLimiter.initialize();
+    // After expiration, first check should reset count to 1 with a new window.
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, settings);
+    expect(result.allowed).toBe(true);
+    expect(rateLimiter['state'].get('origin:https://example.com')?.count).toBe(1);
+    expect(rateLimiter['state'].get('origin:https://example.com')?.resetTime).toBeGreaterThan(future - 1000);
+  });
 });
 
 describe('RateLimiter — origin-based sender key (H4)', () => {

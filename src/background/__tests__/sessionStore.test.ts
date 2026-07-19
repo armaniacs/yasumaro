@@ -103,6 +103,17 @@ describe('SessionStore', () => {
     expect(mockSession.set).toHaveBeenCalledTimes(2);
   });
 
+  it('flush failure restores delete queue', async () => {
+    mockSession.remove.mockRejectedValueOnce(new Error('network error'));
+    store.set('key1', 'value1');
+    store.remove('key1');
+    await store.flushNow();
+    expect(mockSession.remove).toHaveBeenCalledTimes(1);
+    // retry should call remove again
+    await new Promise((r) => setTimeout(r, 100));
+    expect(mockSession.remove).toHaveBeenCalledTimes(2);
+  });
+
   // T10
   it('storage unavailable should not throw', async () => {
     delete (globalThis as any).chrome.storage.session;
@@ -118,6 +129,15 @@ describe('SessionStore', () => {
     await store.flushNow();
     expect(mockSession.set).toHaveBeenCalledTimes(1);
     // Should not retry after quota error
+    await new Promise((r) => setTimeout(r, 100));
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles non-Error quota rejection', async () => {
+    mockSession.set.mockRejectedValueOnce('QUOTA_BYTES quota exceeded');
+    store.set('key1', 'value1');
+    await store.flushNow();
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
     await new Promise((r) => setTimeout(r, 100));
     expect(mockSession.set).toHaveBeenCalledTimes(1);
   });
