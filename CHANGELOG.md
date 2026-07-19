@@ -13,6 +13,25 @@ All notable changes to this project will be documented in this file.
 > 本拡張機能は旧称「Obsidian Weave」から「Yasumaro」へ改名しました。今後のリリースは `armaniacs/yasumaro` リポジトリで公開されます。
 >
 > This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
+>
+> **リリース頻度・連日リリース時のガイドライン / Release Frequency & Consecutive Release Guidelines**
+>
+> 本プロジェクトでは、緊急の hotfix、前日リリースに対するレビュー指摘の即時反映、CI/pipeline の緊急修正などにより、連日リリースが発生することがあります。
+> 連日リリースの場合は、各リリースエントリの先頭にその意図を示す文言を含め、読み手がバグ修正版か新機能版かを区別しやすくします。
+>
+> - hotfix の場合: 「このリリースは ... に対する hotfix です。」
+> - 前日レビュー指摘の即時反映の場合: 「このリリースは前日のレビュー指摘を即座に反映したものです。」
+> - CI/pipeline 修正の場合: 「このリリースは CI/pipeline の緊急修正です。」
+>
+> 通常のリリース間隔の場合は、これらの追加文言は不要です。
+>
+> This project may ship releases on consecutive days for emergency hotfixes, immediate follow-ups to review feedback from the previous release, or urgent CI/pipeline fixes. When this happens, each release entry begins with a phrase that clarifies the intent so readers can distinguish bug-fix releases from feature releases.
+>
+> - Hotfix: "This release is a hotfix for ..."
+> - Review feedback follow-up: "This release immediately addresses review feedback from the previous day."
+> - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
+>
+> For releases with normal spacing, no additional prefix is required.
 
 
 ## [Unreleased]
