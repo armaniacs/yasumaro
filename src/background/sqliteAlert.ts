@@ -55,10 +55,6 @@ export function recordSqliteSuccess(): void {
     firstFailureTime = 0;
 }
 
-export function getConsecutiveFailureCount(): number {
-    return consecutiveFailures;
-}
-
 export function _resetForTesting(): void {
     consecutiveFailures = 0;
     lastAlertTime = 0;
