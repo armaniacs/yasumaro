@@ -17,6 +17,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.41] - 2026-07-20
+
+### Fixed / 修正
+
+- **protocolVersion 不一致時にメッセージを拒否するよう変更** — `src/background/service-worker.ts` でプロトコルバージョン不一致をログ出力のみからエラーレスポンスを返す動作に変更。undefined のプロトコルバージョンは下位互換のため許容
+- **`logCritical` の console.error 出力に PII 難読化を追加** — `src/utils/logger.ts` で `JSON.stringify` の replacer に長文文字列のトランケートと API キー風文字列の難読化を実装
+- **Service Worker でのモバイル判定を `navigator.userAgent` から `chrome.runtime.getPlatformInfo()` に変更** — `src/utils/deviceUtils.ts` に `getPlatformOs()` と `detectOsFromUserAgent()` を新設。SW コンテキストで `navigator` が利用不可の場合でも正しくモバイル判定できるよう改善。`sqliteClient.ts` のキューサイズ判定も追従
+- **楽観的ロックの post-write 再検証を本番ではスキップ** — `src/utils/optimisticLock.ts` で `enablePostWriteVerification()` （テスト用）を追加し、本番環境での余分なストレージ I/O を削減。`_postWriteVerificationEnabled` フラグで制御
+- **`scheduleCacheSave()` にエラーハンドリングを追加** — `src/background/recordingLogic.ts` で fire-and-forget だったキャッシュ保存に try/catch と async を追加。書き込み失敗時のサイレントデータ消失を防止
+
+### Changed / 変更
+
+- **`htmlparser2` override を `~12.0.0` に狭域化** — `package.json` の overrides で `^12.0.0` から `~12.0.0` に変更し、マイナーバージョンの自動更新リスクを低減
+
+### Tests / テスト
+
+- **`optimisticLock.test.ts`** — post-write 再検証テストに `enablePostWriteVerification()` 呼び出しを追加
+- **`sqliteClient-queue.test.ts`** — モバイル判定テストを `chrome.runtime.getPlatformInfo` モックに対応
+- **`service-worker.test.ts`** — protocolVersion 不一致テストを拒否期待動作に更新
+
 ## [6.5.40] - 2026-07-19
 
 ### Added / 追加

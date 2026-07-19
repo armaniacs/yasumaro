@@ -10,7 +10,7 @@ import { addLog, LogType, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
 import { Mutex } from './Mutex.js';
-import { isMobileUserAgent } from '../utils/deviceUtils.js';
+import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
@@ -77,7 +77,8 @@ export class SqliteClient {
     this.creatingOffscreenPromise = null;
     this.offscreenAlive = false;
     // Reduce the queue size on mobile devices to limit memory consumption.
-    const maxQueueSize = isMobileUserAgent() ? 50 : 200;
+    const os = getPlatformOs();
+    const maxQueueSize = (os === 'android' || os === 'ios') ? 50 : 200;
     this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: MESSAGE_TIMEOUT_MS * 2 });
   }
 

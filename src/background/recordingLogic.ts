@@ -184,15 +184,19 @@ export class RecordingLogic {
   static scheduleCacheSave(): void {
     if (RecordingLogic.saveQueueScheduled) return;
     RecordingLogic.saveQueueScheduled = true;
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       RecordingLogic.saveQueueScheduled = false;
-      RecordingLogic.saveCacheToSession();
+      try {
+        await RecordingLogic.saveCacheToSession();
+      } catch (err) {
+        console.warn('[RecordingLogic] Failed to persist cache to session storage:', err);
+      }
     });
   }
 
-  private static saveCacheToSession(): void {
+  private static async saveCacheToSession(): Promise<void> {
     const cs = RecordingLogic.cacheState;
-    RecordingLogic.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
+    await RecordingLogic.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
       settingsCache: cs.settingsCache,
       cacheTimestamp: cs.cacheTimestamp,
       cacheVersion: cs.cacheVersion,

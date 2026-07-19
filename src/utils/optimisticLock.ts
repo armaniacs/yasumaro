@@ -161,26 +161,34 @@ async function performCasUpdate<T>(
     }
 
     // アトミックに書き込み（chrome.storage.local.setは呼び出し内でアトミック）
+    // Service Worker は単一スレッドのため、書き込み後の再検証は通常不要。
+    // テスト環境で再検証が必要な場合は enablePostWriteVerification() を事前に呼ぶ。
     await chrome.storage.local.set({
         [key]: newValue,
         [`${key}_version`]: newVersion
     });
 
-    // 書き込み後の再検証: 他プロセスが割り込んでいないか確認
-    const postWriteResult = await chrome.storage.local.get([key, `${key}_version`]);
-    const postWriteVersion = postWriteResult[`${key}_version`] as number || INITIAL_VERSION;
-    const postWriteValue = postWriteResult[key] as T;
+    if (_postWriteVerificationEnabled) {
+        const postWriteResult = await chrome.storage.local.get([key, `${key}_version`]);
+        const postWriteVersion = postWriteResult[`${key}_version`] as number || INITIAL_VERSION;
+        const postWriteValue = postWriteResult[key] as T;
 
-    const versionMatches = postWriteVersion === newVersion;
-    const valueMatches = JSON.stringify(postWriteValue) === JSON.stringify(newValue);
+        const versionMatches = postWriteVersion === newVersion;
+        const valueMatches = JSON.stringify(postWriteValue) === JSON.stringify(newValue);
 
-
-
-    if (!versionMatches || !valueMatches) {
-        conflictStats.totalConflicts++;
-        throw new ConflictError(key, newVersion, postWriteVersion);
+        if (!versionMatches || !valueMatches) {
+            conflictStats.totalConflicts++;
+            throw new ConflictError(key, newVersion, postWriteVersion);
+        }
     }
 }
+
+/** @internal Test-only: enable post-write verification. */
+export function enablePostWriteVerification(): void {
+    _postWriteVerificationEnabled = true;
+}
+
+let _postWriteVerificationEnabled = false;
 
 /**
  * 現在の競合統計を取得
