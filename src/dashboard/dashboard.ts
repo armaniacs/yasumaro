@@ -744,57 +744,6 @@ export async function handleContentPurgeNow(): Promise<void> {
   }
 }
 
-// Breaking Changes Notification Modal
-// ============================================================================
-
-let breakingChangesTrapId: string | null = null;
-
-const BREAKING_CHANGES_SHOWN_KEY = 'breaking_changes_v5_shown';
-
-function getBreakingChangesElements() {
-  return {
-    modal: document.getElementById('breakingChangesModal') as HTMLElement | null,
-    closeBtn: document.getElementById('closeBreakingChangesModalBtn') as HTMLButtonElement | null,
-    dismissBtn: document.getElementById('dismissBreakingChangesModalBtn') as HTMLButtonElement | null,
-  };
-}
-
-async function showBreakingChangesModal(): Promise<void> {
-  // 既に表示済みの場合はスキップ
-  const shown = await chrome.storage.local.get(BREAKING_CHANGES_SHOWN_KEY).then(result => result[BREAKING_CHANGES_SHOWN_KEY]);
-  if (shown) return;
-
-  const { modal, dismissBtn, closeBtn } = getBreakingChangesElements();
-  if (!modal) return;
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-  void modal.offsetHeight;
-  modal.classList.add('show');
-
-  // ボタンのイベントリスナー設定
-  dismissBtn?.addEventListener('click', closeBreakingChangesModal);
-  closeBtn?.addEventListener('click', closeBreakingChangesModal);
-
-  // Focus trap
-  breakingChangesTrapId = focusTrapManager.trap(modal, closeBreakingChangesModal);
-  dismissBtn?.focus();
-}
-
-async function closeBreakingChangesModal(): Promise<void> {
-  const { modal } = getBreakingChangesElements();
-  if (!modal) return;
-  modal.classList.remove('show');
-  modal.style.display = 'none';
-  modal.classList.add('hidden');
-  if (breakingChangesTrapId) {
-    focusTrapManager.release(breakingChangesTrapId);
-    breakingChangesTrapId = null;
-  }
-
-  // 表示済みとして記録
-  await chrome.storage.local.set({ [BREAKING_CHANGES_SHOWN_KEY]: true });
-}
-
 // ============================================================================
 // Initialization
 // ============================================================================
