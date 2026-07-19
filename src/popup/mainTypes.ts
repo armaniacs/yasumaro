@@ -32,7 +32,6 @@ export interface PreviewResponse {
   processedContent: string;
   maskedItems?: (string | MaskedItem)[];
   maskedCount?: number;
-  aiDuration?: number;
 }
 
 export interface PendingSave {

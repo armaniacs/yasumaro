@@ -174,6 +174,85 @@ describe('processPrivacyPipelineStep', () => {
     });
   });
 
+  describe('aiDuration（クラウドAI呼び出し時間）の伝播', () => {
+    it('pipelineResult.aiCallDurationMs を context.aiDuration にそのまま反映する', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'Cloud summary',
+        maskedCount: 0,
+        aiCallDurationMs: 842,
+      });
+      const mockAiService = { generateSummary: vi.fn(), getSupportedModes: vi.fn() };
+
+      const context = makeContext({ aiService: mockAiService as any });
+      const result = await processPrivacyPipelineStep(context);
+
+      expect(result.aiDuration).toBe(842);
+    });
+
+    it('previewOnly 時、pipelineResult に aiCallDurationMs が含まれない場合 aiDuration は undefined になる（クラウドAI未呼び出し）', async () => {
+      mockProcess.mockResolvedValue({
+        success: true,
+        preview: true,
+        processedContent: 'Masked content',
+        maskedCount: 0,
+        maskedItems: [],
+      });
+
+      const context = makeContext({
+        aiService: null,
+        data: {
+          title: 'Test',
+          url: 'https://example.com',
+          content: 'Content',
+          previewOnly: true,
+        },
+      });
+
+      const result = await processPrivacyPipelineStep(context);
+
+      expect(result.aiDuration).toBeUndefined();
+      expect(result.result?.aiDuration).toBeUndefined();
+    });
+
+    it('alreadyProcessed=true（SAVE_RECORD相当）でも、context の既存 aiDuration を使い回さず実測値をそのまま使う', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'Cloud summary',
+        maskedCount: 0,
+        aiCallDurationMs: 1234,
+      });
+      const mockAiService = { generateSummary: vi.fn(), getSupportedModes: vi.fn() };
+
+      const context = makeContext({
+        aiService: mockAiService as any,
+        // プレビュー段階の誤った値が context に残っていたとしても、実測値で上書きされることを確認
+        aiDuration: 3,
+        data: {
+          title: 'Test',
+          url: 'https://example.com',
+          content: 'Content',
+          alreadyProcessed: true,
+        },
+      });
+
+      const result = await processPrivacyPipelineStep(context);
+
+      expect(result.aiDuration).toBe(1234);
+    });
+
+    it('local_onlyモード等クラウドAI未使用時、aiCallDurationMs が返らないため aiDuration は undefined になる', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'Local summary',
+        maskedCount: 0,
+      });
+      const mockAiService = { generateSummary: vi.fn(), getSupportedModes: vi.fn() };
+
+      const context = makeContext({ aiService: mockAiService as any });
+      const result = await processPrivacyPipelineStep(context);
+
+      expect(result.aiDuration).toBeUndefined();
+    });
+  });
+
   describe('エラーハンドリング', () => {
     it('previewOnly 時のエラーは result にセットして throw しない', async () => {
       mockProcess.mockRejectedValue(new Error('AI service unavailable'));

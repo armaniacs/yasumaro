@@ -83,7 +83,7 @@ export interface RecordingResult {
   mode?: string;
   maskedCount?: number;
   maskedItems?: (string | MaskedItem)[]; // マスクされたPII項目のリスト
-  /** AI処理時間 (ミリ秒) */
+  /** クラウドAI要約の実処理時間 (ミリ秒) — クラウドAIが呼ばれなかった場合は undefined */
   aiDuration?: number;
   /** Obsidian保存時間 (ミリ秒) — undefined の場合は Obsidian 未保存 */
   obsidianDuration?: number;
@@ -129,8 +129,6 @@ export interface RecordingData {
   recordType?: RecordType;
   maskedCount?: number;
   skipAi?: boolean;
-  /** AI処理時間 (ミリ秒) — alreadyProcessed 時にプレビューから伝播させる */
-  aiDuration?: number;
   pageBytes?: number;
   candidateBytes?: number;
   originalBytes?: number;
