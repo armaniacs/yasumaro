@@ -1437,6 +1437,11 @@
             <label for="masterPasswordEnabled" class="inline-label" data-i18n="enableMasterPassword">Enable master password protection</label>
           </div>
 
+          <div id="masterPasswordWarning" class="field-warning hidden" role="alert">
+            <p data-i18n="masterPasswordWarning">API keys are stored in chrome.storage.local because no master password is set.</p>
+            <button type="button" id="setMasterPasswordNowBtn" class="link-btn" data-i18n="masterPasswordWarningSetNow">Set master password to encrypt</button>
+          </div>
+
           <div id="masterPasswordOptions" class="ml-24 hidden">
             <div class="mb-8">
               <input type="checkbox" id="encryptApiKeys" checked aria-describedby="encryptApiKeysDesc">

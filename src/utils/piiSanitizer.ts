@@ -28,13 +28,14 @@ const PII_PATTERNS: PiiPattern[] = [
         pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
     },
     // クレジットカード: 16桁または15桁のカード番号（Luhn検証あるので先に検出）
+    // 区切り文字を必須にして、数値列との誤検知を抑制
     {
         type: 'creditCard',
-        pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/ // 16桁（4-4-4-4）
+        pattern: /\b\d{4}(?:[-\s]\d{4}){3}\b/ // 16桁（4-4-4-4）
     },
     {
         type: 'creditCard',
-        pattern: /\b\d{4}[-\s]?\d{6}[-\s]?\d{5}\b/ // 15桁（区切り2つ）
+        pattern: /\b\d{4}[-\s]\d{6}[-\s]\d{5}\b/ // 15桁（区切り2つ）
     },
     // マイナンバー: 12桁（4桁-4桁-4桁、区切り必須）- 連続12桁はdriverLicenseに委譲
     {
@@ -78,9 +79,10 @@ const PII_PATTERNS: PiiPattern[] = [
         pattern: /\b\d{3}-\d{2}-\d{4}\b/
     },
     // US phone number: (XXX) XXX-XXXX or +1-XXX-XXX-XXXX
+    // 桁グループ間の区切りを必須にして、11桁数字列との誤検知を抑制
     {
         type: 'phoneUs',
-        pattern: /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/
+        pattern: /(?:\+?1[-.\s])?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/
     },
     // Chinese phone number: +86 or 1[3-9]XXXXXXXXX
     {
@@ -101,6 +103,36 @@ const PII_PATTERNS: PiiPattern[] = [
     {
         type: 'phoneKr',
         pattern: /(?:\+?82[-.\s]?)?0?\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/
+    },
+    // EU IBAN (major countries: DE, FR, IT, ES, NL)
+    {
+        type: 'iban',
+        pattern: /\b(?:DE\d{20}|FR\d{2}[A-Z0-9]{23}|IT\d{2}[A-Z0-9]{23}|ES\d{2}[A-Z0-9]{20}|NL\d{2}[A-Z0-9]{14})\b/
+    },
+    // German tax ID (Steuerliche Identifikationsnummer): 11 digits, first non-zero
+    {
+        type: 'deTaxId',
+        pattern: /\b[1-9]\d{10}\b/
+    },
+    // French INSEE number: 15 digits
+    {
+        type: 'frInsee',
+        pattern: /\b\d{15}\b/
+    },
+    // Italian Codice Fiscale: 16 chars (LLL LLN NN NNN N)
+    {
+        type: 'itCodiceFiscale',
+        pattern: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/
+    },
+    // Spanish DNI: 8 digits + 1 letter
+    {
+        type: 'esDni',
+        pattern: /\b\d{8}[A-Z]\b/
+    },
+    // Spanish NIE: X/Y/Z + 7 digits + 1 letter
+    {
+        type: 'esNie',
+        pattern: /\b[XYZ]\d{7}[A-Z]\b/
     }
 ];
 

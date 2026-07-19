@@ -33,7 +33,6 @@
 |---|---|---|---|---|
 | [2026-07-20-01](2026-07-20-01-fix-message-type-unification.md) | セキュリティ | メッセージング型定義のSSOT化・sender.id検証・Pipeline重複解消 | 🔴高（5pt） | 🟢なし |
 | [2026-07-20-02](2026-07-20-02-fix-session-store-resilience.md) | ストレージ | SessionStore 耐久性向上（fallback/waitForFlush/suspend/クォータ） | 🔴高（5pt） | 🟡軽微 |
-| [2026-07-20-06](2026-07-20-06-fix-security-privacy-extensions.md) | セキュリティ | PII EUカバレッジ・暗号化キーUX・AIコスト追跡 | 🔴高（5pt） | 🟢なし |
 | [2026-07-20-10](2026-07-20-10-feat-offline-network-queue.md) | ストレージ | オフラインネットワークキュー — AI要約/同期のオフライン耐性 | 🔴高（8pt） | 🟡軽微 |
 
 ---
@@ -83,6 +82,7 @@ UI・ドキュメント:
 - 2026-07-20-09-fix-docs-dual-translation-system.md
 - 2026-07-20-04-fix-content-extractor-cleansing-config.md
 - 2026-07-20-05-fix-ui-css-touchups.md
+- 2026-07-20-06-fix-security-privacy-extensions.md
 - 2026-07-20-03-fix-i18n-module-separation.md
 - 2026-07-20-07-fix-data-integrity-cleanup.md
 - 2026-07-20-08-fix-changelog-release-note-guidelines.md
@@ -129,6 +129,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 4 |
-| アーカイブ済み | 68 |
+| ⬜ 未着手 | 3 |
+| アーカイブ済み | 69 |
 | **合計（archive除く）** | 4 |

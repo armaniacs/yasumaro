@@ -18,6 +18,8 @@ import { focusTrapManager } from '../popup/utils/focusTrap.js';
 // DOM Elements
 const masterPasswordEnabled = document.getElementById('masterPasswordEnabled') as HTMLInputElement | null;
 const masterPasswordOptions = document.getElementById('masterPasswordOptions') as HTMLElement | null;
+const masterPasswordWarning = document.getElementById('masterPasswordWarning') as HTMLElement | null;
+const setMasterPasswordNowBtn = document.getElementById('setMasterPasswordNowBtn') as HTMLButtonElement | null;
 const changeMasterPasswordBtn = document.getElementById('changeMasterPassword') as HTMLButtonElement | null;
 
 const passwordModal = document.getElementById('passwordModal') as HTMLElement | null;
@@ -48,6 +50,12 @@ let passwordTrapId: string | null = null;
 let passwordAuthTrapId: string | null = null;
 let passwordModalMode: 'set' | 'change' = 'set';
 let pendingPasswordAction: ((password: string) => Promise<void>) | null = null;
+
+function updateMasterPasswordWarningVisibility(isSet: boolean): void {
+  if (masterPasswordWarning) {
+    masterPasswordWarning.classList.toggle('hidden', isSet);
+  }
+}
 
 function updatePasswordStrength(password: string): void {
   if (!passwordStrengthBar || !passwordStrengthText) return;
@@ -134,6 +142,7 @@ async function savePassword(): Promise<void> {
     closePasswordModal();
     if (masterPasswordEnabled) masterPasswordEnabled.checked = true;
     if (masterPasswordOptions) masterPasswordOptions.classList.remove('hidden');
+    updateMasterPasswordWarningVisibility(true);
   } else {
     showStatus('status', result.error || 'Failed to save password.', 'error');
   }
@@ -196,10 +205,16 @@ export function initMasterPasswordSettings(): void {
       } else {
         await chrome.storage.local.remove(['master_password_enabled', 'master_password_salt', 'master_password_hash']);
         masterPasswordOptions.classList.add('hidden');
+        updateMasterPasswordWarningVisibility(false);
         showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
       }
     });
   }
+
+  setMasterPasswordNowBtn?.addEventListener('click', () => {
+    if (masterPasswordEnabled) masterPasswordEnabled.checked = true;
+    showPasswordModal('set');
+  });
 
   changeMasterPasswordBtn?.addEventListener('click', () => {
     showPasswordAuthModal('export', async () => {
@@ -239,6 +254,7 @@ export async function loadMasterPasswordSettings(): Promise<void> {
       masterPasswordOptions.classList.add('hidden');
     }
   }
+  updateMasterPasswordWarningVisibility(isSet);
 }
 
 export { showPasswordAuthModal, closePasswordModal };
