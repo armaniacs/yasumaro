@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.38` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.5.40` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -16,6 +16,55 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [6.5.40] - 2026-07-19
+
+### Added / 追加
+
+- **はてな匿名ダイアリーのホワイトリスト抽出アダプタを追加** — `anond.hatelabo.jp` 向けに `div.section` からの記事本文抽出を追加。`div.hatena-body` 内の不要要素を `excludeSelectors` で除外
+- **`SessionStore` を `chrome.storage.session` に移行** — セッション状態の保存先を `chrome.storage.local` から `chrome.storage.session` に変更し、Service Worker 再起動時のパフォーマンスとメモリ効率を改善
+- **Content ↔ SW メッセージプロトコルに `protocolVersion` を追加** — `src/messaging/types.ts` に `PROTOCOL_VERSION` 定数（現在 `1`）を定義し、content script からの全メッセージに含めるよう変更。将来のプロトコル非互換を検出可能に
+- **英語ロケールで件数表示の単数形/複数形を出し分け** — `src/utils/i18nPlural.ts` を新設し、`chrome.i18n.getMessage` の `$COUNT` プレースホルダーを介して英文の単数/複数を適切に使い分け
+- **ログ source パラメータの自動補完ヘルパーを追加** — `src/utils/logger.ts` でログ出力時に呼び出し元モジュール名を自動補完するユーティリティを追加
+- **モバイル環境で `SqliteClient` Mutex キュー上限を 50 に引き下げ** — 低メモリデバイスでのキュー溢れリスクを低減
+
+### Fixed / 修正
+
+- **クラウドAI要約の処理時間計測を実測値ベースに修正** — 従来の分割払い出しタイミングではなく、API 呼び出しの実測経過時間を `ai_duration_ms` に記録するよう修正
+- **`CONSENT_STATE_CHANGED` ハンドラに送信元検証を追加** — `messageHandlers.ts` で `sender.id !== chrome.runtime.id` の場合にエラーを返す defense-in-depth
+- **`unlimitedStorage` 付与時の誤ったクォータエラーを修正** — `storage/quota.ts` で `unlimitedStorage` 権限がある場合はクォータチェックをスキップするよう修正
+- **`optimisticLock` の CAS 操作に書き込み後再検証を追加** — `withOptimisticLock()` がストレージ更新後に再度バージョンを読み取り、不整合を検出した場合はエラーを返す二重検証を実装
+- **`wa-sqlite` を caret レンジから exact pin `1.0.0` に変更** — サプライチェーンリスク低減のため、`package.json` の `overrides` でバージョンを固定
+- **`Permissions` ページを i18n 対応化** — `entrypoints/permissions/index.html` のハードコード文言を `chrome.i18n.getMessage` 経由に変更
+- **`popup/main.ts` の i18n import を `src/utils/i18n` に移行** — 重複していたポップアップ側の i18n 実装を統合後の単一ソースに修正
+- **保留レコードの挿入を 50 件チャンクのバッチ処理に変更** — `pendingSqliteQueue.ts` で大量保留時の SQLite 負荷を分散
+
+### Accessibility / アクセシビリティ
+
+- **ダッシュボードサイドバーに `tablist`/`tab` の ARIA ロールを追加** — サイドバーナビゲーションに適切なロールと `aria-selected` を付与し、スクリーンリーダーでの操作性を改善
+
+### Refactored / リファクタリング
+
+- **`popup` と `options` の重複 `i18n.ts` を `src/utils/i18n.ts` に統合** — 3 箇所に分散していた i18n ヘルパーを単一モジュールに集約
+- **`RecordingPipeline` の生成を `createRecordingPipeline()` ファクトリに抽出** — コンストラクタの複雑な依存注入をファクトリ関数に分離し、テスト容易性を向上
+
+### Removed / 削除
+
+- **未使用の Breaking Changes modal サブシステムを削除** — 使用されていないモーダルコンポーネントとその関連コードを除去
+- **未使用の OPFS spike 関数 `runOpfsSpikeB` を削除** — 過去の調査用コードをクリーンアップ
+- **未使用の exported public API 群を削除** — 内部モジュールからの不要な export 文を整理
+- **未使用の `_` プレフィックスヘルパー関数を削除** — 呼び出し元のない private 関数を除去
+
+### Chores / その他
+
+- **`THIRD_PARTY_NOTICES.md` の自動生成 CI を導入** — `.github/workflows/ci.yml` で依存ライセンス情報を自動的に生成・検証するワークフローを追加
+- **`README.md` にアーキテクチャ図と Privacy & Security セクションを追加** — 拡張機能の全体構成とデータ処理の透明性を文書化
+
+### Docs / ドキュメント
+
+- **AI処理時間表示の意味を `SETUP_GUIDE.md` / `FAQ.md` に追記** — ダッシュボードの処理時間表示が実測値であることを明記
+- **デッドコード削除の設計ドキュメント・実装計画を追加** — `dev-docs/superpowers/specs/` および `plans/` 配下に 2 件のドキュメントを追加
+- **複数の PBI をアーカイブ** — 完了済みの PBI エントリを `pbi/archive/` に移動し、`00-INDEX.md` を更新
 
 ## [6.5.39] - 2026-07-18
 
