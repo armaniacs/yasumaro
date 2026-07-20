@@ -15,6 +15,10 @@ import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
+import { createRecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import type { ObsidianClient } from '../obsidianClient.js';
+import type { AIService } from '../ai/AIService.js';
+import type { SqliteClient } from '../sqliteClient.js';
 
 import type {
   ValidVisitMessage,
@@ -56,9 +60,9 @@ export interface ManualRecordHandlerDeps {
   checkRateLimit: (sender: MessageSenderLike | undefined, settings: Record<string, unknown>) => Promise<{ allowed: boolean; error?: string }>;
   fetchContent: (url: string) => Promise<string>;
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
-  obsidian: { testConnection: () => Promise<unknown> };
-  aiService: unknown;
-  sqliteClient: unknown;
+  obsidian: ObsidianClient;
+  aiService: AIService | null;
+  sqliteClient: SqliteClient | null;
   getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
@@ -66,9 +70,9 @@ export interface ManualRecordHandlerDeps {
 export interface SaveRecordHandlerDeps {
   isRecordingAllowed: () => Promise<boolean>;
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
-  obsidian: { testConnection: () => Promise<unknown> };
-  aiService: unknown;
-  sqliteClient: unknown;
+  obsidian: ObsidianClient;
+  aiService: AIService | null;
+  sqliteClient: SqliteClient | null;
   getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
@@ -297,13 +301,12 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       }
     }
 
-    const { RecordingPipeline } = await import('../pipeline/RecordingPipeline.js');
-    const pipeline = new RecordingPipeline(
-      deps.getPrivacyInfoWithCache,
-      deps.obsidian as any,
-      deps.aiService as any,
-      deps.sqliteClient as any,
-    );
+    const pipeline = createRecordingPipeline({
+      getPrivacyInfoWithCache: deps.getPrivacyInfoWithCache,
+      obsidian: deps.obsidian,
+      aiService: deps.aiService,
+      sqliteClient: deps.sqliteClient,
+    });
 
     const result = await pipeline.execute({
       title: message.payload.title,
@@ -350,13 +353,12 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
 
     const settings = await deps.getSettings();
 
-    const { RecordingPipeline } = await import('../pipeline/RecordingPipeline.js');
-    const pipeline = new RecordingPipeline(
-      deps.getPrivacyInfoWithCache,
-      deps.obsidian as any,
-      deps.aiService as any,
-      deps.sqliteClient as any,
-    );
+    const pipeline = createRecordingPipeline({
+      getPrivacyInfoWithCache: deps.getPrivacyInfoWithCache,
+      obsidian: deps.obsidian,
+      aiService: deps.aiService,
+      sqliteClient: deps.sqliteClient,
+    });
 
     const result = await pipeline.execute({
       title: message.payload.title,
