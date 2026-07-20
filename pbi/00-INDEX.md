@@ -30,7 +30,6 @@
 
 | PBI | カテゴリ | タイトル | 難易度 | 副作用 | 状態 |
 |---|---|---|---|---|---|---|
-| [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | セキュリティ・防御的実装 | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
 
 ---
 
@@ -43,7 +42,6 @@
 セキュリティ・防御的実装:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | Checking Team High/Medium | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 |
 
 データ整合性・移行:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -77,6 +75,7 @@ UI・ドキュメント:
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-20-fix-external-endpoint-configurability.md
 - 2026-07-20-16-feat-ai-usage-controls.md
 - 2026-07-20-15-fix-logger-sw-resilience.md
 - 2026-07-20-14-fix-content-script-performance.md
