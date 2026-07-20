@@ -1,8 +1,9 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type MessageHandler = (
-  message: Record<string, unknown>,
+  message: any,
   sender: chrome.runtime.MessageSender,
-  sendResponse: (response: Record<string, unknown>) => void,
-) => boolean;
+  sendResponse: (response?: unknown) => void,
+) => void | Promise<void>;
 
 export class MessageHandlerRegistry {
   private handlers = new Map<string, MessageHandler>();
@@ -15,16 +16,22 @@ export class MessageHandlerRegistry {
   }
 
   dispatch(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: string,
-    message: Record<string, unknown>,
+    message: any,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response: Record<string, unknown>) => void,
+    sendResponse: (response?: unknown) => void,
   ): boolean {
     const handler = this.handlers.get(type);
     if (!handler) {
       sendResponse({ success: false, error: `Unknown message type: ${type}` });
       return false;
     }
-    return handler(message, sender, sendResponse);
+    // Fire-and-forget: handlers are async and use sendResponse for replies.
+    // Catch handler errors so they do not become unhandled promise rejections.
+    Promise.resolve(handler(message, sender, sendResponse)).catch((err) => {
+      sendResponse({ success: false, error: err instanceof Error ? err.message : String(err) });
+    });
+    return true;
   }
 }

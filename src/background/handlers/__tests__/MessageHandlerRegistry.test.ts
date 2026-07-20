@@ -9,14 +9,15 @@ describe('MessageHandlerRegistry', () => {
   });
 
   test('register and dispatch a handler', () => {
-    const handler = vi.fn().mockReturnValue(false);
+    const handler = vi.fn();
     registry.register('VALID_VISIT' as any, handler);
 
     const sendResponse = vi.fn();
     const result = registry.dispatch('VALID_VISIT' as any, { type: 'VALID_VISIT' }, {} as any, sendResponse);
 
     expect(handler).toHaveBeenCalledWith({ type: 'VALID_VISIT' }, {}, sendResponse);
-    expect(result).toBe(false);
+    // dispatch returns true for registered handlers (fire-and-forget)
+    expect(result).toBe(true);
   });
 
   test('unknown message type returns error', () => {
@@ -33,13 +34,18 @@ describe('MessageHandlerRegistry', () => {
     expect(() => registry.register('TEST' as any, handler)).toThrow('Duplicate handler');
   });
 
-  test('async handler returns true to keep channel open', () => {
-    const handler = vi.fn().mockReturnValue(true);
+  test('async handler is dispatched and dispatch returns true', async () => {
+    const handler = vi.fn().mockResolvedValue(undefined);
     registry.register('ASYNC_TEST' as any, handler);
 
     const sendResponse = vi.fn();
     const result = registry.dispatch('ASYNC_TEST' as any, { type: 'ASYNC_TEST' }, {} as any, sendResponse);
 
+    // dispatch returns true immediately (fire-and-forget)
     expect(result).toBe(true);
+    // handler is called asynchronously
+    await vi.waitFor(() => {
+      expect(handler).toHaveBeenCalled();
+    });
   });
 });
