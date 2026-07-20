@@ -63,7 +63,8 @@ export class GeminiProvider extends AIProviderStrategy {
         }
 
         const cleanModelName = this.model.replace(/^models\//, '');
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModelName}:generateContent`;
+        const apiVersion = this._getApiVersion();
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${cleanModelName}:generateContent`;
         const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
         const truncatedContent = content.substring(0, maxContentChars);
 
@@ -127,12 +128,20 @@ export class GeminiProvider extends AIProviderStrategy {
         }
     }
 
+    private _getApiVersion(): string {
+        const version = (this.settings[StorageKeys.GEMINI_API_VERSION] as string | undefined)?.trim();
+        if (version && /^(v\d+([a-z]+)?)$/.test(version)) {
+            return version;
+        }
+        return 'v1beta';
+    }
+
     async testConnection(): Promise<AIProviderConnectionResult> {
         if (!this.apiKey) {
             return { success: false, message: 'Gemini API Key is not set.' };
         }
 
-        const testUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models`;
 
         // BaseUrl SSRF対策 - テストURLの検証
         try {
