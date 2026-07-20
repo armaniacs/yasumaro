@@ -244,7 +244,11 @@ function scheduleFlush(): void {
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
     chrome.runtime.onSuspend.addListener(() => {
         console.log('[Logger] Service Worker suspending - flushing pending logs');
-        void flushLogs(true); // 即時フラッシュ
+        // Await flush with a timeout so pending logs are not lost when the SW dies.
+        Promise.race([
+            flushLogs(true),
+            new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+        ]).catch(() => undefined);
     });
 }
 

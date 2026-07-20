@@ -770,7 +770,7 @@
   "testGistConnection": {
     "message": "接続テスト"
   },
-  "confirmImport": {
+  "confirmImportTitle": {
     "message": "設定のインポート"
   },
   "confirmImportDesc": {
