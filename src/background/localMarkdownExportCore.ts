@@ -21,7 +21,7 @@ export async function flushBufferedExports(
     const settings = await getSettings();
     const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
 
-    const all = await chrome.storage.local.get();
+    const all = await chrome.storage.local.get(Object.keys(StorageKeys));
 
     for (const key of Object.keys(all)) {
       if (!key.startsWith(DAILY_BUFFER_PREFIX)) continue;
