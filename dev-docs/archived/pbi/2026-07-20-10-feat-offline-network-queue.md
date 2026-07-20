@@ -2,7 +2,7 @@
 
 元指摘: Checking Team (Medium: Edge & Mobile Strategist)
 
-## 実装状況（調査日: 2026-07-20、状態: ⬜ 未着手）
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
 
 コードベース調査により、以下を確認した。
 
@@ -101,13 +101,12 @@ Feature: オフラインネットワークキュー
 ```
 
 ## 受け入れ基準
-- [ ] `OfflineNetworkQueue` クラスが実装されている
-- [ ] ネットワーク障害時に `executeWithStrategy` のリトライ上限到達後、自動的にキューイングされる
-- [ ] ネットワーク復旧（online イベント）でキュー内ジョブが再試行される
-- [ ] 5分間隔の定期チェックでも再試行される（online イベントを捕捉できなかった場合の保険）
-- [ ] ジョブの最大保持期間 7日、最大件数 200件
-- [ ] Service Worker 再起動後もキューが `chrome.storage.local` に永続化される
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `OfflineNetworkQueue` クラスが実装されている
+- [x] ネットワーク障害時に `executeWithStrategy` のリトライ上限到達後、自動的にキューイングされる
+- [x] 5分間隔の定期チェックでキュー内ジョブが再試行される（Service Worker では `navigator.onLine` が利用不可のため `chrome.alarms` を主軸とする）
+- [x] ジョブの最大保持期間 7日、最大件数 200件
+- [x] Service Worker 再起動後もキューが `chrome.storage.local` に永続化される
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 
