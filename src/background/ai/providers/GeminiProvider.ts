@@ -6,11 +6,11 @@
 import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls, Settings } from '../../../utils/storage.js';
+import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
     candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
@@ -44,6 +44,12 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, summary: "Error: API key is missing. Please check your settings." };
         }
 
+        // 月次ハードリミットチェック
+        const hardLimit = await checkHardLimit();
+        if (hardLimit.blocked) {
+            return { success: false, summary: `Error: ${hardLimit.message}` };
+        }
+
         // 使用量警告チェック
         const usageWarning = await checkUsageWarning();
         if (usageWarning.warning) {
@@ -58,7 +64,8 @@ export class GeminiProvider extends AIProviderStrategy {
 
         const cleanModelName = this.model.replace(/^models\//, '');
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModelName}:generateContent`;
-        const truncatedContent = content.substring(0, 30000);
+        const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
+        const truncatedContent = content.substring(0, maxContentChars);
 
         // プロンプトインジェクション対策 - コンテンツのサニタイズ
         const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
