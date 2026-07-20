@@ -74,34 +74,30 @@ export class GistSyncTarget implements SyncTarget {
     try {
       let totalSynced = 0;
 
-      for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-        const result = await this.sqliteClient.query({
-          limit: BATCH_SIZE,
-          offset: 0,
-          orderBy: 'created_at',
-          orderDir: 'DESC',
-          gistSynced: 0,
-        });
+        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+            const result = await this.sqliteClient.query({
+                limit: BATCH_SIZE,
+                offset: 0,
+                orderBy: 'created_at',
+                orderDir: 'DESC',
+                gistSynced: 0,
+            });
 
-        if (!result || !result.rows || result.rows.length === 0) {
-          break;
+            if (!result || !result.rows || result.rows.length === 0) {
+                break;
+            }
+
+            let batchSynced = 0;
+            for (const row of result.rows) {
+                if (row.id === undefined) continue;
+                const syncResult = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
+                if (syncResult.success) {
+                    batchSynced++;
+                }
+            }
+
+            totalSynced += batchSynced;
         }
-
-        let batchSynced = 0;
-        for (const row of result.rows) {
-          if (row.id === undefined) continue;
-          const syncResult = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-          if (syncResult.success) {
-            batchSynced++;
-          }
-        }
-
-        totalSynced += batchSynced;
-
-        if (result.rows.length < BATCH_SIZE) {
-          break;
-        }
-      }
 
       if (totalSynced > 0) {
         addLog(LogType.INFO, 'GistSync: batch completed', { synced: totalSynced });
