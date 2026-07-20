@@ -4335,3 +4335,49 @@ details[open] > .priority-details-summary {
     background: #6d28d9;
   }
 }
+
+/* =============================================================================
+   Utility classes replacing inline styles (PBI 2026-07-20-05)
+   ============================================================================= */
+
+.manual-export-section {
+  margin-top: var(--space-4, 16px);
+  padding-top: var(--space-4, 16px);
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.export-section-label {
+  font-weight: 600;
+}
+
+.date-range-row {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: center;
+  margin-top: var(--space-2, 8px);
+}
+
+.date-input-label {
+  font-size: 0.875rem;
+}
+
+.export-btn-spaced {
+  margin-top: var(--space-4, 16px);
+}
+
+.status-message-spaced {
+  margin-top: var(--space-2, 8px);
+}
+
+.top-bordered-flex-row {
+  margin-top: var(--space-4, 16px);
+  padding-top: var(--space-4, 16px);
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+.section-spaced {
+  margin-top: var(--space-4, 16px);
+}

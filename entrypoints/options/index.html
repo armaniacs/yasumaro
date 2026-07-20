@@ -252,20 +252,20 @@
             </div>
 
             <!-- 手動エクスポート -->
-            <div class="form-group" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border, #e2e8f0);">
-              <label style="font-weight: 600;">手動エクスポート（日付範囲指定）</label>
-              <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+            <div class="form-group manual-export-section">
+              <label class="export-section-label">手動エクスポート（日付範囲指定）</label>
+              <div class="date-range-row">
                 <div>
-                  <label for="localExportStartDate" style="font-size: 0.875rem;">開始日</label>
+                  <label for="localExportStartDate" class="date-input-label">開始日</label>
                   <input type="date" id="localExportStartDate">
                 </div>
                 <div>
-                  <label for="localExportEndDate" style="font-size: 0.875rem;">終了日</label>
+                  <label for="localExportEndDate" class="date-input-label">終了日</label>
                   <input type="date" id="localExportEndDate">
                 </div>
-                <button id="localExportManualBtn" class="secondary-btn" style="margin-top: 16px;" data-i18n="localExportManualBtn">エクスポート</button>
+                <button id="localExportManualBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">エクスポート</button>
               </div>
-              <div id="localExportManualStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
+              <div id="localExportManualStatus" class="status-message status-message-spaced" aria-live="polite"></div>
             </div>
           </div>
         </div>
@@ -287,7 +287,7 @@
           <div class="form-group" id="reviewSummaryManualActions">
             <button id="generateWeeklySummaryBtn" class="secondary-btn" data-i18n="generateWeeklySummaryBtn">今週のサマリを生成</button>
             <button id="generateMonthlySummaryBtn" class="secondary-btn" data-i18n="generateMonthlySummaryBtn">今月のサマリを生成</button>
-            <div id="reviewSummaryStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
+            <div id="reviewSummaryStatus" class="status-message status-message-spaced" aria-live="polite"></div>
           </div>
         </div>
 
@@ -1437,6 +1437,11 @@
             <label for="masterPasswordEnabled" class="inline-label" data-i18n="enableMasterPassword">Enable master password protection</label>
           </div>
 
+          <div id="masterPasswordWarning" class="field-warning hidden" role="alert">
+            <p data-i18n="masterPasswordWarning">API keys are stored in chrome.storage.local because no master password is set.</p>
+            <button type="button" id="setMasterPasswordNowBtn" class="link-btn" data-i18n="masterPasswordWarningSetNow">Set master password to encrypt</button>
+          </div>
+
           <div id="masterPasswordOptions" class="ml-24 hidden">
             <div class="mb-8">
               <input type="checkbox" id="encryptApiKeys" checked aria-describedby="encryptApiKeysDesc">
@@ -1620,7 +1625,7 @@
         <div id="historyList" class="history-list" aria-live="polite"></div>
 
         <!-- Local Markdown Export -->
-        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border, #e2e8f0); display: flex; align-items: center; gap: 12px;">
+        <div class="top-bordered-flex-row">
           <button id="historyExportLocalMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">すべて Markdown に書き出す</button>
           <span id="historyExportLocalMarkdownStatus" class="status-message" aria-live="polite"></span>
         </div>
@@ -1658,29 +1663,29 @@
             <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">データベースとしてエクスポート (.db)</button>
             <p class="field-description" data-i18n="exportDbDesc">SQLite データベースファイル。OPFS ストレージ使用時のみ利用可能。</p>
           </div>
-          <div id="export-status" class="save-success" style="display:none"></div>
+          <div id="export-status" class="save-success hidden"></div>
         </div>
 
         <!-- Local Markdown Export Section -->
-        <div class="settings-section" style="margin-top: 16px;">
+        <div class="settings-section section-spaced">
           <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
           <p class="field-description" data-i18n="exportLocalMarkdownDesc">日付範囲を指定して、閲覧履歴を Markdown ファイルとしてダウンロードします。</p>
-          <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+          <div class="date-range-row">
             <div>
-              <label for="exportLocalStartDate" style="font-size: 0.875rem;" data-i18n="startDate">開始日</label>
+              <label for="exportLocalStartDate" class="date-input-label" data-i18n="startDate">開始日</label>
               <input type="date" id="exportLocalStartDate">
             </div>
             <div>
-              <label for="exportLocalEndDate" style="font-size: 0.875rem;" data-i18n="endDate">終了日</label>
+              <label for="exportLocalEndDate" class="date-input-label" data-i18n="endDate">終了日</label>
               <input type="date" id="exportLocalEndDate">
             </div>
-            <button id="exportLocalMarkdownBtn" class="secondary-btn" style="margin-top: 16px;" data-i18n="localExportManualBtn">エクスポート</button>
+            <button id="exportLocalMarkdownBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">エクスポート</button>
           </div>
-          <div id="exportLocalMarkdownStatus" class="status-message" aria-live="polite" style="margin-top: 8px;"></div>
+          <div id="exportLocalMarkdownStatus" class="status-message status-message-spaced" aria-live="polite"></div>
         </div>
 
         <!-- Audit Log TSV Export -->
-        <div class="settings-section" style="margin-top: 16px;">
+        <div class="settings-section section-spaced">
           <h3 class="settings-section-title" data-i18n="auditLogTab">監査ログ</h3>
           <p class="field-description">どのページ内容がどのAIプロバイダーへ送信されたかの履歴を TSV ファイルとしてダウンロードします。</p>
           <div class="audit-log-download-section">
@@ -1822,7 +1827,7 @@
         </details>
 
         <!-- Divergence Warning -->
-        <div id="diagDivergenceWarning" class="diag-section" style="display: none;">
+        <div id="diagDivergenceWarning" class="diag-section hidden">
           <div class="diag-warning" data-i18n="diagDivergenceWarning">Environment detection mismatch between dashboard and offscreen.</div>
         </div>
 
@@ -1875,7 +1880,7 @@
           <p class="help-text" data-i18n="importLogsDesc">Import browsing history records from a JSON file exported from the Export Logs panel.</p>
           <button id="importLogsBtn" class="secondary-btn" data-i18n="importLogsBtn">Import Logs from JSON</button>
           <input type="file" id="importLogsFileInput" accept=".json" class="hidden" aria-hidden="true">
-          <div id="importLogsProgress" class="diag-result" style="display:none" aria-live="polite"></div>
+          <div id="importLogsProgress" class="diag-result hidden" aria-live="polite"></div>
         </div>
 
         <hr class="settings-hr">

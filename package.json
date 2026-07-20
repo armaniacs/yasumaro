@@ -1,12 +1,14 @@
 {
   "name": "yasumaro",
-  "version": "6.5.41",
+  "version": "6.5.42",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "node scripts/check-version-consistency.js && wxt build",
     "build:store": "node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
+    "build:docs-i18n": "node scripts/sync-docs-translations.mjs",
+    "build:docs-pii": "esbuild docs-src/pii-sandbox.ts --bundle --outfile=docs/assets/pii-sandbox.js --format=iife --global-name=PiiSandbox",
     "build:edge": "node scripts/check-version-consistency.js && wxt build --browser edge && node scripts/build-store-zip.mjs",
     "build:brave": "node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:watch": "wxt build --watch",
@@ -61,6 +63,7 @@
     "adm-zip": "^0.6.0",
     "crx3": "^2.0.0",
     "css-tree": "^3.2.1",
+    "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
     "eslint-plugin-svelte": "^3.7.0",
     "globals": "^17.7.0",

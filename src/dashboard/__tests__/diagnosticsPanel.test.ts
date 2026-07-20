@@ -35,6 +35,10 @@ vi.mock('../../utils/storage.js', () => ({
     OPENAI_2_BASE_URL: 'openai_2_base_url',
     OPENAI_2_API_KEY: 'openai_2_api_key',
     OPENAI_2_MODEL: 'openai_2_model',
+    AI_USAGE_MONTH: 'ai_usage_month',
+    AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+    AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+    AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
   },
 }));
 
@@ -116,7 +120,7 @@ function setupDOM(includeConnectionResult = true): void {
     <button id="diagMigrateBtn"></button>
     <div id="diagMigrateResult"></div>
     <details id="diagCompileOptionsSection"></details>
-    <div id="diagDivergenceWarning" style="display: none;"></div>
+    <div id="diagDivergenceWarning" class="hidden"></div>
   `;
 }
 
@@ -316,6 +320,32 @@ describe('initDiagnosticsPanel — AI settings (provider-specific)', () => {
     expect(el.textContent).toContain('https://api.openai.com/v1');
     expect(el.textContent).toContain('gpt-4o');
     expect(el.textContent).toContain('configured');
+  });
+
+  it('renders monthly AI usage stats in the AI settings section', async () => {
+    setupDOM();
+    mockGetSettings.mockResolvedValue({
+      ai_provider: 'gemini',
+      gemini_model: 'gemini-2.0-flash',
+      gemini_api_key: 'gem-key',
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: 'key',
+      obsidian_daily_path: '',
+    });
+    mockStorageLocalGet.mockResolvedValue({
+      ai_usage_month: '2026-07',
+      ai_usage_tokens_sent: 1500,
+      ai_usage_tokens_received: 500,
+      ai_usage_request_count: 10,
+    });
+    await initDiagnosticsPanel();
+
+    const el = document.getElementById('diagAiSettings')!;
+    expect(el.textContent).toContain('diagAiApiCalls');
+    expect(el.textContent).toContain('10');
+    expect(el.textContent).toContain('diagAiTotalTokens');
+    expect(el.textContent).toContain('2000');
   });
 
   it('renders openai2 base URL, model, and key when provider is openai2', async () => {
@@ -743,14 +773,14 @@ describe('BDD: SQLite capability matrix — debug mode', () => {
     mockStorageLocalGet.mockResolvedValue({ debugMode: false });
     await initDiagnosticsPanel();
     const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
-    expect(section.style.display).toBe('none');
+    expect(section.classList.contains('hidden')).toBe(true);
   });
 
   it('shows compile options section when debug mode is ON', async () => {
     mockStorageLocalGet.mockResolvedValue({ debugMode: true });
     await initDiagnosticsPanel();
     const section = document.getElementById('diagCompileOptionsSection') as HTMLElement;
-    expect(section.style.display).toBe('');
+    expect(section.classList.contains('hidden')).toBe(false);
   });
 
   it('toggles debug mode and persists to chrome.storage.local', async () => {
@@ -795,7 +825,7 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning');
-    expect(warning!.style.display).toBe('none');
+    expect(warning!.classList.contains('hidden')).toBe(true);
   });
 
   it('shows divergence warning only when offscreen uses fallback but dashboard detects OPFS', async () => {
@@ -813,6 +843,6 @@ describe('BDD: SQLite capability matrix — divergence detection', () => {
     });
     await initDiagnosticsPanel();
     const warning = document.getElementById('diagDivergenceWarning');
-    expect(warning!.style.display).not.toBe('none');
+    expect(warning!.classList.contains('hidden')).toBe(false);
   });
 });

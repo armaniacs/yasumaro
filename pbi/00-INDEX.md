@@ -8,9 +8,32 @@
 
 ---
 
+## 実装順序（推奨）
+
+依存関係: **PBI-03 (i18n分離) → PBI-05 (UI修正)** の順序必須。他は独立。
+
+| 順位 | PBI | ポイント | 理由 |
+|:----:|-----|:--------:|------|
+| 1 | [08](2026-07-20-08-fix-changelog-release-note-guidelines.md) | 1pt | 最小、ドキュメントのみ |
+| 2 | [07](2026-07-20-07-fix-data-integrity-cleanup.md) | 2pt | 小規模リファクタリング、他と独立 |
+| 3 | [03](2026-07-20-03-fix-i18n-module-separation.md) | 3pt | PBI-05 の前提。先に完了させる |
+| 4 | [05](2026-07-20-05-fix-ui-css-touchups.md) | 3pt | PBI-03 完了後に着手 |
+| 5 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
+| 6 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
+| 7 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
+| 8 | [01](2026-07-20-01-fix-message-type-unification.md) | 5pt | 型構造変更。影響範囲が広い |
+| 9 | [02](2026-07-20-02-fix-session-store-resilience.md) | 5pt | ストレージ変更。モバイル影響あり |
+| 10 | [10](2026-07-20-10-feat-offline-network-queue.md) | 8pt | 最大。新機能。最後に実施 |
+
+---
+
 ## 未着手 ⬜
 
-未着手のPBIはありません。
+| PBI | カテゴリ | タイトル | 難易度 | 副作用 |
+|---|---|---|---|---|
+| [2026-07-20-01](2026-07-20-01-fix-message-type-unification.md) | セキュリティ | メッセージング型定義のSSOT化・sender.id検証・Pipeline重複解消 | 🔴高（5pt） | 🟢なし |
+| [2026-07-20-02](2026-07-20-02-fix-session-store-resilience.md) | ストレージ | SessionStore 耐久性向上（fallback/waitForFlush/suspend/クォータ） | 🔴高（5pt） | 🟡軽微 |
+| [2026-07-20-10](2026-07-20-10-feat-offline-network-queue.md) | ストレージ | オフラインネットワークキュー — AI要約/同期のオフライン耐性 | 🔴高（8pt） | 🟡軽微 |
 
 ---
 
@@ -56,6 +79,13 @@ UI・ドキュメント:
 完了済みPBIは [archive/](archive/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-09-fix-docs-dual-translation-system.md
+- 2026-07-20-04-fix-content-extractor-cleansing-config.md
+- 2026-07-20-05-fix-ui-css-touchups.md
+- 2026-07-20-06-fix-security-privacy-extensions.md
+- 2026-07-20-03-fix-i18n-module-separation.md
+- 2026-07-20-07-fix-data-integrity-cleanup.md
+- 2026-07-20-08-fix-changelog-release-note-guidelines.md
 - 2026-07-19-02-fix-anond-whitelist-adapter.md
 - 2026-07-19-01-fix-ai-duration-measurement.md
 - 2026-07-18-20-fix-session-store-storage-backend.md
@@ -99,6 +129,6 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 0 |
-| アーカイブ済み | 62 |
-| **合計（archive除く）** | 0 |
+| ⬜ 未着手 | 3 |
+| アーカイブ済み | 69 |
+| **合計（archive除く）** | 4 |
