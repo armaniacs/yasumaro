@@ -75,6 +75,7 @@ UI・ドキュメント:
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-21-fix-dashboard-i18n-locale-fallback.md
 - 2026-07-20-18-fix-supply-chain-adm-zip.md
 - 2026-07-20-23-fix-ci-dx-improvements.md
 - 2026-07-20-19-cleanup-conflictstats-docs.md
