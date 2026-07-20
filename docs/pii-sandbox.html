@@ -232,16 +232,17 @@
 
     function renderHighlights(original, items) {
       if (!items.length) return `<span class="empty">${i18n[currentLang].noMask}</span>`;
-      const sorted = [...items].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
-      let html = escapeHtml(original);
+      const sorted = [...items].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+      const parts = [];
+      let cursor = 0;
       for (const item of sorted) {
         const idx = item.index ?? 0;
-        const before = html.slice(0, idx);
-        const target = html.slice(idx, idx + item.original.length);
-        const after = html.slice(idx + item.original.length);
-        html = before + `<span class="highlight" title="${escapeHtml(item.type)}">${target}</span>` + after;
+        if (idx > cursor) parts.push(escapeHtml(original.slice(cursor, idx)));
+        parts.push(`<span class="highlight" title="${escapeHtml(item.type)}">${escapeHtml(original.slice(idx, idx + item.original.length))}</span>`);
+        cursor = idx + item.original.length;
       }
-      return html;
+      if (cursor < original.length) parts.push(escapeHtml(original.slice(cursor)));
+      return parts.join('');
     }
 
     async function run() {
