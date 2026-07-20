@@ -56,6 +56,42 @@ describe('OpenAIProvider', () => {
         mockFetchWithRetry.mockReset();
     });
 
+    describe('response schema validation', () => {
+        test('choices が空の場合はスキーマエラー', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({ choices: [] }));
+
+            const settings = {
+                openai_base_url: 'https://api.openai.com/v1',
+                openai_api_key: 'test-key',
+                openai_model: 'gpt-4o-mini'
+            } as any;
+            const provider = new OpenAIProvider(settings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('choices is missing or empty');
+        });
+
+        test('message.content が文字列でない場合はスキーマエラー', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({
+                choices: [{ message: { role: 'assistant' } }]
+            }));
+
+            const settings = {
+                openai_base_url: 'https://api.openai.com/v1',
+                openai_api_key: 'test-key',
+                openai_model: 'gpt-4o-mini'
+            } as any;
+            const provider = new OpenAIProvider(settings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('message.content is not a string');
+        });
+    });
+
     describe('content length truncation', () => {
         test('デフォルトで 10,000 文字に切り詰める', async () => {
             mockFetchWithRetry.mockResolvedValue(createResponse({

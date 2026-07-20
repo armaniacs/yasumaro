@@ -56,6 +56,40 @@ describe('GeminiProvider', () => {
         mockFetchWithRetry.mockReset();
     });
 
+    describe('response schema validation', () => {
+        test('candidates が空の場合はスキーマエラー', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({ candidates: [] }));
+
+            const settings = {
+                gemini_api_key: 'test-key',
+                gemini_model: 'gemini-3.1-flash-lite'
+            } as any;
+            const provider = new GeminiProvider(settings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('candidates is missing or empty');
+        });
+
+        test('parts[0].text が文字列でない場合はスキーマエラー', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({
+                candidates: [{ content: { parts: [{ role: 'model' }] } }]
+            }));
+
+            const settings = {
+                gemini_api_key: 'test-key',
+                gemini_model: 'gemini-3.1-flash-lite'
+            } as any;
+            const provider = new GeminiProvider(settings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('parts[0].text is not a string');
+        });
+    });
+
     describe('API version configurability', () => {
         test('testConnection が設定された API バージョンを使用する', async () => {
             mockFetchWithRetry.mockResolvedValue(createResponse({
