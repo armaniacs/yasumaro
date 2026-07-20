@@ -17,6 +17,8 @@ let maxMonthlyTokens = 1000000;
 let aiRateLimitMax = 10;
 let openaiContentChars = 10000;
 let geminiContentChars = 30000;
+let obsidianHost = '127.0.0.1';
+let geminiApiVersion = 'v1beta';
 
 export async function initRecordingConditionsSettings(): Promise<void> {
   const container = document.getElementById('recording-conditions-settings');
@@ -44,6 +46,8 @@ async function loadConditionsSettings(): Promise<void> {
     aiRateLimitMax = (settings[StorageKeys.AI_RATE_LIMIT_MAX] as number) || 10;
     openaiContentChars = (settings[StorageKeys.OPENAI_CONTENT_CHARS] as number) || 10000;
     geminiContentChars = (settings[StorageKeys.GEMINI_CONTENT_CHARS] as number) || 30000;
+    obsidianHost = (settings[StorageKeys.OBSIDIAN_HOST] as string) || '127.0.0.1';
+    geminiApiVersion = (settings[StorageKeys.GEMINI_API_VERSION] as string) || 'v1beta';
   } catch {
     minVisitDuration = 5;
     minScrollDepth = 50;
@@ -53,6 +57,8 @@ async function loadConditionsSettings(): Promise<void> {
     aiRateLimitMax = 10;
     openaiContentChars = 10000;
     geminiContentChars = 30000;
+    obsidianHost = '127.0.0.1';
+    geminiApiVersion = 'v1beta';
   }
 }
 
@@ -115,6 +121,22 @@ function renderSettings(container: HTMLElement): void {
         <label for="geminiContentChars">${getMessage('label_gemini_content_chars') || 'Gemini Max Content Characters'}</label>
         <input type="number" id="geminiContentChars" min="1000" max="100000" step="1000" value="${geminiContentChars}" aria-invalid="false">
       </div>
+
+      <h3 class="settings-section-title">${getMessage('externalEndpointControlsSection') || '外部エンドポイント'}</h3>
+
+      <div class="form-group">
+        <label for="obsidianHost">${getMessage('label_obsidian_host') || 'Obsidian Host'}</label>
+        <input type="text" id="obsidianHost" value="${obsidianHost}" placeholder="127.0.0.1" aria-invalid="false"
+          aria-describedby="obsidianHostNote">
+        <p class="help-text" id="obsidianHostNote">${getMessage('note_obsidian_host') || 'Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）'}</p>
+      </div>
+
+      <div class="form-group">
+        <label for="geminiApiVersion">${getMessage('label_gemini_api_version') || 'Gemini API Version'}</label>
+        <input type="text" id="geminiApiVersion" value="${geminiApiVersion}" placeholder="v1beta" aria-invalid="false"
+          aria-describedby="geminiApiVersionNote">
+        <p class="help-text" id="geminiApiVersionNote">${getMessage('note_gemini_api_version') || 'Gemini API のバージョン（v1 または v1beta）'}</p>
+      </div>
     </div>
 
     <div class="form-actions">
@@ -143,6 +165,8 @@ function wireEvents(container: HTMLElement): void {
     const aiRateLimitMaxInput = container.querySelector('#aiRateLimitMax') as HTMLInputElement;
     const openaiContentCharsInput = container.querySelector('#openaiContentChars') as HTMLInputElement;
     const geminiContentCharsInput = container.querySelector('#geminiContentChars') as HTMLInputElement;
+    const obsidianHostInput = container.querySelector('#obsidianHost') as HTMLInputElement;
+    const geminiApiVersionInput = container.querySelector('#geminiApiVersion') as HTMLInputElement;
 
     const minVisitVal = parseInt(minVisitInput?.value || '5', 10);
     const minScrollVal = parseInt(minScrollInput?.value || '50', 10);
@@ -152,6 +176,8 @@ function wireEvents(container: HTMLElement): void {
     const aiRateLimitMaxVal = parseInt(aiRateLimitMaxInput?.value ?? '10', 10);
     const openaiContentCharsVal = parseInt(openaiContentCharsInput?.value ?? '10000', 10);
     const geminiContentCharsVal = parseInt(geminiContentCharsInput?.value ?? '30000', 10);
+    const obsidianHostVal = obsidianHostInput?.value?.trim() || '127.0.0.1';
+    const geminiApiVersionVal = geminiApiVersionInput?.value?.trim() || 'v1beta';
 
     if (isNaN(minVisitVal) || minVisitVal < 1) {
       validationError.textContent = getMessage('minVisitDurationError') || 'Min visit duration must be at least 1 second.';
@@ -195,6 +221,18 @@ function wireEvents(container: HTMLElement): void {
       return;
     }
 
+    if (/[\s\/\\:]/.test(obsidianHostVal)) {
+      validationError.textContent = getMessage('obsidianHostError') || 'Obsidian host contains invalid characters.';
+      validationError.classList.remove('hidden');
+      return;
+    }
+
+    if (!/^(v\d+([a-z]+)?)?$/.test(geminiApiVersionVal)) {
+      validationError.textContent = getMessage('geminiApiVersionError') || 'Gemini API version must be like v1 or v1beta.';
+      validationError.classList.remove('hidden');
+      return;
+    }
+
     try {
       // Save recording conditions via saveSettings so values are written
       // to the 'settings' object, matching what getSettings reads.
@@ -207,6 +245,8 @@ function wireEvents(container: HTMLElement): void {
         [StorageKeys.AI_RATE_LIMIT_MAX]: aiRateLimitMaxVal,
         [StorageKeys.OPENAI_CONTENT_CHARS]: openaiContentCharsVal,
         [StorageKeys.GEMINI_CONTENT_CHARS]: geminiContentCharsVal,
+        [StorageKeys.OBSIDIAN_HOST]: obsidianHostVal,
+        [StorageKeys.GEMINI_API_VERSION]: geminiApiVersionVal,
       });
 
       minVisitDuration = minVisitVal;
@@ -217,6 +257,8 @@ function wireEvents(container: HTMLElement): void {
       aiRateLimitMax = aiRateLimitMaxVal;
       openaiContentChars = openaiContentCharsVal;
       geminiContentChars = geminiContentCharsVal;
+      obsidianHost = obsidianHostVal;
+      geminiApiVersion = geminiApiVersionVal;
 
       successMsg.classList.remove('hidden');
     } catch (err) {
