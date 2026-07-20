@@ -22,6 +22,10 @@ vi.mock('../../utils/storage.js', () => ({
     MIN_SCROLL_DEPTH: 'minScrollDepth',
     MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
     AI_TIMEOUT_MS: 'aiTimeoutMs',
+    MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+    AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+    OPENAI_CONTENT_CHARS: 'openaiContentChars',
+    GEMINI_CONTENT_CHARS: 'geminiContentChars',
   },
 }));
 
@@ -101,6 +105,10 @@ describe('recordingConditionsSettings', () => {
       minScrollDepth: 75,
       maxTokensPerPrompt: 2000,
       aiTimeoutMs: 30000,
+      maxMonthlyTokens: 50000,
+      aiRateLimitMax: 5,
+      openaiContentChars: 15000,
+      geminiContentChars: 20000,
     });
     await initRecordingConditionsSettings();
 
@@ -108,11 +116,19 @@ describe('recordingConditionsSettings', () => {
     const minScrollInput = document.getElementById('minScrollDepth') as HTMLInputElement;
     const maxTokensInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
     const aiTimeoutInput = document.getElementById('aiTimeoutSeconds') as HTMLInputElement;
+    const maxMonthlyTokensInput = document.getElementById('maxMonthlyTokens') as HTMLInputElement;
+    const aiRateLimitMaxInput = document.getElementById('aiRateLimitMax') as HTMLInputElement;
+    const openaiContentCharsInput = document.getElementById('openaiContentChars') as HTMLInputElement;
+    const geminiContentCharsInput = document.getElementById('geminiContentChars') as HTMLInputElement;
 
     expect(minVisitInput?.value).toBe('10');
     expect(minScrollInput?.value).toBe('75');
     expect(maxTokensInput?.value).toBe('2000');
     expect(aiTimeoutInput?.value).toBe('30');
+    expect(maxMonthlyTokensInput?.value).toBe('50000');
+    expect(aiRateLimitMaxInput?.value).toBe('5');
+    expect(openaiContentCharsInput?.value).toBe('15000');
+    expect(geminiContentCharsInput?.value).toBe('20000');
   });
 
   it('saves recording conditions via saveSettings on save click', async () => {
@@ -137,6 +153,10 @@ describe('recordingConditionsSettings', () => {
       minScrollDepth: 50,
       maxTokensPerPrompt: 3000,
       aiTimeoutMs: 0,
+      maxMonthlyTokens: 1000000,
+      aiRateLimitMax: 10,
+      openaiContentChars: 10000,
+      geminiContentChars: 30000,
     });
   });
 

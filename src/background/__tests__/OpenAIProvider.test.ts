@@ -52,6 +52,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
 
 // aiUsageTracker モック
 vi.mock('../../utils/aiUsageTracker.js', () => ({
+    checkHardLimit: vi.fn(async () => ({ blocked: false })),
     checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: 60 })),
     checkUsageWarning: vi.fn(async () => ({ warning: false })),
     recordUsage: vi.fn(async () => {}),
@@ -63,7 +64,7 @@ import { fetchWithRetry } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
-const { checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
+const { checkHardLimit, checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('OpenAIProvider', () => {
