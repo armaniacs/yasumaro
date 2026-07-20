@@ -2,6 +2,18 @@
 
 元指摘: Checking Team (Medium: Edge & Mobile Strategist)
 
+## 実装状況（調査日: 2026-07-20、状態: ⬜ 未着手）
+
+コードベース調査により、以下を確認した。
+
+| 受け入れ基準 | 状態 | 証拠 |
+|------------|:----:|------|
+| `OfflineNetworkQueue` クラス (`src/background/offlineNetworkQueue.ts`) | ❌ 未着手 | ファイル不在（`ls` で確認） |
+| `RecordingPipeline.executeWithStrategy` へのキューイング統合 | ❌ 未着手 | `offlineNetworkQueue` への参照なし |
+| ネットワーク状態監視（定期チェック + online イベント） | ❌ 未着手 | 該当実装なし |
+
+**補足**: 既存の `pendingSqliteQueue`（SQLite 書き込み失敗用）は存在するが、本 PBI の「ネットワーク障害」キューとは独立した別機能。開始時は PBI 本文の Inside-Out アプローチ（型定義 → 永続化 → Pipeline 統合 → ネットワーク監視）に従う。
+
 ## ユーザーストーリー
 ユーザーとして、モバイル環境などネットワークが不安定な状況でもAI要約の生成とObsidianへの保存をキューイングし、ネットワーク復旧後に自動で再試行したい、なぜなら現在はネットワーク断が発生するとAI呼び出しやObsidian同期がその場で失敗し、記録が不完全になるから
 

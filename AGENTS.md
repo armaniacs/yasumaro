@@ -37,7 +37,7 @@ npm validate             # Type check + run tests (pre-commit gate)
 
 ### Loading the Extension
 
-1. Run `npm build` to build the extension
+1. Run `npm run build` to build the extension
 2. Open Chrome and navigate to `chrome://extensions`
 3. Enable "Developer mode" (toggle in top-right)
 4. Click "Load unpacked" and select the `dist/chromium-mv3` directory
@@ -68,9 +68,10 @@ Popup UI (src/popup/)
   ├── settings/ → Settings management
   └── utils/ → Shared utilities (focusTrap, i18n, etc.)
 
-Dashboard (src/dashboard/)
-  ├── dashboard.html → Settings configuration interface
-  └── dashboard.ts → Dashboard logic
+Dashboard (entrypoints/options/ + src/dashboard/)
+  ├── index.html → Settings configuration interface (WXT entrypoint)
+  ├── main.ts → Dashboard entrypoint
+  └── src/dashboard/ → Dashboard logic modules
 
 Offscreen (src/offscreen/)
   └── offscreen.ts → DOM operations requiring offscreen document
