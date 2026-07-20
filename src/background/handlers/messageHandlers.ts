@@ -16,6 +16,7 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { createRecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import { sharedOfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
@@ -306,6 +307,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       obsidian: deps.obsidian,
       aiService: deps.aiService,
       sqliteClient: deps.sqliteClient,
+      offlineNetworkQueue: sharedOfflineNetworkQueue,
     });
 
     const result = await pipeline.execute({
@@ -358,6 +360,7 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       obsidian: deps.obsidian,
       aiService: deps.aiService,
       sqliteClient: deps.sqliteClient,
+      offlineNetworkQueue: sharedOfflineNetworkQueue,
     });
 
     const result = await pipeline.execute({
