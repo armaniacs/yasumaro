@@ -5,7 +5,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { saveSettings, getSettings, StorageKeys, clearEncryptionKeyCache } from '../storage.js';
-import { withOptimisticLock, resetConflictStats } from '../optimisticLock.js';
 
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};
@@ -81,8 +80,6 @@ describe('saveSettings - 楽観的ロック', () => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         // 暗号化キーキャッシュをクリア
         clearEncryptionKeyCache();
-        // 競合統計をリセット
-        resetConflictStats();
         // 楽観的ロック用のバージョンキーを初期化
         mockStorage['settings_version'] = 0;
         mockStorage['settings_migrated'] = true;
@@ -188,7 +185,6 @@ describe('migrateToSingleSettingsObject', () => {
         // テストごとにストレージをクリア
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         clearEncryptionKeyCache();
-        resetConflictStats();
     });
 
     afterEach(() => {
@@ -230,7 +226,7 @@ describe('migrateToSingleSettingsObject', () => {
     });
 });
 
-describe('楽観的ロックの競合統計', () => {
+describe('暗号化エラーハンドリング', () => {
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         clearEncryptionKeyCache();
