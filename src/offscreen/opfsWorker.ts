@@ -235,7 +235,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   const {
     limit = 20, offset = 0, since, until, domain,
     isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tagFilter,
+    tagFilter, gistSynced,
   } = payload;
 
   // Validate sort columns
@@ -252,6 +252,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
   if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
+  if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
   if (ids !== undefined && ids.length > 0) {
     conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
     params.push(...ids);

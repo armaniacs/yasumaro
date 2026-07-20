@@ -3347,5 +3347,41 @@
   "triggerTabCloseDesc": {
     "message": "Record when the tab is closed",
     "description": "Recording trigger description: record when the tab is closed"
+  },
+  "dashboardTitle": {
+    "message": "Yasumaro Dashboard",
+    "description": "Dashboard page title"
+  },
+  "popupTitle": {
+    "message": "Yasumaro",
+    "description": "Popup page title"
+  },
+  "textQualityTitle": {
+    "message": "Text Quality Settings",
+    "description": "Section title for text quality settings"
+  },
+  "dedupLabel": {
+    "message": "Remove redundant sentences from input",
+    "description": "Label for dedup feature"
+  },
+  "dedupDesc": {
+    "message": "Detects and removes duplicate sentences using Jaccard similarity (MMR Redundancy Reduction).",
+    "description": "Description for dedup feature"
+  },
+  "dedupThresholdLabel": {
+    "message": "Similarity threshold:",
+    "description": "Label for dedup threshold slider"
+  },
+  "dedupThresholdDesc": {
+    "message": "Lower values remove more (0.5=loose), higher values remove less (0.95=strict). Default: 0.7",
+    "description": "Help text for dedup threshold slider"
+  },
+  "normalizeLabel": {
+    "message": "Normalize Japanese sentence endings to plain form",
+    "description": "Label for normalization feature"
+  },
+  "normalizeDesc": {
+    "message": "Converts polite form to plain form (desu→da, mashita→ta, teimasu→teiru, teimashita→teita, deshou→darou).",
+    "description": "Description for normalization feature"
   }
 }

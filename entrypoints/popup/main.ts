@@ -4,7 +4,7 @@
  */
 
 import './styles.css';
-import { applyI18n, setHtmlLangAndDir } from '../../src/utils/i18n-dom.js';
+import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../../src/utils/i18n-dom.js';
 import '../../src/popup/navigation';
 import '../../src/popup/main';
 import '../../src/popup/popup';
@@ -14,8 +14,10 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     setHtmlLangAndDir();
     applyI18n();
+    translatePageTitle('popupTitle');
   });
 } else {
   setHtmlLangAndDir();
   applyI18n();
+  translatePageTitle('popupTitle');
 }

@@ -203,7 +203,12 @@ export class GeminiProvider extends AIProviderStrategy {
 
     private async _extractSummary(data: GeminiApiResponse): Promise<AISummaryResult> {
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            const summary = data.candidates[0].content.parts[0].text;
+            const parts = data.candidates[0].content.parts;
+            if (!parts || parts.length === 0 || typeof parts[0].text !== 'string') {
+                addLog(LogType.ERROR, 'Gemini schema validation failed: candidates[0].content.parts[0].text is not a string');
+                return { success: false, summary: "Error: Invalid API response format - unexpected schema." };
+            }
+            const summary = parts[0].text;
             const sentTokens = data.usageMetadata?.promptTokenCount || 0;
             const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
 
