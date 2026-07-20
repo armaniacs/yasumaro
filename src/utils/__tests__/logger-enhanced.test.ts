@@ -11,6 +11,7 @@ describe('Logger - Enhanced Coverage', () => {
     beforeEach(async () => {
         vi.resetModules();
         process.env.NODE_ENV = 'development';
+        (chrome as any).runtime.onSuspend = { addListener: vi.fn() };
         logger = await import('../logger.js');
         await logger.clearLogs();
         logger.clearPendingLogs();
@@ -116,6 +117,38 @@ describe('Logger - Enhanced Coverage', () => {
             await logger.addLog('INFO', 'To be cleared', {});
             logger.clearPendingLogs();
             expect(logger.getPendingLogCount()).toBe(0);
+        });
+    });
+
+    describe('Service Worker resilience', () => {
+        test('schedules flush via chrome.alarms when buffer is below BATCH_FLUSH_SIZE', async () => {
+            await logger.addLog('INFO', 'Alarm scheduled log', {});
+            expect(chrome.alarms.create).toHaveBeenCalledWith(
+                'yasumaro-logger-flush',
+                expect.objectContaining({ delayInMinutes: 1 })
+            );
+        });
+
+        test('flushLogs is called when the logger alarm fires', async () => {
+            await logger.addLog('INFO', 'Alarm fired log', {});
+            const alarmListener = (chrome.alarms.onAlarm.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+            await alarmListener({ name: 'yasumaro-logger-flush' });
+            const logs = await logger.getLogs();
+            expect(logs.some((l: any) => l.message === 'Alarm fired log')).toBe(true);
+        });
+
+        test('onSuspend awaits flushLogs with a timeout', async () => {
+            await logger.addLog('INFO', 'Suspend log', {});
+            const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+            await suspendListener();
+            const logs = await logger.getLogs();
+            expect(logs.some((l: any) => l.message === 'Suspend log')).toBe(true);
+        });
+
+        test('logCritical flushes immediately', async () => {
+            await logger.logCritical('Critical event', {}, 'UNKN_001', 'test');
+            const logs = await logger.getLogs();
+            expect(logs.some((l: any) => l.message === 'Critical event')).toBe(true);
         });
     });
 
