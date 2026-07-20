@@ -2,7 +2,7 @@
 
 元指摘: Checking Team (High: Maintainability Guardian, Medium: System Architect, API & Contract Negotiator, Blue Team Leader, Maintainability Guardian)
 
-## 実装状況（調査日: 2026-07-20、状態: 🔶 部分実装）
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
 
 コードベース調査により、以下を確認した。
 
@@ -57,12 +57,12 @@ Feature: メッセージング型統一
 ```
 
 ## 受け入れ基準
-- [ ] `messaging/types.ts` の `ServiceWorkerRequest` 独立定義を削除し、`import type { ExtensionMessage }` 経由で参照
-- [ ] `isServiceWorkerRequest()` 型ガードが `ExtensionMessage` の全18種をカバー（現在不足の4種: PING, REFRESH_LOCAL_MARKDOWN_SCHEDULER, CONSENT_STATE_CHANGED, DASHBOARD_SQLITE を追加）
-- [ ] `sendServiceWorkerMessage()` / `sendFromPopup()` の型引数が `ExtensionMessage['type']` を使用
-- [ ] `MessageHandlerRegistry` に sender.id 一括検証を追加（全ハンドラのエントリポイント）
-- [ ] `createManualRecordHandler` / `createSaveRecordHandler` が `createRecordingPipeline(deps)` を使用し `as any` キャストが除去されている
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `messaging/types.ts` の `ServiceWorkerRequest` 独立定義を削除し、`import type { ExtensionMessage }` 経由で参照
+- [x] `isServiceWorkerRequest()` 型ガードが `ExtensionMessage` の全18種をカバー（不足していた PING, REFRESH_LOCAL_MARKDOWN_SCHEDULER, CONSENT_STATE_CHANGED, DASHBOARD_SQLITE を追加）
+- [x] `sendServiceWorkerMessage()` / `sendFromPopup()` の型引数が `ExtensionMessage['type']` を使用
+- [x] `MessageHandlerRegistry` に sender.id 一括検証を追加（全ハンドラのエントリポイント）
+- [x] `createManualRecordHandler` / `createSaveRecordHandler` が `createRecordingPipeline(deps)` を使用し `as any` キャストが除去されている
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 

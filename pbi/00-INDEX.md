@@ -21,15 +21,14 @@
 | 5 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
 | 6 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
 | 7 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
-| 8 | [01](2026-07-20-01-fix-message-type-unification.md) | 5pt | 型構造変更。影響範囲が広い |
-| 9 | [02](2026-07-20-02-fix-session-store-resilience.md) | 5pt | ストレージ変更。モバイル影響あり |
-| 10 | [10](2026-07-20-10-feat-offline-network-queue.md) | 8pt | 最大。新機能。最後に実施 |
-| 11 | [11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | 2pt | OPFS/SQLite の整合性強化 |
-| 12 | [22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | 2pt | プライバシー改善 |
-| 13 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
-| 14 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
-| 15 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
-| 16 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
+| 8 | [02](2026-07-20-02-fix-session-store-resilience.md) | 5pt | ストレージ変更。モバイル影響あり |
+| 9 | [10](2026-07-20-10-feat-offline-network-queue.md) | 8pt | 最大。新機能。最後に実施 |
+| 10 | [11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | 2pt | OPFS/SQLite の整合性強化 |
+| 11 | [22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | 2pt | プライバシー改善 |
+| 12 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
+| 13 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
+| 14 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
+| 15 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
 
 ---
 
@@ -37,7 +36,6 @@
 
 | PBI | カテゴリ | タイトル | 難易度 | 副作用 | 状態 |
 |---|---|---|---|---|---|
-| [2026-07-20-01](2026-07-20-01-fix-message-type-unification.md) | セキュリティ | メッセージング型定義のSSOT化・sender.id検証・Pipeline重複解消 | 🔴高（5pt） | 🟢なし | 🔶 部分実装（ファクトリ・個別sender検証は完了。SSOT型統一・一括検証は未着手） |
 | [2026-07-20-02](2026-07-20-02-fix-session-store-resilience.md) | ストレージ | SessionStore 耐久性向上（fallback/waitForFlush/suspend/クォータ） | 🔴高（5pt） | 🟡軽微 | 🔶 部分実装（SessionStoreクラス・クォータ捕捉は完了。4つの受け入れ基準は未着手） |
 | [2026-07-20-10](2026-07-20-10-feat-offline-network-queue.md) | ストレージ | オフラインネットワークキュー — AI要約/同期のオフライン耐性 | 🔴高（8pt） | 🟡軽微 | ⬜ 未着手（`offlineNetworkQueue.ts` 不在） |
 | [2026-07-20-11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | データ整合性・移行 | OPFS SQLite トランザクション整合性強化 | 🟡中（2pt） | 🟡軽微 | ⬜ 未着手 |
@@ -97,6 +95,7 @@ UI・ドキュメント:
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-01-fix-message-type-unification.md
 - 2026-07-20-23-fix-ci-dx-improvements.md
 - 2026-07-20-21-fix-dashboard-i18n-locale-fallback.md
 - 2026-07-20-19-cleanup-conflictstats-docs.md
@@ -155,6 +154,6 @@ UI・ドキュメント:
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 7 |
-| 🔶 部分実装 | 2 |
-| アーカイブ済み | 76 |
-| **合計（archive除く）** | 9 |
+| 🔶 部分実装 | 1 |
+| アーカイブ済み | 77 |
+| **合計（archive除く）** | 8 |
