@@ -22,6 +22,7 @@ interface SanitizeResult {
 interface SanitizeOptions {
   skipSizeLimit?: boolean;
   timeout?: number;
+  includeIndices?: boolean;
 }
 
 describe('piiSanitizer', () => {
@@ -685,6 +686,28 @@ describe('piiSanitizer', () => {
       const manyEmails = Array.from({ length: 20 }, (_, i) => `user${i}@example.com`).join(' ');
       const result = await sanitizeRegex(manyEmails, { timeout: 0 }) as SanitizeResult;
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('sanitizeRegex - includeIndices オプション', () => {
+    test('includeIndices オプションでマスク位置を取得できる', async () => {
+      const text = 'メール: user@example.com';
+      const result = await sanitizeRegex(text, { includeIndices: true }) as SanitizeResult;
+
+      expect(result.text).toBe('メール: [MASKED:email]');
+      expect(result.maskedItems).toHaveLength(1);
+      expect(result.maskedItems[0]).toMatchObject({
+        type: 'email',
+        original: 'user@example.com',
+        index: 5,
+      });
+    });
+
+    test('includeIndices=false のとき index は含まれない', async () => {
+      const text = 'メール: user@example.com';
+      const result = await sanitizeRegex(text) as SanitizeResult;
+
+      expect(result.maskedItems[0]).not.toHaveProperty('index');
     });
   });
 });

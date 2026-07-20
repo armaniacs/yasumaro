@@ -159,6 +159,7 @@ function validateInputSize(text: string): { valid: boolean; error?: string } {
 export interface SanitizeOptions {
     timeout?: number;
     skipSizeLimit?: boolean;
+    includeIndices?: boolean;
 }
 
 interface MaskedItem {
@@ -196,7 +197,7 @@ interface Range {
  * @returns {Promise<SanitizeResult>} { text: string, maskedItems: Array<{type: string, original: string}>, error?: string }
  */
 export async function sanitizeRegex(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
-    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false } = options;
+    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false, includeIndices = false } = options;
 
     // null/undefinedチェック
     if (!text || typeof text !== 'string') {
@@ -323,7 +324,11 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
 
         // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
         finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
-        const resultItems = finalMaskedItems.map(item => ({ type: item.type, original: item.original }));
+        const resultItems = finalMaskedItems.map(item =>
+            includeIndices
+                ? { type: item.type, original: item.original, index: item.index }
+                : { type: item.type, original: item.original }
+        );
 
         // 出力サイズチェック（置換によりサイズが大きくなる可能性があるため）
         const outputSize = processedText.length;
@@ -336,7 +341,11 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
             );
             return {
                 text: processedText,
-                maskedItems: trimmedMaskedItems.map(item => ({ type: item.type, original: item.original })),
+                maskedItems: trimmedMaskedItems.map(item =>
+                    includeIndices
+                        ? { type: item.type, original: item.original, index: item.index }
+                        : { type: item.type, original: item.original }
+                ),
                 error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
             };
         }
