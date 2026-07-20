@@ -150,6 +150,7 @@ async function runMigration(): Promise<void> {
 
 // Session store for cross-SW-restart persistence
 const sessionStore = new SessionStore();
+SessionStore.registerSuspendHandler(sessionStore);
 
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
 let CONFIRM_TOKEN: string | null = null;
