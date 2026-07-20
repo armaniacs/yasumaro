@@ -24,19 +24,12 @@
 | 8 | [01](2026-07-20-01-fix-message-type-unification.md) | 5pt | 型構造変更。影響範囲が広い |
 | 9 | [02](2026-07-20-02-fix-session-store-resilience.md) | 5pt | ストレージ変更。モバイル影響あり |
 | 10 | [10](2026-07-20-10-feat-offline-network-queue.md) | 8pt | 最大。新機能。最後に実施 |
-| 11 | [12](2026-07-20-12-fix-gist-sync-completeness.md) | 1pt | 最小、データ整合性 |
-| 12 | [23](2026-07-20-23-fix-ci-dx-improvements.md) | 1pt | CI/DX のみ |
-| 13 | [18](2026-07-20-18-fix-supply-chain-adm-zip.md) | 1pt | 依存関係更新のみ |
-| 14 | [11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | 2pt | OPFS/SQLite の整合性強化 |
-| 15 | [13](2026-07-20-13-fix-ai-provider-response-validation.md) | 2pt | 防御的実装 |
-| 16 | [17](2026-07-20-17-fix-mobile-accessibility-frontend.md) | 2pt | UI/ARIA 改善 |
-| 17 | [19](2026-07-20-19-cleanup-conflictstats-docs.md) | 2pt | デッドコード削除 |
-| 18 | [21](2026-07-20-21-fix-dashboard-i18n-locale-fallback.md) | 2pt | i18n 改善 |
-| 19 | [22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | 2pt | プライバシー改善 |
-| 20 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
-| 21 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
-| 22 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
-| 23 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
+| 11 | [11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | 2pt | OPFS/SQLite の整合性強化 |
+| 12 | [22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | 2pt | プライバシー改善 |
+| 13 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
+| 14 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
+| 15 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
+| 16 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
 
 ---
 
@@ -48,18 +41,11 @@
 | [2026-07-20-02](2026-07-20-02-fix-session-store-resilience.md) | ストレージ | SessionStore 耐久性向上（fallback/waitForFlush/suspend/クォータ） | 🔴高（5pt） | 🟡軽微 | 🔶 部分実装（SessionStoreクラス・クォータ捕捉は完了。4つの受け入れ基準は未着手） |
 | [2026-07-20-10](2026-07-20-10-feat-offline-network-queue.md) | ストレージ | オフラインネットワークキュー — AI要約/同期のオフライン耐性 | 🔴高（8pt） | 🟡軽微 | ⬜ 未着手（`offlineNetworkQueue.ts` 不在） |
 | [2026-07-20-11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | データ整合性・移行 | OPFS SQLite トランザクション整合性強化 | 🟡中（2pt） | 🟡軽微 | ⬜ 未着手 |
-| [2026-07-20-12](2026-07-20-12-fix-gist-sync-completeness.md) | データ整合性・移行 | Gist 同期ターゲットの未同期レコード取り残し防止 | 🟢低（1pt） | 🟢なし | ⬜ 未着手 |
-| [2026-07-20-13](2026-07-20-13-fix-ai-provider-response-validation.md) | セキュリティ・防御的実装 | AI プロバイダー API レスポンススキーマ検証 | 🟡中（2pt） | 🟢なし | ⬜ 未着手 |
 | [2026-07-20-14](2026-07-20-14-fix-content-script-performance.md) | ストレージ・パフォーマンス | コンテンツスクリプトのスクロール/ポーリング負荷軽減 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
 | [2026-07-20-15](2026-07-20-15-fix-logger-sw-resilience.md) | ストレージ・パフォーマンス | Logger の Service Worker 終了耐性強化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
 | [2026-07-20-16](2026-07-20-16-feat-ai-usage-controls.md) | ストレージ・パフォーマンス | AI 使用量ハードリミットとレート制限のユーザー設定化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
-| [2026-07-20-17](2026-07-20-17-fix-mobile-accessibility-frontend.md) | アクセシビリティ・i18n | Popup/Dashboard のモバイル対応と ARIA 改善 | 🟡中（2pt） | 🟢なし | ⬜ 未着手 |
-| [2026-07-20-18](2026-07-20-18-fix-supply-chain-adm-zip.md) | サプライチェーン・依存関係 | サプライチェーン脆弱性対応 — adm-zip と runtime 依存のピン留め緩和 | 🟢低（1pt） | 🟢なし | ⬜ 未着手 |
-| [2026-07-20-19](2026-07-20-19-cleanup-conflictstats-docs.md) | DX・保守性 | デッドコード削除 — optimisticLock conflictStats とドキュメント整備 | 🟡中（2pt） | 🟢なし | ⬜ 未着手 |
 | [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | セキュリティ・防御的実装 | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
-| [2026-07-20-21](2026-07-20-21-fix-dashboard-i18n-locale-fallback.md) | アクセシビリティ・i18n | Dashboard ハードコード日本語の i18n 化とロケールフォールバック修正 | 🟡中（2pt） | 🟢なし | ⬜ 未着手 |
 | [2026-07-20-22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | セキュリティ・防御的実装 | ローカル AI 要約前の PII マスキング適用 | 🟡中（2pt） | 🟡軽微 | ⬜ 未着手 |
-| [2026-07-20-23](2026-07-20-23-fix-ci-dx-improvements.md) | DX・保守性 | CI/CD と Makefile の開発フィードバック改善 | 🟢低（1pt） | 🟢なし | ⬜ 未着手 |
 
 ---
 
@@ -72,7 +58,6 @@
 セキュリティ・防御的実装:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-20-13](2026-07-20-13-fix-ai-provider-response-validation.md) | Checking Team High | AI プロバイダー API レスポンススキーマ検証 | 🟡中（2pt） | 🟢なし |
 | [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | Checking Team High/Medium | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 |
 | [2026-07-20-22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | Checking Team Medium | ローカル AI 要約前の PII マスキング適用 | 🟡中（2pt） | 🟡軽微 |
 
@@ -80,7 +65,6 @@
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
 | [2026-07-20-11](2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md) | Checking Team High | OPFS SQLite トランザクション整合性強化 | 🟡中（2pt） | 🟡軽微 |
-| [2026-07-20-12](2026-07-20-12-fix-gist-sync-completeness.md) | Checking Team High | Gist 同期ターゲットの未同期レコード取り残し防止 | 🟢低（1pt） | 🟢なし |
 
 ストレージ・パフォーマンス:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -93,19 +77,14 @@
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
 | [2026-07-18-16](2026-07-18-16-feat-plural-locale-support.md) | L4 | 複数形・数量表現のロケール対応 | 🔴高（3pt） | 🟢なし |
-| [2026-07-20-17](2026-07-20-17-fix-mobile-accessibility-frontend.md) | Checking Team High/Medium | Popup/Dashboard のモバイル対応と ARIA 改善 | 🟡中（2pt） | 🟢なし |
-| [2026-07-20-21](2026-07-20-21-fix-dashboard-i18n-locale-fallback.md) | Checking Team High/Medium | Dashboard ハードコード日本語の i18n 化とロケールフォールバック修正 | 🟡中（2pt） | 🟢なし |
 
 サプライチェーン・依存関係:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-20-18](2026-07-20-18-fix-supply-chain-adm-zip.md) | Checking Team High | サプライチェーン脆弱性対応 — adm-zip と runtime 依存のピン留め緩和 | 🟢低（1pt） | 🟢なし |
 
 DX・保守性:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
-| [2026-07-20-19](2026-07-20-19-cleanup-conflictstats-docs.md) | Checking Team High/Medium | デッドコード削除 — optimisticLock conflictStats とドキュメント整備 | 🟡中（2pt） | 🟢なし |
-| [2026-07-20-23](2026-07-20-23-fix-ci-dx-improvements.md) | Checking Team Medium | CI/CD と Makefile の開発フィードバック改善 | 🟢低（1pt） | 🟢なし |
 
 UI・ドキュメント:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -118,57 +97,64 @@ UI・ドキュメント:
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-23-fix-ci-dx-improvements.md
+- 2026-07-20-21-fix-dashboard-i18n-locale-fallback.md
+- 2026-07-20-19-cleanup-conflictstats-docs.md
+- 2026-07-20-18-fix-supply-chain-adm-zip.md
+- 2026-07-20-17-fix-mobile-accessibility-frontend.md
+- 2026-07-20-13-fix-ai-provider-response-validation.md
+- 2026-07-20-12-fix-gist-sync-completeness.md
 - 2026-07-20-09-fix-docs-dual-translation-system.md
-- 2026-07-20-04-fix-content-extractor-cleansing-config.md
-- 2026-07-20-05-fix-ui-css-touchups.md
-- 2026-07-20-06-fix-security-privacy-extensions.md
-- 2026-07-20-03-fix-i18n-module-separation.md
-- 2026-07-20-07-fix-data-integrity-cleanup.md
 - 2026-07-20-08-fix-changelog-release-note-guidelines.md
+- 2026-07-20-07-fix-data-integrity-cleanup.md
+- 2026-07-20-06-fix-security-privacy-extensions.md
+- 2026-07-20-05-fix-ui-css-touchups.md
+- 2026-07-20-04-fix-content-extractor-cleansing-config.md
+- 2026-07-20-03-fix-i18n-module-separation.md
 - 2026-07-19-02-fix-anond-whitelist-adapter.md
 - 2026-07-19-01-fix-ai-duration-measurement.md
-- 2026-07-18-20-fix-session-store-storage-backend.md
-- 2026-07-18-33-feat-message-protocol-versioning.md
-- 2026-07-18-29-fix-optimistic-lock-cas-reverification.md
-- 2026-07-18-31-fix-wa-sqlite-exact-version-pin.md
-- 2026-07-18-11-fix-consent-state-changed-sender-validation.md
-- 2026-07-18-26-feat-mobile-offscreen-queue-limit.md
-- 2026-07-18-32-fix-recording-pipeline-factory-extraction.md
-- 2026-07-18-22-fix-dashboard-tablist-aria-roles.md
-- 2026-07-18-23-fix-permissions-page-i18n.md
-- 2026-07-18-34-fix-log-source-auto-completion.md
-- 2026-07-18-15-feat-readme-architecture-and-privacy-section.md
-- 2026-07-13-03-fix-sqlite-history-panel-deepening.md
-- 2026-07-16-02-fix-architecture-knowledge-graph-findings.md
-- 2026-07-16-04-fix-adr014-file-references.md
-- 2026-07-16-05-fix-sqlite-message-type-unification.md
-- 2026-07-16-06-fix-idb-fallback-subframe7536-migration.md
-- 2026-07-16-07-decide-opfs-migration-v2-removal.md
-- 2026-07-17-08-dashboard-opfs-migration-status.md
-- 2026-07-17-09-feat-audit-log-tsv-download.md
-- 2026-07-18-10-fix-remove-dead-history-panel-code.md
-- 2026-07-18-12-fix-content-script-sender-validation.md
-- 2026-07-18-13-fix-popup-width-responsive.md
-- 2026-07-18-14-fix-uuid-override-range.md
-- 2026-07-18-17-fix-crypto-random-log-id-fallback.md
-- 2026-07-18-18-fix-migration-backup-columns-coverage.md
-- 2026-07-18-21-fix-dashboard-html-lang-attribute.md
-- 2026-07-18-24-fix-tab-switch-focus-movement.md
-- 2026-07-18-25-fix-remove-noop-optimistic-lock-save-sqlite.md
-- 2026-07-18-27-fix-log-retention-quota-separation.md
-- 2026-07-18-35-fix-barrel-reexport-deprecation-notice.md
-- 2026-07-18-19-fix-storage-quota-unlimited-storage-check.md
-- 2026-07-18-16-feat-plural-locale-support.md
 - 2026-07-18-36-feat-automate-third-party-notices.md
+- 2026-07-18-35-fix-barrel-reexport-deprecation-notice.md
+- 2026-07-18-34-fix-log-source-auto-completion.md
+- 2026-07-18-33-feat-message-protocol-versioning.md
+- 2026-07-18-32-fix-recording-pipeline-factory-extraction.md
+- 2026-07-18-31-fix-wa-sqlite-exact-version-pin.md
 - 2026-07-18-30-fix-consolidate-duplicate-i18n-modules.md
+- 2026-07-18-29-fix-optimistic-lock-cas-reverification.md
 - 2026-07-18-28-fix-pending-sqlite-queue-batch-insert.md
+- 2026-07-18-27-fix-log-retention-quota-separation.md
+- 2026-07-18-26-feat-mobile-offscreen-queue-limit.md
+- 2026-07-18-25-fix-remove-noop-optimistic-lock-save-sqlite.md
+- 2026-07-18-24-fix-tab-switch-focus-movement.md
+- 2026-07-18-23-fix-permissions-page-i18n.md
+- 2026-07-18-22-fix-dashboard-tablist-aria-roles.md
+- 2026-07-18-21-fix-dashboard-html-lang-attribute.md
+- 2026-07-18-20-fix-session-store-storage-backend.md
+- 2026-07-18-19-fix-storage-quota-unlimited-storage-check.md
+- 2026-07-18-18-fix-migration-backup-columns-coverage.md
+- 2026-07-18-17-fix-crypto-random-log-id-fallback.md
+- 2026-07-18-16-feat-plural-locale-support.md
+- 2026-07-18-15-feat-readme-architecture-and-privacy-section.md
+- 2026-07-18-14-fix-uuid-override-range.md
+- 2026-07-18-13-fix-popup-width-responsive.md
+- 2026-07-18-12-fix-content-script-sender-validation.md
+- 2026-07-18-11-fix-consent-state-changed-sender-validation.md
+- 2026-07-18-10-fix-remove-dead-history-panel-code.md
+- 2026-07-17-09-feat-audit-log-tsv-download.md
+- 2026-07-17-08-dashboard-opfs-migration-status.md
+- 2026-07-16-07-decide-opfs-migration-v2-removal.md
+- 2026-07-16-06-fix-idb-fallback-subframe7536-migration.md
+- 2026-07-16-05-fix-sqlite-message-type-unification.md
+- 2026-07-16-04-fix-adr014-file-references.md
+- 2026-07-16-02-fix-architecture-knowledge-graph-findings.md
+- 2026-07-13-03-fix-sqlite-history-panel-deepening.md
 - 2026-07-18-StorageBackend設計ドキュメント更新
 
 ## 集計
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 14 |
+| ⬜ 未着手 | 7 |
 | 🔶 部分実装 | 2 |
-| アーカイブ済み | 69 |
-| **合計（archive除く）** | 16 |
+| アーカイブ済み | 76 |
+| **合計（archive除く）** | 9 |
