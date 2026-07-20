@@ -146,6 +146,55 @@ describe('AIProviderStrategy', () => {
         });
     });
 
+    describe('getMaxContentChars', () => {
+        test('プロバイダー別設定の maxContentChars を返す', () => {
+            const settings = {
+                providers: {
+                    'test-provider': {
+                        maxContentChars: 5000
+                    }
+                }
+            } as unknown as Settings;
+
+            const provider = new TestProvider(settings);
+            const maxChars = (provider as any).getMaxContentChars(10_000);
+            expect(maxChars).toBe(5000);
+        });
+
+        test('storageKey 指定時はグローバル設定を優先して返す', () => {
+            const settings = {
+                [StorageKeys.OPENAI_CONTENT_CHARS]: 15000
+            } as unknown as Settings;
+
+            const provider = new TestProvider(settings);
+            const maxChars = (provider as any).getMaxContentChars(10_000, StorageKeys.OPENAI_CONTENT_CHARS);
+            expect(maxChars).toBe(15000);
+        });
+
+        test('プロバイダー別設定が優先される', () => {
+            const settings = {
+                providers: {
+                    'test-provider': {
+                        maxContentChars: 7000
+                    }
+                },
+                [StorageKeys.OPENAI_CONTENT_CHARS]: 15000
+            } as unknown as Settings;
+
+            const provider = new TestProvider(settings);
+            const maxChars = (provider as any).getMaxContentChars(10_000, StorageKeys.OPENAI_CONTENT_CHARS);
+            expect(maxChars).toBe(7000);
+        });
+
+        test('設定がない場合はデフォルト値を返す', () => {
+            const settings = {} as Settings;
+
+            const provider = new TestProvider(settings);
+            const maxChars = (provider as any).getMaxContentChars(30_000);
+            expect(maxChars).toBe(30_000);
+        });
+    });
+
     describe('abstract methods', () => {
         test('generateSummaryを実装できる', async () => {
             const settings = {} as Settings;

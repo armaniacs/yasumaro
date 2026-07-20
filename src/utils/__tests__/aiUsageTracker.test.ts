@@ -11,10 +11,12 @@ vi.mock('../storage.js', () => ({
     StorageKeys: {
         AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
         AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+        AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
         AI_USAGE_MONTH: 'ai_usage_month',
         AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
         AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-        AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count'
+        AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+        MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
     }
 }));
 
@@ -29,10 +31,18 @@ const mockStorage: Record<string, any> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: vi.fn(async (keys: string[]) => {
+            get: vi.fn(async (keys: string | string[] | Record<string, any>) => {
                 const result: Record<string, any> = {};
-                for (const key of keys) {
-                    if (key in mockStorage) result[key] = mockStorage[key];
+                if (typeof keys === 'string') {
+                    if (keys in mockStorage) result[keys] = mockStorage[keys];
+                } else if (Array.isArray(keys)) {
+                    for (const key of keys) {
+                        if (key in mockStorage) result[key] = mockStorage[key];
+                    }
+                } else if (keys && typeof keys === 'object') {
+                    for (const key of Object.keys(keys)) {
+                        if (key in mockStorage) result[key] = mockStorage[key];
+                    }
                 }
                 return result;
             }),
@@ -49,7 +59,8 @@ import {
     getMonthlyUsage,
     recordUsage,
     getRateLimitMessage,
-    checkUsageWarning
+    checkUsageWarning,
+    checkHardLimit
 } from '../aiUsageTracker.js';
 
 describe('aiUsageTracker', () => {
@@ -103,6 +114,27 @@ describe('aiUsageTracker', () => {
             const result = await checkRateLimit();
             expect(result.allowed).toBe(true);
             expect(result.remaining).toBe(9);
+        });
+
+        test('AI_RATE_LIMIT_MAX 設定値を参照する', async () => {
+            mockStorage['ai_rate_limit_max'] = 5;
+            const now = Date.now();
+            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_count'] = 5;
+
+            const result = await checkRateLimit();
+            expect(result.allowed).toBe(false);
+            expect(result.remaining).toBe(0);
+        });
+
+        test('AI_RATE_LIMIT_MAX が未設定の場合はデフォルト 10 を使用する', async () => {
+            const now = Date.now();
+            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_count'] = 9;
+
+            const result = await checkRateLimit();
+            expect(result.allowed).toBe(true);
+            expect(result.remaining).toBe(0);
         });
     });
 
@@ -208,6 +240,68 @@ describe('aiUsageTracker', () => {
             const result = await checkUsageWarning();
             expect(result.warning).toBe(true);
             expect(result.message).toBeDefined();
+        });
+
+        test('MAX_MONTHLY_TOKENS が 0 の場合は警告なし', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+            mockStorage['ai_usage_tokens_sent'] = 2000000;
+            mockStorage['ai_usage_tokens_received'] = 2000000;
+            mockStorage['max_monthly_tokens'] = 0;
+
+            const result = await checkUsageWarning();
+            expect(result.warning).toBe(false);
+        });
+    });
+
+    describe('checkHardLimit', () => {
+        test('月次使用量が上限未満の場合はブロックしない', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+            mockStorage['ai_usage_tokens_sent'] = 20000;
+            mockStorage['ai_usage_tokens_received'] = 20000;
+            mockStorage['max_monthly_tokens'] = 50000;
+
+            const result = await checkHardLimit(5000);
+            expect(result.blocked).toBe(false);
+        });
+
+        test('予定使用量を含めて上限を超える場合はブロックする', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+            mockStorage['ai_usage_tokens_sent'] = 25000;
+            mockStorage['ai_usage_tokens_received'] = 25000;
+            mockStorage['max_monthly_tokens'] = 50000;
+
+            const result = await checkHardLimit(200);
+            expect(result.blocked).toBe(true);
+            expect(result.message).toContain('Monthly token limit reached');
+        });
+
+        test('MAX_MONTHLY_TOKENS が 0 の場合は無制限としてブロックしない', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+            mockStorage['ai_usage_tokens_sent'] = 2000000;
+            mockStorage['ai_usage_tokens_received'] = 2000000;
+            mockStorage['max_monthly_tokens'] = 0;
+
+            const result = await checkHardLimit(1000);
+            expect(result.blocked).toBe(false);
+        });
+
+        test('MAX_MONTHLY_TOKENS が未設定の場合はデフォルト 100 万を使用する', async () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            mockStorage['ai_usage_month'] = monthKey;
+            mockStorage['ai_usage_tokens_sent'] = 900000;
+            mockStorage['ai_usage_tokens_received'] = 100000;
+
+            const result = await checkHardLimit(1);
+            expect(result.blocked).toBe(true);
         });
     });
 });
