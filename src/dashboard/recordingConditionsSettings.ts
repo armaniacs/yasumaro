@@ -81,8 +81,8 @@ function renderSettings(container: HTMLElement): void {
 
     <div class="form-actions">
       <button id="save-conditions-settings" class="btn-primary">${getMessage('save') || 'Save'}</button>
-      <span id="conditions-validation-error" class="validation-error" role="alert" style="display:none"></span>
-      <span id="conditions-save-success" class="save-success" aria-live="polite" style="display:none">${getMessage('settingsSaved') || 'Settings saved.'}</span>
+      <span id="conditions-validation-error" class="validation-error hidden" role="alert"></span>
+      <span id="conditions-save-success" class="save-success hidden" aria-live="polite">${getMessage('settingsSaved') || 'Settings saved.'}</span>
     </div>
   `;
 }
@@ -93,8 +93,8 @@ function wireEvents(container: HTMLElement): void {
   const successMsg = container.querySelector('#conditions-save-success') as HTMLElement;
 
   saveBtn?.addEventListener('click', async () => {
-    validationError.style.display = 'none';
-    successMsg.style.display = 'none';
+    validationError.classList.add('hidden');
+    successMsg.classList.add('hidden');
 
     // Validate recording conditions
     const minVisitInput = container.querySelector('#minVisitDuration') as HTMLInputElement;
@@ -109,19 +109,19 @@ function wireEvents(container: HTMLElement): void {
 
     if (isNaN(minVisitVal) || minVisitVal < 1) {
       validationError.textContent = getMessage('minVisitDurationError') || 'Min visit duration must be at least 1 second.';
-      validationError.style.display = '';
+      validationError.classList.remove('hidden');
       return;
     }
 
     if (isNaN(minScrollVal) || minScrollVal < 0 || minScrollVal > 100) {
       validationError.textContent = getMessage('minScrollDepthError') || 'Min scroll depth must be between 0 and 100.';
-      validationError.style.display = '';
+      validationError.classList.remove('hidden');
       return;
     }
 
     if (isNaN(maxTokensVal) || maxTokensVal < 10 || maxTokensVal > 16000) {
       validationError.textContent = getMessage('maxTokensError') || 'Max tokens must be between 10 and 16000.';
-      validationError.style.display = '';
+      validationError.classList.remove('hidden');
       return;
     }
 
@@ -140,10 +140,10 @@ function wireEvents(container: HTMLElement): void {
       maxTokensPerPrompt = maxTokensVal;
       aiTimeoutSeconds = aiTimeoutVal;
 
-      successMsg.style.display = '';
+      successMsg.classList.remove('hidden');
     } catch (err) {
       validationError.textContent = `${getMessage('error') || 'Error'}: ${errorMessage(err)}`;
-      validationError.style.display = '';
+      validationError.classList.remove('hidden');
     }
   });
 }
