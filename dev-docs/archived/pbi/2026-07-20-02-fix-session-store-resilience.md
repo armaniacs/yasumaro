@@ -2,7 +2,7 @@
 
 元指摘: Checking Team (High: Legacy Bridge Architect, Edge & Mobile Strategist; Medium: System Architect, Tuning Expert, SRE/Ops Specialist)
 
-## 実装状況（調査日: 2026-07-20、状態: 🔶 部分実装）
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
 
 コードベース調査（`src/background/sessionStore.ts`）により、以下を確認した。
 
@@ -54,11 +54,11 @@ Feature: SessionStore 耐久性
 ```
 
 ## 受け入れ基準
-- [ ] `SessionStore.get()` に local→session フォールバック読み取りパスを追加（`migrateFromLocalStorageIfSessionEmpty()`）
-- [ ] `waitForFlush()` をポーリングから `flushQueue: Promise<void>[]` + `Promise.all` ベースに書き換え
-- [ ] `chrome.runtime.onSuspend` イベントで未フラッシュデータを `chrome.storage.session.set` に書き込む
-- [ ] `SessionStore.set()` でサイズ推定（`new Blob([JSON.stringify(value)]).size`）を行い、1MB 超過時は重要データ（settingsCache）のみ保存する段階的戦略を実装
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `SessionStore.get()` に local→session フォールバック読み取りパスを追加（`migrateFromLocalStorageIfSessionEmpty()`）
+- [x] `waitForFlush()` をポーリングから `flushQueue: Promise<void>[]` + `Promise.all` ベースに書き換え
+- [x] `chrome.runtime.onSuspend` イベントで未フラッシュデータを `chrome.storage.session.set` に書き込む
+- [x] `SessionStore.set()` でサイズ推定（`new Blob([JSON.stringify(value)]).size`）を行い、1MB 超過時は重要データ（settingsCache）のみ保存する段階的戦略を実装
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 
