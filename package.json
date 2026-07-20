@@ -8,6 +8,7 @@
     "build": "node scripts/check-version-consistency.js && wxt build",
     "build:store": "node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:docs-i18n": "node scripts/sync-docs-translations.mjs",
+    "build:docs-pii": "esbuild docs-src/pii-sandbox.ts --bundle --outfile=docs/assets/pii-sandbox.js --format=iife --global-name=PiiSandbox",
     "build:edge": "node scripts/check-version-consistency.js && wxt build --browser edge && node scripts/build-store-zip.mjs",
     "build:brave": "node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:watch": "wxt build --watch",
