@@ -5,8 +5,6 @@
 
 import {
     withOptimisticLock,
-    getConflictStats,
-    resetConflictStats,
     ConflictError,
     enablePostWriteVerification
 } from '../optimisticLock.js';
@@ -14,9 +12,7 @@ import {
 describe('withOptimisticLock', () => {
     describe('基本機能', () => {
         beforeEach(async () => {
-            // Clear storage and stats before each test
             await chrome.storage.local.set({});
-            resetConflictStats();
         });
 
         it('新しい値を更新して返す', async () => {
@@ -112,7 +108,6 @@ describe('withOptimisticLock', () => {
     describe('並行アクセス', () => {
         beforeEach(async () => {
             await chrome.storage.local.set({});
-            resetConflictStats();
         });
 
         it('並行した複数の操作でデータが破損しない', async () => {
@@ -143,7 +138,6 @@ describe('withOptimisticLock', () => {
 
         beforeEach(async () => {
             await chrome.storage.local.set({});
-            resetConflictStats();
             // モックを保存
             originalGet = chrome.storage.local.get;
             originalSet = chrome.storage.local.set;
@@ -303,16 +297,12 @@ describe('withOptimisticLock', () => {
                 // Expected ConflictError
             }
 
-            const stats = getConflictStats();
-            expect(stats.totalAttempts).toBe(1);
-            expect(stats.totalConflicts).toBe(1);
         });
     });
 
     describe('エラーハンドリング', () => {
         beforeEach(async () => {
             await chrome.storage.local.set({});
-            resetConflictStats();
         });
 
         it('updateFnでスローされたエラーを伝播する', async () => {
@@ -325,9 +315,6 @@ describe('withOptimisticLock', () => {
             ).rejects.toThrow('Update function error');
 
             // 失敗してもstatは記録される
-            const stats = getConflictStats();
-            expect(stats.totalAttempts).toBe(1);
-            expect(stats.totalFailures).toBe(1);
         });
 
         it('chrome.storage.local.setが失敗した場合にエラーを伝播する', async () => {
@@ -348,7 +335,6 @@ describe('withOptimisticLock', () => {
 
         beforeEach(async () => {
             await chrome.storage.local.set({});
-            resetConflictStats();
             // jest.setup.tsのモックを保存
             originalGet = chrome.storage.local.get;
             originalSet = chrome.storage.local.set;
@@ -403,11 +389,6 @@ describe('withOptimisticLock', () => {
             expect(result).toEqual(['initial', 'item']);
             const stored = await chrome.storage.local.get('testKey');
             expect(stored.testKey).toEqual(['initial', 'item']);
-
-            // 統計を確認
-            const stats = getConflictStats();
-            expect(stats.totalAttempts).toBeGreaterThan(0);
-            expect(stats.totalConflicts).toBeGreaterThan(0);
         });
 
         it('リトライ回数上限を超えるとエラーをスローする', async () => {
@@ -428,10 +409,6 @@ describe('withOptimisticLock', () => {
                     initialDelay: 10
                 })
             ).rejects.toThrow(ConflictError);
-
-            const stats = getConflictStats();
-            expect(stats.totalAttempts).toBeGreaterThanOrEqual(1);
-            expect(stats.totalFailures).toBe(1);
         });
 
         it('default maxRetriesでリトライが機能する', async () => {
@@ -451,56 +428,10 @@ describe('withOptimisticLock', () => {
                 withOptimisticLock('testKey', (current) => [...current, 'item'])
             ).rejects.toThrow(ConflictError);
 
-            const stats = getConflictStats();
-            expect(stats.totalAttempts).toBe(6); // 初回 + 5回リトライ
-
             // Reset storage for other tests
             await chrome.storage.local.set({ testKey: ['initial'] });
         });
     });
 });
 
-describe('getConflictStats', () => {
-    beforeEach(async () => {
-        await chrome.storage.local.set({});
-        resetConflictStats();
-    });
 
-    it('初期統計を返す', () => {
-        const stats = getConflictStats();
-
-        expect(stats).toEqual({
-            totalAttempts: 0,
-            totalConflicts: 0,
-            totalFailures: 0
-        });
-    });
-
-    it('統計情報をコピーで返す（変更不可）', () => {
-        const stats1 = getConflictStats();
-        stats1.totalAttempts = 999;
-
-        const stats2 = getConflictStats();
-        expect(stats2.totalAttempts).toBe(0);
-    });
-});
-
-describe('resetConflictStats', () => {
-    beforeEach(async () => {
-        await chrome.storage.local.set({});
-        resetConflictStats();
-    });
-
-    it('統計情報をリセットする', async () => {
-        await chrome.storage.local.set({ testKey: ['initial'] });
-
-        await withOptimisticLock<string[]>('testKey', (current) => [...current, 'item']);
-
-        resetConflictStats();
-
-        const stats = getConflictStats();
-        expect(stats.totalAttempts).toBe(0);
-        expect(stats.totalConflicts).toBe(0);
-        expect(stats.totalFailures).toBe(0);
-    });
-});

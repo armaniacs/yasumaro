@@ -52,15 +52,18 @@ npm validate             # Type check + run tests (pre-commit gate)
 The extension follows a modular design pattern:
 
 ```
-Service Worker (src/background/)
+Service Worker (entrypoints/background/ + src/background/)
+  ├── index.ts → WXT entrypoint
   ├── ObsidianClient → Obsidian Local REST API
   ├── AIClient (multiple implementations) → AI Providers
   ├── localAiClient → Local AI provider (Ollama, etc.)
   ├── sessionAlarmsManager → Session timeout management
   ├── Mutex / ServiceWorkerContext → Concurrency management
-  └── recordingLogic → Core recording orchestration
+  ├── recordingLogic → Core recording orchestration
+  └── service-worker.ts → Service worker lifecycle
 
-Popup UI (src/popup/)
+Popup UI (entrypoints/popup/ + src/popup/)
+  ├── index.html / main.ts → WXT entrypoints
   ├── navigation.ts → Tab management
   ├── domainFilter.ts → Domain filter settings
   ├── main.ts → Core popup logic
@@ -68,15 +71,16 @@ Popup UI (src/popup/)
   ├── settings/ → Settings management
   └── utils/ → Shared utilities (focusTrap, i18n, etc.)
 
-Dashboard (entrypoints/options/ + src/dashboard/)
+Dashboard / Options (entrypoints/options/ + src/dashboard/)
   ├── index.html → Settings configuration interface (WXT entrypoint)
   ├── main.ts → Dashboard entrypoint
   └── src/dashboard/ → Dashboard logic modules
 
-Offscreen (src/offscreen/)
+Offscreen (entrypoints/offscreen.html + src/offscreen/)
   └── offscreen.ts → DOM operations requiring offscreen document
 
-Content Scripts (src/content/)
+Content Scripts (entrypoints/content/ + src/content/)
+  ├── index.ts → WXT content script entrypoint
   ├── loader.ts → Injection orchestrator
   └── extractor.ts → DOM content extraction
 ```
@@ -254,12 +258,12 @@ npm type-check        # TypeScript type checking
 npm validate          # Type check + run tests (pre-commit gate)
 ```
 
-> Note: After code changes, run `npm build` before testing in Chrome Extension.
+> Note: After code changes, run `npm run build` before testing in Chrome Extension.
 
 ### Building
 
 ```bash
-npm build             # Build TypeScript and copy assets to dist/
+npm run build             # Build TypeScript and copy assets to dist/
 npm run build:watch   # Watch mode for development
 ```
 
