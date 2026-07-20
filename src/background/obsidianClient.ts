@@ -5,6 +5,7 @@ import { Mutex } from './Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { redactSensitiveData } from '../utils/redaction.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { fetchWithTimeout } from '../utils/fetch.js';
 
 /**
  * Problem #2: HTTPヘッダーの固定部分を定数化
@@ -59,33 +60,6 @@ export interface ObsidianClientOptions {
     mutex?: Mutex;
 }
 
-/**
- * Problem #1: タイムアウト付きfetchのラッパー関数
- * @param {string} url - リクエストURL
- * @param {object} options - fetchオプション
- * @returns {Promise<Response>} fetchレスポンス
- * @throws {Error} タイムアウト時にエラーをスロー
- */
-async function _fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        controller.abort();
-        addLog(LogType.ERROR, `Obsidian request timed out after ${FETCH_TIMEOUT_MS}ms`, { url });
-    }, FETCH_TIMEOUT_MS);
-
-    try {
-        const response = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(timeoutId);
-        return response;
-    } catch (error: unknown) {
-        clearTimeout(timeoutId);
-        if (error instanceof Error && error.name === 'AbortError') {
-            throw new Error('Error: Request timed out. Please check your Obsidian connection.');
-        }
-        throw error instanceof Error ? error : new Error(errorMessage(error));
-    }
-}
-
 export class ObsidianClient {
     private mutex: Mutex;
 
@@ -109,6 +83,7 @@ export class ObsidianClient {
         const protocol = this._validateProtocol(s[StorageKeys.OBSIDIAN_PROTOCOL] as string | undefined | null);
         const rawPort = (s[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT) as string | number;
         const port = this._validatePort(rawPort);
+        const host = this._validateHost(s[StorageKeys.OBSIDIAN_HOST] as string | undefined | null);
         const apiKey = s[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
 
         addLog(LogType.DEBUG, 'Obsidian API Key check', {
@@ -130,7 +105,7 @@ export class ObsidianClient {
         }
 
         return {
-            baseUrl: `${protocol}://127.0.0.1:${port}`,
+            baseUrl: `${protocol}://${host}:${port}`,
             headers: {
                 ...BASE_HEADERS,
                 'Authorization': `Bearer ${apiKey}`
@@ -166,6 +141,33 @@ export class ObsidianClient {
         }
 
         return normalized;
+    }
+
+    /**
+     * ホスト名の検証
+     * @param {string|undefined|null} host - Obsidian Local REST API のホスト
+     * @returns {string} 有効なホスト名
+     */
+    _validateHost(host: string | undefined | null): string {
+        if (host === undefined || host === null || host === '') {
+            return '127.0.0.1';
+        }
+
+        if (typeof host !== 'string') {
+            return '127.0.0.1';
+        }
+
+        const trimmed = host.trim();
+        if (trimmed === '') {
+            return '127.0.0.1';
+        }
+
+        // プロトコルやスラッシュを含む不正なホストは拒否
+        if (/[\s\/\\:]/.test(trimmed)) {
+            throw new Error('Obsidian host contains invalid characters.');
+        }
+
+        return trimmed;
     }
 
     /**
@@ -233,10 +235,12 @@ export class ObsidianClient {
     }
 
     async _fetchExistingContent(url: string, headers: HeadersInit): Promise<string> {
-        const response = await _fetchWithTimeout(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'GET',
-            headers
-        });
+            headers,
+            skipCspValidation: true,
+            allowedUrls: null
+        }, FETCH_TIMEOUT_MS);
 
         if (response.ok) {
             return await response.text();
@@ -250,11 +254,13 @@ export class ObsidianClient {
     }
 
     async _writeContent(url: string, headers: HeadersInit, content: string): Promise<void> {
-        const response = await _fetchWithTimeout(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'PUT',
             headers,
-            body: content
-        });
+            body: content,
+            skipCspValidation: true,
+            allowedUrls: null
+        }, FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -264,10 +270,13 @@ export class ObsidianClient {
     }
 
     _handleError(error: Error, targetUrl: string): Error {
-        let errorMessage = error.message;
+        const errorMessage = error.message;
         if (errorMessage.includes('Failed to fetch') && targetUrl.startsWith('https')) {
             addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`);
             return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
+        }
+        if (errorMessage.toLowerCase().includes('timed out')) {
+            return new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
         addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`);
         return new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.');
@@ -298,10 +307,12 @@ export class ObsidianClient {
             }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 
-            const response = await _fetchWithTimeout(`${baseUrl}/`, {
+            const response = await fetchWithTimeout(`${baseUrl}/`, {
                 method: 'GET',
-                headers
-            });
+                headers,
+                skipCspValidation: true,
+                allowedUrls: null
+            }, FETCH_TIMEOUT_MS);
 
             if (response.ok) {
                 return { success: true, message: 'Success! Connected to Obsidian. Settings Saved.' };
