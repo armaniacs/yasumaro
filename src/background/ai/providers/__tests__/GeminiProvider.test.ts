@@ -56,6 +56,26 @@ describe('GeminiProvider', () => {
         mockFetchWithRetry.mockReset();
     });
 
+    describe('API version configurability', () => {
+        test('testConnection が設定された API バージョンを使用する', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({
+                models: [{ name: 'models/gemini-3.1-flash-lite' }]
+            }));
+
+            const settings = {
+                gemini_api_key: 'test-key',
+                gemini_model: 'gemini-3.1-flash-lite',
+                [StorageKeys.GEMINI_API_VERSION]: 'v1'
+            } as any;
+            const provider = new GeminiProvider(settings);
+
+            await provider.testConnection();
+
+            const url = mockFetchWithRetry.mock.calls[0][0];
+            expect(url).toBe('https://generativelanguage.googleapis.com/v1/models');
+        });
+    });
+
     describe('content length truncation', () => {
         test('デフォルトで 30,000 文字に切り詰める', async () => {
             mockFetchWithRetry.mockResolvedValue(createResponse({
@@ -77,6 +97,44 @@ describe('GeminiProvider', () => {
             const contentMatch = userContent.match(/Content:\n([\s\S]*)$/);
             const actualContent = contentMatch ? contentMatch[1] : '';
             expect(actualContent.length).toBe(30_000);
+        });
+
+        test('gemini_api_version 設定で API URL のバージョンを上書きする', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({
+                candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+            }));
+
+            const settings = {
+                gemini_api_key: 'test-key',
+                gemini_model: 'gemini-3.1-flash-lite',
+                [StorageKeys.GEMINI_API_VERSION]: 'v1'
+            } as any;
+            const provider = new GeminiProvider(settings);
+
+            await provider.generateSummary('content');
+
+            const url = mockFetchWithRetry.mock.calls[0][0];
+            expect(url).toContain('/v1/models/');
+            expect(url).not.toContain('/v1beta/models/');
+        });
+
+        test('gemini_api_version が未設定の場合はデフォルト v1beta を使用する', async () => {
+            mockFetchWithRetry.mockResolvedValue(createResponse({
+                candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+            }));
+
+            const settings = {
+                gemini_api_key: 'test-key',
+                gemini_model: 'gemini-3.1-flash-lite'
+            } as any;
+            const provider = new GeminiProvider(settings);
+
+            await provider.generateSummary('content');
+
+            const url = mockFetchWithRetry.mock.calls[0][0];
+            expect(url).toContain('/v1beta/models/');
         });
 
         test('gemini_content_chars 設定で切り詰め文字数を上書きする', async () => {
