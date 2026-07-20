@@ -100,6 +100,8 @@ E-mail1件、クレジットカード番号2件をマスクしました
 > AI APIに送信されるのは先頭の64KBのみであるため、ページの後半部分に含まれる機密情報はAI APIには送信されません。これはプライバシー保護の観点から安全な設計です。
 
 #### PII検出 (Regex)
+実際に試すには [PII Sandbox](pii-sandbox.html) を開いてください。
+
 以下のパターンを自動検出してマスクします：
 - クレジットカード番号
 - マイナンバー
@@ -275,6 +277,8 @@ From a PII perspective, this means **"PII contained beyond 64KB will not be tran
 > Since only the first 64KB is sent to the AI API, sensitive information in the latter part of the page is not transmitted to the AI API. This is a safe design from a privacy protection perspective.
 
 #### PII Detection (Regex)
+Try it at [PII Sandbox](pii-sandbox.html).
+
 Automatically detects and masks the following patterns:
 - Credit card numbers
 - My Number (Japanese personal identification number)

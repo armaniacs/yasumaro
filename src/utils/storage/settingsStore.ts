@@ -203,6 +203,66 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
     return true;
 }
 
+/**
+ * Apply default-to-settings migrations and decrypt API keys.
+ *
+ * This helper centralizes the logic that was duplicated between the
+ * single-settings-object path and the legacy per-key path in getSettings().
+ *
+ * @param rawSettings - settings object read from storage (may be partial)
+ * @param rawEncrypted - if not false, API key fields are treated as encrypted
+ * @returns merged settings with migrations applied and keys decrypted
+ */
+async function _applyMigrationsAndDecrypt(
+    rawSettings: Settings,
+    rawEncrypted: boolean = true
+): Promise<Settings> {
+    const merged = { ...DEFAULT_SETTINGS, ...rawSettings };
+
+    // obsidian_enabled が未設定の場合、obsidian_api_key の有無で初期化（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.OBSIDIAN_ENABLED in rawSettings)) {
+        const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+        merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
+    }
+
+    // AI_PROVIDER_PRIORITY_LIST が未設定の場合、既存の AI_PROVIDER を1位スロットとして導出（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.AI_PROVIDER_PRIORITY_LIST in rawSettings)) {
+        const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
+        merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
+    }
+
+    // LOCAL_MARKDOWN_EXPORT_TIMING が未設定の場合、既存の AUTO_ENABLED から導出（既存ユーザー向けマイグレーション）
+    if (!(StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING in rawSettings)) {
+        const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
+        merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
+    }
+
+    if (rawEncrypted !== false) {
+        try {
+            const key = await getOrCreateEncryptionKey();
+            for (const field of API_KEY_FIELDS) {
+                const value = merged[field];
+                if (isEncrypted(value)) {
+                    try {
+                        const decryptedValue = await decryptApiKey(value, key);
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
+                    } catch (e) {
+                        await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
+                    }
+                }
+            }
+        } catch (e) {
+            await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
+        }
+    }
+
+    // 【パフォーマンス改善】復号後にキャッシュを保存
+    cachedSettings = { data: merged, timestamp: Date.now() };
+
+    return merged;
+}
+
 export async function getSettings(): Promise<Settings> {
     // 【パフォーマンス改善】短時間キャッシュチェック（1秒間有効）
     const now = Date.now();
@@ -229,49 +289,7 @@ export async function getSettings(): Promise<Settings> {
                 filteredSettings[key] = value;
             }
         }
-        const merged = { ...DEFAULT_SETTINGS, ...filteredSettings };
-
-        // obsidian_enabled が未設定の場合、obsidian_api_key の有無で初期化（既存ユーザー向けマイグレーション）
-        if (!(StorageKeys.OBSIDIAN_ENABLED in filteredSettings)) {
-            const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
-            merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
-        }
-
-        // AI_PROVIDER_PRIORITY_LIST が未設定の場合、既存の AI_PROVIDER を1位スロットとして導出（既存ユーザー向けマイグレーション）
-        if (!(StorageKeys.AI_PROVIDER_PRIORITY_LIST in filteredSettings)) {
-            const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
-            merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
-        }
-
-        // LOCAL_MARKDOWN_EXPORT_TIMING が未設定の場合、既存の AUTO_ENABLED から導出（既存ユーザー向けマイグレーション）
-        if (!(StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING in filteredSettings)) {
-            const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
-            merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
-        }
-
-        // 暗号化されたAPIキーを復号
-        try {
-            const key = await getOrCreateEncryptionKey();
-            for (const field of API_KEY_FIELDS) {
-                const value = merged[field];
-                if (isEncrypted(value)) {
-                    try {
-                        const decryptedValue = await decryptApiKey(value, key);
-                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
-                    } catch (e) {
-                        await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
-                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
-                    }
-                }
-            }
-        } catch (e) {
-            await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
-        }
-
-        // 【パフォーマンス改善】復号後にキャッシュを保存
-        cachedSettings = { data: merged, timestamp: Date.now() };
-
-        return merged;
+        return _applyMigrationsAndDecrypt(filteredSettings);
     }
 
     // 旧方式: StorageKeysで定義されているキーのみを取得
@@ -309,47 +327,7 @@ export async function getSettings(): Promise<Settings> {
         // テスト環境などで関数がロードできない場合に備えて保護
         logDebug('storage', { error: e }, 'Failed to initialize Tranco version');
     }
-    const merged = { ...DEFAULT_SETTINGS, ...settings };
-
-    // obsidian_enabled が未設定の場合、obsidian_api_key の有無で初期化（既存ユーザー向けマイグレーション）
-    if (!(StorageKeys.OBSIDIAN_ENABLED in settings)) {
-        const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
-        merged[StorageKeys.OBSIDIAN_ENABLED] = !!(apiKey && apiKey.length >= 16);
-    }
-
-    // AI_PROVIDER_PRIORITY_LIST が未設定の場合、既存の AI_PROVIDER を1位スロットとして導出（既存ユーザー向けマイグレーション）
-    if (!(StorageKeys.AI_PROVIDER_PRIORITY_LIST in settings)) {
-        const legacyProvider = merged[StorageKeys.AI_PROVIDER] as string | undefined;
-        merged[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = legacyProvider ? [{ provider: legacyProvider }] : [];
-    }
-
-    // LOCAL_MARKDOWN_EXPORT_TIMING が未設定の場合、既存の AUTO_ENABLED から導出（既存ユーザー向けマイグレーション）
-    if (!(StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING in settings)) {
-        const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
-        merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
-    }
-    try {
-        const key = await getOrCreateEncryptionKey();
-        for (const field of API_KEY_FIELDS) {
-            const value = merged[field];
-            if (isEncrypted(value)) {
-                try {
-                    const decryptedValue = await decryptApiKey(value, key);
-                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
-                } catch (e) {
-                    await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
-                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
-                }
-            }
-        }
-    } catch (e) {
-        await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
-    }
-
-    // 【パフォーマンス改善】復号後にキャッシュを保存
-    cachedSettings = { data: merged, timestamp: Date.now() };
-
-    return merged;
+    return _applyMigrationsAndDecrypt(settings);
 }
 
 /**

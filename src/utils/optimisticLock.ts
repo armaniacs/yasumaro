@@ -163,6 +163,13 @@ async function performCasUpdate<T>(
     // アトミックに書き込み（chrome.storage.local.setは呼び出し内でアトミック）
     // Service Worker は単一スレッドのため、書き込み後の再検証は通常不要。
     // テスト環境で再検証が必要な場合は enablePostWriteVerification() を事前に呼ぶ。
+    //
+    // TOCTOU note: Between the verification read above and the atomic set below,
+    // another execution context could update the same key. In Manifest V3 the
+    // Service Worker is single-threaded and event-driven, so this window is
+    // negligible in practice. When post-write verification is disabled, that
+    // theoretical window remains; enable it in tests or parallel contexts to
+    // close it.
     await chrome.storage.local.set({
         [key]: newValue,
         [`${key}_version`]: newVersion

@@ -220,7 +220,7 @@ export function initExportImport(): void {
     if (!file) return;
 
     if (importLogsProgress) {
-      importLogsProgress.style.display = '';
+      importLogsProgress.classList.remove('hidden');
       importLogsProgress.textContent = getMessage('importLogsProcessing') || 'Importing...';
       importLogsProgress.className = 'diag-result';
     }

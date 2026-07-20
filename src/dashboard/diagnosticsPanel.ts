@@ -6,6 +6,7 @@ import { getMessage } from '../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { getSavedUrlCount } from '../utils/storageUrls.js';
+import { getMonthlyUsage } from '../utils/aiUsageTracker.js';
 import { UI_COLORS } from '../constants/appConstants.js';
 import { getSqliteStatus, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -152,6 +153,21 @@ async function initDiagnosticsPanel(): Promise<void> {
           !key
         ));
       }
+
+      // Monthly AI cost tracking (cloud API calls + tokens)
+      try {
+        const usage = await getMonthlyUsage();
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagAiApiCalls') || 'Monthly API Calls',
+          String(usage.requestCount)
+        ));
+        aiSettingsEl.appendChild(makeStatRow(
+          getMessage('diagAiTotalTokens') || 'Monthly Total Tokens',
+          String(usage.tokensSent + usage.tokensReceived)
+        ));
+      } catch {
+        // Best-effort display; ignore storage read failures
+      }
     }
   } catch {
     if (obsidianSettingsEl) {
@@ -200,7 +216,7 @@ async function initDiagnosticsPanel(): Promise<void> {
   }
   // Show/hide debug sections based on debugMode
   if (compileOptionsSection) {
-    compileOptionsSection.style.display = debugMode ? '' : 'none';
+    compileOptionsSection.classList.toggle('hidden', !debugMode);
   }
 
   // Debug mode toggle handler
@@ -209,7 +225,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     diagDebugModeToggle.setAttribute('aria-checked', String(isOn));
     await chrome.storage.local.set({ debugMode: isOn });
     if (compileOptionsSection) {
-      compileOptionsSection.style.display = isOn ? '' : 'none';
+      compileOptionsSection.classList.toggle('hidden', !isOn);
     }
   });
 
@@ -387,7 +403,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     const dashboardDetectsOpfs = dashboardVfsStrategy !== 'fallback';
 
     if (offscreenUsesFallback && dashboardDetectsOpfs) {
-      diagDivergenceWarning.style.display = '';
+      diagDivergenceWarning.classList.remove('hidden');
     }
   }
 

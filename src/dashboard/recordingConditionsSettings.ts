@@ -6,7 +6,8 @@
 
 import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { getMessage, applyI18n } from '../utils/i18n.js';
+import { getMessage } from '../utils/i18n.js';
+import { applyI18n } from '../utils/i18n-dom.js';
 
 let minVisitDuration = 5;
 let minScrollDepth = 50;

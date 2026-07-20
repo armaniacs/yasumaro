@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "docs-src/**"
       - "src/**/*.ts"
       - "typedoc.json"
       - "dev-docs/typedoc.json"
@@ -44,6 +45,9 @@ jobs:
 
       - name: Copy typedoc to docs/
         run: cp -r dev-docs/typedoc docs/typedoc
+
+      - name: Build PII sandbox bundle
+        run: npm run build:docs-pii
 
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

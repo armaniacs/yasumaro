@@ -6,14 +6,8 @@
  */
 
 import { vi } from 'vitest';
-import {
-  getMessage,
-  applyI18n,
-  translatePageTitle,
-  getUserLocale,
-  setHtmlLangAndDir,
-  isRTL
-} from '../i18n.js';
+import { getMessage, getUserLocale, isRTL } from '../i18n.js';
+import { applyI18n, translatePageTitle, setHtmlLangAndDir } from '../i18n-dom.js';
 
 describe('i18n', () => {
   beforeEach(() => {
