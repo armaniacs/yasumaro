@@ -36,6 +36,38 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.5.43] - 2026-07-20
+
+このリリースは同日の Checking Team レビュー指摘事項の修正とCSP強化を反映したものです。
+
+This release addresses Checking Team review findings and strengthens CSP.
+
+### Fixed / 修正
+
+- **`MessageHandlerRegistry.dispatch()` の未ハンドル Promise rejection を修正** — 非同期ハンドラが例外をスローした場合、`void` でPromiseを捨てていたため未ハンドルrejectionが発生し、MV3 Service Workerが停止するリスクがあった。`Promise.resolve().catch()` でハンドラ例外を捕捉し、`sendResponse` でエラーを返すよう変更
+- **`handleDashboardSqlite` の IIFE に try-catch を追加** — `_dashboardSqliteHandler` が例外をスローした場合、`sendResponse` が呼ばれないままDashboard UIが永久に待機状態になる問題を修正
+- **`sanitizeRegex` の例外伝播方針変更にテストを追従** — エラー時に `[SANITIZATION_FAILED]` プレースホルダーを返す代わりに例外をスローするよう変更。到達不能アサーション4件を除去し、`rejects.toThrow()` に更新
+
+### Security / セキュリティ
+
+- **CSP `style-src` から `'unsafe-inline'` を削除** — CSSインジェクションによる情報漏洩リスクを低減。ダッシュボード（`sqliteHistoryPanel.ts`）のインラインスタイル属性を既存CSSクラス（`.hidden`、`.warning-banner`）とJS DOM操作に移行。`recordingConditionsSettings.ts` の `style.display` 操作を `classList` に統一
+
+### Changed / 変更
+
+- **`MessageHandler` 型の戻り値を `void | Promise<void>` に変更** — `boolean` 戻り値によるチャネル維持ロジックを廃止し、`dispatch()` が常時 `true` を返す fire-and-forget パターンに移行。全ハンドラからの `as unknown as MessageHandler` キャストを削除
+
+### i18n
+
+- **日本語ロケールに42キーを追加** — ルール/例外/エラー数、時間表記、マスク状態、履歴件数、トリガー設定、診断メッセージなど
+
+### Tests / テスト
+
+- **`MessageHandlerRegistry.test.ts`** — dispatch の fire-and-forget 動作に合わせてテストを更新
+- **`sqlite-security-integrity.test.ts`** — dashboardSqliteガードテストを正規表現から `indexOf` + `substring` に変更
+- **`piiSanitizer-security.test.ts`** — 到達不能アサーション4件を除去、throw対応に更新
+- **`piiSanitizer.test.ts`** — タイムアウトテストを `rejects.toThrow()` に更新
+- **`piiSanitizer-redos.test.ts`** — マッチ件数制限以内に反復回数を調整
+
 ## [6.5.42] - 2026-07-20
 
 このリリースは同日の PBI 実装を反映したものです。
