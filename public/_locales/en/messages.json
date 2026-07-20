@@ -824,7 +824,7 @@
   "testGistConnection": {
     "message": "Test Connection"
   },
-  "confirmImport": {
+  "confirmImportTitle": {
     "message": "Import Settings"
   },
   "confirmImportDesc": {
@@ -3339,5 +3339,13 @@
   "clearAllFilters": {
     "message": "Clear filters",
     "description": "Button label to clear all active filters (search, date, tag)"
+  },
+  "triggerTabClose": {
+    "message": "When tab is closed",
+    "description": "Recording trigger label: record when the tab is closed"
+  },
+  "triggerTabCloseDesc": {
+    "message": "Record when the tab is closed",
+    "description": "Recording trigger description: record when the tab is closed"
   }
 }

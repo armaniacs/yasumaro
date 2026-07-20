@@ -87,6 +87,10 @@ async function initSqlite(): Promise<void> {
 async function initSqliteInner(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
+  // Enable WAL mode before any schema/migration operations for journal consistency
+  // (mirrors sqliteEngineContext.ts IDB path; without this, concurrent access
+  // suffers read/write blocking and the checkpoint below is a no-op).
+  await engine.exec('PRAGMA journal_mode=WAL;');
   await engine.exec(SCHEMA_SQL);
   await engine.exec(AUDIT_LOG_SCHEMA_SQL);
 
@@ -353,12 +357,11 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
   if (!engine) await initSqlite();
   let inserted = 0;
   try {
-    await sqlExec('BEGIN');
+    await sqlExec('BEGIN IMMEDIATE');
     for (const record of records) {
       try {
         const domain = record.domain || extractDomain(record.url);
         await sqlExec(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-        inserted++;
       } catch (err) {
         // Log first error for diagnosis, silently skip the rest
         if (inserted === 0 && records.indexOf(record) === 0) {
@@ -367,8 +370,11 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
       }
     }
     await sqlExec('COMMIT');
-    // M10: use local counter instead of per-row SELECT changes() (O(n) → O(1))
-    // NOTE: local counter may overcount with INSERT OR IGNORE but is sufficient for logging
+    // Use a single post-COMMIT changes() call for an accurate inserted-row count
+    // (INSERT OR IGNORE makes a local counter unreliable).
+    await sqlQuery('SELECT changes() AS c', [], (row) => {
+      inserted = Number(row.c);
+    });
   } catch (err) {
     await sqlExec('ROLLBACK');
     console.error('OPFS Worker: insertBatch transaction failed:', err);
