@@ -162,13 +162,13 @@ export interface SanitizeOptions {
     includeIndices?: boolean;
 }
 
-interface MaskedItem {
+export interface MaskedItem {
     type: string;
     original: string;
     index?: number;
 }
 
-interface SanitizeResult {
+export interface SanitizeResult {
     text: string;
     maskedItems: MaskedItem[];
     error?: string;
