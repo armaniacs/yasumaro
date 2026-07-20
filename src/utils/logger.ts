@@ -107,10 +107,10 @@ const SANITIZE_RESULT = {
 
 // 【パフォーマンス改善】バッチ書き込み用設定
 const BATCH_FLUSH_SIZE = 10; // バッファがこのサイズを超えるとフラッシュ
-const BATCH_FLUSH_DELAY_MS = 5000; // 5秒間書き込みがないとフラッシュ
+const BATCH_FLUSH_ALARM_MINUTES = 1; // chrome.alarms ベースの遅延フラッシュ（Chrome の最小間隔）
+const LOGGER_ALARM_NAME = 'yasumaro-logger-flush';
 const MAX_PENDING_LOGS = 100; // バッファ上限（メモリリーク防止）
 let pendingLogs: LogEntry[] = []; // 保留中のログバッファ
-let flushTimer: number | NodeJS.Timeout | null = null; // フラッシュ遅延タイマー
 let isFlushing = false; // フラッシュ中フラグ（多重フラッシュ防止）
 
 /**
@@ -180,10 +180,7 @@ export async function flushLogs(_immediate: boolean = false): Promise<void> {
             console.log(`[Logger:${log.type}] ${log.message}`, log.details || '');
         }
         pendingLogs = [];
-        if (flushTimer !== null) {
-            clearTimeout(flushTimer);
-            flushTimer = null;
-        }
+        clearScheduledFlush();
         return;
     }
 
@@ -194,11 +191,8 @@ export async function flushLogs(_immediate: boolean = false): Promise<void> {
         const logsToFlush = [...pendingLogs];
         pendingLogs = [];
 
-        // タイマーをクリア
-        if (flushTimer !== null) {
-            clearTimeout(flushTimer);
-            flushTimer = null;
-        }
+        // アラームスケジュールをクリア
+        clearScheduledFlush();
 
         // 既存ログを取得
         const storage = await chrome.storage.local.get(LOG_STORAGE_KEY);
@@ -226,15 +220,36 @@ export async function flushLogs(_immediate: boolean = false): Promise<void> {
 
 /**
  * 【パフォーマンス改善】保留中のログをスケジュールしてフラッシュする
+ * chrome.alarms を使用して Service Worker サスペンド後も再開可能にする。
  */
 function scheduleFlush(): void {
-    if (flushTimer !== null) {
-        clearTimeout(flushTimer);
+    if (typeof chrome === 'undefined' || !chrome.alarms) {
+        return;
     }
 
-    flushTimer = setTimeout(() => {
-        flushLogs();
-    }, BATCH_FLUSH_DELAY_MS) as unknown as number;
+    chrome.alarms.create(LOGGER_ALARM_NAME, { delayInMinutes: BATCH_FLUSH_ALARM_MINUTES });
+}
+
+/**
+ * スケジュール済みのフラッシュアラームをクリアする
+ */
+function clearScheduledFlush(): void {
+    if (typeof chrome === 'undefined' || !chrome.alarms) {
+        return;
+    }
+
+    chrome.alarms.clear(LOGGER_ALARM_NAME);
+}
+
+/**
+ * chrome.alarms イベントで保留中ログをフラッシュする
+ */
+if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === LOGGER_ALARM_NAME) {
+            void flushLogs();
+        }
+    });
 }
 
 /**
@@ -242,13 +257,13 @@ function scheduleFlush(): void {
  * ChromeがService Workerを停止する前に保留中のログを保存
  */
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
-    chrome.runtime.onSuspend.addListener(() => {
+    chrome.runtime.onSuspend.addListener(async () => {
         console.log('[Logger] Service Worker suspending - flushing pending logs');
         // Await flush with a timeout so pending logs are not lost when the SW dies.
-        Promise.race([
+        await Promise.race([
             flushLogs(true),
             new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-        ]).catch(() => undefined);
+        ]);
     });
 }
 
@@ -468,10 +483,7 @@ export async function getLogs(): Promise<LogEntry[]> {
  */
 export async function clearLogs(): Promise<void> {
     pendingLogs = []; // 保留中のログもクリア
-    if (flushTimer !== null) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-    }
+    clearScheduledFlush();
     await chrome.storage.local.remove(LOG_STORAGE_KEY);
 }
 
@@ -701,6 +713,8 @@ export async function logCritical<T extends object = Record<string, unknown>>(
 ): Promise<void> {
     const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
     await writeStructuredLog(entry);
+    // Critical logs are flushed immediately so they are not lost on SW termination.
+    await flushLogs(true);
 
     console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details, (key, value) => {
         if (typeof value === 'string' && value.length > 128) {
