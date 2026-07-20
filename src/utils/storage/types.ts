@@ -22,8 +22,10 @@ export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
     OBSIDIAN_PROTOCOL: 'obsidian_protocol', // 'http' or 'https'
     OBSIDIAN_PORT: 'obsidian_port',
+    OBSIDIAN_HOST: 'obsidian_host', // Obsidian Local REST API のホスト（デフォルト: 127.0.0.1）
     OBSIDIAN_ENABLED: 'obsidian_enabled', // true | false
     GEMINI_API_KEY: 'gemini_api_key',
+    GEMINI_API_VERSION: 'gemini_api_version', // Gemini API バージョン（デフォルト: v1beta）
     MIN_VISIT_DURATION: 'min_visit_duration',
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
     GEMINI_MODEL: 'gemini_model',
@@ -255,8 +257,10 @@ export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
     [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.OBSIDIAN_HOST]: string;
     [StorageKeys.OBSIDIAN_ENABLED]: boolean;
-    [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
+    [StorageKeys.GEMINI_API_KEY]: string;
+    [StorageKeys.GEMINI_API_VERSION]: string;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
     [StorageKeys.GEMINI_MODEL]: string;
