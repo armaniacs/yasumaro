@@ -2599,6 +2599,27 @@
   "geminiContentCharsError": {
     "message": "Gemini コンテンツ文字数は 1,000 〜 100,000 の範囲で入力してください"
   },
+  "externalEndpointControlsSection": {
+    "message": "外部エンドポイント"
+  },
+  "label_obsidian_host": {
+    "message": "Obsidian ホスト"
+  },
+  "note_obsidian_host": {
+    "message": "Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）。"
+  },
+  "obsidianHostError": {
+    "message": "Obsidian ホストに無効な文字が含まれています"
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API バージョン"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API のバージョン（v1 または v1beta）。"
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API バージョンは v1 または v1beta の形式で入力してください"
+  },
   "error_max_tokens_range": {
     "message": "トークン数は 10 〜 16,000 の範囲で入力してください"
   },
