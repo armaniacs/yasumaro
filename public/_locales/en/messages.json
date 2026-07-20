@@ -2657,6 +2657,39 @@
   "note_ai_timeout": {
     "message": "Leave blank for auto (local LLM: 120s / cloud AI: 30s). Set a higher value for slow models like LM Studio or Ollama."
   },
+  "aiUsageControlsSection": {
+    "message": "AI Usage Controls"
+  },
+  "label_max_monthly_tokens": {
+    "message": "Monthly Token Limit (0 = unlimited)"
+  },
+  "note_max_monthly_tokens": {
+    "message": "Enter 0 for unlimited. AI summary requests will be blocked when this limit is reached."
+  },
+  "maxMonthlyTokensError": {
+    "message": "Monthly token limit must be 0 or greater"
+  },
+  "label_ai_rate_limit_max": {
+    "message": "AI Rate Limit (requests/min)"
+  },
+  "note_ai_rate_limit_max": {
+    "message": "Number of AI requests allowed per minute. Higher values may increase API costs."
+  },
+  "aiRateLimitMaxError": {
+    "message": "AI rate limit must be between 1 and 60"
+  },
+  "label_openai_content_chars": {
+    "message": "OpenAI Max Content Characters"
+  },
+  "openaiContentCharsError": {
+    "message": "OpenAI content characters must be between 1,000 and 100,000"
+  },
+  "label_gemini_content_chars": {
+    "message": "Gemini Max Content Characters"
+  },
+  "geminiContentCharsError": {
+    "message": "Gemini content characters must be between 1,000 and 100,000"
+  },
   "error_max_tokens_range": {
     "message": "Please enter a value between 10 and 16,000 tokens"
   },
