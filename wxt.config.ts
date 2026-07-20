@@ -62,7 +62,7 @@ export default defineConfig({
       ...AI_PROVIDER_HOST_PERMISSIONS,
     ],
     content_security_policy: {
-      extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ${buildConnectSrcDomains().join(' ')}; style-src 'self' 'unsafe-inline'; img-src 'self' chrome-extension: data:; default-src 'none';`,
+      extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ${buildConnectSrcDomains().join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
     },
     web_accessible_resources: [
       {

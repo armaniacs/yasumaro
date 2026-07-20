@@ -3169,5 +3169,173 @@
   "clearAllFilters": {
     "message": "条件をクリア",
     "description": "Button label to clear all active filters (search, date, tag)"
+  },
+  "ruleCount_one": {
+    "message": "ルール: {count}",
+    "description": "Rule count singular"
+  },
+  "ruleCount_other": {
+    "message": "ルール: {count}",
+    "description": "Rule count plural"
+  },
+  "exceptionCount_one": {
+    "message": "例外: {count}",
+    "description": "Exception count singular"
+  },
+  "exceptionCount_other": {
+    "message": "例外: {count}",
+    "description": "Exception count plural"
+  },
+  "errorCount_one": {
+    "message": "エラー: {count}",
+    "description": "Error count singular"
+  },
+  "errorCount_other": {
+    "message": "エラー: {count}",
+    "description": "Error count plural"
+  },
+  "timeDaysAgo_one": {
+    "message": "1日前",
+    "description": "Days ago singular"
+  },
+  "timeDaysAgo_other": {
+    "message": "{count}日前",
+    "description": "Days ago plural"
+  },
+  "timeHoursAgo_one": {
+    "message": "1時間前",
+    "description": "Hours ago singular"
+  },
+  "timeHoursAgo_other": {
+    "message": "{count}時間前",
+    "description": "Hours ago plural"
+  },
+  "timeMinutesAgo_one": {
+    "message": "1分前",
+    "description": "Minutes ago singular"
+  },
+  "timeMinutesAgo_other": {
+    "message": "{count}分前",
+    "description": "Minutes ago plural"
+  },
+  "maskStatusCount_one": {
+    "message": "個人情報を1件マスキングしました",
+    "description": "Masked items count singular"
+  },
+  "maskStatusCount_other": {
+    "message": "個人情報を{count}件マスキングしました",
+    "description": "Masked items count plural"
+  },
+  "itemsCount_one": {
+    "message": "1件",
+    "description": "Generic items count singular"
+  },
+  "itemsCount_other": {
+    "message": "{count}件",
+    "description": "Generic items count plural"
+  },
+  "maskedBadgeTitle_one": {
+    "message": "AI送信前に個人情報を1件マスキング",
+    "description": "Badge title for masked items singular"
+  },
+  "maskedBadgeTitle_other": {
+    "message": "AI送信前に個人情報を{count}件マスキング",
+    "description": "Badge title for masked items plural"
+  },
+  "diagSqliteChecking": {
+    "message": "SQLiteの状態を確認中...",
+    "description": "Message shown while checking SQLite status"
+  },
+  "domainTagCount_one": {
+    "message": "1ドメイン",
+    "description": "Domain count singular"
+  },
+  "domainTagCount_other": {
+    "message": "{count}ドメイン",
+    "description": "Domain count plural"
+  },
+  "purgeNowSuccess_one": {
+    "message": "$1件のレコードを削除しました",
+    "description": "Purge success singular"
+  },
+  "purgeNowSuccess_other": {
+    "message": "$1件のレコードを削除しました",
+    "description": "Purge success plural"
+  },
+  "trancoStatusFormat_one": {
+    "message": "ドメイン: {count} | ティア: {tier} | 最終更新: {lastUpdated}",
+    "description": "Tranco status format singular"
+  },
+  "trancoStatusFormat_other": {
+    "message": "ドメイン: {count} | ティア: {tier} | 最終更新: {lastUpdated}",
+    "description": "Tranco status format plural"
+  },
+  "historyAiSummaryCleansedElements_one": {
+    "message": "AI要約クレンジング: 1要素を除去",
+    "description": "AI summary cleansed elements singular"
+  },
+  "historyAiSummaryCleansedElements_other": {
+    "message": "AI要約クレンジング: {count}要素を除去",
+    "description": "AI summary cleansed elements plural"
+  },
+  "historyRecordCount_one": {
+    "message": "$1件のレコード",
+    "description": "History record count singular"
+  },
+  "historyRecordCount_other": {
+    "message": "$1件のレコード",
+    "description": "History record count plural"
+  },
+  "historyAppendSuccess_one": {
+    "message": "$1件のレコードをObsidianに追記しました",
+    "description": "History append success singular"
+  },
+  "historyAppendSuccess_other": {
+    "message": "$1件のレコードをObsidianに追記しました",
+    "description": "History append success plural"
+  },
+  "triggerScrollTime": {
+    "message": "スクロール & 時間",
+    "description": "Trigger mode label for scroll and time based recording"
+  },
+  "triggerScrollTimeDesc": {
+    "message": "スクロール深度≥50%かつ訪問時間≥5秒で記録",
+    "description": "Description for scroll and time trigger mode"
+  },
+  "triggerManual": {
+    "message": "手動保存",
+    "description": "Trigger mode label for manual recording"
+  },
+  "triggerManualDesc": {
+    "message": "手動トリガーで記録",
+    "description": "Description for manual trigger mode"
+  },
+  "triggerSnapshot": {
+    "message": "定期スナップショット",
+    "description": "Trigger mode label for periodic snapshot"
+  },
+  "triggerSnapshotDesc": {
+    "message": "一定間隔で記録",
+    "description": "Description for periodic snapshot trigger"
+  },
+  "snapshotIntervalLabel": {
+    "message": "間隔（分）",
+    "description": "Label for snapshot interval input"
+  },
+  "saveTriggers": {
+    "message": "保存",
+    "description": "Button label to save trigger settings"
+  },
+  "triggersSaved": {
+    "message": "設定を保存しました。",
+    "description": "Message shown when trigger settings are saved"
+  },
+  "contentPurgeNowSuccess_one": {
+    "message": "$1件のコンテンツを削除しました",
+    "description": "Content purge success singular"
+  },
+  "contentPurgeNowSuccess_other": {
+    "message": "$1件のコンテンツを削除しました",
+    "description": "Content purge success plural"
   }
 }
