@@ -18,6 +18,7 @@ export interface AISummaryResult {
     receivedTokens?: number;
     providerName?: string;  // 使用したAIプロバイダー名
     model?: string;         // 使用したAIモデル名
+    error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
 }
 
 /**
