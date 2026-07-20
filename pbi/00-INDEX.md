@@ -21,11 +21,10 @@
 | 5 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
 | 6 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
 | 7 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
-| 8 | [22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | 2pt | プライバシー改善 |
-| 10 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
-| 11 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
-| 12 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
-| 13 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
+| 8 | [14](2026-07-20-14-fix-content-script-performance.md) | 3pt | パフォーマンス改善、影響範囲広 |
+| 9 | [15](2026-07-20-15-fix-logger-sw-resilience.md) | 3pt | SW ライフサイクル、Logger アーキテクチャ変更 |
+| 10 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
+| 11 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
 
 ---
 
@@ -37,7 +36,6 @@
 | [2026-07-20-15](2026-07-20-15-fix-logger-sw-resilience.md) | ストレージ・パフォーマンス | Logger の Service Worker 終了耐性強化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
 | [2026-07-20-16](2026-07-20-16-feat-ai-usage-controls.md) | ストレージ・パフォーマンス | AI 使用量ハードリミットとレート制限のユーザー設定化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
 | [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | セキュリティ・防御的実装 | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 | ⬜ 未着手 |
-| [2026-07-20-22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | セキュリティ・防御的実装 | ローカル AI 要約前の PII マスキング適用 | 🟡中（2pt） | 🟡軽微 | ⬜ 未着手 |
 
 ---
 
@@ -51,7 +49,6 @@
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
 | [2026-07-20-20](2026-07-20-20-fix-external-endpoint-configurability.md) | Checking Team High/Medium | ObsidianClient の中央 fetch 統合と外部エンドポイント設定化 | 🟡中（3pt） | 🟡軽微 |
-| [2026-07-20-22](2026-07-20-22-fix-local-ai-pii-masking-order.md) | Checking Team Medium | ローカル AI 要約前の PII マスキング適用 | 🟡中（2pt） | 🟡軽微 |
 
 データ整合性・移行:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -88,6 +85,7 @@ UI・ドキュメント:
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-20-22-fix-local-ai-pii-masking-order.md
 - 2026-07-20-11-fix-opfs-sqlite-transaction-integrity.md
 - 2026-07-20-10-feat-offline-network-queue.md
 - 2026-07-20-02-fix-session-store-resilience.md
@@ -149,7 +147,7 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 5 |
+| ⬜ 未着手 | 4 |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 80 |
-| **合計（archive除く）** | 5 |
+| アーカイブ済み | 81 |
+| **合計（archive除く）** | 4 |
