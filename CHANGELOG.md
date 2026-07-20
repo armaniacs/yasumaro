@@ -34,7 +34,15 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
-## [Unreleased]
+## [6.5.44] - 2026-07-21
+
+### Fixed / 修正
+
+- **`GistSyncTarget.syncBatch()` の無限ループを修正** — `while(true)` + `offset: 0` + `gistSynced: 0` フィルタの組み合わせで、バッチ内の全行が `sync()` 失敗時に同じ行を再取得し続け無限ループになる問題を修正。`MAX_ITERATIONS = 100` ガードを追加。
+
+### Changed / 変更
+
+- **中国語（`zh`）ロケールのフォールバック先を日本語（`ja`）から英語（`en`）に変更** — `resolveLocaleWithFallback()` の `zh` 判定を `'en'` に変更。既存の中国語ユーザーは AI プロンプトの言語が日本語から英語に変わります。
 
 ## [6.5.43] - 2026-07-20
 

@@ -81,7 +81,7 @@ export function getBrowserLocale(): string {
 function resolveLocaleWithFallback(lang: string): string {
     if (lang.startsWith('ja')) return 'ja';
     if (lang.startsWith('ko')) return 'en';
-    if (lang.startsWith('zh')) return 'ja';
+    if (lang.startsWith('zh')) return 'en';
     if (lang.startsWith('es')) return 'en';
     return 'en';
 }

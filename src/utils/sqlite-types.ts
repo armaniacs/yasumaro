@@ -70,6 +70,8 @@ export interface QueryOptions {
   ids?: number[];
   /** Filter by tag name (FTS5 match on tags column, without # prefix) */
   tagFilter?: string;
+  /** Filter by gist_synced status (0 = unsynced, 1 = synced) */
+  gistSynced?: number;
 }
 
 export interface SearchResult {

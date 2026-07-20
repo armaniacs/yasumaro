@@ -3337,5 +3337,41 @@
   "contentPurgeNowSuccess_other": {
     "message": "$1件のコンテンツを削除しました",
     "description": "Content purge success plural"
+  },
+  "dashboardTitle": {
+    "message": "Yasumaro ダッシュボード",
+    "description": "Dashboard page title"
+  },
+  "popupTitle": {
+    "message": "Yasumaro",
+    "description": "Popup page title"
+  },
+  "textQualityTitle": {
+    "message": "テキスト品質設定",
+    "description": "Section title for text quality settings"
+  },
+  "dedupLabel": {
+    "message": "入力の冗長センテンスを除去",
+    "description": "Label for dedup feature"
+  },
+  "dedupDesc": {
+    "message": "Jaccard類似度で重複センテンスを検出し除去します（MMR的Redundancy Reduction）。",
+    "description": "Description for dedup feature"
+  },
+  "dedupThresholdLabel": {
+    "message": "類似度閾値:",
+    "description": "Label for dedup threshold slider"
+  },
+  "dedupThresholdDesc": {
+    "message": "低い値ほど多く除去（0.5=緩い）、高い値ほど少なく除去（0.95=厳しい）。デフォルト: 0.7",
+    "description": "Help text for dedup threshold slider"
+  },
+  "normalizeLabel": {
+    "message": "日本語要約の文末をである調に統一",
+    "description": "Label for normalization feature"
+  },
+  "normalizeDesc": {
+    "message": "「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。",
+    "description": "Description for normalization feature"
   }
 }

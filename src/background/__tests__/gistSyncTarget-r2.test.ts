@@ -175,9 +175,8 @@ describe('GistSyncTarget - extended coverage', () => {
 
     it('returns 0 when no unsynced rows', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.query.mockResolvedValue({
-        rows: [{ id: 1, url: 'https://a.com', gist_synced: 1, obsidian_synced: 0 }],
-      });
+      // DB-level gistSynced filter returns no rows for synced records
+      mockSqliteClient.query.mockResolvedValue({ rows: [] });
 
       const result = await target.syncBatch();
       expect(result).toBe(0);

@@ -273,10 +273,14 @@ export class OpenAIProvider extends AIProviderStrategy {
 
     private _extractSummary(data: OpenAIApiResponse): AISummaryResult {
         if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-            const summary = data.choices[0].message.content;
+            const content = data.choices[0].message.content;
+            if (typeof content !== 'string') {
+                addLog(LogType.ERROR, 'OpenAI schema validation failed: message.content is not a string');
+                return { success: false, summary: "Error: Invalid API response format - unexpected schema." };
+            }
             const sentTokens = data.usage?.prompt_tokens;
             const receivedTokens = data.usage?.completion_tokens;
-            return { success: true, summary, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
+            return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
         }
         return { success: true, summary: "No summary generated." };
     }
