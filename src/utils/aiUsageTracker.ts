@@ -8,18 +8,28 @@ import { addLog, LogType } from './logger.js';
 
 // レート制限設定
 const RATE_LIMIT_WINDOW_MS = 60000; // 1分
-const RATE_LIMIT_MAX_REQUESTS = 10; // 1分間に最大10リクエスト
+const DEFAULT_RATE_LIMIT_MAX = 10; // 1分間に最大10リクエスト（デフォルト）
 
 /**
  * レート制限チェック
  * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
  */
+async function getRateLimitMax(): Promise<number> {
+  const result = await chrome.storage.local.get(StorageKeys.AI_RATE_LIMIT_MAX);
+  const value = result[StorageKeys.AI_RATE_LIMIT_MAX];
+  if (typeof value === 'number' && value > 0) {
+    return value;
+  }
+  return DEFAULT_RATE_LIMIT_MAX;
+}
+
 export async function checkRateLimit(): Promise<{
   allowed: boolean;
   remaining: number;
   resetTime: number;
 }> {
   const now = Date.now();
+  const rateLimitMax = await getRateLimitMax();
 
   const result = await chrome.storage.local.get([
     StorageKeys.AI_RATE_LIMIT_WINDOW_START,
@@ -37,7 +47,7 @@ export async function checkRateLimit(): Promise<{
     });
     return {
       allowed: true,
-      remaining: RATE_LIMIT_MAX_REQUESTS - 1,
+      remaining: rateLimitMax - 1,
       resetTime: now + RATE_LIMIT_WINDOW_MS
     };
   }
@@ -48,10 +58,10 @@ export async function checkRateLimit(): Promise<{
   }
 
   // レート制限チェック
-  if (count >= RATE_LIMIT_MAX_REQUESTS) {
+  if (count >= rateLimitMax) {
     addLog(LogType.WARN, 'AI rate limit exceeded', {
       count,
-      limit: RATE_LIMIT_MAX_REQUESTS,
+      limit: rateLimitMax,
       resetIn: Math.ceil((windowStart + RATE_LIMIT_WINDOW_MS - now) / 1000)
     });
     return {
@@ -68,7 +78,7 @@ export async function checkRateLimit(): Promise<{
 
   return {
     allowed: true,
-    remaining: RATE_LIMIT_MAX_REQUESTS - count - 1,
+    remaining: rateLimitMax - count - 1,
     resetTime: windowStart + RATE_LIMIT_WINDOW_MS
   };
 }
@@ -161,8 +171,45 @@ export function getRateLimitMessage(resetTime: number): string {
   return `Rate limit exceeded. Please wait ${seconds} seconds.`;
 }
 
+async function getMaxMonthlyTokens(): Promise<number> {
+  const result = await chrome.storage.local.get(StorageKeys.MAX_MONTHLY_TOKENS);
+  const value = result[StorageKeys.MAX_MONTHLY_TOKENS];
+  if (typeof value === 'number' && value >= 0) {
+    return value;
+  }
+  return 1000000;
+}
+
+export interface HardLimitResult {
+  blocked: boolean;
+  message?: string;
+}
+
 /**
- * 使用量警告をチェック（月間100万トークンを想定）
+ * 月次トークン使用量のハードリミットをチェック
+ * 設定値が 0 の場合は無制限としてブロックしない
+ */
+export async function checkHardLimit(expectedTokens: number = 0): Promise<HardLimitResult> {
+  const usage = await getMonthlyUsage();
+  const maxMonthlyTokens = await getMaxMonthlyTokens();
+
+  if (maxMonthlyTokens === 0) {
+    return { blocked: false };
+  }
+
+  const totalTokens = usage.tokensSent + usage.tokensReceived + expectedTokens;
+  if (totalTokens > maxMonthlyTokens) {
+    return {
+      blocked: true,
+      message: `Monthly token limit reached (${totalTokens.toLocaleString()} / ${maxMonthlyTokens.toLocaleString()})`
+    };
+  }
+
+  return { blocked: false };
+}
+
+/**
+ * 使用量警告をチェック
  */
 export async function checkUsageWarning(): Promise<{
   warning: boolean;
@@ -170,12 +217,17 @@ export async function checkUsageWarning(): Promise<{
 }> {
   const usage = await getMonthlyUsage();
   const totalTokens = usage.tokensSent + usage.tokensReceived;
-  const MONTHLY_WARNING_THRESHOLD = 1000000; // 100万トークン
+  const warningThreshold = await getMaxMonthlyTokens();
 
-  if (totalTokens > MONTHLY_WARNING_THRESHOLD) {
+  // 0 の場合は無制限なので警告も出さない
+  if (warningThreshold === 0) {
+    return { warning: false };
+  }
+
+  if (totalTokens > warningThreshold) {
     return {
       warning: true,
-      message: `Monthly token usage (${totalTokens.toLocaleString()}) has exceeded ${MONTHLY_WARNING_THRESHOLD.toLocaleString()}`
+      message: `Monthly token usage (${totalTokens.toLocaleString()}) has exceeded ${warningThreshold.toLocaleString()}`
     };
   }
 
