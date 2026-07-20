@@ -32,8 +32,12 @@ jobs:
         run: npm ci
       - name: Check licenses
         run: npm run check-licenses
-      - name: Validate (type-check + tests)
-        run: npm run validate
+      - name: Security audit
+        run: npm audit --audit-level=high
+      - name: Type Check
+        run: npm run type-check
+      - name: Run Tests
+        run: npm test
 
   build:
     runs-on: ubuntu-latest
