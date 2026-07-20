@@ -125,6 +125,10 @@ export const StorageKeys = {
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
+    MAX_MONTHLY_TOKENS: 'max_monthly_tokens', // 月間トークン使用上限（0=無制限、デフォルト: 1,000,000）
+    AI_RATE_LIMIT_MAX: 'ai_rate_limit_max', // 1分間のAIリクエスト数上限（デフォルト: 10）
+    OPENAI_CONTENT_CHARS: 'openai_content_chars', // OpenAI プロバイダーの送信コンテンツ文字数上限（デフォルト: 10,000）
+    GEMINI_CONTENT_CHARS: 'gemini_content_chars', // Gemini プロバイダーの送信コンテンツ文字数上限（デフォルト: 30,000）
     // Rate Limit Settings (Configurable)
     SKIP_AI_RATE_LIMIT_MAX: 'skip_ai_rate_limit_max', // skipAI操作の最大回数（デフォルト: 5）
     SKIP_AI_RATE_LIMIT_WINDOW_MS: 'skip_ai_rate_limit_window_ms', // skipAIレートリミットウィンドウ（デフォルト: 60000ms）
@@ -331,6 +335,10 @@ export interface StorageKeyValues {
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
     [StorageKeys.AI_TIMEOUT_MS]: number;
+    [StorageKeys.MAX_MONTHLY_TOKENS]: number;
+    [StorageKeys.AI_RATE_LIMIT_MAX]: number;
+    [StorageKeys.OPENAI_CONTENT_CHARS]: number;
+    [StorageKeys.GEMINI_CONTENT_CHARS]: number;
     [StorageKeys.SKIP_AI_RATE_LIMIT_MAX]: number;
     [StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: boolean;
