@@ -84,7 +84,7 @@ function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
   const label = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% ${t('cleansingReduction')})`;
 
   return `<div class="cleansing-progress-wrapper">
-    <div class="cleansing-progress"><div class="cleansing-progress-bar" style="width:${Math.max(sentRatio * 100, 0.2).toFixed(1)}%"></div></div>
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="${Math.max(sentRatio * 100, 0.2).toFixed(1)}"></div></div>
     <span class="cleansing-progress-label">${escapeHtml(label)}</span>
   </div>`;
 }
@@ -688,6 +688,11 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       </div>`;
     }).join('');
 
+    // Set progress bar widths from data attributes (CSP-safe: no inline styles)
+    _container.querySelectorAll<HTMLElement>('.cleansing-progress-bar[data-bar-width]').forEach((bar) => {
+      bar.style.width = `${bar.getAttribute('data-bar-width')}%`;
+    });
+
     _container.querySelectorAll('[data-action="select"]').forEach((el) => {
       const id = Number((el as HTMLElement).getAttribute('data-id'));
       el.addEventListener('change', () => {
@@ -847,7 +852,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if (!container) return;
 
     const fallbackBanner = state.fallbackMode
-      ? `<div class="sqlite-fallback-warning" role="alert" style="background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px 12px;margin-bottom:8px;border-radius:4px;font-size:0.9em;">
+      ? `<div class="sqlite-fallback-warning warning-banner" role="alert">
           \u26A0\uFE0F ${t('fallbackStorageWarning')}
          </div>`
       : '';
@@ -864,7 +869,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           value="${escapeHtml(state.searchQuery)}"
           aria-label="${t('historySearchAriaLabel')}" />
         <div id="sqlite-calendar-nav" class="sqlite-calendar-nav"></div>
-        <div id="sqlite-error" class="sqlite-history-error" style="${state.error ? '' : 'display:none'}">
+        <div id="sqlite-error" class="sqlite-history-error${state.error ? '' : ' hidden'}">
           ${escapeHtml(state.error || '')}
         </div>
         ${state.activeTagFilter ? `
@@ -874,7 +879,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">\u2715</button>
         </div>` : ''}
       </div>
-      <div id="sqlite-bulk-bar" class="sqlite-bulk-bar" style="${state.selectedIds.size > 0 ? '' : 'display:none'}">
+      <div id="sqlite-bulk-bar" class="sqlite-bulk-bar${state.selectedIds.size > 0 ? '' : ' hidden'}">
         <label class="sqlite-bulk-select-all">
           <input type="checkbox" id="sqlite-select-all" aria-label="${t('historySelectAll')}">
           <span data-i18n="historySelectAll">${t('historySelectAll')}</span>
