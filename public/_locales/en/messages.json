@@ -2690,6 +2690,27 @@
   "geminiContentCharsError": {
     "message": "Gemini content characters must be between 1,000 and 100,000"
   },
+  "externalEndpointControlsSection": {
+    "message": "External Endpoints"
+  },
+  "label_obsidian_host": {
+    "message": "Obsidian Host"
+  },
+  "note_obsidian_host": {
+    "message": "Hostname for the Obsidian Local REST API (e.g., 127.0.0.1, localhost, WSL2 IP)."
+  },
+  "obsidianHostError": {
+    "message": "Obsidian host contains invalid characters"
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API Version"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API version (v1 or v1beta)."
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API version must be in the form v1 or v1beta"
+  },
   "error_max_tokens_range": {
     "message": "Please enter a value between 10 and 16,000 tokens"
   },
