@@ -74,10 +74,11 @@ describe('ReDoSリスクの検証（問題点4）', () => {
 
   describe('入力サイズ制限の検証', () => {
     it('複雑な長いテキストを処理できる', async () => {
-      const complexText = 'Contact: test@example.com or call 090-1234-5678. '.repeat(1000);
+      // マッチ件数制限（1000件）以内に収めるよう反復回数を調整
+      const complexText = 'Contact: test@example.com or call 090-1234-5678. '.repeat(400);
 
       const startTime = performance.now();
-      const result = await sanitizeRegex(complexText) as SanitizeResult;
+      const result = await sanitizeRegex(complexText, { skipSizeLimit: true }) as SanitizeResult;
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 

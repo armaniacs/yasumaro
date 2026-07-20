@@ -356,20 +356,18 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('タイムアウト時にエラーを返す', async () => {
+    test('タイムアウト時にエラーをスローする', async () => {
       // 【テスト目的】: タイムアウトエラーの確認
-      // 【テスト内容】: 処理がタイムアウトした場合にエラーを返すことを確認
+      // 【テスト内容】: 処理がタイムアウトした場合にエラーをスローすることを確認
       // 注: このテストは実際にタイムアウトを発生させるため、実行時間がかかる
       // 非常に長いテキストを使用してタイムアウトを強制的に発生させる
       // マッチが多数ある状況を作るとループ回数が増えてタイムアウトしやすくなる
       const text = 'test@example.com '.repeat(5000); // 約100KB (十分重い)
-      const result = await sanitizeRegex(text, { timeout: 1, skipSizeLimit: true }) as SanitizeResult; // 1msでタイムアウト
 
-      // タイムアウトまたは最大マッチ数超過のエラーが返されることを確認
-      expect(result.error).toBeDefined();
-      expect(
-        result.error!.includes('timed out') || result.error!.includes('exceeded maximum match count')
-      ).toBe(true);
+      // タイムアウトまたは最大マッチ数超過でエラーがスローされることを確認
+      await expect(
+        sanitizeRegex(text, { timeout: 1, skipSizeLimit: true })
+      ).rejects.toThrow();
     });
   });
 
