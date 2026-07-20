@@ -42,7 +42,6 @@ import {
 } from './messageTypes.js';
 import type { ExtensionMessage } from './messageTypes.js';
 import { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
-import type { MessageHandler } from './handlers/MessageHandlerRegistry.js';
 import {
     createValidVisitHandler,
     createFetchUrlHandler,
@@ -268,67 +267,67 @@ export const handleValidVisit = createValidVisitHandler({
   recordVisit: (data) => recordingLogic.record(data),
   addBadgeTab: (tabId) => { autoSavedBadgeTabs.add(tabId); },
   hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
-}) as unknown as MessageHandler;
+});
 registry.register('VALID_VISIT', handleValidVisit);
 
 export const handleFetchUrl = createFetchUrlHandler({
   getSettings: () => getSettings(),
   buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-}) as unknown as MessageHandler;
+});
 registry.register('FETCH_URL', handleFetchUrl);
 
-export const handleManualRecord = createManualRecordHandler(_manualRecordDeps) as unknown as MessageHandler;
+export const handleManualRecord = createManualRecordHandler(_manualRecordDeps);
 registry.register('MANUAL_RECORD', handleManualRecord);
 
-export const handlePreviewRecord = createManualRecordHandler(_manualRecordDeps) as unknown as MessageHandler;
+export const handlePreviewRecord = createManualRecordHandler(_manualRecordDeps);
 registry.register('PREVIEW_RECORD', handlePreviewRecord);
 
-export const handleSaveRecord = createSaveRecordHandler(_saveRecordDeps) as unknown as MessageHandler;
+export const handleSaveRecord = createSaveRecordHandler(_saveRecordDeps);
 registry.register('SAVE_RECORD', handleSaveRecord);
 
 export const handleContentCleansingExecuted = createContentCleansingExecutedHandler({
   hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
-}) as unknown as MessageHandler;
+});
 registry.register('CONTENT_CLEANSING_EXECUTED', handleContentCleansingExecuted);
 
 export const handleCheckDomain = createCheckDomainHandler({
   isDomainAllowed: (url) => isDomainAllowed(url),
-}) as unknown as MessageHandler;
+});
 registry.register('CHECK_DOMAIN', handleCheckDomain);
 
 export const handleTestConnections = createTestConnectionsHandler({
   testObsidian: () => obsidian.testConnection(),
   testAi: () => aiClient.testConnection(),
-}) as unknown as MessageHandler;
+});
 registry.register('TEST_CONNECTIONS', handleTestConnections);
 
 export const handleTestObsidian = createTestObsidianHandler({
   testConnection: (override?: { apiKey?: string }) => obsidian.testConnection(override),
-}) as unknown as MessageHandler;
+});
 registry.register('TEST_OBSIDIAN', handleTestObsidian);
 
 export const handleTestAi = createTestAiHandler({
   clearSettingsCache: () => clearSettingsCache(),
   testConnection: () => aiClient.testConnection(),
-}) as unknown as MessageHandler;
+});
 registry.register('TEST_AI', handleTestAi);
 
 export const handleGetPrivacyCache = createGetPrivacyCacheHandler({
   getPrivacyCache: () => RecordingLogic.cacheState.privacyCache,
-}) as unknown as MessageHandler;
+});
 registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache);
 
 export const handleActivityUpdate = createActivityUpdateHandler({
   updateActivity: () => updateActivity(),
-}) as unknown as MessageHandler;
+});
 registry.register('ACTIVITY_UPDATE', handleActivityUpdate);
 
 export const handleSessionLockRequest = createSessionLockRequestHandler({
   lockSession: () => lockSession(),
-}) as unknown as MessageHandler;
+});
 registry.register('SESSION_LOCK_REQUEST', handleSessionLockRequest);
 
-export const handlePing = createPingHandler({}) as unknown as MessageHandler;
+export const handlePing = createPingHandler({});
 registry.register('PING', handlePing);
 
 export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSchedulerHandler({
@@ -336,7 +335,7 @@ export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSch
     const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
     await initExportScheduler();
   },
-}) as unknown as MessageHandler;
+});
 registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handleRefreshLocalMarkdownScheduler);
 
 export const handleConsentStateChanged = createConsentStateChangedHandler({
@@ -344,7 +343,7 @@ export const handleConsentStateChanged = createConsentStateChangedHandler({
     const { updateConsentBadge } = await import('./consentBadge.js');
     await updateConsentBadge();
   },
-}) as unknown as MessageHandler;
+});
 registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged);
 
 const _dashboardSqliteHandler = createDashboardSqliteHandler({
@@ -390,23 +389,26 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler({
   },
 });
 
-export const handleDashboardSqlite = ((message: Record<string, unknown>, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): boolean => {
+export const handleDashboardSqlite = ((message: Record<string, unknown>, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
   if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
     sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
-    return false;
+    return;
   }
   if (sender.id !== chrome.runtime.id) {
     sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from external extensions' });
-    return false;
+    return;
   }
-  (async () => {
-    const result = await _dashboardSqliteHandler(
-      (message.payload || {}) as DashboardSqliteRequest & { confirmToken?: string },
-    );
-    sendResponse(result);
+  void (async () => {
+    try {
+      const result = await _dashboardSqliteHandler(
+        (message.payload || {}) as DashboardSqliteRequest & { confirmToken?: string },
+      );
+      sendResponse(result);
+    } catch (error) {
+      sendResponse(createErrorResponse(error));
+    }
   })();
-  return true;
-}) as unknown as MessageHandler;
+});
 registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
 
 // ============================================================================

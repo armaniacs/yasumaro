@@ -26,17 +26,16 @@ describe('SQLite Security & Data Integrity', () => {
 
     it('should reject DASHBOARD_SQLITE calls from content scripts (sender.tab present) for ALL subtypes', () => {
       // The guard lives inside the handleDashboardSqlite function in service-worker.ts
-      const dashboardSqliteBlock = serviceWorkerSource.match(
-        /export\s+const\s+handleDashboardSqlite\s*=\s*\(\([\s\S]*?return\s+(?:false|true)\s*;?\s*\}\)[\s\S]*?as\s+unknown\s+as\s+MessageHandler/
-      );
-      expect(dashboardSqliteBlock).toBeTruthy();
-      const block = dashboardSqliteBlock![0];
+      // Match from function start to the first sender.tab check
+      const dashboardSqliteStart = serviceWorkerSource.indexOf('export const handleDashboardSqlite');
+      expect(dashboardSqliteStart).toBeGreaterThan(-1);
+      const dashboardSqliteBlock = serviceWorkerSource.substring(dashboardSqliteStart, dashboardSqliteStart + 1000);
 
-      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\b/.test(block);
+      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\b/.test(dashboardSqliteBlock);
       expect(hasEarlySenderGuard).toBe(true);
 
       // The guard must check sender.url for chrome-extension:// origin
-      const hasUrlCheck = /sender\.url/.test(block);
+      const hasUrlCheck = /sender\.url/.test(dashboardSqliteBlock);
       expect(hasUrlCheck).toBe(true);
     });
 
@@ -49,11 +48,9 @@ describe('SQLite Security & Data Integrity', () => {
 
     it('should have sender.tab guard BEFORE any SQLite operation', () => {
       // In service-worker.ts, the sender.tab check must come before _dashboardSqliteHandler call
-      const guardSection = serviceWorkerSource.match(
-        /export\s+const\s+handleDashboardSqlite\s*=\s*\(\([\s\S]*?\)\s*as\s+unknown\s+as\s+MessageHandler/
-      );
-      expect(guardSection).toBeTruthy();
-      const section = guardSection![0];
+      const dashboardSqliteStart = serviceWorkerSource.indexOf('export const handleDashboardSqlite');
+      expect(dashboardSqliteStart).toBeGreaterThan(-1);
+      const section = serviceWorkerSource.substring(dashboardSqliteStart, dashboardSqliteStart + 1500);
 
       const guardPos = section.indexOf('sender.tab');
       const callPos = section.indexOf('dashboardSqliteHandler');
