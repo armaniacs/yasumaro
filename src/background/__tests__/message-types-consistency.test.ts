@@ -1,15 +1,16 @@
 
-import type { ServiceWorkerRequest } from '../../messaging/types.js';
+import type { ExtensionMessage } from '../messageTypes.js';
 import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from '../messageTypes.js';
 
 describe('Message Type Consistency', () => {
-    test('VALID_MESSAGE_TYPES contains all types defined in ServiceWorkerRequest type', () => {
-        type ValidType = ServiceWorkerRequest['type'];
+    test('VALID_MESSAGE_TYPES contains all types defined in ExtensionMessage type', () => {
+        type ValidType = ExtensionMessage['type'];
         const allDefinedTypes: ValidType[] = [
             'VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL',
             'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS',
             'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE',
             'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED',
+            'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED', 'DASHBOARD_SQLITE',
         ];
 
         for (const type of allDefinedTypes) {
@@ -18,7 +19,7 @@ describe('Message Type Consistency', () => {
     });
 
     test('VALID_MESSAGE_TYPES does not contain undeclared types', () => {
-        type ValidType = ServiceWorkerRequest['type'];
+        type ValidType = ExtensionMessage['type'];
         for (const type of VALID_MESSAGE_TYPES) {
             const _assert: ValidType = type as ValidType;
             expect(_assert).toBeDefined();
