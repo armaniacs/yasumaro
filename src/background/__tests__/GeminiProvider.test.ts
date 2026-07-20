@@ -180,7 +180,7 @@ describe('GeminiProvider', () => {
             expect(result.summary).toContain('security risk');
         });
 
-        test('candidates が空の場合はデフォルトメッセージ', async () => {
+        test('candidates が空の場合はスキーマエラー', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ candidates: [] })
@@ -189,7 +189,25 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.generateSummary('content');
 
-            expect(result.summary).toBe('No summary generated.');
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('candidates is missing or empty');
+        });
+
+        test('parts[0].text がない場合はスキーマエラー', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ role: 'model' }] } }]
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('parts[0].text is not a string');
         });
 
         test('モデル名から models/ プレフィックスを除去する', async () => {
