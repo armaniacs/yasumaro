@@ -152,6 +152,101 @@ describe('SessionStore', () => {
     const restored = SessionStore.entriesToMap(entries);
     expect(restored).toEqual(map);
   });
+
+  it('waitForFlush() resolves without polling when flush is already complete', async () => {
+    store.set('key1', 'value1');
+    await store.flushNow();
+    mockSession.set.mockClear();
+
+    await store.waitForFlush();
+
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('get() falls back to local storage when key is missing in session', async () => {
+    const sessionData: Record<string, unknown> = {};
+    mockSession.get.mockImplementation(async (keys: string | string[] | null) => {
+      if (keys === null) return { ...sessionData };
+      if (Array.isArray(keys)) {
+        const result: Record<string, unknown> = {};
+        keys.forEach((key) => { if (key in sessionData) result[key] = sessionData[key]; });
+        return result;
+      }
+      return keys in sessionData ? { [keys]: sessionData[keys] } : {};
+    });
+    mockSession.set.mockImplementation(async (items: Record<string, unknown>) => {
+      Object.assign(sessionData, items);
+    });
+    mockSession.remove.mockImplementation(async (keys: string | string[]) => {
+      const arr = Array.isArray(keys) ? keys : [keys];
+      arr.forEach((key) => delete sessionData[key]);
+    });
+
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({ key1: 'from-local' }),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    const value = await store.get<string>('key1');
+
+    expect(mockSession.get).toHaveBeenCalledWith('key1');
+    expect(mockLocal.get).toHaveBeenCalledWith('key1');
+    expect(mockSession.set).toHaveBeenCalledWith({ key1: 'from-local' });
+    expect(mockLocal.remove).toHaveBeenCalledWith('key1');
+    expect(value).toBe('from-local');
+  });
+
+  it('get() only checks local fallback once per key', async () => {
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+    mockSession.get.mockResolvedValue({});
+
+    await store.get<string>('key1');
+    await store.get<string>('key1');
+
+    expect(mockLocal.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('emergencyFlushToLocal() writes queued data to local storage', () => {
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    store.set('key1', 'value1');
+    store.set('key2', 'value2');
+    store.emergencyFlushToLocal();
+
+    expect(mockLocal.set).toHaveBeenCalledWith({ key1: 'value1', key2: 'value2' });
+  });
+
+  it('flush() saves only priority data when estimated size exceeds 1MB', async () => {
+    // Build a value larger than 1MB when serialized
+    const bigString = 'x'.repeat(1.2 * 1024 * 1024);
+    store.set(SESSION_KEYS.RECORDING_CACHE, {
+      settingsCache: { value: 'priority' },
+      cacheTimestamp: 12345,
+      cacheVersion: 1,
+      urlCache: bigString,
+    });
+    await store.flushNow();
+
+    const setCall = mockSession.set.mock.calls[0][0];
+    expect(setCall[SESSION_KEYS.RECORDING_CACHE]).toEqual({
+      settingsCache: { value: 'priority' },
+      cacheTimestamp: 12345,
+      cacheVersion: 1,
+    });
+    expect(setCall[SESSION_KEYS.RECORDING_CACHE].urlCache).toBeUndefined();
+  });
 });
 
 describe('SessionStore.migrateFromLocalStorage', () => {
@@ -237,6 +332,82 @@ describe('SessionStore.migrateFromLocalStorage', () => {
     delete (globalThis as any).chrome.storage.local;
 
     const migrated = await SessionStore.migrateFromLocalStorage();
+
+    expect(migrated).toBe(false);
+  });
+});
+
+describe('SessionStore.migrateFromLocalStorageIfSessionEmpty', () => {
+  let localStorage: Record<string, unknown>;
+  let sessionStorage: Record<string, unknown>;
+  let mockLocal: { get: any; set: any; remove: any };
+  let mockSession: { get: any; set: any; remove: any };
+
+  beforeEach(() => {
+    localStorage = {};
+    sessionStorage = {};
+    mockLocal = {
+      get: vi.fn(async (keys: string | string[] | null) => {
+        if (keys === null) return { ...localStorage };
+        if (Array.isArray(keys)) {
+          const result: Record<string, unknown> = {};
+          keys.forEach((key) => { if (key in localStorage) result[key] = localStorage[key]; });
+          return result;
+        }
+        return keys in localStorage ? { [keys]: localStorage[keys] } : {};
+      }),
+      set: vi.fn(async (items: Record<string, unknown>) => {
+        Object.assign(localStorage, items);
+      }),
+      remove: vi.fn(async (keys: string | string[]) => {
+        const arr = Array.isArray(keys) ? keys : [keys];
+        arr.forEach((key) => delete localStorage[key]);
+      }),
+    };
+    mockSession = {
+      get: vi.fn(async (keys: string | string[] | null) => {
+        if (keys === null) return { ...sessionStorage };
+        if (Array.isArray(keys)) {
+          const result: Record<string, unknown> = {};
+          keys.forEach((key) => { if (key in sessionStorage) result[key] = sessionStorage[key]; });
+          return result;
+        }
+        return keys in sessionStorage ? { [keys]: sessionStorage[keys] } : {};
+      }),
+      set: vi.fn(async (items: Record<string, unknown>) => {
+        Object.assign(sessionStorage, items);
+      }),
+      remove: vi.fn(async (keys: string | string[]) => {
+        const arr = Array.isArray(keys) ? keys : [keys];
+        arr.forEach((key) => delete sessionStorage[key]);
+      }),
+    };
+    (globalThis as any).chrome = {
+      storage: { local: mockLocal, session: mockSession },
+    };
+  });
+
+  it('migrates a single key from local to session storage', async () => {
+    localStorage['sw:rateLimiter'] = { entries: [] };
+
+    const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
+
+    expect(migrated).toBe(true);
+    expect(sessionStorage['sw:rateLimiter']).toEqual({ entries: [] });
+    expect(localStorage['sw:rateLimiter']).toBeUndefined();
+  });
+
+  it('returns false when key does not exist in local storage', async () => {
+    const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
+
+    expect(migrated).toBe(false);
+    expect(Object.keys(sessionStorage)).toHaveLength(0);
+  });
+
+  it('returns false when storage APIs are unavailable', async () => {
+    delete (globalThis as any).chrome.storage.local;
+
+    const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
     expect(migrated).toBe(false);
   });
