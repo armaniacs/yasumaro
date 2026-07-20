@@ -440,30 +440,40 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
   const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
   let totalPurged = 0;
 
-  // Delete old non-starred records
-  await sqlExec(
-    'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-    [cutoffMs]
-  );
+  try {
+    await sqlExec('BEGIN IMMEDIATE');
 
-  // Get change count via query
-  await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
-
-  // If still over max, delete oldest non-starred records
-  let count = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
-
-  if (count > maxRecords) {
-    const toDelete = count - maxRecords;
+    // Delete old non-starred records
     await sqlExec(
-      `DELETE FROM browsing_logs WHERE id IN (
-         SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-         ORDER BY created_at ASC LIMIT ?
-       )`,
-      [toDelete]
+      'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
+      [cutoffMs]
     );
-    // Use actual change count from SQLite
-    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+
+    // Get change count via query
+    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
+
+    // If still over max, delete oldest non-starred records
+    let count = 0;
+    await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
+
+    if (count > maxRecords) {
+      const toDelete = count - maxRecords;
+      await sqlExec(
+        `DELETE FROM browsing_logs WHERE id IN (
+           SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
+           ORDER BY created_at ASC LIMIT ?
+         )`,
+        [toDelete]
+      );
+      // Use actual change count from SQLite
+      await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+    }
+
+    await sqlExec('COMMIT');
+  } catch (err) {
+    await sqlExec('ROLLBACK');
+    console.error('OPFS Worker: purge transaction failed:', err);
+    throw err;
   }
 
   return { purged: totalPurged };
