@@ -1,4 +1,4 @@
-.PHONY: build build-store clean test test-watch test-coverage test-e2e type-check validate test-news test-news-watch local-ci test-all lock-linux build-wasm
+.PHONY: build build-store clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux build-wasm
 
 # build: vendor WASM → node_modules コピー後にバンドル
 build: copy-wasm
@@ -33,6 +33,13 @@ type-check:
 
 validate:
 	npm run validate
+
+# ビルド不要のクイックバリデーション（validate のエイリアス）
+test-quick: validate
+
+# ビルド不要のユニットテストのみ
+test-unit:
+	npm test
 
 test-and-build: build test
 
