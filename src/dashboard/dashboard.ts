@@ -8,8 +8,8 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } f
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
+import { type MultiProviderTestResult, PROVIDER_LABELS } from '../background/aiClient.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
@@ -231,7 +231,7 @@ export async function loadGeneralSettings(): Promise<void> {
 // Connection Test Helpers
 // ============================================================================
 
-export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, _successColor: string, _errorColor: string): HTMLElement {
+export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }): HTMLElement {
   const statusDiv = document.createElement('div');
   statusDiv.className = 'diag-indent';
 
@@ -268,19 +268,6 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
   }) as { obsidian?: { success: boolean; message: string } };
 
   return testResult?.obsidian || { success: false, message: 'No response' };
-}
-
-export interface ProviderTestResult {
-  provider: string;
-  model?: string;
-  success: boolean;
-  message: string;
-}
-
-export interface MultiProviderTestResult {
-  success: boolean;
-  message: string;
-  providers: ProviderTestResult[];
 }
 
 export async function testAiConnection(): Promise<MultiProviderTestResult> {
@@ -374,7 +361,7 @@ export async function handleTestObsidian(): Promise<void> {
     const obsidianResult = await testObsidianConnection(typedApiKey || '');
 
     statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
     // HTTPS証明書警告
     if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && protocolInput?.value === 'https') {
@@ -441,14 +428,7 @@ export async function handleTestAi(): Promise<void> {
       container.appendChild(statusEl);
       statusDiv.appendChild(container);
 
-      const providerLabels: Record<string, string> = {
-        gemini: 'Google Gemini',
-        openai: 'OpenAI Compatible',
-        openai2: 'OpenAI Compatible 2',
-        'lm-studio': 'LM Studio',
-        ollama: 'Ollama',
-        'openai-compatible': 'OpenAI Compatible',
-      };
+      const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
       for (const provider of aiResult.providers) {
         const row = document.createElement('div');
@@ -461,7 +441,7 @@ export async function handleTestAi(): Promise<void> {
       }
     } else {
       // Single provider: show simple result
-      statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+      statusDiv.appendChild(createConnectionStatusElement('AI', aiResult));
     }
 
     statusDiv.className = aiResult.success ? 'success' : 'error';

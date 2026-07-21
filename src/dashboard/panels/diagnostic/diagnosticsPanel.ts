@@ -1,33 +1,16 @@
 import { getMessage } from '../../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../../../utils/storage.js';
+import { PROVIDER_LABELS } from '../../../background/aiClient.js';
+import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 
 import { UI_COLORS } from '../../../constants/appConstants.js';
 import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
-import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from '../../diagnoseDeficiencies.js';
+import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
 import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
 import { type DiagnosticPanel } from '../types.js';
-
-function makeStatRow(label: string, value: string, masked = false): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'diag-stat-row';
-  const valueHtml = masked
-    ? `<span class="diag-stat-value diag-stat-masked">${value}</span>`
-    : `<span class="diag-stat-value">${value}</span>`;
-  row.innerHTML = `<span class="diag-stat-label">${label}</span>${valueHtml}`;
-  return row;
-}
-
-function getSeverityLabel(severity: DeficiencyItem['severity']): string {
-  switch (severity) {
-    case 'high': return getMessage('diagSeverityHigh') || 'High';
-    case 'medium': return getMessage('diagSeverityMedium') || 'Medium';
-    case 'low': return getMessage('diagSeverityLow') || 'Low';
-    default: return severity;
-  }
-}
 
 export function createDiagnosticsPanel(): DiagnosticPanel {
   let _container: HTMLElement | null = null;
@@ -79,14 +62,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       }
 
       if (aiSettingsEl) {
-        const providerLabels: Record<string, string> = {
-          gemini: 'Google Gemini',
-          openai: 'OpenAI Compatible',
-          openai2: 'OpenAI Compatible 2',
-          'lm-studio': 'LM Studio',
-          ollama: 'Ollama',
-          'openai-compatible': 'OpenAI Compatible',
-        };
+        const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
         const configuredLabel = getMessage('configured') || '(configured)';
         const notSetLabel = getMessage('notSet') || '(not set)';
@@ -177,7 +153,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         const kb = (bytesUsed / 1024).toFixed(1);
         const urlCount = await getLogCount();
         storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${kb} KB`));
-        storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', String(urlCount)));
+        const countLabel = urlCount >= 0 ? String(urlCount) : (getMessage('diagUnavailable') || 'Unavailable');
+        storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', countLabel));
       } catch {
         storageStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
       }
@@ -407,14 +384,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
           const ai = testResult?.ai;
           if (ai) {
             connectionResult.innerHTML = '';
-            const providerLabels: Record<string, string> = {
-              gemini: 'Google Gemini',
-              openai: 'OpenAI Compatible',
-              openai2: 'OpenAI Compatible 2',
-              'lm-studio': 'LM Studio',
-              ollama: 'Ollama',
-              'openai-compatible': 'OpenAI Compatible',
-            };
+            const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
             if (ai.providers && ai.providers.length > 1) {
               // Multi-provider: show per-provider results
@@ -442,7 +412,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
           } else {
             connectionResult.textContent = getMessage('testComplete') || 'Test complete.';
           }
-        } catch {
+        } catch (err) {
+          console.error('Diagnostics: AI test failed', err);
           connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
           connectionResult.className = 'diag-result diag-error';
         } finally {

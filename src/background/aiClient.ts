@@ -9,11 +9,6 @@ export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
 }
 
-export interface ConnectionTestResult {
-    success: boolean;
-    message: string;
-}
-
 export interface ProviderTestResult {
     provider: string;
     model?: string;
@@ -26,6 +21,16 @@ export interface MultiProviderTestResult {
     message: string;
     providers: ProviderTestResult[];
 }
+
+/** Human-readable labels for AI provider identifiers */
+export const PROVIDER_LABELS: Record<string, string> = {
+    gemini: 'Google Gemini',
+    openai: 'OpenAI Compatible',
+    openai2: 'OpenAI Compatible 2',
+    'lm-studio': 'LM Studio',
+    ollama: 'Ollama',
+    'openai-compatible': 'OpenAI Compatible',
+};
 
 /**
  * AI Client
@@ -106,17 +111,19 @@ export class AIClient {
         return lastResult;
     }
 
+    /** Maximum number of provider slots to process in testConnection/generateSummary */
+    private static readonly MAX_PROVIDERS = 10;
+
     /**
      * 優先度スロットリストを解決する
      * AI_PROVIDER_PRIORITY_LISTが空の場合は旧AI_PROVIDER単一設定を1位スロットとして扱う
      */
     private resolveProviderSlots(settings: Settings): ProviderSlot[] {
         const slots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[] | undefined;
-        if (slots && slots.length > 0) {
-            return slots;
-        }
-        const legacyProvider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
-        return [{ provider: legacyProvider }];
+        const resolved = (slots && slots.length > 0)
+            ? slots
+            : [{ provider: (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini' }];
+        return resolved.slice(0, AIClient.MAX_PROVIDERS);
     }
 
     /**
