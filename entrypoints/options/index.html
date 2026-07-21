@@ -3,8 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' chrome-extension: data:; object-src 'none'; connect-src https://tranco-list.eu;">
+    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none'; connect-src https://tranco-list.eu;">
   <title>Yasumaro Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="models-dev-dialog.css">
@@ -20,8 +21,8 @@
       </div>
 
       <div class="sidebar-nav">
-        <div class="sidebar-section-label" data-i18n="settingsSection">Settings</div>
-        <button class="sidebar-nav-btn active" role="tab" aria-controls="panel-general" aria-selected="true" data-panel="panel-general">
+        <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="settingsSection">Settings</div>
+        <button class="sidebar-nav-btn active" role="tab" aria-controls="panel-general" aria-selected="true" data-panel="panel-general" tabindex="0">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -105,7 +106,7 @@
         </button>
 
         <div class="sidebar-divider"></div>
-        <div class="sidebar-section-label" data-i18n="dataSection">Data</div>
+        <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="dataSection">Data</div>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cluster" aria-selected="false" data-panel="panel-tag-cluster">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="8" cy="8" r="2"/>
@@ -134,7 +135,7 @@
         </button>
 
         <div class="sidebar-divider"></div>
-        <div class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
+        <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-export-logs" aria-selected="false" data-panel="panel-export-logs">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
@@ -798,25 +799,25 @@
 
         <!-- テキスト品質設定セクション -->
         <div class="settings-section">
-          <h3 class="settings-section-title">テキスト品質設定</h3>
+          <h3 class="settings-section-title" data-i18n="textQualityTitle">テキスト品質設定</h3>
 
           <!-- 冗長除去 -->
           <div class="form-group">
-            <label>入力の冗長センテンスを除去</label>
+            <label data-i18n="dedupLabel">入力の冗長センテンスを除去</label>
             <div class="mb-8">
               <input type="checkbox" id="content-dedup-enabled" checked>
-              <label for="content-dedup-enabled" class="inline-label">
+              <label for="content-dedup-enabled" class="inline-label" data-i18n="dedupDesc">
                 Jaccard類似度で重複センテンスを検出し除去します（MMR的Redundancy Reduction）。
               </label>
             </div>
             <div id="contentDedupThresholdGroup" class="mb-8">
               <label for="content-dedup-threshold">
-                類似度閾値: <span id="contentDedupThresholdValue">0.7</span>
+                <span data-i18n="dedupThresholdLabel">類似度閾値:</span> <span id="contentDedupThresholdValue">0.7</span>
               </label>
               <input type="range" id="content-dedup-threshold"
                 min="0.5" max="0.95" step="0.05" value="0.7"
                 aria-describedby="contentDedupThresholdDesc">
-              <div class="help-text" id="contentDedupThresholdDesc">
+              <div class="help-text" id="contentDedupThresholdDesc" data-i18n="dedupThresholdDesc">
                 低い値ほど多く除去（0.5=緩い）、高い値ほど少なく除去（0.95=厳しい）。デフォルト: 0.7
               </div>
             </div>
@@ -824,10 +825,10 @@
 
           <!-- 文末正規化 -->
           <div class="form-group">
-            <label>日本語要約の文末をである調に統一</label>
+            <label data-i18n="normalizeLabel">日本語要約の文末をである調に統一</label>
             <div class="mb-8">
               <input type="checkbox" id="summary-normalize-enabled" checked>
-              <label for="summary-normalize-enabled" class="inline-label">
+              <label for="summary-normalize-enabled" class="inline-label" data-i18n="normalizeDesc">
                 「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。
               </label>
             </div>
@@ -2019,7 +2020,7 @@
     aria-labelledby="importConfirmTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="importConfirmTitle" data-i18n="confirmImport">Import Settings</h3>
+        <h3 id="importConfirmTitle" data-i18n="confirmImportTitle">Import Settings</h3>
         <button id="closeImportModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
       </div>
       <div class="modal-body">

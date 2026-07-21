@@ -4381,3 +4381,34 @@ details[open] > .priority-details-summary {
 .section-spaced {
   margin-top: var(--space-4, 16px);
 }
+
+/* Responsive: narrow viewports */
+@media (max-width: 480px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    flex-shrink: 0;
+    padding: 8px;
+  }
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .sidebar-nav-btn {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+  .sidebar-section-label,
+  .sidebar-divider {
+    display: none;
+  }
+  .main-content {
+    padding: 8px;
+  }
+  .form-group {
+    margin-bottom: 12px;
+  }
+}

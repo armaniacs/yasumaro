@@ -871,13 +871,19 @@ input[type="checkbox"]:focus {
 }
 
 /* Native <dialog>-based modal (M21): showModal()/close() handle backdrop,
-   focus trapping, and ESC — no JS-managed overlay or focusTrapManager needed. */
+   focus trapping, and ESC — no JS-managed overlay or focusTrapManager needed.
+   width/margin are explicit because UA auto-centering shrink-to-fits the
+   dialog box, which fights with .modal-content's `width: 90%` and can drift
+   off-center. max-height is capped to the popup viewport so overly tall
+   modal content scrolls within .modal-body instead of overflowing invisibly. */
 .modal-dialog {
   border: none;
   padding: 0;
+  margin: auto;
   background: transparent;
-  max-width: none;
-  max-height: none;
+  width: 90%;
+  max-width: 550px;
+  max-height: 90vh;
 }
 
 .modal-dialog::backdrop {
@@ -886,6 +892,8 @@ input[type="checkbox"]:focus {
 }
 
 .modal-dialog .modal-content {
+  width: 100%;
+  max-height: 90vh;
   transform: none;
 }
 
@@ -2494,4 +2502,18 @@ label.inline-label {
 
 .wizard-step h2 {
   margin-bottom: 0;
+}
+
+/* Responsive: narrow viewports */
+@media (max-width: 480px) {
+  .popup-container {
+    padding: 8px;
+  }
+  button, .btn, input[type="button"] {
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+  input[type="text"], input[type="number"], select, textarea {
+    font-size: 16px;
+  }
 }

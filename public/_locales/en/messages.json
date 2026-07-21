@@ -824,7 +824,7 @@
   "testGistConnection": {
     "message": "Test Connection"
   },
-  "confirmImport": {
+  "confirmImportTitle": {
     "message": "Import Settings"
   },
   "confirmImportDesc": {
@@ -2657,6 +2657,60 @@
   "note_ai_timeout": {
     "message": "Leave blank for auto (local LLM: 120s / cloud AI: 30s). Set a higher value for slow models like LM Studio or Ollama."
   },
+  "aiUsageControlsSection": {
+    "message": "AI Usage Controls"
+  },
+  "label_max_monthly_tokens": {
+    "message": "Monthly Token Limit (0 = unlimited)"
+  },
+  "note_max_monthly_tokens": {
+    "message": "Enter 0 for unlimited. AI summary requests will be blocked when this limit is reached."
+  },
+  "maxMonthlyTokensError": {
+    "message": "Monthly token limit must be 0 or greater"
+  },
+  "label_ai_rate_limit_max": {
+    "message": "AI Rate Limit (requests/min)"
+  },
+  "note_ai_rate_limit_max": {
+    "message": "Number of AI requests allowed per minute. Higher values may increase API costs."
+  },
+  "aiRateLimitMaxError": {
+    "message": "AI rate limit must be between 1 and 60"
+  },
+  "label_openai_content_chars": {
+    "message": "OpenAI Max Content Characters"
+  },
+  "openaiContentCharsError": {
+    "message": "OpenAI content characters must be between 1,000 and 100,000"
+  },
+  "label_gemini_content_chars": {
+    "message": "Gemini Max Content Characters"
+  },
+  "geminiContentCharsError": {
+    "message": "Gemini content characters must be between 1,000 and 100,000"
+  },
+  "externalEndpointControlsSection": {
+    "message": "External Endpoints"
+  },
+  "label_obsidian_host": {
+    "message": "Obsidian Host"
+  },
+  "note_obsidian_host": {
+    "message": "Hostname for the Obsidian Local REST API (e.g., 127.0.0.1, localhost, WSL2 IP)."
+  },
+  "obsidianHostError": {
+    "message": "Obsidian host contains invalid characters"
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API Version"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API version (v1 or v1beta)."
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API version must be in the form v1 or v1beta"
+  },
   "error_max_tokens_range": {
     "message": "Please enter a value between 10 and 16,000 tokens"
   },
@@ -3339,5 +3393,49 @@
   "clearAllFilters": {
     "message": "Clear filters",
     "description": "Button label to clear all active filters (search, date, tag)"
+  },
+  "triggerTabClose": {
+    "message": "When tab is closed",
+    "description": "Recording trigger label: record when the tab is closed"
+  },
+  "triggerTabCloseDesc": {
+    "message": "Record when the tab is closed",
+    "description": "Recording trigger description: record when the tab is closed"
+  },
+  "dashboardTitle": {
+    "message": "Yasumaro Dashboard",
+    "description": "Dashboard page title"
+  },
+  "popupTitle": {
+    "message": "Yasumaro",
+    "description": "Popup page title"
+  },
+  "textQualityTitle": {
+    "message": "Text Quality Settings",
+    "description": "Section title for text quality settings"
+  },
+  "dedupLabel": {
+    "message": "Remove redundant sentences from input",
+    "description": "Label for dedup feature"
+  },
+  "dedupDesc": {
+    "message": "Detects and removes duplicate sentences using Jaccard similarity (MMR Redundancy Reduction).",
+    "description": "Description for dedup feature"
+  },
+  "dedupThresholdLabel": {
+    "message": "Similarity threshold:",
+    "description": "Label for dedup threshold slider"
+  },
+  "dedupThresholdDesc": {
+    "message": "Lower values remove more (0.5=loose), higher values remove less (0.95=strict). Default: 0.7",
+    "description": "Help text for dedup threshold slider"
+  },
+  "normalizeLabel": {
+    "message": "Normalize Japanese sentence endings to plain form",
+    "description": "Label for normalization feature"
+  },
+  "normalizeDesc": {
+    "message": "Converts polite form to plain form (desu→da, mashita→ta, teimasu→teiru, teimashita→teita, deshou→darou).",
+    "description": "Description for normalization feature"
   }
 }

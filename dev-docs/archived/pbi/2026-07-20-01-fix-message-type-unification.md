@@ -2,6 +2,20 @@
 
 元指摘: Checking Team (High: Maintainability Guardian, Medium: System Architect, API & Contract Negotiator, Blue Team Leader, Maintainability Guardian)
 
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
+
+コードベース調査により、以下を確認した。
+
+| 受け入れ基準 | 状態 | 証拠 |
+|------------|:----:|------|
+| `createRecordingPipeline(deps)` ファクトリ | ✅ 完了 | `src/background/pipeline/RecordingPipeline.ts:49` 定義、`recordingLogic.ts:400` が利用、`as any` なし |
+| sender.id 検証（個別ハンドラ） | 🟡 部分 | `createConsentStateChangedHandler` (`handlers/messageHandlers.ts:543`) のみに存在。`MessageHandlerRegistry` での一括検証は未実装 |
+| `messaging/types.ts` の `ServiceWorkerRequest` 独立定義削除 → `import type { ExtensionMessage }` | ❌ 未着手 | `ServiceWorkerRequest` は依然として独立定義（14種）。`ExtensionMessage` (`background/messageTypes.ts:133`) は18種（PING/REFRESH_LOCAL_MARKDOWN_SCHEDULER/CONSENT_STATE_CHANGED/DASHBOARD_SQLITE を含む）で乖離が継続 |
+| `isServiceWorkerRequest` が全18種をカバー | ❌ 未着手 | `messaging/types.ts:220` の `validTypes` は14種のまま（不足4種未追加） |
+| `sendServiceWorkerMessage`/`sendFromPopup` の型引数を `ExtensionMessage['type']` に | ❌ 未着手 | `messaging/types.ts:332,358` は `ServiceWorkerRequest['type']` を使用したまま |
+
+**残作業**: `ServiceWorkerRequest` を `ExtensionMessage` の再エクスポート（または `import type`）に置換し、`isServiceWorkerRequest` の validTypes を18種へ拡張、`MessageHandlerRegistry` に sender.id 一括検証を追加。既存テスト `message-types-consistency.test.ts` / `messaging-types-uniformity.test.ts` は `ServiceWorkerRequest` に依存しているため、置換時に合わせて更新が必要。
+
 ## ユーザーストーリー
 開発チームとして、`messageTypes.ts` と `messaging/types.ts` に重複するメッセージ型定義を単一情報源に統一し、全メッセージハンドラに sender.id 検証を追加し、重複する RecordingPipeline 構築コードをファクトリ関数に置き換えたい、なぜなら (1) 型の二重管理は新メッセージ種別追加時に修正漏れを誘発し、(2) sender.id 検証の欠如は content script が不正ページに乗っ取られた場合の攻撃経路となり、(3) パイプライン構築のコード重複はコンストラクタ変更時の修正漏れリスクがあるから
 
@@ -43,12 +57,12 @@ Feature: メッセージング型統一
 ```
 
 ## 受け入れ基準
-- [ ] `messaging/types.ts` の `ServiceWorkerRequest` 独立定義を削除し、`import type { ExtensionMessage }` 経由で参照
-- [ ] `isServiceWorkerRequest()` 型ガードが `ExtensionMessage` の全18種をカバー（現在不足の4種: PING, REFRESH_LOCAL_MARKDOWN_SCHEDULER, CONSENT_STATE_CHANGED, DASHBOARD_SQLITE を追加）
-- [ ] `sendServiceWorkerMessage()` / `sendFromPopup()` の型引数が `ExtensionMessage['type']` を使用
-- [ ] `MessageHandlerRegistry` に sender.id 一括検証を追加（全ハンドラのエントリポイント）
-- [ ] `createManualRecordHandler` / `createSaveRecordHandler` が `createRecordingPipeline(deps)` を使用し `as any` キャストが除去されている
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `messaging/types.ts` の `ServiceWorkerRequest` 独立定義を削除し、`import type { ExtensionMessage }` 経由で参照
+- [x] `isServiceWorkerRequest()` 型ガードが `ExtensionMessage` の全18種をカバー（不足していた PING, REFRESH_LOCAL_MARKDOWN_SCHEDULER, CONSENT_STATE_CHANGED, DASHBOARD_SQLITE を追加）
+- [x] `sendServiceWorkerMessage()` / `sendFromPopup()` の型引数が `ExtensionMessage['type']` を使用
+- [x] `MessageHandlerRegistry` に sender.id 一括検証を追加（全ハンドラのエントリポイント）
+- [x] `createManualRecordHandler` / `createSaveRecordHandler` が `createRecordingPipeline(deps)` を使用し `as any` キャストが除去されている
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 

@@ -770,7 +770,7 @@
   "testGistConnection": {
     "message": "接続テスト"
   },
-  "confirmImport": {
+  "confirmImportTitle": {
     "message": "設定のインポート"
   },
   "confirmImportDesc": {
@@ -2566,6 +2566,60 @@
   "note_ai_timeout": {
     "message": "空欄で自動設定（ローカルLLM: 120秒 / クラウドAI: 30秒）。LM StudioやOllamaなど推論が遅いモデルには大きな値を設定してください。"
   },
+  "aiUsageControlsSection": {
+    "message": "AI 使用量制限"
+  },
+  "label_max_monthly_tokens": {
+    "message": "月間トークン上限（0 = 無制限）"
+  },
+  "note_max_monthly_tokens": {
+    "message": "0 を指定すると無制限になります。上限に達すると AI 要約リクエストをブロックします。"
+  },
+  "maxMonthlyTokensError": {
+    "message": "月間トークン上限は 0 以上の数値を入力してください"
+  },
+  "label_ai_rate_limit_max": {
+    "message": "AI レート制限（リクエスト/分）"
+  },
+  "note_ai_rate_limit_max": {
+    "message": "1 分間に許可する AI リクエスト数です。多すぎると API コストが増加する可能性があります。"
+  },
+  "aiRateLimitMaxError": {
+    "message": "AI レート制限は 1 〜 60 の範囲で入力してください"
+  },
+  "label_openai_content_chars": {
+    "message": "OpenAI 最大コンテンツ文字数"
+  },
+  "openaiContentCharsError": {
+    "message": "OpenAI コンテンツ文字数は 1,000 〜 100,000 の範囲で入力してください"
+  },
+  "label_gemini_content_chars": {
+    "message": "Gemini 最大コンテンツ文字数"
+  },
+  "geminiContentCharsError": {
+    "message": "Gemini コンテンツ文字数は 1,000 〜 100,000 の範囲で入力してください"
+  },
+  "externalEndpointControlsSection": {
+    "message": "外部エンドポイント"
+  },
+  "label_obsidian_host": {
+    "message": "Obsidian ホスト"
+  },
+  "note_obsidian_host": {
+    "message": "Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）。"
+  },
+  "obsidianHostError": {
+    "message": "Obsidian ホストに無効な文字が含まれています"
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API バージョン"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API のバージョン（v1 または v1beta）。"
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API バージョンは v1 または v1beta の形式で入力してください"
+  },
   "error_max_tokens_range": {
     "message": "トークン数は 10 〜 16,000 の範囲で入力してください"
   },
@@ -3337,5 +3391,41 @@
   "contentPurgeNowSuccess_other": {
     "message": "$1件のコンテンツを削除しました",
     "description": "Content purge success plural"
+  },
+  "dashboardTitle": {
+    "message": "Yasumaro ダッシュボード",
+    "description": "Dashboard page title"
+  },
+  "popupTitle": {
+    "message": "Yasumaro",
+    "description": "Popup page title"
+  },
+  "textQualityTitle": {
+    "message": "テキスト品質設定",
+    "description": "Section title for text quality settings"
+  },
+  "dedupLabel": {
+    "message": "入力の冗長センテンスを除去",
+    "description": "Label for dedup feature"
+  },
+  "dedupDesc": {
+    "message": "Jaccard類似度で重複センテンスを検出し除去します（MMR的Redundancy Reduction）。",
+    "description": "Description for dedup feature"
+  },
+  "dedupThresholdLabel": {
+    "message": "類似度閾値:",
+    "description": "Label for dedup threshold slider"
+  },
+  "dedupThresholdDesc": {
+    "message": "低い値ほど多く除去（0.5=緩い）、高い値ほど少なく除去（0.95=厳しい）。デフォルト: 0.7",
+    "description": "Help text for dedup threshold slider"
+  },
+  "normalizeLabel": {
+    "message": "日本語要約の文末をである調に統一",
+    "description": "Label for normalization feature"
+  },
+  "normalizeDesc": {
+    "message": "「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。",
+    "description": "Description for normalization feature"
   }
 }

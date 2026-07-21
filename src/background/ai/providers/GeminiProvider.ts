@@ -6,11 +6,11 @@
 import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls, Settings } from '../../../utils/storage.js';
+import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
     candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
@@ -44,6 +44,12 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, summary: "Error: API key is missing. Please check your settings." };
         }
 
+        // 月次ハードリミットチェック
+        const hardLimit = await checkHardLimit();
+        if (hardLimit.blocked) {
+            return { success: false, summary: `Error: ${hardLimit.message}` };
+        }
+
         // 使用量警告チェック
         const usageWarning = await checkUsageWarning();
         if (usageWarning.warning) {
@@ -57,8 +63,10 @@ export class GeminiProvider extends AIProviderStrategy {
         }
 
         const cleanModelName = this.model.replace(/^models\//, '');
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModelName}:generateContent`;
-        const truncatedContent = content.substring(0, 30000);
+        const apiVersion = this._getApiVersion();
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${cleanModelName}:generateContent`;
+        const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
+        const truncatedContent = content.substring(0, maxContentChars);
 
         // プロンプトインジェクション対策 - コンテンツのサニタイズ
         const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
@@ -120,12 +128,20 @@ export class GeminiProvider extends AIProviderStrategy {
         }
     }
 
+    private _getApiVersion(): string {
+        const version = (this.settings[StorageKeys.GEMINI_API_VERSION] as string | undefined)?.trim();
+        if (version && /^(v\d+([a-z]+)?)$/.test(version)) {
+            return version;
+        }
+        return 'v1beta';
+    }
+
     async testConnection(): Promise<AIProviderConnectionResult> {
         if (!this.apiKey) {
             return { success: false, message: 'Gemini API Key is not set.' };
         }
 
-        const testUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models`;
 
         // BaseUrl SSRF対策 - テストURLの検証
         try {
@@ -202,16 +218,29 @@ export class GeminiProvider extends AIProviderStrategy {
     }
 
     private async _extractSummary(data: GeminiApiResponse): Promise<AISummaryResult> {
-        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            const summary = data.candidates[0].content.parts[0].text;
-            const sentTokens = data.usageMetadata?.promptTokenCount || 0;
-            const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
-
-            // トークン使用量を記録
-            await recordUsage(sentTokens, receivedTokens);
-
-            return { success: true, summary, sentTokens, receivedTokens };
+        if (!data.candidates || data.candidates.length === 0) {
+            const error = 'Gemini schema validation failed: candidates is missing or empty';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
-        return { success: true, summary: "No summary generated." };
+        if (!data.candidates[0].content) {
+            const error = 'Gemini schema validation failed: candidates[0].content is missing';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+        }
+        const parts = data.candidates[0].content.parts;
+        if (!parts || parts.length === 0 || typeof parts[0].text !== 'string') {
+            const error = 'Gemini schema validation failed: candidates[0].content.parts[0].text is not a string';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+        }
+        const summary = parts[0].text;
+        const sentTokens = data.usageMetadata?.promptTokenCount || 0;
+        const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
+
+        // トークン使用量を記録
+        await recordUsage(sentTokens, receivedTokens);
+
+        return { success: true, summary, sentTokens, receivedTokens };
     }
 }

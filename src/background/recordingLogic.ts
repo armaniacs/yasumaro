@@ -15,6 +15,7 @@ import type { RecordingResult } from '../messaging/types.js';
 
 // RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
 import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
+import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -401,7 +402,8 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
       getPrivacyInfoWithCache: this.getPrivacyInfoWithCache.bind(this),
       obsidian: this.obsidian,
       aiService: this.aiService,
-      sqliteClient: this.sqliteClient
+      sqliteClient: this.sqliteClient,
+      offlineNetworkQueue: sharedOfflineNetworkQueue,
     });
 
     // Get settings with cache

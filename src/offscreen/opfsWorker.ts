@@ -87,6 +87,10 @@ async function initSqlite(): Promise<void> {
 async function initSqliteInner(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
+  // Enable WAL mode before any schema/migration operations for journal consistency
+  // (mirrors sqliteEngineContext.ts IDB path; without this, concurrent access
+  // suffers read/write blocking and the checkpoint below is a no-op).
+  await engine.exec('PRAGMA journal_mode=WAL;');
   await engine.exec(SCHEMA_SQL);
   await engine.exec(AUDIT_LOG_SCHEMA_SQL);
 
@@ -231,7 +235,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   const {
     limit = 20, offset = 0, since, until, domain,
     isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tagFilter,
+    tagFilter, gistSynced,
   } = payload;
 
   // Validate sort columns
@@ -248,6 +252,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
   if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
+  if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
   if (ids !== undefined && ids.length > 0) {
     conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
     params.push(...ids);
@@ -353,12 +358,11 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
   if (!engine) await initSqlite();
   let inserted = 0;
   try {
-    await sqlExec('BEGIN');
+    await sqlExec('BEGIN IMMEDIATE');
     for (const record of records) {
       try {
         const domain = record.domain || extractDomain(record.url);
         await sqlExec(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-        inserted++;
       } catch (err) {
         // Log first error for diagnosis, silently skip the rest
         if (inserted === 0 && records.indexOf(record) === 0) {
@@ -367,8 +371,11 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
       }
     }
     await sqlExec('COMMIT');
-    // M10: use local counter instead of per-row SELECT changes() (O(n) → O(1))
-    // NOTE: local counter may overcount with INSERT OR IGNORE but is sufficient for logging
+    // Use a single post-COMMIT changes() call for an accurate inserted-row count
+    // (INSERT OR IGNORE makes a local counter unreliable).
+    await sqlQuery('SELECT changes() AS c', [], (row) => {
+      inserted = Number(row.c);
+    });
   } catch (err) {
     await sqlExec('ROLLBACK');
     console.error('OPFS Worker: insertBatch transaction failed:', err);
@@ -433,30 +440,40 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
   const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
   let totalPurged = 0;
 
-  // Delete old non-starred records
-  await sqlExec(
-    'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-    [cutoffMs]
-  );
+  try {
+    await sqlExec('BEGIN IMMEDIATE');
 
-  // Get change count via query
-  await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
-
-  // If still over max, delete oldest non-starred records
-  let count = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
-
-  if (count > maxRecords) {
-    const toDelete = count - maxRecords;
+    // Delete old non-starred records
     await sqlExec(
-      `DELETE FROM browsing_logs WHERE id IN (
-         SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-         ORDER BY created_at ASC LIMIT ?
-       )`,
-      [toDelete]
+      'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
+      [cutoffMs]
     );
-    // Use actual change count from SQLite
-    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+
+    // Get change count via query
+    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
+
+    // If still over max, delete oldest non-starred records
+    let count = 0;
+    await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
+
+    if (count > maxRecords) {
+      const toDelete = count - maxRecords;
+      await sqlExec(
+        `DELETE FROM browsing_logs WHERE id IN (
+           SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
+           ORDER BY created_at ASC LIMIT ?
+         )`,
+        [toDelete]
+      );
+      // Use actual change count from SQLite
+      await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+    }
+
+    await sqlExec('COMMIT');
+  } catch (err) {
+    await sqlExec('ROLLBACK');
+    console.error('OPFS Worker: purge transaction failed:', err);
+    throw err;
   }
 
   return { purged: totalPurged };

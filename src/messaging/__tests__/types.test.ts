@@ -140,7 +140,7 @@ describe('messaging/types: isServiceWorkerRequest', () => {
     });
 
     it('returns true for no-payload type with undefined payload', () => {
-        expect(isServiceWorkerRequest({ type: 'SAVE_RECORD', payload: undefined })).toBe(true);
+        expect(isServiceWorkerRequest({ type: 'GET_PRIVACY_CACHE', payload: undefined })).toBe(true);
     });
 
     it('returns true for no-payload type without payload property', () => {
@@ -177,13 +177,49 @@ describe('messaging/types: isServiceWorkerRequest', () => {
 
     it('handles all no-payload types correctly', () => {
         const noPayloadTypes = [
-            'CHECK_DOMAIN', 'GET_CONTENT', 'SAVE_RECORD',
-            'TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI',
+            'CHECK_DOMAIN', 'GET_CONTENT',
+            'TEST_CONNECTIONS', 'TEST_AI',
             'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST',
+            'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED',
         ];
         noPayloadTypes.forEach((type) => {
             expect(isServiceWorkerRequest({ type })).toBe(true);
             expect(isServiceWorkerRequest({ type, payload: {} })).toBe(false);
+        });
+    });
+
+    it('accepts optional payload for TEST_OBSIDIAN', () => {
+        expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN' })).toBe(true);
+        expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN', payload: { apiKey: 'key' } })).toBe(true);
+        expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN', payload: 'key' })).toBe(false);
+    });
+
+    it('accepts optional payload for DASHBOARD_SQLITE', () => {
+        expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE' })).toBe(true);
+        expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: { query: 'SELECT 1' } })).toBe(true);
+        expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: 'query' })).toBe(false);
+    });
+
+    it('covers all ExtensionMessage types', () => {
+        const allTypes = [
+            'VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL',
+            'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS',
+            'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE',
+            'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED',
+            'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED',
+            'DASHBOARD_SQLITE',
+        ] as const;
+        const payloadForType: Partial<Record<typeof allTypes[number], unknown>> = {
+            VALID_VISIT: { content: 'hi' },
+            FETCH_URL: { url: 'https://example.com' },
+            MANUAL_RECORD: { title: 't', url: 'u', content: 'c' },
+            PREVIEW_RECORD: { title: 't', url: 'u', content: 'c' },
+            SAVE_RECORD: { title: 't', url: 'u', content: 'c' },
+            CONTENT_CLEANSING_EXECUTED: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 },
+        };
+        allTypes.forEach((type) => {
+            const payload = payloadForType[type];
+            expect(isServiceWorkerRequest({ type, payload })).toBe(true);
         });
     });
 });

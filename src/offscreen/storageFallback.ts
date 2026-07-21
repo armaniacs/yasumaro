@@ -131,6 +131,9 @@ export class FallbackStorage {
       if (options.until !== undefined) {
         filtered = filtered.filter(r => r.created_at <= options.until!);
       }
+      if (options.gistSynced !== undefined) {
+        filtered = filtered.filter(r => r.gist_synced === options.gistSynced);
+      }
 
       const total = filtered.length;
 

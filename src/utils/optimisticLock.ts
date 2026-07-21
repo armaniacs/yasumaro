@@ -6,21 +6,10 @@
 
 import { logDebug } from './logger.js';
 
-interface ConflictStats {
-    totalAttempts: number;
-    totalConflicts: number;
-    totalFailures: number;
-}
 
 // グローバル定数
 const INITIAL_VERSION = 0;
 
-// 競合統計情報（グローバル状態）
-let conflictStats: ConflictStats = {
-    totalAttempts: 0,
-    totalConflicts: 0,
-    totalFailures: 0
-};
 
 /**
  * 楽観的ロックの競合検出時にスローされるエラー
@@ -68,8 +57,6 @@ export async function withOptimisticLock<T>(
     let lastError: Error | null = null;
 
     while (attemptCount <= maxRetries) {
-        conflictStats.totalAttempts++;
-
         try {
             // Step 1: 現在の値とバージョンを読み込み
             const result = await chrome.storage.local.get([key, `${key}_version`]);
@@ -92,7 +79,6 @@ export async function withOptimisticLock<T>(
 
             // ConflictError以外は即座に失敗
             if (!(error instanceof ConflictError)) {
-                conflictStats.totalFailures++;
                 logDebug('withOptimisticLock error', { error: err.message, stack: err.stack }, 'optimisticLock.ts');
                 throw error;
             }
@@ -100,7 +86,6 @@ export async function withOptimisticLock<T>(
             // リトライ回数を超えた場合は失敗
             attemptCount++;
             if (attemptCount > maxRetries) {
-                conflictStats.totalFailures++;
                 throw new ConflictError(key, -1, -1);
             }
 
@@ -145,7 +130,6 @@ async function performCasUpdate<T>(
 
     // バージョンと値の両方を検証（値の比較は可能な場合のみ）
     if (verifyVersion !== currentVersion) {
-        conflictStats.totalConflicts++;
         throw new ConflictError(key, currentVersion, verifyVersion);
     }
 
@@ -156,7 +140,6 @@ async function performCasUpdate<T>(
         typeof currentValue !== 'object' &&
         currentValue !== verifyValue
     ) {
-        conflictStats.totalConflicts++;
         throw new ConflictError(key, currentVersion, verifyVersion);
     }
 
@@ -184,7 +167,6 @@ async function performCasUpdate<T>(
         const valueMatches = JSON.stringify(postWriteValue) === JSON.stringify(newValue);
 
         if (!versionMatches || !valueMatches) {
-            conflictStats.totalConflicts++;
             throw new ConflictError(key, newVersion, postWriteVersion);
         }
     }
@@ -197,22 +179,3 @@ export function enablePostWriteVerification(): void {
 
 let _postWriteVerificationEnabled = false;
 
-/**
- * 現在の競合統計を取得
- *
- * @returns {ConflictStats}
- */
-export function getConflictStats(): ConflictStats {
-    return { ...conflictStats };
-}
-
-/**
- * 競合統計をリセット（テスト用）
- */
-export function resetConflictStats(): void {
-    conflictStats = {
-        totalAttempts: 0,
-        totalConflicts: 0,
-        totalFailures: 0
-    };
-}

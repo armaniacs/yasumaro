@@ -65,6 +65,8 @@ import type {
 } from './handlers/messageHandlers.js';
 import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
+import { sharedOfflineNetworkQueue, type OfflineJob } from './offlineNetworkQueue.js';
+import type { RecordingData } from '../messaging/types.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 
 // ============================================================================
@@ -110,6 +112,7 @@ export function init(): void {
     initializeSessionAlarms();
 
     chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
+    chrome.alarms.create('yasumaro-offline-network-retry', { periodInMinutes: 5 });
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
     (async () => {
@@ -150,6 +153,7 @@ async function runMigration(): Promise<void> {
 
 // Session store for cross-SW-restart persistence
 const sessionStore = new SessionStore();
+SessionStore.registerSuspendHandler(sessionStore);
 
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
 let CONFIRM_TOKEN: string | null = null;
@@ -412,6 +416,36 @@ export const handleDashboardSqlite = ((message: Record<string, unknown>, sender:
 registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
 
 // ============================================================================
+// Offline Network Queue Retry
+// ============================================================================
+
+async function processOfflineNetworkQueue(): Promise<void> {
+  await sharedOfflineNetworkQueue.retryAll(async (job: OfflineJob) => {
+    const payload = job.payload as {
+      title: string;
+      url: string;
+      content: string;
+      summary?: string;
+      maskedCount?: number;
+      tags?: string[];
+    };
+    try {
+      const result = await recordingLogic.record({
+        title: payload.title,
+        url: payload.url,
+        content: payload.content,
+        force: true,
+        skipDuplicateCheck: true,
+        recordType: 'manual',
+      } as RecordingData);
+      return result.success && !result.skipped;
+    } catch {
+      return false;
+    }
+  });
+}
+
+// ============================================================================
 // Message Handler (wraps registry with validation)
 // ============================================================================
 
@@ -599,6 +633,9 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
               const { flushBufferedExports } = await import('./localMarkdownExportCore.js');
               void flushBufferedExports();
             })();
+          }
+          if (alarm.name === 'yasumaro-offline-network-retry') {
+            void processOfflineNetworkQueue();
           }
     });
 }

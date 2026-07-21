@@ -35,6 +35,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     storage.StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
+      OBSIDIAN_HOST: 'OBSIDIAN_HOST',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
       OBSIDIAN_DAILY_PATH: 'OBSIDIAN_DAILY_PATH'
     };
@@ -511,9 +512,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         global.fetch = vi.fn((_, opts: RequestInit) =>
           new Promise((_, reject) => {
             opts.signal?.addEventListener('abort', () => {
-              const err = new Error('The operation was aborted.');
-              err.name = 'AbortError';
-              reject(err);
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
             });
           })
         );
