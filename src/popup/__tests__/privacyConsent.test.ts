@@ -10,7 +10,8 @@ import {
     requireConsent,
     migrateLegacyPrivacyConsent,
     withdrawPrivacyConsent,
-    getConsentWithdrawalHistory
+    getConsentWithdrawalHistory,
+    PRIVACY_POLICY_VERSION
 } from '../privacyConsent.js';
 
 // Mock global.crypto for Web Crypto API polyfill
@@ -75,12 +76,12 @@ describe('getPrivacyConsent', () => {
         storageMock['privacy_consent'] = {
             hasConsented: true,
             consentDate: '2026-01-01T00:00:00.000Z',
-            consentVersion: '2026-02-23'
+            consentVersion: PRIVACY_POLICY_VERSION
         };
         const state = await getPrivacyConsent();
         expect(state.hasConsented).toBe(true);
         expect(state.consentDate).toBe('2026-01-01T00:00:00.000Z');
-        expect(state.consentVersion).toBe('2026-02-23');
+        expect(state.consentVersion).toBe(PRIVACY_POLICY_VERSION);
     });
 
     it('バージョン不一致の場合は hasConsented: false を返す', async () => {
@@ -149,7 +150,7 @@ describe('savePrivacyConsent', () => {
 
 describe('hasPrivacyConsent', () => {
     it('同意済みの場合は true', async () => {
-        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: '2026-02-23' };
+        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: PRIVACY_POLICY_VERSION };
         const result = await hasPrivacyConsent();
         expect(result).toBe(true);
     });
@@ -168,7 +169,7 @@ describe('hasPrivacyConsent', () => {
 
 describe('requireConsent', () => {
     it('同意済みの場合はエラーを投げない', async () => {
-        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: '2026-02-23' };
+        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: PRIVACY_POLICY_VERSION };
         await expect(requireConsent()).resolves.not.toThrow();
     });
 

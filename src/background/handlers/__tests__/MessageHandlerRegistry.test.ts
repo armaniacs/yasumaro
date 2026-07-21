@@ -8,6 +8,34 @@ describe('MessageHandlerRegistry', () => {
     registry = new MessageHandlerRegistry();
   });
 
+  test('rejects message from invalid sender when runtimeId is set', () => {
+    const handler = vi.fn();
+    registry = new MessageHandlerRegistry('valid-extension-id');
+    registry.register('VALID_VISIT' as any, handler);
+
+    const sendResponse = vi.fn();
+    const sender = { id: 'invalid-extension-id' } as chrome.runtime.MessageSender;
+    const result = registry.dispatch('VALID_VISIT' as any, { type: 'VALID_VISIT' }, sender, sendResponse);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Invalid sender' });
+    expect(result).toBe(false);
+  });
+
+  test('accepts message from valid sender when runtimeId is set', () => {
+    const handler = vi.fn();
+    const runtimeId = 'valid-extension-id';
+    registry = new MessageHandlerRegistry(runtimeId);
+    registry.register('VALID_VISIT' as any, handler);
+
+    const sendResponse = vi.fn();
+    const sender = { id: runtimeId } as chrome.runtime.MessageSender;
+    const result = registry.dispatch('VALID_VISIT' as any, { type: 'VALID_VISIT' }, sender, sendResponse);
+
+    expect(handler).toHaveBeenCalledWith({ type: 'VALID_VISIT' }, sender, sendResponse);
+    expect(result).toBe(true);
+  });
+
   test('register and dispatch a handler', () => {
     const handler = vi.fn();
     registry.register('VALID_VISIT' as any, handler);

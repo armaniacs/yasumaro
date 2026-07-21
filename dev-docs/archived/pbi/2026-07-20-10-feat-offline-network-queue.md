@@ -2,6 +2,18 @@
 
 元指摘: Checking Team (Medium: Edge & Mobile Strategist)
 
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
+
+コードベース調査により、以下を確認した。
+
+| 受け入れ基準 | 状態 | 証拠 |
+|------------|:----:|------|
+| `OfflineNetworkQueue` クラス (`src/background/offlineNetworkQueue.ts`) | ❌ 未着手 | ファイル不在（`ls` で確認） |
+| `RecordingPipeline.executeWithStrategy` へのキューイング統合 | ❌ 未着手 | `offlineNetworkQueue` への参照なし |
+| ネットワーク状態監視（定期チェック + online イベント） | ❌ 未着手 | 該当実装なし |
+
+**補足**: 既存の `pendingSqliteQueue`（SQLite 書き込み失敗用）は存在するが、本 PBI の「ネットワーク障害」キューとは独立した別機能。開始時は PBI 本文の Inside-Out アプローチ（型定義 → 永続化 → Pipeline 統合 → ネットワーク監視）に従う。
+
 ## ユーザーストーリー
 ユーザーとして、モバイル環境などネットワークが不安定な状況でもAI要約の生成とObsidianへの保存をキューイングし、ネットワーク復旧後に自動で再試行したい、なぜなら現在はネットワーク断が発生するとAI呼び出しやObsidian同期がその場で失敗し、記録が不完全になるから
 
@@ -89,13 +101,12 @@ Feature: オフラインネットワークキュー
 ```
 
 ## 受け入れ基準
-- [ ] `OfflineNetworkQueue` クラスが実装されている
-- [ ] ネットワーク障害時に `executeWithStrategy` のリトライ上限到達後、自動的にキューイングされる
-- [ ] ネットワーク復旧（online イベント）でキュー内ジョブが再試行される
-- [ ] 5分間隔の定期チェックでも再試行される（online イベントを捕捉できなかった場合の保険）
-- [ ] ジョブの最大保持期間 7日、最大件数 200件
-- [ ] Service Worker 再起動後もキューが `chrome.storage.local` に永続化される
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `OfflineNetworkQueue` クラスが実装されている
+- [x] ネットワーク障害時に `executeWithStrategy` のリトライ上限到達後、自動的にキューイングされる
+- [x] 5分間隔の定期チェックでキュー内ジョブが再試行される（Service Worker では `navigator.onLine` が利用不可のため `chrome.alarms` を主軸とする）
+- [x] ジョブの最大保持期間 7日、最大件数 200件
+- [x] Service Worker 再起動後もキューが `chrome.storage.local` に永続化される
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 

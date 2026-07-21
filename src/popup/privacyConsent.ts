@@ -8,7 +8,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
 /** プライバシーポリシーバージョン定数 */
-export const PRIVACY_POLICY_VERSION = '2026-02-23';
+export const PRIVACY_POLICY_VERSION = '2026-06-20';
 
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {

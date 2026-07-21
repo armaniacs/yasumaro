@@ -7,6 +7,11 @@ export type MessageHandler = (
 
 export class MessageHandlerRegistry {
   private handlers = new Map<string, MessageHandler>();
+  private readonly runtimeId: string | undefined;
+
+  constructor(runtimeId?: string) {
+    this.runtimeId = runtimeId ?? (typeof chrome !== 'undefined' ? chrome.runtime?.id : undefined);
+  }
 
   register(type: string, handler: MessageHandler): void {
     if (this.handlers.has(type)) {
@@ -22,6 +27,12 @@ export class MessageHandlerRegistry {
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): boolean {
+    // Sender ID validation: reject messages from external extensions or unexpected senders.
+    if (this.runtimeId !== undefined && sender.id !== this.runtimeId) {
+      sendResponse({ success: false, error: 'Invalid sender' });
+      return false;
+    }
+
     const handler = this.handlers.get(type);
     if (!handler) {
       sendResponse({ success: false, error: `Unknown message type: ${type}` });

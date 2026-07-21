@@ -31,6 +31,7 @@ import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
+import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 
 /**
  * Dependencies required to build a RecordingPipeline instance.
@@ -40,6 +41,7 @@ export interface RecordingPipelineDeps {
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
+  offlineNetworkQueue?: OfflineNetworkQueue | null;
 }
 
 /**
@@ -51,7 +53,8 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
     deps.getPrivacyInfoWithCache,
     deps.obsidian,
     deps.aiService,
-    deps.sqliteClient
+    deps.sqliteClient,
+    deps.offlineNetworkQueue
   );
 }
 
@@ -70,17 +73,20 @@ export class RecordingPipeline {
   private obsidian: ObsidianClient;
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
+  private offlineNetworkQueue: OfflineNetworkQueue | null;
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
     obsidian: ObsidianClient,
     aiService: AIService | null = null,
-    sqliteClient: SqliteClient | null = null
+    sqliteClient: SqliteClient | null = null,
+    offlineNetworkQueue: OfflineNetworkQueue | null = null
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
     this.obsidian = obsidian;
     this.aiService = aiService;
     this.sqliteClient = sqliteClient;
+    this.offlineNetworkQueue = offlineNetworkQueue;
 
     // Define pipeline steps with their error strategies
     this.steps = [
@@ -289,8 +295,48 @@ export class RecordingPipeline {
           await delay(delayMs);
           continue;
         }
+
+        // Queue network-dependent steps for later retry when offline/retry limit is reached.
+        if (this.offlineNetworkQueue) {
+          await this.enqueueOfflineJob(step.name, context, error);
+        }
+
         throw error;
       }
+    }
+  }
+
+  private async enqueueOfflineJob(
+    stepName: string,
+    context: RecordingContext,
+    error: unknown
+  ): Promise<void> {
+    const type = stepName === 'saveObsidian' ? 'obsidian_sync' : 'ai_summary';
+    if (stepName !== 'saveObsidian' && stepName !== 'extractSentences' && stepName !== 'privacyPipeline') {
+      return;
+    }
+
+    const payload = {
+      title: context.data.title,
+      url: context.data.url,
+      content: context.data.content,
+      summary: context.privacyResult?.summary,
+      maskedCount: context.privacyResult?.maskedCount,
+      tags: context.privacyResult?.tags,
+    };
+
+    try {
+      await this.offlineNetworkQueue!.enqueue({ type, payload });
+      addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${stepName}`, {
+        url: context.data.url,
+        type,
+      });
+    } catch (enqueueError) {
+      addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
+        url: context.data.url,
+        type,
+        error: enqueueError instanceof Error ? enqueueError.message : String(enqueueError),
+      });
     }
   }
 

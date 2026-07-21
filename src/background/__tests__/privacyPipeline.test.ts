@@ -3,6 +3,7 @@ import { PrivacyPipeline } from '../privacyPipeline.js';
 import { vi } from 'vitest';
 import { addLog, LogType } from '../../utils/logger.js';
 import { StorageKeys } from '../../utils/storage.js';
+import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
 // Mock logger to capture addLog calls
 vi.mock('../../utils/logger.js', () => ({
@@ -62,12 +63,17 @@ describe('PrivacyPipeline', () => {
   };
 
   describe('process', () => {
+    beforeEach(() => {
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReset();
+      vi.restoreAllMocks();
+    });
+
     it('should process full pipeline (L1 -> L2 -> L3)', async () => {
       const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
 
       // Mock sanitizePromptContent for input and output of Local AI
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'Original content', warnings: [], dangerLevel: 'low' }) // L1 input
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' }) // L1 output
         .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' }); // L3 output
@@ -78,12 +84,45 @@ describe('PrivacyPipeline', () => {
       expect(result.maskedCount).toBe(1);
     });
 
+    it('masks PII before local AI summarization in full_pipeline mode', async () => {
+      const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
+
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({ sanitized: 'masked input', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' });
+
+      await pipeline.process('user@example.com confidential content');
+
+      expect(mockSanitizers.sanitizeRegex).toHaveBeenCalledWith('user@example.com confidential content');
+      expect(mockAiService.generateSummary).toHaveBeenCalledWith('masked input', expect.objectContaining({ mode: 'local_only' }));
+    });
+
+    it('masks PII before local AI in local_only mode', async () => {
+      const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
+      const mockLocalService = {
+        getSupportedModes: vi.fn().mockReturnValue(['local_only']),
+        generateSummary: vi.fn().mockResolvedValue({ summary: 'Local summary' }),
+      };
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'masked content', maskedItems: [{ type: 'email' }] }) };
+      const pipeline = new PrivacyPipeline(localOnlySettings, mockLocalService, sanitizers);
+
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({ sanitized: 'masked content', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
+
+      const result = await pipeline.process('user@example.com content');
+      expect(result.summary).toBe('Local summary');
+      expect(sanitizers.sanitizeRegex).toHaveBeenCalledWith('user@example.com content');
+      expect(mockLocalService.generateSummary).toHaveBeenCalledWith('masked content', expect.objectContaining({ mode: 'local_only' }));
+    });
+
     it('should return preview only when previewOnly is true', async () => {
       const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
 
       // Mock sanitizePromptContent for input and output of Local AI
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'Original content', warnings: [], dangerLevel: 'low' }) // L1 input
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' }); // L1 output
 
@@ -106,13 +145,15 @@ describe('PrivacyPipeline', () => {
 
       // Override sanitizePromptContent to return LLM output unchanged (pass-through)
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValueOnce({
         sanitized: llmSummary,
         warnings: [],
         dangerLevel: 'low'
       });
 
       const result = await pipeline.process('content', { tagSummaryMode: true });
+      console.log('sanitizePromptContent calls', promptSanitizerModule.sanitizePromptContent.mock.calls);
+      console.log('sanitizePromptContent results', promptSanitizerModule.sanitizePromptContent.mock.results);
 
       // summary にはプロンプト例示行 "#カテゴリ1 ... | 要約文（改行なし）" が含まれないこと
       expect(result.summary).not.toContain('#カテゴリ1');
@@ -136,7 +177,7 @@ describe('PrivacyPipeline', () => {
 
       // Override sanitizePromptContent to pass through the LLM output
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValueOnce({
         sanitized: llmSummary,
         warnings: [],
         dangerLevel: 'low'
@@ -172,7 +213,7 @@ describe('PrivacyPipeline', () => {
 
       // Mock sanitizePromptContent to return appropriate values for both input and output sanitization
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' }) // input sanitization
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' }); // output sanitization
 
@@ -191,7 +232,7 @@ describe('PrivacyPipeline', () => {
 
       // Spy on sanitizePromptContent and force high danger
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValueOnce({
         sanitized: 'sanitized',
         warnings: ['high danger'],
         dangerLevel: 'high'
@@ -218,7 +259,7 @@ describe('PrivacyPipeline', () => {
 
       // Mock sanitizePromptContent for input sanitization
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValue({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValue({
         sanitized: 'content',
         warnings: [],
         dangerLevel: 'low'
@@ -238,7 +279,7 @@ describe('PrivacyPipeline', () => {
 
       // Mock sanitizePromptContent to detect high danger in input
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValue({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValue({
         sanitized: 'content',
         warnings: ['Detected high-risk pattern'],
         dangerLevel: 'high'
@@ -261,7 +302,7 @@ describe('PrivacyPipeline', () => {
 
       // Mock sanitizePromptContent for input and output sanitization
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' }) // input sanitization
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' }); // output sanitization
 
@@ -281,7 +322,7 @@ describe('PrivacyPipeline', () => {
 
       // Mock sanitizePromptContent for input and output sanitization
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' }) // input sanitization
         .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' }); // output sanitization
 
@@ -305,7 +346,7 @@ describe('PrivacyPipeline', () => {
       const pipeline = new PrivacyPipeline(maskedCloudSettings, mockCloudService, sanitizers);
 
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValueOnce({
         sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low'
       });
 
@@ -318,7 +359,7 @@ describe('PrivacyPipeline', () => {
       const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
 
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'Original content', warnings: [], dangerLevel: 'low' })
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
 
@@ -337,7 +378,7 @@ describe('PrivacyPipeline', () => {
       const pipeline = new PrivacyPipeline(localOnlySettings, mockLocalService, sanitizers);
 
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent')
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
         .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' })
         .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
 
@@ -359,7 +400,7 @@ describe('PrivacyPipeline', () => {
       const pipeline = new PrivacyPipeline(maskedCloudSettings, mockCloudService, sanitizers);
 
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
-      vi.spyOn(promptSanitizerModule, 'sanitizePromptContent').mockReturnValueOnce({
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValueOnce({
         sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low'
       });
 

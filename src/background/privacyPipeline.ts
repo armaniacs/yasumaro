@@ -95,22 +95,8 @@ export class PrivacyPipeline {
 
     const originalTokens = estimateTokens(content);
 
-    // L1: Local Summarization
-    const localResult = await this._performLocalSummarization(
-      content,
-      processingText,
-      sanitizedSettings.useLocalAi,
-      originalTokens,
-      url,
-      title
-    );
-
-    if (localResult?.returnEarly) {
-      return localResult.result as PrivacyPipelineResult;
-    }
-    processingText = localResult?.processedText || processingText;
-
-    // L2: PII Masking
+    // L2: PII Masking — run before any AI (local or cloud) so that
+    // on-device local AI also receives masked content when masking is enabled.
     if (sanitizedSettings.useMasking) {
       const sanitizeResult = await this.sanitizers.sanitizeRegex(processingText);
       processingText = sanitizeResult.text;
@@ -134,6 +120,21 @@ export class PrivacyPipeline {
       };
     }
 
+    // L1: Local Summarization
+    const localResult = await this._performLocalSummarization(
+      processingText,
+      processingText,
+      sanitizedSettings.useLocalAi,
+      originalTokens,
+      url,
+      title
+    );
+
+    if (localResult?.returnEarly) {
+      return localResult.result as PrivacyPipelineResult;
+    }
+    processingText = localResult?.processedText || processingText;
+
     // L3: Cloud Summarization
     if (sanitizedSettings.useCloudAi) {
       const aiCallStart = performance.now();
@@ -152,7 +153,9 @@ export class PrivacyPipeline {
   private _buildSanitizedSettings(alreadyProcessed: boolean) {
     return {
       useLocalAi: (this.mode === 'local_only' || this.mode === 'full_pipeline') && !alreadyProcessed,
-      useMasking: (this.mode === 'full_pipeline' || this.mode === 'masked_cloud') && !alreadyProcessed,
+      // PII masking runs before any AI (local or cloud) so it must be enabled
+      // in local_only mode as well.
+      useMasking: (this.mode === 'full_pipeline' || this.mode === 'masked_cloud' || this.mode === 'local_only') && !alreadyProcessed,
       useCloudAi: this.mode !== 'local_only',
     };
   }

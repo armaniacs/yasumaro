@@ -101,7 +101,8 @@ export interface RecordingResult {
 }
 
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
+import type { ExtensionMessage } from '../background/messageTypes.js';
 
 /**
  * PIIマスキング結果
@@ -148,23 +149,11 @@ export interface RecordingData {
 
 /**
  * Service Worker 宛てのリクエストメッセージ型
+ *
+ * SSOT: messageTypes.ts で定義された ExtensionMessage をそのまま再エクスポートする。
+ * これにより新メッセージ種別追加時の二重管理を防ぐ。
  */
-export type ServiceWorkerRequest = (
-  | { type: 'VALID_VISIT'; payload: { content: string; pageBytes?: number; candidateBytes?: number; originalBytes?: number; cleansedBytes?: number; aiSummaryOriginalBytes?: number; aiSummaryCleansedBytes?: number; aiSummaryCleansedElements?: number; aiSummaryCleansedReason?: string; aiSummaryCleansedReasons?: string[] } }
-  | { type: 'CHECK_DOMAIN'; payload: never }
-  | { type: 'GET_CONTENT'; payload: never }
-  | { type: 'FETCH_URL'; payload: { url: string } }
-  | { type: 'MANUAL_RECORD'; payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } }
-  | { type: 'PREVIEW_RECORD'; payload: { title: string; url: string; content: string } }
-  | { type: 'SAVE_RECORD'; payload: never }
-  | { type: 'TEST_CONNECTIONS'; payload: never }
-  | { type: 'TEST_OBSIDIAN'; payload: never }
-  | { type: 'TEST_AI'; payload: never }
-  | { type: 'GET_PRIVACY_CACHE'; payload: never }
-  | { type: 'ACTIVITY_UPDATE'; payload: never }
-  | { type: 'SESSION_LOCK_REQUEST'; payload: never }
-  | { type: 'CONTENT_CLEANSING_EXECUTED'; payload: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } }
-) & { protocolVersion: number };
+export type ServiceWorkerRequest = ExtensionMessage;
 
 // ============================================================================
 // Response メッセージ型定義
@@ -217,42 +206,20 @@ export function isServiceWorkerRequest(message: unknown): message is ServiceWork
   }
 
   const msg = message as { type?: string; payload?: unknown };
-  const validTypes = [
-    'VALID_VISIT',
-    'CHECK_DOMAIN',
-    'GET_CONTENT',
-    'FETCH_URL',
-    'MANUAL_RECORD',
-    'PREVIEW_RECORD',
-    'SAVE_RECORD',
-    'TEST_CONNECTIONS',
-    'TEST_OBSIDIAN',
-    'TEST_AI',
-    'GET_PRIVACY_CACHE',
-    'ACTIVITY_UPDATE',
-    'SESSION_LOCK_REQUEST',
-    'CONTENT_CLEANSING_EXECUTED'
-  ];
 
-  if (!msg.type || !validTypes.includes(msg.type)) {
+  if (!msg.type || !VALID_MESSAGE_TYPES.includes(msg.type as typeof VALID_MESSAGE_TYPES[number])) {
     return false;
   }
 
-  // CHECK_DOMAIN, GET_CONTENT, SAVE_RECORD, TEST_CONNECTIONS, TEST_OBSIDIAN, TEST_AI, GET_PRIVACY_CACHE, ACTIVITY_UPDATE, SESSION_LOCK_REQUEST は payload 不許可
-  const noPayloadTypes = [
-    'CHECK_DOMAIN',
-    'GET_CONTENT',
-    'SAVE_RECORD',
-    'TEST_CONNECTIONS',
-    'TEST_OBSIDIAN',
-    'TEST_AI',
-    'GET_PRIVACY_CACHE',
-    'ACTIVITY_UPDATE',
-    'SESSION_LOCK_REQUEST'
-  ];
+  const type = msg.type;
 
-  if (noPayloadTypes.includes(msg.type)) {
+  if (NO_PAYLOAD_TYPES.includes(type as typeof NO_PAYLOAD_TYPES[number])) {
     return msg.payload === undefined;
+  }
+
+  // Types with optional object payloads
+  if (type === 'TEST_OBSIDIAN' || type === 'DASHBOARD_SQLITE') {
+    return msg.payload === undefined || (typeof msg.payload === 'object' && msg.payload !== null);
   }
 
   return msg.payload !== undefined && typeof msg.payload === 'object';
@@ -311,15 +278,19 @@ export function extractMessageContent(sender: chrome.runtime.MessageSender): Mes
 /**
  * メッセージタイプからペイロード型を抽出
  */
-export type PayloadForType<T extends ServiceWorkerRequest['type']> = Extract<
-  ServiceWorkerRequest,
+export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
+  ExtensionMessage,
   { type: T }
->['payload'];
+> extends infer U
+  ? U extends { payload: infer P }
+    ? P
+    : never
+  : never;
 
 /**
  * メッセージタイプに応じたレスポンス型定義
  */
-export type ResponseForType<T extends ServiceWorkerRequest['type']> =
+export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'MANUAL_RECORD' ? RecordingResult :
@@ -329,11 +300,14 @@ export type ResponseForType<T extends ServiceWorkerRequest['type']> =
 /**
  * メッセージ送信の型安全ラッパー
  */
-export async function sendServiceWorkerMessage<T extends ServiceWorkerRequest['type']>(
+export async function sendServiceWorkerMessage<T extends ExtensionMessage['type']>(
   type: T,
-  payload: PayloadForType<T>
+  payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const response = await chrome.runtime.sendMessage({ type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown);
+  const message = payload !== undefined
+    ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION }
+    : { type, protocolVersion: CURRENT_PROTOCOL_VERSION };
+  const response = await chrome.runtime.sendMessage(message as unknown);
 
   if (isErrorResponse(response)) {
     throw new Error(response.error);
@@ -345,9 +319,9 @@ export async function sendServiceWorkerMessage<T extends ServiceWorkerRequest['t
 /**
  * Content Script から Service Worker へのメッセージ送信
  */
-export async function sendFromContentScript<T extends ServiceWorkerRequest['type']>(
+export async function sendFromContentScript<T extends ExtensionMessage['type']>(
   type: T,
-  payload: PayloadForType<T>
+  payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
   return sendServiceWorkerMessage(type, payload);
 }
@@ -355,15 +329,14 @@ export async function sendFromContentScript<T extends ServiceWorkerRequest['type
 /**
  * Popup/Dashboard から Service Worker へのメッセージ送信
  */
-export async function sendFromPopup<T extends ServiceWorkerRequest['type']>(
+export async function sendFromPopup<T extends ExtensionMessage['type']>(
   type: T,
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const response = await chrome.runtime.sendMessage(
-    payload !== undefined
-      ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown
-      : { type, protocolVersion: CURRENT_PROTOCOL_VERSION } as unknown
-  );
+  const message = payload !== undefined
+    ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION }
+    : { type, protocolVersion: CURRENT_PROTOCOL_VERSION };
+  const response = await chrome.runtime.sendMessage(message as unknown);
 
   if (isErrorResponse(response)) {
     throw new Error(response.error);

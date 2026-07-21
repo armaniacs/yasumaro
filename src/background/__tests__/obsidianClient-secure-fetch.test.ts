@@ -27,6 +27,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     (storage as any).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
+      OBSIDIAN_HOST: 'OBSIDIAN_HOST',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
       OBSIDIAN_DAILY_PATH: 'OBSIDIAN_DAILY_PATH'
     };

@@ -70,6 +70,7 @@ export class IdbVfsBackend implements StorageBackend {
     if (options.until != null) { conditions.push('created_at <= ?'); params.push(options.until); }
     if (options.domain) { conditions.push('domain = ?'); params.push(options.domain); }
     if (options.isStarred != null) { conditions.push('is_starred = ?'); params.push(options.isStarred ? 1 : 0); }
+    if (options.gistSynced != null) { conditions.push('gist_synced = ?'); params.push(options.gistSynced); }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 

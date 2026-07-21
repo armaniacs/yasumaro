@@ -10,7 +10,7 @@ import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -88,15 +88,8 @@ export class OpenAIProvider extends AIProviderStrategy {
         return false;
     }
 
-    private static readonly DEFAULT_MAX_CONTENT_LENGTH = 10_000;
-
     private getMaxContentLength(): number {
-        const s = this.settings as Record<string, unknown>;
-        const override = s['openai_content_limit'] as number | undefined;
-        if (typeof override === 'number' && override > 0 && override <= 100_000) {
-            return override;
-        }
-        return OpenAIProvider.DEFAULT_MAX_CONTENT_LENGTH;
+        return this.getMaxContentChars(10_000, StorageKeys.OPENAI_CONTENT_CHARS);
     }
 
     getName(): string {
@@ -111,6 +104,12 @@ export class OpenAIProvider extends AIProviderStrategy {
     async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
         if (!this.baseUrl) {
             return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
+        }
+
+        // 月次ハードリミットチェック
+        const hardLimit = await checkHardLimit();
+        if (hardLimit.blocked) {
+            return { success: false, summary: `Error: ${hardLimit.message}` };
         }
 
         // 使用量警告チェック
@@ -272,12 +271,24 @@ export class OpenAIProvider extends AIProviderStrategy {
     }
 
     private _extractSummary(data: OpenAIApiResponse): AISummaryResult {
-        if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-            const summary = data.choices[0].message.content;
-            const sentTokens = data.usage?.prompt_tokens;
-            const receivedTokens = data.usage?.completion_tokens;
-            return { success: true, summary, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
+        if (!data.choices || data.choices.length === 0) {
+            const error = 'OpenAI schema validation failed: choices is missing or empty';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
-        return { success: true, summary: "No summary generated." };
+        if (!data.choices[0].message) {
+            const error = 'OpenAI schema validation failed: choices[0].message is missing';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+        }
+        const content = data.choices[0].message.content;
+        if (typeof content !== 'string') {
+            const error = 'OpenAI schema validation failed: message.content is not a string';
+            addLog(LogType.ERROR, error);
+            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+        }
+        const sentTokens = data.usage?.prompt_tokens;
+        const receivedTokens = data.usage?.completion_tokens;
+        return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
     }
 }

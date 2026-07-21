@@ -68,36 +68,42 @@ export class GistSyncTarget implements SyncTarget {
       return 0;
     }
 
+    const BATCH_SIZE = 50;
+    const MAX_ITERATIONS = 100;
+
     try {
-      const result = await this.sqliteClient.query({
-        limit: 5,
-        orderBy: 'created_at',
-        orderDir: 'DESC',
-      });
+      let totalSynced = 0;
 
-      if (!result || !result.rows || result.rows.length === 0) {
-        return 0;
-      }
+        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+            const result = await this.sqliteClient.query({
+                limit: BATCH_SIZE,
+                offset: 0,
+                orderBy: 'created_at',
+                orderDir: 'DESC',
+                gistSynced: 0,
+            });
 
-      const unsyncedRows = result.rows.filter((r) => !r.gist_synced);
-      if (unsyncedRows.length === 0) {
-        return 0;
-      }
+            if (!result || !result.rows || result.rows.length === 0) {
+                break;
+            }
 
-      let syncedCount = 0;
-      for (const row of unsyncedRows) {
-        if (row.id === undefined) continue;
-        const result = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-        if (result.success) {
-          syncedCount++;
+            let batchSynced = 0;
+            for (const row of result.rows) {
+                if (row.id === undefined) continue;
+                const syncResult = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
+                if (syncResult.success) {
+                    batchSynced++;
+                }
+            }
+
+            totalSynced += batchSynced;
         }
+
+      if (totalSynced > 0) {
+        addLog(LogType.INFO, 'GistSync: batch completed', { synced: totalSynced });
       }
 
-      if (syncedCount > 0) {
-        addLog(LogType.INFO, 'GistSync: batch completed', { synced: syncedCount });
-      }
-
-      return syncedCount;
+      return totalSynced;
     } catch (error) {
       addLog(LogType.WARN, 'GistSync: batch failed', {
         error: errorMessage(error),

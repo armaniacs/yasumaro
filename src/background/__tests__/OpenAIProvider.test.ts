@@ -52,6 +52,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
 
 // aiUsageTracker モック
 vi.mock('../../utils/aiUsageTracker.js', () => ({
+    checkHardLimit: vi.fn(async () => ({ blocked: false })),
     checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: 60 })),
     checkUsageWarning: vi.fn(async () => ({ warning: false })),
     recordUsage: vi.fn(async () => {}),
@@ -63,7 +64,7 @@ import { fetchWithRetry } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
-const { checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
+const { checkHardLimit, checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('OpenAIProvider', () => {
@@ -182,7 +183,7 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toContain('security risk');
         });
 
-        test('choices が空の場合はデフォルトメッセージ', async () => {
+        test('choices が空の場合はスキーマエラー', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [] })
@@ -190,7 +191,22 @@ describe('OpenAIProvider', () => {
 
             const p = new OpenAIProvider(baseSettings);
             const result = await p.generateSummary('content');
-            expect(result.summary).toBe('No summary generated.');
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('choices is missing or empty');
+        });
+
+        test('message.content がない場合はスキーマエラー', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ choices: [{ message: { role: 'assistant' } }] })
+            });
+
+            const p = new OpenAIProvider(baseSettings);
+            const result = await p.generateSummary('content');
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('Error: Invalid API response format');
+            expect(result.error).toContain('message.content is not a string');
         });
 
         test('ローカルURLの場合、コンテンツを4000文字に切り詰める', async () => {

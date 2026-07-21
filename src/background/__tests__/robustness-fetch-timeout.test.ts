@@ -38,6 +38,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     (storage as any).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
+      OBSIDIAN_HOST: 'OBSIDIAN_HOST',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
       OBSIDIAN_DAILY_PATH: 'OBSIDIAN_DAILY_PATH'
     };
@@ -95,10 +96,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('AbortErrorでタイムアウトエラーをスローすること', async () => {
-      const abortError = new Error('The user aborted a request');
-      abortError.name = 'AbortError';
       // @ts-expect-error - vi.fn() type narrowing issue
-      mockFetch.mockRejectedValue(abortError);
+      mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
         obsidianClient._fetchExistingContent(
@@ -170,10 +169,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('AbortErrorでタイムアウトエラーをスローすること', async () => {
-      const abortError = new Error('The user aborted a request');
-      abortError.name = 'AbortError';
       // @ts-expect-error - vi.fn() type narrowing issue
-      mockFetch.mockRejectedValue(abortError);
+      mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
         obsidianClient._writeContent(
@@ -213,10 +210,8 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('タイムアウト時はタイムアウトメッセージを返すこと', async () => {
-      const abortError = new Error('The user aborted a request');
-      abortError.name = 'AbortError';
       // @ts-expect-error - vi.fn() type narrowing issue
-      mockFetch.mockRejectedValue(abortError);
+      mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       const result = await obsidianClient.testConnection();
 

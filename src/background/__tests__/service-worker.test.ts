@@ -159,6 +159,9 @@ vi.mock('../aiClient.js', () => ({
     }
 }));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({
+    createRecordingPipeline: vi.fn().mockReturnValue({
+        execute: vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' }),
+    }),
     RecordingPipeline: vi.fn().mockImplementation(function(this: any) {
         this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
     })
@@ -1327,7 +1330,7 @@ describe('service-worker handlers', () => {
         it('calls executeScript and processes the extracted payload for a valid tab', async () => {
             if (!contextMenuClickListener) throw new Error('Context menu listener not registered');
 
-            const RecordingPipelineMock = (await import('../pipeline/RecordingPipeline.js')).RecordingPipeline as ReturnType<typeof vi.fn>;
+            const { createRecordingPipeline } = await import('../pipeline/RecordingPipeline.js');
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
             executeScriptMock.mockResolvedValueOnce([
                 { result: { url: 'https://example.com', title: 'Example', content: 'body text' } },
@@ -1342,8 +1345,10 @@ describe('service-worker handlers', () => {
                 expect.objectContaining({ target: { tabId: 1 } })
             );
 
-            // handleManualRecord forwards the payload to RecordingPipeline.execute
-            const pipelineInstance = RecordingPipelineMock.mock.instances[RecordingPipelineMock.mock.instances.length - 1];
+            // handleManualRecord forwards the payload to RecordingPipeline.execute via factory
+            const pipelineInstance = (createRecordingPipeline as ReturnType<typeof vi.fn>).mock.results[
+                (createRecordingPipeline as ReturnType<typeof vi.fn>).mock.results.length - 1
+            ].value;
             expect(pipelineInstance.execute).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: 'Example',

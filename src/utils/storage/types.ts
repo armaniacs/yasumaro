@@ -22,8 +22,10 @@ export const StorageKeys = {
     OBSIDIAN_API_KEY: 'obsidian_api_key',
     OBSIDIAN_PROTOCOL: 'obsidian_protocol', // 'http' or 'https'
     OBSIDIAN_PORT: 'obsidian_port',
+    OBSIDIAN_HOST: 'obsidian_host', // Obsidian Local REST API のホスト（デフォルト: 127.0.0.1）
     OBSIDIAN_ENABLED: 'obsidian_enabled', // true | false
     GEMINI_API_KEY: 'gemini_api_key',
+    GEMINI_API_VERSION: 'gemini_api_version', // Gemini API バージョン（デフォルト: v1beta）
     MIN_VISIT_DURATION: 'min_visit_duration',
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
     GEMINI_MODEL: 'gemini_model',
@@ -125,6 +127,10 @@ export const StorageKeys = {
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
+    MAX_MONTHLY_TOKENS: 'max_monthly_tokens', // 月間トークン使用上限（0=無制限、デフォルト: 1,000,000）
+    AI_RATE_LIMIT_MAX: 'ai_rate_limit_max', // 1分間のAIリクエスト数上限（デフォルト: 10）
+    OPENAI_CONTENT_CHARS: 'openai_content_chars', // OpenAI プロバイダーの送信コンテンツ文字数上限（デフォルト: 10,000）
+    GEMINI_CONTENT_CHARS: 'gemini_content_chars', // Gemini プロバイダーの送信コンテンツ文字数上限（デフォルト: 30,000）
     // Rate Limit Settings (Configurable)
     SKIP_AI_RATE_LIMIT_MAX: 'skip_ai_rate_limit_max', // skipAI操作の最大回数（デフォルト: 5）
     SKIP_AI_RATE_LIMIT_WINDOW_MS: 'skip_ai_rate_limit_window_ms', // skipAIレートリミットウィンドウ（デフォルト: 60000ms）
@@ -251,8 +257,10 @@ export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'http' | 'https';
     [StorageKeys.OBSIDIAN_PORT]: string;
+    [StorageKeys.OBSIDIAN_HOST]: string;
     [StorageKeys.OBSIDIAN_ENABLED]: boolean;
-    [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
+    [StorageKeys.GEMINI_API_KEY]: string;
+    [StorageKeys.GEMINI_API_VERSION]: string;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
     [StorageKeys.GEMINI_MODEL]: string;
@@ -331,6 +339,10 @@ export interface StorageKeyValues {
     [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: string[];
     [StorageKeys.MAX_TOKENS_PER_PROMPT]: number;
     [StorageKeys.AI_TIMEOUT_MS]: number;
+    [StorageKeys.MAX_MONTHLY_TOKENS]: number;
+    [StorageKeys.AI_RATE_LIMIT_MAX]: number;
+    [StorageKeys.OPENAI_CONTENT_CHARS]: number;
+    [StorageKeys.GEMINI_CONTENT_CHARS]: number;
     [StorageKeys.SKIP_AI_RATE_LIMIT_MAX]: number;
     [StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: boolean;

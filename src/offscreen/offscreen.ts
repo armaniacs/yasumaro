@@ -216,6 +216,7 @@ async function handleSqliteMessage(
                 until: payload?.until != null ? Number(payload.until) : undefined,
                 ids: payload?.ids != null ? payload.ids as number[] : undefined,
                 tagFilter: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
+                gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
             };
             const result = await sqliteQuery(options);
             sendResponse(result);

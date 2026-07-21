@@ -122,10 +122,13 @@ describe('extractPageContent', () => {
     });
 });
 
-describe('init', () => {
+  describe('init', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
         vi.clearAllMocks();
+        Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+        delete (window as Partial<Window & { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }>).requestIdleCallback;
+        delete (window as Partial<Window & { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }>).cancelIdleCallback;
         // loadSettings() はコールバック形式で chrome.storage.local.get を呼ぶ
         // モックがコールバックを即座に呼ぶよう設定
         (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
@@ -156,5 +159,44 @@ describe('init', () => {
         const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
         await init();
         expect(addEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+    });
+
+    it('loads settings from a single storage key', async () => {
+        const getSpy = vi.fn((_keys: string | string[], callback?: (result: Record<string, unknown>) => void) => {
+            if (typeof callback === 'function') callback({ settings: {} });
+            return Promise.resolve({ settings: {} });
+        });
+        chrome.storage.local.get = getSpy as typeof chrome.storage.local.get;
+
+        await init();
+        expect(getSpy).toHaveBeenCalledWith(['settings'], expect.any(Function));
+    });
+
+    it('uses requestIdleCallback for periodic checks when available', async () => {
+        let invoked = false;
+        const requestIdleCallbackSpy = vi.fn((callback: () => void) => {
+            // Invoke once to avoid infinite rescheduling loop in tests
+            if (!invoked) {
+                invoked = true;
+                callback();
+            }
+            return 123;
+        });
+        window.requestIdleCallback = requestIdleCallbackSpy as unknown as typeof window.requestIdleCallback;
+
+        await init();
+        expect(requestIdleCallbackSpy).toHaveBeenCalled();
+    });
+
+    it('stops periodic checks when the page becomes hidden', async () => {
+        const cancelIdleCallbackSpy = vi.fn();
+        window.cancelIdleCallback = cancelIdleCallbackSpy as unknown as typeof window.cancelIdleCallback;
+        let idleHandle = 0;
+        window.requestIdleCallback = vi.fn(() => ++idleHandle) as unknown as typeof window.requestIdleCallback;
+
+        await init();
+        Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(cancelIdleCallbackSpy).toHaveBeenCalledWith(idleHandle);
     });
 });

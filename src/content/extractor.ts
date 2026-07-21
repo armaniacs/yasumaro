@@ -48,7 +48,7 @@ let minScrollDepth = DEFAULT_MIN_SCROLL_DEPTH;
 let startTime = Date.now();
 let maxScrollPercentage = 0;
 let isValidVisitReported = false;
-let checkIntervalId: number | NodeJS.Timeout | null = null; // 【パフォーマンス向上】: 定期実行のIDを管理し、条件満了後に停止
+let checkIntervalId: number | null = null; // 【パフォーマンス向上】: requestIdleCallback/setTimeout IDを管理し、条件満了後に停止
 
 // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
 interface CleansingConfig {
@@ -284,65 +284,17 @@ export function extractPageContent(config: CleansingConfig = cleansingConfig): s
  */
 function loadSettings(): Promise<void> {
     return new Promise((resolve) => {
-        // 新方式（settings オブジェクト）と旧方式（フラットキー）の両方を取得
-        chrome.storage.local.get([
-            'settings',
-            'settings_migrated',
-            'min_visit_duration',
-            'min_scroll_depth',
-            StorageKeys.CONTENT_STRIP_HARD_ENABLED,
-            StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED,
-            StorageKeys.CONTENT_STRIP_KEYWORDS,
-            StorageKeys.AI_SUMMARY_CLEANSING_ENABLED,
-            StorageKeys.AI_SUMMARY_CLEANSING_ALT,
-            StorageKeys.AI_SUMMARY_CLEANSING_METADATA,
-            StorageKeys.AI_SUMMARY_CLEANSING_ADS,
-            StorageKeys.AI_SUMMARY_CLEANSING_NAV,
-            StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL,
-            StorageKeys.AI_SUMMARY_CLEANSING_DEEP,
-            StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD,
-            StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD,
-            StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK,
-            StorageKeys.AI_SUMMARY_CLEANSING_CARD,
-            StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY,
-            // NEW: 6つの新しいクレンジングオプション
-            StorageKeys.AI_SUMMARY_CLEANSING_FIXED,
-            StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND,
-            StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION,
-            StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO,
-            StorageKeys.AI_SUMMARY_CLEANSING_POPUP,
-            StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM,
-            // NEW: 9つの追加クレンジングオプション
-            StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY,
-            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ,
-            StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE,
-            StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA,
-            StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN,
-            StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM,
-            StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT,
-            StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION,
-            StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR,
-            // Threshold settings
-            StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD,
-            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD,
-            StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT,
-            StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD,
-            // Custom patterns
-            StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS,
-            StorageKeys.CONTENT_DEDUP_ENABLED,
-            StorageKeys.CONTENT_DEDUP_THRESHOLD
-        ], (result: Record<string, unknown>) => {
-            // 新方式: settings オブジェクトが存在する場合はそちらを優先
-            const s: Record<string, unknown> = (result['settings_migrated'] && result['settings'])
-                ? { ...(result['settings'] as object), ...result }
-                : result;
+        // Migration to the single 'settings' object is complete; read all values
+        // from that object to reduce storage access overhead.
+        chrome.storage.local.get(['settings'], (result: Record<string, unknown>) => {
+            const s: Record<string, unknown> = (result['settings'] as Record<string, unknown> | undefined) ?? {};
 
-            if (s.min_visit_duration !== undefined) {
-                const parsedDuration = parseInt(String(s.min_visit_duration), 10);
+            if (s[StorageKeys.MIN_VISIT_DURATION] !== undefined) {
+                const parsedDuration = parseInt(String(s[StorageKeys.MIN_VISIT_DURATION]), 10);
                 minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
             }
-            if (s.min_scroll_depth !== undefined) {
-                const parsedDepth = parseInt(String(s.min_scroll_depth), 10);
+            if (s[StorageKeys.MIN_SCROLL_DEPTH] !== undefined) {
+                const parsedDepth = parseInt(String(s[StorageKeys.MIN_SCROLL_DEPTH]), 10);
                 minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
             }
             // クレンジング設定を一括読み込み
@@ -490,10 +442,7 @@ function checkVisitConditions(): void {
                 JSON.stringify(window.__OW_TEST_STATE));
         }
         // 【パフォーマンス向上】: 条件満了後に定期実行を停止
-        if (checkIntervalId) {
-            clearInterval(checkIntervalId);
-            checkIntervalId = null;
-        }
+        stopPeriodicCheck();
     }
 }
 
@@ -655,10 +604,7 @@ async function reportValidVisit(): Promise<void> {
         const msg = errorMessage(error);
         if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
             // 拡張機能がリロードされた場合は、定期チェックを停止してページリフレッシュを推奨
-            if (checkIntervalId) {
-                clearInterval(checkIntervalId);
-                checkIntervalId = null;
-            }
+            stopPeriodicCheck();
             await logInfo('Extension reloaded - page refresh needed', {}, 'extractor');
         } else {
             await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'extractor');
@@ -787,16 +733,41 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
 }
 
 /**
+ * Schedule the next periodic check using requestIdleCallback when available,
+ * falling back to a short setTimeout. This avoids the fixed 1s polling of
+ * setInterval and only runs while the page is visible.
+ */
+function scheduleNextCheck(): void {
+    if (isValidVisitReported || document.hidden) return;
+
+    if (typeof window.requestIdleCallback === 'function') {
+        checkIntervalId = window.requestIdleCallback(() => {
+            checkIntervalId = null;
+            updateMaxScroll();
+            if (!isValidVisitReported && !document.hidden) {
+                scheduleNextCheck();
+            }
+        }, { timeout: 2000 });
+    } else {
+        checkIntervalId = window.setTimeout(() => {
+            checkIntervalId = null;
+            updateMaxScroll();
+            if (!isValidVisitReported && !document.hidden) {
+                scheduleNextCheck();
+            }
+        }, 1000);
+    }
+}
+
+/**
  * 定期実行を開始する
- * 【機能概要】: 1秒ごとに条件チェックを実行するタイマーを開始する
- * 【パフォーマンス】: 条件満了後にタイマーが停止されるため、不要なCPU使用を回避
+ * 【機能概要】: ブラウザがアイドル時に条件チェックを実行するループを開始する
+ * 【パフォーマンス】: requestIdleCallback + visibilitychange により不要なCPU使用を回避
  * 🟢
  */
 function startPeriodicCheck(): void {
-    if (checkIntervalId) {
-        clearInterval(checkIntervalId);
-    }
-    checkIntervalId = setInterval(updateMaxScroll, 1000);
+    stopPeriodicCheck();
+    scheduleNextCheck();
 }
 
 /**
@@ -805,11 +776,16 @@ function startPeriodicCheck(): void {
  * 【用途】:
  *   - 条件満了時の自動停止
  *   - ページ離脱時のクリーンアップ
+ *   - タブ非表示時の一時停止
  * 🟢
  */
 function stopPeriodicCheck(): void {
-    if (checkIntervalId) {
-        clearInterval(checkIntervalId);
+    if (checkIntervalId !== null) {
+        if (typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(checkIntervalId);
+        } else {
+            window.clearTimeout(checkIntervalId);
+        }
         checkIntervalId = null;
     }
 }

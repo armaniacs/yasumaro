@@ -8,7 +8,7 @@
  * - 読み込み→更新→書き込み間での競合を検出
  */
 
-import { withOptimisticLock, getConflictStats, resetConflictStats } from '../optimisticLock';
+import { withOptimisticLock } from '../optimisticLock';
 
 // Chrome Storage API モック
 const mockStorage: Record<string, any> = {};
@@ -18,7 +18,6 @@ let mockSet = vi.fn();
 beforeEach(() => {
   // モックをリセット
   Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
-  resetConflictStats();
 
   // chrome.storage.local モック
   mockGet.mockImplementation((keys: string | string[]) => {
@@ -68,12 +67,6 @@ describe('楽観的ロック - セキュリティテスト', () => {
       const result2 = await withOptimisticLock('counter', (current) => (current as number) + 10);
       expect(result2).toBe(11);
       expect(mockStorage['counter']).toBe(11);
-
-      // 統計情報が正常に記録されている
-      const stats = getConflictStats();
-      expect(stats.totalAttempts).toBe(2);
-      expect(stats.totalConflicts).toBe(0);
-      expect(stats.totalFailures).toBe(0);
     });
 
     test('オブジェクトの更新', async () => {
@@ -106,9 +99,6 @@ describe('楽観的ロック - セキュリティテスト', () => {
           throw new Error('User error');
         })
       ).rejects.toThrow('User error');
-
-      const stats = getConflictStats();
-      expect(stats.totalFailures).toBeGreaterThan(0);
     });
 
     test('ストレージエラーが適切に処理される', async () => {
@@ -120,9 +110,6 @@ describe('楽観的ロック - セキュリティテスト', () => {
       await expect(
         withOptimisticLock('test', (current) => `${current}-updated`)
       ).rejects.toThrow('Storage error');
-
-      const stats = getConflictStats();
-      expect(stats.totalFailures).toBeGreaterThan(0);
     });
   });
 
@@ -139,10 +126,6 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(result).toBeDefined();
       expect((result as { balance: number }).balance).toBe(150);
       expect(mockStorage['account']).toEqual({ balance: 150 });
-
-      // 統計情報が記録されている
-      const stats = getConflictStats();
-      expect(stats.totalAttempts).toBeGreaterThan(0);
     });
 
     test('複雑なオブジェクトの更新', async () => {
@@ -181,36 +164,6 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(results[1]).toBe('value2-updated');
       expect(mockStorage['key1']).toBe('value1-updated');
       expect(mockStorage['key2']).toBe('value2-updated');
-    });
-  });
-
-  describe('統計情報', () => {
-    test('競合統計が正しく記録される', async () => {
-      mockStorage['test'] = 'initial';
-
-      // 成功した操作
-      await withOptimisticLock('test', (current) => `${current}-updated`);
-
-      const stats = getConflictStats();
-      expect(stats.totalAttempts).toBe(1);
-      expect(stats.totalConflicts).toBe(0);
-      expect(stats.totalFailures).toBe(0);
-    });
-
-    test('統計情報をリセットできる', async () => {
-      mockStorage['test'] = 'initial';
-
-      await withOptimisticLock('test', (current) => `${current}-updated`);
-
-      let stats = getConflictStats();
-      expect(stats.totalAttempts).toBeGreaterThan(0);
-
-      resetConflictStats();
-
-      stats = getConflictStats();
-      expect(stats.totalAttempts).toBe(0);
-      expect(stats.totalConflicts).toBe(0);
-      expect(stats.totalFailures).toBe(0);
     });
   });
 

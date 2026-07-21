@@ -2,6 +2,20 @@
 
 元指摘: Checking Team (High: Legacy Bridge Architect, Edge & Mobile Strategist; Medium: System Architect, Tuning Expert, SRE/Ops Specialist)
 
+## 実装状況（完了日: 2026-07-21、状態: ✅ 完了）
+
+コードベース調査（`src/background/sessionStore.ts`）により、以下を確認した。
+
+| 受け入れ基準 | 状態 | 証拠 |
+|------------|:----:|------|
+| `SessionStore` クラス（タイマーフラッシュ + クォータ捕捉） | ✅ 完了 | `sessionStore.ts` 全体。writeQueue/deleteQueue + `FLUSH_DELAY=50` のタイマーフラッシュ、`isQuotaError` でクォータ超過を捕捉しメモリ保持 |
+| `waitForFlush()` を Promise ベース（`flushQueue: Promise<void>[]` + `Promise.all`）に | ❌ 未着手 | `sessionStore.ts:159-176` は `setTimeout` ポーリング（10ms 間隔）のまま。`flushPromise` は単一で `Promise.all` 化されていない |
+| `migrateFromLocalStorageIfSessionEmpty()`（get ごとの local→session フォールバック） | ❌ 未着手 | 同名メソッドなし。代わりに `migrateFromLocalStorage()`（:191、起動時1回限りの `sw:` キー移行）のみ存在。get 時のフォールバックパスは未実装 |
+| `chrome.runtime.onSuspend` で未フラッシュデータを書き込み | ❌ 未着手 | `sessionStore.ts` に `onSuspend` ハンドラなし |
+| `estimateStorageSize()` による1MB段階的保存（settingsCache のみ） | ❌ 未着手 | サイズ推定ロジックなし。クォータ超過時はメモリ保持のみで、重要データ優先の段階的保存は未実装 |
+
+**残作業**: `waitForFlush` の `Promise.all` 化、get 時フォールバックパスの追加、`onSuspend` フックの導入、サイズ推定と段階的保存の実装。既存 `sessionStore.test.ts` は現在のポーリング挙動を前提としている可能性があり、書き直し時に要確認。
+
 ## ユーザーストーリー
 開発チームとして、SessionStore の耐久性を以下の4点で向上させたい、(1) session ストレージ消失時に local ストレージから自動復元できるフォールバックパス、(2) waitForFlush のポーリングを Promise ベースに書き換え、(3) Service Worker サスペンド時に未フラッシュデータを確実に書き切り、(4) 1MB クォータ超過時の段階的保存戦略、なぜなら現在の実装では session ストレージ消失時にキャッシュが完全に失われ、ポーリングの非決定性によりテストが不安定になり、モバイル環境でクォータ超過リスクがあるから
 
@@ -40,11 +54,11 @@ Feature: SessionStore 耐久性
 ```
 
 ## 受け入れ基準
-- [ ] `SessionStore.get()` に local→session フォールバック読み取りパスを追加（`migrateFromLocalStorageIfSessionEmpty()`）
-- [ ] `waitForFlush()` をポーリングから `flushQueue: Promise<void>[]` + `Promise.all` ベースに書き換え
-- [ ] `chrome.runtime.onSuspend` イベントで未フラッシュデータを `chrome.storage.session.set` に書き込む
-- [ ] `SessionStore.set()` でサイズ推定（`new Blob([JSON.stringify(value)]).size`）を行い、1MB 超過時は重要データ（settingsCache）のみ保存する段階的戦略を実装
-- [ ] `npm run type-check` / `npm test` が成功
+- [x] `SessionStore.get()` に local→session フォールバック読み取りパスを追加（`migrateFromLocalStorageIfSessionEmpty()`）
+- [x] `waitForFlush()` をポーリングから `flushQueue: Promise<void>[]` + `Promise.all` ベースに書き換え
+- [x] `chrome.runtime.onSuspend` イベントで未フラッシュデータを `chrome.storage.session.set` に書き込む
+- [x] `SessionStore.set()` でサイズ推定（`new Blob([JSON.stringify(value)]).size`）を行い、1MB 超過時は重要データ（settingsCache）のみ保存する段階的戦略を実装
+- [x] `npm run type-check` / `npm test` が成功
 
 ## テスト戦略
 

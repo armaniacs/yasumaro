@@ -18,6 +18,7 @@ export interface AISummaryResult {
     receivedTokens?: number;
     providerName?: string;  // 使用したAIプロバイダー名
     model?: string;         // 使用したAIモデル名
+    error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
 }
 
 /**
@@ -57,6 +58,35 @@ export abstract class AIProviderStrategy {
      */
     getProviderId(): string {
         return this.getName();
+    }
+
+    /**
+     * プロバイダー別の送信コンテンツ最大文字数を取得
+     * 優先順位:
+     * 1. プロバイダー別設定 (providers.<providerId>.maxContentChars)
+     * 2. ストレージキーに保存されたグローバル設定
+     * 3. デフォルト値
+     */
+    protected getMaxContentChars(defaultValue: number, storageKey?: string): number {
+        const providerId = this.getProviderId();
+
+        // 1. プロバイダー別設定を確認
+        const providerSettings = this.settings[`providers`] as Record<string, { maxContentChars?: number }> | undefined;
+        const providerConfig = providerSettings?.[providerId];
+        if (typeof providerConfig?.maxContentChars === 'number' && providerConfig.maxContentChars > 0) {
+            return providerConfig.maxContentChars;
+        }
+
+        // 2. グローバル設定を確認
+        if (storageKey) {
+            const globalValue = this.settings[storageKey] as number | undefined;
+            if (typeof globalValue === 'number' && globalValue > 0) {
+                return globalValue;
+            }
+        }
+
+        // 3. デフォルト値
+        return defaultValue;
     }
 
     /**

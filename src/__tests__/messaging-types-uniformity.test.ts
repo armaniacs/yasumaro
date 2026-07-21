@@ -10,10 +10,10 @@
 
 
 import {
-  ServiceWorkerRequest,
   isServiceWorkerRequest,
   PayloadForType
 } from '../messaging/types.js';
+import type { ExtensionMessage } from '../background/messageTypes.js';
 
 describe('Messaging Types Uniformity Tests', () => {
   test('CHECK_DOMAIN payload type should be never', () => {
@@ -31,11 +31,16 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(true).toBe(true);
   });
 
-  test('SAVE_RECORD payload type should be never', () => {
+  test('SAVE_RECORD payload type should include required fields', () => {
     type Payload = PayloadForType<'SAVE_RECORD'>;
-    // never型であることを確認
-    const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    const payload: Payload = {
+      title: 'Test',
+      url: 'https://example.com',
+      content: 'Content'
+    };
+    expect(payload.title).toBe('Test');
+    expect(payload.url).toBe('https://example.com');
+    expect(payload.content).toBe('Content');
   });
 
   test('TEST_CONNECTIONS payload type should be never', () => {
@@ -78,6 +83,38 @@ describe('Messaging Types Uniformity Tests', () => {
     // never型であることを確認
     const assertNever: never = 1 as Payload;
     expect(true).toBe(true);
+  });
+
+  test('PING payload type should be never', () => {
+    type Payload = PayloadForType<'PING'>;
+    const assertNever: never = 1 as Payload;
+    expect(true).toBe(true);
+  });
+
+  test('REFRESH_LOCAL_MARKDOWN_SCHEDULER payload type should be never', () => {
+    type Payload = PayloadForType<'REFRESH_LOCAL_MARKDOWN_SCHEDULER'>;
+    const assertNever: never = 1 as Payload;
+    expect(true).toBe(true);
+  });
+
+  test('CONSENT_STATE_CHANGED payload type should be never', () => {
+    type Payload = PayloadForType<'CONSENT_STATE_CHANGED'>;
+    const assertNever: never = 1 as Payload;
+    expect(true).toBe(true);
+  });
+
+  test('TEST_OBSIDIAN payload type should allow optional apiKey', () => {
+    type Payload = PayloadForType<'TEST_OBSIDIAN'>;
+    const withKey: Payload = { apiKey: 'secret' };
+    const withoutKey: Payload = undefined;
+    expect(withKey.apiKey).toBe('secret');
+    expect(withoutKey).toBeUndefined();
+  });
+
+  test('DASHBOARD_SQLITE payload type should allow optional object', () => {
+    type Payload = PayloadForType<'DASHBOARD_SQLITE'>;
+    const payload: Payload = { query: 'SELECT 1' };
+    expect(payload.query).toBe('SELECT 1');
   });
 
   test('VALID_VISIT payload type should be { content: string }', () => {
@@ -157,7 +194,7 @@ describe('Messaging Types Uniformity Tests', () => {
   });
 
   test('isServiceWorkerRequest handles CONTENT_CLEANSING_EXECUTED with valid payload', () => {
-    const validMessage: ServiceWorkerRequest = {
+    const validMessage: ExtensionMessage = {
       type: 'CONTENT_CLEANSING_EXECUTED',
       payload: {
         hardStripRemoved: 10,
@@ -173,13 +210,14 @@ describe('Messaging Types Uniformity Tests', () => {
     const noPayloadTypes = [
       'CHECK_DOMAIN',
       'GET_CONTENT',
-      'SAVE_RECORD',
       'TEST_CONNECTIONS',
-      'TEST_OBSIDIAN',
       'TEST_AI',
       'GET_PRIVACY_CACHE',
       'ACTIVITY_UPDATE',
-      'SESSION_LOCK_REQUEST'
+      'SESSION_LOCK_REQUEST',
+      'PING',
+      'REFRESH_LOCAL_MARKDOWN_SCHEDULER',
+      'CONSENT_STATE_CHANGED'
     ] as const;
 
     noPayloadTypes.forEach(type => {
