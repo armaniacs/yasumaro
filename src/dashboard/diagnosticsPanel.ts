@@ -5,42 +5,15 @@
 import { getMessage } from '../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../utils/storage.js';
+import { PROVIDER_LABELS } from '../background/aiClient.js';
 import { getMonthlyUsage } from '../utils/aiUsageTracker.js';
 import { UI_COLORS } from '../constants/appConstants.js';
 import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from './dashboardSqliteService.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from './utils/retry.js';
-import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from './diagnoseDeficiencies.js';
+import { diagnoseDeficiencies, type DiagnosticInput } from './diagnoseDeficiencies.js';
 import { detectLiveVfsStrategy } from '../offscreen/opfsCapabilities.js';
-
-/**
- * Creates a stat row element for the diagnostics panel
- * @param label - The label text for the stat
- * @param value - The value text for the stat
- * @param masked - Whether the value should be displayed as masked (for sensitive info)
- * @returns HTMLElement - The created stat row div
- */
-function makeStatRow(label: string, value: string, masked = false): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'diag-stat-row';
-  const valueHtml = masked
-    ? `<span class="diag-stat-value diag-stat-masked">${value}</span>`
-    : `<span class="diag-stat-value">${value}</span>`;
-  row.innerHTML = `<span class="diag-stat-label">${label}</span>${valueHtml}`;
-  return row;
-}
-
-/**
- * Returns the localized severity label for a deficiency severity level.
- */
-function getSeverityLabel(severity: DeficiencyItem['severity']): string {
-  switch (severity) {
-    case 'high': return getMessage('diagSeverityHigh') || 'High';
-    case 'medium': return getMessage('diagSeverityMedium') || 'Medium';
-    case 'low': return getMessage('diagSeverityLow') || 'Low';
-    default: return severity;
-  }
-}
+import { makeStatRow, getSeverityLabel } from './diagnosticUtils.js';
 
 /**
  * Initializes the diagnostics panel with storage stats, extension info,
@@ -91,14 +64,7 @@ async function initDiagnosticsPanel(): Promise<void> {
     }
 
     if (aiSettingsEl) {
-      const providerLabels: Record<string, string> = {
-        gemini: 'Google Gemini',
-        openai: 'OpenAI Compatible',
-        openai2: 'OpenAI Compatible 2',
-        'lm-studio': 'LM Studio',
-        ollama: 'Ollama',
-        'openai-compatible': 'OpenAI Compatible',
-      };
+      const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
       const configuredLabel = getMessage('configured') || '(configured)';
       const notSetLabel = getMessage('notSet') || '(not set)';
@@ -210,7 +176,7 @@ async function initDiagnosticsPanel(): Promise<void> {
       ));
       storageStats.appendChild(makeStatRow(
         getMessage('diagSavedUrls') || 'Saved URLs',
-        String(urlCount)
+        urlCount >= 0 ? String(urlCount) : (getMessage('diagUnavailable') || 'Unavailable')
       ));
     } catch {
       storageStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
@@ -491,14 +457,7 @@ async function initDiagnosticsPanel(): Promise<void> {
       const ai = testResult?.ai;
       if (ai) {
         connectionResult.innerHTML = '';
-        const providerLabels: Record<string, string> = {
-          gemini: 'Google Gemini',
-          openai: 'OpenAI Compatible',
-          openai2: 'OpenAI Compatible 2',
-          'lm-studio': 'LM Studio',
-          ollama: 'Ollama',
-          'openai-compatible': 'OpenAI Compatible',
-        };
+        const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
         if (ai.providers && ai.providers.length > 1) {
           // Multi-provider: show per-provider results

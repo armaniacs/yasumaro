@@ -27,6 +27,7 @@ vi.mock('../../utils/storage.js', () => ({
     OBSIDIAN_PORT: 'obsidian_port',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     AI_PROVIDER: 'ai_provider',
+    AI_PROVIDER_PRIORITY_LIST: 'ai_provider_priority_list',
     GEMINI_API_KEY: 'gemini_api_key',
     GEMINI_MODEL: 'gemini_model',
     OPENAI_BASE_URL: 'openai_base_url',
@@ -183,6 +184,36 @@ describe('makeStatRow (tested via initDiagnosticsPanel output)', () => {
     );
     const valueSpan = keyRow!.querySelector('.diag-stat-value');
     expect(valueSpan!.classList.contains('diag-stat-masked')).toBe(true);
+  });
+
+  it('escapes HTML in label and value (XSS prevention)', async () => {
+    document.body.innerHTML = '';
+    setupChromeMocks();
+    setupDOM();
+    // Inject a malicious provider name through settings
+    mockGetSettings.mockResolvedValue({
+      obsidian_protocol: 'https',
+      obsidian_port: '27124',
+      obsidian_api_key: '',
+      obsidian_daily_path: '/notes',
+      ai_provider_priority_list: [{ provider: '<img src=x onerror=alert(1)>' }],
+    });
+    await initDiagnosticsPanel();
+
+    // Verify the malicious string appears as text, not as an img element
+    const imgs = document.querySelectorAll('img');
+    expect(imgs.length).toBe(0);
+
+    // Verify the text is rendered as textContent, not eval'd
+    const rows = document.querySelectorAll('.diag-stat-row');
+    let foundMalicious = false;
+    rows.forEach((row) => {
+      const valEl = row.querySelector('.diag-stat-value');
+      if (valEl && valEl.textContent?.includes('<img')) {
+        foundMalicious = true;
+      }
+    });
+    expect(foundMalicious).toBe(true);
   });
 });
 
