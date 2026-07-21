@@ -293,7 +293,7 @@ describe('createConnectionStatusElement', () => {
         const el = createConnectionStatusElement('Test', result, '#22c55e', '#ef4444');
 
         expect(el.innerHTML).toContain('Test:');
-        expect(el.querySelector('span')?.style.color).toBe('rgb(34, 197, 94)');
+        expect(el.querySelector('span')?.className).toBe('diag-success');
     });
 
     it('creates error element', () => {
@@ -301,7 +301,7 @@ describe('createConnectionStatusElement', () => {
         const el = createConnectionStatusElement('Test', result, '#22c55e', '#ef4444');
 
         expect(el.innerHTML).toContain('Failed');
-        expect(el.querySelector('span')?.style.color).toBe('rgb(239, 68, 68)');
+        expect(el.querySelector('span')?.className).toBe('diag-error');
     });
 
     it('creates element with strong label', () => {

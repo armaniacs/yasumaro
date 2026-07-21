@@ -290,7 +290,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('configuration is missing');
+      expect(result.message).toContain('Unknown provider: unknown');
     });
 
     it('プロバイダーがthrowした場合エラーを返す', async () => {
