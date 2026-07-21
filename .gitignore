@@ -86,3 +86,4 @@ graphify-out/
 
 # vulnhunt
 *_VULNHUNT_RESULTS_*
+.vulnhunter-fix/
