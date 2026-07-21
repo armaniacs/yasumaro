@@ -83,3 +83,6 @@ _locales/*/*.bak*
 
 # Graphify outputs
 graphify-out/
+
+# vulnhunt
+*_VULNHUNT_RESULTS_*
