@@ -245,6 +245,7 @@ export async function clearAllLogs(): Promise<boolean> {
 
 /**
  * Get total record count.
+ * Returns -1 on error to distinguish from a legitimate count of 0.
  */
 export async function getLogCount(): Promise<number> {
   try {
@@ -252,9 +253,9 @@ export async function getLogCount(): Promise<number> {
     if (response.success) {
       return Number(response.count || 0);
     }
-    return 0;
+    return -1;
   } catch {
-    return 0;
+    return -1;
   }
 }
 

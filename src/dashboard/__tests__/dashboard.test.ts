@@ -290,23 +290,23 @@ describe('setHtmlLangDir', () => {
 describe('createConnectionStatusElement', () => {
     it('creates success element', () => {
         const result = { success: true, message: 'Connected' };
-        const el = createConnectionStatusElement('Test', result, '#22c55e', '#ef4444');
+        const el = createConnectionStatusElement('Test', result);
 
         expect(el.innerHTML).toContain('Test:');
-        expect(el.querySelector('span')?.style.color).toBe('rgb(34, 197, 94)');
+        expect(el.querySelector('span')?.className).toBe('diag-success');
     });
 
     it('creates error element', () => {
         const result = { success: false, message: 'Failed' };
-        const el = createConnectionStatusElement('Test', result, '#22c55e', '#ef4444');
+        const el = createConnectionStatusElement('Test', result);
 
         expect(el.innerHTML).toContain('Failed');
-        expect(el.querySelector('span')?.style.color).toBe('rgb(239, 68, 68)');
+        expect(el.querySelector('span')?.className).toBe('diag-error');
     });
 
     it('creates element with strong label', () => {
         const result = { success: true, message: 'OK' };
-        const el = createConnectionStatusElement('Service', result, '#22c55e', '#ef4444');
+        const el = createConnectionStatusElement('Service', result);
 
         const strongEl = el.querySelector('strong');
         expect(strongEl?.textContent).toBe('Service: ');

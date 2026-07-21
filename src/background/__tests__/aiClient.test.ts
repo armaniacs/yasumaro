@@ -290,7 +290,7 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       const result = await aiClient.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('configuration is missing');
+      expect(result.message).toContain('Unknown provider: unknown');
     });
 
     it('プロバイダーがthrowした場合エラーを返す', async () => {
@@ -411,6 +411,38 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('Connection test internal error');
+    });
+  });
+
+  describe('testConnection - MAX_PROVIDERS制限 (DoS対策)', () => {
+    it('MAX_PROVIDERSを超えるスロットは切り捨てられる', async () => {
+      const client = new AIClient();
+      let callCount = 0;
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => Promise.resolve({ success: true, summary: 'ok' }),
+        testConnection: () => {
+          callCount++;
+          return Promise.resolve({ success: true, message: 'ok' });
+        }
+      }));
+
+      // 30 slots — exceeds MAX_PROVIDERS=10
+      const slots = Array.from({ length: 30 }, (_, i) => ({
+        provider: 'gemini',
+        model: `model-${i}`,
+      }));
+      mockGetSettings.mockResolvedValue({
+        ai_provider_priority_list: slots,
+        gemini_api_key: 'key',
+        gemini_model: 'gemini-pro',
+      });
+
+      const result = await client.testConnection();
+
+      // Only MAX_PROVIDERS (10) should be processed
+      expect(callCount).toBeLessThanOrEqual(10);
+      expect(result.providers.length).toBeLessThanOrEqual(10);
+      expect(result.success).toBe(true);
     });
   });
 });
