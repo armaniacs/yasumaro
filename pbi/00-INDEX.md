@@ -4,87 +4,25 @@
 
 凡例: ⬜ 未着手 / 🔶 部分実装（一部基準のみ満たす） / 実装完了したPBIは `dev-docs/archived/pbi/` へ移動する
 難易度: 🟢低（1pt目安） / 🟡中（2pt目安） / 🔴高（3pt以上目安） — 各PBI内「見積もり」セクションのポイントに基づく
-副作用: 🔴あり（既存機能・既存ユーザーに実害の可能性） / 🟡軽微（コスト増や要検証点はあるが致命的でない） / 🟢なし（安全に対処可能） — [side-effects.md](../plans/2026-07-18-0522-review-side-effects.md)の元指摘判定に基づく
-
----
-
-## 実装順序（推奨）
-
-依存関係: **21-02 (型共通化) → 21-03 (二重実装解消)** の順序推奨（21-02 の共通化が 21-03 の統合を容易にする）。**21-01 (セキュリティ修正) は最優先で独立着手可能**。
-
-| 順位 | PBI | ポイント | 理由 |
-|:----:|-----|:--------:|------|
-| 1 | [21-01](2026-07-21-01-fix-diagnostic-security.md) | 3pt | **最優先**: XSS/DoS 脆弱性修正、独立 |
-| 2 | [08](2026-07-20-08-fix-changelog-release-note-guidelines.md) | 1pt | 最小、ドキュメントのみ |
-| 3 | [07](2026-07-20-07-fix-data-integrity-cleanup.md) | 2pt | 小規模リファクタリング、他と独立 |
-| 4 | [03](2026-07-20-03-fix-i18n-module-separation.md) | 3pt | PBI-05 の前提。先に完了させる |
-| 5 | [05](2026-07-20-05-fix-ui-css-touchups.md) | 3pt | PBI-03 完了後に着手 |
-| 6 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
-| 7 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
-| 8 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
-| 9 | [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | 3pt | 型・ラベル共通化、21-03の前提 |
-| 10 | [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | 8pt | 二重実装解消、21-02完了後に着手 |
-| 11 | [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | 2pt | エラーハンドリング改善、独立 |
+副作用: 🔴あり（既存機能・既存ユーザーに実害の可能性） / 🟡軽微（コスト増や要検証点はあるが致命的でない） / 🟢なし（安全に対処可能）
 
 ---
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-| PBI | カテゴリ | タイトル | 難易度 | 副作用 | 状態 |
-|---|---|---|---|---|---|
-| [21-01](2026-07-21-01-fix-diagnostic-security.md) | セキュリティ | 診断パネルのXSS/DoS脆弱性修正 | 🔴高（3pt） | 🟢なし | ⬜ |
-| [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | DX・保守性 | AIプロバイダの型・ラベル・ロジック共通化 | 🔴高（3pt） | 🟢なし | ⬜ |
-| [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | DX・保守性 | 診断パネルの二重実装解消と表示ロジック共通化 | 🔴高（8pt） | 🟡軽微 | ⬜ |
-| [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | DX・保守性 | 診断結果表示の堅牢化とエラーハンドリング改善 | 🟡中（2pt） | 🟢なし | ⬜ |
-
----
-
-### 元指摘カテゴリ別一覧
-
-コンテンツ抽出品質:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-
-セキュリティ・防御的実装:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-| [21-01](2026-07-21-01-fix-diagnostic-security.md) | adversarial-review | 診断パネルのXSS/DoS脆弱性修正 | 🔴高（3pt） | 🟢なし |
-
-データ整合性・移行:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-
-ストレージ・パフォーマンス:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-
-アクセシビリティ・i18n:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-| [2026-07-18-16](2026-07-18-16-feat-plural-locale-support.md) | L4 | 複数形・数量表現のロケール対応 | 🔴高（3pt） | 🟢なし |
-
-サプライチェーン・依存関係:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-
-DX・保守性:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
-| [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | adversarial-review | AIプロバイダの型・ラベル・ロジック共通化 | 🔴高（3pt） | 🟢なし |
-| [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | adversarial-review | 診断パネルの二重実装解消 | 🔴高（8pt） | 🟡軽微 |
-| [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | adversarial-review | 診断結果表示の堅牢化とエラーハンドリング改善 | 🟡中（2pt） | 🟢なし |
-
-UI・ドキュメント:
-| PBI | 元指摘 | タイトル | 難易度 | 副作用 |
-|---|---|---|---|---|
+すべてのPBIが実装完了・アーカイブ済みです。新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 
 ---
 
 ## アーカイブ
 
-完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。運用手順は各PBIスキルのライフサイクル節を参照。
+完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-21-04-refactor-hardening-diagnostics-errors.md
+- 2026-07-21-03-refactor-dedup-diagnostics-panel.md
+- 2026-07-21-02-refactor-ai-provider-commons.md
+- 2026-07-21-01-fix-diagnostic-security.md
 - 2026-07-20-12-fix-gist-sync-completeness.md
 - 2026-07-20-13-fix-ai-provider-response-validation.md
 - 2026-07-20-17-fix-mobile-accessibility-frontend.md
@@ -101,13 +39,6 @@ UI・ドキュメント:
 - 2026-07-20-10-feat-offline-network-queue.md
 - 2026-07-20-02-fix-session-store-resilience.md
 - 2026-07-20-01-fix-message-type-unification.md
-- 2026-07-20-23-fix-ci-dx-improvements.md
-- 2026-07-20-21-fix-dashboard-i18n-locale-fallback.md
-- 2026-07-20-19-cleanup-conflictstats-docs.md
-- 2026-07-20-18-fix-supply-chain-adm-zip.md
-- 2026-07-20-17-fix-mobile-accessibility-frontend.md
-- 2026-07-20-13-fix-ai-provider-response-validation.md
-- 2026-07-20-12-fix-gist-sync-completeness.md
 - 2026-07-20-09-fix-docs-dual-translation-system.md
 - 2026-07-20-08-fix-changelog-release-note-guidelines.md
 - 2026-07-20-07-fix-data-integrity-cleanup.md
@@ -152,13 +83,11 @@ UI・ドキュメント:
 - 2026-07-16-04-fix-adr014-file-references.md
 - 2026-07-16-02-fix-architecture-knowledge-graph-findings.md
 - 2026-07-13-03-fix-sqlite-history-panel-deepening.md
-- 2026-07-18-StorageBackend設計ドキュメント更新
 
 ## 集計
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 6 |
+| ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 83 |
-| **合計（archive除く）** | 6 |
+| アーカイブ済み | 87 |
