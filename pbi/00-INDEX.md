@@ -10,7 +10,18 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-すべてのPBIが実装完了・アーカイブ済みです。新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
+VulnHunterセキュリティ監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-07-21-000000/`、確認済み21件）由来のPBI群。優先順位はvulnhunter-fixのクラスタスコア（Critical=8/High=4/Medium=2/Low=1）に基づく。
+
+| PBI | タイトル | 状態 | 難易度 | 副作用 | 対象VULN件数 |
+|---|---|---|---|---|---|
+| [2026-07-22-01-fix-obsidian-markdown-injection-core](2026-07-22-01-fix-obsidian-markdown-injection-core.md) | Obsidianマークダウン注入の根本修正（共有サニタイザ+主要2入口点） | ⬜ | 🟡中 | 🟢なし | 4 (VULN-001,002,004,005) |
+| [2026-07-22-02-fix-obsidian-markdown-injection-downstream](2026-07-22-02-fix-obsidian-markdown-injection-downstream.md) | Obsidianマークダウン注入 — 派生サーフェス修正（PBI A後続） | ⬜ | 🟡中 | 🟢なし | 3 (VULN-006,007,020) |
+| [2026-07-22-03-fix-reliability-races-resource-exhaustion](2026-07-22-03-fix-reliability-races-resource-exhaustion.md) | 信頼性ハードニング — 競合状態・リソース枯渇の解消 | ⬜ | 🔴高 | 🟡軽微 | 6 (VULN-003,008,011,012,014,016) |
+| [2026-07-22-04-fix-settings-import-bypass-ssrf](2026-07-22-04-fix-settings-import-bypass-ssrf.md) | 設定インポート署名検証バイパスの解消とループバックSSRFの防止 | ⬜ | 🟡中 | 🟡軽微 | 3 (VULN-009,010,013) |
+| [2026-07-22-05-fix-master-password-lockout](2026-07-22-05-fix-master-password-lockout.md) | マスターパスワード認証試行回数制限の統一 | ⬜ | 🟢低 | 🟢なし | 2 (VULN-018,021) |
+| [2026-07-22-06-fix-master-password-protection-integrity](2026-07-22-06-fix-master-password-protection-integrity.md) | マスターパスワード保護の完全性（無認証解除・失効漏れ・KDF強度）の修正 | ⬜ | 🔴高 | 🟡軽微 | 3 (VULN-015,017,019) |
+
+新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 
 ---
 
@@ -88,6 +99,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 0 |
+| ⬜ 未着手 | 6 |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 87 |
