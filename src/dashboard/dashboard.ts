@@ -8,8 +8,8 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } f
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
+import { type MultiProviderTestResult, PROVIDER_LABELS } from '../background/aiClient.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { STATUS_COLORS } from '../constants/appConstants.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
@@ -231,9 +231,9 @@ export async function loadGeneralSettings(): Promise<void> {
 // Connection Test Helpers
 // ============================================================================
 
-export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }, successColor: string, errorColor: string): HTMLElement {
+export function createConnectionStatusElement(label: string, result: { success: boolean; message: string }): HTMLElement {
   const statusDiv = document.createElement('div');
-  statusDiv.style.marginBottom = '8px';
+  statusDiv.className = 'diag-indent';
 
   const labelEl = document.createElement('strong');
   labelEl.textContent = `${label}: `;
@@ -242,10 +242,10 @@ export function createConnectionStatusElement(label: string, result: { success: 
   const spanEl = document.createElement('span');
   if (result.success) {
     spanEl.textContent = getMessage('connectionSuccess') || '接続成功';
-    spanEl.style.color = successColor;
+    spanEl.className = 'diag-success';
   } else {
     spanEl.textContent = result.message;
-    spanEl.style.color = errorColor;
+    spanEl.className = 'diag-error';
   }
   statusDiv.appendChild(spanEl);
 
@@ -270,14 +270,14 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
   return testResult?.obsidian || { success: false, message: 'No response' };
 }
 
-export async function testAiConnection(): Promise<{ success: boolean; message: string }> {
+export async function testAiConnection(): Promise<MultiProviderTestResult> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
     protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload: {}
-  }) as { ai?: { success: boolean; message: string } };
+  }) as { ai?: MultiProviderTestResult };
 
-  return testResult?.ai || { success: false, message: 'No response' };
+  return testResult?.ai || { success: false, message: 'No response', providers: [] };
 }
 
 export async function handleSaveOnly(): Promise<void> {
@@ -361,7 +361,7 @@ export async function handleTestObsidian(): Promise<void> {
     const obsidianResult = await testObsidianConnection(typedApiKey || '');
 
     statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
     // HTTPS証明書警告
     if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && protocolInput?.value === 'https') {
@@ -410,7 +410,39 @@ export async function handleTestAi(): Promise<void> {
     const aiResult = await testAiConnection();
 
     statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('AI', aiResult, STATUS_COLORS.SUCCESS, STATUS_COLORS.ERROR));
+
+    if (aiResult.providers && aiResult.providers.length > 1) {
+      // Multi-provider: show per-provider results
+      const container = document.createElement('div');
+      container.className = 'diag-indent';
+
+      const header = document.createElement('strong');
+      header.textContent = 'AI: ';
+      container.appendChild(header);
+
+      const statusEl = document.createElement('span');
+      statusEl.textContent = aiResult.success
+        ? (getMessage('connectionSuccess') || '接続成功')
+        : (getMessage('connectionFailed') || '接続失敗');
+      statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
+      container.appendChild(statusEl);
+      statusDiv.appendChild(container);
+
+      const providerLabels: Record<string, string> = PROVIDER_LABELS;
+
+      for (const provider of aiResult.providers) {
+        const row = document.createElement('div');
+        row.className = 'diag-indent';
+        const label = providerLabels[provider.provider] || provider.provider;
+        const modelInfo = provider.model ? ` (${provider.model})` : '';
+        row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
+        row.classList.add(provider.success ? 'diag-success' : 'diag-error');
+        statusDiv.appendChild(row);
+      }
+    } else {
+      // Single provider: show simple result
+      statusDiv.appendChild(createConnectionStatusElement('AI', aiResult));
+    }
 
     statusDiv.className = aiResult.success ? 'success' : 'error';
     syncStatusToTop();

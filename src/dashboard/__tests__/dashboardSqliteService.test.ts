@@ -173,18 +173,18 @@ describe('dashboardSqliteService', () => {
       expect(result).toBe(42);
     });
 
-    it('returns 0 on failed response', async () => {
+    it('returns -1 on failed response', async () => {
       givenResponse({ success: false });
 
       const result = await getLogCount();
-      expect(result).toBe(0);
+      expect(result).toBe(-1);
     });
 
-    it('returns 0 on rejection', async () => {
+    it('returns -1 on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await getLogCount();
-      expect(result).toBe(0);
+      expect(result).toBe(-1);
     });
   });
 });

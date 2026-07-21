@@ -1800,6 +1800,30 @@ mark.domain-match-highlight {
   font-family: var(--font-sans);
 }
 
+/* Diagnostic result color utilities (CSP-safe: no inline styles) */
+.diag-success {
+  color: var(--color-success, #22c55e);
+}
+
+.diag-error {
+  color: var(--color-danger, #ef4444);
+}
+
+.diag-bold {
+  font-weight: bold;
+}
+
+.diag-indent {
+  margin-left: 1em;
+}
+
+.diag-provider-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
 /* =============================================================================
    Export / Import Panel
    ============================================================================= */

@@ -10,26 +10,32 @@
 
 ## 実装順序（推奨）
 
-依存関係: **PBI-03 (i18n分離) → PBI-05 (UI修正)** の順序必須。他は独立。
+依存関係: **21-02 (型共通化) → 21-03 (二重実装解消)** の順序推奨（21-02 の共通化が 21-03 の統合を容易にする）。**21-01 (セキュリティ修正) は最優先で独立着手可能**。
 
 | 順位 | PBI | ポイント | 理由 |
 |:----:|-----|:--------:|------|
-| 1 | [08](2026-07-20-08-fix-changelog-release-note-guidelines.md) | 1pt | 最小、ドキュメントのみ |
-| 2 | [07](2026-07-20-07-fix-data-integrity-cleanup.md) | 2pt | 小規模リファクタリング、他と独立 |
-| 3 | [03](2026-07-20-03-fix-i18n-module-separation.md) | 3pt | PBI-05 の前提。先に完了させる |
-| 4 | [05](2026-07-20-05-fix-ui-css-touchups.md) | 3pt | PBI-03 完了後に着手 |
-| 5 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
-| 6 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
-| 7 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
-| 8 | [16](2026-07-20-16-feat-ai-usage-controls.md) | 3pt | 設定 UI 追加 |
-| 9 | [20](2026-07-20-20-fix-external-endpoint-configurability.md) | 3pt | Obsidian/Gemini 設定追加 |
+| 1 | [21-01](2026-07-21-01-fix-diagnostic-security.md) | 3pt | **最優先**: XSS/DoS 脆弱性修正、独立 |
+| 2 | [08](2026-07-20-08-fix-changelog-release-note-guidelines.md) | 1pt | 最小、ドキュメントのみ |
+| 3 | [07](2026-07-20-07-fix-data-integrity-cleanup.md) | 2pt | 小規模リファクタリング、他と独立 |
+| 4 | [03](2026-07-20-03-fix-i18n-module-separation.md) | 3pt | PBI-05 の前提。先に完了させる |
+| 5 | [05](2026-07-20-05-fix-ui-css-touchups.md) | 3pt | PBI-03 完了後に着手 |
+| 6 | [04](2026-07-20-04-fix-content-extractor-cleansing-config.md) | 3pt | extractor.ts に閉じた変更 |
+| 7 | [09](2026-07-20-09-fix-docs-dual-translation-system.md) | 3pt | 独立したビルドスクリプト追加 |
+| 8 | [06](2026-07-20-06-fix-security-privacy-extensions.md) | 5pt | 独立した3機能を含む |
+| 9 | [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | 3pt | 型・ラベル共通化、21-03の前提 |
+| 10 | [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | 8pt | 二重実装解消、21-02完了後に着手 |
+| 11 | [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | 2pt | エラーハンドリング改善、独立 |
 
 ---
 
 ## 未着手 ⬜ / 部分実装 🔶
 
 | PBI | カテゴリ | タイトル | 難易度 | 副作用 | 状態 |
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|
+| [21-01](2026-07-21-01-fix-diagnostic-security.md) | セキュリティ | 診断パネルのXSS/DoS脆弱性修正 | 🔴高（3pt） | 🟢なし | ⬜ |
+| [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | DX・保守性 | AIプロバイダの型・ラベル・ロジック共通化 | 🔴高（3pt） | 🟢なし | ⬜ |
+| [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | DX・保守性 | 診断パネルの二重実装解消と表示ロジック共通化 | 🔴高（8pt） | 🟡軽微 | ⬜ |
+| [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | DX・保守性 | 診断結果表示の堅牢化とエラーハンドリング改善 | 🟡中（2pt） | 🟢なし | ⬜ |
 
 ---
 
@@ -42,6 +48,7 @@
 セキュリティ・防御的実装:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
+| [21-01](2026-07-21-01-fix-diagnostic-security.md) | adversarial-review | 診断パネルのXSS/DoS脆弱性修正 | 🔴高（3pt） | 🟢なし |
 
 データ整合性・移行:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -63,6 +70,9 @@
 DX・保守性:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
 |---|---|---|---|---|
+| [21-02](2026-07-21-02-refactor-ai-provider-commons.md) | adversarial-review | AIプロバイダの型・ラベル・ロジック共通化 | 🔴高（3pt） | 🟢なし |
+| [21-03](2026-07-21-03-refactor-dedup-diagnostics-panel.md) | adversarial-review | 診断パネルの二重実装解消 | 🔴高（8pt） | 🟡軽微 |
+| [21-04](2026-07-21-04-refactor-hardening-diagnostics-errors.md) | adversarial-review | 診断結果表示の堅牢化とエラーハンドリング改善 | 🟡中（2pt） | 🟢なし |
 
 UI・ドキュメント:
 | PBI | 元指摘 | タイトル | 難易度 | 副作用 |
@@ -148,7 +158,7 @@ UI・ドキュメント:
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 2 |
+| ⬜ 未着手 | 6 |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 83 |
-| **合計（archive除く）** | 2 |
+| **合計（archive除く）** | 6 |
