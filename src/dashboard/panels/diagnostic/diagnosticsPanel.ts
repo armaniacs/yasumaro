@@ -1,9 +1,9 @@
 import { getMessage } from '../../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../../../utils/storage.js';
-import { getSavedUrlCount } from '../../../utils/storageUrls.js';
+
 import { UI_COLORS } from '../../../constants/appConstants.js';
-import { getSqliteStatus, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../dashboardSqliteService.js';
+import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { diagnoseDeficiencies, type DiagnosticInput, type DeficiencyItem } from '../../diagnoseDeficiencies.js';
@@ -79,36 +79,89 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       }
 
       if (aiSettingsEl) {
-        const provider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
         const providerLabels: Record<string, string> = {
           gemini: 'Google Gemini',
           openai: 'OpenAI Compatible',
           openai2: 'OpenAI Compatible 2',
+          'lm-studio': 'LM Studio',
+          ollama: 'Ollama',
+          'openai-compatible': 'OpenAI Compatible',
         };
-        aiSettingsEl.appendChild(makeStatRow(getMessage('diagProvider') || 'Provider', providerLabels[provider] || provider));
 
         const configuredLabel = getMessage('configured') || '(configured)';
         const notSetLabel = getMessage('notSet') || '(not set)';
 
-        if (provider === 'gemini') {
-          const model = (settings[StorageKeys.GEMINI_MODEL] as string) || '';
-          const key = (settings[StorageKeys.GEMINI_API_KEY] as string) || '';
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagModel') || 'Model', model || notSetLabel));
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-        } else if (provider === 'openai') {
-          const baseUrl = (settings[StorageKeys.OPENAI_BASE_URL] as string) || '';
-          const model = (settings[StorageKeys.OPENAI_MODEL] as string) || '';
-          const key = (settings[StorageKeys.OPENAI_API_KEY] as string) || '';
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagBaseUrl') || 'Base URL', baseUrl || notSetLabel));
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagModel') || 'Model', model || notSetLabel));
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-        } else if (provider === 'openai2') {
-          const baseUrl = (settings[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
-          const model = (settings[StorageKeys.OPENAI_2_MODEL] as string) || '';
-          const key = (settings[StorageKeys.OPENAI_2_API_KEY] as string) || '';
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagBaseUrl') || 'Base URL', baseUrl || notSetLabel));
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagModel') || 'Model', model || notSetLabel));
-          aiSettingsEl.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
+        // Read priority list; fall back to legacy AI_PROVIDER if empty
+        const priorityList = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as Array<{ provider: string; model?: string }>) || [];
+        const legacyProvider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
+        const slots = priorityList.length > 0
+          ? priorityList
+          : [{ provider: legacyProvider }];
+
+        // Show provider priority list header
+        if (slots.length > 1) {
+          aiSettingsEl.appendChild(makeStatRow(
+            getMessage('diagProvider') || 'Provider',
+            `${slots.length} providers (priority order)`
+          ));
+        }
+
+        // Show each provider in the priority list
+        for (let i = 0; i < slots.length; i++) {
+          const slot = slots[i];
+          const label = providerLabels[slot.provider] || slot.provider;
+          const priorityLabel = slots.length > 1 ? `#${i + 1} ` : '';
+          const modelOverride = slot.model ? ` [${slot.model}]` : '';
+
+          // Wrap each provider group in a bordered container
+          const providerGroup = document.createElement('div');
+          providerGroup.className = slots.length > 1 ? 'diag-provider-group' : '';
+
+          providerGroup.appendChild(makeStatRow(
+            `${priorityLabel}Provider`,
+            `${label}${modelOverride}`
+          ));
+
+          // Show provider-specific settings
+          if (slot.provider === 'gemini') {
+            const model = (settings[StorageKeys.GEMINI_MODEL] as string) || '';
+            const key = (settings[StorageKeys.GEMINI_API_KEY] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
+          } else if (slot.provider === 'openai') {
+            const baseUrl = (settings[StorageKeys.OPENAI_BASE_URL] as string) || '';
+            const model = (settings[StorageKeys.OPENAI_MODEL] as string) || '';
+            const key = (settings[StorageKeys.OPENAI_API_KEY] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
+          } else if (slot.provider === 'openai2') {
+            const baseUrl = (settings[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
+            const model = (settings[StorageKeys.OPENAI_2_MODEL] as string) || '';
+            const key = (settings[StorageKeys.OPENAI_2_API_KEY] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
+          } else if (slot.provider === 'lm-studio') {
+            const baseUrl = (settings[StorageKeys.LM_STUDIO_BASE_URL] as string) || '';
+            const model = (settings[StorageKeys.LM_STUDIO_MODEL] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+          } else if (slot.provider === 'ollama') {
+            const baseUrl = (settings[StorageKeys.OLLAMA_BASE_URL] as string) || '';
+            const model = (settings[StorageKeys.OLLAMA_MODEL] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+          } else if (slot.provider === 'openai-compatible') {
+            const baseUrl = (settings[StorageKeys.PROVIDER_BASE_URL] as string) || '';
+            const model = (settings[StorageKeys.PROVIDER_MODEL] as string) || '';
+            const key = (settings[StorageKeys.PROVIDER_API_KEY] as string) || '';
+            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
+            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
+          }
+
+          aiSettingsEl.appendChild(providerGroup);
         }
       }
     } catch {
@@ -122,7 +175,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       try {
         const bytesUsed = await chrome.storage.local.getBytesInUse(null);
         const kb = (bytesUsed / 1024).toFixed(1);
-        const urlCount = await getSavedUrlCount();
+        const urlCount = await getLogCount();
         storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${kb} KB`));
         storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', String(urlCount)));
       } catch {
@@ -349,16 +402,49 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
             type: 'TEST_AI',
             protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: {}
-          }) as { ai?: { success: boolean; message: string } };
+          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string }> } };
 
           const ai = testResult?.ai;
-          connectionResult.textContent = ai
-            ? `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`
-            : getMessage('testComplete') || 'Test complete.';
-          connectionResult.style.color = ai?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+          if (ai) {
+            connectionResult.innerHTML = '';
+            const providerLabels: Record<string, string> = {
+              gemini: 'Google Gemini',
+              openai: 'OpenAI Compatible',
+              openai2: 'OpenAI Compatible 2',
+              'lm-studio': 'LM Studio',
+              ollama: 'Ollama',
+              'openai-compatible': 'OpenAI Compatible',
+            };
+
+            if (ai.providers && ai.providers.length > 1) {
+              // Multi-provider: show per-provider results
+              const header = document.createElement('div');
+              header.textContent = ai.success
+                ? `AI: ${getMessage('testSuccess') || '✓ Connection successful'}`
+                : `AI: ${getMessage('testFailed') || '✗ Connection failed'}`;
+              header.className = ai.success ? 'diag-success diag-bold' : 'diag-error diag-bold';
+              connectionResult.appendChild(header);
+
+              for (const provider of ai.providers) {
+                const row = document.createElement('div');
+                row.className = 'diag-indent';
+                const label = providerLabels[provider.provider] || provider.provider;
+                const modelInfo = provider.model ? ` (${provider.model})` : '';
+                row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
+                row.classList.add(provider.success ? 'diag-success' : 'diag-error');
+                connectionResult.appendChild(row);
+              }
+            } else {
+              // Single provider: show simple result
+              connectionResult.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
+              connectionResult.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
+            }
+          } else {
+            connectionResult.textContent = getMessage('testComplete') || 'Test complete.';
+          }
         } catch {
           connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
-          connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+          connectionResult.className = 'diag-result diag-error';
         } finally {
           diagTestAiBtn.disabled = false;
         }

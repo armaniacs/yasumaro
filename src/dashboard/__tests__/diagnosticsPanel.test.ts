@@ -42,16 +42,13 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-const mockGetSavedUrlCount = vi.fn().mockResolvedValue(42);
-vi.mock('../../utils/storageUrls.js', () => ({
-  getSavedUrlCount: () => mockGetSavedUrlCount(),
-}));
-
 const mockGetSqliteStatus = vi.fn().mockResolvedValue(null);
+const mockGetLogCount = vi.fn().mockResolvedValue(42);
 const mockRunOpfsSpike = vi.fn().mockResolvedValue(null);
 const mockMigrateLogs = vi.fn().mockResolvedValue(null);
 vi.mock('../dashboardSqliteService.js', () => ({
   getSqliteStatus: () => mockGetSqliteStatus(),
+  getLogCount: () => mockGetLogCount(),
   runOpfsSpike: () => mockRunOpfsSpike(),
   migrateLogs: () => mockMigrateLogs(),
 }));
@@ -193,7 +190,7 @@ describe('initDiagnosticsPanel — Obsidian settings', () => {
   beforeEach(() => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
   });
 
   afterEach(() => {
@@ -273,7 +270,7 @@ describe('initDiagnosticsPanel — AI settings (provider-specific)', () => {
   beforeEach(() => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
   });
 
   afterEach(() => {
@@ -393,7 +390,7 @@ describe('initDiagnosticsPanel — Storage stats', () => {
   beforeEach(() => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
     setupDOM();
     mockGetSettings.mockResolvedValue({
       obsidian_protocol: 'https',
@@ -413,12 +410,12 @@ describe('initDiagnosticsPanel — Storage stats', () => {
     await initDiagnosticsPanel();
 
     expect(mockGetBytesInUse).toHaveBeenCalledWith(null);
-    expect(mockGetSavedUrlCount).toHaveBeenCalled();
+    expect(mockGetLogCount).toHaveBeenCalled();
   });
 
   it('renders KB value and URL count', async () => {
     mockGetBytesInUse.mockResolvedValue(204800);
-    mockGetSavedUrlCount.mockResolvedValue(99);
+    mockGetLogCount.mockResolvedValue(99);
     await initDiagnosticsPanel();
 
     const el = document.getElementById('diagStorageStats')!;
@@ -519,7 +516,7 @@ describe('initDiagnosticsPanel — Obsidian connection test button', () => {
   beforeEach(() => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
     setupDOM();
     mockGetSettings.mockResolvedValue({
       obsidian_protocol: 'https',
@@ -585,7 +582,7 @@ describe('initDiagnosticsPanel — AI connection test button', () => {
   beforeEach(() => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
     setupDOM();
     mockGetSettings.mockResolvedValue({
       obsidian_protocol: 'https',
@@ -651,7 +648,7 @@ describe('initDiagnosticsPanel — Connection test with missing connectionResult
   beforeEach(async () => {
     setupChromeMocks();
     mockGetSettings.mockReset();
-    mockGetSavedUrlCount.mockClear();
+    mockGetLogCount.mockClear();
     setupDOM(false);
     mockGetSettings.mockResolvedValue({
       obsidian_protocol: 'https',

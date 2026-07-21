@@ -14,6 +14,19 @@ export interface ConnectionTestResult {
     message: string;
 }
 
+export interface ProviderTestResult {
+    provider: string;
+    model?: string;
+    success: boolean;
+    message: string;
+}
+
+export interface MultiProviderTestResult {
+    success: boolean;
+    message: string;
+    providers: ProviderTestResult[];
+}
+
 /**
  * AI Client
  * Strategyパターンによるプロバイダー拡張
@@ -122,25 +135,62 @@ export class AIClient {
 
     /**
      * 接続テストを実行する
+     * 優先度リストの全プロバイダをテストし、各プロバイダの結果を返す
      */
-    async testConnection(): Promise<ConnectionTestResult> {
+    async testConnection(): Promise<MultiProviderTestResult> {
         const settings = await getSettings();
-        // Settings型は StorageKeys でアクセス可能
-        const providerName = settings[StorageKeys.AI_PROVIDER] || 'gemini';
+        const slots = this.resolveProviderSlots(settings);
 
-        const factory = this.providers.get(providerName);
-        if (!factory) {
-            return { success: false, message: 'AI provider configuration is missing.' };
+        const providerResults: ProviderTestResult[] = [];
+        let anySuccess = false;
+
+        for (const slot of slots) {
+            const factory = this.providers.get(slot.provider);
+            if (!factory) {
+                providerResults.push({
+                    provider: slot.provider,
+                    model: slot.model,
+                    success: false,
+                    message: `Unknown provider: ${slot.provider}`,
+                });
+                continue;
+            }
+
+            const effectiveSettings = this.applySlotModel(settings, slot);
+
+            try {
+                const providerInstance = factory(effectiveSettings);
+                const result = await providerInstance.testConnection();
+                providerResults.push({
+                    provider: slot.provider,
+                    model: slot.model,
+                    success: result.success,
+                    message: result.message,
+                });
+                if (result.success) {
+                    anySuccess = true;
+                }
+            } catch (error: unknown) {
+                const msg = errorMessage(error);
+                addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
+                providerResults.push({
+                    provider: slot.provider,
+                    model: slot.model,
+                    success: false,
+                    message: msg,
+                });
+            }
         }
 
-        try {
-            const providerInstance = factory(settings);
-            return await providerInstance.testConnection();
-        } catch (error: unknown) {
-            const msg = errorMessage(error);
-            addLog(LogType.ERROR, `Connection test failed: ${msg}`);
-            return { success: false, message: msg };
-        }
+        const overallMessage = anySuccess
+            ? providerResults.filter(r => r.success).map(r => `${r.provider}: OK`).join(', ')
+            : providerResults.map(r => `${r.provider}: ${r.message}`).join('; ');
+
+        return {
+            success: anySuccess,
+            message: overallMessage,
+            providers: providerResults,
+        };
     }
 
     /**

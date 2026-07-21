@@ -41,18 +41,15 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-const mockGetSavedUrlCount = vi.fn().mockResolvedValue(42);
-vi.mock('../../utils/storageUrls.js', () => ({
-  getSavedUrlCount: () => mockGetSavedUrlCount(),
-}));
-
 const mockGetSqliteStatus = vi.fn();
+const mockGetLogCount = vi.fn().mockResolvedValue(42);
 const mockRunOpfsSpike = vi.fn();
 const mockMigrateLogs = vi.fn();
 const mockBackfillMetadata = vi.fn();
 const mockCleanupLegacyStorage = vi.fn();
 vi.mock('../dashboardSqliteService.js', () => ({
   getSqliteStatus: () => mockGetSqliteStatus(),
+  getLogCount: () => mockGetLogCount(),
   runOpfsSpike: () => mockRunOpfsSpike(),
   migrateLogs: () => mockMigrateLogs(),
   backfillMetadata: () => mockBackfillMetadata(),
