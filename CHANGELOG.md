@@ -34,6 +34,27 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.5.46] - 2026-07-21
+
+### Fixed / 修正
+
+- **診断パネルの記録済みURL数が0と表示されるバグを修正** — chrome.storage の `getSavedUrlCount()` から SQLite の `getLogCount()` に切り替え。SQLite 障害時は -1 を返し UI で "Unavailable" と表示。
+- **Stored XSS 脆弱性を修正** — `makeStatRow()` の `innerHTML` を `createElement` + `textContent` に置換。設定インポート経由で悪意あるプロバイダ名を注入されてもスクリプトが実行されない。
+- **DoS リスクを緩和** — `resolveProviderSlots()` に `MAX_PROVIDERS=10` 制限を追加し、大量のプロバイダ設定によるリソース枯渇を防止。
+- **`getLogCount()` のエラー判別を改善** — エラー時に `0` ではなく `-1` を返すよう変更し、データ0件と SQLite 障害を区別可能に。
+
+### Added / 追加
+
+- **診断パネルに複数AIプロバイダの表示とテストを追加** — 優先度リストの全プロバイダの設定（Base URL、Model、API Key）を罫線付きグループで表示。AI接続テストを全プロバイダに対して実行し、各プロバイダごとの結果を表示。
+
+### Changed / 変更
+
+- **`ProviderTestResult` / `MultiProviderTestResult` を `aiClient.ts` に一本化** — `dashboard.ts` の重複定義を削除し import に統一。デッドコード `ConnectionTestResult` を削除。
+- **`PROVIDER_LABELS` 共通マップを `aiClient.ts` に追加** — 4箇所に重複していたプロバイダラベル定義を解消。
+- **`createConnectionStatusElement` の未使用色パラメータを削除** — CSP 準拠の CSS クラス (`diag-success`、`diag-error`、`diag-provider-group`) に移行済みのため不要に。
+- **`diagnosticUtils.ts` を新設** — `makeStatRow` / `getSeverityLabel` を新旧両方の diagnosticsPanel から共通化。
+- **catch ブロックに `console.error` を追加** — 診断パネルのエラー飲み込みを抑制し、デバッグ容易性を向上。
+
 ## [6.5.45] - 2026-07-21
 
 ### Added / 追加
