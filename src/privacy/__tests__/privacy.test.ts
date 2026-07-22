@@ -333,6 +333,9 @@ describe('loadPrivacyPolicy', () => {
         (global.fetch as any).mockResolvedValueOnce({
             ok: true,
             status: 200,
+            headers: {
+                get: () => null
+            },
             text: () => Promise.resolve(mockMd)
         });
 
@@ -377,6 +380,9 @@ describe('loadPrivacyPolicy', () => {
         (global.fetch as any).mockResolvedValueOnce({
             ok: true,
             status: 200,
+            headers: {
+                get: () => null
+            },
             text: () => Promise.resolve(mockMd)
         });
 
