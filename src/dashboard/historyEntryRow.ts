@@ -188,10 +188,17 @@ export function makeHistoryEntryRow(
     }
   }
 
-  if (originalTokens !== undefined && cleansedTokens !== undefined) {
+  if (maskedCount !== undefined || (originalTokens !== undefined && cleansedTokens !== undefined)) {
+    const maskingParts: string[] = [];
+    if (maskedCount !== undefined) {
+      maskingParts.push(`${getCachedMessage('historyMaskedCount', '検出件数')}: ${maskedCount}`);
+    }
+    if (originalTokens !== undefined && cleansedTokens !== undefined) {
+      maskingParts.push(`トークン: ${originalTokens} → ${cleansedTokens}`);
+    }
     const maskingEl = document.createElement('div');
     maskingEl.className = 'history-entry-token-reduction';
-    maskingEl.textContent = `${getCachedMessage('historyPiiMasking', 'PIIマスキング')} — トークン: ${originalTokens} → ${cleansedTokens}`;
+    maskingEl.textContent = `${getCachedMessage('historyPiiMasking', 'PIIマスキング')} — ${maskingParts.join(', ')}`;
     info.appendChild(maskingEl);
   }
 

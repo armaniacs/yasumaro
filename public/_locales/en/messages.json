@@ -2906,6 +2906,9 @@
   "historyPiiMasking": {
     "message": "PII Masking"
   },
+  "historyMaskedCount": {
+    "message": "Detected"
+  },
   "historyAiSummaryCleansing": {
     "message": "AI Summary Cleansing"
   },

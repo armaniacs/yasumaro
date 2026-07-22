@@ -25,8 +25,8 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      'local/require-sanitized-markdown': 'warn',
-      'local/require-response-size-limit': 'warn',
+      'local/require-sanitized-markdown': 'error',
+      'local/require-response-size-limit': 'error',
     },
   },
   {

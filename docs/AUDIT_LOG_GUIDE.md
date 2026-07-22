@@ -35,12 +35,6 @@ Yasumaro は、AI要約の生成リクエストを送信するたびに、いつ
 - 複数のAIプロバイダーを優先度設定で使い分けている際に、実際にどのプロバイダーが呼ばれたかを追跡したい場合（[AI自動要約ガイド](AI_SUMMARY_GUIDE.md) の優先度フォールバックを参照）
 - 監査ログのTSVファイルを表計算ソフトで開いてフィルタリング・集計したい場合
 
-### 想定される使い方
-
-- どのAIプロバイダーが実際に使われているかを確認したい場合
-- 特定のページの内容がAIに送信された事実を後から確認したい場合
-- 複数のAIプロバイダーを優先度設定で使い分けている際に、実際にどのプロバイダーが呼ばれたかを追跡したい場合（[AI自動要約ガイド](AI_SUMMARY_GUIDE.md) の優先度フォールバックを参照）
-
 ---
 
 ## English
@@ -74,8 +68,4 @@ Audit log entries are never automatically deleted; they accumulate indefinitely 
 - Tracking which provider was actually invoked when using priority-ranked fallback across multiple providers (see the priority fallback section in the [AI Summarization Guide](AI_SUMMARY_GUIDE.md))
 - Opening the audit log TSV in a spreadsheet for filtering and aggregation
 
-### Typical Use Cases
-
-- Confirming which AI provider is actually being used
-- Verifying after the fact that a specific page's content was sent to an AI
-- Tracking which provider was actually invoked when using priority-ranked fallback across multiple providers (see the priority fallback section in the [AI Summarization Guide](AI_SUMMARY_GUIDE.md))
+---

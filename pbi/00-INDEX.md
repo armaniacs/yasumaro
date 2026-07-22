@@ -10,7 +10,11 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-全件実装完了。
+| PBI | 難易度 | 副作用 | 状態 |
+|-----|--------|--------|------|
+| [2026-07-22-01-doc-response-size-limit-adr.md](2026-07-22-01-doc-response-size-limit-adr.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-22-02-refactor-response-size-limit-detection.md](2026-07-22-02-refactor-response-size-limit-detection.md) | 🔴高 | 🟡軽微 | 🔶 |
+| [2026-07-22-03-refactor-i18n-mode-key-names.md](2026-07-22-03-refactor-i18n-mode-key-names.md) | 🟡中 | 🔴あり | ⬜ |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 

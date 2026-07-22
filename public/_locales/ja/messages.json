@@ -2809,6 +2809,9 @@
   "historyPiiMasking": {
     "message": "PIIマスキング"
   },
+  "historyMaskedCount": {
+    "message": "検出件数"
+  },
   "historyAiSummaryCleansing": {
     "message": "AI要約クレンジング"
   },
