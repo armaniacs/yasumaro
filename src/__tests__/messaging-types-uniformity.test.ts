@@ -111,6 +111,12 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(withoutKey).toBeUndefined();
   });
 
+  test('GENERATE_REVIEW_SUMMARY payload type should include periodType', () => {
+    type Payload = PayloadForType<'GENERATE_REVIEW_SUMMARY'>;
+    const payload: Payload = { periodType: 'weekly' };
+    expect(payload.periodType).toBe('weekly');
+  });
+
   test('DASHBOARD_SQLITE payload type should allow optional object', () => {
     type Payload = PayloadForType<'DASHBOARD_SQLITE'>;
     const payload: Payload = { query: 'SELECT 1' };

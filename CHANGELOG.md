@@ -37,6 +37,11 @@ All notable changes to this project will be documented in this file.
 
 ## [6.5.52] - 2026-07-23
 
+### Fixed / 修正
+
+- **週次/月次振り返りサマリ生成がダッシュボードから常に「履歴なし」になる不具合を修正** — ダッシュボードの「今週/今月のサマリを生成」ボタンが `reviewSummaryGenerator.ts`（service worker 専用に設計された offscreen document 直接操作モジュール）をダッシュボードページから直接動的 import しており、他の SQLite 操作（履歴一覧・検索など）が使う `chrome.runtime.sendMessage` 経由の統一経路を通っていなかった。新規メッセージ型 `GENERATE_REVIEW_SUMMARY` を追加し、service worker 側でサマリ生成を実行する方式に統一
+- **SQLite クエリ失敗時のログを「履歴なし」と誤表示しないよう修正** — `reviewSummaryGenerator.ts` で SQLite クエリが失敗して `null` が返るケースと、対象期間の履歴が実際に0件のケースを区別せずログ出力していたため、接続エラー発生時にも「対象期間の履歴がない」という誤解を招くメッセージが表示されていた
+
 ### Chores / その他
 
 - **バージョン更新** — `6.5.51` → `6.5.52`

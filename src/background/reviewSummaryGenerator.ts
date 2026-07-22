@@ -187,7 +187,11 @@ export async function generateWeeklySummary(targetDate?: Date): Promise<boolean>
   const { start, end } = getWeekPeriod(date);
   const result = await sqliteClient.query({ since: start, until: end, limit: 10000 });
 
-  if (!result || result.rows.length === 0) {
+  if (!result) {
+    addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: sqliteClient.lastError });
+    return false;
+  }
+  if (result.rows.length === 0) {
     addLog(LogType.INFO, 'No entries for this week, skipping', { weekKey });
     return false;
   }
@@ -252,7 +256,11 @@ export async function generateMonthlySummary(targetDate?: Date): Promise<boolean
   const { start, end } = getMonthPeriod(date);
   const result = await sqliteClient.query({ since: start, until: end, limit: 10000 });
 
-  if (!result || result.rows.length === 0) {
+  if (!result) {
+    addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: sqliteClient.lastError });
+    return false;
+  }
+  if (result.rows.length === 0) {
     addLog(LogType.INFO, 'No entries for this month, skipping', { monthKey });
     return false;
   }

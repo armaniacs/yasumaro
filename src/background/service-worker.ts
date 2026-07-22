@@ -58,6 +58,7 @@ import {
     createPingHandler,
     createRefreshLocalMarkdownSchedulerHandler,
     createConsentStateChangedHandler,
+    createGenerateReviewSummaryHandler,
 } from './handlers/messageHandlers.js';
 import type {
     ManualRecordHandlerDeps,
@@ -349,6 +350,18 @@ export const handleConsentStateChanged = createConsentStateChangedHandler({
   },
 });
 registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged);
+
+export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
+  generateWeeklySummary: async () => {
+    const { generateWeeklySummary } = await import('./reviewSummaryGenerator.js');
+    return generateWeeklySummary();
+  },
+  generateMonthlySummary: async () => {
+    const { generateMonthlySummary } = await import('./reviewSummaryGenerator.js');
+    return generateMonthlySummary();
+  },
+});
+registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary);
 
 const _dashboardSqliteHandler = createDashboardSqliteHandler({
   query: (params) => sqliteClient.query(params as any),
