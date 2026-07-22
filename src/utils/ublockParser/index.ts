@@ -128,8 +128,26 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     //     return { ...cached, errors: cached.errors || [] }; // ディープコピーして返す
     //   }
 
+    // VULN-012 fix: limit input size to prevent memory exhaustion
+    const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
+    if (text.length > MAX_INPUT_SIZE) {
+        return {
+            rules: createEmptyRuleset(),
+            errors: [{ lineNumber: 0, line: '', message: `Input too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_INPUT_SIZE / 1024 / 1024}MB limit` }]
+        };
+    }
+
     // 【行分割】: 改行区切りのテキストを配列に変換 🟢
     const lines = text.split('\n');
+
+    // VULN-012 fix: limit line count to prevent excessive processing
+    const MAX_LINES = 500000;
+    if (lines.length > MAX_LINES) {
+        return {
+            rules: createEmptyRuleset(),
+            errors: [{ lineNumber: 0, line: '', message: `Too many lines: ${lines.length} exceeds ${MAX_LINES} limit` }]
+        };
+    }
 
     // 【配列初期化】: ルール格納用配列 🟢
     const blockRules: UblockRule[] = [];
@@ -238,8 +256,20 @@ export function parseUblockFilterList(text: string): UblockRules {
         return { ...(cached as UblockRules) };
     }
 
+    // VULN-012 fix: limit input size to prevent memory exhaustion
+    const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
+    if (text.length > MAX_INPUT_SIZE) {
+        return createEmptyRuleset();
+    }
+
     // 【行分割】: 改行区切りのテキストを配列に変換 🟢
     const lines = text.split('\n');
+
+    // VULN-012 fix: limit line count to prevent excessive processing
+    const MAX_LINES = 500000;
+    if (lines.length > MAX_LINES) {
+        return createEmptyRuleset();
+    }
 
     // 【配列初期化】: ルール格納用配列 🟢
     const blockRules: UblockRule[] = [];

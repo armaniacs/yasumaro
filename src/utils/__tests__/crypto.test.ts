@@ -460,8 +460,8 @@ describe('crypto', () => {
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
 
-            const isValid = await verifyPasswordWithPBKDF2(password, storedHash, salt);
-            expect(isValid).toBe(true);
+            const result = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+            expect(result.isValid).toBe(true);
         });
 
         test('間違ったパスワードを拒否できる', async () => {
@@ -469,8 +469,8 @@ describe('crypto', () => {
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
 
-            const isValid = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
-            expect(isValid).toBe(false);
+            const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
+            expect(result.isValid).toBe(false);
         });
 
         test('定数時間比較を使用している', { timeout: 60000 }, async () => {

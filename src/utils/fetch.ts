@@ -291,19 +291,40 @@ export function isUrlAllowed(url: string, allowedUrls: Set<string> | null): bool
 }
 
 /**
+ * VULN-013 fix: Allowed localhost ports (matching host_permissions in manifest)
+ */
+const ALLOWED_LOCALHOST_PORTS = new Set([27123, 27124, 11434, 1234]);
+
+/**
  * ローカルAI用ホスト名かどうか判定（127.x.x.x / ::1）
  * Ollama、LM Studio等のローカルLLMサーバー向け
+ * VULN-013 fix: ポート番号も検証し、許可されたポートのみ信頼する
  */
-function isLocalhostAddress(hostname: string): boolean {
-  // 127.x.x.x (ループバックIPv4)
-  const ipv4Match = hostname.match(/^(\d{1,3})\./);
-  if (ipv4Match && Number(ipv4Match[1]) === 127) return true;
+function isLocalhostAddress(hostname: string, port?: number): boolean {
+  // 127.x.x.x (ループバックIPv4) — VULN-013 fix: fully anchored regex
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+    // If port is specified, check against allowlist
+    if (port !== undefined) {
+      return ALLOWED_LOCALHOST_PORTS.has(port);
+    }
+    return true;
+  }
 
   // ::1 (IPv6ループバック)
-  if (hostname.toLowerCase() === '::1') return true;
+  if (hostname.toLowerCase() === '::1') {
+    if (port !== undefined) {
+      return ALLOWED_LOCALHOST_PORTS.has(port);
+    }
+    return true;
+  }
 
   // ::ffff:127.x.x.x (IPv4マップ)
-  if (hostname.toLowerCase().startsWith('::ffff:127.')) return true;
+  if (hostname.toLowerCase().startsWith('::ffff:127.')) {
+    if (port !== undefined) {
+      return ALLOWED_LOCALHOST_PORTS.has(port);
+    }
+    return true;
+  }
 
   return false;
 }
@@ -323,9 +344,10 @@ export function validateUrlForAIRequests(url: string): void {
   });
 
   const parsedUrl = new URL(url);
+  const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (parsedUrl.protocol === 'https:' ? 443 : 80);
 
-  // ローカルAI用アドレス（127.x.x.x / ::1）は許可
-  if (isLocalhostAddress(parsedUrl.hostname)) {
+  // ローカルAI用アドレス（127.x.x.x / ::1）は許可（ポート制限付き）
+  if (isLocalhostAddress(parsedUrl.hostname, port)) {
     return;
   }
 

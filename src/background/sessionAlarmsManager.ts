@@ -127,11 +127,30 @@ async function lockSession(): Promise<void> {
         // storage.tsのlockSessionをエクスポートして使用するか、
         // 直接ロック処理を実装
         await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
-        // マスターパスワードキャッシュはstorage.tsで管理されるため、
-        // 通知メッセージを送信してstorage.tsにロックをさせる
-        chrome.runtime.sendMessage({ type: 'SESSION_LOCK_REQUEST', protocolVersion: CURRENT_PROTOCOL_VERSION }).catch(() => {
-            // 送信失敗は無視
-        });
+        // VULN-017 fix: retry lock notification up to 3 times to ensure
+        // encryption session receives the lock signal, preventing stale
+        // cached decryption keys from remaining usable after auto-lock
+        let retries = 3;
+        let success = false;
+        while (retries > 0 && !success) {
+            try {
+                await chrome.runtime.sendMessage({ type: 'SESSION_LOCK_REQUEST', protocolVersion: CURRENT_PROTOCOL_VERSION });
+                success = true;
+            } catch {
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+        }
+        if (!success) {
+            logError(
+                'Failed to deliver lock notification after retries. Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey.',
+                { retries },
+                ErrorCode.INTERNAL_ERROR,
+                'sessionAlarmsManager.ts'
+            );
+        }
     } catch (error) {
         logError(
             'Failed to lock session',

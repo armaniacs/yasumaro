@@ -442,6 +442,11 @@ export async function saveSettings(
     await withOptimisticLock('settings', (currentSettings: Settings) => {
         return { ...currentSettings, ...toSave };
     });
+
+    // VULN-014 fix: invalidate cache after save completes
+    // The getSettings() call at line 395 may have re-populated cachedSettings
+    // with stale data. Clear it again to ensure subsequent reads get fresh data.
+    cachedSettings = null;
 }
 
 /**

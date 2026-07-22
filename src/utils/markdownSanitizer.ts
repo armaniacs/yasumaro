@@ -59,12 +59,47 @@ export function sanitizeAllMarkdownLinks(text: string): string {
 }
 
 /**
+ * Escape Obsidian wikilink/embed syntax
+ *
+ * Targets [[wikilink]] and ![[embed]] patterns so they are rendered
+ * as literal text instead of being interpreted by Obsidian.
+ *
+ * @param text - text to escape
+ * @returns text with wikilink syntax escaped
+ */
+export function escapeObsidianWikilinks(text: string): string {
+    if (!text || typeof text !== 'string') return text;
+    return text.replace(/(!?)\[\[([^\]]*)\]\]/g, (_m, bang, inner) => `${bang}\\[\\[${inner}\\]\\]`);
+}
+
+/**
+ * Sanitize URL for embedding inside a Markdown link target `(url)`
+ *
+ * Percent-encodes characters that can break out of a Markdown link:
+ * `)`, `(`, `[`, `]`, `!`
+ * This preserves normal URL readability while preventing injection.
+ *
+ * @param url - raw URL string
+ * @returns URL safe for embedding in `[title](url)`
+ */
+export function sanitizeUrlForMarkdownTarget(url: string): string {
+    if (!url || typeof url !== 'string') return url;
+    // Encode characters dangerous for Markdown link syntax
+    return url
+        .replace(/\)/g, '%29')
+        .replace(/\(/g, '%28')
+        .replace(/\[/g, '%5B')
+        .replace(/\]/g, '%5D')
+        .replace(/!/g, '%21');
+}
+
+/**
  * Obsidian保存用のコンテンツをサニタイズする
- * 
+ *
  * 【処理内容】:
- * 1. Markdownリンク形式のエスケープ
- * 2. その他必要なサニタイズ処理があれば追加
- * 
+ * 1. スキーム非依存のMarkdownリンクエスケープ（sanitizeAllMarkdownLinks）
+ * 2. Obsidian wikilink/embed 構文のエスケープ（escapeObsidianWikilinks）
+ *
  * @param {string} content - サニタイズするコンテンツ
  * @returns {string} サニタイズされたコンテンツ
  */
@@ -73,8 +108,11 @@ export function sanitizeForObsidian(content: string): string {
         return content;
     }
 
-    // Markdownリンクをエスケープ
-    let sanitized = sanitizeMarkdownLinks(content);
+    // Escape all Markdown links regardless of URL scheme (VULN-002/005 fix)
+    let sanitized = sanitizeAllMarkdownLinks(content);
+
+    // Escape Obsidian wikilink/embed syntax (VULN-002/005 fix)
+    sanitized = escapeObsidianWikilinks(sanitized);
 
     return sanitized;
 }

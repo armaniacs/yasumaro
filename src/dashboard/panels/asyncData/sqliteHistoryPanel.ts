@@ -15,6 +15,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { formatEntryToMarkdown } from '../../../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
+import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { type AsyncDataPanel } from '../types.js';
 import { getRegistry } from '../registryContext.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
@@ -660,7 +661,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
                   data-action="star" title="${t('historyToggleStar')}"
                    aria-pressed="${String(Boolean(entry.is_starred))}" aria-label="${t('historyToggleStar')}">\u2605</button>
-          <a href="${escapeHtml(entry.url)}" target="_blank" class="sqlite-entry-title">
+          <a href="${isSecureUrl(entry.url) ? escapeHtml(entry.url) : '#'}" target="_blank" rel="noopener noreferrer" class="sqlite-entry-title">
             ${escapeHtml(entry.title || entry.url)}
           </a>
           <button type="button" class="sqlite-entry-delete" data-action="delete" title="${t('historyDeleteRecord')}" aria-label="${t('historyDeleteRecordAria')}">\u2715</button>

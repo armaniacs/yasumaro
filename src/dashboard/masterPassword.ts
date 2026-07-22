@@ -13,6 +13,7 @@ import {
   validatePasswordRequirements,
   validatePasswordMatch
 } from '../utils/masterPassword.js';
+import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 
 // DOM Elements
@@ -182,13 +183,28 @@ async function authenticatePassword(): Promise<void> {
     }
     return;
   }
+
+  // VULN-021 fix: check rate limit before attempting password verification
+  const rateLimitResult = await checkRateLimit();
+  if (!rateLimitResult.success) {
+    if (passwordAuthError) {
+      passwordAuthError.textContent = rateLimitResult.error || 'Too many attempts.';
+      passwordAuthError.classList.add('visible');
+    }
+    return;
+  }
+
   const getStorageFn = async (keys: string[]) => chrome.storage.local.get(keys);
   const result = await verifyMasterPassword(password, getStorageFn);
   if (result.success) {
+    // VULN-021 fix: reset failed attempts on successful authentication
+    await resetFailedAttempts();
     const action = pendingPasswordAction;
     closePasswordAuthModal();
     if (action) await action(password);
   } else {
+    // VULN-021 fix: record failed attempt
+    await recordFailedAttempt();
     if (passwordAuthError) {
       passwordAuthError.textContent = getMessage('passwordIncorrect') || result.error || 'Incorrect password.';
       passwordAuthError.classList.add('visible');
@@ -203,10 +219,13 @@ export function initMasterPasswordSettings(): void {
       if (isChecked) {
         showPasswordModal('set');
       } else {
-        await chrome.storage.local.remove(['master_password_enabled', 'master_password_salt', 'master_password_hash']);
-        masterPasswordOptions.classList.add('hidden');
-        updateMasterPasswordWarningVisibility(false);
-        showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+        // VULN-015 fix: require password authentication before disabling master password
+        showPasswordAuthModal('export', async () => {
+          await chrome.storage.local.remove(['master_password_enabled', 'master_password_salt', 'master_password_hash']);
+          masterPasswordOptions.classList.add('hidden');
+          updateMasterPasswordWarningVisibility(false);
+          showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+        });
       }
     });
   }
