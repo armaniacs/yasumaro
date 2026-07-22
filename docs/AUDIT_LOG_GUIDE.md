@@ -22,11 +22,18 @@ Yasumaro は、AI要約の生成リクエストを送信するたびに、いつ
 
 ### 確認方法
 
-ダッシュボードの **監査ログ** パネルで、直近100件の記録を新しい順に一覧表示できます。フィルタや検索機能はなく、シンプルな一覧表示のみです。
+ダッシュボードの **ログをエクスポート** パネルの「監査ログ TSV ダウンロード」から、直近100,000件の記録を TSV ファイルとしてダウンロードできます。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv` で、`created_at`（ISO 8601形式）・プロバイダー名・URL の3カラムが含まれます。
 
 ### 保持期間
 
-監査ログには自動削除機能がなく、無期限に蓄積されます（保存先はローカルのSQLiteデータベースです）。
+監査ログには自動削除機能がなく、無期限に蓄積されます（保存先はローカルの SQLite データベースです）。蓄積量が気になる場合は、SQLite の定期的なメンテナンス（PURGE）と併せてご利用ください。
+
+### 想定される使い方
+
+- どのAIプロバイダーが実際に使われているかを確認したい場合
+- 特定のページの内容がAIに送信された事実を後から確認したい場合
+- 複数のAIプロバイダーを優先度設定で使い分けている際に、実際にどのプロバイダーが呼ばれたかを追跡したい場合（[AI自動要約ガイド](AI_SUMMARY_GUIDE.md) の優先度フォールバックを参照）
+- 監査ログのTSVファイルを表計算ソフトで開いてフィルタリング・集計したい場合
 
 ### 想定される使い方
 
@@ -54,11 +61,18 @@ Every time Yasumaro sends an AI summarization request, it records when, to which
 
 ### Viewing the Log
 
-The dashboard's **Audit Log** panel displays the most recent 100 entries, newest first. There is no filtering or search — just a simple list view.
+From the dashboard's **Export Logs** panel, use the "Audit Log TSV Download" section to download the most recent 100,000 entries as a TSV file. The filename follows the pattern `yasumaro-audit-log-YYYY-MM-DD.tsv` and contains three columns: `created_at` (ISO 8601), provider name, and URL.
 
 ### Retention
 
-Audit log entries are never automatically deleted; they accumulate indefinitely (stored in the local SQLite database).
+Audit log entries are never automatically deleted; they accumulate indefinitely (stored in the local SQLite database). If storage size becomes a concern, periodic SQLite maintenance (PURGE) can help manage it.
+
+### Typical Use Cases
+
+- Confirming which AI provider is actually being used
+- Verifying after the fact that a specific page's content was sent to an AI
+- Tracking which provider was actually invoked when using priority-ranked fallback across multiple providers (see the priority fallback section in the [AI Summarization Guide](AI_SUMMARY_GUIDE.md))
+- Opening the audit log TSV in a spreadsheet for filtering and aggregation
 
 ### Typical Use Cases
 

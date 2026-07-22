@@ -10,23 +10,23 @@
 
 Webページを要約してAIに送る前に、個人情報（PII）を自動でマスクする機能のガイドです。
 
-> [!NOTE]
-> **Local AI機能について**
-> Chrome/Edge等のブラウザにおける Prompt API (window.ai) の実装状況が過渡期であるため、**Mode A / Mode B は現在「開発中（実験的機能）」** と位置づけています。
-> デフォルトでは **Mode C (Masked Cloud)** を使用することを強く推奨します。
-
 ### 主な機能
 
 1. **4つのプライバシーモード**: ユーザーのニーズに合わせて選択可能。
-2. **PIIマスキング**: クレジットカード番号、電話番号などの機密情報を正規表現で検出し `[MASKED]` に置換。
-3. **確認・編集プレビュー**: 送信前にマスク結果を確認・編集できるモーダルUI。
-4. **サニタイズログ**: マスキング履歴をローカルに記録（7日間保持）。
+2. **PIIマスキング**: クレジットカード番号、電話番号、EU圏の税ID等の機密情報を正規表現で検出し `[MASKED]` に置換。
+3. **コンテンツクレンジング**: Webページの不要な要素（広告、ナビゲーション、SNS埋め込み等）をAI要約の前に削減。
+4. **確認・編集プレビュー**: 送信前にマスク結果を確認・編集できるモーダルUI。
 
-### 操作設定
+### 4つのプライバシーモード
 
-#### 推奨設定 (Mode C)
+| モード | 動作 |
+|--------|------|
+| **Masked Cloud**（推奨） | PIIマスキング + クラウドAI要約。PIIをマスクしてからクラウドAIに送信 |
+| **Full Pipeline** | PIIマスキング + コンテンツクレンジング + クラウドAI要約。最大のプライバシー保護 |
+| **Local Only** | クラウドAIを使わず、デバイス上のローカル処理のみ |
+| **Cloud Only** | PIIマスキング・クレンジングなしでクラウドAIに送信 |
 
-ポップアップの「プライバシー」タブから設定します。
+**推奨設定: Masked Cloud**。PIIをマスクしてからクラウドAIに送信するため、プライバシーと利便性のバランスが最も良い。
 
 | モード | ステータス | 動作説明 |
 | :--- | :--- | :--- |
@@ -156,7 +156,7 @@ await reviewLogs()
 
 ### 将来の展望
 
-ブラウザの `window.ai` 実装が安定次第、Mode A/B のローカルAI機能が自動的に有効になる設計となっています。
+ブラウザの Local AI API 実装が安定し次第、Local Only モードのローカルAI機能が自動的に有効になる設計となっています。
 
 ---
 
@@ -187,30 +187,23 @@ await reviewLogs()
 
 A guide to how Yasumaro automatically masks personally identifiable information (PII) before sending page content to an AI provider for summarization.
 
-> [!NOTE]
-> **Local AI Feature Availability**
-> Since Chrome/Edge Prompt API (window.ai) implementation is in a transitional period, **Mode A / Mode B are currently marked as "Experimental"**.
-> We strongly recommend using **Mode C (Masked Cloud)** by default.
-
 ### Key Features
 
 1. **Four Privacy Modes**: Choose according to your needs.
-2. **PII Masking**: Detect sensitive information such as credit card numbers and phone numbers using regex patterns and replace them with `[MASKED]`.
-3. **Preview & Edit Modal**: Modal UI to verify and edit masking results before sending.
-4. **Sanitization Log**: Record masking history locally (retained for 7 days).
+2. **PII Masking**: Detect sensitive information such as credit card numbers, phone numbers, EU tax IDs, etc. using regex patterns and replace them with `[MASKED]`.
+3. **Content Cleansing**: Remove unwanted elements (ads, navigation, SNS embeds, etc.) from web pages before AI summarization.
+4. **Preview & Edit Modal**: Modal UI to verify and edit masking results before sending.
 
 ### Configuration
 
-#### Recommended Setting (Mode C)
-
 Configure via the "Privacy" tab in the popup.
 
-| Mode | Status | Description |
-| :--- | :--- | :--- |
-| **A: Local Only** | 🚧 Experimental | Fully local processing. Works only on supported browsers. |
-| **B: Full Pipeline** | 🚧 Experimental | Local summary + Cloud refinement. Works only on supported browsers. |
-| **C: Masked Cloud** | ✅ **Recommended** | **Send masked PII to cloud**. Most stable and secure. |
-| **D: Cloud Only** | - | Original behavior. Send raw data to cloud. |
+| Mode | Description |
+| :--- | :--- |
+| **Masked Cloud** (Recommended) | PII masking + cloud AI. Masks sensitive data before sending. Best balance of privacy and convenience. |
+| **Full Pipeline** | PII masking + content cleansing + cloud AI. Maximum privacy protection. |
+| **Local Only** | On-device processing only, no cloud AI. |
+| **Cloud Only** | Sends raw data to cloud AI without masking or cleansing. |
 
 #### Workflow
 
@@ -333,7 +326,7 @@ This achieves a balance between convenience and security for internal systems.
 
 ### Future Outlook
 
-The design automatically enables Mode A/B local AI functionality once browser `window.ai` implementation stabilizes.
+The design automatically enables Local Only mode functionality once browser local AI APIs stabilize.
 
 ---
 
