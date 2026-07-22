@@ -21,6 +21,7 @@
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-22-07-back-security-lint-rule-and-review-checklist.md (lint rules + PR template)
 - 2026-07-22-01-fix-obsidian-markdown-injection-core.md (VULN-001,002,004,005)
 - 2026-07-22-02-fix-obsidian-markdown-injection-downstream.md (VULN-006,007,020)
 - 2026-07-22-03-fix-reliability-races-resource-exhaustion.md (VULN-003,008,011,012,014,016)
@@ -98,4 +99,4 @@
 |---|---|
 | ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 93 |
+| アーカイブ済み | 100 |

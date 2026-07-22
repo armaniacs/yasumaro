@@ -9,6 +9,7 @@ import { SqliteClient } from '../sqliteClient.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import type { Settings } from '../../utils/storage/types.js';
 
 const GIST_API_BASE = 'https://api.github.com';
@@ -39,7 +40,13 @@ export class GistSyncTarget implements SyncTarget {
       const settings = await getSettings();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
       const gistId = settings[StorageKeys.GIST_ID] as string | undefined;
-      const entry = markdown || `- [${title || url}](${url})${summary ? `: ${summary}` : ''}`;
+      const defaultEntry = () => {
+        const safeTitle = sanitizeForObsidian(title || url || 'Untitled');
+        const safeUrl = sanitizeUrlForMarkdownTarget(url);
+        const safeSummary = summary ? sanitizeForObsidian(summary) : null;
+        return `- [${safeTitle}](${safeUrl})${safeSummary ? `: ${safeSummary}` : ''}`;
+      };
+      const entry = markdown || defaultEntry();
 
       if (gistId) {
         // Update existing Gist

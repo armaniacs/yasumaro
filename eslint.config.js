@@ -1,6 +1,7 @@
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import sveltePlugin from 'eslint-plugin-svelte';
+import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
@@ -17,12 +18,15 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
+      local: localPlugin,
     },
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
+      'local/require-sanitized-markdown': 'warn',
+      'local/require-response-size-limit': 'warn',
     },
   },
   {

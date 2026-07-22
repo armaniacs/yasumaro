@@ -11,6 +11,7 @@ import { AIClient } from './aiClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 
 type ReviewLogEntry = BrowsingLogRecord & { id: number };
@@ -114,10 +115,11 @@ function generateReviewMarkdown(
   const dateStr = new Date().toISOString().split('T')[0];
 
   const entryList = entries.map((e, i) => {
-    const title = e.title || e.url;
+    const title = sanitizeForObsidian(e.title || e.url || 'Untitled');
     const domain = e.domain || new URL(e.url).hostname;
-    const summary = e.summary || 'No summary available';
-    return `### ${i + 1}. ${title}\n\n**URL:** ${e.url}\n**Domain:** ${domain}\n**Date:** ${new Date(e.created_at).toLocaleDateString()}\n\n${summary}`;
+    const summary = sanitizeForObsidian(e.summary || 'No summary available');
+    const url = sanitizeForObsidian(e.url);
+    return `### ${i + 1}. ${title}\n\n**URL:** ${url}\n**Domain:** ${domain}\n**Date:** ${new Date(e.created_at).toLocaleDateString()}\n\n${summary}`;
   }).join('\n\n---\n\n');
 
   return `# Yasumaro Review: ${periodLabel}
@@ -126,7 +128,7 @@ Generated on: ${dateStr}
 
 ## Digest
 
-${digest}
+${sanitizeForObsidian(digest)}
 
 ${generateStatsSection(entries)}
 
