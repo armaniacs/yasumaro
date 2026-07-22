@@ -106,8 +106,8 @@ test.describe('Popup - Settings Screen @ui', () => {
     await expect(page.locator('#privacyPanel')).toBeAttached();
     await expect(page.locator('#modeA')).toBeAttached();
     await expect(page.locator('#modeB')).toBeAttached();
-    await expect(page.locator('#modeC')).toBeAttached();
-    await expect(page.locator('#modeD')).toBeAttached();
+    await expect(page.locator('#privacyModeMaskedCloud')).toBeAttached();
+    await expect(page.locator('#privacyModeCloudOnly')).toBeAttached();
   });
 });
 
