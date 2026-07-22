@@ -111,8 +111,6 @@ const defaultMessages: Record<string, string> = {
   statusPageNotRecordable: 'Page not recordable',
   modeAShort: 'Local',
   modeBShort: 'Full',
-  modeCShort: 'Masked',
-  modeDShort: 'Cloud',
   privacyModeMaskedCloudShort: 'Masked',
   privacyModeCloudOnlyShort: 'Cloud',
   domainAddedToWhitelist: 'Domain added',
