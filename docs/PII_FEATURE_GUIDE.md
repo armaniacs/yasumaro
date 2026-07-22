@@ -179,6 +179,19 @@ await reviewLogs()
 
 **A. ダッシュボードの History タブ**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、ダッシュボードの「Skipped」フィルターに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存することができます。スキップされたページは24時間後に自動削除されます。
 
+#### Q. History の「PIIマスキング」欄で、電話番号やメールアドレスがマスクされているのにトークン数が変化しません。バグですか？
+
+**A. バグではありません。** History の各エントリには、由来の異なる2つの削減指標が別々の行で表示されています。
+
+| 表示行 | 対象 | 計測タイミング |
+|--------|------|----------------|
+| **Content Cleansing** | ページ本文のDOM要素除去（広告・ナビゲーション等） | コンテンツ抽出時 |
+| **PIIマスキング** | 個人情報の `[MASKED:*]` 置換 | AI送信直前 |
+
+「PIIマスキング」行のトークン数は、`[MASKED:phoneJp]` のようなマスク後の文字列を含めた概算値（日本語は2文字=1トークンとして概算）です。マスク用の置換文字列は元の電話番号断片などより**長くなる場合がある**ため、実際にマスクが実行されても、文字数の増減が概算のトークン数（整数への丸め）に反映されず、見かけ上 `82 → 82` のように変化しないことがあります。
+
+マスキングが実際に何件実行されたかは、同じ行の**検出件数**（例: `検出件数: 2`）で確認できます。トークン数が同じでも検出件数が1件以上であれば、PIIマスキングは正常に動作しています。
+
 ---
 
 ## English
@@ -348,3 +361,16 @@ Confirmation notifications appear when accessing pages where the server returns 
 #### Q. Where can I find pages that were skipped?
 
 **A. In the Dashboard's History tab.** When the auto-save behavior is set to `skip`, pages triggered by private page detection are not saved to Obsidian, but appear in the "Skipped" filter of the Dashboard. You can manually save them from there using the "Record Now" button. Skipped pages are automatically deleted after 24 hours.
+
+#### Q. The "PII Masking" line in History shows masked phone numbers/emails, but the token count doesn't change. Is this a bug?
+
+**A. No, this is not a bug.** Each History entry displays two independent reduction metrics on separate lines, with different origins:
+
+| Line | What it measures | When it's measured |
+|------|-------------------|---------------------|
+| **Content Cleansing** | DOM element removal from page content (ads, navigation, etc.) | During content extraction |
+| **PII Masking** | Replacement of personal information with `[MASKED:*]` | Just before sending to AI |
+
+The token count on the "PII Masking" line is a rough estimate (Japanese text is approximated as 2 characters per token) computed on the text including mask replacement strings like `[MASKED:phoneJp]`. Since a mask replacement string can be **longer** than the original phone number fragment it replaces, the character-count change from masking doesn't always show up after rounding to an integer token count — so you may see `82 → 82` even though masking actually ran.
+
+To confirm masking actually happened, check the **detected count** on the same line (e.g., `Detected: 2`). If the detected count is 1 or more, PII masking is working correctly even if the token count looks unchanged.

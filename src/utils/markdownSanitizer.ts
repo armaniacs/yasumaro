@@ -52,10 +52,10 @@ export function sanitizeAllMarkdownLinks(text: string): string {
         return text;
     }
 
-    // 全ての [text](url) パターンをエスケープ（URL形式に関わらず）
-    const allMarkdownLinkPattern = /\[([^\]]*)\]\(([^)]+)\)/gi;
+    // All [text](url) and ![alt](url) patterns regardless of URL scheme (VULN-006)
+    const allMarkdownLinkPattern = /(!?)\[([^\]]*)\]\(([^)]+)\)/gi;
 
-    return text.replace(allMarkdownLinkPattern, '\\[$1\\]\\($2\\)');
+    return text.replace(allMarkdownLinkPattern, '$1\\[$2\\]\\($3\\)');
 }
 
 /**
@@ -84,6 +84,10 @@ export function escapeObsidianWikilinks(text: string): string {
  */
 export function sanitizeUrlForMarkdownTarget(url: string): string {
     if (!url || typeof url !== 'string') return url;
+    // Only allow http/https URLs; reject dangerous schemes like javascript:, data:
+    if (!/^https?:\/\//i.test(url)) {
+        return 'about:blank';
+    }
     // Encode characters dangerous for Markdown link syntax
     return url
         .replace(/\)/g, '%29')

@@ -37,10 +37,8 @@ export default {
 
   create(context) {
     const sanitizedVars = new Set();
-    const unusedSanitizedVars = new Set();
     let hasMarkdownTemplate = false;
     let importsSanitize = false;
-    let importNode = null;
 
     return {
       /** Track import of sanitizeForObsidian */
@@ -51,7 +49,6 @@ export default {
             .map(s => s.imported.name);
           if (importedNames.some(name => SANITIZE_FUNCTIONS.has(name))) {
             importsSanitize = true;
-            importNode = node;
           }
         }
       },
@@ -69,11 +66,6 @@ export default {
           if (parent && parent.type === 'AssignmentExpression' && parent.left && parent.left.type === 'Identifier') {
             sanitizedVars.add(parent.left.name);
             return;
-          }
-          // Case 3: Argument tracking (fallback - counts arg variable)
-          const arg = node.arguments[0];
-          if (arg && arg.type === 'Identifier') {
-            sanitizedVars.add(arg.name);
           }
         }
       },
@@ -95,15 +87,25 @@ export default {
             if (sanitizedVars.has(varName) || INTERNAL_VARS.has(varName) || varName.startsWith('sanitized') || varName.startsWith('safe')) {
               return;
             }
-            // Skip primitive/type-like names
-            if (['undefined', 'null', 'true', 'false', 'Number', 'String', 'Boolean', 'Date'].includes(varName)) {
-              return;
-            }
             // Report unsanitized usage
             context.report({
               node: expr,
               messageId: 'unsanitizedMarkdown',
               data: { name: varName },
+            });
+          }
+
+          // Check MemberExpression (e.g., entry.title, e.url)
+          if (expr.type === 'MemberExpression' && expr.object.type === 'Identifier') {
+            const objName = expr.object.name;
+            // Skip if the object variable is sanitized itself or is an internal var
+            if (sanitizedVars.has(objName) || INTERNAL_VARS.has(objName) || objName.startsWith('sanitized') || objName.startsWith('safe')) {
+              return;
+            }
+            context.report({
+              node: expr,
+              messageId: 'unsanitizedMarkdown',
+              data: { name: `${objName}.${expr.property?.name || '(computed)'}` },
             });
           }
         });

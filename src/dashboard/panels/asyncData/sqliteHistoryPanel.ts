@@ -137,8 +137,17 @@ function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     }
   }
 
-  if (entry.original_tokens != null && entry.cleansed_tokens != null) {
-    parts.push(`<div class="history-entry-token-reduction">${t('historyPiiMasking', [])} — ${t('historyTokens', [])}: ${entry.original_tokens} → ${entry.cleansed_tokens}</div>`);
+  if (entry.masked_count != null || (entry.original_tokens != null && entry.cleansed_tokens != null)) {
+    const maskingParts: string[] = [];
+    if (entry.masked_count != null) {
+      maskingParts.push(`${t('historyMaskedCount', [])}: ${entry.masked_count}`);
+    }
+    if (entry.original_tokens != null && entry.cleansed_tokens != null) {
+      maskingParts.push(`${t('historyTokens', [])}: ${entry.original_tokens} → ${entry.cleansed_tokens}`);
+    }
+    if (maskingParts.length > 0) {
+      parts.push(`<div class="history-entry-token-reduction">${t('historyPiiMasking', [])} — ${maskingParts.join(', ')}</div>`);
+    }
   }
 
   if (entry.ai_summary_original_bytes != null && entry.ai_summary_cleansed_bytes != null) {

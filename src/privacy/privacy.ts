@@ -173,6 +173,11 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
     try {
         const res = await fetch('../PRIVACY.md');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentLength = res.headers.get('content-length');
+        const maxSize = 1024 * 1024; // 1MB limit for privacy policy
+        if (contentLength && parseInt(contentLength, 10) > maxSize) {
+            throw new Error('Privacy policy file exceeds size limit');
+        }
         const md = await res.text();
         content.innerHTML = renderMarkdown(md);
     } catch (_e) {

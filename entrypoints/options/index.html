@@ -14,12 +14,12 @@
 <body>
   <div id="dashboardLayout">
     <!-- Left Sidebar -->
-    <nav id="sidebar" class="sidebar" role="tablist" aria-label="Dashboard navigation">
-      <div class="sidebar-header">
+    <div class="sidebar-container">
+      <a class="sidebar-header sidebar-header-link" href="https://armaniacs.github.io/yasumaro/" target="_blank" rel="noopener noreferrer">
         <img src="/icons/icon48.png" alt="" aria-hidden="true" width="32" height="32">
         <span class="sidebar-title" data-i18n="appTitle">Yasumaro</span>
-      </div>
-
+      </a>
+      <nav id="sidebar" class="sidebar" role="tablist" aria-label="Dashboard navigation">
       <div class="sidebar-nav">
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="settingsSection">Settings</div>
         <button class="sidebar-nav-btn active" role="tab" aria-controls="panel-general" aria-selected="true" data-panel="panel-general" tabindex="0">
@@ -154,6 +154,7 @@
         </button>
       </div>
     </nav>
+    </div>
 
     <!-- Main Content Area -->
     <main id="contentArea" class="content-area">

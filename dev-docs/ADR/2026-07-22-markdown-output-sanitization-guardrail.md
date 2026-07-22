@@ -22,7 +22,7 @@ exportLogsService）でサニタイズ漏れが発生した。
 ### 層1: 自動検出（lint rule）
 - ESLintカスタムルール `local/require-sanitized-markdown` が全 `src/**/*.ts` ファイルに対して
   適用される
-- このルールはmarkdownテンプレートリテラル内の未サニタイズ変数を `warn` レベルで検出する
+ - このルールはmarkdownテンプレートリテラル内の未サニタイズ変数を `error` レベルで検出する
 - ルールは CI パイプラインで常時実行される
 
 ### 層2: レビューチェックリスト
@@ -56,13 +56,19 @@ exportLogsService）でサニタイズ漏れが発生した。
 ### デメリット
 - 新規ファイルに import 文と関数呼び出しの追加が必要（軽微なオーバーヘッド）
 - 静的解析ではすべてのケースをカバーできない（lint ruleはヒューリスティック）
-- lint rule は `warn` レベルであり、CIをブロックしない
+ - lint rule は `error` レベルであり、CIをブロックする
 
 ## 影響を受けるコンポーネント
 - 新規/変更される全 `src/**/*.ts` ファイルでmarkdown出力を行うもの
 - ESLint設定（`eslint.config.js`）— カスタムルールの継続的メンテナンスが必要
 
 ## 将来の改善案
-- 将来的に lint rule を `error` レベルに引き上げ、CIをブロックする
+ - ~~将来的に~~ lint rule を `error` レベルに引き上げ、CIをブロックする（2026-07-22 実施済み）
 - テンプレートリテラルの代わりに構造化されたmarkdownビルダー関数を導入し、
   サニタイズを義務化するアーキテクチャへの移行
+
+## 関連ADR
+- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) — リソース枯渇対策の独立ADR
+
+## 関連 ADR
+- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) — リソース枯渇対策の独立したガードレール
