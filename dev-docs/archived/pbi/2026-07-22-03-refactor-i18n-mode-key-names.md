@@ -89,3 +89,20 @@ Then 移行期間中は旧キー名もエイリアスとして機能する（オ
 3. **Phase 3**: 旧キー名を削除
 
 または、別 PR で段階的に実施することを推奨する。
+
+## Svelte撤去（未使用の導入痕跡を除去）
+
+**背景**: `src/offscreen/App.svelte` はどこからもマウントされていない孤立ファイル。
+過去にpopup UI全体をSvelte化する試みがあったが（2026-04-20〜21）、実機確認で
+既存機能（ステータスパネル等）の欠落が発覚し翌日リバート済み（コミット `2f38afc`）。
+ビルド設定（wxt.config.ts, package.json, tsconfig.json）にはSvelte/Tailwindの
+導入痕跡だけが残っており、実質未使用のままビルドコストだけ発生している。
+
+### やること
+- [ ] `src/offscreen/App.svelte` を削除
+- [ ] `wxt.config.ts` から `svelte()` / `tailwindcss()` プラグインと関連importを削除
+- [ ] `tsconfig.json` の `"svelte"` types参照を削除
+- [ ] `package.json` から `@sveltejs/vite-plugin-svelte`, `@tailwindcss/vite`,
+      `eslint-plugin-svelte`, `svelte`, `tailwindcss` を削除し `npm install` でlockfile更新
+- [ ] ESLint設定にsvelte向けの個別設定があれば削除
+- [ ] `npm run build` / `npm validate` が通ることを確認
