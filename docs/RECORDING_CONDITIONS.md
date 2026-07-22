@@ -35,6 +35,12 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 | **Min Scroll Depth**（最小スクロール深度） | 0〜100% | 50% |
 | **Max Tokens Per Prompt** | 10〜16,000 | 1,000 |
 | **AI Timeout**（AIタイムアウト秒数） | 10〜600秒、空欄で自動 | 自動 |
+| **Max Monthly Tokens**（月間トークン上限） | 1〜10,000,000 | 1,000,000 |
+| **AI Rate Limit**（1分間のAIリクエスト数上限） | 1〜100 | 10 |
+| **OpenAI Max Content Characters** | 1,000〜100,000 | 10,000 |
+| **Gemini Max Content Characters** | 1,000〜100,000 | 30,000 |
+| **Obsidian Host** | Obsidian REST APIのホスト名 | 127.0.0.1 |
+| **Gemini API Version** | Gemini APIのバージョン | v1beta |
 
 条件を厳しくする（滞在時間を長く、スクロール深度を高く）と誤検出が減りますが、記録漏れが増える可能性があります。逆に条件を緩めると多くのページが記録される一方、流し読みしたページも記録対象になりやすくなります。
 
@@ -92,6 +98,12 @@ Adjust the following in the dashboard's **Recording Conditions** panel:
 | **Min Scroll Depth** | 0–100% | 50% |
 | **Max Tokens Per Prompt** | 10–16,000 | 1,000 |
 | **AI Timeout** | 10–600 seconds, blank for auto | Auto |
+| **Max Monthly Tokens** | 1–10,000,000 | 1,000,000 |
+| **AI Rate Limit** (requests/min) | 1–100 | 10 |
+| **OpenAI Max Content Characters** | 1,000–100,000 | 10,000 |
+| **Gemini Max Content Characters** | 1,000–100,000 | 30,000 |
+| **Obsidian Host** | Obsidian REST API hostname | 127.0.0.1 |
+| **Gemini API Version** | Gemini API version string | v1beta |
 
 Stricter conditions (longer visit duration, higher scroll depth) reduce false positives but may cause more pages to go unrecorded. Looser conditions record more pages, including ones you only skimmed.
 
