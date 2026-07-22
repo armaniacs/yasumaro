@@ -244,14 +244,27 @@ export class CSPValidator {
         return true;
       }
 
-      // 非AIドメイン（Tranco, uBlock, localhost）
+      // 非AIドメイン（Tranco, uBlock）
       if (domain === 'tranco-list.eu' ||
           domain === 'easylist.to' ||
           domain === 'pgl.yoyo.org' ||
-          domain === 'nsfw.oisd.nl' ||
-          domain === 'localhost' ||
-          domain.startsWith('127.0.0.1')) {
+          domain === 'nsfw.oisd.nl') {
         return true;
+      }
+
+      // VULN-013 fix: localhost/loopback with port allowlist
+      // Only allow ports declared in host_permissions
+      const ALLOWED_LOCALHOST_PORTS = new Set([27123, 27124, 11434, 1234]);
+      const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
+
+      if (domain === 'localhost') {
+        return ALLOWED_LOCALHOST_PORTS.has(port);
+      }
+
+      // VULN-013 fix: strict IPv4 loopback check (anchored regex)
+      // Prevents '127.attacker.example' from matching
+      if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(domain)) {
+        return ALLOWED_LOCALHOST_PORTS.has(port);
       }
 
       return false;

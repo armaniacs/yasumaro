@@ -28,6 +28,34 @@ import {
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+
+// VULN-016 fix: simple promise-based mutex to serialize SQLite write operations
+// and prevent concurrent transactions from rolling back each other
+class SqliteWriteMutex {
+  private queue: Array<() => void> = [];
+  private locked = false;
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return;
+    }
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
+const sqliteWriteMutex = new SqliteWriteMutex();
 import { StorageKeys } from '../utils/storage/types.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 
@@ -447,11 +475,18 @@ export function handleOffscreenMessage(
                     sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
             } else if (isSqliteMessage) {
-                // Cast is safe: isSqliteMessage narrowed msg.type via isSqliteMessageType
-                // above, so msg.type is a known SqliteMessageType at this point. Payload
-                // shape itself is not runtime-validated here (same trust boundary as
-                // before this refactor: the sender is verified to be our own SW).
-                await handleSqliteMessage(msg as SqliteMessage, sendResponse);
+                // VULN-016 fix: acquire write mutex to serialize SQLite operations
+                // and prevent concurrent transactions from interfering with each other
+                await sqliteWriteMutex.acquire();
+                try {
+                  // Cast is safe: isSqliteMessage narrowed msg.type via isSqliteMessageType
+                  // above, so msg.type is a known SqliteMessageType at this point. Payload
+                  // shape itself is not runtime-validated here (same trust boundary as
+                  // before this refactor: the sender is verified to be our own SW).
+                  await handleSqliteMessage(msg as SqliteMessage, sendResponse);
+                } finally {
+                  sqliteWriteMutex.release();
+                }
 
             } else {
                 console.warn(`Offscreen: Unknown message type ${msg.type}`);

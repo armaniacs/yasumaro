@@ -18,6 +18,7 @@ import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 
 export function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -515,15 +516,17 @@ export async function handleTestLocalMarkdown(): Promise<void> {
 
 /**
  * Format a single browsing log entry as markdown
+ * VULN-020 fix: sanitize title and URL to prevent Markdown injection
  */
 function formatEntryToMarkdown(entry: { title?: string | null; url: string; summary?: string | null; created_at: number }): string {
   const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit'
   });
-  const title = entry.title || entry.url || 'Untitled';
-  const summary = (entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
-  return `- ${timestamp} [${title}](${entry.url})\n    - ${summary}`;
+  const title = sanitizeForObsidian(entry.title || entry.url || 'Untitled');
+  const url = sanitizeUrlForMarkdownTarget(entry.url);
+  const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
+  return `- ${timestamp} [${title}](${url})\n    - ${summary}`;
 }
 
 /**

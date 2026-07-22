@@ -206,6 +206,9 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
 }
 
 export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
+  // VULN-012 fix: limit response size to prevent memory exhaustion
+  const MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024; // 10MB
+
   return async (
     message: FetchUrlMessage,
     _sender: chrome.runtime.MessageSender,
@@ -227,8 +230,19 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // VULN-012 fix: check Content-Length header first
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength, 10) > MAX_FILTER_LIST_SIZE) {
+        throw new Error(`Filter list too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
+      }
+
       const contentType = response.headers.get('content-type');
       const text = await response.text();
+
+      // VULN-012 fix: also check actual text size after reading
+      if (text.length > MAX_FILTER_LIST_SIZE) {
+        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
+      }
 
       sendResponse({ success: true, data: text, contentType });
     } catch (error) {
@@ -350,6 +364,18 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
   ): Promise<void> => {
     if (!(await deps.isRecordingAllowed())) {
       sendResponse({ success: false, reason: 'privacy_consent_required' });
+      return;
+    }
+
+    // VULN-004 fix: validate URL scheme before processing (same as MANUAL_RECORD)
+    if (!isSecureUrl(message.payload.url)) {
+      await logWarn(
+        'Blocked SAVE_RECORD with insecure URL',
+        { url: message.payload.url },
+        undefined,
+        'service-worker',
+      );
+      sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
       return;
     }
 

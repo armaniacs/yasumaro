@@ -72,13 +72,19 @@ const storageData: Record<string, any> = { settings_migrated: true };
                 return Promise.resolve();
             })
         },
-            runtime: {
-                id: 'test-extension-id',
-                getURL: vi.fn(() => 'chrome-extension://test-extension-id/'),
-                reconnect: vi.fn(),
-                sendMessage: vi.fn(() => Promise.resolve())
-            }
-    }
+        session: {
+            get: vi.fn(() => Promise.resolve({})),
+            set: vi.fn(() => Promise.resolve()),
+            remove: vi.fn(() => Promise.resolve()),
+            clear: vi.fn(() => Promise.resolve()),
+        },
+    },
+    runtime: {
+        id: 'test-extension-id',
+        getURL: vi.fn(() => 'chrome-extension://test-extension-id/'),
+        reconnect: vi.fn(),
+        sendMessage: vi.fn(() => Promise.resolve())
+    },
 };
 
 
@@ -154,6 +160,12 @@ describe('Master Password Security', () => {
                         }
                         return Promise.resolve();
                     })
+                },
+                session: {
+                    get: vi.fn(() => Promise.resolve({})),
+                    set: vi.fn(() => Promise.resolve()),
+                    remove: vi.fn(() => Promise.resolve()),
+                    clear: vi.fn(() => Promise.resolve()),
                 },
             },
             runtime: {

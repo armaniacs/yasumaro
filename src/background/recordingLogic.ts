@@ -16,6 +16,7 @@ import type { RecordingResult } from '../messaging/types.js';
 // RecordingPipeline - 静的インポート（動的import()はService Workerで禁止）
 import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { Mutex } from './Mutex.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -142,6 +143,18 @@ export class RecordingLogic {
   };
 
   static sessionStore: SessionStore = new SessionStore();
+
+  // VULN-003 fix: per-URL mutex map to prevent TOCTOU races in duplicate check
+  private static urlRecordMutexes = new Map<string, Mutex>();
+
+  private static getUrlMutex(url: string): Mutex {
+    let mutex = RecordingLogic.urlRecordMutexes.get(url);
+    if (!mutex) {
+      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      RecordingLogic.urlRecordMutexes.set(url, mutex);
+    }
+    return mutex;
+  }
 
   /**
    * Session storage からキャッシュ状態を復元
@@ -397,19 +410,27 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
-    // Delegate to RecordingPipeline via factory
-    const pipeline = createRecordingPipeline({
-      getPrivacyInfoWithCache: this.getPrivacyInfoWithCache.bind(this),
-      obsidian: this.obsidian,
-      aiService: this.aiService,
-      sqliteClient: this.sqliteClient,
-      offlineNetworkQueue: sharedOfflineNetworkQueue,
-    });
+    // VULN-003 fix: acquire per-URL lock to prevent TOCTOU race between
+    // duplicate check and metadata save across concurrent pipeline executions
+    const mutex = RecordingLogic.getUrlMutex(data.url);
+    await mutex.acquire();
+    try {
+      // Delegate to RecordingPipeline via factory
+      const pipeline = createRecordingPipeline({
+        getPrivacyInfoWithCache: this.getPrivacyInfoWithCache.bind(this),
+        obsidian: this.obsidian,
+        aiService: this.aiService,
+        sqliteClient: this.sqliteClient,
+        offlineNetworkQueue: sharedOfflineNetworkQueue,
+      });
 
-    // Get settings with cache
-    const settings = await this.getSettingsWithCache();
+      // Get settings with cache
+      const settings = await this.getSettingsWithCache();
 
-    return await pipeline.execute(data, settings);
+      return await pipeline.execute(data, settings);
+    } finally {
+      mutex.release();
+    }
   }
 
   async recordWithPreview(data: RecordingData): Promise<RecordingResult> {

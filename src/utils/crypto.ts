@@ -310,12 +310,13 @@ export async function computeHMAC(secret: string, message: string): Promise<stri
 
 /**
  * 【セキュリティ修正】PBKDF2を使用したパスワードハッシュ化
- * パスワードを安全に保存するため、PBKDF2でハッシュ化（100,000回のイテレーション）
+ * VULN-019 fix: 600,000 iterations (ENVELOPE_ITERATIONS) for stronger KDF
  * @param {string} password - パスワード
  * @param {Uint8Array} salt - ソルト
+ * @param {number} iterations - PBKDF2 iterations (default: ENVELOPE_ITERATIONS)
  * @returns {Promise<string>} Base64エンコードされたパスワードハッシュ
  */
-export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array): Promise<string> {
+export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array, iterations: number = ENVELOPE_ITERATIONS): Promise<string> {
     const webcrypto = getWebCrypto();
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
@@ -332,7 +333,7 @@ export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array)
         {
             name: 'PBKDF2',
             salt: salt as BufferSource,
-            iterations: PBKDF2_ITERATIONS,
+            iterations,
             hash: HASH_ALGORITHM
         },
         baseKey,
@@ -344,15 +345,31 @@ export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array)
 }
 
 /**
+ * Legacy PBKDF2 iteration count used before VULN-019 fix
+ */
+const LEGACY_PBKDF2_ITERATIONS = 100000;
+
+/**
  * パスワードハッシュを検証する（PBKDF2）
+ * VULN-019 fix: tries new iteration count first, then falls back to legacy
+ * for backward compatibility with existing hashes
  * @param {string} password - 検証するパスワード
  * @param {string} storedHash - 保存されているハッシュ（Base64）
  * @param {Uint8Array} salt - 使用されたソルト
- * @returns {Promise<boolean>} パスワードが正しければtrue
+ * @returns {Promise<{isValid: boolean; needsRehash: boolean}>} 検証結果と再ハッシュ必要性
  */
-export async function verifyPasswordWithPBKDF2(password: string, storedHash: string, salt: Uint8Array): Promise<boolean> {
-    const computedHash = await hashPasswordWithPBKDF2(password, salt);
-    return constantTimeCompare(computedHash, storedHash);
+export async function verifyPasswordWithPBKDF2(password: string, storedHash: string, salt: Uint8Array): Promise<{ isValid: boolean; needsRehash: boolean }> {
+    // VULN-019 fix: try new iteration count first
+    const computedHash = await hashPasswordWithPBKDF2(password, salt, ENVELOPE_ITERATIONS);
+    if (await constantTimeCompare(computedHash, storedHash)) {
+        return { isValid: true, needsRehash: false };
+    }
+    // VULN-019 fix: fallback to legacy iteration count for existing hashes
+    const legacyHash = await hashPasswordWithPBKDF2(password, salt, LEGACY_PBKDF2_ITERATIONS);
+    if (await constantTimeCompare(legacyHash, storedHash)) {
+        return { isValid: true, needsRehash: true };
+    }
+    return { isValid: false, needsRehash: false };
 }
 
 // ============================================================================
@@ -513,7 +530,7 @@ export async function hashUrl(url: string): Promise<string> {
 // ============================================================================
 
 export const CURRENT_ENVELOPE_VERSION = 2;
-const ENVELOPE_ITERATIONS = 600_000;
+export const ENVELOPE_ITERATIONS = 600_000;
 const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
 
 export interface EncryptionEnvelope {

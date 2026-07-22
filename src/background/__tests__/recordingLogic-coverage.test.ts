@@ -38,6 +38,7 @@ vi.mock('../../utils/piiSanitizer.ts', () => ({
 
 vi.mock('../../utils/markdownSanitizer.ts', () => ({
   sanitizeForObsidian: vi.fn((s: string) => s),
+  sanitizeUrlForMarkdownTarget: vi.fn((s: string) => s),
 }));
 
 vi.mock('../../utils/localeUtils.ts', () => ({
