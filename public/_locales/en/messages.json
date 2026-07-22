@@ -380,6 +380,27 @@
   "modeDDesc": {
     "message": "Send raw text directly to cloud AI.\nPrioritize speed."
   },
+  "privacyModeMaskedCloud": {
+    "message": "Masked Cloud"
+  },
+  "privacyModeMaskedCloudShort": {
+    "message": "Masked Cloud"
+  },
+  "privacyModeMaskedCloudDesc": {
+    "message": "Send only masked data to cloud AI (including LM Studio and Ollama).\nFor environments where browser built-in AI is not available."
+  },
+  "privacyModeMaskedCloudRecommended": {
+    "message": "(Recommended)"
+  },
+  "privacyModeCloudOnly": {
+    "message": "Cloud Only"
+  },
+  "privacyModeCloudOnlyShort": {
+    "message": "Cloud Only"
+  },
+  "privacyModeCloudOnlyDesc": {
+    "message": "Send raw text directly to cloud AI.\nPrioritize speed."
+  },
   "confirmSettings": {
     "message": "Confirmation Settings"
   },
