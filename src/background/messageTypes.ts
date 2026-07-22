@@ -117,6 +117,11 @@ export type ConsentStateChangedMessage = {
     type: 'CONSENT_STATE_CHANGED';
 };
 
+export type GenerateReviewSummaryMessage = {
+    type: 'GENERATE_REVIEW_SUMMARY';
+    payload: { periodType: 'weekly' | 'monthly' };
+};
+
 // ============================================================================
 // Discriminated union of all extension messages
 // ============================================================================
@@ -148,6 +153,7 @@ export type ExtensionMessage = (
     | PingMessage
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
+    | GenerateReviewSummaryMessage
     | DashboardSqliteMessage
 ) & { protocolVersion: number };
 
@@ -174,6 +180,7 @@ export const VALID_MESSAGE_TYPES = [
     'REFRESH_LOCAL_MARKDOWN_SCHEDULER', // Re-run initExportScheduler() after a timing change is saved
     'CONSENT_STATE_CHANGED', // Re-run updateConsentBadge() after accept/decline
     'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
+    'GENERATE_REVIEW_SUMMARY', // Manually trigger weekly/monthly review summary generation
 ] as const;
 
 export const CONTENT_SCRIPT_ONLY_TYPES = [

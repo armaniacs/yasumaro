@@ -73,6 +73,9 @@ document.body.innerHTML = `
     <div id="breakingChangesModal"></div>
     <button id="closeBreakingChangesModalBtn"></button>
     <button id="dismissBreakingChangesModalBtn"></button>
+    <button id="generateWeeklySummaryBtn"></button>
+    <button id="generateMonthlySummaryBtn"></button>
+    <div id="reviewSummaryStatus"></div>
 `;
 
 // Mock dependencies
@@ -212,6 +215,8 @@ import {
     testObsidianConnection,
     testAiConnection,
     getAiProviderElements,
+    handleGenerateWeeklySummary,
+    handleGenerateMonthlySummary,
 } from '../dashboard.js';
 
 describe('dashboard.ts exports', () => {
@@ -423,6 +428,90 @@ describe('testAiConnection', () => {
 
         expect(result.success).toBe(false);
         expect(result.message).toBe('API key invalid');
+    });
+});
+
+describe('handleGenerateWeeklySummary', () => {
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <button id="generateWeeklySummaryBtn"></button>
+            <button id="generateMonthlySummaryBtn"></button>
+            <div id="reviewSummaryStatus"></div>
+        `;
+    });
+
+    it('sends GENERATE_REVIEW_SUMMARY with periodType weekly', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: true });
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+            i18n: { getMessage: vi.fn(() => '') },
+        });
+
+        await handleGenerateWeeklySummary();
+
+        expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+            type: 'GENERATE_REVIEW_SUMMARY',
+            payload: { periodType: 'weekly' },
+        }));
+        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
+        expect(statusEl.className).toBe('success');
+    });
+
+    it('shows info status when no entries were found', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: false });
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+            i18n: { getMessage: vi.fn(() => '') },
+        });
+
+        await handleGenerateWeeklySummary();
+
+        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
+        expect(statusEl.className).toBe('info');
+    });
+
+    it('shows error status when the service worker call fails', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({ success: false, error: 'SQLite query failed' });
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+            i18n: { getMessage: vi.fn(() => '') },
+        });
+
+        await handleGenerateWeeklySummary();
+
+        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
+        expect(statusEl.className).toBe('error');
+    });
+});
+
+describe('handleGenerateMonthlySummary', () => {
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <button id="generateWeeklySummaryBtn"></button>
+            <button id="generateMonthlySummaryBtn"></button>
+            <div id="reviewSummaryStatus"></div>
+        `;
+    });
+
+    it('sends GENERATE_REVIEW_SUMMARY with periodType monthly', async () => {
+        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: true });
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: { sendMessage },
+            i18n: { getMessage: vi.fn(() => '') },
+        });
+
+        await handleGenerateMonthlySummary();
+
+        expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+            type: 'GENERATE_REVIEW_SUMMARY',
+            payload: { periodType: 'monthly' },
+        }));
+        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
+        expect(statusEl.className).toBe('success');
     });
 });
 

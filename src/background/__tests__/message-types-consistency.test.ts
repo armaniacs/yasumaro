@@ -11,6 +11,7 @@ describe('Message Type Consistency', () => {
             'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE',
             'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED',
             'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED', 'DASHBOARD_SQLITE',
+            'GENERATE_REVIEW_SUMMARY',
         ];
 
         for (const type of allDefinedTypes) {

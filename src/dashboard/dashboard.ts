@@ -689,8 +689,13 @@ export async function handleGenerateWeeklySummary(): Promise<void> {
   statusEl.className = '';
 
   try {
-    const { generateWeeklySummary } = await import('../background/reviewSummaryGenerator.js');
-    const success = await generateWeeklySummary();
+    const response = await chrome.runtime.sendMessage({
+      type: 'GENERATE_REVIEW_SUMMARY',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
+      payload: { periodType: 'weekly' },
+    }) as { success: boolean; generated?: boolean };
+    if (!response.success) throw new Error('GENERATE_REVIEW_SUMMARY failed');
+    const success = Boolean(response.generated);
     statusEl.textContent = chrome.i18n.getMessage(
       success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
     ) || (success ? 'Summary generated.' : 'No history for the target period.');
@@ -713,8 +718,13 @@ export async function handleGenerateMonthlySummary(): Promise<void> {
   statusEl.className = '';
 
   try {
-    const { generateMonthlySummary } = await import('../background/reviewSummaryGenerator.js');
-    const success = await generateMonthlySummary();
+    const response = await chrome.runtime.sendMessage({
+      type: 'GENERATE_REVIEW_SUMMARY',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
+      payload: { periodType: 'monthly' },
+    }) as { success: boolean; generated?: boolean };
+    if (!response.success) throw new Error('GENERATE_REVIEW_SUMMARY failed');
+    const success = Boolean(response.generated);
     statusEl.textContent = chrome.i18n.getMessage(
       success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
     ) || (success ? 'Summary generated.' : 'No history for the target period.');

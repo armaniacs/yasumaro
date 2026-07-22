@@ -226,6 +226,10 @@ vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../reviewSummaryGenerator.js', () => ({
+    generateWeeklySummary: vi.fn().mockResolvedValue(false),
+    generateMonthlySummary: vi.fn().mockResolvedValue(false),
+}));
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
@@ -2162,6 +2166,48 @@ describe('service-worker handlers', () => {
 
             await new Promise(resolve => setTimeout(resolve, 10));
             expect(sendResponse).toHaveBeenCalledWith({ success: true });
+        });
+
+        it('should handle GENERATE_REVIEW_SUMMARY (weekly)', async () => {
+            const serviceWorker = await import('../service-worker.js');
+            const { generateWeeklySummary, generateMonthlySummary } = await import('../reviewSummaryGenerator.js');
+            vi.mocked(generateWeeklySummary).mockClear().mockResolvedValue(true);
+            vi.mocked(generateMonthlySummary).mockClear();
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+
+            const result = handler(
+                { type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'weekly' } },
+                {},
+                sendResponse,
+            );
+            expect(result).toBe(true);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+            expect(generateWeeklySummary).toHaveBeenCalledTimes(1);
+            expect(generateMonthlySummary).not.toHaveBeenCalled();
+            expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: true });
+        });
+
+        it('should handle GENERATE_REVIEW_SUMMARY (monthly)', async () => {
+            const serviceWorker = await import('../service-worker.js');
+            const { generateWeeklySummary, generateMonthlySummary } = await import('../reviewSummaryGenerator.js');
+            vi.mocked(generateWeeklySummary).mockClear();
+            vi.mocked(generateMonthlySummary).mockClear().mockResolvedValue(false);
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+
+            const result = handler(
+                { type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'monthly' } },
+                {},
+                sendResponse,
+            );
+            expect(result).toBe(true);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+            expect(generateMonthlySummary).toHaveBeenCalledTimes(1);
+            expect(generateWeeklySummary).not.toHaveBeenCalled();
+            expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: false });
         });
 
         it('should handle REFRESH_LOCAL_MARKDOWN_SCHEDULER', async () => {

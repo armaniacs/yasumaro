@@ -36,6 +36,7 @@ import type {
   ActivityUpdateMessage,
   SessionLockRequestMessage,
   PingMessage,
+  GenerateReviewSummaryMessage,
 } from '../messageTypes.js';
 
 // ============================================================================
@@ -121,6 +122,11 @@ export interface RefreshLocalMarkdownSchedulerHandlerDeps {
 
 export interface ConsentStateChangedHandlerDeps {
   updateConsentBadge: () => Promise<void>;
+}
+
+export interface GenerateReviewSummaryHandlerDeps {
+  generateWeeklySummary: () => Promise<boolean>;
+  generateMonthlySummary: () => Promise<boolean>;
 }
 
 // ============================================================================
@@ -577,5 +583,27 @@ export function createConsentStateChangedHandler(deps: ConsentStateChangedHandle
     }
     await deps.updateConsentBadge();
     sendResponse({ success: true });
+  };
+}
+
+export function createGenerateReviewSummaryHandler(deps: GenerateReviewSummaryHandlerDeps) {
+  return async (
+    message: GenerateReviewSummaryMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ): Promise<void> => {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ success: false, error: 'GENERATE_REVIEW_SUMMARY is not allowed from external extensions' });
+      return;
+    }
+    try {
+      const periodType = message.payload?.periodType;
+      const generated = periodType === 'monthly'
+        ? await deps.generateMonthlySummary()
+        : await deps.generateWeeklySummary();
+      sendResponse({ success: true, generated });
+    } catch (error) {
+      sendResponse(createErrorResponse(error));
+    }
   };
 }
