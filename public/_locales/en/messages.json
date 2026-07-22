@@ -360,7 +360,7 @@
     "message": "(Under development)"
   },
   "modeC": {
-    "message": "Mode C: Masked Cloud"
+    "message": "Masked Cloud"
   },
   "modeCShort": {
     "message": "Masked Cloud"
@@ -372,7 +372,7 @@
     "message": "(Recommended)"
   },
   "modeD": {
-    "message": "Mode D: Cloud Only"
+    "message": "Cloud Only"
   },
   "modeDShort": {
     "message": "Cloud Only"
@@ -2902,6 +2902,9 @@
   },
   "historyContentCleansing": {
     "message": "Content Cleansing"
+  },
+  "historyPiiMasking": {
+    "message": "PII Masking"
   },
   "historyAiSummaryCleansing": {
     "message": "AI Summary Cleansing"

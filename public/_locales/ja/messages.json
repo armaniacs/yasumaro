@@ -342,7 +342,7 @@
     "message": "（開発中）"
   },
   "modeC": {
-    "message": "Mode C: Masked Cloud"
+    "message": "Masked Cloud"
   },
   "modeCShort": {
     "message": "Masked Cloud"
@@ -354,7 +354,7 @@
     "message": "（推奨）"
   },
   "modeD": {
-    "message": "Mode D: Cloud Only"
+    "message": "Cloud Only"
   },
   "modeDShort": {
     "message": "Cloud Only"
@@ -2805,6 +2805,9 @@
   },
   "historyContentCleansing": {
     "message": "Content Cleansing"
+  },
+  "historyPiiMasking": {
+    "message": "PIIマスキング"
   },
   "historyAiSummaryCleansing": {
     "message": "AI要約クレンジング"

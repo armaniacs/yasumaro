@@ -175,24 +175,24 @@ export function makeHistoryEntryRow(
     info.appendChild(extractEl);
   }
 
-  if (originalTokens !== undefined || cleansedTokens !== undefined || originalBytes !== undefined || cleansedBytes !== undefined) {
-    const cleansingEl = document.createElement('div');
-    cleansingEl.className = 'history-entry-token-reduction';
-    const parts: string[] = [];
-    if (originalTokens !== undefined && cleansedTokens !== undefined) {
-      parts.push(`トークン: ${originalTokens} → ${cleansedTokens}`);
-    }
+  if (originalBytes !== undefined || cleansedBytes !== undefined) {
     const contentOriginalB = originalBytes || candidateBytes;
     const contentCleansedB = cleansedBytes || originalBytes || candidateBytes;
     if (contentOriginalB !== undefined && contentCleansedB !== undefined) {
       const reduction = contentOriginalB - contentCleansedB;
       const reductionPercent = contentOriginalB > 0 ? ((reduction / contentOriginalB) * 100).toFixed(1) : '0.0';
-      parts.push(`バイト: ${contentOriginalB} → ${contentCleansedB} (削減 ${reduction} / ${reductionPercent}%)`);
-    }
-    if (parts.length > 0) {
-      cleansingEl.textContent = `Content Cleansing — ${parts.join(', ')}`;
+      const cleansingEl = document.createElement('div');
+      cleansingEl.className = 'history-entry-token-reduction';
+      cleansingEl.textContent = `${getCachedMessage('historyContentCleansing', 'Content Cleansing')} — バイト: ${contentOriginalB} → ${contentCleansedB} (削減 ${reduction} / ${reductionPercent}%)`;
       info.appendChild(cleansingEl);
     }
+  }
+
+  if (originalTokens !== undefined && cleansedTokens !== undefined) {
+    const maskingEl = document.createElement('div');
+    maskingEl.className = 'history-entry-token-reduction';
+    maskingEl.textContent = `${getCachedMessage('historyPiiMasking', 'PIIマスキング')} — トークン: ${originalTokens} → ${cleansedTokens}`;
+    info.appendChild(maskingEl);
   }
 
   if (entry.fallbackTriggered) {
