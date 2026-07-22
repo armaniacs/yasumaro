@@ -92,6 +92,15 @@
   "dailyNotePathPlaceholder": {
     "message": "e.g. 092.Daily"
   },
+  "label_obsidian_host": {
+    "message": "Obsidian Host"
+  },
+  "note_obsidian_host": {
+    "message": "Obsidian Local REST API hostname (e.g. 127.0.0.1, localhost, WSL2 IP)"
+  },
+  "obsidianHostError": {
+    "message": "Obsidian host contains invalid characters."
+  },
   "aiProvider": {
     "message": "AI Provider"
   },
@@ -169,6 +178,15 @@
   },
   "geminiApiKeyHelp": {
     "message": "Get it from Google AI Studio."
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API Version"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API version (v1 or v1beta)"
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API version must be like v1 or v1beta."
   },
   "modelName": {
     "message": "Model Name"
@@ -358,27 +376,6 @@
   },
   "modeBCurrently": {
     "message": "(Under development)"
-  },
-  "modeC": {
-    "message": "Masked Cloud"
-  },
-  "modeCShort": {
-    "message": "Masked Cloud"
-  },
-  "modeCDesc": {
-    "message": "Send only masked data to cloud AI (including LM Studio and Ollama).\nFor environments where browser built-in AI is not available."
-  },
-  "modeCRecommended": {
-    "message": "(Recommended)"
-  },
-  "modeD": {
-    "message": "Cloud Only"
-  },
-  "modeDShort": {
-    "message": "Cloud Only"
-  },
-  "modeDDesc": {
-    "message": "Send raw text directly to cloud AI.\nPrioritize speed."
   },
   "privacyModeMaskedCloud": {
     "message": "Masked Cloud"

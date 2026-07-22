@@ -92,6 +92,15 @@
   "dailyNotePathPlaceholder": {
     "message": "例: 092.Daily"
   },
+  "label_obsidian_host": {
+    "message": "Obsidian ホスト"
+  },
+  "note_obsidian_host": {
+    "message": "Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）"
+  },
+  "obsidianHostError": {
+    "message": "Obsidian ホストに使用できない文字が含まれています。"
+  },
   "aiProvider": {
     "message": "AIプロバイダー"
   },
@@ -169,6 +178,15 @@
   },
   "geminiApiKeyHelp": {
     "message": "Google AI Studio で取得できます。"
+  },
+  "label_gemini_api_version": {
+    "message": "Gemini API バージョン"
+  },
+  "note_gemini_api_version": {
+    "message": "Gemini API のバージョン（v1 または v1beta）"
+  },
+  "geminiApiVersionError": {
+    "message": "Gemini API バージョンは v1 または v1beta のような形式で指定してください。"
   },
   "modelName": {
     "message": "モデル名"
@@ -340,27 +358,6 @@
   },
   "modeBCurrently": {
     "message": "（開発中）"
-  },
-  "modeC": {
-    "message": "Masked Cloud"
-  },
-  "modeCShort": {
-    "message": "Masked Cloud"
-  },
-  "modeCDesc": {
-    "message": "PIIのみマスクしてクラウドAI（LM StudioやOllamaも含む）へ送信。\nブラウザ内蔵AIが使えない環境向け。"
-  },
-  "modeCRecommended": {
-    "message": "（推奨）"
-  },
-  "modeD": {
-    "message": "Cloud Only"
-  },
-  "modeDShort": {
-    "message": "Cloud Only"
-  },
-  "modeDDesc": {
-    "message": "生のテキストをそのままクラウドAIへ送信。\n速度優先。"
   },
   "privacyModeMaskedCloud": {
     "message": "Masked Cloud"
