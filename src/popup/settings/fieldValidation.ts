@@ -256,6 +256,60 @@ export function setupMaxTokensValidation(input: HTMLInputElement | null): () => 
 }
 
 /**
+ * Obsidian ホストフィールドのバリデーション
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {boolean} 有効な場合はtrue
+ */
+export function validateObsidianHost(input: HTMLInputElement): boolean {
+    const v = input.value.trim();
+    if (/[\s/\\:]/.test(v)) {
+        setFieldError(input, 'obsidianHostError', getMessage('obsidianHostError') || 'Obsidian host contains invalid characters.');
+        return false;
+    }
+    clearFieldError(input, 'obsidianHostError');
+    return true;
+}
+
+/**
+ * Gemini API バージョンフィールドのバリデーション
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {boolean} 有効な場合はtrue
+ */
+export function validateGeminiApiVersion(input: HTMLInputElement): boolean {
+    const v = input.value.trim();
+    if (!/^(v\d+([a-z]+)?)?$/.test(v)) {
+        setFieldError(input, 'geminiApiVersionError', getMessage('geminiApiVersionError') || 'Gemini API version must be like v1 or v1beta.');
+        return false;
+    }
+    clearFieldError(input, 'geminiApiVersionError');
+    return true;
+}
+
+/**
+ * Obsidian ホストフィールドのバリデーションイベントリスナーを設定
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {() => void} リスナー削除関数
+ */
+export function setupObsidianHostValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
+    const handler = () => validateObsidianHost(input);
+    input.addEventListener('blur', handler);
+    return () => input.removeEventListener('blur', handler);
+}
+
+/**
+ * Gemini API バージョンフィールドのバリデーションイベントリスナーを設定
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {() => void} リスナー削除関数
+ */
+export function setupGeminiApiVersionValidation(input: HTMLInputElement | null): () => void {
+    if (!input) return () => {};
+    const handler = () => validateGeminiApiVersion(input);
+    input.addEventListener('blur', handler);
+    return () => input.removeEventListener('blur', handler);
+}
+
+/**
  * 主要フィールドのバリデーションイベントリスナーを一括設定
  * @param {HTMLInputElement} protocolInput - プロトコル入力
  * @param {HTMLInputElement} portInput - ポート入力

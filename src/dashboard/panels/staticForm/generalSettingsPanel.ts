@@ -12,7 +12,7 @@ import {
 } from '../../dashboard.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
 import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../../popup/settings/aiProvider.js';
-import { setupAllFieldValidations } from '../../../popup/settings/fieldValidation.js';
+import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../../popup/settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
 
@@ -133,6 +133,8 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
         document.getElementById('protocol') as HTMLInputElement | null,
         document.getElementById('port') as HTMLInputElement | null,
       );
+      setupObsidianHostValidation(container.querySelector('#obsidianHost') as HTMLInputElement | null);
+      setupGeminiApiVersionValidation(container.querySelector('#geminiApiVersion') as HTMLInputElement | null);
 
       const openModelsDevDialogBtn = container.querySelector('#openModelsDevDialogBtn') as HTMLButtonElement;
       const selectedProviderInfoDiv = container.querySelector('#selectedProviderInfo') as HTMLElement;
