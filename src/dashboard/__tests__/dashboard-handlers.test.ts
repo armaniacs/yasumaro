@@ -164,6 +164,8 @@ vi.mock('../../popup/settingsUiHelper.js', () => ({
 vi.mock('../../popup/settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
     validateAllFields: vi.fn().mockReturnValue(true),
+    validateObsidianHost: vi.fn().mockReturnValue(true),
+    validateGeminiApiVersion: vi.fn().mockReturnValue(true),
     setupAllFieldValidations: vi.fn().mockReturnValue([]),
     ErrorPair: class {},
 }));

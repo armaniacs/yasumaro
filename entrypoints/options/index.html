@@ -217,6 +217,14 @@
               <label for="dailyPath" data-i18n="dailyNotePath">Daily Note Path</label>
               <input type="text" id="dailyPath" data-storage-key="obsidian_daily_path" data-i18n-input-placeholder="dailyNotePathPlaceholder">
             </div>
+
+            <div class="form-group">
+              <label for="obsidianHost" data-i18n="label_obsidian_host">Obsidian Host</label>
+              <input type="text" id="obsidianHost" data-storage-key="obsidian_host" placeholder="127.0.0.1" aria-invalid="false"
+                aria-describedby="obsidianHostNote obsidianHostError">
+              <p class="help-text" id="obsidianHostNote" data-i18n="note_obsidian_host">Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）</p>
+              <div id="obsidianHostError" class="field-error" role="alert"></div>
+            </div>
           </div>
         </details>
 
@@ -394,6 +402,14 @@
             <div class="form-group">
               <label for="geminiModel" data-i18n="modelName">Model Name (e.g. gemini-3.1-flash-lite)</label>
               <input type="text" id="geminiModel" data-storage-key="gemini_model" value="gemini-3.1-flash-lite">
+            </div>
+
+            <div class="form-group">
+              <label for="geminiApiVersion" data-i18n="label_gemini_api_version">Gemini API Version</label>
+              <input type="text" id="geminiApiVersion" data-storage-key="gemini_api_version" placeholder="v1beta" aria-invalid="false"
+                aria-describedby="geminiApiVersionNote geminiApiVersionError">
+              <p class="help-text" id="geminiApiVersionNote" data-i18n="note_gemini_api_version">Gemini API のバージョン（v1 または v1beta）</p>
+              <div id="geminiApiVersionError" class="field-error" role="alert"></div>
             </div>
           </div>
 

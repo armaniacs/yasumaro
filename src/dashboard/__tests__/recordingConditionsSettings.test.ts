@@ -26,8 +26,6 @@ vi.mock('../../utils/storage.js', () => ({
     AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
     OPENAI_CONTENT_CHARS: 'openaiContentChars',
     GEMINI_CONTENT_CHARS: 'geminiContentChars',
-    OBSIDIAN_HOST: 'obsidianHost',
-    GEMINI_API_VERSION: 'geminiApiVersion',
   },
 }));
 
@@ -111,8 +109,6 @@ describe('recordingConditionsSettings', () => {
       aiRateLimitMax: 5,
       openaiContentChars: 15000,
       geminiContentChars: 20000,
-      obsidianHost: 'localhost',
-      geminiApiVersion: 'v1',
     });
     await initRecordingConditionsSettings();
 
@@ -124,8 +120,6 @@ describe('recordingConditionsSettings', () => {
     const aiRateLimitMaxInput = document.getElementById('aiRateLimitMax') as HTMLInputElement;
     const openaiContentCharsInput = document.getElementById('openaiContentChars') as HTMLInputElement;
     const geminiContentCharsInput = document.getElementById('geminiContentChars') as HTMLInputElement;
-    const obsidianHostInput = document.getElementById('obsidianHost') as HTMLInputElement;
-    const geminiApiVersionInput = document.getElementById('geminiApiVersion') as HTMLInputElement;
 
     expect(minVisitInput?.value).toBe('10');
     expect(minScrollInput?.value).toBe('75');
@@ -135,8 +129,6 @@ describe('recordingConditionsSettings', () => {
     expect(aiRateLimitMaxInput?.value).toBe('5');
     expect(openaiContentCharsInput?.value).toBe('15000');
     expect(geminiContentCharsInput?.value).toBe('20000');
-    expect(obsidianHostInput?.value).toBe('localhost');
-    expect(geminiApiVersionInput?.value).toBe('v1');
   });
 
   it('saves recording conditions via saveSettings on save click', async () => {
@@ -165,8 +157,6 @@ describe('recordingConditionsSettings', () => {
       aiRateLimitMax: 10,
       openaiContentChars: 10000,
       geminiContentChars: 30000,
-      obsidianHost: '127.0.0.1',
-      geminiApiVersion: 'v1beta',
     });
   });
 

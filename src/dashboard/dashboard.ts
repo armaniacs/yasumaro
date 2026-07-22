@@ -6,7 +6,7 @@
 
 import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } from '../utils/storage.js';
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
-import { clearAllFieldErrors, validateAllFields, ErrorPair } from '../popup/settings/fieldValidation.js';
+import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
 import { type MultiProviderTestResult, PROVIDER_LABELS } from '../background/aiClient.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
@@ -289,13 +289,25 @@ export async function handleSaveOnly(): Promise<void> {
 
   const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
   const portInput = document.getElementById('port') as HTMLInputElement | null;
+  const obsidianHostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
+  const geminiApiVersionInput = document.getElementById('geminiApiVersion') as HTMLInputElement | null;
   const errorPairs: ErrorPair[] = [
     [protocolInput, 'protocolError'],
     [portInput, 'portError'],
+    [obsidianHostInput, 'obsidianHostError'],
+    [geminiApiVersionInput, 'geminiApiVersionError'],
   ];
   clearAllFieldErrors(errorPairs);
 
   if (!validateAllFields(protocolInput, portInput)) {
+    return;
+  }
+
+  if (obsidianHostInput && !validateObsidianHost(obsidianHostInput)) {
+    return;
+  }
+
+  if (geminiApiVersionInput && !validateGeminiApiVersion(geminiApiVersionInput)) {
     return;
   }
 
