@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.49] - 2026-07-22
+
+このリリースはドキュメントの現状追従とPBIアーカイブ漏れの整理です。
+
+This release updates documentation to reflect the current codebase state and cleans up leftover PBI archive files.
+
+### Docs / ドキュメント
+
+- **AUDIT_LOG_GUIDE.md**: 監査ログ一覧表示→TSVダウンロードに更新（v6.5.36の変更を反映）
+- **RECORDING_CONDITIONS.md**: 4設定→10設定に拡張（月間トークン上限・レート制限・各プロバイダーの文字数上限等を追加）
+- **STORAGE_MODES.md**: 2モード（OPFS vs chrome.storage.local）→3層（OPFS→IndexedDB VFS→FallbackStorage）に更新
+- **PII_FEATURE_GUIDE.md**: Mode A/B/C/D表記を廃止し、実際の4モード（Masked Cloud / Full Pipeline / Local Only / Cloud Only）に更新
+- **FAQ.md**: Mode C表記をMasked Cloudに統一、ストレージ記述を3層構成に更新
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.48` → `6.5.49`
+- **PBIファイルの移動漏れを整理** — アーカイブ済みPBI6件の pbi/ 上の実ファイルを完全に削除
+
 ## [6.5.48] - 2026-07-22
 
 このリリースは VulnHunter 修正バッチの残存ギャップを解消したものです。
