@@ -4,10 +4,7 @@
  * Detects response.text() calls that are not preceded by a
  * Content-Length check or size limit guard.
  *
- * Works by finding CallExpression where:
- *   - callee.object.name === 'response' (or similar)
- *   - callee.property.name === 'text'
- * Then checks if the preceding statements contain size validation.
+ * Uses AST-based detection to find size validation patterns in preceding statements.
  */
 
 export default {
@@ -26,39 +23,137 @@ export default {
   create(context) {
     const sourceCode = context.sourceCode;
 
+    /**
+     * Check if a node is a statement type
+     */
+    function isStatement(node) {
+      return (
+        node.type === 'VariableDeclaration' ||
+        node.type === 'ExpressionStatement' ||
+        node.type === 'IfStatement' ||
+        node.type === 'ReturnStatement' ||
+        node.type === 'ThrowStatement' ||
+        node.type === 'ForStatement' ||
+        node.type === 'WhileStatement' ||
+        node.type === 'DoWhileStatement' ||
+        node.type === 'SwitchStatement' ||
+        node.type === 'TryStatement'
+      );
+    }
+
+    /**
+     * Find the enclosing block (function or block statement)
+     */
+    function findEnclosingBlock(ancestors) {
+      for (let i = ancestors.length - 1; i >= 0; i--) {
+        const ancestor = ancestors[i];
+        if (
+          ancestor.type === 'FunctionDeclaration' ||
+          ancestor.type === 'FunctionExpression' ||
+          ancestor.type === 'ArrowFunctionExpression' ||
+          ancestor.type === 'BlockStatement' ||
+          ancestor.type === 'Program'
+        ) {
+          return ancestor;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Recursively collect all statements that appear before the target node
+     */
+    function collectPrecedingStatements(node, targetStart, statements) {
+      if (!node || typeof node !== 'object') return;
+
+      // If this node is a statement and it's before the target
+      if (isStatement(node) && node.range && node.range[1] <= targetStart) {
+        statements.push(node);
+      }
+
+      // Recurse into child nodes
+      for (const key of Object.keys(node)) {
+        if (key === 'parent' || key === 'range' || key === 'loc') continue;
+        const child = node[key];
+        if (Array.isArray(child)) {
+          for (const item of child) {
+            if (item && typeof item === 'object' && item.type) {
+              collectPrecedingStatements(item, targetStart, statements);
+            }
+          }
+        } else if (child && typeof child === 'object' && child.type) {
+          collectPrecedingStatements(child, targetStart, statements);
+        }
+      }
+    }
+
+    /**
+     * Recursively check if an AST node contains size-related patterns
+     */
+    function hasSizePattern(node) {
+      if (!node || typeof node !== 'object') return false;
+
+      // Check for content-length string literal
+      if (node.type === 'Literal' && typeof node.value === 'string') {
+        if (/content.?length/i.test(node.value)) return true;
+      }
+
+      // Check for identifier names (contentLength, maxSize, sizeLimit, MAX_SIZE)
+      if (node.type === 'Identifier') {
+        if (/^contentLength$/i.test(node.name)) return true;
+        if (/^maxSize$/i.test(node.name)) return true;
+        if (/^sizeLimit$/i.test(node.name)) return true;
+        if (/^MAX_SIZE$/i.test(node.name)) return true;
+        if (/MAX.*SIZE/i.test(node.name)) return true;
+      }
+
+      // Check for member expression property names (byteLength)
+      if (node.type === 'MemberExpression' && node.property.type === 'Identifier') {
+        if (/^byteLength$/i.test(node.property.name)) return true;
+      }
+
+      // Check for numeric literals that look like byte sizes (1024, 1024*1024, etc.)
+      if (node.type === 'Literal' && typeof node.value === 'number') {
+        if (node.value === 1024 || node.value >= 1024 * 1024) return true;
+      }
+
+      // Recurse into child nodes
+      for (const key of Object.keys(node)) {
+        if (key === 'parent' || key === 'range' || key === 'loc') continue;
+        const child = node[key];
+        if (Array.isArray(child)) {
+          for (const item of child) {
+            if (item && typeof item === 'object' && item.type) {
+              if (hasSizePattern(item)) return true;
+            }
+          }
+        } else if (child && typeof child === 'object' && child.type) {
+          if (hasSizePattern(child)) return true;
+        }
+      }
+
+      return false;
+    }
+
+    /**
+     * Check if there's a size limit check in preceding statements
+     */
     function hasSizeLimitCheck(node) {
       const ancestors = sourceCode.getAncestors(node);
-      // Find the enclosing function or block
-      const block = ancestors.find(a =>
-        a.type === 'FunctionDeclaration' ||
-        a.type === 'FunctionExpression' ||
-        a.type === 'ArrowFunctionExpression' ||
-        a.type === 'BlockStatement' ||
-        a.type === 'Program'
-      );
+      const block = findEnclosingBlock(ancestors);
 
       if (!block) return false;
 
-      // Get all tokens in the enclosing scope before this node
-      const blockTokens = sourceCode.getTokens(block);
-      const nodeStart = node.range ? node.range[0] : 0;
-      const precedingTokens = blockTokens.filter(t => t.range && t.range[1] <= nodeStart);
-      const precedingText = precedingTokens.map(t => t.value).join(' ');
+      const targetStart = node.range ? node.range[0] : 0;
+      const precedingStatements = [];
+      collectPrecedingStatements(block, targetStart, precedingStatements);
 
-      // Check for size limit patterns
-      const limitPatterns = [
-        /content.?length/i,
-        /contentLength/i,
-        /maxSize/i,
-        /MAX_SIZE/i,
-        /sizeLimit/i,
-        /MAX.*SIZE/i,
-        /\d+\s*\*\s*1024\s*\*\s*1024/, // e.g. 5 * 1024 * 1024
-        /\.length\s*[<>]/,
-        /\.byteLength\s*[<>]/,
-      ];
+      // Check each preceding statement for size patterns
+      for (const stmt of precedingStatements) {
+        if (hasSizePattern(stmt)) return true;
+      }
 
-      return limitPatterns.some(p => p.test(precedingText));
+      return false;
     }
 
     return {
