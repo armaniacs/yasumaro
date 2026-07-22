@@ -113,6 +113,8 @@ const defaultMessages: Record<string, string> = {
   modeBShort: 'Full',
   modeCShort: 'Masked',
   modeDShort: 'Cloud',
+  privacyModeMaskedCloudShort: 'Masked',
+  privacyModeCloudOnlyShort: 'Cloud',
   domainAddedToWhitelist: 'Domain added',
   pathAddedToWhitelist: 'Path added',
   saveDomain: 'Save domain',
