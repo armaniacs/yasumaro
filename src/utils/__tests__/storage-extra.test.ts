@@ -25,7 +25,7 @@ vi.mock('../crypto.js', () => ({
   decryptApiKey: vi.fn(() => Promise.resolve('decrypted-key')),
   isEncrypted: vi.fn((v: unknown) => typeof v === 'string' && v.startsWith('encrypted:')),
   hashPasswordWithPBKDF2: vi.fn(() => Promise.resolve('hash')),
-  verifyPasswordWithPBKDF2: vi.fn(() => Promise.resolve(true)),
+  verifyPasswordWithPBKDF2: vi.fn(() => Promise.resolve({ isValid: true, needsRehash: false })),
 }));
 
 vi.mock('../optimisticLock.js', () => ({

@@ -197,6 +197,12 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (typeof data !== 'string' || data.length === 0) {
             return { success: false, error: 'No data provided' };
           }
+          // VULN-008 fix: reject oversized base64 payload before decoding
+          // 100MB raw → ~134MB base64; use 150MB base64 as safe ceiling
+          const MAX_RESTORE_BASE64_LENGTH = 150 * 1024 * 1024;
+          if (data.length > MAX_RESTORE_BASE64_LENGTH) {
+            return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > 100MB)` };
+          }
           const restored = await deps.restoreDb(base64ToBytes(data));
           return restored ? { success: true } : { success: false, error: 'Restore failed' };
         }

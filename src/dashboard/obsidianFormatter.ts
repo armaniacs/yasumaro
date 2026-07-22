@@ -4,7 +4,7 @@
  * Pure function — no side effects, easily testable.
  */
 
-import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 
 /**
@@ -23,7 +23,8 @@ function formatSingleEntry(entry: BrowsingLogEntry, appendedAt: number): string 
   });
 
   const title = sanitizeForObsidian(entry.title || entry.url || 'Untitled');
-  const url = entry.url;
+  // VULN-007 fix: sanitize URL for Markdown link target
+  const url = sanitizeUrlForMarkdownTarget(entry.url);
 
   let summary = entry.summary || 'Summary not available.';
   // Normalize newlines to spaces (Obsidian list format breaks with newlines)

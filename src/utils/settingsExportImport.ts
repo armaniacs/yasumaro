@@ -182,16 +182,9 @@ export async function importEncryptedSettings(
         ErrorCode.SETTINGS_SIGNATURE_FAILURE,
         'settingsExportImport.ts'
       );
-      const forceImport = confirm(chrome.i18n.getMessage('hmacVerificationFailedConfirm'));
-      if (!forceImport) {
-        return null;
-      }
-      await logWarn(
-        'Force importing encrypted settings despite HMAC verification failure',
-        {},
-        ErrorCode.SETTINGS_SIGNATURE_FAILURE,
-        'settingsExportImport.ts'
-      );
+      // VULN-010 fix: reject import unconditionally when HMAC verification fails
+      // Do not allow force-import via confirm() dialog as it bypasses integrity check
+      return null;
     }
 
     // 復号されたJSONを解析してインポート
@@ -406,16 +399,9 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         ErrorCode.SETTINGS_SIGNATURE_FAILURE,
         'settingsExportImport.ts'
       );
-      const forceImport = confirm(chrome.i18n.getMessage('hmacVerificationFailedConfirm'));
-      if (!forceImport) {
-        return null;
-      }
-      await logWarn(
-        'Force importing settings despite signature verification failure',
-        {},
-        ErrorCode.SETTINGS_SIGNATURE_FAILURE,
-        'settingsExportImport.ts'
-      );
+      // VULN-009 fix: reject import unconditionally when signature verification fails
+      // Do not allow force-import via confirm() dialog as it bypasses integrity check
+      return null;
     }
 
     // 構造検証（既存のvalidateExportDataを使用）

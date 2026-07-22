@@ -42,6 +42,11 @@ vi.stubGlobal('chrome', {
       set: mockChromeSet,
       remove: mockChromeRemove,
     },
+    session: {
+      get: vi.fn(() => Promise.resolve({})),
+      set: vi.fn(() => Promise.resolve()),
+      remove: vi.fn(() => Promise.resolve()),
+    },
   },
 });
 

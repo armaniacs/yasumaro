@@ -35,6 +35,11 @@ vi.stubGlobal('chrome', {
       set: mockChromeSet,
       remove: mockChromeRemove,
     },
+    session: {
+      get: vi.fn(() => Promise.resolve({})),
+      set: vi.fn(() => Promise.resolve()),
+      remove: vi.fn(() => Promise.resolve()),
+    },
   },
 });
 
@@ -321,7 +326,7 @@ describe('initMasterPasswordSettings - checkbox events', () => {
     expect(modal.classList.contains('show')).toBe(true);
   });
 
-  it('should remove storage keys, hide options, and show success when checkbox is unchecked', async () => {
+  it('should show auth modal when checkbox is unchecked, then remove on auth success (VULN-015)', async () => {
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
@@ -333,6 +338,18 @@ describe('initMasterPasswordSettings - checkbox events', () => {
 
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change'));
+
+    await flushPromises();
+
+    // VULN-015 fix: checkbox uncheck now shows auth modal instead of directly removing
+    const authModal = document.getElementById('passwordAuthModal')!;
+    expect(authModal.classList.contains('hidden')).toBe(false);
+
+    // Simulate password entry and submission
+    const authInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement;
+    authInput.value = 'correct-password';
+    const submitBtn = document.getElementById('submitPasswordAuthBtn')!;
+    submitBtn.click();
 
     await flushPromises();
 
