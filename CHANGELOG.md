@@ -35,6 +35,21 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.51] - 2026-07-23
+
+### Refactored / リファクタリング
+
+- **ESLint `require-response-size-limit` ルールを AST ベースにリファクタリング** — トークンテキスト結合方式から AST ノード再帰走査方式に変更。`findEnclosingBlock()` / `collectPrecedingStatements()` / `hasSizePattern()` の3関数で構成。コメント・文字列リテラル内の偽陽性を排除（PBI 2）
+
+### Fixed / 修正
+
+- **プライバシーポリシーテストの fetch モックに `headers` オブジェクトを追加** — `res.headers.get('content-length')` の呼び出しに対応。2つの失敗していたテストを修正
+- **E2E テストのプライバシーモード ID を PBI 3 のリネームに対応** — `modeC` → `privacyModeMaskedCloud`、`modeD` → `privacyModeCloudOnly`
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.50` → `6.5.51`
+
 ## [6.5.50] - 2026-07-22
 
 ### Added / 追加
