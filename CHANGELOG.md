@@ -34,6 +34,47 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+
+## [6.5.47] - 2026-07-22
+
+このリリースは VulnHunter セキュリティ監査（2026-07-21）由来の21件の脆弱性修正を反映したものです。
+
+This release addresses 21 security findings from the VulnHunter security audit (2026-07-21).
+
+### Security / セキュリティ
+
+- **マークダウン注入の根本修正（VULN-001,002,004,005）** — `sanitizeForObsidian()` を scheme-agnostic な `sanitizeAllMarkdownLinks` に切り替え + `escapeObsidianWikilinks` 追加。`formatMarkdownStep` のURLに `sanitizeUrlForMarkdownTarget` を適用。`SAVE_RECORD` ハンドラに `isSecureUrl` チェックを追加。
+- **マークダウン注入の派生サーフェス修正（VULN-006,007,020）** — `obsidianFormatter.ts` / `dashboard.ts` / `sqliteHistoryPanel.ts` の各出力経路でURL・タイトルをサニタイズし、`rel="noopener noreferrer"` を追加。
+- **設定インポート署名検証バイパスを解消（VULN-009,010）** — `importSettings()` / `importEncryptedSettings()` の `confirm()` ダイアログによる強制インポートを削除。署名検証失敗時は常にインポートを拒否する。
+- **ループバックSSRFを防止（VULN-013）** — `cspValidator.ts` / `fetch.ts` のループバックアドレス判定にポート許可リスト（27123/27124/11434/1234）を導入。IPv4正規表現を完全アンカー化。
+- **PBKDF2反復回数を強化（VULN-019）** — マスターパスワードのハッシュ導出に `ENVELOPE_ITERATIONS`（600,000回）を使用。既存の100,000回ハッシュにはフォールバック検証＋透過的再ハッシュを実装。
+- **マスターパスワード保護の完全性（VULN-015,017,018,021）** — 無効化操作にパスワード認証を必須化。暗号化キーキャッシュ返却前に `IS_LOCKED` チェック。セッションロック通知にリトライ機構。`unlockWithPassword` / `authenticatePassword` にレート制限を統一。
+
+### Fixed / 修正
+
+- **TOCTOU競合状態を修正（VULN-003）** — `recordingLogic.record()` にURL単位の Mutex を追加し、同一URLの同時記録による重複チェックの競合を防止。
+- **restore_db の資源枯渇を防止（VULN-008）** — base64デコード前にサイズ上限（150MB）をチェック。
+- **ReDoSリスクを低減（VULN-011）** — `matchesPattern()` のワイルドカード数に上限（5個）を設定。
+- **uBlockフィルタ読み込みの資源枯渇を防止（VULN-012）** — フェッチ応答のサイズ上限（10MB）とパーサーの行数上限（50万行）を追加。
+- **settingsStore キャッシュの不整合を修正（VULN-014）** — `saveSettings()` 完了後に `cachedSettings` を明示的に無効化。
+- **Offscreen SQLite 書き込みの競合を修正（VULN-016）** — offscreenドキュメントのSQLiteメッセージハンドラを Mutex で直列化。
+- **piiSanitizer のフレーキーテストを修正** — タイムアウトテストをCPUタイミングに依存しない実装に変更。
+
+### Tests / テスト
+
+- **`markdownSanitizer.test.ts`** — `sanitizeUrlForMarkdownTarget` / `escapeObsidianWikilinks` のテストを追加。
+- **`obsidianFormatter.test.ts`** — VULN-007回帰テスト（新規ファイル）。
+- **`formatMarkdownStep.test.ts`** — URLサニタイズのテストを追加。
+- **`settingsExportImport.test.ts` / `settingsExportImport-signature.test.ts`** — 署名検証バイパス削除に伴うテスト更新。
+- **`storage-security.test.ts`** — `chrome.storage.session` モック不足を修正。
+- **`masterPassword.test.ts` / `masterPassword-r2.test.ts`** — VULN-015/021に伴うテスト更新。
+- **`crypto.test.ts`** — `verifyPasswordWithPBKDF2` の戻り値型変更に対応。
+- **`storage-keys.test.ts`** — `MASTER_PASSWORD_KDF_ITERATIONS` を内部キーリストに追加。
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.46` → `6.5.47`
+
 ## [6.5.46] - 2026-07-21
 
 ### Fixed / 修正
