@@ -35,6 +35,24 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.48] - 2026-07-22
+
+このリリースは VulnHunter 修正バッチの残存ギャップを解消したものです。
+
+This release closes the remaining gaps from the VulnHunter fix batch.
+
+### Security / セキュリティ
+
+- **4つの未サニタイズmarkdown出力経路を修正** — `obsidianSyncService.ts` / `gistSyncTarget.ts` / `reviewSummaryGenerator.ts` / `exportLogsService.ts` の markdown テンプレートに `sanitizeForObsidian()` / `sanitizeUrlForMarkdownTarget()` を適用。
+- **ESLint カスタムルールを導入** — `require-sanitized-markdown`: markdown テンプレート内の未サニタイズ変数を検出。`require-response-size-limit`: `response.text()` 呼び出し前のサイズ制限欠如を検出。
+- **セキュリティレビューチェックリストを PR テンプレートに追加** — markdown 出力・fetch サイズ上限・localhost 検証・レート制限・鍵キャッシュの5観点。
+- **ADR: Markdown出力経路へのサニタイズ適用ルール** — 3層ガードレール（lint rule + レビューチェックリスト + ADR）を確立。
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.47` → `6.5.48`
+- **PBIアーカイブ** — 完了済み7件のPBIを `dev-docs/archived/pbi/` に移動。
+
 ## [6.5.47] - 2026-07-22
 
 このリリースは VulnHunter セキュリティ監査（2026-07-21）由来の21件の脆弱性修正を反映したものです。
