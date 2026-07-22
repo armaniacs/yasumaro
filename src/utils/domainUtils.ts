@@ -48,6 +48,12 @@ export function extractDomain(url: string): string | null {
 }
 
 /**
+ * Maximum number of wildcards allowed in a single pattern.
+ * Prevents ReDoS (VULN-011) by limiting the regex complexity.
+ */
+const MAX_WILDCARDS_PER_PATTERN = 5;
+
+/**
  * Check if a domain matches a pattern (supports wildcards)
  * @param {string} domain - The domain to check
  * @param {string} pattern - The pattern to match against (supports wildcards)
@@ -56,6 +62,11 @@ export function extractDomain(url: string): string | null {
 export function matchesPattern(domain: string, pattern: string): boolean {
     // Convert wildcard pattern to regex
     if (pattern.includes('*')) {
+        // VULN-011 fix: limit wildcard count to prevent ReDoS
+        const wildcardCount = (pattern.match(/\*/g) || []).length;
+        if (wildcardCount > MAX_WILDCARDS_PER_PATTERN) {
+            return false;
+        }
         // 【Code Review #3】: 全ての正規表現特殊文字をエスケープしてからワイルドカードを処理
         const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // ワイルドカード（\*）を .* に変換

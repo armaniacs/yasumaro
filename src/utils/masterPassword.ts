@@ -154,11 +154,17 @@ export async function verifyMasterPassword(
         // Base64デコード
         const salt = new Uint8Array(atob(saltBase64).split('').map(c => c.charCodeAt(0)));
 
-        // パスワード検証
-        const isValid = await verifyPasswordWithPBKDF2(password, hash, salt);
+        // パスワード検証（VULN-019: returns {isValid, needsRehash}）
+        const verifyResult = await verifyPasswordWithPBKDF2(password, hash, salt);
 
-        if (!isValid) {
+        if (!verifyResult.isValid) {
             return { success: false, error: 'Incorrect password' };
+        }
+
+        // VULN-019 fix: re-hash with new iteration count if legacy hash was used
+        if (verifyResult.needsRehash) {
+            const newHash = await hashPasswordWithPBKDF2(password, salt);
+            await chrome.storage.local.set({ master_password_hash: newHash });
         }
 
         return { success: true };

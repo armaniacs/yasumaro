@@ -24,7 +24,8 @@ vi.mock('../crypto.js', () => ({
     generateSalt: vi.fn(() => new Uint8Array(16).fill(1)),
     hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
     verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {
-        return password === 'correct_password' && hash === 'hashed_value';
+        const isValid = password === 'correct_password' && hash === 'hashed_value';
+        return { isValid, needsRehash: false };
     }),
     encrypt: vi.fn(async (plaintext: string, _key: CryptoKey) => ({
         ciphertext: 'encrypted_' + plaintext,

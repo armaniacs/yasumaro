@@ -5,7 +5,7 @@
  */
 
 import { getUserLocale } from '../../../utils/localeUtils.js';
-import { sanitizeForObsidian } from '../../../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../../utils/markdownSanitizer.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -31,6 +31,8 @@ export const formatMarkdownStep: PipelineStepFunction = async (
 
   // Sanitize for Obsidian (XSS protection)
   const sanitizedTitle = sanitizeForObsidian(title);
+  // Sanitize URL for Markdown link target (VULN-001/004 fix)
+  const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
   // Normalize newlines and extra spaces - Obsidian list format breaks with newlines
   const normalizedSummary = summary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
   const finalSanitizedSummary = sanitizeForObsidian(normalizedSummary);
@@ -46,7 +48,7 @@ export const formatMarkdownStep: PipelineStepFunction = async (
   const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${t}`).join(' ') + ' ' : '';
 
   // Create markdown
-  const markdown = `- ${timestamp} [${sanitizedTitle}](${url})\n    - ${tagPrefix}${finalSanitizedSummary}`;
+  const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;
 
   return {
     ...context,

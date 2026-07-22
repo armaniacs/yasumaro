@@ -11,9 +11,11 @@ import {
     generateSalt,
     deriveKey,
     hashPasswordWithPBKDF2,
-    verifyPasswordWithPBKDF2
+    verifyPasswordWithPBKDF2,
+    ENVELOPE_ITERATIONS
 } from '../crypto.js';
 import { StorageKeys } from './types.js';
+import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 
 // ============================================================================
 // Module-private session state
@@ -40,8 +42,12 @@ function base64ToUint8Array(base64: string): Uint8Array {
 /**
  * パスワードから暗号化キーを導出する（PBKDF2、extensionIdなし）
  * マスターパスワード方式専用
+ * VULN-019 fix: uses stored iteration count with fallback to legacy
  */
 async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
+    // VULN-019 fix: use stored iteration count or ENVELOPE_ITERATIONS for new setups
+    const kdfResult = await chrome.storage.local.get([StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
+    const iterations = (kdfResult[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number) || ENVELOPE_ITERATIONS;
     const webcrypto = global.crypto || crypto;
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
@@ -58,7 +64,7 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
         {
             name: 'PBKDF2',
             salt: salt as BufferSource,
-            iterations: 100000,
+            iterations,
             hash: 'SHA-256'
         },
         baseKey,
@@ -85,7 +91,14 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
  * @throws {Error} ロックされている場合（マスターパスワード未入力）
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
+    // VULN-017 fix: check IS_LOCKED before returning cached key
     if (cachedEncryptionKey) {
+        const lockStatus = await chrome.storage.local.get([StorageKeys.IS_LOCKED]);
+        if (lockStatus[StorageKeys.IS_LOCKED]) {
+            cachedEncryptionKey = null;
+            cachedMasterPassword = null;
+            throw new Error('ENCRYPTION_LOCKED: Session is locked');
+        }
         return cachedEncryptionKey;
     }
 
@@ -221,6 +234,12 @@ export async function setMasterPassword(password: string): Promise<boolean> {
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function unlockWithPassword(password: string): Promise<boolean> {
+    // VULN-018 fix: check rate limit before attempting password verification
+    const rateLimitResult = await checkRateLimit();
+    if (!rateLimitResult.success) {
+        throw new Error(rateLimitResult.error || 'Too many attempts. Please try again later.');
+    }
+
     const result = await chrome.storage.local.get([
         StorageKeys.MASTER_PASSWORD_HASH,
         StorageKeys.MASTER_PASSWORD_SALT,
@@ -240,9 +259,17 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     }
 
     const salt = base64ToUint8Array(saltBase64);
-    const isValid = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+    const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt);
 
-    if (isValid) {
+    if (verifyResult.isValid) {
+        // VULN-019 fix: re-hash with new iteration count if legacy hash was used
+        if (verifyResult.needsRehash) {
+            const newHash = await hashPasswordWithPBKDF2(password, salt);
+            await chrome.storage.local.set({ [StorageKeys.MASTER_PASSWORD_HASH]: newHash });
+            logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
+        }
+        // VULN-018 fix: reset failed attempts on successful authentication
+        await resetFailedAttempts();
         // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
         chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch((error) => {
             // 送信失敗は無視（Service Workerが起動していない可能性）
@@ -254,6 +281,8 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         return true;
     }
 
+    // VULN-018 fix: record failed attempt
+    await recordFailedAttempt();
     return false;
 }
 

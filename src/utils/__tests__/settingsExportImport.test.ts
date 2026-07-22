@@ -108,7 +108,7 @@ vi.mock('../crypto.js', () => ({
     }),
     deriveKey: vi.fn(async () => 'mock_key'),
     hashPasswordWithPBKDF2: vi.fn(async () => 'hashed'),
-    verifyPasswordWithPBKDF2: vi.fn(async () => true),
+    verifyPasswordWithPBKDF2: vi.fn(async () => ({ isValid: true, needsRehash: false })),
     generateSalt: vi.fn(() => new Uint8Array(16).fill(42))
 }));
 
@@ -379,15 +379,12 @@ describe('settingsExportImport', () => {
             const signedData = { ...exportData, signature: 'wrong_signature' };
             const result = await importSettings(JSON.stringify(signedData));
 
-            expect(result).not.toBeNull();
-            expect(global.confirm).toHaveBeenCalled();
-
-            (global as any).confirm = vi.fn(() => true);
+            // VULN-009 fix: signature mismatch always returns null, no confirm() dialog
+            expect(result).toBeNull();
+            expect(global.confirm).not.toHaveBeenCalled();
         });
 
-        test('署名検証失敗時にconfirmで拒否するとnullを返す', async () => {
-            (global as any).confirm = vi.fn(() => false);
-
+        test('署名検証失敗時はconfirmなしで即座にnullを返す（VULN-009）', async () => {
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -421,9 +418,7 @@ describe('settingsExportImport', () => {
             const result = await importSettings(JSON.stringify(signedData));
 
             expect(result).toBeNull();
-            expect(global.confirm).toHaveBeenCalled();
-
-            (global as any).confirm = vi.fn(() => true);
+            expect(global.confirm).not.toHaveBeenCalled();
         });
 
         test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
@@ -578,15 +573,12 @@ describe('settingsExportImport', () => {
             };
 
             const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
+            // VULN-010 fix: HMAC mismatch always returns null, no confirm() dialog
             expect(result).toBeNull();
-            expect(global.confirm).toHaveBeenCalled();
-
-            (global as any).confirm = vi.fn(() => true);
+            expect(global.confirm).not.toHaveBeenCalled();
         });
 
-        test('HMAC検証失敗時にconfirmで承認するとフォースインポートする', async () => {
-            (global as any).confirm = vi.fn(() => true);
-
+        test('HMAC検証失敗時はconfirmなしで即座にnullを返す（VULN-010）', async () => {
             const settings = {
                 obsidian_protocol: 'http',
                 obsidian_port: '27123',
@@ -630,9 +622,10 @@ describe('settingsExportImport', () => {
             };
 
             const result = await importEncryptedSettings(JSON.stringify(encryptedData), 'password');
-            expect(result).not.toBeNull();
-            expect(global.confirm).toHaveBeenCalled();
-            expect(saveSettings).toHaveBeenCalled();
+            // VULN-010 fix: HMAC mismatch always returns null
+            expect(result).toBeNull();
+            expect(global.confirm).not.toHaveBeenCalled();
+            expect(saveSettings).not.toHaveBeenCalled();
         });
 
         test('復号データの構造検証失敗時にnullを返す', async () => {

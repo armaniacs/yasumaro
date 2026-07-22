@@ -191,9 +191,8 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【結果検証】改ざんされた署名でインポート拒否
         expect(result).toBeNull(); // 【確認内容】: インポートが拒否されたこと 🟢
-        expect(global.confirm).toHaveBeenCalledWith(
-            expect.stringContaining('signature verification failed')
-        ); // 【確認内容】: force import 確認が表示されたこと 🟢
+        // VULN-009 fix: confirm() dialog is no longer shown; import is unconditionally rejected
+        expect(global.confirm).not.toHaveBeenCalled();
     });
 
     /**
@@ -249,9 +248,8 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【結果検証】データ改ざんでインポート拒否
         expect(result).toBeNull(); // 【確認内容】: インポートが拒否されたこと 🟢
-        expect(global.confirm).toHaveBeenCalledWith(
-            expect.stringContaining('signature verification failed')
-        ); // 【確認内容】: force import 確認が表示されたこと 🟢
+        // VULN-009 fix: confirm() dialog is no longer shown; import is unconditionally rejected
+        expect(global.confirm).not.toHaveBeenCalled();
     });
 
     /**

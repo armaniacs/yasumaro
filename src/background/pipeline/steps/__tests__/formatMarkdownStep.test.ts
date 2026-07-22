@@ -16,13 +16,15 @@ vi.mock('../../../../utils/localeUtils.js', () => ({
 }));
 vi.mock('../../../../utils/markdownSanitizer.js', () => ({
   sanitizeForObsidian: vi.fn((text: string) => text),
+  sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
 }));
 
 import { formatMarkdownStep } from '../formatMarkdownStep.js';
-import { sanitizeForObsidian } from '../../../../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../../../utils/markdownSanitizer.js';
 import type { RecordingContext } from '../../types.js';
 
 const mockSanitize = sanitizeForObsidian as vi.MockedFunction<typeof sanitizeForObsidian>;
+const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as vi.MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -45,6 +47,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 beforeEach(() => {
   vi.clearAllMocks();
   mockSanitize.mockImplementation((text: string) => text);
+  mockSanitizeUrl.mockImplementation((url: string) => url);
 });
 
 describe('formatMarkdownStep', () => {
@@ -185,6 +188,32 @@ describe('formatMarkdownStep', () => {
       const result = await formatMarkdownStep(context);
 
       expect(result.sanitizedSummary).toBe('escaped_Original summary');
+    });
+  });
+
+  describe('URL sanitization (VULN-001/004)', () => {
+    it('url が sanitizeUrlForMarkdownTarget を通って埋め込まれる', async () => {
+      mockSanitizeUrl.mockImplementation((url: string) => url.replace(/\)/g, '%29'));
+
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://evil.tld/x)![beacon](https://evil.tld/exfil', content: '' },
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(mockSanitizeUrl).toHaveBeenCalledWith('https://evil.tld/x)![beacon](https://evil.tld/exfil');
+      // The markdown should not contain unescaped ) that could break the link syntax
+      expect(result.markdown).toContain('%29');
+    });
+
+    it('sanitizeUrlForMarkdownTarget is called with the URL from data', async () => {
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://example.com/page', content: '' },
+      });
+
+      await formatMarkdownStep(context);
+
+      expect(mockSanitizeUrl).toHaveBeenCalledWith('https://example.com/page');
     });
   });
 });
