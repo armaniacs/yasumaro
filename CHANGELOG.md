@@ -35,6 +35,20 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.50] - 2026-07-22
+
+### Added / 追加
+
+- **ダッシュボードサイドバーヘッダーをクリック可能に変更** — サイドバー上部の「Yasumaro」ロゴ/タイトル领域をリンク化し、クリックで `https://armaniacs.github.io/yasumaro/` が新しいタブで開くようにした。セマンティック修正として `<a>` タグを `<nav role="tablist">` の外に移動し、`.sidebar-container` でラップ
+
+### Changed / 変更
+
+- **サイドバーのHTML構造を整理** — ヘッダー（`<a>`）とナビゲーション（`<nav>`）を `.sidebar-container` で囲み、ダークモード・レスポンシブ対応のCSSセレクタを `.sidebar-container` に統一
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.49` → `6.5.50`
+
 ## [6.5.49] - 2026-07-22
 
 このリリースはドキュメントの現状追従とPBIアーカイブ漏れの整理です。
