@@ -5,6 +5,7 @@
  */
 
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
+import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 
 // ============================================================================
 // Markdown Export
@@ -38,7 +39,7 @@ date: ${date}
 tags: [${tags.map(t => `"${t}"`).join(', ')}]
 ---
 
-${entry.summary || ''}
+${sanitizeForObsidian(entry.summary || '')}
 `;
   }).join('\n---\n');
 }

@@ -10,6 +10,7 @@ import { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { SyncTarget } from './syncTargets/SyncTarget.js';
 
 export class ObsidianSyncService implements SyncTarget {
@@ -48,7 +49,10 @@ export class ObsidianSyncService implements SyncTarget {
 
     try {
       // Use the existing ObsidianClient to append to daily note
-      const markdown = `- [${title || url}](${url})${summary ? `: ${summary}` : ''}`;
+      const sanitizedTitle = sanitizeForObsidian(title || url || 'Untitled');
+      const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
+      const sanitizedSummary = summary ? sanitizeForObsidian(summary) : null;
+      const markdown = `- [${sanitizedTitle}](${sanitizedUrl})${sanitizedSummary ? `: ${sanitizedSummary}` : ''}`;
       await this.obsidianClient.appendToDailyNote(markdown);
       // Mark as synced in SQLite
       await this.sqliteClient.update(logId, { obsidian_synced: 1 });
