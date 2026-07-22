@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.52] - 2026-07-23
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.51` → `6.5.52`
+
 ## [6.5.51] - 2026-07-23
 
 ### Refactored / リファクタリング
