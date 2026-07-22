@@ -127,22 +127,18 @@ function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${entry.page_bytes} → ${entry.candidate_bytes} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)</div>`);
   }
 
-  if (entry.original_tokens != null || entry.cleansed_tokens != null ||
-      entry.original_bytes != null || entry.cleansed_bytes != null) {
-    const cleansingParts: string[] = [];
-    if (entry.original_tokens != null && entry.cleansed_tokens != null) {
-      cleansingParts.push(`${t('historyTokens', [])}: ${entry.original_tokens} → ${entry.cleansed_tokens}`);
-    }
+  if (entry.original_bytes != null || entry.cleansed_bytes != null) {
     const contentOriginalB = (entry.original_bytes || entry.candidate_bytes) as number | null | undefined;
     const contentCleansedB = (entry.cleansed_bytes || entry.original_bytes || entry.candidate_bytes) as number | null | undefined;
     if (contentOriginalB != null && contentCleansedB != null) {
       const reduction = contentOriginalB - contentCleansedB;
       const reductionPercent = contentOriginalB > 0 ? ((reduction / contentOriginalB) * 100).toFixed(1) : '0.0';
-      cleansingParts.push(`${t('historyBytes', [])}: ${contentOriginalB} → ${contentCleansedB} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)`);
+      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${contentOriginalB} → ${contentCleansedB} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)</div>`);
     }
-    if (cleansingParts.length > 0) {
-      parts.push(`<div class="history-entry-token-reduction">Content Cleansing — ${cleansingParts.join(', ')}</div>`);
-    }
+  }
+
+  if (entry.original_tokens != null && entry.cleansed_tokens != null) {
+    parts.push(`<div class="history-entry-token-reduction">${t('historyPiiMasking', [])} — ${t('historyTokens', [])}: ${entry.original_tokens} → ${entry.cleansed_tokens}</div>`);
   }
 
   if (entry.ai_summary_original_bytes != null && entry.ai_summary_cleansed_bytes != null) {

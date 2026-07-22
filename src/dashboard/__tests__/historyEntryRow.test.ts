@@ -258,12 +258,13 @@ describe('Content Extraction Stats', () => {
 });
 
 describe('Content Cleansing Stats', () => {
-  it('shows cleansing section when originalTokens and cleansedTokens are present', () => {
+  it('shows PII masking section when originalTokens and cleansedTokens are present', () => {
     const row = makeHistoryEntryRow(
       createMinimalEntry({ originalTokens: 1000, cleansedTokens: 500 }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
     const text = row.textContent || '';
-    expect(text).toContain('Content Cleansing');
+    expect(text).toContain('PIIマスキング');
+    expect(text).not.toContain('Content Cleansing');
   });
 
   it('shows cleansing section when originalBytes and cleansedBytes are present', () => {
