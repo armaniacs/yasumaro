@@ -335,28 +335,28 @@
   "privacyMode": {
     "message": "プライバシーモード"
   },
-  "modeA": {
+  "privacyModeLocalOnly": {
     "message": "Mode A: Local Only"
   },
-  "modeAShort": {
+  "privacyModeLocalOnlyShort": {
     "message": "Local Only"
   },
-  "modeADesc": {
+  "privacyModeLocalOnlyDesc": {
     "message": "ページ内容を外部送信せず、ブラウザ内蔵AIのみで要約します。\n現在、多くのブラウザで動作しません。"
   },
-  "modeADetail": {
+  "privacyModeLocalOnlyStatus": {
     "message": "（開発中）"
   },
-  "modeB": {
+  "privacyModeFullPipeline": {
     "message": "Mode B: Full Pipeline"
   },
-  "modeBShort": {
+  "privacyModeFullPipelineShort": {
     "message": "Full Pipeline"
   },
-  "modeBDesc": {
+  "privacyModeFullPipelineDesc": {
     "message": "ブラウザ内蔵AIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
   },
-  "modeBCurrently": {
+  "privacyModeFullPipelineStatus": {
     "message": "（開発中）"
   },
   "privacyModeMaskedCloud": {
