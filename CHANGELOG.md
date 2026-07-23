@@ -35,20 +35,39 @@ All notable changes to this project will be documented in this file.
 
 
 
-## [6.5.61] - 2026-07-24
+## [6.5.60] - 2026-07-24
+
+### Docs / ドキュメント
+
+- **CHANGELOG・ADR・ドキュメント参照を更新** — `AGENTS.md`、`CONTRIBUTING.md`、`PERMISSIONS.md`、`dev-docs/ADR/`配下の各ADRファイル、`dev-docs/ADR/README.md`のファイルパス・参照を現状のコードベースに追従させて更新
+
+## [6.5.59] - 2026-07-24
 
 ### Refactored / リファクタリング
 
-- **プライバシーモードi18nキー名を意味ベース命名に統一** — `modeA`/`modeB`系キー（`modeAShort`, `modeADesc`, `modeADetail`, `modeBShort`, `modeBDesc`, `modeBCurrently`）を`privacyModeLocalOnly`/`privacyModeFullPipeline`系（`privacyModeLocalOnlyShort`, `privacyModeLocalOnlyDesc`, `privacyModeLocalOnlyStatus`, `privacyModeFullPipelineShort`, `privacyModeFullPipelineDesc`, `privacyModeFullPipelineStatus`）にリネーム。PBI 3（`modeC`/`modeD` → `privacyModeMaskedCloud`/`privacyModeCloudOnly`）が未対応だった`modeA`/`modeB`を同じ命名規則に揃えるもの。`public/_locales/{ja,en}/messages.json`、`entrypoints/{options,popup}/index.html`のdata-i18n属性、`src/popup/statusPanel.ts`、テストモック（`statusPanel-extra.test.ts`, `testDir/vitest.setup.ts`）を更新。DOM要素ID（`id="modeA"`等）はE2Eテストとの結合度を考慮し変更せず維持
+- **未使用エクスポートを削除** — knip で検出された82個の未使用エクスポートと34個の未使用型定義を整理。バーレル再エクスポートの削除、内部使用関数の `export` キーワード削除、デッドコードの削除を実施。テストで動的 import されている関数（`startTimeoutChecker`、`stopTimeoutChecker` 等）は `export` を維持
+- **ステージング漏れ分の追加削除も含む** — knip 検出範囲外だった追従漏れファイルも合わせて整理
+
+## [6.5.58] - 2026-07-24
+
+### Removed / 削除
+
+- **未使用ファイル5個を削除** — `public/utils/trustDb/bloomfilter-vendor.mjs`、`scripts/test-gate-false-positive.mjs`、`src/__tests__/docs.spec.ts`、`src/__tests__/types.ts`、`src/background/pipeline/index.ts`。knip で検出後、grep で未使用を確認して削除
+
+## [6.5.57] - 2026-07-24
 
 ### Removed / 削除
 
 - **未使用の Svelte 依存を完全削除** — `svelte`, `@sveltejs/vite-plugin-svelte`, `eslint-plugin-svelte` を `package.json` から削除。`svelte.config.js` を削除。`wxt.config.ts` から svelte プラグイン import と登録を削除。`eslint.config.js` から svelte プラグイン import と `flat/recommended` 設定を削除。`tsconfig.json` の `types` 配列から `"svelte"` を削除。孤立ファイル `src/offscreen/App.svelte` を削除。29 パッケージが node_modules から除去
 - **未使用の依存パッケージ6個を削除** — `bloomfilter`（dependencies）、`@rollup/plugin-commonjs`、`@rollup/plugin-node-resolve`、`css-tree`、`globals`、`tailwindcss`（devDependencies）。knip で検出後、grep で未使用を確認して削除。11 パッケージが node_modules から除去
-- **未使用ファイル5個を削除** — `public/utils/trustDb/bloomfilter-vendor.mjs`、`scripts/test-gate-false-positive.mjs`、`src/__tests__/docs.spec.ts`、`src/__tests__/types.ts`、`src/background/pipeline/index.ts`。knip で検出後、grep で未使用を確認して削除
-- **未使用エクスポートを削除** — knip で検出された82個の未使用エクスポートと34個の未使用型定義を整理。バーレル再エクスポートの削除、内部使用関数の `export` キーワード削除、デッドコードの削除を実施。テストで動的 import されている関数（`startTimeoutChecker`、`stopTimeoutChecker` 等）は `export` を維持
 
-## [6.5.61] - 2026-07-24
+## [6.5.56] - 2026-07-24
+
+### Refactored / リファクタリング
+
+- **プライバシーモードi18nキー名を意味ベース命名に統一** — `modeA`/`modeB`系キー（`modeAShort`, `modeADesc`, `modeADetail`, `modeBShort`, `modeBDesc`, `modeBCurrently`）を`privacyModeLocalOnly`/`privacyModeFullPipeline`系（`privacyModeLocalOnlyShort`, `privacyModeLocalOnlyDesc`, `privacyModeLocalOnlyStatus`, `privacyModeFullPipelineShort`, `privacyModeFullPipelineDesc`, `privacyModeFullPipelineStatus`）にリネーム。PBI 3（`modeC`/`modeD` → `privacyModeMaskedCloud`/`privacyModeCloudOnly`）が未対応だった`modeA`/`modeB`を同じ命名規則に揃えるもの。`public/_locales/{ja,en}/messages.json`、`entrypoints/{options,popup}/index.html`のdata-i18n属性、`src/popup/statusPanel.ts`、テストモック（`statusPanel-extra.test.ts`, `testDir/vitest.setup.ts`）を更新。DOM要素ID（`id="modeA"`等）はE2Eテストとの結合度を考慮し変更せず維持
+
+## [6.5.55] - 2026-07-23
 
 ### Chores / その他
 

@@ -17,7 +17,7 @@ export default defineConfig({
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: '6.5.56',
+    version: '6.5.60',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     homepage_url: 'https://github.com/armaniacs/yasumaro',
