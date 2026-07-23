@@ -2269,6 +2269,9 @@
   "trustTabPanelDescription": {
     "message": "訪問するWebサイトの信頼度を判定し、適切な対応を選択できます。"
   },
+  "trustDomainGuideLink": {
+    "message": "ドメイン信頼度判定ガイドを見る（新しいタブで開きます）"
+  },
   "safetyModeSection": {
     "message": "Safety Mode（セーフティモード）"
   },
@@ -2538,6 +2541,9 @@
   },
   "cspDescription": {
     "message": "設定したAIプロバイダーのみCSPに含めることで、セキュリティを強化"
+  },
+  "cspGuideLink": {
+    "message": "条件付きCSP設定ガイドを見る（新しいタブで開きます）"
   },
   "cspProviderSearchPlaceholder": {
     "message": "プロバイダーを検索..."
