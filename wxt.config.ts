@@ -1,5 +1,4 @@
 import { defineConfig } from 'wxt';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { AI_PROVIDER_HOST_PERMISSIONS, OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS, buildConnectSrcDomains } from './src/utils/cspDomains.js';
 
@@ -10,8 +9,7 @@ export default defineConfig({
 
   vite: () => ({
     plugins: [
-      tailwindcss(),
-      svelte()
+      tailwindcss()
     ]
   }),
 
@@ -19,7 +17,7 @@ export default defineConfig({
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: '6.5.54',
+    version: '6.5.56',
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     homepage_url: 'https://github.com/armaniacs/yasumaro',
