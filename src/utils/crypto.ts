@@ -92,6 +92,7 @@ export async function constantTimeCompare(a: string, b: string): Promise<boolean
 
 /**
  * パスワードをハッシュ化する
+ * @deprecated Use hashPasswordWithPBKDF2() instead. SHA-256 without salt is insecure.
  * @param {string} password - 平文パスワード
  * @returns {Promise<string>} Base64エンコードされたハッシュ
  */
@@ -106,6 +107,7 @@ export async function hashPassword(password: string): Promise<string> {
 
 /**
  * パスワードを検証する
+ * @deprecated Use hashPasswordWithPBKDF2() instead. Relies on deprecated hashPassword().
  * @param {string} password - 平文パスワード
  * @param {string} hash - 比較対象のハッシュ（Base64エンコード）
  * @returns {Promise<boolean>} パスワードが一致するかどうか
