@@ -9,7 +9,7 @@ export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
 }
 
-export interface ProviderTestResult {
+interface ProviderTestResult {
     provider: string;
     model?: string;
     success: boolean;

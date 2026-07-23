@@ -29,7 +29,7 @@ export const STATUS_COLORS = {
 } as const;
 
 /** トラストレベル表示用の色 */
-export const TRUST_LEVEL_COLORS = {
+const TRUST_LEVEL_COLORS = {
   /** Trusted - 緑 */
   TRUSTED: '#10b981',
   /** Sensitive - アンバー */
@@ -119,7 +119,7 @@ export const TIMEOUTS = {
 } as const;
 
 /** 分単位の時間定数 */
-export const TIMEOUTS_MINUTES = {
+const TIMEOUTS_MINUTES = {
   /** アラームチェック間隔: 1分 */
   ALARM_CHECK_INTERVAL: 1,
 } as const;
@@ -129,7 +129,7 @@ export const TIMEOUTS_MINUTES = {
 // =============================================================================
 
 /** URLやコンテンツのサイズ制限 */
-export const SIZE_LIMITS = {
+const SIZE_LIMITS = {
   /** URL最大長: 64KB */
   MAX_URL_LENGTH: 64 * 1024,
   /** 推奨最大コンテンツサイズ: 8KB */
@@ -143,7 +143,7 @@ export const SIZE_LIMITS = {
 // =============================================================================
 
 /** メッセージ送信のリトライ設定 */
-export const RETRY_CONFIG = {
+const RETRY_CONFIG = {
   /** 最大リトライ回数 */
   MAX_RETRIES: 3,
   /** 初期待機時間: 2000ms */
@@ -169,7 +169,7 @@ export const RATE_LIMITS = {
 // =============================================================================
 
 /** デフォルトの訪問設定 */
-export const DEFAULT_VISIT_SETTINGS = {
+const DEFAULT_VISIT_SETTINGS = {
   /** 最小訪問時間: 5秒 */
   MIN_VISIT_DURATION: 5,
   /** 最小スクロール深度: 50% */
@@ -177,14 +177,14 @@ export const DEFAULT_VISIT_SETTINGS = {
 } as const;
 
 /** デフォルトのポート番号 */
-export const DEFAULT_PORT = 27123;
+const DEFAULT_PORT = 27123;
 
 // =============================================================================
 // エラーコード定数
 // =============================================================================
 
 /** ドメインブロックエラーコード */
-export const ERROR_CODES = {
+const ERROR_CODES = {
   /** ドメインブロック */
   DOMAIN_BLOCKED: 'DOMAIN_BLOCKED',
   /** プライベートページ検出 */
@@ -198,7 +198,7 @@ export const ERROR_CODES = {
 // =============================================================================
 
 /** 特殊URLスキーム（記録不可） */
-export const NON_RECORDABLE_SCHEMES = [
+const NON_RECORDABLE_SCHEMES = [
   'chrome://',
   'chrome-extension://',
   'edge://',
@@ -214,7 +214,7 @@ export const NON_RECORDABLE_SCHEMES = [
 // =============================================================================
 
 /** DOM要素セレクタ */
-export const DOM_SELECTORS = {
+const DOM_SELECTORS = {
   /** メインステータス表示エリア */
   MAIN_STATUS: '#mainStatus',
   /** 記録ボタン */

@@ -99,7 +99,7 @@ export async function loadPrivacySettings(): Promise<void> {
  * Show a fixed dummy sample before/after PII masking, so users can see
  * what kind of data gets redacted before cloud AI submission (M4).
  */
-export async function renderPiiSample(): Promise<void> {
+async function renderPiiSample(): Promise<void> {
     const originalEl = document.getElementById('piiSampleOriginal');
     const maskedEl = document.getElementById('piiSampleMasked');
     if (!originalEl || !maskedEl) return;

@@ -20,7 +20,7 @@ import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 
-export function openSettingsPanel(section: string): void {
+function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
     obsidian: 'panel-general',
     'ai-provider': 'panel-general',
@@ -83,7 +83,7 @@ export function loadLocalMarkdownExportTiming(timing: string | undefined): void 
  * Best-effort: a failure here just means the old schedule keeps running
  * until the next natural SW restart, so errors are swallowed.
  */
-export function refreshLocalMarkdownScheduler(): void {
+function refreshLocalMarkdownScheduler(): void {
   try {
     // Best-effort: a failure just means the old schedule keeps running
     // until the next natural Service Worker restart.
