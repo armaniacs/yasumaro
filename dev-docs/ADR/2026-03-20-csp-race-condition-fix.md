@@ -118,15 +118,15 @@ static async safeFetch(url: string, options?: RequestInit): Promise<Response> {
 
 ## Implementation Steps
 
-1. [ ] `cspValidator.ts`に初期化Promiseとリクエストキューシステムを実装
-2. [ ] `initializeFromSettings()`で初期化完了を管理
-3. [ ] TDDテスト追加（初期化前キューイング、初期化後実行）
-4. [ ] `fetch.ts`（既存）への影響確認
-5. [ ] 文書更新
+1. [x] `cspValidator.ts`に初期化Promiseとリクエストキューシステムを実装
+2. [x] `initializeFromSettings()`で初期化完了を管理
+3. [x] TDDテスト追加（初期化前キューイング、初期化後実行）
+4. [x] `fetch.ts`（既存）への影響確認
+5. [x] 文書更新
 
 ## Status
 
 - **Proposed**: 2026-03-20
 - **Approved**: 2026-03-20
-- **Implemented**: 待機
+- **Implemented**: 実装済み（`src/utils/cspValidator.ts`に`initPromise`/`requestQueue`/`REQUEST_QUEUE_LIMIT`として実装確認済み）
 - **Superseded By**: -

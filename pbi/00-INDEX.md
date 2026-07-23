@@ -14,6 +14,9 @@
 |-----|--------|--------|------|
 | [2026-07-22-01-doc-response-size-limit-adr.md](2026-07-22-01-doc-response-size-limit-adr.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-22-02-refactor-response-size-limit-detection.md](2026-07-22-02-refactor-response-size-limit-detection.md) | 🔴高 | 🟡軽微 | ✅ |
+| [2026-07-23-03-fix-remove-unused-dependencies.md](2026-07-23-03-fix-remove-unused-dependencies.md) | 🟢低 | 🟢なし | ✅ |
+| [2026-07-23-04-fix-remove-unused-files.md](2026-07-23-04-fix-remove-unused-files.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-23-05-fix-remove-unused-exports.md](2026-07-23-05-fix-remove-unused-exports.md) | 🔴高 | 🟡軽微 | ✅ |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 
@@ -24,6 +27,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-23-05-fix-remove-unused-exports.md (未使用エクスポート82個+型34個の削除)
+- 2026-07-23-04-fix-remove-unused-files.md (未使用ファイル6個の削除)
+- 2026-07-23-03-fix-remove-unused-dependencies.md (未使用依存パッケージ6個の削除)
+- 2026-07-23-03-fix-remove-unused-dependencies.md (未使用依存パッケージ6個の削除)
 - 2026-07-22-07-back-security-lint-rule-and-review-checklist.md (lint rules + PR template)
 - 2026-07-22-01-fix-obsidian-markdown-injection-core.md (VULN-001,002,004,005)
 - 2026-07-22-02-fix-obsidian-markdown-injection-downstream.md (VULN-006,007,020)
