@@ -2354,6 +2354,9 @@
   "trustTabPanelDescription": {
     "message": "Determine the trustworthiness of websites you visit and choose appropriate responses."
   },
+  "trustDomainGuideLink": {
+    "message": "View Domain Trust Evaluation Guide (opens in new tab)"
+  },
   "safetyModeSection": {
     "message": "Safety Mode"
   },
@@ -2629,6 +2632,9 @@
   },
   "cspDescription": {
     "message": "Only include configured AI providers in CSP to improve security"
+  },
+  "cspGuideLink": {
+    "message": "View Conditional CSP Settings Guide (opens in new tab)"
   },
   "cspProviderSearchPlaceholder": {
     "message": "Search providers..."
