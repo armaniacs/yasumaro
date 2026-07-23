@@ -22,7 +22,7 @@ import {
     getFromCache,
     hasCacheKey
 } from './cache.js';
-import { parseDomainList, parseOptions, parseRuleOptions } from './options.js';
+import { parseOptions } from './options.js';
 
 // Re-export constants
 export * as CONSTANTS from './constants.js';
@@ -46,9 +46,7 @@ export {
 
 // Re-export options functions
 export {
-    parseDomainList,
-    parseOptions,
-    parseRuleOptions
+    parseOptions
 };
 
 // Re-export parsing functions

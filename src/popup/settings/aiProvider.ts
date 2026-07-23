@@ -72,7 +72,7 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
  * @param {string} provider - プロバイダーID
  * @returns {Promise<boolean>} 許可されたかどうか
  */
-export async function requestAIProviderPermission(provider: string): Promise<boolean> {
+async function requestAIProviderPermission(provider: string): Promise<boolean> {
     const url = PROVIDER_URLS[provider];
     if (!url) {
         // openai-compatible の場合は手動入力を待つ

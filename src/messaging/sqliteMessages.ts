@@ -58,16 +58,7 @@ export const SQLITE_MESSAGE_TYPES: readonly SqliteMessageType[] = [
   'SQLITE_OPFS_SPIKE',
 ];
 
-/** メッセージタイプからペイロード型を抽出する。 */
-export type SqlitePayloadForType<T extends SqliteMessageType> = Extract<
-  SqliteMessage,
-  { type: T }
->['payload'];
-
 /** message.type が SqliteMessage の既知の type と一致するか判定する型ガード。 */
 export function isSqliteMessageType(type: unknown): type is SqliteMessageType {
   return typeof type === 'string' && (SQLITE_MESSAGE_TYPES as readonly string[]).includes(type);
 }
-
-/** Re-exported for callers that build BrowsingLogRecord payloads. */
-export type { BrowsingLogRecord };

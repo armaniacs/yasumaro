@@ -30,7 +30,7 @@ export interface DiagnosticInput {
 }
 
 /** Severity levels for deficiency items. */
-export type DeficiencySeverity = 'none' | 'low' | 'medium' | 'high';
+type DeficiencySeverity = 'none' | 'low' | 'medium' | 'high';
 
 /** A single deficiency item returned by the diagnosis. */
 export interface DeficiencyItem {

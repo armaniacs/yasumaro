@@ -35,12 +35,6 @@ interface ISanitizers {
   sanitizeRegex(text: string): Promise<{ text: string; maskedItems: MaskedItem[] }>;
 }
 
-export interface PrivacyPipelineOptions {
-  previewOnly?: boolean;
-  alreadyProcessed?: boolean;
-  tagSummaryMode?: boolean;
-  url?: string;
-}
 
 export interface PrivacyPipelineResult {
   summary?: string;

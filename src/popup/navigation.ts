@@ -48,7 +48,7 @@ export function showMainScreen(): void {
 /**
  * Open the SQLite history dashboard in a new tab.
  */
-export function openHistory(): void {
+function openHistory(): void {
   clearAutoCloseTimer();
 
   const historyUrl = chrome.runtime.getURL('options.html?tab=history');

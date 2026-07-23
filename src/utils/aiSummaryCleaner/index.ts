@@ -61,9 +61,7 @@ import {
 // 型とパターンを再エクスポート
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
 export { countAISummaryTargets } from './countTargets.js';
-export { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES, GUTENBERG_STRUCTURAL_PATTERNS } from './patterns.js';
-export { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
-export { markBodyElements, unmarkBodyElements, isBodyProtected } from './bodyProtection.js';
+
 
 /**
  * DOMからAI要約に不要な要素を削除する

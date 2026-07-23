@@ -6,7 +6,7 @@ import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 
-export interface TrancoConsentState {
+interface TrancoConsentState {
   needsConsent: 'GRANTED' | 'DENIED' | 'PENDING' | 'ALREADY_GRANTED' | 'RETRY_NEEDED';
   grantedVersion: string | null;
   deniedReason: string | null;

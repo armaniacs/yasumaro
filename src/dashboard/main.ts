@@ -19,7 +19,7 @@ import { createRecordingConditionsPanel } from './panels/staticForm/recordingCon
 import { createExportImportPanel } from './panels/staticForm/exportImportPanel.js';
 import { setRegistry } from './panels/registryContext.js';
 
-export const registry = new NavigationRegistry();
+const registry = new NavigationRegistry();
 setRegistry(registry);
 const bootstrapper = new DashboardBootstrapper(registry);
 

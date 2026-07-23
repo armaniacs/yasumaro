@@ -18,7 +18,7 @@ export interface MessageSenderLike {
   tab?: { id?: number };
 }
 
-export function originFromSender(sender: MessageSenderLike | undefined): string {
+function originFromSender(sender: MessageSenderLike | undefined): string {
   if (!sender?.url) return 'unknown';
   try {
     return new URL(sender.url).origin;

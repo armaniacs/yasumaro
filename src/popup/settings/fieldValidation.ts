@@ -51,7 +51,7 @@ export function clearAllFieldErrors(pairs: ErrorPair[]): void {
  * プロトコルの警告を表示（HTTP選択時のセキュリティ注意喚起）
  * @param {string} message - 警告メッセージ
  */
-export function showProtocolWarning(message: string): void {
+function showProtocolWarning(message: string): void {
     const warningEl = document.getElementById('protocolWarning');
     if (warningEl) {
         warningEl.textContent = message;
@@ -62,7 +62,7 @@ export function showProtocolWarning(message: string): void {
 /**
  * プロトコルの警告をクリア
  */
-export function clearProtocolWarning(): void {
+function clearProtocolWarning(): void {
     const warningEl = document.getElementById('protocolWarning');
     if (warningEl) {
         warningEl.textContent = '';

@@ -26,7 +26,6 @@ import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAda
 export type { ExtractResult } from './types.js';
 export { isExcludedElement, isAsianContentElement } from './classifier.js';
 export { calculateTextScore } from './scoring.js';
-export { EXCLUDED_ROLES, EXCLUDED_TAGS, EXCLUDED_CLASS_PATTERNS, ASIA_CONTENT_CLASS_PATTERNS, ASIA_CONTENT_ID_PATTERNS } from './classifier.js';
 
 /**
  * 文字列のUTF-8バイト数を計算（Blob生成を避けて効率化）
