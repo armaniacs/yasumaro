@@ -22,7 +22,7 @@ Yasumaroへのコントリビューションに感謝します。このガイド
 
 1. プロジェクトをクローン
 ```bash
-git clone https://github.com/your-username/yasumaro.git
+git clone https://github.com/armaniacs/yasumaro.git
 cd yasumaro
 ```
 
@@ -73,7 +73,7 @@ npm run test:e2e:headed # E2Eテストヘッドフルモード（Playwright）
    - 用途: 個別の関数、クラス、モジュールのテスト
 
 2. **Playwright テスト**: E2E（エンドツーエンド）テスト
-   - 位置: `e2e/`
+   - 位置: `testDir/e2e/`
    - 用途: 拡張機能のポップアップUI、コンテンツスクリプトの統合テスト
 
 #### テストの追加
@@ -91,10 +91,10 @@ src/
 ```
 
 **Playwright テスト**:
-E2Eテストは `e2e/` ディレクトリに配置してください。
+E2Eテストは `testDir/e2e/` ディレクトリに配置してください。
 
 ```
-e2e/
+testDir/e2e/
   extension.spec.ts
 ```
 
@@ -340,7 +340,8 @@ yasumaro/
 │       │   └── messages.json
 │       └── ja/
 │           └── messages.json
-├── e2e/               # E2Eテスト（Playwright）
+├── testDir/
+│   └── e2e/           # E2Eテスト（Playwright）
 ├── docs/              # 公開ドキュメント (GitHub Pages)
 ├── dev-docs/          # 開発者内部ドキュメント
 ├── wxt.config.ts      # WXT 設定（マニフェスト生成）
@@ -459,7 +460,7 @@ Thank you for contributing to Yasumaro. This guide covers development environmen
 
 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/yasumaro.git
+git clone https://github.com/armaniacs/yasumaro.git
 cd yasumaro
 ```
 
@@ -510,7 +511,7 @@ This project uses two types of tests:
    - Purpose: Test individual functions, classes, and modules
 
 2. **Playwright Tests**: E2E (End-to-End) tests
-   - Location: `e2e/`
+   - Location: `testDir/e2e/`
    - Purpose: Test extension popup UI, content script integration
 
 #### Adding Tests
@@ -528,10 +529,10 @@ src/
 ```
 
 **Playwright Tests**:
-Place E2E tests in the `e2e/` directory.
+Place E2E tests in the `testDir/e2e/` directory.
 
 ```
-e2e/
+testDir/e2e/
   extension.spec.ts
 ```
 
@@ -777,7 +778,8 @@ yasumaro/
 │       │   └── messages.json
 │       └── ja/
 │           └── messages.json
-├── e2e/               # E2E tests (Playwright)
+├── testDir/
+│   └── e2e/           # E2E tests (Playwright)
 ├── docs/              # Public docs (GitHub Pages)
 ├── dev-docs/          # Internal developer docs
 ├── wxt.config.ts      # WXT configuration (manifest generation)

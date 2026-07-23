@@ -104,4 +104,4 @@ dist/chromium-mv3/
 
 - [WXT Documentation](https://wxt.dev/)
 - ADR-012: Vitest Migration（テスト環境）
-- [plans/2026-04-18-wtx.md](../../plans/2026-04-18-wtx.md)
+- 実装計画ドキュメント（`plans/2026-04-18-wtx.md`）は当時作成されたが現存しない

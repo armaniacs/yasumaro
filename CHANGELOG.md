@@ -35,7 +35,7 @@ All notable changes to this project will be documented in this file.
 
 
 
-## [6.5.56] - 2026-07-23
+## [6.5.61] - 2026-07-24
 
 ### Refactored / リファクタリング
 
@@ -48,7 +48,7 @@ All notable changes to this project will be documented in this file.
 - **未使用ファイル5個を削除** — `public/utils/trustDb/bloomfilter-vendor.mjs`、`scripts/test-gate-false-positive.mjs`、`src/__tests__/docs.spec.ts`、`src/__tests__/types.ts`、`src/background/pipeline/index.ts`。knip で検出後、grep で未使用を確認して削除
 - **未使用エクスポートを削除** — knip で検出された82個の未使用エクスポートと34個の未使用型定義を整理。バーレル再エクスポートの削除、内部使用関数の `export` キーワード削除、デッドコードの削除を実施。テストで動的 import されている関数（`startTimeoutChecker`、`stopTimeoutChecker` 等）は `export` を維持
 
-## [6.5.55] - 2026-07-23
+## [6.5.61] - 2026-07-24
 
 ### Chores / その他
 

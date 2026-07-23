@@ -82,9 +82,11 @@ if (!checkResult.canProceed) {
 - [x] 統合テスト実行・検証（1747件パス、Regressionなし）
 - [ ] ドキュメント更新
 
+> **注記**: 統合先はその後のパイプライン化により`recordingLogic.ts`から`src/background/pipeline/steps/checkTrustDomainStep.ts`（`RecordingPipeline.ts`経由）に移動しています。
+
 ## Status
 
 - **Proposed**: 2026-03-20
 - **Approved**: 2026-03-20
-- **Implemented**: -
+- **Implemented**: 2026-03-20（`checkTrustDomainStep.ts`として実装、テスト`recordingLogic-trustchecker-integration.test.ts`で確認済み）
 - **Superseded By**: -

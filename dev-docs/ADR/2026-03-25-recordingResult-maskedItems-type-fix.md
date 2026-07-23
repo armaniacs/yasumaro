@@ -77,7 +77,7 @@ export interface RecordingResult {
 
 ### 例外的な型定義について
 
-`src/utils/retryHelper.ts` の `ServiceWorkerResponse` インターフェースにおける `maskedItems` フィールドは、意図的に `any[]` 型として保持しています。これは以下の理由による設計判断です：
+`src/utils/retryHelper.ts` の `ServiceWorkerResponse` インターフェースにおける `maskedItems` フィールドは、当初 `any[]` 型として意図的に保持されていましたが、その後 `unknown[]` 型に更新されています（プロジェクト規約「any/unknown型を使わない」に伴う型安全性向上）。以下は当時の設計判断の記録です：
 
 1. **汎用性の維持**: `retryHelper.ts` はあらゆる種類のService Workerメッセージを処理する汎用ヘルパーであり、`RecordingResult` 以外のレスポンスタイプにも対応する必要がある
 2. **循環依存の回避**: `messaging/types.ts` への依存を避けることで、モジュール間の結合度を低く保っている
