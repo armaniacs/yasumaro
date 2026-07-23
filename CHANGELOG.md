@@ -35,6 +35,21 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.54] - 2026-07-23
+
+### Added / 追加
+
+- **ダッシュボードUIテスト（Playwright）を新規追加** — `testDir/e2e/dashboard-ui.spec.ts` に16パネルのDOM構造検証、サイドバー3セクション・16タブの存在確認、初期設定パネルのフォーム要素チェック、レスポンシブレイアウトテストを網羅。`file://` プロトコルでの静的HTML検証パターン
+
+### Security / セキュリティ
+
+- **`GEMINI_API_KEY` の型定義を修正** — `src/utils/storage/types.ts` で `string` のみだった型を `string | EncryptedData` に変更。他のAPIキーと同様の暗号化対応型に統一
+- **`hashPassword` / `verifyPassword` に `@deprecated` を追加** — 未ソルトSHA-256を使用する旧関数に非推奨マークを付与。将来の誤使用防止
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.53` → `6.5.54`
+
 ## [6.5.53] - 2026-07-23
 
 ### Added / 追加
