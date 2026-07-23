@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.55] - 2026-07-23
+
+### Chores / その他
+
+- **依存パッケージのアップデート（typescript 以外）** — `@tailwindcss/vite` 4.3.2 → 4.3.3, `@typescript-eslint/eslint-plugin` 8.63.0 → 8.65.0, `@typescript-eslint/parser` 8.63.0 → 8.65.0, `eslint-plugin-svelte` 3.20.0 → 3.22.0, `happy-dom` 20.10.6 → 20.11.1, `svelte` 5.56.4 → 5.56.7, `tailwindcss` 4.3.2 → 4.3.3, `vite` 8.1.4 → 8.1.5。`typescript` 6.0.3 → 7.0.2 は major アップデートのため保留
+
 ## [6.5.54] - 2026-07-23
 
 ### Added / 追加
