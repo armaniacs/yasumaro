@@ -103,7 +103,6 @@ jobs:
           UPLOAD_RESP=$(curl -s -X PUT \
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
             -H "Content-Type: application/octet-stream" \
             -T "${CRX_FILE}")
           UPLOAD_STATUS=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
