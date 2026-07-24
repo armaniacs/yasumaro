@@ -88,28 +88,52 @@ jobs:
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
-          ACCESS_TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
-            -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
-          if [ -z "${ACCESS_TOKEN}" ]; then echo "❌ Auth failed"; exit 1; fi
+          FULL_RESP=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token")
+          ACCESS_TOKEN=$(echo "${FULL_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+          if [ -z "${ACCESS_TOKEN}" ]; then
+            echo "Auth failed. Full response:"
+            echo "${FULL_RESP}" | python3 -m json.tool
+            exit 1
+          fi
 
           CRX_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx"
-          UPLOAD_STATUS=$(curl -s -X PUT \
+          echo "CRX size: $(stat -c%s ${CRX_FILE}) bytes"
+          python3 -c "
+with open('${CRX_FILE}','rb') as f:
+    d=f.read(16); print(f'CRX first 16 bytes: {d.hex()}');
+    print(f'Magic: {d[0:4]}'); print(f'Version: {int.from_bytes(d[4:8],\"little\")}')
+    print(f'HeaderLen: {int.from_bytes(d[8:12],\"little\")}')
+    print(f'First header byte (CBOR): {hex(d[12])}')
+    print(f'Total size: {len(open(\"${CRX_FILE}\",\"rb\").read())}')
+"
+          UPLOAD_RESP=$(curl -s -X PUT \
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
             -H "Content-Type: application/octet-stream" \
-            -T "${CRX_FILE}" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
-          echo "Upload status: ${UPLOAD_STATUS}"
-          if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then exit 1; fi
+            -T "${CRX_FILE}")
+          echo "Upload response:"
+          echo "${UPLOAD_RESP}" | python3 -m json.tool
+          UPLOAD_STATUS=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
+          if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
+            echo "❌ Upload failed. Checking itemError details..."
+            echo "${UPLOAD_RESP}" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+for err in d.get('itemError',[]):
+    print(f'  {err.get(\"error_code\")}: {err.get(\"error_detail\")}')
+"
+            exit 1
+          fi
 
-          PUBLISH_STATUS=$(curl -s -X POST \
+          PUBLISH_RESP=$(curl -s -X POST \
             "https://www.googleapis.com/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}/publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
-          echo "Publish status: ${PUBLISH_STATUS}"
+            -H "Content-Length: 0")
+          echo "Publish response:"
+          echo "${PUBLISH_RESP}" | python3 -m json.tool
+          PUBLISH_STATUS=$(echo "${PUBLISH_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
           if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then exit 1; fi
           echo "✅ Published successfully"
