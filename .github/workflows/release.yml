@@ -86,7 +86,7 @@ jobs:
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          ZIP_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip
+          CRX_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
         run: |
           # Step 1: Obtain OAuth2 access token
           echo "::group::OAuth2 Token Refresh"
@@ -108,7 +108,7 @@ jobs:
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${EXTENSION_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
-            -T "${ZIP_FILE}")
+            -T "${CRX_FILE}")
           echo "Upload response: $(echo ${UPLOAD_RESPONSE} | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || echo 'INVALID_JSON')"
           UPLOAD_STATUS=$(echo "${UPLOAD_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
           echo "Upload status: ${UPLOAD_STATUS}"
