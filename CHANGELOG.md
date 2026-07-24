@@ -35,6 +35,16 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.0] - 2026-07-24
+
+最初の v6.6.x 安定化リリース。v6.5.x シリーズ（新機能フェーズ）からバグフィクス専用となる v6.6.x シリーズへ移行します。
+
+This is the first v6.6.x stable release, transitioning from the v6.5.x feature series to the v6.6.x bug-fix-only series.
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.61` → `6.6.0`
+
 ## [6.5.61] - 2026-07-24
 
 ### Docs / ドキュメント
