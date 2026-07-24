@@ -95,8 +95,24 @@ jobs:
             -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token")
           ACCESS_TOKEN=$(echo "${FULL_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
           if [ -z "${ACCESS_TOKEN}" ]; then
-            echo "Auth failed. Full response:"
-            echo "${FULL_RESP}" | python3 -m json.tool
+            echo "Auth failed. Error details:"
+            echo "${FULL_RESP}" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    for k in ('access_token', 'refresh_token', 'client_secret', 'id_token'):
+        d.pop(k, None)
+    if 'error' in d:
+        print(f\"Error: {d['error']}\")
+    if 'error_description' in d:
+        print(f\"Description: {d['error_description']}\")
+    if 'error_uri' in d:
+        print(f\"URI: {d['error_uri']}\")
+    if not any(k in d for k in ('error', 'error_description', 'error_uri')):
+        print('Unknown error - response sanitized')
+except:
+    print('Failed to parse error response')
+"
             exit 1
           fi
 
