@@ -52,9 +52,10 @@ jobs:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
         run: |
           echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
-          npx crx3 dist/chrome-mv3/ \
-            --key /tmp/private.pem \
-            --crx dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
+          node .github/workflows/build-crx3.mjs \
+            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip \
+            /tmp/private.pem \
+            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
           rm /tmp/private.pem
       - name: Build for Firefox
         run: npx wxt zip -b firefox
@@ -86,94 +87,29 @@ jobs:
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
         run: |
-          # Step 1: Generate CRX from the ZIP using node built-in capabilities
-          # The chrome-webstore-upload API now requires CRX packages for updates.
-          # crx3 creates CRX3 format which the API rejects, so we wrap the ZIP
-          # with proper CRX3 headers using Node.js crypto.
-          #
-          # First, verify the CRX file created by crx3 has correct magic bytes
-          echo "::group::Verify CRX header"
+          ACCESS_TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+          if [ -z "${ACCESS_TOKEN}" ]; then echo "❌ Auth failed"; exit 1; fi
+
           CRX_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx"
-          python3 -c "
-          with open('${CRX_FILE}', 'rb') as f:
-              magic = f.read(4)
-              version = int.from_bytes(f.read(4), 'little')
-              print(f'Magic: {magic}')
-              print(f'Version: {version}')
-              if magic != b'Cr24' or version != 3:
-                  print('INVALID CRX - wrong format')
-                  exit(1)
-              else:
-                  print('CRX header is valid')
-          " 2>&1
-          echo "::endgroup::"
-
-          # Step 2: Upload CRX with verbose curl to see the full API response
-          echo "::group::Upload CRX"
-          echo "Obtaining access token..."
-          TOKEN_RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
-            -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token")
-          ACCESS_TOKEN=$(echo "${TOKEN_RESPONSE}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || echo '')
-          if [ -z "${ACCESS_TOKEN}" ]; then
-            echo "ERROR: Failed to get access token"
-            echo "${TOKEN_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${TOKEN_RESPONSE}"
-            exit 1
-          fi
-
-          echo "Uploading CRX to Chrome Web Store API..."
-          # Use verbose curl to see the request details
-          UPLOAD_RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT \
+          UPLOAD_STATUS=$(curl -s -X PUT \
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
             -H "Content-Type: application/octet-stream" \
-            -T "${CRX_FILE}")
-          HTTP_CODE=$(echo "${UPLOAD_RESPONSE}" | tail -1)
-          BODY=$(echo "${UPLOAD_RESPONSE}" | sed '$d')
-          echo "HTTP Status: ${HTTP_CODE}"
-          echo "Response: ${BODY}"
-          echo "${BODY}" | python3 -m json.tool 2>/dev/null || echo "${BODY}"
-          UPLOAD_STATE=$(echo "${BODY}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))" 2>/dev/null || echo 'UNKNOWN')
-          if [ "${UPLOAD_STATE}" != "SUCCESS" ] && [ "${UPLOAD_STATE}" != "IN_PROGRESS" ]; then
-            echo "CRX upload failed. Trying upload with empty publish target parameter..."
-            # Try with publishTarget param
-            UPLOAD_RESPONSE2=$(curl -s -X PUT \
-              "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}?publishTarget=TRUSTED_TESTERS" \
-              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-              -H "x-goog-api-version: 2" \
-              -H "Content-Type: application/octet-stream" \
-              -T "${CRX_FILE}")
-            echo "Response: ${UPLOAD_RESPONSE2}"
-            echo "${UPLOAD_RESPONSE2}" | python3 -m json.tool 2>/dev/null || echo "${UPLOAD_RESPONSE2}"
-            UPLOAD_STATE2=$(echo "${UPLOAD_RESPONSE2}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))" 2>/dev/null || echo 'UNKNOWN')
-            if [ "${UPLOAD_STATE2}" != "SUCCESS" ] && [ "${UPLOAD_STATE2}" != "IN_PROGRESS" ]; then
-              echo "❌ All upload attempts failed"
-              echo ""
-              echo "=== POSSIBLE FIX ==="
-              echo "Google may have changed the Chrome Web Store API requirements."
-              echo "Try uploading the CRX manually from:"
-              echo "  https://chrome.google.com/webstore/devconsole"
-              echo "The CRX file is attached to the GitHub release assets."
-              exit 1
-            fi
-          fi
-          echo "✅ CRX upload successful"
-          echo "::endgroup::"
+            -T "${CRX_FILE}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
+          echo "Upload status: ${UPLOAD_STATUS}"
+          if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then exit 1; fi
 
-          # Step 3: Publish
-          echo "::group::Publish"
-          PUBLISH_RESPONSE=$(curl -s -X POST \
+          PUBLISH_STATUS=$(curl -s -X POST \
             "https://www.googleapis.com/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}/publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0")
-          echo "${PUBLISH_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${PUBLISH_RESPONSE}"
-          PUBLISH_STATUS=$(echo "${PUBLISH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))" 2>/dev/null || echo 'UNKNOWN')
-          if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then
-            echo "❌ Publish failed: ${PUBLISH_STATUS}"
-            exit 1
-          fi
+            -H "Content-Length: 0" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
+          echo "Publish status: ${PUBLISH_STATUS}"
+          if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then exit 1; fi
           echo "✅ Published successfully"
-          echo "::endgroup::"
