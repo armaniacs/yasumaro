@@ -40,7 +40,7 @@ export function getPlatformOs(): string {
 /**
  * Detect platform OS from a User-Agent string.
  */
-export function detectOsFromUserAgent(userAgent: string): string {
+function detectOsFromUserAgent(userAgent: string): string {
   if (/Android/i.test(userAgent)) return 'android';
   if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios';
   if (/Windows|IEMobile|Trident/i.test(userAgent)) return 'win';

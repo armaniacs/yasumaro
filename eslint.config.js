@@ -1,6 +1,5 @@
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
-import sveltePlugin from 'eslint-plugin-svelte';
 import localPlugin from './eslint/plugin.mjs';
 
 export default [
@@ -45,5 +44,4 @@ export default [
       ],
     },
   },
-  ...sveltePlugin.configs['flat/recommended'],
 ];

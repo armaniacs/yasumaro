@@ -35,6 +35,59 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.5.60] - 2026-07-24
+
+### Docs / ドキュメント
+
+- **CHANGELOG・ADR・ドキュメント参照を更新** — `AGENTS.md`、`CONTRIBUTING.md`、`PERMISSIONS.md`、`dev-docs/ADR/`配下の各ADRファイル、`dev-docs/ADR/README.md`のファイルパス・参照を現状のコードベースに追従させて更新
+
+## [6.5.59] - 2026-07-24
+
+### Refactored / リファクタリング
+
+- **未使用エクスポートを削除** — knip で検出された82個の未使用エクスポートと34個の未使用型定義を整理。バーレル再エクスポートの削除、内部使用関数の `export` キーワード削除、デッドコードの削除を実施。テストで動的 import されている関数（`startTimeoutChecker`、`stopTimeoutChecker` 等）は `export` を維持
+- **ステージング漏れ分の追加削除も含む** — knip 検出範囲外だった追従漏れファイルも合わせて整理
+
+## [6.5.58] - 2026-07-24
+
+### Removed / 削除
+
+- **未使用ファイル5個を削除** — `public/utils/trustDb/bloomfilter-vendor.mjs`、`scripts/test-gate-false-positive.mjs`、`src/__tests__/docs.spec.ts`、`src/__tests__/types.ts`、`src/background/pipeline/index.ts`。knip で検出後、grep で未使用を確認して削除
+
+## [6.5.57] - 2026-07-24
+
+### Removed / 削除
+
+- **未使用の Svelte 依存を完全削除** — `svelte`, `@sveltejs/vite-plugin-svelte`, `eslint-plugin-svelte` を `package.json` から削除。`svelte.config.js` を削除。`wxt.config.ts` から svelte プラグイン import と登録を削除。`eslint.config.js` から svelte プラグイン import と `flat/recommended` 設定を削除。`tsconfig.json` の `types` 配列から `"svelte"` を削除。孤立ファイル `src/offscreen/App.svelte` を削除。29 パッケージが node_modules から除去
+- **未使用の依存パッケージ6個を削除** — `bloomfilter`（dependencies）、`@rollup/plugin-commonjs`、`@rollup/plugin-node-resolve`、`css-tree`、`globals`、`tailwindcss`（devDependencies）。knip で検出後、grep で未使用を確認して削除。11 パッケージが node_modules から除去
+
+## [6.5.56] - 2026-07-24
+
+### Refactored / リファクタリング
+
+- **プライバシーモードi18nキー名を意味ベース命名に統一** — `modeA`/`modeB`系キー（`modeAShort`, `modeADesc`, `modeADetail`, `modeBShort`, `modeBDesc`, `modeBCurrently`）を`privacyModeLocalOnly`/`privacyModeFullPipeline`系（`privacyModeLocalOnlyShort`, `privacyModeLocalOnlyDesc`, `privacyModeLocalOnlyStatus`, `privacyModeFullPipelineShort`, `privacyModeFullPipelineDesc`, `privacyModeFullPipelineStatus`）にリネーム。PBI 3（`modeC`/`modeD` → `privacyModeMaskedCloud`/`privacyModeCloudOnly`）が未対応だった`modeA`/`modeB`を同じ命名規則に揃えるもの。`public/_locales/{ja,en}/messages.json`、`entrypoints/{options,popup}/index.html`のdata-i18n属性、`src/popup/statusPanel.ts`、テストモック（`statusPanel-extra.test.ts`, `testDir/vitest.setup.ts`）を更新。DOM要素ID（`id="modeA"`等）はE2Eテストとの結合度を考慮し変更せず維持
+
+## [6.5.55] - 2026-07-23
+
+### Chores / その他
+
+- **依存パッケージのアップデート（typescript 以外）** — `@tailwindcss/vite` 4.3.2 → 4.3.3, `@typescript-eslint/eslint-plugin` 8.63.0 → 8.65.0, `@typescript-eslint/parser` 8.63.0 → 8.65.0, `eslint-plugin-svelte` 3.20.0 → 3.22.0, `happy-dom` 20.10.6 → 20.11.1, `svelte` 5.56.4 → 5.56.7, `tailwindcss` 4.3.2 → 4.3.3, `vite` 8.1.4 → 8.1.5。`typescript` 6.0.3 → 7.0.2 は major アップデートのため保留
+
+## [6.5.54] - 2026-07-23
+
+### Added / 追加
+
+- **ダッシュボードUIテスト（Playwright）を新規追加** — `testDir/e2e/dashboard-ui.spec.ts` に16パネルのDOM構造検証、サイドバー3セクション・16タブの存在確認、初期設定パネルのフォーム要素チェック、レスポンシブレイアウトテストを網羅。`file://` プロトコルでの静的HTML検証パターン
+
+### Security / セキュリティ
+
+- **`GEMINI_API_KEY` の型定義を修正** — `src/utils/storage/types.ts` で `string` のみだった型を `string | EncryptedData` に変更。他のAPIキーと同様の暗号化対応型に統一
+- **`hashPassword` / `verifyPassword` に `@deprecated` を追加** — 未ソルトSHA-256を使用する旧関数に非推奨マークを付与。将来の誤使用防止
+
+### Chores / その他
+
+- **バージョン更新** — `6.5.53` → `6.5.54`
+
 ## [6.5.53] - 2026-07-23
 
 ### Added / 追加

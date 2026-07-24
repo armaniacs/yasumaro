@@ -8,8 +8,7 @@ export type { SavedUrlEntry, CleansedReason } from './urlEntry.js';
 export {
     MAX_URL_SET_SIZE,
     URL_WARNING_THRESHOLD,
-    URL_RETENTION_DAYS,
-    MAX_CONTENT_ENTRIES
+    URL_RETENTION_DAYS
 } from './urlEntry.js';
 
 // 基本URL管理機能

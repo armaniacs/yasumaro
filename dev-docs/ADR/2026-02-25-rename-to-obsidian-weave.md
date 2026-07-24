@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** (2026-02-25)
+**Accepted** (2026-02-25) — **その後 "Yasumaro" へ再改名済み**（v6.0.2、2026-06-20。CHANGELOG.md参照）。以下は"Obsidian Weave"への改名を決定した当時の記録です。
 
 ## Context（背景・経緯）
 

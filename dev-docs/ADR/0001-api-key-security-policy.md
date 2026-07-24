@@ -83,4 +83,4 @@ async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Set
 ### 実装コード
 
 - `src/utils/settingsExportImport.ts`: エクスポート/インポートの実装
-- `src/utils/storageSettings.ts`: `API_KEY_FIELDS` の定義
+- `src/utils/storage/settingsStore.ts`: `API_KEY_FIELDS` の定義（当時の`storageSettings.ts`はその後廃止・統合済み）

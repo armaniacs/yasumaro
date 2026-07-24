@@ -101,8 +101,8 @@ export const COLUMN_NAMES = [
   'fallback_triggered',
 ] as const;
 
-export const INSERT_COLS = COLUMN_NAMES.join(', ');
-export const INSERT_PLACEHOLDERS = COLUMN_NAMES.map(() => '?').join(', ');
+const INSERT_COLS = COLUMN_NAMES.join(', ');
+const INSERT_PLACEHOLDERS = COLUMN_NAMES.map(() => '?').join(', ');
 
 /** INSERT without conflict handling (for insert()). */
 export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
@@ -311,7 +311,7 @@ export function buildInsertRecordFields(
 /**
  * FTS5 DDL as a single string — used by sqlite.ts (IDB path) via one-shot exec().
  */
-export const FTS5_SQL = `
+const FTS5_SQL = `
   CREATE VIRTUAL TABLE IF NOT EXISTS browsing_logs_fts USING fts5(
     url, title, summary, tags,
     content='browsing_logs',

@@ -1,7 +1,11 @@
 # ADR: HMAC署名検証失敗時のユーザー確認によるインポート許可
 
 ## ステータス
-採用済み
+**撤回済み** — VULN-010（改ざんされた設定ファイルのインポートバイパス）修正により、本ADRが決定した`confirm()`による強制インポート機能は完全に削除されました。現在は`src/utils/settingsExportImport.ts`でHMAC検証失敗時に無条件で`null`を返し、インポートを拒否します。i18nキー`hmacVerificationFailedConfirm`は未使用のまま残存しています。以下は撤回前の意思決定記録です。
+
+---
+
+採用済み（撤回前の元ステータス）
 
 ## 日付
 2026-03-03
@@ -150,3 +154,4 @@ HMAC署名の目的：
 - [HMAC - OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html)
 - Checking Team レビュー結果 (v4.1.1) - CRITICAL指摘についての対応
 - Chrome Extension Storage API - `chrome.storage.local` の永続性に関するドキュメント
+- [dev-docs/archived/pbi/2026-07-22-04-fix-settings-import-bypass-ssrf.md](../archived/pbi/2026-07-22-04-fix-settings-import-bypass-ssrf.md) - VULN-010修正（本ADRの撤回契機）

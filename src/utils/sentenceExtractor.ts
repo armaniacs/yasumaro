@@ -130,7 +130,7 @@ export function calculateSimilarity(s1: string, s2: string): number {
  * Build similarity graph from sentences
  * Nodes = sentences, Edges = similarity above threshold
  */
-export function buildSentenceGraph(
+function buildSentenceGraph(
   sentences: string[],
   threshold: number = 0.3
 ): Map<string, number[]> {

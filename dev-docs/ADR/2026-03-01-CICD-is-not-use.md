@@ -2,7 +2,11 @@
 
 ## 状況（Status）
 
-承認済み (Accepted)
+**撤回済み (Superseded)** — 本ADRの決定は撤回されました。現在は `.github/workflows/`（`ci.yml`, `tests.yml`, `coverage.yml`, `release.yml`, `security-audit.yml`, `pages.yml`）でCI/CDが稼働しています。以下の本文は撤回前の意思決定記録として残しています。
+
+---
+
+承認済み (Accepted)（撤回前の元ステータス）
 
 ## 文脈（Context）
 
@@ -111,3 +115,4 @@ npm run build
 | 日付 | 変更内容 |
 |------|----------|
 | 2026-03-01 | 初版作成 |
+| - | 撤回。`.github/workflows/`（ci.yml, tests.yml, coverage.yml, release.yml, security-audit.yml, pages.yml）でCI/CDを導入し、本決定を覆した |

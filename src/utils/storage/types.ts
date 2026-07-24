@@ -260,7 +260,7 @@ export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_PORT]: string;
     [StorageKeys.OBSIDIAN_HOST]: string;
     [StorageKeys.OBSIDIAN_ENABLED]: boolean;
-    [StorageKeys.GEMINI_API_KEY]: string;
+    [StorageKeys.GEMINI_API_KEY]: string | EncryptedData;
     [StorageKeys.GEMINI_API_VERSION]: string;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;

@@ -7,8 +7,6 @@ import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 
-export { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES };
-
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 
 function bytesToBase64(bytes: Uint8Array): string {

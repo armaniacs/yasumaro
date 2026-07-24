@@ -15,14 +15,6 @@
  */
 
 /** @deprecated Use direct module imports instead (see file header). */
-export {
-    encryptEnvelope,
-    decryptEnvelope,
-    migrateLegacyCiphertext,
-    isEncryptionEnvelope,
-    CURRENT_ENVELOPE_VERSION,
-} from './crypto.js';
-/** @deprecated Use direct module imports instead (see file header). */
 export type { EncryptionEnvelope } from './crypto.js';
 
 /** @deprecated Use direct module imports instead (see file header). */

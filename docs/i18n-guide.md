@@ -14,8 +14,8 @@ Yasumaroは、Chrome Extensionのi18n APIを使用した多言語対応アーキ
 
 | 言語コード | ロケールファイル | ステータス |
 |-----------|----------------|----------|
-| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (859キー) |
-| `en` | `public/_locales/en/messages.json` | ✅ 100% (867キー) |
+| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1094キー) |
+| `en` | `public/_locales/en/messages.json` | ✅ 100% (1094キー、日英で完全同期) |
 
 ### アーキテクチャ
 
@@ -24,24 +24,24 @@ Yasumaroは、Chrome Extensionのi18n APIを使用した多言語対応アーキ
 ```
 public/_locales/
 ├── en/
-│   └── messages.json    # 英語翻訳（867キー）
+│   └── messages.json    # 英語翻訳
 └── ja/
-    └── messages.json    # 日本語翻訳（859キー）
-src/popup/
-├── i18n.js              # i18nヘルパー関数
-└── utils/
-    └── localeUtils.js   # ロケール関連ユーティリティ
+    └── messages.json    # 日本語翻訳
+src/utils/
+├── i18n.ts              # getMessage() 等のi18nヘルパー関数
+├── i18n-dom.ts          # data-*属性へのDOM適用（applyI18n()）
+└── localeUtils.ts       # ロケール関連ユーティリティ
 ```
 
-#### i18n.jsの役割
+#### i18n.ts / i18n-dom.tsの役割
 
-i18n.jsは、HTML上の`data-*`属性に基づいて自動的に翻訳を適用します。
+i18n.tsは`getMessage()`等の翻訳取得関数を提供し、i18n-dom.tsが`applyI18n()`によりHTML上の`data-*`属性に基づいて自動的に翻訳を適用します。
 
 主要エクスポート:
-- `getMessage(key, substitutions)` - 翻訳文字列を取得
-- `applyI18n(element)` - 指定要素以下の翻訳を適用
-- `translatePageTitle(key)` - ページタイトルを翻訳
-- `getUserLocale()` - 現在のロケールを取得
+- `getMessage(key, substitutions)` - 翻訳文字列を取得（`i18n.ts`）
+- `applyI18n(element)` - 指定要素以下の翻訳を適用（`i18n-dom.ts`）
+- `translatePageTitle(key)` - ページタイトルを翻訳（`i18n-dom.ts`）
+- `getUserLocale()` - 現在のロケールを取得（`localeUtils.ts`）
 
 ### 翻訳キーの命名規則
 
@@ -265,8 +265,8 @@ Yasumaro uses a multi-language architecture based on Chrome Extension i18n API. 
 
 | Language Code | Locale File | Status |
 |---------------|-------------|--------|
-| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (859 keys) |
-| `en` | `public/_locales/en/messages.json` | ✅ 100% (867 keys) |
+| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1094 keys) |
+| `en` | `public/_locales/en/messages.json` | ✅ 100% (1094 keys, fully in sync between languages) |
 
 ### Architecture
 
@@ -275,24 +275,24 @@ Yasumaro uses a multi-language architecture based on Chrome Extension i18n API. 
 ```
 public/_locales/
 ├── en/
-│   └── messages.json    # English translations (867 keys)
+│   └── messages.json    # English translations
 └── ja/
-    └── messages.json    # Japanese translations (859 keys)
-src/popup/
-├── i18n.js              # i18n helper functions
-└── utils/
-    └── localeUtils.js   # Locale utilities
+    └── messages.json    # Japanese translations
+src/utils/
+├── i18n.ts              # i18n helper functions such as getMessage()
+├── i18n-dom.ts          # DOM application for data-* attributes (applyI18n())
+└── localeUtils.ts       # Locale utilities
 ```
 
-#### Role of i18n.js
+#### Role of i18n.ts / i18n-dom.ts
 
-i18n.js automatically applies translations based on `data-*` attributes in HTML.
+i18n.ts provides translation lookup functions such as `getMessage()`, and i18n-dom.ts's `applyI18n()` automatically applies translations based on `data-*` attributes in HTML.
 
 Key exports:
-- `getMessage(key, substitutions)` - Get translation string
-- `applyI18n(element)` - Apply translations under specified element
-- `translatePageTitle(key)` - Translate page title
-- `getUserLocale()` - Get current locale
+- `getMessage(key, substitutions)` - Get translation string (`i18n.ts`)
+- `applyI18n(element)` - Apply translations under specified element (`i18n-dom.ts`)
+- `translatePageTitle(key)` - Translate page title (`i18n-dom.ts`)
+- `getUserLocale()` - Get current locale (`localeUtils.ts`)
 
 ### Translation Key Naming Conventions
 

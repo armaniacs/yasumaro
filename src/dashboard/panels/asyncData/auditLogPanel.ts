@@ -1,4 +1,4 @@
-import { queryAuditLogs } from '../../../dashboard/dashboardSqliteService.js';
+
 
 interface AuditLogEntry {
   id: number;
@@ -26,4 +26,3 @@ export function toTsvString(rows: AuditLogEntry[]): string {
   return header + '\n' + lines.join('\n') + '\n';
 }
 
-export { queryAuditLogs };

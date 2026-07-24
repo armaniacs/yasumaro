@@ -82,9 +82,9 @@ Yasumaro はかつて全ての閲覧履歴を `chrome.storage.local` の `savedU
 3. 重複管理用の `savedUrls` キーを削除（`savedUrlsWithTimestamps` から再生成可能）
 4. 解放されたバイト数を返し、`saveSettings` がリトライ
 
-### 3. 削除対象 large field を明示的に列挙する
+### 3. 保持対象フィールドをホワイトリストで明示的に列挙する
 
-`purgeLegacyStorage` 内の `LEGACY_STRIP_FIELDS` 定数で、クォータ回復時に削除するフィールドを管理する。新たな large field が追加された場合、ここに追加することを推奨する。この定数が、将来の完全 SQLite 化時に一括削除すべきフィールドの一覧としても機能する。
+`purgeLegacyStorage`（`src/utils/storage/savedUrlStore.ts`）は「削除対象を列挙する定数」ではなく、**保持するフィールドをホワイトリストとしてインラインで列挙する方式**を採る。エントリを`{ url, timestamp }`の最小構成に切り詰めた上で、レガシー履歴パネルに必要な`recordType`・`maskedCount`・`tags`・`isTrancoDomain`のみを条件付きで復元する。それ以外の large field（`content`, `aiSummary`等）は自動的に除外される。新たに保持すべきフィールドが増えた場合はこのホワイトリストに追加する。
 
 ## 結果
 
@@ -106,7 +106,7 @@ Yasumaro はかつて全ての閲覧履歴を `chrome.storage.local` の `savedU
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `src/utils/storage.ts` | `purgeLegacyStorage()` を追加。`saveSettings` のクォータチェックに自動回復機構を追加。 |
+| `src/utils/storage/savedUrlStore.ts` | `purgeLegacyStorage()` を追加（`src/utils/storage.ts`は集約ファイルとして再エクスポートのみ）。`saveSettings` のクォータチェックに自動回復機構を追加。 |
 | `src/background/pipeline/steps/saveMetadataStep.ts` | 変更なし（全ての metadata 書き込みを維持） |
 
 ## 将来の削除計画
@@ -139,7 +139,7 @@ Yasumaro はかつて全ての閲覧履歴を `chrome.storage.local` の `savedU
 ## 参照
 
 - [Chrome storage.local quota 仕様](https://developer.chrome.com/docs/extensions/reference/api/storage#property-local)
-- `src/utils/storage.ts` — `purgeLegacyStorage()` 実装
+- `src/utils/storage/savedUrlStore.ts` — `purgeLegacyStorage()` 実装（`src/utils/storage.ts`から再エクスポート）
 - `src/utils/storageUrls.ts` — `storageUrls.ts` エクスポート集約
 - `src/background/pipeline/steps/saveMetadataStep.ts` — 二重書き込みの主要箇所
 - `src/offscreen/storageFallback.ts` — FallbackStorage 実装

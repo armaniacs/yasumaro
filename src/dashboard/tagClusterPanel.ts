@@ -15,7 +15,7 @@ const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Global state for tag filtering (used by navigate-to-tag event)
-export let tagFilterState = {
+let tagFilterState = {
   activeTag: null as string | null,
 };
 

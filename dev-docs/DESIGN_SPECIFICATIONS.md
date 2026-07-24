@@ -130,8 +130,8 @@ All Obsidian write operations are serialized via global mutex:
 ## 9. Obsidian REST API Integration
 
 ### 9.1 Connection Configuration
-- **Default Protocol**: `http`
-- **Default Port**: `27123`
+- **Default Protocol**: `https`
+- **Default Port**: `27124`
 - **Port Validation**: 1-65535, integer only
 - **Required**: API key (Bearer token)
 
@@ -153,7 +153,7 @@ Uses placeholder substitution with `buildDailyNotePath()`:
 ## 10. Content Extraction
 
 ### 10.1 Content Script Behavior
-- **Source**: `src/content/extractor.js`
+- **Source**: `src/content/extractor.ts`
 - **Extraction Scope**: `document.body.innerText`
 - **Length Limit**: Maximum 10,000 characters
 - **Normalization**: Consecutive whitespace → single space

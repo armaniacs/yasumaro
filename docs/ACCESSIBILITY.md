@@ -86,8 +86,8 @@ focusTrapManager.release(trapId);
            name="privacyMode"
            value="local_only"
            aria-describedby="modeADesc">
-    <label for="modeA" data-i18n="modeA">Mode A</label>
-    <div class="help-text" id="modeADesc" data-i18n="modeADesc">
+    <label for="modeA" data-i18n="privacyModeLocalOnly">Mode A</label>
+    <div class="help-text" id="modeADesc" data-i18n="privacyModeLocalOnlyDesc">
       サービス説明
     </div>
   </div>
@@ -268,8 +268,8 @@ focusTrapManager.release(trapId);
            name="privacyMode"
            value="local_only"
            aria-describedby="modeADesc">
-    <label for="modeA" data-i18n="modeA">Mode A</label>
-    <div class="help-text" id="modeADesc" data-i18n="modeADesc">
+    <label for="modeA" data-i18n="privacyModeLocalOnly">Mode A</label>
+    <div class="help-text" id="modeADesc" data-i18n="privacyModeLocalOnlyDesc">
       Service description
     </div>
   </div>

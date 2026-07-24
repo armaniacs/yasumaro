@@ -609,10 +609,3 @@ export async function renderPermissionSuggestList(): Promise<{ domain: string; c
   return entries;
 }
 
-/**
- * Export for dashboard.ts
- */
-export default {
-  init,
-  loadTrustSettings
-};

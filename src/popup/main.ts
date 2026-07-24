@@ -1,10 +1,9 @@
 import { initializeModalEvents } from './sanitizePreview.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { isRecordable } from './tabUtils.js';
 import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn, handleRecordNowClick } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
 
-export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus, isRecordable };
+export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus };
 
 setRecordCurrentPageFn(recordCurrentPage);
 
