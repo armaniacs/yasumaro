@@ -35,11 +35,15 @@ All notable changes to this project will be documented in this file.
 
 
 
-## [6.5.60] - 2026-07-24
+## [6.5.61] - 2026-07-24
 
 ### Docs / ドキュメント
 
 - **CHANGELOG・ADR・ドキュメント参照を更新** — `AGENTS.md`、`CONTRIBUTING.md`、`PERMISSIONS.md`、`dev-docs/ADR/`配下の各ADRファイル、`dev-docs/ADR/README.md`のファイルパス・参照を現状のコードベースに追従させて更新
+
+### Fixed / 修正
+
+- **CI: Playwright E2E テストに `--config` フラグを追加** — `.github/workflows/tests.yml` の `Extension E2E tests` ステップで `npx playwright test --grep @extension` を `npx playwright test --config testDir/playwright.config.ts --grep @extension` に修正。設定ファイルを明示的に指定しないと Playwright がリポジトリ全体の `.spec.ts` ファイルを走査し、`test()` / `describe()` の混在したファイルを検出してクラッシュしていた
 
 ## [6.5.59] - 2026-07-24
 
