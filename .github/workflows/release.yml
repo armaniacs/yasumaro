@@ -89,6 +89,7 @@ jobs:
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           FULL_RESP=$(curl -s -X POST https://oauth2.googleapis.com/token \
             -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token")
@@ -99,7 +100,7 @@ jobs:
             exit 1
           fi
 
-          ZIP_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip"
+          ZIP_FILE="dist/yasumaro-${VERSION}-chrome.zip"
 
           UPLOAD_RESP=$(curl -s -X PUT \
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
