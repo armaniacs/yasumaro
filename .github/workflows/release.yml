@@ -97,14 +97,12 @@ jobs:
             exit 1
           fi
 
-          CRX_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx"
-          python3 -c "import struct;f=open('${CRX_FILE}','rb');d=f.read(16);f.seek(0,2);print('CRX ok' if d[:4]==b'Cr24' and struct.unpack('<I',d[4:8])[0]==3 else 'BAD')"
+          ZIP_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip"
 
           UPLOAD_RESP=$(curl -s -X PUT \
             "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/octet-stream" \
-            -T "${CRX_FILE}")
+            -T "${ZIP_FILE}")
           UPLOAD_STATUS=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
           echo "Upload: ${UPLOAD_STATUS}"
           if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
