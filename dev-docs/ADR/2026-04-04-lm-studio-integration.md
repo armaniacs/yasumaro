@@ -29,7 +29,7 @@
    - APIキー: 不要（ローカル動作のため）
    - モデル: LM Studioで読み込んだモデルをユーザーが手動入力
 
-3. **ローカルURL検出によるコンテンツサイズ制限**:
+3. **ローカルURL検出によるコンテンツサイズ制限**（決定当時の設計案。実際の実装値は下記「ローカルURL検出ロジック」の注記を参照）:
    - `localhost` / `127.0.0.1` / プライベートIPの場合、送信コンテンツを **4,000文字に自動制限**
    - 小型モデル（4B〜8B）のコンテキストウィンドウ制約への対応
    - クラウドAPIは30,000文字のまま変更なし
@@ -120,8 +120,10 @@ Base URL: http://localhost:1234/v1
 
 ### ローカルURL検出ロジック
 
+> **注記**: 以下は決定当時の設計スニペットです。実際の実装（`src/background/ai/providers/OpenAIProvider.ts`）は`localhost`/`.localhost`サフィックス/`127.x.x.x`/`::1`のみを判定し、`192.168.`/`10.`/`172.`等のプライベートIPレンジは対象外です。ローカル判定はタイムアウト設定（ローカル: 120000ms、非ローカル: 30000ms）に使用され、コンテンツサイズ制限（デフォルト`10_000`文字、`getMaxContentLength()`）とは別の設定です。
+
 ```typescript
-// OpenAIProvider.ts
+// OpenAIProvider.ts（決定当時の設計案。実装と異なる点は上記注記を参照）
 static isLocalUrl(url: string): boolean {
     try {
         const parsed = new URL(url);

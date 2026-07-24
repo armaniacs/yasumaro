@@ -22,7 +22,7 @@ export async function initStatusPanel(): Promise<void> {
         const mode = (settings[StorageKeys.PRIVACY_MODE] as string) || 'full_pipeline';
         const modeBadge = document.getElementById('statusModeBadge');
         if (modeBadge) {
-          const modeKey = mode === 'local_only' ? 'modeAShort' : mode === 'full_pipeline' ? 'modeBShort' : mode === 'masked_cloud' ? 'privacyModeMaskedCloudShort' : 'privacyModeCloudOnlyShort';
+          const modeKey = mode === 'local_only' ? 'privacyModeLocalOnlyShort' : mode === 'full_pipeline' ? 'privacyModeFullPipelineShort' : mode === 'masked_cloud' ? 'privacyModeMaskedCloudShort' : 'privacyModeCloudOnlyShort';
           modeBadge.textContent = getMessage(modeKey) || mode;
           modeBadge.className = `status-badge status-mode-badge mode-${mode}`;
         }

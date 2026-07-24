@@ -150,4 +150,4 @@ export class ManualContentFetcher {
   }
 }
 
-export const manualContentFetcher = new ManualContentFetcher();
+const manualContentFetcher = new ManualContentFetcher();

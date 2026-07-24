@@ -25,7 +25,7 @@ export const CURRENT_PROTOCOL_VERSION = 1;
  * Byte tracking fields used across multiple message payloads
  * for content size analytics.
  */
-export interface ByteStatsPayload {
+interface ByteStatsPayload {
     pageBytes?: number;
     candidateBytes?: number;
     originalBytes?: number;
@@ -50,7 +50,7 @@ export type CheckDomainMessage = {
     type: 'CHECK_DOMAIN';
 };
 
-export type GetContentMessage = {
+type GetContentMessage = {
     type: 'GET_CONTENT';
 };
 
@@ -109,11 +109,11 @@ export type PingMessage = {
     type: 'PING';
 };
 
-export type RefreshLocalMarkdownSchedulerMessage = {
+type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
 
-export type ConsentStateChangedMessage = {
+type ConsentStateChangedMessage = {
     type: 'CONSENT_STATE_CHANGED';
 };
 
@@ -130,7 +130,7 @@ export type GenerateReviewSummaryMessage = {
  * Type-safe union of all messages the Service Worker can receive.
  * Discriminate on `type` to narrow to a specific message shape.
  */
-export type DashboardSqliteMessage = {
+type DashboardSqliteMessage = {
     type: 'DASHBOARD_SQLITE';
     payload?: Record<string, unknown>;
 };

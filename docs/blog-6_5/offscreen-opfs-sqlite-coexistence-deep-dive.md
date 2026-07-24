@@ -101,6 +101,8 @@ if (fts5Available && charLen >= 3) {
 3. **SW↔offscreen のメッセージ型を単一ソース化する**: `SQLITE_*` 文字列が `sqliteClient.ts` と `opfsWorker.ts` の両方に散る。型または定数で共有し、typo による実行時エラーを防ぐ。
 4. **Offscreen/OPFS 層の注入経路を可視化する**: この層は AST 上で孤立しやすい。メッセージング契約を docs に図示する。
 
+> **追記（v6.5系リリース内で対応済み）**: 上記2.のIDBフォールバックパス移行は、本記事執筆後に完了しました。`sqliteEngineContext.ts` は現在 `@subframe7536/sqlite-wasm` の `useIdbStorage` を使用しており、`wa-sqlite` は旧データベースからの一度限りの移行検出のためだけに動的importされる形で残っています。
+
 ---
 
 ## English
@@ -199,3 +201,5 @@ This is less an extraction blind spot and more a **practical issue: the ADR was 
 2. **Finish migrating the IDB fallback path to `@subframe7536`**: the OPFS Worker path is swapped, but `sqliteEngineContext.ts`'s IDB VFS init (L9/L233) still uses `wa-sqlite`. Set a deadline for the ADR's "coexist until migration completes" clause.
 3. **Single-source the SW↔offscreen message types**: `SQLITE_*` strings are scattered across `sqliteClient.ts` and `opfsWorker.ts`. Share via a type/constant to prevent runtime typos.
 4. **Visualize the Offscreen/OPFS injection path**: this layer is AST-isolated; document the messaging contract in docs.
+
+> **Update (completed within the v6.5 release line)**: The IDB fallback migration described in item 2 above has since been completed. `sqliteEngineContext.ts` now uses `@subframe7536/sqlite-wasm`'s `useIdbStorage`; `wa-sqlite` remains only as a dynamically-imported, one-time migration path for detecting pre-existing legacy databases.

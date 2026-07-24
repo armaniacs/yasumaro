@@ -32,7 +32,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 ```bash
 npm install              # Install dependencies
 npm run build:watch      # Build and watch for development changes
-npm validate             # Type check + run tests (pre-commit gate)
+npm run validate         # Type check + run tests (pre-commit gate)
 ```
 
 ### Loading the Extension
@@ -77,7 +77,8 @@ Dashboard / Options (entrypoints/options/ + src/dashboard/)
   └── src/dashboard/ → Dashboard logic modules
 
 Offscreen (entrypoints/offscreen.html + src/offscreen/)
-  └── offscreen.ts → DOM operations requiring offscreen document
+  ├── offscreen.html → WXT entrypoint
+  └── src/offscreen/offscreen.ts → DOM operations requiring offscreen document
 
 Content Scripts (entrypoints/content/ + src/content/)
   ├── index.ts → WXT content script entrypoint
@@ -252,10 +253,10 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 npm test              # Run all tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report
-npm test:e2e          # Run Playwright E2E tests
-npm test:e2e:ui       # Playwright with UI mode
-npm type-check        # TypeScript type checking
-npm validate          # Type check + run tests (pre-commit gate)
+npm run test:e2e      # Run Playwright E2E tests
+npm run test:e2e:ui   # Playwright with UI mode
+npm run type-check    # TypeScript type checking
+npm run validate      # Type check + run tests (pre-commit gate)
 ```
 
 > Note: After code changes, run `npm run build` before testing in Chrome Extension.

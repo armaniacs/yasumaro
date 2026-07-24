@@ -8,8 +8,6 @@
 
 import { getMessage, getUserLocale, isRTL } from './i18n.js';
 
-export { getMessage, getUserLocale, isRTL } from './i18n.js';
-
 /**
  * Translate <option> elements inside <select> tags.
  */

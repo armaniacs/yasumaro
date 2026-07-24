@@ -15,7 +15,8 @@ const ROOT_DIR = join(__dirname, '..');
 
 export const VERSION_FILES = [
   'package.json',
-  'wxt.config.ts'
+  'wxt.config.ts',
+  'docs/version.json'
 ];
 
 export function extractVersion(content, filePath) {
@@ -34,6 +35,12 @@ export function extractVersion(content, filePath) {
   // wxt.config.ts: version: '5.1.14'
   if (filePath.includes('wxt.config.ts')) {
     const match = content.match(/version\s*:\s*['"]([^'"]+)['"]/);
+    return match ? match[1] : null;
+  }
+
+  // docs/version.json: { "version": "5.1.14" }
+  if (filePath.includes('docs/version.json')) {
+    const match = content.match(/"version"\s*:\s*"([^"]+)"/);
     return match ? match[1] : null;
   }
 

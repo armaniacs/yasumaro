@@ -113,12 +113,4 @@ export interface PipelineStep {
  */
 export type PipelineStepFunction = (context: RecordingContext) => Promise<RecordingContext>;
 
-/**
- * Recording pipeline configuration
- */
-export interface PipelineConfig {
-  /** Steps to execute in order */
-  steps: PipelineStep[];
-  /** Global timeout for entire pipeline (ms) */
-  timeout?: number;
-}
+

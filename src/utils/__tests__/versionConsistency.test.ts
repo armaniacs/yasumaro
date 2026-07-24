@@ -1,5 +1,5 @@
 /**
- * Test that all version files (package.json, manifest.json, wxt.config.ts)
+ * Test that all version files (package.json, wxt.config.ts, docs/version.json)
  * have matching version numbers. This prevents the build from failing
  * due to version drift.
  */
@@ -35,7 +35,7 @@ describe('version consistency', () => {
   });
 
   it('should read all expected version files', () => {
-    const expected = ['package.json', 'wxt.config.ts'];
+    const expected = ['package.json', 'wxt.config.ts', 'docs/version.json'];
     expect(VERSION_FILES).toEqual(expected);
   });
 

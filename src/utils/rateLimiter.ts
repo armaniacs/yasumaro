@@ -4,10 +4,10 @@
  * ブルートフォース攻撃防止のための試行回数制限
  */
 
-export const RATE_LIMIT_ATTEMPTS = 5;      // 5分以内の最大試行回数
-export const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;  // 評価ウインドウ: 5分
-export const LOCKOUT_DURATION_MS = 30 * 60 * 1000;  // ロックアウト期間: 30分 (pre-computed)
-export const LOCKOUT_DURATION_MINUTES = 30;  // ロックアウト期間（分、エラーメッセージ用）
+const RATE_LIMIT_ATTEMPTS = 5;      // 5分以内の最大試行回数
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;  // 評価ウインドウ: 5分
+const LOCKOUT_DURATION_MS = 30 * 60 * 1000;  // ロックアウト期間: 30分 (pre-computed)
+const LOCKOUT_DURATION_MINUTES = 30;  // ロックアウト期間（分、エラーメッセージ用）
 
 const STORAGE_KEYS = {
   FAILED_ATTEMPTS: 'passwordFailedAttempts',

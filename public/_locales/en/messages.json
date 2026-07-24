@@ -353,28 +353,28 @@
   "privacyMode": {
     "message": "Privacy Mode"
   },
-  "modeA": {
+  "privacyModeLocalOnly": {
     "message": "Mode A: Local Only"
   },
-  "modeAShort": {
+  "privacyModeLocalOnlyShort": {
     "message": "Local Only"
   },
-  "modeADesc": {
+  "privacyModeLocalOnlyDesc": {
     "message": "Summarize page content using only the browser's built-in AI, without sending data externally.\nCurrently not supported on most browsers."
   },
-  "modeADetail": {
+  "privacyModeLocalOnlyStatus": {
     "message": "(Under development)"
   },
-  "modeB": {
+  "privacyModeFullPipeline": {
     "message": "Mode B: Full Pipeline"
   },
-  "modeBShort": {
+  "privacyModeFullPipelineShort": {
     "message": "Full Pipeline"
   },
-  "modeBDesc": {
+  "privacyModeFullPipelineDesc": {
     "message": "Browser built-in AI summary → PII masking → Cloud AI refinement.\nCurrently not supported on most browsers."
   },
-  "modeBCurrently": {
+  "privacyModeFullPipelineStatus": {
     "message": "(Under development)"
   },
   "privacyModeMaskedCloud": {

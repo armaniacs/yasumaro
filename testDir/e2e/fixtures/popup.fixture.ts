@@ -25,7 +25,7 @@ export const test = base.extend<StaticPopupFixtures>({
   },
 });
 
-export const testExt = base.extend<PopupFixtures>({
+const testExt = base.extend<PopupFixtures>({
   context: async ({}, use) => {
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',

@@ -55,7 +55,7 @@ export function recordSqliteSuccess(): void {
     firstFailureTime = 0;
 }
 
-export function _resetForTesting(): void {
+function _resetForTesting(): void {
     consecutiveFailures = 0;
     lastAlertTime = 0;
 }

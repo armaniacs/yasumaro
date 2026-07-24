@@ -4,7 +4,7 @@ export function escapeHtml(text: string): string {
   return div.innerHTML;
 }
 
-export function createStatusCircle(svg: SVGSVGElement): SVGElement {
+function createStatusCircle(svg: SVGSVGElement): SVGElement {
   const ns = 'http://www.w3.org/2000/svg';
   const circle = document.createElementNS(ns, 'circle');
   circle.setAttribute('cx', '12');

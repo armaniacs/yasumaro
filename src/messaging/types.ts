@@ -105,15 +105,6 @@ import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from 
 import type { ExtensionMessage } from '../background/messageTypes.js';
 
 /**
- * PIIマスキング結果
- */
-export interface MaskingResult {
-  content: string;
-  maskedCount: number;
-  items: MaskedItem[];
-}
-
-/**
  * 記録データ型
  * Pipeline処理用の入力データ
  */
@@ -174,14 +165,6 @@ export interface ErrorResponse {
   success: false;
   error: string;
   errorCode?: string;
-}
-
-/**
- * 送信者情報
- */
-export interface SenderInfo {
-  id?: number;
-  url?: string;
 }
 
 /**

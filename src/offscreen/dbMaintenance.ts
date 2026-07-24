@@ -44,7 +44,7 @@ export async function purgeContent(
 /**
  * Get the number of entries in the FTS5 index.
  */
-export async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
+async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
   return backend.getFtsIndexSize();
 }
@@ -53,7 +53,7 @@ export async function getFtsIndexSize(): Promise<{ success: true; count: number 
  * Check FTS5 index health and log a warning if it exceeds the threshold.
  * Returns the current FTS index size.
  */
-export async function checkFtsIndexHealth(): Promise<{ count: number; warning: boolean }> {
+async function checkFtsIndexHealth(): Promise<{ count: number; warning: boolean }> {
   const backend = await engine.getBackend();
   const result = await backend.getFtsIndexSize();
   if (!result.success) return { count: 0, warning: false };

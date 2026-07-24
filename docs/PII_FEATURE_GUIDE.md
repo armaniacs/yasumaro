@@ -22,7 +22,7 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 | モード | 動作 |
 |--------|------|
 | **Masked Cloud**（推奨） | PIIマスキング + クラウドAI要約。PIIをマスクしてからクラウドAIに送信 |
-| **Full Pipeline** | PIIマスキング + コンテンツクレンジング + クラウドAI要約。最大のプライバシー保護 |
+| **Full Pipeline** | ローカルAI要約 + PIIマスキング + クラウドAI仕上げ。対応ブラウザでのみ動作 |
 | **Local Only** | クラウドAIを使わず、デバイス上のローカル処理のみ |
 | **Cloud Only** | PIIマスキング・クレンジングなしでクラウドAIに送信 |
 
@@ -31,7 +31,7 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 | モード | ステータス | 動作説明 |
 | :--- | :--- | :--- |
 | **A: Local Only** | 🚧 開発中 | 完全ローカル処理。対応ブラウザでのみ動作。 |
-| **B: Full Pipeline** | 🚧 開発中 | ローカル要約 + クラウド仕上げ。対応ブラウザでのみ動作。 |
+| **B: Full Pipeline** | 🚧 開発中 | ローカル要約 + PIIマスキング + クラウド仕上げ。対応ブラウザでのみ動作。 |
 | **C: Masked Cloud** | ✅ **推奨** | **PIIをマスクしてクラウドへ送信**。最も安定的かつ安全。 |
 | **D: Cloud Only** | - | 従来動作。生データをクラウド送信。 |
 
@@ -214,7 +214,7 @@ Configure via the "Privacy" tab in the popup.
 | Mode | Description |
 | :--- | :--- |
 | **Masked Cloud** (Recommended) | PII masking + cloud AI. Masks sensitive data before sending. Best balance of privacy and convenience. |
-| **Full Pipeline** | PII masking + content cleansing + cloud AI. Maximum privacy protection. |
+| **Full Pipeline** | Local AI summary + PII masking + cloud AI finishing. Only works on supported browsers. |
 | **Local Only** | On-device processing only, no cloud AI. |
 | **Cloud Only** | Sends raw data to cloud AI without masking or cleansing. |
 
