@@ -26,10 +26,10 @@ Scenario: 通常の semver version が正しく展開される
 
 ## 受け入れ基準
 
-- [ ] `${{ steps.version.outputs.version }}` の展開が env 変数経由 + 二重引用符で囲まれた変数展開に置き換わっている
-- [ ] 同様の `${{ }}` 展開を含むすべての shell `run:` ブロックが env 変数化されている
-- [ ] `version` に `"; ... #` などの文字列を設定した場合でも、CIステップがコマンドを実行しない
-- [ ] 通常の semver version （例: `6.6.2`）でもパスが正しく構築される
+- [x] `${{ steps.version.outputs.version }}` の展開が env 変数経由 + 二重引用符で囲まれた変数展開に置き換わっている
+- [x] 同様の `${{ }}` 展開を含むすべての shell `run:` ブロックが env 変数化されている
+- [x] `version` に `"; ... #` などの文字列を設定した場合でも、CIステップがコマンドを実行しない
+- [x] 通常の semver version （例: `6.6.2`）でもパスが正しく構築される
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,6 +75,20 @@ grep -n "steps.version.outputs.version" .github/workflows/release.yml
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが検証可能な形で実装・パスしている
-- [ ] コードレビュー完了
-- [ ] 既存の正常系リリースフローが壊れていないことの確認
+- [x] 全BDDシナリオが検証可能な形で実装・パスしている
+- [x] コードレビュー完了
+- [x] 既存の正常系リリースフローが壊れていないことの確認
+
+## 実装完了
+
+**完了日**: 2026-07-25
+**実装方法**: Subagent-Driven Development
+**コミット**:
+- `7045fca` fix(ci): use env variables to prevent command injection in release.yml
+- `07a75c5` fix(ci): use env variable for VERSION in Chrome Web Store publish step
+
+**修正内容**:
+- "Extract version" ステップに `minor` 出力を追加
+- "Check if minor version is even" ステップを `${{ steps.version.outputs.minor }}` を使用するように簡素化
+- "Sign CRX with private key" ステップに `VERSION` 環境変数を追加し、`${{ }}` 展開を `"${VERSION}"` に置換
+- "Publish to Chrome Web Store" ステップに `VERSION` 環境変数を追加し、`${{ }}` 展開を `"${VERSION}"` に置換
