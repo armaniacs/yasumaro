@@ -35,6 +35,29 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.1] - 2026-07-24
+
+このリリースは v6.6.0 に対する follow-up で、前回のコミット作業に含まれていなかった tailwindcss 残骸の完全除去と、ai-summary-cleansing の開発者向け改善を反映したものです。
+
+This release is a follow-up to v6.6.0, completing the removal of orphaned tailwindcss artifacts and implementing developer-oriented improvements for ai-summary-cleansing.
+
+### Removed / 削除
+
+- **tailwindcss vite plugin と依存を完全削除** — `wxt.config.ts` から `import tailwindcss` と `vite` plugin ブロックを削除。`package.json` から `@tailwindcss/vite` 依存を削除（node_modules から 7 パッケージ除去）
+
+### Changed / 変更
+
+- **セレクター文字列をモジュールレベルでキャッシュ化** — `stripCore.ts` / `stripExtended.ts` の `buildClassIdSelectors()` 呼び出しをモジュール初回評価時に一度だけ実行し、全 strip 関数でキャッシュされたセレクター文字列を再利用するよう変更。ページロードごとの再計算を排除
+- **過剰削減フォールバック閾値を設定可能化** — 従来ハードコードされていた fallback 比率（0.20）と絶対量（300 バイト）を storage 設定経由で変更可能に。ダッシュボード・ポップアップの AI 要約クレンジング設定パネルにスライダー UI を追加
+
+### Tests / テスト
+
+- **パターンマッチング単体テストを追加** — `src/utils/aiSummaryCleaner/__tests__/patterns.test.ts` に AD/SOCIAL/NAV/DEEP 各クラスパターンの正検出・誤検出テスト 13 件を追加
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.0` → `6.6.1`
+
 ## [6.6.0] - 2026-07-24
 
 最初の v6.6.x 安定化リリース。v6.5.x シリーズ（新機能フェーズ）からバグフィクス専用となる v6.6.x シリーズへ移行します。
