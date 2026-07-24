@@ -26,3 +26,30 @@
 - タイムスタンプ
 - 処理時間
 - エラーメッセージ（機密情報を含まないもの）
+
+## 使用方法
+
+### マスク関数の使用
+
+```typescript
+import { maskSensitiveData } from '../utils/logMasker.js';
+
+const responseData = await api.getResponse();
+console.log('Response:', maskSensitiveData(responseData));
+```
+
+### 既存コードへの適用
+
+1. エラーレスポンスをログ出力する箇所を探す:
+   ```bash
+   grep -rn "console.log.*response\|console.error.*response" src/
+   ```
+
+2. 各箇所で`maskSensitiveData`を適用:
+   ```typescript
+   // Before
+   console.error('API error:', error.response);
+
+   // After
+   console.error('API error:', maskSensitiveData(error.response));
+   ```
