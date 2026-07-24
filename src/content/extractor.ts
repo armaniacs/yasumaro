@@ -94,6 +94,9 @@ interface CleansingConfig {
     aiSummaryCleansingShortSeqCount: number;
     aiSummaryCleansingLinkParaThreshold: number;
     aiSummaryCleansingCustomPatterns: string[];
+    // Over-cleansed fallback thresholds
+    aiSummaryCleansingFallbackRatio: number;
+    aiSummaryCleansingFallbackMinBytes: number;
     contentDedupEnabled: boolean;
     contentDedupThreshold: number;
 }
@@ -141,6 +144,8 @@ const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     aiSummaryCleansingShortSeqCount: 5,
     aiSummaryCleansingLinkParaThreshold: 50,
     aiSummaryCleansingCustomPatterns: [],
+    aiSummaryCleansingFallbackRatio: 0.20,
+    aiSummaryCleansingFallbackMinBytes: 300,
     contentDedupEnabled: true,
     contentDedupThreshold: 0.7,
 };
@@ -237,7 +242,10 @@ export function extractPageContent(config: CleansingConfig = cleansingConfig): s
         shortTextThreshold: config.aiSummaryCleansingShortTextThreshold,
         shortSeqCount: config.aiSummaryCleansingShortSeqCount,
         linkParaThreshold: config.aiSummaryCleansingLinkParaThreshold,
-        customPatterns: config.aiSummaryCleansingCustomPatterns
+        customPatterns: config.aiSummaryCleansingCustomPatterns,
+        // Over-cleansed fallback thresholds
+        fallbackRatio: config.aiSummaryCleansingFallbackRatio,
+        fallbackMinBytes: config.aiSummaryCleansingFallbackMinBytes
     };
     // テキスト品質設定（冗長除去）
     const dedupOptions = {
@@ -365,6 +373,14 @@ function loadSettings(): Promise<void> {
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
                 cleansingConfig.aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
+            }
+
+            // Over-cleansed fallback thresholds
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] !== undefined) {
+                cleansingConfig.aiSummaryCleansingFallbackRatio = Math.max(0, Math.min(1, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]) || 0.20));
+            }
+            if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] !== undefined) {
+                cleansingConfig.aiSummaryCleansingFallbackMinBytes = Math.max(0, Math.min(5000, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]) || 300));
             }
 
             if (s[StorageKeys.CONTENT_DEDUP_THRESHOLD] !== undefined) {

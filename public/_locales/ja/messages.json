@@ -2254,6 +2254,21 @@
   "aiSummaryCleansingBodyProtectionThresholdDesc": {
     "message": "低い値ほど厳格に保護（50=厳格）、高い値ほど緩やか（500=緩やか）。デフォルト: 200"
   },
+  "fallbackSection": {
+    "message": "過剰削減フォールバック"
+  },
+  "aiSummaryCleansingFallbackRatioLabel": {
+    "message": "削減比率閾値"
+  },
+  "aiSummaryCleansingFallbackRatioDesc": {
+    "message": "クレンジング後のコンテンツが元の何%未満に減った場合にフォールバックするか。デフォルト: 20%"
+  },
+  "aiSummaryCleansingFallbackMinBytesLabel": {
+    "message": "絶対量閾値"
+  },
+  "aiSummaryCleansingFallbackMinBytesDesc": {
+    "message": "クレンジング後のコンテンツが何バイト未満の場合にフォールバックするか。デフォルト: 300バイト"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },

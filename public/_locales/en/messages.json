@@ -2339,6 +2339,21 @@
   "aiSummaryCleansingBodyProtectionThresholdDesc": {
     "message": "Lower = stricter protection (50=strict), higher = looser (500=loose). Default: 200"
   },
+  "fallbackSection": {
+    "message": "Over-cleansed Fallback"
+  },
+  "aiSummaryCleansingFallbackRatioLabel": {
+    "message": "Reduction Ratio Threshold"
+  },
+  "aiSummaryCleansingFallbackRatioDesc": {
+    "message": "Fallback triggers when cleansed content drops below this percentage of the original. Default: 20%"
+  },
+  "aiSummaryCleansingFallbackMinBytesLabel": {
+    "message": "Absolute Size Threshold"
+  },
+  "aiSummaryCleansingFallbackMinBytesDesc": {
+    "message": "Fallback triggers when cleansed content drops below this byte size. Default: 300 bytes"
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },

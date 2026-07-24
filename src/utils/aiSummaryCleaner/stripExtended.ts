@@ -8,6 +8,125 @@
 import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
 import { NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from './patterns.js';
 
+// パターンは不変なため、セレクター文字列はモジュール初回評価時に一度だけ構築して使い回す
+const NEWS_MEDIA_SELECTOR = buildClassIdSelectors(NEWS_MEDIA_PATTERNS);
+const EC_SITE_SELECTOR = buildClassIdSelectors(EC_SITE_PATTERNS);
+const QA_SITE_SELECTOR = buildClassIdSelectors(QA_SITE_PATTERNS);
+const VIDEO_SITE_SELECTOR = buildClassIdSelectors(VIDEO_SITE_PATTERNS);
+
+const RECOMMEND_PATTERNS = [
+    // 英語パターン
+    'carousel', 'slider', 'recommend-item', 'product-carousel',
+    'pickup', 'feature', 'ranking', 'trending',
+    'for-you', 'personalized', 'recommendation-box',
+    // 日本語パターン
+    'ichiran', 'yoyaku', 'osusume', 'kanren', 'kiji-related',
+    'kaiwa-related', 'yahoo-relation', 'lazuda', 'rakuten-scrap',
+    // Amazon
+    'sp-RELATED', 'sp-centered', 'a-carousel-container',
+    // その他
+    'contents--contents-recommend', 'pickup-content',
+    'recommend-list'
+];
+const RECOMMEND_SELECTOR = buildClassIdSelectors(RECOMMEND_PATTERNS);
+
+const PAGINATION_PATTERNS = [
+    'next', 'prev', 'pager', 'page-nav', 'page-numbers',
+    'pagination-numbers', 'pagination', 'load-more',
+    'infinite-scroll-trigger'
+];
+const PAGINATION_SELECTOR = buildClassIdSelectors(PAGINATION_PATTERNS);
+
+const SNS_PROMO_PATTERNS = [
+    // 英語
+    'promoted', 'sponsored', 'sp-cc', 'trend-item',
+    'a-carousel', 'sp-RELATED', 'ad-slot', 'ad-container',
+    // Amazon スポンサープロダクト
+    'sp-ads', 'sp-ad', 'sponseredContent', 'adPokemon',
+    // Google/Twitter
+    'tweet-promoted', 'promoted-trend', 'ads-results',
+    // 日本語
+    'koukoku', 'kouka', 'ad-area'
+];
+const SNS_PROMO_SELECTOR = buildClassIdSelectors(SNS_PROMO_PATTERNS);
+
+const POPUP_PATTERNS = [
+    // 英語
+    'popup', 'modal', 'overlay', 'lightbox', 'dialog',
+    'toast', 'notification', 'snackbar', 'ribbon', 'alert',
+    'consent', 'cookie-banner', 'gdpr', 'age-gate', 'paywall',
+    // 日本語
+    'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup',
+    'popup-cookie', 'consent-banner', 'login-prompt',
+    // Amazon
+    'a-popover', 'a-modal', 'snssignup',
+    // Game8
+    'game8-popup', 'loginbox', 'messagebox'
+];
+const POPUP_SELECTOR = buildClassIdSelectors(POPUP_PATTERNS);
+
+const PLATFORM_PATTERNS = [
+    // 5ch/be
+    'be-', 'mona', 'since', '2chmate', '2ch-sc', 'matome-hatune',
+    // YouTube
+    'ytp-', 'ytd-companion', 'video-ads', 'ytd-promoted-video',
+    // TVer
+    'tver-overlay', 'player-overlay',
+    // ニコニコ動画
+    'nico-external-banner', 'ndm-ads', 'nicolive',
+    // Yahoo!
+    'yahoo-ad', 'weather', 'ranking',
+    // Amazon
+    'aws-iv', 'a-carousel', 'sp-ads',
+    // Game8
+    'game8-ad', 'adiene',
+    //  Twitter/X
+    'promoted-trend', 'tweet'
+];
+const PLATFORM_SELECTOR = buildClassIdSelectors(PLATFORM_PATTERNS);
+
+const JP_NAVIGATION_PATTERNS = [
+    'global-nav', 'gnav', 'g-nav', 'primary-nav',
+    'footer-nav', 'fnav',
+    'topic-path', 'topicpath', 'breadcrumb',
+    'site-search', 'search-form', 'ss-search',
+    'utility-nav', 'sub-nav', 'local-nav'
+];
+const JP_NAVIGATION_SELECTOR = buildClassIdSelectors(JP_NAVIGATION_PATTERNS);
+
+const AUTHOR_META_PATTERNS = [
+    'author-profile', 'writer-bio', 'profile-card',
+    'post-date', 'update-date', 'post-meta', 'entry-meta',
+    'article-tag', 'post-tag', 'tag-list',
+    'entry-footer', 'article-footer'
+];
+const AUTHOR_META_SELECTOR = buildClassIdSelectors(AUTHOR_META_PATTERNS);
+
+const AFFILIATE_PATTERNS = [
+    // Rinker (SWELL bundled) — container-level only
+    'yyi-rinker-contents', 'yyi-rinker-box',
+    // カエレバ / ヨマレバ
+    'kaerebalink-box', 'yomerebalink-box', 'booklink-box',
+    // もしもアフィリエイト
+    'moshimo-style-single', 'moshimo-style', 'moshimo-affiliate',
+    // ポチップ (Pochipp)
+    'pochipp-box', 'pochi-contents', 'pochipp-card',
+];
+const AFFILIATE_SELECTOR = buildClassIdSelectors(AFFILIATE_PATTERNS);
+
+const SPEECH_BUBBLE_META_PATTERNS = [
+    'balloon-meta', 'balloon-avatar', 'talk-name',
+    'balloon-icon', 'character-name', 'talk-avatar',
+    'comment-name', 'speaker-name', 'chara-name',
+];
+const SPEECH_BUBBLE_META_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_META_PATTERNS);
+
+const SPEECH_BUBBLE_TEXT_PATTERNS = [
+    'balloon-text', 'talk-comment', 'comment-text',
+    'balloon-body', 'talk-body', 'speech-text',
+];
+const SPEECH_BUBBLE_TEXT_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_TEXT_PATTERNS);
+
 /**
  * 固定要素を削除（position:fixed/sticky）
  * @param element - クレンジング対象のルート要素
@@ -77,22 +196,7 @@ export function stripRecommendSections(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const recommendPatterns = [
-        // 英語パターン
-        'carousel', 'slider', 'recommend-item', 'product-carousel',
-        'pickup', 'feature', 'ranking', 'trending',
-        'for-you', 'personalized', 'recommendation-box',
-        // 日本語パターン
-        'ichiran', 'yoyaku', 'osusume', 'kanren', 'kiji-related',
-        'kaiwa-related', 'yahoo-relation', 'lazuda', 'rakuten-scrap',
-        // Amazon
-        'sp-RELATED', 'sp-centered', 'a-carousel-container',
-        // その他
-        'contents--contents-recommend', 'pickup-content',
-        'recommend-list'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(recommendPatterns)).forEach(elem => {
+    element.querySelectorAll(RECOMMEND_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -134,13 +238,7 @@ export function stripPaginationElements(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const paginationPatterns = [
-        'next', 'prev', 'pager', 'page-nav', 'page-numbers',
-        'pagination-numbers', 'pagination', 'load-more',
-        'infinite-scroll-trigger'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(paginationPatterns)).forEach(elem => {
+    element.querySelectorAll(PAGINATION_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -166,19 +264,7 @@ export function stripSnsPromoElements(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const snsPromoPatterns = [
-        // 英語
-        'promoted', 'sponsored', 'sp-cc', 'trend-item',
-        'a-carousel', 'sp-RELATED', 'ad-slot', 'ad-container',
-        // Amazon スポンサープロダクト
-        'sp-ads', 'sp-ad', 'sponseredContent', 'adPokemon',
-        // Google/Twitter
-        'tweet-promoted', 'promoted-trend', 'ads-results',
-        // 日本語
-        'koukoku', 'kouka', 'ad-area'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(snsPromoPatterns)).forEach(elem => {
+    element.querySelectorAll(SNS_PROMO_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -226,21 +312,7 @@ export function stripPopupElements(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const popupPatterns = [
-        // 英語
-        'popup', 'modal', 'overlay', 'lightbox', 'dialog',
-        'toast', 'notification', 'snackbar', 'ribbon', 'alert',
-        'consent', 'cookie-banner', 'gdpr', 'age-gate', 'paywall',
-        // 日本語
-        'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup',
-        'popup-cookie', 'consent-banner', 'login-prompt',
-        // Amazon
-        'a-popover', 'a-modal', 'snssignup',
-        // Game8
-        'game8-popup', 'loginbox', 'messagebox'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(popupPatterns)).forEach(elem => {
+    element.querySelectorAll(POPUP_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -282,26 +354,7 @@ export function stripPlatformNoise(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const platformPatterns = [
-        // 5ch/be
-        'be-', 'mona', 'since', '2chmate', '2ch-sc', 'matome-hatune',
-        // YouTube
-        'ytp-', 'ytd-companion', 'video-ads', 'ytd-promoted-video',
-        // TVer
-        'tver-overlay', 'player-overlay',
-        // ニコニコ動画
-        'nico-external-banner', 'ndm-ads', 'nicolive',
-        // Yahoo!
-        'yahoo-ad', 'weather', 'ranking',
-        // Amazon
-        'aws-iv', 'a-carousel', 'sp-ads',
-        // Game8
-        'game8-ad', 'adiene',
-        //  Twitter/X 
-        'promoted-trend', 'tweet'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(platformPatterns)).forEach(elem => {
+    element.querySelectorAll(PLATFORM_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -685,15 +738,7 @@ export function stripJPNavigationPatterns(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const patterns = [
-        'global-nav', 'gnav', 'g-nav', 'primary-nav',
-        'footer-nav', 'fnav',
-        'topic-path', 'topicpath', 'breadcrumb',
-        'site-search', 'search-form', 'ss-search',
-        'utility-nav', 'sub-nav', 'local-nav'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+    element.querySelectorAll(JP_NAVIGATION_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -730,14 +775,7 @@ export function stripAuthorMetaElements(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    const patterns = [
-        'author-profile', 'writer-bio', 'profile-card',
-        'post-date', 'update-date', 'post-meta', 'entry-meta',
-        'article-tag', 'post-tag', 'tag-list',
-        'entry-footer', 'article-footer'
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+    element.querySelectorAll(AUTHOR_META_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -777,18 +815,7 @@ export function stripAffiliateElements(element: Element): number {
     const elementsToProcess: Element[] = [];
     const counted = new Set<Element>();
 
-    const patterns = [
-        // Rinker (SWELL bundled) — container-level only
-        'yyi-rinker-contents', 'yyi-rinker-box',
-        // カエレバ / ヨマレバ
-        'kaerebalink-box', 'yomerebalink-box', 'booklink-box',
-        // もしもアフィリエイト
-        'moshimo-style-single', 'moshimo-style', 'moshimo-affiliate',
-        // ポチップ (Pochipp)
-        'pochipp-box', 'pochi-contents', 'pochipp-card',
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
+    element.querySelectorAll(AFFILIATE_SELECTOR).forEach(elem => {
         // Skip elements whose ancestor already matched (process only top-level containers)
         if (counted.has(elem)) return;
         // Check if any ancestor of this element is already in the counted set
@@ -845,32 +872,18 @@ export function stripSpeechBubbles(element: Element): number {
         '.comment-balloon', '.message-balloon',
     ];
 
-    const META_PATTERNS = [
-        'balloon-meta', 'balloon-avatar', 'talk-name',
-        'balloon-icon', 'character-name', 'talk-avatar',
-        'comment-name', 'speaker-name', 'chara-name',
-    ];
-
-    const TEXT_PATTERNS = [
-        'balloon-text', 'talk-comment', 'comment-text',
-        'balloon-body', 'talk-body', 'speech-text',
-    ];
-
-    const metaSelector = buildClassIdSelectors(META_PATTERNS);
-    const textSelector = buildClassIdSelectors(TEXT_PATTERNS);
-
     const containers = element.querySelectorAll(CONTAINER_SELECTORS.join(', '));
 
     containers.forEach(container => {
         // Remove character names and avatars
-        const metaElements = container.querySelectorAll(metaSelector);
+        const metaElements = container.querySelectorAll(SPEECH_BUBBLE_META_SELECTOR);
         metaElements.forEach(meta => {
             safeRemoveElement(meta);
         });
 
         // Keep speech text — extract and replace container with text
         let speechText = '';
-        const textElements = container.querySelectorAll(textSelector);
+        const textElements = container.querySelectorAll(SPEECH_BUBBLE_TEXT_SELECTOR);
         if (textElements.length > 0) {
             const parts: string[] = [];
             textElements.forEach(el => {
@@ -908,7 +921,7 @@ export function stripNewsMediaPatterns(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    element.querySelectorAll(buildClassIdSelectors(NEWS_MEDIA_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(NEWS_MEDIA_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -932,7 +945,7 @@ export function stripEcSitePatterns(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    element.querySelectorAll(buildClassIdSelectors(EC_SITE_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(EC_SITE_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -956,7 +969,7 @@ export function stripQaSitePatterns(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    element.querySelectorAll(buildClassIdSelectors(QA_SITE_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(QA_SITE_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -980,7 +993,7 @@ export function stripVideoSitePatterns(element: Element): number {
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
 
-    element.querySelectorAll(buildClassIdSelectors(VIDEO_SITE_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(VIDEO_SITE_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);

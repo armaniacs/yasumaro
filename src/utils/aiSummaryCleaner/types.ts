@@ -53,6 +53,9 @@ export interface AiSummaryCleanseOptions {
     shortSeqCount?: number;           // 短文連続数閾値（デフォルト: 5）
     // Custom patterns
     customPatterns?: string[];        // カスタムパターン列表
+    // Over-cleansed fallback thresholds
+    fallbackRatio?: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
+    fallbackMinBytes?: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
 }
 
 /**

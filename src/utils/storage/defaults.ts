@@ -135,6 +135,8 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: 50,
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: 0.20,
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: 300,
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: [],
     // Domain Whitelist Extraction Mode — default true for new users (existing users migrated to false)
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: true,

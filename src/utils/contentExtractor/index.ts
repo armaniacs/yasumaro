@@ -62,7 +62,7 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false, textDensityEnabled = false, shortSeqEnabled = false, symbolLineEnabled = false, linkParaEnabled = false, enhancedHiddenEnabled = false, emptyElemEnabled = false, jpLayoutEnabled = false, jpNavigationEnabled = false, authorEnabled = false, affiliateEnabled = false, speechBubbleEnabled = false, newsMediaEnabled = false, ecSiteEnabled = false, qaSiteEnabled = false, videoSiteEnabled = false, linkRatioThreshold = 70, shortTextThreshold = 30, shortSeqCount = 5, linkParaThreshold = 50, customPatterns = [] } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false, textDensityEnabled = false, shortSeqEnabled = false, symbolLineEnabled = false, linkParaEnabled = false, enhancedHiddenEnabled = false, emptyElemEnabled = false, jpLayoutEnabled = false, jpNavigationEnabled = false, authorEnabled = false, affiliateEnabled = false, speechBubbleEnabled = false, newsMediaEnabled = false, ecSiteEnabled = false, qaSiteEnabled = false, videoSiteEnabled = false, linkRatioThreshold = 70, shortTextThreshold = 30, shortSeqCount = 5, linkParaThreshold = 50, customPatterns = [], fallbackRatio = 0.20, fallbackMinBytes = 300 } = aiSummaryCleanseOptions;
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -364,8 +364,8 @@ export function extractMainContent(
             const _overCleansed = aiSummaryOriginalBytes !== undefined
                 && aiSummaryOriginalBytes > 0
                 && (
-                    (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 10% → 20%に緩和
-                    || _contentBytes < 300                            // 絶対量が300B未満ならフォールバック
+                    (_contentBytes / aiSummaryOriginalBytes) < fallbackRatio
+                    || _contentBytes < fallbackMinBytes
                 );
 
             if (_isTooShort || _overCleansed) {
@@ -517,8 +517,8 @@ export function extractMainContent(
                 const _overCleansed = aiSummaryOriginalBytes !== undefined
                     && aiSummaryOriginalBytes > 0
                     && (
-                        (_contentBytes / aiSummaryOriginalBytes) < 0.20  // 10% → 20%に緩和
-                        || _contentBytes < 300                            // 絶対量が300B未満ならフォールバック
+                        (_contentBytes / aiSummaryOriginalBytes) < fallbackRatio
+                        || _contentBytes < fallbackMinBytes
                     );
 
                  if (_isTooShort || _overCleansed) {

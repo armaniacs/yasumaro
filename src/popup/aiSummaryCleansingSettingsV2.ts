@@ -56,6 +56,9 @@ export interface AiSummaryCleansingSettings {
     // Body protection settings
     bodyProtectionEnabled: boolean;  // 本文保護機能（デフォルト：true）
     bodyProtectionThreshold: number; // 本文スコア閾値（デフォルト：200）
+    // Over-cleansed fallback settings
+    fallbackRatio: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
+    fallbackMinBytes: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
 }
 
 /**
@@ -105,9 +108,12 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         qaSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE] ?? true,
         videoSiteEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE] ?? true,
         whitelistExtractionEnabled: settings[StorageKeys.WHITELIST_EXTRACTION_ENABLED] ?? true,
-    // Body protection
-    bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
-    bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200
+        // Body protection
+        bodyProtectionEnabled: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] ?? true,
+        bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200,
+        // Over-cleansed fallback
+        fallbackRatio: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] ?? 0.20,
+        fallbackMinBytes: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] ?? 300
     };
 }
 
@@ -159,6 +165,8 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.WHITELIST_EXTRACTION_ENABLED] = settings.whitelistExtractionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] = settings.fallbackRatio;
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] = settings.fallbackMinBytes;
     await saveSettings(currentSettings);
 }
 
@@ -206,6 +214,11 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
     const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
+    // Over-cleansed fallback UI elements
+    const fallbackRatioSlider = document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement;
+    const fallbackRatioValue = document.getElementById('ai-summary-cleansing-fallback-ratio-value') as HTMLSpanElement;
+    const fallbackMinBytesSlider = document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement;
+    const fallbackMinBytesValue = document.getElementById('ai-summary-cleansing-fallback-min-bytes-value') as HTMLSpanElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     if (altCheckbox) altCheckbox.checked = settings.altEnabled;
@@ -285,6 +298,17 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
         if (valElem) valElem.textContent = settings.linkParaThreshold.toString();
     }
 
+    // Over-cleansed fallback thresholds
+    if (fallbackRatioSlider) {
+        const ratioPercent = Math.round(settings.fallbackRatio * 100);
+        fallbackRatioSlider.value = ratioPercent.toString();
+        if (fallbackRatioValue) fallbackRatioValue.textContent = ratioPercent.toString();
+    }
+    if (fallbackMinBytesSlider) {
+        fallbackMinBytesSlider.value = settings.fallbackMinBytes.toString();
+        if (fallbackMinBytesValue) fallbackMinBytesValue.textContent = settings.fallbackMinBytes.toString();
+    }
+
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
 
@@ -362,7 +386,9 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         videoSiteEnabled: (document.getElementById('ai-summary-cleansing-video-site') as HTMLInputElement)?.checked ?? true,
         whitelistExtractionEnabled: (document.getElementById('whitelist-extraction-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
-        bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10)
+        bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10),
+        fallbackRatio: parseInt((document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement)?.value || '20', 10) / 100,
+        fallbackMinBytes: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value || '300', 10)
     };
 }
 
