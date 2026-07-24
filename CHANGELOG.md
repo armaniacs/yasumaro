@@ -35,6 +35,20 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.3] - 2026-07-25
+
+このリリースは CI/pipeline の緊急修正です。v6.6.2 の Chrome Web Store 公開ステップが失敗したため、修正を反映した上で再リリースします。
+
+This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.2, so this release re-ships with the fix applied.
+
+### Fixed / 修正
+
+- **Chrome Web Store エラー詳細出力の SyntaxError を修正** — `.github/workflows/release.yml` のエラー詳細出力用 Python スクリプトでリテラルの `\n` が改行として解釈されず、アップロード失敗時の本当の原因（`itemError`）が隠れていた問題を修正。単一行スクリプトに変更
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.2` → `6.6.3`
+
 ## [6.6.2] - 2026-07-25
 
 ### Changed / 変更
