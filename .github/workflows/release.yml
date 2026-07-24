@@ -82,67 +82,10 @@ jobs:
       - name: Publish to Chrome Web Store
         if: steps.minor_check.outputs.is_even == 'true'
         env:
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          CRX_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
-          ZIP_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
-          set -e
-          # Obtain OAuth2 access token
-          echo "::group::OAuth2 Token"
-          TOKEN_RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
-            -d "client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&refresh_token=${REFRESH_TOKEN}&grant_type=refresh_token")
-          ACCESS_TOKEN=$(echo "${TOKEN_RESPONSE}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
-          if [ -z "${ACCESS_TOKEN}" ]; then
-            echo "❌ Failed to obtain access token"
-            echo "${TOKEN_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${TOKEN_RESPONSE}"
-            exit 1
-          fi
-          echo "✅ Access token obtained"
-          echo "::endgroup::"
-
-          # Upload CRX (Google now requires CRX for updates)
-          echo "::group::Upload CRX"
-          UPLOAD_RESPONSE=$(curl -s -X PUT \
-            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${EXTENSION_ID}" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary "@${CRX_FILE}")
-          echo "${UPLOAD_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${UPLOAD_RESPONSE}"
-          UPLOAD_STATUS=$(echo "${UPLOAD_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
-          if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
-            echo "❌ CRX upload failed, trying ZIP..."
-            UPLOAD_RESPONSE=$(curl -s -X PUT \
-              "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${EXTENSION_ID}" \
-              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-              -H "x-goog-api-version: 2" \
-              -H "Content-Type: application/zip" \
-              --data-binary "@${ZIP_FILE}")
-            echo "${UPLOAD_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${UPLOAD_RESPONSE}"
-            UPLOAD_STATUS=$(echo "${UPLOAD_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
-            if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
-              echo "❌ All upload attempts failed"
-              exit 1
-            fi
-          fi
-          echo "✅ Upload successful"
-          echo "::endgroup::"
-
-          # Publish
-          echo "::group::Publish"
-          PUBLISH_RESPONSE=$(curl -s -X POST \
-            "https://www.googleapis.com/chromewebstore/v1.1/items/${EXTENSION_ID}/publish" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0")
-          echo "${PUBLISH_RESPONSE}" | python3 -m json.tool 2>/dev/null || echo "${PUBLISH_RESPONSE}"
-          PUBLISH_STATUS=$(echo "${PUBLISH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
-          if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then
-            echo "❌ Publish failed: ${PUBLISH_STATUS}"
-            exit 1
-          fi
-          echo "✅ Published successfully"
-          echo "::endgroup::"
+          npx --yes wxt submit \
+            --chrome-zip "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip"
