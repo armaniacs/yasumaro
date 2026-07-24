@@ -87,18 +87,11 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
-          # Use Google's official chrome-webstore-upload-cli
           npx chrome-webstore-upload-cli@latest upload \
             --item-id "${EXTENSION_ID}" \
-            --client-id "${CLIENT_ID}" \
-            --client-secret "${CLIENT_SECRET}" \
-            --refresh-token "${REFRESH_TOKEN}" \
             --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip"
           echo "✅ Upload complete"
 
           npx chrome-webstore-upload-cli@latest publish \
-            --item-id "${EXTENSION_ID}" \
-            --client-id "${CLIENT_ID}" \
-            --client-secret "${CLIENT_SECRET}" \
-            --refresh-token "${REFRESH_TOKEN}"
+            --item-id "${EXTENSION_ID}"
           echo "✅ Publish complete"
