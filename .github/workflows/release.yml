@@ -88,24 +88,17 @@ jobs:
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
           # Use Google's official chrome-webstore-upload-cli
-          npx @google/chrome-webstore-upload-cli@latest upload \
+          npx chrome-webstore-upload-cli@latest upload \
             --item-id "${EXTENSION_ID}" \
             --client-id "${CLIENT_ID}" \
             --client-secret "${CLIENT_SECRET}" \
             --refresh-token "${REFRESH_TOKEN}" \
-            --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip" 2>&1 || {
-            echo "⚠️ ZIP upload failed, trying CRX..."
-            npx @google/chrome-webstore-upload-cli@latest upload \
-              --item-id "${EXTENSION_ID}" \
-              --client-id "${CLIENT_ID}" \
-              --client-secret "${CLIENT_SECRET}" \
-              --refresh-token "${REFRESH_TOKEN}" \
-              --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx" 2>&1
-          }
+            --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip"
+          echo "✅ Upload complete"
 
-          # Publish
-          npx @google/chrome-webstore-upload-cli@latest publish \
+          npx chrome-webstore-upload-cli@latest publish \
             --item-id "${EXTENSION_ID}" \
             --client-id "${CLIENT_ID}" \
             --client-secret "${CLIENT_SECRET}" \
-            --refresh-token "${REFRESH_TOKEN}" 2>&1
+            --refresh-token "${REFRESH_TOKEN}"
+          echo "✅ Publish complete"
