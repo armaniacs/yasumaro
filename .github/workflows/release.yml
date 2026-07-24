@@ -33,10 +33,11 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "minor=$(echo "$VERSION" | cut -d. -f2)" >> $GITHUB_OUTPUT
       - name: Check if minor version is even
         id: minor_check
         run: |
-          MINOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f2)
+          MINOR="${{ steps.version.outputs.minor }}"
           if [ $((MINOR % 2)) -eq 0 ]; then
             echo "is_even=true" >> $GITHUB_OUTPUT
           else
@@ -50,12 +51,13 @@ jobs:
       - name: Sign CRX with private key
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
           node .github/workflows/build-crx2.mjs \
-            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip \
+            "dist/yasumaro-${VERSION}-chrome.zip" \
             /tmp/private.pem \
-            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
+            "dist/yasumaro-${VERSION}-chrome.crx"
           rm /tmp/private.pem
       - name: Build for Firefox
         run: npx wxt zip -b firefox
