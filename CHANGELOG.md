@@ -35,6 +35,17 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.2] - 2026-07-25
+
+### Changed / 変更
+
+- **CRX2 ビルドスクリプトを簡素化** — `.github/workflows/build-crx2.mjs` の冗長コメントを削除し、CRX2バイナリフォーマットの説明を1行に集約。compact if文を展開してUsageメッセージを追加
+- **Chrome Web Store パブリッシュステップを可読性向上** — `.github/workflows/release.yml` の入れ子三項演算子をif/elseチェーンに、リスト内包表記（副作用利用）をfor文に置換
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.1` → `6.6.2`
+
 ## [6.6.1] - 2026-07-24
 
 このリリースは v6.6.0 に対する follow-up で、前回のコミット作業に含まれていなかった tailwindcss 残骸の完全除去と、ai-summary-cleansing の開発者向け改善を反映したものです。
