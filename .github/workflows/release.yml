@@ -107,7 +107,7 @@ jobs:
           echo "Upload: ${UPLOAD_STATUS}"
           if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
             echo "Error detail:"
-            echo "${UPLOAD_RESP}" | python3 -c "import sys, json;\nfor e in json.load(sys.stdin).get('itemError', []):\n    print(e.get('error_code', '?'), e.get('error_detail', ''))"
+            echo "${UPLOAD_RESP}" | python3 -c "import sys, json; [print(e.get('error_code', '?'), e.get('error_detail', '')) for e in json.load(sys.stdin).get('itemError', [])]"
             exit 1
           fi
 
@@ -116,7 +116,7 @@ jobs:
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "x-goog-api-version: 2" \
             -H "Content-Length: 0")
-          PUBLISH_STATUS=$(echo "${PUBLISH_RESP}" | python3 -c "import sys, json;\nd = json.load(sys.stdin);\ns = d.get('status', []);\nif isinstance(s, list) and len(s) > 0:\n    print(s[0])\nelif isinstance(s, str):\n    print(s)\nelse:\n    print('UNKNOWN')")
+          PUBLISH_STATUS=$(echo "${PUBLISH_RESP}" | python3 -c "import sys, json; d = json.load(sys.stdin); s = d.get('status', []); print(s[0] if isinstance(s, list) and len(s) > 0 else (s if isinstance(s, str) else 'UNKNOWN'))")
           echo "Publish: ${PUBLISH_STATUS}"
           if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then exit 1; fi
           echo "✅ Published"
