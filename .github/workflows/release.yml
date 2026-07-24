@@ -52,7 +52,7 @@ jobs:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
         run: |
           echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
-          node .github/workflows/build-crx3.mjs \
+          node .github/workflows/build-crx2.mjs \
             dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip \
             /tmp/private.pem \
             dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
