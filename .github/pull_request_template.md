@@ -13,6 +13,16 @@
 - [ ] **レート制限**: 新規/変更したパスワード認証経路には `checkRateLimit()`/`recordFailedAttempt()` が適用されている
 - [ ] **鍵キャッシュ**: キャッシュされた暗号鍵を返す前に `IS_LOCKED` を確認している
 
+## CI/CD Security
+
+`docs/CI_SECURITY_CHECKLIST.md` も参照してください。
+
+`.github/workflows/` を変更する場合:
+
+- [ ] `run:` ブロックで `${{ }}` を直接展開していない（代わりに `env:` で変数化）
+- [ ] シークレットやトークンがログに出力されていない
+- [ ] ネットワーク呼び出し（curl 等）にタイムアウトが設定されている
+
 ## テスト結果
 
 - [ ] `npm run type-check` がパス
