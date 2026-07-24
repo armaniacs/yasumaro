@@ -181,6 +181,9 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD: 'ai_summary_cleansing_short_text_threshold', // 短文閾値文字数（デフォルト: 30）
     AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT: 'ai_summary_cleansing_short_seq_count', // 短文連続数閾値（デフォルト: 5）
     AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD: 'ai_summary_cleansing_link_para_threshold', // リンクのみ段落閾値（デフォルト: 50）
+    // Over-cleansed fallback settings
+    AI_SUMMARY_CLEANSING_FALLBACK_RATIO: 'ai_summary_cleansing_fallback_ratio', // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
+    AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES: 'ai_summary_cleansing_fallback_min_bytes', // 過剰削減フォールバック絶対量閾値（デフォルト: 300バイト）
     // Custom pattern settings
     AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
     // Domain Whitelist Extraction Mode
@@ -386,6 +389,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: boolean;
     [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;

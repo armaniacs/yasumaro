@@ -1,17 +1,10 @@
 import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
 import { AI_PROVIDER_HOST_PERMISSIONS, OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS, buildConnectSrcDomains } from './src/utils/cspDomains.js';
 
 export default defineConfig({
   outDir: 'dist',
   browser: 'chromium',
   manifestVersion: 3,
-
-  vite: () => ({
-    plugins: [
-      tailwindcss()
-    ]
-  }),
 
   manifest: {
     manifest_version: 3,

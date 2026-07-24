@@ -1126,6 +1126,33 @@
           </div>
         </div>
 
+        <!-- 過剰削減フォールバック設定 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="fallbackSection">過剰削減フォールバック</h3>
+          <div class="form-group">
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-fallback-ratio">
+                <span data-i18n="aiSummaryCleansingFallbackRatioLabel">削減比率閾値</span>: <span id="ai-summary-cleansing-fallback-ratio-value">20</span>%
+              </label>
+              <input type="range" id="ai-summary-cleansing-fallback-ratio" min="5" max="50" step="5" value="20" class="slider"
+                aria-describedby="fallbackRatioDesc">
+              <div class="help-text" id="fallbackRatioDesc" data-i18n="aiSummaryCleansingFallbackRatioDesc">
+                クレンジング後のコンテンツが元の何%未満に減った場合にフォールバックするか。デフォルト: 20%
+              </div>
+            </div>
+            <div class="threshold-slider">
+              <label for="ai-summary-cleansing-fallback-min-bytes">
+                <span data-i18n="aiSummaryCleansingFallbackMinBytesLabel">絶対量閾値</span>: <span id="ai-summary-cleansing-fallback-min-bytes-value">300</span>バイト
+              </label>
+              <input type="range" id="ai-summary-cleansing-fallback-min-bytes" min="100" max="1000" step="50" value="300" class="slider"
+                aria-describedby="fallbackMinBytesDesc">
+              <div class="help-text" id="fallbackMinBytesDesc" data-i18n="aiSummaryCleansingFallbackMinBytesDesc">
+                クレンジング後のコンテンツが何バイト未満の場合にフォールバックするか。デフォルト: 300バイト
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">保存</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>

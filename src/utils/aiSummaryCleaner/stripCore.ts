@@ -7,6 +7,12 @@ import { escapeCssSelector } from '../cssUtils.js';
 import { buildClassIdSelectors, safeRemoveElement } from './helpers.js';
 import { AD_CLASS_PATTERNS, SOCIAL_CLASS_PATTERNS, NAV_CLASS_PATTERNS, LEGAL_TEXT_PATTERNS, DEEP_CLASS_PATTERNS, DEEP_ROLES } from './patterns.js';
 
+// パターンは不変なため、セレクター文字列はモジュール初回評価時に一度だけ構築して使い回す
+const AD_SELECTOR = buildClassIdSelectors(AD_CLASS_PATTERNS);
+const NAV_SELECTOR = buildClassIdSelectors(NAV_CLASS_PATTERNS);
+const SOCIAL_SELECTOR = buildClassIdSelectors(SOCIAL_CLASS_PATTERNS);
+const DEEP_SELECTOR = buildClassIdSelectors(DEEP_CLASS_PATTERNS);
+
 /**
  * 画像alt属性を削除
  * @param element - クレンジング対象のルート要素
@@ -78,7 +84,7 @@ export function stripAdElements(element: Element): number {
     });
     
     // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
-    element.querySelectorAll(buildClassIdSelectors(AD_CLASS_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(AD_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -154,7 +160,7 @@ export function stripNavElements(element: Element): number {
     });
     
     // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
-    element.querySelectorAll(buildClassIdSelectors(NAV_CLASS_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(NAV_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -268,7 +274,7 @@ export function stripSocialElements(element: Element): number {
     });
     
     // クラス名パターンで検索（全パターンを結合して1回のクエリーに）
-    element.querySelectorAll(buildClassIdSelectors(SOCIAL_CLASS_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(SOCIAL_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -415,13 +421,15 @@ export const CARD_PATTERNS = [
     'recommend-list', 'pickup-list', 'ranking-list'
 ];
 
+const CARD_SELECTOR = buildClassIdSelectors(CARD_PATTERNS);
+
 export function stripCardElements(element: Element): number {
     let removedCount = 0;
     const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
     
     // 全パターンを結合して1回のクエリーに
-    element.querySelectorAll(buildClassIdSelectors(CARD_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(CARD_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
@@ -466,7 +474,7 @@ export function stripDeepElements(element: Element): number {
     }
 
     // クラス/IDパターンで削除（全パターンを結合して1回のクエリーに）
-    element.querySelectorAll(buildClassIdSelectors(DEEP_CLASS_PATTERNS)).forEach(elem => {
+    element.querySelectorAll(DEEP_SELECTOR).forEach(elem => {
         if (!counted.has(elem)) {
             elementsToRemove.push(elem);
             counted.add(elem);
