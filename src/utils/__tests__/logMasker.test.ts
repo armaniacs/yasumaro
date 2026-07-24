@@ -28,4 +28,30 @@ describe('maskSensitiveData', () => {
     expect(result.user.email).toBe('t***@example.com');
     expect(result.data.api_key).toBe('***');
   });
+
+  it('handles null and primitives', () => {
+    expect(maskSensitiveData(null)).toBeNull();
+    expect(maskSensitiveData(42)).toBe(42);
+    expect(maskSensitiveData('plain string')).toBe('plain string');
+  });
+
+  it('handles arrays with sensitive data', () => {
+    const input = [{ api_key: 'secret123' }, { email: 'user@example.com' }];
+    const result = maskSensitiveData(input) as Array<Record<string, unknown>>;
+    expect(result[0].api_key).toBe('***');
+    expect(result[1].email).toBe('u***@example.com');
+  });
+
+  it('handles non-string Level 1/2 values', () => {
+    const input = { api_key: 12345, user_id: null };
+    const result = maskSensitiveData(input);
+    expect(result.api_key).toBe(12345);
+    expect(result.user_id).toBeNull();
+  });
+
+  it('handles email without domain', () => {
+    const input = { email: 'invalid' };
+    const result = maskSensitiveData(input);
+    expect(result.email).toBe('***');
+  });
 });
