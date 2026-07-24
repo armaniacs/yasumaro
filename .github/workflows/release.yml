@@ -86,53 +86,26 @@ jobs:
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          CRX_FILE: dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
         run: |
-          # Step 1: Obtain OAuth2 access token
-          echo "::group::OAuth2 Token Refresh"
-          TOKEN_RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
-            -d "client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&refresh_token=${REFRESH_TOKEN}&grant_type=refresh_token")
-          echo "Token response: $(echo ${TOKEN_RESPONSE} | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || echo 'INVALID_JSON')"
-          ACCESS_TOKEN=$(echo "${TOKEN_RESPONSE}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
-          if [ -z "${ACCESS_TOKEN}" ]; then
-            ERROR_DESC=$(echo "${TOKEN_RESPONSE}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error_description','unknown error'))" 2>/dev/null || echo 'failed to parse token response')
-            echo "❌ Failed to obtain access token: ${ERROR_DESC}"
-            exit 1
-          fi
-          echo "✅ Access token obtained"
-          echo "::endgroup::"
+          # Use Google's official chrome-webstore-upload-cli
+          npx @google/chrome-webstore-upload-cli@latest upload \
+            --item-id "${EXTENSION_ID}" \
+            --client-id "${CLIENT_ID}" \
+            --client-secret "${CLIENT_SECRET}" \
+            --refresh-token "${REFRESH_TOKEN}" \
+            --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip" 2>&1 || {
+            echo "⚠️ ZIP upload failed, trying CRX..."
+            npx @google/chrome-webstore-upload-cli@latest upload \
+              --item-id "${EXTENSION_ID}" \
+              --client-id "${CLIENT_ID}" \
+              --client-secret "${CLIENT_SECRET}" \
+              --refresh-token "${REFRESH_TOKEN}" \
+              --file "dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx" 2>&1
+          }
 
-          # Step 2: Upload to Chrome Web Store
-          echo "::group::Upload to Chrome Web Store"
-          UPLOAD_RESPONSE=$(curl -s -X PUT \
-            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${EXTENSION_ID}" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
-            -T "${CRX_FILE}")
-          echo "Upload response: $(echo ${UPLOAD_RESPONSE} | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || echo 'INVALID_JSON')"
-          UPLOAD_STATUS=$(echo "${UPLOAD_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uploadState','UNKNOWN'))")
-          echo "Upload status: ${UPLOAD_STATUS}"
-          if [ "${UPLOAD_STATUS}" != "SUCCESS" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
-            echo "❌ Upload failed"
-            exit 1
-          fi
-          echo "✅ Upload successful"
-          echo "::endgroup::"
-
-          # Step 3: Publish
-          echo "::group::Publish to Chrome Web Store"
-          PUBLISH_RESPONSE=$(curl -s -X POST \
-            "https://www.googleapis.com/chromewebstore/v1.1/items/${EXTENSION_ID}/publish" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0")
-          echo "Publish response: $(echo ${PUBLISH_RESPONSE} | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || echo 'INVALID_JSON')"
-          PUBLISH_RESULT=$(echo "${PUBLISH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',[]); print((s[0] if s else 'UNKNOWN') if isinstance(s,list) else (s or 'UNKNOWN'))")
-          echo "Publish result: ${PUBLISH_RESULT}"
-          # OK = published, IN_REVIEW = under Google review (treated as success)
-          if [ "${PUBLISH_RESULT}" != "OK" ] && [ "${PUBLISH_RESULT}" != "IN_REVIEW" ]; then
-            echo "❌ Publish failed with result: ${PUBLISH_RESULT}"
-            exit 1
-          fi
-          echo "✅ Published successfully"
-          echo "::endgroup::"
+          # Publish
+          npx @google/chrome-webstore-upload-cli@latest publish \
+            --item-id "${EXTENSION_ID}" \
+            --client-id "${CLIENT_ID}" \
+            --client-secret "${CLIENT_SECRET}" \
+            --refresh-token "${REFRESH_TOKEN}" 2>&1
