@@ -1,4 +1,4 @@
-.PHONY: build build-store clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux build-wasm
+.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux build-wasm
 
 # build: vendor WASM → node_modules コピー後にバンドル
 build: copy-wasm
@@ -7,6 +7,10 @@ build: copy-wasm
 # build-store: バージョン整合性チェック → ビルド → ZIP 生成
 build-store: copy-wasm
 	npm run build:store
+
+# build-edge: バージョン整合性チェック → ビルド → Edge 向け ZIP 生成
+build-edge: copy-wasm
+	node scripts/check-version-consistency.js && npx wxt zip -b edge
 
 # vendor WASM を node_modules にコピー
 copy-wasm:
