@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.5.40` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.6.6` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -35,11 +35,17 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.6] - 2026-07-25
+
+### Fixed / 修正
+
+- **「ログをエクスポート」パネルのローカル Markdown 書き出しが動作しない不具合を修正** — `exportLocalMarkdownBtn`（「ログをエクスポート」パネル内の「ローカル Markdown 書き出し」エクスポートボタン）にイベントリスナーが未接続だった。`dashboard.ts` の `initDashboard()` で `handleExportLocalMarkdown` ハンドラをバインド
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.5` → `6.6.6`
+
 ## [6.6.5] - 2026-07-25
-
-このリリースは CI/pipeline の緊急修正です。v6.6.4 の Chrome Web Store 公開ステップが `PKG_CANNOT_VERIFY_CRX_SIGNATURE` エラーで失敗したため、修正を反映した上で再リリースします。
-
-This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.4 with a `PKG_CANNOT_VERIFY_CRX_SIGNATURE` error, so this release re-ships with the fix applied.
 
 ### Fixed / 修正
 
@@ -51,10 +57,6 @@ This release is an urgent CI/pipeline fix. The Chrome Web Store publish step fai
 
 ## [6.6.4] - 2026-07-25
 
-このリリースは CI/pipeline の緊急修正です。v6.6.3 の Chrome Web Store 公開ステップが `PKG_MUST_UPDATE_AS_CRX` エラーで失敗したため、修正を反映した上で再リリースします。
-
-This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.3 with a `PKG_MUST_UPDATE_AS_CRX` error, so this release re-ships with the fix applied.
-
 ### Fixed / 修正
 
 - **Chrome Web Store 公開を v2 API + CRX3 署名アップロードに移行** — この拡張機能は Verified CRX Uploads 設定のため署名済み `.crx` パッケージが必須だが、`.github/workflows/release.yml` は `.zip` をアップロードしていたため公開に失敗していた問題を修正。加えて非推奨の v1.1 API から v2 API（`chromewebstore.googleapis.com/v2`）に移行
@@ -65,10 +67,6 @@ This release is an urgent CI/pipeline fix. The Chrome Web Store publish step fai
 - **バージョン更新** — `6.6.3` → `6.6.4`
 
 ## [6.6.3] - 2026-07-25
-
-このリリースは CI/pipeline の緊急修正です。v6.6.2 の Chrome Web Store 公開ステップが失敗したため、修正を反映した上で再リリースします。
-
-This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.2, so this release re-ships with the fix applied.
 
 ### Fixed / 修正
 
