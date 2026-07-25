@@ -34,9 +34,15 @@ function encodeAsymmetricKeyProof(publicKeyDer, signature) {
   ]);
 }
 
-function encodeCrxFileHeader(proofBuf) {
-  // message CrxFileHeader { repeated AsymmetricKeyProof sha256_with_rsa = 2; ... }
-  return encodeLengthDelimitedField(2, proofBuf);
+function encodeCrxFileHeader(proofBuf, signedDataBuf) {
+  // message CrxFileHeader {
+  //   repeated AsymmetricKeyProof sha256_with_rsa = 2;
+  //   optional bytes signed_header_data = 10000;
+  // }
+  return Buffer.concat([
+    encodeLengthDelimitedField(2, proofBuf),
+    encodeLengthDelimitedField(10000, signedDataBuf),
+  ]);
 }
 
 function buildCrx3(zipPath, keyPath, outputPath) {
@@ -64,7 +70,7 @@ function buildCrx3(zipPath, keyPath, outputPath) {
   const signature = sign.sign(privateKey);
 
   const proof = encodeAsymmetricKeyProof(publicKeyDer, signature);
-  const header = encodeCrxFileHeader(proof);
+  const header = encodeCrxFileHeader(proof, signedData);
 
   const magic = Buffer.from('Cr24', 'utf8');
   const version = Buffer.alloc(4);
