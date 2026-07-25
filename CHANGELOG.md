@@ -35,6 +35,21 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.4] - 2026-07-25
+
+このリリースは CI/pipeline の緊急修正です。v6.6.3 の Chrome Web Store 公開ステップが `PKG_MUST_UPDATE_AS_CRX` エラーで失敗したため、修正を反映した上で再リリースします。
+
+This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.3 with a `PKG_MUST_UPDATE_AS_CRX` error, so this release re-ships with the fix applied.
+
+### Fixed / 修正
+
+- **Chrome Web Store 公開を v2 API + CRX3 署名アップロードに移行** — この拡張機能は Verified CRX Uploads 設定のため署名済み `.crx` パッケージが必須だが、`.github/workflows/release.yml` は `.zip` をアップロードしていたため公開に失敗していた問題を修正。加えて非推奨の v1.1 API から v2 API（`chromewebstore.googleapis.com/v2`）に移行
+- **CRX3 生成スクリプトを正しいフォーマットで再実装** — `.github/workflows/build-crx3.mjs` を protobuf ベースの CRX3 仕様（`CrxFileHeader` + `CRX3 SignedData` 署名コンテキスト）で再実装。旧 CRX2 生成スクリプトは削除
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.3` → `6.6.4`
+
 ## [6.6.3] - 2026-07-25
 
 このリリースは CI/pipeline の緊急修正です。v6.6.2 の Chrome Web Store 公開ステップが失敗したため、修正を反映した上で再リリースします。
