@@ -91,10 +91,8 @@ export async function constantTimeCompare(a: string, b: string): Promise<boolean
 }
 
 /**
- * パスワードをハッシュ化する
+ * SHA-256 password hashing (no salt).
  * @deprecated Use hashPasswordWithPBKDF2() instead. SHA-256 without salt is insecure.
- * @param {string} password - 平文パスワード
- * @returns {Promise<string>} Base64エンコードされたハッシュ
  */
 export async function hashPassword(password: string): Promise<string> {
     const webcrypto = getWebCrypto();
@@ -106,11 +104,8 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * パスワードを検証する
- * @deprecated Use hashPasswordWithPBKDF2() instead. Relies on deprecated hashPassword().
- * @param {string} password - 平文パスワード
- * @param {string} hash - 比較対象のハッシュ（Base64エンコード）
- * @returns {Promise<boolean>} パスワードが一致するかどうか
+ * Password verification using deprecated SHA-256 (no salt).
+ * @deprecated Use verifyPasswordWithPBKDF2() instead.
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
     const computedHash = await hashPassword(password);
@@ -353,20 +348,37 @@ const LEGACY_PBKDF2_ITERATIONS = 100000;
 
 /**
  * パスワードハッシュを検証する（PBKDF2）
- * VULN-019 fix: tries new iteration count first, then falls back to legacy
- * for backward compatibility with existing hashes
+ * VULN-019 fix: uses stored iteration count when provided (constant time).
+ * Falls back to legacy iteration count for backward compatibility with
+ * existing hashes that predate the KDF iteration storage.
+ *
+ * Timing safety: when @param iterations is provided, only one PBKDF2
+ * computation is performed, eliminating the timing side channel between
+ * the new and legacy iteration counts.
+ *
  * @param {string} password - 検証するパスワード
  * @param {string} storedHash - 保存されているハッシュ（Base64）
  * @param {Uint8Array} salt - 使用されたソルト
+ * @param {number} [iterations] - 保存されていたKDF iteration回数（あれば1回のみ計算）
  * @returns {Promise<{isValid: boolean; needsRehash: boolean}>} 検証結果と再ハッシュ必要性
  */
-export async function verifyPasswordWithPBKDF2(password: string, storedHash: string, salt: Uint8Array): Promise<{ isValid: boolean; needsRehash: boolean }> {
-    // VULN-019 fix: try new iteration count first
+export async function verifyPasswordWithPBKDF2(
+    password: string,
+    storedHash: string,
+    salt: Uint8Array,
+    iterations?: number,
+): Promise<{ isValid: boolean; needsRehash: boolean }> {
+    if (iterations !== undefined) {
+        // Constant-time path: use stored iteration count exclusively.
+        const computedHash = await hashPasswordWithPBKDF2(password, salt, iterations);
+        const valid = await constantTimeCompare(computedHash, storedHash);
+        return { isValid: valid, needsRehash: false };
+    }
+    // Legacy path (no stored iterations): try new count first, fall back to legacy.
     const computedHash = await hashPasswordWithPBKDF2(password, salt, ENVELOPE_ITERATIONS);
     if (await constantTimeCompare(computedHash, storedHash)) {
         return { isValid: true, needsRehash: false };
     }
-    // VULN-019 fix: fallback to legacy iteration count for existing hashes
     const legacyHash = await hashPasswordWithPBKDF2(password, salt, LEGACY_PBKDF2_ITERATIONS);
     if (await constantTimeCompare(legacyHash, storedHash)) {
         return { isValid: true, needsRehash: true };
