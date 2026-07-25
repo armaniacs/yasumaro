@@ -72,3 +72,17 @@ exportLogsService）でサニタイズ漏れが発生した。
 
 ## 関連 ADR
 - [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) — リソース枯渇対策の独立したガードレール
+
+## Security Considerations
+
+### CWE Classification
+- **CWE-79**: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')
+  - 影響: ユーザーがマークダウンを介してObsidianでスクリプトを実行可能
+  - 対策: `sanitizeForObsidian()`によるリンクのサニタイゼーション、`escapeObsidianWikilinks()`によるWikiLinkのエスケープ
+
+### Related CVEs
+- なし（潜在的な脆弱性を未然に防止）
+
+### Trade-offs
+- 安全性 vs 機能性: サニタイゼーションにより一部のマークダウン機能が制限される
+  - 例: `javascript:`スキームのリンクはブロックされる
