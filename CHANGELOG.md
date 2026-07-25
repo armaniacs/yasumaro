@@ -114,6 +114,8 @@ This release is a follow-up to v6.6.0, completing the removal of orphaned tailwi
 
 最初の v6.6.x 安定化リリース。v6.5.x シリーズ（新機能フェーズ）からバグフィクス専用となる v6.6.x シリーズへ移行します。
 
+Chrome Web Store公開は保留中
+
 This is the first v6.6.x stable release, transitioning from the v6.5.x feature series to the v6.6.x bug-fix-only series.
 
 ### Chores / その他
