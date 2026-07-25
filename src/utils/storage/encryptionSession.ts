@@ -205,10 +205,13 @@ export async function setMasterPassword(password: string): Promise<boolean> {
     const saltBase64 = btoa(String.fromCharCode(...salt));
     const hash = await hashPasswordWithPBKDF2(password, salt);
 
+    // VULN-019 fix: persist the iteration count used for this hash so
+    // verifyPasswordWithPBKDF2 can verify with a single pass (constant time).
     await chrome.storage.local.set({
         [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
         [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
         [StorageKeys.MASTER_PASSWORD_HASH]: hash,
+        [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
         [StorageKeys.IS_LOCKED]: true // 初期状態でロック（アンロック必要）
     });
 
@@ -243,6 +246,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     const result = await chrome.storage.local.get([
         StorageKeys.MASTER_PASSWORD_HASH,
         StorageKeys.MASTER_PASSWORD_SALT,
+        StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
         StorageKeys.MASTER_PASSWORD_ENABLED
     ]);
 
@@ -253,19 +257,25 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 
     const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string;
     const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
+    const storedIterations = result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number | undefined;
 
     if (!storedHash || !saltBase64) {
         throw new Error('Master password data corrupted');
     }
 
     const salt = base64ToUint8Array(saltBase64);
-    const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+    // Pass stored iterations to enable constant-time verification:
+    // when iterations is known, only one PBKDF2 pass is needed.
+    const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt, storedIterations);
 
     if (verifyResult.isValid) {
         // VULN-019 fix: re-hash with new iteration count if legacy hash was used
         if (verifyResult.needsRehash) {
             const newHash = await hashPasswordWithPBKDF2(password, salt);
-            await chrome.storage.local.set({ [StorageKeys.MASTER_PASSWORD_HASH]: newHash });
+            await chrome.storage.local.set({
+                [StorageKeys.MASTER_PASSWORD_HASH]: newHash,
+                [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
+            });
             logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
         }
         // VULN-018 fix: reset failed attempts on successful authentication

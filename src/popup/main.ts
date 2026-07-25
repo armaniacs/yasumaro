@@ -15,7 +15,7 @@ async function loadCurrentTabAndInitStatus(): Promise<void> {
 document.addEventListener('DOMContentLoaded', () => {
   const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
   if (recordBtn) {
-    recordBtn.onclick = () => handleRecordNowClick(false);
+    recordBtn.addEventListener('click', () => handleRecordNowClick(false));
   }
 
   initializeModalEvents();
