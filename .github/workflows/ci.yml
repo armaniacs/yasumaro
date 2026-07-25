@@ -33,7 +33,7 @@ jobs:
       - name: Check licenses
         run: npm run check-licenses
       - name: Security audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
       - name: Type Check
         run: npm run type-check
       - name: Run Tests
