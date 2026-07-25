@@ -54,7 +54,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
-          node .github/workflows/build-crx2.mjs \
+          node .github/workflows/build-crx3.mjs \
             "dist/yasumaro-${VERSION}-chrome.zip" \
             /tmp/private.pem \
             "dist/yasumaro-${VERSION}-chrome.crx"
@@ -86,6 +86,7 @@ jobs:
         if: steps.minor_check.outputs.is_even == 'true'
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
@@ -100,13 +101,15 @@ jobs:
             exit 1
           fi
 
-          ZIP_FILE="dist/yasumaro-${VERSION}-chrome.zip"
+          CRX_FILE="dist/yasumaro-${VERSION}-chrome.crx"
+          ITEM_PATH="publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}"
 
-          UPLOAD_RESP=$(curl -s --connect-timeout 10 --max-time 300 -X PUT \
-            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
+          UPLOAD_RESP=$(curl -s --connect-timeout 10 --max-time 300 -X POST \
+            "https://chromewebstore.googleapis.com/upload/v2/${ITEM_PATH}:upload" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/zip" \
-            --data-binary "@${ZIP_FILE}")
+            -H "X-Goog-Upload-Protocol: raw" \
+            -H "X-Goog-Upload-File-Name: extension.crx" \
+            -T "${CRX_FILE}")
           UPLOAD_STATUS=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
           echo "Upload: ${UPLOAD_STATUS}"
 
@@ -114,7 +117,7 @@ jobs:
             for i in {1..30}; do
               sleep 10
               STATUS_RESP=$(curl -s --connect-timeout 10 --max-time 30 -X GET \
-                "https://www.googleapis.com/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}" \
+                "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}")
               UPLOAD_STATUS=$(echo "${STATUS_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
               echo "Upload status check ${i}/30: ${UPLOAD_STATUS}"
@@ -124,19 +127,21 @@ jobs:
             done
           fi
 
-          if [ "${UPLOAD_STATUS}" != "SUCCESS" ]; then
+          if [ "${UPLOAD_STATUS}" != "SUCCEEDED" ]; then
             echo "Upload failed with status: ${UPLOAD_STATUS}"
-            echo "Error detail:"
-            echo "${UPLOAD_RESP}" | python3 -c "import sys, json; [print(e.get('error_code', '?'), e.get('error_detail', '')) for e in json.load(sys.stdin).get('itemError', [])]"
+            echo "${UPLOAD_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); [d.pop(k,None) for k in ('access_token','refresh_token','client_secret','id_token')]; print(json.dumps(d,indent=2))" 2>/dev/null || echo "${UPLOAD_RESP}"
             exit 1
           fi
 
           PUBLISH_RESP=$(curl -s --connect-timeout 10 --max-time 60 -X POST \
-            "https://www.googleapis.com/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}/publish" \
+            "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0")
-          PUBLISH_STATUS=$(echo "${PUBLISH_RESP}" | python3 -c "import sys, json; d = json.load(sys.stdin); s = d.get('status', []); print(s[0] if isinstance(s, list) and len(s) > 0 else (s if isinstance(s, str) else 'UNKNOWN'))")
-          echo "Publish: ${PUBLISH_STATUS}"
-          if [ "${PUBLISH_STATUS}" != "OK" ] && [ "${PUBLISH_STATUS}" != "IN_REVIEW" ]; then exit 1; fi
+            -H "Content-Type: application/json" \
+            -d '{"publishType":"DEFAULT_PUBLISH"}')
+          echo "Publish response received"
+          PUBLISH_ERROR=$(echo "${PUBLISH_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message','')) if isinstance(d, dict) else print('')" 2>/dev/null || echo '')
+          if [ -n "${PUBLISH_ERROR}" ]; then
+            echo "Publish failed: ${PUBLISH_ERROR}"
+            exit 1
+          fi
           echo "✅ Published"
