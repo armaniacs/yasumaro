@@ -35,6 +35,20 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.6.5] - 2026-07-25
+
+このリリースは CI/pipeline の緊急修正です。v6.6.4 の Chrome Web Store 公開ステップが `PKG_CANNOT_VERIFY_CRX_SIGNATURE` エラーで失敗したため、修正を反映した上で再リリースします。
+
+This release is an urgent CI/pipeline fix. The Chrome Web Store publish step failed in v6.6.4 with a `PKG_CANNOT_VERIFY_CRX_SIGNATURE` error, so this release re-ships with the fix applied.
+
+### Fixed / 修正
+
+- **CRX3 ヘッダーに `signed_header_data` フィールドを追加** — Chromium の CRX3 実装は `CrxFileHeader` protobuf に署名対象データ（`SignedData` のシリアライズ済みバイト列）自体を `signed_header_data`（field 10000）として含める必要があるが、`.github/workflows/build-crx3.mjs` はこのフィールドを省略していたため、Chrome Web Store 側で署名検証ができず公開に失敗していた問題を修正
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.4` → `6.6.5`
+
 ## [6.6.4] - 2026-07-25
 
 このリリースは CI/pipeline の緊急修正です。v6.6.3 の Chrome Web Store 公開ステップが `PKG_MUST_UPDATE_AS_CRX` エラーで失敗したため、修正を反映した上で再リリースします。
