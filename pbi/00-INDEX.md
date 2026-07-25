@@ -17,14 +17,6 @@
 | [2026-07-23-03-fix-remove-unused-dependencies.md](2026-07-23-03-fix-remove-unused-dependencies.md) | 🟢低 | 🟢なし | ✅ |
 | [2026-07-23-04-fix-remove-unused-files.md](2026-07-23-04-fix-remove-unused-files.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-23-05-fix-remove-unused-exports.md](2026-07-23-05-fix-remove-unused-exports.md) | 🔴高 | 🟡軽微 | ✅ |
-| [2026-07-25-01-fix-release-command-injection.md](2026-07-25-01-fix-release-command-injection.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-02-fix-oauth-response-log-leak.md](2026-07-25-02-fix-oauth-response-log-leak.md) | 🟢低 | 🟢なし | ✅ |
-| [2026-07-25-03-fix-cws-publish-reliability.md](2026-07-25-03-fix-cws-publish-reliability.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-04-feat-ci-security-review-checklist.md](2026-07-25-04-feat-ci-security-review-checklist.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-05-feat-log-sensitivity-policy.md](2026-07-25-05-feat-log-sensitivity-policy.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-06-feat-external-api-reliability-guideline.md](2026-07-25-06-feat-external-api-reliability-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-07-feat-eslint-rule-testing-guideline.md](2026-07-25-07-feat-eslint-rule-testing-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-08-feat-cwe-classification-guideline.md](2026-07-25-08-feat-cwe-classification-guideline.md) | 🟡中 | 🟢なし | ✅ |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 
@@ -35,6 +27,14 @@
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
 今回アーカイブ済み（実装完了確認済み）:
+- 2026-07-25-08-feat-cwe-classification-guideline.md (CWE分類ガイドライン作成)
+- 2026-07-25-07-feat-eslint-rule-testing-guideline.md (ESLintルールテストガイドライン + テスト拡充)
+- 2026-07-25-06-feat-external-api-reliability-guideline.md (外部API信頼性ガイドライン作成)
+- 2026-07-25-05-feat-log-sensitivity-policy.md (ログ機密性ポリシー + logMasker実装)
+- 2026-07-25-04-feat-ci-security-review-checklist.md (CI/CDセキュリティチェックリスト作成)
+- 2026-07-25-03-fix-cws-publish-reliability.md (CWS公開ステップ信頼性向上)
+- 2026-07-25-02-fix-oauth-response-log-leak.md (OAuthログ漏洩防止)
+- 2026-07-25-01-fix-release-command-injection.md (コマンドインジェクション修正)
 - 2026-07-23-05-fix-remove-unused-exports.md (未使用エクスポート82個+型34個の削除)
 - 2026-07-23-04-fix-remove-unused-files.md (未使用ファイル6個の削除)
 - 2026-07-23-03-fix-remove-unused-dependencies.md (未使用依存パッケージ6個の削除)
@@ -117,5 +117,5 @@
 |---|---|
 | ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
-| ✅ 完了 | 8 |
-| アーカイブ済み | 100 |
+| ✅ 完了 | 0 |
+| アーカイブ済み | 108 |
