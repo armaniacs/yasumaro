@@ -17,6 +17,14 @@
 | [2026-07-23-03-fix-remove-unused-dependencies.md](2026-07-23-03-fix-remove-unused-dependencies.md) | 🟢低 | 🟢なし | ✅ |
 | [2026-07-23-04-fix-remove-unused-files.md](2026-07-23-04-fix-remove-unused-files.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-23-05-fix-remove-unused-exports.md](2026-07-23-05-fix-remove-unused-exports.md) | 🔴高 | 🟡軽微 | ✅ |
+| [2026-07-25-01-fix-release-command-injection.md](2026-07-25-01-fix-release-command-injection.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-02-fix-oauth-response-log-leak.md](2026-07-25-02-fix-oauth-response-log-leak.md) | 🟢低 | 🟢なし | ✅ |
+| [2026-07-25-03-fix-cws-publish-reliability.md](2026-07-25-03-fix-cws-publish-reliability.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-04-feat-ci-security-review-checklist.md](2026-07-25-04-feat-ci-security-review-checklist.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-05-feat-log-sensitivity-policy.md](2026-07-25-05-feat-log-sensitivity-policy.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-06-feat-external-api-reliability-guideline.md](2026-07-25-06-feat-external-api-reliability-guideline.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-07-feat-eslint-rule-testing-guideline.md](2026-07-25-07-feat-eslint-rule-testing-guideline.md) | 🟡中 | 🟢なし | ✅ |
+| [2026-07-25-08-feat-cwe-classification-guideline.md](2026-07-25-08-feat-cwe-classification-guideline.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-25-09-doc-api-endpoint-documentation.md](2026-07-25-09-doc-api-endpoint-documentation.md) | 🟢低 | 🟢なし | ⬜ |
 | [2026-07-25-10-fix-magic-numbers-extraction.md](2026-07-25-10-fix-magic-numbers-extraction.md) | 🟢低 | 🟢なし | ⬜ |
 | [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | 🟡中 | 🟢なし | ⬜ |
@@ -145,5 +153,5 @@
 |---|---|
 | ⬜ 未着手 | 28 |
 | 🔶 部分実装 | 0 |
-| ✅ 完了 | 5 |
-| アーカイブ済み | 108 |
+| ✅ 完了 | 8 |
+| アーカイブ済み | 83 |
