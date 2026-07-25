@@ -33,10 +33,11 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "minor=$(echo "$VERSION" | cut -d. -f2)" >> $GITHUB_OUTPUT
       - name: Check if minor version is even
         id: minor_check
         run: |
-          MINOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f2)
+          MINOR="${{ steps.version.outputs.minor }}"
           if [ $((MINOR % 2)) -eq 0 ]; then
             echo "is_even=true" >> $GITHUB_OUTPUT
           else
@@ -50,12 +51,13 @@ jobs:
       - name: Sign CRX with private key
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
           node .github/workflows/build-crx3.mjs \
-            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip \
+            "dist/yasumaro-${VERSION}-chrome.zip" \
             /tmp/private.pem \
-            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
+            "dist/yasumaro-${VERSION}-chrome.crx"
           rm /tmp/private.pem
       - name: Build for Firefox
         run: npx wxt zip -b firefox
@@ -88,20 +90,21 @@ jobs:
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          FULL_RESP=$(curl -s -X POST https://oauth2.googleapis.com/token \
+          FULL_RESP=$(curl -s --connect-timeout 10 --max-time 30 -X POST https://oauth2.googleapis.com/token \
             -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token")
           ACCESS_TOKEN=$(echo "${FULL_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
           if [ -z "${ACCESS_TOKEN}" ]; then
-            echo "Auth failed. Full response:"
-            echo "${FULL_RESP}" | python3 -m json.tool
+            echo "Auth failed. Error details:"
+            echo "${FULL_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); [d.pop(k,None) for k in ('access_token','refresh_token','client_secret','id_token')]; print(f\"Error: {d['error']}\") if 'error' in d else None; print(f\"Description: {d['error_description']}\") if 'error_description' in d else None; print(f\"URI: {d['error_uri']}\") if 'error_uri' in d else None; print('Unknown error - response sanitized') if not any(k in d for k in ('error','error_description','error_uri')) else None" 2>/dev/null || echo 'Failed to parse error response'
             exit 1
           fi
 
-          CRX_FILE="dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx"
+          CRX_FILE="dist/yasumaro-${VERSION}-chrome.crx"
           ITEM_PATH="publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}"
 
-          UPLOAD_RESP=$(curl -s -X POST \
+          UPLOAD_RESP=$(curl -s --connect-timeout 10 --max-time 300 -X POST \
             "https://chromewebstore.googleapis.com/upload/v2/${ITEM_PATH}:upload" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "X-Goog-Upload-Protocol: raw" \
@@ -109,18 +112,33 @@ jobs:
             -T "${CRX_FILE}")
           UPLOAD_STATUS=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
           echo "Upload: ${UPLOAD_STATUS}"
-          if [ "${UPLOAD_STATUS}" != "SUCCEEDED" ] && [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
-            echo "Error detail:"
-            echo "${UPLOAD_RESP}"
+
+          if [ "${UPLOAD_STATUS}" = "IN_PROGRESS" ]; then
+            for i in {1..30}; do
+              sleep 10
+              STATUS_RESP=$(curl -s --connect-timeout 10 --max-time 30 -X GET \
+                "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}" \
+                -H "Authorization: Bearer ${ACCESS_TOKEN}")
+              UPLOAD_STATUS=$(echo "${STATUS_RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uploadState','UNKNOWN'))")
+              echo "Upload status check ${i}/30: ${UPLOAD_STATUS}"
+              if [ "${UPLOAD_STATUS}" != "IN_PROGRESS" ]; then
+                break
+              fi
+            done
+          fi
+
+          if [ "${UPLOAD_STATUS}" != "SUCCEEDED" ]; then
+            echo "Upload failed with status: ${UPLOAD_STATUS}"
+            echo "${UPLOAD_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); [d.pop(k,None) for k in ('access_token','refresh_token','client_secret','id_token')]; print(json.dumps(d,indent=2))" 2>/dev/null || echo "${UPLOAD_RESP}"
             exit 1
           fi
 
-          PUBLISH_RESP=$(curl -s -X POST \
+          PUBLISH_RESP=$(curl -s --connect-timeout 10 --max-time 60 -X POST \
             "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"publishType":"DEFAULT_PUBLISH"}')
-          echo "Publish response: ${PUBLISH_RESP}"
+          echo "Publish response received"
           PUBLISH_ERROR=$(echo "${PUBLISH_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message','')) if isinstance(d, dict) else print('')" 2>/dev/null || echo '')
           if [ -n "${PUBLISH_ERROR}" ]; then
             echo "Publish failed: ${PUBLISH_ERROR}"
