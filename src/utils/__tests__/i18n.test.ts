@@ -147,6 +147,60 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Test Message');
     });
 
+    it('countを含むdata-i18n-argsで英語ロケール時に複数形キーが解決される', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('en-US');
+      global.chrome.i18n.getMessage.mockImplementation((key) => {
+        const messages = {
+          'itemCount_one': '1 item',
+          'itemCount_other': '{count} items',
+        };
+        return messages[key] || '';
+      });
+
+      const singular = document.createElement('div');
+      singular.setAttribute('data-i18n', 'itemCount');
+      singular.setAttribute('data-i18n-args', '{"count":"1"}');
+      document.body.appendChild(singular);
+
+      const plural = document.createElement('div');
+      plural.setAttribute('data-i18n', 'itemCount');
+      plural.setAttribute('data-i18n-args', '{"count":"5"}');
+      document.body.appendChild(plural);
+
+      applyI18n();
+
+      expect(singular.textContent).toBe('1 item');
+      expect(plural.textContent).toBe('5 items');
+    });
+
+    it('日本語ロケールではcountがあっても複数形サフィックスなしのキーが使われる', () => {
+      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
+      global.chrome.i18n.getMessage.mockImplementation((key) => {
+        const messages = { 'itemCount': '{count}件' };
+        return messages[key] || '';
+      });
+
+      const div = document.createElement('div');
+      div.setAttribute('data-i18n', 'itemCount');
+      div.setAttribute('data-i18n-args', '{"count":"5"}');
+      document.body.appendChild(div);
+
+      applyI18n();
+
+      expect(div.textContent).toBe('5件');
+    });
+
+    it('countを含まないdata-i18n-argsは従来通り動作する', () => {
+      const div = document.createElement('div');
+      div.setAttribute('data-i18n', 'testWithArgs');
+      div.setAttribute('data-i18n-args', '{"name":"NoCount"}');
+      document.body.appendChild(div);
+
+      applyI18n();
+
+      expect(div.textContent).toBe('Hello NoCount');
+    });
+
     it('data-i18n属性を持つIMG要素のtitleを翻訳する', () => {
       const img = document.createElement('img');
       img.setAttribute('data-i18n', 'testKey');
