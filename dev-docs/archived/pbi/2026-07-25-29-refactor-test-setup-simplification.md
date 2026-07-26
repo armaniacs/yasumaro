@@ -1,9 +1,38 @@
 # PBI: vitest.setup.tsのchrome.i18nメッセージモックを_locales/ja/messages.jsonから自動生成する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（既存テストのi18nメッセージ取得結果が変わらないことを確認する必要がある）
+
+## 実装メモ（2026-07-26）
+
+PBI記載では `_locales/ja/messages.json` ベースを想定していたが、実装中に以下を発見し `_locales/en/messages.json`
+ベースに設計変更した:
+
+- `getPluralKey()`（`src/utils/i18nPlural.ts`）は `chrome.i18n.getUILanguage()` が `'en'` の場合のみ
+  `_one`/`_other` サフィックス付きキーを使う。既存モックの `getUILanguage` は `'en'` を返す実装になっており、
+  複数形キー（`ruleCount_one` 等）は `en/messages.json` にのみ存在し `ja/messages.json` には存在しない
+  （日本語は複数形区別がないため）。
+- また、実コードの `chrome.i18n.getMessage` 呼び出しには2パターンが混在することを確認した:
+  1. `chrome.i18n.getMessage(key, [array])` — Chrome標準の `$1`/`$2` 位置プレースホルダー
+  2. `getMessage(key, {count: ...})`（`src/utils/i18n.ts` のラッパー経由）— ラッパー内部で
+     `chrome.i18n.getMessage(key)`（引数なし）を呼んでから `{name}` 形式で独自に置換
+  このため、モックの `chrome.i18n.getMessage` 自体は `{name}` 置換を行わず、`message` 文字列をそのまま返す
+  必要がある（`placeholders` 定義がある場合のみ `$NAME$` を配列引数から位置置換）。
+
+`testDir/vitest.setup.ts` に `buildGetMessageMock()` ヘルパーを追加し、`en/messages.json` を
+`with { type: 'json' }` でimportして動的生成する方式に変更。393-656行のハードコードされたメッセージ
+オブジェクト（80件超）を削除し、717行→530行に削減した。
+
+回帰確認で12件のテスト失敗を発見したが、いずれも旧モックが「日本語文字列＋英語キー」の中途半端な混在状態
+だったことに起因する壊れやすいテスト（モックの中身に依存し、実装のフォールバック文言と食い違っていた）
+だったため、実際に返る英語文字列に合わせてテスト側を修正した（`errorMessages.test.ts` 5件、
+`cleansingStatsView.test.ts` 5件、`confirmDialog.test.ts` 1件、`popup-xss.test.ts`/`i18n.test.ts` は
+`global.chrome` を独自に上書きしており無関係と確認）。
+
+最終的に全7359件パス（18件skip）、型チェックも通過。
 
 ---
 

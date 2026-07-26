@@ -64,13 +64,13 @@ describe('errorMessages', () => {
     describe('getUserMessage', () => {
         it('should return user-friendly message for network errors', () => {
             const message = getUserMessage({ message: 'Network error' });
-            expect(message).toContain('ネットワーク');
+            expect(message).toContain('network');
             expect(message).not.toContain('Network error');
         });
 
         it('should return user-friendly message for auth errors', () => {
             const message = getUserMessage({ message: 'Invalid API key' });
-            expect(message).toContain('認証');
+            expect(message).toContain('authentication');
         });
 
         it('should not expose technical details', () => {
@@ -86,7 +86,7 @@ describe('errorMessages', () => {
             const response = createErrorResponse(error, { url: 'https://example.com' } as ErrorContext);
 
             expect(response.success).toBe(false);
-            expect(response.error).toContain('ネットワーク');
+            expect(response.error).toContain('network');
             expect(response.error).not.toContain('Network connection failed');
             expect(response.errorType).toBe(ErrorType.NETWORK);
         });
@@ -109,7 +109,7 @@ describe('errorMessages', () => {
     describe('convertKnownErrorMessage', () => {
         it('should convert domain blocked error', () => {
             const message = convertKnownErrorMessage('Domain blocked by filter');
-            expect(message).toContain('ブロック');
+            expect(message).toContain('blocked');
         });
 
         it('should convert Obsidian connection error', () => {
@@ -119,7 +119,7 @@ describe('errorMessages', () => {
 
         it('should convert AI summarization error', () => {
             const message = convertKnownErrorMessage('AI summarization failed');
-            expect(message).toContain('AI要約');
+            expect(message).toContain('AI summary');
         });
 
         it('should handle empty input', () => {
