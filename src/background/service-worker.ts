@@ -69,8 +69,8 @@ import type {
 } from './handlers/messageHandlers.js';
 import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
-import { sharedOfflineNetworkQueue, type OfflineJob } from './offlineNetworkQueue.js';
-import type { RecordingData } from '../messaging/types.js';
+import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 
 // ============================================================================
@@ -208,8 +208,10 @@ const sqliteClient = getSharedSqliteClient();
 const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
-// Import RecordingPipeline
-import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+const processOfflineNetworkQueue = createOfflineQueueProcessor({
+    offlineNetworkQueue: sharedOfflineNetworkQueue,
+    recordingLogic,
+});
 
 // TabCache for storing tab data
 const tabCache = new TabCache(sessionStore);
@@ -435,54 +437,6 @@ export const handleDashboardSqlite = ((message: Record<string, unknown>, sender:
   })();
 });
 registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
-
-// ============================================================================
-// Offline Network Queue Retry
-// ============================================================================
-
-async function processOfflineNetworkQueue(): Promise<void> {
-  await sharedOfflineNetworkQueue.retryAll(async (job: OfflineJob) => {
-    const payload = job.payload as {
-      title: string;
-      url: string;
-      content: string;
-      summary?: string;
-      maskedCount?: number;
-      tags?: string[];
-    };
-
-    // obsidian_sync jobs mean the AI summary already succeeded and only the
-    // Obsidian append failed — retry that write only, without re-calling the
-    // AI provider. Jobs queued before this field existed (or with a missing
-    // summary) fall through to the full pipeline for backward compatibility.
-    if (job.type === 'obsidian_sync' && payload.summary) {
-      try {
-        return await recordingLogic.retryObsidianWriteOnly({
-          title: payload.title,
-          url: payload.url,
-          summary: payload.summary,
-          tags: payload.tags,
-        });
-      } catch {
-        return false;
-      }
-    }
-
-    try {
-      const result = await recordingLogic.record({
-        title: payload.title,
-        url: payload.url,
-        content: payload.content,
-        force: true,
-        skipDuplicateCheck: true,
-        recordType: 'manual',
-      } as RecordingData);
-      return result.success && !result.skipped;
-    } catch {
-      return false;
-    }
-  });
-}
 
 // ============================================================================
 // Message Handler (wraps registry with validation)

@@ -440,6 +440,33 @@ Task単位で個別コミットする（3コミット、この順序を厳守）
 2. `refactor(background): TabCacheを遅延初期化パターンへ移行（試験導入）`（Task 2）
 3. `fix(background): isCacheInitializedをchrome.storage.sessionへ永続化`（Task 3、Step 1の判断次第で内容変わる）
 
+## Deep-dig セッション記録（2026-07-27）
+
+PBI-29/36/35 の実装前に deep-dig スキルで仮定・リスクを洗い出した。以下が決定事項。
+
+### 挑戦した仮定
+
+| 仮定 | リスク | 発見 | 決定 |
+|------|--------|------|------|
+| PBI-29 のみ実装すればよい | 高 | PBI-29/36/35 は同一ファイル対象で順序依存あり | **Task 1→2→3 を続けて実装**。コミットは Task 単位で 3 つ |
+| アラームディスパッチも同時に抽出すべき | 中 | 6 分支は異なる責務（purge/export/queue/health）を呼び出す | **オフラインキュー本体のみ抽出**。アラーム名分岐は service-worker.ts に残す |
+| 新規テストは service-worker.test.ts に統合すれば十分 | 中 | 抽出モジュールの独立テストがないと責務の分離が検証できない | **offlineQueueProcessor.test.ts を新規作成し、既存 alarm dispatch テストも維持** |
+| tabCacheFactory は SessionStore を自前生成できる | 高 | sessionStore は rateLimiter でも使われ、registerSuspendHandler の二重登録リスクがある | **`getTabCacheInstance(sessionStore)` とし、service-worker.ts 側の既存 sessionStore を共有** |
+| autoSavedBadgeTabs は永続化不要 | 中 | PBI-35 受け入れ基準に「SW 再起動後も維持」とある | **`autoSavedBadgeTabs` も chrome.storage.session に配列変換して永続化** |
+
+### 新たに発見したリスク
+
+- `isCacheInitialized` は `lifecycleHandlers.handleStartup()` で true にセットされる。永続化後もその代入箇所を正しくフックしないと、起動時の再初期化防止が機能しない。
+- `autoSavedBadgeTabs` は `Set<number>` なので、chrome.storage.session には配列として保存・復元する必要がある。復元後に存在しないタブ ID が残っていても、`tabEventHandlers` の `onRemoved`/`onUpdated` で削除される。
+- Task 2 で `SessionStore.registerSuspendHandler` が二重登録されると、Service Worker 再起動時の挙動が壊れる可能性がある。sessionStore の共有で回避する。
+
+### 決定事項
+
+1. Task 1: `offlineQueueProcessor.ts` を新設。`createOfflineQueueProcessor(deps)` ファクトリ形式。deps は `offlineNetworkQueue.retryAll` と `recordingLogic.record/retryObsidianWriteOnly` のみ。
+2. Task 2: `tabCacheFactory.ts` を新設。`getTabCacheInstance(sessionStore)` で遅延初期化。テスト用 `resetTabCacheInstanceForTesting()` を提供。
+3. Task 3: `swStatePersistence.ts` を新設。`isCacheInitialized` / `autoSavedBadgeTabs` の save/load ヘルパーを集約。service-worker.ts はこれらを呼び出すのみ。
+4. テスト: 各 Task ごとに単体テストを新規作成し、既存 `service-worker.test.ts` は回帰確認として維持・更新する。
+
 ## 実装者への注記
 
 - 3Taskは**必ずこの順序で**実施すること（PBI-29が推奨し、フェーズ0再調査でも妥当性を確認済み）
