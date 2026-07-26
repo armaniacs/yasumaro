@@ -42,11 +42,11 @@ Scenario: エラー発生時にtraceIdで関連ログを追跡できる
 ```
 
 ## 受け入れ基準
-- [ ] `RecordingContext`（またはパイプラインの共通コンテキスト型）に `traceId` フィールドを追加する
-- [ ] パイプライン開始時（`RecordingPipeline.ts` の実行開始箇所）で一意のtraceIdを発行する
-- [ ] 各ステップ（`src/background/pipeline/steps/` 配下の全ファイル）のログ出力（`addLog` 呼び出し）にtraceIdを含める
-- [ ] Offscreen・AI API呼び出し・Obsidian API呼び出しのログにもtraceIdを伝播させる
-- [ ] 既存のパイプライン関連テストが全てパスする
+- [x] `RecordingContext`（またはパイプラインの共通コンテキスト型）に `traceId` フィールドを追加する
+- [x] パイプライン開始時（`RecordingPipeline.ts` の実行開始箇所）で一意のtraceIdを発行する
+- [x] 各ステップ（`src/background/pipeline/steps/` 配下の全ファイル）のログ出力（`addLog` 呼び出し）にtraceIdを含める
+- [ ] Offscreen・AI API呼び出し・Obsidian API呼び出しのログにもtraceIdを伝播させる（別途対応）
+- [x] 既存のパイプライン関連テストが全てパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,11 +75,28 @@ Scenario: エラー発生時にtraceIdで関連ログを追跡できる
 - テスタビリティ: 既存のパイプラインテストが土台
 - 非機能要件: 可観測性（SRE/Ops）
 
+## 実装進捗メモ（2026-07-27）
+
+- `RecordingContext` に `traceId?: string` を追加。
+- `RecordingPipeline.executeInternal()` 開始時に `crypto.randomUUID()` で traceId を発行し、初期 context に設定。
+- `LogEntry` に `traceId?: string` を追加。`addLog()` は details 内の `traceId` をトップレベルに抽出して保存。
+- `src/background/pipeline/steps/` 配下11ファイルの35箇所の `addLog()` 呼び出しに `traceId: context.traceId` を追加。
+- `SaveSqliteStepParams` / `saveSqliteStep` に `traceId` を追加し、RecordingPipeline から渡すように変更。
+- テストを追加:
+  - `logger-enhanced.test.ts`: `addLog` が details 内の `traceId` をトップレベルに抽出すること
+  - `RecordingPipeline.test.ts`: パイプライン開始時に traceId が発行され、全ステップのログに同一の traceId が含まれること
+  - `testDir/e2e/recording-traceId.spec.ts`: Playwright E2E で実際の Chrome 拡張機能を読み込み、テストページの記録処理が走った後に Service Worker の `sanitization_logs` を読み取り、同一 URL のログが同一 traceId を持つことを検証
+- `npm run validate` 成功（7285 passed / 18 skipped）。
+
+### 未実施（別途対応）
+
+AI Provider（`src/background/ai/providers/*`）、`ObsidianClient`、`SqliteClient` → Offscreen 間のログへの traceId 伝播は、これらのコンポーネントが `RecordingContext` を持たないため、メソッドシグネチャの拡張または専用ログコンテキストの導入が必要。PBI 本文の「Offscreen/外部API連携は別PBIとして分割することも検討する」に従い、本段階ではコアパイプラインのログ相関を優先。
+
 ## Definition of Done
-- [ ] RecordingContextにtraceIdが追加されている
-- [ ] 主要なパイプラインステップのログにtraceIdが含まれている
-- [ ] 既存テストが全てパスする
-- [ ] `pbi/00-INDEX.md` が更新されている
+- [x] RecordingContextにtraceIdが追加されている
+- [x] 主要なパイプラインステップのログにtraceIdが含まれている
+- [x] 既存テストが全てパスする
+- [x] `pbi/00-INDEX.md` が更新されている（部分実装として記録）
 
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（SRE/Ops Specialist指摘）

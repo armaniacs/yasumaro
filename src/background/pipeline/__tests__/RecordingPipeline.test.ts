@@ -228,6 +228,59 @@ describe('RecordingPipeline', () => {
     });
   });
 
+  describe('traceId', () => {
+    it('パイプライン開始時に一意の traceId が発行される', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      await pipeline.execute({
+        title: 'Test',
+        url: 'https://example.com',
+        content: 'Some content',
+      }, mockSettings);
+
+      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
+      expect(traceIds.size).toBe(1);
+      const traceId = Array.from(traceIds)[0];
+      expect(typeof traceId).toBe('string');
+      expect((traceId as string).length).toBeGreaterThan(0);
+    });
+
+    it('全パイプラインステップのログに同一の traceId が含まれる', async () => {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      await pipeline.execute({
+        title: 'Test',
+        url: 'https://example.com',
+        content: 'Some content',
+      }, mockSettings);
+
+      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const traceIds = calls.map((call: any[]) => call[2]?.traceId).filter(Boolean);
+      expect(traceIds.length).toBeGreaterThan(0);
+      const firstTraceId = traceIds[0];
+      expect(traceIds.every((id: string) => id === firstTraceId)).toBe(true);
+    });
+  });
+
   describe('previewOnly モード', () => {
     it('processedContent と maskedItems を返す', async () => {
       mockProcess.mockResolvedValue({

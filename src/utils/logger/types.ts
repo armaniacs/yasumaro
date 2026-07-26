@@ -105,4 +105,5 @@ export interface LogEntry {
     details?: Record<string, unknown>;
     source?: string; // ログ出力元モジュール
     userId?: string; // ユーザー識別子（匿名化済み）
+    traceId?: string; // パイプライン等のトレース/相関ID
 }

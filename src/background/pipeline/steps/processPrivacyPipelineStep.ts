@@ -64,7 +64,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
     addLog(LogType.ERROR, 'Privacy pipeline failed', {
       error: errorMessage(error),
       url: data.url,
-      previewOnly
+      previewOnly,
+      traceId: context.traceId
     });
 
     if (previewOnly) {

@@ -94,7 +94,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
     } catch (error: unknown) {
       results.failed.push('savedUrlsWithTimestamps');
       addLog(LogType.WARN, 'Failed to save savedUrlsWithTimestamps entry', {
-        error: errorMessage(error), url
+        error: errorMessage(error), url, traceId: context.traceId
       });
       // PBI-13: retry via pendingChromeStorageQueue instead of dropping the write
       await enqueuePendingWrite({
@@ -111,7 +111,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
       results.success.push(name);
     } catch (error: unknown) {
       results.failed.push(name);
-      addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage(error), url });
+      addLog(LogType.WARN, `Failed to save ${name}`, { error: errorMessage(error), url, traceId: context.traceId });
     }
   };
 
@@ -133,13 +133,13 @@ export const saveMetadataStep: PipelineStepFunction = async (
   // Save tags
   if (privacyResult?.tags && privacyResult.tags.length > 0) {
     await save('tags', setUrlTags(url, privacyResult.tags));
-    addLog(LogType.INFO, 'Tags saved', { url, tags: privacyResult.tags });
+    addLog(LogType.INFO, 'Tags saved', { url, tags: privacyResult.tags, traceId: context.traceId });
   }
 
   // Save AI summary
   if (privacyResult?.summary) {
     await save('aiSummary', setUrlAiSummary(url, privacyResult.summary));
-    addLog(LogType.INFO, 'AI summary saved', { url });
+    addLog(LogType.INFO, 'AI summary saved', { url, traceId: context.traceId });
   }
 
   // Save tokens
@@ -218,7 +218,8 @@ export const saveMetadataStep: PipelineStepFunction = async (
       url,
       success: results.success.length,
       failed: results.failed.length,
-      failedItems: results.failed
+      failedItems: results.failed,
+      traceId: context.traceId
     });
   }
 

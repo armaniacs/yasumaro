@@ -345,6 +345,10 @@ export async function addLog<T extends object = Record<string, unknown>>(type: L
 
         const sanitizedMessage = await sanitizeRegex(message);
 
+        // traceId はログ検索・相関用に details から分離してトップレベルに保持
+        const { traceId: traceIdValue, ...restDetails } = details as Record<string, unknown>;
+        const traceId = typeof traceIdValue === 'string' ? traceIdValue : undefined;
+
         const entry: LogEntry = {
             id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
                 ? crypto.randomUUID()
@@ -352,7 +356,8 @@ export async function addLog<T extends object = Record<string, unknown>>(type: L
             timestamp: Date.now(),
             type,
             message: sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
-            details: await sanitizeLogDetails(details as Record<string, unknown>)
+            details: await sanitizeLogDetails(restDetails),
+            traceId
         };
 
         // バッファに追加（上限超過時は古いエントリを破棄）

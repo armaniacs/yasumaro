@@ -29,7 +29,7 @@ export const extractSentencesStep: PipelineStepFunction = async (
   const l0Enabled = settings[StorageKeys.L0_EXTRACTIVE_ENABLED] ?? true;
 
   if (!l0Enabled) {
-    addLog(LogType.INFO, 'L0 extractive compression disabled by settings', { url });
+    addLog(LogType.INFO, 'L0 extractive compression disabled by settings', { url, traceId: context.traceId });
     return context;
   }
 
@@ -38,7 +38,7 @@ export const extractSentencesStep: PipelineStepFunction = async (
   const contentToExtract = sanitizedSummary || privacyResult?.summary || truncatedContent || '';
 
   if (!contentToExtract || !contentToExtract.trim()) {
-    addLog(LogType.WARN, 'No content available for L0 extraction', { url });
+    addLog(LogType.WARN, 'No content available for L0 extraction', { url, traceId: context.traceId });
     return context;
   }
 
@@ -61,7 +61,8 @@ export const extractSentencesStep: PipelineStepFunction = async (
       url,
       contentLength: contentToExtract.length,
       extractedCount: extracted.length,
-      extractedPreview: extracted.slice(0, 2).join(' | ').substring(0, 200)
+      extractedPreview: extracted.slice(0, 2).join(' | ').substring(0, 200),
+      traceId: context.traceId
     });
 
     const endTime = performance.now();
@@ -74,7 +75,8 @@ export const extractSentencesStep: PipelineStepFunction = async (
       addLog(LogType.WARN, 'L0 extraction exceeded performance threshold, using fallback', {
         url,
         duration,
-        threshold: performanceThreshold
+        threshold: performanceThreshold,
+        traceId: context.traceId
       });
       // Still return extracted sentences but log warning
     }
@@ -89,7 +91,8 @@ export const extractSentencesStep: PipelineStepFunction = async (
       compressionRatio: stats.compressionRatio.toFixed(2),
       sentenceCount: stats.sentenceCount,
       extractedSentencesCount: stats.extractedCount,
-      duration: duration.toFixed(2)
+      duration: duration.toFixed(2),
+      traceId: context.traceId
     });
 
     // If extracted sentences is empty or very small, log warning
@@ -98,7 +101,8 @@ export const extractSentencesStep: PipelineStepFunction = async (
         url,
         extractedSentencesCount: extracted.length,
         extractedLength: stats.extractedLength,
-        contentLength: contentToExtract.length
+        contentLength: contentToExtract.length,
+        traceId: context.traceId
       });
     }
 
@@ -119,7 +123,8 @@ export const extractSentencesStep: PipelineStepFunction = async (
     
     addLog(LogType.ERROR, 'L0 extraction failed, using fallback', {
       url,
-      error: errorMessage
+      error: errorMessage,
+      traceId: context.traceId
     });
 
     // Add to errors but don't fail the pipeline (RETRY strategy fallback)

@@ -28,7 +28,7 @@ export class PrivacyHeadersChecker {
     // force=true の場合はプライバシーチェックをスキップして記録を許可する
     // （「それでも記録」ボタンや手動記録操作など、ユーザーが明示的に記録を指示した場合）
     if (force) {
-      addLog(LogType.WARN, 'Force recording - bypassing privacy check', { url });
+      addLog(LogType.WARN, 'Force recording - bypassing privacy check', { url, traceId: context.traceId });
       return context;
     }
 
@@ -39,7 +39,7 @@ export class PrivacyHeadersChecker {
     if (whitelist.length > 0) {
       const domain = this.extractDomain(url);
       if (domain && whitelist.includes(domain)) {
-        addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', { url, domain });
+        addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', { url, domain, traceId: context.traceId });
         shouldSkipPrivacyCheck = true;
       }
     }
@@ -59,7 +59,8 @@ export class PrivacyHeadersChecker {
     addLog(LogType.WARN, 'Private page detected', {
       url,
       reason: privacyInfo.reason,
-      requireConfirmation
+      requireConfirmation,
+      traceId: context.traceId
     });
 
     // Handle based on requireConfirmation flag
@@ -96,7 +97,7 @@ export class PrivacyHeadersChecker {
     }
 
     // 'save' - continue
-    addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url });
+    addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url, traceId: context.traceId });
 
     return context;
   }

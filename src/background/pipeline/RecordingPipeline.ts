@@ -222,7 +222,8 @@ export class RecordingPipeline {
     return async (context: RecordingContext): Promise<RecordingContext> => {
       if (!this.sqliteClient) {
         addLog(LogType.WARN, 'No SqliteClient available, skipping SQLite save', {
-          url: context.data.url
+          url: context.data.url,
+          traceId: context.traceId
         });
         return context;
       }
@@ -232,10 +233,11 @@ export class RecordingPipeline {
         recordId: 0,
         record,
         sqliteClient: this.sqliteClient,
-        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined
+        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
+        traceId: context.traceId
       });
 
-      addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title });
+      addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title, traceId: context.traceId });
       return context;
     };
   }
@@ -280,12 +282,17 @@ export class RecordingPipeline {
   }
 
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
-    // Create initial context
+    // Create initial context with a trace ID for cross-step log correlation
+    const traceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : (() => { const a = new Uint32Array(2); if (typeof crypto !== 'undefined') crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })();
+
     let context: RecordingContext = {
       data,
       settings,
       force: data.force || false,
       aiService: this.aiService,
+      traceId,
       errors: [],
     };
 
@@ -339,7 +346,8 @@ export class RecordingPipeline {
 
         addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, {
           error: (error as Error).message,
-          url: data.url
+          url: data.url,
+          traceId: context.traceId
         });
       }
     }
@@ -366,7 +374,8 @@ export class RecordingPipeline {
           const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000); // Exponential backoff with 5s cap
           addLog(LogType.INFO, `Retrying step ${step.name} (attempt ${retries}/${step.maxRetries})`, {
             delayMs,
-            url: context.data.url
+            url: context.data.url,
+            traceId: context.traceId
           });
           await delay(delayMs);
           continue;
@@ -406,12 +415,14 @@ export class RecordingPipeline {
       addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${stepName}`, {
         url: context.data.url,
         type,
+        traceId: context.traceId,
       });
     } catch (enqueueError) {
       addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
         url: context.data.url,
         type,
         error: enqueueError instanceof Error ? enqueueError.message : String(enqueueError),
+        traceId: context.traceId,
       });
     }
   }
@@ -480,7 +491,8 @@ export class RecordingPipeline {
       addLog(LogType.INFO, 'Pipeline completed with non-fatal errors', {
         url: data.url,
         errorCount: errors.length,
-        errorSteps: errors.map(e => e.step)
+        errorSteps: errors.map(e => e.step),
+        traceId: context.traceId
       });
     }
 

@@ -133,8 +133,18 @@ Scenario: popup固有の機能は維持される
 - `npm run build`: 成功（popup.html 15.2 kB に縮小）
 
 ### 未実施（本環境では実行不可）
-- 実ブラウザでの popup→dashboard 遷移確認
 - ダッシュボードですべての設定項目が編集・保存できることの手動確認
+
+### 追記（2026-07-27）
+- Playwright E2E テストを追加し、実ブラウザでの popup→dashboard 遷移を自動化:
+  - `testDir/e2e/popup-pbi27.spec.ts`
+  - `testDir/e2e/fixtures/popup-pbi27.fixture.ts`
+- 検証内容:
+  - popup に inline の `#settingsScreen` が存在しないこと
+  - `#menuBtn` クリックで `options.html` が新規タブで開かれ `window.close()` が呼ばれること
+  - `#historyBtn` クリックで `options.html?tab=history` が新規タブで開かれること
+  - `#recordBtn` は mainScreen 内で動作し、ダッシュボードを開かないこと
+- `npx playwright test --grep @extension testDir/e2e/popup-pbi27.spec.ts` → 4 passed
 
 ## テスト戦略（t_wadaスタイル）
 

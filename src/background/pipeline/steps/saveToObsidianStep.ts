@@ -28,7 +28,7 @@ export const saveToObsidianStep = async (
   const { url, title } = data;
 
   if (!markdown) {
-    addLog(LogType.WARN, 'No markdown to save to Obsidian', { url });
+    addLog(LogType.WARN, 'No markdown to save to Obsidian', { url, traceId: context.traceId });
     return context;
   }
 
@@ -36,7 +36,7 @@ export const saveToObsidianStep = async (
   const settings = context.settings as Record<string, unknown>;
   const obsidianEnabled = settings[StorageKeys.OBSIDIAN_ENABLED];
   if (obsidianEnabled === false) {
-    addLog(LogType.INFO, 'Obsidian disabled by user, skipping save', { url });
+    addLog(LogType.INFO, 'Obsidian disabled by user, skipping save', { url, traceId: context.traceId });
     return context;
   }
 
@@ -45,7 +45,7 @@ export const saveToObsidianStep = async (
   if (!obsidian) {
     const obsidianApiKey = settings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
     if (!obsidianApiKey || obsidianApiKey.length < 16) {
-      addLog(LogType.INFO, 'Obsidian not configured, skipping save', { url });
+      addLog(LogType.INFO, 'Obsidian not configured, skipping save', { url, traceId: context.traceId });
       return context;
     }
   }
@@ -57,7 +57,7 @@ export const saveToObsidianStep = async (
   try {
     await obsidianClient.appendToDailyNote(markdown);
     const obsidianDuration = Date.now() - obsidianStart;
-    addLog(LogType.INFO, 'Saved to Obsidian', { title, url });
+    addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });
 
     // Create notification after successful save
     const notificationTitle = chrome.i18n.getMessage('saveToObsidian') || 'Saved to Obsidian';
@@ -68,7 +68,8 @@ export const saveToObsidianStep = async (
     addLog(LogType.ERROR, 'Failed to save to Obsidian', {
       error: errorMessage(error),
       url,
-      title
+      title,
+      traceId: context.traceId
     });
     throw error instanceof Error ? error : new Error(errorMessage(error));
   }
