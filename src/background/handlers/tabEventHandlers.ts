@@ -13,7 +13,10 @@ import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface TabHandlerContext {
     tabCache: TabCache;
-    autoSavedBadgeTabs: Set<number>;
+    autoSavedBadgeTabs: {
+        has: (tabId: number) => boolean;
+        delete: (tabId: number) => void;
+    };
 }
 
 export function createTabEventHandlers(ctx: TabHandlerContext) {

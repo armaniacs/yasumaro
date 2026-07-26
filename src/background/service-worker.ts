@@ -71,6 +71,7 @@ import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
+import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 
 // ============================================================================
@@ -216,8 +217,8 @@ const processOfflineNetworkQueue = createOfflineQueueProcessor({
 // TabCache for storing tab data (lazy-initialized singleton)
 const tabCache = getTabCacheInstance(sessionStore);
 
-// 自動保存成功バッジを表示中のタブIDセット
-const autoSavedBadgeTabs = new Set<number>();
+// 自動保存成功バッジを表示中のタブIDセット（SW再起動をまたいで永続化）
+const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
 
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
@@ -229,8 +230,9 @@ const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 const rateLimiter = new RateLimiter(sessionStore);
 rateLimiter.initialize();
 
-// Track whether cache has been initialized (for startup rehydration)
-let isCacheInitialized = false;
+// Track whether cache has been initialized (for startup rehydration; persisted
+// across Service Worker restarts via chrome.storage.session)
+const isCacheInitialized = createCacheInitializedFlag();
 
 const manualContentFetcher = new ManualContentFetcher();
 
@@ -530,7 +532,7 @@ export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 // ============================================================================
 
 const _lifecycleHandlers = createLifecycleHandlers({
-    isCacheInitialized: { get value() { return isCacheInitialized; }, set value(v: boolean) { isCacheInitialized = v; } },
+    isCacheInitialized,
     rateLimiter,
     sqliteClient,
 });
