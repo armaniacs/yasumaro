@@ -13,7 +13,8 @@ import { getPluralKey } from '../utils/i18nPlural.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
-import { queryLogs } from './dashboardSqliteService.js';
+import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
+import { getPlatformOs } from '../utils/deviceUtils.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
@@ -571,6 +572,79 @@ interface LocalMarkdownExportOptions {
  * Queries SQLite for the given (or full) date range, groups results by
  * local date, and downloads one Markdown file per date.
  */
+/** Batch size for paginated full-history export (desktop). */
+const EXPORT_BATCH_SIZE_DESKTOP = 1000;
+/** Smaller batch size on mobile to reduce peak memory usage. */
+const EXPORT_BATCH_SIZE_MOBILE = 500;
+
+function getExportBatchSize(): number {
+  const os = getPlatformOs();
+  return os === 'android' || os === 'ios' ? EXPORT_BATCH_SIZE_MOBILE : EXPORT_BATCH_SIZE_DESKTOP;
+}
+
+/**
+ * Downloads one Markdown file for the given date's entries.
+ */
+async function downloadDateMarkdown(exportPath: string, date: string, entries: BrowsingLogEntry[]): Promise<void> {
+  const header = `# ${date}`;
+  const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
+
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const blobUrl = URL.createObjectURL(blob);
+
+  await chrome.downloads.download({
+    url: blobUrl,
+    filename: `${exportPath}/${date}.md`,
+    saveAs: false,
+    conflictAction: 'overwrite'
+  });
+
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+/**
+ * Streams the full history in batches (ordered by created_at ASC), grouping
+ * consecutive rows by local date and downloading one file per date as soon
+ * as the date changes. This keeps at most one batch + one date's worth of
+ * rows in memory at a time, instead of materializing the entire history.
+ * Returns the total row count and file count exported.
+ */
+async function exportFullHistoryInBatches(exportPath: string): Promise<{ totalRows: number; totalFiles: number }> {
+  const batchSize = getExportBatchSize();
+  let offset = 0;
+  let totalRows = 0;
+  let totalFiles = 0;
+  let pendingDate: string | null = null;
+  let pendingEntries: BrowsingLogEntry[] = [];
+
+  for (;;) {
+    const result = await queryLogs({ limit: batchSize, offset, orderBy: 'created_at', orderDir: 'ASC' });
+    if (!result || !('rows' in result) || result.rows.length === 0) break;
+
+    for (const row of result.rows) {
+      const date = getLocalDateString(row.created_at);
+      if (pendingDate !== null && date !== pendingDate) {
+        await downloadDateMarkdown(exportPath, pendingDate, pendingEntries);
+        totalFiles++;
+        pendingEntries = [];
+      }
+      pendingDate = date;
+      pendingEntries.push(row);
+    }
+
+    totalRows += result.rows.length;
+    if (result.rows.length < batchSize) break;
+    offset += batchSize;
+  }
+
+  if (pendingDate !== null && pendingEntries.length > 0) {
+    await downloadDateMarkdown(exportPath, pendingDate, pendingEntries);
+    totalFiles++;
+  }
+
+  return { totalRows, totalFiles };
+}
+
 async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Promise<void> {
   const exportBtn = document.getElementById(options.exportBtnId) as HTMLButtonElement | null;
   const statusEl = document.getElementById(options.statusElId) as HTMLElement | null;
@@ -587,22 +661,31 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
 
     statusEl.textContent = getMessage('searching') || 'Searching...';
 
-    const result = options.dateRange
-      ? await (async () => {
-          const startDateInput = document.getElementById(options.dateRange!.startDateId) as HTMLInputElement | null;
-          const endDateInput = document.getElementById(options.dateRange!.endDateId) as HTMLInputElement | null;
+    if (!options.dateRange) {
+      // Full-history export: stream in batches to bound peak memory usage.
+      const { totalRows, totalFiles } = await exportFullHistoryInBatches(exportPath);
+      if (totalRows === 0) {
+        statusEl.textContent = options.emptyMessage;
+        statusEl.className = 'error';
+        return;
+      }
+      statusEl.textContent = `${totalRows}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+      statusEl.className = 'success';
+      return;
+    }
 
-          // Parse date range (YYYY-MM-DD format from date input)
-          const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
-          const endDate = endDateInput?.value || startDate;
+    const startDateInput = document.getElementById(options.dateRange.startDateId) as HTMLInputElement | null;
+    const endDateInput = document.getElementById(options.dateRange.endDateId) as HTMLInputElement | null;
 
-          // Create timestamps at start of start date and end of end date in local timezone
-          const since = new Date(startDate + 'T00:00:00').getTime();
-          const until = new Date(endDate + 'T23:59:59').getTime();
+    // Parse date range (YYYY-MM-DD format from date input)
+    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
+    const endDate = endDateInput?.value || startDate;
 
-          return queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
-        })()
-      : await queryLogs({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
+    // Create timestamps at start of start date and end of end date in local timezone
+    const since = new Date(startDate + 'T00:00:00').getTime();
+    const until = new Date(endDate + 'T23:59:59').getTime();
+
+    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
 
     if (!result || !('rows' in result) || result.rows.length === 0) {
       statusEl.textContent = options.emptyMessage;
@@ -625,24 +708,11 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
     // Generate markdown for each date
     let totalFiles = 0;
     for (const [date, entries] of entriesByDate) {
-      const header = `# ${date}`;
-      const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
-
-      const blob = new Blob([content], { type: 'text/markdown' });
-      const blobUrl = URL.createObjectURL(blob);
-
-      await chrome.downloads.download({
-        url: blobUrl,
-        filename: `${exportPath}/${date}.md`,
-        saveAs: false,
-        conflictAction: 'overwrite'
-      });
-
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      await downloadDateMarkdown(exportPath, date, entries);
       totalFiles++;
     }
 
-    statusEl.textContent = `${'rows' in result ? result.rows.length : 0}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.textContent = `${rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
     statusEl.className = 'success';
   } catch (e) {
     statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;

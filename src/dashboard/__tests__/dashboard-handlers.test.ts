@@ -7,7 +7,7 @@
  * We avoid static imports of mocked modules to prevent resolution mismatches.
  */
 
-import { describe, it, expect, vi, beforeEach, mocked } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, mocked } from 'vitest';
 import {
     loadGeneralSettings,
     handleSaveOnly,
@@ -18,6 +18,7 @@ import {
     handleHistoryExportLocalMarkdown,
 } from '../dashboard.js';
 import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
+import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
 // Capture variables for assertions
 let lastSavedSettings: unknown = null;
@@ -432,11 +433,22 @@ describe('handleTestAi', () => {
 
 
 describe('exportLocalMarkdownCore behavior parity (M15)', () => {
+    const originalUserAgent = globalThis.navigator.userAgent;
+
     beforeEach(() => {
         buildDom();
         vi.clearAllMocks();
         mockQueryLogs.mockReset();
         mockDownload.mockReset().mockResolvedValue(undefined);
+        resetPlatformOsCache();
+    });
+
+    afterEach(() => {
+        Object.defineProperty(globalThis.navigator, 'userAgent', {
+            value: originalUserAgent,
+            configurable: true,
+        });
+        resetPlatformOsCache();
     });
 
     it('handleManualLocalMarkdownExport queries by date range and shows date-range empty message', async () => {
@@ -463,12 +475,12 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         expect(document.getElementById('exportLocalMarkdownStatus')?.textContent).toBe('指定期間に記録がありません。');
     });
 
-    it('handleHistoryExportLocalMarkdown queries full history (no date range) and shows its own empty message', async () => {
+    it('handleHistoryExportLocalMarkdown queries full history in batches (no date range) and shows its own empty message', async () => {
         mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
 
         await handleHistoryExportLocalMarkdown();
 
-        expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 100000, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 1000, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
         expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe('エクスポートする記録がありません。');
     });
 
@@ -498,5 +510,83 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
 
         expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toContain('boom');
         expect(btn.disabled).toBe(false);
+    });
+
+    function makeRow(id: number, date: Date) {
+        return { id, url: `https://example.com/${id}`, title: `T${id}`, summary: `S${id}`, created_at: date.getTime() };
+    }
+
+    it('pages through queryLogs with the desktop batch size until a short page ends the loop', async () => {
+        const firstBatch = Array.from({ length: 1000 }, (_, i) => makeRow(i, new Date(2026, 0, 1, 0, 0, i)));
+        const secondBatch = [makeRow(1000, new Date(2026, 0, 1, 0, 20, 0))];
+        mockQueryLogs
+            .mockResolvedValueOnce({ rows: firstBatch, total: 1001 })
+            .mockResolvedValueOnce({ rows: secondBatch, total: 1001 });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+        expect(mockQueryLogs).toHaveBeenNthCalledWith(1, { limit: 1000, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(mockQueryLogs).toHaveBeenNthCalledWith(2, { limit: 1000, offset: 1000, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+            '1001件の記録を1ファイルにエクスポートしました。'
+        );
+    });
+
+    it('stops paging as soon as a page returns exactly a full batch followed by an empty page', async () => {
+        const fullBatch = Array.from({ length: 1000 }, (_, i) => makeRow(i, new Date(2026, 0, 1, 0, 0, i)));
+        mockQueryLogs
+            .mockResolvedValueOnce({ rows: fullBatch, total: 1000 })
+            .mockResolvedValueOnce({ rows: [], total: 1000 });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+            '1000件の記録を1ファイルにエクスポートしました。'
+        );
+    });
+
+    it('flushes a date group as soon as the batch crosses into a new date, keeping files grouped correctly across batch boundaries', async () => {
+        // Use the mobile batch size (500) so a realistic two-page scenario fits
+        // in this test: batch 1 is a full page ending mid-way through Jan 2,
+        // batch 2 (a short page, ending the loop) continues Jan 2 then moves to Jan 3.
+        Object.defineProperty(globalThis.navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Linux; Android 14)',
+            configurable: true,
+        });
+
+        const batch1 = [
+            makeRow(1, new Date(2026, 0, 1, 9, 0, 0)),
+            ...Array.from({ length: 499 }, (_, i) => makeRow(i + 2, new Date(2026, 0, 2, 0, 0, i))),
+        ];
+        const batch2 = [
+            makeRow(501, new Date(2026, 0, 2, 20, 0, 0)),
+            makeRow(502, new Date(2026, 0, 3, 9, 0, 0)),
+        ];
+        mockQueryLogs
+            .mockResolvedValueOnce({ rows: batch1, total: 502 })
+            .mockResolvedValueOnce({ rows: batch2, total: 502 });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenNthCalledWith(1, { limit: 500, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(mockQueryLogs).toHaveBeenNthCalledWith(2, { limit: 500, offset: 500, orderBy: 'created_at', orderDir: 'ASC' });
+        expect(mockDownload).toHaveBeenCalledTimes(3); // Jan 1, Jan 2 (rows spanning both batches), Jan 3
+        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+            '502件の記録を3ファイルにエクスポートしました。'
+        );
+    });
+
+    it('uses a smaller batch size on mobile platforms', async () => {
+        Object.defineProperty(globalThis.navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Linux; Android 14)',
+            configurable: true,
+        });
+        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+
+        await handleHistoryExportLocalMarkdown();
+
+        expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 500, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
     });
 });
