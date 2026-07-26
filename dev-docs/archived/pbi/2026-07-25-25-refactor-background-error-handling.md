@@ -1,9 +1,25 @@
 # PBI: background/配下の重複するtry-catchパターンを共通エラーハンドリングに集約する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26（sqliteClient.tsでの試験導入のみ。他ファイルへの展開は見送り、フォローアップとして記録）
 **優先度**: Low
 **見積もり**: 🔴高（3pt以上目安）
 **副作用**: 🟡軽微（エラーハンドリングのラップにより、既存のログ出力形式・エラー伝播の挙動が変わらないことを慎重に確認する必要がある）
+
+## 実装メモ（2026-07-26）
+
+調査の結果、`sqliteClient.ts` には既に `call<T>()`（178-199行）という共通エラーハンドリングラッパーが
+存在し、`init`/`insert`/`update`/`delete`/`query`等のほぼ全メソッドがこれを経由していた。つまりPBIが
+提案する「共通ラッパーの試験導入」は既に大部分完了していた状態だった。
+
+未統一だったのは `restoreDb()` と `isSqliteHealthy()` の2箇所のみ（独自の try-catch、`restoreDb` は
+`console.error` を使っており他メソッドの `logError`/`addLog` 系と一貫性がなかった）。この2箇所を `call()`
+経由に統一。`isSqliteHealthy()` には既存テストがなかったため新規に3件追加。
+
+sqliteClient全54件パス。**他ファイル（`migrationService.ts`, `sessionAlarmsManager.ts`,
+`service-worker.ts`, `recordingLogic.ts`）への展開は本セッションでは見送った** — それぞれ既存の
+try-catchパターンが `sqliteClient.ts` の `call()` ほど統一されていない可能性があり、個別の設計判断が
+必要なため、別PBIとして改めて起票することを推奨する。
 
 ---
 
