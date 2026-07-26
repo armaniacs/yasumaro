@@ -148,6 +148,20 @@ function isEncryptionKey(key: string): boolean {
 }
 
 /**
+ * settingsオブジェクトへキーバリューを代入する際のヘルパー。
+ * `Settings` 型は `[key: string]: unknown` というレガシー互換のインデックス
+ * シグネチャを持つため `settings[key] = value` は型チェッカーをすり抜けてしまう。
+ * `value` はストレージ（chrome.storage.local）から実行時に取得した値であり、
+ * コンパイル時点では `key` に対応する型と一致する保証がない（実行時検証に依存する）。
+ * このヘルパーに集約することで、少なくとも「`key` が `StorageKey` である」という
+ * 前提と、キャストが発生している箇所をコード上の1箇所に限定する。
+ */
+function assignSettingValue(settings: Settings, key: StorageKey, value: unknown): void {
+    const target = settings as Record<StorageKey, unknown>;
+    target[key] = value;
+}
+
+/**
  * 古い個別キー方式から単一settingsオブジェクト方式へのマイグレーション
  *
  * @returns {Promise<boolean>} マイグレーションが実行された場合はtrue
@@ -169,14 +183,14 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
             !key.includes('_version') &&
             !isEncryptionKey(key) &&
             key !== SETTINGS_MIGRATED_KEY) {
-            settings[key] = value;
+            assignSettingValue(settings, key as StorageKey, value);
         }
     }
 
     // settingsオブジェクトが空であれば、デフォルト設定で初期化
     if (Object.keys(settings).length === 0) {
         for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-            settings[key] = value;
+            assignSettingValue(settings, key as StorageKey, value);
         }
     }
 
@@ -286,7 +300,7 @@ export async function getSettings(): Promise<Settings> {
         const filteredSettings: Settings = {};
         for (const [key, value] of Object.entries(settings)) {
             if (validStorageKeys.includes(key)) {
-                filteredSettings[key] = value;
+                assignSettingValue(filteredSettings, key as StorageKey, value);
             }
         }
         return _applyMigrationsAndDecrypt(filteredSettings);

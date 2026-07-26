@@ -1,9 +1,28 @@
 # PBI: obsidianClient.ts / settingsStore.ts のRecord<string, unknown>キャストを型安全なヘルパーに置き換える
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（型定義の変更のみだが、周辺コードの型エラーが連鎖的に顕在化する可能性がある）
+
+## 実装メモ（2026-07-26）
+
+`obsidianClient.ts:82` の `as Record<string, unknown>` は完全に削除できた。`Settings` 型が既に
+`Partial<StorageKeyValues>` を含んでおり、`settings[StorageKeys.OBSIDIAN_PROTOCOL]` のような直接
+アクセスで型チェックが通ることを確認したため、キャストなしの直接アクセスに置き換えた。
+
+`settingsStore.ts` 側は `Settings` 型自体が `[key: string]: unknown` というレガシー互換のインデックス
+シグネチャを持っており、これが `settings[key] = value` を型チェッカーから隠していた根本原因だった。
+`Settings`型定義自体の変更は影響範囲が広すぎるためスコープ外とし、代わりに `assignSettingValue()` という
+共通ヘルパー関数を新設し、3箇所に散らばっていた同一パターンの代入をこの1関数に集約した。
+キャスト（`Record<StorageKey, unknown>`）はこの関数内の1箇所のみに限定される。
+
+回帰確認中に、PBI-19（マイグレーション再試行制限）で追加した `YASUMARO_MIGRATION_RETRY_COUNT` が
+`storage-keys.test.ts` の internalKeys 除外リストに未登録だったことを発見し、修正した
+（PBI-26の変更ではなくPBI-19の見落とし）。
+
+storage関連全147件・obsidianClient全68件パス。
 
 ---
 
