@@ -25,34 +25,29 @@
 | [2026-07-25-06-feat-external-api-reliability-guideline.md](2026-07-25-06-feat-external-api-reliability-guideline.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-25-07-feat-eslint-rule-testing-guideline.md](2026-07-25-07-feat-eslint-rule-testing-guideline.md) | 🟡中 | 🟢なし | ✅ |
 | [2026-07-25-08-feat-cwe-classification-guideline.md](2026-07-25-08-feat-cwe-classification-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-09-doc-api-endpoint-documentation.md](2026-07-25-09-doc-api-endpoint-documentation.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-10-fix-magic-numbers-extraction.md](2026-07-25-10-fix-magic-numbers-extraction.md) | 🟢低 | 🟢なし | ⬜ |
 | [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | 🟡中 | 🟢なし | ⬜ |
-| [2026-07-25-12-doc-recording-pipeline-edge-cases.md](2026-07-25-12-doc-recording-pipeline-edge-cases.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-13-fix-verify-inline-event-handler.md](2026-07-25-13-fix-verify-inline-event-handler.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-14-fix-pii-regex-redos-hardening.md](2026-07-25-14-fix-pii-regex-redos-hardening.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-15-fix-hardcoded-japanese-strings.md](2026-07-25-15-fix-hardcoded-japanese-strings.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-16-fix-ai-summary-locale-default.md](2026-07-25-16-fix-ai-summary-locale-default.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-17-fix-privacy-consent-integrity-signature.md](2026-07-25-17-fix-privacy-consent-integrity-signature.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-18-fix-data-retention-after-consent-withdrawal.md](2026-07-25-18-fix-data-retention-after-consent-withdrawal.md) | 🟡中 | 🔴あり | ⬜ |
-| [2026-07-25-19-fix-migration-retry-limit.md](2026-07-25-19-fix-migration-retry-limit.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-20-fix-logger-batch-flush-strategy.md](2026-07-25-20-fix-logger-batch-flush-strategy.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-21-fix-ai-call-deduplication.md](2026-07-25-21-fix-ai-call-deduplication.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-22-fix-duplicate-check-race-condition.md](2026-07-25-22-fix-duplicate-check-race-condition.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-23-fix-sqlite-optimistic-lock.md](2026-07-25-23-fix-sqlite-optimistic-lock.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-25-24-fix-focus-trap-consistency.md](2026-07-25-24-fix-focus-trap-consistency.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-25-refactor-background-error-handling.md](2026-07-25-25-refactor-background-error-handling.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-25-26-refactor-legacy-typescript-patterns.md](2026-07-25-26-refactor-legacy-typescript-patterns.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-27-refactor-obsidian-api-abstraction.md](2026-07-25-27-refactor-obsidian-api-abstraction.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-28-fix-message-type-contract-testing.md](2026-07-25-28-fix-message-type-contract-testing.md) | 🟡中 | 🟢なし | ⬜ |
-| [2026-07-25-29-refactor-test-setup-simplification.md](2026-07-25-29-refactor-test-setup-simplification.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-30-fix-pbkdf2-legacy-timing-sidechannel.md](2026-07-25-30-fix-pbkdf2-legacy-timing-sidechannel.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-25-31-fix-verify-legacy-crypto-export-removal.md](2026-07-25-31-fix-verify-legacy-crypto-export-removal.md) | 🟢低 | 🟢なし | ⬜ |
-| [2026-07-25-32-fix-export-batch-pagination.md](2026-07-25-32-fix-export-batch-pagination.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-25-33-refactor-domain-filter-consolidation.md](2026-07-25-33-refactor-domain-filter-consolidation.md) | 🔴高 | 🟡軽微 | ⬜ |
 | [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-14-fix-offline-queue-retry-skip-ai.md](2026-07-26-14-fix-offline-queue-retry-skip-ai.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-19-fix-tabcache-content-removal.md](2026-07-26-19-fix-tabcache-content-removal.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md](2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-21-feat-recording-pipeline-trace-id.md](2026-07-26-21-feat-recording-pipeline-trace-id.md) | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-22-refactor-barrel-reexport-removal.md](2026-07-26-22-refactor-barrel-reexport-removal.md) | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-23-fix-dashboard-dead-code-removal.md](2026-07-26-23-fix-dashboard-dead-code-removal.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-25-refactor-logger-split.md](2026-07-26-25-refactor-logger-split.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-28-fix-web-accessible-resources-scope.md](2026-07-26-28-fix-web-accessible-resources-scope.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | 🟡中 | 🟢なし | ⬜ |
+| [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜ |
+| [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-33-fix-hardcoded-japanese-strings-options.md](2026-07-26-33-fix-hardcoded-japanese-strings-options.md) | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-34-refactor-offscreen-console-to-logger.md](2026-07-26-34-refactor-offscreen-console-to-logger.md) | 🟡中 | 🟡軽微 | ⬜ |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
 
@@ -151,7 +146,7 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 28 |
+| ⬜ 未着手 | 60 |
 | 🔶 部分実装 | 0 |
 | ✅ 完了 | 8 |
 | アーカイブ済み | 83 |
