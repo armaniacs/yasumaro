@@ -1,9 +1,21 @@
 # PBI: ログ永続化のバッチフラッシュに保持上限とSW終了時の確実な永続化を実装する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（ログ保持挙動が変わるため、既存の診断パネルのログ表示に影響しないか確認が必要）
+
+## 実装メモ（2026-07-26）
+
+フェーズ0調査の結果、`MAX_PENDING_LOGS`（100件）と`BATCH_FLUSH_SIZE`（10件）は既に実装済みだった。
+`BATCH_FLUSH_SIZE`到達で必ず即時フラッシュされるため、`MAX_PENDING_LOGS`の破棄ロジックには実質到達しない設計。
+
+新規実装したのは `onSuspend` ハンドラーのタイムアウト可視化のみ:
+`src/utils/logger.ts` の `chrome.runtime.onSuspend` リスナーで、`flushLogs(true)` が3秒のタイムアウト内に
+完了しなかった場合、`console.error` で保留件数を記録するようにした（ストレージ自体が不安定な suspend 中は
+永続化できないため、SW の console 出力への記録がベストエフォートの上限）。
+`src/utils/__tests__/logger-enhanced.test.ts` に `vi.useFakeTimers()` を使ったタイムアウトシナリオのテストを追加。
 
 ---
 
