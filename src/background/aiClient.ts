@@ -36,6 +36,11 @@ export const PROVIDER_LABELS: Record<string, string> = {
  * AI Client
  * Strategyパターンによるプロバイダー拡張
  *
+ * ⚠️ 新規コードからの直接利用は避けること。AI要約機能へのアクセスは
+ * src/background/ai/AIService.ts（AIServiceインターフェース）経由で行う。
+ * AIClientはRemoteAIService内部でProviderロジックの実装として使われる。
+ * 詳細: dev-docs/ADR/2026-07-27-ai-client-service-unification.md
+ *
  * 【拡張性】: 新しいAIプロバイダーを追加する際はproviderConfigsに設定を追加するのみ
  * 【OCP Compliance】: 既存コードを修正せずに新しいプロバイダーを追加可能
  */
