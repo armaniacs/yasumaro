@@ -61,6 +61,7 @@ import {
     createRefreshLocalMarkdownSchedulerHandler,
     createConsentStateChangedHandler,
     createGenerateReviewSummaryHandler,
+    createLogForwardHandler,
 } from './handlers/messageHandlers.js';
 import type {
     ManualRecordHandlerDeps,
@@ -367,6 +368,9 @@ export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
 });
 registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary);
 
+export const handleLogForward = createLogForwardHandler();
+registry.register('LOG_FORWARD', handleLogForward);
+
 const _dashboardSqliteHandler = createDashboardSqliteHandler({
   query: (params) => sqliteClient.query(params as any),
   search: (query, limit, offset) => sqliteClient.search(query, limit, offset),
@@ -446,6 +450,24 @@ async function processOfflineNetworkQueue(): Promise<void> {
       maskedCount?: number;
       tags?: string[];
     };
+
+    // obsidian_sync jobs mean the AI summary already succeeded and only the
+    // Obsidian append failed — retry that write only, without re-calling the
+    // AI provider. Jobs queued before this field existed (or with a missing
+    // summary) fall through to the full pipeline for backward compatibility.
+    if (job.type === 'obsidian_sync' && payload.summary) {
+      try {
+        return await recordingLogic.retryObsidianWriteOnly({
+          title: payload.title,
+          url: payload.url,
+          summary: payload.summary,
+          tags: payload.tags,
+        });
+      } catch {
+        return false;
+      }
+    }
+
     try {
       const result = await recordingLogic.record({
         title: payload.title,
@@ -654,6 +676,11 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
           if (alarm.name === 'yasumaro-offline-network-retry') {
             void processOfflineNetworkQueue();
             void flushPendingRecords(sqliteClient);
+            // Piggyback a lightweight health check on this existing 5-minute
+            // alarm to keep the offscreen document from being suspended for
+            // long stretches on mobile Chrome (PBI-2026-07-26-20). Reduces
+            // suspend frequency; does not guarantee it.
+            void sqliteClient.isSqliteHealthy();
           }
     });
 }

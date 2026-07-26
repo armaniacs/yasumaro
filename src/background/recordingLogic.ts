@@ -17,6 +17,9 @@ import type { RecordingResult } from '../messaging/types.js';
 import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { Mutex } from './Mutex.js';
+import { formatMarkdownStep } from './pipeline/steps/formatMarkdownStep.js';
+import { saveToObsidianStep } from './pipeline/steps/saveToObsidianStep.js';
+import type { RecordingContext } from './pipeline/types.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -409,6 +412,35 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
     RecordingLogic.cacheState.privacyCache = null;
     RecordingLogic.cacheState.privacyCacheTimestamp = null;
     RecordingLogic.scheduleCacheSave();
+  }
+
+  /**
+   * Retry an Obsidian write for an offline-queued job whose AI summary already
+   * succeeded (the only failure was the Obsidian append). Runs just the
+   * formatMarkdown + saveToObsidian steps instead of the full pipeline, so no
+   * AI API call is made on retry.
+   *
+   * @param job - Payload persisted by RecordingPipeline.enqueueOfflineJob()
+   *   for a 'obsidian_sync' job (payload.summary is guaranteed present there).
+   */
+  async retryObsidianWriteOnly(job: {
+    title: string;
+    url: string;
+    summary: string;
+    tags?: string[];
+  }): Promise<boolean> {
+    const settings = await this.getSettingsWithCache();
+    let context: RecordingContext = {
+      data: { title: job.title, url: job.url, content: '' } as RecordingData,
+      settings,
+      force: true,
+      errors: [],
+      privacyResult: { summary: job.summary, tags: job.tags },
+    };
+
+    context = await formatMarkdownStep(context);
+    context = await saveToObsidianStep(context, this.obsidian);
+    return true;
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {

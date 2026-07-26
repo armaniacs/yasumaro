@@ -456,7 +456,10 @@ describe('ensureSession', () => {
 
         await ensureSession();
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Offscreen: Failed to create session', 'session init failed');
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            '[offscreen] Offscreen: Failed to create session',
+            { error: 'session init failed' }
+        );
         const loggedArg = consoleErrorSpy.mock.calls[0][1];
         expect(loggedArg).not.toBe(rawError);
         expect(loggedArg).not.toBeInstanceOf(Error);

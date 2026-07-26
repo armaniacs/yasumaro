@@ -206,6 +206,42 @@ describe('RecordingLogic', () => {
     });
   });
 
+  describe('retryObsidianWriteOnly', () => {
+    it('saves to Obsidian using the already-computed summary without calling the AI provider', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const result = await logic.retryObsidianWriteOnly({
+        title: 'Retry Page',
+        url: 'https://retry.example.com',
+        summary: 'Already summarized content',
+        tags: ['news'],
+      });
+
+      expect(result).toBe(true);
+      expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
+      const [markdown] = mockObsidian.appendToDailyNote.mock.calls[0];
+      expect(markdown).toContain('Retry Page');
+      expect(markdown).toContain('Already summarized content');
+      expect(markdown).toContain('#news');
+    });
+
+    it('propagates the error when the Obsidian append fails', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      mockObsidian.appendToDailyNote.mockRejectedValueOnce(new Error('network down'));
+
+      await expect(
+        logic.retryObsidianWriteOnly({
+          title: 'Retry Page',
+          url: 'https://retry.example.com',
+          summary: 'Already summarized content',
+        })
+      ).rejects.toThrow('network down');
+
+      expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Privacy Cache', () => {
     beforeEach(() => {
       // キャッシュをクリア

@@ -14,7 +14,11 @@ import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
-const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
+const MESSAGE_TIMEOUT_MS_DESKTOP = 10000; // 10 seconds
+// Mobile Chrome suspends the offscreen document more aggressively when idle,
+// so a shorter timeout surfaces the resulting failure sooner instead of
+// leaving the caller waiting the full desktop timeout.
+const MESSAGE_TIMEOUT_MS_MOBILE = 5000; // 5 seconds
 
 // ============================================================================
 // Types
@@ -73,13 +77,18 @@ export class SqliteClient {
   /** Last categorized error from call(). Read by dashboard handlers. */
   lastError: string | null = null;
 
+  /** Per-message timeout, shortened on mobile (see MESSAGE_TIMEOUT_MS_MOBILE). */
+  private readonly messageTimeoutMs: number;
+
   constructor() {
     this.creatingOffscreenPromise = null;
     this.offscreenAlive = false;
-    // Reduce the queue size on mobile devices to limit memory consumption.
     const os = getPlatformOs();
-    const maxQueueSize = (os === 'android' || os === 'ios') ? 50 : 200;
-    this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: MESSAGE_TIMEOUT_MS * 2 });
+    const isMobile = os === 'android' || os === 'ios';
+    // Reduce the queue size on mobile devices to limit memory consumption.
+    const maxQueueSize = isMobile ? 50 : 200;
+    this.messageTimeoutMs = isMobile ? MESSAGE_TIMEOUT_MS_MOBILE : MESSAGE_TIMEOUT_MS_DESKTOP;
+    this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: this.messageTimeoutMs * 2 });
   }
 
   /**
@@ -130,8 +139,8 @@ export class SqliteClient {
         fn();
       };
       const timeoutId = setTimeout(() => {
-        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`)));
-      }, MESSAGE_TIMEOUT_MS);
+        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${this.messageTimeoutMs}ms`)));
+      }, this.messageTimeoutMs);
 
       chrome.runtime.sendMessage(
         { type, target: 'offscreen', payload },

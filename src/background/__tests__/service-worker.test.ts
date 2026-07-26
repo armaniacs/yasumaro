@@ -176,6 +176,8 @@ vi.mock('../../utils/logger.js', () => ({
     logDebug: vi.fn(),
     logWarn: vi.fn(),
     logError: vi.fn(),
+    addLog: vi.fn(),
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG', SANITIZE: 'SANITIZE' },
     ErrorCode: {
         STORAGE_READ_FAILURE: 'STRG_RD_001',
         STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',

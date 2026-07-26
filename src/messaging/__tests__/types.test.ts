@@ -208,6 +208,7 @@ describe('messaging/types: isServiceWorkerRequest', () => {
             SAVE_RECORD: { title: 't', url: 'u', content: 'c' },
             CONTENT_CLEANSING_EXECUTED: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 },
             GENERATE_REVIEW_SUMMARY: { periodType: 'weekly' },
+            LOG_FORWARD: { level: 'warn', message: 'test', source: 'offscreen' },
         };
         VALID_MESSAGE_TYPES.forEach((type) => {
             const payload = payloadForType[type];

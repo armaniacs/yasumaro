@@ -37,6 +37,7 @@ import type {
   SessionLockRequestMessage,
   PingMessage,
   GenerateReviewSummaryMessage,
+  LogForwardMessage,
 } from '../messageTypes.js';
 
 // ============================================================================
@@ -582,6 +583,28 @@ export function createConsentStateChangedHandler(deps: ConsentStateChangedHandle
       return;
     }
     await deps.updateConsentBadge();
+    sendResponse({ success: true });
+  };
+}
+
+export function createLogForwardHandler() {
+  return async (
+    message: LogForwardMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ): Promise<void> => {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ success: false, error: 'LOG_FORWARD is not allowed from external extensions' });
+      return;
+    }
+    const { level, message: logMessage, details, source } = message.payload;
+    if (level === 'error') {
+      await logError(logMessage, details ?? {}, ErrorCode.INTERNAL_ERROR, source);
+    } else if (level === 'warn') {
+      await logWarn(logMessage, details ?? {}, undefined, source);
+    } else {
+      await logDebug(logMessage, details ?? {}, source);
+    }
     sendResponse({ success: true });
   };
 }
