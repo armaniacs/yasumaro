@@ -5,6 +5,8 @@
 **見積もり**: 🔴高（3pt以上目安）
 **副作用**: 🔴あり（デフォルト値変更は既存ユーザーのダッシュボード「履歴」パネル等、chrome.storage.local依存機能に影響する可能性がある）
 
+**実装計画**: `dev-docs/plans/2026-07-27-pbi13-legacy-dual-write-default-plan.md`（2026-07-27作成。pendingChromeStorageQueue.ts新設含む3タスク構成）
+
 ---
 
 ## 背景

@@ -5,6 +5,8 @@
 **見積もり**: 🔴高（3pt以上目安）
 **副作用**: 🔴あり（Content Scriptのコア処理の内部構造変更。全webページでの動作に影響するため広範な回帰テストが必須）
 
+**実装計画**: `dev-docs/plans/2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md`（2026-07-27作成。実際のグローバル変数は12個〔PBI記載の8個から再カウント〕と判明、2段階移行のTask→Step分解済み）
+
 ---
 
 ## 背景

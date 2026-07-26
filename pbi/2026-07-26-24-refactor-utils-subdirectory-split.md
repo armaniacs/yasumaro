@@ -5,6 +5,8 @@
 **見積もり**: 🔴高（3pt以上目安）
 **副作用**: 🔴あり（100件超のファイル移動とimportパス変更。全プロジェクトに影響する広範な変更）
 
+**実装計画**: `dev-docs/plans/2026-07-27-pbi24-utils-subdirectory-split-plan.md`（2026-07-27作成。crypto/privacy/i18n/cspの4グループに分割、Task→Step分解済み）
+
 ---
 
 ## 背景
