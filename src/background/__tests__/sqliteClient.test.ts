@@ -45,7 +45,7 @@ describe('SqliteClient', () => {
       const result = await client.init();
       expect(result).toBe(true);
       expect(sendMessageMock).toHaveBeenCalledWith(
-        { type: 'SQLITE_INIT', target: 'offscreen', payload: {} },
+        { type: 'SQLITE_INIT', target: 'offscreen', payload: {}, traceId: '' },
         expect.any(Function)
       );
     });
@@ -105,6 +105,27 @@ describe('SqliteClient', () => {
         created_at: Date.now(),
       });
       expect(result).toBeNull();
+    });
+
+    it('propagates traceId in SQLITE_INSERT message', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true, id: 42 });
+        }
+      );
+
+      const result = await client.insert(
+        { url: 'https://example.com', created_at: Date.now() },
+        'trace-sqlite-123'
+      );
+      expect(result).toEqual({ id: 42 });
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SQLITE_INSERT',
+          traceId: 'trace-sqlite-123',
+        }),
+        expect.any(Function)
+      );
     });
   });
 
@@ -177,6 +198,25 @@ describe('SqliteClient', () => {
         expect.any(Function)
       );
     });
+
+    it('propagates traceId in SQLITE_UPDATE message', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true });
+        }
+      );
+
+      const result = await client.update(1, { title: 'Updated' }, 'trace-update-456');
+      expect(result).toBe(true);
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SQLITE_UPDATE',
+          payload: { id: 1, title: 'Updated' },
+          traceId: 'trace-update-456',
+        }),
+        expect.any(Function)
+      );
+    });
   });
 
   describe('delete', () => {
@@ -230,7 +270,7 @@ describe('SqliteClient', () => {
       const result = await client.getCount();
       expect(result).toBe(42);
       expect(sendMessageMock).toHaveBeenCalledWith(
-        { type: 'SQLITE_COUNT', target: 'offscreen', payload: {} },
+        { type: 'SQLITE_COUNT', target: 'offscreen', payload: {}, traceId: '' },
         expect.any(Function)
       );
     });

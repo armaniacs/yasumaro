@@ -74,9 +74,11 @@ export class PrivacyPipeline {
       tagSummaryMode?: boolean;
       url?: string;
       title?: string;
+      traceId?: string;
     } = {}
   ): Promise<PrivacyPipelineResult> {
     const { previewOnly = false, alreadyProcessed = false, url = '', title = '' } = options;
+    const traceId = options.traceId || '';
 
     if (!content) {
       return { summary: 'Summary not available.' };
@@ -121,7 +123,8 @@ export class PrivacyPipeline {
       sanitizedSettings.useLocalAi,
       originalTokens,
       url,
-      title
+      title,
+      traceId
     );
 
     if (localResult?.returnEarly) {
@@ -136,6 +139,7 @@ export class PrivacyPipeline {
         mode: 'full_pipeline',
         tagSummaryMode: options.tagSummaryMode,
         url,
+        traceId,
       });
       const aiCallDurationMs = performance.now() - aiCallStart;
       return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens, aiCallDurationMs);
@@ -161,6 +165,7 @@ export class PrivacyPipeline {
     originalTokens: number,
     pageUrl: string = '',
     pageTitle: string = '',
+    traceId: string = '',
   ): Promise<{
     returnEarly?: boolean;
     result?: PrivacyPipelineResult;
@@ -174,11 +179,12 @@ export class PrivacyPipeline {
     if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
       addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
         warnings: localSanitizeResult.warnings,
+        traceId,
       });
       return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
     }
 
-    const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only' });
+    const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only', traceId });
     if (!localResult.summary) {
       if (this.mode === 'local_only') {
         void addPendingPage({

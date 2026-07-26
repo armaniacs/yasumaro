@@ -79,7 +79,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
 
     const result = await saveToObsidianStep(context, mockObsidian);
 
-    expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith('## Example Page\n\nTest content');
+    expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith('## Example Page\n\nTest content', context.traceId);
     expect(result.obsidianDuration).toBeGreaterThanOrEqual(0);
     expect(result).not.toBe(context);
   });

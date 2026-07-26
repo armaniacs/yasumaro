@@ -13,7 +13,7 @@ export interface SaveSqliteStepParams {
 
 export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void> {
   try {
-    const insertResult = await params.sqliteClient.insert(params.record);
+    const insertResult = await params.sqliteClient.insert(params.record, params.traceId);
     if (!insertResult) {
       // SQLite unavailable/failing: queue the record instead of losing it (M14).
       await enqueuePendingRecord(params.record);
@@ -22,7 +22,7 @@ export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void
     if (params.obsidianSynced !== undefined) {
       await params.sqliteClient.update(insertResult.id, {
         obsidian_synced: params.obsidianSynced ? 1 : 0,
-      });
+      }, params.traceId);
     }
   } catch (err) {
     addLog(LogType.ERROR, 'saveSqliteStep: failed', {

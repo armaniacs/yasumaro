@@ -4,6 +4,7 @@ export interface AISummaryOptions {
   mode?: AISummaryMode;
   tagSummaryMode?: boolean;
   url?: string;
+  traceId?: string;
 }
 
 export interface AISummaryResult {

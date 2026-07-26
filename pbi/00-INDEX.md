@@ -15,7 +15,6 @@
 
 | PBI | 難易度 | 副作用 | 状態 |
 |-----|--------|--------|------|
-| [2026-07-26-21-feat-recording-pipeline-trace-id.md](2026-07-26-21-feat-recording-pipeline-trace-id.md) | 🔴高 | 🟡軽微 | 🔶（RecordingContext / RecordingPipeline / 全ステップの addLog に traceId を追加。AI/Obsidian/SQLite 内部ログへの伝播は未対応） |
 | [2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | 🟡中 | 🟢なし | ⬜ |
 | [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜（設計ドキュメントは `dev-docs/2026-07-26-chrome-built-in-ai-provider-design.md` として作成済み） |
 | [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜（実装計画は `dev-docs/plans/2026-07-26-chrome-built-in-ai-provider-plan.md` として作成済み） |
@@ -35,7 +34,7 @@
 
 ### 2026-07-27 セッションでアーカイブ済み
 
-- 2026-07-25-34-refactor-extractor-global-state-encapsulation.md (`extractor.ts` のモジュールレベル状態を `PageState` クラスに移行。4テストファイルを更新。自動テスト・ビルド検証済み)
+- 2026-07-26-21-feat-recording-pipeline-trace-id.md (記録パイプラーン全体に traceId を導入。RecordingContext / RecordingPipeline / 全パイプラインステップ / AI Provider / ObsidianClient / SQLite-Offscreen 間で traceId を伝播。Playwright E2E 含むテスト追加・更新。`npm run validate` 7290 passed / 18 skipped)
 - 2026-07-26-27-fix-popup-dashboard-settings-duplication.md (popup の重複設定 UI を削除し dashboard に一本化。共有モジュールはファイル削除せず popup 側の init 呼び出しのみ除去。自動テスト・ビルド検証済み)
 - 2026-07-25-35-fix-service-worker-state-persistence.md (`isCacheInitialized`/`autoSavedBadgeTabs` を `chrome.storage.session` へ永続化、実ブラウザ動作確認済み)
 - 2026-07-25-36-refactor-service-worker-singleton-di.md (`TabCache` の遅延初期化パターン試験導入、実ブラウザ動作確認済み)

@@ -77,7 +77,7 @@ describe('saveSqliteStep', () => {
       obsidianSynced: true,
     });
 
-    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 }, undefined);
   });
 
   it('calls update with obsidian_synced=0 when obsidianSynced is false', async () => {
@@ -90,7 +90,7 @@ describe('saveSqliteStep', () => {
       obsidianSynced: false,
     });
 
-    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 0 });
+    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 0 }, undefined);
   });
 
   it('throws when insert returns null', async () => {
