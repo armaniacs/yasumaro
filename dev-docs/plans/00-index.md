@@ -103,3 +103,20 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](archive-old/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
 - [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
 - [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
+
+## 未着手非機能PBI 実装計画（2026-07-27作成、他エージェントによる実装着手待ち）
+
+Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`, `plans/2026-07-25-2019-review-main.md`）から起票した非機能PBI10件のうち、フェーズ0再調査（2026-07-27）を経て、未着手の7件（実質10PBI、うち3件は1計画に統合）について、他エージェントが着手できる粒度の実装計画ファイルを作成した。各ファイルはTask→Step分解・Red-Green形式・具体的なコードスニペット・落とし穴の明記を含む。
+
+| 対象PBI | 計画ファイル | 概要 | 見積もり |
+|---------|-------------|------|---------|
+| PBI-24 | [2026-07-27-pbi24-utils-subdirectory-split-plan.md](2026-07-27-pbi24-utils-subdirectory-split-plan.md) | `src/utils/`をcrypto/privacy/i18n/cspの4サブディレクトリに分割 | crypto必須、他3グループは任意 |
+| PBI-13 | [2026-07-27-pbi13-legacy-dual-write-default-plan.md](2026-07-27-pbi13-legacy-dual-write-default-plan.md) | `pendingChromeStorageQueue.ts`新設、`LEGACY_DUAL_WRITE_ENABLED`のデフォルトをfalseへ | 3タスク構成 |
+| PBI-15 | [2026-07-27-pbi15-settings-migration-non-destructive-plan.md](2026-07-27-pbi15-settings-migration-non-destructive-plan.md) | 設定マイグレーションの即時削除をバックアップ退避方式に変更 | 3タスク構成 |
+| PBI-26 | [2026-07-27-pbi26-ai-client-service-unification-plan.md](2026-07-27-pbi26-ai-client-service-unification-plan.md) | AIClient/AIService統一方針のADR作成（実質的コード変更は最小） | 1-2pt相当（当初3pt以上から縮小） |
+| PBI-27 | [2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md](2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md) | popup設定画面（settingsScreen）をダッシュボード誘導に一本化 | 3pt以上 |
+| PBI-29/36/35 | [2026-07-27-pbi29-36-35-service-worker-refactor-plan.md](2026-07-27-pbi29-36-35-service-worker-refactor-plan.md) | service-worker.tsのGod File分割→シングルトンDI化→状態永続化（同一ファイル対象のため統合・順序厳守） | 3PBI統合 |
+| PBI-34 | [2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md](2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md) | content/extractor.tsのモジュールレベル変数12個（PBI記載の8個から再カウント）をPageStateクラスに集約 | 3pt以上 |
+| PBI-11 | [2026-07-27-pbi11-constant-time-compare-verify-plan.md](2026-07-27-pbi11-constant-time-compare-verify-plan.md) | constantTimeCompareのタイミング差検証ベンチマーク作成（実行は人間の手動作業必須） | ベンチマーク作成のみ自動化可 |
+
+**実装順の推奨**: 各計画は独立して着手可能だが、PBI-29/36/35は同一ファイル（service-worker.ts）を触るため他の作業と並行させる場合はコンフリクトに注意。PBI-27は`domainFilter.ts`等の共有モジュール改変を伴うためPBI-24（utils分割）と時期が重ならないようにする。
