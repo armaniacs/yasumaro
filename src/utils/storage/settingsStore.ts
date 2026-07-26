@@ -135,6 +135,14 @@ const SETTINGS_CACHE_TTL = 1000; // 1秒間キャッシュ（record()内の重�
 const SETTINGS_MIGRATED_KEY = 'settings_migrated';
 
 /**
+ * PBI-15: マイグレーション時に個別キーデータを退避するバックアップキーのプレフィックス。
+ * `settings` オブジェクト破損時の復元に使用し、BACKUP_RETENTION_DAYS 経過後に
+ * dailyPurgeHandler から削除される。
+ */
+export const LEGACY_SETTINGS_BACKUP_KEY = 'legacy_settings_backup';
+const BACKUP_RETENTION_DAYS = 30;
+
+/**
  * 暗号化キーがストレージキーかどうかを判定する
  * @param {string} key - チェック対象のキー
  * @returns {boolean} 暗号化キーの場合true
@@ -211,6 +219,17 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
     );
 
     if (keysToRemove.length > 0) {
+        // PBI-15: back up per-key data before removing it, so a corrupted
+        // `settings` object can still be recovered. Cleaned up after
+        // BACKUP_RETENTION_DAYS by dailyPurgeHandler.ts.
+        const backupData: Record<string, unknown> = {};
+        for (const key of keysToRemove) {
+            backupData[key] = existingKeys[key];
+        }
+        const backupKey = `${LEGACY_SETTINGS_BACKUP_KEY}_${Date.now()}`;
+        await chrome.storage.local.set({
+            [backupKey]: { data: backupData, createdAt: Date.now() },
+        });
         await chrome.storage.local.remove(keysToRemove);
     }
 
@@ -277,6 +296,51 @@ async function _applyMigrationsAndDecrypt(
     return merged;
 }
 
+/**
+ * Find the most recent legacy_settings_backup_* entry and return its data
+ * as a Settings-shaped object. Returns null if no backup exists.
+ */
+async function tryRestoreFromBackup(): Promise<Settings | null> {
+    const all = await chrome.storage.local.get(null);
+    const backupKeys = Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
+    if (backupKeys.length === 0) return null;
+
+    // Most recent backup wins (keys are suffixed with Date.now())
+    backupKeys.sort().reverse();
+    const latest = all[backupKeys[0]] as { data: Record<string, unknown>; createdAt: number } | undefined;
+    if (!latest?.data) return null;
+
+    const restored: Settings = {};
+    for (const [key, value] of Object.entries(latest.data)) {
+        if (Object.values(StorageKeys).includes(key as StorageKey)) {
+            assignSettingValue(restored, key as StorageKey, value);
+        }
+    }
+
+    // Persist the recovered settings back so future getSettings() calls
+    // don't need to re-scan backups.
+    await withOptimisticLock('settings', (current: Settings) => ({ ...current, ...restored }));
+
+    return restored;
+}
+
+/**
+ * Remove legacy_settings_backup_* entries older than BACKUP_RETENTION_DAYS.
+ * Called from dailyPurgeHandler.ts's existing chrome.alarms-based cycle.
+ */
+export async function cleanupExpiredSettingsBackups(): Promise<void> {
+    const all = await chrome.storage.local.get(null);
+    const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const expiredKeys = Object.keys(all).filter((k) => {
+        if (!k.startsWith(LEGACY_SETTINGS_BACKUP_KEY)) return false;
+        const entry = all[k] as { createdAt?: number } | undefined;
+        return typeof entry?.createdAt === 'number' && entry.createdAt < cutoff;
+    });
+    if (expiredKeys.length > 0) {
+        await chrome.storage.local.remove(expiredKeys);
+    }
+}
+
 export async function getSettings(): Promise<Settings> {
     // 【パフォーマンス改善】短時間キャッシュチェック（1秒間有効）
     const now = Date.now();
@@ -295,6 +359,16 @@ export async function getSettings(): Promise<Settings> {
 
     if (result.settings && result[SETTINGS_MIGRATED_KEY]) {
         let settings = result.settings;
+
+        // PBI-15: detect a corrupted/empty settings object and attempt recovery
+        // from the most recent legacy_settings_backup_* entry.
+        if (Object.keys(settings).length === 0) {
+            const recovered = await tryRestoreFromBackup();
+            if (recovered) {
+                settings = recovered;
+            }
+        }
+
         // StorageKeysに含まれないキー（ゴミデータ）を排除
         const validStorageKeys: string[] = Object.values(StorageKeys);
         const filteredSettings: Settings = {};
