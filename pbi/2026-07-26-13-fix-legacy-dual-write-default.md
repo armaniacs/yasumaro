@@ -91,3 +91,26 @@ Scenario: デフォルトをfalseに変更した後も既存ユーザーのデ�
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（System Architect, Data Integrity Expert指摘、High）
 - 対象コード: `src/background/pipeline/steps/saveMetadataStep.ts:66-75`, `src/utils/storage/defaults.ts:182`
+
+## フェーズ0再調査（2026-07-27）
+
+コードは記載通り一致・変化なし。`saveMetadataStep.ts:66-75`のLEGACY_DUAL_WRITE_ENABLED分岐、
+`defaults.ts:182`のデフォルト`true`とも変更されていない。
+
+**「dual-write」の実態を確認**: 同一レコードを(a)`saveSqliteStep.ts`経由でSQLite(OPFS)へ、
+(b)`saveMetadataStep.ts`経由で`chrome.storage.local`の`savedUrlsWithTimestamps`他複数キーへ、
+両方書き込んでいる。`savedUrlsWithTimestamps`は`urlMetadata.ts`（約30箇所）、`urlStorage.ts`、
+`savedUrlStore.ts`、dashboardの`historyPanel.ts`など**極めて広範囲**で読み書きされていることを
+確認した。「SQLite単独で代替可能か確認」という受け入れ基準は、想定より広い依存箇所の洗い出しが
+必要になる。
+
+**既存機構の再利用可能性（新規発見）**: `src/background/pendingSqliteQueue.ts`（PBI-16で実装済み、
+`chrome.storage.local`キー`pending_sqlite_records`＋Service Worker起動時`flushPendingRecords`で
+再試行する設計）が、本PBIが提案する`pendingChromeStorageQueue`のほぼそのまま流用可能な設計
+テンプレートとして使える。ゼロから設計する必要はなく、同じパターンをchrome.storage側の失敗ケースに
+適用するだけで済む可能性が高い。
+
+**見積もり再評価**: `savedUrlsWithTimestamps`依存箇所が約30ファイルと想定より広いため、
+「依存箇所の網羅確認」の工数は**当初見積もりより増える可能性がある**（過小評価だった疑い）。
+一方でリカバリキュー自体の実装は`pendingSqliteQueue.ts`を流用できるため軽くなる。差し引き
+3pt以上のまま据え置きだが、内訳（確認作業重め・実装作業軽め）が変わったと捉えるべき。

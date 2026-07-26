@@ -87,3 +87,21 @@ Scenario: SW生存中のみ有効な短命な状態は引き続きモジュー�
 ## 関連
 - Checking Team レポート: `plans/2026-07-25-2019-review-main.md`（Red Team Leader指摘、コンフリクト調整結果でSystem Architectとも合意済みの方針）
 - 対象コード: `src/background/service-worker.ts:159-213`
+
+## フェーズ0再調査（2026-07-27）
+
+`service-worker.ts`は前回のセッションでの機能追加（オフラインキュー・ログ中継・SQLiteタイムアウト）
+により654行→686行に増加。行番号は`159-213`→`161-231`付近にズレているが、指摘対象の変数
+（`CONFIRM_TOKEN`, `isCacheInitialized`, `autoSavedBadgeTabs`）は全て現存し、指摘内容自体は健在。
+
+**変化点**: `ensureConfirmToken()`が既に`chrome.storage.session`への読み書きロジックを実装済み
+（167-194行相当）。CONFIRM_TOKEN自体は「短命なので永続化不要」というPBI本文の想定に近い形に
+既に近づいている。一方`isCacheInitialized`（231行相当）は依然モジュール変数のみで、SW再起動時の
+永続化は未対応のまま。
+
+**PBI-29（God File分割）との関係**: PBI-29が推奨する「分割→DI→永続化」の順序に従うなら、本PBIは
+PBI-29・PBI-36の後に着手するのが自然。ただし対象箇所（`isCacheInitialized`周辺）はPBI-29の分割後は
+`lifecycleHandlers.ts`へ自然に移動する程度で、致命的な競合はない。
+
+**見積もり再評価**: 3pt以上のまま据え置きで妥当。むしろ`ensureConfirmToken()`が一部実装済みのため、
+残作業（`isCacheInitialized`, `autoSavedBadgeTabs`の永続化）はやや軽くなっている可能性がある。

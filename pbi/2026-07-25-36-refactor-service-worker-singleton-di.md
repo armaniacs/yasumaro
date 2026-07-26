@@ -96,3 +96,21 @@ Epic規模（5pt以上を想定）。着手前にシニアエンジニアとの�
 ## 関連
 - Checking Team レポート: `plans/2026-07-25-2019-review-main.md`（System Architect指摘、コンフリクト調整結果で合意済みの方針）
 - 対象コード: `src/background/service-worker.ts:192-228`
+
+## フェーズ0再調査（2026-07-27）
+
+`service-worker.ts`は654行→686行に増加。行番号は`192-228`→`197-215`付近にズレているが、
+`obsidian`/`aiClient`/`localClient`/`aiService`/`sqliteClient`/`recordingLogic`/`migrationService`/
+`tabCache`が全てモジュールレベルで`new`されている実態は記載通りで指摘は健在。
+
+**新規発見（要着手前確認）**: 211-212行付近に`import { RecordingPipeline } from './pipeline/RecordingPipeline.js';`
+という未使用のimportが、シングルトン変数宣言の途中に混入している。`RecordingPipeline`はこのファイル内で
+一度も使われておらず、デッドコードの可能性が高い。着手前に「削除するか、本格的にDIへ組み込むか」を
+判断する必要がある（前回セッション以降に紛れ込んだコードで、PBI策定時にはなかった）。
+
+**PBI-29（God File分割）との関係**: 本当に競合するのはPBI-29と本PBI（ファイル分割とシングルトン注入は
+同じインスタンス化コードに触れる）。PBI-29が推奨する「先にファイル分割 → 分割後の各モジュールでDI導入」
+という順序が妥当。
+
+**見積もり再評価**: Epic規模（5pt以上）のまま変化なし。未使用importの扱いという新しい論点が1つ増えたが、
+全体の規模を動かすほどではない。

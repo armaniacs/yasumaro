@@ -130,10 +130,14 @@ Scenario: popup固有の機能は維持される
 
 ## 見積もり
 
-2pt
+3pt以上（当初2ptから再見積もり。popup/dashboard間でDOM IDを共有する全モジュール
+〔`domainFilter.ts`, `customPromptManager.ts`, `privacySettings.ts`等〕の依存関係を
+一つずつ洗い出す必要があるため。詳細は上記「実装時の追加調査」参照）
 
 ## 技術的考慮事項
-- 依存関係: `entrypoints/popup/index.html`, `entrypoints/options/index.html`
+- 依存関係: `entrypoints/popup/index.html`, `entrypoints/options/index.html`,
+  `src/popup/domainFilter.ts`（dashboard側と共有）, `src/popup/customPromptManager.ts`（要確認）,
+  `src/popup/privacySettings.ts`（要確認）
 - テスタビリティ: 既存のpopup/dashboardテストが土台
 - 非機能要件: UX（操作導線の一貫性）
 

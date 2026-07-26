@@ -89,3 +89,22 @@ Scenario: 既存のマイグレーションフローが回帰しない
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Legacy Bridge Architect指摘、High）
 - 対象コード: `src/utils/storage/settingsStore.ts:155-201`
+
+## フェーズ0再調査（2026-07-27）
+
+コードは記載通り一致。行番号は`155-201`→`169-218`付近にズレているが、`migrateToSingleSettingsObject()`
+内で`withOptimisticLock('settings', ...)`保存直後・`SETTINGS_MIGRATED_KEY`設定直後に
+`chrome.storage.local.remove(keysToRemove)`が即時実行される挙動は変わっていない。バックアップや
+遅延削除の仕組みは依然として存在しない。
+
+**既存機構の再利用可能性（新規発見）**: `src/background/dailyPurgeHandler.ts`（`chrome.alarms`ベースの
+既存の定期処理）が、本PBIが提案する「バックアップ保持期間経過後クリーンアップ」の統合先として
+最適。新規アラームを追加せず、既存のdailyPurgeHandlerに処理を1つ追加する形で実装できる可能性が高い。
+
+**PBI-13との関係**: 対象storageキーが異なる（本PBIは`settings`、PBI-13は`savedUrlsWithTimestamps`）
+ため直接の競合はない。ただし両者とも`withOptimisticLock`ユーティリティと「chrome.storage.local
+書き込み安全性の強化」という同じ関心軸を共有しており、同時期に着手するとレビュー時に差分が
+重なりやすい点に留意する。
+
+**見積もり再評価**: 3pt以上のまま据え置きで妥当。`dailyPurgeHandler.ts`への統合が可能なため、
+定期クリーンアップ部分の実装コストはやや軽くなる見込み。

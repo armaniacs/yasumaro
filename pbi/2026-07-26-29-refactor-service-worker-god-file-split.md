@@ -103,3 +103,29 @@ Epic規模（5pt以上を想定）。既存PBI-35, PBI-36との実施順序調�
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Maintainability Guardian, Refactoring Evangelist指摘、High、重複統合）
 - 対象コード: `src/background/service-worker.ts`（654行）
 - 関連PBI（同一ファイル対象、実施順序要調整）: `2026-07-25-35-fix-service-worker-state-persistence.md`, `2026-07-25-36-refactor-service-worker-singleton-di.md`
+
+## フェーズ0再調査（2026-07-27）
+
+「654行のまま」という背景記載の前提が既に崩れている。前回セッションでの機能追加（オフラインキュー
+retry・LOG_FORWARDハンドラー登録・health check ping）により**686行に増加**（+32行）。
+
+**重要な発見**: `src/background/handlers/`配下への責務分離は、PBI本文が想定するより**大幅に進んでいる**。
+既に`messageHandlers.ts`, `MessageHandlerRegistry.ts`, `tabEventHandlers.ts`, `lifecycleHandlers.ts`,
+`notificationHandlers.ts`, `contextMenuHandlers.ts`, `dashboardSqliteHandlers.ts`が分離済みで、
+メッセージハンドラー・タブイベント・ライフサイクル・通知・コンテキストメニューは既に別モジュール化
+されている。
+
+**現在`service-worker.ts`に残る責務**（トップレベルで確認したもの）:
+1. `init()`による起動オーケストレーション
+2. クライアント/シングルトンのインスタンス化（PBI-36の対象と重複）
+3. `MessageHandlerRegistry`へのハンドラー登録配線
+4. `processOfflineNetworkQueue()`等のオフラインキュー再試行ロジック本体
+5. `chrome.alarms`/`chrome.notifications`のイベントリスナー登録本体
+
+つまり「5責務混在の654行God File」という当初の問題認識よりも実態は改善されており、残る作業は
+主に「配線コード（2, 3, 5）をさらに薄くする」ことと「オフラインキュー処理本体（4）の抽出」に
+絞られる。行数増加分（+32行）も主に4番の機能追加によるもの。
+
+**見積もり再評価**: 対象範囲が実質的に縮小しているため、Epic規模（5pt以上）は据え置きだが上限寄りでは
+なくなっている可能性がある。ただし本PBIとPBI-36（シングルトン注入）が同じインスタンス化コード
+（責務2）に触れるため、実施順序（本PBI→PBI-36→PBI-35）の推奨は変わらず妥当。

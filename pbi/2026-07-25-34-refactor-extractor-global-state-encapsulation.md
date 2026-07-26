@@ -88,3 +88,19 @@ Scenario: テスト時の状態リセットが容易になる
 ## 関連
 - Checking Team レポート: `plans/2026-07-25-2019-review-main.md`（Maintainability Guardian指摘）
 - 対象コード: `src/content/extractor.ts:46-178`
+
+## フェーズ0再調査（2026-07-27）
+
+モジュールレベル変数は記載通り現存する（`minVisitDuration`, `minScrollDepth`, `startTime`,
+`maxScrollPercentage`, `isValidVisitReported`, `checkIntervalId`, `cleansingConfig`,
+`lastCleansedReason`, `lastByteStats`）。
+
+**新規発見**: このうち`lastCleansedReason`と`lastByteStats`（156, 163行）は**`export let`で
+モジュール外に公開されている**。他モジュールからの参照（プロダクションコード）は見当たらないが、
+`extractor-core.test.ts`, `extractor-extra.test.ts`, `extractor-r2.test.ts`, `extractor.test.ts`の
+**4つのテストファイルがこれらのexport変数に直接依存**していることを確認した。これはPBIの受け入れ
+基準（Scenario 4「テスト時の状態リセットが容易になる」）が指摘する問題の実例であり、`PageState`
+クラスへの移行時にこれら4テストファイルの書き換えが必須になる。
+
+**見積もり再評価**: 3pt以上のまま据え置きで妥当。ただし影響テストファイルが4件と判明したことで、
+移行時の作業範囲（テスト側の書き換え）がやや具体化した。

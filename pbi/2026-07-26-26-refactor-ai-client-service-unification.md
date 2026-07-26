@@ -79,3 +79,25 @@ Scenario: 既存の呼び出し元が段階的に移行される
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Domain Logic Expert指摘）
 - 対象コード: `src/background/aiClient.ts:42-110`, `src/background/ai/AIService.ts:19-21`
+
+## フェーズ0再調査（2026-07-27）
+
+両ファイルとも現存し記述通り。ただし調査の結果、実態は「並立する二重抽象化」というより
+**`RemoteAIService`が内部で`AIClient`をラップして委譲するアダプター構造**であることが判明した。
+`FallbackAIService`は`LocalAIService` + `RemoteAIService(aiClient)`という構成で、`AIService`側は
+`AIClient`の上位ファサードとして既に機能している。
+
+一方で`aiClient.ts`は`AIService`を介さず`reviewSummaryGenerator.ts`・`dashboard.ts`（型/定数のみ）
+からも直接呼ばれている。Strategy実装（`providers/GeminiProvider.ts`, `OpenAIProvider.ts`,
+`ProviderStrategy.ts`）は`AIClient`側にのみ存在し、`AIService`側はStrategyを持たず「AIClient委譲か
+ローカル要約かの分岐」のみを行う。
+
+**見積もりへの示唆**: 「どちらを正とするか」は単純な二択ではなく、既にアダプター経由の構造が
+あるため、**「AIServiceに統一（AIClientはProviderロジックの内部実装として温存し、呼び出し元を
+全てAIService経由に統一）」という結論に至りやすい**。ADR作成に必要な機能比較・呼び出し箇所分析は、
+想定より構造理解が容易なため当初見積もりよりやや軽い可能性がある。3pt以上のまま据え置きだが、
+上限寄りではなく下限寄りとみてよい。
+
+**PBI-24との関係**: `aiClient.ts`は`utils/logger.js`, `utils/errorUtils.js`, `utils/auditLog.js`,
+`utils/storage.js`をimportしており、PBI-24（utils分割）でこれらが移動されるとimportパス修正が
+必要。ただし独立して並行実施可能。

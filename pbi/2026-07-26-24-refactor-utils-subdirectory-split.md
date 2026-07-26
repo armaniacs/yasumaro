@@ -80,3 +80,25 @@ Scenario: 段階的な移行が可能である
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Maintainability Guardian指摘）
 - 対象コード: `src/utils/`（103ファイル、2026-07-26時点）
+
+## フェーズ0再調査（2026-07-27）
+
+**PBI記載の「103ファイル」は既に古い数値。** 前回セッションで`logger.ts`, `aiSummaryCleaner.ts`,
+`contentExtractor.ts`, `ublockParser.ts`のバレル削除・サブディレクトリ化を実施した結果、
+`src/utils/`直下（`__tests__`除く）は**62ファイルに減少**（41ファイル、約4割減）。既存の
+`storage/`, `trustDb/`と合わせ、現在は計6サブディレクトリ（`aiSummaryCleaner/`,
+`contentExtractor/`, `logger/`, `storage/`, `trustDb/`, `ublockParser/`）が存在する。
+
+**グルーピング案自体は妥当**: PBIが例示する分類候補（crypto: `crypto.ts`/`typesCrypto.ts`、
+privacy: `piiSanitizer.ts`/`piiStripper.ts`/`privacyChecker.ts`/`privacyStatusCodes.ts`、
+i18n: `i18n.ts`/`i18n-dom.ts`/`i18nPlural.ts`/`localeUtils.ts`、domain: `domainUtils.ts`/
+`cspDomains.ts`）はいずれも未着手のまま直下に残存しており、分類案自体は今も有効。
+
+**PBI-26との関係**: `AIClient`が`../utils/logger.js`, `../utils/errorUtils.js`,
+`../utils/auditLog.js`, `../utils/storage.js`をimportしているため、本PBIでこれらのファイルを
+移動する場合はPBI-26側のimportパス修正が必要になる。ただし機能的には独立しており、パス依存の
+軽微な接点のみで並行実施は可能。
+
+**見積もり再評価**: 対象ファイル数が4割減少しているため、3pt以上という見積もりは**やや過大の
+可能性がある**。技術的考慮事項の「100件超のファイルが対象」という記載、実装者向け注記の
+`find`確認コマンドの想定結果も62件に更新すべき。

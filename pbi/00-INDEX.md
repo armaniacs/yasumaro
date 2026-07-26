@@ -24,16 +24,16 @@
 
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
-| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中） |
-| [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | fix | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中。2026-07-27再調査: コードレビュー上は妥当な設計と確認、見積もり据え置き） |
+| [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `lastCleansedReason`/`lastByteStats`がexport済みで4テストファイルが依存していることを新規確認） |
+| [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `ensureConfirmToken()`は永続化済み、`isCacheInitialized`は未対応のまま。PBI-29/36の後に着手推奨） |
+| [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 未使用の`RecordingPipeline` importを新規発見、着手前に扱いを要確認） |
+| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `savedUrlsWithTimestamps`依存箇所が約30ファイルと判明、既存`pendingSqliteQueue.ts`が流用可能） |
+| [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 既存`dailyPurgeHandler.ts`がクリーンアップ統合先として活用可能と判明） |
+| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 対象ファイル数が103→62に4割減少済み、見積もりやや過大の可能性） |
+| [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: AIServiceは既にAIClientをラップするアダプター構造と判明、統一方針を決めやすい） |
 | [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🔴高 | 🔴あり | ⬜（PBI-37完了済み。着手時にpopup/dashboardのDOM ID共有設計が判明し再見積もり、フェーズ3へ移動） |
-| [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: handlers/配下への分離が想定より進行済み、残責務は配線コードとオフラインキュー抽出に限定） |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
