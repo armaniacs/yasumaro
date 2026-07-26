@@ -6,6 +6,7 @@
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { withOptimisticLock } from '../../../utils/optimisticLock.js';
+import { enqueuePendingWrite } from '../../pendingChromeStorageQueue.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
@@ -94,6 +95,11 @@ export const saveMetadataStep: PipelineStepFunction = async (
       results.failed.push('savedUrlsWithTimestamps');
       addLog(LogType.WARN, 'Failed to save savedUrlsWithTimestamps entry', {
         error: errorMessage(error), url
+      });
+      // PBI-13: retry via pendingChromeStorageQueue instead of dropping the write
+      await enqueuePendingWrite({
+        key: 'savedUrlsWithTimestamps',
+        value: { url, title: data.title || '', timestamp: Date.now() },
       });
     }
   })();

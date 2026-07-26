@@ -23,7 +23,10 @@ import {
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
+import { flushPendingWrites, type PendingChromeStorageWrite } from './pendingChromeStorageQueue.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
+import { withOptimisticLock } from '../utils/optimisticLock.js';
+import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { MigrationService } from './migrationService.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -585,6 +588,22 @@ const _contextClickHandler = createContextClickHandler({
 // globalThis.chrome is undefined, without causing errors.
 // ============================================================================
 
+async function retryPendingChromeStorageWrite(write: PendingChromeStorageWrite): Promise<boolean> {
+  if (write.key !== 'savedUrlsWithTimestamps') return false;
+  try {
+    const entry = write.value as SavedUrlEntry;
+    await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
+      const list = current || [];
+      const idx = list.findIndex((e) => e.url === entry.url);
+      if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
+      return [...list, entry];
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Message listener
     chrome.runtime.onMessage.addListener(createMessageHandler());
@@ -636,6 +655,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
           if (alarm.name === 'yasumaro-offline-network-retry') {
             void processOfflineNetworkQueue();
             void flushPendingRecords(sqliteClient);
+            void flushPendingWrites(retryPendingChromeStorageWrite);
             // Piggyback a lightweight health check on this existing 5-minute
             // alarm to keep the offscreen document from being suspended for
             // long stretches on mobile Chrome (PBI-2026-07-26-20). Reduces
