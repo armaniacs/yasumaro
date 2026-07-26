@@ -11,9 +11,16 @@ import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 type LogLevel = 'warn' | 'error' | 'info';
 
-function forwardLog(level: LogLevel, message: string, details?: Record<string, unknown>, source = 'offscreen'): void {
+function forwardLog(
+    level: LogLevel,
+    message: string,
+    details?: Record<string, unknown>,
+    source = 'offscreen',
+    traceId?: string
+): void {
+    const payloadDetails = traceId ? { ...(details ?? {}), traceId } : details;
     if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        console[level === 'info' ? 'log' : level](`[${source}] ${message}`, details ?? '');
+        console[level === 'info' ? 'log' : level](`[${source}] ${message}`, payloadDetails ?? '');
         return;
     }
 
@@ -21,7 +28,7 @@ function forwardLog(level: LogLevel, message: string, details?: Record<string, u
         const result = chrome.runtime.sendMessage({
             type: 'LOG_FORWARD',
             protocolVersion: CURRENT_PROTOCOL_VERSION,
-            payload: { level, message, details, source },
+            payload: { level, message, details: payloadDetails, source },
         });
         // sendMessage returns a Promise when no callback is passed; guard for
         // mocks/environments where it doesn't (e.g. callback-style or undefined).
@@ -37,14 +44,29 @@ function forwardLog(level: LogLevel, message: string, details?: Record<string, u
     }
 }
 
-export function forwardWarn(message: string, details?: Record<string, unknown>, source?: string): void {
-    forwardLog('warn', message, details, source);
+export function forwardWarn(
+    message: string,
+    details?: Record<string, unknown>,
+    source?: string,
+    traceId?: string
+): void {
+    forwardLog('warn', message, details, source, traceId);
 }
 
-export function forwardError(message: string, details?: Record<string, unknown>, source?: string): void {
-    forwardLog('error', message, details, source);
+export function forwardError(
+    message: string,
+    details?: Record<string, unknown>,
+    source?: string,
+    traceId?: string
+): void {
+    forwardLog('error', message, details, source, traceId);
 }
 
-export function forwardInfo(message: string, details?: Record<string, unknown>, source?: string): void {
-    forwardLog('info', message, details, source);
+export function forwardInfo(
+    message: string,
+    details?: Record<string, unknown>,
+    source?: string,
+    traceId?: string
+): void {
+    forwardLog('info', message, details, source, traceId);
 }

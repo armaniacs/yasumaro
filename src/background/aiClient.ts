@@ -86,7 +86,12 @@ export class AIClient {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false, url: string = ''): Promise<AISummaryResult> {
+    async generateSummary(
+        content: string,
+        tagSummaryMode: boolean = false,
+        url: string = '',
+        traceId: string = ''
+    ): Promise<AISummaryResult> {
         // in-flightキーはURLとtagSummaryModeの組み合わせ（同一URLでもモードが異なれば別リクエストとして扱う）。
         // urlが空文字列の場合は重複排除の対象外とする（キーの衝突リスクを避けるため）。
         const dedupeKey = url ? `${url}::${tagSummaryMode}` : null;
@@ -98,7 +103,7 @@ export class AIClient {
             }
         }
 
-        const requestPromise = this.generateSummaryInternal(content, tagSummaryMode, url);
+        const requestPromise = this.generateSummaryInternal(content, tagSummaryMode, url, traceId);
 
         if (dedupeKey) {
             this.inFlightSummaryRequests.set(dedupeKey, requestPromise);
@@ -110,7 +115,12 @@ export class AIClient {
         return requestPromise;
     }
 
-    private async generateSummaryInternal(content: string, tagSummaryMode: boolean, url: string): Promise<AISummaryResult> {
+    private async generateSummaryInternal(
+        content: string,
+        tagSummaryMode: boolean,
+        url: string,
+        traceId: string = ''
+    ): Promise<AISummaryResult> {
         const settings = await getSettings();
         const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
         const slots = this.resolveProviderSlots(settings);
@@ -123,7 +133,7 @@ export class AIClient {
         for (const slot of slots) {
             const factory = this.providers.get(slot.provider);
             if (!factory) {
-                addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`);
+                addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
                 continue;
             }
 
@@ -133,13 +143,13 @@ export class AIClient {
 
             try {
                 const providerInstance = factory(effectiveSettings);
-                const result = await providerInstance.generateSummary(content, tagSummaryMode);
+                const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
                 if (result.success && result.summary.length >= minLength) {
                     return result;
                 }
                 lastResult = result;
             } catch (error: unknown) {
-                addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`);
+                addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
                 lastResult = { success: false, summary: "Error: Failed to generate summary. Please try again." };
             }
         }

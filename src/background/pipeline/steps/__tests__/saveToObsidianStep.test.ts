@@ -62,7 +62,7 @@ describe('saveToObsidianStep', () => {
 
       await saveToObsidianStep(context, mockObsidian as any);
 
-      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown, context.traceId);
     });
 
     it('obsidian を省略すると ObsidianClient を内部生成してフォールバックする', async () => {
@@ -74,7 +74,7 @@ describe('saveToObsidianStep', () => {
       expect(ObsidianClient).toHaveBeenCalledTimes(1);
       // appendToDailyNote が呼ばれたことを確認
       const instance = (ObsidianClient as any).mock.results[0].value;
-      expect(instance.appendToDailyNote).toHaveBeenCalledWith(context.markdown);
+      expect(instance.appendToDailyNote).toHaveBeenCalledWith(context.markdown, context.traceId);
     });
   });
 
@@ -142,7 +142,7 @@ describe('saveToObsidianStep', () => {
 
       const result = await saveToObsidianStep(context, mockObsidian as any);
 
-      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown, context.traceId);
       expect(result).toEqual(expect.objectContaining(context));
       expect(result).toHaveProperty('obsidianDuration');
     });
@@ -157,7 +157,7 @@ describe('saveToObsidianStep', () => {
 
       const result = await saveToObsidianStep(context, mockObsidian as any);
 
-      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown, context.traceId);
       expect(result).toEqual(expect.objectContaining(context));
       expect(result).toHaveProperty('obsidianDuration');
       expect(typeof result.obsidianDuration).toBe('number');

@@ -39,8 +39,9 @@ export abstract class AIProviderStrategy {
      * 要約を生成する
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     * @param {string} [traceId] - 記録パイプラインのトレースID
      */
-    abstract generateSummary(content: string, tagSummaryMode?: boolean): Promise<AISummaryResult>;
+    abstract generateSummary(content: string, tagSummaryMode?: boolean, traceId?: string): Promise<AISummaryResult>;
 
     /**
      * 接続テストを実行する
