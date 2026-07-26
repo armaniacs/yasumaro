@@ -200,6 +200,7 @@ async function handleSqliteMessage(
     msg: SqliteMessage,
     sendResponse: (response: unknown) => void
 ): Promise<void> {
+    const traceId = msg.traceId || '';
     switch (msg.type) {
         case 'SQLITE_HEALTH_CHECK': {
             const ok = await sqliteHealthCheck();
@@ -490,11 +491,13 @@ export function handleOffscreenMessage(
                 }
 
             } else {
-                forwardWarn(`Offscreen: Unknown message type ${msg.type}`);
+                const traceId = isSqliteMessageType(msg.type) ? (msg as SqliteMessage).traceId : undefined;
+                forwardWarn(`Offscreen: Unknown message type ${msg.type}`, {}, 'offscreen', traceId);
                 sendResponse({ success: false, error: 'Unknown message type' });
             }
         } catch (err: unknown) {
-            forwardError('Offscreen: Unexpected error', { error: errorMessage(err) });
+            const traceId = isSqliteMessageType(msg.type) ? (msg as SqliteMessage).traceId : undefined;
+            forwardError('Offscreen: Unexpected error', { error: errorMessage(err) }, 'offscreen', traceId);
             sendResponse({ success: false, error: errorMessage(err) });
         }
     })();

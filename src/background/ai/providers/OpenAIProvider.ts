@@ -101,7 +101,7 @@ export class OpenAIProvider extends AIProviderStrategy {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
+    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
         if (!this.baseUrl) {
             return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
         }
@@ -137,11 +137,11 @@ export class OpenAIProvider extends AIProviderStrategy {
         // プロンプトインジェクション対策 - コンテンツのサニタイズ
         const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
         if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${this.providerName}] Prompt injection detected: ${warnings.join('; ')}`);
+            addLog(LogType.WARN, `[${this.providerName}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
         }
         if (dangerLevel === 'high') {
             const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
-            addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked: ${cause}`);
+            addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked: ${cause}`, { traceId });
             return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
         }
 
@@ -201,7 +201,7 @@ export class OpenAIProvider extends AIProviderStrategy {
             }
 
             const data = await response.json();
-            return this._extractSummary(data);
+            return this._extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
             if (msg.includes('timed out')) {
@@ -270,21 +270,21 @@ export class OpenAIProvider extends AIProviderStrategy {
         return getAllowedUrls();
     }
 
-    private _extractSummary(data: OpenAIApiResponse): AISummaryResult {
+    private _extractSummary(data: OpenAIApiResponse, traceId: string = ''): AISummaryResult {
         if (!data.choices || data.choices.length === 0) {
             const error = 'OpenAI schema validation failed: choices is missing or empty';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         if (!data.choices[0].message) {
             const error = 'OpenAI schema validation failed: choices[0].message is missing';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         const content = data.choices[0].message.content;
         if (typeof content !== 'string') {
             const error = 'OpenAI schema validation failed: message.content is not a string';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         const sentTokens = data.usage?.prompt_tokens;

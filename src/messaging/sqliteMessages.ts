@@ -11,26 +11,26 @@
 import type { BrowsingLogRecord, QueryOptions } from '../utils/sqlite-types.js';
 
 export type SqliteMessage =
-  | { type: 'SQLITE_HEALTH_CHECK'; payload?: never }
-  | { type: 'SQLITE_INIT'; payload?: never }
-  | { type: 'SQLITE_INSERT'; payload: Record<string, unknown> }
-  | { type: 'SQLITE_INSERT_BATCH'; payload: { records: Record<string, unknown>[] } }
-  | { type: 'SQLITE_QUERY'; payload?: Partial<QueryOptions> }
-  | { type: 'SQLITE_AUDIT_LOG_INSERT'; payload: { provider: string; url: string; created_at: number } }
-  | { type: 'SQLITE_AUDIT_LOG_QUERY'; payload?: { limit?: number; offset?: number } }
-  | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number } }
-  | { type: 'SQLITE_UPDATE'; payload: { id: number } & Partial<Record<string, unknown>> }
-  | { type: 'SQLITE_DELETE'; payload: { id: number } }
-  | { type: 'SQLITE_TOGGLE_STAR'; payload: { id: number } }
-  | { type: 'SQLITE_COUNT'; payload?: never }
-  | { type: 'SQLITE_STATUS'; payload?: never }
-  | { type: 'SQLITE_CLEAR_ALL'; payload?: never }
-  | { type: 'SQLITE_EXPORT'; payload?: never }
-  | { type: 'SQLITE_BACKUP'; payload?: never }
-  | { type: 'SQLITE_RESTORE'; payload: { data: number[] } }
-  | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number } }
-  | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean } }
-  | { type: 'SQLITE_OPFS_SPIKE'; payload?: never };
+  | { type: 'SQLITE_HEALTH_CHECK'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_INIT'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_INSERT'; payload: Record<string, unknown>; traceId?: string }
+  | { type: 'SQLITE_INSERT_BATCH'; payload: { records: Record<string, unknown>[] }; traceId?: string }
+  | { type: 'SQLITE_QUERY'; payload?: Partial<QueryOptions>; traceId?: string }
+  | { type: 'SQLITE_AUDIT_LOG_INSERT'; payload: { provider: string; url: string; created_at: number }; traceId?: string }
+  | { type: 'SQLITE_AUDIT_LOG_QUERY'; payload?: { limit?: number; offset?: number }; traceId?: string }
+  | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number }; traceId?: string }
+  | { type: 'SQLITE_UPDATE'; payload: { id: number } & Partial<Record<string, unknown>>; traceId?: string }
+  | { type: 'SQLITE_DELETE'; payload: { id: number }; traceId?: string }
+  | { type: 'SQLITE_TOGGLE_STAR'; payload: { id: number }; traceId?: string }
+  | { type: 'SQLITE_COUNT'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_STATUS'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_CLEAR_ALL'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_EXPORT'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_BACKUP'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
+  | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
+  | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
+  | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string };
 
 export type SqliteMessageType = SqliteMessage['type'];
 
