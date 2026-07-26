@@ -92,3 +92,37 @@ Scenario: 外部サイトから内部バンドルが読み取れなくなる
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Red Team Leader指摘、High）
 - 対象コード: `wxt.config.ts:58-73`
 - 参考: `CLAUDE.local.md`「モジュール分割時のルール」（web_accessible_resources更新漏れによる過去の実障害、2026-04-15）
+
+## 実装メモ（2026-07-26完了）
+
+`src/content/*.ts`（Content Script実行コンテキスト）からの`chrome.runtime.getURL()`/動的`import()`
+呼び出しを全て洗い出した結果、外部Webページから実際に必要なリソースは以下の2つのみと判明した:
+
+- `content-extractor.js`（`loader.ts`が`import()`で動的取得）
+- `icons/icon48.png`（`extractor.ts`のプライバシー確認ダイアログで`<img>`表示用）
+
+残り7パターンは全て拡張機能内部コンテキスト（popup/dashboard/permissionsページ）からのみ
+利用されており、`chrome-extension://`オリジン内は`web_accessible_resources`の制約を受けないため
+宣言不要と判明した:
+
+- `content-scripts/content.js`: `manifest.json`の`content_scripts`セクションで既に宣言されており
+  ブラウザが自動注入するファイル。`web_accessible_resources`への重複宣言だった
+- `chunks/*.js`, `assets/*.js`: `content-extractor.js`は静的importのみでビルドされる自己完結
+  バンドルであり、ビルド後の成果物を`grep`しても`chunks/`への参照はゼロ
+- `data/models-dev-openai-compatible.json`: `src/utils/modelsDevApi.ts`（popup/dashboard専用）から
+  `fetch(chrome.runtime.getURL(...))`
+- `PRIVACY.md`: `src/privacy/privacy.ts`（`entrypoints/permissions/`配下の独立ページ）から`fetch()`
+- `permissions.html`: `src/popup/privacyConsentController.ts`から`chrome.runtime.getURL()`でリンク先
+  として使用
+- `assets/permissions-*.css`: `permissions.html`自身が`<link>`で読み込む静的アセット
+
+`wxt.config.ts`の`resources`を9パターンから2パターンに絞り込み。検証:
+- `npm run build`成功、生成`manifest.json`で意図通り2パターンのみになったことを確認
+- 単体テスト全7269件パス
+- Playwright E2E全183件パス（2件は既知の条件付きスキップ）。特に`@extension`プロジェクト
+  （実Chromiumで拡張機能をロード）の`content-script-recording.spec.ts`5件が全てパスし、
+  動的import・`VALID_VISIT`発火まで正常動作を確認
+- 変更前後を`git stash`で比較し、テスト中に見えた`[page error] 404`警告は今回の変更と無関係の
+  既存挙動と確認済み
+- ユーザーによる実Chromeブラウザでの手動確認（複数サイトでの動的importエラー有無、
+  `chrome-extension://`への直接fetchでの絞り込み確認）完了、問題なしと報告あり

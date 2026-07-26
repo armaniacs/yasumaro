@@ -33,7 +33,6 @@
 | [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🔴高 | 🔴あり | ⬜（PBI-37完了済み。着手時にpopup/dashboardのDOM ID共有設計が判明し再見積もり、フェーズ3へ移動） |
-| [2026-07-26-28-fix-web-accessible-resources-scope.md](2026-07-26-28-fix-web-accessible-resources-scope.md) | fix | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
@@ -105,6 +104,7 @@
 - 2026-07-26-22-refactor-barrel-reexport-removal.md (aiClient.tsは誤認識と判明し対象外。残り4バレルファイルは呼び出し元が1〜2箇所と少なく、直接import化してバレル自体を削除)
 - 2026-07-26-35-fix-dashboard-tagspanel-dead-code.md (調査の結果tagsPanel.tsはpanels/staticForm/tagsSettingsPanel.tsから現役でimportされている依存モジュールと判明。削除不要でクローズ)
 - 2026-07-26-33-fix-hardcoded-japanese-strings-options.md (options.html日本語ハードコード約247件をi18n化。当初想定220件+複数行パターン22件+data-i18n属性欠落19件を追加発見し対応、新規i18nキー19件追加)
+- 2026-07-26-28-fix-web-accessible-resources-scope.md (web_accessible_resourcesを9パターンから2パターンに絞り込み。Content Scriptから実際に必要なのはcontent-extractor.jsとicons/icon48.pngのみと判明、残りは拡張機能内部専用リソースで宣言不要と確認。実Chrome手動確認済み)
 
 ### これまでのアーカイブ済み
 
@@ -187,6 +187,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 15（✨機能追加 4 / 🔧非機能追加 11） |
+| ⬜ 未着手 | 14（✨機能追加 4 / 🔧非機能追加 10） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 159 |
+| アーカイブ済み | 160 |

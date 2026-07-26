@@ -57,16 +57,18 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
+        // Only resources actually fetched from the Content Script's page
+        // context (src/content/*.ts) belong here. content-scripts/content.js
+        // itself is injected via manifest.json's content_scripts and needs
+        // no separate web_accessible_resources entry. Everything else
+        // (chunks/*.js, assets/*.js, data/models-dev-openai-compatible.json,
+        // PRIVACY.md, permissions.html, assets/permissions-*.css) is only
+        // ever fetched from extension pages (popup/dashboard/permissions),
+        // which can already access chrome-extension:// resources without a
+        // web_accessible_resources declaration.
         resources: [
-          'content-scripts/content.js',
           'content-extractor.js',
-          'chunks/*.js',
-          'assets/*.js',
           'icons/icon48.png',
-          'data/models-dev-openai-compatible.json',
-          'PRIVACY.md',
-          'permissions.html',
-          'assets/permissions-*.css',
         ],
         matches: ['http://*/*', 'https://*/*'],
       },
