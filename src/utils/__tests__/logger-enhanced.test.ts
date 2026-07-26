@@ -145,6 +145,32 @@ describe('Logger - Enhanced Coverage', () => {
             expect(logs.some((l: any) => l.message === 'Suspend log')).toBe(true);
         });
 
+        test('onSuspend logs a best-effort warning when flush times out', async () => {
+            vi.useFakeTimers();
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            try {
+                // chrome.storage.local.get を永久に解決しないPromiseにして、
+                // flushLogs() が3秒のタイムアウト内に完了しない状況を再現する
+                (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementationOnce(
+                    () => new Promise(() => {})
+                );
+
+                await logger.addLog('INFO', 'Log that will not be flushed in time', {});
+                const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+                const suspendPromise = suspendListener();
+                await vi.advanceTimersByTimeAsync(3000);
+                await suspendPromise;
+
+                expect(consoleErrorSpy).toHaveBeenCalledWith(
+                    expect.stringContaining('Flush timed out during suspend')
+                );
+            } finally {
+                consoleErrorSpy.mockRestore();
+                vi.useRealTimers();
+            }
+        });
+
         test('logCritical flushes immediately', async () => {
             await logger.logCritical('Critical event', {}, 'UNKN_001', 'test');
             const logs = await logger.getLogs();
