@@ -267,6 +267,128 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
     });
   });
 
+  describe('generateSummary - in-flightリクエストの重複排除', () => {
+    it('同一URLへの並行呼び出しは実際のAPI呼び出しを1回に集約する', async () => {
+      const client = new AIClient();
+      let apiCallCount = 0;
+      let resolveApiCall: ((result: { success: boolean; summary: string }) => void) | undefined;
+      const apiCallPromise = new Promise<{ success: boolean; summary: string }>((resolve) => {
+        resolveApiCall = resolve;
+      });
+
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => {
+          apiCallCount++;
+          return apiCallPromise;
+        },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' }),
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: 'key', gemini_model: 'gemini-pro' });
+
+      const url = 'https://example.com/article';
+      const call1 = client.generateSummary('content', false, url);
+      const call2 = client.generateSummary('content', false, url);
+
+      resolveApiCall!({ success: true, summary: 'shared summary' });
+      const [result1, result2] = await Promise.all([call1, call2]);
+
+      // 並行呼び出しにもかかわらず、実際のプロバイダーAPI呼び出しは1回のみ
+      expect(apiCallCount).toBe(1);
+      expect(result1.summary).toBe('shared summary');
+      expect(result2.summary).toBe('shared summary');
+    });
+
+    it('異なるURLへの並行呼び出しはそれぞれ独立してAPIを呼び出す', async () => {
+      const client = new AIClient();
+      let apiCallCount = 0;
+
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => {
+          apiCallCount++;
+          return Promise.resolve({ success: true, summary: `summary-${apiCallCount}` });
+        },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' }),
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: 'key', gemini_model: 'gemini-pro' });
+
+      await Promise.all([
+        client.generateSummary('content', false, 'https://example.com/a'),
+        client.generateSummary('content', false, 'https://example.com/b'),
+      ]);
+
+      expect(apiCallCount).toBe(2);
+    });
+
+    it('完了後は同一URLへの新規呼び出しで再度APIが呼ばれる', async () => {
+      const client = new AIClient();
+      let apiCallCount = 0;
+
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => {
+          apiCallCount++;
+          return Promise.resolve({ success: true, summary: 'ok' });
+        },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' }),
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: 'key', gemini_model: 'gemini-pro' });
+
+      const url = 'https://example.com/article';
+      await client.generateSummary('content', false, url);
+      expect(apiCallCount).toBe(1);
+
+      // 1回目の呼び出しが完了した後の2回目は、in-flightマップがクリアされているため再度APIを呼ぶ
+      await client.generateSummary('content', false, url);
+      expect(apiCallCount).toBe(2);
+    });
+
+    it('urlが空文字列の場合は重複排除の対象外になる', async () => {
+      const client = new AIClient();
+      let apiCallCount = 0;
+
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => {
+          apiCallCount++;
+          return Promise.resolve({ success: true, summary: 'ok' });
+        },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' }),
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: 'key', gemini_model: 'gemini-pro' });
+
+      await Promise.all([
+        client.generateSummary('content', false),
+        client.generateSummary('content', false),
+      ]);
+
+      expect(apiCallCount).toBe(2);
+    });
+
+    it('失敗時もin-flightマップから削除され、次の呼び出しで再試行できる', async () => {
+      const client = new AIClient();
+      let apiCallCount = 0;
+
+      client.registerProvider('gemini', () => ({
+        generateSummary: () => {
+          apiCallCount++;
+          return Promise.reject(new Error('API error'));
+        },
+        testConnection: () => Promise.resolve({ success: true, message: 'ok' }),
+      }));
+
+      mockGetSettings.mockResolvedValue({ ai_provider: 'gemini', gemini_api_key: 'key', gemini_model: 'gemini-pro' });
+
+      const url = 'https://example.com/article';
+      await client.generateSummary('content', false, url);
+      expect(apiCallCount).toBe(1);
+
+      await client.generateSummary('content', false, url);
+      expect(apiCallCount).toBe(2);
+    });
+  });
+
   describe('registerDefaultProviders', () => {
     it('デフォルトプロバイダーが登録される', () => {
       const client = new AIClient();

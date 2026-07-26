@@ -1,9 +1,22 @@
 # PBI: 同一URLへのAI要約呼び出しの並行重複を防止する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（in-flightリクエスト管理を追加するため、既存の並行記録フローに影響しないか確認が必要）
+
+## 実装メモ（2026-07-26）
+
+`AIClient.generateSummary()` に `inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>` を追加。
+キーは `${url}::${tagSummaryMode}`（url空文字列時は重複排除対象外）。既存ロジックは `generateSummaryInternal()`
+に切り出し、外側のラッパーで in-flight チェック・登録・`finally`でのクリーンアップを行う。
+`src/background/__tests__/aiClient.test.ts` に5件のテストを追加（同一URL集約・異なるURL独立・完了後の再試行・
+空文字列URLの対象外・失敗時のクリーンアップ）。全27件パス。
+
+**確認事項**: `reviewSummaryGenerator.ts` は `AIClient.generateSummary()` を呼ぶがurlを渡していないため、
+この重複排除の対象外（意図通り — 呼び出しごとに新しい `AIClient` インスタンスを生成しており、
+週次/月次ダイジェスト生成の重複制御は別レイヤーの問題であり本PBIのスコープ外）。
 
 ---
 
