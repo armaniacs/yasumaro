@@ -69,11 +69,7 @@ import {
   shouldRecordVisit,
   extractPageContent,
   init,
-  lastCleansedReason,
-  lastCleanseStats,
-  lastByteStats,
-  lastAiSummaryCleansedStats,
-  lastFallbackTriggered,
+  getPageStateForTesting,
   showPrivacyConfirmDialog,
 } from '../extractor.js';
 
@@ -294,14 +290,14 @@ describe('extractPageContent — last stats with variants', () => {
   it('records non-zero candidateBytes when article present', () => {
     document.body.innerHTML = '<article><p>Content here with sufficient text for scoring and extraction purposes in this test scenario.</p></article>';
     extractPageContent();
-    expect(lastByteStats.pageBytes).toBeGreaterThan(0);
-    expect(typeof lastFallbackTriggered).toBe('boolean');
+    expect(getPageStateForTesting().lastByteStats.pageBytes).toBeGreaterThan(0);
+    expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
   });
 
-  it('keeps lastCleansedReason as "none" when no cleansing necessary', () => {
+  it('keeps getPageStateForTesting().lastCleansedReason as "none" when no cleansing necessary', () => {
     document.body.innerHTML = '<article><p>Clean content with no sensitive data or ads to strip here.</p></article>';
     extractPageContent();
-    expect(['none', 'hard', 'keyword', 'both']).toContain(lastCleansedReason);
+    expect(['none', 'hard', 'keyword', 'both']).toContain(getPageStateForTesting().lastCleansedReason);
   });
 
   it('populates aiSummaryCleansedReasons as array when elements cleaned', () => {
@@ -313,8 +309,8 @@ describe('extractPageContent — last stats with variants', () => {
       </article>
     `;
     extractPageContent();
-    expect(Array.isArray(lastAiSummaryCleansedStats.aiSummaryCleansedReasons) ||
-      lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
+    expect(Array.isArray(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons) ||
+      getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
   });
 });
 
