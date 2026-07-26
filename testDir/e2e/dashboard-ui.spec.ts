@@ -122,8 +122,8 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
 
   test('has Obsidian connection section', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.locator('h2.panel-title')).toHaveText(/初期設定/);
-    await expect(panel.getByText('Obsidian 接続')).toBeVisible();
+    await expect(panel.locator('h2.panel-title')).toHaveText(/Initial Setup/);
+    await expect(panel.getByRole('heading', { name: 'Obsidian Connection', exact: true })).toBeVisible();
   });
 
   test('has Obsidian settings details fieldset', async ({ page }) => {
@@ -133,17 +133,17 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
 
   test('has local Markdown export section', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.getByText('ローカル Markdown 書き出し')).toBeVisible();
+    await expect(panel.getByText('Local Markdown Export')).toBeVisible();
   });
 
   test('has weekly/monthly summary section', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.getByText('週次/月次振り返りサマリ')).toBeVisible();
+    await expect(panel.getByText('Weekly/Monthly Review Summary')).toBeVisible();
   });
 
   test('has AI provider priority sections', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.getByText('AI プロバイダー')).toBeVisible();
+    await expect(panel.getByRole('heading', { name: 'AI Provider', exact: true })).toBeVisible();
   });
 
   test('has Gemini API key input', async ({ page }) => {
@@ -152,23 +152,23 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
 
   test('has retention policy section', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.getByText('閲覧履歴 保持ポリシー')).toBeVisible();
+    await expect(panel.getByText('History Retention Policy')).toBeVisible();
   });
 
   test('has content retention section', async ({ page }) => {
     const panel = page.locator('#panel-general');
-    await expect(panel.getByText('コンテンツ保持設定')).toBeVisible();
+    await expect(panel.getByText('Content Retention Settings')).toBeVisible();
   });
 
   test('has action buttons at top and bottom', async ({ page }) => {
     const panel = page.locator('#panel-general');
 
     // 保存するボタンが上下に2つあること
-    const saveButtons = panel.getByRole('button', { name: '保存する' });
+    const saveButtons = panel.getByRole('button', { name: 'Save' });
     await expect(saveButtons).toHaveCount(2);
 
     // Obsidian テストボタンが上下に2つあること
-    const obsidianTestButtons = panel.getByRole('button', { name: 'Obsidian テスト' });
+    const obsidianTestButtons = panel.getByRole('button', { name: 'Test Obsidian' });
     await expect(obsidianTestButtons).toHaveCount(2);
   });
 

@@ -27,7 +27,7 @@
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
-          <span data-i18n="mainTabDashboard">初期設定</span>
+          <span data-i18n="mainTabDashboard">Initial Setup</span>
         </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-domain" aria-selected="false" data-panel="panel-domain">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -161,27 +161,27 @@
 
       <!-- General Settings Panel -->
       <section id="panel-general" class="panel active" role="tabpanel">
-        <h2 class="panel-title" data-i18n="mainTabDashboard">初期設定</h2>
-        <p class="panel-description" data-i18n="initialSetupDescription">Obsidianとの接続とAIの設定を行います。</p>
+        <h2 class="panel-title" data-i18n="mainTabDashboard">Initial Setup</h2>
+        <p class="panel-description" data-i18n="initialSetupDescription">Configure your Obsidian connection and AI settings.</p>
 
         <!-- ボタンエリア（上部） -->
         <div class="general-btn-row">
-          <button id="saveTop" class="btn-primary" data-i18n="saveBtn">保存する</button>
-          <button id="testObsidianBtnTop" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
-          <button id="testAiBtnTop" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
-          <button id="testLocalMarkdownBtnTop" class="secondary-btn" data-i18n="testLocalMarkdownBtn">ローカルMarkdownテスト</button>
-          <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
+          <button id="saveTop" class="btn-primary" data-i18n="saveBtn">Save</button>
+          <button id="testObsidianBtnTop" class="secondary-btn" data-i18n="testObsidianBtn">Test Obsidian</button>
+          <button id="testAiBtnTop" class="secondary-btn" data-i18n="testAiBtn">Test AI</button>
+          <button id="testLocalMarkdownBtnTop" class="secondary-btn" data-i18n="testLocalMarkdownBtn">Test Local Markdown</button>
+          <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="statusTop" aria-live="polite"></div>
 
         <!-- Obsidian 接続セクション -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="obsidianSection">Obsidian 接続</h3>
+          <h3 class="settings-section-title" data-i18n="obsidianSection">Obsidian Connection</h3>
 
           <div class="form-group">
             <input type="checkbox" id="obsidianEnabled" data-storage-key="obsidian_enabled" aria-describedby="obsidianEnabledHelp">
-            <label for="obsidianEnabled" class="inline-label" data-i18n="obsidianEnabledLabel">Obsidian を使う</label>
-            <div id="obsidianEnabledHelp" class="help-text" data-i18n="obsidianEnabledHelp">OFF の場合、記録は SQLite のみに保存されます。</div>
+            <label for="obsidianEnabled" class="inline-label" data-i18n="obsidianEnabledLabel">Use Obsidian</label>
+            <div id="obsidianEnabledHelp" class="help-text" data-i18n="obsidianEnabledHelp">When OFF, records are saved to SQLite only.</div>
           </div>
 
           <div class="form-group">
@@ -191,14 +191,14 @@
               <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md"
                  target="_blank"
                  rel="noopener noreferrer"
-                 data-i18n="obsidianSetupGuideLink">Obsidian設定ガイドを見る（新しいタブで開きます）</a>
+                 data-i18n="obsidianSetupGuideLink">View Obsidian Setup Guide (opens in new tab)</a>
             </div>
           </div>
         </div>
 
         <!-- 詳細設定（折りたたみ） -->
         <details id="obsidianSettingsDetails" class="advanced-details">
-          <summary class="advanced-details-summary" data-i18n="advancedSettings">詳細設定（Protocol / Port / Daily Note Path）</summary>
+          <summary class="advanced-details-summary" data-i18n="advancedSettings">Advanced Settings (Protocol / Port / Daily Note Path)</summary>
           <div class="advanced-details-content">
             <div class="form-group">
               <label for="protocol" data-i18n="protocol">Protocol (http/https)</label>
@@ -222,7 +222,7 @@
               <label for="obsidianHost" data-i18n="label_obsidian_host">Obsidian Host</label>
               <input type="text" id="obsidianHost" data-storage-key="obsidian_host" placeholder="127.0.0.1" aria-invalid="false"
                 aria-describedby="obsidianHostNote obsidianHostError">
-              <p class="help-text" id="obsidianHostNote" data-i18n="note_obsidian_host">Obsidian Local REST API のホスト名（例: 127.0.0.1, localhost, WSL2 の IP）</p>
+              <p class="help-text" id="obsidianHostNote" data-i18n="note_obsidian_host">Hostname for the Obsidian Local REST API (e.g., 127.0.0.1, localhost, WSL2 IP).</p>
               <div id="obsidianHostError" class="field-error" role="alert"></div>
             </div>
           </div>
@@ -230,50 +230,50 @@
 
         <!-- ローカル Markdown 書き出しセクション -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
+          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">Local Markdown Export</h3>
 
           <div class="form-group">
             <input type="checkbox" id="localMarkdownExportEnabled" data-storage-key="local_markdown_export_enabled" aria-describedby="localMarkdownExportEnabledHelp">
-            <label for="localMarkdownExportEnabled" class="inline-label" data-i18n="localMarkdownExportEnabledLabel">ローカル Markdown に書き出す</label>
-            <div id="localMarkdownExportEnabledHelp" class="help-text" data-i18n="localMarkdownExportEnabledHelp">閲覧履歴を Markdown ファイルとしてブラウザのダウンロードフォルダに保存します（例: ~/Downloads/Yasumaro/）。</div>
+            <label for="localMarkdownExportEnabled" class="inline-label" data-i18n="localMarkdownExportEnabledLabel">Export to Local Markdown</label>
+            <div id="localMarkdownExportEnabledHelp" class="help-text" data-i18n="localMarkdownExportEnabledHelp">Save browsing history as daily Markdown files to your browser's downloads folder (e.g., ~/Downloads/Yasumaro/).</div>
           </div>
 
           <div id="localMarkdownExportSettings" class="hidden">
             <div class="form-group">
-              <p data-i18n="localMarkdownExportTimingLabel">書き出しタイミング</p>
+              <p data-i18n="localMarkdownExportTimingLabel">Export timing</p>
               <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingManual" value="manual">
-              <label for="localMarkdownExportTimingManual" class="inline-label" data-i18n="localMarkdownExportTimingManualLabel">手動のみ（自動書き出ししない）</label>
+              <label for="localMarkdownExportTimingManual" class="inline-label" data-i18n="localMarkdownExportTimingManualLabel">Manual only (no auto-export)</label>
 
               <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingImmediate" value="immediate">
-              <label for="localMarkdownExportTimingImmediate" class="inline-label" data-i18n="localMarkdownExportTimingImmediateLabel">即時（記録直後、最短1分間隔）</label>
+              <label for="localMarkdownExportTimingImmediate" class="inline-label" data-i18n="localMarkdownExportTimingImmediateLabel">Immediate (right after recording, min. 1-minute interval)</label>
 
               <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingIdle" value="idle">
-              <label for="localMarkdownExportTimingIdle" class="inline-label" data-i18n="localMarkdownExportTimingIdleLabel">アイドル時 / 30分ごと</label>
-              <div id="localMarkdownExportTimingIdleHelp" class="help-text" data-i18n="localMarkdownExportTimingIdleHelp">ブラウザがアイドル状態になったとき、または最大30分ごとにまとめて書き出します。</div>
+              <label for="localMarkdownExportTimingIdle" class="inline-label" data-i18n="localMarkdownExportTimingIdleLabel">On idle / every 30 minutes</label>
+              <div id="localMarkdownExportTimingIdleHelp" class="help-text" data-i18n="localMarkdownExportTimingIdleHelp">Exports are batched when the browser becomes idle, or at least every 30 minutes.</div>
 
               <input type="radio" name="localMarkdownExportTiming" id="localMarkdownExportTimingDaily" value="daily">
-              <label for="localMarkdownExportTimingDaily" class="inline-label" data-i18n="localMarkdownExportTimingDailyLabel">日付が変わったとき（前日分を回収）</label>
+              <label for="localMarkdownExportTimingDaily" class="inline-label" data-i18n="localMarkdownExportTimingDailyLabel">When the date changes (collects the previous day)</label>
             </div>
 
             <div class="form-group">
-              <label for="localMarkdownExportPath" data-i18n="localMarkdownExportPathLabel">書き出しフォルダ</label>
+              <label for="localMarkdownExportPath" data-i18n="localMarkdownExportPathLabel">Export Folder</label>
               <input type="text" id="localMarkdownExportPath" data-storage-key="local_markdown_export_path" data-i18n-input-placeholder="localMarkdownExportPathPlaceholder">
-              <div class="help-text" data-i18n="localMarkdownExportPathHelp">ダウンロードフォルダ内のフォルダ名（デフォルト: Yasumaro）</div>
+              <div class="help-text" data-i18n="localMarkdownExportPathHelp">Folder name inside your downloads folder (default: Yasumaro)</div>
             </div>
 
             <!-- 手動エクスポート -->
             <div class="form-group manual-export-section">
-              <label class="export-section-label">手動エクスポート（日付範囲指定）</label>
+              <label class="export-section-label" data-i18n="manualExportDateRangeLabel">Manual Export (specify date range)</label>
               <div class="date-range-row">
                 <div>
-                  <label for="localExportStartDate" class="date-input-label">開始日</label>
+                  <label for="localExportStartDate" class="date-input-label" data-i18n="startDate">Start date</label>
                   <input type="date" id="localExportStartDate">
                 </div>
                 <div>
-                  <label for="localExportEndDate" class="date-input-label">終了日</label>
+                  <label for="localExportEndDate" class="date-input-label" data-i18n="endDate">End date</label>
                   <input type="date" id="localExportEndDate">
                 </div>
-                <button id="localExportManualBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">エクスポート</button>
+                <button id="localExportManualBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">Export</button>
               </div>
               <div id="localExportManualStatus" class="status-message status-message-spaced" aria-live="polite"></div>
             </div>
@@ -282,39 +282,39 @@
 
         <!-- Review Summary Section -->
         <div id="reviewSummarySection" class="settings-section">
-          <h3 class="settings-section-title" data-i18n="reviewSummarySection">週次/月次振り返りサマリ</h3>
+          <h3 class="settings-section-title" data-i18n="reviewSummarySection">Weekly/Monthly Review Summary</h3>
 
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="reviewSummaryEnabled" data-storage-key="review_summary_enabled">
-              <span data-i18n="reviewSummaryEnabled">週次/月次サマリを自動生成する</span>
+              <span data-i18n="reviewSummaryEnabled">Auto-generate weekly/monthly summaries</span>
             </label>
             <div class="help-text" data-i18n="reviewSummaryHelp">
-              有効にすると、毎週月曜日と毎月1日に過去期間の閲覧履歴を要約したMarkdownファイルをダウンロードします。
+              When enabled, downloads a Markdown summary of past browsing history every Monday and the 1st of each month.
             </div>
           </div>
 
           <div class="form-group" id="reviewSummaryManualActions">
-            <button id="generateWeeklySummaryBtn" class="secondary-btn" data-i18n="generateWeeklySummaryBtn">今週のサマリを生成</button>
-            <button id="generateMonthlySummaryBtn" class="secondary-btn" data-i18n="generateMonthlySummaryBtn">今月のサマリを生成</button>
+            <button id="generateWeeklySummaryBtn" class="secondary-btn" data-i18n="generateWeeklySummaryBtn">Generate this week's summary</button>
+            <button id="generateMonthlySummaryBtn" class="secondary-btn" data-i18n="generateMonthlySummaryBtn">Generate this month's summary</button>
             <div id="reviewSummaryStatus" class="status-message status-message-spaced" aria-live="polite"></div>
           </div>
         </div>
 
         <!-- AI プロバイダーセクション -->
         <div id="aiProviderSection" class="settings-section">
-          <h3 class="settings-section-title" data-i18n="aiSection">AI プロバイダー</h3>
+          <h3 class="settings-section-title" data-i18n="aiSection">AI Provider</h3>
 
           <!-- Priority 1 Provider -->
           <details class="priority-details" open>
             <summary class="priority-details-summary">
               <span class="priority-number">1</span>
-              <span class="priority-details-label" data-i18n="aiProviderPriority1">優先度1位（必須）</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority1">Priority 1 (Required)</span>
               <span class="priority-provider-name" data-priority="1"></span>
             </summary>
             <div class="priority-details-content">
               <div class="form-group">
-                <label for="aiProvider" class="sr-only">AIプロバイダー</label>
+                <label for="aiProvider" class="sr-only" data-i18n="aiProvider">AI Provider</label>
                 <select id="aiProvider" data-storage-key="ai_provider">
                   <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
                   <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
@@ -326,7 +326,7 @@
               </div>
               <div id="priority1ProviderSettings"></div>
               <div class="form-group">
-                <label for="aiProviderPriority1Model" class="sr-only">モデル名</label>
+                <label for="aiProviderPriority1Model" class="sr-only" data-i18n="modelName">Model Name</label>
                 <input type="text" id="aiProviderPriority1Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
               </div>
             </div>
@@ -336,14 +336,14 @@
           <details class="priority-details">
             <summary class="priority-details-summary">
               <span class="priority-number">2</span>
-              <span class="priority-details-label" data-i18n="aiProviderPriority2">優先度2位（任意）</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority2">Priority 2 (Optional)</span>
               <span class="priority-provider-name" data-priority="2"></span>
             </summary>
             <div class="priority-details-content">
               <div class="form-group">
-                <label for="aiProviderPriority2" class="sr-only">AIプロバイダー</label>
+                <label for="aiProviderPriority2" class="sr-only" data-i18n="aiProvider">AI Provider</label>
                 <select id="aiProviderPriority2">
-                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="" data-i18n-opt="providerPriorityNone">Not set</option>
                   <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
                   <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
                   <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
@@ -354,7 +354,7 @@
               </div>
               <div id="priority2ProviderSettings"></div>
               <div class="form-group">
-                <label for="aiProviderPriority2Model" class="sr-only">モデル名</label>
+                <label for="aiProviderPriority2Model" class="sr-only" data-i18n="modelName">Model Name</label>
                 <input type="text" id="aiProviderPriority2Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
               </div>
             </div>
@@ -364,14 +364,14 @@
           <details class="priority-details">
             <summary class="priority-details-summary">
               <span class="priority-number">3</span>
-              <span class="priority-details-label" data-i18n="aiProviderPriority3">優先度3位（任意）</span>
+              <span class="priority-details-label" data-i18n="aiProviderPriority3">Priority 3 (Optional)</span>
               <span class="priority-provider-name" data-priority="3"></span>
             </summary>
             <div class="priority-details-content">
               <div class="form-group">
-                <label for="aiProviderPriority3" class="sr-only">AIプロバイダー</label>
+                <label for="aiProviderPriority3" class="sr-only" data-i18n="aiProvider">AI Provider</label>
                 <select id="aiProviderPriority3">
-                  <option value="" data-i18n-opt="providerPriorityNone">未設定</option>
+                  <option value="" data-i18n-opt="providerPriorityNone">Not set</option>
                   <option value="gemini" data-i18n-opt="googleGemini">Google Gemini</option>
                   <option value="openai" data-i18n-opt="openaiCompatible">OpenAI Compatible (Groq, etc.)</option>
                   <option value="openai2" data-i18n-opt="openaiCompatible2">OpenAI Compatible 2 (Local, etc.)</option>
@@ -382,7 +382,7 @@
               </div>
               <div id="priority3ProviderSettings"></div>
               <div class="form-group">
-                <label for="aiProviderPriority3Model" class="sr-only">モデル名</label>
+                <label for="aiProviderPriority3Model" class="sr-only" data-i18n="modelName">Model Name</label>
                 <input type="text" id="aiProviderPriority3Model" data-i18n-input-placeholder="providerPriorityModelPlaceholder" class="priority-model-input" placeholder="Model Name (optional)">
               </div>
             </div>
@@ -394,8 +394,8 @@
               <label for="geminiApiKey" data-i18n="geminiApiKey">Gemini API Key</label>
               <input type="password" id="geminiApiKey" data-storage-key="gemini_api_key" data-i18n-input-placeholder="geminiApiKeyPlaceholder">
               <div class="help-text">
-                <span data-i18n="geminiApiKeyHelp">Google AI Studio で取得できます。</span>
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" data-i18n="apiKeyCreateLink">APIキーを作成 →</a>
+                <span data-i18n="geminiApiKeyHelp">Get it from Google AI Studio.</span>
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" data-i18n="apiKeyCreateLink">Create API Key →</a>
               </div>
             </div>
 
@@ -408,7 +408,7 @@
               <label for="geminiApiVersion" data-i18n="label_gemini_api_version">Gemini API Version</label>
               <input type="text" id="geminiApiVersion" data-storage-key="gemini_api_version" placeholder="v1beta" aria-invalid="false"
                 aria-describedby="geminiApiVersionNote geminiApiVersionError">
-              <p class="help-text" id="geminiApiVersionNote" data-i18n="note_gemini_api_version">Gemini API のバージョン（v1 または v1beta）</p>
+              <p class="help-text" id="geminiApiVersionNote" data-i18n="note_gemini_api_version">Gemini API version (v1 or v1beta).</p>
               <div id="geminiApiVersionError" class="field-error" role="alert"></div>
             </div>
           </div>
@@ -506,52 +506,77 @@
           </div>
         </div>
 
+        <!-- 記録条件・AI設定 -->
+        <div class="settings-section">
+          <div class="form-group">
+            <label for="minVisitDuration" data-i18n="minVisitDuration">Min Visit Duration (seconds)</label>
+            <input type="number" id="minVisitDuration" data-storage-key="min_visit_duration" min="1" value="5" aria-invalid="false"
+              aria-describedby="minVisitDurationError">
+            <div id="minVisitDurationError" class="field-error" role="alert"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="minScrollDepth" data-i18n="minScrollDepth">Min Scroll Depth (%)</label>
+            <input type="number" id="minScrollDepth" data-storage-key="min_scroll_depth" min="0" max="100" value="50" aria-invalid="false"
+              aria-describedby="minScrollDepthError">
+            <div id="minScrollDepthError" class="field-error" role="alert"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="maxTokensPerPrompt" data-i18n="label_max_tokens">Max Tokens Per Prompt</label>
+            <input type="number" id="maxTokensPerPrompt" data-storage-key="max_tokens_per_prompt" min="10" max="16000" step="100" value="1000" aria-invalid="false"
+              aria-describedby="maxTokensError maxTokensNote">
+            <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
+            <div id="maxTokensError" class="field-error" role="alert"></div>
+          </div>
+        </div>
+
         <!-- 閲覧履歴 保持ポリシー -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="retentionPolicyTitle">閲覧履歴 保持ポリシー</h3>
+          <h3 class="settings-section-title" data-i18n="retentionPolicyTitle">History Retention Policy</h3>
           <div class="form-group">
-            <label for="sqliteRetentionDays" data-i18n="retentionDaysLabel">保持期間</label>
+            <label for="sqliteRetentionDays" data-i18n="retentionDaysLabel">Retention period</label>
             <select id="sqliteRetentionDays" data-storage-key="sqlite_retention_days">
-              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
-              <option value="30" data-i18n="retention30days">30日</option>
-              <option value="90" data-i18n="retention90days">90日</option>
-              <option value="180" data-i18n="retention180days">180日</option>
-              <option value="365" data-i18n="retention365days">365日</option>
+              <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
+              <option value="30" data-i18n="retention30days">30 days</option>
+              <option value="90" data-i18n="retention90days">90 days</option>
+              <option value="180" data-i18n="retention180days">180 days</option>
+              <option value="365" data-i18n="retention365days">365 days</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="sqliteMaxRecords" data-i18n="maxRecordsLabel">最大件数</label>
+            <label for="sqliteMaxRecords" data-i18n="maxRecordsLabel">Maximum records</label>
             <select id="sqliteMaxRecords" data-storage-key="sqlite_max_records">
-              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
               <option value="1000">1,000</option>
               <option value="10000">10,000</option>
               <option value="100000">100,000</option>
             </select>
           </div>
           <div class="form-group">
-            <button id="purgeNowBtn" class="secondary-btn" data-i18n="purgeNowBtn">今すぐ削除を実行</button>
+            <button id="purgeNowBtn" class="secondary-btn" data-i18n="purgeNowBtn">Purge now</button>
             <span id="purgeNowStatus" aria-live="polite"></span>
           </div>
         </div>
 
         <!-- コンテンツ保持設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="contentRetentionPolicyTitle">コンテンツ保持設定</h3>
-          <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">content（本文）のみを対象とし、レコード自体は削除しません</p>
+          <h3 class="settings-section-title" data-i18n="contentRetentionPolicyTitle">Content Retention Settings</h3>
+          <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">Only content (page body) will be purged; records themselves are kept</p>
           <div class="form-group">
-            <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">content（本文）保持期間</label>
+            <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">Content retention period</label>
             <select id="contentRetentionDays" data-storage-key="content_retention_days">
-              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
-              <option value="7" data-i18n="retention7days">7日</option>
-              <option value="30" data-i18n="retention30days">30日</option>
-              <option value="90" data-i18n="retention90days">90日</option>
-              <option value="180" data-i18n="retention180days">180日</option>
+              <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
+              <option value="7" data-i18n="retention7days">7 days</option>
+              <option value="30" data-i18n="retention30days">30 days</option>
+              <option value="90" data-i18n="retention90days">90 days</option>
+              <option value="180" data-i18n="retention180days">180 days</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="contentMaxRecords" data-i18n="contentMaxRecordsLabel">content（本文）最大保持件数</label>
+            <label for="contentMaxRecords" data-i18n="contentMaxRecordsLabel">Max content records</label>
             <select id="contentMaxRecords" data-storage-key="content_max_records">
-              <option value="" data-i18n="retentionUnlimited">無制限（削除しない）</option>
+              <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
               <option value="100">100</option>
               <option value="500">500</option>
               <option value="1000">1,000</option>
@@ -561,22 +586,22 @@
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="contentPurgeIncludeStarred" data-storage-key="content_purge_include_starred">
-              <span data-i18n="contentPurgeIncludeStarredLabel">スター付きエントリの content も削除対象にする</span>
+              <span data-i18n="contentPurgeIncludeStarredLabel">Include starred entries in content purge</span>
             </label>
           </div>
           <div class="form-group">
-            <button id="contentPurgeNowBtn" class="secondary-btn" data-i18n="contentPurgeNowBtn">今すぐ content を削除</button>
+            <button id="contentPurgeNowBtn" class="secondary-btn" data-i18n="contentPurgeNowBtn">Purge content now</button>
             <span id="contentPurgeNowStatus" aria-live="polite"></span>
           </div>
         </div>
 
         <!-- ボタンエリア -->
         <div class="general-btn-row">
-          <button id="save" class="btn-primary" data-i18n="saveBtn">保存する</button>
-          <button id="testObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
-          <button id="testAiBtn" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
-          <button id="testLocalMarkdownBtnBottom" class="secondary-btn" data-i18n="testLocalMarkdownBtn">ローカルMarkdownテスト</button>
-          <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">セットアップウィザード</button>
+          <button id="save" class="btn-primary" data-i18n="saveBtn">Save</button>
+          <button id="testObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Test Obsidian</button>
+          <button id="testAiBtn" class="secondary-btn" data-i18n="testAiBtn">Test AI</button>
+          <button id="testLocalMarkdownBtnBottom" class="secondary-btn" data-i18n="testLocalMarkdownBtn">Test Local Markdown</button>
+          <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="status" aria-live="polite"></div>
       </section>
@@ -585,7 +610,7 @@
       <section id="panel-domain" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="domainTab">Domain Filter</h2>
         <p class="panel-description" data-i18n="domainFilterDescription">
-          記録するサイトをドメインで制御します。銀行・SNSなど記録不要なサイトはブラックリストに、社内サイトなど特定のサイトだけ記録したい場合はホワイトリストを使います。
+          Control which sites are recorded by domain. Add sites you don't want recorded (e.g. banking, social media) to the blacklist, or use the whitelist to record only specific sites.
         </p>
 
         <!-- トグル ON/OFF -->
@@ -594,16 +619,16 @@
             <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false">
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
-          <span class="toggle-label" data-i18n="domainFilterEnable">フィルターを有効にする</span>
+          <span class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
         </div>
 
         <!-- タブ（ON時のみ表示） -->
         <div id="domainModeTabBar" class="domain-mode-tab-bar" hidden>
           <div class="domain-mode-tabs" role="tablist">
             <button id="domainModeTab-blacklist" class="domain-mode-tab active" role="tab" aria-selected="true"
-              data-i18n="domainBlacklistTab">ブラックリスト</button>
+              data-i18n="domainBlacklistTab">Blacklist</button>
             <button id="domainModeTab-whitelist" class="domain-mode-tab" role="tab" aria-selected="false"
-              data-i18n="domainWhitelistTab">ホワイトリスト</button>
+              data-i18n="domainWhitelistTab">Whitelist</button>
           </div>
           <p id="domainModeDesc" class="domain-mode-desc"></p>
         </div>
@@ -616,21 +641,21 @@
             <input type="text" id="domainTagInput" class="domain-tag-input"
               data-i18n-input-placeholder="domainTagInputPlaceholder"
               autocomplete="off" autocapitalize="none" spellcheck="false">
-            <button id="domainTagAddBtn" class="secondary-btn" data-i18n="domainTagAdd">追加</button>
+            <button id="domainTagAddBtn" class="secondary-btn" data-i18n="domainTagAdd">Add</button>
           </div>
           <div id="domainTagError" class="field-error" role="alert"></div>
         </div>
 
         <!-- 保存エリア -->
         <div id="domainSaveArea" class="domain-save-area">
-          <button id="domainSaveBtn" class="btn-primary" data-i18n="domainSaveBtn">保存する</button>
+          <button id="domainSaveBtn" class="btn-primary" data-i18n="domainSaveBtn">Save</button>
           <div id="domainSaveStatus" class="status-message" aria-live="polite"></div>
         </div>
 
         <!-- uBlock折りたたみ -->
         <details id="ublockDetails" class="ublock-details">
           <summary class="ublock-summary" data-i18n="ublockDetailsTitle">
-            uBlock Origin フィルター（上級者向け）
+            uBlock Origin Filter (Advanced)
           </summary>
           <div class="ublock-details-content">
             <div class="form-group">
@@ -645,7 +670,7 @@
                 <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-UBLOCK-IMPORT.md"
                    target="_blank"
                    rel="noopener noreferrer"
-                   data-i18n="ublockImportGuideLink">uBlockインポート機能のユーザーガイドを見る（新しいタブで開きます）</a>
+                   data-i18n="ublockImportGuideLink">View uBlock Import User Guide (opens in new tab)</a>
               </div>
             </div>
 
@@ -718,7 +743,7 @@
             <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md"
                target="_blank"
                rel="noopener noreferrer"
-               data-i18n="aiPromptGuideLink">AIプロンプトカスタマイズガイドを見る（新しいタブで開きます）</a>
+               data-i18n="aiPromptGuideLink">View AI Prompt Customization Guide (opens in new tab)</a>
           </div>
         </div>
 
@@ -777,90 +802,90 @@
 
       <!-- Content Cleansing Settings Panel -->
       <section id="panel-content" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="contentTabPanelTitle">コンテンツ・クレンジング</h2>
-        <p class="panel-description" data-i18n="contentTabPanelDescription">Webページから機密情報を含む可能性がある要素を自動的に削除します。</p>
+        <h2 class="panel-title" data-i18n="contentTabPanelTitle">Content Cleansing</h2>
+        <p class="panel-description" data-i18n="contentTabPanelDescription">Automatically remove elements that may contain sensitive information from web pages.</p>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md"
              target="_blank"
              rel="noopener noreferrer"
-             data-i18n="piiFeatureGuideLink">PIIマスキング機能の詳細を見る（新しいタブで開きます）</a>
+             data-i18n="piiFeatureGuideLink">View PII Masking Feature Guide (opens in new tab)</a>
         </div>
 
         <!-- Hard Strip 設定 -->
         <div class="form-group">
-          <label data-i18n="contentStripHardEnabled">Hard Strip（タグ・属性削除）を有効にする</label>
+          <label data-i18n="contentStripHardEnabled">Enable Hard Strip (Tag/Attribute Removal)</label>
           <div class="mb-8">
             <input type="checkbox" id="contentStripHardEnabled" aria-describedby="contentStripHardEnabledDesc">
-            <label for="contentStripHardEnabled" class="inline-label" data-i18n="contentStripHardEnabledDesc">input、password、script、iframe 等のタグと属性を削除します。</label>
+            <label for="contentStripHardEnabled" class="inline-label" data-i18n="contentStripHardEnabledDesc">Removes tags like input, password, script, iframe and their attributes.</label>
           </div>
         </div>
 
         <!-- Keyword Strip 設定 -->
         <div class="form-group">
-          <label data-i18n="contentStripKeywordEnabled">Keyword Strip（キーワード削除）を有効にする</label>
+          <label data-i18n="contentStripKeywordEnabled">Enable Keyword Strip</label>
           <div class="mb-8">
             <input type="checkbox" id="contentStripKeywordEnabled" aria-describedby="contentStripKeywordEnabledDesc">
-            <label for="contentStripKeywordEnabled" class="inline-label" data-i18n="contentStripKeywordEnabledDesc">ID/クラス属性に指定されたキーワードを含む要素を削除します。</label>
+            <label for="contentStripKeywordEnabled" class="inline-label" data-i18n="contentStripKeywordEnabledDesc">Removes elements whose ID/class attributes contain specified keywords.</label>
           </div>
         </div>
 
         <!-- キーワードリスト -->
         <div class="form-group">
-          <label for="contentStripKeywords" data-i18n="contentStripKeywords">キーワード</label>
-          <div class="help-text mb-4" data-i18n="contentStripKeywordsDesc">削除対象とするキーワード（1行に1つ）</div>
+          <label for="contentStripKeywords" data-i18n="contentStripKeywords">Keywords</label>
+          <div class="help-text mb-4" data-i18n="contentStripKeywordsDesc">Keywords to remove (one per line)</div>
           <textarea id="contentStripKeywords" class="keyword-textarea" rows="10" aria-describedby="contentStripKeywordsHelp"></textarea>
           <div class="button-group mt-8">
-            <button type="button" id="contentStripResetKeywords" class="secondary-btn" data-i18n="contentStripResetKeywords">デフォルトに戻す</button>
+            <button type="button" id="contentStripResetKeywords" class="secondary-btn" data-i18n="contentStripResetKeywords">Reset to Default</button>
           </div>
         </div>
 
         <!-- テキスト品質設定セクション -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="textQualityTitle">テキスト品質設定</h3>
+          <h3 class="settings-section-title" data-i18n="textQualityTitle">Text Quality Settings</h3>
 
           <!-- 冗長除去 -->
           <div class="form-group">
-            <label data-i18n="dedupLabel">入力の冗長センテンスを除去</label>
+            <label data-i18n="dedupLabel">Remove redundant sentences from input</label>
             <div class="mb-8">
               <input type="checkbox" id="content-dedup-enabled" checked>
               <label for="content-dedup-enabled" class="inline-label" data-i18n="dedupDesc">
-                Jaccard類似度で重複センテンスを検出し除去します（MMR的Redundancy Reduction）。
+                Detects and removes duplicate sentences using Jaccard similarity (MMR Redundancy Reduction).
               </label>
             </div>
             <div id="contentDedupThresholdGroup" class="mb-8">
               <label for="content-dedup-threshold">
-                <span data-i18n="dedupThresholdLabel">類似度閾値:</span> <span id="contentDedupThresholdValue">0.7</span>
+                <span data-i18n="dedupThresholdLabel">Similarity threshold:</span> <span id="contentDedupThresholdValue">0.7</span>
               </label>
               <input type="range" id="content-dedup-threshold"
                 min="0.5" max="0.95" step="0.05" value="0.7"
                 aria-describedby="contentDedupThresholdDesc">
               <div class="help-text" id="contentDedupThresholdDesc" data-i18n="dedupThresholdDesc">
-                低い値ほど多く除去（0.5=緩い）、高い値ほど少なく除去（0.95=厳しい）。デフォルト: 0.7
+                Lower values remove more (0.5=loose), higher values remove less (0.95=strict). Default: 0.7
               </div>
             </div>
           </div>
 
           <!-- 文末正規化 -->
           <div class="form-group">
-            <label data-i18n="normalizeLabel">日本語要約の文末をである調に統一</label>
+            <label data-i18n="normalizeLabel">Normalize Japanese sentence endings to plain form</label>
             <div class="mb-8">
               <input type="checkbox" id="summary-normalize-enabled" checked>
               <label for="summary-normalize-enabled" class="inline-label" data-i18n="normalizeDesc">
-                「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。
+                Converts polite form to plain form (desu→da, mashita→ta, teimasu→teiru, teimashita→teita, deshou→darou).
               </label>
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">保存</button>
+          <button id="saveContentSettings" class="btn-primary" data-i18n="contentStripSave">Save</button>
           <div id="contentSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
 
       <!-- AI Summary Cleansing Settings Panel -->
       <section id="panel-ai-summary-cleansing" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI要約クレンジング</h2>
+        <h2 class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI Summary Cleansing</h2>
 
         <!-- 削減率統計サマリー（案A） -->
         <div id="cleansingStatsSummary" class="cleansing-stats-summary" aria-live="polite">
@@ -868,26 +893,26 @@
         </div>
 
         <!-- ファネルチャート（案B） -->
-        <canvas id="cleansingFunnelChart" class="cleansing-funnel-chart" width="480" height="200" aria-label="クレンジング段階別バイト削減チャート" role="img">
-          クレンジング段階別バイト削減の視覚的表示
+        <canvas id="cleansingFunnelChart" class="cleansing-funnel-chart" width="480" height="200" data-i18n-aria-label="cleansingFunnelChartAriaLabel" aria-label="Byte reduction chart by cleansing stage" role="img">
+          <span data-i18n="cleansingFunnelChartFallback">Visual display of byte reduction by cleansing stage</span>
         </canvas>
 
-        <p class="panel-description" data-i18n="aiSummaryCleansingTabPanelDescription">AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。</p>
+        <p class="panel-description" data-i18n="aiSummaryCleansingTabPanelDescription">Remove unnecessary information (image alt attributes, metadata, ads, navigation, social widgets) before AI summarization.</p>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/CLEANSING_ORDER.md"
              target="_blank"
              rel="noopener noreferrer"
-             data-i18n="cleansingOrderGuideLink">クレンジングの処理順序について（新しいタブで開きます）</a>
+             data-i18n="cleansingOrderGuideLink">View Cleansing Processing Order (opens in new tab)</a>
         </div>
 
         <!-- AI要約クレンジング有効化 -->
         <div class="form-group">
           <fieldset id="aiSummaryCleansingFieldset">
-            <legend class="visually-hidden" data-i18n="aiSummaryCleansingLegend">AI要約クレンジング設定</legend>
-            <label data-i18n="aiSummaryCleansingEnabled">AI要約クレンジングを有効にする</label>
+            <legend class="visually-hidden" data-i18n="aiSummaryCleansingLegend">AI Summary Cleansing Settings</legend>
+            <label data-i18n="aiSummaryCleansingEnabled">Enable AI Summary Cleansing</label>
             <div class="mb-8">
               <input type="checkbox" id="ai-summary-cleansing-enabled" aria-describedby="aiSummaryCleansingEnabledDesc">
-              <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">AI要約前に不要な情報を削除します。</label>
+              <label for="ai-summary-cleansing-enabled" class="inline-label" data-i18n="aiSummaryCleansingEnabledDesc">Remove unnecessary information before AI summarization.</label>
             </div>
           </fieldset>
         </div>
@@ -895,232 +920,232 @@
         <div id="aiSummaryCleansingSubGroup" aria-live="polite">
         <!-- 画像alt属性削除 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingAltEnabled">画像alt属性を削除</label>
+          <label data-i18n="aiSummaryCleansingAltEnabled">Remove Image Alt Attributes</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-alt">
-            <label for="ai-summary-cleansing-alt" class="inline-label" data-i18n="aiSummaryCleansingAltEnabledDesc">画像のalt属性を削除します。</label>
+            <label for="ai-summary-cleansing-alt" class="inline-label" data-i18n="aiSummaryCleansingAltEnabledDesc">Remove alt attributes from images.</label>
           </div>
         </div>
 
         <!-- メタデータ削除 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingMetadataEnabled">メタデータを削除</label>
+          <label data-i18n="aiSummaryCleansingMetadataEnabled">Remove Metadata</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-metadata">
-            <label for="ai-summary-cleansing-metadata" class="inline-label" data-i18n="aiSummaryCleansingMetadataEnabledDesc">メタデータ（meta、link、style等）を削除します。</label>
+            <label for="ai-summary-cleansing-metadata" class="inline-label" data-i18n="aiSummaryCleansingMetadataEnabledDesc">Remove metadata (meta, link, style, etc.).</label>
           </div>
         </div>
 
         <!-- 広告関連要素削除 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingAdsEnabled">広告関連要素を削除</label>
+          <label data-i18n="aiSummaryCleansingAdsEnabled">Remove Ad-related Elements</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-ads">
-            <label for="ai-summary-cleansing-ads" class="inline-label" data-i18n="aiSummaryCleansingAdsEnabledDesc">広告関連要素（ad、advertisement、banner等）を削除します。</label>
+            <label for="ai-summary-cleansing-ads" class="inline-label" data-i18n="aiSummaryCleansingAdsEnabledDesc">Remove ad-related elements (ad, advertisement, banner, etc.).</label>
           </div>
         </div>
 
         <!-- ナビゲーション・フッター削除 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingNavEnabled">ナビゲーション・フッターを削除</label>
+          <label data-i18n="aiSummaryCleansingNavEnabled">Remove Navigation and Footer</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-nav">
-            <label for="ai-summary-cleansing-nav" class="inline-label" data-i18n="aiSummaryCleansingNavEnabledDesc">ナビゲーション・フッター（nav、footer、header等）を削除します。</label>
+            <label for="ai-summary-cleansing-nav" class="inline-label" data-i18n="aiSummaryCleansingNavEnabledDesc">Remove navigation and footer (nav, footer, header, etc.).</label>
           </div>
         </div>
 
         <!-- コメント・ソーシャルウィジェット削除 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingSocialEnabled">コメント・ソーシャルウィジェットを削除</label>
+          <label data-i18n="aiSummaryCleansingSocialEnabled">Remove Comments and Social Widgets</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-social">
-            <label for="ai-summary-cleansing-social" class="inline-label" data-i18n="aiSummaryCleansingSocialEnabledDesc">コメント・ソーシャルウィジェット（comments、social、share等）を削除します。</label>
+            <label for="ai-summary-cleansing-social" class="inline-label" data-i18n="aiSummaryCleansingSocialEnabledDesc">Remove comments and social widgets (comments, social, share, etc.).</label>
           </div>
         </div>
 
         <!-- ディープクレンジング -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingDeepEnabled">ディープクレンジング（実験的）</label>
+          <label data-i18n="aiSummaryCleansingDeepEnabled">Deep Cleansing (Experimental)</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-deep">
-            <label for="ai-summary-cleansing-deep" class="inline-label" data-i18n="aiSummaryCleansingDeepEnabledDesc">aside/figure/form/dialog/button/input/select/details、ARIA role（banner/complementary等）、非表示要素、空要素、cookie/popup/modal/著者情報/法的情報/BEM系等のクラスを持つ要素を削除します。</label>
+            <label for="ai-summary-cleansing-deep" class="inline-label" data-i18n="aiSummaryCleansingDeepEnabledDesc">Remove aside/figure/form/dialog/button/input/select/details, ARIA roles (banner/complementary, etc.), hidden elements (hidden/aria-hidden), empty elements, and elements matching cookie/popup/modal/author-info/legal/BEM-style class patterns.</label>
           </div>
         </div>
 
         <!-- リンク密度フィルタ -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingLinkDensityEnabled">リンク密度フィルタ（実験的）</label>
+          <label data-i18n="aiSummaryCleansingLinkDensityEnabled">Link Density Filter (Experimental)</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-link-density">
-            <label for="ai-summary-cleansing-link-density" class="inline-label" data-i18n="aiSummaryCleansingLinkDensityEnabledDesc">リンクが密集した関連記事リスト・ナビゲーションブロックを削除します（リンク比率70%以上・100文字以上の要素）。</label>
+            <label for="ai-summary-cleansing-link-density" class="inline-label" data-i18n="aiSummaryCleansingLinkDensityEnabledDesc">Removes link-dense blocks like related article lists and navigation groups (elements with 70%+ link text ratio and 100+ characters).</label>
           </div>
         </div>
 
         <!-- JSON-LD 構造化データ -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingJsonLdLabel">JSON-LD 構造化データを除去</label>
+          <label data-i18n="aiSummaryCleansingJsonLdLabel">Remove JSON-LD structured data</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-json-ld">
-            <label for="ai-summary-cleansing-json-ld" class="inline-label" data-i18n="aiSummaryCleansingJsonLdTitle">ページの JSON-LD スクリプトタグを除去します（高度）</label>
+            <label for="ai-summary-cleansing-json-ld" class="inline-label" data-i18n="aiSummaryCleansingJsonLdTitle">Remove JSON-LD script tags from the page (advanced)</label>
           </div>
         </div>
 
         <!-- 遅延読み込み要素 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingLazyLoadLabel">遅延読み込み要素を除去</label>
+          <label data-i18n="aiSummaryCleansingLazyLoadLabel">Remove lazy-loaded elements</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-lazy-load">
-            <label for="ai-summary-cleansing-lazy-load" class="inline-label" data-i18n="aiSummaryCleansingLazyLoadTitle">data-src 等の遅延読み込み属性を持つ要素を除去します（高度）</label>
+            <label for="ai-summary-cleansing-lazy-load" class="inline-label" data-i18n="aiSummaryCleansingLazyLoadTitle">Remove elements with lazy-load attributes such as data-src (advanced)</label>
           </div>
         </div>
 
         <!-- スキップリンク -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingSkipLinkLabel">スキップリンクを除去</label>
+          <label data-i18n="aiSummaryCleansingSkipLinkLabel">Remove skip links</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-skip-link">
-            <label for="ai-summary-cleansing-skip-link" class="inline-label" data-i18n="aiSummaryCleansingSkipLinkTitle">アクセシビリティ用スキップリンクを除去します（高度）</label>
+            <label for="ai-summary-cleansing-skip-link" class="inline-label" data-i18n="aiSummaryCleansingSkipLinkTitle">Remove accessibility skip links (advanced)</label>
           </div>
         </div>
 
         <!-- カード型要素 -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingCardLabel">カード型要素を除去</label>
+          <label data-i18n="aiSummaryCleansingCardLabel">Remove card elements</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-card">
-            <label for="ai-summary-cleansing-card" class="inline-label" data-i18n="aiSummaryCleansingCardTitle">card クラスを持つ要素を除去します（高度）</label>
+            <label for="ai-summary-cleansing-card" class="inline-label" data-i18n="aiSummaryCleansingCardTitle">Remove elements with card class (advanced)</label>
           </div>
         </div>
 
         <!-- 高度クレンジングオプション（NEW） -->
         <div class="form-group">
-          <label data-i18n="aiSummaryCleansingAdvancedLabel">高度クレンジングオプション</label>
+          <label data-i18n="aiSummaryCleansingAdvancedLabel">Advanced Cleansing Options</label>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-fixed">
-            <label for="ai-summary-cleansing-fixed" class="inline-label" data-i18n="aiSummaryCleansingFixedDesc">position:fixed/sticky の固定要素を削除します（Yahoo!、Game8等の追従バナー）。</label>
+            <label for="ai-summary-cleansing-fixed" class="inline-label" data-i18n="aiSummaryCleansingFixedDesc">Remove fixed position elements (position:fixed/sticky) - sticky banners on Yahoo!, Game8, etc.</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-recommend" checked>
-            <label for="ai-summary-cleansing-recommend" class="inline-label" data-i18n="aiSummaryCleansingRecommendDesc">おすすめ・相關記事・おすすめ商品等の推荐セクションを削除します。</label>
+            <label for="ai-summary-cleansing-recommend" class="inline-label" data-i18n="aiSummaryCleansingRecommendDesc">Remove recommendation sections - related articles, recommended products, etc.</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-pagination">
-            <label for="ai-summary-cleansing-pagination" class="inline-label" data-i18n="aiSummaryCleansingPaginationDesc">ページネーション（次へ/前のボタン等）を削除します。</label>
+            <label for="ai-summary-cleansing-pagination" class="inline-label" data-i18n="aiSummaryCleansingPaginationDesc">Remove pagination elements (Next/Previous buttons, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-sns-promo">
-            <label for="ai-summary-cleansing-sns-promo" class="inline-label" data-i18n="aiSummaryCleansingSnsPromoDesc">SNS/Amazonのスポンサー製品・トレンド等のプロモコンテンツを削除します。</label>
+            <label for="ai-summary-cleansing-sns-promo" class="inline-label" data-i18n="aiSummaryCleansingSnsPromoDesc">Remove SNS/Amazon promotional content - sponsored products, trends, etc.</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-popup" checked>
-            <label for="ai-summary-cleansing-popup" class="inline-label" data-i18n="aiSummaryCleansingPopupDesc">ポップアップ・モーダル・トースト通知を削除します。</label>
+            <label for="ai-summary-cleansing-popup" class="inline-label" data-i18n="aiSummaryCleansingPopupDesc">Remove popups, modals, and toast notifications.</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-platform">
-            <label for="ai-summary-cleansing-platform" class="inline-label" data-i18n="aiSummaryCleansingPlatformDesc">プラットフォーム固有の噪声（5ch/be画像 YouTubeコメント欄等）を削除します。</label>
+            <label for="ai-summary-cleansing-platform" class="inline-label" data-i18n="aiSummaryCleansingPlatformDesc">Remove platform-specific noise (5ch/be images, YouTube comments, etc.).</label>
           </div>
           <!-- NEW: 9 additional cleansing options -->
-          <div class="cleansing-group-title" data-i18n="aggressiveModeTitle">Aggressive モード（数値ベース）</div>
+          <div class="cleansing-group-title" data-i18n="aggressiveModeTitle">Aggressive Mode (Numeric)</div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-text-density">
-            <label for="ai-summary-cleansing-text-density" class="inline-label" data-i18n="aiSummaryCleansingTextDensityDesc">テキスト密度フィルタリング（リンク文字が70%以上の要素を削除）。</label>
+            <label for="ai-summary-cleansing-text-density" class="inline-label" data-i18n="aiSummaryCleansingTextDensityDesc">Text density filtering (remove elements where link text is 70%+).</label>
             <div class="threshold-slider">
-              <label for="ai-summary-cleansing-link-ratio-threshold">リンク密度閾値: <span id="link-ratio-threshold-value">70</span>%</label>
+              <label for="ai-summary-cleansing-link-ratio-threshold"><span data-i18n="linkRatioThresholdLabel">Link Density Threshold</span>: <span id="link-ratio-threshold-value">70</span>%</label>
               <input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="50" max="100" value="70" class="slider">
             </div>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-short-seq">
-            <label for="ai-summary-cleansing-short-seq" class="inline-label" data-i18n="aiSummaryCleansingShortSeqDesc">短文要素の連続削除（30文字以下の要素が5つ以上連続した場合）。</label>
+            <label for="ai-summary-cleansing-short-seq" class="inline-label" data-i18n="aiSummaryCleansingShortSeqDesc">Short sequence removal (remove when 5+ elements with ≤30 chars consecutive).</label>
             <div class="threshold-slider">
-              <label for="ai-summary-cleansing-short-text-threshold">短文閾値: <span id="short-text-threshold-value">30</span>文字</label>
+              <label for="ai-summary-cleansing-short-text-threshold"><span data-i18n="shortTextThresholdLabel">Short Text Threshold</span>: <span id="short-text-threshold-value">30</span> <span data-i18n="charactersUnit">characters</span></label>
               <input type="range" id="ai-summary-cleansing-short-text-threshold" min="10" max="100" value="30" class="slider">
             </div>
             <div class="threshold-slider">
-              <label for="ai-summary-cleansing-short-seq-count">連続数閾値: <span id="short-seq-count-value">5</span>つ</label>
+              <label for="ai-summary-cleansing-short-seq-count"><span data-i18n="shortSeqCountLabel">Consecutive Count Threshold</span>: <span id="short-seq-count-value">5</span></label>
               <input type="range" id="ai-summary-cleansing-short-seq-count" min="2" max="20" value="5" class="slider">
             </div>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-symbol-line">
-            <label for="ai-summary-cleansing-symbol-line" class="inline-label" data-i18n="aiSummaryCleansingSymbolLineDesc">特殊記号行の削除（| » ◀ ▶ 等のみの行）。</label>
+            <label for="ai-summary-cleansing-symbol-line" class="inline-label" data-i18n="aiSummaryCleansingSymbolLineDesc">Symbol-only line removal (lines with only | » ◀ ▶ etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-link-para">
-            <label for="ai-summary-cleansing-link-para" class="inline-label" data-i18n="aiSummaryCleansingLinkParaDesc">リンクのみ段落の削除（50文字以下のリンクのみ段落）。</label>
+            <label for="ai-summary-cleansing-link-para" class="inline-label" data-i18n="aiSummaryCleansingLinkParaDesc">Link-only paragraph removal (paragraphs ≤50 chars with only links).</label>
             <div class="threshold-slider">
-              <label for="ai-summary-cleansing-link-para-threshold">段落長閾値: <span id="link-para-threshold-value">50</span>文字</label>
+              <label for="ai-summary-cleansing-link-para-threshold"><span data-i18n="linkParaThresholdLabel">Paragraph Length Threshold</span>: <span id="link-para-threshold-value">50</span> <span data-i18n="charactersUnit">characters</span></label>
               <input type="range" id="ai-summary-cleansing-link-para-threshold" min="20" max="100" value="50" class="slider">
             </div>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-enhanced-hidden" checked>
-            <label for="ai-summary-cleansing-enhanced-hidden" class="inline-label" data-i18n="aiSummaryCleansingEnhancedHiddenDesc">非表示要素強化削除（visibility:hidden、opacity:0、template、slot等）。</label>
+            <label for="ai-summary-cleansing-enhanced-hidden" class="inline-label" data-i18n="aiSummaryCleansingEnhancedHiddenDesc">Enhanced hidden element removal (visibility:hidden, opacity:0, template, slot).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-empty-elem" checked>
-            <label for="ai-summary-cleansing-empty-elem" class="inline-label" data-i18n="aiSummaryCleansingEmptyElemDesc">空要素の削除（テキスト、子要素共にないdiv/span/p/section/article）。</label>
+            <label for="ai-summary-cleansing-empty-elem" class="inline-label" data-i18n="aiSummaryCleansingEmptyElemDesc">Empty element removal (div/span/p/section/article with no text or children).</label>
           </div>
-          <div class="cleansing-group-title" data-i18n="jpSpecificTitle">日本ウェブサイト特有</div>
+          <div class="cleansing-group-title" data-i18n="jpSpecificTitle">Japanese Website Specific</div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-jp-layout">
-            <label for="ai-summary-cleansing-jp-layout" class="inline-label" data-i18n="aiSummaryCleansingJpLayoutDesc">JP BEM系レイアウトパターン（l-footer、p-entry__footer、c-button等）。</label>
+            <label for="ai-summary-cleansing-jp-layout" class="inline-label" data-i18n="aiSummaryCleansingJpLayoutDesc">JP BEM layout patterns (l-footer, p-entry__footer, c-button, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-jp-navigation">
-            <label for="ai-summary-cleansing-jp-navigation" class="inline-label" data-i18n="aiSummaryCleansingJpNavigationDesc">JP ナビ頻出語（global-nav、gnav、breadcrumb等）。</label>
+            <label for="ai-summary-cleansing-jp-navigation" class="inline-label" data-i18n="aiSummaryCleansingJpNavigationDesc">JP navigation patterns (global-nav, gnav, breadcrumb, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-author">
-            <label for="ai-summary-cleansing-author" class="inline-label" data-i18n="aiSummaryCleansingAuthorDesc">執筆者・メタ情報（author-profile、post-date、tag-list等）。</label>
+            <label for="ai-summary-cleansing-author" class="inline-label" data-i18n="aiSummaryCleansingAuthorDesc">Author and meta info (author-profile, post-date, tag-list, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-affiliate">
-            <label for="ai-summary-cleansing-affiliate" class="inline-label" data-i18n="aiSummaryCleansingAffiliateDesc">アフィリエイト要素のプレーンテキスト化（Rinker、カエレバ、もしも、ポチップ等。商品名・価格のみ残す）</label>
+            <label for="ai-summary-cleansing-affiliate" class="inline-label" data-i18n="aiSummaryCleansingAffiliateDesc">Convert affiliate elements to plain text (Rinker, Kaereba, Moshimo, Pochipp, etc.; keep only product name and price).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-speech-bubble">
-            <label for="ai-summary-cleansing-speech-bubble" class="inline-label" data-i18n="aiSummaryCleansingSpeechBubbleDesc">吹き出し要素のクレンジング（キャラ名・アバター削除、発言テキストのみ保持）</label>
+            <label for="ai-summary-cleansing-speech-bubble" class="inline-label" data-i18n="aiSummaryCleansingSpeechBubbleDesc">Cleanse speech bubble elements (remove character names and avatars; keep only spoken text).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-news-media">
-            <label for="ai-summary-cleansing-news-media" class="inline-label" data-i18n="aiSummaryCleansingNewsMediaDesc">ニュースメディア固有パターン（コメント欄・関連記事カード・記者クレジット等）。</label>
+            <label for="ai-summary-cleansing-news-media" class="inline-label" data-i18n="aiSummaryCleansingNewsMediaDesc">News media specific patterns (comment sections, related article cards, byline credits, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-ec-site">
-            <label for="ai-summary-cleansing-ec-site" class="inline-label" data-i18n="aiSummaryCleansingEcSiteDesc">EC・通販固有パターン（レビュー・バリエーション選択・関連購入等）。</label>
+            <label for="ai-summary-cleansing-ec-site" class="inline-label" data-i18n="aiSummaryCleansingEcSiteDesc">E-commerce specific patterns (reviews, variation selectors, frequently bought together, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-qa-site">
-            <label for="ai-summary-cleansing-qa-site" class="inline-label" data-i18n="aiSummaryCleansingQaSiteDesc">Q&A・知恵袋固有パターン（ベストアンサー・関連質問・回答者情報等）。</label>
+            <label for="ai-summary-cleansing-qa-site" class="inline-label" data-i18n="aiSummaryCleansingQaSiteDesc">Q&A site specific patterns (best answer badges, related questions, answerer profiles, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="ai-summary-cleansing-video-site">
-            <label for="ai-summary-cleansing-video-site" class="inline-label" data-i18n="aiSummaryCleansingVideoSiteDesc">動画プラットフォーム固有パターン（コメント弾幕・タグクラウド・関連動画等）。</label>
+            <label for="ai-summary-cleansing-video-site" class="inline-label" data-i18n="aiSummaryCleansingVideoSiteDesc">Video platform specific patterns (comment overlays, tag clouds, related videos, etc.).</label>
           </div>
           <div class="mb-8">
             <input type="checkbox" id="whitelist-extraction-enabled">
-            <label for="whitelist-extraction-enabled" class="inline-label" data-i18n="whitelistExtractionEnabledDesc">ドメイン別ホワイトリスト抽出モード（Togetter・5chまとめ・知恵袋・小説投稿サイト等でノイズ除去精度を大幅向上）。</label>
+            <label for="whitelist-extraction-enabled" class="inline-label" data-i18n="whitelistExtractionEnabledDesc">Domain whitelist extraction mode (dramatically improves noise removal accuracy for Togetter, 5ch matome blogs, Q&A sites, novel platforms, etc.).</label>
           </div>
         </div>
 
         <!-- 本文保護設定（Body Protection） -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="bodyProtectionSection">本文保護（Body Protection）</h3>
+          <h3 class="settings-section-title" data-i18n="bodyProtectionSection">Body Protection</h3>
           <div class="form-group">
-            <label data-i18n="aiSummaryCleansingBodyProtectionEnabled">本文保護を有効にする</label>
+            <label data-i18n="aiSummaryCleansingBodyProtectionEnabled">Enable body protection</label>
             <div class="mb-8">
               <input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">
-              <label for="ai-summary-cleansing-body-protection-enabled" class="inline-label" data-i18n="aiSummaryCleansingBodyProtectionEnabledDesc">クレンジング後の本文スコアが閾値未満の場合、削除を元に戻して本文を保護します。</label>
+              <label for="ai-summary-cleansing-body-protection-enabled" class="inline-label" data-i18n="aiSummaryCleansingBodyProtectionEnabledDesc">If the body score drops below the threshold after cleansing, restore removed elements to protect the main article body.</label>
             </div>
             <div class="threshold-slider" id="bodyProtectionThresholdGroup">
               <label for="ai-summary-cleansing-body-protection-threshold">
-                <span data-i18n="aiSummaryCleansingBodyProtectionThresholdLabel">本文保護閾値</span>: <span id="ai-summary-cleansing-body-protection-threshold-value">200</span>
+                <span data-i18n="aiSummaryCleansingBodyProtectionThresholdLabel">Protection Score Threshold</span>: <span id="ai-summary-cleansing-body-protection-threshold-value">200</span>
               </label>
               <input type="range" id="ai-summary-cleansing-body-protection-threshold" min="50" max="500" step="10" value="200" class="slider"
                 aria-describedby="bodyProtectionThresholdDesc">
               <div class="help-text" id="bodyProtectionThresholdDesc" data-i18n="aiSummaryCleansingBodyProtectionThresholdDesc">
-                低い値ほど厳格に保護（50=厳格）、高い値ほど緩やか（500=緩やか）。デフォルト: 200
+                Lower = stricter protection (50=strict), higher = looser (500=loose). Default: 200
               </div>
             </div>
           </div>
@@ -1128,69 +1153,69 @@
 
         <!-- 過剰削減フォールバック設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="fallbackSection">過剰削減フォールバック</h3>
+          <h3 class="settings-section-title" data-i18n="fallbackSection">Over-cleansed Fallback</h3>
           <div class="form-group">
             <div class="threshold-slider">
               <label for="ai-summary-cleansing-fallback-ratio">
-                <span data-i18n="aiSummaryCleansingFallbackRatioLabel">削減比率閾値</span>: <span id="ai-summary-cleansing-fallback-ratio-value">20</span>%
+                <span data-i18n="aiSummaryCleansingFallbackRatioLabel">Reduction Ratio Threshold</span>: <span id="ai-summary-cleansing-fallback-ratio-value">20</span>%
               </label>
               <input type="range" id="ai-summary-cleansing-fallback-ratio" min="5" max="50" step="5" value="20" class="slider"
                 aria-describedby="fallbackRatioDesc">
               <div class="help-text" id="fallbackRatioDesc" data-i18n="aiSummaryCleansingFallbackRatioDesc">
-                クレンジング後のコンテンツが元の何%未満に減った場合にフォールバックするか。デフォルト: 20%
+                Fallback triggers when cleansed content drops below this percentage of the original. Default: 20%
               </div>
             </div>
             <div class="threshold-slider">
               <label for="ai-summary-cleansing-fallback-min-bytes">
-                <span data-i18n="aiSummaryCleansingFallbackMinBytesLabel">絶対量閾値</span>: <span id="ai-summary-cleansing-fallback-min-bytes-value">300</span>バイト
+                <span data-i18n="aiSummaryCleansingFallbackMinBytesLabel">Absolute Size Threshold</span>: <span id="ai-summary-cleansing-fallback-min-bytes-value">300</span> bytes
               </label>
               <input type="range" id="ai-summary-cleansing-fallback-min-bytes" min="100" max="1000" step="50" value="300" class="slider"
                 aria-describedby="fallbackMinBytesDesc">
               <div class="help-text" id="fallbackMinBytesDesc" data-i18n="aiSummaryCleansingFallbackMinBytesDesc">
-                クレンジング後のコンテンツが何バイト未満の場合にフォールバックするか。デフォルト: 300バイト
+                Fallback triggers when cleansed content drops below this byte size. Default: 300 bytes
               </div>
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">保存</button>
+          <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">Save</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
 
       <!-- Trust Database Settings Panel -->
       <section id="panel-trust" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="trustTabPanelTitle">ドメイン信頼度判定</h2>
-        <p class="panel-description" data-i18n="trustTabPanelDescription">訪問するWebサイトの信頼度を判定し、適切な対応を選択できます。</p>
+        <h2 class="panel-title" data-i18n="trustTabPanelTitle">Domain Trust Evaluation</h2>
+        <p class="panel-description" data-i18n="trustTabPanelDescription">Determine the trustworthiness of websites you visit and choose appropriate responses.</p>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/TRUST_DOMAIN_GUIDE.md"
              target="_blank"
              rel="noopener noreferrer"
-             data-i18n="trustDomainGuideLink">ドメイン信頼度判定ガイドを見る（新しいタブで開きます）</a>
+             data-i18n="trustDomainGuideLink">View Domain Trust Evaluation Guide (opens in new tab)</a>
         </div>
 
         <!-- Safety Mode 設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="safetyModeSection">Safety Mode（セーフティモード）</h3>
+          <h3 class="settings-section-title" data-i18n="safetyModeSection">Safety Mode</h3>
           <div class="form-group">
             <label for="safetyMode" data-i18n="safetyModeLabel">Safety Mode</label>
             <select id="safetyMode" class="form-select" aria-describedby="safetyModeDesc">
-              <option value="strict" data-i18n="safetyModeStrict">Strict（厳格）- Top 1,000まで信頼</option>
-              <option value="balanced" selected data-i18n="safetyModeBalanced">Balanced（バランス）- Top 10,000まで信頼</option>
-              <option value="relaxed" data-i18n="safetyModeRelaxed">Relaxed（緩和）- Top 100,000まで信頼</option>
+              <option value="strict" data-i18n="safetyModeStrict">Strict - Trust Top 1,000 only</option>
+              <option value="balanced" selected data-i18n="safetyModeBalanced">Balanced - Trust Top 10,000</option>
+              <option value="relaxed" data-i18n="safetyModeRelaxed">Relaxed - Trust Top 100,000</option>
             </select>
-            <div class="help-text" id="safetyModeDesc" data-i18n="safetyModeDesc">Strictではより厳格なドメインのみを信頼します。Relaxedでは多くのドメインを信頼します。</div>
+            <div class="help-text" id="safetyModeDesc" data-i18n="safetyModeDesc">Strict trusts only stricter domains. Relaxed trusts more domains.</div>
           </div>
         </div>
 
         <!-- Tranco List 設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="trancoSection">Tranco List（信頼済みドメイン）</h3>
+          <h3 class="settings-section-title" data-i18n="trancoSection">Tranco List (Trusted Domains)</h3>
           <div class="form-group">
             <label for="trancoTier" data-i18n="trancoTierLabel">Tranco Trust Tier</label>
             <div class="help-text mb-4" data-i18n="trustTierLabelDesc">
-              Tranco Listの上位ドメインを信頼済みとして扱います。
+              Top domains from Tranco List are treated as trusted.
             </div>
             <select id="trancoTier" class="form-select" aria-describedby="trancoTierDesc">
               <option value="top1k" data-i18n="trancoTierTop1k">Top 1,000</option>
@@ -1198,34 +1223,34 @@
               <option value="top100k" data-i18n="trancoTierTop100k">Top 100,000</option>
             </select>
             <div class="help-text" id="trancoTierDesc" data-i18n="trancoTierDesc">
-              Safety Modeと連動しています。手動で変更することもできます。
+              Linked with Safety Mode. You can also change manually.
             </div>
           </div>
           <div id="trancoStatus" class="status-message" aria-live="polite"></div>
           <div class="button-group mt-8">
-            <button id="updateTrancoBtn" class="btn-primary" data-i18n="updateTrancoBtn">Tranco Listを更新</button>
+            <button id="updateTrancoBtn" class="btn-primary" data-i18n="updateTrancoBtn">Update Tranco List</button>
           </div>
         </div>
 
         <!-- Tranco Version & Consent Settings -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="trancoSectionTitle">Tranco信頼ドメイン</h3>
+          <h3 class="settings-section-title" data-i18n="trancoSectionTitle">Tranco Trusted Domains</h3>
 
           <!-- Current Version Info -->
           <div class="tranco-info">
             <div class="info-row">
-              <label data-i18n="trancoCurrentVersion">現在のバージョン</label>
+              <label data-i18n="trancoCurrentVersion">Current Version</label>
               <div id="trancoCurrentVersion" class="info-value">-</div>
             </div>
             <div class="info-row">
-              <label data-i18n="trancoCurrentDomains">現在のドメイン数</label>
+              <label data-i18n="trancoCurrentDomains">Current Tranco Domains</label>
               <div id="trancoDomainCount" class="info-value">-</div>
             </div>
           </div>
 
           <!-- Consent Status -->
           <div class="consent-status">
-            <label data-i18n="trancoConsentStatus">同意状態</label>
+            <label data-i18n="trancoConsentStatus">Consent Status</label>
             <div id="trancoConsentStatus" class="status-badge status-pending" aria-live="polite">-</div>
             <div id="trancoConsentRetryInfo" class="help-text" hidden></div>
           </div>
@@ -1237,87 +1262,87 @@
 
         <!-- JP-Anchor List 設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="jpAnchorSection">JP-Anchor List（日本公式ドメイン）</h3>
+          <h3 class="settings-section-title" data-i18n="jpAnchorSection">JP-Anchor List (Official Japan Domains)</h3>
           <div class="help-text mb-4" data-i18n="jpAnchorSectionDesc">
-            以下のTLDで終わるドメインは自動的に信頼済みとして扱います。
+            Domains ending with these TLDs are automatically treated as trusted.
           </div>
           <div id="jpAnchorList" class="preset-list"></div>
           <div class="form-group mt-8">
-            <label for="jpAnchorAdd" data-i18n="jpAnchorAddLabel">TLDを追加（例: .ed.jp）</label>
+            <label for="jpAnchorAdd" data-i18n="jpAnchorAddLabel">Add TLD (e.g., .ed.jp)</label>
             <div class="input-group">
               <input type="text" id="jpAnchorAdd" class="form-input" placeholder=".ed.jp" aria-describedby="jpAnchorAddHelp">
-              <button id="jpAnchorAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+              <button id="jpAnchorAddBtn" class="secondary-btn" data-i18n="add">Add</button>
             </div>
-            <div class="help-text" id="jpAnchorAddHelp" data-i18n="jpAnchorAddHelp">先頭のドット（.）を含めて入力してください</div>
+            <div class="help-text" id="jpAnchorAddHelp" data-i18n="jpAnchorAddHelp">Include the leading dot (.)</div>
           </div>
         </div>
 
         <!-- Sensitive List 設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="sensitiveSection">Sensitive List（警戒ドメイン）</h3>
+          <h3 class="settings-section-title" data-i18n="sensitiveSection">Sensitive List (Warning Domains)</h3>
           <div class="help-text mb-4" data-i18n="sensitiveSectionDesc">
-            金融、ゲーム、SNS等のドメインは警告対象として扱います。
+            Finance, Gaming, SNS, and similar domains are treated as warning targets.
           </div>
           <div class="category-tabs">
-            <button class="category-tab active" data-category="finance" data-i18n="categoryFinance">金融</button>
-            <button class="category-tab" data-category="gaming" data-i18n="categoryGaming">ゲーム</button>
+            <button class="category-tab active" data-category="finance" data-i18n="categoryFinance">Finance</button>
+            <button class="category-tab" data-category="gaming" data-i18n="categoryGaming">Gaming</button>
             <button class="category-tab" data-category="sns" data-i18n="categorySns">SNS</button>
           </div>
           <div id="sensitiveList" class="domain-list"></div>
           <div class="form-group mt-8">
-            <label for="sensitiveAdd" data-i18n="sensitiveAddLabel">ドメインを追加</label>
+            <label for="sensitiveAdd" data-i18n="sensitiveAddLabel">Add domain</label>
             <div class="input-group">
               <select id="sensitiveCategory" class="form-select" aria-label="Category">
-                <option value="finance" data-i18n="categoryFinance">金融</option>
-                <option value="gaming" data-i18n="categoryGaming">ゲーム</option>
+                <option value="finance" data-i18n="categoryFinance">Finance</option>
+                <option value="gaming" data-i18n="categoryGaming">Gaming</option>
                 <option value="sns" data-i18n="categorySns">SNS</option>
               </select>
               <input type="text" id="sensitiveAdd" class="form-input" placeholder="example.com" aria-describedby="sensitiveAddHelp">
-              <button id="sensitiveAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+              <button id="sensitiveAddBtn" class="secondary-btn" data-i18n="add">Add</button>
             </div>
-            <div class="help-text" id="sensitiveAddHelp" data-i18n="sensitiveAddHelp">ドメイン名を入力してください</div>
+            <div class="help-text" id="sensitiveAddHelp" data-i18n="sensitiveAddHelp">Enter domain name</div>
           </div>
         </div>
 
         <!-- Whitelist 設定 -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="whitelistSection">ホワイトリスト（信頼済み除外）</h3>
+          <h3 class="settings-section-title" data-i18n="whitelistSection">Whitelist (Trusted Domains)</h3>
           <div class="help-text mb-4" data-i18n="whitelistSectionDesc">
-            これらのドメインは警戒リストに含まれていても警告しません。
+            These domains are not warned even if included in the warning list.
           </div>
           <div id="whitelist" class="domain-list"></div>
           <div class="form-group mt-8">
-            <label for="whitelistAdd" data-i18n="whitelistAddLabel">ドメインを追加</label>
+            <label for="whitelistAdd" data-i18n="whitelistAddLabel">Add domain</label>
             <div class="input-group">
               <input type="text" id="whitelistAdd" class="form-input" placeholder="example.com" aria-describedby="whitelistAddHelp">
-              <button id="whitelistAddBtn" class="secondary-btn" data-i18n="add">追加</button>
+              <button id="whitelistAddBtn" class="secondary-btn" data-i18n="add">Add</button>
             </div>
-            <div class="help-text" id="whitelistAddHelp" data-i18n="whitelistAddHelp">除外するドメイン名を入力してください</div>
+            <div class="help-text" id="whitelistAddHelp" data-i18n="whitelistAddHelp">Enter domain name to exclude</div>
           </div>
         </div>
 
         <!-- Alert Settings -->
         <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="alertSettingsSection">警告設定</h3>
+          <h3 class="settings-section-title" data-i18n="alertSettingsSection">Alert Settings</h3>
           <div class="form-group">
             <input type="checkbox" id="alertFinance" aria-describedby="alertFinanceDesc">
-            <label for="alertFinance" class="inline-label" data-i18n="alertFinanceLabel">金融サイトの警告を表示</label>
-            <div class="help-text" id="alertFinanceDesc" data-i18n="alertFinanceDesc">金融系サイトで記録しようとする場合に警告を表示します。</div>
+            <label for="alertFinance" class="inline-label" data-i18n="alertFinanceLabel">Show financial site warning</label>
+            <div class="help-text" id="alertFinanceDesc" data-i18n="alertFinanceDesc">Display warning when trying to record on financial sites.</div>
           </div>
           <div class="form-group">
             <input type="checkbox" id="alertSensitive" aria-describedby="alertSensitiveDesc">
-            <label for="alertSensitive" class="inline-label" data-i18n="alertSensitiveLabel">警戒ドメインの警告を表示</label>
-            <div class="help-text" id="alertSensitiveDesc" data-i18n="alertSensitiveDesc">警戒リストにあるドメインで記録しようとする場合に警告を表示します。</div>
+            <label for="alertSensitive" class="inline-label" data-i18n="alertSensitiveLabel">Show warning list site warning</label>
+            <div class="help-text" id="alertSensitiveDesc" data-i18n="alertSensitiveDesc">Display warning when trying to record on sites in the warning list.</div>
           </div>
           <div class="form-group">
             <input type="checkbox" id="alertUnverified" aria-describedby="alertUnverifiedDesc">
-            <label for="alertUnverified" class="inline-label" data-i18n="alertUnverifiedLabel">未検証サイトの警告を表示</label>
-            <div class="help-text" id="alertUnverifiedDesc" data-i18n="alertUnverifiedDesc">TrancoリストやJP-Anchorに含まれない未検証のサイトで記録しようとする場合に警告を表示します。</div>
+            <label for="alertUnverified" class="inline-label" data-i18n="alertUnverifiedLabel">Show unverified site warning</label>
+            <div class="help-text" id="alertUnverifiedDesc" data-i18n="alertUnverifiedDesc">Display warning when trying to record on unverified sites not in Tranco or JP-Anchor.</div>
           </div>
         </div>
 
         <div class="form-group">
-          <button id="saveTrustSettings" class="btn-primary" data-i18n="save">設定を保存</button>
+          <button id="saveTrustSettings" class="btn-primary" data-i18n="save">Save</button>
           <div id="trustSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
       </section>
@@ -1325,22 +1350,22 @@
       <!-- 許可を検討するサイトセクション（P0） -->
       <section class="panel hidden" id="permissionSuggestSection">
         <div class="section-header section-header-row">
-          <h2 class="panel-title" data-i18n="permissionSuggestTitle">許可を検討するサイト</h2>
-          <button class="btn-icon" id="dismissAllPermissions" title="全て無視する">×</button>
+          <h2 class="panel-title" data-i18n="permissionSuggestTitle">Sites to consider allowing</h2>
+          <button class="btn-icon" id="dismissAllPermissions" title="Dismiss all">×</button>
         </div>
         <p class="section-hint" data-i18n="permissionSuggestHint">
-          よく訪問するのに未許可のサイトです。許可するとページ記録が有効になります。
+          Frequently visited but not permitted. Allowing enables page recording.
         </p>
         <div id="permissionSuggestList" class="permission-suggest-list"></div>
 
         <!-- 閾値設定 -->
         <div class="form-group">
           <label for="permissionThreshold" data-i18n="permissionThresholdLabel">
-            通知する訪問回数の閾値:
+            Notification threshold (visits)
           </label>
           <input type="number" id="permissionThreshold" min="1" max="50" value="3" step="1">
           <span class="setting-note" data-i18n="permissionThresholdNote">
-            （1〜50、デフォルト3）
+            (1-50, default 3)
           </span>
         </div>
       </section>
@@ -1352,7 +1377,7 @@
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md"
              target="_blank"
              rel="noopener noreferrer"
-             data-i18n="privacyPolicyLink">プライバシーポリシーを見る（新しいタブで開きます）</a>
+             data-i18n="privacyPolicyLink">View Privacy Policy (opens in new tab)</a>
         </div>
 
         <div class="form-group">
@@ -1616,13 +1641,13 @@
       <!-- Tag Cluster Panel -->
       <section id="panel-tag-cluster" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
-        <p class="panel-description">タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。</p>
-        <div id="tagClusterEmptyState" hidden>タグ付き履歴がまだありません。</div>
-        <div id="tagClusterTruncatedNotice" hidden>タグ数が多いため、上位50件のみ表示しています。</div>
+        <p class="panel-description" data-i18n="tagClusterDescription">Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag.</p>
+        <div id="tagClusterEmptyState" data-i18n="tagClusterEmptyState" hidden>No tagged history yet.</div>
+        <div id="tagClusterTruncatedNotice" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
         <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
-          <button type="button" id="tagClusterZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="拡大">+</button>
-          <button type="button" id="tagClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="縮小">−</button>
-          <button type="button" id="tagClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="表示をリセット">リセット</button>
+          <button type="button" id="tagClusterZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" id="tagClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" id="tagClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
         </div>
         <svg id="tagClusterSvg" width="800" height="600"></svg>
       </section>
@@ -1638,17 +1663,17 @@
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md"
              target="_blank"
              rel="noopener noreferrer"
-             data-i18n="storageModesGuideLink">ストレージモード（SQLite / Obsidian）の違いを見る（新しいタブで開きます）</a>
+             data-i18n="storageModesGuideLink">View Storage Modes (SQLite / Obsidian) Guide (opens in new tab)</a>
         </div>
 
         <!-- 保留中（記録できなかった）ページ -->
         <div id="pendingSection" class="pending-section" hidden>
           <h3 class="pending-section-title">
             <span class="pending-section-icon">⚠️</span>
-            <span data-i18n="pendingSectionTitle">記録できなかったページ</span>
+            <span data-i18n="pendingSectionTitle">Pages that could not be recorded</span>
           </h3>
           <p class="panel-description" data-i18n="pendingSectionDesc">
-            PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。
+            These pages were skipped due to privacy headers (Cache-Control, Set-Cookie, etc.). You can manually record them here.
           </p>
           <div id="pendingList" class="pending-list" aria-live="polite"></div>
         </div>
@@ -1663,12 +1688,12 @@
               data-i18n-input-placeholder="historySearchPlaceholder">
           </div>
           <div class="history-filter-bar" role="group" data-i18n-aria-label="filterOptions">
-            <button id="filterAll" class="history-filter-btn active" data-filter="all" data-i18n="filterAll">すべて</button>
-            <button id="filterAuto" class="history-filter-btn" data-filter="auto" data-i18n="filterAuto">自動</button>
-            <button id="filterManual" class="history-filter-btn" data-filter="manual" data-i18n="filterManual">手動</button>
-            <button id="filterSkipped" class="history-filter-btn" data-filter="skipped" data-i18n="filterSkipped">スキップ</button>
-            <button id="filterMasked" class="history-filter-btn" data-filter="masked" data-i18n="filterMasked">🔒 マスクあり</button>
-            <button id="filterCleansed" class="history-filter-btn" data-filter="cleansed" data-i18n="filterCleansed">🧹 クレンジング</button>
+            <button id="filterAll" class="history-filter-btn active" data-filter="all" data-i18n="filterAll">All</button>
+            <button id="filterAuto" class="history-filter-btn" data-filter="auto" data-i18n="filterAuto">Auto</button>
+            <button id="filterManual" class="history-filter-btn" data-filter="manual" data-i18n="filterManual">Manual</button>
+            <button id="filterSkipped" class="history-filter-btn" data-filter="skipped" data-i18n="filterSkipped">Skipped</button>
+            <button id="filterMasked" class="history-filter-btn" data-filter="masked" data-i18n="filterMasked">🔒 Masked</button>
+            <button id="filterCleansed" class="history-filter-btn" data-filter="cleansed" data-i18n="filterCleansed">🧹 Cleansed</button>
           </div>
         </div>
 
@@ -1677,7 +1702,7 @@
 
         <!-- Local Markdown Export -->
         <div class="top-bordered-flex-row">
-          <button id="historyExportLocalMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">すべて Markdown に書き出す</button>
+          <button id="historyExportLocalMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">Export all as Markdown</button>
           <span id="historyExportLocalMarkdownStatus" class="status-message" aria-live="polite"></span>
         </div>
       </section>
@@ -1693,54 +1718,54 @@
 
       <!-- Export Logs Panel -->
       <section id="panel-export-logs" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="exportLogsTab">ログをエクスポート</h2>
+        <h2 class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
         <p class="panel-description" data-i18n="exportLogsDesc">
-          ブラウジング履歴を JSON、Markdown、CSV、または SQLite データベースファイルとしてエクスポートします。
+          Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file.
         </p>
         <div id="export-logs-container">
           <div class="settings-section">
-            <button id="export-json-btn" class="btn-primary" data-i18n="exportJsonBtn">JSON としてエクスポート (.json)</button>
-            <p class="field-description" data-i18n="exportJsonDesc">全フィールドを含む JSON 形式。再インポート可能です。</p>
+            <button id="export-json-btn" class="btn-primary" data-i18n="exportJsonBtn">Export as JSON (.json)</button>
+            <p class="field-description" data-i18n="exportJsonDesc">JSON format with all fields. Can be re-imported.</p>
           </div>
           <div class="settings-section">
-            <button id="export-markdown-btn" class="btn-primary" data-i18n="exportMarkdownBtn">Markdown としてエクスポート (.md)</button>
-            <p class="field-description" data-i18n="exportMarkdownDesc">YAML フロントマット付きの Obsidian 互換 Markdown。</p>
+            <button id="export-markdown-btn" class="btn-primary" data-i18n="exportMarkdownBtn">Export as Markdown (.md)</button>
+            <p class="field-description" data-i18n="exportMarkdownDesc">Obsidian-compatible Markdown with YAML frontmatter.</p>
           </div>
           <div class="settings-section">
-            <button id="export-csv-btn" class="btn-primary" data-i18n="exportCsvBtn">CSV としてエクスポート (.csv)</button>
-            <p class="field-description" data-i18n="exportCsvDesc">Excel 互換の UTF-8 BOM CSV。</p>
+            <button id="export-csv-btn" class="btn-primary" data-i18n="exportCsvBtn">Export as CSV (.csv)</button>
+            <p class="field-description" data-i18n="exportCsvDesc">UTF-8 BOM CSV for Excel compatibility.</p>
           </div>
           <div class="settings-section">
-            <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">データベースとしてエクスポート (.db)</button>
-            <p class="field-description" data-i18n="exportDbDesc">SQLite データベースファイル。OPFS ストレージ使用時のみ利用可能。</p>
+            <button id="export-db-btn" class="btn-primary" data-i18n="exportDbBtn">Export as Database (.db)</button>
+            <p class="field-description" data-i18n="exportDbDesc">Raw SQLite database file. Only available with OPFS storage.</p>
           </div>
           <div id="export-status" class="save-success hidden"></div>
         </div>
 
         <!-- Local Markdown Export Section -->
         <div class="settings-section section-spaced">
-          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">ローカル Markdown 書き出し</h3>
-          <p class="field-description" data-i18n="exportLocalMarkdownDesc">日付範囲を指定して、閲覧履歴を Markdown ファイルとしてダウンロードします。</p>
+          <h3 class="settings-section-title" data-i18n="localMarkdownExportSection">Local Markdown Export</h3>
+          <p class="field-description" data-i18n="exportLocalMarkdownDesc">Download your browsing history as a Markdown file for a specified date range.</p>
           <div class="date-range-row">
             <div>
-              <label for="exportLocalStartDate" class="date-input-label" data-i18n="startDate">開始日</label>
+              <label for="exportLocalStartDate" class="date-input-label" data-i18n="startDate">Start date</label>
               <input type="date" id="exportLocalStartDate">
             </div>
             <div>
-              <label for="exportLocalEndDate" class="date-input-label" data-i18n="endDate">終了日</label>
+              <label for="exportLocalEndDate" class="date-input-label" data-i18n="endDate">End date</label>
               <input type="date" id="exportLocalEndDate">
             </div>
-            <button id="exportLocalMarkdownBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">エクスポート</button>
+            <button id="exportLocalMarkdownBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">Export</button>
           </div>
           <div id="exportLocalMarkdownStatus" class="status-message status-message-spaced" aria-live="polite"></div>
         </div>
 
         <!-- Audit Log TSV Export -->
         <div class="settings-section section-spaced">
-          <h3 class="settings-section-title" data-i18n="auditLogTab">監査ログ</h3>
-          <p class="field-description">どのページ内容がどのAIプロバイダーへ送信されたかの履歴を TSV ファイルとしてダウンロードします。</p>
+          <h3 class="settings-section-title" data-i18n="auditLogTab">Audit Log</h3>
+          <p class="field-description" data-i18n="auditLogTabDesc">Download a history of which page content was sent to which AI provider as a TSV file.</p>
           <div class="audit-log-download-section">
-            <button type="button" id="auditLogDownloadTsv" class="btn-primary" data-i18n="auditLogDownloadTsv">TSV でダウンロード</button>
+            <button type="button" id="auditLogDownloadTsv" class="btn-primary" data-i18n="auditLogDownloadTsv">Download as TSV</button>
             <span id="auditLogStatus" class="audit-log-status" aria-live="polite"></span>
           </div>
         </div>
@@ -1822,8 +1847,8 @@
         <hr class="settings-hr">
 
         <div class="csp-save-area">
-          <button id="cspSaveButton" class="btn-primary" data-i18n="cspSaveBtn">保存する</button>
-          <button id="cspResetButton" class="secondary-btn" data-i18n="cspResetBtn">リセット</button>
+          <button id="cspSaveButton" class="btn-primary" data-i18n="cspSaveBtn">Save</button>
+          <button id="cspResetButton" class="secondary-btn" data-i18n="cspResetBtn">Reset</button>
           <div id="cspSaveMessage" class="success-message" aria-live="polite"></div>
           <div id="cspResetMessage" class="success-message" aria-live="polite"></div>
         </div>
@@ -1863,15 +1888,15 @@
         <div class="diag-section">
           <h3 class="diag-section-title" data-i18n="diagSqliteTitle">SQLite Database</h3>
           <div id="diagSqliteStats" class="diag-stats"></div>
-          <button id="diagTestSqliteBtn" class="secondary-btn" data-i18n="testSqliteBtn">SQLite テスト</button>
+          <button id="diagTestSqliteBtn" class="secondary-btn" data-i18n="testSqliteBtn">Test SQLite</button>
           <div id="diagSqliteResult" class="diag-result" aria-live="polite"></div>
-          <button id="diagOpfsSpikeBtn" class="secondary-btn" data-i18n="diagOpfsSpikeBtn">OPFS スパイク実行</button>
+          <button id="diagOpfsSpikeBtn" class="secondary-btn" data-i18n="diagOpfsSpikeBtn">Run OPFS Spike</button>
           <div id="diagOpfsSpikeResult" class="diag-result" aria-live="polite"></div>
-          <button id="diagMigrateBtn" class="secondary-btn" data-i18n="diagMigrateBtn">記録履歴を SQLite へ変換</button>
+          <button id="diagMigrateBtn" class="secondary-btn" data-i18n="diagMigrateBtn">Convert history to SQLite</button>
           <div id="diagMigrateResult" class="diag-result" aria-live="polite"></div>
-          <button id="diagBackfillBtn" class="secondary-btn" data-i18n="diagBackfillBtn">SQLite 履歴のメトリクスを補完</button>
+          <button id="diagBackfillBtn" class="secondary-btn" data-i18n="diagBackfillBtn">Backfill SQLite history metrics</button>
           <div id="diagBackfillResult" class="diag-result" aria-live="polite"></div>
-          <button id="diagCleanupBtn" class="secondary-btn" data-i18n="diagCleanupBtn">元の chrome.storage データを削除</button>
+          <button id="diagCleanupBtn" class="secondary-btn" data-i18n="diagCleanupBtn">Delete original chrome.storage data</button>
           <div id="diagCleanupResult" class="diag-result" aria-live="polite"></div>
         </div>
 
@@ -1889,19 +1914,19 @@
         </div>
 
         <div class="diag-section">
-          <h3 class="diag-section-title">Obsidian 接続設定</h3>
+          <h3 class="diag-section-title" data-i18n="diagObsidianSettingsTitle">Obsidian Connection Settings</h3>
           <div id="diagObsidianSettings" class="diag-stats"></div>
         </div>
 
         <div class="diag-section">
-          <h3 class="diag-section-title">AI 設定</h3>
+          <h3 class="diag-section-title" data-i18n="diagAiSettingsTitle">AI Settings</h3>
           <div id="diagAiSettings" class="diag-stats"></div>
         </div>
 
         <div class="diag-section">
           <h3 class="diag-section-title" data-i18n="diagConnectionTitle">Connection Test</h3>
-          <button id="diagTestObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Obsidian テスト</button>
-          <button id="diagTestAiBtn" class="secondary-btn" data-i18n="testAiBtn">AI テスト</button>
+          <button id="diagTestObsidianBtn" class="secondary-btn" data-i18n="testObsidianBtn">Test Obsidian</button>
+          <button id="diagTestAiBtn" class="secondary-btn" data-i18n="testAiBtn">Test AI</button>
           <div id="diagConnectionResult" class="diag-result" data-i18n-placeholder="diagConnectionPlaceholder" aria-live="polite"></div>
         </div>
 
@@ -1943,10 +1968,10 @@
         <hr class="settings-hr">
 
         <div class="export-import-section">
-          <h3 class="diag-section-title">暗号化バックアップ</h3>
-          <p class="help-text">パスフレーズで暗号化した履歴+設定のバックアップを作成・復元します。</p>
-          <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">暗号化バックアップを作成</button>
-          <button id="importEncryptedBackupBtn" class="secondary-btn" data-i18n="importEncryptedBackupBtn">暗号化バックアップから復元</button>
+          <h3 class="diag-section-title" data-i18n="encryptedBackupSectionTitle">Encrypted Backup</h3>
+          <p class="help-text" data-i18n="encryptedBackupSectionDesc">Create or restore a backup of history and settings encrypted with a passphrase.</p>
+          <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">Create Encrypted Backup</button>
+          <button id="importEncryptedBackupBtn" class="secondary-btn" data-i18n="importEncryptedBackupBtn">Restore from Encrypted Backup</button>
           <input type="file" id="importEncryptedBackupFileInput" accept=".json" class="hidden" aria-hidden="true">
           <div id="encryptedBackupStatus" class="status-message"></div>
         </div>
@@ -1983,31 +2008,31 @@
   <div id="breakingChangesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="breakingChangesTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="breakingChangesTitle" data-i18n="breakingChangesTitle">重要: 権限変更 / Breaking Changes</h3>
+        <h3 id="breakingChangesTitle" data-i18n="breakingChangesTitle">Breaking Changes: Permission Update Required</h3>
         <button id="closeBreakingChangesModalBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
       </div>
       <div class="modal-body">
         <p data-i18n="breakingChangesDesc">
-          v5.0.0 で拡張機能の権限モデルが変更されました。`<all_urls>` 権限が削除され、より安全なモデルに移行しました。
+          v5.0.0 has updated the permission model. The `<all_urls>` permission has been removed for better security.
         </p>
         <p data-i18n="breakingChangesDesc2">
-          新しいモデルでは、各ドメインごとに個別の権限許可が必要です。以下のドメインへのアクセス許可を確認してください。
+          The new model requires individual permission for each domain. Please verify you have permissions for:
         </p>
 
         <div class="permission-list">
-          <h4 data-i18n="requiredPermissions">必要な権限</h4>
+          <h4 data-i18n="requiredPermissions">Required Permissions</h4>
           <ul id="breakingChangesPermissionList">
-            <li><strong>localhost:27124</strong> - Obsidian Local REST API（必須）</li>
-            <li data-i18n="otherDomainsText">その他、閲覧するWebサイト（随時許可）</li>
+            <li><strong>localhost:27124</strong> - <span data-i18n="obsidianLocalRestApiRequired">Obsidian Local REST API (required)</span></li>
+            <li data-i18n="otherDomainsText">Other websites you visit (grant as prompted)</li>
           </ul>
         </div>
 
         <div class="help-text" data-i18n="breakingChangesHelp">
-          ヒント: 訪問したWebサイトを初めて記録する際、権限を許可するように促されます。
+          Tip: When recording a new website for the first time, you will be prompted to grant permission.
         </div>
       </div>
       <div class="modal-footer">
-        <button id="dismissBreakingChangesModalBtn" class="btn btn-primary" data-i18n="understood">理解しました / I understand</button>
+        <button id="dismissBreakingChangesModalBtn" class="btn btn-primary" data-i18n="understood">I understand</button>
       </div>
     </div>
   </div>
@@ -2099,31 +2124,31 @@
   <div id="tagEditModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tagEditTitle">
     <div class="modal-content tag-edit-modal">
       <div class="modal-header">
-        <h3 id="tagEditTitle" data-i18n="tagEditTitle">タグを編集</h3>
+        <h3 id="tagEditTitle" data-i18n="tagEditTitle">Edit Tags</h3>
       </div>
       <div class="modal-body">
         <p class="url-display" id="tagEditUrl"></p>
 
         <!-- Current Tags -->
         <div class="tag-edit-section">
-          <h4 class="tag-edit-section-title" data-i18n="currentTags">現在のタグ</h4>
+          <h4 class="tag-edit-section-title" data-i18n="currentTags">Current Tags</h4>
           <div id="currentTagsList" class="current-tags-list"></div>
-          <p id="noCurrentTagsMsg" class="no-tags-msg" data-i18n="noTags" hidden>なし</p>
+          <p id="noCurrentTagsMsg" class="no-tags-msg" data-i18n="noTags" hidden>None</p>
         </div>
 
         <!-- Add Tags -->
         <div class="tag-edit-section">
-          <h4 class="tag-edit-section-title" data-i18n="addTag">タグを追加</h4>
+          <h4 class="tag-edit-section-title" data-i18n="addTag">Add Tag</h4>
           <div class="form-group">
             <select id="tagCategorySelect" class="tag-category-select" data-i18n-aria-label="tagCategory">
-              <option value="" data-i18n="selectCategory" disabled selected>カテゴリを選択...</option>
+              <option value="" data-i18n="selectCategory" disabled selected>Select category...</option>
             </select>
           </div>
-          <button id="addTagBtn" class="secondary-btn" data-i18n="add" disabled>追加</button>
+          <button id="addTagBtn" class="secondary-btn" data-i18n="add" disabled>Add</button>
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveTagEditsBtn" class="btn-primary" data-i18n="save">保存する</button>
+        <button id="saveTagEditsBtn" class="btn-primary" data-i18n="save">Save</button>
       </div>
     </div>
   </div>

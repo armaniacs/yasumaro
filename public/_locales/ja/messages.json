@@ -761,6 +761,12 @@
   "settingsImported": {
     "message": "設定をインポートしました"
   },
+  "encryptedBackupSectionTitle": {
+    "message": "暗号化バックアップ"
+  },
+  "encryptedBackupSectionDesc": {
+    "message": "パスフレーズで暗号化した履歴+設定のバックアップを作成・復元します。"
+  },
   "exportEncryptedBackupBtn": {
     "message": "暗号化バックアップを作成"
   },
@@ -1391,6 +1397,12 @@
   "diagStorageTitle": {
     "message": "ストレージ"
   },
+  "diagObsidianSettingsTitle": {
+    "message": "Obsidian 接続設定"
+  },
+  "diagAiSettingsTitle": {
+    "message": "AI 設定"
+  },
   "diagConnectionTitle": {
     "message": "接続テスト"
   },
@@ -1441,6 +1453,9 @@
   },
   "auditLogTab": {
     "message": "監査ログ"
+  },
+  "auditLogTabDesc": {
+    "message": "どのページ内容がどのAIプロバイダーへ送信されたかの履歴を TSV ファイルとしてダウンロードします。"
   },
   "auditLogDownloadTsv": {
     "message": "TSV でダウンロード"
@@ -1780,6 +1795,21 @@
   "localExportManualBtn": {
     "message": "エクスポート"
   },
+  "historyExportLocalMarkdownBtn": {
+    "message": "すべて Markdown に書き出す"
+  },
+  "manualExportDateRangeLabel": {
+    "message": "手動エクスポート（日付範囲指定）"
+  },
+  "exportLocalMarkdownDesc": {
+    "message": "日付範囲を指定して、閲覧履歴を Markdown ファイルとしてダウンロードします。"
+  },
+  "startDate": {
+    "message": "開始日"
+  },
+  "endDate": {
+    "message": "終了日"
+  },
   "tagEditTitle": {
     "message": "タグを編集"
   },
@@ -1865,6 +1895,15 @@
   "filterOptions": {
     "message": "フィルターオプション",
     "description": "ARIA label for history filter buttons"
+  },
+  "tagClusterDescription": {
+    "message": "タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。"
+  },
+  "tagClusterEmptyState": {
+    "message": "タグ付き履歴がまだありません。"
+  },
+  "tagClusterTruncatedNotice": {
+    "message": "タグ数が多いため、上位50件のみ表示しています。"
   },
   "tagClusterControlsGroup": {
     "message": "グラフのズーム操作",
@@ -2089,6 +2128,12 @@
   "aiSummaryCleansingTabPanelDescription": {
     "message": "AI要約前に不要な情報（画像alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット）を削除します。"
   },
+  "cleansingFunnelChartAriaLabel": {
+    "message": "クレンジング段階別バイト削減チャート"
+  },
+  "cleansingFunnelChartFallback": {
+    "message": "クレンジング段階別バイト削減の視覚的表示"
+  },
   "aiSummaryCleansingEnabled": {
     "message": "AI要約クレンジングを有効にする"
   },
@@ -2208,6 +2253,21 @@
   },
   "aiSummaryCleansingLinkParaDesc": {
     "message": "リンクのみ段落の削除（50文字以下のリンクのみ段落）。"
+  },
+  "linkRatioThresholdLabel": {
+    "message": "リンク密度閾値"
+  },
+  "shortTextThresholdLabel": {
+    "message": "短文閾値"
+  },
+  "charactersUnit": {
+    "message": "文字"
+  },
+  "shortSeqCountLabel": {
+    "message": "連続数閾値"
+  },
+  "linkParaThresholdLabel": {
+    "message": "段落長閾値"
   },
   "aiSummaryCleansingEnhancedHiddenDesc": {
     "message": "非表示要素強化削除（visibility:hidden、opacity:0、template、slot等）。"
@@ -2592,6 +2652,9 @@
   },
   "requiredPermissions": {
     "message": "必要な権限"
+  },
+  "obsidianLocalRestApiRequired": {
+    "message": "Obsidian Local REST API（必須）"
   },
   "breakingChangesPermissionList": {
     "message": "以下のドメインへのアクセス許可を確認してください。"

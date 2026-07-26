@@ -292,15 +292,21 @@ export async function handleSaveOnly(): Promise<void> {
   const portInput = document.getElementById('port') as HTMLInputElement | null;
   const obsidianHostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
   const geminiApiVersionInput = document.getElementById('geminiApiVersion') as HTMLInputElement | null;
+  const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement | null;
+  const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement | null;
+  const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement | null;
   const errorPairs: ErrorPair[] = [
     [protocolInput, 'protocolError'],
     [portInput, 'portError'],
     [obsidianHostInput, 'obsidianHostError'],
     [geminiApiVersionInput, 'geminiApiVersionError'],
+    [minVisitDurationInput, 'minVisitDurationError'],
+    [minScrollDepthInput, 'minScrollDepthError'],
+    [maxTokensPerPromptInput, 'maxTokensError'],
   ];
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(protocolInput, portInput)) {
+  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
     return;
   }
 

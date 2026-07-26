@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   loadGeneralSettings,
 } from '../dashboard.js';
+import { extractSettingsFromInputs } from '../../utils/settingsFormBinding.js';
 
 vi.stubGlobal('chrome', {
   i18n: {
@@ -53,6 +54,9 @@ function buildDom() {
     <input id="providerModel" />
     <div id="selectedProviderInfo" class="hidden"></div>
     <div id="providerInfoDisplay"></div>
+    <input type="number" id="minVisitDuration" data-storage-key="min_visit_duration" />
+    <input type="number" id="minScrollDepth" data-storage-key="min_scroll_depth" />
+    <input type="number" id="maxTokensPerPrompt" data-storage-key="max_tokens_per_prompt" />
   `;
 }
 
@@ -159,8 +163,6 @@ vi.mock('../masterPassword.js', () => ({
 vi.mock('../exportImport.js', () => ({ initExportImport: vi.fn() }));
 vi.mock('../domainFilterTagUI.js', () => ({ initDomainFilterTagUI: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../tagsPanel.js', () => ({ initTagsPanel: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('../domainSearchPanel.js', () => ({ initDomainSearchPanel: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('../diagnosticsPanel.js', () => ({ initDiagnosticsPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../trancoConsent.js', () => ({ initTrancoConsentPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../../popup/privacyConsent.js', () => ({
   getPrivacyConsent: vi.fn().mockResolvedValue({ hasConsessed: false }),
@@ -212,5 +214,32 @@ describe('Dashboard — obsidianEnabledInput', () => {
     await loadGeneralSettings();
 
     expect(details.open).toBe(false);
+  });
+
+  it('loadGeneralSettings が min_visit_duration / min_scroll_depth / max_tokens_per_prompt を読み込む', async () => {
+    const m = await mocked('../../utils/storage.js');
+    m.getSettings.mockResolvedValueOnce({
+      min_visit_duration: 10,
+      min_scroll_depth: 30,
+      max_tokens_per_prompt: 2000,
+    });
+
+    await loadGeneralSettings();
+
+    expect((document.getElementById('minVisitDuration') as HTMLInputElement).value).toBe('10');
+    expect((document.getElementById('minScrollDepth') as HTMLInputElement).value).toBe('30');
+    expect((document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value).toBe('2000');
+  });
+
+  it('extractSettingsFromInputs が min_visit_duration / min_scroll_depth / max_tokens_per_prompt を抽出する', () => {
+    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '15';
+    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '40';
+    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '3000';
+
+    const extracted = extractSettingsFromInputs(document.body);
+
+    expect(extracted.min_visit_duration).toBe(15);
+    expect(extracted.min_scroll_depth).toBe(40);
+    expect(extracted.max_tokens_per_prompt).toBe(3000);
   });
 });
