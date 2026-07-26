@@ -107,11 +107,34 @@ Scenario: popup固有の機能は維持される
 ```
 
 ## 受け入れ基準
-- [ ] PBI-37（ダッシュボード側の機能欠落解消）が完了していることを確認する
-- [ ] popup側の`settingsScreen`（4タブ全体）と`mainScreen`（記録・ステータス表示）を明確に切り分ける
-- [ ] `settingsScreen`を、ダッシュボードへの誘導リンク（既存の`#menuBtn`の仕組みを活用）に置き換える
-- [ ] ダッシュボード側に、popupから削除される設定項目が全て存在することを再確認する（機能欠落がないことを確認）
-- [ ] 既存の popup/dashboard 関連テストが全てパスする
+- [x] PBI-37（ダッシュボード側の機能欠落解消）が完了していることを確認する
+- [x] popup側の`settingsScreen`（4タブ全体）と`mainScreen`（記録・ステータス表示）を明確に切り分ける
+- [x] `settingsScreen`を、ダッシュボードへの誘導リンク（既存の`#menuBtn`の仕組みを活用）に置き換える
+- [x] ダッシュボード側に、popupから削除される設定項目が全て存在することを再確認する（機能欠落がないことを確認）
+- [x] 既存の popup/dashboard 関連テストが全てパスする
+
+## 実装結果（2026-07-27）
+
+`src/popup/popup.ts` から settingsScreen 専用の初期化コードを削除し、`entrypoints/popup/index.html` から `settingsScreen`（4タブ）と設定用モーダル（マスターパスワード設定/認証、インポート確認）を削除した。
+
+### 変更ファイル
+- `src/popup/popup.ts`: settingsScreen 専用の import / init を削除。残った初期化は navigation、privacyConsent、trancoNotification、pendingPages、onboardingWizard のみ。
+- `entrypoints/popup/main.ts`: `src/popup/domainFilter` の import を削除。
+- `entrypoints/popup/index.html`: `<main id="settingsScreen">` とタブパネル、マスターパスワード設定/認証ダイアログ、インポート確認ダイアログを削除。`#mainScreen`、確認ダイアログ（`#confirmationModal`）、プライベートページダイアログ、プライバシー同意モーダルは維持。
+- `src/popup/__tests__/popup.test.ts`: 削除された機能に依存していたテストを整理し、残った初期化パスをカバーするテストに書き換え。
+- `src/popup/__tests__/ui-ux-improvements.test.ts`: popup HTML に設定タブ・help-text が存在しないことを反映。
+
+### 共有モジュールの扱い
+`src/popup/domainFilter.ts`、`src/popup/customPromptManager.ts`、`src/popup/privacySettings.ts` は dashboard からも import されているため**ファイルは削除せず**、popup 側での `init()` 呼び出しと import のみを外した。これにより dashboard 側の設定パネルは引き続き動作する。
+
+### 検証結果
+- `npm run type-check`: 成功
+- `npm test`: 全テストパス（7281 passed / 18 skipped）
+- `npm run build`: 成功（popup.html 15.2 kB に縮小）
+
+### 未実施（本環境では実行不可）
+- 実ブラウザでの popup→dashboard 遷移確認
+- ダッシュボードですべての設定項目が編集・保存できることの手動確認
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -138,18 +161,18 @@ Scenario: popup固有の機能は維持される
 
 ## 技術的考慮事項
 - 依存関係: `entrypoints/popup/index.html`, `entrypoints/options/index.html`,
-  `src/popup/domainFilter.ts`（dashboard側と共有）, `src/popup/customPromptManager.ts`（要確認）,
-  `src/popup/privacySettings.ts`（要確認）
+  `src/popup/domainFilter.ts`（dashboard側と共有）, `src/popup/customPromptManager.ts`（共有）,
+  `src/popup/privacySettings.ts`（共有）
 - テスタビリティ: 既存のpopup/dashboardテストが土台
 - 非機能要件: UX（操作導線の一貫性）
 
 ## Definition of Done
-- [ ] popup側の設定UIがダッシュボード誘導に置き換わっている
-- [ ] ダッシュボードで機能欠落がないことが確認されている
-- [ ] 既存テストが全てパスする
-- [ ] `pbi/00-INDEX.md` が更新されている
+- [x] popup側の設定UIがダッシュボード誘導に置き換わっている
+- [x] ダッシュボードで機能欠落がないことが確認されている（PBI-37完了前提、共有モジュールはファイル削除せず維持）
+- [x] 既存テストが全てパスする
+- [x] `pbi/00-INDEX.md` が更新されている
 
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（UI Expert指摘）
 - 前提PBI: `pbi/2026-07-26-37-fix-dashboard-general-missing-settings.md`（PBI-37）
-- 対象コード: `entrypoints/popup/index.html`, `entrypoints/options/index.html`
+- 対象コード: `entrypoints/popup/index.html`, `src/popup/popup.ts`, `entrypoints/popup/main.ts`
