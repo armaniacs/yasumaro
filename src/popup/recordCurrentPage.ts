@@ -68,6 +68,9 @@ async function resetRecordButton(recordBtn: HTMLButtonElement): Promise<void> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tabs[0]?.url;
   const status = url ? await checkPageStatus(url) : null;
+  // Uses the .onclick property (not addEventListener) intentionally: this function
+  // can be called repeatedly as domain-filter status changes, and property assignment
+  // replaces the previous handler atomically instead of stacking listeners.
   if (status && !status.domainFilter.allowed) {
     recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
     recordBtn.onclick = () => handleRecordNowClick(true);
@@ -85,6 +88,7 @@ function setRecordAnywayButton(
   isAwaitingForceConfirm = true;
   recordBtn.disabled = false;
   recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+  // .onclick property assignment intentional here too — see resetRecordButton() above.
   recordBtn.onclick = () => {
     isAwaitingForceConfirm = false;
     return handleRecordNowClick(true, tab, content);
