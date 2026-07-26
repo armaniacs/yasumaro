@@ -93,8 +93,9 @@ export async function constantTimeCompare(a: string, b: string): Promise<boolean
 /**
  * SHA-256 password hashing (no salt).
  * @deprecated Use hashPasswordWithPBKDF2() instead. SHA-256 without salt is insecure.
+ * Kept internal-only (not exported) since no production code should use this.
  */
-export async function hashPassword(password: string): Promise<string> {
+async function _hashPasswordDeprecated(password: string): Promise<string> {
     const webcrypto = getWebCrypto();
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -106,9 +107,10 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Password verification using deprecated SHA-256 (no salt).
  * @deprecated Use verifyPasswordWithPBKDF2() instead.
+ * Kept internal-only (not exported) since no production code should use this.
  */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-    const computedHash = await hashPassword(password);
+async function _verifyPasswordDeprecated(password: string, hash: string): Promise<boolean> {
+    const computedHash = await _hashPasswordDeprecated(password);
     return constantTimeCompare(computedHash, hash);
 }
 
@@ -374,13 +376,17 @@ export async function verifyPasswordWithPBKDF2(
         const valid = await constantTimeCompare(computedHash, storedHash);
         return { isValid: valid, needsRehash: false };
     }
-    // Legacy path (no stored iterations): try new count first, fall back to legacy.
-    const computedHash = await hashPasswordWithPBKDF2(password, salt, ENVELOPE_ITERATIONS);
-    if (await constantTimeCompare(computedHash, storedHash)) {
+    // Legacy path (no stored iterations): always compute both hashes before
+    // comparing, so response time does not depend on which iteration count
+    // (or neither) matches.
+    const newHash = await hashPasswordWithPBKDF2(password, salt, ENVELOPE_ITERATIONS);
+    const legacyHash = await hashPasswordWithPBKDF2(password, salt, LEGACY_PBKDF2_ITERATIONS);
+    const newMatches = await constantTimeCompare(newHash, storedHash);
+    const legacyMatches = await constantTimeCompare(legacyHash, storedHash);
+    if (newMatches) {
         return { isValid: true, needsRehash: false };
     }
-    const legacyHash = await hashPasswordWithPBKDF2(password, salt, LEGACY_PBKDF2_ITERATIONS);
-    if (await constantTimeCompare(legacyHash, storedHash)) {
+    if (legacyMatches) {
         return { isValid: true, needsRehash: true };
     }
     return { isValid: false, needsRehash: false };
@@ -392,7 +398,55 @@ export async function verifyPasswordWithPBKDF2(
 
 const HMAC_SIGNATURE_KEY_STORAGE = 'notification-signature-key';
 const HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
+const CONSENT_HMAC_SIGNATURE_KEY_STORAGE = 'privacy-consent-signature-key';
+const CONSENT_HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
 const textEncoder = new TextEncoder();
+
+/**
+ * Get or create HMAC signature key for privacy consent integrity checks.
+ * Uses a dedicated key (separate from getNotificationHmacKey) so that key
+ * rotation or compromise in one domain does not affect the other.
+ * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
+ */
+export async function getConsentHmacKey(): Promise<CryptoKey> {
+    const webcrypto = getWebCrypto();
+
+    try {
+        const result = await chrome.storage.local.get([
+            CONSENT_HMAC_SIGNATURE_KEY_STORAGE,
+            CONSENT_HMAC_SIGNATURE_KEY_VERSION
+        ]);
+
+        const storedKeyData = result[CONSENT_HMAC_SIGNATURE_KEY_STORAGE];
+        if (typeof storedKeyData === 'string' && storedKeyData.length > 0) {
+            const keyData = base64ToUint8Array(storedKeyData);
+            return await webcrypto.subtle.importKey(
+                'raw',
+                keyData,
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign', 'verify']
+            );
+        }
+    } catch (error: unknown) {
+        console.warn('Failed to load consent HMAC key, generating new one:', errorMessage(error));
+    }
+
+    const keyData = webcrypto.getRandomValues(new Uint8Array(32));
+    const keyBase64 = uint8ArrayToBase64(keyData);
+    await chrome.storage.local.set({
+        [CONSENT_HMAC_SIGNATURE_KEY_STORAGE]: keyBase64,
+        [CONSENT_HMAC_SIGNATURE_KEY_VERSION]: '1'
+    });
+
+    return await webcrypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign', 'verify']
+    );
+}
 
 /**
  * Get or create HMAC signature key for notification IDs

@@ -10,8 +10,6 @@ import type { EncryptedData } from '../typesCrypto.js';
 import {
     generateSalt,
     generateIV,
-    hashPassword,
-    verifyPassword,
     deriveKey,
     encrypt,
     decrypt,
@@ -70,43 +68,10 @@ describe('crypto', () => {
         });
     });
 
-    describe('hashPassword', () => {
-        test('パスワードをハッシュ化できる', async () => {
-            const password = 'test-password';
-            const hash = await hashPassword(password);
-            expect(typeof hash).toBe('string');
-            expect(hash.length).toBeGreaterThan(0);
-        });
-
-        test('同じパスワードで同じハッシュを生成する', async () => {
-            const password = 'test-password';
-            const hash1 = await hashPassword(password);
-            const hash2 = await hashPassword(password);
-            expect(hash1).toBe(hash2);
-        });
-
-        test('異なるパスワードで異なるハッシュを生成する', async () => {
-            const hash1 = await hashPassword('password1');
-            const hash2 = await hashPassword('password2');
-            expect(hash1).not.toBe(hash2);
-        });
-    });
-
-    describe('verifyPassword', () => {
-        test('正しいパスワードを検証できる', async () => {
-            const password = 'test-password';
-            const hash = await hashPassword(password);
-            const isValid = await verifyPassword(password, hash);
-            expect(isValid).toBe(true);
-        });
-
-        test('間違ったパスワードを拒否できる', async () => {
-            const password = 'test-password';
-            const hash = await hashPassword(password);
-            const isValid = await verifyPassword('wrong-password', hash);
-            expect(isValid).toBe(false);
-        });
-    });
+    // hashPassword/verifyPassword (deprecated, salt-less SHA-256) were made
+    // internal-only (see PBI-2026-07-25-31) since no production code used
+    // them; coverage now lives entirely in hashPasswordWithPBKDF2/
+    // verifyPasswordWithPBKDF2 below.
 
     describe('deriveKey', () => {
         test('パスワードとソルトからキーを導出できる', async () => {
@@ -500,6 +465,38 @@ describe('crypto', () => {
             // 一致・不一致の平均時間が大きく異ならないことを確認（許容範囲5倍以内）
             const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
             expect(ratio).toBeLessThan(5);
+        });
+
+        describe('レガシーパス（iterations未指定）', () => {
+            test('新iteration countで生成されたハッシュは一致し再ハッシュ不要と判定される', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+                expect(result.isValid).toBe(true);
+                expect(result.needsRehash).toBe(false);
+            });
+
+            test('旧iteration countで生成されたハッシュは一致し再ハッシュ要と判定される', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
+
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt);
+                expect(result.isValid).toBe(true);
+                expect(result.needsRehash).toBe(true);
+            });
+
+            test('新旧どちらにも一致しない場合は無効と判定される', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+
+                const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
+                expect(result.isValid).toBe(false);
+                expect(result.needsRehash).toBe(false);
+            });
         });
     });
 });
