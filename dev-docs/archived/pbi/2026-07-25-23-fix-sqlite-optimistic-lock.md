@@ -1,9 +1,28 @@
 # PBI: SQLiteクライアントの更新操作に楽観的ロックを適用する
 
 **作成日**: 2026-07-25
+**調査完了日**: 2026-07-26（実装は見送り、下記の調査結果により対応不要と判断）
 **優先度**: Low
 **見積もり**: 🔴高（3pt以上目安）
 **副作用**: 🟡軽微（更新処理にバージョン列とWHERE句条件を追加するため、既存呼び出し元での競合エラーハンドリング追加が必要）
+
+## 調査結果（2026-07-26）
+
+`src/background/sqliteClient.ts` の `update()` は `SQLITE_UPDATE` メッセージをOffscreen Documentに送信し、
+実際のUPDATE文は `src/offscreen/recordsRepo.ts` の `update()` → `backend.update()` で実行される。
+
+**重要な発見**: `src/offscreen/offscreen.ts:32-58` にVULN-016対応として `SqliteWriteMutex` が既に実装されており、
+`isSqliteMessage` に一致する**全てのSQLiteメッセージ**（insert/insertBatch/update/delete/toggleStar等）を
+グローバルに直列化している（480行目 `sqliteWriteMutex.acquire()` 〜 488行目 `release()`）。
+
+Chrome拡張のOffscreen Documentは拡張機能全体で単一インスタンスしか存在できない仕様のため、
+「複数のOffscreen経由の並行書き込み」は原理的に発生しない。また全SQLite操作（読み取りメッセージも含む）が
+1つずつ順番にしか処理されないため、PBIが懸念する「read（重複チェック等）→ write（update）の間に
+別プロセスが割り込む」というread-then-writeレース自体が、既存のMutexにより発生しえない。
+
+**結論**: DBスキーマ変更（version列追加）を伴う3pt規模の楽観的ロック実装は、現状のリスクに対して過剰と判断し、
+実装を見送る。将来Offscreen Document以外の経路からSQLiteに直接書き込む設計変更が入る場合は、本PBIの
+受け入れ基準を参考に再評価すること。
 
 ---
 
