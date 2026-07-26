@@ -112,7 +112,7 @@ export async function checkAvailability(): Promise<string> {
         const capabilities = await ai.languageModel.capabilities();
         return capabilities?.available || 'no';
     } catch (error) {
-        console.error('Offscreen: Failed to check capabilities', error);
+        console.error('Offscreen: Failed to check capabilities', errorMessage(error));
         return 'unsupported';
     }
 }
@@ -148,7 +148,7 @@ export async function ensureSession(): Promise<boolean | { success: false; error
         });
         return true;
     } catch (error: unknown) {
-        console.error('Offscreen: Failed to create session', error);
+        console.error('Offscreen: Failed to create session', errorMessage(error));
         return { success: false, error: `Session creation failed: ${errorMessage(error)}` };
     }
 }
@@ -470,7 +470,7 @@ export function handleOffscreenMessage(
                         throw new Error('Session is null');
                     }
                 } catch (promptError: unknown) {
-                    console.error('Offscreen: Prompt extraction failed', promptError);
+                    console.error('Offscreen: Prompt extraction failed', errorMessage(promptError));
                     session = null;
                     sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
@@ -493,7 +493,7 @@ export function handleOffscreenMessage(
                 sendResponse({ success: false, error: 'Unknown message type' });
             }
         } catch (err: unknown) {
-            console.error('Offscreen: Unexpected error', err);
+            console.error('Offscreen: Unexpected error', errorMessage(err));
             sendResponse({ success: false, error: errorMessage(err) });
         }
     })();

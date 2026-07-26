@@ -442,4 +442,24 @@ describe('ensureSession', () => {
             expect.objectContaining({ success: false, error: expect.stringContaining("'no'") })
         );
     });
+
+    it('logs the extracted error message string (not the raw error object) when session creation fails', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const rawError = new Error('session init failed');
+        const mockAi = {
+            languageModel: {
+                capabilities: vi.fn().mockResolvedValue({ available: 'readily' }),
+                create: vi.fn().mockRejectedValue(rawError),
+            },
+        };
+        Object.defineProperty(window, 'ai', { value: mockAi, writable: true, configurable: true });
+
+        await ensureSession();
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Offscreen: Failed to create session', 'session init failed');
+        const loggedArg = consoleErrorSpy.mock.calls[0][1];
+        expect(loggedArg).not.toBe(rawError);
+        expect(loggedArg).not.toBeInstanceOf(Error);
+        consoleErrorSpy.mockRestore();
+    });
 });
