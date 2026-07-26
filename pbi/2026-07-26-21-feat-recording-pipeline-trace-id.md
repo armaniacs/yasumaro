@@ -85,6 +85,7 @@ Scenario: エラー発生時にtraceIdで関連ログを追跡できる
 - テストを追加:
   - `logger-enhanced.test.ts`: `addLog` が details 内の `traceId` をトップレベルに抽出すること
   - `RecordingPipeline.test.ts`: パイプライン開始時に traceId が発行され、全ステップのログに同一の traceId が含まれること
+  - `testDir/e2e/recording-traceId.spec.ts`: Playwright E2E で実際の Chrome 拡張機能を読み込み、テストページの記録処理が走った後に Service Worker の `sanitization_logs` を読み取り、同一 URL のログが同一 traceId を持つことを検証
 - `npm run validate` 成功（7285 passed / 18 skipped）。
 
 ### 未実施（別途対応）
