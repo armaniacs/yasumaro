@@ -259,11 +259,20 @@ if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
     chrome.runtime.onSuspend.addListener(async () => {
         console.log('[Logger] Service Worker suspending - flushing pending logs');
+        const pendingCountBeforeFlush = pendingLogs.length;
         // Await flush with a timeout so pending logs are not lost when the SW dies.
-        await Promise.race([
-            flushLogs(true),
-            new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+        const flushCompleted = await Promise.race([
+            flushLogs(true).then(() => true),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
         ]);
+        // Best-effort visibility: chrome.storage may itself be unreliable during
+        // suspend, so we can't persist this — but it surfaces in the SW's console
+        // output (captured by chrome://extensions inspect) for debugging.
+        if (!flushCompleted) {
+            console.error(
+                `[Logger] Flush timed out during suspend — up to ${pendingCountBeforeFlush} log entries may not have been persisted`
+            );
+        }
     });
 }
 
@@ -440,13 +449,15 @@ export async function addLog<T extends object = Record<string, unknown>>(type: L
             return; // DEBUGログは保存せず破棄
         }
 
+        const sanitizedMessage = await sanitizeRegex(message);
+
         const entry: LogEntry = {
             id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
                 ? crypto.randomUUID()
                 : (() => { const a = new Uint32Array(2); crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })(),
             timestamp: Date.now(),
             type,
-            message,
+            message: sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
             details: await sanitizeLogDetails(details as Record<string, unknown>)
         };
 

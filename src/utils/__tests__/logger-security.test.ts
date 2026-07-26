@@ -236,5 +236,24 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).not.toContain(sensitiveData);
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
+
+        test('messageパラメータ内のPIIもマスクされる', async () => {
+            await addLog('ERROR', 'Failed to fetch https://example.com/user@test.com');
+            await flushLogs(true);
+
+            const logs = await getLogs();
+            expect(logs.length).toBe(1);
+            expect(logs[0].message).not.toContain('user@test.com');
+            expect(logs[0].message).toContain('[MASKED:email]');
+        });
+
+        test('PIIを含まないmessageは変化しない', async () => {
+            await addLog('INFO', 'Recording pipeline completed successfully');
+            await flushLogs(true);
+
+            const logs = await getLogs();
+            expect(logs.length).toBe(1);
+            expect(logs[0].message).toBe('Recording pipeline completed successfully');
+        });
     });
 });
