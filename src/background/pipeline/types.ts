@@ -69,6 +69,9 @@ export interface RecordingContext {
   force: boolean;
   aiService?: AIService | null;
 
+  // Trace / correlation ID for cross-step logging
+  traceId?: string;
+
   // Intermediate results (cached for performance)
   truncatedContent?: string;
   isDomainAllowed?: boolean;

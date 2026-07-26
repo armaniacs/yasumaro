@@ -8,6 +8,7 @@ export interface SaveSqliteStepParams {
   record: BrowsingLogRecord;
   sqliteClient: SqliteClient;
   obsidianSynced?: boolean;
+  traceId?: string;
 }
 
 export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void> {
@@ -27,6 +28,7 @@ export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void
     addLog(LogType.ERROR, 'saveSqliteStep: failed', {
       url: params.record.url,
       error: String(err),
+      traceId: params.traceId,
     });
     throw err;
   }

@@ -25,7 +25,8 @@ export const checkTrustDomainStep: PipelineStepFunction = async (
     addLog(LogType.WARN, 'Domain not trusted, recording blocked', {
       url,
       reason: trustCheck.reason,
-      trustLevel: trustCheck.trustResult.level
+      trustLevel: trustCheck.trustResult.level,
+      traceId: context.traceId
     });
 
     if (trustCheck.showAlert) {

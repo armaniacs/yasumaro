@@ -40,7 +40,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
   console.log('[LocalMD] Step reached:', { url, hasMarkdown: !!markdown });
 
   if (!markdown) {
-    addLog(LogType.WARN, '[LocalMD] No markdown to save locally', { url });
+    addLog(LogType.WARN, '[LocalMD] No markdown to save locally', { url, traceId: context.traceId });
     return context;
   }
 
@@ -53,10 +53,11 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     url,
     enabled: localExportEnabled,
     timing,
-    hasMarkdown: !!markdown
+    hasMarkdown: !!markdown,
+    traceId: context.traceId
   });
   if (!localExportEnabled || timing === 'manual' || !timing) {
-    addLog(LogType.INFO, '[LocalMD] Disabled, skipping', { url });
+    addLog(LogType.INFO, '[LocalMD] Disabled, skipping', { url, traceId: context.traceId });
     return context;
   }
 
@@ -75,6 +76,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
       addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
         title,
         url,
+        traceId: context.traceId,
       });
 
       return context;
@@ -83,7 +85,8 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     addLog(LogType.ERROR, 'Failed to save to local Markdown', {
       error: errorMessage(error),
       url,
-      title
+      title,
+      traceId: context.traceId
     });
     // BEST_EFFORT: log error but don't throw — continue pipeline
     return context;

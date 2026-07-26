@@ -15,7 +15,7 @@
 
 | PBI | 難易度 | 副作用 | 状態 |
 |-----|--------|--------|------|
-| [2026-07-26-21-feat-recording-pipeline-trace-id.md](2026-07-26-21-feat-recording-pipeline-trace-id.md) | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-21-feat-recording-pipeline-trace-id.md](2026-07-26-21-feat-recording-pipeline-trace-id.md) | 🔴高 | 🟡軽微 | 🔶（RecordingContext / RecordingPipeline / 全ステップの addLog に traceId を追加。AI/Obsidian/SQLite 内部ログへの伝播は未対応） |
 | [2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | 🟡中 | 🟢なし | ⬜ |
 | [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜（設計ドキュメントは `dev-docs/2026-07-26-chrome-built-in-ai-provider-design.md` として作成済み） |
 | [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜（実装計画は `dev-docs/plans/2026-07-26-chrome-built-in-ai-provider-plan.md` として作成済み） |
@@ -189,6 +189,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 5（✨機能追加 4 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 0 |
+| ⬜ 未着手 | 4（✨機能追加 3 / 🔧非機能追加 1） |
+| 🔶 部分実装 | 1 |
 | アーカイブ済み | 165 |
