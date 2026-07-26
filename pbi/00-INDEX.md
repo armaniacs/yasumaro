@@ -5,51 +5,46 @@
 凡例: ⬜ 未着手 / 🔶 部分実装（一部基準のみ満たす） / 実装完了したPBIは `dev-docs/archived/pbi/` へ移動する
 難易度: 🟢低（1pt目安） / 🟡中（2pt目安） / 🔴高（3pt以上目安） — 各PBI内「見積もり」セクションのポイントに基づく
 副作用: 🔴あり（既存機能・既存ユーザーに実害の可能性） / 🟡軽微（コスト増や要検証点はあるが致命的でない） / 🟢なし（安全に対処可能）
+種別: ✨機能追加（feat、ユーザーに見える新機能） / 🔧非機能追加（fix/refactor、バグ修正・内部改善・性能改善など機能追加を伴わないもの）
 
 ---
 
 ## 未着手 ⬜ / 部分実装 🔶
 
+### ✨ 機能追加（feat）
+
 | PBI | 難易度 | 副作用 | 状態 |
 |-----|--------|--------|------|
-| [2026-07-22-01-doc-response-size-limit-adr.md](2026-07-22-01-doc-response-size-limit-adr.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-22-02-refactor-response-size-limit-detection.md](2026-07-22-02-refactor-response-size-limit-detection.md) | 🔴高 | 🟡軽微 | ✅ |
-| [2026-07-23-03-fix-remove-unused-dependencies.md](2026-07-23-03-fix-remove-unused-dependencies.md) | 🟢低 | 🟢なし | ✅ |
-| [2026-07-23-04-fix-remove-unused-files.md](2026-07-23-04-fix-remove-unused-files.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-23-05-fix-remove-unused-exports.md](2026-07-23-05-fix-remove-unused-exports.md) | 🔴高 | 🟡軽微 | ✅ |
-| [2026-07-25-01-fix-release-command-injection.md](2026-07-25-01-fix-release-command-injection.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-02-fix-oauth-response-log-leak.md](2026-07-25-02-fix-oauth-response-log-leak.md) | 🟢低 | 🟢なし | ✅ |
-| [2026-07-25-03-fix-cws-publish-reliability.md](2026-07-25-03-fix-cws-publish-reliability.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-04-feat-ci-security-review-checklist.md](2026-07-25-04-feat-ci-security-review-checklist.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-05-feat-log-sensitivity-policy.md](2026-07-25-05-feat-log-sensitivity-policy.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-06-feat-external-api-reliability-guideline.md](2026-07-25-06-feat-external-api-reliability-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-07-feat-eslint-rule-testing-guideline.md](2026-07-25-07-feat-eslint-rule-testing-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-08-feat-cwe-classification-guideline.md](2026-07-25-08-feat-cwe-classification-guideline.md) | 🟡中 | 🟢なし | ✅ |
-| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | 🟡中 | 🟢なし | ⬜ |
-| [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-14-fix-offline-queue-retry-skip-ai.md](2026-07-26-14-fix-offline-queue-retry-skip-ai.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-19-fix-tabcache-content-removal.md](2026-07-26-19-fix-tabcache-content-removal.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md](2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md) | 🟡中 | 🟡軽微 | ⬜ |
 | [2026-07-26-21-feat-recording-pipeline-trace-id.md](2026-07-26-21-feat-recording-pipeline-trace-id.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-26-22-refactor-barrel-reexport-removal.md](2026-07-26-22-refactor-barrel-reexport-removal.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-26-23-fix-dashboard-dead-code-removal.md](2026-07-26-23-fix-dashboard-dead-code-removal.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-25-refactor-logger-split.md](2026-07-26-25-refactor-logger-split.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-28-fix-web-accessible-resources-scope.md](2026-07-26-28-fix-web-accessible-resources-scope.md) | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | 🟡中 | 🟢なし | ⬜ |
-| [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜ |
-| [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-26-33-fix-hardcoded-japanese-strings-options.md](2026-07-26-33-fix-hardcoded-japanese-strings-options.md) | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-26-34-refactor-offscreen-console-to-logger.md](2026-07-26-34-refactor-offscreen-console-to-logger.md) | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜（設計ドキュメントは `dev-docs/2026-07-26-chrome-built-in-ai-provider-design.md` として作成済み） |
+| [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜（実装計画は `dev-docs/plans/2026-07-26-chrome-built-in-ai-provider-plan.md` として作成済み） |
 
-新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください。
+### 🔧 非機能追加（fix / refactor：バグ修正・内部改善・性能改善）
+
+| PBI | 種別 | 難易度 | 副作用 | 状態 |
+|-----|------|--------|--------|------|
+| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中） |
+| [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | fix | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-14-fix-offline-queue-retry-skip-ai.md](2026-07-26-14-fix-offline-queue-retry-skip-ai.md) | fix | 🟡中 | 🟡軽微 | ⬜（調査の結果、当初想定より広い変更が必要と判明。着手時は再見積もり要） |
+| [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-19-fix-tabcache-content-removal.md](2026-07-26-19-fix-tabcache-content-removal.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md](2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-22-refactor-barrel-reexport-removal.md](2026-07-26-22-refactor-barrel-reexport-removal.md) | refactor | 🔴高 | 🟡軽微 | ⬜ |
+| [2026-07-26-23-fix-dashboard-dead-code-removal.md](2026-07-26-23-fix-dashboard-dead-code-removal.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-25-refactor-logger-split.md](2026-07-26-25-refactor-logger-split.md) | refactor | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-28-fix-web-accessible-resources-scope.md](2026-07-26-28-fix-web-accessible-resources-scope.md) | fix | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
+| [2026-07-26-33-fix-hardcoded-japanese-strings-options.md](2026-07-26-33-fix-hardcoded-japanese-strings-options.md) | fix | 🔴高 | 🟡軽微 | ⬜（options.html 235件、popup.html 分は対応済み） |
+| [2026-07-26-34-refactor-offscreen-console-to-logger.md](2026-07-26-34-refactor-offscreen-console-to-logger.md) | refactor | 🟡中 | 🟡軽微 | ⬜（dashboard 分〔cspSettings.ts〕は対応済み、Offscreen 側21件が残存） |
+
+新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
 ---
 
@@ -57,18 +52,62 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
-今回アーカイブ済み（実装完了確認済み）:
-- 2026-07-25-08-feat-cwe-classification-guideline.md (CWE分類ガイドライン作成)
-- 2026-07-25-07-feat-eslint-rule-testing-guideline.md (ESLintルールテストガイドライン + テスト拡充)
-- 2026-07-25-06-feat-external-api-reliability-guideline.md (外部API信頼性ガイドライン作成)
-- 2026-07-25-05-feat-log-sensitivity-policy.md (ログ機密性ポリシー + logMasker実装)
-- 2026-07-25-04-feat-ci-security-review-checklist.md (CI/CDセキュリティチェックリスト作成)
-- 2026-07-25-03-fix-cws-publish-reliability.md (CWS公開ステップ信頼性向上)
-- 2026-07-25-02-fix-oauth-response-log-leak.md (OAuthログ漏洩防止)
-- 2026-07-25-01-fix-release-command-injection.md (コマンドインジェクション修正)
+### 2026-07-26 セッションでアーカイブ済み
+
+- 2026-07-22-01-doc-response-size-limit-adr.md (response-size-limit用ADR作成、後片付け漏れを確認しアーカイブ)
+- 2026-07-22-02-refactor-response-size-limit-detection.md (ASTベース検出ロジックへのリファクタ、後片付け漏れを確認しアーカイブ)
+- 2026-07-25-01-fix-release-command-injection.md (release.ymlコマンドインジェクション修正、重複ファイルを整理)
+- 2026-07-25-02-fix-oauth-response-log-leak.md (OAuthログ漏洩防止、重複ファイルを整理)
+- 2026-07-25-03-fix-cws-publish-reliability.md (CWS公開ステップ信頼性向上、重複ファイルを整理)
+- 2026-07-25-04-feat-ci-security-review-checklist.md (CI/CDセキュリティレビューチェックリスト作成、重複ファイルを整理)
+- 2026-07-25-05-feat-log-sensitivity-policy.md (ログ機密性分類ポリシー策定、重複ファイルを整理)
+- 2026-07-25-06-feat-external-api-reliability-guideline.md (外部API信頼性設計ガイドライン策定、重複ファイルを整理)
+- 2026-07-25-07-feat-eslint-rule-testing-guideline.md (ESLintルールテストケース生成プロセス確立、重複ファイルを整理)
+- 2026-07-25-08-feat-cwe-classification-guideline.md (CWE分類フレームワーク適用ガイドライン、重複ファイルを整理)
+- 2026-07-25-09-doc-api-endpoint-documentation.md (Obsidian Local REST APIエンドポイント一覧を文書化)
+- 2026-07-25-10-fix-magic-numbers-extraction.md (背景処理のマジックナンバーを名前付き定数に抽出)
+- 2026-07-25-12-doc-recording-pipeline-edge-cases.md (RecordingPipelineのステップ実行順序をコメントで図示)
+- 2026-07-25-13-fix-verify-inline-event-handler.md (recordBtn等の.onclick=パターンに設計意図のコメント追加)
+- 2026-07-25-14-fix-pii-regex-redos-hardening.md (PIIサニタイズのemailパターンによるReDoS解消)
+- 2026-07-25-15-fix-hardcoded-japanese-strings.md (popup.html日本語ハードコード修正、13箇所。options.html分はPBI-33に分割)
+- 2026-07-25-16-fix-ai-summary-locale-default.md (AI要約デフォルトプロンプトのロケール解決を修正)
+- 2026-07-25-17-fix-privacy-consent-integrity-signature.md (プライバシー同意記録にHMAC署名検証を追加)
+- 2026-07-25-18-fix-data-retention-after-consent-withdrawal.md (同意撤回時のデータ削除確認ダイアログ追加)
+- 2026-07-25-19-fix-migration-retry-limit.md (マイグレーション失敗の無限リトライに上限を追加)
+- 2026-07-25-20-fix-logger-batch-flush-strategy.md (ログバッチフラッシュの既存実装状況を記録・SW終了時タイムアウト可視化)
+- 2026-07-25-21-fix-ai-call-deduplication.md (AI要約リクエストのin-flight重複排除を実装)
+- 2026-07-25-22-fix-duplicate-check-race-condition.md (RecordingPipelineにURL単位のMutexを追加)
+- 2026-07-25-23-fix-sqlite-optimistic-lock.md (SQLite楽観的ロックの現状調査、対応不要と判断)
+- 2026-07-25-24-fix-focus-trap-consistency.md (フォーカストラップの共通ロジックを抽出し未使用箇所に適用)
+- 2026-07-25-25-refactor-background-error-handling.md (共通エラーハンドリングラッパーの導入状況を記録)
+- 2026-07-25-26-refactor-legacy-typescript-patterns.md (settingsへの値代入をassignSettingValue()経由に統一)
+- 2026-07-25-27-refactor-obsidian-api-abstraction.md (Obsidian Local REST APIのパス組み立てを一元化)
+- 2026-07-25-28-fix-message-type-contract-testing.md (メッセージ型契約テストをVALID_MESSAGE_TYPESからSSOT自動導出化)
+- 2026-07-25-29-refactor-test-setup-simplification.md (chrome.i18nメッセージモックをen/messages.jsonから動的生成)
+- 2026-07-25-30-fix-pbkdf2-legacy-timing-sidechannel.md (PBKDF2レガシー検証パスのタイミングサイドチャネル解消)
+- 2026-07-25-31-fix-verify-legacy-crypto-export-removal.md (非推奨hashPassword/verifyPasswordを内部専用化)
+- 2026-07-25-32-fix-export-batch-pagination.md (ローカルMarkdown全履歴エクスポートをバッチストリーミング化)
+- 2026-07-25-33-refactor-domain-filter-consolidation.md (ドメインフィルタ関連コードの責務分離マップをADRとして作成)
+- 2026-07-26-01-doc-privacy-md-sync.md (public/PRIVACY.mdをdocs/PRIVACY.mdの最新内容に同期)
+- 2026-07-26-02-doc-design-tokens.md (デザイントークン「研墨」をDESIGN_TOKENS.mdとして文書化)
+- 2026-07-26-03-fix-encryption-secret-label.md (ENCRYPTION_SECRETの誤った「廃止予定」ラベルを訂正)
+- 2026-07-26-04-fix-wa-sqlite-version-pin.md (wa-sqliteバージョン方針の調査、現状維持でクローズ)
+- 2026-07-26-05-feat-ci-sbom-generation.md (CIにSBOM生成ステップを追加)
+- 2026-07-26-06-fix-html-lang-attribute-dynamic.md (html lang属性動的化、実装済みと確認しクローズ)
+- 2026-07-26-07-fix-addlog-message-sanitization.md (addLogのmessageパラメータもPIIサニタイズ対象に追加)
+- 2026-07-26-08-fix-offscreen-ai-error-exposure.md (offscreen.tsの生エラーオブジェクトのconsole出力を修正)
+- 2026-07-26-09-fix-pending-storage-key-rename.md (osh_pending_pagesストレージキーをpending_pagesにリネーム)
+- 2026-07-26-10-fix-i18n-plural-integration.md (applyI18nがdata-i18n-argsのcountから複数形キーを自動解決)
+- 2026-07-26-11-fix-response-for-type-completeness.md (ResponseForTypeの型マッピングを全メッセージ種別に完全化)
+- 2026-07-26-12-fix-protocol-version-validation.md (プロトコルバージョン検証、実装済み・制約により対応不可と判明しクローズ)
+- 2026-07-26-16-fix-pending-sqlite-queue-retry-alarm.md (pendingSqliteQueueに定期リトライアラームを追加)
+- 2026-07-26-17-refactor-console-to-structured-logger.md (dashboard分のconsole出力を構造化ロガーに置き換え。Offscreen分はPBI-34に分割)
+- 2026-07-26-18-refactor-sqlite-client-last-error.md (SqliteClientのlastError管理をcall()に一元化)
+
+### これまでのアーカイブ済み
+
 - 2026-07-23-05-fix-remove-unused-exports.md (未使用エクスポート82個+型34個の削除)
 - 2026-07-23-04-fix-remove-unused-files.md (未使用ファイル6個の削除)
-- 2026-07-23-03-fix-remove-unused-dependencies.md (未使用依存パッケージ6個の削除)
 - 2026-07-23-03-fix-remove-unused-dependencies.md (未使用依存パッケージ6個の削除)
 - 2026-07-22-07-back-security-lint-rule-and-review-checklist.md (lint rules + PR template)
 - 2026-07-22-01-fix-obsidian-markdown-injection-core.md (VULN-001,002,004,005)
@@ -146,7 +185,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 60 |
+| ⬜ 未着手 | 23（✨機能追加 4 / 🔧非機能追加 19） |
 | 🔶 部分実装 | 0 |
-| ✅ 完了 | 8 |
-| アーカイブ済み | 83 |
+| アーカイブ済み | 149 |
