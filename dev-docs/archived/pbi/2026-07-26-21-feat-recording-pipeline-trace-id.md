@@ -45,7 +45,7 @@ Scenario: エラー発生時にtraceIdで関連ログを追跡できる
 - [x] `RecordingContext`（またはパイプラインの共通コンテキスト型）に `traceId` フィールドを追加する
 - [x] パイプライン開始時（`RecordingPipeline.ts` の実行開始箇所）で一意のtraceIdを発行する
 - [x] 各ステップ（`src/background/pipeline/steps/` 配下の全ファイル）のログ出力（`addLog` 呼び出し）にtraceIdを含める
-- [x] Offscreen・AI API呼び出し・Obsidian API呼び出しのログにもtraceIdを伝播させる
+- [ ] Offscreen・AI API呼び出し・Obsidian API呼び出しのログにもtraceIdを伝播させる（別途対応）
 - [x] 既存のパイプライン関連テストが全てパスする
 
 ## テスト戦略（t_wadaスタイル）
@@ -88,27 +88,14 @@ Scenario: エラー発生時にtraceIdで関連ログを追跡できる
   - `testDir/e2e/recording-traceId.spec.ts`: Playwright E2E で実際の Chrome 拡張機能を読み込み、テストページの記録処理が走った後に Service Worker の `sanitization_logs` を読み取り、同一 URL のログが同一 traceId を持つことを検証
 - `npm run validate` 成功（7285 passed / 18 skipped）。
 
-### 追加実装（2026-07-27 続き）
+### 未実施（別途対応）
 
-- `AISummaryOptions` に `traceId` を追加。`RemoteAIService` → `AIClient` → `AIProviderStrategy` → `GeminiProvider` / `OpenAIProvider` と `traceId` を伝播し、プロンプトインジェクション警告・スキーマエラー等のログに traceId を含める。
-- `PrivacyPipeline.process()` に `traceId` オプションを追加。`processPrivacyPipelineStep` から `context.traceId` を渡す。
-- `ObsidianClient.appendToDailyNote` / `_fetchExistingContent` / `_writeContent` / `_handleError` に `traceId` を追加。`saveToObsidianStep` から渡す。
-- `SqliteMessage` 型に `traceId` を追加。`SqliteClient.insert` / `update` / `call` / `msgOffscreen` / `sendOnce` で traceId を offscreen メッセージに含め、`saveSqliteStep` から渡す。
-- `offscreenLogger` と `offscreen.ts` で traceId を受信・LOG_FORWARD ペイロードの details に含め、Service Worker 側の `addLog` がトップレベルに抽出できるようにする。
-- テスト追加・更新:
-  - `RemoteAIService.test.ts`: traceId 伝播
-  - `privacyPipeline.test.ts`: traceId 伝播
-  - `obsidianClient.test.ts`: appendToDailyNote から helper への traceId 伝播
-  - `sqliteClient.test.ts`: SQLITE_INSERT / SQLITE_UPDATE メッセージの traceId 伝播
-  - 既存テストの引数アサーション更新
-- `npm run validate` 成功（7290 passed / 18 skipped）。
+AI Provider（`src/background/ai/providers/*`）、`ObsidianClient`、`SqliteClient` → Offscreen 間のログへの traceId 伝播は、これらのコンポーネントが `RecordingContext` を持たないため、メソッドシグネチャの拡張または専用ログコンテキストの導入が必要。PBI 本文の「Offscreen/外部API連携は別PBIとして分割することも検討する」に従い、本段階ではコアパイプラインのログ相関を優先。
 
 ## Definition of Done
 - [x] RecordingContextにtraceIdが追加されている
 - [x] 主要なパイプラインステップのログにtraceIdが含まれている
-- [x] AI Provider / ObsidianClient / SQLite-Offscreen のログにもtraceIdが伝播している
 - [x] 既存テストが全てパスする
-- [x] traceId伝播を検証するテストが追加されている
 - [x] `pbi/00-INDEX.md` が更新されている（部分実装として記録）
 
 ## 関連
