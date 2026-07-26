@@ -891,6 +891,15 @@
   "confirmClearAllMessage": {
     "message": "この操作は取り消せません。SQLite に保存された全ての閲覧履歴が削除されます。続行しますか？"
   },
+  "confirmWithdrawConsentTitle": {
+    "message": "プライバシー同意を撤回"
+  },
+  "confirmWithdrawConsentMessage": {
+    "message": "同意を撤回すると、これまでに記録された全ての閲覧履歴データ（要約・URL履歴を含む）も完全に削除されます。この操作は取り消せません。続行しますか？"
+  },
+  "withdrawConsentDataDeleteFailed": {
+    "message": "記録データの削除に失敗しました。同意状態は変更されていません。"
+  },
   "confirmDelete": {
     "message": "削除"
   },

@@ -945,6 +945,15 @@
   "confirmClearAllMessage": {
     "message": "This action cannot be undone. All browsing history stored in SQLite will be deleted. Continue?"
   },
+  "confirmWithdrawConsentTitle": {
+    "message": "Withdraw Privacy Consent"
+  },
+  "confirmWithdrawConsentMessage": {
+    "message": "Withdrawing consent will also permanently delete all previously recorded browsing history (including summaries and URL history). This action cannot be undone. Continue?"
+  },
+  "withdrawConsentDataDeleteFailed": {
+    "message": "Failed to delete recorded data. Your consent status was not changed."
+  },
   "confirmDelete": {
     "message": "Delete"
   },
