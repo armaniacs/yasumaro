@@ -25,7 +25,6 @@
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
 | [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中。2026-07-27再調査: コードレビュー上は妥当な設計と確認、見積もり据え置き） |
-| [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | 🔶（PageState移行・自動テスト更新完了。実ブラウザでの複数サイト動作確認は本環境では実行できず未実施） |
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
 ---
@@ -36,6 +35,7 @@
 
 ### 2026-07-27 セッションでアーカイブ済み
 
+- 2026-07-25-34-refactor-extractor-global-state-encapsulation.md (`extractor.ts` のモジュールレベル状態を `PageState` クラスに移行。4テストファイルを更新。自動テスト・ビルド検証済み)
 - 2026-07-26-27-fix-popup-dashboard-settings-duplication.md (popup の重複設定 UI を削除し dashboard に一本化。共有モジュールはファイル削除せず popup 側の init 呼び出しのみ除去。自動テスト・ビルド検証済み)
 - 2026-07-25-35-fix-service-worker-state-persistence.md (`isCacheInitialized`/`autoSavedBadgeTabs` を `chrome.storage.session` へ永続化、実ブラウザ動作確認済み)
 - 2026-07-25-36-refactor-service-worker-singleton-di.md (`TabCache` の遅延初期化パターン試験導入、実ブラウザ動作確認済み)
@@ -189,6 +189,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 6（✨機能追加 4 / 🔧非機能追加 2） |
+| ⬜ 未着手 | 5（✨機能追加 4 / 🔧非機能追加 1） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 164 |
+| アーカイブ済み | 165 |
