@@ -48,10 +48,18 @@ describe('swStatePersistence', () => {
             const flag = createCacheInitializedFlag();
             flag.value = true;
 
-            await new Promise((resolve) => setTimeout(resolve, 10));
-
             const stored = await loadCacheInitializedState();
             expect(stored).toBe(true);
+        });
+
+        it('restores the flag value via restore()', async () => {
+            await saveCacheInitializedState(true);
+            const flag = createCacheInitializedFlag();
+            expect(flag.value).toBe(false);
+
+            await flag.restore();
+
+            expect(flag.value).toBe(true);
         });
     });
 
@@ -71,8 +79,6 @@ describe('swStatePersistence', () => {
             const tabs = createAutoSavedBadgeTabs();
             tabs.add(42);
 
-            await new Promise((resolve) => setTimeout(resolve, 10));
-
             const stored = await loadAutoSavedBadgeTabs();
             expect(stored.has(42)).toBe(true);
         });
@@ -80,14 +86,22 @@ describe('swStatePersistence', () => {
         it('persists deleted tabs', async () => {
             await saveAutoSavedBadgeTabs(new Set([1, 2, 3]));
             const tabs = createAutoSavedBadgeTabs();
-
-            await new Promise((resolve) => setTimeout(resolve, 10));
-
+            await tabs.restore();
             tabs.delete(2);
-            await new Promise((resolve) => setTimeout(resolve, 10));
 
             const stored = await loadAutoSavedBadgeTabs();
             expect(stored).toEqual(new Set([1, 3]));
+        });
+
+        it('restores tab ids via restore()', async () => {
+            await saveAutoSavedBadgeTabs(new Set([10, 20]));
+            const tabs = createAutoSavedBadgeTabs();
+            expect(tabs.has(10)).toBe(false);
+
+            await tabs.restore();
+
+            expect(tabs.has(10)).toBe(true);
+            expect(tabs.has(20)).toBe(true);
         });
     });
 });

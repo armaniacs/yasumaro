@@ -27,28 +27,28 @@ export async function saveCacheInitializedState(value: boolean): Promise<void> {
 
 export interface CacheInitializedFlag {
     value: boolean;
+    restore(): Promise<void>;
 }
 
 /**
  * Creates a mutable flag backed by chrome.storage.session.
- * The current value is updated asynchronously after creation; callers should
- * treat the initial `false` as a conservative default.
+ * Callers must await `restore()` before relying on the value across a
+ * Service Worker restart.
  */
 export function createCacheInitializedFlag(): CacheInitializedFlag {
-    const flag: CacheInitializedFlag = { value: false };
-
-    loadCacheInitializedState()
-        .then((stored) => {
-            flag.value = stored;
-        })
-        .catch(() => {
-            // Best-effort restore; keep the conservative default.
-        });
+    const flag: CacheInitializedFlag = {
+        value: false,
+        async restore() {
+            flag.value = await loadCacheInitializedState();
+        },
+    };
 
     return new Proxy(flag, {
         set(target, property, newValue: boolean) {
-            target.value = newValue;
-            void saveCacheInitializedState(newValue);
+            if (property === 'value') {
+                target.value = newValue;
+                void saveCacheInitializedState(newValue);
+            }
             return true;
         },
     });
@@ -75,22 +75,16 @@ export interface AutoSavedBadgeTabs {
     has(tabId: number): boolean;
     add(tabId: number): void;
     delete(tabId: number): void;
+    restore(): Promise<void>;
 }
 
 /**
- * Creates an in-memory Set of tab IDs that is asynchronously rehydrated from
- * chrome.storage.session and persisted on every mutation.
+ * Creates an in-memory Set of tab IDs that is persisted on every mutation.
+ * Callers must await `restore()` before relying on the set across a Service
+ * Worker restart.
  */
 export function createAutoSavedBadgeTabs(): AutoSavedBadgeTabs {
     const tabs = new Set<number>();
-
-    loadAutoSavedBadgeTabs()
-        .then((stored) => {
-            stored.forEach((tabId) => tabs.add(tabId));
-        })
-        .catch(() => {
-            // Best-effort restore; keep the empty set default.
-        });
 
     return {
         has: (tabId: number) => tabs.has(tabId),
@@ -101,6 +95,10 @@ export function createAutoSavedBadgeTabs(): AutoSavedBadgeTabs {
         delete: (tabId: number) => {
             tabs.delete(tabId);
             void saveAutoSavedBadgeTabs(tabs);
+        },
+        restore: async () => {
+            const stored = await loadAutoSavedBadgeTabs();
+            stored.forEach((tabId) => tabs.add(tabId));
         },
     };
 }

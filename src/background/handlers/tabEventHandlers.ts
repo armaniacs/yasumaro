@@ -16,16 +16,19 @@ export interface TabHandlerContext {
     autoSavedBadgeTabs: {
         has: (tabId: number) => boolean;
         delete: (tabId: number) => void;
+        restore: () => Promise<void>;
     };
 }
 
 export function createTabEventHandlers(ctx: TabHandlerContext) {
-    function handleTabRemoved(tabId: number): void {
+    async function handleTabRemoved(tabId: number): Promise<void> {
+        await ctx.autoSavedBadgeTabs.restore();
         ctx.tabCache.remove(tabId);
         ctx.autoSavedBadgeTabs.delete(tabId);
     }
 
     async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
+        await ctx.autoSavedBadgeTabs.restore();
         try {
             const tab = await chrome.tabs.get(activeInfo.tabId);
             // 自動保存バッジ表示中のタブは ◎ を維持
@@ -58,7 +61,8 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
     /**
      * Handle tab navigation - update badge after page load completes.
      */
-    function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void {
+    async function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): Promise<void> {
+        await ctx.autoSavedBadgeTabs.restore();
         if (changeInfo.status !== 'complete' || !tab.url) return;
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);

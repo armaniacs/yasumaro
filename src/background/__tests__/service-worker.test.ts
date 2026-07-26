@@ -826,41 +826,41 @@ describe('service-worker handlers', () => {
             expect(typeof serviceWorker.handleTabUpdated).toBe('function');
         });
 
-        it('should do nothing if status is not complete', () => {
-            serviceWorker.handleTabUpdated(1, { status: 'loading' }, { url: 'https://example.com' });
+        it('should do nothing if status is not complete', async () => {
+            await serviceWorker.handleTabUpdated(1, { status: 'loading' }, { url: 'https://example.com' });
             expect(mockSetBadgeText).not.toHaveBeenCalled();
         });
 
-        it('should do nothing if tab URL is missing', () => {
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, {});
+        it('should do nothing if tab URL is missing', async () => {
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, {});
             expect(mockSetBadgeText).not.toHaveBeenCalled();
         });
 
-        it('should clear auto-saved badge and show warning for private page', () => {
+        it('should clear auto-saved badge and show warning for private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://private.com');
             RecordingLogic.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://private.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://private.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 1 });
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ tabId: 1 }));
         });
 
-        it('should clear badge for non-private page', () => {
+        it('should clear badge for non-private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
             RecordingLogic.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
         });
 
-        it('should clear badge when privacy cache is empty', () => {
+        it('should clear badge when privacy cache is empty', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
             RecordingLogic.cacheState.privacyCache = null;
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
         });
     });

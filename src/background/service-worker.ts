@@ -455,6 +455,10 @@ export function createMessageHandler(): (
 ) => boolean {
     return (rawMessage: unknown, sender, sendResponse) => {
         const process = async () => {
+            // Restore persisted SW state before handling the first message after
+            // a Service Worker restart.
+            await Promise.all([isCacheInitialized.restore(), autoSavedBadgeTabs.restore()]);
+
             try {
                 if (!rawMessage || typeof rawMessage !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
