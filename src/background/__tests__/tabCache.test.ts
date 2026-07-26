@@ -46,8 +46,7 @@ describe('TabCache', () => {
             url: 'https://example.com/1',
             favIconUrl: null,
             lastUpdated: expect.any(Number),
-            isValidVisit: false,
-            content: null
+            isValidVisit: false
           });
         });
       });
@@ -146,10 +145,10 @@ describe('TabCache', () => {
                 favIconUrl: null
             };
             tabCache.add(tab);
-            tabCache.update(1, { title: 'New Title', content: 'Test content' });
+            tabCache.update(1, { title: 'New Title', isValidVisit: true });
             const retrieved = tabCache.get(1);
             expect(retrieved.title).toBe('New Title');
-            expect(retrieved.content).toBe('Test content');
+            expect(retrieved.isValidVisit).toBe(true);
             expect(retrieved.url).toBe('https://example.com');
         });
 

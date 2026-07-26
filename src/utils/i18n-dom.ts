@@ -7,6 +7,20 @@
  */
 
 import { getMessage, getUserLocale, isRTL } from './i18n.js';
+import { getPluralKey } from './i18nPlural.js';
+
+/**
+ * Resolves the effective message key for `data-i18n-args`, applying
+ * getPluralKey() when a numeric `count` substitution is present so the
+ * plural-variant message key (e.g. `ruleCount_one` / `ruleCount_other`) is
+ * used instead of the base key.
+ */
+function resolvePluralKey(key: string, args: Record<string, unknown> | null): string {
+  if (!args || !('count' in args)) return key;
+  const count = Number(args.count);
+  if (Number.isNaN(count)) return key;
+  return getPluralKey(key, count);
+}
 
 /**
  * Translate <option> elements inside <select> tags.
@@ -73,7 +87,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
       }
     }
 
-    const translatedText = getMessage(key, args);
+    const translatedText = getMessage(resolvePluralKey(key, args), args);
 
     // Guard: if translation is missing, keep the original HTML fallback text
     if (!translatedText) return;
@@ -94,7 +108,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     if (key) {
       const substitutions = htmlEl.getAttribute('data-i18n-args');
       const args = substitutions ? JSON.parse(substitutions) : null;
-      htmlEl.placeholder = getMessage(key, args);
+      htmlEl.placeholder = getMessage(resolvePluralKey(key, args), args);
     }
   });
 

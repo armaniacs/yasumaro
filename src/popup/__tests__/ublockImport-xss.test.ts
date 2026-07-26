@@ -2,7 +2,7 @@
 /**
  * ublockImport-xss.test.js
  * XSS protection tests for renderSourceList
- * 【テスト対象】: src/popup/ublockImport.js - renderSourceList function
+ * 【テスト対象】: src/popup/ublockImport/index.js - renderSourceList function
  */
 
 

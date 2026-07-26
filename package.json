@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.6.6",
+  "version": "6.7.2",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -37,7 +37,8 @@
     "check-htmlparser2": "node scripts/check-htmlparser2-override.js",
     "check-bundle-size": "node scripts/check-bundle-size.mjs",
     "generate-notices": "node scripts/generate-third-party-notices.mjs",
-    "check-licenses": "node scripts/check-licenses.mjs"
+    "check-licenses": "node scripts/check-licenses.mjs",
+    "generate-sbom": "cyclonedx-npm --output-file sbom.json"
   },
   "keywords": [
     "obsidian",
@@ -49,6 +50,7 @@
   "license": "MIT",
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@cyclonedx/cyclonedx-npm": "^6.0.0",
     "@peculiar/webcrypto": "^1.5.0",
     "@playwright/test": "^1.58.2",
     "@types/chrome": "^0.2.2",

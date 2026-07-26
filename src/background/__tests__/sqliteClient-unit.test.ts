@@ -311,4 +311,33 @@ describe('SqliteClient — unit tests', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('isSqliteHealthy', () => {
+    it('sends SQLITE_HEALTH_CHECK and returns true on success', async () => {
+      const spy = vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: true });
+
+      const result = await client.isSqliteHealthy();
+
+      expect(result).toBe(true);
+      expect(spy).toHaveBeenCalledWith('SQLITE_HEALTH_CHECK', {});
+      expect(client.lastError).toBeNull();
+    });
+
+    it('returns false when offscreen reports failure', async () => {
+      vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: false, error: 'unhealthy' });
+
+      const result = await client.isSqliteHealthy();
+
+      expect(result).toBe(false);
+      expect(client.lastError).not.toBeNull();
+    });
+
+    it('returns false when msgOffscreen throws', async () => {
+      vi.spyOn(client, 'msgOffscreen').mockRejectedValue(new Error('timeout'));
+
+      const result = await client.isSqliteHealthy();
+
+      expect(result).toBe(false);
+    });
+  });
 });

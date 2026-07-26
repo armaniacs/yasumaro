@@ -12,7 +12,7 @@ import { JSDOM } from 'jsdom';
 import {
     cleanseAISummaryContent,
     countAISummaryTargets
-} from '../aiSummaryCleaner.js';
+} from '../aiSummaryCleaner/index.js';
 
 describe('aiSummaryCleaner', () => {
     let dom: JSDOM;

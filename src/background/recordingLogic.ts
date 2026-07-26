@@ -17,6 +17,9 @@ import type { RecordingResult } from '../messaging/types.js';
 import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { Mutex } from './Mutex.js';
+import { formatMarkdownStep } from './pipeline/steps/formatMarkdownStep.js';
+import { saveToObsidianStep } from './pipeline/steps/saveToObsidianStep.js';
+import type { RecordingContext } from './pipeline/types.js';
 
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
@@ -25,6 +28,9 @@ const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
 // 【設定定数】URLキャッシュの有効期限（秒 - Problem #7用）🟢
 // 【調整可能性】重複チェックの許容スパンに応じて調整可能
 const URL_CACHE_TTL = 60 * 1000; // 60 seconds
+
+// 【設定定数】プライバシー情報キャッシュの有効期限
+const PRIVACY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // 【設定定数】記録時の最大コンテンツサイズ（バイト）最大コンテンツサイズ 🟢
 // 【PII保護】64KB以降のPIIはAI APIに送信されず、安全側の挙動
@@ -172,16 +178,16 @@ export class RecordingLogic {
       }>(SESSION_KEYS.RECORDING_CACHE);
       if (!saved) return;
       const now = Date.now();
-      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < 30000) {
+      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < SETTINGS_CACHE_TTL) {
         RecordingLogic.cacheState.settingsCache = saved.settingsCache;
         RecordingLogic.cacheState.cacheTimestamp = saved.cacheTimestamp;
         RecordingLogic.cacheState.cacheVersion = saved.cacheVersion;
       }
-      if (saved.urlCache && saved.urlCacheTimestamp && (now - saved.urlCacheTimestamp) < 60000) {
+      if (saved.urlCache && saved.urlCacheTimestamp && (now - saved.urlCacheTimestamp) < URL_CACHE_TTL) {
         RecordingLogic.cacheState.urlCache = SessionStore.entriesToMap(saved.urlCache);
         RecordingLogic.cacheState.urlCacheTimestamp = saved.urlCacheTimestamp;
       }
-      if (saved.privacyCache && saved.privacyCacheTimestamp && (now - saved.privacyCacheTimestamp) < 300000) {
+      if (saved.privacyCache && saved.privacyCacheTimestamp && (now - saved.privacyCacheTimestamp) < PRIVACY_CACHE_TTL) {
         RecordingLogic.cacheState.privacyCache = SessionStore.entriesToMap(saved.privacyCache);
         RecordingLogic.cacheState.privacyCacheTimestamp = saved.privacyCacheTimestamp;
       }
@@ -360,7 +366,6 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
    */
   public async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
     const now = Date.now();
-    const PRIVACY_CACHE_TTL = 5 * 60 * 1000; // 5分
 
     // HeaderDetectorと同じ正規化でキャッシュキーを統一
     const normalizedUrl = RecordingLogic.normalizeUrlForCache(url);
@@ -407,6 +412,35 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
     RecordingLogic.cacheState.privacyCache = null;
     RecordingLogic.cacheState.privacyCacheTimestamp = null;
     RecordingLogic.scheduleCacheSave();
+  }
+
+  /**
+   * Retry an Obsidian write for an offline-queued job whose AI summary already
+   * succeeded (the only failure was the Obsidian append). Runs just the
+   * formatMarkdown + saveToObsidian steps instead of the full pipeline, so no
+   * AI API call is made on retry.
+   *
+   * @param job - Payload persisted by RecordingPipeline.enqueueOfflineJob()
+   *   for a 'obsidian_sync' job (payload.summary is guaranteed present there).
+   */
+  async retryObsidianWriteOnly(job: {
+    title: string;
+    url: string;
+    summary: string;
+    tags?: string[];
+  }): Promise<boolean> {
+    const settings = await this.getSettingsWithCache();
+    let context: RecordingContext = {
+      data: { title: job.title, url: job.url, content: '' } as RecordingData,
+      settings,
+      force: true,
+      errors: [],
+      privacyResult: { summary: job.summary, tags: job.tags },
+    };
+
+    context = await formatMarkdownStep(context);
+    context = await saveToObsidianStep(context, this.obsidian);
+    return true;
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {

@@ -1,9 +1,11 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年6月18日 / Last Updated: June 18, 2026**
+**最終更新日: 2026年6月20日 / Last Updated: June 20, 2026**
 
 > **更新履歴 / Update History**:
-> - **2026年6月17日**: v6.0.0 - Chrome Web Store 公開準備。各パーミッションの使用目的の明確化、AI プロバイダーの選択肢拡大、データ保持期間の説明
+> - **2026年6月20日**: v6.0.1 - GDPR 準拠修正。プライバシー同意拒否を「永久非表示」から「30日後に再表示」に変更
+> - **2026年6月13日**: v5.1.0 - PII サニタイゼーション強化（多言語対応）、データ保持期間の自動削除実装
+> - **2026年6月11日**: v5.0.0 - SQLite (OPFS) 移行、データ保持ポリシー追加、GDPR 削除権の物理削除対応
 > - **2026年3月9日**: v4.2.1 - 自動コンテンツフェッチ機能の有効化手順、URLログの記録について追加
 > - **2026年2月23日**: v4.1.3 - マスターパスワード保護機能追加
 
@@ -33,14 +35,18 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
    - 設定情報（最小滞在時間、スクロール深度など）
 
 ### データの保存場所
+- 閲覧履歴データは、デバイス上の **OPFS (Origin Private File System) 上の SQLite DB** に保存されます。
 - すべての設定データは、デバイス上の **Chrome ローカルストレージ** に保存されます。
-- 閲覧履歴は、デバイス上の **OPFS（Origin Private File System）上の SQLite DB** に保存されます。Obsidian 連携を有効にした場合は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
+- 閲覧履歴は、ユーザー自身の **ローカル Obsidian Vault** にも保存されます。
+- **データ保持ポリシー**: デフォルトでは閲覧履歴は**無制限に保持**されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から、保持期間（30日〜365日）および最大件数（1,000〜100,000件）を任意で設定できます。いずれかを設定すると、24時間ごとに自動パージが実行されます。
+  - **自動削除の仕組み**: 保持期間を超えた非スター付きエントリが物理削除されます。総数が最大件数を超える場合は古い非スター付きエントリから追加削除されます。スター付きエントリは自動削除の対象外です。「今すぐ削除を実行」ボタンで手動パージも可能です。
+  - **PII サニタイゼーション**: 取得されたページコンテンツは保存前に PII（個人情報）サニタイザーで処理されます。メールアドレス、クレジットカード番号、電話番号（日本・米国・中国・韓国）、マイナンバー、SSN（米国社会保障番号）などが自動的にマスクされます。
+- **旧バージョンからの移行**: 旧バージョンからのデータ移行はOPFS上のSQLite DBに対して実行されます。移行完了後、旧ストレージのデータは削除されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
-- **データ保持ポリシー**: デフォルトでは閲覧履歴は**無制限に保持**されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から、保持期間（30日〜365日）および最大件数（1,000〜100,000件）を任意で設定できます。スター付きエントリは自動削除の対象外です。
 
 ### データの使用方法
 1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。送信先の AI プロバイダーはユーザーが設定画面で選択したものであり、各プロバイダーのデータ利用ポリシーが適用されます。各プロバイダーのプライバシーポリシーをご確認ください。
-2. **閲覧履歴**: 直近7日分のメタデータ（URL・タイトル・記録種別・PIIマスク件数等）が Chrome ローカルストレージに保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。Obsidian 連携を有効にした場合（オプション）は、Obsidian Local REST API を通じて Obsidian Vault にもデータが送信されます。この場合、データの取り扱いは Obsidian およびそのプラグイン（Local REST API）のポリシーに依存します。
+2. **閲覧履歴**: OPFS上のSQLite DBに保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。Obsidian 連携を有効にした場合（オプション）は、Obsidian Local REST API を通じて Obsidian Vault にもデータが送信されます。この場合、データの取り扱いは Obsidian およびそのプラグイン（Local REST API）のポリシーに依存します。
 3. **設定**: Obsidian および AI プロバイダー API への接続に使用されます。
 
 ### プライベートページ保護機能
@@ -102,9 +108,21 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **有効にする方法**: ダッシュボード → Privacy タブ → 「マスターパスワード保護を有効にする」をオンにして、パスワードを設定します
 - **暗号化方式**: AES-GCM（業界標準）+ PBKDF2による鍵導出（100,000回反復）
 - **適用範囲**: エクスポートされたJSONファイルに含まれるすべての設定（APIキーを含む）
-- **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+  - **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+
+#### プライバシー同意の仕組み
+
+初回起動時にデータ収集への同意確認モーダルが表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります。30日経過後、再度同意確認が表示されます（GDPR 第7条「再同意取得」準拠）。
 
 通常の使用（拡張機能内でのAPIキー保存）には、マスターパスワードとは別の自動暗号化機構が使用されており、ユーザーの操作は不要です。
+
+#### 自動暗号化機構の仕組みと限界
+
+通常の使用では、APIキーは**自動的に暗号化されて保存**されます。マスターパスワードの設定は不要で、ユーザーの操作なくバックグラウンドでAES-GCMによる暗号化が適用されます。
+
+ただし、マスターパスワードが**未設定の場合**、暗号化に使用するキー自体が `chrome.storage.local` に平文で保存されます。Chrome拡張機能のストレージは拡張機能スコープで分離されているため、他の拡張機能から直接読み取ることはできませんが、本拡張機能内からは参照可能です。この場合、暗号化は「外部からの読み取り防止」の意味は持ちますが、「拡張機能自体によるアクセス防止」の意味は持ちません。
+
+**マスターパスワードを設定することで、暗号化キー自体がマスターパスワードから導出されるようになり、この制限を超えた保護が実現されます。**
 
 ### v4.2.1 プライバシー保護機能（追加）
 
@@ -151,8 +169,8 @@ v4.2.1以降、以下の機能が追加されました：
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
 
-1. **全Webサイトへのアクセス権限 (`<all_urls>`)**:
-   - 訪問したページのコンテンツを抽出するために必要です
+1. **コンテンツスクリプトによるページアクセス権限**:
+   - `content_scripts` で指定されたWebサイトのコンテンツを抽出するために必要です
    - ページのタイトル、URL、本文テキストを取得します
    - このデータはAI要約生成とObsidianへの保存にのみ使用されます
 
@@ -182,14 +200,18 @@ The Extension collects the following data **locally on your device**:
 - Configuration data (API keys, connection settings)
 
 ### Storage
+- Browsing history data is stored in **SQLite DB on OPFS (Origin Private File System)** on your device.
 - All configuration data is stored in **Chrome's local storage** on your device.
-- Browsing history is stored in a **SQLite DB on OPFS (Origin Private File System)** on your device. If Obsidian integration is enabled, entries are also saved to **your local Obsidian vault**.
+- Browsing history entries are also saved to **your local Obsidian vault**.
+- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy". When either setting is configured, an automatic purge runs every 24 hours.
+  - **Automatic Deletion Mechanism**: Non-starred entries older than the configured retention period are physically deleted. If the total count exceeds the configured maximum, the oldest non-starred entries are additionally removed. Starred entries are exempt from automatic deletion. A "Purge now" button is also available for immediate manual purge.
+  - **PII Sanitization**: Fetched page content is processed through a PII (Personally Identifiable Information) sanitizer before storage. Email addresses, credit card numbers, phone numbers (Japan, US, China, Korea), My Number (Japan), SSN (US Social Security Numbers), and other PII patterns are automatically masked.
+- **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
 - **No data is stored on our servers.**
-- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in Settings under "History Retention Policy". Starred entries are exempt from automatic deletion.
 
 ### How Data Is Used
 1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider.
-2. **Browsing history**: Metadata for the last 7 days (URL, title, record type, PII mask count, etc.) is stored in Chrome's local storage and can be viewed and managed in the extension's Dashboard (History tab). If you enable Obsidian integration (optional), data is also sent to your Obsidian vault via the Obsidian Local REST API. In that case, data handling is subject to the policies of Obsidian and the Local REST API plugin.
+2. **Browsing history**: Stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (History tab). If you enable Obsidian integration (optional), data is also sent to your Obsidian vault via the Obsidian Local REST API. In that case, data handling is subject to the policies of Obsidian and the Local REST API plugin.
 3. **Settings**: Used to connect to Obsidian and the AI provider API.
 
 ### Master Password Protection
@@ -201,7 +223,19 @@ You can encrypt exported settings files with a **master password**.
 - **Scope**: All settings in the exported JSON file, including API keys
 - **Note**: If you forget your password, encrypted export files cannot be decrypted
 
+#### Privacy Consent Mechanism
+
+On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days. After 30 days, the consent prompt reappears (GDPR Article 7 "Right to Re-consent" compliance).
+
 For regular use (storing API keys within the extension), a separate auto-encryption mechanism is used that requires no user action.
+
+#### Auto-Encryption Mechanism: Scope and Limitations
+
+Under normal use, API keys are **automatically encrypted** before being stored. No master password is required; AES-GCM encryption is applied in the background without any user action.
+
+However, when no master password is set, the encryption key itself is stored in plaintext within `chrome.storage.local`. While Chrome extension storage is scoped to the extension and cannot be read directly by other extensions, it is accessible from within this extension. In this state, encryption prevents external read access, but does not prevent access from within the extension itself.
+
+**Setting a master password changes this behavior: the encryption key is derived from the master password via PBKDF2, providing protection beyond the extension's own storage boundary.**
 
 ### v4.2.1 Privacy Protections (Updated)
 
@@ -298,8 +332,8 @@ The following data is temporarily stored locally for pages detected as private:
 ### Extension Permissions
 This extension requires the following permissions:
 
-1. **Access to All Websites (`<all_urls>`)**:
-   - Required to extract content from visited pages
+1. **Content Script Page Access**:
+   - Required to extract content from visited pages as specified in `content_scripts`
    - Collects page titles, URLs, and body text
    - Data is used solely for AI summarization and saving to Obsidian
 
@@ -326,5 +360,9 @@ This extension requires the following permissions:
 ダッシュボード → プライバシー設定 → 「データ管理」セクション → 「すべてのデータを削除」ボタン
 
 Dashboard → Privacy Settings → "Data Management" section → "Delete All Data" button
+
+個別の閲覧履歴エントリは物理的に削除されます（GDPR Art.17 対応）。WAL チェックポイントにより、削除後にディスク領域も確実に解放されます。
+
+Individual browsing history entries are physically deleted from the database (GDPR Art.17 compliance). WAL checkpoint ensures disk space is released after deletion.
 
 All data is stored locally and can be deleted by uninstalling the extension or manually deleting notes in Obsidian.

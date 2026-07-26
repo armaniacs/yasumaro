@@ -112,7 +112,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.querySelector('.cleansing-progress-bar')).not.toBeNull();
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
     expect(bar.style.width).toBe('40%');
-    expect(el!.textContent).toContain('60.0% 削減');
+    expect(el!.textContent).toContain('60.0% reduction');
   });
 
   it('aiSummaryCleansedBytes がなく cleansedBytes がある場合も機能する', () => {
@@ -126,7 +126,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el).not.toBeNull();
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
     expect(bar.style.width).toBe('25%');
-    expect(el!.textContent).toContain('75.0% 削減');
+    expect(el!.textContent).toContain('75.0% reduction');
   });
 
   it('pageBytes が 0 の場合 null を返す', () => {
@@ -153,7 +153,7 @@ describe('makeCleansingProgressBar', () => {
     // fallback時は aiSummaryCleansedBytes ではなく cleansedBytes (3000) を使う
     const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
     expect(bar.style.width).toBe('30%');
-    expect(el!.textContent).toContain('70.0% 削減');
+    expect(el!.textContent).toContain('70.0% reduction');
   });
 
   it('MB単位のバイト表示が正しい（>= 1MB）', () => {
@@ -199,7 +199,7 @@ describe('renderStatsSummary', () => {
     const stats = computeCleansingStats([]);
     renderStatsSummary(container, stats);
     expect(container.className).toBe('cleansing-stats-summary no-data');
-    expect(container.textContent).toContain('削減率データがありません');
+    expect(container.textContent).toContain('No reduction rate data available');
   });
 
   it('count>0 のとき統計カードを描画', () => {
@@ -216,9 +216,9 @@ describe('renderStatsSummary', () => {
     renderStatsSummary(container, stats);
     expect(container.className).toBe('cleansing-stats-summary');
     expect(container.innerHTML).toContain('stats-card');
-    expect(container.innerHTML).toContain('平均削減率');
-    expect(container.innerHTML).toContain('累計削減量');
-    expect(container.innerHTML).toContain('集計対象');
+    expect(container.innerHTML).toContain('Avg. Reduction Rate');
+    expect(container.innerHTML).toContain('Total Saved');
+    expect(container.innerHTML).toContain('Records');
   });
 
   it('統計カードの値が正しい', () => {
@@ -235,6 +235,6 @@ describe('renderStatsSummary', () => {
     renderStatsSummary(container, stats);
     expect(container.innerHTML).toContain('60.0%');
     expect(container.innerHTML).toContain('5.859 KB');
-    expect(container.innerHTML).toContain('1件');
+    expect(container.innerHTML).toContain('1 record(s)');
   });
 });

@@ -82,29 +82,9 @@ describe('UI/UX Improvements Test Suite', () => {
       document = parseHTML(html);
     });
 
-    it('タブボタンにrole="tab"属性が設定されていること', () => {
+    it('ポップアップに設定画面用のタブは存在しないこと', () => {
       const tabButtons = document.querySelectorAll('.tab-btn');
-      expect(tabButtons.length).toBeGreaterThan(0);
-
-      tabButtons.forEach((tab, index) => {
-        expect(tab.getAttribute('role')).toBe('tab');
-      });
-    });
-
-    it('アクティブなタブにaria-selected="true"が設定されていること', () => {
-      const activeTab = document.querySelector('.tab-btn.active');
-      if (activeTab) {
-        expect(activeTab.getAttribute('aria-selected')).toBe('true');
-      }
-    });
-
-    it('非アクティブなタブにaria-selected="false"が設定されていること', () => {
-      const inactiveTabs = document.querySelectorAll('.tab-btn:not(.active)');
-      expect(inactiveTabs.length).toBeGreaterThan(0);
-
-      inactiveTabs.forEach((tab) => {
-        expect(tab.getAttribute('aria-selected')).toBe('false');
-      });
+      expect(tabButtons.length).toBe(0);
     });
 
     it('ステータス要素にaria-live属性が設定されていること', () => {
@@ -125,48 +105,7 @@ describe('UI/UX Improvements Test Suite', () => {
     });
   });
 
-  describe('3. 保存ボタンのラベル統一 (高優先度)', () => {
-    let document;
-
-    beforeAll(() => {
-      const html = getPopupHTML();
-      document = parseHTML(html);
-    });
-
-    it('すべての保存ボタンがdata-i18n属性で定義されていること', () => {
-      const saveButtons = [
-        document.getElementById('save'),
-        document.getElementById('saveDomainSettings'),
-        document.getElementById('savePrivacySettings')
-      ];
-
-      saveButtons.forEach((button) => {
-        if (button) {
-          expect(button.hasAttribute('data-i18n')).toBe(true);
-        }
-      });
-    });
-
-    it('各保存ボタンにコンテキストに適したi18nキーが設定されていること', () => {
-      const generalSave = document.getElementById('save');
-      const domainSave = document.getElementById('saveDomainSettings');
-      const privacySave = document.getElementById('savePrivacySettings');
-
-      if (generalSave) {
-        expect(generalSave.getAttribute('data-i18n')).toBe('saveAndTest');
-      }
-
-      if (domainSave) {
-        expect(domainSave.getAttribute('data-i18n')).toBe('saveDomainSettings');
-      }
-
-      if (privacySave) {
-        expect(privacySave.getAttribute('data-i18n')).toBe('savePrivacySettings');
-      }
-    });
-  });
-
-  describe('4. 強制記録ボタンのスタイル正規化 (中期)', () => {
+  describe('3. 強制記録ボタンのスタイル正規化 (中期)', () => {
     let stylesCSS;
 
     beforeAll(() => {
@@ -208,9 +147,9 @@ describe('UI/UX Improvements Test Suite', () => {
       expect(helpTextMatch).toBeTruthy();
     });
 
-    it('HTMLにhelp-textクラスが使用されていること', () => {
+    it('ポップアップHTMLにはhelp-textクラスが使用されていないこと', () => {
       const html = getPopupHTML();
-      expect(html).toContain('help-text');
+      expect(html).not.toContain('help-text');
     });
   });
 

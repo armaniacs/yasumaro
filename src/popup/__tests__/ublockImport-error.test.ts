@@ -2,11 +2,11 @@
 /**
  * ublockImport-error.test.js
  * Error handling tests for fetchFromUrl function
- * 【テスト対象】: src/popup/ublockImport.js - fetchFromUrl function
+ * 【テスト対象】: src/popup/ublockImport/index.js - fetchFromUrl function
  */
 
 
-import { fetchFromUrl, isValidUrl } from '../ublockImport.js';
+import { fetchFromUrl, isValidUrl } from '../ublockImport/index.js';
 import * as loggerModule from '../../utils/logger.js';
 
 const { addLog, LogType } = vi.mocked(loggerModule);

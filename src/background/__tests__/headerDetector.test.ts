@@ -18,7 +18,7 @@ vi.mock('../../utils/privacyChecker.js', () => ({
   }),
 }));
 
-vi.mock('../../utils/crypto.js', () => ({
+vi.mock('../../utils/crypto/index.js', () => ({
   hashUrl: vi.fn((url: string) => Promise.resolve(url)),
 }));
 

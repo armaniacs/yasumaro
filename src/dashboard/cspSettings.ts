@@ -7,6 +7,8 @@
 import { StorageKeys } from '../utils/storage.js';
 import { CSPValidator } from '../utils/cspValidator.js';
 import { getSettings, saveSettings } from '../utils/storage.js';
+import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 /**
  * CSP設定UI管理クラス
@@ -40,7 +42,7 @@ export class CSPSettings {
       // リセットボタンイベント
       CSPSettings.bindResetButton();
     } catch (error) {
-      console.error('CSP settings load failed:', error);
+      addLog(LogType.ERROR, 'CSP settings load failed', { error: errorMessage(error) });
     }
   }
 
@@ -126,7 +128,7 @@ export class CSPSettings {
       // 保存成功通知
       CSPSettings.showSaveSuccess();
     } catch (error) {
-      console.error('CSP settings save failed:', error);
+      addLog(LogType.ERROR, 'CSP settings save failed', { error: errorMessage(error) });
       alert(i18n('cspSaveError'));
     }
   }
@@ -192,7 +194,7 @@ export class CSPSettings {
 
       CSPSettings.showResetSuccess();
     } catch (error) {
-      console.error('CSP settings reset failed:', error);
+      addLog(LogType.ERROR, 'CSP settings reset failed', { error: errorMessage(error) });
       alert(i18n('cspResetError'));
     }
   }
@@ -234,7 +236,7 @@ export class CSPSettings {
     try {
       const domain = CSPValidator.getProviderDomain(provider);
       if (!domain) {
-        console.warn(`Unknown provider: ${provider}`);
+        addLog(LogType.WARN, 'Unknown CSP provider', { provider });
         return false;
       }
 
@@ -244,7 +246,7 @@ export class CSPSettings {
 
       return granted === true;
     } catch (error) {
-      console.error(`Failed to request permission for ${provider}:`, error);
+      addLog(LogType.ERROR, 'Failed to request provider permission', { provider, error: errorMessage(error) });
       return false;
     }
   }
@@ -266,14 +268,14 @@ export class CSPSettings {
           origins = ['https://tranco-list.eu/*'];
           break;
         default:
-          console.warn(`Unknown essential permission type: ${type}`);
+          addLog(LogType.WARN, 'Unknown essential permission type', { type });
           return false;
       }
 
       const granted = await chrome.permissions.request({ origins });
       return granted === true;
     } catch (error) {
-      console.error(`Failed to request ${type} permission:`, error);
+      addLog(LogType.ERROR, 'Failed to request essential permission', { type, error: errorMessage(error) });
       return false;
     }
   }
@@ -296,7 +298,7 @@ export class CSPSettings {
 
       return hasPermission === true;
     } catch (error) {
-      console.error(`Failed to check permission for ${provider}:`, error);
+      addLog(LogType.ERROR, 'Failed to check provider permission', { provider, error: errorMessage(error) });
       return false;
     }
   }

@@ -13,7 +13,7 @@ import {
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
     ENVELOPE_ITERATIONS
-} from '../crypto.js';
+} from '../crypto/index.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 

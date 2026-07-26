@@ -103,6 +103,8 @@ export interface RecordingResult {
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
+import type { ContentResponse } from '../popup/mainTypes.js';
+import type { PrivacyInfo } from '../utils/privacyChecker.js';
 
 /**
  * 記録データ型
@@ -276,8 +278,23 @@ export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
 export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
+  T extends 'GET_CONTENT' ? ContentResponse :
+  T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :
   T extends 'MANUAL_RECORD' ? RecordingResult :
   T extends 'PREVIEW_RECORD' ? RecordingResult :
+  T extends 'SAVE_RECORD' ? RecordingResult :
+  T extends 'TEST_CONNECTIONS' ? { success: true; obsidian: { success: boolean; message: string }; ai: { success: boolean; message: string } } :
+  T extends 'TEST_OBSIDIAN' ? { success: true; obsidian: { success: boolean; message: string } } :
+  T extends 'TEST_AI' ? { success: true; ai: { success: boolean; message: string } } :
+  T extends 'GET_PRIVACY_CACHE' ? { success: true; cache: [string, PrivacyInfo][] } :
+  T extends 'ACTIVITY_UPDATE' ? { success: true } :
+  T extends 'SESSION_LOCK_REQUEST' ? { success: true } :
+  T extends 'CONTENT_CLEANSING_EXECUTED' ? { success: true } :
+  T extends 'PING' ? { success: true } :
+  T extends 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' ? { success: true } :
+  T extends 'CONSENT_STATE_CHANGED' ? { success: true } :
+  T extends 'GENERATE_REVIEW_SUMMARY' ? { success: true; generated: boolean } :
+  T extends 'DASHBOARD_SQLITE' ? Record<string, unknown> :
   SuccessResponse;
 
 /**

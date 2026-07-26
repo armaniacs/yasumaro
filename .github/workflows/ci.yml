@@ -34,6 +34,14 @@ jobs:
         run: npm run check-licenses
       - name: Security audit
         run: npm audit --audit-level=high --omit=dev
+      - name: Generate SBOM
+        run: npm run generate-sbom
+      - name: Upload SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 90
       - name: Type Check
         run: npm run type-check
       - name: Run Tests

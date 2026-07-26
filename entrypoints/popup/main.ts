@@ -8,7 +8,6 @@ import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../../src/util
 import '../../src/popup/navigation';
 import '../../src/popup/main';
 import '../../src/popup/popup';
-import '../../src/popup/domainFilter';
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {

@@ -94,7 +94,7 @@ vi.mock('../storage.js', () => ({
 }));
 
 // crypto モック
-vi.mock('../crypto.js', () => ({
+vi.mock('../crypto/index.js', () => ({
     computeHMAC: vi.fn(async (_secret: string, data: string) => 'hmac_' + Buffer.from(data).toString('base64').substring(0, 20)),
     encrypt: vi.fn(async (plaintext: string) => ({
         ciphertext: 'enc_' + Buffer.from(plaintext).toString('base64'),
@@ -123,7 +123,7 @@ import {
     saveEncryptedExportToFile
 } from '../settingsExportImport.js';
 
-import * as cryptoModule from '../crypto.js';
+import * as cryptoModule from '../crypto/index.js';
 import * as storageModule from '../storage.js';
 
 const { computeHMAC, decryptData, deriveKey } = vi.mocked(cryptoModule);

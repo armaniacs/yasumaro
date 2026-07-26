@@ -20,7 +20,7 @@ import {
 } from '../masterPassword.js';
 
 // crypto モック
-vi.mock('../crypto.js', () => ({
+vi.mock('../crypto/index.js', () => ({
     generateSalt: vi.fn(() => new Uint8Array(16).fill(1)),
     hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
     verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {

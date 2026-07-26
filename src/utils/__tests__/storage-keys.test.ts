@@ -30,6 +30,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.IS_LOCKED,
       StorageKeys.YASUMARO_MIGRATION_STATUS,
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,
+      StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT,
       StorageKeys.MIGRATION_JP_LAYOUT_DEFAULT_DONE,
       StorageKeys.MIGRATION_CATEGORY_B_DEFAULT_DONE,
       StorageKeys.RECORDING_TRIGGERS,

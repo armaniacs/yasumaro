@@ -6,7 +6,6 @@ export interface TabData {
     favIconUrl?: string;
     lastUpdated: number;
     isValidVisit: boolean;
-    content: string | null;
     [key: string]: unknown;
 }
 
@@ -39,8 +38,7 @@ export class TabCache {
                             url: tab.url,
                             favIconUrl: tab.favIconUrl,
                             lastUpdated: Date.now(),
-                            isValidVisit: false,
-                            content: null
+                            isValidVisit: false
                         });
                     }
                 });
@@ -90,8 +88,7 @@ export class TabCache {
                 url: tab.url,
                 favIconUrl: tab.favIconUrl,
                 lastUpdated: Date.now(),
-                isValidVisit: false,
-                content: null
+                isValidVisit: false
             });
             this.saveToSession();
         }

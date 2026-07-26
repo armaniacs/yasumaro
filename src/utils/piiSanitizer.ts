@@ -16,6 +16,29 @@ const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
 const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マッチごと）
 
+// 【ReDoS対策】どのPIIパターンの実体も100文字を超えることはないため、区切り文字
+// （空白等）を含まない塊が100文字を大幅に超えて続く場合、その中間部分は
+// PIIパターンにマッチしようがない「安全に無効化できる区間」とみなせる。
+// 中間部分のみをプレースホルダーに置換し、先頭・末尾のTOKEN_EDGE_KEEP_LENGTH文字は
+// 残すことで、長い塊の端に直接連結されたPII（例: "aaa...aaauser@example.com"）の
+// 検出漏れを防ぎつつ、「@や区切り文字を含まない巨大な文字列」に対する正規表現エンジンの
+// O(n^2)的な走査（開始位置ごとの再試行）を防ぐ。
+// 検出自体は /\S+/（バックトラッキングしない単純な貪欲文字クラス）で行い、
+// 閾値判定・中間置換はコード側で行うことで、検出用正規表現自体の複雑化を避ける。
+const TOKEN_EDGE_KEEP_LENGTH = 100;
+const NON_WHITESPACE_RUN = /\S+/g;
+
+function neutralizeLongNonWhitespaceRuns(text: string): string {
+    return text.replace(NON_WHITESPACE_RUN, (token) => {
+        const threshold = TOKEN_EDGE_KEEP_LENGTH * 2;
+        if (token.length <= threshold) return token;
+        const head = token.slice(0, TOKEN_EDGE_KEEP_LENGTH);
+        const tail = token.slice(-TOKEN_EDGE_KEEP_LENGTH);
+        const middleLength = token.length - TOKEN_EDGE_KEEP_LENGTH * 2;
+        return head + '#'.repeat(middleLength) + tail;
+    });
+}
+
 interface PiiPattern {
     type: string;
     pattern: RegExp;
@@ -230,6 +253,12 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         const _maskedItems: MaskedItem[] = [];
         const replacements: Replacement[] = [];
 
+        // 【ReDoS対策】区切り文字（空白等）を含まない異常に長い塊（100文字超）を
+        // 同じ長さのプレースホルダー文字に置換してからスキャンする。
+        // PIIパターンはいずれも100文字を超える連続した非空白文字にマッチしないため、
+        // 検出結果には影響しない。文字数を変えずに置換するためインデックスはずれない。
+        const scanText = neutralizeLongNonWhitespaceRuns(text);
+
         // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン
         // 同じタイプのパターンを統合して名前付きグループの重複を避ける
         const typeGroups: string[] = [];
@@ -246,7 +275,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
 
         let match: RegExpExecArray | null;
         let matchCount = 0;
-        while ((match = combinedRegex.exec(text)) !== null) {
+        while ((match = combinedRegex.exec(scanText)) !== null) {
             matchCount++;
             // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
             if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
@@ -257,7 +286,9 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
             }
 
-            const matchedValue = match[0];
+            // マッチ自体はプレースホルダー置換後のscanTextに対するものだが、
+            // 文字数・インデックスはtextと完全に一致するため、実際の値はtextから取得する
+            const matchedValue = text.substring(match.index, match.index + match[0].length);
             const startIndex = match.index;
 
             // どのグループがマッチしたか特定

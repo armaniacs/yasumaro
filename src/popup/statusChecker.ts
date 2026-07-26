@@ -4,7 +4,7 @@ import { getSettings, getSavedUrlsWithTimestamps } from '../utils/storage.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { hashUrl } from '../utils/crypto.js';
+import { hashUrl } from '../utils/crypto/index.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 
 export interface StatusInfo {

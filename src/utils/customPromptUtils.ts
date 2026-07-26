@@ -39,11 +39,12 @@ Content:
 
 /**
  * デフォルトのユーザープロンプト（言語自動選択）
- * @param {string} locale - 言語コード ('ja' または 'en')
+ * @param {string} [locale] - 言語コード ('ja' または 'en')。省略時はブラウザのUI言語から判定する
  * @returns {string} デフォルトユーザープロンプト
  */
-export function getDefaultUserPrompt(locale: string = 'ja'): string {
-    return locale === 'ja' ? DEFAULT_USER_PROMPT_JA : DEFAULT_USER_PROMPT_EN;
+export function getDefaultUserPrompt(locale?: string): string {
+    const effectiveLocale = locale ?? getBrowserLocale();
+    return effectiveLocale === 'ja' ? DEFAULT_USER_PROMPT_JA : DEFAULT_USER_PROMPT_EN;
 }
 
 /**
@@ -54,11 +55,12 @@ export const DEFAULT_SYSTEM_PROMPT_EN = 'You are a helpful assistant that summar
 
 /**
  * デフォルトのシステムプロンプト（言語自動選択）
- * @param {string} locale - 言語コード ('ja' または 'en')
+ * @param {string} [locale] - 言語コード ('ja' または 'en')。省略時はブラウザのUI言語から判定する
  * @returns {string} デフォルトシステムプロンプト
  */
-export function getDefaultSystemPrompt(locale: string = 'ja'): string {
-    return locale === 'ja' ? DEFAULT_SYSTEM_PROMPT_JA : DEFAULT_SYSTEM_PROMPT_EN;
+export function getDefaultSystemPrompt(locale?: string): string {
+    const effectiveLocale = locale ?? getBrowserLocale();
+    return effectiveLocale === 'ja' ? DEFAULT_SYSTEM_PROMPT_JA : DEFAULT_SYSTEM_PROMPT_EN;
 }
 
 /**

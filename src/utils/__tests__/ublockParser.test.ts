@@ -1,7 +1,7 @@
 /**
  * ublockParser.test.js
  * uBlock Origin形式フィルターパーサーのテスト
- * 【テスト対象】: src/utils/ublockParser.js
+ * 【テスト対象】: src/utils/ublockParser/index.js
  *
  * TDD Redフェーズ: まだ実装されていない関数を呼び出す失敗するテスト
  */
@@ -15,7 +15,7 @@ import {
   isValidRulePattern,
   parseOptions,
   generateRuleId
-} from '../ublockParser.js';
+} from '../ublockParser/index.js';
 
 describe('ublockParser', () => {
   // 【テスト前準備】: 各テスト実行前にテスト環境を初期化し、一貫したテスト条件を保証

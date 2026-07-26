@@ -342,6 +342,9 @@ function renderStatusPanel(status: StatusInfo): void {
   const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
   if (recordBtn && !recordBtn.disabled && _recordCurrentPage) {
     const recordPage = _recordCurrentPage;
+    // Uses .onclick property (not addEventListener) intentionally: this function can be
+    // called repeatedly as status updates arrive, and property assignment replaces the
+    // previous handler atomically instead of stacking listeners (see recordCurrentPage.ts).
     if (!status.domainFilter.allowed) {
       recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
       recordBtn.onclick = () => void recordPage(true);

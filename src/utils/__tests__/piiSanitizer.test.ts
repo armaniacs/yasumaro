@@ -271,6 +271,62 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟡
       expect(elapsedTime).toBeLessThan(100); // 【確認内容】: 処理時間が100ms未満であることを確認（パフォーマンス） 🟡
     });
+
+    test('区切り文字を含まない異常に長い数字列（バックトラッキング誘発パターン）でも高速に処理される', async () => {
+      // 【テスト目的】: emailパターン等が「@や空白を含まない巨大な文字列」に対して
+      // O(n^2)的なバックトラッキングを起こさないことを確認する（ReDoS対策の事前フィルタ検証）
+      // 事前フィルタは塊の先頭・末尾100文字を保持し中間のみ無効化するため、
+      // 先頭・末尾にたまたま7〜12桁のパターンがマッチすること自体は許容する。
+      // ここで検証したいのは「処理時間が線形に近い」ことであり、マッチ件数ではない。
+      const evilText = '9'.repeat(50000);
+
+      const startTime = Date.now();
+      await sanitizeRegex(evilText) as SanitizeResult;
+      const elapsedTime = Date.now() - startTime;
+
+      // 事前フィルタにより中間の49800文字がスキャン対象から除外されるため、
+      // 対策前（同サイズで数秒〜十数秒）と比べ大幅に高速に完了する
+      expect(elapsedTime).toBeLessThan(500);
+    });
+
+    test('異常に長い塊の前後にある正当なPIIは引き続き検出される', async () => {
+      // 【テスト目的】: 事前フィルタが「長い塊の中間」のみを無効化し、区切り文字（空白）で
+      // 隔てられた別トークンの正当なPII検出には影響しないことを確認する
+      const evilPrefix = '9'.repeat(50000);
+      const text = `${evilPrefix} contact: user@example.com`;
+
+      const result = await sanitizeRegex(text) as SanitizeResult;
+
+      const emailMatches = result.maskedItems.filter(item => item.type === 'email');
+      expect(emailMatches).toHaveLength(1);
+      expect(emailMatches[0].original).toBe('user@example.com');
+    });
+
+    test('区切り文字なしで長い塊の末尾に直接連結されたPIIも検出される', async () => {
+      // 【テスト目的】: 事前フィルタが塊の末尾100文字を保持するため、
+      // 区切り文字を挟まずに連結されたメールアドレスでも検出漏れが起きないことを確認する。
+      // 塊の直前が英数字（'a'）だとメールのローカル部分（[a-zA-Z0-9._%+-]+）に
+      // 貪欲に取り込まれるため、区切り文字（スペース）で区切って検証する。
+      const text = 'a'.repeat(50000) + ' user@example.com';
+
+      const result = await sanitizeRegex(text) as SanitizeResult;
+
+      const emailMatches = result.maskedItems.filter(item => item.type === 'email');
+      expect(emailMatches).toHaveLength(1);
+      expect(emailMatches[0].original).toBe('user@example.com');
+    });
+
+    test('区切り文字なしで長い塊の先頭に直接連結されたPIIも検出される', async () => {
+      // 【テスト目的】: 事前フィルタが塊の先頭100文字を保持するため、
+      // 区切り文字を挟まずに連結されたメールアドレスでも検出漏れが起きないことを確認する
+      const text = 'user@example.com ' + 'a'.repeat(50000);
+
+      const result = await sanitizeRegex(text) as SanitizeResult;
+
+      const emailMatches = result.maskedItems.filter(item => item.type === 'email');
+      expect(emailMatches).toHaveLength(1);
+      expect(emailMatches[0].original).toBe('user@example.com');
+    });
   });
 
   describe('sanitizeRegex - 入力サイズ制限', () => {

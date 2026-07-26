@@ -815,6 +815,12 @@
   "settingsImported": {
     "message": "Settings imported successfully"
   },
+  "encryptedBackupSectionTitle": {
+    "message": "Encrypted Backup"
+  },
+  "encryptedBackupSectionDesc": {
+    "message": "Create or restore a backup of history and settings encrypted with a passphrase."
+  },
   "exportEncryptedBackupBtn": {
     "message": "Create Encrypted Backup"
   },
@@ -944,6 +950,15 @@
   },
   "confirmClearAllMessage": {
     "message": "This action cannot be undone. All browsing history stored in SQLite will be deleted. Continue?"
+  },
+  "confirmWithdrawConsentTitle": {
+    "message": "Withdraw Privacy Consent"
+  },
+  "confirmWithdrawConsentMessage": {
+    "message": "Withdrawing consent will also permanently delete all previously recorded browsing history (including summaries and URL history). This action cannot be undone. Continue?"
+  },
+  "withdrawConsentDataDeleteFailed": {
+    "message": "Failed to delete recorded data. Your consent status was not changed."
   },
   "confirmDelete": {
     "message": "Delete"
@@ -1442,6 +1457,12 @@
   "diagStorageTitle": {
     "message": "Storage"
   },
+  "diagObsidianSettingsTitle": {
+    "message": "Obsidian Connection Settings"
+  },
+  "diagAiSettingsTitle": {
+    "message": "AI Settings"
+  },
   "diagConnectionTitle": {
     "message": "Connection Test"
   },
@@ -1495,6 +1516,9 @@
   },
   "auditLogTab": {
     "message": "Audit Log"
+  },
+  "auditLogTabDesc": {
+    "message": "Download a history of which page content was sent to which AI provider as a TSV file."
   },
   "auditLogDownloadTsv": {
     "message": "Download as TSV"
@@ -1856,6 +1880,21 @@
   "localExportManualBtn": {
     "message": "Export"
   },
+  "historyExportLocalMarkdownBtn": {
+    "message": "Export all as Markdown"
+  },
+  "manualExportDateRangeLabel": {
+    "message": "Manual Export (specify date range)"
+  },
+  "exportLocalMarkdownDesc": {
+    "message": "Download your browsing history as a Markdown file for a specified date range."
+  },
+  "startDate": {
+    "message": "Start date"
+  },
+  "endDate": {
+    "message": "End date"
+  },
   "tagEditTitle": {
     "message": "Edit Tags"
   },
@@ -1941,6 +1980,15 @@
   "filterOptions": {
     "message": "Filter Options",
     "description": "ARIA label for history filter buttons"
+  },
+  "tagClusterDescription": {
+    "message": "Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag."
+  },
+  "tagClusterEmptyState": {
+    "message": "No tagged history yet."
+  },
+  "tagClusterTruncatedNotice": {
+    "message": "Too many tags — showing only the top 50."
   },
   "tagClusterControlsGroup": {
     "message": "Graph zoom controls",
@@ -2165,6 +2213,12 @@
   "aiSummaryCleansingTabPanelDescription": {
     "message": "Remove unnecessary information (image alt attributes, metadata, ads, navigation, social widgets) before AI summarization."
   },
+  "cleansingFunnelChartAriaLabel": {
+    "message": "Byte reduction chart by cleansing stage"
+  },
+  "cleansingFunnelChartFallback": {
+    "message": "Visual display of byte reduction by cleansing stage"
+  },
   "aiSummaryCleansingEnabled": {
     "message": "Enable AI Summary Cleansing"
   },
@@ -2284,6 +2338,21 @@
   },
   "aiSummaryCleansingLinkParaDesc": {
     "message": "Link-only paragraph removal (paragraphs ≤50 chars with only links)."
+  },
+  "linkRatioThresholdLabel": {
+    "message": "Link Density Threshold"
+  },
+  "shortTextThresholdLabel": {
+    "message": "Short Text Threshold"
+  },
+  "charactersUnit": {
+    "message": "characters"
+  },
+  "shortSeqCountLabel": {
+    "message": "Consecutive Count Threshold"
+  },
+  "linkParaThresholdLabel": {
+    "message": "Paragraph Length Threshold"
   },
   "aiSummaryCleansingEnhancedHiddenDesc": {
     "message": "Enhanced hidden element removal (visibility:hidden, opacity:0, template, slot)."
@@ -2674,6 +2743,9 @@
   },
   "requiredPermissions": {
     "message": "Required Permissions"
+  },
+  "obsidianLocalRestApiRequired": {
+    "message": "Obsidian Local REST API (required)"
   },
   "breakingChangesPermissionList": {
     "message": "Verify you have access to each domain shown below."

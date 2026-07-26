@@ -11,7 +11,7 @@ import {
   getFromCache,
   saveToCache,
   hasCacheKey
-} from '../ublockParser.js';
+} from '../ublockParser/index.js';
 
 interface CacheValue {
   blockRules: any[];

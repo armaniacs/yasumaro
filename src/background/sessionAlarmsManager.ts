@@ -14,6 +14,7 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分
 const SESSION_CHECK_INTERVAL_MINUTES = 5; // セッションチェック間隔（バッテリー効率化）
 const ALARM_NAME_CHECK_SESSION = 'check_session_timeout';
 const STORAGE_KEY_LAST_ACTIVITY = 'session_last_activity';
+const LOCK_NOTIFICATION_RETRY_DELAY_MS = 100; // ロック通知リトライ間の待機時間
 
 /**
  * アクティビティを更新
@@ -139,7 +140,7 @@ async function lockSession(): Promise<void> {
             } catch {
                 retries--;
                 if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, LOCK_NOTIFICATION_RETRY_DELAY_MS));
                 }
             }
         }

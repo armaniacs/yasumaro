@@ -122,6 +122,20 @@ export type GenerateReviewSummaryMessage = {
     payload: { periodType: 'weekly' | 'monthly' };
 };
 
+/**
+ * Log forwarding from contexts without direct chrome.storage/logger access
+ * (Offscreen Document, its Worker). See src/offscreen/offscreenLogger.ts.
+ */
+export type LogForwardMessage = {
+    type: 'LOG_FORWARD';
+    payload: {
+        level: 'warn' | 'error' | 'info';
+        message: string;
+        details?: Record<string, unknown>;
+        source: string;
+    };
+};
+
 // ============================================================================
 // Discriminated union of all extension messages
 // ============================================================================
@@ -155,6 +169,7 @@ export type ExtensionMessage = (
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage
     | DashboardSqliteMessage
+    | LogForwardMessage
 ) & { protocolVersion: number };
 
 // ============================================================================
@@ -181,6 +196,7 @@ export const VALID_MESSAGE_TYPES = [
     'CONSENT_STATE_CHANGED', // Re-run updateConsentBadge() after accept/decline
     'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
     'GENERATE_REVIEW_SUMMARY', // Manually trigger weekly/monthly review summary generation
+    'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
 ] as const;
 
 export const CONTENT_SCRIPT_ONLY_TYPES = [

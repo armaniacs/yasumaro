@@ -111,8 +111,22 @@ describe('customPromptUtils', () => {
             expect(getDefaultUserPrompt('en')).toBe(DEFAULT_USER_PROMPT_EN);
         });
 
-        test('デフォルトは ja', () => {
+        test('locale省略時はブラウザのUI言語（日本語）が使われる', () => {
+            Object.defineProperty(global, 'navigator', {
+                value: { language: 'ja-JP' },
+                configurable: true,
+                writable: true
+            });
             expect(getDefaultUserPrompt()).toBe(DEFAULT_USER_PROMPT_JA);
+        });
+
+        test('locale省略時はブラウザのUI言語（英語）が使われる', () => {
+            Object.defineProperty(global, 'navigator', {
+                value: { language: 'en-US' },
+                configurable: true,
+                writable: true
+            });
+            expect(getDefaultUserPrompt()).toBe(DEFAULT_USER_PROMPT_EN);
         });
     });
 
@@ -125,8 +139,22 @@ describe('customPromptUtils', () => {
             expect(getDefaultSystemPrompt('en')).toBe(DEFAULT_SYSTEM_PROMPT_EN);
         });
 
-        test('デフォルトは ja', () => {
+        test('locale省略時はブラウザのUI言語（日本語）が使われる', () => {
+            Object.defineProperty(global, 'navigator', {
+                value: { language: 'ja-JP' },
+                configurable: true,
+                writable: true
+            });
             expect(getDefaultSystemPrompt()).toBe(DEFAULT_SYSTEM_PROMPT_JA);
+        });
+
+        test('locale省略時はブラウザのUI言語（英語）が使われる', () => {
+            Object.defineProperty(global, 'navigator', {
+                value: { language: 'en-US' },
+                configurable: true,
+                writable: true
+            });
+            expect(getDefaultSystemPrompt()).toBe(DEFAULT_SYSTEM_PROMPT_EN);
         });
     });
 

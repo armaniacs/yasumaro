@@ -18,7 +18,7 @@ vi.mock('../logger.js', () => ({
   },
 }));
 
-vi.mock('../crypto.js', () => ({
+vi.mock('../crypto/index.js', () => ({
   generateSalt: vi.fn(() => new Uint8Array(32).fill(1)),
   deriveKey: vi.fn(() => Promise.resolve({} as CryptoKey)),
   encryptApiKey: vi.fn((v: string) => Promise.resolve(`encrypted:${v}`)),
@@ -221,7 +221,7 @@ describe('URL set functions', () => {
     });
 
     it('falls back to an empty string when decryption fails', async () => {
-      const { decryptApiKey } = await import('../crypto.js');
+      const { decryptApiKey } = await import('../crypto/index.js');
       vi.mocked(decryptApiKey).mockRejectedValueOnce(new Error('Decryption failed'));
 
       await chrome.storage.local.set({
@@ -320,7 +320,7 @@ describe('URL set functions', () => {
 
   describe('saveSettings - empty API key handling', () => {
     it('does not encrypt an empty API key value', async () => {
-      const { encryptApiKey } = await import('../crypto.js');
+      const { encryptApiKey } = await import('../crypto/index.js');
       vi.mocked(encryptApiKey).mockClear();
 
       await saveSettings({

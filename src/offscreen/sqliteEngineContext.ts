@@ -21,10 +21,17 @@ import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams,
 import { runMigrations } from './migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from './sqliteEngine.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import type { WorkerLogMessage } from './opfsWorker.js';
 
 export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
 
 export const DB_FILENAME = 'yasumaro.db';
+
+function isWorkerLogMessage(
+  data: { id: number; success: boolean; result?: unknown; error?: string } | WorkerLogMessage
+): data is WorkerLogMessage {
+  return '__log' in data && data.__log === true;
+}
 
 const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;
 
@@ -140,8 +147,21 @@ export class SqliteEngineContext {
         { type: 'module' }
       );
 
-      worker.onmessage = (e: MessageEvent<{ id: number; success: boolean; result?: unknown; error?: string }>) => {
-        const { id, success, result, error } = e.data;
+      worker.onmessage = (e: MessageEvent<{ id: number; success: boolean; result?: unknown; error?: string } | WorkerLogMessage>) => {
+        const data = e.data;
+        if (isWorkerLogMessage(data)) {
+          const { level, message, details } = data;
+          if (level === 'error') {
+            logError(message, details ?? {}, ErrorCode.INTERNAL_ERROR, 'sqlite');
+          } else if (level === 'warn') {
+            logWarn(message, details ?? {}, undefined, 'sqlite');
+          } else {
+            logInfo(message, details ?? {}, 'sqlite');
+          }
+          return;
+        }
+
+        const { id, success, result, error } = data;
         const pending = this.opfsPending.get(id);
         if (pending) {
           this.opfsPending.delete(id);
@@ -154,7 +174,7 @@ export class SqliteEngineContext {
       };
 
       worker.onerror = (e: ErrorEvent) => {
-        console.error('OPFS Worker error:', e.message);
+        logError('OPFS Worker error', { error: e.message }, ErrorCode.INTERNAL_ERROR, 'sqlite');
         // Reject all pending requests
         for (const [id, pending] of this.opfsPending) {
           pending.reject(new Error(`OPFS Worker error: ${e.message}`));
@@ -164,7 +184,7 @@ export class SqliteEngineContext {
 
       return worker;
     } catch (err) {
-      console.warn('Failed to create OPFS Worker:', errorMessage(err));
+      logWarn('Failed to create OPFS Worker', { error: errorMessage(err) }, undefined, 'sqlite');
       return null;
     }
   }
@@ -205,7 +225,7 @@ export class SqliteEngineContext {
     try {
       return await this.sendToOpfsWorker(type, payload) as T;
     } catch (err) {
-      console.warn(`OPFS Worker call failed (${type}), falling back:`, errorMessage(err));
+      logWarn(`OPFS Worker call failed (${type}), falling back`, { error: errorMessage(err) }, undefined, 'sqlite');
       return null;
     }
   }
@@ -231,10 +251,10 @@ export class SqliteEngineContext {
         return true;
       }
 
-      console.warn('OPFS: Worker INIT returned unexpected result:', result);
+      logWarn('OPFS: Worker INIT returned unexpected result', { result }, undefined, 'sqlite');
       return false;
     } catch (err) {
-      console.warn('OPFS: Worker init failed:', errorMessage(err));
+      logWarn('OPFS: Worker init failed', { error: errorMessage(err) }, undefined, 'sqlite');
       return false;
     }
   }
@@ -323,7 +343,7 @@ export class SqliteEngineContext {
       return true;
     } catch (error) {
       this.lastInitError = errorMessage(error);
-      console.error('SQLite: init failed', error);
+      logError('SQLite: init failed', { error: errorMessage(error) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'sqlite');
       this.idbEngine = null;
       this.initPromise = null;
 

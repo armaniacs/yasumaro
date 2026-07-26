@@ -4,7 +4,7 @@
  * パスワード設定、検証、変更、パスワード強度チェック
  */
 
-import type { EncryptedData } from './typesCrypto.js';
+import type { EncryptedData } from './crypto/types.js';
 import { errorMessage } from './errorUtils.js';
 import {
     generateSalt,
@@ -13,7 +13,7 @@ import {
     encrypt,
     decryptData,
     deriveKey
-} from './crypto.js';
+} from './crypto/index.js';
 
 // パスワード強度レベル
 export enum PasswordStrength {

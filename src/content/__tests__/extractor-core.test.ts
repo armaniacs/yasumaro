@@ -9,11 +9,7 @@ import {
     shouldRecordVisit,
     extractPageContent,
     init,
-    lastCleansedReason,
-    lastCleanseStats,
-    lastByteStats,
-    lastAiSummaryCleansedStats,
-    lastFallbackTriggered,
+    getPageStateForTesting,
 } from '../extractor.js';
 
 describe('shouldRecordVisit', () => {
@@ -42,32 +38,32 @@ describe('shouldRecordVisit', () => {
 });
 
 describe('exported state initial values', () => {
-    it('lastCleansedReason is "none" by default', () => {
-        expect(lastCleansedReason).toBe('none');
+    it('getPageStateForTesting().lastCleansedReason is "none" by default', () => {
+        expect(getPageStateForTesting().lastCleansedReason).toBe('none');
     });
 
-    it('lastCleanseStats has zero counts by default', () => {
-        expect(lastCleanseStats.hardStripRemoved).toBe(0);
-        expect(lastCleanseStats.keywordStripRemoved).toBe(0);
-        expect(lastCleanseStats.totalRemoved).toBe(0);
+    it('getPageStateForTesting().lastCleanseStats has zero counts by default', () => {
+        expect(getPageStateForTesting().lastCleanseStats.hardStripRemoved).toBe(0);
+        expect(getPageStateForTesting().lastCleanseStats.keywordStripRemoved).toBe(0);
+        expect(getPageStateForTesting().lastCleanseStats.totalRemoved).toBe(0);
     });
 
-    it('lastByteStats has zero bytes by default', () => {
-        expect(lastByteStats.pageBytes).toBe(0);
-        expect(lastByteStats.candidateBytes).toBe(0);
-        expect(lastByteStats.originalBytes).toBe(0);
-        expect(lastByteStats.cleansedBytes).toBe(0);
+    it('getPageStateForTesting().lastByteStats has zero bytes by default', () => {
+        expect(getPageStateForTesting().lastByteStats.pageBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.candidateBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.originalBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.cleansedBytes).toBe(0);
     });
 
-    it('lastAiSummaryCleansedStats has zero counts and "none" reason by default', () => {
-        expect(lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedBytes).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedElements).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBe('none');
+    it('getPageStateForTesting().lastAiSummaryCleansedStats has zero counts and "none" reason by default', () => {
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBe('none');
     });
 
-    it('lastFallbackTriggered is false by default', () => {
-        expect(lastFallbackTriggered).toBe(false);
+    it('getPageStateForTesting().lastFallbackTriggered is false by default', () => {
+        expect(getPageStateForTesting().lastFallbackTriggered).toBe(false);
     });
 });
 

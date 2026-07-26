@@ -26,12 +26,19 @@ vi.mock('../../utils/cspValidator.js', () => ({
   },
 }));
 
+vi.mock('../../utils/logger.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+}));
+
 import { CSPSettings } from '../cspSettings.js';
 import { getSettings, saveSettings, StorageKeys } from '../../utils/storage.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
+import { addLog } from '../../utils/logger.js';
 
 const mockGetSettings = getSettings as vi.MockedFunction<typeof getSettings>;
 const mockSaveSettings = saveSettings as vi.MockedFunction<typeof saveSettings>;
+const mockAddLog = addLog as vi.MockedFunction<typeof addLog>;
 
 function setupDOM() {
   document.body.innerHTML = `
@@ -119,13 +126,12 @@ describe('CSPSettings', () => {
     });
 
     test('should log error on load failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockAddLog.mockClear();
       mockGetSettings.mockRejectedValue(new Error('Storage error'));
 
       await CSPSettings.loadCSPSettings();
 
-      expect(consoleSpy).toHaveBeenCalledWith('CSP settings load failed:', expect.any(Error));
-      consoleSpy.mockRestore();
+      expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings load failed', expect.objectContaining({ error: expect.any(String) }));
     });
 
     test('should handle missing checkbox element', async () => {
@@ -286,13 +292,12 @@ describe('CSPSettings', () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSaveSettings.mockRejectedValue(new Error('Save error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockAddLog.mockClear();
 
       await CSPSettings.saveCSPSettings();
 
-      expect(consoleSpy).toHaveBeenCalledWith('CSP settings save failed:', expect.any(Error));
+      expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings save failed', expect.objectContaining({ error: expect.any(String) }));
       expect(alert).toHaveBeenCalled();
-      consoleSpy.mockRestore();
     });
 
     test('should default enabled to true when checkbox element missing', async () => {
@@ -463,7 +468,7 @@ describe('CSPSettings', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockRejectedValue(new Error('Reset error'));
       (global.confirm as vi.Mock).mockReturnValue(true);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockAddLog.mockClear();
 
       await CSPSettings.loadCSPSettings();
 
@@ -472,9 +477,8 @@ describe('CSPSettings', () => {
 
       await new Promise(r => setTimeout(r, 10));
 
-      expect(consoleSpy).toHaveBeenCalledWith('CSP settings reset failed:', expect.any(Error));
+      expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }));
       expect(alert).toHaveBeenCalled();
-      consoleSpy.mockRestore();
     });
   });
 

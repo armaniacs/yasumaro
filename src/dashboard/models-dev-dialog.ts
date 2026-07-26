@@ -11,6 +11,7 @@ import {
 } from '../utils/modelsDevApi.js';
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { applyI18n } from '../utils/i18n-dom.js';
+import { focusTrapManager } from '../popup/utils/focusTrap.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -40,6 +41,8 @@ export class ModelsDevDialog {
 
     // Flag to prevent duplicate event listener attachment
     private eventListenersAttached = false;
+    // フォーカストラップID（hide()での解放に使用）
+    private trapId: string | null = null;
 
     constructor(options: DialogOptions = {}) {
         this.options = options;
@@ -56,7 +59,11 @@ export class ModelsDevDialog {
 
         // Show dialog
         this.dialog?.classList.remove('hidden');
-        document.getElementById('dialog-close')?.focus();
+        // focusTrap.ts の共通ロジックでTab循環・Escキー対応・非表示要素除外を統一する
+        // （popup側のタブ切り替えと同じ判定基準）
+        if (this.dialog) {
+            this.trapId = focusTrapManager.trap(this.dialog, () => this.hide());
+        }
 
         // Load providers
         await this.loadProviders();
@@ -67,6 +74,10 @@ export class ModelsDevDialog {
      */
     hide(): void {
         this.dialog?.classList.add('hidden');
+        if (this.trapId) {
+            focusTrapManager.release(this.trapId);
+            this.trapId = null;
+        }
         this.options.onCancel?.();
     }
 

@@ -44,6 +44,10 @@ function getRequestQueueMaxSize(client: SqliteClient): number {
   return ((client as unknown as { requestQueue: Mutex }).requestQueue).getMaxQueueSize();
 }
 
+function getMessageTimeoutMs(client: SqliteClient): number {
+  return (client as unknown as { messageTimeoutMs: number }).messageTimeoutMs;
+}
+
 describe('SqliteClient — request queue (M7)', () => {
   let client: SqliteClient;
   let inFlight: number;
@@ -109,5 +113,20 @@ describe('SqliteClient — request queue (M7)', () => {
     (globalThis as any).chrome.runtime.getPlatformInfo = vi.fn().mockResolvedValue({ os: 'android' });
     const testClient = createSqliteClient();
     expect(getRequestQueueMaxSize(testClient)).toBe(50);
+  });
+
+  it('uses the 10s message timeout on desktop user agents', () => {
+    resetPlatformOsCache();
+    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
+    const testClient = createSqliteClient();
+    expect(getMessageTimeoutMs(testClient)).toBe(10000);
+  });
+
+  it('uses a shortened 5s message timeout on mobile user agents', () => {
+    resetPlatformOsCache();
+    setUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
+    (globalThis as any).chrome.runtime.getPlatformInfo = vi.fn().mockResolvedValue({ os: 'android' });
+    const testClient = createSqliteClient();
+    expect(getMessageTimeoutMs(testClient)).toBe(5000);
   });
 });

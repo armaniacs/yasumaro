@@ -24,6 +24,28 @@ export function createPrivacySettingsPanel(): StaticFormPanel {
           : chrome.i18n.getMessage('notConsented') || 'Not consented';
         btn.classList.toggle('hidden', !state.hasConsented);
         btn.addEventListener('click', async () => {
+          const { showConfirmDialog } = await import('../../utils/confirmDialog.js');
+          const confirmed = await showConfirmDialog({
+            title: chrome.i18n.getMessage('confirmWithdrawConsentTitle') || 'Withdraw Privacy Consent',
+            message: chrome.i18n.getMessage('confirmWithdrawConsentMessage') || 'Withdrawing consent will also permanently delete all previously recorded browsing history. Continue?',
+            confirmLabel: chrome.i18n.getMessage('confirmDelete') || 'Delete',
+            cancelLabel: chrome.i18n.getMessage('cancel') || 'Cancel',
+            dangerous: true,
+          });
+          if (!confirmed) return;
+
+          // データ削除→同意撤回の順で行う。同意撤回だけ成功しデータが
+          // 残る不整合（GDPR Art.7の実効性を損なう）を避けるため。
+          const { clearAllLogs } = await import('../../dashboardSqliteService.js');
+          const dataDeleted = await clearAllLogs();
+          if (!dataDeleted) {
+            if (statusEl) {
+              statusEl.textContent = chrome.i18n.getMessage('withdrawConsentDataDeleteFailed') || 'Failed to delete recorded data. Your consent status was not changed.';
+              statusEl.style.color = 'var(--color-error)';
+            }
+            return;
+          }
+
           const ok = await withdrawPrivacyConsent();
           if (statusEl) {
             statusEl.textContent = ok ? 'Consent withdrawn. Recording will stop.' : 'Failed to withdraw consent.';

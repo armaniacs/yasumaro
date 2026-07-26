@@ -63,8 +63,12 @@ const BATCH_SIZE = 100;
 const PROGRESS_WRITE_INTERVAL = 5;
 const MIGRATION_STATUS_KEY = StorageKeys.YASUMARO_MIGRATION_STATUS;
 const MIGRATION_PROGRESS_KEY = StorageKeys.YASUMARO_MIGRATION_PROGRESS;
+const MIGRATION_RETRY_COUNT_KEY = StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT;
 
-type MigrationStatus = 'pending' | 'completed' | 'fresh_install';
+/** 連続失敗がこの回数に達すると、それ以降の起動でマイグレーションを試行しない */
+const MAX_MIGRATION_RETRY_COUNT = 5;
+
+type MigrationStatus = 'pending' | 'completed' | 'fresh_install' | 'failed_permanently';
 
 /**
  * MigrationService handles one-time migration of legacy browsing log data
@@ -86,6 +90,11 @@ export class MigrationService {
 
       if (status === 'completed' || status === 'fresh_install') {
         addLog(LogType.INFO, 'Migration: already completed or fresh install', { status });
+        return;
+      }
+
+      if (status === 'failed_permanently') {
+        addLog(LogType.WARN, 'Migration: skipped — retry limit previously reached', { status });
         return;
       }
 
@@ -169,11 +178,7 @@ export class MigrationService {
       }
 
       if (hasErrors) {
-        addLog(LogType.WARN, 'Migration: completed with errors, will retry on next startup', {
-          total: entries.length,
-        });
-        // Don't mark as completed — next startup will retry failed entries
-        // (already migrated entries are skipped due to progress tracking)
+        await this.recordFailureAndMaybeGiveUp(entries.length);
         return;
       }
 
@@ -182,6 +187,7 @@ export class MigrationService {
       // or run an explicit cleanup step from the diagnostics panel.
       await this.setMigrationStatus('completed');
       await chrome.storage.local.remove(MIGRATION_PROGRESS_KEY);
+      await chrome.storage.local.remove(MIGRATION_RETRY_COUNT_KEY);
 
       addLog(LogType.INFO, 'Migration: completed (original data preserved)', {
         totalMigrated: entries.length,
@@ -191,8 +197,46 @@ export class MigrationService {
       addLog(LogType.ERROR, 'Migration: failed', {
         error: errorMessage(error),
       });
-      // Don't set status — next startup will retry
+      try {
+        await this.recordFailureAndMaybeGiveUp();
+      } catch (retryTrackingError) {
+        // Storage itself may be unavailable (the same failure that triggered the
+        // outer catch). Retry tracking is best-effort — next startup will simply
+        // retry from scratch (retryCount defaults to 0 when unreadable).
+        addLog(LogType.WARN, 'Migration: failed to record retry count', {
+          error: errorMessage(retryTrackingError),
+        });
+      }
     }
+  }
+
+  /**
+   * Increment the retry counter after a failed migration attempt.
+   * Once MAX_MIGRATION_RETRY_COUNT consecutive failures are reached, the status
+   * is set to 'failed_permanently' so subsequent startups stop retrying and the
+   * failure can be surfaced to the user via the diagnostics panel.
+   */
+  private async recordFailureAndMaybeGiveUp(totalEntries?: number): Promise<void> {
+    const retryCount = (await this.getMigrationRetryCount()) + 1;
+    await this.setMigrationRetryCount(retryCount);
+
+    if (retryCount >= MAX_MIGRATION_RETRY_COUNT) {
+      await this.setMigrationStatus('failed_permanently');
+      addLog(LogType.ERROR, 'Migration: retry limit reached, giving up', {
+        retryCount,
+        maxRetryCount: MAX_MIGRATION_RETRY_COUNT,
+        total: totalEntries,
+      });
+      return;
+    }
+
+    addLog(LogType.WARN, 'Migration: completed with errors, will retry on next startup', {
+      retryCount,
+      maxRetryCount: MAX_MIGRATION_RETRY_COUNT,
+      total: totalEntries,
+    });
+    // Don't mark as completed — next startup will retry failed entries
+    // (already migrated entries are skipped due to progress tracking)
   }
 
   /** Read the current migration status from chrome.storage.local */
@@ -215,6 +259,17 @@ export class MigrationService {
   /** Save migration progress */
   private async setMigrationProgress(count: number): Promise<void> {
     await chrome.storage.local.set({ [MIGRATION_PROGRESS_KEY]: count });
+  }
+
+  /** Read the current consecutive-failure retry count */
+  private async getMigrationRetryCount(): Promise<number> {
+    const result = await chrome.storage.local.get(MIGRATION_RETRY_COUNT_KEY);
+    return (result[MIGRATION_RETRY_COUNT_KEY] as number) || 0;
+  }
+
+  /** Save the consecutive-failure retry count */
+  private async setMigrationRetryCount(count: number): Promise<void> {
+    await chrome.storage.local.set({ [MIGRATION_RETRY_COUNT_KEY]: count });
   }
 
   /**

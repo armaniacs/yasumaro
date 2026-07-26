@@ -3,6 +3,9 @@ import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 
+const TAB_LOAD_TIMEOUT_MS = 10000;
+const MAX_EXTRACTED_TEXT_LENGTH = 10000;
+
 interface CacheEntry {
   content: string;
   timestamp: number;
@@ -106,7 +109,7 @@ export class ManualContentFetcher {
 
         if (targetTabId) {
           await new Promise<void>((resolve) => {
-            const timeout = setTimeout(resolve, 10000);
+            const timeout = setTimeout(resolve, TAB_LOAD_TIMEOUT_MS);
             const listener = (tabId: number, info: { status?: string }): void => {
               if (tabId === targetTabId && info.status === 'complete') {
                 clearTimeout(timeout);
@@ -122,14 +125,15 @@ export class ManualContentFetcher {
       if (targetTabId) {
         const results = await chrome.scripting.executeScript({
           target: { tabId: targetTabId },
-          func: () => {
+          func: (maxLength: number) => {
             const body = document.body;
             if (!body) return '';
             const clone = body.cloneNode(true) as HTMLElement;
             const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
             clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
-            return clone.innerText?.trim().substring(0, 10000) || '';
-          }
+            return clone.innerText?.trim().substring(0, maxLength) || '';
+          },
+          args: [MAX_EXTRACTED_TEXT_LENGTH]
         });
         return results?.[0]?.result || '';
       }

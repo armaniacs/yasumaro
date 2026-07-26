@@ -1,5 +1,5 @@
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
-import { getPendingPages } from '../../../utils/pendingStorage.js';
+import { getPendingPages, PENDING_PAGES_KEY } from '../../../utils/pendingStorage.js';
 import { createInitialState } from '../../historyState.js';
 import type { HistoryPanelState, HistoryElements, TagEditElements } from '../../historyState.js';
 import { renderHistoryEntries } from '../../historyRenderer.js';
@@ -112,7 +112,7 @@ export function createHistoryPanel(): AsyncDataPanel {
         if (area !== 'local') return;
 
         const savedChanged = 'savedUrlsWithTimestamps' in changes;
-        const pendingChanged = 'osh_pending_pages' in changes;
+        const pendingChanged = PENDING_PAGES_KEY in changes;
         if (!savedChanged && !pendingChanged) return;
 
         const updatePromises: Promise<void>[] = [];

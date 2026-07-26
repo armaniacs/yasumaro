@@ -3,7 +3,7 @@
  * uBlockインポートモジュール - 変換ロジック
  */
 
-import { parseUblockFilterListWithErrors, ParseError } from '../../utils/ublockParser.js';
+import { parseUblockFilterListWithErrors, ParseError } from '../../utils/ublockParser/index.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 interface Source {

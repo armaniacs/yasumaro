@@ -638,5 +638,55 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
       await expect(obsidianClient.appendToDailyNote('new content')).resolves.not.toThrow();
     });
+
+    it('ENDPOINTS.dailyNote()経由で正しいURL（/vault/配下）を生成する', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'https',
+        OBSIDIAN_PORT: '27124',
+        OBSIDIAN_HOST: '127.0.0.1',
+        OBSIDIAN_DAILY_PATH: 'daily-notes'
+      });
+
+      const calledUrls: string[] = [];
+      global.fetch.mockImplementation((url: string, options: { method: string }) => {
+        calledUrls.push(url);
+        if (options.method === 'GET') {
+          return Promise.resolve({ ok: true, text: () => Promise.resolve('') });
+        }
+        return Promise.resolve({ ok: true });
+      });
+
+      await obsidianClient.appendToDailyNote('content');
+
+      expect(calledUrls).toHaveLength(2); // GET (read) + PUT (write)
+      // buildDailyNotePath はこのテストファイルで固定文字列 '2026-02-07' を返すようモックされているため、
+      // dailyPath・ファイル名ともにこの値になる（ENDPOINTS.dailyNote が baseUrl/vault/ 配下を
+      // 正しく組み立てていることを検証するのが目的であり、日付フォーマット自体は対象外）
+      for (const url of calledUrls) {
+        expect(url).toBe('https://127.0.0.1:27124/vault/2026-02-07/2026-02-07.md');
+      }
+      // GET/PUTとも同一URLに対して行われる
+      expect(calledUrls[0]).toBe(calledUrls[1]);
+    });
+
+    it('testConnection()でENDPOINTS.root()経由のルートURLにリクエストする', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_HOST: '127.0.0.1',
+      });
+
+      let calledUrl = '';
+      global.fetch.mockImplementation((url: string) => {
+        calledUrl = url;
+        return Promise.resolve({ ok: true, status: 200, statusText: 'OK' });
+      });
+
+      await obsidianClient.testConnection();
+
+      expect(calledUrl).toBe('http://127.0.0.1:27123/');
+    });
   });
 });

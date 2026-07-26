@@ -11,8 +11,9 @@
 import { createSender } from '../utils/retryHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
-import { extractMainContent } from '../utils/contentExtractor.js';
+import { extractMainContent } from '../utils/contentExtractor/index.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from './pageState.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
@@ -42,140 +43,16 @@ declare global {
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
 
-// 【状態管理】: スクリプトの実行状態を管理
-let minVisitDuration = DEFAULT_MIN_VISIT_DURATION;
-let minScrollDepth = DEFAULT_MIN_SCROLL_DEPTH;
-let startTime = Date.now();
-let maxScrollPercentage = 0;
-let isValidVisitReported = false;
-let checkIntervalId: number | null = null; // 【パフォーマンス向上】: requestIdleCallback/setTimeout IDを管理し、条件満了後に停止
+// 【状態管理】: Content Script単位の可変状態をPageStateインスタンスに集約
+const pageState = new PageState();
 
-// 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-interface CleansingConfig {
-    contentStripHardEnabled: boolean;
-    contentStripKeywordEnabled: boolean;
-    contentStripKeywords: string[];
-    aiSummaryCleansingEnabled: boolean;
-    aiSummaryCleansingAlt: boolean;
-    aiSummaryCleansingMetadata: boolean;
-    aiSummaryCleansingAds: boolean;
-    aiSummaryCleansingNav: boolean;
-    aiSummaryCleansingSocial: boolean;
-    aiSummaryCleansingDeep: boolean;
-    aiSummaryCleansingJsonLd: boolean;
-    aiSummaryCleansingLazyLoad: boolean;
-    aiSummaryCleansingSkipLink: boolean;
-    aiSummaryCleansingCard: boolean;
-    aiSummaryCleansingLinkDensity: boolean;
-    aiSummaryCleansingFixed: boolean;
-    aiSummaryCleansingRecommend: boolean;
-    aiSummaryCleansingPagination: boolean;
-    aiSummaryCleansingSnsPromo: boolean;
-    aiSummaryCleansingPopup: boolean;
-    aiSummaryCleansingPlatform: boolean;
-    aiSummaryCleansingTextDensity: boolean;
-    aiSummaryCleansingShortSeq: boolean;
-    aiSummaryCleansingSymbolLine: boolean;
-    aiSummaryCleansingLinkPara: boolean;
-    aiSummaryCleansingEnhancedHidden: boolean;
-    aiSummaryCleansingEmptyElem: boolean;
-    aiSummaryCleansingJpLayout: boolean;
-    aiSummaryCleansingJpNavigation: boolean;
-    aiSummaryCleansingAuthor: boolean;
-    aiSummaryCleansingAffiliate: boolean;
-    aiSummaryCleansingSpeechBubble: boolean;
-    aiSummaryCleansingNewsMedia: boolean;
-    aiSummaryCleansingEcSite: boolean;
-    aiSummaryCleansingQaSite: boolean;
-    aiSummaryCleansingVideoSite: boolean;
-    whitelistExtractionEnabled: boolean;
-    aiSummaryCleansingLinkRatioThreshold: number;
-    aiSummaryCleansingShortTextThreshold: number;
-    aiSummaryCleansingShortSeqCount: number;
-    aiSummaryCleansingLinkParaThreshold: number;
-    aiSummaryCleansingCustomPatterns: string[];
-    // Over-cleansed fallback thresholds
-    aiSummaryCleansingFallbackRatio: number;
-    aiSummaryCleansingFallbackMinBytes: number;
-    contentDedupEnabled: boolean;
-    contentDedupThreshold: number;
+/**
+ * PBI-34: 後方互換用。テスト等でモジュールレベルのPageStateインスタンスに
+ * アクセスする必要がある場合に使用。本番コードでは原則pageStateを直接参照する。
+ */
+export function getPageStateForTesting(): Readonly<PageState> {
+    return pageState;
 }
-
-const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
-    contentStripHardEnabled: true,
-    contentStripKeywordEnabled: true,
-    contentStripKeywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
-    aiSummaryCleansingEnabled: true,
-    aiSummaryCleansingAlt: true,
-    aiSummaryCleansingMetadata: true,
-    aiSummaryCleansingAds: true,
-    aiSummaryCleansingNav: true,
-    aiSummaryCleansingSocial: true,
-    aiSummaryCleansingDeep: false,
-    aiSummaryCleansingJsonLd: false,
-    aiSummaryCleansingLazyLoad: false,
-    aiSummaryCleansingSkipLink: false,
-    aiSummaryCleansingCard: false,
-    aiSummaryCleansingLinkDensity: false,
-    aiSummaryCleansingFixed: false,
-    aiSummaryCleansingRecommend: true,
-    aiSummaryCleansingPagination: false,
-    aiSummaryCleansingSnsPromo: false,
-    aiSummaryCleansingPopup: true,
-    aiSummaryCleansingPlatform: false,
-    aiSummaryCleansingTextDensity: false,
-    aiSummaryCleansingShortSeq: false,
-    aiSummaryCleansingSymbolLine: false,
-    aiSummaryCleansingLinkPara: false,
-    aiSummaryCleansingEnhancedHidden: false,
-    aiSummaryCleansingEmptyElem: false,
-    aiSummaryCleansingJpLayout: false,
-    aiSummaryCleansingJpNavigation: false,
-    aiSummaryCleansingAuthor: false,
-    aiSummaryCleansingAffiliate: false,
-    aiSummaryCleansingSpeechBubble: false,
-    aiSummaryCleansingNewsMedia: true,
-    aiSummaryCleansingEcSite: true,
-    aiSummaryCleansingQaSite: true,
-    aiSummaryCleansingVideoSite: true,
-    whitelistExtractionEnabled: true,
-    aiSummaryCleansingLinkRatioThreshold: 70,
-    aiSummaryCleansingShortTextThreshold: 30,
-    aiSummaryCleansingShortSeqCount: 5,
-    aiSummaryCleansingLinkParaThreshold: 50,
-    aiSummaryCleansingCustomPatterns: [],
-    aiSummaryCleansingFallbackRatio: 0.20,
-    aiSummaryCleansingFallbackMinBytes: 300,
-    contentDedupEnabled: true,
-    contentDedupThreshold: 0.7,
-};
-
-let cleansingConfig: CleansingConfig = { ...DEFAULT_CLEANSING_CONFIG };
-
-// 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
-export let lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
-export let lastCleanseStats: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number } = {
-    hardStripRemoved: 0,
-    keywordStripRemoved: 0,
-    totalRemoved: 0
-};
-// 【バイト数情報】: 直近の抽出で適用されたバイト数情報を保持
-export let lastByteStats: { pageBytes: number; candidateBytes: number; originalBytes: number; cleansedBytes: number } = {
-    pageBytes: 0,
-    candidateBytes: 0,
-    originalBytes: 0,
-    cleansedBytes: 0
-};
-// 【AI要約クレンジング情報】: 直近の抽出で適用されたAI要約クレンジング情報を保持
-export let lastAiSummaryCleansedStats: { aiSummaryOriginalBytes: number; aiSummaryCleansedBytes: number; aiSummaryCleansedElements: number; aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none'; aiSummaryCleansedReasons?: string[] } = {
-    aiSummaryOriginalBytes: 0,
-    aiSummaryCleansedBytes: 0,
-    aiSummaryCleansedElements: 0,
-    aiSummaryCleansedReason: 'none'
-};
-
-// 【フォールバック情報】: 直近の抽出でフォールバックが発動したかを保持
-export let lastFallbackTriggered = false;
 
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
@@ -194,7 +71,7 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  * 🟢
  * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
  */
-export function extractPageContent(config: CleansingConfig = cleansingConfig): string {
+export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): string {
     const cleanseOptions = {
         cleanseEnabled: config.contentStripHardEnabled || config.contentStripKeywordEnabled,
         hardStripEnabled: config.contentStripHardEnabled,
@@ -255,21 +132,21 @@ export function extractPageContent(config: CleansingConfig = cleansingConfig): s
     const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
     // クレンジング情報を保存
     if (typeof result === 'object' && 'cleansedReason' in result) {
-        lastCleansedReason = result.cleansedReason || 'none';
-        lastCleanseStats = {
+        pageState.lastCleansedReason = result.cleansedReason || 'none';
+        pageState.lastCleanseStats = {
             hardStripRemoved: result.hardStripRemoved ?? 0,
             keywordStripRemoved: result.keywordStripRemoved ?? 0,
             totalRemoved: result.totalRemoved ?? 0
         };
         // バイト数情報を保存
-        lastByteStats = {
+        pageState.lastByteStats = {
             pageBytes: result.pageBytes ?? 0,
             candidateBytes: result.candidateBytes ?? 0,
             originalBytes: result.originalBytes ?? 0,
             cleansedBytes: result.cleansedBytes ?? 0
         };
         // AI要約クレンジング情報を保存
-        lastAiSummaryCleansedStats = {
+        pageState.lastAiSummaryCleansedStats = {
             aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
             aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
             aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
@@ -277,7 +154,7 @@ export function extractPageContent(config: CleansingConfig = cleansingConfig): s
             aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
         };
         // フォールバック情報を保存
-        lastFallbackTriggered = result.fallbackTriggered ?? false;
+        pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
     }
     return typeof result === 'string' ? result : result.content;
 }
@@ -299,11 +176,11 @@ function loadSettings(): Promise<void> {
 
             if (s[StorageKeys.MIN_VISIT_DURATION] !== undefined) {
                 const parsedDuration = parseInt(String(s[StorageKeys.MIN_VISIT_DURATION]), 10);
-                minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
+                pageState.minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
             }
             if (s[StorageKeys.MIN_SCROLL_DEPTH] !== undefined) {
                 const parsedDepth = parseInt(String(s[StorageKeys.MIN_SCROLL_DEPTH]), 10);
-                minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
+                pageState.minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
             }
             // クレンジング設定を一括読み込み
             const booleanKeys: Array<[StorageKey, keyof CleansingConfig]> = [
@@ -347,7 +224,7 @@ function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of booleanKeys) {
                 if (s[key] !== undefined) {
-                    (cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = Boolean(s[key]);
+                    (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = Boolean(s[key]);
                 }
             }
 
@@ -357,44 +234,44 @@ function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of stringArrayKeys) {
                 if (s[key] !== undefined && Array.isArray(s[key])) {
-                    (cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = s[key] as string[];
+                    (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = s[key] as string[];
                 }
             }
 
             // Threshold settings (with bounds validation)
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
-                cleansingConfig.aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
+                pageState.cleansingConfig.aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] !== undefined) {
-                cleansingConfig.aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
+                pageState.cleansingConfig.aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] !== undefined) {
-                cleansingConfig.aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
+                pageState.cleansingConfig.aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
-                cleansingConfig.aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
+                pageState.cleansingConfig.aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
             }
 
             // Over-cleansed fallback thresholds
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] !== undefined) {
-                cleansingConfig.aiSummaryCleansingFallbackRatio = Math.max(0, Math.min(1, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]) || 0.20));
+                pageState.cleansingConfig.aiSummaryCleansingFallbackRatio = Math.max(0, Math.min(1, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]) || 0.20));
             }
             if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] !== undefined) {
-                cleansingConfig.aiSummaryCleansingFallbackMinBytes = Math.max(0, Math.min(5000, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]) || 300));
+                pageState.cleansingConfig.aiSummaryCleansingFallbackMinBytes = Math.max(0, Math.min(5000, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]) || 300));
             }
 
             if (s[StorageKeys.CONTENT_DEDUP_THRESHOLD] !== undefined) {
-                cleansingConfig.contentDedupThreshold = parseFloat(String(s[StorageKeys.CONTENT_DEDUP_THRESHOLD]));
+                pageState.cleansingConfig.contentDedupThreshold = parseFloat(String(s[StorageKeys.CONTENT_DEDUP_THRESHOLD]));
             }
             logInfo('Settings loaded', {
-                minVisitDuration,
-                minScrollDepth,
-                aiSummaryCleansingEnabled: cleansingConfig.aiSummaryCleansingEnabled,
-                aiSummaryCleansingAlt: cleansingConfig.aiSummaryCleansingAlt,
-                aiSummaryCleansingMetadata: cleansingConfig.aiSummaryCleansingMetadata,
-                aiSummaryCleansingAds: cleansingConfig.aiSummaryCleansingAds,
-                aiSummaryCleansingNav: cleansingConfig.aiSummaryCleansingNav,
-                aiSummaryCleansingSocial: cleansingConfig.aiSummaryCleansingSocial
+                minVisitDuration: pageState.minVisitDuration,
+                minScrollDepth: pageState.minScrollDepth,
+                aiSummaryCleansingEnabled: pageState.cleansingConfig.aiSummaryCleansingEnabled,
+                aiSummaryCleansingAlt: pageState.cleansingConfig.aiSummaryCleansingAlt,
+                aiSummaryCleansingMetadata: pageState.cleansingConfig.aiSummaryCleansingMetadata,
+                aiSummaryCleansingAds: pageState.cleansingConfig.aiSummaryCleansingAds,
+                aiSummaryCleansingNav: pageState.cleansingConfig.aiSummaryCleansingNav,
+                aiSummaryCleansingSocial: pageState.cleansingConfig.aiSummaryCleansingSocial
             }, 'extractor').catch(() => { /* non-critical logging failure */ });
             resolve();
         });
@@ -408,7 +285,7 @@ function loadSettings(): Promise<void> {
  * @returns 条件を満たす場合true
  */
 export function shouldRecordVisit(duration: number, scrollPercent: number): boolean {
-    return duration >= minVisitDuration && scrollPercent >= minScrollDepth;
+    return duration >= pageState.minVisitDuration && scrollPercent >= pageState.minScrollDepth;
 }
 
 /**
@@ -423,22 +300,22 @@ export function shouldRecordVisit(duration: number, scrollPercent: number): bool
  * 🟢
  */
 function checkVisitConditions(): void {
-    if (isValidVisitReported) return;
+    if (pageState.isValidVisitReported) return;
 
-    const duration = (Date.now() - startTime) / 1000;
+    const duration = (Date.now() - pageState.startTime) / 1000;
 
     // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
-    void logDebug('Visit status', { duration, maxScrollPercentage, minVisitDuration, minScrollDepth }, 'extractor');
+    void logDebug('Visit status', { duration, maxScrollPercentage: pageState.maxScrollPercentage, minVisitDuration: pageState.minVisitDuration, minScrollDepth: pageState.minScrollDepth }, 'extractor');
 
     // E2Eテスト用フック: data-ow-e2e-test 属性が設定されている場合のみ有効
     // （ページスクリプトと Content Script は別 JS コンテキストのため DOM 経由で通信）
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
         const state = {
-            maxScrollPercentage,
-            isValidVisitReported,
-            startTime,
-            minVisitDuration,
-            minScrollDepth,
+            maxScrollPercentage: pageState.maxScrollPercentage,
+            isValidVisitReported: pageState.isValidVisitReported,
+            startTime: pageState.startTime,
+            minVisitDuration: pageState.minVisitDuration,
+            minScrollDepth: pageState.minScrollDepth,
             duration,
         };
         window.__OW_TEST_STATE = state;
@@ -446,8 +323,8 @@ function checkVisitConditions(): void {
     }
 
     // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
-    if (shouldRecordVisit(duration, maxScrollPercentage)) {
-        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${maxScrollPercentage.toFixed(0)}%`);
+    if (shouldRecordVisit(duration, pageState.maxScrollPercentage)) {
+        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${pageState.maxScrollPercentage.toFixed(0)}%`);
         reportValidVisit();
         // E2Eテスト用フック: 報告後に状態を更新
         if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
@@ -530,9 +407,9 @@ function updateMaxScroll(): void {
     const scrollPercentage = (scrollTop / docHeight) * 100;
 
     // 【最大値更新】: 新しい最大スクロール深度を記録
-    if (scrollPercentage > maxScrollPercentage) {
-        maxScrollPercentage = scrollPercentage;
-        // console.log(`New Max Scroll: ${maxScrollPercentage.toFixed(1)}%`);
+    if (scrollPercentage > pageState.maxScrollPercentage) {
+        pageState.maxScrollPercentage = scrollPercentage;
+        // console.log(`New Max Scroll: ${pageState.maxScrollPercentage.toFixed(1)}%`);
     }
 
     checkVisitConditions();
@@ -548,7 +425,7 @@ function updateMaxScroll(): void {
  * 🟢
  */
 async function reportValidVisit(): Promise<void> {
-    isValidVisitReported = true;
+    pageState.isValidVisitReported = true;
     void logInfo('Sending VALID_VISIT', {}, 'extractor');
     console.info('[OWeave] VALID_VISIT 送信開始');
 
@@ -559,16 +436,16 @@ async function reportValidVisit(): Promise<void> {
             type: 'VALID_VISIT',
             payload: {
                 content: content,
-                pageBytes: lastByteStats.pageBytes || undefined,
-                candidateBytes: lastByteStats.candidateBytes || undefined,
-                originalBytes: lastByteStats.originalBytes || undefined,
-                cleansedBytes: lastByteStats.cleansedBytes || undefined,
-                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons,
-                fallbackTriggered: lastFallbackTriggered
+                pageBytes: pageState.lastByteStats.pageBytes || undefined,
+                candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+                originalBytes: pageState.lastByteStats.originalBytes || undefined,
+                cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
+                aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons,
+                fallbackTriggered: pageState.lastFallbackTriggered
             }
         });
         void logDebug('VALID_VISIT response', { response }, 'extractor');
@@ -754,21 +631,21 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
  * setInterval and only runs while the page is visible.
  */
 function scheduleNextCheck(): void {
-    if (isValidVisitReported || document.hidden) return;
+    if (pageState.isValidVisitReported || document.hidden) return;
 
     if (typeof window.requestIdleCallback === 'function') {
-        checkIntervalId = window.requestIdleCallback(() => {
-            checkIntervalId = null;
+        pageState.checkIntervalId = window.requestIdleCallback(() => {
+            pageState.checkIntervalId = null;
             updateMaxScroll();
-            if (!isValidVisitReported && !document.hidden) {
+            if (!pageState.isValidVisitReported && !document.hidden) {
                 scheduleNextCheck();
             }
         }, { timeout: 2000 });
     } else {
-        checkIntervalId = window.setTimeout(() => {
-            checkIntervalId = null;
+        pageState.checkIntervalId = window.setTimeout(() => {
+            pageState.checkIntervalId = null;
             updateMaxScroll();
-            if (!isValidVisitReported && !document.hidden) {
+            if (!pageState.isValidVisitReported && !document.hidden) {
                 scheduleNextCheck();
             }
         }, 1000);
@@ -796,13 +673,13 @@ function startPeriodicCheck(): void {
  * 🟢
  */
 function stopPeriodicCheck(): void {
-    if (checkIntervalId !== null) {
+    if (pageState.checkIntervalId !== null) {
         if (typeof window.cancelIdleCallback === 'function') {
-            window.cancelIdleCallback(checkIntervalId);
+            window.cancelIdleCallback(pageState.checkIntervalId);
         } else {
-            window.clearTimeout(checkIntervalId);
+            window.clearTimeout(pageState.checkIntervalId);
         }
-        checkIntervalId = null;
+        pageState.checkIntervalId = null;
     }
 }
 
@@ -830,7 +707,7 @@ export async function init(): Promise<void> {
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             stopPeriodicCheck();
-        } else if (!isValidVisitReported) {
+        } else if (!pageState.isValidVisitReported) {
             // タブが表示され、まだ記録が行われていない場合は再開
             startPeriodicCheck();
         }
@@ -839,11 +716,11 @@ export async function init(): Promise<void> {
     // E2Eテスト用: 初期化完了を data-ow-test-state 属性で通知
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
         document.documentElement.setAttribute('data-ow-test-state', JSON.stringify({
-            maxScrollPercentage,
-            isValidVisitReported,
-            startTime,
-            minVisitDuration,
-            minScrollDepth,
+            maxScrollPercentage: pageState.maxScrollPercentage,
+            isValidVisitReported: pageState.isValidVisitReported,
+            startTime: pageState.startTime,
+            minVisitDuration: pageState.minVisitDuration,
+            minScrollDepth: pageState.minScrollDepth,
             duration: 0,
         }));
     }
@@ -861,22 +738,22 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
             const content = extractPageContent();
             sendResponse({
                 content,
-                cleansedReason: lastCleansedReason,
-                cleanseStats: lastCleanseStats,
+                cleansedReason: pageState.lastCleansedReason,
+                cleanseStats: pageState.lastCleanseStats,
                 byteStats: {
-                    pageBytes: lastByteStats.pageBytes || undefined,
-                    candidateBytes: lastByteStats.candidateBytes || undefined,
-                    originalBytes: lastByteStats.originalBytes || undefined,
-                    cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                    pageBytes: pageState.lastByteStats.pageBytes || undefined,
+                    candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+                    originalBytes: pageState.lastByteStats.originalBytes || undefined,
+                    cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
                 },
                 aiSummaryCleansedStats: {
-                    aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                    aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                    aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                    aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                    aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+                    aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                    aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                    aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                    aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                    aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons
                 },
-                fallbackTriggered: lastFallbackTriggered
+                fallbackTriggered: pageState.lastFallbackTriggered
             });
         }
         return true;

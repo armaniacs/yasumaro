@@ -3,6 +3,7 @@
  * テスト: プライバシーポリシー同意管理
  */
 import { describe, it, expect, jest, beforeEach } from 'vitest';
+import { Crypto } from '@peculiar/webcrypto';
 import {
     getPrivacyConsent,
     savePrivacyConsent,
@@ -14,11 +15,11 @@ import {
     PRIVACY_POLICY_VERSION
 } from '../privacyConsent.js';
 
-// Mock global.crypto for Web Crypto API polyfill
+// Mock global.crypto with a real Web Crypto API polyfill (needed for HMAC signing
+// in savePrivacyConsent/withdrawPrivacyConsent/getPrivacyConsent).
 Object.defineProperty(global, 'crypto', {
-    value: {
-        getRandomValues: () => new Uint32Array(10),
-    },
+    value: new Crypto(),
+    configurable: true,
 });
 
 // logger モック
@@ -113,6 +114,47 @@ describe('getPrivacyConsent', () => {
             return Object.fromEntries(ks.map(k => [k, storageMock[k]]));
         });
     });
+
+    it('署名なしの既存データ（後方互換）は正常に読み込める', async () => {
+        // マイグレーション前の署名フィールドを持たないレガシーオブジェクト形式
+        storageMock['privacy_consent'] = {
+            hasConsented: true,
+            consentDate: '2026-01-01T00:00:00.000Z',
+            consentVersion: PRIVACY_POLICY_VERSION
+        };
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(true);
+    });
+
+    it('正しい署名を持つデータは正常に読み込める', async () => {
+        await savePrivacyConsent();
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(true);
+    });
+
+    it('署名が改ざんされている場合は未同意として扱われる', async () => {
+        await savePrivacyConsent();
+        const saved = storageMock['privacy_consent'] as { signature: string };
+        // 署名はそのままに、本文だけ書き換える（典型的な改ざんシナリオ）
+        storageMock['privacy_consent'] = {
+            ...saved,
+            hasConsented: true,
+            consentVersion: 'tampered-version',
+        };
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(false);
+    });
+
+    it('署名の値自体が壊れている場合は未同意として扱われる', async () => {
+        await savePrivacyConsent();
+        const saved = storageMock['privacy_consent'] as { signature: string };
+        storageMock['privacy_consent'] = {
+            ...saved,
+            signature: 'invalid-signature-value',
+        };
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(false);
+    });
 });
 
 describe('savePrivacyConsent', () => {
@@ -122,6 +164,13 @@ describe('savePrivacyConsent', () => {
         expect(saved.hasConsented).toBe(true);
         expect(saved.consentDate).toBeDefined();
         expect(saved.consentVersion).toBeDefined();
+    });
+
+    it('HMAC署名を付与して保存する', async () => {
+        await savePrivacyConsent();
+        const saved = storageMock['privacy_consent'] as any;
+        expect(typeof saved.signature).toBe('string');
+        expect(saved.signature.length).toBeGreaterThan(0);
     });
 
     it('カスタムバージョンで保存する', async () => {
