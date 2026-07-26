@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.7.2] - 2026-07-27
+
+このリリースは前日リリースに対するレビュー指摘の即時反映です。popup と dashboard で重複していた設定 UI を一本化しました。
+
+### Fixed / 修正
+
+- **popup の設定 UI を dashboard に一本化** — `entrypoints/popup/index.html` から `settingsScreen`（General / Domain Filter / Prompt / Privacy の4タブ）と設定用モーダルを削除。設定は `#menuBtn` から開く dashboard（`options.html`）に集約
+- **`src/popup/popup.ts` から settingsScreen 専用の初期化コードを削除** — domain filter / custom prompt / privacy settings / export-import / master password の popup 側初期化を除去。これらの共有モジュールは dashboard からも import されているためファイルは維持
+- **`entrypoints/popup/main.ts` から不要な `domainFilter` import を削除**
+
+### Tests / テスト
+
+- **`popup.test.ts` を設定 UI 削除後の責務に合わせて更新**
+- **`ui-ux-improvements.test.ts` を popup HTML から設定タブ・help-text が削除された構造に合わせて更新**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.1` → `6.7.2`
+
 ## [6.7.1] - 2026-07-26
 
 このリリースは前日リリースに対するレビュー指摘の即時反映です。Checking Team レビューから起票した非機能改善 PBI 群のフォローアップを実施しました。
