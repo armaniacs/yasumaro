@@ -12,7 +12,44 @@ export interface PendingPage {
   errorMessage?: string;
 }
 
-const PENDING_PAGES_KEY = 'osh_pending_pages';
+export const PENDING_PAGES_KEY = 'pending_pages';
+const LEGACY_PENDING_PAGES_KEY = 'osh_pending_pages';
+
+/**
+ * Migrates pending pages data from the legacy 'osh_pending_pages' key
+ * (from the pre-rebrand "Obsidian Smart History" project name) to the
+ * current 'pending_pages' key. No-op if the legacy key holds no data.
+ */
+export async function migrateLegacyPendingPagesKey(): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get(LEGACY_PENDING_PAGES_KEY);
+    const legacyPages = result[LEGACY_PENDING_PAGES_KEY] as PendingPage[] | undefined;
+    if (!legacyPages || legacyPages.length === 0) {
+      if (LEGACY_PENDING_PAGES_KEY in result) {
+        await chrome.storage.local.remove(LEGACY_PENDING_PAGES_KEY);
+      }
+      return;
+    }
+
+    const currentPages = await getPendingPagesList();
+    const existingUrls = new Set(currentPages.map(p => p.url));
+    const mergedPages = [...currentPages, ...legacyPages.filter(p => !existingUrls.has(p.url))];
+
+    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: mergedPages });
+    await chrome.storage.local.remove(LEGACY_PENDING_PAGES_KEY);
+
+    await logInfo(
+      'Migrated pending pages from legacy key',
+      { migratedCount: legacyPages.length, source: 'pendingStorage' }
+    );
+  } catch (error) {
+    await logError(
+      'Failed to migrate legacy pending pages key',
+      { error: errorMessage(error), source: 'pendingStorage' },
+      ErrorCode.STORAGE_MIGRATION_FAILURE
+    );
+  }
+}
 
 /**
  * Retrieves the list of pending pages directly from chrome.storage.local.

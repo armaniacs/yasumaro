@@ -3,7 +3,7 @@
  * pendingStorage モジュールのテスト
  */
 
-import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages } from '../pendingStorage';
+import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey } from '../pendingStorage';
 
 vi.mock('../logger.js', () => ({
     logInfo: vi.fn().mockResolvedValue(undefined),
@@ -12,6 +12,7 @@ vi.mock('../logger.js', () => ({
     ErrorCode: {
         STORAGE_READ_FAILURE: 'STRG_RD_001',
         STORAGE_WRITE_FAILURE: 'STRG_WR_001',
+        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
     },
 }));
 
@@ -83,7 +84,7 @@ describe('pendingStorage', () => {
 
             await addPendingPage(pendingPage);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pendingPage]);
         });
 
@@ -100,7 +101,7 @@ describe('pendingStorage', () => {
 
             await addPendingPage(pendingPage);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pendingPage]);
         });
 
@@ -117,7 +118,7 @@ describe('pendingStorage', () => {
 
             await addPendingPage(pendingPage);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pendingPage]);
         });
 
@@ -134,7 +135,7 @@ describe('pendingStorage', () => {
 
             await addPendingPage(pendingPage);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pendingPage]);
         });
 
@@ -148,7 +149,7 @@ describe('pendingStorage', () => {
                 headerValue: 'Cache-Control: private',
                 expiry: now + 24 * 60 * 60 * 1000
             };
-            mockStorage['osh_pending_pages'] = [existingPage];
+            mockStorage['pending_pages'] = [existingPage];
 
             const duplicatePage = {
                 url: 'https://example.com/page',
@@ -161,7 +162,7 @@ describe('pendingStorage', () => {
 
             await addPendingPage(duplicatePage);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([existingPage]);
         });
     });
@@ -178,7 +179,7 @@ describe('pendingStorage', () => {
                 expiry: now + 24 * 60 * 60 * 1000
             };
 
-            mockStorage['osh_pending_pages'] = [pendingPage];
+            mockStorage['pending_pages'] = [pendingPage];
 
             const result = await getPendingPages();
 
@@ -203,7 +204,7 @@ describe('pendingStorage', () => {
                 expiry: now + 24 * 60 * 60 * 1000
             };
 
-            mockStorage['osh_pending_pages'] = [expiredPage, validPage];
+            mockStorage['pending_pages'] = [expiredPage, validPage];
 
             const result = await getPendingPages();
 
@@ -219,11 +220,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/page2', title: 'Page 2', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now + 86400000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await removePendingPages(['https://example.com/page1']);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pages[1]]);
         });
 
@@ -235,11 +236,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/page3', title: 'Page 3', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now + 86400000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await removePendingPages(['https://example.com/page1', 'https://example.com/page3']);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pages[1]]);
         });
 
@@ -249,11 +250,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/page1', title: 'Page 1', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now + 86400000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await removePendingPages([]);
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual(pages);
         });
     });
@@ -266,11 +267,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/valid', title: 'Valid', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now + 86400000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await clearExpiredPages();
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([pages[1]]);
         });
 
@@ -281,11 +282,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/expired2', title: 'Expired 2', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now - 2000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await clearExpiredPages();
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual([]);
         });
 
@@ -296,11 +297,11 @@ describe('pendingStorage', () => {
                 { url: 'https://example.com/valid2', title: 'Valid 2', timestamp: now, reason: 'cache-control' as const, headerValue: 'Cache-Control: private', expiry: now + 86400000 }
             ];
 
-            mockStorage['osh_pending_pages'] = pages;
+            mockStorage['pending_pages'] = pages;
 
             await clearExpiredPages();
 
-            const result = mockStorage['osh_pending_pages'] as unknown[];
+            const result = mockStorage['pending_pages'] as unknown[];
             expect(result).toEqual(pages);
         });
     });
@@ -365,7 +366,7 @@ describe('pendingStorage', () => {
             mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
 
             const now = Date.now();
-            mockStorage['osh_pending_pages'] = [
+            mockStorage['pending_pages'] = [
                 { url: 'https://example.com/page1', title: 'Page 1', timestamp: now, reason: 'cache-control' as const, expiry: now + 86400000 }
             ];
 
@@ -383,7 +384,7 @@ describe('pendingStorage', () => {
             mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
 
             const now = Date.now();
-            mockStorage['osh_pending_pages'] = [
+            mockStorage['pending_pages'] = [
                 { url: 'https://example.com/expired', title: 'Expired', timestamp: now, reason: 'cache-control' as const, expiry: now - 1000 }
             ];
 
@@ -429,6 +430,67 @@ describe('pendingStorage', () => {
                 expect.objectContaining({ error: 'string error' }),
                 expect.any(String)
             );
+        });
+    });
+
+    describe('migrateLegacyPendingPagesKey', () => {
+        it('migrates data from the legacy osh_pending_pages key to pending_pages', async () => {
+            const now = Date.now();
+            const legacyPage = {
+                url: 'https://legacy.example.com',
+                title: 'Legacy Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+            mockStorage['osh_pending_pages'] = [legacyPage];
+
+            await migrateLegacyPendingPagesKey();
+
+            expect(mockStorage['pending_pages']).toEqual([legacyPage]);
+            expect(mockStorage['osh_pending_pages']).toBeUndefined();
+        });
+
+        it('merges legacy data with existing new-key data without duplicating URLs', async () => {
+            const now = Date.now();
+            const existingPage = {
+                url: 'https://existing.example.com',
+                title: 'Existing Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+            const legacyPage = {
+                url: 'https://legacy.example.com',
+                title: 'Legacy Page',
+                timestamp: now,
+                reason: 'cache-control' as const,
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+            const duplicatePage = { ...existingPage, title: 'Duplicate (should be ignored)' };
+            mockStorage['pending_pages'] = [existingPage];
+            mockStorage['osh_pending_pages'] = [legacyPage, duplicatePage];
+
+            await migrateLegacyPendingPagesKey();
+
+            expect(mockStorage['pending_pages']).toEqual([existingPage, legacyPage]);
+            expect(mockStorage['osh_pending_pages']).toBeUndefined();
+        });
+
+        it('does nothing when the legacy key has no data', async () => {
+            await migrateLegacyPendingPagesKey();
+
+            expect(mockStorage['pending_pages']).toBeUndefined();
+            expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+        });
+
+        it('removes an empty legacy key even without merging', async () => {
+            mockStorage['osh_pending_pages'] = [];
+
+            await migrateLegacyPendingPagesKey();
+
+            expect(mockStorage['osh_pending_pages']).toBeUndefined();
+            expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
         });
     });
 });

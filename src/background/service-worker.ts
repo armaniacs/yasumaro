@@ -21,6 +21,8 @@ import {
     clearSettingsCache
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
+import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
+import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
@@ -150,6 +152,8 @@ async function runMigration(): Promise<void> {
             'service-worker'
         );
     }
+
+    await migrateLegacyPendingPagesKey();
 }
 
 // Session store for cross-SW-restart persistence
@@ -649,6 +653,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
           }
           if (alarm.name === 'yasumaro-offline-network-retry') {
             void processOfflineNetworkQueue();
+            void flushPendingRecords(sqliteClient);
           }
     });
 }
