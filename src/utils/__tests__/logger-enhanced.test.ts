@@ -444,5 +444,26 @@ describe('Logger - Enhanced Coverage', () => {
             expect(log!.timestamp).toBeDefined();
             expect(typeof log!.timestamp).toBe('number');
         });
+
+        test('details 内の traceId をトップレベルに抽出する', async () => {
+            await logger.addLog('INFO', 'Trace ID test', { data: 'test', traceId: 'trace-123' });
+            await logger.flushLogs(true);
+
+            const logs = await logger.getLogs();
+            const log = logs.find((l: any) => l.message === 'Trace ID test');
+            expect(log).toBeDefined();
+            expect(log!.traceId).toBe('trace-123');
+            expect((log!.details as Record<string, unknown>).traceId).toBeUndefined();
+        });
+
+        test('traceId が文字列でない場合は無視する', async () => {
+            await logger.addLog('INFO', 'No trace ID test', { data: 'test', traceId: 123 });
+            await logger.flushLogs(true);
+
+            const logs = await logger.getLogs();
+            const log = logs.find((l: any) => l.message === 'No trace ID test');
+            expect(log).toBeDefined();
+            expect(log!.traceId).toBeUndefined();
+        });
     });
 });

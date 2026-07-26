@@ -35,7 +35,8 @@ export const checkDuplicateStep: PipelineStepFunction = async (
       ) {
         addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', {
           url,
-          savedDate: savedDate.toUTCString()
+          savedDate: savedDate.toUTCString(),
+          traceId: context.traceId
         });
         throw new DuplicateError('same_day');
       }
@@ -47,7 +48,8 @@ export const checkDuplicateStep: PipelineStepFunction = async (
     addLog(LogType.ERROR, 'URL set size limit exceeded', {
       current: urlMap.size,
       max: MAX_URL_SET_SIZE,
-      url
+      url,
+      traceId: context.traceId
     });
     throw new Error('URL_SET_LIMIT_EXCEEDED');
   }
@@ -57,7 +59,8 @@ export const checkDuplicateStep: PipelineStepFunction = async (
     addLog(LogType.WARN, 'URL set size approaching limit', {
       current: urlMap.size,
       threshold: URL_WARNING_THRESHOLD,
-      remaining: MAX_URL_SET_SIZE - urlMap.size
+      remaining: MAX_URL_SET_SIZE - urlMap.size,
+      traceId: context.traceId
     });
   }
 

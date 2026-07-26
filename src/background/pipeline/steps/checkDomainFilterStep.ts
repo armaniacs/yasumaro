@@ -21,7 +21,7 @@ export const checkDomainFilterStep: PipelineStepFunction = async (
 
   if (!isAllowed) {
     if (force) {
-      addLog(LogType.WARN, 'Force recording blocked domain', { url });
+      addLog(LogType.WARN, 'Force recording blocked domain', { url, traceId: context.traceId });
       return {
         ...context,
         isDomainAllowed: false

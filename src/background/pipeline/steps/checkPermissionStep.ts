@@ -27,12 +27,12 @@ export const checkPermissionStep: PipelineStepFunction = async (
     try {
       domain = extractDomain(url) || new URL(url).hostname;
     } catch {
-      addLog(LogType.ERROR, 'Failed to extract domain from URL', { url });
+      addLog(LogType.ERROR, 'Failed to extract domain from URL', { url, traceId: context.traceId });
       throw new Error('INVALID_URL');
     }
 
     await permissionManager.recordDeniedVisit(domain);
-    addLog(LogType.WARN, 'Permission required for recording', { url, domain });
+    addLog(LogType.WARN, 'Permission required for recording', { url, domain, traceId: context.traceId });
     throw new Error('PERMISSION_REQUIRED');
   }
 

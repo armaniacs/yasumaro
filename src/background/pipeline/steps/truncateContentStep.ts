@@ -47,7 +47,8 @@ export const truncateContentStep: PipelineStepFunction = async (
     addLog(LogType.WARN, 'Content truncated for recording', {
       originalLength,
       truncatedLength: MAX_RECORD_SIZE,
-      url
+      url,
+      traceId: context.traceId
     });
 
     return {
