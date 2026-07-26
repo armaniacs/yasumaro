@@ -240,12 +240,6 @@ vi.mock('../domainFilterTagUI.js', () => ({
 vi.mock('../tagsPanel.js', () => ({
     initTagsPanel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../domainSearchPanel.js', () => ({
-    initDomainSearchPanel: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock('../diagnosticsPanel.js', () => ({
-    initDiagnosticsPanel: vi.fn().mockResolvedValue(undefined),
-}));
 vi.mock('../trancoConsent.js', () => ({
     initTrancoConsentPanel: vi.fn().mockResolvedValue(undefined),
 }));
