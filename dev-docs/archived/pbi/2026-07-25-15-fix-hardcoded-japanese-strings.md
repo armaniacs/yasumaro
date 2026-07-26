@@ -1,9 +1,45 @@
 # PBI: HTML内にフォールバックとして残る日本語ハードコード文字列をi18n化する
 
 **作成日**: 2026-07-25
+**再調査日**: 2026-07-26（規模を再調査した結果、見積もりを大幅に引き上げ。実装は一旦スキップし後続PBIとして起票し直す）
+**完了日**: 2026-07-26（popup.html分のみ。options.html分は別PBIに分割）
 **優先度**: Low
-**見積もり**: 🟢低（1pt目安）
-**副作用**: 🟢なし（表示テキストの取得元をdata-i18n経由に統一するのみ）
+**見積もり**: 🔴高（3pt以上目安、当初🟢低から引き上げ）
+**副作用**: 🟡軽微（件数が多く、全箇所で`_locales/*/messages.json`の値と実際の表示文言が一致するかの確認作業が必要）
+
+## 実装メモ（2026-07-26）
+
+`entrypoints/popup/index.html` の12件（`statusShowDetails`, `statusDomainFilter`, `statusPrivacy`,
+`statusCache`, `statusLastSaved`, `statusCleansing`, `pendingPagesTitle`, `btnSelectAll`,
+`btnSaveSelected`, `btnSaveWhitelist`, `btnDiscard`, `pendingPagesEmpty`）+ `permissionAllow`
+（背景に記載の167行の指摘対象）の計13件を、`_locales/en/messages.json` の対応する英語メッセージに
+置き換えた。`docs/i18n-guide.md` のサンプルコードが一貫して英語プレースホルダーを使っている慣習に
+合わせた。
+
+`entrypoints/options/index.html`（235件）は規模が大きく本PBIの範囲を超えるため、
+`2026-07-26-33-fix-hardcoded-japanese-strings-options.md` として別PBIに分割した。
+`entrypoints/permissions/index.html` は前回調査で対象0件を確認済み、
+`src/dashboard/models-dev-dialog.html` も今回確認し対象0件。
+
+型チェック・全テストスイート（7357件）ともに回帰なし。
+
+---
+
+## 2026-07-26 再調査メモ
+
+`docs/i18n-guide.md` のサンプルコードは英語のプレースホルダーテキスト（例: `<div data-i18n="dropFileHere">Drop file here</div>`）を推奨しており、HTML内の日本語ベタ書きは基本的に見落としと判断できる。
+
+ただし実際の対象箇所を洗い出したところ、当初想定（popup.htmlの1箇所）を大幅に超える規模であることが判明した:
+
+```bash
+grep -n "data-i18n=" entrypoints/popup/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]'   # → 12件
+grep -n "data-i18n=" entrypoints/options/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]'  # → 235件
+grep -n "data-i18n=" entrypoints/permissions/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]' # → 0件
+```
+
+**合計247件**（popup 12件 + options 235件）。247件を一括で置換するのは影響範囲が広すぎるため、本セッションでは実装を見送り、次のPBIへ進んだ。着手する際は以下のいずれかの分割方針を推奨する:
+- popup.html（12件、小規模）を先に片付け、options.html（235件）は規模が大きいため独立したPBIとして分割する
+- または自動化スクリプト（`data-i18n`属性値と`_locales/ja/messages.json`の値を突き合わせ、一致する場合のみHTML側の平文を空文字列相当に置換する）を書いて機械的に処理する
 
 ---
 
