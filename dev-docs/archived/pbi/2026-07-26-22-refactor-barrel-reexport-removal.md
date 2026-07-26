@@ -91,3 +91,22 @@ Scenario: 既存のビルド・テストが回帰しない
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Maintainability Guardian, DX Advocate指摘、重複統合）
 - 対象コード: `src/utils/aiSummaryCleaner.ts`, `src/utils/contentExtractor.ts`, `src/utils/ublockParser.ts`, `src/background/aiClient.ts`, `src/popup/ublockImport.ts`
 - 参考: `CLAUDE.local.md`「モジュール分割時のルール」
+
+## 実装メモ（2026-07-26完了）
+
+- **`src/background/aiClient.ts`は誤認識だった**: 実際には`AIClient`クラスの実体実装ファイルであり、
+  バレル再エクスポートではなかった（対象外）
+- 残り4ファイル（`aiSummaryCleaner.ts`, `contentExtractor.ts`, `ublockParser.ts`, `ublockImport.ts`）は
+  いずれも`export * from './xxx/index.js'`のみの純粋バレルと確認。各呼び出し元は1〜2ファイルのみと
+  想定より少なく（当初懸念の「範囲が広い」は該当せず）:
+  - `aiSummaryCleaner.ts` → `src/utils/contentExtractor/index.ts`（1箇所）
+  - `contentExtractor.ts` → `src/content/extractor.ts`（1箇所）
+  - `ublockParser.ts` → `src/popup/ublockImport/{rulesBuilder,sourceManager}.ts`（2箇所）
+  - `ublockImport.ts` → `src/popup/domainFilter.ts`（1箇所、`@ts-ignore`付きだったが直接import化で不要になり削除）
+- プロダクションコード4箇所を`../xxx/index.js`直接importに変更後、テストコード側にも同じバレル参照が
+  11ファイル（`vi.mock()`のパス指定1件含む）残っていたため、すべて`.../index.js`に統一
+  （うち`ublockImport.test.ts`は動的import 44箇所を`replace_all`で一括置換）
+- 全呼び出し元の移行を確認した上で、4つのバレルファイル自体を`git rm`で削除
+- `manifest.json`（`wxt.config.ts`の`web_accessible_resources`）は`chunks/*.js`ワイルドカードで
+  ビルド後のチャンクを自動カバーするため、更新不要と確認（PBI-25/34と同様の判断）
+- `npm run type-check`・全7269テスト・`npm run build`とも成功

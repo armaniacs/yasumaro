@@ -29,20 +29,12 @@
 | [2026-07-25-35-fix-service-worker-state-persistence.md](2026-07-25-35-fix-service-worker-state-persistence.md) | fix | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-25-36-refactor-service-worker-singleton-di.md](2026-07-25-36-refactor-service-worker-singleton-di.md) | refactor | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-14-fix-offline-queue-retry-skip-ai.md](2026-07-26-14-fix-offline-queue-retry-skip-ai.md) | fix | 🟡中 | 🟡軽微 | ⬜（調査の結果、当初想定より広い変更が必要と判明。着手時は再見積もり要） |
 | [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-19-fix-tabcache-content-removal.md](2026-07-26-19-fix-tabcache-content-removal.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md](2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
-| [2026-07-26-22-refactor-barrel-reexport-removal.md](2026-07-26-22-refactor-barrel-reexport-removal.md) | refactor | 🔴高 | 🟡軽微 | ⬜ |
-| [2026-07-26-23-fix-dashboard-dead-code-removal.md](2026-07-26-23-fix-dashboard-dead-code-removal.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
 | [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-25-refactor-logger-split.md](2026-07-26-25-refactor-logger-split.md) | refactor | 🟡中 | 🟡軽微 | ⬜ |
 | [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🟡中 | 🟡軽微 | ⬜ |
+| [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🔴高 | 🔴あり | ⬜（PBI-37完了済み。着手時にpopup/dashboardのDOM ID共有設計が判明し再見積もり、フェーズ3へ移動） |
 | [2026-07-26-28-fix-web-accessible-resources-scope.md](2026-07-26-28-fix-web-accessible-resources-scope.md) | fix | 🔴高 | 🔴あり | ⬜ |
 | [2026-07-26-29-refactor-service-worker-god-file-split.md](2026-07-26-29-refactor-service-worker-god-file-split.md) | refactor | 🔴高 | 🔴あり | ⬜ |
-| [2026-07-26-33-fix-hardcoded-japanese-strings-options.md](2026-07-26-33-fix-hardcoded-japanese-strings-options.md) | fix | 🔴高 | 🟡軽微 | ⬜（options.html 235件、popup.html 分は対応済み） |
-| [2026-07-26-34-refactor-offscreen-console-to-logger.md](2026-07-26-34-refactor-offscreen-console-to-logger.md) | refactor | 🟡中 | 🟡軽微 | ⬜（dashboard 分〔cspSettings.ts〕は対応済み、Offscreen 側21件が残存） |
 
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
@@ -103,6 +95,16 @@
 - 2026-07-26-16-fix-pending-sqlite-queue-retry-alarm.md (pendingSqliteQueueに定期リトライアラームを追加)
 - 2026-07-26-17-refactor-console-to-structured-logger.md (dashboard分のconsole出力を構造化ロガーに置き換え。Offscreen分はPBI-34に分割)
 - 2026-07-26-18-refactor-sqlite-client-last-error.md (SqliteClientのlastError管理をcall()に一元化)
+- 2026-07-26-19-fix-tabcache-content-removal.md (TabCacheのcontentフィールドが常にnullのデッドフィールドと判明、削除)
+- 2026-07-26-20-fix-offscreen-mobile-suspend-mitigation.md (モバイル検出時にSQLiteメッセージタイムアウトを短縮、既存アラームにヘルスチェックpingを相乗り)
+- 2026-07-26-23-fix-dashboard-dead-code-removal.md (未参照の旧パネル実装3ファイル+テスト4件を削除、tagsPanel.tsは別PBI-35に分割)
+- 2026-07-26-37-fix-dashboard-general-missing-settings.md (PBI-27着手前の前提条件。dashboardのGeneralパネルにmin_visit_duration等3項目を追加。Body Protectionは既存実装と判明し対象外)
+- 2026-07-26-25-refactor-logger-split.md (logger.ts 755行をtypes/core/apiの3ファイルに分割、呼び出し元120件が多いためlogger.tsはバレルとして維持)
+- 2026-07-26-34-refactor-offscreen-console-to-logger.md (Offscreen側21件のconsole出力をログ機構経由に置き換え。offscreen.tsはLOG_FORWARDメッセージでSW中継、sqliteEngineContext.tsは既存loggerを直接呼び出し可能と判明、opfsWorker.ts(Web Worker)はpostMessage経由でsqliteEngineContextに中継)
+- 2026-07-26-14-fix-offline-queue-retry-skip-ai.md (前回スキップ判断を覆し実装。OfflineJob.typeが既にobsidian_sync/ai_summaryを区別済みと判明し、recordingLogic.retryObsidianWriteOnly()を追加するだけの小規模実装で完了)
+- 2026-07-26-22-refactor-barrel-reexport-removal.md (aiClient.tsは誤認識と判明し対象外。残り4バレルファイルは呼び出し元が1〜2箇所と少なく、直接import化してバレル自体を削除)
+- 2026-07-26-35-fix-dashboard-tagspanel-dead-code.md (調査の結果tagsPanel.tsはpanels/staticForm/tagsSettingsPanel.tsから現役でimportされている依存モジュールと判明。削除不要でクローズ)
+- 2026-07-26-33-fix-hardcoded-japanese-strings-options.md (options.html日本語ハードコード約247件をi18n化。当初想定220件+複数行パターン22件+data-i18n属性欠落19件を追加発見し対応、新規i18nキー19件追加)
 
 ### これまでのアーカイブ済み
 
@@ -185,6 +187,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 23（✨機能追加 4 / 🔧非機能追加 19） |
+| ⬜ 未着手 | 15（✨機能追加 4 / 🔧非機能追加 11） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 149 |
+| アーカイブ済み | 159 |

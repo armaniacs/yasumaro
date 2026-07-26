@@ -1,9 +1,35 @@
 # PBI: モバイルChromeでのOffscreen Documentサスペンド対策を実装する
 
 **作成日**: 2026-07-26
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（タイムアウト値の変更・ヘルスチェック追加により、SQLite操作のタイムアウト挙動が変わる）
+
+## 実装メモ（2026-07-26）
+
+フェーズ0確認で、`getPlatformOs()`は既に`sqliteClient.ts`コンストラクタでモバイル判定に使われて
+いたが、それは`maxQueueSize`（リクエストキューサイズ）のためのみで、`MESSAGE_TIMEOUT_MS`
+（10秒固定）はモバイル/デスクトップで区別されていなかったことを確認した。
+
+`MESSAGE_TIMEOUT_MS`をモジュール定数から`MESSAGE_TIMEOUT_MS_DESKTOP`（10秒）/
+`MESSAGE_TIMEOUT_MS_MOBILE`（5秒）の2定数に分離し、インスタンスプロパティ`messageTimeoutMs`として
+コンストラクタで`getPlatformOs()`の結果に応じて決定する形に変更した。`sendOnce()`内のタイムアウト
+参照もこのインスタンスプロパティ経由に統一。
+
+ヘルスチェックping機構は、新規アラームを追加せず既存の`yasumaro-offline-network-retry`アラーム
+（5分間隔）に`sqliteClient.isSqliteHealthy()`呼び出しを相乗りさせる形で実装した（完全なサスペンド
+防止ではなく頻度低減が目的、というPBIの受け入れ基準に合致）。
+
+この変更により`service-worker.test.ts`で`isSqliteHealthy()`失敗時に`sqliteAlert.ts`経由で
+`addLog`が呼ばれるパスが初めて実行されるようになり、既存の`logger.js`モックに`addLog`/`LogType`が
+不足していたことが顕在化したため追加した。
+
+`sqliteClient-queue.test.ts`の既存キューサイズテストと同じパターン（`resetPlatformOsCache()` +
+`navigator.userAgent`書き換え + `chrome.runtime.getPlatformInfo`モック）で、デスクトップ/モバイル
+それぞれのタイムアウト値を検証するテストを2件追加した。
+
+型チェック・全テストスイート（7373件）ともに回帰なし。
 
 ---
 

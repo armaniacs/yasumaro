@@ -84,3 +84,31 @@ Scenario: 既存の動作が回帰しない
 - 分割元PBI: `dev-docs/archived/pbi/2026-07-26-17-refactor-console-to-structured-logger.md`（dashboard側は対応済み）
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（SRE/Ops Specialist, Blue Team Leader, DX Advocate指摘）
 - 対象コード: `src/offscreen/offscreen.ts`, `src/offscreen/sqliteEngineContext.ts`, `src/offscreen/opfsWorker.ts`
+
+## 実装メモ（2026-07-26完了）
+
+3つのファイルは実行コンテキストが異なるため、それぞれ別の対応をした:
+
+- **`src/offscreen/offscreen.ts`（9件）**: Offscreen Documentのメインスレッドだが
+  `chrome.storage`は使えても`chrome.runtime.onMessage`受信専用（能動送信はしていなかった）。
+  新規`src/offscreen/offscreenLogger.ts`を作成し、`chrome.runtime.sendMessage({ type: 'LOG_FORWARD', ... })`
+  でService Workerへログを転送するヘルパー（`forwardWarn`/`forwardError`/`forwardInfo`）に置き換えた。
+  Service Worker側は`src/background/handlers/messageHandlers.ts`の`createLogForwardHandler()`が
+  受信し`logWarn`/`logError`/`logDebug`を呼ぶ（`src/background/messageTypes.ts`に`LogForwardMessage`型と
+  `LOG_FORWARD`を`VALID_MESSAGE_TYPES`へ追加、`service-worker.ts`に`registry.register('LOG_FORWARD', ...)`登録）
+- **`src/offscreen/sqliteEngineContext.ts`（6件）**: 調査の結果、既に`../utils/logger.js`から
+  `logError`/`logWarn`/`logInfo`をimportして使用済みだったことが判明（`logger/core.ts`の`flushLogs()`が
+  `chrome.storage`未対応環境ではconsoleにフォールバックする設計のため、Offscreenでも直接呼び出し可能）。
+  残っていた6件もそのまま`logWarn`/`logError`に置き換えるだけで済んだ（新規機構は不要）
+- **`src/offscreen/opfsWorker.ts`（6件、真のWeb Workerコンテキスト）**: `chrome.*`に一切アクセスできない
+  ため、既存の`RequestMessage`/`ResponseMessage`プロトコルとは別に`WorkerLogMessage`
+  （`{ __log: true, level, message, details }`）という専用フォーマットを`self.postMessage`で
+  `sqliteEngineContext.ts`に送信する`postWorkerLog()`ヘルパーを追加。受信側の`worker.onmessage`に
+  `isWorkerLogMessage()`型ガードで判別する分岐を追加し、`logWarn`/`logError`/`logInfo`を直接呼ぶ
+  （Service Worker中継は不要、offscreen document内で完結）
+- テスト環境（jsdom）では`self`が`Window`扱いになり`postMessage`が`targetOrigin`必須の2引数版になる
+  ため`postWorkerLog`内にtry-catchでconsoleフォールバックを追加。同様に`chrome.runtime.sendMessage`が
+  Promiseを返さないモック環境に対応するガードも`offscreenLogger.ts`に追加
+- 既存テスト2件（`offscreen.test.ts`の`console.error`引数期待値、`messaging/types.test.ts`の
+  `VALID_MESSAGE_TYPES`網羅テストに`LOG_FORWARD`ペイロード例を追加）を更新
+- `npm run type-check`・全7267テスト・`npm run build`とも成功

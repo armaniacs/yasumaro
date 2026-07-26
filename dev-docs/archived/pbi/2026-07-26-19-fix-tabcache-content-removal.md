@@ -1,9 +1,28 @@
 # PBI: TabCacheからcontentフィールドを削除しモバイルメモリ使用量を削減する
 
 **作成日**: 2026-07-26
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（TabCacheのcontent取得元をContent Script直接取得に変更するため、既存のcontentを前提とする呼び出し元の修正が必要）
+
+## 実装メモ（2026-07-26）
+
+フェーズ0確認で、`TabData.content`は`initialize()`/`add()`時に常に`null`で設定され、`update()`経由で
+非null値を設定している呼び出し元がプロジェクト全体を検索してもゼロであることを確認した。
+`messageHandlers.ts`等で見つかった`.content`参照は全て`message.payload.content`（メッセージの
+payload）であり、`TabData.content`とは無関係だった。
+
+つまりPBIが想定していた「Content Script経由での代替取得ロジックへの置き換え」は不要で、単純に
+`content`フィールドを型定義・初期化箇所（2箇所）から削除するだけで対応できた（当初想定より
+大幅に小さい変更で完了）。
+
+既存テスト（`tabCache.test.ts`）に`content`フィールドを直接検証する箇所が2件あり、
+`toEqual`完全一致検証と`update()`の汎用性テストとして`content`という名前を使っていた。
+前者はフィールドごと削除、後者は削除済みフィールド名を使い続けるのが紛らわしいため
+`isValidVisit`（既存フィールド）を使う形に修正した。
+
+型チェック・全テストスイート（7371件、tabCache.test.ts 23件含む）ともに回帰なし。
 
 ---
 

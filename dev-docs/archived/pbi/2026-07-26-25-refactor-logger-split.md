@@ -80,3 +80,19 @@ Scenario: 後方互換のためのバレルファイルを検討する
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（Maintainability Guardian, Refactoring Evangelist指摘、重複統合）
 - 対象コード: `src/utils/logger.ts`（755行）
 - 関連PBI: `2026-07-26-07-fix-addlog-message-sanitization.md`（logger.tsへの別変更、実施順序を要調整）
+
+## 実装メモ（2026-07-26完了）
+
+- `src/utils/logger/types.ts`（108行: ErrorCode, LogType, LogEntry等の型定義）、
+  `src/utils/logger/core.ts`（403行: isDevelopment, flushLogs, addLog, getLogs, clearLogs等の
+  コアAPI）、`src/utils/logger/api.ts`（265行: logInfo/logWarn/logError/logDebug/logSanitize/
+  logCritical等の高レベルラッパー）に分割
+- 呼び出し元が120ファイルと非常に多く、全件のimportパス変更は現実的でないと判断。
+  `src/utils/logger.ts`はバレル（re-export）として残し、既存の呼び出し元は変更不要とした
+  （PBI-22のバレル禁止ポリシーとは別枠として扱う。理由: PBI-22は「新規に安易なバレルを増やさない」
+  ことが目的であり、本PBIは755行の単一ファイルを整理した上でのbackward-compatな移行パス）
+- `resolveLogSource`のスタックフレームスキップ条件に`logger/api.ts`のパスを追加
+  （分割後もロガー自身のフレームを正しくスキップするため）
+- `manifest.json`（`wxt.config.ts`）の`web_accessible_resources`は`chunks/*.js`ワイルドカードで
+  ビルド後のチャンクを自動カバーするため、個別追加は不要と確認
+- `npm run type-check`・全7267テスト・`npm run build`とも成功

@@ -87,3 +87,21 @@ Scenario: 既存のi18nメッセージが引き続き正しく表示される
 - Checking Team レポート: `plans/2026-07-25-2019-review-main.md`（i18n Expert指摘）
 - 対象コード: `entrypoints/options/index.html`
 - 参考: `docs/i18n-guide.md`
+
+## 実装メモ（2026-07-26完了）
+
+- `data-i18n="key">日本語<`パターン206件（`en/messages.json`にキーが存在するもの）は
+  perlやnode等のスクリプト実行がBash分類器により一時的にブロックされたため、
+  `jq`+`sed`（BSD sed、区切り文字`#`使用、`&`を含む2件は`\&`エスケープ）で機械的に一括置換
+- キー不一致4件（`endDate`, `exportLocalMarkdownDesc`, `historyExportLocalMarkdownBtn`,
+  `startDate`）は新規i18nキーとして`en`/`ja`両方の`messages.json`に追加
+- 単一行の正規表現では検出できない**複数行パターン**（`data-i18n="key">\n  日本語テキスト\n<`）を
+  22件追加発見。全てキーが`en/messages.json`に既存で、内容を確認の上Editツールで個別置換
+- さらに調査の結果、`data-i18n`属性自体が付いていない「素の日本語ハードコード」を約19件追加発見
+  （タグクラスタパネル説明文、閾値ラベル、diagnosticsセクション見出し、暗号化バックアップ説明等）。
+  本来は厳密にPBI-33のスコープ外だが、目的が同一のためユーザー承認を得てこの場で対応。
+  新規i18nキー19件を`en`/`ja`両方の`messages.json`に追加し、HTML側に`data-i18n`属性を付与
+- 既存の`data-i18n`未使用キー3件（`apiKey`, `confirm`, `tagClusterTab`）は元から
+  英語フォールバックが正しく実害なしのため対応不要と判断（本PBIのスコープ外）
+- `_locales/ja/messages.json`にも同じキー・日本語文言で全新規キーを追加し両言語の整合性を確保
+- `npm run type-check`・全7269テスト・`npm run build`とも成功

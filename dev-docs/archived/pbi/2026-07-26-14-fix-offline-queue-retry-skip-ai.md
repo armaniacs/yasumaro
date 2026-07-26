@@ -95,3 +95,32 @@ Scenario: リトライ成功時はキューから正しく削除される
 ## 関連
 - Checking Team レポート: `plans/2026-07-23-1038-review-fix-0723.md`（FinOps Consultant, Tuning Expert指摘、High）
 - 対象コード: `src/background/service-worker.ts:436-459`
+
+## 実装メモ（2026-07-26完了、当初のスキップ判断を覆した経緯）
+
+前回セッションで「4ファイルにまたがる新規実装が必要」と判断しスキップしていたが、
+`RecordingPipeline.ts`の`enqueueOfflineJob()`（385行目）を再調査した結果、
+**当初懸念より大幅に小さい規模で実装可能**と判明した。
+
+決め手となった事実: `enqueueOfflineJob()`は失敗ステップ名に応じて
+`type: stepName === 'saveObsidian' ? 'obsidian_sync' : 'ai_summary'`という形で
+**既にジョブの種類を判別してキューに積んでいた**（`OfflineJob.type`は
+`'ai_summary' | 'obsidian_sync'`のリテラル型ユニオン、`offlineNetworkQueue.ts:12`）。
+つまり「AI要約が既に成功しObsidian書き込みだけが失敗した」ケースは
+`type === 'obsidian_sync'`かつ`payload.summary`ありのジョブとして既に区別可能で、
+新規のフラグや型追加は不要だった。
+
+実装内容:
+- `src/background/recordingLogic.ts`に`retryObsidianWriteOnly(job)`メソッドを追加。
+  最小限の`RecordingContext`（`data`, `settings`, `force`, `errors`, `privacyResult.summary/tags`）を
+  組み立て、既存の`formatMarkdownStep` → `saveToObsidianStep`の2関数のみを呼ぶ
+  （フルパイプラインの`RecordingPipeline.execute()`は呼ばない → AI要約ステップを経由しない）
+- `src/background/service-worker.ts`の`processOfflineNetworkQueue()`に、
+  `job.type === 'obsidian_sync' && payload.summary`の場合は`retryObsidianWriteOnly()`を、
+  それ以外（`ai_summary`型、または`summary`のない旧形式ジョブ）は従来通り
+  `recordingLogic.record()`のフルパイプラインを呼ぶ分岐を追加
+- `src/background/__tests__/recordingLogic.test.ts`に`retryObsidianWriteOnly`の単体テスト2件
+  （AI未呼び出しでのObsidian保存成功、Obsidian書き込み失敗時のエラー伝播）を追加
+- 変更ファイルは`recordingLogic.ts`と`service-worker.ts`の2ファイルのみ
+  （`processPrivacyPipelineStep.ts`への変更は不要だった）
+- `npm run type-check`・全7269テスト・`npm run build`とも成功

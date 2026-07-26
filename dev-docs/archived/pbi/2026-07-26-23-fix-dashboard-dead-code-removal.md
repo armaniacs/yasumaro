@@ -1,9 +1,37 @@
 # PBI: dashboard配下の旧パネル実装（デッドコード）を削除する
 
 **作成日**: 2026-07-26
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（削除前に本当に未使用か確認が必須。誤って現役コードを削除するリスクがある）
+
+## 実装メモ（2026-07-26）
+
+フェーズ0確認で、`tagClusterPanel.ts`/`domainSearchPanel.ts`/`diagnosticsPanel.ts`（いずれも
+`src/dashboard/`ルート直下、旧実装）は`main.ts`から一切参照されず、`panels/asyncData/`・
+`panels/diagnostic/`配下の同名または別実装ファイルに置き換わっていることを確認した。
+
+重要な訂正: PBIのシナリオ2は「`tagCooccurrence.ts`/`tagClusterLayout.ts`が現在のPanelベース実装
+から参照されている」としていたが、当初の`grep`調査で見落としがあった。実際には新実装
+（`panels/asyncData/tagClusterPanel.ts`）が`tagCooccurrence.js`/`tagClusterLayout.js`を
+直接importしており、**現役コードであることを確認**した。誤って削除しないよう慎重に検証した。
+
+アーカイブ済みPBI `2026-07-21-03-refactor-dedup-diagnostics-panel.md` は確認したが、今回の
+3ファイル削除とは重複しない別内容だった。
+
+削除したファイル: `tagClusterPanel.ts`, `domainSearchPanel.ts`, `diagnosticsPanel.ts`
+（いずれも旧実装）+ 対応テスト4件（`tagClusterPanel.test.ts`, `domainSearchPanel.test.ts`,
+`diagnosticsPanel.test.ts`, `diagnosticsPanel-r2.test.ts`）。
+
+`dashboard.test.ts`/`dashboard-handlers.test.ts`/`dashboard-obsidian-enabled.test.ts`に
+これら3ファイルへの死んだ`vi.mock`（実際にはテスト対象から一切参照されていないモック）が
+残っていたため、併せて削除した。
+
+作業中に`tagsPanel.ts`も同じパターンで未使用の可能性が高いことを発見したが、本PBIのスコープ外
+のため`2026-07-26-35-fix-dashboard-tagspanel-dead-code.md`として別PBIに起票した。
+
+型チェック・全テストスイート（7265件、削除4件分減）・ビルドともに成功。
 
 ---
 
