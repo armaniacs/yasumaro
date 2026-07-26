@@ -1,9 +1,21 @@
 # PBI: マイグレーション失敗時の無限リトライに上限を設ける
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（既存の「次回起動時に無条件で再試行」という仕様を変更するため、リトライ上限到達時の挙動を新たに定義する必要がある）
+
+## 実装メモ（2026-07-26）
+
+コア機能（リトライ上限、`failed_permanently` 状態、成功時のリセット）を実装・テスト済み。
+`src/background/migrationService.ts` に `MAX_MIGRATION_RETRY_COUNT = 5` を追加し、`recordFailureAndMaybeGiveUp()` で管理。
+`src/background/__tests__/migrationService-extra.test.ts` に4件のテストケースを追加（全58件パス）。
+
+**未実装（フォローアップとして別PBI化を推奨）**: 診断パネル（dashboard）への `failed_permanently` 状態の表示。
+現状はログ（`addLog(LogType.ERROR, 'Migration: retry limit reached, giving up', ...)`）にのみ記録される。
+表示するには `dashboardSqliteService.ts` の `getSqliteStatus()` 相当の仕組みで Service Worker 側のマイグレーション状態を
+dashboard に伝える経路が必要（現状はSQLite自体のステータスのみを扱っており、レガシーマイグレーション状態は含まれない）。
 
 ---
 

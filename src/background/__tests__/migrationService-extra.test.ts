@@ -92,7 +92,10 @@ describe('MigrationService', () => {
     const storageSet = vi.fn(async (items: Record<string, unknown>) => {
       Object.assign(mockStorage, items);
     });
-    const storageRemove = vi.fn(async (_keys: string | string[]) => Promise.resolve());
+    const storageRemove = vi.fn(async (keys: string | string[]) => {
+      const ks = Array.isArray(keys) ? keys : [keys];
+      for (const k of ks) delete mockStorage[k];
+    });
     (globalThis as any).chrome = {
       runtime: { sendMessage: vi.fn(), lastError: undefined },
       storage: { local: { get: storageGet, set: storageSet, remove: storageRemove } },
@@ -186,6 +189,56 @@ describe('MigrationService', () => {
       await service.run();
       // Should not throw, caught by top-level catch
       expect(true).toBe(true);
+    });
+
+    describe('retry limit', () => {
+      beforeEach(() => {
+        mockStorage['savedUrlsWithTimestamps'] = [
+          { url: 'https://a.com', timestamp: 1 },
+        ];
+        sqliteClient.insertBatch.mockRejectedValue(new Error('DB error'));
+      });
+
+      it('increments the retry count on each failure without reaching the limit', async () => {
+        await service.run();
+        expect(mockStorage['yasumaro_migration_retry_count']).toBe(1);
+        expect(mockStorage['yasumaro_migration_status']).not.toBe('failed_permanently');
+
+        await service.run();
+        expect(mockStorage['yasumaro_migration_retry_count']).toBe(2);
+        expect(mockStorage['yasumaro_migration_status']).not.toBe('failed_permanently');
+      });
+
+      it('sets status to failed_permanently once MAX_MIGRATION_RETRY_COUNT is reached', async () => {
+        // MAX_MIGRATION_RETRY_COUNT is 5 — run 5 times to reach the limit
+        for (let i = 0; i < 5; i++) {
+          await service.run();
+        }
+        expect(mockStorage['yasumaro_migration_retry_count']).toBe(5);
+        expect(mockStorage['yasumaro_migration_status']).toBe('failed_permanently');
+      });
+
+      it('skips migration entirely once status is failed_permanently', async () => {
+        mockStorage['yasumaro_migration_status'] = 'failed_permanently';
+        mockStorage['yasumaro_migration_retry_count'] = 5;
+
+        await service.run();
+
+        // insertBatch should not be called — run() should short-circuit
+        expect(sqliteClient.insertBatch).not.toHaveBeenCalled();
+      });
+
+      it('resets the retry count once migration succeeds', async () => {
+        await service.run(); // fails once, retryCount = 1
+        expect(mockStorage['yasumaro_migration_retry_count']).toBe(1);
+
+        // Now make the next attempt succeed
+        sqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+        await service.run();
+
+        expect(mockStorage['yasumaro_migration_status']).toBe('completed');
+        expect(mockStorage['yasumaro_migration_retry_count']).toBeUndefined();
+      });
     });
   });
 
