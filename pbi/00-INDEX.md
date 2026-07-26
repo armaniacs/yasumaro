@@ -26,7 +26,6 @@
 |-----|------|--------|--------|------|
 | [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中。2026-07-27再調査: コードレビュー上は妥当な設計と確認、見積もり据え置き） |
 | [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `lastCleansedReason`/`lastByteStats`がexport済みで4テストファイルが依存していることを新規確認） |
-| [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `savedUrlsWithTimestamps`依存箇所が約30ファイルと判明、既存`pendingSqliteQueue.ts`が流用可能） |
 | [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 既存`dailyPurgeHandler.ts`がクリーンアップ統合先として活用可能と判明） |
 | [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🔴高 | 🔴あり | ⬜（PBI-37完了済み。着手時にpopup/dashboardのDOM ID共有設計が判明し再見積もり、フェーズ3へ移動） |
 
@@ -45,6 +44,7 @@
 - 2026-07-26-29-refactor-service-worker-god-file-split.md (オフラインキュー処理抽出・未使用 `RecordingPipeline` import 削除、実ブラウザ動作確認済み)
 - 2026-07-26-24-refactor-utils-subdirectory-split.md (`crypto.ts`/`typesCrypto.ts` を `src/utils/crypto/` へ移行、Task 1完了としてアーカイブ)
 - 2026-07-26-26-refactor-ai-client-service-unification.md (`AIService` への統一方針を ADR に記録、`AIClient` に新規利用非推奨の JSDoc を追加)
+- 2026-07-26-13-fix-legacy-dual-write-default.md (`pendingChromeStorageQueue.ts` を新設し chrome.storage 書き込み失敗時のリカバリキューを実装。デフォルト変更は影響範囲が大きいため見送り、ADRに記録)
 
 ### 2026-07-26 セッションでアーカイブ済み
 
@@ -190,6 +190,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 9（✨機能追加 4 / 🔧非機能追加 5） |
+| ⬜ 未着手 | 8（✨機能追加 4 / 🔧非機能追加 4） |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 163 |
