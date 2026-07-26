@@ -5,7 +5,7 @@ import { RemoteAIService } from './ai/RemoteAIService.js';
 import { LocalAIService } from './ai/LocalAIService.js';
 import { LocalAIClient } from './localAiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
-import { TabCache } from './tabCache.js';
+import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -213,8 +213,8 @@ const processOfflineNetworkQueue = createOfflineQueueProcessor({
     recordingLogic,
 });
 
-// TabCache for storing tab data
-const tabCache = new TabCache(sessionStore);
+// TabCache for storing tab data (lazy-initialized singleton)
+const tabCache = getTabCacheInstance(sessionStore);
 
 // 自動保存成功バッジを表示中のタブIDセット
 const autoSavedBadgeTabs = new Set<number>();
