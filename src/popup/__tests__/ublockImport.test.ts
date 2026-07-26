@@ -2,7 +2,7 @@
 /**
  * ublockImport.test.js
  * uBlock import UI component tests
- * Test target: src/popup/ublockImport.js and related modules
+ * Test target: src/popup/ublockImport/index.js and related modules
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -58,7 +58,7 @@ vi.mock('../settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-describe('ublockImport.js - UI Component Tests', () => {
+describe('ublockImport/index.js - UI Component Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = '';
@@ -106,7 +106,7 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('Import test', () => {
     test('Verify module can be loaded', async () => {
-      const { init, saveUblockSettings } = await import('../ublockImport.js');
+      const { init, saveUblockSettings } = await import('../ublockImport/index.js');
       expect(init).toBeDefined();
       expect(saveUblockSettings).toBeDefined();
     });
@@ -117,22 +117,22 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('Functions not exported', () => {
     test('setupDragAndDrop is exported', async () => {
-      const { setupDragAndDrop } = await import('../ublockImport.js');
+      const { setupDragAndDrop } = await import('../ublockImport/index.js');
       expect(setupDragAndDrop).toBeDefined();
     });
 
     test('exportSimpleFormat function is not exported', async () => {
-      const module = await import('../ublockImport.js');
+      const module = await import('../ublockImport/index.js');
       expect(module.exportSimpleFormat).toBeUndefined();
     });
 
     test('copyToClipboard function is not exported', async () => {
-      const module = await import('../ublockImport.js');
+      const module = await import('../ublockImport/index.js');
       expect(module.copyToClipboard).toBeUndefined();
     });
 
     test('buildUblockFormat function is not exported', async () => {
-      const module = await import('../ublockImport.js');
+      const module = await import('../ublockImport/index.js');
       expect(module.buildUblockFormat).toBeUndefined();
     });
   });
@@ -151,14 +151,14 @@ describe('ublockImport.js - UI Component Tests', () => {
         contentType: 'text/plain'
       });
 
-      const { fetchFromUrl } = await import('../ublockImport.js');
+      const { fetchFromUrl } = await import('../ublockImport/index.js');
       const result = await fetchFromUrl('https://example.com/filters.txt');
 
       expect(result).toBe(mockText);
     });
 
     test('fetchFromUrl should throw error for invalid URL', async () => {
-      const { fetchFromUrl } = await import('../ublockImport.js');
+      const { fetchFromUrl } = await import('../ublockImport/index.js');
 
       await expect(fetchFromUrl('javascript:alert(1)')).rejects.toThrow();
       await expect(fetchFromUrl('data:text/html,hello')).rejects.toThrow();
@@ -172,7 +172,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         error: 'HTTP 404: Not Found'
       });
 
-      const { fetchFromUrl } = await import('../ublockImport.js');
+      const { fetchFromUrl } = await import('../ublockImport/index.js');
 
       await expect(fetchFromUrl('https://example.com/notfound.txt')).rejects.toThrow();
     });
@@ -207,7 +207,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('deleteSource should remove source by index', async () => {
-      const { deleteSource } = await import('../ublockImport.js');
+      const { deleteSource } = await import('../ublockImport/index.js');
       const renderCallback = vi.fn();
 
       await deleteSource(1, renderCallback);
@@ -218,7 +218,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('deleteSource should handle invalid index gracefully', async () => {
-      const { deleteSource } = await import('../ublockImport.js');
+      const { deleteSource } = await import('../ublockImport/index.js');
       const renderCallback = vi.fn();
 
       await deleteSource(999, renderCallback);
@@ -264,7 +264,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('reloadSource should fetch and update source', async () => {
-      const { reloadSource } = await import('../ublockImport.js');
+      const { reloadSource } = await import('../ublockImport/index.js');
     // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchCallback = vi.fn().mockResolvedValue('||example.com^\n||newsite.com^\n@@||trusted.com^');
@@ -285,14 +285,14 @@ describe('ublockImport.js - UI Component Tests', () => {
         ]
       }));
 
-      const { reloadSource } = await import('../ublockImport.js');
+      const { reloadSource } = await import('../ublockImport/index.js');
       const fetchCallback = vi.fn();
 
       await expect(reloadSource(0, fetchCallback)).rejects.toThrow();
     });
 
     test('reloadSource should throw error for invalid index', async () => {
-      const { reloadSource } = await import('../ublockImport.js');
+      const { reloadSource } = await import('../ublockImport/index.js');
       const fetchCallback = vi.fn();
 
       await expect(reloadSource(999, fetchCallback)).rejects.toThrow();
@@ -332,7 +332,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     test('saveUblockSettings should save valid filter text', async () => {
       const filterText = '||example.com^\n||ads.net^\n@@||trusted.com^';
 
-      const { saveUblockSettings } = await import('../ublockImport.js');
+      const { saveUblockSettings } = await import('../ublockImport/index.js');
       const result = await saveUblockSettings(filterText, 'https://example.com/filters.txt');
 
       expect(result).toBeDefined();
@@ -342,7 +342,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('saveUblockSettings should throw error for empty input', async () => {
-      const { saveUblockSettings } = await import('../ublockImport.js');
+      const { saveUblockSettings } = await import('../ublockImport/index.js');
 
       await expect(saveUblockSettings('', null)).rejects.toThrow();
       await expect(saveUblockSettings('   \n  ', null)).rejects.toThrow();
@@ -351,7 +351,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     test('saveUblockSettings should handle manual input (no URL)', async () => {
       const filterText = '||example.com^\n||ads.net^';
 
-      const { saveUblockSettings } = await import('../ublockImport.js');
+      const { saveUblockSettings } = await import('../ublockImport/index.js');
       const result = await saveUblockSettings(filterText, null);
 
       expect(result.sources).toBeDefined();
@@ -365,7 +365,7 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('UI-011: Preview uBlock filter', () => {
     test('previewUblockFilter should exist and be callable', async () => {
-      const { previewUblockFilter } = await import('../ublockImport.js');
+      const { previewUblockFilter } = await import('../ublockImport/index.js');
       expect(previewUblockFilter).toBeDefined();
       expect(typeof previewUblockFilter).toBe('function');
     });
@@ -373,7 +373,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     test('previewUblockFilter should handle basic filter text', async () => {
       const filterText = '||example.com^\n||ads.net^\n@@||trusted.com^';
 
-      const { previewUblockFilter } = await import('../ublockImport.js');
+      const { previewUblockFilter } = await import('../ublockImport/index.js');
       const result = await previewUblockFilter(filterText);
 
       expect(result).toBeDefined();
@@ -381,7 +381,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('previewUblockFilter should handle empty input', async () => {
-      const { previewUblockFilter } = await import('../ublockImport.js');
+      const { previewUblockFilter } = await import('../ublockImport/index.js');
       const result = await previewUblockFilter('');
 
       expect(result).toBeDefined();
@@ -394,7 +394,7 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('UI-012: Validate URL format', () => {
     test('isValidUrl should accept valid https URLs', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('https://example.com')).toBe(true);
       expect(isValidUrl('https://example.com/filters.txt')).toBe(true);
@@ -402,20 +402,20 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('isValidUrl should accept valid http URLs', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('http://example.com')).toBe(true);
       expect(isValidUrl('http://example.com/filters.txt')).toBe(true);
     });
 
     test('isValidUrl should accept valid ftp URLs', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('ftp://example.com/file.txt')).toBe(true);
     });
 
     test('isValidUrl should reject dangerous protocols', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('javascript:alert(1)')).toBe(false);
       expect(isValidUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
@@ -423,7 +423,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('isValidUrl should reject invalid URLs', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('')).toBe(false);
       expect(isValidUrl('not a url')).toBe(false);
@@ -434,7 +434,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003 / SECURITY-007: Extended dangerous protocols tests
     // =============================================================================
     test('PRIV-003/SECURITY-007: should reject additional dangerous protocols', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // Browser-specific protocols
       expect(isValidUrl('chrome://extensions')).toBe(false);
@@ -482,7 +482,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003: Malicious URL structure tests
     // =============================================================================
     test('PRIV-003: should reject malicious URL structures', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // Protocol-only URLs without domain
       expect(isValidUrl('https://')).toBe(false);
@@ -520,7 +520,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003: URL encoding attacks tests
     // =============================================================================
     test('PRIV-003: should handle URL encoding attacks', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // URL-encoded dangerous protocols
       expect(isValidUrl('javascript%3Aalert(1)')).toBe(false);
@@ -543,7 +543,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003: Internationalized Domain Name (IDN) tests
     // =============================================================================
     test('PRIV-003: should handle internationalized domains', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // Non-ASCII domain names (valid but may be homograph attack vectors)
       expect(isValidUrl('https://xn--e1afmkfd.xn--p1ai')).toBe(true); // Russian cyrillic domains
@@ -567,7 +567,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003: Edge cases and boundary tests
     // =============================================================================
     test('PRIV-003: should handle edge cases', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // Case sensitivity (allowed)
       expect(isValidUrl('HTTPS://example.com')).toBe(true);
@@ -598,7 +598,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // PRIV-003: Data URL variants
     // =============================================================================
     test('PRIV-003: should reject all data URL variants', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       expect(isValidUrl('data::text/plain,hello')).toBe(false);
       expect(isValidUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
@@ -612,7 +612,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     // Integer overflow and special values
     // =============================================================================
     test('PRIV-003: should handle port and IPv6 special values', async () => {
-      const { isValidUrl } = await import('../ublockImport.js');
+      const { isValidUrl } = await import('../ublockImport/index.js');
 
       // Edge case ports
       expect(isValidUrl('https://example.com:0')).toBe(true);
@@ -637,7 +637,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         { blockDomains: ['example.com'], exceptionDomains: [] }, // duplicate
       ];
 
-      const { rebuildRulesFromSources } = await import('../ublockImport.js');
+      const { rebuildRulesFromSources } = await import('../ublockImport/index.js');
       const result = rebuildRulesFromSources(sources);
 
       expect(result.blockDomains).toContain('example.com');
@@ -653,7 +653,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         { blockDomains: [], exceptionDomains: ['whitelisted.net'] },
       ];
 
-      const { rebuildRulesFromSources } = await import('../ublockImport.js');
+      const { rebuildRulesFromSources } = await import('../ublockImport/index.js');
       const result = rebuildRulesFromSources(sources);
 
       expect(result.exceptionDomains).toContain('trusted.com');
@@ -663,7 +663,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('rebuildRulesFromSources should handle empty sources', async () => {
-      const { rebuildRulesFromSources } = await import('../ublockImport.js');
+      const { rebuildRulesFromSources } = await import('../ublockImport/index.js');
       const result = rebuildRulesFromSources([]);
 
       expect(result.blockDomains).toEqual([]);
@@ -672,7 +672,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     });
 
     test('rebuildRulesFromSources should handle null/undefined', async () => {
-      const { rebuildRulesFromSources } = await import('../ublockImport.js');
+      const { rebuildRulesFromSources } = await import('../ublockImport/index.js');
       const result = rebuildRulesFromSources(null);
 
       expect(result.blockDomains).toEqual([]);
@@ -701,7 +701,7 @@ describe('ublockImport.js - UI Component Tests', () => {
       const deleteCallback = vi.fn();
       const reloadCallback = vi.fn();
 
-      const { renderSourceList } = await import('../ublockImport.js');
+      const { renderSourceList } = await import('../ublockImport/index.js');
       expect(() => renderSourceList(sources, deleteCallback, reloadCallback)).not.toThrow();
     });
 
@@ -718,7 +718,7 @@ describe('ublockImport.js - UI Component Tests', () => {
       const deleteCallback = vi.fn();
       const reloadCallback = vi.fn();
 
-      const { renderSourceList } = await import('../ublockImport.js');
+      const { renderSourceList } = await import('../ublockImport/index.js');
       expect(() => renderSourceList(sources, deleteCallback, reloadCallback)).not.toThrow();
     });
   });
@@ -740,7 +740,7 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('UI-015: Update preview UI - NOT FULLY TESTABLE', () => {
     test('should verify updatePreviewUI function exists', async () => {
-      const { updatePreviewUI } = await import('../ublockImport.js');
+      const { updatePreviewUI } = await import('../ublockImport/index.js');
       expect(updatePreviewUI).toBeDefined();
       expect(typeof updatePreviewUI).toBe('function');
     });
@@ -751,13 +751,13 @@ describe('ublockImport.js - UI Component Tests', () => {
   // =============================================================================
   describe('UI-016: Hide preview', () => {
     test('hidePreview should exist and be callable', async () => {
-      const { hidePreview } = await import('../ublockImport.js');
+      const { hidePreview } = await import('../ublockImport/index.js');
       expect(hidePreview).toBeDefined();
       expect(typeof hidePreview).toBe('function');
     });
 
     test('hidePreview should handle missing element gracefully', async () => {
-      const { hidePreview } = await import('../ublockImport.js');
+      const { hidePreview } = await import('../ublockImport/index.js');
       expect(() => hidePreview()).not.toThrow();
     });
   });
@@ -785,7 +785,7 @@ describe('ublockImport.js - UI Component Tests', () => {
       const mockTextarea = document.getElementById('uBlockFilterInput');
       mockTextarea.value = 'some text content';
 
-      const { clearInput } = await import('../ublockImport.js');
+      const { clearInput } = await import('../ublockImport/index.js');
       clearInput();
 
       expect(mockTextarea.value).toBe('');
@@ -794,7 +794,7 @@ describe('ublockImport.js - UI Component Tests', () => {
     test('clearInput should handle missing element gracefully', async () => {
       document.getElementById = vi.fn(() => null);
 
-      const { clearInput } = await import('../ublockImport.js');
+      const { clearInput } = await import('../ublockImport/index.js');
 
       expect(() => clearInput()).not.toThrow();
     });
@@ -829,7 +829,7 @@ describe('ublockImport.js - UI Component Tests', () => {
         return mockReader;
       });
 
-      const { readFile } = await import('../ublockImport.js');
+      const { readFile } = await import('../ublockImport/index.js');
       const result = await readFile(mockFile);
 
       expect(result).toBe('test content');
@@ -839,7 +839,7 @@ describe('ublockImport.js - UI Component Tests', () => {
       const originalFileReader = global.FileReader;
       delete global.FileReader;
 
-      const { readFile } = await import('../ublockImport.js');
+      const { readFile } = await import('../ublockImport/index.js');
 
       // Should not throw when FileReader is not available
       expect(readFile).toBeDefined();

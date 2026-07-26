@@ -11,7 +11,7 @@
 import { createSender } from '../utils/retryHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
-import { extractMainContent } from '../utils/contentExtractor.js';
+import { extractMainContent } from '../utils/contentExtractor/index.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 
 // Type-only import to establish graphify edge between content script and

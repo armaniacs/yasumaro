@@ -43,7 +43,7 @@ vi.mock('../../utils/domainUtils.js', () => ({
 const mockInitUblock = vi.fn();
 const mockHandleSaveUblockSettings = vi.fn(() => Promise.resolve());
 
-vi.mock('../ublockImport.js', () => ({
+vi.mock('../ublockImport/index.js', () => ({
   init: mockInitUblock,
   handleSaveUblockSettings: mockHandleSaveUblockSettings,
 }));
