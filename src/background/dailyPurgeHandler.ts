@@ -1,4 +1,5 @@
 import { getSettings, StorageKeys } from '../utils/storage.js';
+import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsStore.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
@@ -49,6 +50,9 @@ export async function handleDailyPurgeAlarm(
                 }, 'dailyPurgeHandler');
             }
         }
+
+        // PBI-15: clean up expired settings migration backups
+        await cleanupExpiredSettingsBackups();
     } catch (error) {
         logError('daily-purge failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'dailyPurgeHandler');
     }
