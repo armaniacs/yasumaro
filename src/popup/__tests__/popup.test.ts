@@ -291,10 +291,13 @@ describe('initTabNavigation', () => {
         const input = document.createElement('input');
         input.id = 'panel2-input';
         panel2?.appendChild(input);
+        // jsdom always reports offsetParent as null (no real layout engine); the
+        // implementation intentionally checks it to avoid focusing hidden elements,
+        // so simulate "visible" for this element to exercise the real behavior.
+        Object.defineProperty(input, 'offsetParent', { value: document.body, configurable: true });
 
         tabBtns[1].click();
 
-        // RED: current code does not move focus
         expect(document.activeElement).toBe(input);
     });
 

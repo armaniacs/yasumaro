@@ -1,9 +1,28 @@
 # PBI: フォーカストラップとキーボードナビゲーションをpopup/dashboardで統一する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Medium
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（既存のフォーカス制御の挙動が変わる可能性があり、アクセシビリティ回帰テストが必要）
+
+## 実装メモ（2026-07-26）
+
+調査の結果、レビュー指摘とは異なり `popup/main.ts`, `popup/navigation.ts` に focus 関連コードはなく、
+実際の該当箇所は `popup/popup.ts:59-62`（タブ切り替え時の独自 `panel.querySelector(...).focus()`）だった。
+
+`src/popup/utils/focusTrap.ts` に `getFocusableElements()` / `getFirstFocusableElement()` /
+`focusFirstFocusableElement()` を追加し、`trap()` 内部の重複ロジックもこれらの共通関数に統合。
+`popup.ts` のタブ切り替えを `focusFirstFocusableElement(panel)` に置き換え、非表示要素除外の判定基準を統一。
+
+dashboard側は `masterPassword.ts` / `tagsPanel.ts` の直接 `.focus()` は意図的なUX（特定入力欄への
+フォーカスや入力後の利便性）と判断し変更を見送った。唯一 `models-dev-dialog.ts`（`role="dialog"
+aria-modal="true"` の真のモーダルだがフォーカストラップ未使用）に `focusTrapManager.trap()`/`release()`
+を導入し、Tab循環・Escキー対応を統一した。
+
+テストでjsdom環境の `offsetParent` 常時null制約に当たったため、`popup.test.ts` のテストで
+`Object.defineProperty(input, 'offsetParent', ...)` により「表示状態」を模擬する対応を追加。
+popup全1473件・dashboard全1005件が回帰なくパス。
 
 ---
 

@@ -29,6 +29,7 @@ import { getPendingPages } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog } from './privatePageDialog.js';
 import { getPrivacyConsent } from './privacyConsent.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
+import { focusFirstFocusableElement } from './utils/focusTrap.js';
 
 // ============================================================================
 // Tab Navigation
@@ -56,10 +57,9 @@ export function initTabNavigation(): void {
                     panel.removeAttribute('style');
                     panel.setAttribute('aria-hidden', 'false');
                     panel.removeAttribute('inert');
-                    const focusTarget = panel.querySelector<HTMLElement>(
-                        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-                    );
-                    focusTarget?.focus();
+                    // focusTrap.ts の共通ロジック（非表示要素を除外したフォーカス可能要素検出）を利用し、
+                    // popup/dashboard間で判定基準を統一する
+                    focusFirstFocusableElement(panel);
                 } else {
                     panel.classList.remove('active');
                     panel.removeAttribute('style');

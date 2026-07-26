@@ -8,6 +8,40 @@ interface TrapInfo {
   handler: (e: KeyboardEvent) => void;
 }
 
+/** フォーカス可能要素のセレクタ（trap()と共有） */
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/**
+ * コンテナ内のフォーカス可能要素を全て返す（非表示要素は除外）。
+ * trap() と popup/dashboard 側のタブ・パネル切り替えロジックで共有する
+ * 単一の非表示判定基準。
+ */
+export function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
+    return !el.closest('.hidden, [hidden]');
+  });
+}
+
+/**
+ * コンテナ内の最初のフォーカス可能要素を返す（非表示要素は除外）。
+ * タブパネル切り替え時など、フォーカストラップ（Tab循環・Escキー処理）までは
+ * 不要だが「最初の要素にフォーカスを移す」処理だけが必要な場面で使う。
+ */
+export function getFirstFocusableElement(container: HTMLElement): HTMLElement | null {
+  return getFocusableElements(container)[0] ?? null;
+}
+
+/**
+ * コンテナ内の最初のフォーカス可能要素にフォーカスを移す。
+ * 要素が見つからない、またはDOMにアタッチされていない/非表示の場合は何もしない。
+ */
+export function focusFirstFocusableElement(container: HTMLElement): void {
+  const target = getFirstFocusableElement(container);
+  if (target && document.body.contains(target) && target.offsetParent !== null) {
+    target.focus();
+  }
+}
+
 /**
  * フォーカストラップの状態管理
  */
@@ -40,12 +74,7 @@ class FocusTrapManager {
     this.previousFocus.set(trapId, document.activeElement);
 
     // フォーカス可能な要素を取得（非表示要素は除外）
-    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const focusableElements = Array.from(modalElement.querySelectorAll(focusableSelector)).filter((el) => {
-      const element = el as HTMLElement;
-      // display:none / hidden 属性 / 非表示祖先を持つ要素はフォーカストラップ対象外
-      return !element.closest('.hidden, [hidden]');
-    }) as HTMLElement[];
+    const focusableElements = getFocusableElements(modalElement);
     const firstFocusable = focusableElements[0];
     const lastFocusable = focusableElements[focusableElements.length - 1];
 
