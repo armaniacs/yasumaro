@@ -1,9 +1,25 @@
 # PBI: Obsidian Local REST APIのエンドポイントをクライアント内で抽象化する
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（内部実装のリファクタリングだが、既存の全Obsidian連携機能に影響する範囲のため回帰テストを丁寧に行う必要がある）
+
+## 実装メモ（2026-07-26）
+
+`obsidianClient.ts` に `ENDPOINTS` オブジェクト（`root()`, `dailyNote()`）を新設し、`appendToDailyNote()` と
+`testConnection()` 内のパス組み立てをこの2関数経由に統一した。`127.0.0.1` のハードコード（4箇所）も
+`DEFAULT_HOST` 定数に集約。
+
+回帰確認の過程で、`obsidianClient.test.ts` のモック規約（`storage.StorageKeys` を大文字キー名の文字列に
+オーバーライドする、`obsidianClient-mutex.test.ts` と同じパターン）を誤解し、一度小文字スネークケースの
+キー名でテストを書いてしまった。実際に生成されるURLで検証し直し、正しいモック規約に沿って修正した
+（`buildDailyNotePath` もこのテストファイルでは固定文字列 `'2026-02-07'` を返すモックになっている点も
+考慮）。
+
+新規に2件のURL検証テスト（`ENDPOINTS.dailyNote()`のvaultパス生成、`ENDPOINTS.root()`のルートURL）を追加。
+obsidianClient全70件パス。
 
 ---
 
