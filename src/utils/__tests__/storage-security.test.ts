@@ -100,7 +100,7 @@ import {
     clearEncryptionKeyCache,
     getOrCreateEncryptionKey
 } from '../storage.js';
-import { encryptApiKey, decryptApiKey, isEncrypted } from '../crypto.js';
+import { encryptApiKey, decryptApiKey, isEncrypted } from '../crypto/index.js';
 
 // Web Crypto APIのモック設定
 const webcrypto = new Crypto();

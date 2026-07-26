@@ -6,8 +6,8 @@
  * 【セキュリティ】: 導出キーはメモリにのみ保存、ソルトとハッシュのみを永続化
  */
 
-import type { EncryptedData } from './typesCrypto.js';
-import { errorMessage } from './errorUtils.js';
+import type { EncryptedData } from './types.js';
+import { errorMessage } from '../errorUtils.js';
 
 // 定数設定
 const PBKDF2_ITERATIONS = 100000;

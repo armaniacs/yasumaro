@@ -6,7 +6,7 @@ global.atob = (b64: string) => Buffer.from(b64, 'base64').toString('binary');
 console.log('Polyfill applied: btoa =', typeof global.btoa, 'atob =', typeof global.atob);
 
 // Mock dependencies before importing modules under test
-vi.mock('../../../utils/crypto.js', () => ({
+vi.mock('../../../utils/crypto/index.js', () => ({
   getNotificationHmacKey: vi.fn().mockImplementation(async () => { console.log('>> getNotificationHmacKey called'); return 'test-key'; }),
   generateHmacSignature: vi.fn().mockImplementation(async (data: string, key: any) => { console.log('>> generateHmacSignature called with', data); return 'signature123'; }),
   verifyHmacSignature: vi.fn().mockResolvedValue(true),
@@ -49,7 +49,7 @@ describe('encodeUrlSafeBase64', () => {
    });
 
     it('throws when encoding fails due to crypto error', async () => {
-      const crypto = await import('../../../utils/crypto.js');
+      const crypto = await import('../../../utils/crypto/index.js');
       vi.mocked(crypto.getNotificationHmacKey).mockRejectedValueOnce(new Error('Crypto unavailable'));
       await expect(encodeUrlSafeBase64('https://example.com')).rejects.toThrow('encodeUrlSafeBase64: Failed to encode URL');
     });
@@ -85,7 +85,7 @@ describe('decodeUrlFromNotificationId', () => {
    });
 
     it('throws Invalid signature when verification fails', async () => {
-      const crypto = await import('../../../utils/crypto.js');
+      const crypto = await import('../../../utils/crypto/index.js');
       vi.mocked(crypto.verifyHmacSignature).mockResolvedValueOnce(false);
       const url = 'https://example.com/test';
       const encoded = await encodeUrlSafeBase64(url);

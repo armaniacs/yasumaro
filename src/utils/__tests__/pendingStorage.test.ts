@@ -16,7 +16,7 @@ vi.mock('../logger.js', () => ({
     },
 }));
 
-vi.mock('../crypto.js', () => ({
+vi.mock('../crypto/index.js', () => ({
     hashUrl: vi.fn().mockResolvedValue('mocked-hash'),
 }));
 

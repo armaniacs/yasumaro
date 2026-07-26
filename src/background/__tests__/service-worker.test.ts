@@ -207,7 +207,7 @@ vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../utils/crypto.js', () => ({
+vi.mock('../../utils/crypto/index.js', () => ({
     getNotificationHmacKey: vi.fn().mockResolvedValue({
         type: 'hmac',
         extractable: false,
@@ -969,7 +969,7 @@ describe('service-worker handlers', () => {
             ]);
 
             // Import crypto to mock signature verification failure
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(false);
 
@@ -984,7 +984,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1003,7 +1003,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification that returns a valid URL
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1021,7 +1021,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockRejectedValue(new Error('Remove failed'));
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1044,7 +1044,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1082,7 +1082,7 @@ describe('service-worker handlers', () => {
             mockClear.mockRejectedValueOnce(new Error('Notification API error'));
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1111,7 +1111,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1131,7 +1131,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1159,7 +1159,7 @@ describe('service-worker handlers', () => {
 
         it('should handle error in notification button click gracefully', async () => {
             // Import crypto module to set up error mock
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.getNotificationHmacKey.mockRejectedValue(new Error('Crypto error'));
 
@@ -1180,7 +1180,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Ensure crypto verification succeeds
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             crypto.getNotificationHmacKey.mockResolvedValueOnce({
                 type: 'hmac',
                 extractable: false,

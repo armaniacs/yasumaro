@@ -28,7 +28,6 @@
 | [2026-07-25-34-refactor-extractor-global-state-encapsulation.md](2026-07-25-34-refactor-extractor-global-state-encapsulation.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `lastCleansedReason`/`lastByteStats`がexport済みで4テストファイルが依存していることを新規確認） |
 | [2026-07-26-13-fix-legacy-dual-write-default.md](2026-07-26-13-fix-legacy-dual-write-default.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: `savedUrlsWithTimestamps`依存箇所が約30ファイルと判明、既存`pendingSqliteQueue.ts`が流用可能） |
 | [2026-07-26-15-fix-settings-migration-non-destructive.md](2026-07-26-15-fix-settings-migration-non-destructive.md) | fix | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 既存`dailyPurgeHandler.ts`がクリーンアップ統合先として活用可能と判明） |
-| [2026-07-26-24-refactor-utils-subdirectory-split.md](2026-07-26-24-refactor-utils-subdirectory-split.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: 対象ファイル数が103→62に4割減少済み、見積もりやや過大の可能性） |
 | [2026-07-26-26-refactor-ai-client-service-unification.md](2026-07-26-26-refactor-ai-client-service-unification.md) | refactor | 🔴高 | 🔴あり | ⬜（2026-07-27再調査: AIServiceは既にAIClientをラップするアダプター構造と判明、統一方針を決めやすい） |
 | [2026-07-26-27-fix-popup-dashboard-settings-duplication.md](2026-07-26-27-fix-popup-dashboard-settings-duplication.md) | fix | 🔴高 | 🔴あり | ⬜（PBI-37完了済み。着手時にpopup/dashboardのDOM ID共有設計が判明し再見積もり、フェーズ3へ移動） |
 
@@ -45,6 +44,7 @@
 - 2026-07-25-35-fix-service-worker-state-persistence.md (`isCacheInitialized`/`autoSavedBadgeTabs` を `chrome.storage.session` へ永続化、実ブラウザ動作確認済み)
 - 2026-07-25-36-refactor-service-worker-singleton-di.md (`TabCache` の遅延初期化パターン試験導入、実ブラウザ動作確認済み)
 - 2026-07-26-29-refactor-service-worker-god-file-split.md (オフラインキュー処理抽出・未使用 `RecordingPipeline` import 削除、実ブラウザ動作確認済み)
+- 2026-07-26-24-refactor-utils-subdirectory-split.md (`crypto.ts`/`typesCrypto.ts` を `src/utils/crypto/` へ移行、Task 1完了としてアーカイブ)
 
 ### 2026-07-26 セッションでアーカイブ済み
 
@@ -190,6 +190,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 11（✨機能追加 4 / 🔧非機能追加 7） |
+| ⬜ 未着手 | 10（✨機能追加 4 / 🔧非機能追加 6） |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 163 |

@@ -1,12 +1,12 @@
 /**
  * crypto.test.ts
  * crypto.tsのテスト
- * 【テスト対象】: src/utils/crypto.ts
+ * 【テスト対象】: src/utils/crypto/index.ts
  */
 
 import { vi } from 'vitest';;
 import { Crypto } from '@peculiar/webcrypto';
-import type { EncryptedData } from '../typesCrypto.js';
+import type { EncryptedData } from '../types.js';
 import {
     generateSalt,
     generateIV,
@@ -30,8 +30,8 @@ import {
     migrateLegacyCiphertext,
     isEncryptionEnvelope,
     CURRENT_ENVELOPE_VERSION,
-} from '../crypto.js';
-import type { EncryptionEnvelope } from '../crypto.js';
+} from '../index.js';
+import type { EncryptionEnvelope } from '../index.js';
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {
@@ -687,7 +687,7 @@ describe('verifyHmacSignature edge cases', () => {
 
 describe('deriveKey', () => {
     test('secretとsaltから暗号化キーを導出できる', async () => {
-        const { deriveKey } = await import('../crypto.js');
+        const { deriveKey } = await import('../index.js');
         const salt = generateSalt();
         const key = await deriveKey('secret', salt);
         expect(key).toBeInstanceOf(CryptoKey);
@@ -695,7 +695,7 @@ describe('deriveKey', () => {
     });
 
     test('異なるsaltで異なるキーを導出する', async () => {
-        const { deriveKey } = await import('../crypto.js');
+        const { deriveKey } = await import('../index.js');
         const salt1 = generateSalt();
         const salt2 = generateSalt();
         const key1 = await deriveKey('secret', salt1);

@@ -4,7 +4,7 @@
  * storage.tsから型・定数を分離したモジュール
  */
 
-import type { EncryptedData } from '../typesCrypto.js';
+import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 

@@ -6,7 +6,7 @@
 import { StorageKeys } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
-import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto.js';
+import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';
 
 /** プライバシーポリシーバージョン定数 */
 export const PRIVACY_POLICY_VERSION = '2026-06-20';

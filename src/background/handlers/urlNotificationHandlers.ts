@@ -4,7 +4,7 @@
  * Extracted from service-worker.ts for better modularity
  */
 
-import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../../utils/crypto.js';
+import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../../utils/crypto/index.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 

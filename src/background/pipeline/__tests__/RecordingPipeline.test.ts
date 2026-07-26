@@ -56,7 +56,7 @@ vi.mock('../../../utils/errorUtils.js', () => ({
 vi.mock('../../../utils/pendingStorage.js', () => ({
   addPendingPage: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../../utils/crypto.js', () => ({
+vi.mock('../../../utils/crypto/index.js', () => ({
   hashUrl: vi.fn().mockResolvedValue('mocked-hash'),
 }));
 vi.mock('../../../utils/storageUrls.js');

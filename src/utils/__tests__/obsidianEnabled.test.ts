@@ -10,7 +10,7 @@ vi.mock('../logger.js', () => ({
   ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
 }));
 
-vi.mock('../crypto.js', () => ({
+vi.mock('../crypto/index.js', () => ({
   encryptApiKey: vi.fn(async (v: string) => ({ ciphertext: 'enc_' + v, iv: 'iv' })),
   decryptApiKey: vi.fn(async (data: unknown) => {
     if (data && typeof data === 'object' && 'ciphertext' in data) {

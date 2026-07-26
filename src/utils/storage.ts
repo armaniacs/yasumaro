@@ -15,7 +15,7 @@
  */
 
 /** @deprecated Use direct module imports instead (see file header). */
-export type { EncryptionEnvelope } from './crypto.js';
+export type { EncryptionEnvelope } from './crypto/index.js';
 
 /** @deprecated Use direct module imports instead (see file header). */
 export { StorageKeys } from './storage/types.js';

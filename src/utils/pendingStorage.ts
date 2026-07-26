@@ -1,6 +1,6 @@
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
-import { hashUrl } from './crypto.js';
+import { hashUrl } from './crypto/index.js';
 
 export interface PendingPage {
   url: string;
