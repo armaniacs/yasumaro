@@ -35,6 +35,32 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.7.1] - 2026-07-26
+
+このリリースは前日リリースに対するレビュー指摘の即時反映です。Checking Team レビューから起票した非機能改善 PBI 群のフォローアップを実施しました。
+
+### Added / 追加
+
+- **オフラインキューのリトライ時、AI要約の不要な再実行をスキップ** — Obsidian書き込みのみ失敗したジョブは、保存済みの要約結果を使って書き込みのみ再試行するようにし、無駄なAI APIコストを削減
+- **ダッシュボードのGeneralパネルに記録条件設定を追加** — popup側にのみ存在していた Min Visit Duration / Min Scroll Depth / Max Tokens Per Prompt の3設定項目をダッシュボードにも追加
+
+### Fixed / 修正
+
+- **`options.html` の未翻訳フォールバック文字列を英語プレースホルダーに統一**（約247箇所）
+- **モバイル環境での SQLite メッセージタイムアウトを短縮** — Offscreen Document がサスペンドされやすいモバイル Chrome で、タイムアウトを10秒→5秒に短縮し失敗を早期に検出できるようにした
+
+### Refactor / リファクタ
+
+- **`logger.ts`（755行）を型定義・コアAPI・高レベルラッパーの3ファイルに分割**（`logger/types.ts`, `logger/core.ts`, `logger/api.ts`）。呼び出し元120件が多いため `logger.ts` 自体はバレルとして維持
+- **Offscreen Document/Worker の `console.*` 出力を構造化ロガー経由に統一** — Service Workerへのメッセージ中継機構（`LOG_FORWARD`）を新設し、直接ログできないコンテキストからも構造化ログを利用できるようにした
+- **未参照のダッシュボード旧パネル実装3ファイルを削除**（新Panelベース実装への移行完了に伴う）
+- **バレル再エクスポート4ファイルを削除し直接importに統一** — `aiSummaryCleaner.ts`, `contentExtractor.ts`, `ublockParser.ts`, `ublockImport.ts`
+- **`TabData` の未使用 `content` フィールドを削除**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.0` → `6.7.1`
+
 ## [6.7.0] - 2026-07-26
 
 ### Added / 追加
