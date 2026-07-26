@@ -73,7 +73,7 @@ export const StorageKeys = {
     ALLOWED_URLS_HASH: 'allowed_urls_hash', // URLリストのハッシュ（変更検出用）
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
-    ENCRYPTION_SECRET: 'encryption_secret', // 自動生成されたランダムシークレット（Base64）[廃止予定]
+    ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット（Base64）。現役で読み書きされる — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
     HMAC_SECRET: 'hmac_secret',             // 設定エクスポート用HMACシークレット（Base64）
     // 【セキュリティ修正】マスターパスワード関連
     MASTER_PASSWORD_ENABLED: 'master_password_enabled', // マスターパスワード設定済みフラグ
@@ -213,8 +213,9 @@ export const StorageKeys = {
     RECORDING_TRIGGERS: 'recording_triggers', // 記録トリガー設定（JSON）
     SNAPSHOT_INTERVAL_MINUTES: 'snapshot_interval_minutes', // 定期スナップショット間隔（分）
     // SQLite migration tracking
-    YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | null
+    YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | 'failed_permanently' | null
     YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress', // 移行済み件数（再開用）
+    YASUMARO_MIGRATION_RETRY_COUNT: 'yasumaro_migration_retry_count', // 連続失敗リトライ回数（上限到達でfailed_permanently）
     MIGRATION_JP_LAYOUT_DEFAULT_DONE: 'migration_jp_layout_default_done', // Category A jpLayout デフォルト移行完了フラグ
     MIGRATION_CATEGORY_B_DEFAULT_DONE: 'migration_category_b_default_done', // Category B デフォルト移行完了フラグ
     // OPFS fallback mode tracking
@@ -411,8 +412,9 @@ export interface StorageKeyValues {
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: boolean;
     [StorageKeys.RECORDING_TRIGGERS]: string;
     [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: number;
-    [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | null;
+    [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | 'failed_permanently' | null;
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
+    [StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT]: number;
     [StorageKeys.MIGRATION_JP_LAYOUT_DEFAULT_DONE]: boolean;
     [StorageKeys.MIGRATION_CATEGORY_B_DEFAULT_DONE]: boolean;
     [StorageKeys.OPFS_FALLBACK_MODE]: boolean;
