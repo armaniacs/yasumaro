@@ -688,5 +688,25 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
       expect(calledUrl).toBe('http://127.0.0.1:27123/');
     });
+
+    it('appendToDailyNote propagates traceId to helper methods', async () => {
+      storage.getSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'http',
+        OBSIDIAN_PORT: '27123',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const fetchSpy = vi.spyOn(obsidianClient, '_fetchExistingContent').mockResolvedValue('');
+      const writeSpy = vi.spyOn(obsidianClient, '_writeContent').mockResolvedValue();
+
+      await obsidianClient.appendToDailyNote('content', 'trace-obsidian-123');
+
+      expect(fetchSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 'trace-obsidian-123');
+      expect(writeSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Object), expect.any(String), 'trace-obsidian-123');
+
+      fetchSpy.mockRestore();
+      writeSpy.mockRestore();
+    });
   });
 });

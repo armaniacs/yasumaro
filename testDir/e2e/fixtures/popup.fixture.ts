@@ -69,17 +69,10 @@ const testExt = base.extend<PopupFixtures>({
       // Prevent popup from closing
       window.close = () => {};
 
-      // Intercept chrome.tabs.create to show settings screen instead of opening new tab
-      const originalCreate = chrome.tabs.create;
-      chrome.tabs.create = (createProperties: any, callback?: (tab: chrome.tabs.Tab) => void) => {
-        // Show settings screen in popup instead of opening new tab
-        const mainScreen = document.getElementById('mainScreen');
-        const settingsScreen = document.getElementById('settingsScreen');
-        const menuBtn = document.getElementById('menuBtn');
-        if (mainScreen) mainScreen.style.display = 'none';
-        if (settingsScreen) settingsScreen.style.display = 'block';
-        if (menuBtn) menuBtn.setAttribute('aria-expanded', 'true');
-
+      // Intercept chrome.tabs.create to prevent actually opening a new tab in tests.
+      // The popup now opens the dashboard (options.html) instead of showing an inline
+      // settings screen, so we just return a resolved promise/callback.
+      chrome.tabs.create = (_createProperties: any, callback?: (tab: chrome.tabs.Tab) => void) => {
         if (callback) {
           callback({ id: 999, index: 0, highlighted: false, active: false, pinned: false, incognito: false } as chrome.tabs.Tab);
         }

@@ -48,69 +48,6 @@ test.describe('Popup - Main Screen @ui', () => {
   });
 });
 
-test.describe('Popup - Settings Screen @ui', () => {
-  test('has settings screen in DOM', async ({ popupPage: page }) => {
-    await expect(page.locator('#settingsScreen')).toBeAttached();
-  });
-
-  test('has navigation tabs with correct count', async ({ popupPage: page }) => {
-    await test.step('Verify tab list exists', async () => {
-      await expect(page.locator('#tabList')).toBeAttached();
-    });
-
-    await test.step('Verify expected tabs are present', async () => {
-      await expect(page.locator('.tab-btn')).toHaveCount(4);
-    });
-
-    await test.step('Verify first tab is active by default', async () => {
-      await expect(page.locator('#generalTab')).toHaveAttribute('aria-selected', 'true');
-      await expect(page.locator('#generalTab')).toHaveClass(/active/);
-    });
-  });
-
-  test('has tab panels with correct ARIA attributes', async ({ popupPage: page }) => {
-    await expect(page.locator('#generalPanel')).toHaveAttribute('role', 'tabpanel');
-    await expect(page.locator('#domainPanel')).toHaveAttribute('role', 'tabpanel');
-    await expect(page.locator('#promptPanel')).toHaveAttribute('role', 'tabpanel');
-    await expect(page.locator('#privacyPanel')).toHaveAttribute('role', 'tabpanel');
-  });
-
-  test('general panel has form elements', async ({ popupPage: page }) => {
-    await expect(page.locator('#apiKey')).toBeAttached();
-    await expect(page.locator('#protocol')).toBeAttached();
-    await expect(page.locator('#port')).toBeAttached();
-    await expect(page.locator('#dailyPath')).toBeAttached();
-    await expect(page.locator('#aiProvider')).toBeAttached();
-    await expect(page.locator('#save')).toBeAttached();
-  });
-
-  test('general panel has validation error containers', async ({ popupPage: page }) => {
-    await expect(page.locator('#protocolError')).toBeAttached();
-    await expect(page.locator('#portError')).toBeAttached();
-    await expect(page.locator('#minVisitDurationError')).toBeAttached();
-    await expect(page.locator('#minScrollDepthError')).toBeAttached();
-  });
-
-  test('domain panel has filter mode radio buttons', async ({ popupPage: page }) => {
-    await expect(page.locator('#domainPanel')).toBeAttached();
-    await expect(page.locator('#filterDisabled')).toBeAttached();
-    await expect(page.locator('#filterWhitelist')).toBeAttached();
-    await expect(page.locator('#filterBlacklist')).toBeAttached();
-  });
-
-  test('domain panel has domain list textarea', async ({ popupPage: page }) => {
-    await expect(page.locator('#domainList')).toBeAttached();
-  });
-
-  test('privacy panel has privacy mode radio buttons', async ({ popupPage: page }) => {
-    await expect(page.locator('#privacyPanel')).toBeAttached();
-    await expect(page.locator('#modeA')).toBeAttached();
-    await expect(page.locator('#modeB')).toBeAttached();
-    await expect(page.locator('#privacyModeMaskedCloud')).toBeAttached();
-    await expect(page.locator('#privacyModeCloudOnly')).toBeAttached();
-  });
-});
-
 test.describe('Popup - Private Page Dialog @ui', () => {
   test('dialog exists and is of correct type', async ({ popupPage: page }) => {
     const dialog = page.locator('#private-page-dialog');
@@ -157,31 +94,6 @@ test.describe('Popup - Private Page Dialog @ui', () => {
 
   test('pending section is hidden when no pages exist', async ({ popupPage: page }) => {
     await expect(page.locator('#pending-section')).toHaveClass(/hidden/);
-  });
-});
-
-test.describe('Popup - Navigation Interaction @interaction', () => {
-  testInteraction('should navigate to settings screen', async ({ popupPage: page }) => {
-    await page.locator('#menuBtn').click();
-    await expect(page.locator('#settingsScreen')).toBeVisible();
-  });
-
-  testInteraction('should switch between tabs', async ({ popupPage: page }) => {
-    await page.locator('#menuBtn').click();
-
-    const generalTab = page.locator('#generalTab');
-    await generalTab.click();
-    await expect(generalTab).toHaveClass(/active/);
-    await expect(page.locator('#generalPanel')).toBeVisible();
-  });
-
-  testInteraction('should handle form input', async ({ popupPage: page }) => {
-    await page.locator('#menuBtn').click();
-    await page.locator('#generalTab').click();
-
-    const protocolInput = page.locator('#protocol');
-    await protocolInput.fill('http');
-    await expect(protocolInput).toHaveValue('http');
   });
 });
 

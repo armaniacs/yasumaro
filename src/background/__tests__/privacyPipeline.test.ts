@@ -98,6 +98,26 @@ describe('PrivacyPipeline', () => {
       expect(mockAiService.generateSummary).toHaveBeenCalledWith('masked input', expect.objectContaining({ mode: 'local_only' }));
     });
 
+    it('propagates traceId to AI service calls', async () => {
+      const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
+
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({ sanitized: 'masked input', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' });
+
+      await pipeline.process('Original content', { traceId: 'trace-privacy-123' });
+
+      expect(mockAiService.generateSummary).toHaveBeenCalledWith(
+        'masked input',
+        expect.objectContaining({ mode: 'local_only', traceId: 'trace-privacy-123' })
+      );
+      expect(mockAiService.generateSummary).toHaveBeenCalledWith(
+        'Local summary',
+        expect.objectContaining({ mode: 'full_pipeline', traceId: 'trace-privacy-123' })
+      );
+    });
+
     it('masks PII before local AI in local_only mode', async () => {
       const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
       const mockLocalService = {

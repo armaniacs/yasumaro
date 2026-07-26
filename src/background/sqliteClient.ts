@@ -128,7 +128,11 @@ export class SqliteClient {
    * Send a single message to the offscreen document and await the response.
    * Does not retry — callers needing reconnect-on-failure should use msgOffscreen().
    */
-  private async sendOnce(type: SqliteMessageType, payload: Record<string, unknown>): Promise<OffscreenResponse> {
+  private async sendOnce(
+    type: SqliteMessageType,
+    payload: Record<string, unknown>,
+    traceId: string = ''
+  ): Promise<OffscreenResponse> {
     await this.ensureOffscreenDocument();
     return new Promise<OffscreenResponse>((resolve, reject) => {
       let settled = false;
@@ -143,7 +147,7 @@ export class SqliteClient {
       }, this.messageTimeoutMs);
 
       chrome.runtime.sendMessage(
-        { type, target: 'offscreen', payload },
+        { type, target: 'offscreen', payload, traceId },
         (response: OffscreenResponse) => {
           if (chrome.runtime.lastError) {
             settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
@@ -165,15 +169,22 @@ export class SqliteClient {
    * with a connection error. Resetting offscreenAlive and recreating the
    * document lets the retry succeed instead of surfacing a transient error.
    */
-  async msgOffscreen(type: SqliteMessageType, payload: Record<string, unknown> = {}): Promise<OffscreenResponse> {
+  async msgOffscreen(
+    type: SqliteMessageType,
+    payload: Record<string, unknown> = {},
+    traceId: string = ''
+  ): Promise<OffscreenResponse> {
     await this.requestQueue.acquire();
     try {
       try {
-        return await this.sendOnce(type, payload);
+        return await this.sendOnce(type, payload, traceId);
       } catch (firstError) {
         this.offscreenAlive = false;
-        addLog(LogType.WARN, `SqliteClient: '${type}' failed, retrying once`, { error: errorMessage(firstError) });
-        return await this.sendOnce(type, payload);
+        addLog(LogType.WARN, `SqliteClient: '${type}' failed, retrying once`, {
+          error: errorMessage(firstError),
+          traceId,
+        });
+        return await this.sendOnce(type, payload, traceId);
       }
     } catch (error) {
       // Reset the cached alive flag so the next call re-checks the document.
@@ -188,13 +199,14 @@ export class SqliteClient {
     type: SqliteMessageType,
     payload: Record<string, unknown> = {},
     transform?: (res: OffscreenResponse) => T,
+    traceId: string = '',
   ): Promise<CallResult<T>> {
     try {
-      const res = await this.msgOffscreen(type, payload);
+      const res = await this.msgOffscreen(type, payload, traceId);
       if (!res?.success) {
         const msg = String(res?.error || `${type} failed`);
         recordSqliteFailure(type, msg);
-        logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+        logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
         this.lastError = categorizeError(msg);
         return { success: false, error: this.lastError };
       }
@@ -204,7 +216,7 @@ export class SqliteClient {
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
-      logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
+      logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
       this.lastError = categorizeError(msg);
       return { success: false, error: this.lastError };
     }
@@ -215,11 +227,12 @@ export class SqliteClient {
     return result.success;
   }
 
-  async insert(record: BrowsingLogRecord): Promise<{ id: number } | null> {
+  async insert(record: BrowsingLogRecord, traceId: string = ''): Promise<{ id: number } | null> {
     const result = await this.call<{ id: number }>(
       'SQLITE_INSERT',
       record as unknown as Record<string, unknown>,
       (res) => ({ id: Number(res.id) }),
+      traceId,
     );
     return result.success ? result.data : null;
   }
@@ -257,8 +270,8 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
-  async update(id: number, changes: Partial<Record<string, unknown>>): Promise<boolean> {
-    const result = await this.call('SQLITE_UPDATE', { id, ...changes });
+  async update(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<boolean> {
+    const result = await this.call('SQLITE_UPDATE', { id, ...changes }, undefined, traceId);
     return result.success;
   }
 

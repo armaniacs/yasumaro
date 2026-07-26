@@ -292,7 +292,7 @@ describe('SqliteClient — unit tests', () => {
       const result = await client.restoreDb(data);
 
       expect(result).toBe(true);
-      expect(spy).toHaveBeenCalledWith('SQLITE_RESTORE', { data: [1, 2, 3] });
+      expect(spy).toHaveBeenCalledWith('SQLITE_RESTORE', { data: [1, 2, 3] }, '');
     });
 
     it('returns false when offscreen reports failure', async () => {
@@ -319,7 +319,7 @@ describe('SqliteClient — unit tests', () => {
       const result = await client.isSqliteHealthy();
 
       expect(result).toBe(true);
-      expect(spy).toHaveBeenCalledWith('SQLITE_HEALTH_CHECK', {});
+      expect(spy).toHaveBeenCalledWith('SQLITE_HEALTH_CHECK', {}, '');
       expect(client.lastError).toBeNull();
     });
 

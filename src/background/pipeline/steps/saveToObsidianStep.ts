@@ -55,7 +55,7 @@ export const saveToObsidianStep = async (
 
   const obsidianStart = Date.now();
   try {
-    await obsidianClient.appendToDailyNote(markdown);
+    await obsidianClient.appendToDailyNote(markdown, context.traceId);
     const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });
 

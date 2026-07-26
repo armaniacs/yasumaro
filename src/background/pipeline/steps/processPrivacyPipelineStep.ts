@@ -32,7 +32,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       alreadyProcessed,
       tagSummaryMode,
       url: data.url,
-      title: data.title
+      title: data.title,
+      traceId: context.traceId,
     });
 
     // クラウドAI要約(L3)が実際に呼ばれた場合のみ実測値が入る

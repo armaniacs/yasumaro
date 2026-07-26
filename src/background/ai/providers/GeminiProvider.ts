@@ -39,7 +39,7 @@ export class GeminiProvider extends AIProviderStrategy {
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false): Promise<AISummaryResult> {
+    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
         if (!this.apiKey) {
             return { success: false, summary: "Error: API key is missing. Please check your settings." };
         }
@@ -71,11 +71,11 @@ export class GeminiProvider extends AIProviderStrategy {
         // プロンプトインジェクション対策 - コンテンツのサニタイズ
         const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
         if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${this.getName()}] Prompt injection detected: ${warnings.join('; ')}`);
+            addLog(LogType.WARN, `[${this.getName()}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
         }
         if (dangerLevel === 'high') {
             const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
-            addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked: ${cause}`);
+            addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked: ${cause}`, { traceId });
             return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
         }
 
@@ -118,7 +118,7 @@ export class GeminiProvider extends AIProviderStrategy {
             }
 
             const data = await response.json();
-            return await this._extractSummary(data);
+            return await this._extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
             if (msg.includes('timed out')) {
@@ -217,21 +217,21 @@ export class GeminiProvider extends AIProviderStrategy {
         return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
     }
 
-    private async _extractSummary(data: GeminiApiResponse): Promise<AISummaryResult> {
+    private async _extractSummary(data: GeminiApiResponse, traceId: string = ''): Promise<AISummaryResult> {
         if (!data.candidates || data.candidates.length === 0) {
             const error = 'Gemini schema validation failed: candidates is missing or empty';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         if (!data.candidates[0].content) {
             const error = 'Gemini schema validation failed: candidates[0].content is missing';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         const parts = data.candidates[0].content.parts;
         if (!parts || parts.length === 0 || typeof parts[0].text !== 'string') {
             const error = 'Gemini schema validation failed: candidates[0].content.parts[0].text is not a string';
-            addLog(LogType.ERROR, error);
+            addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         const summary = parts[0].text;

@@ -218,7 +218,7 @@ export class ObsidianClient {
         return String(portNum);
     }
 
-    async appendToDailyNote(content: string): Promise<void> {
+    async appendToDailyNote(content: string, traceId: string = ''): Promise<void> {
         // ロックを取得して競合を回避
         await this.mutex.acquire();
 
@@ -231,16 +231,16 @@ export class ObsidianClient {
             const targetUrl = ENDPOINTS.dailyNote(baseUrl, dailyPath);
 
             try {
-                const existingContent = await this._fetchExistingContent(targetUrl, headers);
+                const existingContent = await this._fetchExistingContent(targetUrl, headers, traceId);
                 const newContent = NoteSectionEditor.insertIntoSection(
                     existingContent,
                     NoteSectionEditor.DEFAULT_SECTION_HEADER,
                     content
                 );
 
-                await this._writeContent(targetUrl, headers, newContent);
+                await this._writeContent(targetUrl, headers, newContent, traceId);
             } catch (error: unknown) {
-                throw this._handleError(error instanceof Error ? error : new Error(String(error)), targetUrl);
+                throw this._handleError(error instanceof Error ? error : new Error(String(error)), targetUrl, traceId);
             }
         } finally {
             // 確実にロックを解放
@@ -248,7 +248,7 @@ export class ObsidianClient {
         }
     }
 
-    async _fetchExistingContent(url: string, headers: HeadersInit): Promise<string> {
+    async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
         const response = await fetchWithTimeout(url, {
             method: 'GET',
             headers,
@@ -262,12 +262,12 @@ export class ObsidianClient {
             return '';
         } else {
             const errorText = await response.text();
-            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${errorText}`);
+            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${errorText}`, { traceId });
             throw new Error('Error: Failed to read daily note. Please check your Obsidian connection.');
         }
     }
 
-    async _writeContent(url: string, headers: HeadersInit, content: string): Promise<void> {
+    async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
         const response = await fetchWithTimeout(url, {
             method: 'PUT',
             headers,
@@ -278,21 +278,21 @@ export class ObsidianClient {
 
         if (!response.ok) {
             const errorText = await response.text();
-            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`);
+            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`, { traceId });
             throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
         }
     }
 
-    _handleError(error: Error, targetUrl: string): Error {
+    _handleError(error: Error, targetUrl: string, traceId: string = ''): Error {
         const errorMessage = error.message;
         if (errorMessage.includes('Failed to fetch') && targetUrl.startsWith('https')) {
-            addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`);
+            addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`, { traceId });
             return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
         }
         if (errorMessage.toLowerCase().includes('timed out')) {
             return new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
-        addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`);
+        addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`, { traceId });
         return new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.');
     }
 
