@@ -176,6 +176,8 @@ vi.mock('../../utils/logger.js', () => ({
     logDebug: vi.fn(),
     logWarn: vi.fn(),
     logError: vi.fn(),
+    addLog: vi.fn(),
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG', SANITIZE: 'SANITIZE' },
     ErrorCode: {
         STORAGE_READ_FAILURE: 'STRG_RD_001',
         STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
@@ -205,7 +207,7 @@ vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../utils/crypto.js', () => ({
+vi.mock('../../utils/crypto/index.js', () => ({
     getNotificationHmacKey: vi.fn().mockResolvedValue({
         type: 'hmac',
         extractable: false,
@@ -221,6 +223,10 @@ vi.mock('../../popup/privacyConsent.js', () => ({
 }));
 vi.mock('../localMarkdownExportCore.js', () => ({
     flushBufferedExports: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../pendingSqliteQueue.js', () => ({
+    flushPendingRecords: vi.fn().mockResolvedValue(undefined),
+    enqueuePendingRecord: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
@@ -820,41 +826,41 @@ describe('service-worker handlers', () => {
             expect(typeof serviceWorker.handleTabUpdated).toBe('function');
         });
 
-        it('should do nothing if status is not complete', () => {
-            serviceWorker.handleTabUpdated(1, { status: 'loading' }, { url: 'https://example.com' });
+        it('should do nothing if status is not complete', async () => {
+            await serviceWorker.handleTabUpdated(1, { status: 'loading' }, { url: 'https://example.com' });
             expect(mockSetBadgeText).not.toHaveBeenCalled();
         });
 
-        it('should do nothing if tab URL is missing', () => {
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, {});
+        it('should do nothing if tab URL is missing', async () => {
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, {});
             expect(mockSetBadgeText).not.toHaveBeenCalled();
         });
 
-        it('should clear auto-saved badge and show warning for private page', () => {
+        it('should clear auto-saved badge and show warning for private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://private.com');
             RecordingLogic.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://private.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://private.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 1 });
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ tabId: 1 }));
         });
 
-        it('should clear badge for non-private page', () => {
+        it('should clear badge for non-private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
             RecordingLogic.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
         });
 
-        it('should clear badge when privacy cache is empty', () => {
+        it('should clear badge when privacy cache is empty', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
             RecordingLogic.cacheState.privacyCache = null;
 
-            serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
+            await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
         });
     });
@@ -963,7 +969,7 @@ describe('service-worker handlers', () => {
             ]);
 
             // Import crypto to mock signature verification failure
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(false);
 
@@ -978,7 +984,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -997,7 +1003,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification that returns a valid URL
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1015,7 +1021,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockRejectedValue(new Error('Remove failed'));
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1038,7 +1044,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1076,7 +1082,7 @@ describe('service-worker handlers', () => {
             mockClear.mockRejectedValueOnce(new Error('Notification API error'));
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
@@ -1105,7 +1111,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock successful signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1125,7 +1131,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Import crypto to mock signature verification
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.verifyHmacSignature.mockResolvedValue(true);
 
@@ -1153,7 +1159,7 @@ describe('service-worker handlers', () => {
 
         it('should handle error in notification button click gracefully', async () => {
             // Import crypto module to set up error mock
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
             crypto.getNotificationHmacKey.mockRejectedValue(new Error('Crypto error'));
 
@@ -1174,7 +1180,7 @@ describe('service-worker handlers', () => {
             pendingStorage.removePendingPages.mockResolvedValue(undefined);
 
             // Ensure crypto verification succeeds
-            const crypto = await import('../../utils/crypto.js');
+            const crypto = await import('../../utils/crypto/index.js');
             crypto.getNotificationHmacKey.mockResolvedValueOnce({
                 type: 'hmac',
                 extractable: false,
@@ -1314,6 +1320,19 @@ describe('service-worker handlers', () => {
 
             expect(flushBufferedExports).not.toHaveBeenCalled();
             expect(flushYesterdaysExport).not.toHaveBeenCalled();
+        });
+
+        it('retries the pending SQLite queue on the offline-network-retry alarm', async () => {
+            if (!onAlarmListener) throw new Error('onAlarm listener not registered');
+
+            const flushPendingRecords = (await import('../pendingSqliteQueue.js')).flushPendingRecords as ReturnType<typeof vi.fn>;
+            flushPendingRecords.mockClear();
+
+            onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(flushPendingRecords).toHaveBeenCalledTimes(1);
         });
     });
 

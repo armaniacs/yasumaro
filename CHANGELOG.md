@@ -35,6 +35,95 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [6.7.2] - 2026-07-27
+
+このリリースは前日リリースに対するレビュー指摘の即時反映です。popup と dashboard で重複していた設定 UI を一本化しました。
+
+### Fixed / 修正
+
+- **popup の設定 UI を dashboard に一本化** — `entrypoints/popup/index.html` から `settingsScreen`（General / Domain Filter / Prompt / Privacy の4タブ）と設定用モーダルを削除。設定は `#menuBtn` から開く dashboard（`options.html`）に集約
+- **`src/popup/popup.ts` から settingsScreen 専用の初期化コードを削除** — domain filter / custom prompt / privacy settings / export-import / master password の popup 側初期化を除去。これらの共有モジュールは dashboard からも import されているためファイルは維持
+- **`entrypoints/popup/main.ts` から不要な `domainFilter` import を削除**
+
+### Tests / テスト
+
+- **`popup.test.ts` を設定 UI 削除後の責務に合わせて更新**
+- **`ui-ux-improvements.test.ts` を popup HTML から設定タブ・help-text が削除された構造に合わせて更新**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.1` → `6.7.2`
+
+## [6.7.1] - 2026-07-26
+
+このリリースは前日リリースに対するレビュー指摘の即時反映です。Checking Team レビューから起票した非機能改善 PBI 群のフォローアップを実施しました。
+
+### Added / 追加
+
+- **オフラインキューのリトライ時、AI要約の不要な再実行をスキップ** — Obsidian書き込みのみ失敗したジョブは、保存済みの要約結果を使って書き込みのみ再試行するようにし、無駄なAI APIコストを削減
+- **ダッシュボードのGeneralパネルに記録条件設定を追加** — popup側にのみ存在していた Min Visit Duration / Min Scroll Depth / Max Tokens Per Prompt の3設定項目をダッシュボードにも追加
+
+### Fixed / 修正
+
+- **`options.html` の未翻訳フォールバック文字列を英語プレースホルダーに統一**（約247箇所）
+- **モバイル環境での SQLite メッセージタイムアウトを短縮** — Offscreen Document がサスペンドされやすいモバイル Chrome で、タイムアウトを10秒→5秒に短縮し失敗を早期に検出できるようにした
+
+### Refactor / リファクタ
+
+- **`logger.ts`（755行）を型定義・コアAPI・高レベルラッパーの3ファイルに分割**（`logger/types.ts`, `logger/core.ts`, `logger/api.ts`）。呼び出し元120件が多いため `logger.ts` 自体はバレルとして維持
+- **Offscreen Document/Worker の `console.*` 出力を構造化ロガー経由に統一** — Service Workerへのメッセージ中継機構（`LOG_FORWARD`）を新設し、直接ログできないコンテキストからも構造化ログを利用できるようにした
+- **未参照のダッシュボード旧パネル実装3ファイルを削除**（新Panelベース実装への移行完了に伴う）
+- **バレル再エクスポート4ファイルを削除し直接importに統一** — `aiSummaryCleaner.ts`, `contentExtractor.ts`, `ublockParser.ts`, `ublockImport.ts`
+- **`TabData` の未使用 `content` フィールドを削除**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.0` → `6.7.1`
+
+## [6.7.0] - 2026-07-26
+
+### Added / 追加
+
+- **CI に SBOM 生成ステップを追加** — `@cyclonedx/cyclonedx-npm` を導入し、CycloneDX 1.6 形式の SBOM を生成して CI アーティファクトとして保存するようにした
+- **`data-i18n-args` の `count` から複数形メッセージキーを自動解決** — `applyI18n()` が `count` を含む置換パラメータを検出すると `getPluralKey()` 経由で `_one`/`_other` バリエーションを自動選択するようにした（英語ロケール向け）
+- **保留中 SQLite キューの定期リトライを追加** — オフライン等で SQLite への書き込みに失敗したレコードを、既存の `yasumaro-offline-network-retry` アラーム（5分間隔）で自動的に再試行するようにした
+- **プライバシー同意撤回時にデータ削除の確認ダイアログを追加** — 同意を撤回すると記録済みの閲覧履歴データ（SQLite）も完全に削除されることをダイアログで明示し、実行前に確認を求めるようにした
+
+### Fixed / 修正
+
+- **PBKDF2 レガシー検証パスのタイミングサイドチャネルを解消** — iteration count 未保存の古いマスターパスワードユーザー向け検証パスが、新旧いずれかの iteration count と一致した時点で早期リターンしていたため、応答時間から iteration count を推測できる問題があった。常に両方のハッシュを計算してから判定するよう修正
+- **プライバシー同意記録に HMAC 署名検証を追加** — 同意記録の改ざんを検知できるよう、保存・読み込み時に専用の HMAC 鍵で署名検証するようにした
+- **PII サニタイズの email パターンによる ReDoS を解消** — 区切り文字を含まない長大な文字列（5万文字で約4秒）に対して正規表現マッチングが O(n²) バックトラッキングを起こす問題を修正
+- **マイグレーション失敗の無限リトライに上限を追加** — 恒久的に失敗するデータがあった場合に起動のたびに再試行し続けていた問題を修正し、5回失敗すると再試行を打ち切るようにした
+- **RecordingPipeline に URL 単位の排他制御を追加** — 重複チェックとメタデータ保存の間に TOCTOU レースがあり、同一 URL の並行記録リクエストで重複保存が発生しうる問題を修正
+- **Offscreen Document のエラーログから生の Error オブジェクトを排除** — AI プロンプト実行エラー等が `console.error` にそのまま出力され、意図しない情報（スタックトレース等）が漏れる可能性があった問題を修正
+- **ログメッセージ文字列の PII マスキング漏れを修正** — `addLog()` の詳細情報（`details`）はマスキングされるが、メッセージ本文はマスキング対象外だったため、URL 等に含まれる PII が漏洩する可能性があった問題を修正
+- **`popup.html` の未翻訳フォールバック文字列を英語プレースホルダーに統一**（13箇所）
+- **カスタムプロンプトのデフォルトロケール解決を修正** — ロケール未指定時に正しくブラウザのロケールへフォールバックするよう修正
+
+### Performance / パフォーマンス
+
+- **ローカル Markdown 全履歴エクスポートをバッチストリーミング化** — 全履歴を一括取得していたエクスポート処理を、デスクトップ 1,000 件・モバイル 500 件のバッチ単位で逐次処理するように変更し、メモリ使用量を抑制
+- **AI 要約リクエストの in-flight 重複排除を追加** — 同一 URL に対する並行 AI 要約リクエストをデデュープし、不要な API コールを削減
+
+### Documentation / ドキュメント
+
+- **`public/PRIVACY.md` を `docs/PRIVACY.md`（v6.0.1、GDPR 準拠修正）の内容に同期**
+- **デザイントークンのコンセプト「研墨」を `dev-docs/DESIGN_TOKENS.md` として文書化**
+- **Obsidian Local REST API のエンドポイント一覧を `dev-docs/API_ENDPOINTS.md` として文書化**
+- **ドメインフィルタ関連コードの責務分離マップを ADR として文書化**
+- **Chrome Built-in AI Provider 統合の設計・実装計画を追加** — Chrome Prompt API（`window.ai`）を既存の AI Provider 抽象化に統合するための設計ドキュメントと TDD 実装計画（今後のリリースに向けた準備）
+
+### Chores / その他
+
+- **バージョン更新** — `6.6.6` → `6.7.0`
+- `osh_pending_pages` ストレージキーを `pending_pages` にリネーム（旧キーから自動移行）
+- `ENCRYPTION_SECRET` の誤った「廃止予定」ラベルを訂正
+- 非推奨の `hashPassword`/`verifyPassword` を内部専用化
+- `SqliteClient` の `lastError` 管理を共通ラッパーに一元化
+- `ResponseForType` の型マッピングを全メッセージ種別に完全化
+- `cspSettings.ts` の `console` 出力を構造化ロガーに置き換え
+
 ## [6.6.6] - 2026-07-25
 
 ### Fixed / 修正

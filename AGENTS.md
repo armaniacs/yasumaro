@@ -21,6 +21,8 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 | Project Architecture | [dev-docs/DESIGN_SPECIFICATIONS.md](dev-docs/DESIGN_SPECIFICATIONS.md) |
 | Architecture Decisions | [dev-docs/ADR/](dev-docs/ADR/) |
 | Error Codes | [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md) |
+| API Endpoints | [dev-docs/API_ENDPOINTS.md](dev-docs/API_ENDPOINTS.md) |
+| Design Tokens | [dev-docs/DESIGN_TOKENS.md](dev-docs/DESIGN_TOKENS.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
 | i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
@@ -354,6 +356,7 @@ When making architectural changes that affect documentation (e.g., TypeScript mi
 - [ ] **README.md**: Any file references or technical explanations
 - [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
 - [ ] **User documentation** (Setup guides, feature guides)
+- [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (Chrome Web Store reviews `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).
 
 ### TypeScript-Specific Notes
 

@@ -1,10 +1,41 @@
 /**
  * Recording Pipeline
  * Orchestrates the recording process through a series of pipeline steps
+ *
+ * Step order and skip/bypass conditions (data.force / data.skipDuplicateCheck / data.previewOnly):
+ *
+ *   1. truncate            — always runs
+ *   2. domainFilter        — blocked domain: FATAL unless force=true (force bypasses the block)
+ *   3. permission          — always runs
+ *   4. trust               — untrusted domain: FATAL unless force=true (force bypasses the check)
+ *   5. privacyHeaders      — private-page headers detected: throws PrivatePageError unless force=true
+ *                            (force bypasses the privacy-header block entirely)
+ *   6. duplicate           — same-day duplicate: throws DuplicateError unless skipDuplicateCheck=true
+ *                            (force does NOT bypass this — only skipDuplicateCheck does)
+ *   7. privacyPipeline     — AI summary + PII masking; RETRY (max 3)
+ *      → if data.previewOnly=true, execute() returns context.result immediately after this step
+ *        (steps 8-12 below do not run in preview mode)
+ *   8. extractSentences    — RETRY (max 3)
+ *   9. formatMarkdown      — FATAL
+ *  10. saveObsidian        — BEST_EFFORT (failure does not abort the pipeline)
+ *  11. saveLocalMarkdown   — BEST_EFFORT
+ *  12. saveSqlite          — BEST_EFFORT (no-op if sqliteClient is unavailable)
+ *  13. saveMetadata        — BEST_EFFORT
+ *
+ * Flag combinations:
+ *   - force + skipDuplicateCheck: both bypasses apply independently (force skips
+ *     domain/trust/privacy-header blocks, skipDuplicateCheck skips the same-day check).
+ *     This combination is used by the offline-network-queue retry path, which force-replays
+ *     a page that a user already chose to record.
+ *   - force + previewOnly: force bypasses steps 2/4/5, then privacyPipeline still runs and
+ *     execute() returns early with the preview result — no write steps execute.
+ *   - skipDuplicateCheck alone (force=false): domain/trust/privacy-header blocks still apply;
+ *     only the same-day duplicate check is bypassed.
  */
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
+import { Mutex } from '../Mutex.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
 import {
   truncateContentStep,
@@ -74,6 +105,15 @@ export class RecordingPipeline {
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
   private offlineNetworkQueue: OfflineNetworkQueue | null;
+  /**
+   * Per-URL mutex to serialize the read-then-write window between
+   * checkDuplicateStep (reads savedUrlsWithTimestamps) and saveMetadataStep
+   * (writes it). Without this, two concurrent requests for the same URL can
+   * both pass the duplicate check before either has saved, causing the page
+   * to be recorded twice (double AI summary calls, double Obsidian writes).
+   * Entries are removed once no longer in use to avoid unbounded growth.
+   */
+  private urlMutexes: Map<string, Mutex> = new Map();
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
@@ -201,9 +241,45 @@ export class RecordingPipeline {
   }
 
   /**
-   * Execute the pipeline with initial data
+   * Execute the pipeline with initial data.
+   * Serializes concurrent requests for the same URL (see urlMutexes) so that
+   * checkDuplicateStep's read and saveMetadataStep's write cannot race.
    */
   async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
+    const mutex = this.acquireUrlMutex(data.url);
+    await mutex.acquire();
+    try {
+      return await this.executeInternal(data, settings);
+    } finally {
+      mutex.release();
+      this.releaseUrlMutexIfIdle(data.url, mutex);
+    }
+  }
+
+  /**
+   * Get (or create) the mutex for a given URL. Callers must release it via
+   * releaseUrlMutexIfIdle() once done.
+   */
+  private acquireUrlMutex(url: string): Mutex {
+    let mutex = this.urlMutexes.get(url);
+    if (!mutex) {
+      mutex = new Mutex();
+      this.urlMutexes.set(url, mutex);
+    }
+    return mutex;
+  }
+
+  /**
+   * Remove the mutex entry for a URL once it is no longer locked and has no
+   * queued waiters, so the map does not grow unbounded over the SW lifetime.
+   */
+  private releaseUrlMutexIfIdle(url: string, mutex: Mutex): void {
+    if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+      this.urlMutexes.delete(url);
+    }
+  }
+
+  private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     // Create initial context
     let context: RecordingContext = {
       data,

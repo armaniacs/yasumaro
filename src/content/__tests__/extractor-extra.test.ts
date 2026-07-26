@@ -71,11 +71,7 @@ import {
   shouldRecordVisit,
   extractPageContent,
   init,
-  lastCleansedReason,
-  lastCleanseStats,
-  lastByteStats,
-  lastAiSummaryCleansedStats,
-  lastFallbackTriggered,
+  getPageStateForTesting,
   showPrivacyConfirmDialog,
 } from '../extractor.js';
 
@@ -91,33 +87,33 @@ describe('extractPageContent — state tracking', () => {
     );
   });
 
-  it('updates lastCleanseStats when extractMainContent returns object', () => {
+  it('updates getPageStateForTesting().lastCleanseStats when extractMainContent returns object', () => {
     document.body.innerHTML = `<article><p>Some content here with enough text for extraction.</p></article>`;
     extractPageContent();
-    expect(lastCleanseStats).toBeDefined();
-    expect(lastCleanseStats.totalRemoved).toBeGreaterThanOrEqual(0);
-    expect(lastCleanseStats.hardStripRemoved).toBeGreaterThanOrEqual(0);
-    expect(lastCleanseStats.keywordStripRemoved).toBeGreaterThanOrEqual(0);
+    expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
+    expect(getPageStateForTesting().lastCleanseStats.totalRemoved).toBeGreaterThanOrEqual(0);
+    expect(getPageStateForTesting().lastCleanseStats.hardStripRemoved).toBeGreaterThanOrEqual(0);
+    expect(getPageStateForTesting().lastCleanseStats.keywordStripRemoved).toBeGreaterThanOrEqual(0);
   });
 
-  it('updates lastByteStats after extraction', () => {
+  it('updates getPageStateForTesting().lastByteStats after extraction', () => {
     document.body.innerHTML = `<article><p>Content bytes tracking test with enough text.</p></article>`;
     extractPageContent();
-    expect(lastByteStats.pageBytes).toBeGreaterThan(0);
-    expect(lastByteStats.originalBytes).toBeGreaterThan(0);
+    expect(getPageStateForTesting().lastByteStats.pageBytes).toBeGreaterThan(0);
+    expect(getPageStateForTesting().lastByteStats.originalBytes).toBeGreaterThan(0);
   });
 
-  it('updates lastAiSummaryCleansedStats after extraction', () => {
+  it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
     document.body.innerHTML = `<article><p>AI summary cleansing stats test with enough text here.</p></article>`;
     extractPageContent();
-    expect(lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBeGreaterThanOrEqual(0);
-    expect(lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBeDefined();
+    expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBeGreaterThanOrEqual(0);
+    expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBeDefined();
   });
 
   it('tracks fallback triggered state', () => {
     document.body.innerHTML = `<p>Minimal content.</p>`;
     extractPageContent();
-    expect(typeof lastFallbackTriggered).toBe('boolean');
+    expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
   });
 
   it('does not throw when document.body is minimal', () => {
@@ -279,7 +275,7 @@ describe('extractPageContent — with cleansedReason tracking', () => {
       </article>
     `;
     extractPageContent();
-    expect(lastAiSummaryCleansedStats).toHaveProperty('aiSummaryCleansedReasons');
-    expect(Array.isArray(lastAiSummaryCleansedStats.aiSummaryCleansedReasons) || lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
+    expect(getPageStateForTesting().lastAiSummaryCleansedStats).toHaveProperty('aiSummaryCleansedReasons');
+    expect(Array.isArray(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons) || getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
   });
 });

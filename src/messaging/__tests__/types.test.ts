@@ -16,7 +16,7 @@ import {
     sendFromContentScript,
     sendFromPopup,
 } from '../types.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../../background/messageTypes.js';
 
 describe('messaging/types: isMaskedItem', () => {
     it('returns false for null', () => {
@@ -176,13 +176,9 @@ describe('messaging/types: isServiceWorkerRequest', () => {
     });
 
     it('handles all no-payload types correctly', () => {
-        const noPayloadTypes = [
-            'CHECK_DOMAIN', 'GET_CONTENT',
-            'TEST_CONNECTIONS', 'TEST_AI',
-            'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE', 'SESSION_LOCK_REQUEST',
-            'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED',
-        ];
-        noPayloadTypes.forEach((type) => {
+        // SSOT: derived from NO_PAYLOAD_TYPES (messageTypes.ts) so a newly added
+        // no-payload type is automatically covered here.
+        NO_PAYLOAD_TYPES.forEach((type) => {
             expect(isServiceWorkerRequest({ type })).toBe(true);
             expect(isServiceWorkerRequest({ type, payload: {} })).toBe(false);
         });
@@ -201,23 +197,20 @@ describe('messaging/types: isServiceWorkerRequest', () => {
     });
 
     it('covers all ExtensionMessage types', () => {
-        const allTypes = [
-            'VALID_VISIT', 'CHECK_DOMAIN', 'GET_CONTENT', 'FETCH_URL',
-            'MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD', 'TEST_CONNECTIONS',
-            'TEST_OBSIDIAN', 'TEST_AI', 'GET_PRIVACY_CACHE', 'ACTIVITY_UPDATE',
-            'SESSION_LOCK_REQUEST', 'CONTENT_CLEANSING_EXECUTED',
-            'PING', 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', 'CONSENT_STATE_CHANGED',
-            'DASHBOARD_SQLITE',
-        ] as const;
-        const payloadForType: Partial<Record<typeof allTypes[number], unknown>> = {
+        // SSOT: derived from VALID_MESSAGE_TYPES (messageTypes.ts) instead of a
+        // hand-maintained list, so a newly added message type is automatically
+        // included here without requiring a manual test update.
+        const payloadForType: Partial<Record<typeof VALID_MESSAGE_TYPES[number], unknown>> = {
             VALID_VISIT: { content: 'hi' },
             FETCH_URL: { url: 'https://example.com' },
             MANUAL_RECORD: { title: 't', url: 'u', content: 'c' },
             PREVIEW_RECORD: { title: 't', url: 'u', content: 'c' },
             SAVE_RECORD: { title: 't', url: 'u', content: 'c' },
             CONTENT_CLEANSING_EXECUTED: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 },
+            GENERATE_REVIEW_SUMMARY: { periodType: 'weekly' },
+            LOG_FORWARD: { level: 'warn', message: 'test', source: 'offscreen' },
         };
-        allTypes.forEach((type) => {
+        VALID_MESSAGE_TYPES.forEach((type) => {
             const payload = payloadForType[type];
             expect(isServiceWorkerRequest({ type, payload })).toBe(true);
         });

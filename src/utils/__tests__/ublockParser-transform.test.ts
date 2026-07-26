@@ -8,7 +8,7 @@ import {
   buildRuleObject,
   createEmptyRuleset,
   transformParseDomainList
-} from '../ublockParser.js';
+} from '../ublockParser/index.js';
 
 import { parseRuleOptions } from '../ublockParser/options.js';
 import type { UblockRule, UblockRules } from '../ublockParser/transform.js';

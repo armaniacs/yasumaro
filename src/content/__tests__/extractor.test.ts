@@ -74,11 +74,7 @@ import {
     shouldRecordVisit,
     extractPageContent,
     init,
-    lastCleansedReason,
-    lastCleanseStats,
-    lastByteStats,
-    lastAiSummaryCleansedStats,
-    lastFallbackTriggered,
+    getPageStateForTesting,
     showPrivacyConfirmDialog,
 } from '../extractor.js';
 
@@ -108,32 +104,32 @@ describe('shouldRecordVisit', () => {
 });
 
 describe('exported state initial values', () => {
-    it('lastCleansedReason is "none" by default', () => {
-        expect(lastCleansedReason).toBe('none');
+    it('getPageStateForTesting().lastCleansedReason is "none" by default', () => {
+        expect(getPageStateForTesting().lastCleansedReason).toBe('none');
     });
 
-    it('lastCleanseStats has zero counts by default', () => {
-        expect(lastCleanseStats.hardStripRemoved).toBe(0);
-        expect(lastCleanseStats.keywordStripRemoved).toBe(0);
-        expect(lastCleanseStats.totalRemoved).toBe(0);
+    it('getPageStateForTesting().lastCleanseStats has zero counts by default', () => {
+        expect(getPageStateForTesting().lastCleanseStats.hardStripRemoved).toBe(0);
+        expect(getPageStateForTesting().lastCleanseStats.keywordStripRemoved).toBe(0);
+        expect(getPageStateForTesting().lastCleanseStats.totalRemoved).toBe(0);
     });
 
-    it('lastByteStats has zero bytes by default', () => {
-        expect(lastByteStats.pageBytes).toBe(0);
-        expect(lastByteStats.candidateBytes).toBe(0);
-        expect(lastByteStats.originalBytes).toBe(0);
-        expect(lastByteStats.cleansedBytes).toBe(0);
+    it('getPageStateForTesting().lastByteStats has zero bytes by default', () => {
+        expect(getPageStateForTesting().lastByteStats.pageBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.candidateBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.originalBytes).toBe(0);
+        expect(getPageStateForTesting().lastByteStats.cleansedBytes).toBe(0);
     });
 
-    it('lastAiSummaryCleansedStats has zero counts and "none" reason by default', () => {
-        expect(lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedBytes).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedElements).toBe(0);
-        expect(lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBe('none');
+    it('getPageStateForTesting().lastAiSummaryCleansedStats has zero counts and "none" reason by default', () => {
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements).toBe(0);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBe('none');
     });
 
-    it('lastFallbackTriggered is false by default', () => {
-        expect(lastFallbackTriggered).toBe(false);
+    it('getPageStateForTesting().lastFallbackTriggered is false by default', () => {
+        expect(getPageStateForTesting().lastFallbackTriggered).toBe(false);
     });
 });
 
@@ -248,15 +244,15 @@ describe('extractPageContent - fallback logic', () => {
         document.body.innerHTML = '';
     });
 
-    it('sets lastFallbackTriggered when content is too short', () => {
+    it('sets getPageStateForTesting().lastFallbackTriggered when content is too short', () => {
         // Create a minimal page that triggers fallback
         document.body.innerHTML = `<p>Short</p>`;
         extractPageContent();
         // Fallback may or may not trigger depending on extraction logic
-        expect(typeof lastFallbackTriggered).toBe('boolean');
+        expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
     });
 
-    it('updates lastByteStats after extraction', () => {
+    it('updates getPageStateForTesting().lastByteStats after extraction', () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -266,10 +262,10 @@ describe('extractPageContent - fallback logic', () => {
         `;
         extractPageContent();
         // Stats should be updated after extraction
-        expect(lastByteStats).toBeDefined();
+        expect(getPageStateForTesting().lastByteStats).toBeDefined();
     });
 
-    it('updates lastAiSummaryCleansedStats after extraction', () => {
+    it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -278,7 +274,7 @@ describe('extractPageContent - fallback logic', () => {
             </article>
         `;
         extractPageContent();
-        expect(lastAiSummaryCleansedStats).toBeDefined();
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
     });
 });
 
@@ -481,11 +477,11 @@ describe('message handler - GET_CONTENT', () => {
     it('extracts content with all stats fields populated', () => {
         const result = extractPageContent();
         expect(typeof result).toBe('string');
-        expect(lastCleansedReason).toBeDefined();
-        expect(lastCleanseStats).toBeDefined();
-        expect(lastByteStats).toBeDefined();
-        expect(lastAiSummaryCleansedStats).toBeDefined();
-        expect(typeof lastFallbackTriggered).toBe('boolean');
+        expect(getPageStateForTesting().lastCleansedReason).toBeDefined();
+        expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
+        expect(getPageStateForTesting().lastByteStats).toBeDefined();
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
+        expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
     });
 });
 
@@ -868,7 +864,7 @@ describe('Content extraction with cleansing enabled', () => {
         await init();
         const result = extractPageContent();
         expect(typeof result).toBe('string');
-        expect(lastCleanseStats).toBeDefined();
+        expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
     });
 
     it('tracks AI summary cleansing stats', async () => {
@@ -881,7 +877,7 @@ describe('Content extraction with cleansing enabled', () => {
         `;
         await init();
         extractPageContent();
-        expect(lastAiSummaryCleansedStats).toBeDefined();
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
     });
 });
 
@@ -1953,22 +1949,22 @@ describe('message handler - GET_CONTENT response building', () => {
         // The message handler builds a response object with these fields
         const response = {
             content: extractPageContent(),
-            cleansedReason: lastCleansedReason,
-            cleanseStats: lastCleanseStats,
+            cleansedReason: getPageStateForTesting().lastCleansedReason,
+            cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {
-                pageBytes: lastByteStats.pageBytes || undefined,
-                candidateBytes: lastByteStats.candidateBytes || undefined,
-                originalBytes: lastByteStats.originalBytes || undefined,
-                cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                pageBytes: getPageStateForTesting().lastByteStats.pageBytes || undefined,
+                candidateBytes: getPageStateForTesting().lastByteStats.candidateBytes || undefined,
+                originalBytes: getPageStateForTesting().lastByteStats.originalBytes || undefined,
+                cleansedBytes: getPageStateForTesting().lastByteStats.cleansedBytes || undefined,
             },
             aiSummaryCleansedStats: {
-                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+                aiSummaryOriginalBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                aiSummaryCleansedBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                aiSummaryCleansedReasons: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons
             },
-            fallbackTriggered: lastFallbackTriggered
+            fallbackTriggered: getPageStateForTesting().lastFallbackTriggered
         };
 
         expect(response).toHaveProperty('content');
@@ -1981,10 +1977,10 @@ describe('message handler - GET_CONTENT response building', () => {
 
     it('response byteStats has correct structure', () => {
         const byteStats = {
-            pageBytes: lastByteStats.pageBytes || undefined,
-            candidateBytes: lastByteStats.candidateBytes || undefined,
-            originalBytes: lastByteStats.originalBytes || undefined,
-            cleansedBytes: lastByteStats.cleansedBytes || undefined,
+            pageBytes: getPageStateForTesting().lastByteStats.pageBytes || undefined,
+            candidateBytes: getPageStateForTesting().lastByteStats.candidateBytes || undefined,
+            originalBytes: getPageStateForTesting().lastByteStats.originalBytes || undefined,
+            cleansedBytes: getPageStateForTesting().lastByteStats.cleansedBytes || undefined,
         };
 
         expect(byteStats).toHaveProperty('pageBytes');
@@ -1995,11 +1991,11 @@ describe('message handler - GET_CONTENT response building', () => {
 
     it('response aiSummaryCleansedStats has correct structure', () => {
         const aiSummaryCleansedStats = {
-            aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-            aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-            aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-            aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-            aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+            aiSummaryOriginalBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+            aiSummaryCleansedBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+            aiSummaryCleansedElements: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+            aiSummaryCleansedReason: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+            aiSummaryCleansedReasons: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons
         };
 
         expect(aiSummaryCleansedStats).toHaveProperty('aiSummaryOriginalBytes');
@@ -2151,22 +2147,22 @@ describe('message handler - GET_CONTENT response building', () => {
         // The message handler builds a response object with these fields
         const response = {
             content: extractPageContent(),
-            cleansedReason: lastCleansedReason,
-            cleanseStats: lastCleanseStats,
+            cleansedReason: getPageStateForTesting().lastCleansedReason,
+            cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {
-                pageBytes: lastByteStats.pageBytes || undefined,
-                candidateBytes: lastByteStats.candidateBytes || undefined,
-                originalBytes: lastByteStats.originalBytes || undefined,
-                cleansedBytes: lastByteStats.cleansedBytes || undefined,
+                pageBytes: getPageStateForTesting().lastByteStats.pageBytes || undefined,
+                candidateBytes: getPageStateForTesting().lastByteStats.candidateBytes || undefined,
+                originalBytes: getPageStateForTesting().lastByteStats.originalBytes || undefined,
+                cleansedBytes: getPageStateForTesting().lastByteStats.cleansedBytes || undefined,
             },
             aiSummaryCleansedStats: {
-                aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+                aiSummaryOriginalBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                aiSummaryCleansedBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                aiSummaryCleansedReasons: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons
             },
-            fallbackTriggered: lastFallbackTriggered
+            fallbackTriggered: getPageStateForTesting().lastFallbackTriggered
         };
 
         expect(response).toHaveProperty('content');
@@ -2179,10 +2175,10 @@ describe('message handler - GET_CONTENT response building', () => {
 
     it('response byteStats has correct structure', () => {
         const byteStats = {
-            pageBytes: lastByteStats.pageBytes || undefined,
-            candidateBytes: lastByteStats.candidateBytes || undefined,
-            originalBytes: lastByteStats.originalBytes || undefined,
-            cleansedBytes: lastByteStats.cleansedBytes || undefined,
+            pageBytes: getPageStateForTesting().lastByteStats.pageBytes || undefined,
+            candidateBytes: getPageStateForTesting().lastByteStats.candidateBytes || undefined,
+            originalBytes: getPageStateForTesting().lastByteStats.originalBytes || undefined,
+            cleansedBytes: getPageStateForTesting().lastByteStats.cleansedBytes || undefined,
         };
 
         expect(byteStats).toHaveProperty('pageBytes');
@@ -2193,11 +2189,11 @@ describe('message handler - GET_CONTENT response building', () => {
 
     it('response aiSummaryCleansedStats has correct structure', () => {
         const aiSummaryCleansedStats = {
-            aiSummaryOriginalBytes: lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-            aiSummaryCleansedBytes: lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-            aiSummaryCleansedElements: lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-            aiSummaryCleansedReason: lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-            aiSummaryCleansedReasons: lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+            aiSummaryOriginalBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+            aiSummaryCleansedBytes: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+            aiSummaryCleansedElements: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+            aiSummaryCleansedReason: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+            aiSummaryCleansedReasons: getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons
         };
 
         expect(aiSummaryCleansedStats).toHaveProperty('aiSummaryOriginalBytes');

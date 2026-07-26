@@ -17,7 +17,7 @@ import type { SqliteClient } from '../sqliteClient.js';
 
 export interface LifecycleHandlerContext {
     /** Mutable flag — the handler may set it to true */
-    isCacheInitialized: { value: boolean };
+    isCacheInitialized: { value: boolean; restore: () => Promise<void> };
     rateLimiter: RateLimiter;
     sqliteClient: SqliteClient;
 }
@@ -60,6 +60,8 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
      */
     async function handleStartup(): Promise<void> {
         logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
+
+        await ctx.isCacheInitialized.restore();
 
         await updateConsentBadge();
 

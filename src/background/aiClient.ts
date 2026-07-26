@@ -36,16 +36,28 @@ export const PROVIDER_LABELS: Record<string, string> = {
  * AI Client
  * Strategyパターンによるプロバイダー拡張
  *
+ * ⚠️ 新規コードからの直接利用は避けること。AI要約機能へのアクセスは
+ * src/background/ai/AIService.ts（AIServiceインターフェース）経由で行う。
+ * AIClientはRemoteAIService内部でProviderロジックの実装として使われる。
+ * 詳細: dev-docs/ADR/2026-07-27-ai-client-service-unification.md
+ *
  * 【拡張性】: 新しいAIプロバイダーを追加する際はproviderConfigsに設定を追加するのみ
  * 【OCP Compliance】: 既存コードを修正せずに新しいプロバイダーを追加可能
  */
 export class AIClient {
     private localAiClient: LocalAIClient;
     private providers: Map<string, AIProviderFactory>;
+    /**
+     * In-flight generateSummary() リクエストを追跡するマップ。
+     * 同一URLへの並行呼び出しが実際のAI API呼び出しを重複させないよう、
+     * 進行中のPromiseを再利用する（FinOptimization: 不要なAPIコスト防止）。
+     */
+    private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
 
     constructor() {
         this.localAiClient = new LocalAIClient();
         this.providers = new Map();
+        this.inFlightSummaryRequests = new Map();
         this.registerDefaultProviders();
     }
 
@@ -75,6 +87,30 @@ export class AIClient {
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false, url: string = ''): Promise<AISummaryResult> {
+        // in-flightキーはURLとtagSummaryModeの組み合わせ（同一URLでもモードが異なれば別リクエストとして扱う）。
+        // urlが空文字列の場合は重複排除の対象外とする（キーの衝突リスクを避けるため）。
+        const dedupeKey = url ? `${url}::${tagSummaryMode}` : null;
+
+        if (dedupeKey) {
+            const existing = this.inFlightSummaryRequests.get(dedupeKey);
+            if (existing) {
+                return existing;
+            }
+        }
+
+        const requestPromise = this.generateSummaryInternal(content, tagSummaryMode, url);
+
+        if (dedupeKey) {
+            this.inFlightSummaryRequests.set(dedupeKey, requestPromise);
+            requestPromise.finally(() => {
+                this.inFlightSummaryRequests.delete(dedupeKey);
+            });
+        }
+
+        return requestPromise;
+    }
+
+    private async generateSummaryInternal(content: string, tagSummaryMode: boolean, url: string): Promise<AISummaryResult> {
         const settings = await getSettings();
         const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
         const slots = this.resolveProviderSlots(settings);

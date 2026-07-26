@@ -5,7 +5,7 @@ import { RemoteAIService } from './ai/RemoteAIService.js';
 import { LocalAIService } from './ai/LocalAIService.js';
 import { LocalAIClient } from './localAiClient.js';
 import { RecordingLogic } from './recordingLogic.js';
-import { TabCache } from './tabCache.js';
+import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -21,7 +21,12 @@ import {
     clearSettingsCache
 } from '../utils/storage.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
+import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
+import { flushPendingRecords } from './pendingSqliteQueue.js';
+import { flushPendingWrites, type PendingChromeStorageWrite } from './pendingChromeStorageQueue.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
+import { withOptimisticLock } from '../utils/optimisticLock.js';
+import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { MigrationService } from './migrationService.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -59,6 +64,7 @@ import {
     createRefreshLocalMarkdownSchedulerHandler,
     createConsentStateChangedHandler,
     createGenerateReviewSummaryHandler,
+    createLogForwardHandler,
 } from './handlers/messageHandlers.js';
 import type {
     ManualRecordHandlerDeps,
@@ -66,8 +72,9 @@ import type {
 } from './handlers/messageHandlers.js';
 import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
-import { sharedOfflineNetworkQueue, type OfflineJob } from './offlineNetworkQueue.js';
-import type { RecordingData } from '../messaging/types.js';
+import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
+import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 
 // ============================================================================
@@ -150,6 +157,8 @@ async function runMigration(): Promise<void> {
             'service-worker'
         );
     }
+
+    await migrateLegacyPendingPagesKey();
 }
 
 // Session store for cross-SW-restart persistence
@@ -203,14 +212,16 @@ const sqliteClient = getSharedSqliteClient();
 const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
-// Import RecordingPipeline
-import { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+const processOfflineNetworkQueue = createOfflineQueueProcessor({
+    offlineNetworkQueue: sharedOfflineNetworkQueue,
+    recordingLogic,
+});
 
-// TabCache for storing tab data
-const tabCache = new TabCache(sessionStore);
+// TabCache for storing tab data (lazy-initialized singleton)
+const tabCache = getTabCacheInstance(sessionStore);
 
-// 自動保存成功バッジを表示中のタブIDセット
-const autoSavedBadgeTabs = new Set<number>();
+// 自動保存成功バッジを表示中のタブIDセット（SW再起動をまたいで永続化）
+const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
 
 // Initialize HeaderDetector (must be initialized on Service Worker startup)
 HeaderDetector.initialize();
@@ -222,8 +233,9 @@ const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 const rateLimiter = new RateLimiter(sessionStore);
 rateLimiter.initialize();
 
-// Track whether cache has been initialized (for startup rehydration)
-let isCacheInitialized = false;
+// Track whether cache has been initialized (for startup rehydration; persisted
+// across Service Worker restarts via chrome.storage.session)
+const isCacheInitialized = createCacheInitializedFlag();
 
 const manualContentFetcher = new ManualContentFetcher();
 
@@ -363,6 +375,9 @@ export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
 });
 registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary);
 
+export const handleLogForward = createLogForwardHandler();
+registry.register('LOG_FORWARD', handleLogForward);
+
 const _dashboardSqliteHandler = createDashboardSqliteHandler({
   query: (params) => sqliteClient.query(params as any),
   search: (query, limit, offset) => sqliteClient.search(query, limit, offset),
@@ -429,36 +444,6 @@ export const handleDashboardSqlite = ((message: Record<string, unknown>, sender:
 registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
 
 // ============================================================================
-// Offline Network Queue Retry
-// ============================================================================
-
-async function processOfflineNetworkQueue(): Promise<void> {
-  await sharedOfflineNetworkQueue.retryAll(async (job: OfflineJob) => {
-    const payload = job.payload as {
-      title: string;
-      url: string;
-      content: string;
-      summary?: string;
-      maskedCount?: number;
-      tags?: string[];
-    };
-    try {
-      const result = await recordingLogic.record({
-        title: payload.title,
-        url: payload.url,
-        content: payload.content,
-        force: true,
-        skipDuplicateCheck: true,
-        recordType: 'manual',
-      } as RecordingData);
-      return result.success && !result.skipped;
-    } catch {
-      return false;
-    }
-  });
-}
-
-// ============================================================================
 // Message Handler (wraps registry with validation)
 // ============================================================================
 
@@ -473,6 +458,10 @@ export function createMessageHandler(): (
 ) => boolean {
     return (rawMessage: unknown, sender, sendResponse) => {
         const process = async () => {
+            // Restore persisted SW state before handling the first message after
+            // a Service Worker restart.
+            await Promise.all([isCacheInitialized.restore(), autoSavedBadgeTabs.restore()]);
+
             try {
                 if (!rawMessage || typeof rawMessage !== 'object') {
                     sendResponse(INVALID_MESSAGE_ERROR);
@@ -550,7 +539,7 @@ export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 // ============================================================================
 
 const _lifecycleHandlers = createLifecycleHandlers({
-    isCacheInitialized: { get value() { return isCacheInitialized; }, set value(v: boolean) { isCacheInitialized = v; } },
+    isCacheInitialized,
     rateLimiter,
     sqliteClient,
 });
@@ -598,6 +587,22 @@ const _contextClickHandler = createContextClickHandler({
 // Guard allows this module to be imported in test environments where
 // globalThis.chrome is undefined, without causing errors.
 // ============================================================================
+
+async function retryPendingChromeStorageWrite(write: PendingChromeStorageWrite): Promise<boolean> {
+  if (write.key !== 'savedUrlsWithTimestamps') return false;
+  try {
+    const entry = write.value as SavedUrlEntry;
+    await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
+      const list = current || [];
+      const idx = list.findIndex((e) => e.url === entry.url);
+      if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
+      return [...list, entry];
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Message listener
@@ -649,6 +654,13 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
           }
           if (alarm.name === 'yasumaro-offline-network-retry') {
             void processOfflineNetworkQueue();
+            void flushPendingRecords(sqliteClient);
+            void flushPendingWrites(retryPendingChromeStorageWrite);
+            // Piggyback a lightweight health check on this existing 5-minute
+            // alarm to keep the offscreen document from being suspended for
+            // long stretches on mobile Chrome (PBI-2026-07-26-20). Reduces
+            // suspend frequency; does not guarantee it.
+            void sqliteClient.isSqliteHealthy();
           }
     });
 }

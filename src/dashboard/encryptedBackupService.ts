@@ -6,8 +6,8 @@
 import { getSettings, saveSettings } from '../utils/storage.js';
 import { exportDb } from './exportLogsService.js';
 import { restoreDb } from './dashboardSqliteService.js';
-import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto.js';
-import type { EncryptionEnvelope } from '../utils/crypto.js';
+import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
+import type { EncryptionEnvelope } from '../utils/crypto/index.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';

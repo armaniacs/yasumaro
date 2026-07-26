@@ -28,6 +28,7 @@ import {
 } from './sqlite.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { forwardWarn, forwardError } from './offscreenLogger.js';
 
 // VULN-016 fix: simple promise-based mutex to serialize SQLite write operations
 // and prevent concurrent transactions from rolling back each other
@@ -112,7 +113,7 @@ export async function checkAvailability(): Promise<string> {
         const capabilities = await ai.languageModel.capabilities();
         return capabilities?.available || 'no';
     } catch (error) {
-        console.error('Offscreen: Failed to check capabilities', error);
+        forwardError('Offscreen: Failed to check capabilities', { error: errorMessage(error) });
         return 'unsupported';
     }
 }
@@ -124,18 +125,18 @@ export async function ensureSession(): Promise<boolean | { success: false; error
     const ai = getAI();
 
     if (!ai) {
-        console.error("Offscreen: 'ai' object not found in window, globalThis, or self.");
+        forwardError("Offscreen: 'ai' object not found in window, globalThis, or self.");
         return { success: false, error: "'ai' object not found (Prompt API missing). Check flags." };
     }
 
     if (!ai.languageModel) {
-        console.error("Offscreen: ai.languageModel is undefined.");
+        forwardError('Offscreen: ai.languageModel is undefined.');
         return { success: false, error: "ai.languageModel is undefined" };
     }
 
     const status = await checkAvailability();
     if (status !== 'readily' && status !== 'after-download') {
-        console.warn(`Offscreen: AI status is '${status}', cannot create session.`);
+        forwardWarn(`Offscreen: AI status is '${status}', cannot create session.`, { status });
         return { success: false, error: `AI capability status is '${status}'` };
     }
 
@@ -148,7 +149,7 @@ export async function ensureSession(): Promise<boolean | { success: false; error
         });
         return true;
     } catch (error: unknown) {
-        console.error('Offscreen: Failed to create session', error);
+        forwardError('Offscreen: Failed to create session', { error: errorMessage(error) });
         return { success: false, error: `Session creation failed: ${errorMessage(error)}` };
     }
 }
@@ -400,7 +401,7 @@ async function handleSqliteMessage(
             // Exhaustiveness check: if a new SqliteMessage variant is added without
             // a case above, this line fails to type-check.
             const _exhaustive: never = msg;
-            console.warn(`Offscreen: Unknown SQLite message type ${(_exhaustive as SqliteMessage).type}`);
+            forwardWarn(`Offscreen: Unknown SQLite message type ${(_exhaustive as SqliteMessage).type}`);
             sendResponse({ success: false, error: 'Unknown message type' });
         }
     }
@@ -470,7 +471,7 @@ export function handleOffscreenMessage(
                         throw new Error('Session is null');
                     }
                 } catch (promptError: unknown) {
-                    console.error('Offscreen: Prompt extraction failed', promptError);
+                    forwardError('Offscreen: Prompt extraction failed', { error: errorMessage(promptError) });
                     session = null;
                     sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
                 }
@@ -489,11 +490,11 @@ export function handleOffscreenMessage(
                 }
 
             } else {
-                console.warn(`Offscreen: Unknown message type ${msg.type}`);
+                forwardWarn(`Offscreen: Unknown message type ${msg.type}`);
                 sendResponse({ success: false, error: 'Unknown message type' });
             }
         } catch (err: unknown) {
-            console.error('Offscreen: Unexpected error', err);
+            forwardError('Offscreen: Unexpected error', { error: errorMessage(err) });
             sendResponse({ success: false, error: errorMessage(err) });
         }
     })();

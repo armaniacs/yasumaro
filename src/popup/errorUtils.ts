@@ -345,6 +345,8 @@ function createForceRecordButton(parentElement: HTMLElement, onClick: () => void
   forceBtn.textContent = getMsgWithCache('forceRecord');
   forceBtn.className = 'alert-btn';
 
+  // .onclick property assignment is safe here: forceBtn is a freshly created element
+  // set up exactly once, so there is no risk of listener accumulation.
   forceBtn.onclick = () => {
     forceBtn.disabled = true;
     forceBtn.textContent = getMsgWithCache('recording');

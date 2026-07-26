@@ -6,6 +6,7 @@
 import { StorageKeys } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';
 
 /** プライバシーポリシーバージョン定数 */
 export const PRIVACY_POLICY_VERSION = '2026-06-20';
@@ -20,6 +21,40 @@ export interface PrivacyConsentState {
     consentVersion?: string;
     /** ポリシーバージョンが変更され、再同意が必要かどうか */
     needsReconsent?: boolean;
+}
+
+/** ストレージに保存される同意状態（HMAC署名付き） */
+interface SignedPrivacyConsentRecord {
+    hasConsented: boolean;
+    consentDate?: string;
+    consentVersion?: string;
+    withdrawal?: PrivacyConsentWithdrawal;
+    /** HMAC署名（hasConsented/consentDate/consentVersion/withdrawalを対象） */
+    signature?: string;
+}
+
+/**
+ * 署名対象データを安定した文字列表現に変換する。
+ * フィールド追加時の互換性のため、明示的にキーを列挙する。
+ */
+function buildSignaturePayload(record: Omit<SignedPrivacyConsentRecord, 'signature'>): string {
+    return JSON.stringify({
+        hasConsented: record.hasConsented,
+        consentDate: record.consentDate ?? null,
+        consentVersion: record.consentVersion ?? null,
+        withdrawal: record.withdrawal ?? null
+    });
+}
+
+/**
+ * 同意状態レコードにHMAC署名を付与して保存する。
+ */
+async function signAndStoreConsent(record: Omit<SignedPrivacyConsentRecord, 'signature'>): Promise<void> {
+    const key = await getConsentHmacKey();
+    const payload = buildSignaturePayload(record);
+    const signature = await generateHmacSignature(payload, key);
+    const signedRecord: SignedPrivacyConsentRecord = { ...record, signature };
+    await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT]: signedRecord });
 }
 
 /**
@@ -42,7 +77,25 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
 
         // 現代形式（オブジェクト）の処理
         if (typeof consentValue === 'object' && consentValue !== null) {
-            const data = consentValue as PrivacyConsentState;
+            const data = consentValue as SignedPrivacyConsentRecord;
+
+            // 署名が付与されている場合は改ざんチェックを行う。
+            // 署名がない場合（マイグレーション前の既存データ）は後方互換として読み込む。
+            if (typeof data.signature === 'string') {
+                const key = await getConsentHmacKey();
+                const payload = buildSignaturePayload(data);
+                const isValid = await verifyHmacSignature(payload, data.signature, key);
+                if (!isValid) {
+                    await logWarn(
+                        'Privacy consent signature verification failed — treating as unconsented',
+                        {},
+                        undefined,
+                        'privacyConsent.ts'
+                    );
+                    return { hasConsented: false };
+                }
+            }
+
             const versionMatch = data.consentVersion === PRIVACY_POLICY_VERSION;
             // バージョン不一致の場合、再同意が必要
             const needsReconsent = !versionMatch && data.hasConsented === true;
@@ -79,7 +132,7 @@ export async function savePrivacyConsent(version: string = PRIVACY_POLICY_VERSIO
             consentVersion: version
         };
 
-        await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT]: data });
+        await signAndStoreConsent(data);
         await logInfo(
             'Privacy consent saved',
             { version, date: data.consentDate },
@@ -192,7 +245,7 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
             withdrawal
         };
 
-        await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT]: withdrawnState });
+        await signAndStoreConsent(withdrawnState);
         await logInfo('Privacy consent withdrawn', { withdrawalDate: withdrawal.withdrawalDate }, 'privacyConsent.ts');
         return withdrawal;
     } catch (error) {

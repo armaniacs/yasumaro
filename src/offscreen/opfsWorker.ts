@@ -42,6 +42,30 @@ interface ResponseMessage {
   error?: string;
 }
 
+/**
+ * Log relay message posted to the parent offscreen document, distinguished
+ * from ResponseMessage by the __log marker. This Worker has no chrome.*
+ * access, so sqliteEngineContext.ts's worker.onmessage handler forwards
+ * these to the Service Worker (or logs them directly, since it runs in the
+ * offscreen document and can import ../utils/logger.js).
+ */
+export interface WorkerLogMessage {
+  __log: true;
+  level: 'warn' | 'error' | 'info';
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+function postWorkerLog(level: WorkerLogMessage['level'], message: string, details?: Record<string, unknown>): void {
+  try {
+    (self as unknown as DedicatedWorkerGlobalScope).postMessage({ __log: true, level, message, details } satisfies WorkerLogMessage);
+  } catch {
+    // Non-Worker global (e.g. jsdom's Window.postMessage requires a
+    // targetOrigin argument) — fall back to console so nothing is lost.
+    console[level === 'info' ? 'log' : level](message, details ?? '');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -179,12 +203,12 @@ async function runMigrationV2(): Promise<void> {
     if (result.skipped) {
       // Already done — nothing to log
     } else if (result.error) {
-      console.warn('OPFS Worker: V2 migration failed (will retry next init):', result.error);
+      postWorkerLog('warn', 'OPFS Worker: V2 migration failed (will retry next init)', { error: result.error });
     } else {
-      console.info(`OPFS Worker: V2 migration complete — ${result.migrated} records migrated`);
+      postWorkerLog('info', `OPFS Worker: V2 migration complete — ${result.migrated} records migrated`, { migrated: result.migrated });
     }
   } catch (err) {
-    console.warn('OPFS Worker: runMigrationV2 unexpected error:', errorMessage(err));
+    postWorkerLog('warn', 'OPFS Worker: runMigrationV2 unexpected error', { error: errorMessage(err) });
   }
 }
 
@@ -366,7 +390,7 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
       } catch (err) {
         // Log first error for diagnosis, silently skip the rest
         if (inserted === 0 && records.indexOf(record) === 0) {
-          console.error('OPFS Worker: first INSERT failed:', err, 'record:', record.url);
+          postWorkerLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
         }
       }
     }
@@ -378,7 +402,7 @@ async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count:
     });
   } catch (err) {
     await sqlExec('ROLLBACK');
-    console.error('OPFS Worker: insertBatch transaction failed:', err);
+    postWorkerLog('error', 'OPFS Worker: insertBatch transaction failed', { error: errorMessage(err) });
   }
   return { count: inserted };
 }
@@ -472,7 +496,7 @@ async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecord
     await sqlExec('COMMIT');
   } catch (err) {
     await sqlExec('ROLLBACK');
-    console.error('OPFS Worker: purge transaction failed:', err);
+    postWorkerLog('error', 'OPFS Worker: purge transaction failed', { error: errorMessage(err) });
     throw err;
   }
 

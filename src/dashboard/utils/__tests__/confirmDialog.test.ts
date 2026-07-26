@@ -79,7 +79,7 @@ describe('showConfirmDialog', () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
 
     expect(document.querySelector('.confirm-dialog-btn-cancel')?.textContent).toBe('Cancel');
-    expect(document.querySelector('.confirm-dialog-btn-primary')?.textContent).toBe('confirmDelete');
+    expect(document.querySelector('.confirm-dialog-btn-primary')?.textContent).toBe('Delete');
 
     document.querySelector('.confirm-dialog-btn-cancel')?.click();
     await promise;

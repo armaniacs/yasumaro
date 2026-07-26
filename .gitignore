@@ -18,6 +18,7 @@ tsconfig.tsbuildinfo
 test-results/
 playwright-report/
 playwright/.cache/
+sbom.json
 
 docs/typedoc/
 dev-docs/typedoc/

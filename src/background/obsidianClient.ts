@@ -27,6 +27,7 @@ const FETCH_TIMEOUT_MS = 15000; // 15秒
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
 const DEFAULT_PORT = '27123';
+const DEFAULT_HOST = '127.0.0.1';
 
 /**
  * Problem #6: Mutexキューサイズ制限とタイムアウト設定
@@ -35,6 +36,21 @@ const MAX_QUEUE_SIZE = 50;
 const MUTEX_TIMEOUT_MS = 30000; // 30秒
 
 type ObsidianProtocol = 'http' | 'https';
+
+/**
+ * Obsidian Local REST API エンドポイントの一元管理。
+ * パス文字列をここに集約することで、API仕様変更時の修正箇所を1箇所に限定する。
+ * 詳細は dev-docs/API_ENDPOINTS.md を参照。
+ */
+const ENDPOINTS = {
+    /** ヘルスチェック / 接続確認用のルートエンドポイント */
+    root: (baseUrl: string): string => `${baseUrl}/`,
+    /** デイリーノートの読み取り・書き込み対象パス */
+    dailyNote: (baseUrl: string, dailyPath: string): string => {
+        const pathSegment = dailyPath ? `${dailyPath}/` : '';
+        return `${baseUrl}/vault/${pathSegment}${buildDailyNotePath('')}.md`;
+    },
+} as const;
 
 /**
  * Mutexのインスタンス（クロージャ経由で共有）
@@ -79,12 +95,11 @@ export class ObsidianClient {
     async _getConfig(): Promise<ObsidianConfig> {
         const settings = await getSettings();
 
-        const s = settings as Record<string, unknown>;
-        const protocol = this._validateProtocol(s[StorageKeys.OBSIDIAN_PROTOCOL] as string | undefined | null);
-        const rawPort = (s[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT) as string | number;
+        const protocol = this._validateProtocol(settings[StorageKeys.OBSIDIAN_PROTOCOL]);
+        const rawPort = settings[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT;
         const port = this._validatePort(rawPort);
-        const host = this._validateHost(s[StorageKeys.OBSIDIAN_HOST] as string | undefined | null);
-        const apiKey = s[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
+        const host = this._validateHost(settings[StorageKeys.OBSIDIAN_HOST]);
+        const apiKey = settings[StorageKeys.OBSIDIAN_API_KEY];
 
         addLog(LogType.DEBUG, 'Obsidian API Key check', {
             exists: !!apiKey,
@@ -150,16 +165,16 @@ export class ObsidianClient {
      */
     _validateHost(host: string | undefined | null): string {
         if (host === undefined || host === null || host === '') {
-            return '127.0.0.1';
+            return DEFAULT_HOST;
         }
 
         if (typeof host !== 'string') {
-            return '127.0.0.1';
+            return DEFAULT_HOST;
         }
 
         const trimmed = host.trim();
         if (trimmed === '') {
-            return '127.0.0.1';
+            return DEFAULT_HOST;
         }
 
         // プロトコルやスラッシュを含む不正なホストは拒否
@@ -213,8 +228,7 @@ export class ObsidianClient {
             // Settings型は StorageKeys でアクセス可能
             const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
             const dailyPath = buildDailyNotePath(dailyPathRaw);
-            const pathSegment = dailyPath ? `${dailyPath}/` : '';
-            const targetUrl = `${baseUrl}/vault/${pathSegment}${buildDailyNotePath('')}.md`;
+            const targetUrl = ENDPOINTS.dailyNote(baseUrl, dailyPath);
 
             try {
                 const existingContent = await this._fetchExistingContent(targetUrl, headers);
@@ -300,14 +314,14 @@ export class ObsidianClient {
                 if (!apiKey) {
                     return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
                 }
-                baseUrl = `${protocol}://127.0.0.1:${port}`;
+                baseUrl = `${protocol}://${DEFAULT_HOST}:${port}`;
                 headers = { ...BASE_HEADERS, 'Authorization': `Bearer ${apiKey}` };
             } else {
                 ({ baseUrl, headers } = await this._getConfig());
             }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 
-            const response = await fetchWithTimeout(`${baseUrl}/`, {
+            const response = await fetchWithTimeout(ENDPOINTS.root(baseUrl), {
                 method: 'GET',
                 headers,
                 skipCspValidation: true,

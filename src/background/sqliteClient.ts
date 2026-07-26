@@ -14,7 +14,11 @@ import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
-const MESSAGE_TIMEOUT_MS = 10000; // 10 seconds
+const MESSAGE_TIMEOUT_MS_DESKTOP = 10000; // 10 seconds
+// Mobile Chrome suspends the offscreen document more aggressively when idle,
+// so a shorter timeout surfaces the resulting failure sooner instead of
+// leaving the caller waiting the full desktop timeout.
+const MESSAGE_TIMEOUT_MS_MOBILE = 5000; // 5 seconds
 
 // ============================================================================
 // Types
@@ -73,13 +77,18 @@ export class SqliteClient {
   /** Last categorized error from call(). Read by dashboard handlers. */
   lastError: string | null = null;
 
+  /** Per-message timeout, shortened on mobile (see MESSAGE_TIMEOUT_MS_MOBILE). */
+  private readonly messageTimeoutMs: number;
+
   constructor() {
     this.creatingOffscreenPromise = null;
     this.offscreenAlive = false;
-    // Reduce the queue size on mobile devices to limit memory consumption.
     const os = getPlatformOs();
-    const maxQueueSize = (os === 'android' || os === 'ios') ? 50 : 200;
-    this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: MESSAGE_TIMEOUT_MS * 2 });
+    const isMobile = os === 'android' || os === 'ios';
+    // Reduce the queue size on mobile devices to limit memory consumption.
+    const maxQueueSize = isMobile ? 50 : 200;
+    this.messageTimeoutMs = isMobile ? MESSAGE_TIMEOUT_MS_MOBILE : MESSAGE_TIMEOUT_MS_DESKTOP;
+    this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: this.messageTimeoutMs * 2 });
   }
 
   /**
@@ -130,8 +139,8 @@ export class SqliteClient {
         fn();
       };
       const timeoutId = setTimeout(() => {
-        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${MESSAGE_TIMEOUT_MS}ms`)));
-      }, MESSAGE_TIMEOUT_MS);
+        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${this.messageTimeoutMs}ms`)));
+      }, this.messageTimeoutMs);
 
       chrome.runtime.sendMessage(
         { type, target: 'offscreen', payload },
@@ -186,26 +195,24 @@ export class SqliteClient {
         const msg = String(res?.error || `${type} failed`);
         recordSqliteFailure(type, msg);
         logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        return { success: false, error: categorizeError(msg) };
+        this.lastError = categorizeError(msg);
+        return { success: false, error: this.lastError };
       }
       recordSqliteSuccess();
+      this.lastError = null;
       return { success: true, data: transform ? transform(res) : (res as unknown as T) };
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
       logError('SQLite Client: call failed', { error: msg }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      return { success: false, error: categorizeError(msg) };
+      this.lastError = categorizeError(msg);
+      return { success: false, error: this.lastError };
     }
   }
 
   async init(): Promise<boolean> {
     const result = await this.call('SQLITE_INIT');
-    if (!result.success) {
-      this.lastError = result.error;
-      return false;
-    }
-    this.lastError = null;
-    return true;
+    return result.success;
   }
 
   async insert(record: BrowsingLogRecord): Promise<{ id: number } | null> {
@@ -214,12 +221,7 @@ export class SqliteClient {
       record as unknown as Record<string, unknown>,
       (res) => ({ id: Number(res.id) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null> {
@@ -228,12 +230,7 @@ export class SqliteClient {
       { records: records as unknown as Record<string, unknown>[] },
       (res) => ({ count: Number(res.count) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async query<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<{ rows: T[]; total: number } | null> {
@@ -245,12 +242,7 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async search(query: string, limit = 50, offset = 0): Promise<{ rows: SearchResult[]; total: number } | null> {
@@ -262,32 +254,17 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async update(id: number, changes: Partial<Record<string, unknown>>): Promise<boolean> {
     const result = await this.call('SQLITE_UPDATE', { id, ...changes });
-    if (!result.success) {
-      this.lastError = result.error;
-      return false;
-    }
-    this.lastError = null;
-    return true;
+    return result.success;
   }
 
   async delete(id: number): Promise<boolean> {
     const result = await this.call('SQLITE_DELETE', { id });
-    if (!result.success) {
-      this.lastError = result.error;
-      return false;
-    }
-    this.lastError = null;
-    return true;
+    return result.success;
   }
 
   async toggleStar(id: number): Promise<{ is_starred: number } | null> {
@@ -296,22 +273,12 @@ export class SqliteClient {
       { id },
       (res) => ({ is_starred: Number(res.is_starred) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async getCount(): Promise<number | null> {
     const result = await this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async exportDb(): Promise<Uint8Array | null> {
@@ -320,12 +287,7 @@ export class SqliteClient {
       {},
       (res) => new Uint8Array(res.data as number[]),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async backupDb(): Promise<Uint8Array | null> {
@@ -334,22 +296,12 @@ export class SqliteClient {
       {},
       (res) => new Uint8Array(res.data as number[]),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async restoreDb(data: Uint8Array): Promise<boolean> {
-    try {
-      const res = await this.msgOffscreen('SQLITE_RESTORE', { data: Array.from(data) });
-      return Boolean(res.success);
-    } catch (error) {
-      console.error('restoreDb failed:', errorMessage(error));
-      return false;
-    }
+    const result = await this.call('SQLITE_RESTORE', { data: Array.from(data) });
+    return result.success;
   }
 
   async getStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5?: boolean; initError?: string; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback' } | null> {
@@ -367,11 +319,9 @@ export class SqliteClient {
       }),
     );
     if (result.success) {
-      this.lastError = null;
       return result.data;
     }
     // Even on failure, return diagnostic info so the UI can display it
-    this.lastError = result.error;
     return {
       initialized: false,
       path: '',
@@ -384,12 +334,7 @@ export class SqliteClient {
 
   async clearAll(): Promise<boolean> {
     const result = await this.call('SQLITE_CLEAR_ALL');
-    if (!result.success) {
-      this.lastError = result.error;
-      return false;
-    }
-    this.lastError = null;
-    return true;
+    return result.success;
   }
 
   /** Run the OPFS feasibility spike (PBI-10) in the offscreen document. */
@@ -398,12 +343,8 @@ export class SqliteClient {
    * Performs a `SELECT 1` equivalent via the offscreen document.
    */
   async isSqliteHealthy(): Promise<boolean> {
-    try {
-      const res = await this.msgOffscreen('SQLITE_HEALTH_CHECK', {});
-      return res.success === true;
-    } catch {
-      return false;
-    }
+    const result = await this.call('SQLITE_HEALTH_CHECK', {});
+    return result.success;
   }
 
   async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
@@ -412,12 +353,7 @@ export class SqliteClient {
       {},
       (res) => res.report as OpfsSpikeReport,
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
@@ -426,12 +362,7 @@ export class SqliteClient {
       { retentionDays, maxRecords },
       (res) => ({ purged: Number(res.purged || 0) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async purgeContent(
@@ -444,12 +375,7 @@ export class SqliteClient {
       { retentionDays, maxRecords, includeStarred },
       (res) => ({ purged: Number(res.purged || 0) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async insertAuditLog(record: { provider: string; url: string; created_at: number }): Promise<{ id: number } | null> {
@@ -458,12 +384,7 @@ export class SqliteClient {
       record,
       (res) => ({ id: Number(res.id) }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 
   async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
@@ -475,12 +396,7 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
-    if (!result.success) {
-      this.lastError = result.error;
-      return null;
-    }
-    this.lastError = null;
-    return result.data;
+    return result.success ? result.data : null;
   }
 }
 
