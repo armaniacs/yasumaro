@@ -1,9 +1,24 @@
 # PBI: 重複URLチェックのread-then-writeレース条件を排他制御で防ぐ
 
 **作成日**: 2026-07-25
+**完了日**: 2026-07-26
 **優先度**: Low
 **見積もり**: 🟡中（2pt目安）
 **副作用**: 🟡軽微（既存のMutex実装を流用するが、パイプラインステップに排他区間を追加するため処理順序に影響する可能性がある）
+
+## 実装メモ（2026-07-26）
+
+`RecordingPipeline.ts` にURL単位のMutexマップ（`urlMutexes: Map<string, Mutex>`）を追加。
+既存の `Mutex`（`src/background/Mutex.ts`）を再利用。`execute()` の既存ロジックを `executeInternal()` に
+切り出し、外側の `execute()` でURL単位のMutex取得→`executeInternal()`実行→`finally`でのMutex解放を行う。
+ロック解放時、待機キューが空かつロック解除済みならマップからエントリを削除し、無制限な増加を防ぐ。
+
+ロック粒度は「パイプライン全体（checkDuplicateStep〜saveMetadataStepを含む）」を選択（PBIが示した2択のうち
+「記録処理全体」）。同一URLへの2件目は1件目の完了（AI要約・Obsidian書き込み等を含む全処理）を待ってから
+実行される。異なるURLは互いにブロックしない。
+
+`src/background/pipeline/__tests__/RecordingPipeline.test.ts` に2件の並行実行テストを追加（直列化確認・
+異なるURL独立確認）。全25件パス（既存のflaky timeoutテストも今回は正常完了）。
 
 ---
 

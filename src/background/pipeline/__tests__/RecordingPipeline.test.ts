@@ -555,4 +555,65 @@ describe('RecordingPipeline', () => {
       expect(pipeline).toBeInstanceOf(RecordingPipeline);
     });
   });
+
+  describe('同一URLへの並行実行の排他制御（レース条件防止）', () => {
+    it('同一URLへの2つの並行リクエストが直列化される（2件目のprivacyPipeline処理は1件目の完了を待つ）', async () => {
+      // mockProcess（privacyPipelineの内部処理に相当）の呼び出し順序を記録する。
+      // Mutexで直列化されていれば、1件目のprocessが完了するまで2件目のprocessは
+      // 呼ばれない（呼び出し自体がMutex獲得後まで遅延する）はず。
+      const processOrder: string[] = [];
+      let callCount = 0;
+      let resolveFirstProcess: (() => void) | undefined;
+      const firstProcessStarted = new Promise<void>((resolve) => { resolveFirstProcess = resolve; });
+
+      mockProcess.mockImplementation(async () => {
+        callCount++;
+        const callNumber = callCount;
+        processOrder.push(`start-${callNumber}`);
+        if (callNumber === 1) {
+          resolveFirstProcess?.();
+          // 1件目は少し時間がかかる想定（AI要約等の実処理を模す）
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        processOrder.push(`end-${callNumber}`);
+        return { summary: 'AI summary', maskedCount: 0 };
+      });
+
+      const url = 'https://example.com/race-condition-test';
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const call1 = pipeline.execute({ title: 'Test', url, content: 'content' }, mockSettings);
+      await firstProcessStarted;
+      const call2 = pipeline.execute({ title: 'Test', url, content: 'content' }, mockSettings);
+
+      await Promise.all([call1, call2]);
+
+      // Mutexによる直列化が機能していれば、1件目のprocessが完全に終わってから
+      // 2件目のprocessが開始される。直列化がなければ2件目は1件目の完了を待たずに
+      // 割り込んで開始されてしまう（start-2 が end-1 より前に来る）。
+      expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+    });
+
+    it('異なるURLへの並行リクエストは互いにブロックしない', async () => {
+      mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any
+      );
+
+      const [result1, result2] = await Promise.all([
+        pipeline.execute({ title: 'A', url: 'https://example.com/a', content: 'content-a' }, mockSettings),
+        pipeline.execute({ title: 'B', url: 'https://example.com/b', content: 'content-b' }, mockSettings),
+      ]);
+
+      expect(result1.success).toBe(true);
+      expect(result2.success).toBe(true);
+    });
+  });
 });
