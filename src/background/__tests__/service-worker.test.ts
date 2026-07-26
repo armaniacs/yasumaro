@@ -222,6 +222,10 @@ vi.mock('../../popup/privacyConsent.js', () => ({
 vi.mock('../localMarkdownExportCore.js', () => ({
     flushBufferedExports: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../pendingSqliteQueue.js', () => ({
+    flushPendingRecords: vi.fn().mockResolvedValue(undefined),
+    enqueuePendingRecord: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
@@ -1314,6 +1318,19 @@ describe('service-worker handlers', () => {
 
             expect(flushBufferedExports).not.toHaveBeenCalled();
             expect(flushYesterdaysExport).not.toHaveBeenCalled();
+        });
+
+        it('retries the pending SQLite queue on the offline-network-retry alarm', async () => {
+            if (!onAlarmListener) throw new Error('onAlarm listener not registered');
+
+            const flushPendingRecords = (await import('../pendingSqliteQueue.js')).flushPendingRecords as ReturnType<typeof vi.fn>;
+            flushPendingRecords.mockClear();
+
+            onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(flushPendingRecords).toHaveBeenCalledTimes(1);
         });
     });
 
