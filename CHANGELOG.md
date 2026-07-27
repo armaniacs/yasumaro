@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v0.0.1` リリース。
+> - 現時点では `v6.6.6` リリース。次の安定化リリースは `v6.6.x` となる。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,12 +34,6 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
-
-## [0.0.1] - 2026-07-27
-
-### Changed / 変更
-
-- **バージョンを 0.0.1 にリセット** — `package.json` および `wxt.config.ts` のバージョンを `6.7.2` から `0.0.1` に変更
 
 ## [6.7.2] - 2026-07-27
 
