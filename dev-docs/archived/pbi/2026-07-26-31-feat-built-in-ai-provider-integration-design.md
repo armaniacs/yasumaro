@@ -50,14 +50,14 @@ Scenario: Built-in AI が利用不可な場合にユーザーへ通知する
 
 ## 受け入れ基準
 
-- [ ] `BuiltInAIProvider` クラスが既存の `AIProviderStrategy` インターフェースに適合する設計図が作成されている
-- [ ] Service Worker → Offscreen Document → `window.ai` のメッセージングフローが Sequence Diagram またはデータフロー図で文書化されている
-- [ ] 長文テキスト（入力上限を超える DOM 抽出結果）に対する前処理（切り詰め・チャンク化）の仕様が確定している
-- [ ] ダッシュボード UI で「Built-in AI（APIキー不要）」を選択肢として表示・切り替え可能にする設計が完了している
-- [ ] `after-download` / `no` / `unsupported` 各状態におけるユーザー通知とフォールバック動作が設計されている
-- [ ] 既存の優先度リスト、フォールバック、設定管理の仕組みを最大限再利用する設計になっている
-- [ ] 他の AI Provider（gemini / openai / ollama 等）との設定切り替えが直感的に行える UI 設計になっている
-- [ ] 設計ドキュメントがチームレビューで承認されている
+- [x] `BuiltInAIService`（`AIService` インターフェース実装）の設計図が作成されている（PBI 1 実機検証・2026-07-27 ADR「AIClientとAIServiceの統一方針」を踏まえ、`AIProviderStrategy`/`AIClient.registerProvider` 経由ではなく `AIService` 経由で統合する）
+- [x] Service Worker から `LanguageModel` を直接呼び出す設計（Offscreen Document 経由を廃止するか、SQLite 用途のみに縮退させるか）がデータフロー図で文書化されている
+- [x] 長文テキスト（入力上限を超える DOM 抽出結果）に対する前処理（切り詰め・チャンク化、`contextWindow`/`contextUsage` を用いた動的管理）の仕様が確定している
+- [x] ダッシュボード UI で「Built-in AI（APIキー不要）」を選択肢として表示・切り替え可能にする設計が完了している
+- [x] `downloadable` / `downloading` / `unavailable`（現行4値仕様）各状態におけるユーザー通知とフォールバック動作が設計されている
+- [x] 既存の `FallbackAIService` / 優先度リスト / 設定管理の仕組みを最大限再利用する設計になっている
+- [x] 他の AI Provider（gemini / openai / ollama 等）との設定切り替えが直感的に行える UI 設計になっている
+- [x] 設計ドキュメントがチームレビューで承認されている
 
 ## テスト戦略（t_wada スタイル）
 
@@ -66,14 +66,14 @@ E2E / 統合テストは対象外（設計 PBI のため）。
 ### 設計の検証（単体テストに相当）
 
 - 設計ドキュメントのレビュー
-- `BuiltInAIProvider` のインターフェースが既存 Strategy パターンと整合しているか
+- `BuiltInAIService` のインターフェースが既存 `AIService` 契約（`FallbackAIService` 経由での合成）と整合しているか
 - UI 設計が i18n / アクセシビリティ基準（`docs/ACCESSIBILITY.md`）を満たすか
 - 長文処理・エラーハンドリングの状態遷移図のレビュー
 
 ## 実装アプローチ
 
-- **調査結果を設計に反映**: PBI 1 で特定した OSS 実装パターンや API 限界を設計に組み込む
-- **既存コードとの整合**: `AIClient.registerProvider` / `AIProviderStrategy` の契約を変更しない範囲で設計する
+- **調査結果を設計に反映**: PBI 1 で特定した OSS 実装パターン・API 限界・実機検証結果（Service Worker 直接呼び出し可否）を設計に組み込む
+- **既存コードとの整合**: `AIService` インターフェース（`generateSummary` / `getSupportedModes`）の契約を変更しない範囲で設計する。`AIClient.registerProvider` への新規登録は 2026-07-27 ADR の方針により行わない
 - **設計 → レビュー → 承認**: 実装に入る前に設計を承認する
 
 ## 見積もり
@@ -91,34 +91,38 @@ E2E / 統合テストは対象外（設計 PBI のため）。
 ### 現状コードの確認
 
 ```bash
-# Provider 抽象化を確認
-grep -rn "AIProviderStrategy\|AIProviderFactory\|registerProvider\|generateSummary" src/background/ --include="*.ts"
+# AIService統合層（2026-07-27 ADRで確定した新方針の窓口）を確認
+grep -rn "AIService\|RemoteAIService\|LocalAIService\|FallbackAIService" src/background/ai/ --include="*.ts"
+
+# 既存Prompt API実装（刷新対象）を確認
+grep -rn "LanguageModel\|window.ai\|LocalAIClient" src/background/localAiClient.ts src/offscreen/offscreen.ts
 
 # UI 側の選択肢を確認
 grep -rn "PROVIDER_LABELS\|updateAIProviderVisibility\|setupAIProviderChangeListener" src/ --include="*.ts"
 ```
 
-**確認済み**: `src/background/aiClient.ts` の `providers` Map には `gemini`, `openai`, `ollama` 等が登録されているが、`localai` / `builtInAi` は登録されていない。`src/popup/settings/aiProvider.ts` の UI 選択肢にも存在しない。
+**確認済み**: `dev-docs/ADR/2026-07-27-ai-client-service-unification.md` により「新規のAI機能はAIService経由、AIClientへの新規直接依存は原則禁止」の方針が確定済み。既存の `LocalAIService`（`src/background/ai/LocalAIService.ts`）が既に `LocalAIClient`（Prompt API）をラップしているため、Built-in AI 統合はこの層を刷新する形で行う。`src/background/aiClient.ts` の `providers` Map（Strategy パターン）は Gemini/OpenAI 系の外部APIプロバイダー専用のままとし、新規登録は行わない。`src/popup/settings/aiProvider.ts` の UI 選択肢にも Built-in AI は存在しない。
 
 ### 設計のポイント
 
-1. `BuiltInAIProvider` が `AIProviderStrategy` を実装する
-2. `AIClient.registerProvider('built-in-ai', ...)` で登録する
-3. ダッシュボードの Provider 選択肢に「Built-in AI（APIキー不要）」を追加する
-4. 既存の `LocalAIClient` / `offscreen.ts` をラップする形で再利用するか、置き換えるかを設計で決定する
+1. `BuiltInAIService`（or 刷新後の `LocalAIService`）が `AIService` インターフェース（`generateSummary` / `getSupportedModes`）を実装する
+2. `createBackgroundServices.ts` の配線（`FallbackAIService({ local, remote })`）に、刷新後の Built-in AI 実装を注入する
+3. ダッシュボードの Provider 選択肢に「Built-in AI（APIキー不要）」を追加する（この UI 選択は `AI_PROVIDER_PRIORITY_LIST` の `mode` 切り替えと整合させる）
+4. `LocalAIClient` / `offscreen.ts` の Prompt API 呼び出しを現行仕様（`LanguageModel.availability()`/`create()`）へ刷新し、Service Worker 直接呼び出しへの移行可否を設計で決定する
 
 ### 落とし穴
 
-- `AIProviderStrategy.generateSummary()` の戻り値形式（`AISummaryResult`）を変更しないように注意
+- `AIService.generateSummary()` の戻り値形式（`AISummaryResult`）を変更しないように注意
 - `aiLimits.ts` の `localai` 制限と実際の Gemini Nano 上限の整合性を確認
 - UI 側で「API キー不要」であることを明確に表示しないと、ユーザーが設定ミスをする可能性がある
 - 優先度リストで Built-in AI が 1位の場合、2位以下の外部 Provider への切り替えが自然に行えるよう遷移設計が必要
 - 既存ユーザー設定との後方互換性を考慮し、`ai_provider` / `ai_provider_priority_list` の移行設計が必要
 - 設定画面での Provider 表示切り替えが、単一選択モードと優先度リストモードの両方で一貫して動作するよう注意
+- `reviewSummaryGenerator.ts` は ADR の例外規定により `AIClient` を直接生成し続けているため、Built-in AI を週次/月次ダイジェストでも使う場合はこの経路の扱いを別途検討する
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオに対応する設計項目が完了している
-- [ ] 設計ドキュメントがチームレビューで承認されている
-- [ ] PBI 3（実装）に必要な設計情報が引き継がれている
-- [ ] ドキュメント更新済み
+- [x] 全 BDD シナリオに対応する設計項目が完了している
+- [x] 設計ドキュメントがチームレビューで承認されている
+- [x] PBI 3（実装）に必要な設計情報が引き継がれている
+- [x] ドキュメント更新済み
