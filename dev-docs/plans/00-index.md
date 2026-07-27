@@ -11,6 +11,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - 更新 2026-07-06（#03・#05・#01実装完了を反映、Phase 1完了、関連設計ドキュメント一覧を拡充）
 - 更新 2026-07-06（git logに基づき #06, #10, #11実装状況を確認・更新予定）
 - 更新 2026-07-11（完了済みPBI/plan/specファイルをarchiveへ再整理。`pbi/archive/`, `docs/superpowers/archive/`, `dev-docs/specs/archive-old/` を新設）
+- 更新 2026-07-27（非機能PBIセクションを修正。PBI-13, 15, 24, 26, 27, 29/35/36, 34は完了またはADR記録済みでアーカイブ済み。未着手PBIはpbi/00-INDEX.mdのPBI-11, 30, 31, 32）
 
 全ての完了済み計画ファイルは `dev-docs/plans/archive-old/` に移動しました。
 
@@ -104,19 +105,27 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
 - [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
 
-## 未着手非機能PBI 実装計画（2026-07-27作成、他エージェントによる実装着手待ち）
+## 非機能PBI 実装計画（2026-07-27作成）— 現在の状態
 
-Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`, `plans/2026-07-25-2019-review-main.md`）から起票した非機能PBI10件のうち、フェーズ0再調査（2026-07-27）を経て、未着手の7件（実質10PBI、うち3件は1計画に統合）について、他エージェントが着手できる粒度の実装計画ファイルを作成した。各ファイルはTask→Step分解・Red-Green形式・具体的なコードスニペット・落とし穴の明記を含む。
+Checking Team レビューから起票した非機能PBIについて、2026-07-27以降の作業を経て、**以下のPBIは完了またはADR記録済みとしてアーカイブ済み**です。各計画ファイルは履歴参考として残存していますが、新規着手は不要です。
 
-| 対象PBI | 計画ファイル | 概要 | 見積もり |
-|---------|-------------|------|---------|
-| PBI-24 | [2026-07-27-pbi24-utils-subdirectory-split-plan.md](2026-07-27-pbi24-utils-subdirectory-split-plan.md) | `src/utils/`をcrypto/privacy/i18n/cspの4サブディレクトリに分割 | crypto必須、他3グループは任意 |
-| PBI-13 | [2026-07-27-pbi13-legacy-dual-write-default-plan.md](2026-07-27-pbi13-legacy-dual-write-default-plan.md) | `pendingChromeStorageQueue.ts`新設、`LEGACY_DUAL_WRITE_ENABLED`のデフォルトをfalseへ | 3タスク構成 |
-| PBI-15 | [2026-07-27-pbi15-settings-migration-non-destructive-plan.md](2026-07-27-pbi15-settings-migration-non-destructive-plan.md) | 設定マイグレーションの即時削除をバックアップ退避方式に変更 | 3タスク構成 |
-| PBI-26 | [2026-07-27-pbi26-ai-client-service-unification-plan.md](2026-07-27-pbi26-ai-client-service-unification-plan.md) | AIClient/AIService統一方針のADR作成（実質的コード変更は最小） | 1-2pt相当（当初3pt以上から縮小） |
-| PBI-27 | [2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md](2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md) | popup設定画面（settingsScreen）をダッシュボード誘導に一本化 | 3pt以上 |
-| PBI-29/36/35 | [2026-07-27-pbi29-36-35-service-worker-refactor-plan.md](2026-07-27-pbi29-36-35-service-worker-refactor-plan.md) | service-worker.tsのGod File分割→シングルトンDI化→状態永続化（同一ファイル対象のため統合・順序厳守） | 3PBI統合 |
-| PBI-34 | [2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md](2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md) | content/extractor.tsのモジュールレベル変数12個（PBI記載の8個から再カウント）をPageStateクラスに集約 | 3pt以上 |
-| PBI-11 | [2026-07-27-pbi11-constant-time-compare-verify-plan.md](2026-07-27-pbi11-constant-time-compare-verify-plan.md) | constantTimeCompareのタイミング差検証ベンチマーク作成（実行は人間の手動作業必須） | ベンチマーク作成のみ自動化可 |
+| 対象PBI | 計画ファイル | 現在の状態 |
+|---------|-------------|-----------|
+| PBI-13 | [2026-07-27-pbi13-legacy-dual-write-default-plan.md](2026-07-27-pbi13-legacy-dual-write-default-plan.md) | ✅ 完了。`pendingChromeStorageQueue.ts`を実装。デフォルト変更は影響範囲が大きいためADRで見送り。 |
+| PBI-15 | [2026-07-27-pbi15-settings-migration-non-destructive-plan.md](2026-07-27-pbi15-settings-migration-non-destructive-plan.md) | ✅ 完了。 |
+| PBI-24 | [2026-07-27-pbi24-utils-subdirectory-split-plan.md](2026-07-27-pbi24-utils-subdirectory-split-plan.md) | ✅ 完了（cryptoグループまで）。残りグループは任意としアーカイブ。 |
+| PBI-26 | [2026-07-27-pbi26-ai-client-service-unification-plan.md](2026-07-27-pbi26-ai-client-service-unification-plan.md) | ✅ ADR記録済み。実質的なコード変更は最小。 |
+| PBI-27 | [2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md](2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md) | ✅ 完了。popupの重複設定UIを削除しdashboardに一本化。 |
+| PBI-29/35/36 | [2026-07-27-pbi29-36-35-service-worker-refactor-plan.md](2026-07-27-pbi29-36-35-service-worker-refactor-plan.md) | ✅ 完了。service-worker.tsのGod File分割・状態永続化・シングルトンDI化。 |
+| PBI-34 | [2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md](2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md) | ✅ 完了。 |
 
-**実装順の推奨**: 各計画は独立して着手可能だが、PBI-29/36/35は同一ファイル（service-worker.ts）を触るため他の作業と並行させる場合はコンフリクトに注意。PBI-27は`domainFilter.ts`等の共有モジュール改変を伴うためPBI-24（utils分割）と時期が重ならないようにする。
+### 未着手PBI
+
+現時点で未着手のPBIは[pbi/00-INDEX.md](../../pbi/00-INDEX.md)が正です。以下に概要を記載します。
+
+| PBI | ファイル | 種別 | 状態 | 備考 |
+|-----|---------|------|------|------|
+| PBI-11 | [pbi/2026-07-25-11-fix-verify-constant-time-compare.md](../../pbi/2026-07-25-11-fix-verify-constant-time-compare.md) | fix | ⬜ 未着手 | 実ブラウザ計測は人間作業必須 |
+| PBI-30 | [pbi/2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](../../pbi/2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | feat | ⬜ 未着手 | Chrome Built-in AI調査 |
+| PBI-31 | [pbi/2026-07-26-31-feat-built-in-ai-provider-integration-design.md](../../pbi/2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | feat | ⬜ 未着手 | 設計ドキュメントは作成済み |
+| PBI-32 | [pbi/2026-07-26-32-feat-built-in-ai-provider-implementation.md](../../pbi/2026-07-26-32-feat-built-in-ai-provider-implementation.md) | feat | ⬜ 未着手 | Epic級（13pt）。PBI-30,31の後 |
