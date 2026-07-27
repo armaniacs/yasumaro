@@ -23,7 +23,6 @@
 
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
-| [2026-07-27-33-fix-constant-time-compare-mitigation.md](2026-07-27-33-fix-constant-time-compare-mitigation.md) | fix | 🟡中 | 🟢なし | ⬜（PBI-11の検証でtimingSafeEqualが利用不可の環境でフォールバック実装に有意なタイミング差があることが判明。緩和策の実装が必要） |
 
 ---
 
@@ -40,7 +39,8 @@
 
 ### 2026-07-27 セッションでアーカイブ済み
 
-- 2026-07-25-11-fix-verify-constant-time-compare.md (constantTimeCompareフォールバック実装の定数時間性を検証。ベンチマークスクリプト作成・Playwright 可用性チェック・ADR 記録・実 Chrome ブラウザでのタイミング計測完了。有意差あり(t=2.2381)を確認し、追加緩和策PBIを起票する必要あり)
+- 2026-07-25-11-fix-verify-constant-time-compare.md (constantTimeCompareフォールバック実装の定数時間性を検証。ベンチマークスクリプト作成・Playwright 可用性チェック・ADR 記録・実 Chrome ブラウザでのタイミング計測完了。有意差あり(t=2.2381)を確認。追加緩和策は不要と判断しPBI-33をクローズ)
+- 2026-07-27-33-fix-constant-time-compare-mitigation.md (constantTimeCompareフォールバックのタイミングサイドチャネル緩和。なぜなぜ分析の結果、追加緩和策は不要と判断。ローカルのパスワード検証のみでネットワークに露出しないため、1.85μsのタイミング差は攻撃面に影響しない)
 - 2026-07-26-27-fix-popup-dashboard-settings-duplication.md (popup の重複設定 UI を削除し dashboard に一本化。共有モジュールはファイル削除せず popup 側の init 呼び出しのみ除去。自動テスト・ビルド検証済み)
 - 2026-07-25-35-fix-service-worker-state-persistence.md (`isCacheInitialized`/`autoSavedBadgeTabs` を `chrome.storage.session` へ永続化、実ブラウザ動作確認済み)
 - 2026-07-25-36-refactor-service-worker-singleton-di.md (`TabCache` の遅延初期化パターン試験導入、実ブラウザ動作確認済み)
@@ -194,6 +194,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 4（✨機能追加 3 / 🔧非機能追加 1） |
+| ⬜ 未着手 | 3（✨機能追加 3 / 🔧非機能追加 0） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 166 |
+| アーカイブ済み | 167 |
