@@ -23,7 +23,7 @@
 
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
-| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | 🔶（`scripts/benchmark-constant-time-compare.mjs`作成・Node.js動作確認済み。実ChromeブラウザService Workerでの計測とADR記録は手動作業待ち） |
+| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | 🔶（ベンチマークスクリプト作成・Playwright による Service Worker 可用性チェック・ADR 記録済み。Playwright HeadlessChrome 149 では `timingSafeEqual` が利用不可でフォールバックが実行されることを確認。実ブラウザでのタイミング計測は未実施） |
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
 ---
