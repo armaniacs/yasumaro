@@ -15,7 +15,6 @@
 
 | PBI | 難易度 | 副作用 | 状態 |
 |-----|--------|--------|------|
-| [2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | 🟡中 | 🟢なし | ⬜ |
 | [2026-07-26-31-feat-built-in-ai-provider-integration-design.md](2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | 🟡中 | 🟢なし | ⬜（設計ドキュメントは `dev-docs/2026-07-26-chrome-built-in-ai-provider-design.md` として作成済み） |
 | [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜（実装計画は `dev-docs/plans/2026-07-26-chrome-built-in-ai-provider-plan.md` として作成済み） |
 
@@ -36,6 +35,10 @@
 ## アーカイブ
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
+
+### 2026-07-28 セッションでアーカイブ済み
+
+- 2026-07-26-30-feat-chrome-built-in-ai-oss-research.md (Chrome Built-in AI OSS実装3件・Prompt API公式仕様を調査し `dev-docs/2026-07-27-chrome-built-in-ai-oss-research.md` にレポート化。実機検証によりService Worker内で`LanguageModel`へ直接アクセス・呼び出しできることを確認、既存の「Offscreen Document必須」という前提に疑義を提示。改善候補6件をPBI-31に引き継ぎ)
 
 ### 2026-07-27 セッションでアーカイブ済み
 
@@ -194,6 +197,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 3（✨機能追加 3 / 🔧非機能追加 0） |
+| ⬜ 未着手 | 2（✨機能追加 2 / 🔧非機能追加 0） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 167 |
+| アーカイブ済み | 168 |
