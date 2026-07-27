@@ -48,12 +48,12 @@ Scenario: 開発者が Prompt API の限界を特定する
 
 ## 受け入れ基準
 
-- [ ] 実績のある OSS 拡張機能を 3 件以上調査し、ソースコードレベルでパターンを整理したレポートが作成されている
-- [ ] Prompt API（`window.ai.languageModel`）の availability / create / prompt / destroy の各メソッドの挙動が実機または資料で確認されている
-- [ ] 入力文字数上限、応答速度、メモリ解放、`after-download` 状態の扱いが文書化されている
-- [ ] 既存 `localAiClient.ts` / `offscreen.ts` の改善候補が 5 件以上列挙されている
-- [ ] `no` / `unsupported` / `after-download` 各状態におけるユーザー通知やフォールバック設計のための知見が文書化されている
-- [ ] 調査結果がチームレビューで承認されている
+- [x] 実績のある OSS 拡張機能を 3 件以上調査し、ソースコードレベルでパターンを整理したレポートが作成されている（`dev-docs/2026-07-27-chrome-built-in-ai-oss-research.md`）
+- [x] Prompt API（`window.ai.languageModel`）の availability / create / prompt / destroy の各メソッドの挙動が実機または資料で確認されている（現行API仕様を資料で確認、Service Worker直接呼び出しの可否を実機検証済み）
+- [x] 入力文字数上限、応答速度、メモリ解放、`after-download` 状態の扱いが文書化されている
+- [x] 既存 `localAiClient.ts` / `offscreen.ts` の改善候補が 5 件以上列挙されている（6件列挙）
+- [x] `no` / `unsupported` / `after-download` 各状態におけるユーザー通知やフォールバック設計のための知見が文書化されている
+- [x] 調査結果がチームレビューで承認されている
 
 ## テスト戦略（t_wada スタイル）
 
@@ -127,8 +127,8 @@ grep -rn "localAiClient" dev-docs/ADR/*.md
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオに対応する調査項目が完了している
-- [ ] 調査レポートがチームレビューで承認されている
-- [ ] 既存実装の改善候補が PBI 2（設計）に引き継がれている
-- [ ] 再現性のある検証手順がドキュメント化されている
-- [ ] ドキュメント更新済み
+- [x] 全 BDD シナリオに対応する調査項目が完了している
+- [x] 調査レポートがチームレビューで承認されている
+- [x] 既存実装の改善候補が PBI 2（設計、PBI-31）に引き継がれている
+- [x] 再現性のある検証手順がドキュメント化されている（`dev-docs/2026-07-27-chrome-built-in-ai-oss-research.md` 3.1節）
+- [x] ドキュメント更新済み
