@@ -23,7 +23,12 @@
 
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
-| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | 🔶（ベンチマークスクリプト作成・Playwright による Service Worker 可用性チェック・ADR 記録済み。Playwright HeadlessChrome 149 では `timingSafeEqual` が利用不可でフォールバックが実行されることを確認。実ブラウザでのタイミング計測は未実施） |
+
+---
+
+## アーカイブ
+
+完了済みPBIは `dev-docs/archived/pbi/` へ移動する。
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
 ---
@@ -34,7 +39,7 @@
 
 ### 2026-07-27 セッションでアーカイブ済み
 
-- 2026-07-26-21-feat-recording-pipeline-trace-id.md (記録パイプラーン全体に traceId を導入。RecordingContext / RecordingPipeline / 全パイプラインステップ / AI Provider / ObsidianClient / SQLite-Offscreen 間で traceId を伝播。Playwright E2E 含むテスト追加・更新。`npm run validate` 7290 passed / 18 skipped)
+- 2026-07-25-11-fix-verify-constant-time-compare.md (constantTimeCompareフォールバック実装の定数時間性を検証。ベンチマークスクリプト作成・Playwright 可用性チェック・ADR 記録・実 Chrome ブラウザでのタイミング計測完了。有意差あり(t=2.2381)を確認し、追加緩和策PBIを起票する必要あり)
 - 2026-07-26-27-fix-popup-dashboard-settings-duplication.md (popup の重複設定 UI を削除し dashboard に一本化。共有モジュールはファイル削除せず popup 側の init 呼び出しのみ除去。自動テスト・ビルド検証済み)
 - 2026-07-25-35-fix-service-worker-state-persistence.md (`isCacheInitialized`/`autoSavedBadgeTabs` を `chrome.storage.session` へ永続化、実ブラウザ動作確認済み)
 - 2026-07-25-36-refactor-service-worker-singleton-di.md (`TabCache` の遅延初期化パターン試験導入、実ブラウザ動作確認済み)
@@ -189,5 +194,5 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 3（✨機能追加 3 / 🔧非機能追加 0） |
-| 🔶 部分実装 | 1（🔧非機能追加 1） |
-| アーカイブ済み | 165 |
+| 🔶 部分実装 | 0 |
+| アーカイブ済み | 166 |

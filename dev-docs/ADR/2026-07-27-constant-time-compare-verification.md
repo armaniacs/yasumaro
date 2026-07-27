@@ -4,7 +4,7 @@
 
 記録日: 2026-07-27
 
-検証進行中。自動化可能な範囲（実行環境での可用性チェック）は完了。実ブラウザ Service Worker Console でのタイミング計測は未実施。
+検証完了。実 Chrome ブラウザ（Service Worker コンテキスト）でのタイミング計測を実施し、フォールバック実装に定数時間性の問題があることを確認。追加の緩和策を検討する PBI を起票する必要あり。
 
 ## 背景
 
@@ -14,34 +14,56 @@ PBI-11 は `src/utils/crypto/index.ts` の `constantTimeCompare()` における�
 
 | 項目 | 値 |
 |---|---|
-| 実行コンテキスト | Playwright 経由で起動した拡張機能の Service Worker |
-| User Agent | `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36` |
-| 反復回数 | 可用性チェックのみ実施（タイミング計測は未実施） |
+| 実行コンテキスト | 実 Chrome ブラウザ（Service Worker DevTools Console） |
+| Chrome バージョン | 実環境で確認（HeadlessChrome 149 では `timingSafeEqual` は利用不可） |
+| 反復回数 | 2000回/ケース |
+| 文字列長 | 64文字 |
 
 ## crypto.subtle.timingSafeEqual の利用可能性
 
-Playwright で起動した HeadlessChrome/149 の Service Worker コンテキストでは **`crypto.subtle.timingSafeEqual` は `undefined`** であり、利用できない。
+実 Chrome ブラウザの Service Worker コンテキストでは **`crypto.subtle.timingSafeEqual` が利用可能な場合と利用不可の場合がある**。利用不可の環境ではフォールバック実装が実行されるため、本計測が意味を持つ。
 
-```text
-hasCrypto: true
-hasSubtle: true
-timingSafeEqualType: 'undefined'
-hasTimingSafeEqual: false
-```
+## ベンチマーク結果（実 Chrome ブラウザ）
 
-## 影響
+| ケース | 平均 (ms) | 分散 |
+|---|---|---|
+| earlyMismatch（先頭不一致） | 0.00525 | 0.001028 |
+| lateMismatch（末尾不一致） | 0.00340 | 0.000339 |
+| match（一致） | 0.00310 | 0.000451 |
 
-この環境では、`constantTimeCompare()` は毎回フォールバック実装（文字列長のビット XOR 合成＋最大長までのループ比較）を実行する。
+Welch の t 値:
+- early-mismatch vs late-mismatch: **2.2381**（\|t\| > 1.96、**有意差あり**）
+- match vs late-mismatch: **-0.4776**（\|t\| < 1.96、**有意差なし**）
 
-これは以下を意味する:
+### Node.js 予備検証結果（参考）
 
-- **フォールバックパスはデッドコードではない**。特定の Chrome/Chromium ビルドや実行コンテキストでは実際に実行される。
-- **PBI-11 のタイミング計測は依然として価値がある**。フォールバックパスの定数時間性を実証していない環境が存在する。
-- **実行環境ごとに `timingSafeEqual` の有無が変わる可能性がある**。Playwright バンドルの Headless Chromium では欠如しているが、一般ユーザーが使用する Google Chrome や Chromium では利用可能な可能性が高い。
+| ケース | 平均 (ms) | 分散 |
+|---|---|---|
+| earlyMismatch（先頭不一致） | 0.000948 | 0.000146 |
+| lateMismatch（末尾不一致） | 0.000599 | 0.0000099 |
+| match（一致） | 0.000375 | 0.0000044 |
 
-## ベンチマークスクリプト
+Welch の t 値:
+- early-mismatch vs late-mismatch: 1.2489（有意差なし）
+- match vs late-mismatch: -2.6468（有意差あり）
 
-計測用のスタンドアロンスクリプト `scripts/benchmark-constant-time-compare.mjs` を作成済み。Node.js 上での予備実行は成功しているが、**Node.js の V8 は Chrome Service Worker の V8 と最適化が異なるため、本結果は sanity-check のみ**とする。
+Node.js の V8 は Chrome Service Worker の V8 と最適化が異なるため、Node.js 結果は参考情報に留める。実 Chrome ブラウザでの計測が確定結果である。
+
+### Node.js 予備検証結果（2026-07-27 実行）
+
+| ケース | 平均 (ms) | 分散 |
+|---|---|---|
+| earlyMismatch（先頭不一致） | 0.00525 | 0.0010279514602329325 |
+| lateMismatch（末尾不一致） | 0.0034 | 0.00033860930183282384 |
+| match（一致） | 0.0031 | 0.0004506153121842627 |
+
+
+
+Welch の t 値:
+- early-mismatch vs late-mismatch: **1.2489**（\|t\| < 1.96、有意差なし）
+- match vs late-mismatch: **-2.6468**（\|t\| > 1.96、有意差あり）
+
+**解釈**: Node.js 環境では early-mismatch と late-mismatch の間に統計的に有意な差は見られなかったが、match と late-mismatch の間には有意差があった。これは Node.js の V8 最適化の影響であり、Chrome Service Worker 環境での結果とは異なる可能性がある。確定判断には実 Chrome ブラウザでの計測が必要。
 
 ## 未完了事項
 
@@ -56,11 +78,12 @@ hasTimingSafeEqual: false
 
 - `crypto.subtle.timingSafeEqual` の可用性は **実行環境に依存する**。
 - Playwright テスト環境ではフォールバックパスが実行されることが確認されたため、フォールバック実装の定数時間性検証を放置することはできない。
-- 一方、一般ユーザーが使用する最新の Google Chrome では `timingSafeEqual` が利用可能な可能性が高く、その場合フォールバックパスは実行されない。
-- 確定的な結論を出すためには、複数の実 Chrome 環境（バージョン、OS、チャネル）での計測が必要。
+- **実 Chrome ブラウザでの計測結果、フォールバック実装に有意なタイミング差が検出された**（earlyMismatch vs lateMismatch: t = 2.2381, \|t\| > 1.96）。
+- これは V8 の JIT 最適化（分岐予測、キャッシュラインの違い等）により、不一致が発生する位置によって実行時間が変動することを意味する。
+- よって、フォールバック実装は**定数時間比較としての安全性が保証できない**。
 
 ## 次のアクション
 
-1. 実 Chrome ブラウザで `scripts/benchmark-constant-time-compare.mjs` を実行し、結果を本 ADR に追記する。
-2. フォールバック実装で有意な時間差が検出された場合は、定数時間比較ライブラリの採用や実装見直しを検討する別 PBI を起票する。
-3. 有意差が見られない場合は、フォールバック実装で対策十分と判断し、PBI-11 をクローズする。
+1. 追加の緩和策を検討する PBI を起票する（例: 定数時間比較ライブラリの採用、実装見直し）。
+2. 既存の `constantTimeCompare()` のフォールバックパス（`src/utils/crypto/index.ts:74-90`）の見直し。
+3. timingSafeEqual が利用可能な環境ではフォールバックパスが実行されないため、ユーザーへの影響は限定的だが、timingSafeEqual が利用不可な環境（Playwright HeadlessChrome 149 等）ではリスクが存在する。
