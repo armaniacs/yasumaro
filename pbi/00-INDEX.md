@@ -23,7 +23,7 @@
 
 | PBI | 種別 | 難易度 | 副作用 | 状態 |
 |-----|------|--------|--------|------|
-| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | ⬜（実ブラウザでの計測が必要なため実行環境なしでスキップ中。2026-07-27再調査: コードレビュー上は妥当な設計と確認、見積もり据え置き） |
+| [2026-07-25-11-fix-verify-constant-time-compare.md](2026-07-25-11-fix-verify-constant-time-compare.md) | fix | 🟡中 | 🟢なし | 🔶（`scripts/benchmark-constant-time-compare.mjs`作成・Node.js動作確認済み。実ChromeブラウザService Workerでの計測とADR記録は手動作業待ち） |
 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
 
 ---
@@ -188,6 +188,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 4（✨機能追加 3 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 1 |
+| ⬜ 未着手 | 3（✨機能追加 3 / 🔧非機能追加 0） |
+| 🔶 部分実装 | 1（🔧非機能追加 1） |
 | アーカイブ済み | 165 |
