@@ -339,4 +339,94 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         expect(result).toBeDefined(); // 【確認内容】: 結果オブジェクトが返されること 🟢
         expect(typeof result.success).toBe('boolean'); // 【確認内容】: successフィールドがbooleanであること 🟢
     });
+
+    describe('VULN-002: LOCKED_UNTIL persistence across browser restart', () => {
+        test('ロックアウト時にlocalにも書き込まれる', async () => {
+            const { checkRateLimit, recordFailedAttempt } = await import('../rateLimiter.js');
+
+            const now = Date.now();
+            (chrome.storage.session.get as vi.Mock).mockResolvedValue({
+                passwordFailedAttempts: 4,
+                firstFailedAttemptTime: now - 2 * 60 * 1000,
+            });
+            (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
+
+            await recordFailedAttempt();
+
+            (chrome.storage.session.get as vi.Mock).mockResolvedValue({
+                passwordFailedAttempts: 5,
+                firstFailedAttemptTime: now - 2 * 60 * 1000,
+            });
+
+            const result = await checkRateLimit();
+
+            expect(result.success).toBe(false);
+            expect(chrome.storage.session.set).toHaveBeenCalledWith({
+                lockedUntil: expect.any(Number),
+            });
+            expect(chrome.storage.local.set).toHaveBeenCalledWith({
+                lockedUntil: expect.any(Number),
+            });
+        });
+
+        test('ブラウザ再起動後、localのLOCKED_UNTILでロックアウト継続', async () => {
+            const { checkRateLimit } = await import('../rateLimiter.js');
+
+            (chrome.storage.session.get as vi.Mock).mockResolvedValue({});
+            (chrome.storage.local.get as vi.Mock).mockResolvedValue({
+                lockedUntil: Date.now() + 30 * 60 * 1000,
+            });
+
+            const result = await checkRateLimit();
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Too many attempts');
+        });
+
+        test('localのLOCKED_UNTILが期限切れの場合は許可', async () => {
+            const { checkRateLimit } = await import('../rateLimiter.js');
+
+            (chrome.storage.session.get as vi.Mock).mockResolvedValue({});
+            (chrome.storage.local.get as vi.Mock).mockResolvedValue({
+                lockedUntil: Date.now() - 31 * 60 * 1000,
+            });
+
+            const result = await checkRateLimit();
+
+            expect(result.success).toBe(true);
+        });
+
+        test('resetFailedAttemptsがlocalのLOCKED_UNTILも削除', async () => {
+            const { resetFailedAttempts } = await import('../rateLimiter.js');
+
+            await resetFailedAttempts();
+
+            expect(chrome.storage.session.remove).toHaveBeenCalledWith(
+                expect.arrayContaining(['lockedUntil'])
+            );
+            expect(chrome.storage.local.remove).toHaveBeenCalledWith(['lockedUntil']);
+        });
+
+        test('sessionとlocalの両方に値がある場合、最新を採用', async () => {
+            const { checkRateLimit } = await import('../rateLimiter.js');
+
+            const now = Date.now();
+            const sessionLockout = now + 40 * 60 * 1000;
+            const localLockout = now + 30 * 60 * 1000;
+
+            (chrome.storage.session.get as vi.Mock).mockResolvedValue({
+                lockedUntil: sessionLockout,
+                passwordFailedAttempts: 5,
+                firstFailedAttemptTime: now - 2 * 60 * 1000,
+            });
+            (chrome.storage.local.get as vi.Mock).mockResolvedValue({
+                lockedUntil: localLockout,
+            });
+
+            const result = await checkRateLimit();
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('40 minutes');
+        });
+    });
 });
