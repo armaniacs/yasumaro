@@ -4,14 +4,33 @@
  * Ensures graceful fallback when running in non-Chrome Chromium browsers (Edge, Brave, etc.).
  */
 
+/** Browser identified from the user agent string. */
+export type BrowserName = 'chrome' | 'edge' | 'brave' | 'unknown';
+
+/** Guidance for enabling the on-device Prompt API flag in a given browser. */
+export interface BuiltInAIFlagGuidance {
+    /** Browser-internal settings URL for the flag (e.g. chrome://flags/...). */
+    url: string;
+    /** Human-readable flag name shown alongside the URL. */
+    flagName: string;
+}
+
 /**
- * Check if the browser supports the built-in AI API (window.ai).
- * Currently only available in Chrome Dev/Canary with specific flags.
+ * Get guidance (flag URL + name) for enabling the on-device Prompt API,
+ * or null when no known flag exists for the given browser.
+ *
+ * URLs reflect the state verified on 2026-07-30 (Chrome stable /
+ * Edge 150.0.4078.105 stable) and may need updates as browser flags evolve.
  */
-export function supportsBuiltInAI(): boolean {
-  return typeof globalThis !== 'undefined' &&
-    'ai' in globalThis &&
-    typeof (globalThis as any).ai?.languageModel !== 'undefined';
+export function getBuiltInAIFlagGuidance(browserName: BrowserName): BuiltInAIFlagGuidance | null {
+    switch (browserName) {
+        case 'chrome':
+            return { url: 'chrome://flags/#prompt-api-for-gemini-nano', flagName: 'Prompt API for Gemini Nano' };
+        case 'edge':
+            return { url: 'edge://flags/#edge-llm-prompt-api-for-phi-mini', flagName: 'Prompt API for on-device language model' };
+        default:
+            return null;
+    }
 }
 
 /**
@@ -46,7 +65,7 @@ export function supportsFavicon(): boolean {
 /**
  * Get the current browser name based on user agent.
  */
-export function getBrowserName(): string {
+export function getBrowserName(): BrowserName {
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   if (ua.includes('Edg/')) return 'edge';
   if (ua.includes('Brave')) return 'brave';

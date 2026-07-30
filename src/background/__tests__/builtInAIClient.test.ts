@@ -38,6 +38,8 @@ interface MockSession {
     destroy: ReturnType<typeof vi.fn>;
     contextWindow?: number;
     contextUsage?: number;
+    inputQuota?: number;
+    oncontextoverflow?: ((event: Event) => void) | null;
 }
 
 function createMockSession(overrides: Partial<MockSession> = {}): MockSession {
@@ -46,6 +48,8 @@ function createMockSession(overrides: Partial<MockSession> = {}): MockSession {
         destroy: vi.fn(),
         contextWindow: 4096,
         contextUsage: 0,
+        inputQuota: 4096,
+        oncontextoverflow: null,
         ...overrides
     };
 }
@@ -258,6 +262,102 @@ describe('BuiltInAIClient', () => {
             // 2回目の summarize は availability がキャッシュされているため availability() を呼ばない
             await client.summarize('content 2');
             expect(mockLanguageModel.availability).toHaveBeenCalledTimes(1); // 変わらず1回
+        });
+
+        test('session.contextWindow が静的上限より狭い場合、その値に基づいて切り詰める（Edge Phi-mini実測値相当）', async () => {
+            const longContent = 'a'.repeat(20000);
+            // 実機検証済みの Edge Phi-mini contextWindow 実測値
+            const session = createMockSession({ contextWindow: 9216 });
+            mockLanguageModel.create.mockResolvedValueOnce(session);
+
+            await client.summarize(longContent);
+
+            const sentText = session.prompt.mock.calls[0][0] as string;
+            // 9216 tokens * 2 chars/token * 0.8 safety margin = 14745
+            expect(sentText.length).toBeLessThanOrEqual(14745);
+            expect(sentText.length).toBeLessThan(16384);
+        });
+
+        test('session.contextWindow が未定義の場合は静的上限（16,384文字）のみを使う', async () => {
+            const longContent = 'a'.repeat(20000);
+            const session = createMockSession({ contextWindow: undefined });
+            mockLanguageModel.create.mockResolvedValueOnce(session);
+
+            await client.summarize(longContent);
+
+            const sentText = session.prompt.mock.calls[0][0] as string;
+            expect(sentText.length).toBe(16384);
+        });
+
+        test('session.contextWindow が静的上限より広い場合は静的上限（16,384文字）が使われる', async () => {
+            const longContent = 'a'.repeat(20000);
+            const session = createMockSession({ contextWindow: 100000 });
+            mockLanguageModel.create.mockResolvedValueOnce(session);
+
+            await client.summarize(longContent);
+
+            const sentText = session.prompt.mock.calls[0][0] as string;
+            expect(sentText.length).toBe(16384);
+        });
+
+        test('session.oncontextoverflow が設定される', async () => {
+            const session = createMockSession();
+            mockLanguageModel.create.mockResolvedValueOnce(session);
+
+            await client.summarize('Some content');
+
+            expect(session.oncontextoverflow).toBeInstanceOf(Function);
+        });
+
+        test('contextoverflow 発生後も成功結果は返る（警告はログのみ、型は変更しない）', async () => {
+            // prompt() 呼び出し内で oncontextoverflow を同期的に発火させ、
+            // マイクロタスクのタイミングに依存せず contextOverflowed の捕捉を検証する。
+            const session = createMockSession({
+                prompt: vi.fn(async function (this: MockSession, text: string) {
+                    this.oncontextoverflow?.(new Event('contextoverflow'));
+                    return 'Mock summary';
+                })
+            });
+            mockLanguageModel.create.mockResolvedValueOnce(session);
+
+            const result = await client.summarize('Some content');
+
+            expect(result.success).toBe(true);
+            expect(result).not.toHaveProperty('contextOverflowed');
+        });
+    });
+
+    describe('unavailable メッセージのブラウザ別案内', () => {
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        test('Chrome では chrome://flags の案内を含む', async () => {
+            vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/126.0.0.0' });
+            mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+            const result = await client.summarize('Some content');
+
+            expect(result.error).toContain('chrome://flags');
+        });
+
+        test('Edge では edge://flags の案内を含む', async () => {
+            vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/126.0.0.0 Edg/126.0.0.0' });
+            mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+            const result = await client.summarize('Some content');
+
+            expect(result.error).toContain('edge://flags');
+        });
+
+        test('未知のブラウザではフラグURLを含まない汎用案内になる', async () => {
+            vi.stubGlobal('navigator', { userAgent: 'SomeOtherBrowser/1.0' });
+            mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+            const result = await client.summarize('Some content');
+
+            expect(result.error).not.toContain('://flags');
+            expect(result.error).toContain('unavailable');
         });
     });
 });
