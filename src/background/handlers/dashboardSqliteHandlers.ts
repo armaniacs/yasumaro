@@ -8,6 +8,7 @@ import { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES } from './dashboardSql
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
+const MAX_APPEND_IDS = 100;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -220,8 +221,17 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
         }
         case 'append_to_obsidian': {
           const ids = payload.ids;
+          // Check 1: array shape
           if (!Array.isArray(ids) || ids.length === 0) {
             return { success: false, error: 'No IDs provided' };
+          }
+          // Check 2: upper bound (before type check — safe on length property)
+          if (ids.length > MAX_APPEND_IDS) {
+            return { success: false, error: `Maximum ${MAX_APPEND_IDS} IDs allowed` };
+          }
+          // Check 3: all elements are finite numbers (safe — at most 100 elements)
+          if (!ids.every((id: unknown): id is number => typeof id === 'number' && Number.isFinite(id))) {
+            return { success: false, error: 'All IDs must be finite numbers' };
           }
 
           const allSettings = await deps.getSettings();

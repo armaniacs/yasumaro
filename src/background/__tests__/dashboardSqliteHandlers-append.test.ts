@@ -245,4 +245,63 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       expect.objectContaining({ ids: [1, 999] })
     );
   });
+
+  describe('VULN-001: MAX_APPEND_IDS bound enforcement', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockSqliteClient = createMockSqliteClient();
+      setupSettings();
+    });
+
+    it('rejects ids array with more than 100 elements', async () => {
+      const hugeIds = Array.from({ length: 101 }, (_, i) => i + 1);
+
+      const result = await handleDashboardSqlite(
+        { subtype: 'append_to_obsidian', ids: hugeIds },
+        mockSqliteClient as any
+      );
+
+      expect(result).toEqual({ success: false, error: 'Maximum 100 IDs allowed' });
+    });
+
+    it('accepts ids array with exactly 100 elements', async () => {
+      const ids = Array.from({ length: 100 }, (_, i) => i + 1);
+      const mockEntries = ids.map(id => ({ id, url: `https://p${id}.com`, title: `Page ${id}` }));
+      mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 100 });
+
+      const result = await handleDashboardSqlite(
+        { subtype: 'append_to_obsidian', ids },
+        mockSqliteClient as any
+      );
+
+      expect(result).toEqual({ success: true, appended: 100 });
+    });
+
+    it('rejects ids array containing non-number elements', async () => {
+      const result = await handleDashboardSqlite(
+        { subtype: 'append_to_obsidian', ids: [1, 'a', 3] } as any,
+        mockSqliteClient as any
+      );
+
+      expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
+    });
+
+    it('rejects ids array containing NaN', async () => {
+      const result = await handleDashboardSqlite(
+        { subtype: 'append_to_obsidian', ids: [NaN] },
+        mockSqliteClient as any
+      );
+
+      expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
+    });
+
+    it('rejects ids array containing Infinity', async () => {
+      const result = await handleDashboardSqlite(
+        { subtype: 'append_to_obsidian', ids: [Infinity] },
+        mockSqliteClient as any
+      );
+
+      expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
+    });
+  });
 });
