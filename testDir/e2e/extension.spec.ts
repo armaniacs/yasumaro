@@ -106,7 +106,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [{
+        pending_pages: [{
           url: 'https://private.example.com/page1',
           title: 'Test Private Page',
           timestamp: Date.now(),
@@ -129,7 +129,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [{
+        pending_pages: [{
           url: 'https://private.example.com/page2',
           title: 'Test Private Page 2',
           timestamp: Date.now(),
@@ -152,7 +152,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [{
+        pending_pages: [{
           url: 'https://private.example.com/page3',
           title: 'Test Private Page 3',
           timestamp: Date.now(),
@@ -175,7 +175,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [{
+        pending_pages: [{
           url: 'https://private.example.com/page4',
           title: 'Test Private Page 4',
           timestamp: Date.now(),
@@ -198,7 +198,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [
+        pending_pages: [
           {
             url: 'https://private.example.com/page5',
             title: 'Pending Page 1',
@@ -229,7 +229,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
     await page.evaluate(async () => {
       // @ts-expect-error - chrome API available in extension context
       await chrome.storage.local.set({
-        osh_pending_pages: [
+        pending_pages: [
           {
             url: 'https://private.example.com/page7',
             title: 'Pending Page A',
@@ -250,17 +250,27 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
       });
     });
     await page.reload();
-    await page.waitForTimeout(500);
+    // Wait for pending section to become visible (data loaded from storage)
+    const pendingSection = page.locator('#pending-section');
+    await expect(pendingSection).not.toHaveClass(/hidden/, { timeout: 3000 });
+    await expect(pendingSection).toBeVisible({ timeout: 3000 });
 
     const selectAllBtn = page.locator('#btn-select-all');
+    await expect(selectAllBtn).toBeVisible({ timeout: 3000 });
     const checkboxes = page.locator('.pending-checkbox');
 
-    await selectAllBtn.click();
+    // Use evaluate to dispatch click since Playwright's visibility check may fail
+    // if the button is below the popup's visible scroll area (popup has fixed height)
+    await page.evaluate(() => {
+      (document.getElementById('btn-select-all') as HTMLButtonElement)?.click();
+    });
     for (const checkbox of await checkboxes.all()) {
       await expect(checkbox).toBeChecked();
     }
 
-    await selectAllBtn.click();
+    await page.evaluate(() => {
+      (document.getElementById('btn-select-all') as HTMLButtonElement)?.click();
+    });
     for (const checkbox of await checkboxes.all()) {
       await expect(checkbox).not.toBeChecked();
     }

@@ -2138,6 +2138,12 @@
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },
+  "builtInAi": {
+    "message": "Built-in AI (No API Key Required)"
+  },
+  "builtInAiHelp": {
+    "message": "Uses Chrome's on-device AI (Gemini Nano). No API key required. Availability depends on your Chrome version and downloaded model."
+  },
   "modelsDevDescription": {
     "message": "Select from 70+ OpenAI-compatible providers (OpenRouter, Perplexity, DeepSeek, etc.)"
   },

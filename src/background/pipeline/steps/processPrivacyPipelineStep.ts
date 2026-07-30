@@ -36,7 +36,7 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       traceId: context.traceId,
     });
 
-    // クラウドAI要約(L3)が実際に呼ばれた場合のみ実測値が入る
+    // AI要約（ローカルL1 または クラウドL3）が実際に呼ばれた場合のみ実測値が入る
     const aiDuration = pipelineResult.aiCallDurationMs;
 
     if (previewOnly) {

@@ -379,7 +379,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
             type: 'TEST_AI',
             protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: {}
-          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string }> } };
+          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
 
           const ai = testResult?.ai;
           if (ai) {
@@ -403,6 +403,24 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
                 row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
                 row.classList.add(provider.success ? 'diag-success' : 'diag-error');
                 connectionResult.appendChild(row);
+
+                // Show debug details if available
+                if (provider.debug) {
+                  const debugRow = document.createElement('div');
+                  debugRow.className = 'diag-indent ai-debug-details';
+                  debugRow.style.cssText = 'margin-left: 1.5em; font-size: 0.85em; color: #666; border-left: 2px solid #ddd; padding-left: 0.5em; margin-top: 2px;';
+
+                  const details: string[] = [];
+                  if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);
+                  if (provider.debug.response) details.push(`Response: ${provider.debug.response}`);
+                  if (provider.debug.error) details.push(`Error: ${provider.debug.error}`);
+                  if (provider.debug.availability) details.push(`Availability: ${provider.debug.availability}`);
+                  if (provider.debug.hasContent !== undefined) details.push(`Has content: ${provider.debug.hasContent}`);
+                  if (provider.debug.statusCode !== undefined) details.push(`Status: ${provider.debug.statusCode}`);
+
+                  debugRow.textContent = details.join(' | ');
+                  connectionResult.appendChild(debugRow);
+                }
               }
             } else {
               // Single provider: show simple result

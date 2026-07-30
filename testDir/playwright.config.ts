@@ -58,9 +58,25 @@ export default defineConfig({
       fullyParallel: false,
       retries: 2,
       workers: 1,
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
+      },
+    },
+
+    {
+      name: 'interaction',
+      testDir: './e2e',
+      grep: /@interaction/,  // Extension-context tests requiring chrome.* APIs (headed Chromium only)
+      timeout: 60_000,
+      expect: { timeout: 15_000 },
+      fullyParallel: false,
+      retries: 2,
+      workers: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+        headless: false,
       },
     },
 

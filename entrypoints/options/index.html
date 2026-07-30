@@ -173,6 +173,11 @@
           <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="statusTop" aria-live="polite"></div>
+        <div class="built-in-ai-help" style="margin-top: 8px; font-size: 0.9em;">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md" target="_blank" rel="noopener noreferrer" data-i18n="builtInAiHelpLink">
+            Built-in AI の設定方法（Chrome/Edge）/ Built-in AI Setup Guide
+          </a>
+        </div>
 
         <!-- Obsidian 接続セクション -->
         <div class="settings-section">
@@ -322,6 +327,7 @@
                   <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
                   <option value="ollama" data-i18n-opt="ollama">Ollama</option>
                   <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                  <option value="built-in-ai" data-i18n-opt="builtInAi">Built-in AI (No API Key Required)</option>
                 </select>
               </div>
               <div id="priority1ProviderSettings"></div>
@@ -350,6 +356,7 @@
                   <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
                   <option value="ollama" data-i18n-opt="ollama">Ollama</option>
                   <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                  <option value="built-in-ai" data-i18n-opt="builtInAi">Built-in AI (No API Key Required)</option>
                 </select>
               </div>
               <div id="priority2ProviderSettings"></div>
@@ -378,6 +385,7 @@
                   <option value="lm-studio" data-i18n-opt="lmStudio">LM Studio</option>
                   <option value="ollama" data-i18n-opt="ollama">Ollama</option>
                   <option value="openai-compatible" data-i18n-opt="openaiCompatibleModelsDev">OpenAI Compatible (Models.dev)</option>
+                  <option value="built-in-ai" data-i18n-opt="builtInAi">Built-in AI (No API Key Required)</option>
                 </select>
               </div>
               <div id="priority3ProviderSettings"></div>
@@ -504,6 +512,11 @@
               <input type="text" id="providerModel" data-storage-key="provider_model" data-i18n-input-placeholder="providerModelPlaceholder">
             </div>
           </div>
+
+          <!-- Built-in AI Settings (no API key needed) -->
+          <div id="built-in-aiSettings" class="openai-settings">
+            <p class="help-text" data-i18n="builtInAiHelp">Uses Chrome's on-device AI (Gemini Nano). No API key required. Availability depends on your Chrome version and downloaded model.</p>
+          </div>
         </div>
 
         <!-- 記録条件・AI設定 -->
@@ -604,6 +617,11 @@
           <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="status" aria-live="polite"></div>
+        <div class="built-in-ai-help" style="margin-top: 8px; font-size: 0.9em;">
+          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md" target="_blank" rel="noopener noreferrer" data-i18n="builtInAiHelpLink">
+            Built-in AI の設定方法（Chrome/Edge）/ Built-in AI Setup Guide
+          </a>
+        </div>
       </section>
 
       <!-- Domain Filter Panel -->

@@ -59,7 +59,7 @@ createBackgroundServices.ts
 
 ## 2. Service Worker 直接呼び出しへの移行設計
 
-### 2.1 実機検証結果の反映（PBI-30より）
+### 2.1 実機検証結果の反映（PBI-30・PBI-32着手前追加検証より）
 
 PBI-30の実機検証（Playwright bundled Chromium）で確認済み:
 
@@ -67,7 +67,16 @@ PBI-30の実機検証（Playwright bundled Chromium）で確認済み:
 - `self.LanguageModel.availability()` は権限拒否なく呼び出せる
 - `self.LanguageModel.create()` は「サービス未起動」エラー（`NotSupportedError`）で失敗したが、これは検証環境（モデル配信サービス未有効化）に起因する可能性が高く、Service Worker文脈自体の制約ではないと解釈
 
-**未検証事項**: モデルダウンロード済みの実環境で `create()` からセッション生成・`prompt()` 実行まで成功するか。この設計は「成功する」という前提で進めるが、実装フェーズの最初のタスクとして実環境検証を必須とする（[6. 申し送り事項](#6-申し送り事項)参照）。
+**2026-07-28 追加検証（完了）**: PBI-32着手前に、実ユーザーのChrome環境（Gemini Nanoモデルダウンロード済み）でYasumaro拡張機能自体のService Worker（`background.js`）コンソール上から以下を実行し、成功を確認した。
+
+```js
+await LanguageModel.availability(); // -> 'available'
+const session = await LanguageModel.create();
+await session.prompt('こんにちは。自己紹介してください。');
+// -> 'こんにちは！私はGemmaです。Google DeepMindによってトレーニングされた...' （正常な応答を取得）
+```
+
+これにより、「Service Worker直接呼び出しでセッション生成・プロンプト実行が成功する」という本設計の前提が実証された。Offscreen Document経由を廃止する設計方針は確定とする。
 
 ### 2.2 新アーキテクチャ: Service Worker 直接呼び出し（一次経路）
 
@@ -197,8 +206,8 @@ PBI本文が前提としていた `after-download` / `no` / `unsupported`（旧3
 
 ## 6. 申し送り事項
 
-1. **最優先**: 実装フェーズ開始前に、モデルダウンロード済みの実環境（Chrome安定版 or Canary、Gemini Nanoコンポーネント有効化済み）で `LanguageModel.create()` → `session.prompt()` の成功を実機確認する。本設計は「Service Worker直接呼び出しでセッション生成・プロンプト実行が成功する」という前提に立っており、これが崩れる場合は Offscreen Document 経由に設計を差し戻す必要がある
+1. ~~実装フェーズ開始前に実機確認~~ → **2026-07-28に完了**。実ユーザーのChrome環境（モデルダウンロード済み）でYasumaro拡張機能自体のService Workerから `LanguageModel.create()` → `session.prompt()` の成功を確認済み（[2.1章](#21-実機検証結果の反映pbi-30pbi-32着手前追加検証より)参照）。Offscreen Document経由廃止の設計方針は確定
 2. `[4.4](#44-優先度リストとの統合方式)` のディスパッチ実装箇所（`RecordingLogic`手前 or 新設ディスパッチャー）は実装フェーズで確定する
-3. Extension向け `LanguageModel` が Origin Trial registration を要するか（`manifest.json` への `trial_tokens` 追加要否）の確認は未実施（PBI-30からの継続申し送り）
+3. Extension向け `LanguageModel` が Origin Trial registration を要するか（`manifest.json` への `trial_tokens` 追加要否）の確認は未実施（PBI-30からの継続申し送り）。ただし今回の実機検証でOrigin Trial未設定のまま成功しているため、優先度は下げてよい
 4. `Summarizer` API との比較検討（PBI-30で言及）は本設計では見送り、Prompt APIベースの `BuiltInAIClient` を先行実装する。将来的に要約特化APIへの切り替えを検討する余地は残す
 5. `reviewSummaryGenerator.ts` は ADR例外規定により `AIClient` を直接生成し続けているため、週次/月次ダイジェストでBuilt-in AIを使う場合の扱いは別PBIで検討する

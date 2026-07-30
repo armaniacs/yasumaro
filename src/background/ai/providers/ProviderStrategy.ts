@@ -9,6 +9,19 @@ import { validateMaxTokens } from '../../../utils/aiLimits.js';
 export interface AIProviderConnectionResult {
     success: boolean;
     message: string;
+    /** Debug information captured during the test. */
+    debug?: {
+        /** The prompt text sent to the provider. */
+        prompt?: string;
+        /** The raw response text from the provider. */
+        response?: string;
+        /** Error message if the test failed. */
+        error?: string;
+        /** HTTP status code if applicable. */
+        statusCode?: number;
+        /** Whether the response was non-empty. */
+        hasContent?: boolean;
+    };
 }
 
 export interface AISummaryResult {

@@ -156,6 +156,7 @@ vi.mock('../obsidianClient.js', () => ({
 vi.mock('../aiClient.js', () => ({
     AIClient: class {
         testConnection = vi.fn().mockResolvedValue({ success: true });
+        registerBuiltInAiService = vi.fn();
     }
 }));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({

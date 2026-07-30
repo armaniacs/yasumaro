@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   RateLimiter: vi.fn(),
   ManualContentFetcher: vi.fn(),
   AIClient: vi.fn(),
-  LocalAIClient: vi.fn(),
+  BuiltInAIClient: vi.fn(),
   LocalAIService: vi.fn(),
   RemoteAIService: vi.fn(),
   FallbackAIService: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('../tabCache.js', () => ({ TabCache: mocks.TabCache }));
 vi.mock('../rateLimiter.js', () => ({ RateLimiter: mocks.RateLimiter }));
 vi.mock('../manualContentFetcher.js', () => ({ ManualContentFetcher: mocks.ManualContentFetcher }));
 vi.mock('../aiClient.js', () => ({ AIClient: mocks.AIClient }));
-vi.mock('../localAiClient.js', () => ({ LocalAIClient: mocks.LocalAIClient }));
+vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient }));
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
@@ -39,8 +39,8 @@ describe('createBackgroundServices', () => {
     mocks.TabCache.mockImplementation(function () { return { tabCache: true }; });
     mocks.RateLimiter.mockImplementation(function () { return { rateLimiter: true }; });
     mocks.ManualContentFetcher.mockImplementation(function () { return { manualContentFetcher: true }; });
-    mocks.AIClient.mockImplementation(function () { return { aiClient: true }; });
-    mocks.LocalAIClient.mockImplementation(function () { return { localAIClient: true }; });
+    mocks.AIClient.mockImplementation(function () { return { aiClient: true, registerBuiltInAiService: vi.fn() }; });
+    mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAIClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
     mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
@@ -58,7 +58,7 @@ describe('createBackgroundServices', () => {
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true },
+      aiClient: { aiClient: true, registerBuiltInAiService: expect.any(Function) },
       sessionStore: { sessionStore: true },
     });
   });
@@ -74,7 +74,7 @@ describe('createBackgroundServices', () => {
   it('wires AI services through FallbackAIService', () => {
     createBackgroundServices();
 
-    expect(mocks.LocalAIClient).toHaveBeenCalledTimes(1);
+    expect(mocks.BuiltInAIClient).toHaveBeenCalledTimes(1);
     expect(mocks.LocalAIService).toHaveBeenCalledTimes(1);
     expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
     expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
@@ -86,26 +86,19 @@ describe('createBackgroundServices', () => {
     );
   });
 
-  it('passes localAIClient and ensureOffscreenDocument callback to LocalAIService', () => {
-    const ensureOffscreenDocument = vi.fn().mockResolvedValue(undefined);
-    mocks.LocalAIClient.mockImplementation(function () { return { ensureOffscreenDocument }; });
-
+  it('passes builtInAiClient to LocalAIService (Service Worker直接呼び出し、Offscreen非経由)', () => {
     createBackgroundServices();
 
-    const localClientInstance = mocks.LocalAIClient.mock.results[0].value;
+    const builtInAiClientInstance = mocks.BuiltInAIClient.mock.results[0].value;
     const config = mocks.LocalAIService.mock.calls[0][0];
-    expect(config.localAiClient).toBe(localClientInstance);
-    expect(typeof config.ensureOffscreenDocument).toBe('function');
+    expect(config.localAiClient).toBe(builtInAiClientInstance);
+    expect(config.ensureOffscreenDocument).toBeUndefined();
   });
 
-  it('ensureOffscreenDocument callback delegates to localAIClient', async () => {
-    const ensureOffscreenDocument = vi.fn().mockResolvedValue(undefined);
-    mocks.LocalAIClient.mockImplementation(function () { return { ensureOffscreenDocument }; });
+  it('registers the LocalAIService instance with AIClient for built-in-ai priority slots', () => {
+    const services = createBackgroundServices();
 
-    createBackgroundServices();
-
-    const config = mocks.LocalAIService.mock.calls[0][0];
-    await config.ensureOffscreenDocument();
-    expect(ensureOffscreenDocument).toHaveBeenCalled();
+    const localAiServiceInstance = mocks.LocalAIService.mock.results[0].value;
+    expect(services.aiClient.registerBuiltInAiService).toHaveBeenCalledWith(localAiServiceInstance);
   });
 });

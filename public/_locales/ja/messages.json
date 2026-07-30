@@ -2053,6 +2053,12 @@
   "openaiCompatibleModelsDev": {
     "message": "OpenAI Compatible (Models.dev)"
   },
+  "builtInAi": {
+    "message": "Built-in AI（APIキー不要）"
+  },
+  "builtInAiHelp": {
+    "message": "Chromeの端末内AI（Gemini Nano）を使用します。APIキーは不要です。利用可否はChromeのバージョンとモデルのダウンロード状況によります。"
+  },
   "modelsDevDescription": {
     "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Perplexity、DeepSeek等）から選択"
   },

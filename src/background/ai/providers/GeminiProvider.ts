@@ -138,7 +138,11 @@ export class GeminiProvider extends AIProviderStrategy {
 
     async testConnection(): Promise<AIProviderConnectionResult> {
         if (!this.apiKey) {
-            return { success: false, message: 'Gemini API Key is not set.' };
+            return {
+                success: false,
+                message: 'Gemini API Key is not set.',
+                debug: { error: 'API key is missing' },
+            };
         }
 
         const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models`;
@@ -148,7 +152,11 @@ export class GeminiProvider extends AIProviderStrategy {
             validateUrlForAIRequests(testUrl);
         } catch (error: unknown) {
             addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage(error)}`);
-            return { success: false, message: `Invalid test URL: ${errorMessage(error)}` };
+            return {
+                success: false,
+                message: `Invalid test URL: ${errorMessage(error)}`,
+                debug: { error: errorMessage(error) },
+            };
         }
 
         try {
@@ -171,21 +179,41 @@ export class GeminiProvider extends AIProviderStrategy {
             );
 
             if (response.ok) {
-                return { success: true, message: 'Connected to Gemini API.' };
+                return {
+                    success: true,
+                    message: 'Connected to Gemini API.',
+                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} OK`, hasContent: true },
+                };
             }
 
             // より詳細なエラーメッセージ
             if (response.status === 401 || response.status === 403) {
-                return { success: false, message: `Authentication failed (${response.status}). Check your Gemini API key.` };
+                return {
+                    success: false,
+                    message: `Authentication failed (${response.status}). Check your Gemini API key.`,
+                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else if (response.status === 429) {
-                return { success: false, message: `Rate limit exceeded (429). Please try again later.` };
+                return {
+                    success: false,
+                    message: `Rate limit exceeded (429). Please try again later.`,
+                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else {
-                return { success: false, message: `Gemini API Error: ${response.status} ${response.statusText}` };
+                return {
+                    success: false,
+                    message: `Gemini API Error: ${response.status} ${response.statusText}`,
+                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             }
         } catch (e: unknown) {
             const msg = errorMessage(e);
             if (msg.includes('timeout')) {
-                return { success: false, message: 'Connection timeout. Check your network connection.' };
+                return {
+                    success: false,
+                    message: 'Connection timeout. Check your network connection.',
+                    debug: { prompt: `GET ${testUrl}`, error: msg },
+                };
             }
 
             // fetchWithRetry throws HTTP errors as "HTTP {status}: {statusText}"
@@ -194,13 +222,29 @@ export class GeminiProvider extends AIProviderStrategy {
             const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
 
             if (statusCode === 401 || statusCode === 403) {
-                return { success: false, message: `Authentication failed (${statusCode}). Check your Gemini API key.` };
+                return {
+                    success: false,
+                    message: `Authentication failed (${statusCode}). Check your Gemini API key.`,
+                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
+                };
             } else if (statusCode === 429) {
-                return { success: false, message: 'Rate limit exceeded (429). Please try again later.' };
+                return {
+                    success: false,
+                    message: 'Rate limit exceeded (429). Please try again later.',
+                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
+                };
             } else if (statusCode >= 500) {
-                return { success: false, message: `Gemini API server error (${statusCode}). Please try again later.` };
+                return {
+                    success: false,
+                    message: `Gemini API server error (${statusCode}). Please try again later.`,
+                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
+                };
             } else {
-                return { success: false, message: `Connection error: ${msg}` };
+                return {
+                    success: false,
+                    message: `Connection error: ${msg}`,
+                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode: statusCode || undefined },
+                };
             }
         }
     }

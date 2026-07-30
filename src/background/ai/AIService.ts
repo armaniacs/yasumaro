@@ -15,6 +15,11 @@ export interface AISummaryResult {
   receivedTokens?: number;
   providerName?: string;
   modelName?: string;
+  /** Whether the underlying provider reported success. False means the summary
+   *  may be empty or contain an error message even if no exception was thrown. */
+  success?: boolean;
+  /** Error message from the underlying provider when success is false. */
+  error?: string;
 }
 
 export interface AIService {

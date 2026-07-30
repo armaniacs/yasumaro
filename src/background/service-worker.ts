@@ -3,7 +3,7 @@ import { AIClient } from './aiClient.js';
 import { FallbackAIService } from './ai/FallbackAIService.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import { LocalAIService } from './ai/LocalAIService.js';
-import { LocalAIClient } from './localAiClient.js';
+import { BuiltInAIClient } from './builtInAIClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
@@ -200,12 +200,13 @@ export async function ensureConfirmToken(): Promise<string> {
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
-const localClient = new LocalAIClient();
+const builtInAiClient = new BuiltInAIClient();
+const localAiService = new LocalAIService({ localAiClient: builtInAiClient });
+// 優先度リストの built-in-ai スロットは AIClient 内で localAiService に委譲される
+// (RemoteAIService → AIClient 経由、Strategy 登録とは別経路)。
+aiClient.registerBuiltInAiService(localAiService);
 const aiService = new FallbackAIService({
-  local: new LocalAIService({
-    localAiClient: localClient,
-    ensureOffscreenDocument: localClient.ensureOffscreenDocument.bind(localClient),
-  }),
+  local: localAiService,
   remote: new RemoteAIService({ aiClient }),
 });
 const sqliteClient = getSharedSqliteClient();

@@ -1,9 +1,12 @@
 import { getSettings, StorageKeys, Settings, ProviderSlot } from '../utils/storage.js';
-import { LocalAIClient, LocalAIAvailability, LocalAISummaryResult } from './localAiClient.js';
 import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordAuditLog } from '../utils/auditLog.js';
+import type { AIService } from './ai/AIService.js';
+
+/** Provider identifier reserved for Chrome Built-in AI, dispatched to an injected AIService. */
+const BUILT_IN_AI_PROVIDER_ID = 'built-in-ai';
 
 export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
@@ -14,6 +17,21 @@ interface ProviderTestResult {
     model?: string;
     success: boolean;
     message: string;
+    /** Debug information captured during the test. */
+    debug?: {
+        /** The prompt text sent to the provider. */
+        prompt?: string;
+        /** The raw response text from the provider. */
+        response?: string;
+        /** Error message if the test failed. */
+        error?: string;
+        /** Availability status for Built-in AI. */
+        availability?: string;
+        /** Whether the summary was non-empty (actual content check). */
+        hasContent?: boolean;
+        /** HTTP status code if applicable (remote providers). */
+        statusCode?: number;
+    };
 }
 
 export interface MultiProviderTestResult {
@@ -22,7 +40,13 @@ export interface MultiProviderTestResult {
     providers: ProviderTestResult[];
 }
 
-/** Human-readable labels for AI provider identifiers */
+/**
+ * Human-readable labels for AI provider identifiers.
+ * Note: 'built-in-ai' is display-only here — it is not registered in
+ * AIClient.providers (Strategy pattern). Built-in AI is dispatched to
+ * LocalAIService via FallbackAIService, not through AIClient. See
+ * dev-docs/2026-07-28-built-in-ai-provider-integration-design.md.
+ */
 export const PROVIDER_LABELS: Record<string, string> = {
     gemini: 'Google Gemini',
     openai: 'OpenAI Compatible',
@@ -30,6 +54,7 @@ export const PROVIDER_LABELS: Record<string, string> = {
     'lm-studio': 'LM Studio',
     ollama: 'Ollama',
     'openai-compatible': 'OpenAI Compatible',
+    'built-in-ai': 'Built-in AI',
 };
 
 /**
@@ -45,7 +70,6 @@ export const PROVIDER_LABELS: Record<string, string> = {
  * 【OCP Compliance】: 既存コードを修正せずに新しいプロバイダーを追加可能
  */
 export class AIClient {
-    private localAiClient: LocalAIClient;
     private providers: Map<string, AIProviderFactory>;
     /**
      * In-flight generateSummary() リクエストを追跡するマップ。
@@ -53,12 +77,28 @@ export class AIClient {
      * 進行中のPromiseを再利用する（FinOptimization: 不要なAPIコスト防止）。
      */
     private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
+    /**
+     * built-in-ai スロット用に登録された AIService（未登録の場合は null）。
+     * Strategy パターン（AIProviderStrategy）とは別経路で、優先度リストの
+     * built-in-ai スロットを検出した際にここへ委譲する。
+     * 詳細: dev-docs/2026-07-28-built-in-ai-provider-integration-design.md
+     */
+    private builtInAiService: AIService | null;
 
     constructor() {
-        this.localAiClient = new LocalAIClient();
         this.providers = new Map();
         this.inFlightSummaryRequests = new Map();
+        this.builtInAiService = null;
         this.registerDefaultProviders();
+    }
+
+    /**
+     * built-in-ai スロット用の AIService を登録する。
+     * FallbackAIService/AIClient のいずれからも独立した委譲経路であり、
+     * providers Map（Strategy登録）には加えない。
+     */
+    registerBuiltInAiService(service: AIService): void {
+        this.builtInAiService = service;
     }
 
     /**
@@ -131,6 +171,30 @@ export class AIClient {
         };
 
         for (const slot of slots) {
+            if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
+                if (!this.builtInAiService) {
+                    addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
+                    continue;
+                }
+
+                void recordAuditLog({ provider: slot.provider, url });
+
+                try {
+                    const result = await this.builtInAiService.generateSummary(content, { traceId });
+                    // Check both the success flag (from LocalAIService/BuiltInAIClient) and content length.
+                    // BuiltInAIClient returns success:false without throwing when the model is
+                    // 'downloadable' — we must not treat that as a valid summary.
+                    if (result.success !== false && result.summary.length >= minLength) {
+                        return { success: true, summary: result.summary, sentTokens: result.sentTokens, receivedTokens: result.receivedTokens, providerName: result.providerName, model: result.modelName };
+                    }
+                    lastResult = { success: false, summary: result.summary || result.error || 'Built-in AI returned no content' };
+                } catch (error: unknown) {
+                    addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
+                    lastResult = { success: false, summary: "Error: Failed to generate summary. Please try again." };
+                }
+                continue;
+            }
+
             const factory = this.providers.get(slot.provider);
             if (!factory) {
                 addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
@@ -189,6 +253,7 @@ export class AIClient {
     /**
      * 接続テストを実行する
      * 優先度リストの全プロバイダをテストし、各プロバイダの結果を返す
+     * 例外の有無だけでなく、実際のレスポンス内容も検証する。
      */
     async testConnection(): Promise<MultiProviderTestResult> {
         const settings = await getSettings();
@@ -198,6 +263,71 @@ export class AIClient {
         let anySuccess = false;
 
         for (const slot of slots) {
+            if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
+                if (!this.builtInAiService) {
+                    providerResults.push({
+                        provider: slot.provider,
+                        model: slot.model,
+                        success: false,
+                        message: `Unknown provider: ${slot.provider}`,
+                        debug: { error: 'Built-in AI service is not registered' },
+                    });
+                    continue;
+                }
+
+                const testPrompt = 'Connection test.';
+                try {
+                    const result = await this.builtInAiService.generateSummary(testPrompt);
+                    const hasContent = result.summary.length > 0;
+                    const isSuccess = result.success !== false && hasContent;
+
+                    if (isSuccess) {
+                        providerResults.push({
+                            provider: slot.provider,
+                            model: slot.model,
+                            success: true,
+                            message: 'ok',
+                            debug: {
+                                prompt: testPrompt,
+                                response: result.summary,
+                                hasContent: true,
+                            },
+                        });
+                        anySuccess = true;
+                    } else {
+                        const errorMsg = result.error || (hasContent ? 'Summary was empty' : 'Provider reported failure');
+                        providerResults.push({
+                            provider: slot.provider,
+                            model: slot.model,
+                            success: false,
+                            message: errorMsg,
+                            debug: {
+                                prompt: testPrompt,
+                                response: result.summary || undefined,
+                                error: result.error,
+                                hasContent: false,
+                            },
+                        });
+                        addLog(LogType.WARN, `Connection test for ${slot.provider} succeeded without exception but returned no content: ${errorMsg}`);
+                    }
+                } catch (error: unknown) {
+                    const msg = errorMessage(error);
+                    addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
+                    providerResults.push({
+                        provider: slot.provider,
+                        model: slot.model,
+                        success: false,
+                        message: msg,
+                        debug: {
+                            prompt: testPrompt,
+                            error: msg,
+                            hasContent: false,
+                        },
+                    });
+                }
+                continue;
+            }
+
             const factory = this.providers.get(slot.provider);
             if (!factory) {
                 providerResults.push({
@@ -205,6 +335,7 @@ export class AIClient {
                     model: slot.model,
                     success: false,
                     message: `Unknown provider: ${slot.provider}`,
+                    debug: { error: `Provider "${slot.provider}" is not registered` },
                 });
                 continue;
             }
@@ -219,6 +350,7 @@ export class AIClient {
                     model: slot.model,
                     success: result.success,
                     message: result.message,
+                    debug: result.debug,
                 });
                 if (result.success) {
                     anySuccess = true;
@@ -231,6 +363,7 @@ export class AIClient {
                     model: slot.model,
                     success: false,
                     message: msg,
+                    debug: { error: msg },
                 });
             }
         }
@@ -246,17 +379,4 @@ export class AIClient {
         };
     }
 
-    /**
-     * ローカルAIで要約を生成する
-     */
-    async summarizeLocally(content: string): Promise<LocalAISummaryResult> {
-        return this.localAiClient.summarize(content);
-    }
-
-    /**
-     * ローカルAIの利用可能性を確認する
-     */
-    async getLocalAvailability(): Promise<LocalAIAvailability> {
-        return this.localAiClient.getAvailability();
-    }
 }

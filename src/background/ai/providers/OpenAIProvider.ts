@@ -213,7 +213,11 @@ export class OpenAIProvider extends AIProviderStrategy {
 
     async testConnection(): Promise<AIProviderConnectionResult> {
         if (!this.baseUrl) {
-            return { success: false, message: 'Base URL is not set.' };
+            return {
+                success: false,
+                message: 'Base URL is not set.',
+                debug: { error: 'Base URL is missing' },
+            };
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
@@ -240,28 +244,60 @@ export class OpenAIProvider extends AIProviderStrategy {
             });
 
             if (response.ok) {
-                return { success: true, message: 'Connected to AI API.' };
+                return {
+                    success: true,
+                    message: 'Connected to AI API.',
+                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} OK`, hasContent: true },
+                };
             }
 
             // より詳細なエラーメッセージ
             if (response.status === 401 || response.status === 403) {
-                return { success: false, message: `Authentication failed (${response.status}). Check your API key.` };
+                return {
+                    success: false,
+                    message: `Authentication failed (${response.status}). Check your API key.`,
+                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else if (response.status === 404) {
-                return { success: false, message: `Endpoint not found (404). Check your Base URL.` };
+                return {
+                    success: false,
+                    message: `Endpoint not found (404). Check your Base URL.`,
+                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else if (response.status === 429) {
-                return { success: false, message: `Rate limit exceeded (429). Please try again later.` };
+                return {
+                    success: false,
+                    message: `Rate limit exceeded (429). Please try again later.`,
+                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else {
-                return { success: false, message: `AI API Error: ${response.status} ${response.statusText}` };
+                return {
+                    success: false,
+                    message: `AI API Error: ${response.status} ${response.statusText}`,
+                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             }
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : 'Error';
             if (msg.includes('timeout')) {
-                return { success: false, message: 'Connection timeout. Check your network or Base URL.' };
+                return {
+                    success: false,
+                    message: 'Connection timeout. Check your network or Base URL.',
+                    debug: { prompt: `GET ${url}`, error: msg },
+                };
             } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
-                return { success: false, message: 'Cannot connect. Check your Base URL and network.' };
+                return {
+                    success: false,
+                    message: 'Cannot connect. Check your Base URL and network.',
+                    debug: { prompt: `GET ${url}`, error: msg },
+                };
             } else {
-                return { success: false, message: `Connection error: ${msg}` };
+                return {
+                    success: false,
+                    message: `Connection error: ${msg}`,
+                    debug: { prompt: `GET ${url}`, error: msg },
+                };
             }
         }
     }
