@@ -24,13 +24,17 @@ export interface RateLimitResult {
  * レート制限チェックを行う
  */
 export async function checkRateLimit(): Promise<RateLimitResult> {
-  const storage = await chrome.storage.session.get([
+  const sessionStorage = await chrome.storage.session.get([
     STORAGE_KEYS.FAILED_ATTEMPTS,
     STORAGE_KEYS.FIRST_ATTEMPT_TIME,
     STORAGE_KEYS.LOCKED_UNTIL,
   ]);
-  const attempts = (storage[STORAGE_KEYS.FAILED_ATTEMPTS] as number) || 0;
-  const lockedUntil = (storage[STORAGE_KEYS.LOCKED_UNTIL] as number) || 0;
+  const localStorage = (await chrome.storage.local.get([STORAGE_KEYS.LOCKED_UNTIL])) || {};
+
+  const attempts = (sessionStorage[STORAGE_KEYS.FAILED_ATTEMPTS] as number) || 0;
+  const sessionLockedUntil = (sessionStorage[STORAGE_KEYS.LOCKED_UNTIL] as number) || 0;
+  const localLockedUntil = (localStorage[STORAGE_KEYS.LOCKED_UNTIL] as number) || 0;
+  const lockedUntil = Math.max(sessionLockedUntil, localLockedUntil);
   const now = Date.now();
 
   if (lockedUntil && now < lockedUntil) {
@@ -42,12 +46,14 @@ export async function checkRateLimit(): Promise<RateLimitResult> {
   }
 
   if (attempts >= RATE_LIMIT_ATTEMPTS) {
-    const firstAttempt = (storage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] as number) || now;
+    const firstAttempt = (sessionStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] as number) || now;
 
     if (now - firstAttempt > RATE_LIMIT_WINDOW_MS) {
       await resetFailedAttempts();
     } else {
-      await chrome.storage.session.set({ [STORAGE_KEYS.LOCKED_UNTIL]: now + LOCKOUT_DURATION_MS });
+      const lockoutTime = now + LOCKOUT_DURATION_MS;
+      await chrome.storage.local.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
+      await chrome.storage.session.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
       return {
         success: false,
         error: `Too many attempts. Please try again in ${LOCKOUT_DURATION_MINUTES} minutes.`
@@ -84,4 +90,5 @@ export async function resetFailedAttempts(): Promise<void> {
     STORAGE_KEYS.FIRST_ATTEMPT_TIME,
     STORAGE_KEYS.LOCKED_UNTIL,
   ]);
+  await chrome.storage.local.remove([STORAGE_KEYS.LOCKED_UNTIL]);
 }
