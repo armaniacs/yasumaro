@@ -11,16 +11,7 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-### ✨ 機能追加（feat）
-
-| PBI | 難易度 | 副作用 | 状態 |
-|-----|--------|--------|------|
-| [2026-07-30-38-feat-edge-phi-mini-provider-support](../pbi/2026-07-30-38-feat-edge-phi-mini-provider-support.md) | 🟡中 | 🟡軽微 | 🔶 部分実装（実装完了、Edge実機での最終動作確認が未実施） |
-
-### 🔧 非機能追加（fix / refactor：バグ修正・内部改善・性能改善）
-
-| PBI | 種別 | 難易度 | 副作用 | 状態 |
-|-----|------|--------|--------|------|
+なし
 
 ---
 
@@ -34,6 +25,10 @@
 ## アーカイブ
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
+
+### 2026-07-30 セッションでアーカイブ済み
+
+- 2026-07-30-38-feat-edge-phi-mini-provider-support.md (Edge (Phi-mini) Built-in AI 対応。実機検証でAPI形状がChromeと同一と判明し、既存 `BuiltInAIClient` に動的コンテキスト切り詰め・`oncontextoverflow`監視・ブラウザ別案内文言を追加。i18n・テスト実装済み。`browserSupport.ts` のデッドコード `supportsBuiltInAI()` を削除。v6.7.4 としてリリース)
 
 ### 2026-07-28 セッションでアーカイブ済み
 
@@ -199,5 +194,5 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 0（✨機能追加 0 / 🔧非機能追加 0） |
-| 🔶 部分実装 | 1 |
-| アーカイブ済み | 170 |
+| 🔶 部分実装 | 0 |
+| アーカイブ済み | 171 |
