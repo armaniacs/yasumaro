@@ -1,7 +1,10 @@
 /**
  * offscreen.ts
- * Handles interactions with the Chrome Prompt API (window.ai) and SQLite database
- * operations in an offscreen document.
+ * Handles SQLite database operations in an offscreen document.
+ *
+ * Prompt API (window.ai / LanguageModel) is no longer handled here — Built-in AI
+ * calls LanguageModel directly from the Service Worker (src/background/builtInAIClient.ts).
+ * See dev-docs/2026-07-28-built-in-ai-provider-integration-design.md for the rationale.
  */
 
 import {
@@ -60,99 +63,10 @@ const sqliteWriteMutex = new SqliteWriteMutex();
 import { StorageKeys } from '../utils/storage/types.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 
-interface AICapabilities {
-    available: 'readily' | 'after-download' | 'no';
-}
-
-interface AISession {
-    prompt(text: string): Promise<string>;
-    destroy(): void;
-}
-
-interface AILanguageModel {
-    capabilities(): Promise<AICapabilities>;
-    create(options?: { systemPrompt?: string }): Promise<AISession>;
-}
-
-interface AI {
-    languageModel: AILanguageModel;
-}
-
-declare global {
-    interface Window {
-        ai?: AI;
-    }
-    // eslint-disable-next-line no-var
-    var ai: AI | undefined;
-}
-
-let session: AISession | null = null;
-
-// For testing only - reset session state
-export const _resetSessionForTesting = (): void => {
-    session = null;
-};
-
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
     sqliteResetForTesting();
 };
-
-// Helper to get the AI object
-export const getAI = (): AI | null | undefined => {
-    return window.ai || globalThis.ai || (typeof self !== 'undefined' ? (self as unknown as { ai?: AI }).ai : null);
-};
-
-// Check availability
-export async function checkAvailability(): Promise<string> {
-    const ai = getAI();
-    if (!ai?.languageModel) {
-        return 'unsupported';
-    }
-    try {
-        const capabilities = await ai.languageModel.capabilities();
-        return capabilities?.available || 'no';
-    } catch (error) {
-        forwardError('Offscreen: Failed to check capabilities', { error: errorMessage(error) });
-        return 'unsupported';
-    }
-}
-
-// Create session if needed
-export async function ensureSession(): Promise<boolean | { success: false; error: string }> {
-    if (session) return true;
-
-    const ai = getAI();
-
-    if (!ai) {
-        forwardError("Offscreen: 'ai' object not found in window, globalThis, or self.");
-        return { success: false, error: "'ai' object not found (Prompt API missing). Check flags." };
-    }
-
-    if (!ai.languageModel) {
-        forwardError('Offscreen: ai.languageModel is undefined.');
-        return { success: false, error: "ai.languageModel is undefined" };
-    }
-
-    const status = await checkAvailability();
-    if (status !== 'readily' && status !== 'after-download') {
-        forwardWarn(`Offscreen: AI status is '${status}', cannot create session.`, { status });
-        return { success: false, error: `AI capability status is '${status}'` };
-    }
-
-    try {
-        session = await ai.languageModel.create({
-            systemPrompt: `あなたはWebページ要約のエキスパートです。
-与えられたテキストを日本語で1文または2文に要約してください。
-重要なポイントのみを抽出し、個人情報や機密情報は含めないでください。
-改行しないでください。`
-        });
-        return true;
-    } catch (error: unknown) {
-        forwardError('Offscreen: Failed to create session', { error: errorMessage(error) });
-        return { success: false, error: `Session creation failed: ${errorMessage(error)}` };
-    }
-}
 
 // Helper: extract BrowsingLogRecord fields from an untrusted payload.
 // Explicit mapping ensures type safety and prevents SQL injection via raw spread.
@@ -421,8 +335,6 @@ export function handleOffscreenMessage(
     // Security: SQLite operations must only come from the service worker,
     // not from content scripts running in web pages (which would have a tab)
     // or from external extensions.
-    // Content scripts can send CHECK_AVAILABILITY and SUMMARIZE (Prompt API)
-    // but NOT SQLITE_* operations.
     const isSqliteMessage = isSqliteMessageType(msg.type);
     if (isSqliteMessage) {
       // Block content scripts (which have a tab)
@@ -445,38 +357,7 @@ export function handleOffscreenMessage(
 
     (async () => {
         try {
-            if (msg.type === 'CHECK_AVAILABILITY') {
-                const result = await checkAvailability();
-                sendResponse({ status: result });
-
-            } else if (msg.type === 'SUMMARIZE') {
-                const content = msg.payload?.['content'];
-                if (!content) {
-                    sendResponse({ success: false, error: 'No content provided' });
-                    return;
-                }
-
-                const sessionResult = await ensureSession();
-                if (sessionResult !== true) {
-                    const errorMsg = (sessionResult as { error: string }).error || 'Unknown session error';
-                    sendResponse({ success: false, error: errorMsg });
-                    return;
-                }
-
-                try {
-                    const truncatedContent = String(content).substring(0, 10000);
-                    if (session) {
-                        const result = await session.prompt(truncatedContent);
-                        sendResponse({ success: true, summary: result });
-                    } else {
-                        throw new Error('Session is null');
-                    }
-                } catch (promptError: unknown) {
-                    forwardError('Offscreen: Prompt extraction failed', { error: errorMessage(promptError) });
-                    session = null;
-                    sendResponse({ success: false, error: `Prompt failed: ${errorMessage(promptError)}` });
-                }
-            } else if (isSqliteMessage) {
+            if (isSqliteMessage) {
                 // VULN-016 fix: acquire write mutex to serialize SQLite operations
                 // and prevent concurrent transactions from interfering with each other
                 await sqliteWriteMutex.acquire();

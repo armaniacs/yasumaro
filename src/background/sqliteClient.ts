@@ -93,7 +93,8 @@ export class SqliteClient {
 
   /**
    * Ensure the offscreen document is open.
-   * Uses the same dedup pattern as LocalAIClient.
+   * Uses the same dedup pattern previously shared with LocalAIClient (now BuiltInAIClient,
+   * which no longer needs an offscreen document since it calls LanguageModel directly).
    */
   async ensureOffscreenDocument(): Promise<void> {
     // Skip redundant browser IPC if we know the document is alive.

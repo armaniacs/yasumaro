@@ -15,7 +15,6 @@
 
 | PBI | 難易度 | 副作用 | 状態 |
 |-----|--------|--------|------|
-| [2026-07-26-32-feat-built-in-ai-provider-implementation.md](2026-07-26-32-feat-built-in-ai-provider-implementation.md) | 🔴高 | 🟡軽微 | ⬜（実装計画は `dev-docs/plans/2026-07-26-chrome-built-in-ai-provider-plan.md` として作成済み） |
 
 ### 🔧 非機能追加（fix / refactor：バグ修正・内部改善・性能改善）
 
@@ -37,6 +36,7 @@
 
 ### 2026-07-28 セッションでアーカイブ済み
 
+- 2026-07-26-32-feat-built-in-ai-provider-implementation.md (TDDによるBuilt-in AI Provider実装。`BuiltInAIClient`（Service Workerから`LanguageModel`を直接呼び出す実装）をTDDで構築し`LocalAIService`/`FallbackAIService`に統合、`offscreen.ts`をSQLite専用に純化、旧`localAiClient.ts`を削除。優先度リストの`built-in-ai`スロット判定を`AIClient`に実装しフォールバックが動作することを単体テストで検証。ダッシュボードUIに選択肢を追加しi18n対応。実機Service Workerで`LanguageModel.create()`→`session.prompt()`の成功を確認、Playwrightで`@interaction`E2Eテスト化（`dashboard-built-in-ai.spec.ts`、`playwright.config.ts`に`interaction`プロジェクト新設）。オフライン動作確認の受け入れ基準はGemini Nanoがオンデバイス推論で外部通信を行わないため検証行為自体が成立しないと判断し撤回、コードレビューで外部通信呼び出し不在を確認する形に代替。全7272テスト・型チェック・ビルド成功)
 - 2026-07-26-31-feat-built-in-ai-provider-integration-design.md (Built-in AI Provider統合設計。PBI本文が想定していた`AIProviderStrategy`/`AIClient.registerProvider`経由ではなく、2026-07-27 ADR「AIClientとAIServiceの統一方針」に沿って`AIService`経由で統合する設計に転換。Service Worker直接呼び出し・長文前処理・状態別UX・ダッシュボードUI統合を `dev-docs/2026-07-28-built-in-ai-provider-integration-design.md` に設計、チームレビュー承認済み)
 - 2026-07-26-30-feat-chrome-built-in-ai-oss-research.md (Chrome Built-in AI OSS実装3件・Prompt API公式仕様を調査し `dev-docs/2026-07-27-chrome-built-in-ai-oss-research.md` にレポート化。実機検証によりService Worker内で`LanguageModel`へ直接アクセス・呼び出しできることを確認、既存の「Offscreen Document必須」という前提に疑義を提示。改善候補6件をPBI-31に引き継ぎ)
 
@@ -197,6 +197,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1（✨機能追加 1 / 🔧非機能追加 0） |
+| ⬜ 未着手 | 0（✨機能追加 0 / 🔧非機能追加 0） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 169 |
+| アーカイブ済み | 170 |

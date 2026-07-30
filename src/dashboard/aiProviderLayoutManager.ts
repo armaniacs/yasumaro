@@ -11,6 +11,7 @@ interface ProviderSettingsMap {
   'lm-studio': { id: string; label: string };
   ollama: { id: string; label: string };
   'openai-compatible': { id: string; label: string };
+  'built-in-ai': { id: string; label: string };
 }
 
 const PROVIDER_SETTINGS_MAP: ProviderSettingsMap = {
@@ -19,7 +20,8 @@ const PROVIDER_SETTINGS_MAP: ProviderSettingsMap = {
   openai2: { id: 'openai2Settings', label: 'OpenAI 2' },
   'lm-studio': { id: 'lm-studioSettings', label: 'LM Studio' },
   ollama: { id: 'ollamaSettings', label: 'Ollama' },
-  'openai-compatible': { id: 'openai-compatibleSettings', label: 'OpenAI Compatible' }
+  'openai-compatible': { id: 'openai-compatibleSettings', label: 'OpenAI Compatible' },
+  'built-in-ai': { id: 'built-in-aiSettings', label: 'Built-in AI' }
 };
 
 // 各プロバイダ設定divの元の親を保存（復元用）

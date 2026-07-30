@@ -33,7 +33,50 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.3] - 2026-07-30
 
+### Added / 追加
+
+- **Chrome Built-in AI (Gemini Nano) の統合** — `window.ai` (Prompt API) を利用したローカル要約機能を実装。優先度リストに `built-in-ai` プロバイダーを追加し、ネットワーク不要かつ低コストな要約を可能にした
+- **AI要約におけるトークン数とプロバイダー名の記録** — ローカルAI使用時も `sentTokens`, `receivedTokens`, `providerName`, `modelName` を履歴に保存し、利用統計の正確性を向上
+- **AI要約の実処理時間計測をローカルAIにも適用** — `aiCallDurationMs` をローカルAIの生成時間にも適用し、パフォーマンス分析を可能にした
+- **ダッシュボードに Built-in AI 設定パネルを追加** — プロバイダー選択時の UI 統合および接続テストへの対応
+- **Built-in AI 統合の E2E テストを追加** — ダッシュボードからのプロバイダー設定および要約動作の検証を自動化
+- **AI テスト結果に通信内容の詳細表示を追加** — 各プロバイダーのテスト結果に prompt, response, error, hasContent を表示し、問題調査を容易にした
+- **Built-in AI 設定ガイド（`docs/BUILT_IN_AI_SETUP_GUIDE.md`）を新規作成** — Chrome/Edge でのモデルダウンロード手順、ハードウェア要件、トラブルシューティングを日英バイリンガルで文書化
+- **初期設定ページに Built-in AI 設定ガイドへのリンクを追加** — 「Built-in AI is currently downloadable」表示時にユーザーが設定手順を確認できるようにした
+- **`BuiltInAIClient` に availability キャッシュを追加** — `LanguageModel.availability()` の結果をインスタンス生存期間中キャッシュし、2回目以降の `summarize()` 呼び出しで API 呼び出しを省略。`'downloading'` 状態は常に再チェックする
+- **`BuiltInAIClient` に `resetAvailabilityCache()` メソッドを追加** — テスト容易性と明示的なキャッシュクリア手段を提供
+
+### Fixed / 修正
+
+- **LocalAIClient の Offscreen Document 依存を解消** — Built-in AI は Service Worker から直接 `LanguageModel` を呼び出せるため、Offscreen Document へのメッセージ転送を排除し、レイテンシと複雑性を削減
+- **AI テストが Built-in AI の実際の動作状態を正しく報告するよう修正** — 従来は例外が投げられなければ「ok」と報告していたが、`success` フラグとレスポンス内容も検証するよう改善。Edge で「Built-in AI is currently downloadable」状態を誤って成功と報告していた問題を修正
+- **`LocalAIService` が `BuiltInAIClient` の `success`/`error` フラグを正しく伝播するよう修正** — 従来は `success: false` を無視して空の要約を返していたため、`generateSummaryInternal()` がフォールバックを正しく判定できなかった
+- **`generateSummaryInternal()` が Built-in AI の `success: false` を検出して次のプロバイダーへフォールバックするよう修正** — `result.success !== false` のチェックを追加し、モデル未ダウンロード時の誤動作を防止
+- **`LocalAIService` から死んだ `ensureOffscreenDocument` を削除** — コードレビュー指摘対応。`LocalAIServiceConfig` から `ensureOffscreenDocument?()` とそのガード条件を削除。このコードパスは既に全呼び出し元から削除済みだった
+
+### Refactor / リファクタ
+
+- **`LocalAIClient` を `BuiltInAIClient` にリネーム・再設計** — Prompt API 特化の設計に変更し、`LocalAIService` との連携を最適化
+- **AIClient の Built-in AI 委譲経路を新設** — Strategy パターン（AIProviderStrategy）とは別に、優先度リストの `built-in-ai` スロットから `LocalAIService` へ直接委譲する専用経路を実装
+- **`AIService` インターフェースに `success`/`error` フィールドを追加** — プロバイダーの実際の成功/失敗状態を呼び出し元に伝達可能に
+- **`AIProviderConnectionResult` に `debug` フィールドを追加** — テスト時の通信内容（prompt, response, error, statusCode, hasContent）を保持
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.2` → `6.7.3`
+- **PBI アーカイブ** — Built-in AI 実装完了に伴い PBI をアーカイブ
+- **未使用の `LocalAIClient` 関連テストを削除し、`BuiltInAIClient` 用に更新**
+- **AI テストの `success: false` シナリオ（Edge の downloadable 状態）のテストを追加**
+- **`LocalAIService` の ensureOffscreenDocument テストを削除** — コードレビューでのデッドコード指摘に対応
+- **availability キャッシュのテストを追加** — キャッシュヒット時の API 呼び出し省略、`downloading` 状態の再チェック、`resetAvailabilityCache` の動作を検証
+
+### Verified / 動作確認
+
+- **Chrome 150.0.7871.186（公式ビルド）macOS (arm64) で Built-in AI の接続テスト・要約生成の動作を確認**
+- **Edge (Chromium ベース) で `downloadable` 状態が正しく検出されることを確認**
+- **全 7283 テストパス（2件増加）・TypeScript 型チェック正常**
 
 ## [6.7.2] - 2026-07-27
 

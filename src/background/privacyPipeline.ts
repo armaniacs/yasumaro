@@ -184,7 +184,9 @@ export class PrivacyPipeline {
       return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
     }
 
+    const localCallStart = performance.now();
     const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only', traceId });
+    const localCallDurationMs = performance.now() - localCallStart;
     if (!localResult.summary) {
       if (this.mode === 'local_only') {
         void addPendingPage({
@@ -210,7 +212,18 @@ export class PrivacyPipeline {
     const processedText = summarySanitizeResult.sanitized;
 
     if (this.mode === 'local_only') {
-      return { returnEarly: true, result: { summary: processedText, originalTokens } };
+      return {
+        returnEarly: true,
+        result: {
+          summary: processedText,
+          originalTokens,
+          sentTokens: localResult.sentTokens,
+          receivedTokens: localResult.receivedTokens,
+          providerName: localResult.providerName,
+          modelName: localResult.modelName,
+          aiCallDurationMs: localCallDurationMs,
+        },
+      };
     }
 
     return { processedText };

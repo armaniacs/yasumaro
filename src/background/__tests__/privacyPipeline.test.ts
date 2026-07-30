@@ -242,6 +242,34 @@ describe('PrivacyPipeline', () => {
       expect(mockLocalService.generateSummary).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ mode: 'local_only' }));
     });
 
+    it('propagates sentTokens/receivedTokens/providerName/modelName from AIService in local_only mode', async () => {
+      const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
+      const mockLocalService = {
+        getSupportedModes: vi.fn().mockReturnValue(['local_only']),
+        generateSummary: vi.fn().mockResolvedValue({
+          summary: 'Local summary',
+          sentTokens: 3817,
+          receivedTokens: 75,
+          providerName: 'built-in-ai',
+          modelName: 'gemini-nano',
+        }),
+      };
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'ignored', maskedItems: [] }) };
+      const pipeline = new PrivacyPipeline(localOnlySettings, mockLocalService, sanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({ sanitized: 'content', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' });
+
+      const result = await pipeline.process('content');
+      expect(result.sentTokens).toBe(3817);
+      expect(result.receivedTokens).toBe(75);
+      expect(result.providerName).toBe('built-in-ai');
+      expect(result.modelName).toBe('gemini-nano');
+      expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(0);
+    });
+
     it('logs warning when AI summary has high danger level', async () => {
       const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud', [StorageKeys.PII_SANITIZE_LOGS]: true };
       const mockAiService = {
@@ -352,7 +380,7 @@ describe('PrivacyPipeline', () => {
     });
   });
 
-  describe('aiCallDurationMs（クラウドAI要約の実処理時間）', () => {
+  describe('aiCallDurationMs（AI要約の実処理時間、ローカル/クラウド共通）', () => {
     it('クラウドAI呼び出し(L3)が実行された場合、その所要時間を aiCallDurationMs として返す', async () => {
       const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
       const DELAY_MS = 30;
@@ -388,11 +416,14 @@ describe('PrivacyPipeline', () => {
       expect(result.aiCallDurationMs).toBeUndefined();
     });
 
-    it('local_onlyモード（クラウドAI未使用）の場合、aiCallDurationMs は含まれない', async () => {
+    it('local_onlyモード（ローカルAI呼び出し）の場合も、その所要時間を aiCallDurationMs として返す', async () => {
       const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
+      const DELAY_MS = 30;
       const mockLocalService = {
         getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-        generateSummary: vi.fn().mockResolvedValue({ summary: 'Local summary' }),
+        generateSummary: vi.fn().mockImplementation(
+          () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Local summary' }), DELAY_MS))
+        ),
       };
       const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'ignored', maskedItems: [] }) };
       const pipeline = new PrivacyPipeline(localOnlySettings, mockLocalService, sanitizers);
@@ -404,7 +435,7 @@ describe('PrivacyPipeline', () => {
 
       const result = await pipeline.process('content');
 
-      expect(result.aiCallDurationMs).toBeUndefined();
+      expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
     });
 
     it('alreadyProcessed=true でもクラウドAIは実際に呼ばれ、その実測時間が返る', async () => {

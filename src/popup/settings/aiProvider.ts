@@ -18,10 +18,12 @@ export interface AIProviderElements {
     openaiCompatibleSettings?: HTMLElement;
     lmStudioSettings?: HTMLElement;
     ollamaSettings?: HTMLElement;
+    builtInAiSettings?: HTMLElement;
 }
 
 /**
  * AIプロバイダーとそのAPI URLのマッピング
+ * built-in-ai はネットワークアクセスもホスト権限も不要なため含めない
  */
 const PROVIDER_URLS: Record<string, string> = {
     'gemini': 'https://generativelanguage.googleapis.com/',
@@ -51,6 +53,9 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
     if (elements.ollamaSettings) {
         elements.ollamaSettings.style.display = 'none';
     }
+    if (elements.builtInAiSettings) {
+        elements.builtInAiSettings.style.display = 'none';
+    }
 
     if (provider === 'gemini') {
         elements.geminiSettings.style.display = 'block';
@@ -64,6 +69,8 @@ export function updateAIProviderVisibility(elements: AIProviderElements): void {
         elements.ollamaSettings.style.display = 'block';
     } else if (provider === 'openai-compatible' && elements.openaiCompatibleSettings) {
         elements.openaiCompatibleSettings.style.display = 'block';
+    } else if (provider === 'built-in-ai' && elements.builtInAiSettings) {
+        elements.builtInAiSettings.style.display = 'block';
     }
 }
 
@@ -136,5 +143,8 @@ export function updateAIProviderVisibilityMulti(elements: AIProviderElements, se
     }
     if (elements.openaiCompatibleSettings) {
         elements.openaiCompatibleSettings.style.display = selected.has('openai-compatible') ? 'block' : 'none';
+    }
+    if (elements.builtInAiSettings) {
+        elements.builtInAiSettings.style.display = selected.has('built-in-ai') ? 'block' : 'none';
     }
 }

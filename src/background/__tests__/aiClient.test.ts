@@ -11,8 +11,6 @@ import * as fetchModule from '../../utils/fetch.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 
 const { fetchWithRetry } = vi.mocked(fetchModule);
-// import { LocalAIClient } from '../localAiClient.js'; // Unused
-
 vi.mock('../../utils/storage.js', () => ({
   getSettings: vi.fn(),
   getAllowedUrls: vi.fn(() => Promise.resolve([])),
@@ -28,7 +26,6 @@ vi.mock('../../utils/storage.js', () => ({
     OPENAI_2_MODEL: 'openai_2_model'
   }
 }));
-vi.mock('../localAiClient.js');
 vi.mock('../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
 describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報漏洩', () => {
