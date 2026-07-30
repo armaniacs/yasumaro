@@ -2142,7 +2142,13 @@
     "message": "Built-in AI (No API Key Required)"
   },
   "builtInAiHelp": {
-    "message": "Uses Chrome's on-device AI (Gemini Nano). No API key required. Availability depends on your Chrome version and downloaded model."
+    "message": "Uses Chrome/Edge's on-device AI (Gemini Nano/Phi-mini). No API key required. Availability depends on your browser version and downloaded model."
+  },
+  "builtInAiUnavailableGeneric": {
+    "message": "Built-in AI is currently unavailable (status: {status}). Your browser may not support this experimental on-device AI feature."
+  },
+  "builtInAiUnavailableWithFlag": {
+    "message": "Built-in AI is currently unavailable (status: {status}). Open \"{flagUrl}\" and enable \"{flagName}\"."
   },
   "modelsDevDescription": {
     "message": "Select from 70+ OpenAI-compatible providers (OpenRouter, Perplexity, DeepSeek, etc.)"

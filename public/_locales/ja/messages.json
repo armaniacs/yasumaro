@@ -2057,7 +2057,13 @@
     "message": "Built-in AI（APIキー不要）"
   },
   "builtInAiHelp": {
-    "message": "Chromeの端末内AI（Gemini Nano）を使用します。APIキーは不要です。利用可否はChromeのバージョンとモデルのダウンロード状況によります。"
+    "message": "Chrome/Edgeの端末内AI（Gemini Nano/Phi-mini）を使用します。APIキーは不要です。利用可否はブラウザのバージョンとモデルのダウンロード状況によります。"
+  },
+  "builtInAiUnavailableGeneric": {
+    "message": "Built-in AIは現在利用できません（状態: {status}）。お使いのブラウザが端末内AIの実験的機能に対応していない可能性があります。"
+  },
+  "builtInAiUnavailableWithFlag": {
+    "message": "Built-in AIは現在利用できません（状態: {status}）。「{flagUrl}」を開き「{flagName}」を有効にしてください。"
   },
   "modelsDevDescription": {
     "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Perplexity、DeepSeek等）から選択"

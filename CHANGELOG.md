@@ -33,6 +33,29 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.4] - 2026-07-30
+
+### Added / 追加
+
+- **Built-in AI の Microsoft Edge (Phi-mini) 対応** — 実機検証（Edge 150.0.4078.105 stable, Mac）により Edge の Phi-mini Prompt API が Chrome の Gemini Nano と同一の `LanguageModel` API 形状（`availability()`/`create()`/`session.prompt()`/`contextWindow`/`contextUsage`/`oncontextoverflow`）を提供することを確認し、以下を実装した
+  - `session.contextWindow`（トークン数）に基づく動的な入力切り詰め上限を追加。静的上限（`aiLimits.ts` の16,384文字）と、実測コンテキストウィンドウから導出した動的上限（保守的な換算係数・安全マージン付き）の小さい方を使用し、Edge Phi-mini（実測 `contextWindow: 9216`）のような狭いコンテキストウィンドウでの `QuotaExceededError` を予防
+  - `session.oncontextoverflow` イベントの監視を追加。発火時は診断ログに警告を記録（ユーザー向け型は変更せず、シングルターン要約における異常系検知として扱う）
+  - ブラウザ検出による Built-in AI 利用不可時の案内文言の出し分けを追加。Chrome では `chrome://flags/#prompt-api-for-gemini-nano`、Edge では `edge://flags/#edge-llm-prompt-api-for-phi-mini` のフラグ URL・フラグ名を含むローカライズ済みメッセージを表示
+  - ブラウザ検出には既存の `src/utils/browserSupport.ts` の `getBrowserName()` を再利用（新規実装は行わず、返り値をリテラル型に変更）。API 呼び出しコード自体にはブラウザ分岐を一切追加していない
+
+### Refactor / リファクタ
+
+- **`src/utils/browserSupport.ts` の `supportsBuiltInAI()` を削除** — `globalThis.ai`（Edge独自の名前空間という誤った前提）をチェックする実装で、`any` 型キャストも使用しており、実際にはどこからも呼ばれていなかったデッドコード
+
+### Tests / テスト
+
+- **`BuiltInAIClient` の動的切り詰め・`oncontextoverflow`・ブラウザ別案内文言のテストを追加**
+- **`browserSupport.ts` の `getBuiltInAIFlagGuidance()` テストを追加、`supportsBuiltInAI()` テストを削除**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.3` → `6.7.4`
+
 ## [6.7.3] - 2026-07-30
 
 ### Added / 追加
