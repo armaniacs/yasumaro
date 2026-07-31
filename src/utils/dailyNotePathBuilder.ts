@@ -1,13 +1,26 @@
 // src/utils/dailyNotePathBuilder.ts
 
 /**
- * パスセグメントをサニタイズ（パストラバーサル攻撃対策）
+ * URLのパス部分で特別な意味を持つメタ文字をエンコードする
+ * フォルダ名に # や ? が含まれるとURLのパス解析が壊れるため
+ * （すでにエンコード済みの %xx シーケンスは維持する）
+ * @param {string} component - エンコード対象のパス
+ * @returns {string} エンコードされたパス
+ */
+function encodeUrlMetacharacters(component: string): string {
+    return component
+        .replace(/#/gu, '%23')
+        .replace(/\?/gu, '%3F');
+}
+
+/**
+ * パスセグメントをサニタイズ（パストラバーサル攻撃対策 + URLメタ文字エンコード）
  * 問題点2対応: URLパスサニタイズ
  * @param {string} component - サニタイズ対象のパスセグメント
  * @returns {string} サニタイズされたパスセグメント
  * @throws {Error} 無効なパス検出時にエラー
  */
-function sanitizePathComponent(component: string): string {
+export function sanitizePathComponent(component: string): string {
     if (!component || typeof component !== 'string') {
         return component;
     }
@@ -27,7 +40,7 @@ function sanitizePathComponent(component: string): string {
         throw new Error('Invalid path component: absolute path detected');
     }
 
-    return component;
+    return encodeUrlMetacharacters(component);
 }
 
 /**
@@ -44,12 +57,12 @@ export function buildDailyNotePath(pathRaw: string, date: Date = new Date()): st
 
     if (!pathRaw) return `${year}-${month}-${day}`;
 
-    // パス入力のサニタイズ
-    sanitizePathComponent(pathRaw);
+    // パス入力のサニタイズ（パストラバーサル検出 + URLメタ文字エンコード）
+    const sanitized = sanitizePathComponent(pathRaw);
 
     const today = `${year}-${month}-${day}`;
 
-    return pathRaw
+    return sanitized
         .replace(/YYYY/gu, year)
         .replace(/MM/gu, month)
         .replace(/DD/gu, day)
