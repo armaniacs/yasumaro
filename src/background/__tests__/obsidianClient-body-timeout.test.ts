@@ -6,6 +6,7 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage.js';
+import { addLog, LogType } from '../../utils/logger.js';
 
 vi.mock('../../utils/storage.js');
 vi.mock('../../utils/logger.js', () => ({
@@ -128,6 +129,50 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       );
 
       expect(result).toBe('Existing content');
+    });
+  });
+
+  describe('_handleError - タイムアウト時のログ出力', () => {
+    it('AbortError時はWARNログを出力してタイムアウトエラーを返すこと', () => {
+      const err = new Error('The operation was aborted.');
+      err.name = 'AbortError';
+
+      const result = client._handleError(err, 'https://127.0.0.1:27123/');
+
+      expect(result.message).toContain('timed out');
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        expect.stringContaining('timed out'),
+        expect.objectContaining({ error: 'The operation was aborted.' })
+      );
+    });
+
+    it('timed out を含むエラーメッセージでもWARNログを出力すること', () => {
+      const result = client._handleError(
+        new Error('Body read timed out after 15000ms'),
+        'https://127.0.0.1:27123/'
+      );
+
+      expect(result.message).toContain('timed out');
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        expect.stringContaining('timed out'),
+        expect.objectContaining({ error: 'Body read timed out after 15000ms' })
+      );
+    });
+
+    it('タイムアウト以外のエラーは従来どおりERRORログを出力する', () => {
+      const result = client._handleError(
+        new Error('Some other error'),
+        'https://127.0.0.1:27123/'
+      );
+
+      expect(result.message).toContain('Failed to connect');
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.ERROR,
+        expect.stringContaining('Some other error'),
+        expect.any(Object)
+      );
     });
   });
 });
