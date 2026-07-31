@@ -6,6 +6,17 @@ export default defineConfig({
   browser: 'chromium',
   manifestVersion: 3,
 
+  // Chrome MV3 extension pages report modulepreload <link> tags as
+  // "cross-world extension resource mismatch" warnings in the errors
+  // console. The scripts still load fine via the entry's own <script
+  // type="module">; disabling modulePreload only drops the (negligible,
+  // same-origin) preload hint and removes the console noise.
+  vite: () => ({
+    build: {
+      modulePreload: false,
+    },
+  }),
+
   manifest: {
     manifest_version: 3,
     name: '__MSG_extensionName__',

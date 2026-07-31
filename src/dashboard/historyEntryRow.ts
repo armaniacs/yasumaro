@@ -2,7 +2,7 @@ import { getMessage } from '../utils/i18n.js';
 import { removeSavedUrl } from '../utils/storageUrls.js';
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { makeCleansingProgressBar } from './cleansingStatsView.js';
-import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge } from './historyBadges.js';
+import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge, makePrivacyModeBadge } from './historyBadges.js';
 import { openTagEditModal } from './historyTagEditModal.js';
 import { getCachedMessage } from './historyState.js';
 import type { HistoryPanelState, TagEditElements } from './historyState.js';
@@ -96,7 +96,7 @@ export function makeHistoryEntryRow(
     pageBytes, candidateBytes, originalBytes, cleansedBytes,
     aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements,
     aiSummaryCleansedReason, aiSummaryCleansedReasons,
-    aiProvider, aiModel, aiDuration,
+    aiProvider, aiModel, aiDuration, privacyMode,
   } = entry;
 
   const row = document.createElement('div');
@@ -120,6 +120,8 @@ export function makeHistoryEntryRow(
   if (maskBadge) topRow.appendChild(maskBadge);
   const cleansedBadge = makeCleansedBadge(cleansedReason);
   if (cleansedBadge) topRow.appendChild(cleansedBadge);
+  const privacyModeBadge = makePrivacyModeBadge(privacyMode);
+  if (privacyModeBadge) topRow.appendChild(privacyModeBadge);
   topRow.appendChild(urlEl);
 
   const timeEl = document.createElement('div');

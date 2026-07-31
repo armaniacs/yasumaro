@@ -360,10 +360,10 @@
     "message": "Local Only"
   },
   "privacyModeLocalOnlyDesc": {
-    "message": "Summarize page content using only the browser's built-in AI, without sending data externally.\nCurrently not supported on most browsers."
+    "message": "Summarize page content using only the browser's built-in AI (e.g. Gemini Nano on Chrome, Phi-mini on Edge), without sending data externally.\nRequires enabling a browser flag and downloading the model on supported browsers."
   },
   "privacyModeLocalOnlyStatus": {
-    "message": "(Under development)"
+    "message": "(Supported browsers only)"
   },
   "privacyModeFullPipeline": {
     "message": "Mode B: Full Pipeline"
@@ -372,10 +372,10 @@
     "message": "Full Pipeline"
   },
   "privacyModeFullPipelineDesc": {
-    "message": "Browser built-in AI summary → PII masking → Cloud AI refinement.\nCurrently not supported on most browsers."
+    "message": "Browser built-in AI summary → PII masking → Cloud AI refinement.\nFalls back to cloud AI only when the browser's built-in AI is unavailable."
   },
   "privacyModeFullPipelineStatus": {
-    "message": "(Under development)"
+    "message": "(Supported browsers only)"
   },
   "privacyModeMaskedCloud": {
     "message": "Masked Cloud"

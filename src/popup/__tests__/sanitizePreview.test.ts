@@ -581,6 +581,50 @@ describe('sanitizePreview', () => {
 
       expect(observeSpy).not.toHaveBeenCalled();
     });
+
+    test('モーダルが閉じている間はResizeObserverのコールバックがbody幅を変更しない', () => {
+      let resizeCallback: (() => void) | undefined;
+      global.ResizeObserver = vi.fn().mockImplementation(function (cb: () => void) {
+        resizeCallback = cb;
+        return {
+          observe: vi.fn(),
+          disconnect: vi.fn(),
+          unobserve: vi.fn(),
+        };
+      });
+
+      document.body.style.width = '360px';
+      initializeModalEvents();
+
+      const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+      expect(modal.open).toBeFalsy();
+
+      resizeCallback?.();
+
+      expect(document.body.style.width).toBe('360px');
+    });
+
+    test('モーダルが開いている間はResizeObserverのコールバックでbody幅を追従させる', () => {
+      let resizeCallback: (() => void) | undefined;
+      global.ResizeObserver = vi.fn().mockImplementation(function (cb: () => void) {
+        resizeCallback = cb;
+        return {
+          observe: vi.fn(),
+          disconnect: vi.fn(),
+          unobserve: vi.fn(),
+        };
+      });
+
+      document.body.style.width = '360px';
+      initializeModalEvents();
+
+      const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+      modal.showModal();
+
+      resizeCallback?.();
+
+      expect(document.body.style.width).not.toBe('360px');
+    });
   });
 
   describe('cleanupModalEvents', () => {

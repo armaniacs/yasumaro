@@ -49,6 +49,7 @@ export {
     setUrlAiSummaryCleansedReasons,
     setUrlAiProvider,
     setUrlAiModel,
+    setUrlPrivacyMode,
     setUrlAiDuration,
     setUrlObsidianDuration,
     setUrlExtractedSentencesBytes,

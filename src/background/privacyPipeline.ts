@@ -128,7 +128,7 @@ export class PrivacyPipeline {
     );
 
     if (localResult?.returnEarly) {
-      return localResult.result as PrivacyPipelineResult;
+      return { ...(localResult.result as PrivacyPipelineResult), mode: this.mode };
     }
     processingText = localResult?.processedText || processingText;
 
@@ -142,10 +142,13 @@ export class PrivacyPipeline {
         traceId,
       });
       const aiCallDurationMs = performance.now() - aiCallStart;
-      return this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens, aiCallDurationMs);
+      return {
+        ...this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens, aiCallDurationMs),
+        mode: this.mode,
+      };
     }
 
-    return { summary: 'Summary not available.', originalTokens, cleansedTokens };
+    return { summary: 'Summary not available.', originalTokens, cleansedTokens, mode: this.mode };
   }
 
   private _buildSanitizedSettings(alreadyProcessed: boolean) {
