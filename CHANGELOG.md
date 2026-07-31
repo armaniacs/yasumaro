@@ -33,6 +33,34 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.5] - 2026-07-31
+
+### Added / 追加
+
+- **履歴一覧に保存時のプライバシーモードバッジを追加** — 「履歴」パネルの各エントリに、保存時に使用したプライバシーモード（Local Only / Full Pipeline / Masked Cloud / Cloud Only）をバッジ表示。設定変更後も過去のエントリがどのモードで処理されたか一覧から確認できるようにした
+- **`PrivacyPipeline` の保存結果に `mode` を含めるよう修正** — 従来は `previewOnly` 時のみ `mode` を返しており、実際の保存パスでは常に欠落していたため、`saveMetadataStep.ts` で `privacyMode` を永続化できるよう修正
+
+### Changed / 変更
+
+- **Mode A (Local Only) / Mode B (Full Pipeline) の説明文言を更新** — 「（開発中）」「現在、多くのブラウザで動作しません」という古い表記を削除し、実装済みのブラウザ内蔵AI（Chrome の Gemini Nano、Edge の Phi-mini）を反映した文言（対応ブラウザでのフラグ有効化・モデルダウンロードが必要、という条件付き表現）に変更。日英両ロケールおよび `options/index.html` のフォールバック文言も同期
+
+### Fixed / 修正
+
+- **popup の幅が無限に広がる不具合を修正** — `entrypoints/popup/index.html` に含まれていた `viewport` メタタグ（`width=device-width`）が Chrome 拡張の popup（ネイティブ管理の固定サイズウィンドウ）と衝突し、ビューポート計算の基準を狂わせていたため削除。あわせて `html` 要素に明示的な `width: 360px` を指定し、Chromium の popup サイズ計算（コンテンツ高さ変化のたびに 800px 幅で再計算する既知の挙動）による幅崩れを防止
+- **popup 確認モーダルの `ResizeObserver` がモーダル非表示時にも `body` 幅を書き換えていた問題を修正** — `<dialog>` は非表示でも DOM 上に存在し続けるため、モーダルを一度も開いていなくても間接的なレイアウト再計算で `document.body.style.width` が上書きされていた。`modal.open` を確認してから幅追従するようガードを追加
+- **popup のプライバシーモードバッジ（`statusModeBadge`）にスタイル未定義だった問題を修正** — `.status-badge`/`.status-mode-badge` の CSS が存在せず、`.status-summary` の flex レイアウト内で伸びきったテキストが popup 全体の幅を押し広げていたため、バッジスタイルと `flex-wrap`/`min-width: 0` によるオーバーフロー対策を追加
+- **CSP 違反となっていたインラインの `style` 属性を削除** — `entrypoints/options/index.html` の Built-in AI 案内リンク（2箇所）が `style="margin-top: 8px; font-size: 0.9em;"` を直書きしており、`style-src 'self'` に違反してブロックされていたため、`.built-in-ai-help` クラスに切り出し
+- **WXT/Vite ビルドで発生していた `modulepreload` の cross-world 警告を解消** — `offscreen.html`/`options.html`/`popup.html` で Chrome の拡張機能エラーコンソールに出ていた「cross-world extension resource mismatch」警告を、`wxt.config.ts` の `vite.build.modulePreload: false` で解消（同一オリジンリソースのためプリロード自体の効果は無視できる）
+
+### Tests / テスト
+
+- **`sanitizePreview.test.ts` に ResizeObserver のモーダル開閉ガードのテストを追加**
+- **`historyEntryRow.test.ts`/`historyEntryRow-r2.test.ts` のモックに `makePrivacyModeBadge` を追加**
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.4` → `6.7.5`
+
 ## [6.7.4] - 2026-07-30
 
 ### Added / 追加
