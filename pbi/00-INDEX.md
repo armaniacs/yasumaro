@@ -11,7 +11,20 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-なし
+### 2026-08-01 adversarial review 対応
+
+- 2026-08-01-01-fix-service-worker-init.md (🟡中 2pt / 🟡軽微 / 🔧) Service Worker の init() を実際に呼び出し、アラーム・マイグレーション・マスターパスワードロックを起動時に実行
+- 2026-08-01-02-fix-crypto-envelope-validation.md (🟡中 2pt / 🟢なし / 🔧) 暗号化エンベロープの iterations/hash/version 入力検証を強化し DoS/ダウングレードを防ぐ
+- 2026-08-01-03-fix-hmac-key-protection.md (🔴高 3pt / 🔴あり / 🔧) HMAC 署名鍵を平文保存しないようにし、設定インポートの署名偽造を防ぐ
+- 2026-08-01-04-fix-prompt-injection-defense.md (🔴高 3pt / 🟡軽微 / 🔧) AI プロンプトの区切り・Gemini system prompt・サニタイザを強化しプロンプトインジェクションを防ぐ
+- 2026-08-01-05-fix-content-script-sender-validation.md (🟡中 2pt / 🟡軽微 / 🔧) VALID_VISIT の sender 検証とレート制限を強化
+- 2026-08-01-06-fix-pii-long-token-leak.md (🟡中 2pt / 🟡軽微 / 🔧) 長いトークン内部の PII マスク漏れを修正
+- 2026-08-01-07-fix-non-idempotent-retry.md (🟡中 2pt / 🟡軽微 / 🔧) 非冪等な POST の 5xx 再送を防止し二重生成/二重課金を防ぐ
+- 2026-08-01-08-fix-recording-state-resource-management.md (🔴高 3pt / 🔴あり / 🔧) urlRecordMutexes/privacyCache/SessionStore のリソース管理と永続化を修正
+- 2026-08-01-09-fix-fetch-utility-robustness.md (🟡中 2pt / 🟢なし / 🔧) fetch ユーティリティの timeoutMs/タイムアウト判定/IPv6 localhost 検証を修正
+- 2026-08-01-10-fix-crypto-maintainability.md (🟡中 2pt / 🟢なし / 🔧) 暗号化モジュールの TDZ/型捏造/version/needsRehash/hashUrl 等の保守性を向上
+- 2026-08-01-11-fix-obsidian-client-robustness.md (🟡中 2pt / 🟡軽微 / 🔧) Obsidian クライアントのポート/IPv6/タイムアウト/ログ/パスエンコードを修正
+- 2026-08-01-12-fix-ai-provider-consistency.md (🟢低 1pt / 🟢なし / 🔧) AI プロバイダー間の recordUsage/タイムアウト/エラーメッセージ整合性を修正
 
 ---
 
@@ -193,6 +206,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 0（✨機能追加 0 / 🔧非機能追加 0） |
+| ⬜ 未着手 | 12（✨機能追加 0 / 🔧非機能追加 12） |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 171 |
