@@ -128,4 +128,17 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(savedSettings).not.toHaveProperty('sqlite_retention_days');
     expect(savedSettings).not.toHaveProperty('some_unknown_key');
   });
+
+  it('rejects import with excessive iterations', async () => {
+    vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    envelope.iterations = 1_000_000_000;
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect(saveSettings).not.toHaveBeenCalled();
+    expect(restoreDb).not.toHaveBeenCalled();
+  });
 });
