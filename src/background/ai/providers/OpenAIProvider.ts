@@ -10,7 +10,7 @@ import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -310,7 +310,7 @@ export class OpenAIProvider extends AIProviderStrategy {
         return getAllowedUrls();
     }
 
-    private _extractSummary(data: OpenAIApiResponse, traceId: string = ''): AISummaryResult {
+    private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {
         if (!data.choices || data.choices.length === 0) {
             const error = 'OpenAI schema validation failed: choices is missing or empty';
             addLog(LogType.ERROR, error, { traceId });
@@ -329,6 +329,12 @@ export class OpenAIProvider extends AIProviderStrategy {
         }
         const sentTokens = data.usage?.prompt_tokens;
         const receivedTokens = data.usage?.completion_tokens;
+
+        // トークン使用量を記録（成功時のみ）
+        if (sentTokens !== undefined || receivedTokens !== undefined) {
+            await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
+        }
+
         return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
     }
 }
