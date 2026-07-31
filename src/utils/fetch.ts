@@ -323,33 +323,30 @@ const ALLOWED_LOCALHOST_PORTS = new Set([27123, 27124, 11434, 1234]);
  * Ollama、LM Studio等のローカルLLMサーバー向け
  * VULN-013 fix: ポート番号も検証し、許可されたポートのみ信頼する
  */
-function isLocalhostAddress(hostname: string, port?: number): boolean {
-  // 127.x.x.x (ループバックIPv4) — VULN-013 fix: fully anchored regex
-  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
-    // If port is specified, check against allowlist
-    if (port !== undefined) {
-      return ALLOWED_LOCALHOST_PORTS.has(port);
-    }
-    return true;
+/**
+ * ローカルAI用ホスト名かどうか判定（localhost / 127.x.x.x / ::1）
+ * Ollama、LM Studio等のローカルLLMサーバー向け
+ * VULN-013 fix: ポート番号も検証し、許可されたポートのみ信頼する
+ */
+export function isLocalhostAddress(hostname: string, port?: number): boolean {
+  const normalized = normalizeIpHostname(hostname).toLowerCase();
+
+  // localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) / ::ffff:127.x.x.x (IPv4マップ)
+  const isLocalhost =
+    normalized === 'localhost' ||
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(normalized) ||
+    normalized === '::1' ||
+    /^::ffff:127\./.test(normalized);
+
+  if (!isLocalhost) {
+    return false;
   }
 
-  // ::1 (IPv6ループバック)
-  if (hostname.toLowerCase() === '::1') {
-    if (port !== undefined) {
-      return ALLOWED_LOCALHOST_PORTS.has(port);
-    }
-    return true;
+  // VULN-013 fix: ポート番号が指定された場合は許可されたポートのみ信頼する
+  if (port !== undefined) {
+    return ALLOWED_LOCALHOST_PORTS.has(port);
   }
-
-  // ::ffff:127.x.x.x (IPv4マップ)
-  if (hostname.toLowerCase().startsWith('::ffff:127.')) {
-    if (port !== undefined) {
-      return ALLOWED_LOCALHOST_PORTS.has(port);
-    }
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 /**
