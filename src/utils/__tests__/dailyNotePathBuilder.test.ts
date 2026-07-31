@@ -31,3 +31,35 @@ describe('buildDailyNotePath', () => {
     expect(buildDailyNotePath('DD')).toBe('04');
   });
 });
+
+describe('buildDailyNotePath - URLメタ文字エンコード', () => {
+  beforeEach(() => {
+    vi.useFakeTimers().setSystemTime(new Date('2026-02-04T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('# を含むパスを %23 にエンコードする', () => {
+    expect(buildDailyNotePath('notes#1/YYYY-MM-DD')).toBe('notes%231/2026-02-04');
+  });
+
+  it('? を含むパスを %3F にエンコードする', () => {
+    expect(buildDailyNotePath('my?folder/YYYY-MM-DD')).toBe('my%3Ffolder/2026-02-04');
+  });
+
+  it('# と ? の両方を含むパスをエンコードする', () => {
+    expect(buildDailyNotePath('a#b?c/YYYY')).toBe('a%23b%3Fc/2026');
+  });
+
+  it('スラッシュは区切りとして維持する', () => {
+    expect(buildDailyNotePath('a/b#c/d?e/YYYY-MM-DD')).toBe('a/b%23c/d%3Fe/2026-02-04');
+  });
+
+  it('エンコード対象外の通常パスは変更しない', () => {
+    expect(buildDailyNotePath('092.Daily/YYYY-MM-DD')).toBe('092.Daily/2026-02-04');
+    expect(buildDailyNotePath('my folder/YYYY-MM-DD')).toBe('my folder/2026-02-04');
+    expect(buildDailyNotePath('%2e%2e/%2f')).toBe('%2e%2e/%2f');
+  });
+});
