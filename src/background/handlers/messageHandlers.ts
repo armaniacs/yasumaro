@@ -134,6 +134,36 @@ export interface GenerateReviewSummaryHandlerDeps {
 // Factory functions
 // ============================================================================
 
+// ----------------------------------------------------------------------------
+// VALID_VISIT per-URL rate limiting
+//
+// In-memory, module-level so entries survive across handler invocations within
+// a single Service Worker lifetime. Prevents a hostile page from flooding
+// VALID_VISIT messages to drive up AI processing costs.
+// ----------------------------------------------------------------------------
+const visitRateLimiter = new Map<string, number>();
+const VISIT_RATE_LIMIT_MS = 5000;
+const VISIT_RATE_LIMIT_MAX_ENTRIES = 1000;
+
+function isRateLimitedVisit(url: string): boolean {
+    const now = Date.now();
+    const last = visitRateLimiter.get(url);
+    if (last !== undefined && now - last < VISIT_RATE_LIMIT_MS) return true;
+    visitRateLimiter.set(url, now);
+    // Guard against unbounded growth: evict the oldest tracked URL when the
+    // cap is exceeded (Map preserves insertion order).
+    if (visitRateLimiter.size > VISIT_RATE_LIMIT_MAX_ENTRIES) {
+        const oldestKey = visitRateLimiter.keys().next().value as string | undefined;
+        if (oldestKey !== undefined) visitRateLimiter.delete(oldestKey);
+    }
+    return false;
+}
+
+/** Clear all tracked rate-limit entries (used by tests). */
+export function resetVisitRateLimiter(): void {
+    visitRateLimiter.clear();
+}
+
 export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
   return async (
     message: ValidVisitMessage,
@@ -142,6 +172,11 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
   ): Promise<void> => {
     if (!sender.tab) {
       sendResponse({ success: false, error: 'Invalid sender' });
+      return;
+    }
+
+    if (sender.tab.url && isRateLimitedVisit(sender.tab.url)) {
+      sendResponse({ success: false, reason: 'rate_limited' });
       return;
     }
 

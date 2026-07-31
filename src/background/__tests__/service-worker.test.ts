@@ -255,6 +255,7 @@ import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
 import * as storageUrls from '../../utils/storageUrls.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
+import { resetVisitRateLimiter } from '../handlers/messageHandlers.js';
 import type {
     ValidVisitMessage,
     FetchUrlMessage,
@@ -288,6 +289,7 @@ const onAlarmListener = ((globalThis as any).chrome?.alarms?.onAlarm?.addListene
 describe('service-worker handlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        resetVisitRateLimiter();
 
         // Sync module mocks with global chrome object so service-worker.ts uses them
         const globalChrome = (global as any).chrome;
