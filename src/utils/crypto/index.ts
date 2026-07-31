@@ -632,6 +632,23 @@ function base64ToBytes(b64: string): Uint8Array {
     return bytes;
 }
 
+function validateEnvelope(envelope: EncryptionEnvelope): void {
+    if (envelope.version !== CURRENT_ENVELOPE_VERSION) {
+        throw new Error(`Unsupported envelope version: ${envelope.version}. Expected ${CURRENT_ENVELOPE_VERSION}.`);
+    }
+    if (envelope.iterations < MIN_ENVELOPE_ITERATIONS || envelope.iterations > MAX_ENVELOPE_ITERATIONS) {
+        throw new Error(`Invalid envelope iterations: ${envelope.iterations}`);
+    }
+    if (!ALLOWED_ENVELOPE_HASHES.includes(envelope.hash as typeof ALLOWED_ENVELOPE_HASHES[number])) {
+        throw new Error(`Invalid envelope hash: ${envelope.hash}`);
+    }
+    for (const field of ['salt', 'iv', 'data'] as const) {
+        if (envelope[field].length > MAX_ENVELOPE_BASE64_LENGTH) {
+            throw new Error(`Envelope ${field} exceeds maximum length`);
+        }
+    }
+}
+
 export async function encryptEnvelope(plaintext: string, password: string): Promise<EncryptionEnvelope> {
     const salt = generateSalt();
     const iv = generateIV();
@@ -654,6 +671,7 @@ export async function encryptEnvelope(plaintext: string, password: string): Prom
 }
 
 export async function decryptEnvelope(envelope: EncryptionEnvelope, password: string): Promise<string> {
+    validateEnvelope(envelope);
     const salt = base64ToBytes(envelope.salt);
     const iv = base64ToBytes(envelope.iv);
     const ciphertext = base64ToBytes(envelope.data);
