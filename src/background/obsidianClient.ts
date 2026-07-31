@@ -289,7 +289,7 @@ export class ObsidianClient {
             addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`, { traceId });
             return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
         }
-        if (errorMessage.toLowerCase().includes('timed out')) {
+        if (error.name === 'AbortError' || errorMessage.toLowerCase().includes('timed out')) {
             return new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
         addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`, { traceId });
@@ -348,7 +348,7 @@ export class ObsidianClient {
             const errorName = e instanceof Error ? e.name : 'Error';
             addLog(LogType.ERROR, `Connection test failed: ${msg}`);
 
-            if (msg.includes('timed out')) {
+            if (errorName === 'AbortError' || msg.includes('timed out')) {
                 return { success: false, message: 'Connection timeout. Is Obsidian running?' };
             } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
                 return { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' };
