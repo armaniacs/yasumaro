@@ -177,12 +177,36 @@ export class ObsidianClient {
             return DEFAULT_HOST;
         }
 
+        // IPv6アドレス（::1, [::1] など）を許可する。
+        // ブラケット付きで返すことで `${protocol}://${host}:${port}` の
+        // URL組み立てが正しく機能する（例: https://[::1]:27123）。
+        if (trimmed.includes(':')) {
+            const inner = trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed.slice(1, -1) : trimmed;
+            if (!this._isIpv6Address(inner)) {
+                throw new Error('Obsidian host contains invalid characters.');
+            }
+            return `[${inner}]`;
+        }
+
         // プロトコルやスラッシュを含む不正なホストは拒否
-        if (/[\s\/\\:]/.test(trimmed)) {
+        if (/[\s\/\\]/.test(trimmed)) {
             throw new Error('Obsidian host contains invalid characters.');
         }
 
         return trimmed;
+    }
+
+    /**
+     * コロンを含み、16進数・コロン・ドット（IPv4埋め込み）のみで構成される
+     * 文字列をIPv6アドレスとして判定する
+     * @param {string} host - 判定対象の文字列
+     * @returns {boolean} IPv6アドレスの場合true
+     */
+    _isIpv6Address(host: string): boolean {
+        if (!host.includes(':')) {
+            return false;
+        }
+        return /^[0-9a-fA-F:.]+$/.test(host);
     }
 
     /**
