@@ -22,6 +22,7 @@ vi.mock('../../../../utils/aiUsageTracker.js', () => ({
     checkHardLimit: vi.fn(async () => ({ blocked: false })),
     checkUsageWarning: vi.fn(async () => ({ warning: false })),
     checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: Date.now() + 60000 })),
+    recordUsage: vi.fn(async () => {}),
     getRateLimitMessage: vi.fn(() => 'Rate limit exceeded')
 }));
 
