@@ -26,6 +26,21 @@
 - 2026-08-01-11-fix-obsidian-client-robustness.md (🟡中 2pt / 🟡軽微 / 🔧) Obsidian クライアントのポート/IPv6/タイムアウト/ログ/パスエンコードを修正
 - 2026-08-01-12-fix-ai-provider-consistency.md (🟢低 1pt / 🟢なし / 🔧) AI プロバイダー間の recordUsage/タイムアウト/エラーメッセージ整合性を修正
 
+### 推奨着手順
+
+1. `2026-08-01-01-fix-service-worker-init.md` — 他の多くの機能（パージ・リトライ・マスターパスワードロック）が止まっている根本原因
+2. `2026-08-01-02-fix-crypto-envelope-validation.md` — DoS / KDF ダウングレードの直接経路
+3. `2026-08-01-04-fix-prompt-injection-defense.md` — 攻撃者ページからの Obsidian ボールト汚染
+4. `2026-08-01-03-fix-hmac-key-protection.md` — 設定インポート署名の偽造
+5. `2026-08-01-05-fix-content-script-sender-validation.md` — AI コスト搾取・ボールト汚染
+6. `2026-08-01-06-fix-pii-long-token-leak.md` — 長いトークン内部の PII 漏洩
+7. `2026-08-01-07-fix-non-idempotent-retry.md` — 二重生成/二重課金
+8. `2026-08-01-09-fix-fetch-utility-robustness.md` — fetch ユーティリティの堅牢性（PBI-07 と連携）
+9. `2026-08-01-12-fix-ai-provider-consistency.md` — AI プロバイダー間の整合性（PBI-07 と連携）
+10. `2026-08-01-11-fix-obsidian-client-robustness.md` — Obsidian クライアントの堅牢性
+11. `2026-08-01-10-fix-crypto-maintainability.md` — 暗号化モジュールの保守性
+12. `2026-08-01-08-fix-recording-state-resource-management.md` — 記録状態のリソース管理（最も影響範囲が広く後回し）
+
 ---
 
 ## アーカイブ
