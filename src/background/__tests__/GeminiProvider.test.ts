@@ -24,7 +24,9 @@ vi.mock('../../utils/storage.js', () => ({
     getAllowedUrls: vi.fn(async () => new Set(['https://generativelanguage.googleapis.com'])),
     StorageKeys: {
         MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-        CUSTOM_PROMPTS: 'custom_prompts'
+        CUSTOM_PROMPTS: 'custom_prompts',
+        AI_TIMEOUT_MS: 'ai_timeout_ms',
+        GEMINI_API_VERSION: 'gemini_api_version'
     },
     Settings: {}
 }));
@@ -90,6 +92,29 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider({ gemini_api_key: 'key' });
             expect(provider.getName()).toBe('gemini');
         });
+
+        test('設定したタイムアウトを使用する', () => {
+            const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
+            expect(provider.timeoutMs).toBe(60000);
+        });
+
+        test('タイムアウト未設定の場合はデフォルト 30000', () => {
+            const provider = new GeminiProvider(baseSettings);
+            expect(provider.timeoutMs).toBe(30000);
+        });
+
+        test('設定したタイムアウトをリクエストに渡す', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
+            });
+
+            const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
+            await provider.generateSummary('content');
+
+            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            expect(options.timeoutMs).toBe(60000);
+        });
     });
 
     describe('getName', () => {
@@ -131,6 +156,22 @@ describe('GeminiProvider', () => {
             expect(result.summary).toBe('Summary result');
             expect(result.sentTokens).toBe(100);
             expect(result.receivedTokens).toBe(50);
+        });
+
+        test('成功結果に providerName と model を含める', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
+                    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.providerName).toBe('gemini');
+            expect(result.model).toBe('gemini-3.1-flash-lite');
         });
 
         test('APIエラーレスポンスでエラーメッセージ', async () => {
@@ -300,6 +341,41 @@ describe('GeminiProvider', () => {
 
             expect(result.success).toBe(false);
             expect(result.message).toContain('Network error');
+        });
+
+        test('AbortError でタイムアウトメッセージ', async () => {
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            const abortError = new Error('The operation was aborted');
+            abortError.name = 'AbortError';
+            (fetchWithRetry as vi.Mock).mockRejectedValue(abortError);
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.testConnection();
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('timed out');
+        });
+
+        test('HTTP 401 のスローエラーで無効な API キー', async () => {
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('HTTP 401: Unauthorized'));
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.testConnection();
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('Invalid API key');
+        });
+
+        test('HTTP 404 のスローエラーでモデル未発見', async () => {
+            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.testConnection();
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('not found');
         });
     });
 });
