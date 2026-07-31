@@ -22,6 +22,12 @@ const BASE_HEADERS = {
 const FETCH_TIMEOUT_MS = 15000; // 15秒
 
 /**
+ * PBI-11: レスポンスボディ読み込み（response.text()）のタイムアウト設定
+ * ヘッダのみ受信後にボディが送られてこないケースでハングしないようにする
+ */
+const READ_TIMEOUT_MS = 15000; // 15秒
+
+/**
  * Problem #2: ポート番号検証定数
  */
 const MIN_PORT = 1;
@@ -281,14 +287,40 @@ export class ObsidianClient {
         }, FETCH_TIMEOUT_MS);
 
         if (response.ok) {
-            return await response.text();
+            return await this._readBodyWithTimeout(response);
         } else if (response.status === 404) {
             return '';
         } else {
-            const errorText = await response.text();
+            const errorText = await this._readBodyWithTimeout(response);
             addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${errorText}`, { traceId });
             throw new Error('Error: Failed to read daily note. Please check your Obsidian connection.');
         }
+    }
+
+    /**
+     * レスポンスボディをタイムアウト付きで読み込む
+     * @param {Response} response - fetchレスポンス
+     * @returns {Promise<string>} レスポンスボディ
+     * @throws {Error} ボディ読み込みがタイムアウトした場合（name='AbortError'）
+     */
+    async _readBodyWithTimeout(response: Response): Promise<string> {
+        const textPromise = response.text();
+        // タイムアウト側が先に勝った場合、text()の遅延失敗がunhandled rejectionにならないよう握りつぶす
+        textPromise.catch(() => {});
+
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+                const timeoutError = new Error(`Body read timed out after ${READ_TIMEOUT_MS}ms`);
+                // 下流の _handleError が name ベースで検出できるようにする
+                timeoutError.name = 'AbortError';
+                reject(timeoutError);
+            }, READ_TIMEOUT_MS);
+        });
+
+        const race = Promise.race([textPromise, timeoutPromise]);
+        race.then(() => clearTimeout(timer), () => clearTimeout(timer));
+        return race;
     }
 
     async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
