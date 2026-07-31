@@ -693,8 +693,13 @@ export async function init(): Promise<void> {
     await loadSettings();
 
     // 【イベントリスナー登録】: スクロールイベントを監視（throttle化でパフォーマンス向上）
+    // プログラムによるスクロール（element.scrollTo など）は isTrusted=false のため無視し、
+    // ユーザー操作のみで記録判定を進める（PBI-05）
     const throttledUpdateMaxScroll = throttle(updateMaxScroll);
-    window.addEventListener('scroll', throttledUpdateMaxScroll);
+    window.addEventListener('scroll', (event: Event) => {
+        if (!event.isTrusted) return;
+        throttledUpdateMaxScroll();
+    }, { passive: true });
 
     // 【定期実行】: 1秒ごとに条件をチェック
     startPeriodicCheck();
