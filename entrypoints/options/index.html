@@ -173,7 +173,7 @@
           <button id="reopenWizardBtnTop" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="statusTop" aria-live="polite"></div>
-        <div class="built-in-ai-help" style="margin-top: 8px; font-size: 0.9em;">
+        <div class="built-in-ai-help">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md" target="_blank" rel="noopener noreferrer" data-i18n="builtInAiHelpLink">
             Built-in AI の設定方法（Chrome/Edge）/ Built-in AI Setup Guide
           </a>
@@ -617,7 +617,7 @@
           <button id="reopenWizardBtn" class="secondary-btn" data-i18n="reopenWizardBtn">Setup Wizard</button>
         </div>
         <div id="status" aria-live="polite"></div>
-        <div class="built-in-ai-help" style="margin-top: 8px; font-size: 0.9em;">
+        <div class="built-in-ai-help">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md" target="_blank" rel="noopener noreferrer" data-i18n="builtInAiHelpLink">
             Built-in AI の設定方法（Chrome/Edge）/ Built-in AI Setup Guide
           </a>
@@ -1405,18 +1405,20 @@
             <div>
               <input type="radio" id="modeA" name="privacyMode" value="local_only" aria-describedby="modeADesc">
               <label for="modeA"><strong data-i18n="privacyModeLocalOnly">Mode A: Local Only</strong> <span
-                  data-i18n="privacyModeLocalOnlyStatus">(Under development)</span></label>
+                  data-i18n="privacyModeLocalOnlyStatus">(Supported browsers only)</span></label>
               <div class="help-text ml-24" id="modeADesc" data-i18n="privacyModeLocalOnlyDesc">
-                Summarize page content using only local AI, without sending data externally.
+                Summarize page content using only the browser's built-in AI (e.g. Gemini Nano on Chrome, Phi-mini on Edge), without sending data externally.
+                Requires enabling a browser flag and downloading the model on supported browsers.
               </div>
             </div>
 
             <div class="mt-10">
               <input type="radio" id="modeB" name="privacyMode" value="full_pipeline" aria-describedby="modeBDesc">
               <label for="modeB"><strong data-i18n="privacyModeFullPipeline">Mode B: Full Pipeline</strong> <span
-                  data-i18n="privacyModeFullPipelineStatus">(Under development)</span></label>
+                  data-i18n="privacyModeFullPipelineStatus">(Supported browsers only)</span></label>
               <div class="help-text ml-24" id="modeBDesc" data-i18n="privacyModeFullPipelineDesc">
-                Local AI summary → PII masking → Cloud AI refinement.
+                Browser built-in AI summary → PII masking → Cloud AI refinement.
+                Falls back to cloud AI only when the browser's built-in AI is unavailable.
               </div>
             </div>
 

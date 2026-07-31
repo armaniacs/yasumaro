@@ -50,4 +50,5 @@ export interface SavedUrlEntry {
     aiModel?: string;     // 使用したAIモデル名（オプション）
     aiDuration?: number;        // AI処理にかかった時間（ミリ秒、オプション）
     obsidianDuration?: number;  // Obsidian保存にかかった時間（ミリ秒、オプション）
+    privacyMode?: string;  // 保存時に使用したプライバシーモード（'local_only' | 'full_pipeline' | 'masked_cloud' | 'cloud_only'、オプション）
 }

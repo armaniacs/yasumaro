@@ -342,10 +342,10 @@
     "message": "Local Only"
   },
   "privacyModeLocalOnlyDesc": {
-    "message": "ページ内容を外部送信せず、ブラウザ内蔵AIのみで要約します。\n現在、多くのブラウザで動作しません。"
+    "message": "ページ内容を外部送信せず、ブラウザ内蔵AI（Chrome の Gemini Nano、Edge の Phi-mini など）のみで要約します。\n対応ブラウザでフラグの有効化とモデルのダウンロードが必要です。"
   },
   "privacyModeLocalOnlyStatus": {
-    "message": "（開発中）"
+    "message": "（対応ブラウザのみ）"
   },
   "privacyModeFullPipeline": {
     "message": "Mode B: Full Pipeline"
@@ -354,10 +354,10 @@
     "message": "Full Pipeline"
   },
   "privacyModeFullPipelineDesc": {
-    "message": "ブラウザ内蔵AIで要約→PIIマスキング→クラウドAIで仕上げ。\n現在、多くのブラウザで動作しません。"
+    "message": "ブラウザ内蔵AIで要約→PIIマスキング→クラウドAIで仕上げ。\nブラウザ内蔵AIが利用できない環境ではクラウドAIのみで処理します。"
   },
   "privacyModeFullPipelineStatus": {
-    "message": "（開発中）"
+    "message": "（対応ブラウザのみ）"
   },
   "privacyModeMaskedCloud": {
     "message": "Masked Cloud"

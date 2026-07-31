@@ -42,6 +42,12 @@ vi.mock('../historyBadges.js', () => ({
     el.className = 'mock-cleansed-badge';
     return el;
   }),
+  makePrivacyModeBadge: vi.fn((mode) => {
+    if (!mode) return null;
+    const el = document.createElement('span');
+    el.className = 'mock-privacy-mode-badge';
+    return el;
+  }),
 }));
 
 vi.mock('../historyTagEditModal.js', () => ({

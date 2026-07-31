@@ -463,6 +463,24 @@ export async function setUrlAiModel(url: string, aiModel: string): Promise<void>
 }
 
 /**
+ * URLエントリに保存時のプライバシーモードを設定する
+ * @param {string} url - 設定するURL
+ * @param {string} privacyMode - プライバシーモード（'local_only' | 'full_pipeline' | 'masked_cloud' | 'cloud_only'）
+ */
+export async function setUrlPrivacyMode(url: string, privacyMode: string): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], privacyMode };
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
  * URLエントリのAI処理時間を設定する
  */
 export async function setUrlAiDuration(url: string, aiDuration: number): Promise<void> {

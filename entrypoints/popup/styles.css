@@ -108,10 +108,15 @@
   box-sizing: border-box;
 }
 
+html {
+  width: 360px;
+  overflow-x: hidden;
+}
+
 body {
-  min-width: 360px;
-  max-width: 100vw;
+  width: 360px;
   min-height: 400px;
+  overflow-x: hidden;
   padding: 0;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -881,7 +886,7 @@ input[type="checkbox"]:focus {
   padding: 0;
   margin: auto;
   background: transparent;
-  width: 90%;
+  width: calc(100% - 32px);
   max-width: 550px;
   max-height: 90vh;
 }
@@ -1591,6 +1596,8 @@ label.inline-label {
   margin-bottom: var(--space-4);
   background: var(--color-bg-white);
   transition: all var(--transition-slow);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .status-panel:hover {
@@ -1600,14 +1607,41 @@ label.inline-label {
 
 .status-summary {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
 }
 
 .status-icons {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  min-width: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  line-height: 1.6;
+}
+
+.status-mode-badge {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
 }
 
 .status-toggle {
@@ -1622,6 +1656,8 @@ label.inline-label {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .status-toggle:hover {
@@ -1671,11 +1707,14 @@ label.inline-label {
   color: var(--color-text-secondary);
   padding-left: calc(18px + var(--space-2));
   line-height: 1.6;
+  overflow-wrap: break-word;
 }
 
 .status-value {
   display: block;
   margin-bottom: var(--space-1);
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .status-success {

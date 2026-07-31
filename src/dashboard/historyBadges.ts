@@ -62,3 +62,23 @@ export function makeCleansedBadge(cleansedReason: CleansedReason | undefined): H
   badge.title = config.title;
   return badge;
 }
+
+const PRIVACY_MODE_SHORT_LABEL_KEYS: Record<string, string> = {
+  local_only: 'privacyModeLocalOnlyShort',
+  full_pipeline: 'privacyModeFullPipelineShort',
+  masked_cloud: 'privacyModeMaskedCloudShort',
+  cloud_only: 'privacyModeCloudOnlyShort',
+};
+
+export function makePrivacyModeBadge(privacyMode: string | undefined): HTMLSpanElement | null {
+  if (!privacyMode) return null;
+
+  const labelKey = PRIVACY_MODE_SHORT_LABEL_KEYS[privacyMode];
+  if (!labelKey) return null;
+
+  const badge = document.createElement('span');
+  badge.className = 'history-badge history-badge-privacy-mode';
+  badge.textContent = getMessage(labelKey) || privacyMode;
+  badge.title = getMessage('privacyMode') || 'Privacy Mode';
+  return badge;
+}

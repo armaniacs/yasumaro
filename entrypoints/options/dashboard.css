@@ -188,6 +188,11 @@ a:hover {
   display: none !important;
 }
 
+.built-in-ai-help {
+  margin-top: 8px;
+  font-size: 0.9em;
+}
+
 .warning-banner {
   background: #fff3cd;
   border: 1px solid #ffc107;
@@ -1446,6 +1451,12 @@ button#changeMasterPassword:hover {
     border-color: #10b981;
   }
 
+  .history-badge-privacy-mode {
+    background: #1e1b4b;
+    color: #a5b4fc;
+    border-color: #4f46e5;
+  }
+
   .warning-banner {
     background: #422006;
     border-color: #b45309;
@@ -1502,6 +1513,12 @@ button#changeMasterPassword:hover {
   background: #d1fae5;
   color: #047857;
   border: 1px solid #10b981;
+}
+
+.history-badge-privacy-mode {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #6366f1;
 }
 
 /* pending-entry-inline: スキップフィルター時にhistoryListに表示するスタイル */

@@ -31,6 +31,7 @@ import {
   setUrlAiSummaryCleansedReasons,
   setUrlAiProvider,
   setUrlAiModel,
+  setUrlPrivacyMode,
   setUrlAiDuration,
   setUrlObsidianDuration,
   setUrlExtractedSentencesBytes,
@@ -192,6 +193,9 @@ export const saveMetadataStep: PipelineStepFunction = async (
   }
   if (privacyResult?.modelName !== undefined) {
     await save('aiModel', setUrlAiModel(url, privacyResult.modelName));
+  }
+  if (privacyResult?.mode !== undefined) {
+    await save('privacyMode', setUrlPrivacyMode(url, privacyResult.mode));
   }
 
   // Save L0 extracted sentences bytes (if L0 extraction was used)

@@ -112,9 +112,14 @@ export function initializeModalEvents(): void {
 
   // PERF-007修正: textareaのリサイズに合わせてポップアップ幅を追従させる
   // ResizeObserverをモジュール変数に保存して管理
+  // モーダルが開いていない間は previewContent のレイアウト変化を無視する。
+  // dialog は非表示でも DOM 上に存在し続けるため、ガードなしだとモーダルを
+  // 一度も開いていなくても body.style.width が書き換わり、popup全体が
+  // 意図せず拡大する不具合があった。
   const previewContent = getPreviewContent();
-  if (previewContent && typeof ResizeObserver !== 'undefined') {
+  if (previewContent && modal && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(() => {
+      if (!modal.open) return;
       const needed = previewContent.offsetWidth + 60; // padding + border分
       const minWidth = 320;
       document.body.style.width = Math.max(needed, minWidth) + 'px';
