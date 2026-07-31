@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Docs / ドキュメント
 
-- **人間向けドキュメントを現状実装に追いつかせる更新** — README.md、CHANGELOG.md バージョニング表記、および docs/ 配下・ルートの各種ガイドを、Built-in AI 対応（Chrome Gemini Nano / Edge Phi-mini）、履歴一覧のプライバシーモードバッジ、ダッシュボードのパネル再編（監査ログ・GitHub Gist Sync・設定エクスポート/インポートの Tools 配下への統合、popup 設定 UI の dashboard 一本化）に合わせて全面的に見直した
+- **ドキュメントを現状実装に追いつかせる更新** — README.md、CHANGELOG.md バージョニング表記、および docs/ 配下・ルートの各種ガイドを、Built-in AI 対応（Chrome Gemini Nano / Edge Phi-mini）、履歴一覧のプライバシーモードバッジ、ダッシュボードのパネル再編（監査ログ・GitHub Gist Sync・設定エクスポート/インポートの Tools 配下への統合、popup 設定 UI の dashboard 一本化）に合わせて全面的に見直した
   - **docs/CSP_GUIDE.md**: Built-in AI はブラウザ内部 API を Service Worker から直接呼び出すオンデバイス推論でネットワーク通信を行わないため、条件付き CSP の対象外である旨を日英両方に追記
   - **docs/MARKDOWN_DOWNLOAD.md**: サイドバーから到達不能になった「履歴」パネル経由のエクスポート手順を削除（`panel-history` は実装上温存されているが導線が撤去済みのため）
   - **docs/USER-GUIDE-UBLOCK-IMPORT.md**: 実装に存在しない「フィルター形式選択」ドロップダウンの説明を、実際の「uBlock Origin Filter (Advanced)」折りたたみセクションの説明に修正
