@@ -64,7 +64,7 @@ import { fetchWithRetry } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
-const { checkHardLimit, checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
+const { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
 describe('OpenAIProvider', () => {
@@ -249,6 +249,33 @@ describe('OpenAIProvider', () => {
             expect(userPrompt.length).toBeLessThanOrEqual(10200);
         });
 
+        test('成功時に使用量を記録する', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    choices: [{ message: { content: 'Summary result' } }],
+                    usage: { prompt_tokens: 10, completion_tokens: 5 }
+                })
+            });
+
+            const p = new OpenAIProvider(baseSettings);
+            await p.generateSummary('content');
+
+            expect(recordUsage).toHaveBeenCalledWith(10, 5);
+        });
+
+        test('usage がない場合は使用量を記録しない', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] })
+            });
+
+            const p = new OpenAIProvider(baseSettings);
+            await p.generateSummary('content');
+
+            expect(recordUsage).not.toHaveBeenCalled();
+        });
+
         test('baseUrl 末尾スラッシュを除去', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
@@ -324,6 +351,26 @@ describe('OpenAIProvider', () => {
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('timeout');
+        });
+
+        test('AbortError でタイムアウトメッセージ', async () => {
+            const abortError = new Error('The operation was aborted');
+            abortError.name = 'AbortError';
+            (fetchWithRetry as vi.Mock).mockRejectedValue(abortError);
+
+            const p = new OpenAIProvider(baseSettings);
+            const result = await p.testConnection();
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('timed out');
+        });
+
+        test('HTTP 404 のスローエラーでエンドポイント未発見', async () => {
+            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
+
+            const p = new OpenAIProvider(baseSettings);
+            const result = await p.testConnection();
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('not found');
         });
     });
 });
