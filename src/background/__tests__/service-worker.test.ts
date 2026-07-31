@@ -233,6 +233,10 @@ vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../reviewSummaryAlarm.js', () => ({
+    initializeReviewSummaryAlarms: vi.fn().mockResolvedValue(undefined),
+    setupReviewSummaryAlarmListener: vi.fn(),
+}));
 vi.mock('../reviewSummaryGenerator.js', () => ({
     generateWeeklySummary: vi.fn().mockResolvedValue(false),
     generateMonthlySummary: vi.fn().mockResolvedValue(false),
@@ -1261,6 +1265,25 @@ describe('service-worker handlers', () => {
     describe('init', () => {
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.init).toBe('function');
+        });
+
+        it('creates the daily-purge and offline-network-retry alarms', () => {
+            serviceWorker.init();
+
+            expect(chrome.alarms.create).toHaveBeenCalledWith(
+                'yasumaro-daily-purge',
+                { periodInMinutes: 1440 }
+            );
+            expect(chrome.alarms.create).toHaveBeenCalledWith(
+                'yasumaro-offline-network-retry',
+                { periodInMinutes: 5 }
+            );
+        });
+
+        it('initializes session alarms (master password timeout)', () => {
+            serviceWorker.init();
+
+            expect(sessionAlarmsManager.initialize).toHaveBeenCalled();
         });
     });
 
