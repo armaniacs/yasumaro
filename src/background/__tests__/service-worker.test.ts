@@ -454,7 +454,7 @@ describe('service-worker handlers', () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             const message: CheckDomainMessage = { type: 'CHECK_DOMAIN' };
-            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+            const sender = { url: 'https://example.com', tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -2178,7 +2178,7 @@ describe('service-worker handlers', () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             
-            const result = handler({ type: 'CHECK_DOMAIN' }, { tab: { id: 1, url: 'https://example.com' } }, sendResponse);
+            const result = handler({ type: 'CHECK_DOMAIN' }, { url: 'https://example.com', tab: { id: 1, url: 'https://example.com' } }, sendResponse);
             expect(result).toBe(true);
             
             // Wait for async

@@ -457,6 +457,20 @@ registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
 // ============================================================================
 
 /**
+ * Validates that a message originates from a content script running on a
+ * real http/https page. Content script messages always carry `sender.url`
+ * set to the page URL; rejecting other schemes (e.g. chrome-extension://,
+ * about:blank, devtools://) prevents non-web sources from triggering
+ * recording or other privileged operations.
+ */
+function isValidContentScriptSender(sender: chrome.runtime.MessageSender): boolean {
+    if (!sender.tab || !sender.tab.id || !sender.tab.url) return false;
+    const senderUrl = sender.url;
+    if (!senderUrl) return false;
+    return senderUrl.startsWith('http://') || senderUrl.startsWith('https://');
+}
+
+/**
  * Creates the message handler for chrome.runtime.onMessage.
  * Returns a listener function that can be tested in isolation.
  */
@@ -502,7 +516,7 @@ export function createMessageHandler(): (
                 const message = rawMessage as ExtensionMessage;
 
                 if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type as typeof CONTENT_SCRIPT_ONLY_TYPES[number])) {
-                    if (!sender.tab || !sender.tab.id || !sender.tab.url) {
+                    if (!isValidContentScriptSender(sender)) {
                         sendResponse(INVALID_SENDER_ERROR);
                         return;
                     }
