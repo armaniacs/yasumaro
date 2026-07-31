@@ -399,7 +399,9 @@ export interface RetryOptions {
   /** 最大遅延時間（ミリ秒、デフォルト: 60000） */
   maxDelayMs?: number;
   /** リトライすべきエラー条件 */
-  shouldRetry?: (error: Error, attempt: number, response: Response | null) => boolean;
+  shouldRetry?: (error: Error, attempt: number, response: Response | null, method?: string) => boolean;
+  /** HTTPメソッドの明示的な指定（省略時はリクエストオプションのmethodを使用） */
+  method?: string;
 }
 
 /**
@@ -462,6 +464,8 @@ export async function fetchWithRetry(
     shouldRetry = defaultShouldRetry
   } = retryOptions;
 
+  const requestMethod = retryOptions.method ?? options.method ?? 'GET';
+
   let lastError: Error | null = null;
   let _lastResponse: Response | null = null;
 
@@ -481,7 +485,7 @@ export async function fetchWithRetry(
 
       // エラーレスポンスの場合、リトライ条件をチェック
       const attemptError = new Error(`HTTP ${response.status}: ${response.statusText}`);
-      if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response)) {
+      if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response, requestMethod)) {
         // リトライ
         lastError = attemptError;
         logWarn(`HTTP error, retrying...`, { url, attempt: attempt + 1, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
@@ -495,7 +499,7 @@ export async function fetchWithRetry(
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // リトライ条件チェック
-      if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null)) {
+      if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null, requestMethod)) {
         // リトライ遅延（指数バックオフ）
         const delay = Math.min(
           initialDelayMs * Math.pow(backoffMultiplier, attempt),
