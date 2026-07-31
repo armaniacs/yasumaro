@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.6.6` リリース。次の安定化リリースは `v6.6.x` となる。
+> - 現時点では `v6.7.6` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,23 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.6] - 2026-07-31
+
+### Docs / ドキュメント
+
+- **人間向けドキュメントを現状実装に追いつかせる更新** — README.md、CHANGELOG.md バージョニング表記、および docs/ 配下・ルートの各種ガイドを、Built-in AI 対応（Chrome Gemini Nano / Edge Phi-mini）、履歴一覧のプライバシーモードバッジ、ダッシュボードのパネル再編（監査ログ・GitHub Gist Sync・設定エクスポート/インポートの Tools 配下への統合、popup 設定 UI の dashboard 一本化）に合わせて全面的に見直した
+  - **docs/CSP_GUIDE.md**: Built-in AI はブラウザ内部 API を Service Worker から直接呼び出すオンデバイス推論でネットワーク通信を行わないため、条件付き CSP の対象外である旨を日英両方に追記
+  - **docs/MARKDOWN_DOWNLOAD.md**: サイドバーから到達不能になった「履歴」パネル経由のエクスポート手順を削除（`panel-history` は実装上温存されているが導線が撤去済みのため）
+  - **docs/USER-GUIDE-UBLOCK-IMPORT.md**: 実装に存在しない「フィルター形式選択」ドロップダウンの説明を、実際の「uBlock Origin Filter (Advanced)」折りたたみセクションの説明に修正
+  - **CONTRIBUTING.md**: `ALLOWED_AI_PROVIDER_DOMAINS` の定義場所を、非推奨の再エクスポートに変わった `src/utils/storage.ts` から実体のある `src/utils/storage/settingsStore.ts` に修正
+  - **AGENTS.md**: 削除済みの `src/background/localAiClient.ts`、単一ファイルからディレクトリに分割された `src/utils/crypto.ts` → `src/utils/crypto/`、存在しない `src/background/aiClient/*.ts` 表記など、ファイルパスの記載を実装に合わせて修正
+  - **PERMISSIONS.md**: `src/dashboard/sqliteHistoryPanel.ts` の実パス（`src/dashboard/panels/asyncData/sqliteHistoryPanel.ts`）への修正、到達不能な「履歴」パネルへの言及削除、最終更新日・対象バージョンの更新
+  - 併せて README.md、docs/AI_SUMMARY_GUIDE.md、docs/BUILT_IN_AI_SETUP_GUIDE.md、docs/FAQ.md、docs/GITHUB_GIST_SYNC_GUIDE.md、docs/PII_FEATURE_GUIDE.md、docs/PRIVACY.md、public/PRIVACY.md の内容も実装と突き合わせて更新済み
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.5` → `6.7.6`
 
 ## [6.7.5] - 2026-07-31
 
