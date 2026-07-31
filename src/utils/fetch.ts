@@ -110,9 +110,13 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     blockLocalhost = false,
     allowedUrls = null, // 動的URL検証用オプション
     skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
+    timeoutMs: optionTimeoutMs,
     ...fetchOptions
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
+
+  // options.timeoutMs が指定された場合は最優先で使用する
+  const effectiveTimeout = optionTimeoutMs ?? timeoutMs;
 
   // P1: CSPValidatorによるAIプロバイダーURL検証
   if (!skipCspValidation) {
@@ -144,12 +148,12 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   }
 
   // タイムアウト検証
-  validateTimeout(timeoutMs);
+  validateTimeout(effectiveTimeout);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-  }, timeoutMs);
+  }, effectiveTimeout);
 
   try {
     const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
