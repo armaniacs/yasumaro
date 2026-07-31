@@ -789,6 +789,24 @@ describe('versioned encryption envelope (H3)', () => {
             expect(isEncryptionEnvelope({ version: 2 })).toBe(false);
             expect(isEncryptionEnvelope({ version: 2, kdf: 'pbkdf2' })).toBe(false);
         });
+
+        test('returns false for excessive iterations', async () => {
+            const envelope = await encryptEnvelope('test', TEST_PASSWORD);
+            envelope.iterations = 1_000_000_000;
+            expect(isEncryptionEnvelope(envelope)).toBe(false);
+        });
+
+        test('returns false for SHA-1 hash downgrade', async () => {
+            const envelope = await encryptEnvelope('test', TEST_PASSWORD);
+            envelope.hash = 'SHA-1';
+            expect(isEncryptionEnvelope(envelope)).toBe(false);
+        });
+
+        test('returns false for future version', async () => {
+            const envelope = await encryptEnvelope('test', TEST_PASSWORD);
+            envelope.version = 999;
+            expect(isEncryptionEnvelope(envelope)).toBe(false);
+        });
     });
 
     describe('migrateLegacyCiphertext', () => {
@@ -828,6 +846,34 @@ describe('versioned encryption envelope (H3)', () => {
             await expect(
                 migrateLegacyCiphertext(invalidData, legacyKey, TEST_PASSWORD)
             ).rejects.toThrow();
+        });
+    });
+
+    describe('decryptEnvelope validation', () => {
+        const password = 'test-password';
+
+        test('rejects iterations that are too high', async () => {
+            const envelope = await encryptEnvelope('secret', password);
+            envelope.iterations = 1_000_000_000;
+            await expect(decryptEnvelope(envelope, password)).rejects.toThrow('Invalid envelope iterations');
+        });
+
+        test('rejects SHA-1 hash downgrade', async () => {
+            const envelope = await encryptEnvelope('secret', password);
+            envelope.hash = 'SHA-1';
+            await expect(decryptEnvelope(envelope, password)).rejects.toThrow('Invalid envelope hash');
+        });
+
+        test('rejects future version', async () => {
+            const envelope = await encryptEnvelope('secret', password);
+            envelope.version = 999;
+            await expect(decryptEnvelope(envelope, password)).rejects.toThrow('Unsupported envelope version');
+        });
+
+        test('rejects oversized data', async () => {
+            const envelope = await encryptEnvelope('secret', password);
+            envelope.data = 'a'.repeat(10 * 1024 * 1024 + 1);
+            await expect(decryptEnvelope(envelope, password)).rejects.toThrow('exceeds maximum length');
         });
     });
 });
