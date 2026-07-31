@@ -600,6 +600,10 @@ export async function hashUrl(url: string): Promise<string> {
 export const CURRENT_ENVELOPE_VERSION = 2;
 export const ENVELOPE_ITERATIONS = 600_000;
 const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
+const MAX_ENVELOPE_ITERATIONS = ENVELOPE_ITERATIONS * 10;
+const MIN_ENVELOPE_ITERATIONS = 1;
+const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
 
 export interface EncryptionEnvelope {
     version: number;
