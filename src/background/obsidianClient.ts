@@ -346,6 +346,7 @@ export class ObsidianClient {
             return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
         }
         if (error.name === 'AbortError' || errorMessage.toLowerCase().includes('timed out')) {
+            addLog(LogType.WARN, `Obsidian request timed out: ${targetUrl}`, { error: errorMessage, traceId });
             return new Error('Error: Request timed out. Please check your Obsidian connection.');
         }
         addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`, { traceId });
