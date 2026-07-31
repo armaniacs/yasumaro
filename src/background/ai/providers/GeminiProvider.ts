@@ -27,7 +27,9 @@ export class GeminiProvider extends AIProviderStrategy {
         // storage.jsのStorageKeysと対応するキー名を使用（snake_case）
         this.apiKey = (settings.gemini_api_key as string) || '';
         this.model = settings.gemini_model || 'gemini-3.1-flash-lite';
-        this.timeoutMs = 30000;
+        // タイムアウト設定: 設定値が0の場合はデフォルト30000ms
+        const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
+        this.timeoutMs = storedTimeout > 0 ? storedTimeout : 30000;
     }
 
     getName(): string {
