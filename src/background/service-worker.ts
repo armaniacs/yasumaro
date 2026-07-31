@@ -124,15 +124,23 @@ export function init(): void {
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
     (async () => {
-      const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-      await initExportScheduler();
+      try {
+        const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+        await initExportScheduler();
+      } catch (err) {
+        logError('Failed to init export scheduler', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+      }
     })();
 
     // Initialize weekly/monthly review summary alarms
     (async () => {
-      const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
-      await initializeReviewSummaryAlarms();
-      setupReviewSummaryAlarmListener();
+      try {
+        const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
+        await initializeReviewSummaryAlarms();
+        setupReviewSummaryAlarmListener();
+      } catch (err) {
+        logError('Failed to init review summary alarms', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+      }
     })();
 }
 
