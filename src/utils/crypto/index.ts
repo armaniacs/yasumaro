@@ -670,11 +670,16 @@ export async function decryptEnvelope(envelope: EncryptionEnvelope, password: st
 export function isEncryptionEnvelope(data: unknown): data is EncryptionEnvelope {
     if (!data || typeof data !== 'object') return false;
     const d = data as Record<string, unknown>;
+    if (typeof d.iterations !== 'number' || d.iterations < MIN_ENVELOPE_ITERATIONS || d.iterations > MAX_ENVELOPE_ITERATIONS) {
+        return false;
+    }
+    if (typeof d.hash !== 'string' || !ALLOWED_ENVELOPE_HASHES.includes(d.hash as typeof ALLOWED_ENVELOPE_HASHES[number])) {
+        return false;
+    }
     return (
         typeof d.version === 'number' &&
+        d.version === CURRENT_ENVELOPE_VERSION &&
         d.kdf === 'pbkdf2' &&
-        typeof d.hash === 'string' &&
-        typeof d.iterations === 'number' &&
         typeof d.salt === 'string' &&
         typeof d.iv === 'string' &&
         typeof d.data === 'string'
