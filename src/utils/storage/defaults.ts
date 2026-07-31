@@ -11,7 +11,7 @@ import type { DeepReadonly } from '../typeUtils.js';
 export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_API_KEY]: '',
     [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
-    [StorageKeys.OBSIDIAN_PORT]: '27124',
+    [StorageKeys.OBSIDIAN_PORT]: '27123',
     [StorageKeys.OBSIDIAN_HOST]: '127.0.0.1',
     [StorageKeys.GEMINI_API_VERSION]: 'v1beta',
     [StorageKeys.OBSIDIAN_ENABLED]: false,

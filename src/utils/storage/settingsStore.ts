@@ -547,7 +547,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
 
     // Obsidian API
     const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] || 'https';
-    const port = settings[StorageKeys.OBSIDIAN_PORT] || '27124';
+    const port = settings[StorageKeys.OBSIDIAN_PORT] || '27123';
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {

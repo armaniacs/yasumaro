@@ -10,4 +10,8 @@ describe('DEFAULT_SETTINGS.AI_PROVIDER_PRIORITY_LIST', () => {
   it('SUMMARY_MIN_LENGTHのデフォルトは10である', () => {
     expect(DEFAULT_SETTINGS[StorageKeys.SUMMARY_MIN_LENGTH]).toBe(10);
   });
+
+  it('OBSIDIAN_PORTのデフォルトは27123である', () => {
+    expect(DEFAULT_SETTINGS[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
+  });
 });
