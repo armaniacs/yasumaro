@@ -46,7 +46,8 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
         userPrompt: `Summarize: ${content}`,
         systemPrompt: 'You are a helpful assistant.',
         isCustom: false
-    }))
+    })),
+    getDefaultSystemPrompt: vi.fn(() => 'Default system prompt.')
 }));
 
 // aiUsageTracker モック
@@ -62,9 +63,11 @@ import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
+import * as customPromptUtilsModule from '../../utils/customPromptUtils.js';
 
 const { checkHardLimit, checkRateLimit, checkUsageWarning } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
+const { applyCustomPrompt } = vi.mocked(customPromptUtilsModule);
 
 describe('GeminiProvider', () => {
 
@@ -268,6 +271,46 @@ describe('GeminiProvider', () => {
             const callUrl = (fetchWithRetry as vi.Mock).mock.calls[0][0];
             expect(callUrl).toContain('gemini-pro:generateContent');
             expect(callUrl).not.toContain('models/models/');
+        });
+
+        test('ペイロードに systemInstruction を含める', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
+                    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            await provider.generateSummary('content');
+
+            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            const body = JSON.parse(options.body);
+            expect(body.systemInstruction).toBeDefined();
+            expect(body.systemInstruction.parts[0].text).toBe('You are a helpful assistant.');
+        });
+
+        test('systemPrompt が空の場合はデフォルトシステムプロンプトを使用する', async () => {
+            (applyCustomPrompt as vi.Mock).mockReturnValueOnce({
+                userPrompt: 'Summarize: content',
+                systemPrompt: '',
+                isCustom: false
+            });
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
+                    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            await provider.generateSummary('content');
+
+            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            const body = JSON.parse(options.body);
+            expect(body.systemInstruction.parts[0].text).toBe('Default system prompt.');
         });
     });
 
