@@ -121,7 +121,8 @@ export class GeminiProvider extends AIProviderStrategy {
             return await this._extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
-            if (msg.includes('timed out')) {
+            const isTimeout = error instanceof Error && error.name === 'AbortError';
+            if (isTimeout || msg.includes('timed out')) {
                 return { success: false, summary: "Error: AI request timed out. Please check your connection." };
             }
             return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };

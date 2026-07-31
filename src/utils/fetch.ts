@@ -161,9 +161,12 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     return response;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
-    const isAbortError = error instanceof DOMException && error.message === 'The operation was aborted.';
-    if (isAbortError) {
-      throw new Error('Request timed out. Please check your connection and try again.');
+    // タイムアウト判定は環境依存のメッセージではなく error.name で行う
+    if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutError = new Error(`Request timed out after ${effectiveTimeout}ms`);
+      // 下流のリトライ判定やエラーハンドラが name ベースで検出できるようにする
+      timeoutError.name = 'AbortError';
+      throw timeoutError;
     }
     throw error;
   }
