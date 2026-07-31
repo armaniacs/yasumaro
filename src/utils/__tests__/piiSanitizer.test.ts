@@ -773,4 +773,50 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]).not.toHaveProperty('index');
     });
   });
+
+  describe('sanitizeRegex - 長トークン内部のPII', () => {
+    test('長い空白なしトークンの中央に埋め込まれたメールアドレスをマスクできる', async () => {
+      // 【テスト目的】: 200文字を超える空白なしトークンの中央に埋め込まれた
+      // メールアドレスが検出・マスクされることを確認（PBI-06）
+      const input = 'a'.repeat(150) + 'user@example.com' + 'b'.repeat(150);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
+    });
+
+    test('長いURLクエリパラメータに埋め込まれたメールアドレスをマスクできる', async () => {
+      // 【テスト目的】: 長いURLのクエリパラメータ（?email=...）に埋め込まれた
+      // メールアドレスが検出・マスクされることを確認（PBI-06）
+      const input = `https://example.com/${'x'.repeat(200)}?email=user@example.com&next=${'y'.repeat(100)}`;
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
+    });
+
+    test('長い空白なしトークンの中央に埋め込まれた電話番号をマスクできる', async () => {
+      // 【テスト目的】: 長いトークンの中央に埋め込まれた電話番号も検出・マスクされる
+      // ことを確認（PBI-06）。電話番号パターンは `\b` 境界が必要なため、
+      // 区切り文字（/）を直前に置いた形で検証する。
+      const input = 'a'.repeat(150) + '/090-1234-5678' + 'b'.repeat(150);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('090-1234-5678');
+      expect(result.maskedItems.some(item => item.type === 'phoneJp')).toBe(true);
+    });
+
+    test('64KBの入力もタイムアウト内で処理できる', async () => {
+      // 【テスト目的】: 最大入力サイズ（64KB）の空白なしテキストが
+      // タイムアウト内で完了することを確認（PBI-06、ReDoS対策の回帰防止）
+      const input = 'a'.repeat(64 * 1024);
+      const start = Date.now();
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).toBe(input);
+      expect(result.maskedItems).toEqual([]);
+      expect(result.error).toBeUndefined();
+      expect(Date.now() - start).toBeLessThan(1000);
+    });
+  });
 });
