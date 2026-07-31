@@ -7,8 +7,8 @@ export default defineBackground({
   manifest: {
     persistent: false,
   },
-  main() {
-    // Import the service worker logic
-    import('../../src/background/service-worker.js');
+  async main() {
+    const { init } = await import('../../src/background/service-worker.js');
+    init();
   },
 });
