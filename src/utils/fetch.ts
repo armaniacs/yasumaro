@@ -408,17 +408,20 @@ export interface RetryOptions {
  * デフォルトのリトライ条件判定
  * - AbortError（タイムアウト）: 最大1回リトライ（合計2試行）
  * - HTTP 429 Too Many Requests: リトライなし（即時終了）
- * - HTTP 5xx サーバーエラー: maxRetryCount まで通常リトライ
+ * - HTTP 5xx サーバーエラー: 冪等なメソッド（GET等）のみ maxRetryCount まで通常リトライ。
+ *   POST/PUT/PATCH/DELETE は二重生成・二重課金を防ぐためリトライしない
+ * @param {string} method - HTTPメソッド（デフォルト 'GET'）
  */
-function defaultShouldRetry(error: Error, attempt: number, response: Response | null): boolean {
+function defaultShouldRetry(error: Error, attempt: number, response: Response | null, method: string = 'GET'): boolean {
   // 429 Too Many Requests: リトライしない
   if (response && response.status === 429) {
     return false;
   }
 
-  // 5xxサーバーエラー: 通常リトライ
+  // 5xxサーバーエラー: 冪等なメソッドのみリトライ
   if (response && response.status >= 500) {
-    return true;
+    const nonIdempotentMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+    return !nonIdempotentMethods.has(method.toUpperCase());
   }
 
   // AbortError（タイムアウト）: 最大1回のみリトライ（attempt=1 のとき、つまり2回目の試行まで）
