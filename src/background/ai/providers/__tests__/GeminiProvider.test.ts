@@ -33,7 +33,8 @@ vi.mock('../../../../utils/promptSanitizer.js', () => ({
 vi.mock('../../../../utils/customPromptUtils.js', () => ({
     applyCustomPrompt: (_settings: any, _providerName: string, content: string) => ({
         userPrompt: `Content:\n${content}`
-    })
+    }),
+    getDefaultSystemPrompt: () => 'Default system prompt.'
 }));
 
 vi.mock('../../../../utils/storage.js', async (importOriginal) => {
