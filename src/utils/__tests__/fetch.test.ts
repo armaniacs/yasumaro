@@ -515,6 +515,52 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  test('POSTの500はリトライしない（1回のみ呼び出し）', async () => {
+    const mockResponse = { ok: false, status: 500, statusText: 'Internal Server Error' } as Response;
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { method: 'POST', body: '{}', skipCspValidation: true }, {
+        maxRetryCount: 3,
+        initialDelayMs: 10,
+        maxDelayMs: 50,
+      })
+    ).rejects.toThrow('HTTP 500');
+
+    // 非冪等メソッドは5xxで再送しない
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('GETの500はリトライして成功する（2回呼び出し）', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK' } as Response);
+
+    const response = await fetchWithRetry('https://example.com/api', { method: 'GET', skipCspValidation: true }, {
+      maxRetryCount: 3,
+      initialDelayMs: 10,
+      maxDelayMs: 50,
+    });
+
+    expect(response.ok).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('POSTの429はリトライしない', async () => {
+    const mockResponse = { ok: false, status: 429, statusText: 'Too Many Requests' } as Response;
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { method: 'POST', body: '{}', skipCspValidation: true }, {
+        maxRetryCount: 3,
+        initialDelayMs: 10,
+        maxDelayMs: 50,
+      })
+    ).rejects.toThrow('HTTP 429');
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   test('defaultShouldRetry: タイムアウト（Request timed out）は1回リトライして成功できる', async () => {
     // fetchWithTimeout は DOMException(AbortError) を Error('Request timed out...') に変換する
     // defaultShouldRetry は message で 'timed out' を含むエラーを1回リトライ許可する想定だが、
