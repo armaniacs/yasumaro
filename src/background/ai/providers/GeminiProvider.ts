@@ -9,7 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
+import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
@@ -82,9 +82,14 @@ export class GeminiProvider extends AIProviderStrategy {
         }
 
         // カスタムプロンプトを適用（タグ付き要約モード対応）
-        const { userPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizedContent, tagSummaryMode);
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizedContent, tagSummaryMode);
 
         const payload = {
+            systemInstruction: {
+                parts: [{
+                    text: systemPrompt || getDefaultSystemPrompt()
+                }]
+            },
             contents: [{
                 parts: [{
                     text: userPrompt
