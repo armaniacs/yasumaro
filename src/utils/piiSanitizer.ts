@@ -18,11 +18,14 @@ const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マ
 
 // 【ReDoS対策】どのPIIパターンの実体も100文字を超えることはないため、区切り文字
 // （空白等）を含まない塊が100文字を大幅に超えて続く場合、その中間部分は
-// PIIパターンにマッチしようがない「安全に無効化できる区間」とみなせる。
-// 中間部分のみをプレースホルダーに置換し、先頭・末尾のTOKEN_EDGE_KEEP_LENGTH文字は
-// 残すことで、長い塊の端に直接連結されたPII（例: "aaa...aaauser@example.com"）の
-// 検出漏れを防ぎつつ、「@や区切り文字を含まない巨大な文字列」に対する正規表現エンジンの
-// O(n^2)的な走査（開始位置ごとの再試行）を防ぐ。
+// PIIパターンの大半がマッチしない区間として扱える。ただし中間にもPIIが含まれうる
+// （例: 長いURLや連続文字列の中央に埋め込まれた "user@example.com"）ため、
+// 中間を完全に無効化せず、一定間隔で元の文字を残す「サンプリング」を行う。
+// 残した文字の間は `#`（どのPIIパターンの文字クラスにも含まれない文字）で
+// パディングし、正規表現エンジンの O(n^2) 的な走査（開始位置ごとの再試行）を
+// サンプリングウィンドウ単位に限定する。
+// 出力長は入力長と完全に一致するため、scanText 上のマッチ位置（index）はそのまま
+// text 上の位置として使える（置換処理でインデックスがずれない）。
 // 検出自体は /\S+/（バックトラッキングしない単純な貪欲文字クラス）で行い、
 // 閾値判定・中間置換はコード側で行うことで、検出用正規表現自体の複雑化を避ける。
 const TOKEN_EDGE_KEEP_LENGTH = 100;
@@ -34,9 +37,30 @@ function neutralizeLongNonWhitespaceRuns(text: string): string {
         if (token.length <= threshold) return token;
         const head = token.slice(0, TOKEN_EDGE_KEEP_LENGTH);
         const tail = token.slice(-TOKEN_EDGE_KEEP_LENGTH);
-        const middleLength = token.length - TOKEN_EDGE_KEEP_LENGTH * 2;
-        return head + '#'.repeat(middleLength) + tail;
+        const middle = token.slice(TOKEN_EDGE_KEEP_LENGTH, -TOKEN_EDGE_KEEP_LENGTH);
+        return head + sampleMiddleForScan(middle) + tail;
     });
+}
+
+/**
+ * 長トークンの中間部分をスキャン可能な状態に保つ。
+ * TOKEN_EDGE_KEEP_LENGTH 文字ごとのウィンドウで元の文字を残し、各ウィンドウの
+ * 末尾1文字を `#` に置換することでウィンドウ間のバックトラッキングを遮断する。
+ * 戻り値の長さは middle と完全に一致する（PIIパターンの実体は100文字以下なので
+ * ウィンドウ内のPIIは検出可能）。
+ */
+function sampleMiddleForScan(middle: string): string {
+    const sampleInterval = TOKEN_EDGE_KEEP_LENGTH;
+    let sampled = '';
+    for (let i = 0; i < middle.length; i += sampleInterval) {
+        const chunk = middle.slice(i, i + sampleInterval);
+        if (chunk.length === sampleInterval) {
+            sampled += chunk.slice(0, -1) + '#';
+        } else {
+            sampled += chunk;
+        }
+    }
+    return sampled;
 }
 
 interface PiiPattern {
