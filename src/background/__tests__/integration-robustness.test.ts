@@ -11,7 +11,8 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
   applyCustomPrompt: vi.fn((settings, provider, content) => ({
     userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。1文または2文で、重要なポイントをまとめてください。改行しないこと。\n\nContent:\n${content}`,
     systemPrompt: ""
-  }))
+  })),
+  getDefaultSystemPrompt: vi.fn(() => 'Default system prompt.')
 }));
 vi.mock('../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: vi.fn((content) => ({
