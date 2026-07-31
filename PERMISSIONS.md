@@ -4,8 +4,8 @@
 
 **目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。Chrome Web Store 審査プロセスにおいて、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
 
-**Last Updated / 最終更新日**: 2026-07-23
-**Target Version / 対象バージョン**: v6.5.61
+**Last Updated / 最終更新日**: 2026-07-31
+**Target Version / 対象バージョン**: v6.7.5
 
 ---
 
@@ -62,7 +62,7 @@
 **Code references / コード参照**
 
 - `src/popup/recordCurrentPage.ts` (popup favicon)
-- `src/dashboard/sqliteHistoryPanel.ts` (history favicon display)
+- `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts` (history favicon display)
 
 ---
 
@@ -87,7 +87,7 @@
 
 - `chrome.downloads.download()` による日次 Markdown ファイル（`YYYY-MM-DD.md`）の書き出し（`conflictAction: 'overwrite'`）
 - 書き出しタイミングは「手動のみ / 即時 / アイドル時・30分ごと / 日付が変わったとき」から選択可能
-- ダッシュボードの「履歴」「ログをエキスポート」パネルからの手動 Markdown エクスポート
+- ダッシュボードの「ログをエキスポート」パネルからの手動 Markdown エクスポート
 
 **Privacy safeguards / プライバシー保護**
 

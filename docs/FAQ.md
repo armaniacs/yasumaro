@@ -86,11 +86,12 @@ Obsidian への書き込みは Obsidian が起動している必要がありま�
 
 | カテゴリ | プロバイダー例 |
 |---------|--------------|
+| ブラウザ内蔵 AI | Chrome の Gemini Nano / Edge の Phi-mini（API キー不要・オフライン動作） |
 | クラウド（OpenAI互換） | OpenAI、Anthropic（Claude）、Groq、Mistral AI、OpenRouter、DeepSeek など |
 | Google | Gemini |
 | ローカル | Ollama、LM Studio |
 
-完全なリストは [完全セットアップガイド](SETUP_GUIDE.md) の「サポートされている AI プロバイダー」テーブルをご覧ください。
+完全なリストは [完全セットアップガイド](SETUP_GUIDE.md) の「サポートされている AI プロバイダー」テーブルをご覧ください。Built-in AI のセットアップ手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
 **Q15. Groq を使うにはどう設定しますか？**
 
@@ -198,7 +199,7 @@ HTTP に切り替えた場合、ポートも `27124` から `27123` に変更す
 
 **Q37. ダッシュボードに「フォールバックモードで動作中」という黄色いバナーが表示されています。**
 
-お使いの環境で OPFS（SQLite の保存先）が使用できないため、`chrome.storage.local` へのフォールバックが有効になっています。保存件数が数百件に制限されます。Chrome のバージョンアップで OPFS が使えるようになると、自動的にデータが移行されます。詳細は [ストレージモードについて](STORAGE_MODES.md) をご覧ください。
+お使いの環境で OPFS（SQLite の保存先）が使用できないため、フォールバックストレージが有効になっています。フォールバックモードでは `unlimitedStorage` 権限により実質無制限の保存が可能ですが、権限が付与されない環境では `chrome.storage.local` の上限（約10MB）に制限されます。OPFS が使えるようになると、自動的にデータが移行されます。詳細は [ストレージモードについて](STORAGE_MODES.md) をご覧ください。
 
 **Q38. ページを開いても自動記録が全く実行されません。**
 
@@ -326,11 +327,12 @@ For writing to Obsidian, yes. However, history data is saved to the SQLite DB on
 
 | Category | Examples |
 |----------|---------|
+| Built-in AI | Chrome's Gemini Nano / Edge's Phi-mini (no API key, works offline) |
 | Cloud (OpenAI-compatible) | OpenAI, Anthropic (Claude), Groq, Mistral AI, OpenRouter, DeepSeek, etc. |
 | Google | Gemini |
 | Local | Ollama, LM Studio |
 
-See the full provider table in the [Complete Setup Guide](SETUP_GUIDE.md).
+See the full provider table in the [Complete Setup Guide](SETUP_GUIDE.md). For Built-in AI setup steps, see the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md).
 
 **Q15. How do I set up Groq?**
 
@@ -438,7 +440,7 @@ When switching to HTTP, you must also change the port from `27124` to `27123`. S
 
 **Q37. A yellow banner says "Running in simplified storage mode".**
 
-OPFS (the SQLite storage backend) is unavailable in your environment, so the extension has fallen back to `chrome.storage.local`. Storage is limited to a few hundred entries. When Chrome is updated and OPFS becomes available, data will be migrated automatically. See [STORAGE_MODES.md](STORAGE_MODES.md) for details.
+OPFS (the SQLite storage backend) is unavailable in your environment, so the extension has fallen back to a simplified storage mode. With the `unlimitedStorage` permission, storage is effectively unlimited; in environments where that permission is not granted, it is limited to the `chrome.storage.local` quota (about 10 MB). When OPFS becomes available, data will be migrated automatically. See [STORAGE_MODES.md](STORAGE_MODES.md) for details.
 
 **Q38. Automatic recording never runs on any page.**
 

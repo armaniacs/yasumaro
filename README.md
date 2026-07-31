@@ -67,7 +67,7 @@ flowchart LR
 ### 特徴
 無料・オープンソースで、これだけの機能が使えます。
 
-- 🤖 **AIによる要約**: OpenAI互換APIまたはGemini APIを使用して、ウェブページの内容を簡潔に要約します（Groq、OpenAI、Anthropic、ローカルLLM等に対応）。
+- 🤖 **AIによる要約**: OpenAI互換API、Gemini API、またはブラウザ内蔵AIを使用して、ウェブページの内容を簡潔に要約します（Groq、OpenAI、Anthropic、ローカルLLM、ChromeのGemini Nano / EdgeのPhi-mini等に対応）。
 - 📝 **Obsidian連携**: 閲覧履歴を直接Obsidianのデイリーノートに保存します。
 - 🎯 **スマート検出**: 実際に読んだページのみを保存します（滞在時間とスクロール深度に基づきます）。
 - 📂 **整理された保存**: デイリーノート内に専用の「ブラウザ閲覧履歴」セクションを自動作成し、管理します。
@@ -89,6 +89,7 @@ flowchart LR
 - 🗄️ **ローカル SQLite 永続化**（OPFS + FTS5 全文検索を `@subframe7536/sqlite-wasm` で両立、Obsidian 不要でも動作）
 - 🇯🇵 **日本語全文検索対応**: FTS5 の trigram トークナイザにより日本語（CJK）の部分一致検索が可能（3 文字未満のクエリは LIKE 検索にフォールバック）
 - 🔍 **SQLite 診断パネル**: 環境判定（OPFS/FTS5）、不足診断（具体的な対処提示）、コンパイルオプション表示、デバッグモード対応。設定画面の Diagnostics タブで確認可能。
+- 🤖 **Built-in AI 対応**: Chrome の Gemini Nano / Edge の Phi-mini を利用したブラウザ内蔵 AI 要約。API キー不要・オフライン動作（対応ブラウザかつフラグ有効化・モデルダウンロードが必要）。詳細は [Built-in AI 設定ガイド](docs/BUILT_IN_AI_SETUP_GUIDE.md) を参照。
 - 🛡️ **プライバシー同意フロー**: 初回起動時に同意確認を表示。3回拒否で永久非表示、その後は制限モード（記録停止）で動作。GDPRに準拠した物理削除（DELETE FROM）対応。
 - 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
 - 📊 **関連グラフ表示**: 記録したページのタグ共起関係をグラフで可視化。ノードをクリックして該当タグのページに自動フィルタ。
@@ -97,7 +98,8 @@ flowchart LR
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)（セットアップ手順は [Obsidian連携ガイド](docs/OBSIDIAN_SETUP_GUIDE.md) を参照）
-- AIプロバイダー（以下のいずれか）
+- AIプロバイダー（以下のいずれか。任意）
+   - ブラウザ内蔵 AI（Chrome の Gemini Nano / Edge の Phi-mini）。API キー不要
    - [Groq](https://console.groq.com/keys)（無料枠あり・推奨）
    - [Google Gemini API キー](https://aistudio.google.com/app/apikey)（無料枠あり）
    - [OpenAI](https://platform.openai.com/api-keys)
@@ -271,7 +273,7 @@ flowchart LR
 ### Features
 Free and open source, with all of the following built in.
 
-- 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using OpenAI-compatible APIs or Google's Gemini API (supports Groq, OpenAI, Anthropic, local LLMs, and more)
+- 🤖 **AI-Powered Summaries**: Automatically generates concise summaries of web pages using OpenAI-compatible APIs, Google's Gemini API, or your browser's Built-in AI (supports Groq, OpenAI, Anthropic, local LLMs, Chrome's Gemini Nano, Edge's Phi-mini, and more)
 - 📝 **Obsidian Integration**: Saves browsing history directly to your Obsidian daily notes
 - 🎯 **Smart Detection**: Only saves pages you actually read (based on scroll depth and time spent)
 - 📂 **Organized Storage**: Automatically creates and maintains a dedicated "Browser History" section in your daily notes
@@ -293,12 +295,14 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🗄️ **Local SQLite Persistence** (OPFS + FTS5 full-text search coexist via `@subframe7536/sqlite-wasm`, works without Obsidian)
 - 🇯🇵 **Japanese full-text search**: FTS5 `trigram` tokenizer enables substring search for Japanese/CJK text (queries shorter than 3 characters fall back to LIKE)
 - 🔍 **SQLite Diagnostics Panel**: Environment detection (OPFS/FTS5), deficiency diagnosis with recommended actions, compile options viewer, debug mode. Available in Settings > Diagnostics tab.
+- 🤖 **Built-in AI Support**: Browser-integrated AI summarization using Chrome's Gemini Nano or Edge's Phi-mini. No API key required, works offline (requires supported browser, enabled flags, and downloaded model). See [Built-in AI Setup Guide](docs/BUILT_IN_AI_SETUP_GUIDE.md).
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)
-- An AI provider (choose one):
+- An AI provider (choose one; optional):
+   - Built-in AI (Chrome's Gemini Nano / Edge's Phi-mini). No API key required
    - [Groq](https://console.groq.com/keys) (free tier available, recommended)
    - [Google Gemini API key](https://aistudio.google.com/app/apikey) (free tier available)
    - [OpenAI](https://platform.openai.com/api-keys)
@@ -434,28 +438,52 @@ MIT License
 ### 文書一覧
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
+- [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [FAQ.md](docs/FAQ.md) - よくある質問
 - [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - セットアップガイド
 - [OBSIDIAN_SETUP_GUIDE.md](docs/OBSIDIAN_SETUP_GUIDE.md) - Obsidian連携ガイド（スクリーンショット付き・トラブルシューティング含む）
-- [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
-- [LICENSE.md](LICENSE.md) - ライセンス詳細
-- [PRIVACY.md](docs/PRIVACY.md) - プライバシーポリシー
-- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - 個人情報保護機能ガイド
+- [BUILT_IN_AI_SETUP_GUIDE.md](docs/BUILT_IN_AI_SETUP_GUIDE.md) - Built-in AI 設定ガイド
+- [AI_SUMMARY_GUIDE.md](docs/AI_SUMMARY_GUIDE.md) - AI要約ガイド
 - [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) - AIプロンプトカスタマイズガイド
 - [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) - uBlockフィルターインポートガイド
+- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - 個人情報保護機能ガイド
+- [PRIVACY.md](docs/PRIVACY.md) - プライバシーポリシー
+- [STORAGE_MODES.md](docs/STORAGE_MODES.md) - ストレージモードについて
+- [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - ローカル Markdown 書き出しガイド
+- [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist 連携ガイド
+- [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - 監査ログガイド
+- [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - クレンジングの順番
+- [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP 設定ガイド
+- [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - ドメイン信頼度ガイド
+- [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - タグクラスターガイド
+- [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - ツールバーバッジガイド
+- [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - 記録条件ガイド
+- [LICENSE.md](LICENSE.md) - ライセンス詳細
 
 ### Documentation
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
 - [FAQ.md](docs/FAQ.md) - Frequently Asked Questions
 - [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - Setup Guide
 - [OBSIDIAN_SETUP_GUIDE.md](docs/OBSIDIAN_SETUP_GUIDE.md) - Obsidian Integration Guide (with screenshots and troubleshooting)
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
-- [LICENSE.md](LICENSE.md) - License Details
-- [PRIVACY.md](docs/PRIVACY.md) - Privacy Policy
-- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
+- [BUILT_IN_AI_SETUP_GUIDE.md](docs/BUILT_IN_AI_SETUP_GUIDE.md) - Built-in AI Setup Guide
+- [AI_SUMMARY_GUIDE.md](docs/AI_SUMMARY_GUIDE.md) - AI Summarization Guide
 - [USER-GUIDE-AI-PROMPT.md](docs/USER-GUIDE-AI-PROMPT.md) - AI Prompt Customization Guide
 - [USER-GUIDE-UBLOCK-IMPORT.md](docs/USER-GUIDE-UBLOCK-IMPORT.md) - uBlock Filter Import Guide
+- [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) - PII Protection Feature Guide
+- [PRIVACY.md](docs/PRIVACY.md) - Privacy Policy
+- [STORAGE_MODES.md](docs/STORAGE_MODES.md) - Storage Modes
+- [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - Local Markdown Export Guide
+- [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist Sync Guide
+- [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - Audit Log Guide
+- [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - Cleansing Order
+- [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP Guide
+- [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - Trust Domain Guide
+- [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - Tag Cluster Guide
+- [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - Toolbar Badge Guide
+- [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - Recording Conditions Guide
+- [LICENSE.md](LICENSE.md) - License Details
 
 ---
 

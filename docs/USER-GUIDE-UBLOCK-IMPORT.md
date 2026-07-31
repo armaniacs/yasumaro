@@ -30,9 +30,9 @@ Yasumaro拡張機能のuBlock Origin形式フィルターインポート機能�
 - **ホワイトリスト**: 指定したサイトのみを記録します。
 - **ブラックリスト**: 指定したサイトを記録から除外します。
 
-#### 4. フィルター形式の選択
+#### 4. uBlock形式フィルターの展開
 
-「フィルター形式」で「uBlock Origin 形式」を選択します。
+パネル下部の「uBlock Origin Filter (Advanced)」をクリックして展開します。フィルター形式を切り替える操作は不要で、このセクションは常時アクセスできます。
 
 #### 5. フィルターの入力
 
@@ -226,9 +226,9 @@ Select one of the following modes:
 - **Whitelist**: Record only specified websites.
 - **Blacklist**: Exclude specified websites from recording.
 
-#### 4. Selecting Filter Format
+#### 4. Expanding the uBlock Format Section
 
-Select "uBlock Origin Format" in the "Filter Format" option.
+Click "uBlock Origin Filter (Advanced)" near the bottom of the panel to expand it. There is no separate filter-format switch to select — this section is always accessible.
 
 #### 5. Inputting Filters
 

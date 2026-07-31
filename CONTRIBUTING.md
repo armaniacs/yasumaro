@@ -198,7 +198,7 @@ WCAG 2.1 Level AA準拠を目指してください：
 
 #### 追加手順
 
-1. **ドメインのホワイトリスト追加** (`src/utils/storage.ts`):
+1. **ドメインのホワイトリスト追加** (`src/utils/storage/settingsStore.ts`):
    - `ALLOWED_AI_PROVIDER_DOMAINS` 配列に許可するドメインを追加します。
    - コメントにプロバイダー名を記載してください。
 
@@ -636,7 +636,7 @@ This extension features dynamic URL validation to restrict access to user-config
 
 #### Steps to Add a Provider
 
-1. **Add to Domain Whitelist** (`src/utils/storage.ts`):
+1. **Add to Domain Whitelist** (`src/utils/storage/settingsStore.ts`):
    - Add the domain to the `ALLOWED_AI_PROVIDER_DOMAINS` array.
    - Include a comment with the provider name.
 

@@ -69,10 +69,6 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 
 1. ダッシュボードの「ログをエキスポート」セクションで、日付範囲を指定してエクスポート
 
-または:
-
-1. ダッシュボードの「履歴」セクションで、「すべて Markdown に書き出す」ボタンをクリック（全期間が対象）
-
 ### ダウンロード通知の非表示化
 
 自動書き出しのたびにブラウザのダウンロード通知が表示される場合、以下の設定で非表示にできます:
@@ -175,10 +171,6 @@ To convert existing history to Markdown:
 Or:
 
 1. In "Export Logs", specify a date range and export
-
-Or:
-
-1. In "History", click "Export All as Markdown" (exports all records)
 
 ### Hiding Download Notifications
 

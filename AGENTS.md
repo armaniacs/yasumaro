@@ -104,10 +104,10 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Dashboard settings | `src/dashboard/` (HTML/CSS/TS) | Settings management interface |
 | uBlock Import | `src/popup/ublockImport/` | Filter list import functionality |
 | Background processing | `src/background/` service-worker.ts | Use modular client classes |
-| Local AI Integration | `src/background/localAiClient.ts` | Ollama and other local providers |
+| Local AI Integration | `src/background/ai/LocalAIService.ts`, `src/background/builtInAIClient.ts` | Built-in AI (Chrome Gemini Nano / Edge Phi-mini); Ollama/LM Studio go through `src/background/ai/providers/OpenAIProvider.ts` |
 | Page interaction | `src/content/` extractor.ts | Consider CSP restrictions |
 | Storage | `src/utils/storage.ts` | Use StorageKeys constant |
-| API Key Encryption | `src/utils/crypto.ts` | PBKDF2 + AES-GCM encryption |
+| API Key Encryption | `src/utils/crypto/` | PBKDF2 + AES-GCM encryption |
 | PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
 | DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |
 | Trust Database | `src/utils/trustDb/` | Domain trust verification with 3-step check |
@@ -161,7 +161,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 
 | Issue Area | Primary Files |
 |------------|---------------|
-| API Integration Failures | `src/background/aiClient/*.ts`, `src/background/ai/providers/*.ts` |
+| API Integration Failures | `src/background/aiClient.ts`, `src/background/ai/providers/*.ts` |
 | Obsidian Connection Issues | `src/background/obsidianClient.ts` |
 | Content Script Not Injecting | `manifest.json`, `src/content/loader.ts`, `src/content/extractor.ts` |
 | Settings Not Persisting | `src/utils/storage.ts` |
@@ -241,7 +241,7 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 
 | Scenario | Coverage |
 |----------|----------|
-| Multiple AI provider configurations | `src/background/aiClient/*.ts` |
+| Multiple AI provider configurations | `src/background/aiClient.ts`, `src/background/ai/providers/*.ts` |
 | Various Obsidian daily note path formats | `src/background/obsidianClient.ts` |
 | Different web page structures for content extraction | `src/content/extractor.ts` |
 | Network failure scenarios | All API clients |
