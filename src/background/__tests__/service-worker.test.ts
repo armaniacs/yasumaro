@@ -725,6 +725,48 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
         });
 
+        it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT with sender.tab but missing sender.url', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message: ValidVisitMessage = { type: 'VALID_VISIT', payload: { content: 'test' } };
+            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+
+            handler(message, sender, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+        });
+
+        it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT with non-http sender.url scheme', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message: ValidVisitMessage = { type: 'VALID_VISIT', payload: { content: 'test' } };
+            const sender = {
+                url: 'chrome-extension://abcdefghijklmnop/content.js',
+                tab: { id: 1, url: 'https://example.com' },
+            } as chrome.runtime.MessageSender;
+
+            handler(message, sender, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+        });
+
+        it('should accept VALID_VISIT with a valid http sender.url', async () => {
+            const handler = serviceWorker.createMessageHandler();
+            const sendResponse = vi.fn();
+            const message: ValidVisitMessage = { type: 'VALID_VISIT', payload: { content: 'test' } };
+            const sender = {
+                url: 'https://example.com',
+                tab: { id: 1, url: 'https://example.com', title: 'Example' },
+            } as chrome.runtime.MessageSender;
+
+            handler(message, sender, sendResponse);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
         it('should handle TEST_CONNECTIONS message', async () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
