@@ -102,19 +102,7 @@ const GENERIC_TERM_PATTERNS = [
  * @param index - マッチ位置
  * @returns 安全ならtrue
  */
-function isInSafeContext(content: string, match: string, index: number): boolean {
-  // マッチ前後20文字のコンテキストを取得
-  const contextStart = Math.max(0, index - 20);
-  const contextEnd = Math.min(content.length, index + match.length + 20);
-  const context = content.slice(contextStart, contextEnd);
-
-  // 安全な文脈パターンが含まれる場合
-  for (const safePattern of SAFE_CONTEXT_PATTERNS) {
-    if (safePattern.test(context)) {
-      return true;
-    }
-  }
-
+function isInSafeContext(_content: string, _match: string, _index: number): boolean {
   return false;
 }
 
@@ -249,7 +237,7 @@ export function sanitizePromptContent(content: string): SanitizeResult {
       if (!isInSafeContext(sanitized, fullMatch, index)) {
         warnings.push(`Detected high-risk pattern: "${fullMatch}"`);
         dangerLevel = DangerLevel.HIGH;
-        sanitized = sanitized.replace(fullMatch, '[FILTERED]');
+        sanitized = sanitized.replaceAll(fullMatch, '[FILTERED]');
       }
 
       _lastIndex = index + fullMatch.length;
