@@ -19,7 +19,7 @@ Yasumaro は、Obsidianの代わりに、または併用して、閲覧履歴を
 ### 設定方法
 
 1. GitHubで **Personal Access Token（PAT）** を発行します（`gist` スコープが必要です）
-2. ダッシュボードの「診断」パネルにある「GitHub Gist Sync」セクションを開きます
+2. ダッシュボードの **「Tools → Export / Import」** パネル内にある「GitHub Gist Sync」セクションを開きます
 3. 「GitHub Gist 同期を有効にする」をONにし、発行したPATを入力します
 4. 「保存」をクリックします
 5. 「接続テスト」ボタンで、PATが正しく認証されるか確認します
@@ -57,7 +57,7 @@ Yasumaro can sync your browsing history to a **GitHub Gist** (a private Secret G
 ### Setup
 
 1. Generate a **Personal Access Token (PAT)** on GitHub (requires the `gist` scope)
-2. Open the "GitHub Gist Sync" section in the dashboard's "Diagnostics" panel
+2. Open the "GitHub Gist Sync" section under **"Tools → Export / Import"** in the dashboard
 3. Enable "Enable GitHub Gist Sync" and enter your PAT
 4. Click "Save"
 5. Use the "Test Connection" button to verify the PAT authenticates correctly

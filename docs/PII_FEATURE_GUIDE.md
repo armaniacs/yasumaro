@@ -30,8 +30,8 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 
 | モード | ステータス | 動作説明 |
 | :--- | :--- | :--- |
-| **A: Local Only** | 🚧 開発中 | 完全ローカル処理。対応ブラウザでのみ動作。 |
-| **B: Full Pipeline** | 🚧 開発中 | ローカル要約 + PIIマスキング + クラウド仕上げ。対応ブラウザでのみ動作。 |
+| **A: Local Only** | 対応ブラウザで利用可能 | 完全ローカル処理。Chrome の Gemini Nano / Edge の Phi-mini など、ブラウザ内蔵 AI を使用。API キー不要・オフラインで動作（対応ブラウザかつフラグ有効化・モデルダウンロードが必要）。 |
+| **B: Full Pipeline** | 対応ブラウザで利用可能 | ローカル要約 + PIIマスキング + クラウド仕上げ。Built-in AI でのローカル要約後、PII マスキングしてクラウド AI で要約を整えます。 |
 | **C: Masked Cloud** | ✅ **推奨** | **PIIをマスクしてクラウドへ送信**。最も安定的かつ安全。 |
 | **D: Cloud Only** | - | 従来動作。生データをクラウド送信。 |
 
@@ -142,8 +142,8 @@ await reviewLogs()
 
 #### 設定方法
 
-1. 拡張機能のポップアップを開く
-2. **「ドメインフィルター」** タブをクリック
+1. 拡張機能アイコンをクリックしてポップアップを開き、右上の **「⚙」アイコン** からダッシュボードを開く
+2. ダッシュボードの **「Domain Filter」** パネルを開く
 3. **「ホワイトリスト」** セクションにドメインを追加
    - 例: `confluence.example.com`
    - ワイルドカード対応: `*.confluence.example.com`
@@ -154,9 +154,9 @@ await reviewLogs()
 
 これにより、社内システムでの利便性とセキュリティの両立が実現します。
 
-### 将来の展望
+### Local Only / Full Pipeline について
 
-ブラウザの Local AI API 実装が安定し次第、Local Only モードのローカルAI機能が自動的に有効になる設計となっています。
+Local Only / Full Pipeline は、ブラウザ内蔵 AI（Chrome の Gemini Nano / Edge の Phi-mini など）を利用してローカルで要約を行うモードです。API キー不要でデータをデバイス外に送信せず、インターネット接続がなくても動作します。ただし、対応ブラウザであることに加え、該当するフラグを有効化し、モデルをダウンロードしておく必要があります。詳しいセットアップ手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
 ---
 
@@ -209,13 +209,13 @@ A guide to how Yasumaro automatically masks personally identifiable information 
 
 ### Configuration
 
-Configure via the "Privacy" tab in the popup.
+Open the extension popup and click the **"⚙" icon** in the top-right to open the Dashboard, then configure in the **"Privacy"** panel.
 
 | Mode | Description |
 | :--- | :--- |
 | **Masked Cloud** (Recommended) | PII masking + cloud AI. Masks sensitive data before sending. Best balance of privacy and convenience. |
-| **Full Pipeline** | Local AI summary + PII masking + cloud AI finishing. Only works on supported browsers. |
-| **Local Only** | On-device processing only, no cloud AI. |
+| **Full Pipeline** | Local AI summary + PII masking + cloud AI finishing. Works on supported browsers with Built-in AI enabled. |
+| **Local Only** | On-device processing only using the browser's Built-in AI. No API key, works offline on supported browsers. |
 | **Cloud Only** | Sends raw data to cloud AI without masking or cleansing. |
 
 #### Workflow
@@ -325,8 +325,8 @@ These systems are detected as "private pages" because they require authenticatio
 
 #### Configuration
 
-1. Open the extension popup
-2. Click the **"Domain Filter"** tab
+1. Click the extension icon to open the popup, then click the **"⚙" icon** in the top-right to open the Dashboard
+2. Open the **"Domain Filter"** panel in the Dashboard
 3. Add domains to the **"Whitelist"** section
    - Example: `confluence.example.com`
    - Wildcard support: `*.confluence.example.com`
@@ -337,9 +337,9 @@ Even if privacy warnings are skipped for whitelisted domains, **PII (Personal Id
 
 This achieves a balance between convenience and security for internal systems.
 
-### Future Outlook
+### About Local Only / Full Pipeline
 
-The design automatically enables Local Only mode functionality once browser local AI APIs stabilize.
+Local Only and Full Pipeline use your browser's Built-in AI (such as Chrome's Gemini Nano or Edge's Phi-mini) to summarize locally. No API key is required and data is not sent outside your device, so these modes can work offline. However, they require a supported browser, the relevant flags to be enabled, and the model to be downloaded. See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for detailed setup instructions.
 
 ---
 

@@ -62,6 +62,9 @@ CSPValidator（第二層）
 | Jina | `jina.ai` |
 | Voyage | `voyageai.com` |
 
+> [!NOTE]
+> **Built-in AI**（Chrome の Gemini Nano / Edge の Phi-mini）はブラウザ内部の API（`LanguageModel`）を Service Worker から直接呼び出すオンデバイス推論であり、ネットワーク通信（fetch）を行いません。そのため条件付きCSPの対象外であり、CSP設定画面にも表示されません。詳細は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
+
 ---
 
 ### 追加プロバイダーの有効化
@@ -233,6 +236,9 @@ The following providers are always permitted. No conditional CSP configuration i
 | Perplexity | `perplexity.ai` |
 | Jina | `jina.ai` |
 | Voyage | `voyageai.com` |
+
+> [!NOTE]
+> **Built-in AI** (Chrome's Gemini Nano / Edge's Phi-mini) performs on-device inference by calling the browser's internal `LanguageModel` API directly from the Service Worker, and makes no network (fetch) requests. It is therefore not subject to conditional CSP and does not appear in the CSP settings screen. See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
 
 ---
 

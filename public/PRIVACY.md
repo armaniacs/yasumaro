@@ -1,8 +1,9 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年6月20日 / Last Updated: June 20, 2026**
+**最終更新日: 2026年7月31日 / Last Updated: July 31, 2026**
 
 > **更新履歴 / Update History**:
+> - **2026年7月31日**: v6.7.0 - プライバシー同意撤回時のデータ削除確認ダイアログについて追記
 > - **2026年6月20日**: v6.0.1 - GDPR 準拠修正。プライバシー同意拒否を「永久非表示」から「30日後に再表示」に変更
 > - **2026年6月13日**: v5.1.0 - PII サニタイゼーション強化（多言語対応）、データ保持期間の自動削除実装
 > - **2026年6月11日**: v5.0.0 - SQLite (OPFS) 移行、データ保持ポリシー追加、GDPR 削除権の物理削除対応
@@ -113,6 +114,8 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 #### プライバシー同意の仕組み
 
 初回起動時にデータ収集への同意確認モーダルが表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります。30日経過後、再度同意確認が表示されます（GDPR 第7条「再同意取得」準拠）。
+
+**同意の撤回**: 一度同意した後でも、いつでも同意を撤回できます。同意を撤回すると、記録済みの閲覧履歴データ（SQLite）も完全に削除されることを確認するダイアログが表示されます。この操作は取り消せないため、実行前に確認が求められます。
 
 通常の使用（拡張機能内でのAPIキー保存）には、マスターパスワードとは別の自動暗号化機構が使用されており、ユーザーの操作は不要です。
 
@@ -226,6 +229,8 @@ You can encrypt exported settings files with a **master password**.
 #### Privacy Consent Mechanism
 
 On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days. After 30 days, the consent prompt reappears (GDPR Article 7 "Right to Re-consent" compliance).
+
+**Withdrawing Consent**: You may withdraw your consent at any time. Withdrawing consent shows a confirmation dialog that makes clear this will also permanently delete your recorded browsing history (SQLite). Because this action cannot be undone, confirmation is required before it is executed.
 
 For regular use (storing API keys within the extension), a separate auto-encryption mechanism is used that requires no user action.
 

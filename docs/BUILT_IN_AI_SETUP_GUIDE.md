@@ -4,7 +4,7 @@
 
 ### Built-in AI とは
 
-Built-in AI（Chrome/Edge の内蔵 AI）は、ブラウザに内蔵された Gemini Nano モデルを使用して、インターネット接続なしで AI 処理を実行する機能です。API キー不要で、データはデバイス外に送信されません。
+Built-in AI（Chrome/Edge の内蔵 AI）は、ブラウザに内蔵された AI モデルを使用して、インターネット接続なしで AI 処理を実行する機能です。Chrome では Gemini Nano、Edge では Phi-mini を使用します。API キー不要で、データはデバイス外に送信されません。
 
 ### 「Built-in AI is currently downloadable」と表示される場合
 
@@ -55,7 +55,7 @@ Gemini Nano モデルを使用する場合:
 
 ### 3. Edge の場合
 
-Edge も Chromium ベースのため、Chrome と同様の API をサポートしています。
+Edge も Chromium ベースで同一の Prompt API 形状をサポートしていますが、Edge では Phi-mini モデルが使用されます。
 
 #### 3.1 フラグを有効化
 
@@ -63,10 +63,10 @@ Edge も Chromium ベースのため、Chrome と同様の API をサポート�
 2. **Enabled** を選択
 3. **Relaunch** をクリックして Edge を再起動
 
-Gemini Nano モデルを使用する場合:
+Phi-mini モデルを使用する場合:
 
-1. アドレスバーに `edge://flags/#prompt-api-for-gemini-nano` を入力
-2. **Enabled** または **Enabled multilingual** を選択
+1. アドレスバーに `edge://flags/#edge-llm-prompt-api-for-phi-mini` を入力
+2. **Enabled** を選択
 3. **Relaunch** をクリック
 
 #### 3.2 モデルのダウンロード
@@ -107,7 +107,7 @@ A: はい、それぞれのブラウザで個別にモデルをダウンロー�
 
 ### What is Built-in AI?
 
-Built-in AI (Chrome/Edge's integrated AI) uses the Gemini Nano model built into the browser to perform AI processing without an internet connection. No API key is required, and data is never sent outside your device.
+Built-in AI (Chrome/Edge's integrated AI) uses the AI model built into the browser to perform AI processing without an internet connection. Chrome uses Gemini Nano, while Edge uses Phi-mini. No API key is required, and data is never sent outside your device.
 
 ### When you see "Built-in AI is currently downloadable"
 
@@ -158,7 +158,7 @@ If the model doesn't work properly:
 
 ### 3. For Edge
 
-Edge also supports the same API since it's Chromium-based.
+Edge also supports the same Prompt API shape since it's Chromium-based, but Edge uses the Phi-mini model.
 
 #### 3.1 Enable Flags
 
@@ -166,10 +166,10 @@ Edge also supports the same API since it's Chromium-based.
 2. Select **Enabled**
 3. Click **Relaunch** to restart Edge
 
-For Gemini Nano model:
+For Phi-mini model:
 
-1. Enter `edge://flags/#prompt-api-for-gemini-nano` in the address bar
-2. Select **Enabled** or **Enabled multilingual**
+1. Enter `edge://flags/#edge-llm-prompt-api-for-phi-mini` in the address bar
+2. Select **Enabled**
 3. Click **Relaunch**
 
 #### 3.2 Download the Model

@@ -16,7 +16,8 @@
 ### 必要なもの
 - **Obsidian**: https://obsidian.md/
 - **Google Chrome** ブラウザ
-- **AIプロバイダー** (以下のいずれか、または複数)
+- **AIプロバイダー** (以下のいずれか、または複数。任意)
+    - ブラウザ内蔵 AI（Chrome の Gemini Nano / Edge の Phi-mini）。API キー不要
     - OpenAI互換のAPIキー (Groq, OpenAI, Anthropic, Together AIなど)
     - Google アカウント (Gemini API用)
     - ローカルLLM (Ollama, LM Studioなど)
@@ -84,7 +85,8 @@
 - **Tag Cluster**: タグの関連性をグラフで可視化
 - **SQLite History**: 記録済みURLの一覧確認・全文検索・管理（旧称「履歴」に相当）
 - **Domain Search**: ドメイン単位での履歴検索
-- **監査ログ**: AI要約の生成・保存操作の記録
+
+**監査ログ**: AI要約の生成・保存操作の記録は、Tools セクションの **「Export Logs」** パネル内「監査ログ TSV ダウンロード」から取得できます。
 
 **Tools セクション**
 - **Export Logs**: 履歴のエクスポート（JSON/Markdown/CSV/DB）
@@ -96,9 +98,15 @@
 *   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。
 
 #### 2. AIプロバイダー設定
-「AI Provider」のプルダウンから使用するサービスを選択します。
+「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。
 
-**A. OpenAI Compatible (Groq, OpenAI, Anthropicなど・推奨)**
+**A. Built-in AI（Chrome / Edge の内蔵 AI）**
+*   **API Key**: 不要
+*   対応ブラウザ（Chrome の Gemini Nano / Edge の Phi-mini）で、該当するフラグを有効化しモデルをダウンロード済みの場合に利用できます
+*   インターネット接続なしで動作し、データはデバイス外に送信されません
+*   詳細は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照
+
+**B. OpenAI Compatible (Groq, OpenAI, Anthropicなど・推奨)**
 *   **Base URL**: APIのエンドポイントURL。
     *   Groq: `https://api.groq.com/openai/v1`
     *   OpenAI: `https://api.openai.com/v1`
@@ -106,11 +114,11 @@
 *   **API Key**: 各サービスのAPIキー。
 *   **Model Name**: 使用するモデル名（例: `llama-3.3-70b-versatile`, `gpt-4o-mini`）。
 
-**B. Google Gemini**
+**C. Google Gemini**
 *   **API Key**: GeminiのAPIキーを入力。
 *   **Model Name**: `gemini-3.1-flash-lite` (推奨) など。
 
-**C. OpenAI Compatible 2 (サブ設定)**
+**D. OpenAI Compatible 2 (サブ設定)**
 *   ローカルLLMなどを2つ目の設定として保存できます。
 *   **Base URL**: 例 `http://127.0.0.1:11434/v1` (Ollama)
 *   **Model Name**: 例 `llama3`
@@ -137,10 +145,11 @@
 | **埋め込みAI** | `jina.ai`, `voyageai.com` |
 | **その他** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
 | **ローカル環境** | `localhost`, `127.0.0.1` |
+| **Built-in AI** | ブラウザ内部 API のため CSP 対象外。API キー不要・オフライン動作 |
 
 ---
 
-設定を入力したら、**「Save & Test Connection」**をクリックして接続を確認してください。
+設定を入力したら、**「Save & Test Connection」**をクリックして接続を確認してください。AI テスト結果には prompt / response / error / hasContent などの通信内容詳細が表示され、接続調査に利用できます。
 
 #### 💡 ローカルLLM (LM Studio / Ollama) の設定
 
@@ -192,14 +201,14 @@ ollama list
 - デフォルトはブラックリストモードで、一般的なサイト（Amazon、Google、Facebookなど）があらかじめ設定されています
 
 #### 4. 設定のエクスポート・インポート
-設定画面の右上にある「⋮」（三点メニュー）ボタンをクリックすると、ドロップダウンメニューが表示されます。
+ダッシュボードの **Tools → Export / Import** パネルで設定のエクスポート・インポートを行います。
 
 - **エクスポート**: 現在の全設定をJSONファイルとしてダウンロードします。ファイル名には日時が含まれます（例: `yasumaro-settings-20240101-120000.json`）。
   - **⚠️ 注意**: APIキー（Obsidian API Key、各AIプロバイダーのAPI Key）はセキュリティ上の理由からエクスポートに含まれません。
-- **インポート**: エクスポートしたJSONファイルを選択すると、設定内容のプレビューが表示されます。確認後「インポート」をクリックすると、現在の設定が上書きされます。
+- **インポート**: エクポートしたJSONファイルを選択すると、設定内容のプレビューが表示されます。確認後「インポート」をクリックすると、現在の設定が上書きされます。
   - APIキーは上書きされず、既存の設定が保持されます。
 
-端末の移行やバックアップにご活用ください（APIキーは別途再入力が必要です）。
+また、同じパネル内で **GitHub Gist 同期** の設定も行えます。端末の移行やバックアップにご活用ください（APIキーは別途再入力が必要です）。
 
 #### 5. プライバシー設定
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
@@ -234,6 +243,9 @@ ollama list
 - **Skipped**: プライバシー検出によりスキップされたページを表示。「今すぐ記録」ボタンで手動保存が可能
 - **🔒 Masked**: PIIマスキングが行われた記録のみ表示
 
+**プライバシーモードバッジ**:
+各履歴エントリには、保存時に使用したプライバシーモード（Local Only / Full Pipeline / Masked Cloud / Cloud Only）を示すバッジが表示されます。設定を変更した後でも、過去のエントリがどのモードで処理されたか一覧から確認できます。
+
 **保持ポリシー**: デフォルトでは無制限に保持されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から保持期間（30〜365日）と最大件数（1,000〜100,000件）を任意で設定できます。
 
 **モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [STORAGE_MODES.md](STORAGE_MODES.md)）。
@@ -251,8 +263,9 @@ ollama list
 
 ### Prerequisites
 - **Obsidian**: https://obsidian.md/
-- **Google Chrome** Browser
-- **AI Provider** (Any of the following)
+- **Google Chrome** or another Chromium-based browser (Microsoft Edge, Brave, etc.)
+- **AI Provider** (Any of the following; optional)
+    - Built-in AI (Chrome's Gemini Nano / Edge's Phi-mini). No API key required
     - OpenAI Compatible Provider (Groq, OpenAI, Anthropic, etc.)
     - Google Account (for Gemini)
     - Local LLM (Ollama, LM Studio, etc.)
@@ -266,6 +279,7 @@ Summary:
 2. **Copy API Key**: Settings → Local REST API → Copy the "API Key"
 
 ### Step 2: Get AI API Key
+*   **Built-in AI**: No API key needed (requires a supported browser, enabled flags, and downloaded model; see [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md))
 *   **Groq (Recommended)**: https://console.groq.com/keys
 *   **OpenAI**: https://platform.openai.com/api-keys
 *   **Anthropic**: https://console.anthropic.com/
@@ -319,7 +333,8 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 - **Tag Cluster**: Visualize tag relationships as a graph
 - **SQLite History**: View, full-text search, and manage recorded URL history (formerly labeled "History")
 - **Domain Search**: Search history by domain
-- **Audit Log**: Records of AI summary generation/save operations
+
+**Audit Log**: Records of AI summary generation/save operations are available under **Tools → Export Logs** as an "Audit Log TSV Download".
 
 **Tools section**
 - **Export Logs**: Export history (JSON/Markdown/CSV/DB)
@@ -330,8 +345,10 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 *   **Daily Note Path**: Enter the folder path where your daily notes are stored (e.g., `092.Daily`).
 
 #### 2. AI Provider Settings
-Select your preferred provider from the dropdown.
+Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers.
 
+*   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
+    *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
 *   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, Anthropic, and more.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
@@ -391,10 +408,11 @@ For security reasons, only the following domains are officially supported. Conne
 | **Embedding AI** | `jina.ai`, `voyageai.com` |
 | **Other** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
 | **Local Environments** | `localhost`, `127.0.0.1` |
+| **Built-in AI** | Browser-internal API, not subject to CSP. No API key required, works offline |
 
 ---
 
-Click **"Save & Test Connection"** to verify.
+Click **"Save & Test Connection"** to verify. The AI test result displays communication details such as prompt, response, error, and hasContent, which are useful for troubleshooting connections.
 
 #### 3. Domain Filter Settings
 In the "Domain Filter" tab, you can control which domains to record.
@@ -414,14 +432,14 @@ In the "Domain Filter" tab, you can control which domains to record.
 - Default is blacklist mode with common sites (Amazon, Google, Facebook, etc.) pre-configured
 
 #### 4. Export / Import Settings
-Click the "⋮" (three-dot menu) button in the top right corner of the settings screen to reveal a dropdown menu.
+Go to the **Tools → Export / Import** panel in the dashboard to export or import settings.
 
 - **Export**: Downloads all current settings as a JSON file. The filename includes a timestamp (e.g., `yasumaro-settings-20240101-120000.json`).
   - **⚠️ Note**: For security reasons, API keys (Obsidian API Key and AI provider API keys) are NOT included in the export.
 - **Import**: Select a previously exported JSON file. A preview of the settings is shown before applying. Click "Import" to overwrite the current settings.
   - API keys are NOT overwritten - existing settings are preserved.
 
-Useful for migrating settings to another device or creating backups (you will need to re-enter API keys).
+The same panel also contains **GitHub Gist Sync** settings. Useful for migrating settings to another device or creating backups (you will need to re-enter API keys).
 
 #### 5. Privacy Settings
 In the "Privacy" tab, you can configure detailed privacy behavior.
@@ -456,6 +474,9 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 - **Skipped**: Shows pages skipped by privacy detection. Use "Record Now" to manually save them
 - **🔒 Masked**: Shows only records where PII masking was applied
 
+**Privacy Mode Badges**:
+Each history entry shows a badge indicating which privacy mode was used when it was saved (Local Only / Full Pipeline / Masked Cloud / Cloud Only). Even after changing your settings, you can see at a glance which mode each past entry was processed with.
+
 **Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy".
 
 **Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
@@ -475,7 +496,7 @@ In the `Dashboard → History` tab, you can view and manage your recording histo
 
 #### GitHub Gist 連携
 Obsidian の代わりに、または併用して GitHub Gist にクラウド同期できます。
-- `Dashboard → Sync Settings → GitHub Gist` から設定
+- `Dashboard → Tools → Export / Import` パネル内の「GitHub Gist Sync」セクションから設定
 - **GitHub PAT（Personal Access Token）** を入力して認証
 - 「接続テスト」ボタンで接続状況を確認
 - Obsidian との同期と並行実行でき、一方の失敗が他方に影響しません
@@ -496,7 +517,7 @@ In `Dashboard → History → Related Graph`, you can visualize the co-occurrenc
 
 #### GitHub Gist Integration
 Sync your history to GitHub Gist instead of, or in addition to, Obsidian.
-- Configure in `Dashboard → Sync Settings → GitHub Gist`
+- Configure in **Tools → Export / Import** panel under `GitHub Gist Sync`
 - Enter your **GitHub Personal Access Token (PAT)** for authentication
 - Use the "Test Connection" button to verify connectivity
 - Runs in parallel with Obsidian sync; failure in one doesn't affect the other

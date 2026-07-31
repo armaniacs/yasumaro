@@ -14,6 +14,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 
 | プロバイダー | 備考 |
 |------------|------|
+| **Built-in AI** | ブラウザ内蔵AI。Chrome の Gemini Nano / Edge の Phi-mini。API キー不要・オフライン動作（対応ブラウザかつフラグ有効化・モデルダウンロードが必要） |
 | **Google Gemini** | クラウドAI。デフォルトのおすすめ |
 | **OpenAI Compatible** | Groq、OpenAI、Anthropic など、OpenAI互換APIを提供する多数のサービスに対応 |
 | **OpenAI Compatible 2** | 2つ目の互換プロバイダー枠。ローカルLLMなどのサブ設定用 |
@@ -21,7 +22,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 | **Ollama** | ローカルで動くOllama（`http://localhost:11434/v1`） |
 | **OpenAI Compatible (Models.dev)** | Models.dev のモデル一覧から選択して接続 |
 
-内部的には Gemini 用と OpenAI 互換用の2つの実装しかなく、Groq・Anthropic・ローカルLLM等は「OpenAI Compatible」の枠に Base URL を差し替えることで対応しています。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md) を参照してください。
+内部的には Gemini 用と OpenAI 互換用の2つの実装しかなく、Groq・Anthropic・ローカルLLM等は「OpenAI Compatible」の枠に Base URL を差し替えることで対応しています。Built-in AI はブラウザの Prompt API を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
 ### 要約生成の流れ
 
@@ -32,7 +33,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
    ↓
 3. AI Summary Cleansing（有効な場合。要約前のクレンジング）
    ↓
-4. AIプロバイダーへ送信し、要約を生成
+4. 優先度順に AI プロバイダー（Built-in AI、クラウドAI、ローカルLLM など）へ送信し、要約を生成
    ↓
 5. Obsidian / SQLite / ローカルMarkdown へ保存
 ```
@@ -64,7 +65,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 
 AIに送信する前に、PIIマスキング（メールアドレス・クレジットカード番号・電話番号など）が適用されます。マスキングの詳細は [PII機能ガイド](PII_FEATURE_GUIDE.md) を参照してください。
 
-また、どのプロバイダーにいつ要約を送信したかは監査ログに記録され、ダッシュボードの「監査ログ」パネルから後から確認できます。
+また、どのプロバイダーにいつ要約を送信したかは監査ログに記録され、ダッシュボードの「Export Logs」パネルから後から確認できます。
 
 ### 使用量の警告
 
@@ -92,6 +93,7 @@ Yasumaro sends the body text of pages that meet the recording criteria to an AI 
 
 | Provider | Notes |
 |----------|-------|
+| **Built-in AI** | Browser-integrated AI: Chrome's Gemini Nano / Edge's Phi-mini. No API key required, works offline (requires a supported browser, flag enablement, and model download) |
 | **Google Gemini** | Cloud AI. Recommended default |
 | **OpenAI Compatible** | Supports many services offering OpenAI-compatible APIs, including Groq, OpenAI, and Anthropic |
 | **OpenAI Compatible 2** | A second compatible-provider slot, useful for a local LLM or secondary configuration |
@@ -99,7 +101,7 @@ Yasumaro sends the body text of pages that meet the recording criteria to an AI 
 | **Ollama** | Local Ollama (`http://localhost:11434/v1`) |
 | **OpenAI Compatible (Models.dev)** | Connect by selecting a model from the Models.dev catalog |
 
-Internally there are only two implementations — one for Gemini and one for OpenAI-compatible APIs — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps.
+Internally there are only two implementations — one for Gemini and one for OpenAI-compatible APIs — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's Prompt API directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
 
 ### Summarization Flow
 
@@ -110,7 +112,7 @@ Internally there are only two implementations — one for Gemini and one for Ope
    ↓
 3. AI Summary Cleansing (if enabled; cleansing before summarization)
    ↓
-4. Send to the AI provider and generate a summary
+4. Send to AI providers in priority order (Built-in AI, cloud AI, local LLM, etc.) and generate a summary
    ↓
 5. Save to Obsidian / SQLite / local Markdown
 ```
@@ -142,7 +144,7 @@ The system and user prompts used during summarization can be freely customized, 
 
 Before content is sent to an AI provider, PII masking (email addresses, credit card numbers, phone numbers, etc.) is applied. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details on masking.
 
-Which provider received a summary request, and when, is recorded in the audit log, viewable from the dashboard's "Audit Log" panel.
+Which provider received a summary request, and when, is recorded in the audit log, viewable from the dashboard's "Export Logs" panel.
 
 ### Usage Warnings
 
