@@ -310,8 +310,12 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
             }
 
-            // マッチ自体はプレースホルダー置換後のscanTextに対するものだが、
-            // 文字数・インデックスはtextと完全に一致するため、実際の値はtextから取得する
+            // マッチ自体はscanText（neutralizeLongNonWhitespaceRuns適用後）に対するもの。
+            // neutralizeLongNonWhitespaceRuns は出力長を入力長と完全に一致させるため
+            // （サンプリングウィンドウの長さを保ったまま `#` でパディング）、
+            // scanText 上の match.index / match[0].length は text 上の位置と1対1で一致する。
+            // また `#` はどのPIIパターンの文字クラスにも含まれないため、
+            // マッチは必ず元の文字列と同じ文字列を跨がない。よって実際の値は text から取得する。
             const matchedValue = text.substring(match.index, match.index + match[0].length);
             const startIndex = match.index;
 
