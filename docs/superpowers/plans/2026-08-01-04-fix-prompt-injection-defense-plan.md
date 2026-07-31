@@ -1,6 +1,6 @@
 # PBI-04: AI プロンプトのインジェクション対策を強化する — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 信頼できない Web ページコンテンツと AI への命令を明確に分離し、プロンプトインジェクションを検出・抑制する。
 
@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `src/utils/customPromptUtils.ts` (lines 28-38)
 
-- [ ] **Step 1: `DEFAULT_USER_PROMPT_JA` を変更する**
+- [x] **Step 1: `DEFAULT_USER_PROMPT_JA` を変更する**
 
 ```typescript
 export const DEFAULT_USER_PROMPT_JA = `以下のWebページの内容を、日本語で簡潔に要約してください。
@@ -30,9 +30,9 @@ export const DEFAULT_USER_PROMPT_JA = `以下のWebページの内容を、日�
 上記の内容を要約してください。`;
 ```
 
-- [ ] **Step 2: `DEFAULT_USER_PROMPT_EN` も同様に変更する**
+- [x] **Step 2: `DEFAULT_USER_PROMPT_EN` も同様に変更する**
 
-- [ ] **Step 3: コミットする**
+- [x] **Step 3: コミットする**
 
 ```bash
 git add src/utils/customPromptUtils.ts
@@ -46,13 +46,13 @@ git commit -m "fix(prompt): add delimiters and guard instructions to default pro
 **Files:**
 - Modify: `src/background/ai/providers/GeminiProvider.ts` (lines 82-95)
 
-- [ ] **Step 1: `applyCustomPrompt` から `systemPrompt` も取得する**
+- [x] **Step 1: `applyCustomPrompt` から `systemPrompt` も取得する**
 
 ```typescript
 const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizedContent, tagSummaryMode);
 ```
 
-- [ ] **Step 2: payload に `systemInstruction` を追加する**
+- [x] **Step 2: payload に `systemInstruction` を追加する**
 
 ```typescript
 const payload: any = {
@@ -69,7 +69,7 @@ const payload: any = {
 };
 ```
 
-- [ ] **Step 3: コミットする**
+- [x] **Step 3: コミットする**
 
 ```bash
 git add src/background/ai/providers/GeminiProvider.ts
@@ -83,7 +83,7 @@ git commit -m "fix(gemini): send system prompt via systemInstruction"
 **Files:**
 - Modify: `src/utils/promptSanitizer.ts` (lines 105-119, 241-257)
 
-- [ ] **Step 1: `isInSafeContext` を削除または無力化する**
+- [x] **Step 1: `isInSafeContext` を削除または無力化する**
 
 ```typescript
 function isInSafeContext(_content: string, _match: string, _index: number): boolean {
@@ -91,13 +91,13 @@ function isInSafeContext(_content: string, _match: string, _index: number): bool
 }
 ```
 
-- [ ] **Step 2: `String.replace` をグローバル置換に修正する**
+- [x] **Step 2: `String.replace` をグローバル置換に修正する**
 
 ```typescript
 sanitized = sanitized.replaceAll(fullMatch, '[FILTERED]');
 ```
 
-- [ ] **Step 3: コミットする**
+- [x] **Step 3: コミットする**
 
 ```bash
 git add src/utils/promptSanitizer.ts
@@ -111,7 +111,7 @@ git commit -m "fix(sanitizer): remove safe-context suppression and fix multi-mat
 **Files:**
 - Modify: `src/utils/promptSanitizer.ts` (lines 50-68)
 
-- [ ] **Step 1: 日本語パターンを追加する**
+- [x] **Step 1: 日本語パターンを追加する**
 
 ```typescript
 const REFINED_INJECTION_PATTERNS = [
@@ -123,7 +123,7 @@ const REFINED_INJECTION_PATTERNS = [
 ];
 ```
 
-- [ ] **Step 2: コミットする**
+- [x] **Step 2: コミットする**
 
 ```bash
 git add src/utils/promptSanitizer.ts
@@ -137,12 +137,12 @@ git commit -m "feat(sanitizer): add Japanese prompt injection patterns"
 **Files:**
 - Modify or delete: `src/utils/promptSanitizer-refined.ts`, `src/utils/__tests__/promptSanitizer-refined.test.ts`
 
-- [ ] **Step 1: 本番コードでの import 有無を再確認する**
+- [x] **Step 1: 本番コードでの import 有無を再確認する**
 
 Run: `grep -rn "promptSanitizer-refined" src/ --include="*.ts" | grep -v test | grep -v "promptSanitizer-refined.ts:"`
 Expected: no output
 
-- [ ] **Step 2: 削除する**
+- [x] **Step 2: 削除する**
 
 ```bash
 git rm src/utils/promptSanitizer-refined.ts
@@ -150,7 +150,7 @@ git rm src/utils/__tests__/promptSanitizer-refined.test.ts
 git rm src/utils/__tests__/promptSanitizer-refined-test.test.ts
 ```
 
-- [ ] **Step 3: コミットする**
+- [x] **Step 3: コミットする**
 
 ```bash
 git commit -m "refactor: remove unused promptSanitizer-refined.ts"
@@ -163,7 +163,7 @@ git commit -m "refactor: remove unused promptSanitizer-refined.ts"
 **Files:**
 - Modify: `src/utils/__tests__/promptSanitizer.test.ts`, `src/background/__tests__/GeminiProvider.test.ts`, `testDir/e2e/`
 
-- [ ] **Step 1: バイパステストを追加する**
+- [x] **Step 1: バイパステストを追加する**
 
 ```typescript
 it('detects injection even with safe-context prefix', () => {
@@ -179,7 +179,7 @@ it('filters all occurrences of repeated injection', () => {
 });
 ```
 
-- [ ] **Step 2: Gemini systemInstruction テストを追加する**
+- [x] **Step 2: Gemini systemInstruction テストを追加する**
 
 ```typescript
 it('includes systemInstruction in Gemini payload', async () => {
@@ -187,7 +187,7 @@ it('includes systemInstruction in Gemini payload', async () => {
 });
 ```
 
-- [ ] **Step 3: コミットする**
+- [x] **Step 3: コミットする**
 
 ```bash
 git add src/utils/__tests__/promptSanitizer.test.ts src/background/__tests__/GeminiProvider.test.ts
