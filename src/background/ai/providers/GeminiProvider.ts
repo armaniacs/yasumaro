@@ -303,6 +303,6 @@ export class GeminiProvider extends AIProviderStrategy {
         // トークン使用量を記録
         await recordUsage(sentTokens, receivedTokens);
 
-        return { success: true, summary, sentTokens, receivedTokens };
+        return { success: true, summary, sentTokens, receivedTokens, providerName: this.getName(), model: this.model };
     }
 }
