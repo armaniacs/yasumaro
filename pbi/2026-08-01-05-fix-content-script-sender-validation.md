@@ -71,6 +71,13 @@ grep -n "CONTENT_SCRIPT_ONLY_TYPES\|createValidVisitHandler" src/background/ -r
 - 厳密にしすぎると正常なコンテンツスクリプトまで拒否する
 - `sender.tab.url` と `sender.url` の整合性は常に成立するとは限らない
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/background/service-worker.ts`, `src/background/handlers/messageHandlers.ts`, `src/background/messageTypes.ts`, `src/content/extractor.ts`, `src/background/recordingLogic.ts`, `src/background/pipeline/RecordingPipeline.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-21-fix-ai-call-deduplication`（AI 要約 in-flight 重複排除）
+  - `2026-07-25-22-fix-duplicate-check-race-condition`（RecordingPipeline URL Mutex 追加）
+- **補足**: `extractor.ts:633-653` の `scheduleNextCheck`/`updateMaxScroll` 経由でプログラムスクロールが条件を満たす。人間の閲覧判定強化は本PBIのオプション要件。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

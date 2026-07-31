@@ -65,6 +65,12 @@ grep -n "getConsentHmacKey\|getNotificationHmacKey\|getOrCreateHmacSecret" src/ 
 - 鍵を暗号化するための鍵（KEK）の管理が新たな問題になる
 - マスターパスワード未設定時の保護は限定的
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/crypto/index.ts`, `src/utils/settingsExportImport.ts`, `src/utils/storage/encryptionSession.ts`, `src/utils/storage/types.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-17-fix-privacy-consent-integrity-signature`（プライバシー同意の HMAC 署名追加）
+- **補足**: `encryptionSession.ts` 内の `ENCRYPTION_SECRET` も平文保存されている移行中の秘密情報であり、本PBIの影響範囲に含めて検討する。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

@@ -70,6 +70,12 @@ grep -n "recordUsage\|timeoutMs\|testConnection\|providerName" src/background/ai
 - `fetchWithRetry` の仕様変更が必要な場合は PBI-7 と連携
 - 使用量情報がレスポンスに含まれない場合の扱い
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/background/ai/providers/OpenAIProvider.ts`, `src/background/ai/providers/GeminiProvider.ts`, `src/background/ai/providers/ProviderStrategy.ts`, `src/background/aiClient.ts`, `src/utils/aiLimits.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-21-fix-ai-call-deduplication`
+- **補足**: `GeminiProvider` はタイムアウトを 30000ms 固定、`OpenAIProvider` は `AI_TIMEOUT_MS` 設定を使用。`recordUsage()` も Gemini のみ呼んでいる非対称が本PBIの主な対象。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

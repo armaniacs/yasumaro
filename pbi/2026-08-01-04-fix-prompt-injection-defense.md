@@ -77,6 +77,12 @@ grep -n "systemPrompt" src/background/ai/providers/GeminiProvider.ts
 - ガード命令自体が誤検知される可能性
 - プロンプト長が増加し、トークンコストに影響
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/customPromptUtils.ts`, `src/utils/promptSanitizer.ts`, `src/utils/promptSanitizer-refined.ts`, `src/background/ai/providers/GeminiProvider.ts`, `src/background/ai/providers/OpenAIProvider.ts`, `src/background/privacyPipeline.ts`
+- **関連する過去PBI**:
+  - `2026-07-22-01-fix-obsidian-markdown-injection-core`（マークダウンインジェクション対策）
+- **補足**: `promptSanitizer-refined.ts` はテストからのみ import されており、本番コードでは未使用。本PBI実装時に `promptSanitizer.ts` へ統合するか、本番から削除する判断が必要。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

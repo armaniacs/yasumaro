@@ -74,6 +74,12 @@ grep -n "timeoutMs\|isPrivateIpAddress\|isLocalhostAddress" src/utils/fetch.ts
 - URL 正規化が不完全だと新たなバイパスが生まれる
 - `blockLocalhost` を有効化すると既存の動作に影響
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/fetch.ts`, `src/background/ai/providers/OpenAIProvider.ts`, `src/background/ai/providers/GeminiProvider.ts`, `src/background/handlers/messageHandlers.ts`
+- **関連する過去PBI**:
+  - `2026-07-22-04-fix-settings-import-bypass-ssrf`（settings import の SSRF 対策）
+- **補足**: `validateUrlForAIRequests` は AI プロバイダー経路で、`validateUrlForFilterImport` は `FETCH_URL` 経路で使用。両方で IPv6 ブラケット対応が必要。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

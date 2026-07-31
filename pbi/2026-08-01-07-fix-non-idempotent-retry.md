@@ -63,6 +63,11 @@ grep -n "fetchWithRetry" src/background/ai/providers/*.ts
 - ネットワーク層のエラー（fetch 例外）は再送してよい
 - レスポンスステータスを持つ 5xx だけが対象
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/fetch.ts`, `src/background/ai/providers/OpenAIProvider.ts`, `src/background/ai/providers/GeminiProvider.ts`, `src/utils/aiLimits.ts`
+- **関連する過去PBI**: 該当なし
+- **補足**: `fetchWithRetry` は `response.ok` が false の 5xx を `Error` に変換して throw するため、`OpenAIProvider`/`GeminiProvider` 内の `if (!response.ok)` 分岐は死にコードとなっている。本PBIと合わせて整理する。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
