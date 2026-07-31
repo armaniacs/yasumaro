@@ -173,13 +173,29 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
 }
 
 /**
+ * IPv6ホスト名からブラケットを除去する
+ * URL.hostname はIPv6アドレスを [::1] の形式で返すため、
+ * プライベートIP判定の前にブラケットを正規化する
+ * @param {string} hostname - チェックするホスト名
+ * @returns {string} ブラケットを除去したホスト名
+ */
+function normalizeIpHostname(hostname: string): string {
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
+    return hostname.slice(1, -1);
+  }
+  return hostname;
+}
+
+/**
  * プライベートIPアドレスかどうか判定
  * @param {string} hostname - チェックするホスト名
  * @returns {boolean} プライベートIPの場合true
  */
 export function isPrivateIpAddress(hostname: string): boolean {
+  const normalized = normalizeIpHostname(hostname);
+
   // IPv4形式（xxx.xxx.xxx.xxx）
-  const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  const ipv4Match = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
     const [, a, b, c, d] = ipv4Match.map(Number);
 
@@ -208,7 +224,7 @@ export function isPrivateIpAddress(hostname: string): boolean {
   }
 
   // IPv6形式のプライベートアドレスの完全なチェック
-  const ipv6Lower = hostname.toLowerCase();
+  const ipv6Lower = normalized.toLowerCase();
 
   // ::1 - ループバックアドレス
   if (ipv6Lower === '::1') {
