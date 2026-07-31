@@ -74,6 +74,14 @@ grep -rn "chrome.alarms.create" src/background/service-worker.ts
 - テスト内 `typeof init === 'function'` は呼び出しを検証しないため注意
 - `init()` を二重に呼ぶと alarm が重複登録される可能性がある（Chrome は同名 alarm を上書きするが、念のため確認）
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `entrypoints/background/index.ts`, `src/background/service-worker.ts`, `src/background/handlers/lifecycleHandlers.ts`, `src/background/sessionStore.ts`
+- **関連する過去PBI**: 
+  - `2026-07-25-35-fix-service-worker-state-persistence`（session storage 永続化）
+  - `2026-07-25-36-refactor-service-worker-singleton-di`（TabCache 遅延初期化）
+  - `2026-07-26-29-refactor-service-worker-god-file-split`（オフラインキュー処理抽出）
+- **補足**: `init()` 内の fire-and-forget Promise は `void` で運用されているが、本PBI実装時に `catch` ラップの見直しも含める。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

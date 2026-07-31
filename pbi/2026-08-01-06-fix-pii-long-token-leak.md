@@ -62,6 +62,13 @@ grep -n "neutralizeLongNonWhitespaceRuns\|scanText" src/utils/piiSanitizer.ts
 - 中央部の検出を有効にすると ReDoS リスクが増す
 - 長い JWT 全体をマスクすると要約品質が低下する
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/piiSanitizer.ts`, `src/background/privacyPipeline.ts`, `src/utils/piiStripper.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-14-fix-pii-regex-redos-hardening`（PII ReDoS 対策強化）
+  - `2026-07-20-22-fix-local-ai-pii-masking-order`（Local AI での PII マスキング順序）
+- **補足**: `neutralizeLongNonWhitespaceRuns` は `scanText` のみを置換し、実際の出力 `text` は変更しない。中央部検出を有効にする際は `scanText` と `text` の整合性を維持する必要がある。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

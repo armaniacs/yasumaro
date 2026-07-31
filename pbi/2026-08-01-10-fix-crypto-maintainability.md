@@ -68,8 +68,15 @@ grep -n "timingSafeEqual\|ENVELOPE_ITERATIONS\|needsRehash\|hashUrl\|isEncrypted
 5. 平文 API キー警告/移行
 
 ### 落とし穴
-- `hashUrl` の形式変更は既存データとの整合性
+- `hashUrl` の形式変更は既存ログに影響
 - 平文移行はマスターパスワード有無で挙動が変わる
+
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/crypto/index.ts`, `src/utils/crypto/types.ts`, `src/utils/storage/settingsStore.ts`, `src/utils/storage/encryptionSession.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-30-fix-pbkdf2-legacy-timing-sidechannel`
+  - `2026-07-25-31-fix-verify-legacy-crypto-export-removal`
+- **補足**: `SubtleCrypto.timingSafeEqual` は Web Crypto 標準に存在しない。型宣言削除後、`constantTimeCompare` のフォールバックが唯一のパスとなる。
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする

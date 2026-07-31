@@ -74,6 +74,14 @@ grep -n "SessionStore" src/background/sessionStore.ts
 - 削除タイミングが早すぎると並行処理で競合
 - session storage 容量制限
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/background/recordingLogic.ts`, `src/background/pipeline/RecordingPipeline.ts`, `src/background/sessionStore.ts`, `src/background/Mutex.ts`, `src/background/handlers/lifecycleHandlers.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-21-fix-ai-call-deduplication`
+  - `2026-07-25-22-fix-duplicate-check-race-condition`
+  - `2026-07-25-35-fix-service-worker-state-persistence`
+- **補足**: `RecordingLogic.urlRecordMutexes` と `RecordingPipeline` 内の URL Mutex が二重に存在する。本PBIでは責務を整理し、片方を削除または統合する。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

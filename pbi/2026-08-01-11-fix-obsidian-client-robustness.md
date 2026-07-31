@@ -80,6 +80,14 @@ grep -n "DEFAULT_PORT\|_validateHost\|_fetchExistingContent\|_handleError" src/b
 - vault 名指定は API バージョン依存
 - 既定値変更は既存ユーザーの設定に影響しないよう注意
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/background/obsidianClient.ts`, `src/utils/fetch.ts`, `src/utils/urlUtils.ts`, `src/utils/dailyNotePathBuilder.ts`, `src/utils/storage/defaults.ts`
+- **関連する過去PBI**:
+  - `2026-07-22-01-fix-obsidian-markdown-injection-core`
+  - `2026-07-22-02-fix-obsidian-markdown-injection-downstream`
+  - `2026-07-25-27-refactor-obsidian-api-abstraction`
+- **補足**: `_validateHost` の `[\s\/\\:]` は IPv6 `::1` を誤って拒否する。`fetch.ts` 側では `::1` を localhost として扱っており、定義が矛盾している。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了

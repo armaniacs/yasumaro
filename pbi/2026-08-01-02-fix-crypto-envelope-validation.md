@@ -73,6 +73,13 @@ grep -n "decryptEnvelope\|isEncryptionEnvelope" src/utils/crypto/index.ts
 - 上限が厳しすぎると将来の正当な値も拒否する
 - 下限 0 や負数も拒否すること
 
+## 関連情報（graphify 調査結果）
+- **関連ファイル**: `src/utils/crypto/index.ts`, `src/dashboard/encryptedBackupService.ts`, `src/dashboard/encryptedBackupPanel.ts`
+- **関連する過去PBI**:
+  - `2026-07-25-30-fix-pbkdf2-legacy-timing-sidechannel`（PBKDF2 レガシータイミング対策）
+  - `2026-07-25-31-fix-verify-legacy-crypto-export-removal`（非推奨 crypto 関数整理）
+- **補足**: `importEncryptedBackup` は `decryptEnvelope` 実行後に `BACKUP_PAYLOAD_VERSION` を検証するが、エンベロープ形式自体の version チェックはない。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
