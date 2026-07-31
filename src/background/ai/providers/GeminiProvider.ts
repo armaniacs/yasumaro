@@ -196,6 +196,12 @@ export class GeminiProvider extends AIProviderStrategy {
                     message: `Authentication failed (${response.status}). Check your Gemini API key.`,
                     debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
                 };
+            } else if (response.status === 404) {
+                return {
+                    success: false,
+                    message: `Model or endpoint not found (404). Check your model settings.`,
+                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
+                };
             } else if (response.status === 429) {
                 return {
                     success: false,
@@ -211,10 +217,13 @@ export class GeminiProvider extends AIProviderStrategy {
             }
         } catch (e: unknown) {
             const msg = errorMessage(e);
-            if (msg.includes('timeout')) {
+            const errorName = e instanceof Error ? e.name : 'Error';
+
+            // タイムアウトは error.name（AbortError）またはメッセージで判定
+            if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
                 return {
                     success: false,
-                    message: 'Connection timeout. Check your network connection.',
+                    message: 'Connection timed out. Check your network or increase timeout.',
                     debug: { prompt: `GET ${testUrl}`, error: msg },
                 };
             }
@@ -227,7 +236,13 @@ export class GeminiProvider extends AIProviderStrategy {
             if (statusCode === 401 || statusCode === 403) {
                 return {
                     success: false,
-                    message: `Authentication failed (${statusCode}). Check your Gemini API key.`,
+                    message: 'Invalid API key (401). Check your Gemini API key settings.',
+                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
+                };
+            } else if (statusCode === 404) {
+                return {
+                    success: false,
+                    message: 'Model or endpoint not found (404). Check your model settings.',
                     debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
                 };
             } else if (statusCode === 429) {

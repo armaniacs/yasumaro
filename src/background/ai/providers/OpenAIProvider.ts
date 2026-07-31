@@ -284,11 +284,37 @@ export class OpenAIProvider extends AIProviderStrategy {
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : 'Error';
-            if (msg.includes('timeout')) {
+
+            // タイムアウトは error.name（AbortError）またはメッセージで判定
+            if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
                 return {
                     success: false,
-                    message: 'Connection timeout. Check your network or Base URL.',
+                    message: 'Connection timed out. Check your network or increase timeout.',
                     debug: { prompt: `GET ${url}`, error: msg },
+                };
+            }
+
+            // fetchWithRetry throws HTTP errors as "HTTP {status}: {statusText}"
+            const httpMatch = msg.match(/HTTP\s+(\d+):/);
+            const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
+
+            if (statusCode === 401 || statusCode === 403) {
+                return {
+                    success: false,
+                    message: 'Invalid API key (401). Check your API key settings.',
+                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
+                };
+            } else if (statusCode === 404) {
+                return {
+                    success: false,
+                    message: 'Model or endpoint not found (404). Check your Base URL.',
+                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
+                };
+            } else if (statusCode === 429) {
+                return {
+                    success: false,
+                    message: 'Rate limit exceeded (429). Please try again later.',
+                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
                 };
             } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
                 return {
