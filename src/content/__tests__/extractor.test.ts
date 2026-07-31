@@ -396,7 +396,7 @@ describe('init - event listeners', () => {
     it('adds scroll event listener to window', async () => {
         const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
         await init();
-        expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function));
+        expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true });
     });
 
     it('adds beforeunload event listener to window', async () => {
