@@ -183,15 +183,18 @@ export class OpenAIProvider extends AIProviderStrategy {
                 initialDelayMs: 1000,
                 backoffMultiplier: 2,
                 maxDelayMs: 60000,
-                shouldRetry: (error: Error, attempt: number, response: Response | null) => {
+                shouldRetry: (error: Error, attempt: number, response: Response | null, method?: string) => {
                     if (response?.status === 429) return false;
+                    // 非冪等メソッド（POST/PUT/PATCH）は二重生成・二重課金を防ぐため5xxでリトライしない
+                    if (response && response.status >= 500) {
+                        return !['POST', 'PUT', 'PATCH'].includes(method?.toUpperCase() ?? 'POST');
+                    }
                     if (error.name === 'AbortError' || error.message.includes('timed out')) {
                         return attempt <= 1;
                     }
                     if (error.name === 'NetworkError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
                         return true;
                     }
-                    if (response && response.status >= 500) return true;
                     return false;
                 }
             });
