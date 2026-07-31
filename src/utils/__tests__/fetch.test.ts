@@ -1,4 +1,4 @@
-import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
+import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
 import { normalizeUrl } from '../urlUtils.js';
 import * as cspValidatorModule from '../cspValidator.js';
 import * as storageModule from '../storage.js';
@@ -274,6 +274,14 @@ describe('isPrivateIpAddress', () => {
     test('パブリックIPv6アドレスは検出しない', () => {
       expect(isPrivateIpAddress('2001:4860:4860::8888')).toBe(false);
     });
+
+    test('ブラケット付きIPv6アドレスを正規化して検出する', () => {
+      expect(isPrivateIpAddress('[::1]')).toBe(true);
+      expect(isPrivateIpAddress('[::ffff:127.0.0.1]')).toBe(true);
+      expect(isPrivateIpAddress('[fe80::1]')).toBe(true);
+      expect(isPrivateIpAddress('[fc00::1]')).toBe(true);
+      expect(isPrivateIpAddress('[2001:4860:4860::8888]')).toBe(false);
+    });
   });
 
   describe('ドメイン名', () => {
@@ -310,6 +318,11 @@ describe('validateUrlForFilterImport', () => {
       .toThrow('Access to localhost is not allowed for filter imports');
     expect(() => validateUrlForFilterImport('http://my.localhost/filters.txt'))
       .toThrow('Access to localhost is not allowed for filter imports');
+  });
+
+  test('ブラケット付きIPv6ループバックをブロックする', () => {
+    expect(() => validateUrlForFilterImport('http://[::1]:8080/'))
+      .toThrow('Access to private network address is not allowed');
   });
 
   test('パブリックURLを許可する', () => {
@@ -359,6 +372,38 @@ describe('validateUrlForAIRequests', () => {
       .toThrow('Access to private network address is not allowed');
     expect(() => validateUrlForAIRequests('http://192.168.1.1/api'))
       .toThrow('Access to private network address is not allowed');
+  });
+});
+
+describe('isLocalhostAddress', () => {
+  test('localhost を認識する', () => {
+    expect(isLocalhostAddress('localhost')).toBe(true);
+    expect(isLocalhostAddress('LOCALHOST')).toBe(true);
+  });
+
+  test('127.x.x.x を認識する', () => {
+    expect(isLocalhostAddress('127.0.0.1')).toBe(true);
+    expect(isLocalhostAddress('127.255.255.255')).toBe(true);
+  });
+
+  test('IPv6ループバックを認識する', () => {
+    expect(isLocalhostAddress('::1')).toBe(true);
+    expect(isLocalhostAddress('[::1]')).toBe(true);
+    expect(isLocalhostAddress('::ffff:127.0.0.1')).toBe(true);
+  });
+
+  test('ポート番号が指定された場合は許可されたポートのみ信頼する（VULN-013）', () => {
+    expect(isLocalhostAddress('localhost', 11434)).toBe(true);
+    expect(isLocalhostAddress('localhost', 27123)).toBe(true);
+    expect(isLocalhostAddress('localhost', 9999)).toBe(false);
+    expect(isLocalhostAddress('127.0.0.1', 1234)).toBe(true);
+    expect(isLocalhostAddress('127.0.0.1', 9999)).toBe(false);
+  });
+
+  test('パブリックアドレスや通常のドメインはローカルホストではない', () => {
+    expect(isLocalhostAddress('8.8.8.8')).toBe(false);
+    expect(isLocalhostAddress('example.com')).toBe(false);
+    expect(isLocalhostAddress('10.0.0.1')).toBe(false);
   });
 });
 
@@ -589,6 +634,21 @@ describe('fetchWithTimeout - AbortError', () => {
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, 1000)
     ).rejects.toThrow('Request timed out');
+  });
+
+  test('options.timeoutMs を3番目の引数より優先する', async () => {
+    // options.timeoutMs が有効な場合、3番目の引数（1000ms）ではなく 100ms でタイムアウトする
+    global.fetch = vi.fn((_url: string, opts?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        opts?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'));
+        });
+      })
+    );
+
+    await expect(
+      fetchWithTimeout('https://example.com', { skipCspValidation: true, timeoutMs: 100 }, 1000)
+    ).rejects.toThrow('timed out after 100ms');
   });
 });
 
