@@ -46,11 +46,20 @@ export class SessionStore {
     return null;
   }
 
-  set(key: string, value: unknown): void {
+  /**
+   * Queue a write for a key. By default the flush is debounced; pass
+   * `{ flushImmediately: true }` for writes that must survive a service-worker
+   * termination (the debounce window is the data-loss window).
+   */
+  async set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void> {
     if (this.disposed) return;
     this.writeQueue.set(key, value);
     this.deleteQueue.delete(key);
-    this.scheduleFlush();
+    if (options?.flushImmediately) {
+      await this.flushNow();
+    } else {
+      this.scheduleFlush();
+    }
   }
 
   remove(key: string): void {

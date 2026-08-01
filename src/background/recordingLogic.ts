@@ -234,6 +234,8 @@ export class RecordingLogic {
 
   private static async saveCacheToSession(): Promise<void> {
     const cs = RecordingLogic.cacheState;
+    // flushImmediately: recording state must survive a service-worker
+    // termination within the SessionStore debounce window.
     await RecordingLogic.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
       settingsCache: cs.settingsCache,
       cacheTimestamp: cs.cacheTimestamp,
@@ -242,7 +244,7 @@ export class RecordingLogic {
       urlCacheTimestamp: cs.urlCacheTimestamp,
       privacyCache: cs.privacyCache ? SessionStore.mapToEntries(cs.privacyCache) : null,
       privacyCacheTimestamp: cs.privacyCacheTimestamp,
-    });
+    }, { flushImmediately: true });
   }
 
   private obsidian: ObsidianClient;
