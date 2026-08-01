@@ -49,29 +49,13 @@ export function generateIV(): Uint8Array {
 /**
  * 定数時間比較（タイミング攻撃対策）
  * 2つの文字列を定数時間で比較し、タイミング攻撃を防ぐ
- * 【標準ブラウザAPIの優先使用】: crypto.subtle.timingSafeEqual() が利用可能な場合はそちらを使用
- * 【フォールバック実装】: 利用不可の場合は自前実装でタイミング安全に比較
+ * 【フォールバック実装】: 自前実装でタイミング安全に比較
  * @param {string} a - 比較する文字列1
  * @param {string} b - 比較する文字列2
  * @returns {Promise<boolean>} 文字列が等しい場合はtrue、それ以外はfalse
  */
 export async function constantTimeCompare(a: string, b: string): Promise<boolean> {
-    const webcrypto = getWebCrypto();
-
-    // 標準ブラウザAPIが利用可能な場合は使用（MDN推奨）
-    if ('subtle' in webcrypto && typeof webcrypto.subtle.timingSafeEqual === 'function') {
-        try {
-            const encoder = new TextEncoder();
-            const aBuf = encoder.encode(a);
-            const bBuf = encoder.encode(b);
-            // Uint8Arrayの.backingストア（ArrayBuffer）を取得
-            return await webcrypto.subtle.timingSafeEqual(aBuf.buffer, bBuf.buffer);
-        } catch {
-            // フォールバック実装へ
-        }
-    }
-
-    // フォールバック実装: タイミング安全な比較
+    // タイミング安全な比較
     // 文字列の長さ差もタイミング安全に組み込む
     const maxLength = Math.max(a.length, b.length);
     let result = 0;
@@ -523,7 +507,6 @@ export async function generateHmacSignature(data: string, key: CryptoKey): Promi
 export async function verifyHmacSignature(data: string, signature: string, key: CryptoKey): Promise<boolean> {
     try {
         const computedSignature = await generateHmacSignature(data, key);
-        const webcrypto = getWebCrypto();
 
         // Use constantTimeCompare if available (from crypto.ts)
         const encoder = textEncoder;
@@ -533,18 +516,6 @@ export async function verifyHmacSignature(data: string, signature: string, key: 
         // Check length mismatch first (timing-safe via length comparison)
         if (sigBuf.byteLength !== compBuf.byteLength) {
             return false;
-        }
-
-        // Use browser's timingSafeEqual if available
-        if ('subtle' in webcrypto && typeof webcrypto.subtle.timingSafeEqual === 'function') {
-            try {
-                return await webcrypto.subtle.timingSafeEqual(
-                    sigBuf.buffer,
-                    compBuf.buffer
-                );
-            } catch {
-                // Fall through to manual comparison
-            }
         }
 
         // Manual constant-time comparison
