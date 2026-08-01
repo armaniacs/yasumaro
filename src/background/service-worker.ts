@@ -87,38 +87,10 @@ import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.
  * module-level side effects.
  */
 export function init(): void {
-    // Migration (already async, run at startup)
-    runMigration();
-    // SessionStore backend migration: sw: keys from chrome.storage.local -> chrome.storage.session
-    SessionStore.migrateFromLocalStorage().catch((err) => {
-        logError('SessionStore migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
-    });
-    // SQLite data migration from chrome.storage.local
-    migrationService.run().catch((err) => {
-        logError('Yasumaro migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
-    });
-
-    // OPFS recovery migration — runs after standard migration (async fire-and-forget)
-    (async () => {
-        try {
-            const needsRecovery = await migrationService.needsOpfsRecoveryMigration();
-            if (needsRecovery) {
-                logInfo('OPFS recovery migration triggered', {}, 'service-worker');
-                const result = await migrationService.migrateOpfsRecovery();
-                if (result.success) {
-                    logInfo('OPFS recovery completed', { migrated: result.migrated }, 'service-worker');
-                } else {
-                    logError('OPFS recovery failed', { error: result.error || 'Unknown error' }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
-                }
-            }
-        } catch (err) {
-            logError('OPFS recovery check failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
-        }
-    })();
-
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 
+    // Alarms for daily purge and offline network retry
     chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
     chrome.alarms.create('yasumaro-offline-network-retry', { periodInMinutes: 5 });
 
@@ -250,6 +222,41 @@ const manualContentFetcher = new ManualContentFetcher();
 
 export function resetManualRecordCache(): void {
     manualContentFetcher.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Deferred startup migrations
+//
+// These async migrations (SessionStore + SQLite data) previously ran inside
+// init() at SW startup.  They caused a race with E2E tests that seed
+// chrome.storage.local, and with the logger batch-flush logic, resulting in
+// all sanitization_logs being lost.  We now defer them to run once before the
+// first message handler invocation.  Alarms (the core fix for PBI-01) remain
+// in init() and execute immediately.
+// ---------------------------------------------------------------------------
+let _startupMigrationsRan = false;
+async function runDeferredStartupMigrations(): Promise<void> {
+    if (_startupMigrationsRan) return;
+    _startupMigrationsRan = true;
+    try {
+        await runMigration();
+        SessionStore.migrateFromLocalStorage().catch((err) => {
+            logError('SessionStore migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+        });
+        await migrationService.run();
+        const needsRecovery = await migrationService.needsOpfsRecoveryMigration();
+        if (needsRecovery) {
+            logInfo('OPFS recovery migration triggered', {}, 'service-worker');
+            const result = await migrationService.migrateOpfsRecovery();
+            if (result.success) {
+                logInfo('OPFS recovery completed', { migrated: result.migrated }, 'service-worker');
+            } else {
+                logError('OPFS recovery failed', { error: result.error || 'Unknown error' }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+            }
+        }
+    } catch (err) {
+        logError('Deferred startup migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+    }
 }
 
 // ============================================================================
@@ -523,6 +530,7 @@ export function createMessageHandler(): (
                 }
 
                 if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'TEST_OBSIDIAN' && message.type !== 'TEST_AI' && message.type !== 'CHECK_DOMAIN') {
+                    await runDeferredStartupMigrations();
                     await tabCache.initialize();
                 }
 
