@@ -369,7 +369,8 @@ export async function verifyPasswordWithPBKDF2(
         // Constant-time path: use stored iteration count exclusively.
         const computedHash = await hashPasswordWithPBKDF2(password, salt, iterations);
         const valid = await constantTimeCompare(computedHash, storedHash);
-        return { isValid: valid, needsRehash: false };
+        const effectiveIterations = iterations ?? ENVELOPE_ITERATIONS;
+        return { isValid: valid, needsRehash: effectiveIterations !== ENVELOPE_ITERATIONS };
     }
     // Legacy path (no stored iterations): always compute both hashes before
     // comparing, so response time does not depend on which iteration count
