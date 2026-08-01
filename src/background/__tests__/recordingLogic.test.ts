@@ -206,6 +206,36 @@ describe('RecordingLogic', () => {
     });
   });
 
+  describe('urlRecordMutexes のリソース管理', () => {
+    it('record() 完了後に URL 別 Mutex エントリが解放・削除される', async () => {
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const url = 'https://mutex-cleanup.example.com';
+
+      await logic.record({ url, title: 'Mutex Cleanup', content: 'content' });
+
+      expect((RecordingLogic as any).urlRecordMutexes.has(url)).toBe(false);
+    });
+
+    it('同じ URL の処理が待機中は Mutex エントリを保持する', async () => {
+      const mutexMap = (RecordingLogic as any).urlRecordMutexes;
+      mutexMap.clear();
+      const url = 'https://mutex-queue.example.com';
+
+      const first = (RecordingLogic as any).withUrlRecordMutex(url, async () => {
+        await new Promise((r) => setTimeout(r, 20));
+        return 'first';
+      });
+      const second = (RecordingLogic as any).withUrlRecordMutex(url, async () => 'second');
+
+      await first;
+      // first が解放して second に移譲した時点ではまだエントリが残っている必要がある
+      expect(mutexMap.has(url)).toBe(true);
+
+      await second;
+      expect(mutexMap.has(url)).toBe(false);
+    });
+  });
+
   describe('retryObsidianWriteOnly', () => {
     it('saves to Obsidian using the already-computed summary without calling the AI provider', async () => {
       const logic = new RecordingLogic(mockObsidian, mockAiClient);

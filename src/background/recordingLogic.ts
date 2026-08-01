@@ -163,6 +163,24 @@ export class RecordingLogic {
   }
 
   /**
+   * Acquire the per-URL mutex, run fn, then release it. The mutex entry is
+   * removed once it is neither locked nor has queued waiters, so the map does
+   * not grow unbounded over the service-worker lifetime.
+   */
+  private static async withUrlRecordMutex<T>(url: string, fn: () => Promise<T>): Promise<T> {
+    const mutex = RecordingLogic.getUrlMutex(url);
+    try {
+      await mutex.acquire();
+      return await fn();
+    } finally {
+      mutex.release();
+      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+        RecordingLogic.urlRecordMutexes.delete(url);
+      }
+    }
+  }
+
+  /**
    * Session storage からキャッシュ状態を復元
    */
   static async loadCacheFromSession(): Promise<void> {
@@ -446,9 +464,7 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
   async record(data: RecordingData): Promise<RecordingResult> {
     // VULN-003 fix: acquire per-URL lock to prevent TOCTOU race between
     // duplicate check and metadata save across concurrent pipeline executions
-    const mutex = RecordingLogic.getUrlMutex(data.url);
-    await mutex.acquire();
-    try {
+    return RecordingLogic.withUrlRecordMutex(data.url, async () => {
       // Delegate to RecordingPipeline via factory
       const pipeline = createRecordingPipeline({
         getPrivacyInfoWithCache: this.getPrivacyInfoWithCache.bind(this),
@@ -462,9 +478,7 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
       const settings = await this.getSettingsWithCache();
 
       return await pipeline.execute(data, settings);
-    } finally {
-      mutex.release();
-    }
+    });
   }
 
   async recordWithPreview(data: RecordingData): Promise<RecordingResult> {
