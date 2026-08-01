@@ -11,35 +11,7 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-### 2026-08-01 adversarial review 対応
-
-- 2026-08-01-01-fix-service-worker-init.md (🟡中 2pt / 🟡軽微 / 🔧) Service Worker の init() を実際に呼び出し、アラーム・マイグレーション・マスターパスワードロックを起動時に実行
-- 2026-08-01-02-fix-crypto-envelope-validation.md (🟡中 2pt / 🟢なし / 🔧) 暗号化エンベロープの iterations/hash/version 入力検証を強化し DoS/ダウングレードを防ぐ
-- 2026-08-01-03-fix-hmac-key-protection.md (🔴高 3pt / 🔴あり / 🔧) HMAC 署名鍵を平文保存しないようにし、設定インポートの署名偽造を防ぐ
-- 2026-08-01-04-fix-prompt-injection-defense.md (🔴高 3pt / 🟡軽微 / 🔧) AI プロンプトの区切り・Gemini system prompt・サニタイザを強化しプロンプトインジェクションを防ぐ
-- 2026-08-01-05-fix-content-script-sender-validation.md (🟡中 2pt / 🟡軽微 / 🔧) VALID_VISIT の sender 検証とレート制限を強化
-- 2026-08-01-06-fix-pii-long-token-leak.md (🟡中 2pt / 🟡軽微 / 🔧) 長いトークン内部の PII マスク漏れを修正
-- 2026-08-01-07-fix-non-idempotent-retry.md (🟡中 2pt / 🟡軽微 / 🔧) 非冪等な POST の 5xx 再送を防止し二重生成/二重課金を防ぐ
-- 2026-08-01-08-fix-recording-state-resource-management.md (🔴高 3pt / 🔴あり / 🔧) urlRecordMutexes/privacyCache/SessionStore のリソース管理と永続化を修正
-- 2026-08-01-09-fix-fetch-utility-robustness.md (🟡中 2pt / 🟢なし / 🔧) fetch ユーティリティの timeoutMs/タイムアウト判定/IPv6 localhost 検証を修正
-- 2026-08-01-10-fix-crypto-maintainability.md (🟡中 2pt / 🟢なし / 🔧) 暗号化モジュールの TDZ/型捏造/version/needsRehash/hashUrl 等の保守性を向上
-- 2026-08-01-11-fix-obsidian-client-robustness.md (🟡中 2pt / 🟡軽微 / 🔧) Obsidian クライアントのポート/IPv6/タイムアウト/ログ/パスエンコードを修正
-- 2026-08-01-12-fix-ai-provider-consistency.md (🟢低 1pt / 🟢なし / 🔧) AI プロバイダー間の recordUsage/タイムアウト/エラーメッセージ整合性を修正
-
-### 推奨着手順
-
-1. `2026-08-01-01-fix-service-worker-init.md` — 他の多くの機能（パージ・リトライ・マスターパスワードロック）が止まっている根本原因
-2. `2026-08-01-02-fix-crypto-envelope-validation.md` — DoS / KDF ダウングレードの直接経路
-3. `2026-08-01-04-fix-prompt-injection-defense.md` — 攻撃者ページからの Obsidian ボールト汚染
-4. `2026-08-01-03-fix-hmac-key-protection.md` — 設定インポート署名の偽造
-5. `2026-08-01-05-fix-content-script-sender-validation.md` — AI コスト搾取・ボールト汚染
-6. `2026-08-01-06-fix-pii-long-token-leak.md` — 長いトークン内部の PII 漏洩
-7. `2026-08-01-07-fix-non-idempotent-retry.md` — 二重生成/二重課金
-8. `2026-08-01-09-fix-fetch-utility-robustness.md` — fetch ユーティリティの堅牢性（PBI-07 と連携）
-9. `2026-08-01-12-fix-ai-provider-consistency.md` — AI プロバイダー間の整合性（PBI-07 と連携）
-10. `2026-08-01-11-fix-obsidian-client-robustness.md` — Obsidian クライアントの堅牢性
-11. `2026-08-01-10-fix-crypto-maintainability.md` — 暗号化モジュールの保守性
-12. `2026-08-01-08-fix-recording-state-resource-management.md` — 記録状態のリソース管理（最も影響範囲が広く後回し）
+なし
 
 ---
 
@@ -53,6 +25,21 @@
 ## アーカイブ
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
+
+### 2026-08-01 セッションでアーカイブ済み
+
+- 2026-08-01-01-fix-service-worker-init.md (Service Worker の init() 呼び出し。遅延マイグレーションで E2E 競合を回避。v6.7.7 としてリリース)
+- 2026-08-01-02-fix-crypto-envelope-validation.md (暗号化エンベロープ入力検証強化。v6.7.7 としてリリース)
+- 2026-08-01-03-fix-hmac-key-protection.md (HMAC 署名鍵暗号化保存。v6.7.7 としてリリース)
+- 2026-08-01-04-fix-prompt-injection-defense.md (プロンプトインジェクション対策強化。v6.7.7 としてリリース)
+- 2026-08-01-05-fix-content-script-sender-validation.md (VALID_VISIT sender 検証 + レート制限。v6.7.7 としてリリース)
+- 2026-08-01-06-fix-pii-long-token-leak.md (PII long-token マスク漏れ修正。v6.7.7 としてリリース)
+- 2026-08-01-07-fix-non-idempotent-retry.md (POST 5xx 再送禁止。v6.7.7 としてリリース)
+- 2026-08-01-08-fix-recording-state-resource-management.md (Mutex/Cache/SessionStore リソース管理。v6.7.7 としてリリース)
+- 2026-08-01-09-fix-fetch-utility-robustness.md (fetch timeoutMs/AbortError/IPv6/localhost。v6.7.7 としてリリース)
+- 2026-08-01-10-fix-crypto-maintainability.md (暗号化モジュール保守性。v6.7.7 としてリリース)
+- 2026-08-01-11-fix-obsidian-client-robustness.md (Obsidian クライアント堅牢性。v6.7.7 としてリリース)
+- 2026-08-01-12-fix-ai-provider-consistency.md (AI プロバイダー整合性。v6.7.7 としてリリース)
 
 ### 2026-07-30 セッションでアーカイブ済み
 
@@ -221,6 +208,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 12（✨機能追加 0 / 🔧非機能追加 12） |
+| ⬜ 未着手 | 0（✨機能追加 0 / 🔧非機能追加 0） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 171 |
+| アーカイブ済み | 183 |
