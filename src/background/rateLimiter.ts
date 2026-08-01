@@ -109,6 +109,12 @@ export class RateLimiter {
   }
 
   private persist(): void {
-    this.sessionStore.set(SESSION_KEYS.SKIP_AI_RATE_LIMITER, SessionStore.mapToEntries(this.state));
+    // flushImmediately: rate-limit state must survive a service-worker
+    // termination, otherwise a restart would silently reset the skip-AI limit.
+    this.sessionStore.set(
+      SESSION_KEYS.SKIP_AI_RATE_LIMITER,
+      SessionStore.mapToEntries(this.state),
+      { flushImmediately: true }
+    );
   }
 }

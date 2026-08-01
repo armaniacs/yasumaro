@@ -38,6 +38,16 @@ describe('SessionStore', () => {
     expect(value).toBe('value1');
   });
 
+  it('set() with flushImmediately persists immediately without waiting for the debounce', async () => {
+    await store.set('key1', 'value1', { flushImmediately: true });
+    expect(mockSession.set).toHaveBeenCalledWith({ key1: 'value1' });
+  });
+
+  it('set() without flushImmediately still debounces (no immediate write)', async () => {
+    await store.set('key1', 'value1');
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
   // T3
   it('remove() should queue delete', async () => {
     store.set('key1', 'value1');

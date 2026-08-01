@@ -188,4 +188,13 @@ describe('RateLimiter — origin-based sender key (H4)', () => {
     await limiter.check({ url: 'https://example.com/' }, {});
     expect(store.set).toHaveBeenCalled();
   });
+
+  it('persists state with flushImmediately so it survives service-worker termination', async () => {
+    await limiter.check({ url: 'https://example.com/' }, {});
+    expect(store.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Array),
+      { flushImmediately: true }
+    );
+  });
 });
