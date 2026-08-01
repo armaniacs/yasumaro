@@ -575,6 +575,19 @@ async function getOrCreateWrappedHmacKey(storageKey: string, versionKey: string)
             } catch (error: unknown) {
                 console.warn(`Failed to unwrap HMAC key (${storageKey}), generating new one:`, errorMessage(error));
             }
+        } else if (typeof stored === 'string' && stored.length > 0) {
+            // Legacy plaintext key (pre-PBI-03): wrap and persist the encrypted
+            // form so the raw key material is no longer exposed in storage.local.
+            try {
+                const keyData = base64ToUint8Array(stored);
+                const wrappingKey = await getOrCreateHmacWrappingKey();
+                const extractableKey = await importHmacKey(keyData, true);
+                const wrapped = await wrapHmacKey(extractableKey, wrappingKey);
+                await chrome.storage.local.set({ [storageKey]: wrapped, [versionKey]: '1' });
+                return await importHmacKey(keyData, false);
+            } catch (error: unknown) {
+                console.warn(`Failed to migrate plaintext HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+            }
         }
     } catch (error: unknown) {
         console.warn(`Failed to load HMAC key (${storageKey}), generating new one:`, errorMessage(error));
