@@ -404,14 +404,20 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
         const result = await chrome.storage.session.get(sessionKey);
         const cached = isPrivacyInfo(result[sessionKey]) ? result[sessionKey] : undefined;
         if (cached) {
-          // インメモリキャッシュに復元
-          if (!RecordingLogic.cacheState.privacyCache) {
-            RecordingLogic.cacheState.privacyCache = new Map();
-            RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+          if ((now - cached.timestamp) >= PRIVACY_CACHE_TTL) {
+            // TTL 切れ: 復元せず、session キーも削除して無制限の蓄積を防ぐ
+            await chrome.storage.session.remove(sessionKey);
+            addLog(LogType.DEBUG, 'Privacy cache session entry expired, evicted', { url });
+          } else {
+            // インメモリキャッシュに復元
+            if (!RecordingLogic.cacheState.privacyCache) {
+              RecordingLogic.cacheState.privacyCache = new Map();
+              RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+            }
+            RecordingLogic.cacheState.privacyCache.set(normalizedUrl, cached);
+            addLog(LogType.DEBUG, 'Privacy cache restored from session storage', { url });
+            return cached;
           }
-          RecordingLogic.cacheState.privacyCache.set(normalizedUrl, cached);
-          addLog(LogType.DEBUG, 'Privacy cache restored from session storage', { url });
-          return cached;
         }
       } catch {
         // session storage エラーは無視
@@ -424,12 +430,26 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
 
   /**
    * プライバシーキャッシュを無効化する
+   * インメモリと session storage の privacyCache_* キーをまとめて削除する
    */
-  static invalidatePrivacyCache(): void {
+  static async invalidatePrivacyCache(): Promise<void> {
     addLog(LogType.DEBUG, 'Privacy cache invalidated');
     RecordingLogic.cacheState.privacyCache = null;
     RecordingLogic.cacheState.privacyCacheTimestamp = null;
     RecordingLogic.scheduleCacheSave();
+
+    // session storage に蓄積した privacyCache_<url> キーも削除する
+    if (chrome.storage.session) {
+      try {
+        const all = await chrome.storage.session.get(null);
+        const privacyKeys = Object.keys(all).filter((key) => key.startsWith('privacyCache_'));
+        if (privacyKeys.length > 0) {
+          await chrome.storage.session.remove(privacyKeys);
+        }
+      } catch {
+        // session storage エラーは無視（インメモリは既に無効化済み）
+      }
+    }
   }
 
   /**

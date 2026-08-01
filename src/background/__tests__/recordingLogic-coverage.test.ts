@@ -402,6 +402,24 @@ describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', ()
     expect(RecordingLogic.cacheState.privacyCache?.get(normalizedUrl)).toBeTruthy();
   });
 
+  test('ignores and evicts expired session entries (TTL exceeded)', async () => {
+    const url = 'https://example.com/stale';
+    const sessionKey = 'privacyCache_' + url;
+    const staleInfo = {
+      isPrivate: true,
+      reason: 'cache-control',
+      timestamp: Date.now() - 6 * 60 * 1000, // 6分前（TTL 5分超過）
+    };
+    await chrome.storage.session.set({ [sessionKey]: staleInfo });
+
+    const result = await logic.getPrivacyInfoWithCache(url);
+
+    expect(result).toBeNull();
+    // 期限切れエントリは session storage からも削除される
+    const remaining = await chrome.storage.session.get(sessionKey);
+    expect(remaining).toEqual({});
+  });
+
   test('returns null when both in-memory and session cache miss', async () => {
     RecordingLogic.cacheState.privacyCache = new Map();
 
@@ -413,14 +431,14 @@ describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', ()
     RecordingLogic.cacheState.privacyCache = new Map();
 
     // Make session.get throw
-    const originalGet = chrome.storage.session.get;
+    const originalGetImpl = (chrome.storage.session.get as vi.Mock).getMockImplementation();
     (chrome.storage.session.get as vi.Mock).mockRejectedValueOnce(new Error('Session error'));
 
     const result = await logic.getPrivacyInfoWithCache('https://example.com/page');
     expect(result).toBeNull();
 
     // Restore
-    (chrome.storage.session.get as vi.Mock).mockImplementation(originalGet as any);
+    (chrome.storage.session.get as vi.Mock).mockImplementation(originalGetImpl as any);
   });
 
   test('skips session storage fallback when in-memory cache has valid entry', async () => {
@@ -452,6 +470,22 @@ describe('RecordingLogic - invalidatePrivacyCache', () => {
 
     expect(RecordingLogic.cacheState.privacyCache).toBeNull();
     expect(RecordingLogic.cacheState.privacyCacheTimestamp).toBeNull();
+  });
+
+  test('removes privacyCache_* keys from session storage', async () => {
+    await chrome.storage.session.set({
+      'privacyCache_https://example.com/a': { isPrivate: true, timestamp: Date.now() },
+      'privacyCache_https://example.com/b': { isPrivate: false, timestamp: Date.now() },
+      'sw:recordingCache': { cacheVersion: 1 },
+    });
+
+    await RecordingLogic.invalidatePrivacyCache();
+
+    const all = await chrome.storage.session.get(null);
+    expect(Object.keys(all)).not.toContain('privacyCache_https://example.com/a');
+    expect(Object.keys(all)).not.toContain('privacyCache_https://example.com/b');
+    // 無関係なキーは残る
+    expect(all['sw:recordingCache']).toBeDefined();
   });
 });
 
