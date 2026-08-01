@@ -124,3 +124,15 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
 
     return { handleInstalled, handleStartup };
 }
+
+/**
+ * Restore the recording cache from session storage on service-worker wake-up.
+ *
+ * `chrome.runtime.onStartup` only fires when the browser profile starts, so
+ * cache rehydration would be missed on every later wake (tab event, alarm,
+ * message). Service-worker module top-level code runs on each wake, so
+ * service-worker.ts invokes this at module scope to rehydrate the cache.
+ */
+export async function restoreRecordingCacheOnWake(): Promise<void> {
+    await RecordingLogic.loadCacheFromSession();
+}

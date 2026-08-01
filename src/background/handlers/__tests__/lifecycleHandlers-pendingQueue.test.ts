@@ -45,7 +45,8 @@ vi.mock('../../pendingSqliteQueue.js', () => ({
   flushPendingRecords: (...args: unknown[]) => mockFlushPendingRecords(...args),
 }));
 
-import { createLifecycleHandlers } from '../lifecycleHandlers.js';
+import { createLifecycleHandlers, restoreRecordingCacheOnWake } from '../lifecycleHandlers.js';
+import { RecordingLogic } from '../../recordingLogic.js';
 
 describe('handleStartup — pending SQLite queue flush (M14)', () => {
   beforeEach(() => {
@@ -75,5 +76,17 @@ describe('handleStartup — pending SQLite queue flush (M14)', () => {
     });
 
     await expect(handleStartup()).resolves.toBeUndefined();
+  });
+});
+
+describe('restoreRecordingCacheOnWake — SW wake-up cache rehydration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('restores the recording cache from session storage', async () => {
+    await restoreRecordingCacheOnWake();
+
+    expect(RecordingLogic.loadCacheFromSession).toHaveBeenCalledTimes(1);
   });
 });
