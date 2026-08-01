@@ -10,7 +10,7 @@ import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
-import { createLifecycleHandlers } from './handlers/lifecycleHandlers.js';
+import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
     getSettings,
@@ -647,6 +647,13 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // Extension lifecycle listeners
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);
+
+    // Rehydrate the recording cache on every service-worker wake. Module
+    // top-level code runs on each wake; chrome.runtime.onStartup only fires on
+    // browser profile startup, so it alone would miss later wakes.
+    if (chrome.storage?.session) {
+      void restoreRecordingCacheOnWake();
+    }
 
     // Context menu for manual recording
     chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
