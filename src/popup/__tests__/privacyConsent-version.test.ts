@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock chrome.storage.local
 const storageMock: Record<string, unknown> = {};
+const sessionMock: Record<string, unknown> = {};
 
 vi.mock('../../utils/logger.js', () => ({
     logInfo: vi.fn(async () => {}),
@@ -39,6 +40,21 @@ vi.stubGlobal('chrome', {
                 }
             }),
         },
+        session: {
+            get: vi.fn(async (key: string | string[]) => {
+                if (Array.isArray(key)) {
+                    const result: Record<string, unknown> = {};
+                    for (const k of key) {
+                        result[k] = sessionMock[k];
+                    }
+                    return result;
+                }
+                return { [key]: sessionMock[key] };
+            }),
+            set: vi.fn(async (items: Record<string, unknown>) => {
+                Object.assign(sessionMock, items);
+            }),
+        },
     },
 });
 
@@ -55,6 +71,9 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
         // Clear storage mock
         for (const key of Object.keys(storageMock)) {
             delete storageMock[key];
+        }
+        for (const key of Object.keys(sessionMock)) {
+            delete sessionMock[key];
         }
     });
 
