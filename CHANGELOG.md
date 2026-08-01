@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.6` リリース。
+> - 現時点では `v6.7.7` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,40 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.7] - 2026-08-01
+
+adversarial code review（攻撃者視点＋保守担当者視点）で発見された12件のセキュリティ・保守性欠陥への対応。
+
+### Security / セキュリティ
+
+- **暗号化エンベロープの入力検証を強化** — `decryptEnvelope` で `iterations`/`hash`/`version`/`salt`/`iv`/`data` の範囲・形式を検証し、細工されたバックアップファイルによる DoS（過大反復）や KDF ダウングレードを防止
+- **HMAC 署名鍵を暗号化保存に変更** — 同意記録・通知URL・設定インポートの HMAC 署名鍵を `chrome.storage.local` の平文 base64 から暗号化形式に移行。旧平文鍵は初回読み込み時に自動移行。設定インポート署名の比較を `constantTimeCompare` に変更
+- **AI プロンプトのインジェクション対策を強化** — デフォルトプロンプトに `<!-- UNTRUSTED_CONTENT -->` 区切りと「以降はデータ」というガード命令を追加。Gemini プロバイダーに `systemInstruction` を送信。サニタイザの safe-context 抑制を除去し、多言語パターン（日本語含む）を追加
+- **VALID_VISIT の送信元検証とレート制限を追加** — コンテンツスクリプトからのメッセージに URL スキーム（http/https）検証を追加。同一 URL への連続記録に5秒間のレート制限を適用。プログラムスクロールのみでの記録トリガーを抑制
+- **長いトークン内部の PII マスク漏れを修正** — 200文字超の空白なしトークン中央部に埋め込まれたメール・電話番号が AI に漏洩する問題を、サンプリング方式で検出・マスク
+- **非冪等な POST リクエストの 5xx 再送を禁止** — `fetchWithRetry` が POST/PUT/PATCH のサーバーエラー後に再送して二重生成・二重課金する問題を、HTTP メソッドを考慮したリトライ条件で防止
+- **暗号化モジュールの保守性向上** — `SubtleCrypto.timingSafeEqual` の型捏造を削除。エンベロープ定数を TDZ 回避で先頭に移動。`needsRehash` の比較ロジック修正。`isEncrypted` の厳密化。平文 API キー検出時の警告追加
+
+### Fixed / 修正
+
+- **Service Worker の `init()` 呼び出しを実装** — 未呼び出しで停止していたアラーム登録・マイグレーション・マスターパスワードロックを起動時に実行。非同期マイグレーションは初回メッセージ処理時に遅延実行し、E2E テストとの競合を回避
+- **fetch ユーティリティの堅牢性向上** — `fetchWithTimeout` が `timeoutMs` オプションを正しく反映。タイムアウト判定を `error.name === 'AbortError'` に統一。IPv6 ブラケット付きプライベート IP の正規化。`localhost`/`127.0.0.1` の `isLocalhostAddress` 判定を追加
+- **Obsidian クライアントの堅牢性向上** — ポート既定値を 27123 に統一。IPv6 ループバックアドレスの許可。レスポンスボディ読み込みにタイムアウト追加。タイムアウト時のログ出力。dailyPath の URL メタ文字エンコード
+- **記録状態のリソース管理と永続化を修正** — `urlRecordMutexes` の使用後解放で無制限成長を防止。RecordingLogic/RecordingPipeline の二重 Mutex を統合。SW 活性化時のキャッシュ復元。`privacyCache` の TTL 検証と session キーのクリーンアップ。`SessionStore` に即時フラッシュオプションを追加
+
+### Refactor / リファクタ
+
+- **AI プロバイダー間の整合性を改善** — OpenAI でも `recordUsage()` を呼ぶように修正。Gemini のタイムアウトを設定値 (`AI_TIMEOUT_MS`) に合わせて修正。`testConnection` のエラーメッセージを401/404/タイムアウト別に整理。Gemini 成功結果に `providerName`/`model` を追加
+
+### Tests / テスト
+
+- **7329 単体テスト（386 ファイル）通過**、181 E2E テスト通過、TypeScript 型チェック正常
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.6` → `6.7.7`
+- PBI 12件を `pbi/2026-08-01-*.md` として作成、実装計画を `docs/superpowers/plans/` に出力
 
 ## [6.7.6] - 2026-07-31
 
