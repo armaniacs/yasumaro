@@ -4,7 +4,7 @@
  * derived from settings. Split out of storage.ts (PBI: storage.ts deepening).
  */
 
-import { logInfo, logDebug, logError, ErrorCode } from '../logger.js';
+import { logInfo, logWarn, logDebug, logError, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { migrateUblockSettings, migrateJpLayoutDefault, migrateCategoryBDefault, migrateWhitelistExtractionDefault } from '../migration.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
@@ -275,6 +275,14 @@ async function _applyMigrationsAndDecrypt(
             const key = await getOrCreateEncryptionKey();
             for (const field of API_KEY_FIELDS) {
                 const value = merged[field];
+                if (typeof value === 'string' && value.length > 0) {
+                    await logWarn(
+                        `Plaintext API key detected: ${field}`,
+                        { field },
+                        undefined,
+                        'settingsStore',
+                    );
+                }
                 if (isEncrypted(value)) {
                     try {
                         const decryptedValue = await decryptApiKey(value, key);
