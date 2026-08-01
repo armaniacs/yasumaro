@@ -537,96 +537,76 @@ async function unwrapHmacKey(wrapped: string, iv: string, wrappingKey: CryptoKey
 }
 
 /**
- * Get or create HMAC signature key for privacy consent integrity checks.
- * Uses a dedicated key (separate from getNotificationHmacKey) so that key
- * rotation or compromise in one domain does not affect the other.
+ * Import raw key material as an HMAC-SHA256 key
+ * @param {Uint8Array} keyData - 32-byte key material
+ * @param {boolean} extractable - Whether the returned key may be extracted (required for wrapKey)
  * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
  */
-export async function getConsentHmacKey(): Promise<CryptoKey> {
+async function importHmacKey(keyData: Uint8Array, extractable: boolean): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
-
-    try {
-        const result = await chrome.storage.local.get([
-            CONSENT_HMAC_SIGNATURE_KEY_STORAGE,
-            CONSENT_HMAC_SIGNATURE_KEY_VERSION
-        ]);
-
-        const storedKeyData = result[CONSENT_HMAC_SIGNATURE_KEY_STORAGE];
-        if (typeof storedKeyData === 'string' && storedKeyData.length > 0) {
-            const keyData = base64ToUint8Array(storedKeyData);
-            return await webcrypto.subtle.importKey(
-                'raw',
-                keyData,
-                { name: 'HMAC', hash: 'SHA-256' },
-                false,
-                ['sign', 'verify']
-            );
-        }
-    } catch (error: unknown) {
-        console.warn('Failed to load consent HMAC key, generating new one:', errorMessage(error));
-    }
-
-    const keyData = webcrypto.getRandomValues(new Uint8Array(32));
-    const keyBase64 = uint8ArrayToBase64(keyData);
-    await chrome.storage.local.set({
-        [CONSENT_HMAC_SIGNATURE_KEY_STORAGE]: keyBase64,
-        [CONSENT_HMAC_SIGNATURE_KEY_VERSION]: '1'
-    });
-
-    return await webcrypto.subtle.importKey(
+    return webcrypto.subtle.importKey(
         'raw',
-        keyData,
+        keyData as BufferSource,
         { name: 'HMAC', hash: 'SHA-256' },
-        false,
+        extractable,
         ['sign', 'verify']
     );
 }
 
 /**
- * Get or create HMAC signature key for notification IDs
+ * Load an HMAC key from storage, unwrapping it when stored in encrypted form.
+ * Generates a new key (and stores it wrapped) when none exists or when the
+ * stored value cannot be unwrapped. Callers receive a non-extractable key.
+ * @param {string} storageKey - chrome.storage.local key for the wrapped key
+ * @param {string} versionKey - chrome.storage.local key for the format version
+ * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
+ */
+async function getOrCreateWrappedHmacKey(storageKey: string, versionKey: string): Promise<CryptoKey> {
+    const webcrypto = getWebCrypto();
+
+    try {
+        const result = await chrome.storage.local.get([storageKey, versionKey]);
+        const stored = result[storageKey];
+
+        if (isWrappedHmacKey(stored)) {
+            try {
+                const wrappingKey = await getOrCreateHmacWrappingKey();
+                return await unwrapHmacKey(stored.wrapped, stored.iv, wrappingKey);
+            } catch (error: unknown) {
+                console.warn(`Failed to unwrap HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+            }
+        }
+    } catch (error: unknown) {
+        console.warn(`Failed to load HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+    }
+
+    // Generate a fresh key and persist only its wrapped form
+    const keyData = webcrypto.getRandomValues(new Uint8Array(32));
+    const wrappingKey = await getOrCreateHmacWrappingKey();
+    const extractableKey = await importHmacKey(keyData, true);
+    const wrapped = await wrapHmacKey(extractableKey, wrappingKey);
+    await chrome.storage.local.set({ [storageKey]: wrapped, [versionKey]: '1' });
+    return importHmacKey(keyData, false);
+}
+
+/**
+ * Get or create HMAC signature key for privacy consent integrity checks.
+ * Uses a dedicated key (separate from getNotificationHmacKey) so that key
+ * rotation or compromise in one domain does not affect the other.
+ * The key is stored encrypted (wrapped) in chrome.storage.local.
+ * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
+ */
+export async function getConsentHmacKey(): Promise<CryptoKey> {
+    return getOrCreateWrappedHmacKey(CONSENT_HMAC_SIGNATURE_KEY_STORAGE, CONSENT_HMAC_SIGNATURE_KEY_VERSION);
+}
+
+/**
+ * Get or create HMAC signature key for notification IDs.
+ * The key is stored encrypted (wrapped) in chrome.storage.local.
  * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
  */
 export async function getNotificationHmacKey(): Promise<CryptoKey> {
-    const webcrypto = getWebCrypto();
-
-    // Try to load encrypted key from storage
-    try {
-        const result = await chrome.storage.local.get([
-            HMAC_SIGNATURE_KEY_STORAGE,
-            HMAC_SIGNATURE_KEY_VERSION
-        ]);
-
-        const storedKeyData = result[HMAC_SIGNATURE_KEY_STORAGE];
-        if (typeof storedKeyData === 'string' && storedKeyData.length > 0) {
-            const keyData = base64ToUint8Array(storedKeyData);
-            return await webcrypto.subtle.importKey(
-                'raw',
-                keyData,
-                { name: 'HMAC', hash: 'SHA-256' },
-                false,
-                ['sign', 'verify']
-            );
-        }
-    } catch (error: unknown) {
-        // If loading fails, we'll generate a new key
-        console.warn('Failed to load HMAC key, generating new one:', errorMessage(error));
-    }
-
-    // Generate new key and store as base64 (storage is extension-scoped, no additional encryption needed)
-    const keyData = webcrypto.getRandomValues(new Uint8Array(32));
-    const keyBase64 = uint8ArrayToBase64(keyData);
-    await chrome.storage.local.set({
-        [HMAC_SIGNATURE_KEY_STORAGE]: keyBase64,
-        [HMAC_SIGNATURE_KEY_VERSION]: '1'
-    });
-
-    return await webcrypto.subtle.importKey(
-        'raw',
-        keyData,
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign', 'verify']
-    );
+    return getOrCreateWrappedHmacKey(HMAC_SIGNATURE_KEY_STORAGE, HMAC_SIGNATURE_KEY_VERSION);
 }
 
 /**
@@ -681,11 +661,7 @@ export async function verifyHmacSignature(data: string, signature: string, key: 
     }
 }
 
-// Helper functions for uint8Array <-> base64 conversion
-function uint8ArrayToBase64(bytes: Uint8Array): string {
-    return btoa(String.fromCharCode(...bytes));
-}
-
+// Helper function for base64 -> uint8Array conversion
 function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
     const binaryString = atob(base64);
     return Uint8Array.from(binaryString, c => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>;
