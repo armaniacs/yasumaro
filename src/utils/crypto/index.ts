@@ -400,6 +400,142 @@ const CONSENT_HMAC_SIGNATURE_KEY_STORAGE = 'privacy-consent-signature-key';
 const CONSENT_HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
 const textEncoder = new TextEncoder();
 
+// ============================================================================
+// HMAC Key Wrapping (PBI-03: never store HMAC keys as plaintext base64)
+// ============================================================================
+// HMAC signing keys are wrapped with an AES-GCM key (KEK) and only the
+// { wrapped, iv } envelope is persisted in chrome.storage.local. The KEK is
+// stored in chrome.storage.session, which is not readable from the local
+// storage area alone and is cleared when the browser closes.
+
+const HMAC_WRAPPING_KEY_SESSION = 'hmac-wrapping-key';
+
+interface WrappedHmacKey {
+    wrapped: string;
+    iv: string;
+}
+
+function isWrappedHmacKey(data: unknown): data is WrappedHmacKey {
+    return Boolean(
+        data !== null &&
+        data !== undefined &&
+        typeof data === 'object' &&
+        'wrapped' in data &&
+        typeof (data as WrappedHmacKey).wrapped === 'string' &&
+        (data as WrappedHmacKey).wrapped.length > 0 &&
+        'iv' in data &&
+        typeof (data as WrappedHmacKey).iv === 'string' &&
+        (data as WrappedHmacKey).iv.length > 0
+    );
+}
+
+/**
+ * Derive a wrapping key (KEK) from a password using PBKDF2.
+ * Intended for the master-password path: the derived key is stable across
+ * sessions, so wrapped HMAC keys remain decryptable after a browser restart
+ * (once the user unlocks). The default path (no master password) uses
+ * getOrCreateHmacWrappingKey() instead.
+ * @param {string} password - Master password
+ * @param {Uint8Array} salt - Per-user salt
+ * @returns {Promise<CryptoKey>} AES-GCM wrapping key
+ */
+export async function deriveHmacWrappingKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+    const webcrypto = getWebCrypto();
+    const encoder = new TextEncoder();
+    const baseKey = await webcrypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+    return webcrypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt as BufferSource,
+            iterations: ENVELOPE_ITERATIONS,
+            hash: 'SHA-256'
+        },
+        baseKey,
+        { name: 'AES-GCM', length: KEY_LENGTH },
+        false,
+        ['wrapKey', 'unwrapKey']
+    );
+}
+
+/**
+ * Get (or create) the session-scoped HMAC wrapping key.
+ * Persisted in chrome.storage.session so that reading chrome.storage.local
+ * alone does not expose the wrapped HMAC keys. Lost when the browser closes —
+ * acceptable tradeoff: HMAC keys are re-created on the next launch.
+ * @returns {Promise<CryptoKey>} AES-GCM wrapping key
+ */
+async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
+    const webcrypto = getWebCrypto();
+
+    try {
+        const result = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
+        const stored = result[HMAC_WRAPPING_KEY_SESSION];
+        if (typeof stored === 'string' && stored.length > 0) {
+            return await webcrypto.subtle.importKey(
+                'raw',
+                base64ToBytes(stored) as BufferSource,
+                { name: 'AES-GCM', length: KEY_LENGTH },
+                false,
+                ['wrapKey', 'unwrapKey']
+            );
+        }
+    } catch (error: unknown) {
+        console.warn('Failed to load HMAC wrapping key, generating new one:', errorMessage(error));
+    }
+
+    const keyBytes = webcrypto.getRandomValues(new Uint8Array(32));
+    await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: bytesToBase64(keyBytes) });
+    return webcrypto.subtle.importKey(
+        'raw',
+        keyBytes as BufferSource,
+        { name: 'AES-GCM', length: KEY_LENGTH },
+        false,
+        ['wrapKey', 'unwrapKey']
+    );
+}
+
+/**
+ * Wrap an HMAC key with the given wrapping key (AES-GCM).
+ * @returns {Promise<WrappedHmacKey>} Base64 wrapped key material and IV
+ */
+async function wrapHmacKey(key: CryptoKey, wrappingKey: CryptoKey): Promise<WrappedHmacKey> {
+    const webcrypto = getWebCrypto();
+    const iv = webcrypto.getRandomValues(new Uint8Array(IV_LENGTH));
+    const wrapped = await webcrypto.subtle.wrapKey(
+        'raw',
+        key,
+        wrappingKey,
+        { name: 'AES-GCM', iv: iv as BufferSource }
+    );
+    return {
+        wrapped: bytesToBase64(new Uint8Array(wrapped)),
+        iv: bytesToBase64(iv),
+    };
+}
+
+/**
+ * Unwrap an HMAC key previously wrapped with wrapHmacKey.
+ * @returns {Promise<CryptoKey>} Non-extractable HMAC-SHA256 key (sign/verify)
+ */
+async function unwrapHmacKey(wrapped: string, iv: string, wrappingKey: CryptoKey): Promise<CryptoKey> {
+    const webcrypto = getWebCrypto();
+    return webcrypto.subtle.unwrapKey(
+        'raw',
+        base64ToBytes(wrapped) as BufferSource,
+        wrappingKey,
+        { name: 'AES-GCM', iv: base64ToBytes(iv) as BufferSource },
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign', 'verify']
+    );
+}
+
 /**
  * Get or create HMAC signature key for privacy consent integrity checks.
  * Uses a dedicated key (separate from getNotificationHmacKey) so that key
