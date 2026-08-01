@@ -35,6 +35,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 // chrome.storage.local のモック
 const storageMock: Record<string, unknown> = {};
+const sessionMock: Record<string, unknown> = {};
 
 (global as any).chrome = {
     storage: {
@@ -46,12 +47,22 @@ const storageMock: Record<string, unknown> = {};
             set: vi.fn(async (data: Record<string, unknown>) => {
                 Object.assign(storageMock, data);
             })
+        },
+        session: {
+            get: vi.fn(async (keys: string | string[]) => {
+                const ks = Array.isArray(keys) ? keys : [keys];
+                return Object.fromEntries(ks.map(k => [k, sessionMock[k]]));
+            }),
+            set: vi.fn(async (data: Record<string, unknown>) => {
+                Object.assign(sessionMock, data);
+            })
         }
     }
 };
 
 beforeEach(() => {
     Object.keys(storageMock).forEach(k => delete storageMock[k]);
+    Object.keys(sessionMock).forEach(k => delete sessionMock[k]);
     vi.clearAllMocks();
 });
 
