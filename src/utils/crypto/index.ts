@@ -17,6 +17,17 @@ const IV_LENGTH = 12; // bytes (recommended for AES-GCM)
 const HASH_ALGORITHM = 'SHA-256';
 const ENCRYPTION_ALGORITHM = 'AES-GCM';
 
+// Versioned Encryption Envelope (H3) constants
+// Declared at the top so every function (e.g. hashPasswordWithPBKDF2,
+// verifyPasswordWithPBKDF2) can reference them without TDZ hazards.
+export const CURRENT_ENVELOPE_VERSION = 2;
+export const ENVELOPE_ITERATIONS = 600_000;
+const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
+const MAX_ENVELOPE_ITERATIONS = ENVELOPE_ITERATIONS * 10;
+const MIN_ENVELOPE_ITERATIONS = 1;
+const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
+
 /**
  * Web Crypto APIのインスタンスを取得する
  * global.crypto.subtleが利用可能ならglobal.cryptoを使用し、なければcryptoを使用
@@ -567,14 +578,6 @@ export async function hashUrl(url: string): Promise<string> {
 // ============================================================================
 // Versioned Encryption Envelope (H3)
 // ============================================================================
-
-export const CURRENT_ENVELOPE_VERSION = 2;
-export const ENVELOPE_ITERATIONS = 600_000;
-const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
-const MAX_ENVELOPE_ITERATIONS = ENVELOPE_ITERATIONS * 10;
-const MIN_ENVELOPE_ITERATIONS = 1;
-const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
-const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
 
 export interface EncryptionEnvelope {
     version: number;
