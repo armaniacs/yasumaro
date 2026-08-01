@@ -11,7 +11,13 @@
 
 ## 未着手 ⬜ / 部分実装 🔶
 
-なし
+| PBI | 難易度 | 副作用 | 種別 | 概要 |
+|---|---|---|---|---|
+| ⬜ [2026-08-01-13-fix-url-fallback-triggered-optimistic-lock.md](2026-08-01-13-fix-url-fallback-triggered-optimistic-lock.md) | 🟢低 | 🟡軽微 | 🔧 | `setUrlFallbackTriggered`をOptimistic Lock・URL正規化に統一 |
+| ⬜ [2026-08-01-14-fix-offline-queue-alarm-await.md](2026-08-01-14-fix-offline-queue-alarm-await.md) | 🟡中 | 🟡軽微 | 🔧 | オフラインキュー再送のalarmsリスナーをasync化しSW生存期間を延長 |
+| ⬜ [2026-08-01-15-fix-offline-queue-rate-limit.md](2026-08-01-15-fix-offline-queue-rate-limit.md) | 🟡中 | 🟡軽微 | 🔧 | オフラインキュー再送にサイクルあたり処理件数上限を追加 |
+| ⬜ [2026-08-01-16-fix-trustdb-settings-store-unification.md](2026-08-01-16-fix-trustdb-settings-store-unification.md) | 🟡中 | 🟡軽微 | 🔧 | trustDb/trancoConsentManagerのtranco_domains個別キーアクセスをsettings経由に統一 |
+| ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 
 ---
 
@@ -208,6 +214,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 0（✨機能追加 0 / 🔧非機能追加 0） |
+| ⬜ 未着手 | 5（✨機能追加 0 / 🔧非機能追加 5） |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 183 |
