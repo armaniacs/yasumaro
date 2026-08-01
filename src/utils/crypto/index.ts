@@ -236,8 +236,10 @@ export function isEncrypted(data: unknown): data is EncryptedData {
         typeof data === 'object' &&
         'ciphertext' in data &&
         typeof data.ciphertext === 'string' &&
+        data.ciphertext.length > 0 &&
         'iv' in data &&
-        typeof data.iv === 'string'
+        typeof data.iv === 'string' &&
+        data.iv.length > 0
     );
 }
 

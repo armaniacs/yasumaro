@@ -214,6 +214,17 @@ describe('crypto', () => {
             expect(isEncrypted({})).toBe(false);
             expect(isEncrypted({ ciphertext: 'test' as const })).toBe(false);
         });
+
+        test('空文字列のciphertext/ivは暗号化データとみなさない', () => {
+            expect(isEncrypted({ ciphertext: '', iv: 'base64-iv' })).toBe(false);
+            expect(isEncrypted({ ciphertext: 'base64-ciphertext', iv: '' })).toBe(false);
+            expect(isEncrypted({ ciphertext: '', iv: '' })).toBe(false);
+        });
+
+        test('非文字列のciphertext/ivは暗号化データとみなさない', () => {
+            expect(isEncrypted({ ciphertext: 123, iv: 'base64-iv' })).toBe(false);
+            expect(isEncrypted({ ciphertext: 'base64-ciphertext', iv: null })).toBe(false);
+        });
     });
 
     describe('encryptApiKey and decryptApiKey', () => {
