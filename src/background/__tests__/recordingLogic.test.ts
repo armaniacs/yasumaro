@@ -270,6 +270,61 @@ describe('RecordingLogic', () => {
 
       expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
     });
+
+    it('waits for the same-URL mutex before writing to Obsidian', async () => {
+      const url = 'https://retry-serialize.example.com';
+      const mutexMap = (RecordingLogic as any).urlRecordMutexes;
+      mutexMap.clear();
+      const mutex = (RecordingLogic as any).getUrlMutex(url);
+      await mutex.acquire();
+
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      let done = false;
+      const retryPromise = (async () => {
+        await logic.retryObsidianWriteOnly({ title: 'Retry', url, summary: 's' });
+        done = true;
+      })();
+
+      await new Promise((r) => setTimeout(r, 30));
+      expect(done).toBe(false);
+
+      mutex.release();
+      await retryPromise;
+      expect(done).toBe(true);
+    });
+  });
+
+  describe('同一URLへの並行 record() の直列化', () => {
+    it('2件目の record() は1件目の完了後に処理が開始される', async () => {
+      const processOrder: string[] = [];
+      let callCount = 0;
+      let resolveFirstProcess: (() => void) | undefined;
+      const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
+
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        this.process = vi.fn(async () => {
+          callCount++;
+          const n = callCount;
+          processOrder.push(`start-${n}`);
+          if (n === 1) {
+            resolveFirstProcess?.();
+            await new Promise((r) => setTimeout(r, 20));
+          }
+          processOrder.push(`end-${n}`);
+          return { summary: 'Test summary', maskedCount: 0 };
+        });
+      });
+
+      const url = 'https://serialize-race.example.com';
+      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+
+      const call1 = logic.record({ url, title: 'A', content: 'a' });
+      await firstProcessStarted;
+      const call2 = logic.record({ url, title: 'B', content: 'b' });
+      await Promise.all([call1, call2]);
+
+      expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+    });
   });
 
   describe('Privacy Cache', () => {

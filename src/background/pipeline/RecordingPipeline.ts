@@ -35,7 +35,6 @@
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
-import { Mutex } from '../Mutex.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
 import {
   truncateContentStep,
@@ -105,15 +104,6 @@ export class RecordingPipeline {
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
   private offlineNetworkQueue: OfflineNetworkQueue | null;
-  /**
-   * Per-URL mutex to serialize the read-then-write window between
-   * checkDuplicateStep (reads savedUrlsWithTimestamps) and saveMetadataStep
-   * (writes it). Without this, two concurrent requests for the same URL can
-   * both pass the duplicate check before either has saved, causing the page
-   * to be recorded twice (double AI summary calls, double Obsidian writes).
-   * Entries are removed once no longer in use to avoid unbounded growth.
-   */
-  private urlMutexes: Map<string, Mutex> = new Map();
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
@@ -244,41 +234,16 @@ export class RecordingPipeline {
 
   /**
    * Execute the pipeline with initial data.
-   * Serializes concurrent requests for the same URL (see urlMutexes) so that
-   * checkDuplicateStep's read and saveMetadataStep's write cannot race.
+   *
+   * NOTE: Per-URL serialization is intentionally NOT handled here. It is
+   * provided by RecordingLogic.withUrlRecordMutex (RecordingLogic.record())
+   * which owns the shared, static per-URL mutex that protects the
+   * read-then-write window between checkDuplicateStep and saveMetadataStep.
+   * Direct pipeline users must either route through RecordingLogic.record()
+   * or accept that no same-URL serialization is applied.
    */
   async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
-    const mutex = this.acquireUrlMutex(data.url);
-    await mutex.acquire();
-    try {
-      return await this.executeInternal(data, settings);
-    } finally {
-      mutex.release();
-      this.releaseUrlMutexIfIdle(data.url, mutex);
-    }
-  }
-
-  /**
-   * Get (or create) the mutex for a given URL. Callers must release it via
-   * releaseUrlMutexIfIdle() once done.
-   */
-  private acquireUrlMutex(url: string): Mutex {
-    let mutex = this.urlMutexes.get(url);
-    if (!mutex) {
-      mutex = new Mutex();
-      this.urlMutexes.set(url, mutex);
-    }
-    return mutex;
-  }
-
-  /**
-   * Remove the mutex entry for a URL once it is no longer locked and has no
-   * queued waiters, so the map does not grow unbounded over the SW lifetime.
-   */
-  private releaseUrlMutexIfIdle(url: string, mutex: Mutex): void {
-    if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-      this.urlMutexes.delete(url);
-    }
+    return this.executeInternal(data, settings);
   }
 
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {

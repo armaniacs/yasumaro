@@ -447,18 +447,20 @@ constructor(obsidianClient: ObsidianClient, aiService: AIService, privacyPipelin
     summary: string;
     tags?: string[];
   }): Promise<boolean> {
-    const settings = await this.getSettingsWithCache();
-    let context: RecordingContext = {
-      data: { title: job.title, url: job.url, content: '' } as RecordingData,
-      settings,
-      force: true,
-      errors: [],
-      privacyResult: { summary: job.summary, tags: job.tags },
-    };
+    return RecordingLogic.withUrlRecordMutex(job.url, async () => {
+      const settings = await this.getSettingsWithCache();
+      let context: RecordingContext = {
+        data: { title: job.title, url: job.url, content: '' } as RecordingData,
+        settings,
+        force: true,
+        errors: [],
+        privacyResult: { summary: job.summary, tags: job.tags },
+      };
 
-    context = await formatMarkdownStep(context);
-    context = await saveToObsidianStep(context, this.obsidian);
-    return true;
+      context = await formatMarkdownStep(context);
+      context = await saveToObsidianStep(context, this.obsidian);
+      return true;
+    });
   }
 
   async record(data: RecordingData): Promise<RecordingResult> {
