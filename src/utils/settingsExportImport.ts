@@ -4,7 +4,7 @@
  */
 
 import { getSettings, saveSettings, getOrCreateHmacSecret, Settings, API_KEY_FIELDS } from './storage.js';
-import { computeHMAC, encrypt, decryptData, deriveKey } from './crypto/index.js';
+import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
 import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
@@ -175,7 +175,7 @@ export async function importEncryptedSettings(
     const hmacSecret = await getOrCreateHmacSecret();
     const computedHmac = await computeHMAC(hmacSecret, decryptedJson);
 
-    if (encryptedData.hmac !== computedHmac) {
+    if (!(await constantTimeCompare(encryptedData.hmac, computedHmac))) {
       await logError(
         'HMAC verification failed',
         {},
@@ -392,7 +392,7 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
 
     const computedSignature = await computeHMAC(hmacSecret, dataJson);
 
-    if (signature !== computedSignature) {
+    if (!(await constantTimeCompare(signature, computedSignature))) {
       await logError(
         'Signature verification failed',
         {},
