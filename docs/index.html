@@ -868,12 +868,12 @@ const FAQ_ITEMS = {
     {
       category: "AI 設定",
       q: "AI 機能は必須ですか？APIキーがないと使えませんか？",
-      a: "AIは任意です。APIキーを設定しなくても、タイトル・URL・閲覧時間などのメタデータだけを記録できます。"
+      a: "必須ではありません。APIキーを設定しなくても、タイトル・URL・閲覧時間などのメタデータだけを記録できます。また、最近のChrome（Gemini Nano）やEdge（Phi-mini）では<strong>ブラウザ組み込みのAI</strong>が利用でき、外部APIキーなしでAI要約が可能です。ブラウザ組み込みAIはバックグラウンドで動作するため、通常は動作を感じることはありません。ただし環境によっては初回要約に数秒〜30秒ほどかかる場合があります（M1 Mac では典型的に30秒程度）。<a href='https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md'>組み込みAI設定ガイド</a> を参照してください。"
     },
     {
       category: "AI 設定",
       q: "どのAIプロバイダーに対応していますか？",
-      a: "Groq・Gemini・OpenAI・Anthropic・OpenAI互換API（Ollama、LM Studio など）に対応しています。ローカルLLMも利用可能です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI自動要約ガイド</a> を参照してください。"
+      a: "<strong>ブラウザ組み込みAI</strong>（Chrome Gemini Nano / Edge Phi-mini）、Groq・Gemini・OpenAI・Anthropic・OpenAI互換API（Ollama、LM Studio など）に対応しています。組み込みAIはAPIキー不要で利用可能です。詳細は <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI自動要約ガイド</a> を参照してください。"
     },
     {
       category: "AI 設定",
@@ -980,12 +980,12 @@ const FAQ_ITEMS = {
     {
       category: "AI Settings",
       q: "Is AI required? What if I don't have an API key?",
-      a: "AI is entirely optional. Without an API key, Yasumaro still records metadata such as title, URL, and time spent."
+      a: "AI is entirely optional. Without an API key, Yasumaro still records metadata such as title, URL, and time spent. Modern browsers also include <strong>built-in AI</strong> (Chrome Gemini Nano, Edge Phi-mini) that provides summarization without any API key. Built-in AI runs in the background, so it won't interrupt your browsing, though initial summarization may take a few seconds to around 30 seconds depending on your device (e.g., ~30 seconds on M1 Mac). See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md'>Built-in AI Setup Guide</a> for details."
     },
     {
       category: "AI Settings",
       q: "Which AI providers are supported?",
-      a: "Groq, Gemini, OpenAI, Anthropic, and any OpenAI-compatible API (Ollama, LM Studio, etc.). Local LLMs are fully supported. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI Summarization Guide</a> for details."
+      a: "<strong>Built-in browser AI</strong> (Chrome Gemini Nano / Edge Phi-mini), Groq, Gemini, OpenAI, Anthropic, and any OpenAI-compatible API (Ollama, LM Studio, etc.). Built-in AI requires no API key. See the <a href='https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md'>AI Summarization Guide</a> for details."
     },
     {
       category: "AI Settings",
