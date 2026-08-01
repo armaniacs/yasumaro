@@ -644,7 +644,7 @@ describe('verifyHmacSignature', () => {
 describe('hashUrl', () => {
     test('URLのSHA-256ハッシュプレフィックスを返す', async () => {
         const hash = await hashUrl('https://example.com');
-        expect(hash).toMatch(/^\[hash:[0-9a-f]{8}\]$/);
+        expect(hash).toMatch(/^\[hash:[0-9a-f]{16}\]$/);
     });
 
     test('同じURLで同じハッシュを返す', async () => {
