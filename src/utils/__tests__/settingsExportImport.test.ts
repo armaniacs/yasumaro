@@ -337,6 +337,13 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
         });
 
+        test('偽造された署名を持つ設定ファイルを拒否する', async () => {
+            // VULN-009 fix: forged signature must never pass signature verification
+            const forged = JSON.stringify({ settings: {}, signature: 'fake', apiKeyExcluded: false });
+            const result = await importSettings(forged);
+            expect(result).toBeNull();
+        });
+
         test('構造検証に失敗した場合は null を返す', async () => {
             const data = { version: '1.0.0', exportedAt: 'now', settings: {} };
             const sig = await computeHMAC('test_hmac_secret', JSON.stringify(data, null, 2));

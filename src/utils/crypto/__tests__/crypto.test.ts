@@ -25,6 +25,7 @@ import {
     verifyHmacSignature,
     hashUrl,
     getNotificationHmacKey,
+    getConsentHmacKey,
     encryptEnvelope,
     decryptEnvelope,
     migrateLegacyCiphertext,
@@ -692,6 +693,95 @@ describe('getNotificationHmacKey', () => {
         expect(key).toBeDefined();
         expect(key.type).toBe('secret');
         consoleWarnSpy.mockRestore();
+    });
+});
+
+describe('HMAC key encryption (PBI-03)', () => {
+    test('consent HMAC key is stored in encrypted (wrapped) form', async () => {
+        await getConsentHmacKey();
+
+        const stored = await chrome.storage.local.get('privacy-consent-signature-key');
+        const value = stored['privacy-consent-signature-key'];
+        expect(typeof value).toBe('object');
+        expect(value).toHaveProperty('wrapped');
+        expect(value).toHaveProperty('iv');
+        expect((value as { wrapped: string }).wrapped.length).toBeGreaterThan(0);
+        expect((value as { iv: string }).iv.length).toBeGreaterThan(0);
+        // No plaintext base64 key material should be stored
+        expect(typeof (stored as Record<string, unknown>)['privacy-consent-signature-key']).not.toBe('string');
+    });
+
+    test('notification HMAC key is stored in encrypted (wrapped) form', async () => {
+        const key = await getNotificationHmacKey();
+
+        const stored = await chrome.storage.local.get('notification-signature-key');
+        const value = stored['notification-signature-key'];
+        expect(typeof value).toBe('object');
+        expect(value).toHaveProperty('wrapped');
+        expect(value).toHaveProperty('iv');
+
+        // The returned key still signs correctly
+        const signature = await generateHmacSignature('test-data', key);
+        expect(signature.length).toBeGreaterThan(0);
+    });
+
+    test('unwraps a stored encrypted key on subsequent reads (same key material)', async () => {
+        const key1 = await getNotificationHmacKey();
+        const key2 = await getNotificationHmacKey();
+
+        // Both keys must produce the identical signature, i.e. same key material
+        const sig1 = await generateHmacSignature('same-data', key1);
+        const sig2 = await generateHmacSignature('same-data', key2);
+        expect(sig1).toBe(sig2);
+    });
+
+    test('migrates a legacy plaintext key to the encrypted format', async () => {
+        // Simulate a pre-PBI-03 plaintext base64 key in storage.local
+        const rawBytes = new Uint8Array(32).map((_, i) => (i * 7 + 3) % 256);
+        const plaintextKey = btoa(String.fromCharCode(...rawBytes));
+        await chrome.storage.local.set({ 'privacy-consent-signature-key': plaintextKey });
+
+        const key = await getConsentHmacKey();
+        expect(key).toBeDefined();
+
+        // The key must now be stored wrapped, not plaintext
+        const stored = await chrome.storage.local.get('privacy-consent-signature-key');
+        const value = stored['privacy-consent-signature-key'];
+        expect(typeof value).toBe('object');
+        expect(value).toHaveProperty('wrapped');
+        expect(value).toHaveProperty('iv');
+
+        // The migrated key uses the same key material as the original plaintext
+        const originalKey = await global.crypto.subtle.importKey(
+            'raw',
+            rawBytes,
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+        );
+        const expectedSig = await generateHmacSignature('migration-check', originalKey);
+        const actualSig = await generateHmacSignature('migration-check', key);
+        expect(actualSig).toBe(expectedSig);
+    });
+
+    test('recovers from undecryptable wrapped data by generating a fresh key', async () => {
+        await chrome.storage.local.set({
+            'notification-signature-key': { wrapped: '!!!invalid-base64!!!', iv: '!!!invalid-base64!!!' }
+        });
+
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const key = await getNotificationHmacKey();
+        consoleWarnSpy.mockRestore();
+
+        expect(key).toBeDefined();
+        expect(key.type).toBe('secret');
+
+        // Storage must now contain a valid wrapped envelope
+        const stored = await chrome.storage.local.get('notification-signature-key');
+        const value = stored['notification-signature-key'];
+        expect(typeof value).toBe('object');
+        expect((value as { wrapped: string }).wrapped.length).toBeGreaterThan(0);
+        expect((value as { iv: string }).iv.length).toBeGreaterThan(0);
     });
 });
 
