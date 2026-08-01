@@ -498,6 +498,38 @@ describe('crypto', () => {
                 expect(result.needsRehash).toBe(false);
             });
         });
+
+        describe('iterations指定パス（定数時間比較）', () => {
+            test('保存iterationが現在のデフォルトと一致する場合は再ハッシュ不要', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, 600000);
+                expect(result.isValid).toBe(true);
+                expect(result.needsRehash).toBe(false);
+            });
+
+            test('保存iterationが現在のデフォルトと異なる場合は再ハッシュ要', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
+
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, 100000);
+                expect(result.isValid).toBe(true);
+                expect(result.needsRehash).toBe(true);
+            });
+
+            test('誤ったパスワードで無効かつ再ハッシュフラグを返す', async () => {
+                const password = 'test-password';
+                const salt = generateSalt();
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+
+                const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt, 600000);
+                expect(result.isValid).toBe(false);
+                expect(result.needsRehash).toBe(false);
+            });
+        });
     });
 });
 
