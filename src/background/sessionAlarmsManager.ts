@@ -91,7 +91,19 @@ export async function stopTimeoutChecker(): Promise<void> {
  */
 async function checkTimeout(): Promise<void> {
     try {
-        const result = await chrome.storage.local.get(STORAGE_KEY_LAST_ACTIVITY);
+        const result = await chrome.storage.local.get([
+            STORAGE_KEY_LAST_ACTIVITY,
+            StorageKeys.MASTER_PASSWORD_ENABLED
+        ]);
+
+        // マスターパスワード未設定の場合、ロックする概念自体が存在しない。
+        // ここでIS_LOCKEDをセットすると、マスターパスワードを使っていない
+        // ユーザーのAPIキー復号・暗号化が恒久的に失敗するようになってしまう
+        // （getOrCreateEncryptionKeyのキャッシュ済みキーIS_LOCKEDチェックに阻まれる）。
+        if (!result[StorageKeys.MASTER_PASSWORD_ENABLED]) {
+            return;
+        }
+
         const lastActivity = result[STORAGE_KEY_LAST_ACTIVITY] as number;
 
         if (!lastActivity) {

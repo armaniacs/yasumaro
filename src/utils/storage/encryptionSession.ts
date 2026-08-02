@@ -91,10 +91,15 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
  * @throws {Error} ロックされている場合（マスターパスワード未入力）
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
-    // VULN-017 fix: check IS_LOCKED before returning cached key
+    // VULN-017 fix: check IS_LOCKED before returning cached key.
+    // Only applies when a master password is actually configured — IS_LOCKED
+    // is meaningless (and must not block decryption) for users who never set one.
     if (cachedEncryptionKey) {
-        const lockStatus = await chrome.storage.local.get([StorageKeys.IS_LOCKED]);
-        if (lockStatus[StorageKeys.IS_LOCKED]) {
+        const lockStatus = await chrome.storage.local.get([
+            StorageKeys.MASTER_PASSWORD_ENABLED,
+            StorageKeys.IS_LOCKED
+        ]);
+        if (lockStatus[StorageKeys.MASTER_PASSWORD_ENABLED] && lockStatus[StorageKeys.IS_LOCKED]) {
             cachedEncryptionKey = null;
             cachedMasterPassword = null;
             throw new Error('ENCRYPTION_LOCKED: Session is locked');

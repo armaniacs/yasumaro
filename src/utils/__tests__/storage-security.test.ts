@@ -341,6 +341,20 @@ describe('Master Password Security', () => {
             expect(key).toBeDefined();
             expect(key.type).toBe('secret');
         });
+
+        test('マスターパスワード未設定時にIS_LOCKEDがtrueでもキャッシュ済みキーで失敗しない', async () => {
+            // マスターパスワードを一度も設定しないユーザーを再現。
+            // sessionAlarmsManager の定期チェックが誤って IS_LOCKED: true を
+            // セットしてしまうケース（実際にセッションロック機構は本来
+            // マスターパスワード専用の概念であり、未設定時には無関係のはず）。
+            const key1 = await getOrCreateEncryptionKey();
+            expect(key1).toBeDefined();
+
+            storageData['is_locked'] = true;
+
+            const key2 = await getOrCreateEncryptionKey();
+            expect(key2).toBeDefined();
+        });
     });
 
     describe('API Key Encryption with Master Password', () => {

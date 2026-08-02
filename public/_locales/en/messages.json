@@ -1571,6 +1571,45 @@
   "diagDeficiencyNone": {
     "message": "No deficiencies — all features are enabled."
   },
+  "diagBuiltInAiTitle": {
+    "message": "Browser Built-in AI"
+  },
+  "diagBuiltInAiStatus": {
+    "message": "Status"
+  },
+  "diagBuiltInAiAvailable": {
+    "message": "Available"
+  },
+  "diagBuiltInAiDownloadable": {
+    "message": "Model download required"
+  },
+  "diagBuiltInAiDownloading": {
+    "message": "Downloading..."
+  },
+  "diagBuiltInAiUnavailable": {
+    "message": "Unavailable"
+  },
+  "diagBuiltInAiGuidanceLabel": {
+    "message": "Guidance"
+  },
+  "diagBuiltInAiFlagGuidance": {
+    "message": "Open \"{flagUrl}\" and enable \"{flagName}\"."
+  },
+  "diagBuiltInAiUnsupportedBrowser": {
+    "message": "This browser does not support built-in AI."
+  },
+  "diagBuiltInAiDownloadBtn": {
+    "message": "Download Model"
+  },
+  "diagBuiltInAiDownloadStarting": {
+    "message": "Starting download... 0%"
+  },
+  "diagBuiltInAiDownloadDone": {
+    "message": "Download complete."
+  },
+  "diagBuiltInAiDownloadFailed": {
+    "message": "Download failed."
+  },
   "diagDeficiencyNoOpfsSummary": {
     "message": "OPFS: Not available"
   },

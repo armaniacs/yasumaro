@@ -83,13 +83,20 @@ Scenario: 上限設定は既存の再送ロジック（成功/失敗判定、AI�
 - PBI-14（アラームリスナーのasync化）と技術的に近接する。上限導入により1サイクルの処理時間が短縮され、PBI-14のSW生存期間問題の緩和にも寄与する
 
 ## Definition of Done
-- [ ] サイクルあたり処理件数上限が実装されている
-- [ ] 上限超過時に残りジョブが次回サイクルに持ち越されることがテストで検証されている
-- [ ] 全テストがパスする
-- [ ] `pbi/00-INDEX.md` が更新されている
+- [x] サイクルあたり処理件数上限が実装されている
+- [x] 上限超過時に残りジョブが次回サイクルに持ち越されることがテストで検証されている
+- [x] 全テストがパスする
+- [x] `pbi/00-INDEX.md` が更新されている
 
 ## 関連
 - Checking Team レポート: `plans/2026-08-01-1903-review-yasumaro.md`（FinOps Consultant指摘、High #4）
 - 対象コード: `src/background/offlineNetworkQueue.ts:25,73`, `src/background/offlineQueueProcessor.ts:53-61`, `src/background/service-worker.ts:693-702`
 - 事実確認: 「200×4=800回」は誤り（正しい理論上限は最大200回/サイクル）。AI再実行スキップは`2026-07-26-14`で対策済み。サイクル上限・レート制限の不在のみが未対策の残存リスク
 - 関連PBI: PBI-14（アラームリスナーのSWライフサイクル対応）と関心が近接
+
+## 実装メモ（2026-08-01完了）
+
+- `src/background/offlineNetworkQueue.ts`: `MAX_JOBS_PER_CYCLE = 20` を追加。`retryAll()` を `queue.slice(0, MAX_JOBS_PER_CYCLE)` で処理対象を絞り、残り（`untouched`）はそのまま保存対象に含めて次回サイクルへ持ち越すよう変更。ジョブ単位保存（PBI-14で追加）にも `untouched` を含めて反映
+- `src/background/__tests__/offlineNetworkQueue.test.ts`: 50件キューで1パスの処理数が20件に収まること、10件（上限未満）は全件処理されること、25件を2回の`retryAll`呼び出しに分けて全件処理されること、21件目（上限超過分）が処理対象にならず`retryCount`が変化しないことを検証するテストを追加
+- `npm run validate`（型チェック + vitest全件7336件）成功、`npm run build` 成功
+- 上限値は固定定数（20）として導入。設定UI化・動的調整は本PBIのスコープ外
