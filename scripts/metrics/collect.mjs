@@ -66,7 +66,18 @@ export async function collectMetricsForRef(ref, git) {
   }
 
   const packageJsonContent = git.readFile(ref, 'package.json');
-  const packageJson = JSON.parse(packageJsonContent);
+  if (packageJsonContent === undefined) {
+    console.warn(`${ref}: package.json is not readable, skipping`);
+    return null;
+  }
+
+  let packageJson;
+  try {
+    packageJson = JSON.parse(packageJsonContent);
+  } catch (error) {
+    console.warn(`${ref}: package.json is not valid JSON, skipping (${error.message})`);
+    return null;
+  }
 
   return {
     version: packageJson.version,

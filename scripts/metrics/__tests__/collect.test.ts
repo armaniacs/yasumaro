@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   countLines,
   countTestCalls,
@@ -168,5 +168,41 @@ describe('collectMetricsForRef', () => {
     const result = await collectMetricsForRef('v1.0.0', fakeGit);
     expect(result.fileCount).toBe(1);
     expect(result.linesOfCode).toBe(1);
+  });
+
+  it('returns null and warns when package.json is not readable', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeGit = {
+      listFiles: () => ['src/foo.ts'],
+      readFile: (ref, path) => {
+        if (path === 'package.json') return undefined;
+        return 'const x = 1;\n';
+      },
+      getTagDate: () => '2026-01-01T00:00:00+09:00',
+    };
+
+    const result = await collectMetricsForRef('v2.0.0', fakeGit);
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('returns null and warns when package.json content is invalid JSON', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeGit = {
+      listFiles: () => ['src/foo.ts'],
+      readFile: (ref, path) => {
+        if (path === 'package.json') return 'not valid json {{{';
+        return 'const x = 1;\n';
+      },
+      getTagDate: () => '2026-01-01T00:00:00+09:00',
+    };
+
+    const result = await collectMetricsForRef('v2.0.0', fakeGit);
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
