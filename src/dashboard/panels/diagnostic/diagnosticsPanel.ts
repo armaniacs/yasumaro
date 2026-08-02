@@ -10,7 +10,49 @@ import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
 import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
+import { checkBuiltInAiAvailability, startBuiltInAiDownload, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
+import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import { type DiagnosticPanel } from '../types.js';
+
+/**
+ * Renders the built-in AI availability row and toggles the download button.
+ * Shared by initial load and the post-download refresh so both paths stay in sync.
+ */
+export function renderBuiltInAiStatus(
+  statsEl: HTMLElement,
+  downloadBtn: HTMLButtonElement | null,
+  result: BuiltInAiDiagnosticsResult
+): void {
+  statsEl.innerHTML = '';
+
+  const statusLabels: Record<BuiltInAIAvailability, string> = {
+    available: getMessage('diagBuiltInAiAvailable') || 'Available',
+    downloadable: getMessage('diagBuiltInAiDownloadable') || 'Model download required',
+    downloading: getMessage('diagBuiltInAiDownloading') || 'Downloading...',
+    unavailable: getMessage('diagBuiltInAiUnavailable') || 'Unavailable',
+  };
+
+  statsEl.appendChild(makeStatRow(
+    getMessage('diagBuiltInAiStatus') || 'Status',
+    statusLabels[result.status],
+    result.status === 'unavailable'
+  ));
+
+  if (result.status === 'unavailable' && result.guidance) {
+    const guidanceText = getMessage('diagBuiltInAiFlagGuidance', { flagName: result.guidance.flagName, flagUrl: result.guidance.url })
+      || `Enable "${result.guidance.flagName}" at ${result.guidance.url}`;
+    statsEl.appendChild(makeStatRow(getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance', guidanceText));
+  } else if (result.status === 'unavailable') {
+    statsEl.appendChild(makeStatRow(
+      getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance',
+      getMessage('diagBuiltInAiUnsupportedBrowser') || 'This browser does not support built-in AI.'
+    ));
+  }
+
+  if (downloadBtn) {
+    downloadBtn.classList.toggle('hidden', result.status !== 'downloadable');
+  }
+}
 
 export function createDiagnosticsPanel(): DiagnosticPanel {
   let _container: HTMLElement | null = null;
@@ -26,6 +68,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
     const connectionResult = container.querySelector('#diagConnectionResult') as HTMLElement | null;
     const sqliteStats = container.querySelector('#diagSqliteStats') as HTMLElement | null;
     const diagDeficiencyStats = container.querySelector('#diagDeficiencyStats') as HTMLElement | null;
+    const diagBuiltInAiStats = container.querySelector('#diagBuiltInAiStats') as HTMLElement | null;
+    const diagBuiltInAiDownloadBtn = container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
     const diagCompileOptionsStats = container.querySelector('#diagCompileOptionsStats') as HTMLElement | null;
     const diagDivergenceWarning = container.querySelector('#diagDivergenceWarning') as HTMLElement | null;
     const compileOptionsSection = container.querySelector('#diagCompileOptionsSection') as HTMLElement | null;
@@ -38,6 +82,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
     if (aiSettingsEl) aiSettingsEl.innerHTML = '';
     if (sqliteStats) { sqliteStats.innerHTML = ''; sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...'; }
     if (diagDeficiencyStats) diagDeficiencyStats.innerHTML = '';
+    if (diagBuiltInAiStats) diagBuiltInAiStats.innerHTML = '';
+    if (diagBuiltInAiDownloadBtn) diagBuiltInAiDownloadBtn.classList.add('hidden');
     if (diagCompileOptionsStats) diagCompileOptionsStats.innerHTML = '';
     if (compileOptionsSection) compileOptionsSection.classList.toggle('hidden', !debugMode);
     if (diagDivergenceWarning) diagDivergenceWarning.classList.add('hidden');
@@ -247,6 +293,16 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       }
     }
 
+    // Built-in AI diagnostics (regardless of the currently configured AI provider)
+    if (diagBuiltInAiStats) {
+      try {
+        const result = await checkBuiltInAiAvailability();
+        renderBuiltInAiStatus(diagBuiltInAiStats, diagBuiltInAiDownloadBtn, result);
+      } catch {
+        diagBuiltInAiStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
+      }
+    }
+
     // Compile options (debug mode only)
     if (diagCompileOptionsStats && sqliteStatus?.compileOptions && debugMode) {
       const options = sqliteStatus.compileOptions;
@@ -319,6 +375,9 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
       const backfillResult = container.querySelector('#diagBackfillResult') as HTMLElement | null;
       const diagCleanupBtn = container.querySelector('#diagCleanupBtn') as HTMLButtonElement | null;
       const cleanupResult = container.querySelector('#diagCleanupResult') as HTMLElement | null;
+      const diagBuiltInAiStats = container.querySelector('#diagBuiltInAiStats') as HTMLElement | null;
+      const diagBuiltInAiDownloadBtn = container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
+      const diagBuiltInAiDownloadResult = container.querySelector('#diagBuiltInAiDownloadResult') as HTMLElement | null;
 
       // Debug mode state + toggle
       const debugModeResult = await chrome.storage.local.get('debugMode');
@@ -588,6 +647,37 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
           cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
         } finally {
           diagCleanupBtn.disabled = false;
+        }
+      });
+
+      // Built-in AI model download
+      diagBuiltInAiDownloadBtn?.addEventListener('click', async () => {
+        if (!diagBuiltInAiDownloadResult) return;
+        diagBuiltInAiDownloadBtn.disabled = true;
+        diagBuiltInAiDownloadResult.textContent = getMessage('diagBuiltInAiDownloadStarting') || 'Starting download... 0%';
+        diagBuiltInAiDownloadResult.className = 'diag-result';
+
+        try {
+          const result = await startBuiltInAiDownload((percent) => {
+            diagBuiltInAiDownloadResult.textContent = `${getMessage('diagBuiltInAiDownloading') || 'Downloading...'} ${percent}%`;
+          });
+
+          if (diagBuiltInAiStats) {
+            renderBuiltInAiStatus(diagBuiltInAiStats, diagBuiltInAiDownloadBtn, result);
+          }
+
+          if (result.status === 'available') {
+            diagBuiltInAiDownloadResult.textContent = `✓ ${getMessage('diagBuiltInAiDownloadDone') || 'Download complete.'}`;
+            diagBuiltInAiDownloadResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
+          } else {
+            diagBuiltInAiDownloadResult.textContent = `✗ ${getMessage('diagBuiltInAiDownloadFailed') || 'Download failed.'}`;
+            diagBuiltInAiDownloadResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+          }
+        } catch {
+          diagBuiltInAiDownloadResult.textContent = `✗ ${getMessage('diagBuiltInAiDownloadFailed') || 'Download failed.'}`;
+          diagBuiltInAiDownloadResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
+        } finally {
+          diagBuiltInAiDownloadBtn.disabled = false;
         }
       });
 

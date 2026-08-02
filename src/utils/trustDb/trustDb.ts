@@ -19,10 +19,6 @@ import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 const DB_VERSION = '1.0.0';
 const STORAGE_KEY = 'trust_db:json';
 
-// Tranco バージョン追跡（Phase 1）
-const STORAGE_KEY_TRANCO_VERSION = 'tranco_version';
-const STORAGE_KEY_TRANCO_DOMAINS = 'tranco_domains';
-
 // 30日（ミリ秒）- 同意拒否後の再確認間隔
 const _CONSENT_RETRY_DAYS = 30;
 
@@ -169,6 +165,30 @@ function isValidTld(tld: string): boolean {
   // ドメインルールと同様の構造チェック（ドットを含まない単一ラベルとして）
   const labelRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
   return labelRegex.test(tldWithoutDot);
+}
+
+// ===== settingsStore 動的import ヘルパー（PBI-2026-08-01-20） =====
+//
+// settingsStore.ts との循環参照回避のため動的importを使う（settingsStore.ts
+// 側も trustDb.ts を動的importしている）。ESMの動的importは2回目以降
+// モジュールキャッシュされるためこのメモ化自体に性能上の意味はほぼないが、
+// 呼び出し側の重複コードを1箇所に集約する目的で用意している。
+
+let settingsStoreModule: typeof import('../storage/settingsStore.js') | undefined;
+let storageTypesModule: typeof import('../storage/types.js') | undefined;
+
+async function getSettingsStore(): Promise<typeof import('../storage/settingsStore.js')> {
+  if (!settingsStoreModule) {
+    settingsStoreModule = await import('../storage/settingsStore.js');
+  }
+  return settingsStoreModule;
+}
+
+async function getStorageTypes(): Promise<typeof import('../storage/types.js')> {
+  if (!storageTypesModule) {
+    storageTypesModule = await import('../storage/types.js');
+  }
+  return storageTypesModule;
 }
 
 // ===== trustDb インターフェース =====
@@ -898,19 +918,34 @@ class TrustDb {
 
   /**
    * 保存されている Tranco バージョンを取得
+   *
+   * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
+   * getSettings() は移行前ユーザーの個別キー（tranco_version）も透過的に
+   * 吸収するため、移行の前後どちらでも正しく値を取得できる。
    */
   async getSavedTrancoVersion(): Promise<string | null> {
-    const result = await chrome.storage.local.get(STORAGE_KEY_TRANCO_VERSION);
-    return result[STORAGE_KEY_TRANCO_VERSION] as string || null;
+    const { getSettings } = await getSettingsStore();
+    const { StorageKeys } = await getStorageTypes();
+    const settings = await getSettings();
+    return settings[StorageKeys.TRANCO_VERSION] || null;
   }
 
   /**
    * Tranco バージョンを更新
+   *
+   * settings オブジェクト経由で書き込む（PBI-2026-08-01-16）。tranco_version と
+   * tranco_domains を同一の saveSettings() 呼び出しでまとめて更新することで、
+   * settingsStore の移行ロジックと構造的に整合させる（従来は
+   * chrome.storage.local への個別キー直接書き込みで settings オブジェクトを
+   * 経由しておらず、migrateToSingleSettingsObject() のバックアップ退避対象
+   * から外れていた）。
    */
   async updateTrancoVersion(version: string, domains: string[]): Promise<void> {
-    await chrome.storage.local.set({
-      [STORAGE_KEY_TRANCO_VERSION]: version,
-      [STORAGE_KEY_TRANCO_DOMAINS]: domains
+    const { saveSettings } = await getSettingsStore();
+    const { StorageKeys } = await getStorageTypes();
+    await saveSettings({
+      [StorageKeys.TRANCO_VERSION]: version,
+      [StorageKeys.TRANCO_DOMAINS]: domains
     });
     logInfo('TrustDb', { version, domainCount: domains.length }, 'Tranco version updated');
   }
@@ -940,10 +975,14 @@ class TrustDb {
 
   /**
    * 保存された Tranco ドメインリストを取得（旧リスト保持用）
+   *
+   * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
    */
   async getSavedTrancoDomains(): Promise<string[]> {
-    const result = await chrome.storage.local.get(STORAGE_KEY_TRANCO_DOMAINS);
-    return result[STORAGE_KEY_TRANCO_DOMAINS] as string[] || [];
+    const { getSettings } = await getSettingsStore();
+    const { StorageKeys } = await getStorageTypes();
+    const settings = await getSettings();
+    return settings[StorageKeys.TRANCO_DOMAINS] || [];
   }
 
   /**

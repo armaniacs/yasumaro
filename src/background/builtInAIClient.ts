@@ -39,9 +39,22 @@ interface LanguageModelSession {
     oncontextoverflow?: ((event: Event) => void) | null;
 }
 
+/** Progress reported while the on-device model downloads (Prompt API `monitor` option). */
+export interface LanguageModelDownloadProgressEvent {
+    loaded: number;
+}
+
+/** Passed to `LanguageModel.create({ monitor })` to observe download progress. */
+export interface LanguageModelDownloadMonitor {
+    addEventListener(type: 'downloadprogress', listener: (event: LanguageModelDownloadProgressEvent) => void): void;
+}
+
 interface LanguageModelGlobal {
     availability(): Promise<BuiltInAIAvailability>;
-    create(options?: { initialPrompts?: Array<{ role: string; content: string }> }): Promise<LanguageModelSession>;
+    create(options?: {
+        initialPrompts?: Array<{ role: string; content: string }>;
+        monitor?: (monitor: LanguageModelDownloadMonitor) => void;
+    }): Promise<LanguageModelSession>;
 }
 
 declare global {
