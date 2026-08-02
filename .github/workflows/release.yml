@@ -82,17 +82,6 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Record project metrics
-        run: node scripts/metrics/updateHistory.mjs ${{ github.ref_name }}
-
-      - name: Commit metrics history
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add dev-docs/metrics/history.json
-          git commit -m "chore(metrics): record ${{ github.ref_name }} growth metrics" || echo "No changes to commit"
-          git push origin HEAD:main
-
       - name: Publish to Chrome Web Store
         if: steps.minor_check.outputs.is_even == 'true'
         env:
@@ -156,3 +145,17 @@ jobs:
             exit 1
           fi
           echo "✅ Published"
+
+      - name: Record and commit project metrics
+        continue-on-error: true
+        run: |
+          git fetch origin main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          node scripts/metrics/updateHistory.mjs ${{ github.ref_name }} || true
+          git stash push -- dev-docs/metrics/history.json || true
+          git checkout -B main origin/main
+          git stash pop || true
+          git add dev-docs/metrics/history.json
+          git commit -m "chore(metrics): record ${{ github.ref_name }} growth metrics" || { echo "No changes to commit"; exit 0; }
+          git push origin main

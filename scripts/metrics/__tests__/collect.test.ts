@@ -44,6 +44,11 @@ describe('countTestCalls', () => {
     const content = 'function unit() { return 1; }';
     expect(countTestCalls(content)).toBe(0);
   });
+
+  it('counts chained calls like it.each and test.skip', () => {
+    const content = "it.each([1, 2])('works with %s', () => {});\ntest.skip('skipped', () => {});\n";
+    expect(countTestCalls(content)).toBe(2);
+  });
 });
 
 describe('countFunctionDefinitions', () => {
@@ -144,6 +149,7 @@ describe('collectMetricsForRef', () => {
 
     expect(result).toEqual({
       version: '1.2.3',
+      tagVersion: '1.2.3',
       tag: 'v1.2.3',
       date: '2026-01-01T00:00:00+09:00',
       linesOfCode: 5,
@@ -168,6 +174,7 @@ describe('collectMetricsForRef', () => {
     const result = await collectMetricsForRef('v1.0.0', fakeGit);
     expect(result.fileCount).toBe(1);
     expect(result.linesOfCode).toBe(1);
+    expect(result.tagVersion).toBe('1.0.0');
   });
 
   it('returns null and warns when package.json is not readable', async () => {
