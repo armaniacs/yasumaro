@@ -15,7 +15,7 @@ export function countLines(content) {
 }
 
 export function countTestCalls(content) {
-  const matches = content.match(/\b(it|test)\s*\(/g);
+  const matches = content.match(/\b(it|test)(\.\w+)?\s*\(/g);
   return matches ? matches.length : 0;
 }
 
@@ -81,6 +81,7 @@ export async function collectMetricsForRef(ref, git) {
 
   return {
     version: packageJson.version,
+    tagVersion: ref.replace(/^v/, ''),
     tag: ref,
     date: git.getTagDate(ref),
     linesOfCode,
@@ -117,6 +118,10 @@ async function main() {
     process.exit(1);
   }
   const metrics = await collectMetricsForRef(ref, realGit);
+  if (metrics === null) {
+    console.error(`Failed to collect metrics for ${ref}`);
+    process.exit(1);
+  }
   console.log(JSON.stringify(metrics, null, 2));
 }
 
