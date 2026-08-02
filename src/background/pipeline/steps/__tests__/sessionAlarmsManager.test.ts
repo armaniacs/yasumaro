@@ -19,7 +19,7 @@ vi.mock('../../../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
 vi.mock('../../../../utils/storage.js', () => ({
-  StorageKeys: { IS_LOCKED: 'IS_LOCKED' },
+  StorageKeys: { IS_LOCKED: 'IS_LOCKED', MASTER_PASSWORD_ENABLED: 'MASTER_PASSWORD_ENABLED' },
 }));
 
 // chrome.alarms のモック
@@ -53,6 +53,10 @@ function setupStorageMocks() {
     const result: Record<string, any> = {};
     if (typeof keys === 'string') {
       if (keys in storageData) result[keys] = storageData[keys];
+    } else if (Array.isArray(keys)) {
+      for (const k of keys) {
+        if (k in storageData) result[k] = storageData[k];
+      }
     } else if (typeof keys === 'object' && keys !== null) {
       for (const k of Object.keys(keys)) {
         result[k] = k in storageData ? storageData[k] : keys[k];
@@ -206,11 +210,12 @@ describe('sessionAlarmsManager', () => {
   });
 
   describe('アラームリスナー', () => {
-    it('check_session_timeout アラームでロックが実行される（タイムアウト超過時）', async () => {
+    it('check_session_timeout アラームでロックが実行される（タイムアウト超過時、マスターパスワード有効時のみ）', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
       expect(capturedListener).not.toBeNull();
 
+      storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
@@ -228,6 +233,7 @@ describe('sessionAlarmsManager', () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
+      storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
@@ -245,6 +251,7 @@ describe('sessionAlarmsManager', () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
+      storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       (chrome.storage.local.set as vi.Mock).mockRejectedValueOnce(new Error('Lock storage error'));
 
@@ -273,6 +280,25 @@ describe('sessionAlarmsManager', () => {
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
       );
       expect(setCalls.length).toBe(0);
+    });
+
+    it('マスターパスワード未設定の場合、タイムアウト超過してもロックしない', async () => {
+      const { startTimeoutChecker } = await loadFreshModule();
+      await startTimeoutChecker();
+
+      // MASTER_PASSWORD_ENABLED を明示的に設定しない（未設定ユーザーを再現）
+      storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
+      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
+
+      await new Promise((r) => setTimeout(r, 100));
+
+      const setCalls = (chrome.storage.local.set as vi.Mock).mock.calls.filter(
+        (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
+      );
+      expect(setCalls.length).toBe(0);
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'SESSION_LOCK_REQUEST' })
+      );
     });
 
     it('アクティビティ記録がない場合はロックしない', async () => {

@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.7` リリース。
+> - 現時点では `v6.7.9` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,51 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.9] - 2026-08-02
+
+Checking Team レビュー（プロジェクト全体、`plans/2026-08-01-1903-review-yasumaro.md`）の High 指摘事項に対する事実確認済みの修正、および直後のコードレビューで見つかった軽微なフォローアップ対応。
+
+### Added / 追加
+
+- **ダッシュボード診断パネルにブラウザ内蔵AI診断セクションを追加** — `builtInAiDiagnosticsService.ts` を新設し、Options ページから `LanguageModel.availability()` を直接呼び出して Prompt API（Chrome Gemini Nano / Edge Phi-mini）の利用可能状態を診断。ダウンロード必要時は `LanguageModel.create({ monitor })` で `downloadprogress` イベントを受信し、ダウンロードボタンでモデル取得を開始できる。i18n メッセージ（日英）、`diagnosticsPanel.ts` の `renderBuiltInAiStatus()`、`entrypoints/options/index.html` のセクションを追加
+
+### Security / セキュリティ
+
+- **セッションタイムアウトのロック処理をマスターパスワード有効時のみに限定** — `sessionAlarmsManager.ts` の `checkTimeout()` が `MASTER_PASSWORD_ENABLED` フラグを確認しないまま `IS_LOCKED: true` を設定していた。マスターパスワードを未設定のユーザーに対してロックを適用すると、`getOrCreateEncryptionKey()` のキャッシュ済みキー IS_LOCKED チェックに阻まれて API キーの復号・暗号化が恒久的に失敗する
+- **`getOrCreateEncryptionKey()` の IS_LOCKED チェックをマスターパスワード有効時のみに限定** — `encryptionSession.ts` で `MASTER_PASSWORD_ENABLED` と `IS_LOCKED` の両方を確認するよう修正。マスターパスワード未設定ユーザーのキー取得が誤ってブロックされることを防止（VULN-017 の修正を補強）
+
+### Fixed / 修正
+
+- **`setUrlFallbackTriggered` を Optimistic Lock に統一** — 他 29 個の `savedUrlsWithTimestamps` setter と異なり素の get-modify-set パターンだったため、並行書き込み時に他エントリの更新を上書きするおそれがあった。`withOptimisticLock` に統一し、URL 照合ロジックも他 setter と同じ非正規化方式に統一（ハッシュフラグメント付き URL の扱いの不整合を解消）
+- **オフラインキュー再送処理を Service Worker のライフサイクルに対応** — `chrome.alarms.onAlarm` リスナーが `processOfflineNetworkQueue()` を fire-and-forget（`void`）で呼んでいたため、Service Worker が処理途中で終了すると `retryCount` の進行が失われる可能性があった。リスナーを `async` 化し `Promise.allSettled` で待機するよう変更。`retryAll()` の `retryCount` 保存もループ完了後の一括保存からジョブ単位保存に変更
+- **オフラインキュー再送にサイクル処理件数上限を追加** — `retryAll()` に上限（`MAX_JOBS_PER_CYCLE = 20`）がなく、キューに大量のジョブが溜まった場合 1 回のアラム発火で多数のクラウド AI 呼び出しが発生しうる状態だった。上限を超えた分は次回サイクルへ持ち越すよう変更
+- **trustDb / TrancoConsentManager のストレージアクセスを `settings` オブジェクト経由に統一** — `tranco_domains` / `tranco_version` が `chrome.storage.local` の個別キーに直接アクセスされており、`migrateToSingleSettingsObject()` の集約・バックアップ対象から外れていた。`getSettings()`/`saveSettings()` 経由に統一し、移行ロジックとの構造的な不整合を解消
+
+### Refactor / リファクタ
+
+- **オフラインキュー処理の計算量を改善** — `retryAll()` 内の未処理ジョブ管理を `filter()`（O(n²)）から `shift()`（O(n)）に変更
+- **trustDb.ts の動的 import 重複を解消** — `settingsStore.ts` との循環参照回避のための動的 import が 3 箇所に重複していたため、メモ化ヘルパー関数（`getSettingsStore()` / `getStorageTypes()`）に集約
+
+### Tests / テスト
+
+- **オフラインキューテストの意図的な未解決 Promise を明示的なクリーンアップに変更** — Service Worker 中断シミュレーションのテストが Promise を未解決のまま放置していたため、明示的に resolve・await するよう修正
+- **Built-in AI 診断・ダウンロード機能のテストを追加** — `builtInAiDiagnosticsService.test.ts`（11テスト）と `diagnosticsPanel-builtInAi.test.ts`（6テスト）に、availability チェック・フラグ案内・ダウンロード進捗通知・セッション破棄のテストを追加
+- **セッションタイムアウト・マスターパスワードゲーティングのテストを追加** — `sessionAlarmsManager.test.ts` にマスターパスワード未設定時のロックスキップテストを追加
+- **暗号化キー IS_LOCKED ゲーティングのテストを追加** — `storage-security.test.ts` にマスターパスワード未設定時に `IS_LOCKED=true` でもキー取得が失敗しないテストを追加
+- **storageUrls-setters テストを `setUrlFallbackTriggered` の Optimistic Lock + URL非正規化に対応** — ハッシュ付き URL の照合方法変更と `_version` キー経由のロック更新テストを追加
+- **trustDb / TrancoConsentManager テストを settingsStore モックに対応** — `tranco_domains` / `tranco_version` が settings オブジェクト経由になったためテストモックを更新
+- **7360 単体テスト（388 ファイル）通過**、TypeScript 型チェック正常
+
+### Documentation / ドキュメント
+
+- **`clearOldTrancoDomains()` / `saveOldTrancoDomains()` のコスト特性を JSDoc に明記** — `saveSettings()` 経由の呼び出しはクォータチェック・API キー暗号化ループ・楽観的ロックを伴うため、`chrome.storage.local` 直接操作より高コストである旨を注記
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.7` → `6.7.9`
+- Checking Team レビュー指摘の事実確認を実施し、誇張・誤りのある指摘（AI コスト再送回数の計算誤り、Safety Mode 機能停止の誇張など）を訂正した上で PBI 化
+- レビューフォローアップ 1 件（`retryAll()` の書き込み頻度最適化）は調査の結果、耐障害性とのトレードオフを優先し対応不要と判断してクローズ
 
 ## [6.7.7] - 2026-08-01
 

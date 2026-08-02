@@ -1508,6 +1508,45 @@
   "diagDeficiencyNone": {
     "message": "不足なし — 全機能が有効です。"
   },
+  "diagBuiltInAiTitle": {
+    "message": "ブラウザ内蔵AI"
+  },
+  "diagBuiltInAiStatus": {
+    "message": "状態"
+  },
+  "diagBuiltInAiAvailable": {
+    "message": "利用可能"
+  },
+  "diagBuiltInAiDownloadable": {
+    "message": "モデルのダウンロードが必要です"
+  },
+  "diagBuiltInAiDownloading": {
+    "message": "ダウンロード中..."
+  },
+  "diagBuiltInAiUnavailable": {
+    "message": "利用不可"
+  },
+  "diagBuiltInAiGuidanceLabel": {
+    "message": "案内"
+  },
+  "diagBuiltInAiFlagGuidance": {
+    "message": "「{flagUrl}」を開き「{flagName}」を有効にしてください。"
+  },
+  "diagBuiltInAiUnsupportedBrowser": {
+    "message": "このブラウザはブラウザ内蔵AIに対応していません。"
+  },
+  "diagBuiltInAiDownloadBtn": {
+    "message": "モデルをダウンロード"
+  },
+  "diagBuiltInAiDownloadStarting": {
+    "message": "ダウンロードを開始しています... 0%"
+  },
+  "diagBuiltInAiDownloadDone": {
+    "message": "ダウンロードが完了しました。"
+  },
+  "diagBuiltInAiDownloadFailed": {
+    "message": "ダウンロードに失敗しました。"
+  },
   "diagDeficiencyNoOpfsSummary": {
     "message": "OPFS: 利用不可"
   },
