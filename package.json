@@ -30,6 +30,8 @@
     "test:type-safe": "npm run type-check:test && npm test",
     "lint": "eslint .",
     "lint:adr-links": "node scripts/lint-adr-links.mjs",
+    "metrics:collect": "node scripts/metrics/updateHistory.mjs",
+    "metrics:backfill": "node scripts/metrics/backfill.mjs",
     "validate": "npm run type-check && npm test",
     "docs": "typedoc --options dev-docs/typedoc.json",
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",

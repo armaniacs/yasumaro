@@ -1,0 +1,164 @@
+{
+  "records": [
+    {
+      "version": "2.1.1",
+      "tag": "v2.2.0",
+      "date": "2026-01-24T13:23:39+09:00",
+      "linesOfCode": 3922,
+      "fileCount": 24,
+      "testCount": 61,
+      "functionCount": 64,
+      "dependencyCount": 3
+    },
+    {
+      "version": "2.3.0",
+      "tag": "v2.3.0",
+      "date": "2026-02-05T12:41:05+09:00",
+      "linesOfCode": 9749,
+      "fileCount": 53,
+      "testCount": 238,
+      "functionCount": 140,
+      "dependencyCount": 6
+    },
+    {
+      "version": "3.0.0",
+      "tag": "v3.0.0",
+      "date": "2026-02-13T21:34:03+09:00",
+      "linesOfCode": 26666,
+      "fileCount": 125,
+      "testCount": 1037,
+      "functionCount": 292,
+      "dependencyCount": 7
+    },
+    {
+      "version": "3.9.7",
+      "tag": "v4.0.0",
+      "date": "2026-02-23T20:32:23+09:00",
+      "linesOfCode": 40729,
+      "fileCount": 162,
+      "testCount": 1307,
+      "functionCount": 491,
+      "dependencyCount": 13
+    },
+    {
+      "version": "4.0.6",
+      "tag": "v4.1",
+      "date": "2026-03-01T20:23:50+09:00",
+      "linesOfCode": 44355,
+      "fileCount": 171,
+      "testCount": 1366,
+      "functionCount": 538,
+      "dependencyCount": 13
+    },
+    {
+      "version": "4.2.0",
+      "tag": "v4.2.0",
+      "date": "2026-03-07T11:51:50+09:00",
+      "linesOfCode": 47456,
+      "fileCount": 180,
+      "testCount": 1483,
+      "functionCount": 580,
+      "dependencyCount": 13
+    },
+    {
+      "version": "5.0.0",
+      "tag": "v5.0.0",
+      "date": "2026-04-06T19:46:53+09:00",
+      "linesOfCode": 91569,
+      "fileCount": 301,
+      "testCount": 3492,
+      "functionCount": 843,
+      "dependencyCount": 15
+    },
+    {
+      "version": "5.1.0",
+      "tag": "v5.1.0",
+      "date": "2026-04-09T05:19:01+09:00",
+      "linesOfCode": 93482,
+      "fileCount": 309,
+      "testCount": 3543,
+      "functionCount": 870,
+      "dependencyCount": 15
+    },
+    {
+      "version": "5.2.0",
+      "tag": "v5.2.0",
+      "date": "2026-05-09T14:47:39+09:00",
+      "linesOfCode": 125607,
+      "fileCount": 446,
+      "testCount": 5468,
+      "functionCount": 1130,
+      "dependencyCount": 22
+    },
+    {
+      "version": "6.0.1",
+      "tag": "v6.0.1",
+      "date": "2026-06-19T04:48:11+09:00",
+      "linesOfCode": 138895,
+      "fileCount": 514,
+      "testCount": 5861,
+      "functionCount": 1317,
+      "dependencyCount": 24
+    },
+    {
+      "version": "6.1.2",
+      "tag": "v6.1.2",
+      "date": "2026-06-21T10:11:37+09:00",
+      "linesOfCode": 140106,
+      "fileCount": 519,
+      "testCount": 5895,
+      "functionCount": 1348,
+      "dependencyCount": 24
+    },
+    {
+      "version": "6.3.0",
+      "tag": "v6.3.0",
+      "date": "2026-06-21T20:45:27+09:00",
+      "linesOfCode": 140958,
+      "fileCount": 524,
+      "testCount": 5919,
+      "functionCount": 1359,
+      "dependencyCount": 24
+    },
+    {
+      "version": "6.4.0",
+      "tag": "v6.4.0",
+      "date": "2026-07-01T10:45:44+09:00",
+      "linesOfCode": 141158,
+      "fileCount": 524,
+      "testCount": 5927,
+      "functionCount": 1361,
+      "dependencyCount": 25
+    },
+    {
+      "version": "6.5.2",
+      "tag": "v6.5.2",
+      "date": "2026-07-05T09:06:04+09:00",
+      "linesOfCode": 141942,
+      "fileCount": 526,
+      "testCount": 5943,
+      "functionCount": 1370,
+      "dependencyCount": 26
+    },
+    {
+      "version": "6.6.0",
+      "tag": "v6.6.0",
+      "date": "2026-07-24T16:06:40+09:00",
+      "linesOfCode": 170734,
+      "fileCount": 690,
+      "testCount": 7271,
+      "functionCount": 1650,
+      "dependencyCount": 25
+    },
+    {
+      "version": "6.7.2",
+      "tag": "v6.7.2",
+      "date": "2026-07-27T20:42:38+09:00",
+      "linesOfCode": 170068,
+      "fileCount": 699,
+      "testCount": 7255,
+      "functionCount": 1672,
+      "dependencyCount": 25
+    }
+  ]
+}
