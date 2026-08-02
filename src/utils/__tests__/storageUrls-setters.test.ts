@@ -550,13 +550,22 @@ describe('storageUrls setter functions', () => {
       expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBe(true);
     });
 
-    it('ハッシュ付きURLも正規化して設定する', async () => {
+    it('他のsetterと同様、URLはハッシュ正規化せずそのまま照合する', async () => {
+      const { setUrlFallbackTriggered } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com#section')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      await setUrlFallbackTriggered('https://example.com#section', true);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com#section')?.fallbackTriggered).toBe(true);
+    });
+
+    it('保存済みURLとハッシュが異なる場合は一致せず変更しない（他setterと整合した挙動）', async () => {
       const { setUrlFallbackTriggered } = await import('../storageUrls.js');
       const entries = [createTestEntry('https://example.com')];
       mockStorage.set('savedUrlsWithTimestamps', entries);
       await setUrlFallbackTriggered('https://example.com#section', true);
       const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
-      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBe(true);
+      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBeUndefined();
     });
 
     it('存在しないURLは変更しない', async () => {
@@ -566,6 +575,19 @@ describe('storageUrls setter functions', () => {
       await setUrlFallbackTriggered('https://other.com', true);
       const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
       expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBeUndefined();
+    });
+
+    it('_versionキーを介してwithOptimisticLock経由で更新する', async () => {
+      const { setUrlFallbackTriggered } = await import('../storageUrls.js');
+      const entries = [createTestEntry('https://example.com')];
+      mockStorage.set('savedUrlsWithTimestamps', entries);
+      mockStorage.set('savedUrlsWithTimestamps_version', 3);
+
+      await setUrlFallbackTriggered('https://example.com', true);
+
+      expect(mockStorage.get('savedUrlsWithTimestamps_version')).toBe(4);
+      const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
+      expect(updated.find(e => e.url === 'https://example.com')?.fallbackTriggered).toBe(true);
     });
   });
 

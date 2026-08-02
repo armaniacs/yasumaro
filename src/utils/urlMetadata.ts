@@ -545,14 +545,14 @@ export async function setUrlExtractedSentencesOriginalBytes(url: string, extract
 }
 
 export async function setUrlFallbackTriggered(url: string, fallbackTriggered: boolean): Promise<void> {
-    // Strip hash inline (no getUrlWithoutHash util available)
-    const validUrl = url.split('#')[0];
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
-
-    const entry = entries.find(e => e.url === validUrl);
-    if (entry) {
-        entry.fallbackTriggered = fallbackTriggered;
-        await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
-    }
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = { ...updatedEntries[idx], fallbackTriggered };
+            return updatedEntries;
+        }
+        return entries;
+    });
 }

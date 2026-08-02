@@ -129,4 +129,114 @@ describe('OfflineNetworkQueue', () => {
     const otherQueue = new OfflineNetworkQueue();
     expect(await otherQueue.getQueueSize()).toBe(1);
   });
+
+  it('persists retryCount progress per job, not only after the full pass completes', async () => {
+    await queue.enqueue({ type: 'ai_summary', payload: { url: 'https://a.com' } });
+    await queue.enqueue({ type: 'ai_summary', payload: { url: 'https://b.com' } });
+
+    let resolveSecondJob: (() => void) | undefined;
+    const secondJobStarted = new Promise<void>((resolve) => {
+      resolveSecondJob = resolve;
+    });
+    // Held so the test can resolve the in-flight handler call explicitly at
+    // the end, rather than leaving it (and the retryAll() Promise chain)
+    // permanently pending — see PBI-2026-08-01-21.
+    let resolveSecondJobHandler: ((success: boolean) => void) | undefined;
+
+    const retryAllPromise = queue.retryAll(async (job) => {
+      if ((job.payload as { url: string }).url === 'https://b.com') {
+        resolveSecondJob?.();
+        // Simulates the Service Worker being torn down while the second job
+        // is still in flight: the handler call doesn't resolve until the
+        // test explicitly does so below.
+        return new Promise<boolean>((resolve) => {
+          resolveSecondJobHandler = resolve;
+        });
+      }
+      return false;
+    });
+
+    await secondJobStarted;
+
+    // At this point the first job has already been handled by retryAll's
+    // loop, and the second job's handler call is still pending (unresolved).
+    // The first job's retryCount increment must already be durable in
+    // storage — this is the behavior PBI-2026-08-01-14 fixes (previously
+    // only a single save after the *entire* loop completed meant this
+    // progress would be lost if the SW terminated here).
+    const persisted = storage['offline_network_queue'] as OfflineJob[];
+    const jobA = persisted.find((j) => (j.payload as { url: string }).url === 'https://a.com');
+    expect(jobA?.retryCount).toBe(1);
+
+    // Explicit cleanup: resolve the in-flight handler and await retryAll()
+    // so no pending Promise chain outlives this test.
+    resolveSecondJobHandler?.(false);
+    await retryAllPromise;
+  });
+
+  it('processes at most MAX_JOBS_PER_CYCLE (20) jobs in a single retryAll pass', async () => {
+    for (let i = 0; i < 50; i++) {
+      await queue.enqueue({ type: 'ai_summary', payload: { index: i } });
+    }
+    expect(await queue.getQueueSize()).toBe(50);
+
+    let handlerCallCount = 0;
+    await queue.retryAll(async () => {
+      handlerCallCount++;
+      return true; // remove each processed job
+    });
+
+    expect(handlerCallCount).toBe(20);
+    expect(await queue.getQueueSize()).toBe(30);
+  });
+
+  it('leaves jobs under the per-cycle cap fully processed (no artificial truncation)', async () => {
+    for (let i = 0; i < 10; i++) {
+      await queue.enqueue({ type: 'ai_summary', payload: { index: i } });
+    }
+
+    let handlerCallCount = 0;
+    await queue.retryAll(async () => {
+      handlerCallCount++;
+      return true;
+    });
+
+    expect(handlerCallCount).toBe(10);
+    expect(await queue.getQueueSize()).toBe(0);
+  });
+
+  it('processes the deferred remainder on the next retryAll call', async () => {
+    for (let i = 0; i < 25; i++) {
+      await queue.enqueue({ type: 'ai_summary', payload: { index: i } });
+    }
+
+    const processedIndexes: number[] = [];
+    const handler = async (job: OfflineJob) => {
+      processedIndexes.push((job.payload as { index: number }).index);
+      return true;
+    };
+
+    await queue.retryAll(handler); // cycle 1: processes indexes 0-19
+    expect(await queue.getQueueSize()).toBe(5);
+
+    await queue.retryAll(handler); // cycle 2: processes the remaining 5
+    expect(await queue.getQueueSize()).toBe(0);
+    expect(processedIndexes).toEqual(Array.from({ length: 25 }, (_, i) => i));
+  });
+
+  it('does not touch jobs deferred past the per-cycle cap (retryCount unchanged)', async () => {
+    for (let i = 0; i < 21; i++) {
+      await queue.enqueue({ type: 'ai_summary', payload: { index: i } });
+    }
+
+    await queue.retryAll(async () => false); // fail every processed job
+
+    const persisted = storage['offline_network_queue'] as OfflineJob[];
+    expect(persisted).toHaveLength(21);
+    const processed = persisted.filter((j) => j.retryCount > 0);
+    const deferred = persisted.filter((j) => j.retryCount === 0);
+    expect(processed).toHaveLength(20);
+    expect(deferred).toHaveLength(1);
+    expect((deferred[0].payload as { index: number }).index).toBe(20);
+  });
 });

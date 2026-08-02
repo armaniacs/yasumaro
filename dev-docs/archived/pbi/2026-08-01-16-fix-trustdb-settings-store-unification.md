@@ -89,13 +89,22 @@ Scenario: 既存のtrustDb関連テストが回帰しない
 - `migrateToSingleSettingsObject()` の集約対象キー判定（`StorageKeys` に含まれ `_version` を含まず暗号化キーでない）は、`tranco_domains` を暗黙に含んでいる。今回の変更でtrustDb側をsettings経由に統一すれば、この暗黙の依存関係が明示化され、将来同様の不整合が再発しにくくなる。
 
 ## Definition of Done
-- [ ] `trustDb.ts` / `trancoConsentManager.ts` が `tranco_domains` をsettingsオブジェクト経由で読み書きしている
-- [ ] レガシー個別キーからの移行パスが実装されている
-- [ ] 全テストがパスする
-- [ ] `pbi/00-INDEX.md` が更新されている
+- [x] `trustDb.ts` / `trancoConsentManager.ts` が `tranco_domains` をsettingsオブジェクト経由で読み書きしている
+- [x] レガシー個別キーからの移行パスが実装されている
+- [x] 全テストがパスする
+- [x] `pbi/00-INDEX.md` が更新されている
 
 ## 関連
 - Checking Team レポート: `plans/2026-08-01-1903-review-yasumaro.md`（Legacy Bridge Architect指摘、High #2）
 - 対象コード: `src/utils/storage/settingsStore.ts:189-193,214-233`, `src/utils/trustDb/trustDb.ts:911-913,945-946`, `src/utils/trustDb/trancoConsentManager.ts:111,121-129`
 - 事実確認: 個別キー非経由アクセスの事実は正確。「Safety Mode警告機能停止」という結論は誇張（`isTrancoDomain()`はメモリ上の`trancoSet`依存でこのストレージキーとは独立）
 - 既存対策済みPBI: `dev-docs/archived/pbi/2026-07-26-15-fix-settings-migration-non-destructive.md`（settingsStore側の即時削除→バックアップ退避化は対応済み。本PBIはtrustDb側の残存課題のみを扱う）
+
+## 実装メモ（2026-08-01完了）
+
+- **スコープ拡張の判断**: `updateTrancoVersion()` が `tranco_version` と `tranco_domains` を同一の `chrome.storage.local.set()` 呼び出しで同時に書き込んでいたため、`tranco_domains` だけをsettings経由に切り替えると1関数内で2つの異なるストレージ経路が混在してしまう。`tranco_version` も `StorageKeys` に定義済みでsettingsオブジェクトの型に含まれていたため、本PBIのスコープを両キーに広げて統一した
+- `src/utils/trustDb/trustDb.ts`: `getSavedTrancoVersion()` / `updateTrancoVersion()` / `getSavedTrancoDomains()` を `getSettings()`/`saveSettings()`（動的import、`settingsStore.ts`との循環参照回避のため）経由に変更。未使用になった`STORAGE_KEY_TRANCO_VERSION`/`STORAGE_KEY_TRANCO_DOMAINS`定数を削除
+- `src/utils/trustDb/trancoConsentManager.ts`: `saveOldTrancoDomains()` / `getOldTrancoDomains()` / `clearOldTrancoDomains()` を `saveSettings()`/`getSettings()` 経由に変更。`clearOldTrancoDomains()`は「キー削除」ではなく「空配列への設定」に意味が変わる（settingsオブジェクトにはキー削除の概念がないため）。`resetAll()`はconsent系3キーの`chrome.storage.local.remove()`（スコープ外、現状維持）と`clearOldTrancoDomains()`呼び出しに分離
+- `isTrancoDomain()`・Safety Mode判定自体（メモリ上の`trancoSet`依存）は変更していない
+- テスト: `trustDb.test.ts`は`settingsStore.js`を`vi.mock`し独立したモックストアで検証するよう書き換え（`getSettings()`のモジュールスコープキャッシュ`cachedSettings`がテスト間で状態を持ち越す問題があり、`chrome.storage.local`直接モックでは対応できなかったため）。`trancoConsentManager.test.ts`は既存の`mockStorage` Mapを`settingsStore`モックからも参照する形にして一貫性を保った。`clearOldTrancoDomains`/`resetAll`のアサーションを「キー削除」から「空配列設定」の新仕様に更新
+- `npm run validate`（型チェック + vitest全件7336件、既存テストの修正のみで純増減なし）成功、`npm run build` 成功

@@ -665,7 +665,13 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.notifications.onClicked.addListener(handleNotificationClicked);
 
     // Daily purge alarm
-    chrome.alarms.onAlarm.addListener((alarm) => {
+    //
+    // Returns a Promise (not `void`) for the offline-network-retry branch so
+    // Chrome keeps this Service Worker alive until the awaited work below
+    // finishes. Previously each call there was detached with `void`, which
+    // let the SW terminate mid-retry and lose in-flight retryCount progress
+    // (PBI-2026-08-01-14). The other branches remain fire-and-forget as before.
+    chrome.alarms.onAlarm.addListener(async (alarm) => {
           if (alarm.name === 'yasumaro-daily-purge') {
             handleDailyPurgeAlarm(
                 (days, max) => sqliteClient.purgeOldRecords(days, max),
@@ -691,14 +697,17 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
             })();
           }
           if (alarm.name === 'yasumaro-offline-network-retry') {
-            void processOfflineNetworkQueue();
-            void flushPendingRecords(sqliteClient);
-            void flushPendingWrites(retryPendingChromeStorageWrite);
-            // Piggyback a lightweight health check on this existing 5-minute
-            // alarm to keep the offscreen document from being suspended for
-            // long stretches on mobile Chrome (PBI-2026-07-26-20). Reduces
-            // suspend frequency; does not guarantee it.
-            void sqliteClient.isSqliteHealthy();
+            // allSettled ensures one failing task doesn't block the others.
+            await Promise.allSettled([
+              processOfflineNetworkQueue(),
+              flushPendingRecords(sqliteClient),
+              flushPendingWrites(retryPendingChromeStorageWrite),
+              // Piggyback a lightweight health check on this existing 5-minute
+              // alarm to keep the offscreen document from being suspended for
+              // long stretches on mobile Chrome (PBI-2026-07-26-20). Reduces
+              // suspend frequency; does not guarantee it.
+              sqliteClient.isSqliteHealthy(),
+            ]);
           }
     });
 }
