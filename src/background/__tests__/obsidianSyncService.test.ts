@@ -81,6 +81,11 @@ describe('ObsidianSyncService', () => {
       mockStorage['obsidian_api_key'] = 1234567890123456;
       expect(await service.isConfigured()).toBe(false);
     });
+
+    it('returns false when storage access throws', async () => {
+      (globalThis as any).chrome.storage.local.get.mockRejectedValue(new Error('storage unavailable'));
+      expect(await service.isConfigured()).toBe(false);
+    });
   });
 
   describe('sync', () => {
@@ -135,6 +140,121 @@ describe('ObsidianSyncService', () => {
       const result = await service.testConnection();
       expect(result.success).toBe(false);
       expect(result.message).toContain('Timeout');
+    });
+  });
+
+  describe('syncBatch', () => {
+    it('returns 0 and does not query when Obsidian is not configured', async () => {
+      mockStorage = { obsidian_api_key: '' };
+      const result = await service.syncBatch();
+
+      expect(result).toBe(0);
+      expect(mockSqliteClient.query).not.toHaveBeenCalled();
+      expect(mockObsidianClient.appendToDailyNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 0 when no rows are returned from the query', async () => {
+      mockSqliteClient.query.mockResolvedValue({ rows: [], total: 0 });
+      const result = await service.syncBatch();
+
+      expect(result).toBe(0);
+      expect(mockObsidianClient.appendToDailyNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 0 when every returned row is already synced', async () => {
+      mockSqliteClient.query.mockResolvedValue({
+        rows: [
+          { id: 1, url: 'https://a.com', title: 'A', summary: null, obsidian_synced: 1 },
+        ],
+        total: 1,
+      });
+      const result = await service.syncBatch();
+
+      expect(result).toBe(0);
+      expect(mockObsidianClient.appendToDailyNote).not.toHaveBeenCalled();
+    });
+
+    it('syncs each unsynced row and marks obsidian_synced in SQLite', async () => {
+      mockSqliteClient.query.mockResolvedValue({
+        rows: [
+          { id: 1, url: 'https://a.com', title: 'A', summary: null, obsidian_synced: 0 },
+          { id: 2, url: 'https://b.com', title: 'B', summary: 'B summary', obsidian_synced: 0 },
+        ],
+        total: 2,
+      });
+      mockObsidianClient.appendToDailyNote.mockResolvedValue(undefined);
+
+      const result = await service.syncBatch();
+
+      expect(result).toBe(2);
+      expect(mockObsidianClient.appendToDailyNote).toHaveBeenCalledTimes(2);
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(2, { obsidian_synced: 1 });
+    });
+
+    it('filters out already-synced rows within a mixed batch', async () => {
+      mockSqliteClient.query.mockResolvedValue({
+        rows: [
+          { id: 1, url: 'https://a.com', title: 'A', summary: null, obsidian_synced: 0 },
+          { id: 2, url: 'https://b.com', title: 'B', summary: null, obsidian_synced: 1 },
+          { id: 3, url: 'https://c.com', title: 'C', summary: null, obsidian_synced: 0 },
+        ],
+        total: 3,
+      });
+
+      const result = await service.syncBatch();
+
+      expect(result).toBe(2);
+      expect(mockObsidianClient.appendToDailyNote).toHaveBeenCalledTimes(2);
+      // Only ids 1 and 3 (unsynced) get updated.
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(3, { obsidian_synced: 1 });
+      expect(mockSqliteClient.update).not.toHaveBeenCalledWith(2, { obsidian_synced: 1 });
+    });
+
+    it('counts only rows whose sync succeeded', async () => {
+      mockSqliteClient.query.mockResolvedValue({
+        rows: [
+          { id: 1, url: 'https://a.com', title: 'A', summary: null, obsidian_synced: 0 },
+          { id: 2, url: 'https://b.com', title: 'B', summary: null, obsidian_synced: 0 },
+        ],
+        total: 2,
+      });
+      mockObsidianClient.appendToDailyNote
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('Obsidian down'));
+
+      const result = await service.syncBatch();
+
+      // Row 1 succeeds, row 2 fails silently → count reflects only the success.
+      expect(result).toBe(1);
+      expect(mockSqliteClient.update).toHaveBeenCalledTimes(1);
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 });
+    });
+
+    it('skips rows with an undefined id', async () => {
+      mockSqliteClient.query.mockResolvedValue({
+        rows: [
+          { id: undefined, url: 'https://no-id.com', title: 'No ID', summary: null, obsidian_synced: 0 },
+          { id: 5, url: 'https://has-id.com', title: 'Has ID', summary: null, obsidian_synced: 0 },
+        ],
+        total: 2,
+      });
+
+      const result = await service.syncBatch();
+
+      expect(result).toBe(1);
+      expect(mockObsidianClient.appendToDailyNote).toHaveBeenCalledTimes(1);
+      expect(mockSqliteClient.update).toHaveBeenCalledWith(5, { obsidian_synced: 1 });
+    });
+
+    it('returns 0 and swallows a query failure', async () => {
+      mockSqliteClient.query.mockRejectedValue(new Error('Query exploded'));
+
+      const result = await service.syncBatch();
+
+      expect(result).toBe(0);
+      expect(mockObsidianClient.appendToDailyNote).not.toHaveBeenCalled();
     });
   });
 });

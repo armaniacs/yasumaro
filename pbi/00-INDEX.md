@@ -16,6 +16,9 @@
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 
 ---
+> 2026-08-02-01〜05 はテストカバレッジ拡充（prompt injection マトリクス / optimistic lock ストレス / privacy pipeline PII リーク / Obsidian APIキー漏洩防止 / SQLite unique 制約）として実装・アーカイブ済み。詳細はアーカイブ欄参照。
+
+---
 
 ## アーカイブ
 
@@ -27,6 +30,14 @@
 ## アーカイブ
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
+
+### 2026-08-02 セッションでアーカイブ済み
+
+- 2026-08-02-01-feat-expand-prompt-injection-tests.md (プロンプトインジェクション検知テスト拡充。OWASP/日本語含むインジェクションマトリクスと誤検知ガードを `promptSanitizer-owasp-matrix.test.ts` に追加。npm run validate成功)
+- 2026-08-02-02-feat-optimistic-lock-stress-test.md (楽観的ロックのストレステスト。大量順序バッチ・キー間独立性・リトライ枯渇時のConflictError・冪等更新の収束を `optimisticLock-stress.test.ts` に追加。npm run validate成功)
+- 2026-08-02-03-feat-privacy-pipeline-integration-test.md (プライバシーパイプラインのPIIリーク防止検証。クラウドAI送信データに生PIIが含まれないことを成功/ローカル失敗/マスク済みクラウドの各モードで `privacyPipeline-pii-leak.test.ts` に追加。npm run validate成功)
+- 2026-08-02-04-fix-obsidian-api-key-leakage-prevention.md (Obsidian APIキー漏洩防止のクライアントレベル検証。ヘッダーへの正当な配置と、ログへの生キー非出力を `obsidianClient-api-key-leak.test.ts` に追加。npm run validate成功)
+- 2026-08-02-05-fix-sqlite-unique-constraint-validation.md (SQLiteの(url, created_at) unique制約検証。重複INSERTが静かに無視され、同一URL別タイムスタンプが保持されることを `recordsRepo-unique-constraint.test.ts` に追加。npm run validate成功)
 
 ### 2026-08-02 セッションでアーカイブ済み
 
@@ -225,4 +236,4 @@
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 193 |
+| アーカイブ済み | 198 |
