@@ -33,6 +33,27 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.10] - 2026-08-02
+
+テストカバレッジ拡充（PBI 2026-08-02-01〜05）と、その過程で発見したカバレッジギャップへの対応。機能変更なし（単体テスト・E2E テストのみ追加）。
+
+### Tests / テスト
+
+- **プロンプトインジェクション検知テストを拡充** — `promptSanitizer-owasp-matrix.test.ts` を新設し、OWASP LLM Top 10 系・日本語を含むプロンプトインジェクションのパターンマトリクスをデータ駆動で追加。各ペイロードが HIGH 判定され、攻撃フレーズがサニタイズ出力に残らないことを検証。あわせて技術文の誤検知（False Positive）ガードを追加
+- **楽観的ロックのストレステストを追加** — `optimisticLock-stress.test.ts` を新設。大量の順序処理バッチでデータ消失が起きないこと、独立キー間の同時更新が互いに干渉しないこと、リトライ枯渇時に `ConflictError` が投げられストレージが破損しないこと、冪等更新が収束することを検証
+- **プライバシーパイプラインの PII リーク防止テストを追加** — `privacyPipeline-pii-leak.test.ts` を新設。クラウド AI へ渡るデータに生 PII が含まれないことを、ハッピーパス・ローカル AI 失敗時・`masked_cloud` モードの各経路で検証
+- **Obsidian API キー漏洩防止のクライアントレベル検証を追加** — `obsidianClient-api-key-leak.test.ts` を新設。有効なキーが `Authorization` ヘッダーへ正しく入りつつログへは一切出力されないこと、キー欠落・オブジェクト形状キー時に `console.error` / `addLog` へ生キーが漏れないことを検証
+- **SQLite unique 制約の検証テストを追加** — `recordsRepo-unique-constraint.test.ts` を新設。`(url, created_at)` 重複が静かに無視され（`id=-1`）、同一 URL 別タイムスタンプは保持され、`insertBatch` が重複をスキップして非重複行のみをカウントすることを検証
+- **追加カバレッジ: `obsidianSyncService.syncBatch`** — バッチ同期の中核（未同期行の抽出・`obsidian_synced` マーク・失敗行のサイレントスキップ・`id` 未定義行スキップ・クエリ失敗の握りつぶし）にテストを追加
+- **追加カバレッジ: `dbMaintenance` ラッパー** — `purgeOldRecords` / `purgeContent` / `backupDb` / `restoreDb` / `sqliteHealthCheck` の委譲ラッパーにテストを追加（カバレッジ 12.5% → 58%）
+- **Service Worker メッセージルーティングの E2E を追加** — `service-worker-orchestration.spec.ts`（`@interaction`）を新設。PING / GET_PRIVACY_CACHE のハンドラ配線、content-script-only 型の送信者検証（`INVALID_SENDER_ERROR`）、未知メッセージでの SW クラッシュ耐性を検証
+- **7398 単体テスト（394 ファイル）通過**、TypeScript 型チェック正常、ビルド成功
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.9` → `6.7.10`
+- 実装済み PBI 2026-08-02-01〜05 を `dev-docs/archived/pbi/` へ移動し `pbi/00-INDEX.md` を更新
+
 ## [6.7.9] - 2026-08-02
 
 Checking Team レビュー（プロジェクト全体、`plans/2026-08-01-1903-review-yasumaro.md`）の High 指摘事項に対する事実確認済みの修正、および直後のコードレビューで見つかった軽微なフォローアップ対応。
