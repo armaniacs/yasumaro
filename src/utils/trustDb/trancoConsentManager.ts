@@ -105,9 +105,19 @@ export class TrancoConsentManager {
 
   /**
    * 旧 Tranco ドメインリストを保存（バックアップ用）
+   *
+   * settings オブジェクト経由で書き込む（PBI-2026-08-01-16）。従来の
+   * chrome.storage.local 直接アクセスは settingsStore の移行ロジックと
+   * 経路が分裂しており、migrateToSingleSettingsObject() のバックアップ退避
+   * 対象から外れていた。
+   *
+   * 注意: saveSettings() はストレージクォータチェック・APIキー暗号化ループ・
+   * withOptimisticLock を伴うコストの高い処理。chrome.storage.local.set() の
+   * 単純呼び出しより重いため、高頻度呼び出しは避けること（PBI-2026-08-01-22）。
    */
   static async saveOldTrancoDomains(domains: string[]): Promise<void> {
-    await chrome.storage.local.set({
+    const { saveSettings } = await import('../storage/settingsStore.js');
+    await saveSettings({
       [this.STORAGE_KEY_TRANCO_DOMAINS]: domains
     });
 
@@ -116,17 +126,31 @@ export class TrancoConsentManager {
 
   /**
    * 保存された旧 Tranco ドメインリストを取得
+   *
+   * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
    */
   static async getOldTrancoDomains(): Promise<string[]> {
-    const result = await chrome.storage.local.get(this.STORAGE_KEY_TRANCO_DOMAINS);
-    return result[this.STORAGE_KEY_TRANCO_DOMAINS] as string[] || [];
+    const { getSettings } = await import('../storage/settingsStore.js');
+    const settings = await getSettings();
+    return settings[this.STORAGE_KEY_TRANCO_DOMAINS] || [];
   }
 
   /**
    * 保存されている旧 Tranco ドメインリストを削除
+   *
+   * settings オブジェクト経由で削除する（PBI-2026-08-01-16）。
+   *
+   * 注意: chrome.storage.local.remove() より高コスト（saveSettings() 経由、
+   * ストレージクォータチェック・APIキー暗号化ループ・withOptimisticLock を
+   * 伴う）。現状は resetAll() からのみ呼ばれる低頻度操作のため許容している
+   * が、新たな高頻度呼び出し元を追加する場合はコストを再検討すること
+   * （PBI-2026-08-01-22）。
    */
   static async clearOldTrancoDomains(): Promise<void> {
-    await chrome.storage.local.remove([this.STORAGE_KEY_TRANCO_DOMAINS]);
+    const { saveSettings } = await import('../storage/settingsStore.js');
+    await saveSettings({
+      [this.STORAGE_KEY_TRANCO_DOMAINS]: []
+    });
 
     logInfo('TrancoConsentManager', {}, 'Old Tranco domains cleared');
   }
@@ -176,9 +200,11 @@ export class TrancoConsentManager {
     await chrome.storage.local.remove([
       this.STORAGE_KEY_CONSENT_GRANTED,
       this.STORAGE_KEY_CONSENT_DENIED_REASON,
-      this.STORAGE_KEY_CONSENT_DENIED_TIMESTAMP,
-      this.STORAGE_KEY_TRANCO_DOMAINS
+      this.STORAGE_KEY_CONSENT_DENIED_TIMESTAMP
     ]);
+    // tranco_domains is settings-object-backed (PBI-2026-08-01-16); clear it
+    // via the same path used elsewhere rather than chrome.storage.local.remove.
+    await this.clearOldTrancoDomains();
 
     logInfo('TrancoConsentManager', {}, 'All Tranco settings reset');
   }

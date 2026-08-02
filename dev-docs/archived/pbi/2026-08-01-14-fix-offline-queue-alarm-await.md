@@ -97,13 +97,21 @@ Scenario: 既存のオフラインキュー再送テストが回帰しない
 - `void` を単純に `await` に変えるだけだと、複数の独立処理（`processOfflineNetworkQueue` / `flushPendingRecords` / `flushPendingWrites` / `isSqliteHealthy`）が直列実行になり不要に遅延する。`Promise.allSettled` で並列化しつつ待機すること。
 
 ## Definition of Done
-- [ ] alarmsリスナーが非同期処理の完了を待つ
-- [ ] retryCountの永続化タイミングがジョブ単位（またはバッチ単位）になっている
-- [ ] 全テストがパスする
-- [ ] `pbi/00-INDEX.md` が更新されている
+- [x] alarmsリスナーが非同期処理の完了を待つ
+- [x] retryCountの永続化タイミングがジョブ単位（またはバッチ単位）になっている
+- [x] 全テストがパスする
+- [x] `pbi/00-INDEX.md` が更新されている
 
 ## 関連
 - Checking Team レポート: `plans/2026-08-01-1903-review-yasumaro.md`（SRE/Ops Specialist指摘、High #3）
 - 対象コード: `src/background/service-worker.ts:693-702`, `src/background/offlineQueueProcessor.ts:26-66`, `src/background/offlineNetworkQueue.ts:92-125`
 - 事実確認: コード構造・保存タイミングは正確。「毎回初回扱い」という結論は条件付き（SW中断時のみ）で誇張気味
 - 関連PBI: PBI-15（サイクルあたり処理件数上限）と技術的関心が重なる。同時期に着手する場合は競合に注意
+
+## 実装メモ（2026-08-01完了）
+
+- `src/background/service-worker.ts`: `chrome.alarms.onAlarm.addListener` のコールバックを `async` 化。`yasumaro-offline-network-retry` 分岐内で `processOfflineNetworkQueue()` / `flushPendingRecords()` / `flushPendingWrites()` / `isSqliteHealthy()` を `Promise.allSettled` で並列に `await` する形に変更（1つの失敗が他をブロックしない）。他の3分岐（daily-purge, local-md-*）は既存通り `void` のfire-and-forgetのまま維持（スコープ外）
+- `src/background/offlineNetworkQueue.ts`: `retryAll()` を、ループの最後に1回だけ `saveQueue()` する実装から、各ジョブ処理直後（成功時・MAX_RETRY_COUNT到達時・残留時のいずれのパスでも）に `saveQueue([...remaining, ...pending])` を呼ぶ実装に変更。未処理分（`pending`）も含めて都度保存することで、途中でSWが終了しても既処理分のretryCount増分が失われない
+- `src/background/__tests__/offlineNetworkQueue.test.ts`: 2件目のジョブ処理がハンドラ内で永久にpendingのまま（SW終了を模擬）でも、1件目のretryCount増分が既にストレージへ反映されていることを検証するテストを追加
+- `npm run validate`（型チェック + vitest全件7332件）成功、`npm run build` 成功
+- 落とし穴として記載されていた「サイクル処理時間の長時間化」「retryCountループ内saveによるI/O増加」はPBI-15（サイクル上限）で緩和予定

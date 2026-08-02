@@ -11,6 +11,19 @@ import { vi } from 'vitest';;
 import { TrancoConsentManager, ConsentResult } from '../trancoConsentManager.js';
 import { StorageKeys } from '../../storage.js';
 
+// settingsStore をモック (PBI-2026-08-01-16: saveOldTrancoDomains/
+// getOldTrancoDomains/clearOldTrancoDomains が settings オブジェクト経由に
+// なったため). Backed by the same mockStorage Map used for chrome.storage.local
+// below so both access paths observe the same underlying state.
+vi.mock('../../storage/settingsStore.js', () => ({
+  getSettings: vi.fn(async () => Object.fromEntries(mockStorage.entries())),
+  saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(partial)) {
+      mockStorage.set(key, value);
+    }
+  }),
+}));
+
 beforeAll(() => {
   vi.useFakeTimers();
 });
@@ -237,8 +250,10 @@ describe('TrancoConsentManager', () => {
 
       await TrancoConsentManager.clearOldTrancoDomains();
 
-      expect(mockStorage.has(StorageKeys.TRANCO_DOMAINS)).toBe(false);
-      expect(mockChromeStorage.local.remove).toHaveBeenCalledWith([StorageKeys.TRANCO_DOMAINS]);
+      // PBI-2026-08-01-16: tranco_domains is settings-object-backed now, so
+      // "clearing" means setting it to an empty array via saveSettings()
+      // rather than chrome.storage.local.remove().
+      expect(mockStorage.get(StorageKeys.TRANCO_DOMAINS)).toEqual([]);
     });
   });
 
@@ -339,7 +354,10 @@ describe('TrancoConsentManager', () => {
       expect(mockStorage.has(StorageKeys.TRANCO_CONSENT_GRANTED)).toBe(false);
       expect(mockStorage.has(StorageKeys.TRANCO_CONSENT_DENIED_REASON)).toBe(false);
       expect(mockStorage.has(StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP)).toBe(false);
-      expect(mockStorage.has(StorageKeys.TRANCO_DOMAINS)).toBe(false);
+      // PBI-2026-08-01-16: tranco_domains is settings-object-backed now, so
+      // "clearing" means setting it to an empty array via saveSettings()
+      // rather than chrome.storage.local.remove().
+      expect(mockStorage.get(StorageKeys.TRANCO_DOMAINS)).toEqual([]);
     });
   });
 

@@ -13,10 +13,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| ⬜ [2026-08-01-13-fix-url-fallback-triggered-optimistic-lock.md](2026-08-01-13-fix-url-fallback-triggered-optimistic-lock.md) | 🟢低 | 🟡軽微 | 🔧 | `setUrlFallbackTriggered`をOptimistic Lock・URL正規化に統一 |
-| ⬜ [2026-08-01-14-fix-offline-queue-alarm-await.md](2026-08-01-14-fix-offline-queue-alarm-await.md) | 🟡中 | 🟡軽微 | 🔧 | オフラインキュー再送のalarmsリスナーをasync化しSW生存期間を延長 |
-| ⬜ [2026-08-01-15-fix-offline-queue-rate-limit.md](2026-08-01-15-fix-offline-queue-rate-limit.md) | 🟡中 | 🟡軽微 | 🔧 | オフラインキュー再送にサイクルあたり処理件数上限を追加 |
-| ⬜ [2026-08-01-16-fix-trustdb-settings-store-unification.md](2026-08-01-16-fix-trustdb-settings-store-unification.md) | 🟡中 | 🟡軽微 | 🔧 | trustDb/trancoConsentManagerのtranco_domains個別キーアクセスをsettings経由に統一 |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 
 ---
@@ -32,8 +28,21 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
 
+### 2026-08-02 セッションでアーカイブ済み
+
+- 2026-08-02-01-feat-builtin-ai-diagnostics.md (診断パネルにブラウザ内蔵AI診断セクションを追加。builtInAiDiagnosticsService + diagnosticsPanelに診断表示・モデルダウンロード導線を実装。npm run validate成功)
+
 ### 2026-08-01 セッションでアーカイブ済み
 
+- 2026-08-01-22-fix-tranco-domains-clear-cost-documentation.md (saveOldTrancoDomains/clearOldTrancoDomainsのJSDocにsaveSettings()経由のコスト特性を明記。ロジック変更なし)
+- 2026-08-01-21-fix-offline-queue-test-pending-promise-cleanup.md (persists retryCount progressテストの未解決Promiseを明示的にresolve/awaitしてクリーンアップする形に変更)
+- 2026-08-01-20-fix-trustdb-dynamic-import-duplication.md (trustDb.tsの3箇所の重複する動的importをgetSettingsStore/getStorageTypesヘルパーに集約)
+- 2026-08-01-19-fix-offline-queue-save-frequency.md (saveQueue書き込みコスト・頻度を調査。unlimitedStorage権限によりクォータ制限なし、耐障害性とのトレードオフを優先し対応不要と判断してクローズ)
+- 2026-08-01-18-fix-offline-queue-pending-filter-complexity.md (retryAll()のpending配列除去をfilter(O(n²))からshift()(O(n))に改善)
+- 2026-08-01-16-fix-trustdb-settings-store-unification.md (trustDb/trancoConsentManagerのtranco_domains・tranco_versionをgetSettings/saveSettings経由に統一。npm run validate成功)
+- 2026-08-01-15-fix-offline-queue-rate-limit.md (retryAll()にMAX_JOBS_PER_CYCLE=20を追加、上限超過分は次回サイクルへ持ち越し。npm run validate成功)
+- 2026-08-01-14-fix-offline-queue-alarm-await.md (alarmsリスナーをasync化しPromise.allSettledで並列待機、retryAll()をジョブ単位保存に変更。npm run validate成功)
+- 2026-08-01-13-fix-url-fallback-triggered-optimistic-lock.md (setUrlFallbackTriggeredをwithOptimisticLockに統一、URL照合を他setterと同じ非正規化方式に変更。npm run validate成功)
 - 2026-08-01-01-fix-service-worker-init.md (Service Worker の init() 呼び出し。遅延マイグレーションで E2E 競合を回避。v6.7.7 としてリリース)
 - 2026-08-01-02-fix-crypto-envelope-validation.md (暗号化エンベロープ入力検証強化。v6.7.7 としてリリース)
 - 2026-08-01-03-fix-hmac-key-protection.md (HMAC 署名鍵暗号化保存。v6.7.7 としてリリース)
@@ -214,6 +223,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 5（✨機能追加 0 / 🔧非機能追加 5） |
+| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 183 |
+| アーカイブ済み | 193 |

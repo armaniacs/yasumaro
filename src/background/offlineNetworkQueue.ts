@@ -26,6 +26,11 @@ const MAX_QUEUED_JOBS = 200;
 const JOB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_JOB_PAYLOAD_BYTES = 50 * 1024;
 const MAX_RETRY_COUNT = 3;
+// Caps how many jobs a single retryAll() pass processes. Without this, a
+// large queue (up to MAX_QUEUED_JOBS) could trigger that many cloud AI calls
+// back-to-back in one 5-minute alarm cycle with no rate limiting
+// (PBI-2026-08-01-15). Jobs beyond the cap stay queued for the next cycle.
+const MAX_JOBS_PER_CYCLE = 20;
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -90,18 +95,44 @@ export class OfflineNetworkQueue {
   }
 
   async retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void> {
-    let queue = await this.loadQueue();
+    const queue = await this.loadQueue();
     const expiredCount = this.dropExpired(queue);
     if (expiredCount > 0) {
       addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: expiredCount });
     }
 
+    // Only the first MAX_JOBS_PER_CYCLE jobs are processed this pass; the
+    // rest are left untouched in the queue for the next alarm cycle
+    // (PBI-2026-08-01-15).
+    const jobsToProcess = queue.slice(0, MAX_JOBS_PER_CYCLE);
+    const untouched = queue.slice(MAX_JOBS_PER_CYCLE);
+    if (untouched.length > 0) {
+      addLog(LogType.INFO, 'OfflineNetworkQueue: deferring jobs to next cycle', {
+        deferred: untouched.length,
+        processing: jobsToProcess.length,
+      });
+    }
+
+    // Jobs not yet processed in this pass; persisted after every job so a
+    // Service Worker termination mid-pass doesn't lose retryCount progress
+    // for jobs already handled (PBI-2026-08-01-14).
+    //
+    // `pending` starts as a copy of `jobsToProcess` and each iteration
+    // removes the job currently being handled via shift() rather than
+    // filter(), since the for-of loop below visits jobsToProcess in the same
+    // order it was built (queue.slice(0, N)) — the job at the front of
+    // `pending` is always the one being processed (PBI-2026-08-01-18).
+    const pending = [...jobsToProcess];
     const remaining: OfflineJob[] = [];
-    for (const job of queue) {
+
+    for (const job of jobsToProcess) {
+      pending.shift();
+
       try {
         const success = await handler(job);
         if (success) {
           addLog(LogType.INFO, 'OfflineNetworkQueue: job succeeded', { id: job.id, type: job.type });
+          await this.saveQueue([...remaining, ...pending, ...untouched]);
           continue;
         }
         job.retryCount++;
@@ -115,13 +146,13 @@ export class OfflineNetworkQueue {
           id: job.id,
           type: job.type,
         });
+        await this.saveQueue([...remaining, ...pending, ...untouched]);
         continue;
       }
 
       remaining.push(job);
+      await this.saveQueue([...remaining, ...pending, ...untouched]);
     }
-
-    await this.saveQueue(remaining);
   }
 
   async getQueueSize(): Promise<number> {
