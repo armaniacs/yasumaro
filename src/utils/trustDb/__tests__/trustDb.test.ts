@@ -58,6 +58,16 @@ vi.mock('../presetDomains.js', () => ({
   TRANCO_VERSION: '2026-01-01',
 }));
 
+// settingsStore をモック (PBI-2026-08-01-16: getSavedTrancoVersion/Domains,
+// updateTrancoVersion が settings オブジェクト経由になったため)
+const mockSettingsStore: Record<string, unknown> = {};
+vi.mock('../../storage/settingsStore.js', () => ({
+  getSettings: vi.fn(async () => ({ ...mockSettingsStore })),
+  saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
+    Object.assign(mockSettingsStore, partial);
+  }),
+}));
+
 import { getTrustDb, isDomainTrusted } from '../trustDb.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
 
@@ -67,6 +77,10 @@ describe('TrustDb', () => {
     // chrome.storage.local をリセット
     (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
     (chrome.storage.local.set as vi.Mock).mockResolvedValue(undefined);
+    // settingsStore モックをリセット (PBI-2026-08-01-16)
+    for (const key of Object.keys(mockSettingsStore)) {
+      delete mockSettingsStore[key];
+    }
     // シングルトンをリセット
     (getTrustDb() as any).state = {
       database: null,
@@ -442,14 +456,17 @@ describe('TrustDb', () => {
       const db = getTrustDb();
       await db.initialize();
       await db.updateTrancoVersion('2026-02-01', ['example.com']);
-      expect(chrome.storage.local.set).toHaveBeenCalled();
+      const { saveSettings } = await import('../../storage/settingsStore.js');
+      expect(saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ tranco_version: '2026-02-01', tranco_domains: ['example.com'] })
+      );
     });
 
     test('getSavedTrancoVersion で保存済みバージョンを取得', async () => {
       (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
       const db = getTrustDb();
       await db.initialize();
-      (chrome.storage.local.get as vi.Mock).mockResolvedValue({ tranco_version: '2026-01-01' });
+      mockSettingsStore.tranco_version = '2026-01-01';
       const version = await db.getSavedTrancoVersion();
       expect(version).toBe('2026-01-01');
     });
@@ -474,10 +491,8 @@ describe('TrustDb', () => {
 
      test('checkTrancoUpdate で更新がなければ false を返す', async () => {
        const currentVersion = '2026-01-01';
-       // Mock storage to return same version
-       (chrome.storage.local.get as vi.Mock).mockResolvedValue({
-         tranco_version: currentVersion
-       });
+       (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
+       mockSettingsStore.tranco_version = currentVersion;
        const db = getTrustDb();
        await db.initialize();
        const result = await db.checkTrancoUpdate();
@@ -487,11 +502,10 @@ describe('TrustDb', () => {
      });
 
     test('getSavedTrancoDomains でドメインリストを取得', async () => {
-      (chrome.storage.local.get as vi.Mock).mockResolvedValue({
-        tranco_domains: ['google.com', 'youtube.com'],
-      });
+      (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
       const db = getTrustDb();
       await db.initialize();
+      mockSettingsStore.tranco_domains = ['google.com', 'youtube.com'];
       const domains = await db.getSavedTrancoDomains();
       expect(domains).toEqual(['google.com', 'youtube.com']);
     });
