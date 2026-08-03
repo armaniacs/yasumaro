@@ -90,7 +90,7 @@ function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
   </div>`;
 }
 
-function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
+export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
   const parts: string[] = [];
 
   if (entry.summary && entry.summary.trim().length > 0) {
@@ -106,14 +106,14 @@ function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
       tokensText += `, ${t('historyDuration', [])} ${(entry.ai_duration_ms / 1000).toFixed(1)}秒`;
     }
     if (entry.ai_provider) {
-      const aiParts = [entry.ai_provider];
-      if (entry.ai_model) aiParts.push(entry.ai_model);
+      const aiParts = [escapeHtml(entry.ai_provider)];
+      if (entry.ai_model) aiParts.push(escapeHtml(entry.ai_model));
       tokensText += ` (AI: ${aiParts.join(' / ')})`;
     }
     parts.push(`<div class="history-entry-tokens">${tokensText}</div>`);
   } else if (entry.ai_provider) {
-    const aiParts = [entry.ai_provider];
-    if (entry.ai_model) aiParts.push(entry.ai_model);
+    const aiParts = [escapeHtml(entry.ai_provider)];
+    if (entry.ai_model) aiParts.push(escapeHtml(entry.ai_model));
     let providerText = `AI: ${aiParts.join(' / ')}`;
     if (entry.ai_duration_ms != null && entry.ai_duration_ms > 0) {
       providerText += `, ${t('historyDuration', [])} ${(entry.ai_duration_ms / 1000).toFixed(1)}秒`;
