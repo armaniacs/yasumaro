@@ -145,3 +145,25 @@ jobs:
             exit 1
           fi
           echo "✅ Published"
+
+  record-metrics:
+    needs: release
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Record and commit project metrics
+        continue-on-error: true
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          node scripts/metrics/updateHistory.mjs ${{ github.ref_name }}
+          git add dev-docs/metrics/history.json
+          git commit -m "chore(metrics): record ${{ github.ref_name }} growth metrics" || { echo "No changes to commit"; exit 0; }
+          git push origin main
