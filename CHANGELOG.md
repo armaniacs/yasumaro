@@ -35,7 +35,7 @@ All notable changes to this project will be documented in this file.
 
 ## [6.7.13] - 2026-08-05
 
-Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指摘された残存事項への対応。バージョンポリシー上、新機能フェーズ（奇数バージョン）としてリリース。
+Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指摘された残存事項への対応。
 
 ### Security / セキュリティ
 
