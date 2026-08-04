@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.13` リリース。
+> - 現時点では `v6.7.14` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,24 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.14] - 2026-08-05
+
+### Added / 追加
+
+- **AI 接続テスト結果に各プロバイダーの所要時間を表示** — `testConnection()` の各プロバイダー結果に `elapsedMs` を追加し、ダッシュボード（初期設定パネル・診断パネル）の結果表示に秒単位で所要時間を併記
+
+### Fixed / 修正
+
+- **Dashboard history タブでの CSP (`style-src 'self'`) 違反を解消** — タグクラスター可視化（SVG）で JS 経由のインラインスタイル代入（`circle.style.cursor`）を CSS クラスに置換。AI 診断結果のデバッグ詳細表示（`cssText` 代入）も CSS クラスベースに変更
+- **popup のマスクナビゲーション UI で同種の CSP 違反を解消** — `cssText` によるインラインスタイル代入を `styles.css` のセレクタベーススタイルに置換
+- **content script のプライバシー確認ダイアログで同種の CSP 違反を解消** — Shadow DOM host 要素への `cssText` 一括代入を個別プロパティ代入に分解（対象 Web ページの任意の CSP 下でも動作するようクラス化はできないため）
+- **AI 接続テスト中の経過時間表示が上部ステータス欄で固まって見える不具合を修正** — 経過時間の 200ms ティックがプロバイダ切替時のみ同期される上部ステータス欄（`#statusTop`）に反映されていなかったため、ティックのたびに直接同期するよう修正
+
+### Tests / テスト
+
+- `dashboard-handlers.test.ts`: 上部ステータス欄の経過時間表示がタイマーティックごとに更新されることを検証する回帰テストを追加
+- `aiClient.test.ts`: 各プロバイダー結果に非負の `elapsedMs` が含まれることを検証するテストを追加
 
 ## [6.7.13] - 2026-08-05
 
