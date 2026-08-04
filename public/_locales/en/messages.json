@@ -647,6 +647,9 @@
   "aiTestElapsedTime": {
     "message": "Elapsed: {seconds}s"
   },
+  "aiProviderTestDuration": {
+    "message": "{seconds}s"
+  },
   "connectionSuccess": {
     "message": "Connection successful"
   },

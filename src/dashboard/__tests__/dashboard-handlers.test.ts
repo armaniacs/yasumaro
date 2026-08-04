@@ -445,6 +445,80 @@ describe('handleTestAi', () => {
         expect(removeListener.mock.calls[0][0]).toBe(addListener.mock.calls[0][0]);
     });
 
+    it('keeps the statusTop elapsed-time mirror in sync on timer ticks, not just provider switches', async () => {
+        // statusTop is normally kept in sync via a one-shot innerHTML copy of
+        // #status (syncStatusToTop), which only runs on provider-switch events.
+        // The elapsed-time ticker (setInterval) must still update statusTop's
+        // copy directly, or the on-screen seconds counter appears frozen.
+        document.getElementById('status')!.insertAdjacentHTML('afterend', '<div id="statusTop"></div>');
+
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                id: 'test-extension-id',
+                // handleTestAi also fires a fire-and-forget REFRESH_LOCAL_MARKDOWN_SCHEDULER
+                // sendMessage call (unrelated to the AI test). Only echo the progress
+                // push for the actual TEST_AI request, or that second call re-triggers
+                // announceProvider=true and syncStatusToTop(), masking the bug this
+                // test exists to catch.
+                sendMessage: vi.fn((msg: { type?: string; runId?: string }) => {
+                    if (msg.type === 'TEST_AI') {
+                        capturedListener?.(
+                            {
+                                type: 'AI_TEST_PROGRESS',
+                                progress: { provider: 'gemini', index: 0, total: 2, runId: msg.runId },
+                            },
+                            { id: 'test-extension-id' } as chrome.runtime.MessageSender
+                        );
+                        return sendMessagePromise;
+                    }
+                    return Promise.resolve({});
+                }),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        const handlePromise = handleTestAi();
+        // Wait for the provider-switch render specifically (not just any
+        // .ai-test-elapsed node, which already exists from the initial
+        // "testingConnection" frame drawn before the progress push arrives).
+        // The provider-switch is the LAST announceProvider=true render in
+        // this test, and thus the last one-shot syncStatusToTop() copy of
+        // statusTop -- everything after this point must come from the
+        // 200ms ticker alone.
+        await vi.waitFor(() => {
+            expect(document.querySelector('#statusTop')!.textContent).toContain('aiTestingProvider');
+        });
+
+        // The i18n module is mocked to echo the key verbatim, so the rendered
+        // text never changes between ticks in this suite -- we can't detect
+        // the bug by comparing textContent values. Instead assign a unique
+        // marker to statusTop's .ai-test-elapsed node and confirm the next
+        // 200ms timer tick overwrites it. Before the fix, only
+        // announceProvider=true (provider switch) touched statusTop's node
+        // via the one-shot innerHTML copy; the ticker only ever wrote to
+        // #status's own node, so this marker would survive untouched.
+        const topElapsedEl = document.querySelector('#statusTop .ai-test-elapsed') as HTMLElement;
+        const marker = '__stale-marker__';
+        topElapsedEl.textContent = marker;
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        await vi.waitFor(() => {
+            expect(document.querySelector('#statusTop .ai-test-elapsed')!.textContent).not.toBe(marker);
+        });
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
+    });
+
     it('renders provider name and progress on an AI_TEST_PROGRESS push from this extension', async () => {
         let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
         const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
