@@ -342,7 +342,7 @@ registry.register('TEST_OBSIDIAN', handleTestObsidian);
 
 export const handleTestAi = createTestAiHandler({
   clearSettingsCache: () => clearSettingsCache(),
-  testConnection: (onProgress) => aiClient.testConnection(onProgress),
+  testConnection: (onProgress, runId) => aiClient.testConnection(onProgress, runId),
   notifyProgress: notifyAiTestProgress,
 });
 registry.register('TEST_AI', handleTestAi);

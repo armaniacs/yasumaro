@@ -7,16 +7,28 @@
  * tab may be closed ("Could not establish connection" rejection) or the
  * Service Worker context may be invalidated mid-broadcast (synchronous
  * throw). Both paths are expected in production and must be swallowed.
+ *
+ * Discards must be observable via addLog(DEBUG) so the reason a progress push
+ * did not render can be diagnosed.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { notifyAiTestProgress, AI_TEST_PROGRESS_MESSAGE_TYPE } from '../aiTestProgressNotifier.js';
+import { addLog, LogType } from '../../utils/logger.js';
+
+vi.mock('../../utils/logger.js', () => ({
+    addLog: vi.fn(),
+    LogType: { WARN: 'WARN', DEBUG: 'DEBUG' },
+}));
+
+const mockAddLog = addLog as unknown as ReturnType<typeof vi.fn>;
 
 describe('notifyAiTestProgress', () => {
   const progress = { provider: 'gemini', model: 'gemini-3.1-flash-lite', index: 0, total: 2 };
 
   beforeEach(() => {
     vi.unstubAllGlobals();
+    mockAddLog.mockClear();
   });
 
   it('レシーバなしで sendMessage が reject しても例外を伝播させない', async () => {
@@ -39,8 +51,10 @@ describe('notifyAiTestProgress', () => {
       progress,
     });
 
-    // reject が .catch(() => {}) で握りつぶされ、未処理 rejection が残らないこと
+    // reject が swallow され、廃棄が DEBUG ログとして記録される
     await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockAddLog).toHaveBeenCalledTimes(1);
+    expect(mockAddLog.mock.calls[0][0]).toBe(LogType.WARN);
   });
 
   it('sendMessage が同期 throw しても例外を swallow する', () => {
@@ -51,9 +65,11 @@ describe('notifyAiTestProgress', () => {
 
     expect(() => notifyAiTestProgress(progress)).not.toThrow();
     expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(mockAddLog).toHaveBeenCalledTimes(1);
+    expect(mockAddLog.mock.calls[0][0]).toBe(LogType.WARN);
   });
 
-  it('model 未指定の進捗も正しいペイロードで送信される', () => {
+  it('正常送信時は不要なログを出さない', () => {
     const sendMessage = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('chrome', { runtime: { sendMessage } });
 
@@ -63,5 +79,6 @@ describe('notifyAiTestProgress', () => {
       type: AI_TEST_PROGRESS_MESSAGE_TYPE,
       progress: { provider: 'openai2', index: 1, total: 2 },
     });
+    expect(mockAddLog).not.toHaveBeenCalled();
   });
 });
