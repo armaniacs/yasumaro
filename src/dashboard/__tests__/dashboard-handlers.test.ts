@@ -37,6 +37,7 @@ vi.stubGlobal('chrome', {
         getUILanguage: vi.fn(() => 'en'),
     },
     runtime: {
+        id: 'test-extension-id',
         sendMessage: vi.fn().mockResolvedValue({}),
         onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -444,9 +445,9 @@ describe('handleTestAi', () => {
         expect(removeListener.mock.calls[0][0]).toBe(addListener.mock.calls[0][0]);
     });
 
-    it('renders provider name and progress on an AI_TEST_PROGRESS push', async () => {
-        let capturedListener: ((message: unknown) => void) | undefined;
-        const addListener = vi.fn((listener: (message: unknown) => void) => {
+    it('renders provider name and progress on an AI_TEST_PROGRESS push from this extension', async () => {
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
             capturedListener = listener;
         });
         const removeListener = vi.fn();
@@ -456,12 +457,17 @@ describe('handleTestAi', () => {
         vi.stubGlobal('chrome', {
             ...chrome,
             runtime: {
-                sendMessage: vi.fn(() => {
-                    // Simulate the progress push arriving while the request is in flight.
-                    capturedListener?.({
-                        type: 'AI_TEST_PROGRESS',
-                        progress: { provider: 'gemini', index: 0, total: 2 },
-                    });
+                id: 'test-extension-id',
+                sendMessage: vi.fn((msg: { runId?: string }) => {
+                    // Simulate the progress push arriving while the request is in
+                    // flight, echoing the runId that handleTestAi just sent.
+                    capturedListener?.(
+                        {
+                            type: 'AI_TEST_PROGRESS',
+                            progress: { provider: 'gemini', index: 0, total: 2, runId: msg.runId },
+                        },
+                        { id: 'test-extension-id' } as chrome.runtime.MessageSender
+                    );
                     return sendMessagePromise;
                 }),
                 onMessage: { addListener, removeListener },
@@ -480,6 +486,179 @@ describe('handleTestAi', () => {
         resolveSendMessage!({ ai: { success: true, message: 'OK' } });
         await handlePromise;
         expect(removeListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores AI_TEST_PROGRESS pushes from a sender other than this extension', async () => {
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                id: 'test-extension-id',
+                sendMessage: vi.fn(() => sendMessagePromise),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        const handlePromise = handleTestAi();
+        const statusDiv = document.getElementById('status')!;
+
+        // A spoofed broadcast from a foreign extension context arrives while the
+        // request is in flight. It must be dropped: the status stays on the
+        // initial "testingConnection" frame and never renders provider/progress.
+        capturedListener?.(
+            {
+                type: 'AI_TEST_PROGRESS',
+                progress: { provider: 'gemini', index: 0, total: 2 },
+            },
+            { id: 'other-extension-id' } as chrome.runtime.MessageSender
+        );
+
+        expect(statusDiv.textContent).not.toContain('aiTestingProvider');
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
+
+        expect(statusDiv.className).toBe('success');
+        expect(removeListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores an AI_TEST_PROGRESS push with a malformed payload shape', async () => {
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                id: 'test-extension-id',
+                sendMessage: vi.fn(() => sendMessagePromise),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        const handlePromise = handleTestAi();
+        const statusDiv = document.getElementById('status')!;
+
+        // Malformed payload: index is a string, total is negative. The push must
+        // be dropped and the initial "testingConnection" frame preserved.
+        capturedListener?.(
+            {
+                type: 'AI_TEST_PROGRESS',
+                progress: { provider: 'gemini', index: 'oops', total: -1 },
+            },
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender
+        );
+
+        expect(statusDiv.textContent).not.toContain('aiTestingProvider');
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
+        expect(removeListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let an Object.prototype key provider name pollute the label', async () => {
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                id: 'test-extension-id',
+                sendMessage: vi.fn((msg: { runId?: string }) => {
+                    // Echo the runId that handleTestAi sent, simulating a real
+                    // broadcast for this run.
+                    capturedListener?.(
+                        {
+                            type: 'AI_TEST_PROGRESS',
+                            progress: { provider: 'constructor', index: 0, total: 1, runId: msg.runId },
+                        },
+                        { id: 'test-extension-id' } as chrome.runtime.MessageSender
+                    );
+                    return sendMessagePromise;
+                }),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        // The i18n util is module-mocked to return keys; re-implement it for this
+        // test so the interpolated provider value is observable in the label.
+        const { getMessage } = await import('../../utils/i18n.js');
+        vi.mocked(getMessage).mockImplementation((key: string, subst?: Record<string, string>) => {
+            if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
+            if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
+            return key;
+        });
+
+        const handlePromise = handleTestAi();
+        const statusDiv = document.getElementById('status')!;
+
+        // "constructor" is a valid string provider but a prototype key of the
+        // PROVIDER_LABELS record. It must fall back to the raw value, not a
+        // function source or "[object Object]".
+        await vi.waitFor(() => {
+            expect(statusDiv.textContent).toContain('constructor');
+        });
+        expect(statusDiv.textContent).not.toContain('[object Object]');
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
+    });
+
+    it('ignores AI_TEST_PROGRESS from a different test run (concurrent Dashboard tab)', async () => {
+        let capturedListener: ((message: unknown, sender: chrome.runtime.MessageSender) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown, sender: chrome.runtime.MessageSender) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+        let sentRunId: string | undefined;
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                id: 'test-extension-id',
+                sendMessage: vi.fn((msg: { runId?: string }) => {
+                    sentRunId = msg.runId;
+                    return sendMessagePromise;
+                }),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        const handlePromise = handleTestAi();
+        const statusDiv = document.getElementById('status')!;
+
+        // A progress push from a DIFFERENT runId (e.g. another Dashboard tab)
+        // must be dropped; the status stays on the initial frame.
+        capturedListener?.(
+            {
+                type: 'AI_TEST_PROGRESS',
+                progress: { provider: 'gemini', index: 0, total: 2, runId: `other-${sentRunId}` },
+            },
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender
+        );
+
+        expect(statusDiv.textContent).not.toContain('aiTestingProvider');
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
     });
 });
 

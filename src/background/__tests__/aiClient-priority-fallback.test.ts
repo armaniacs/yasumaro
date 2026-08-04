@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AIClient } from '../aiClient.js';
 import * as storage from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage.js';
 import * as fetchModule from '../../utils/fetch.js';
 
 const { fetchWithRetry } = vi.mocked(fetchModule);
@@ -150,7 +151,7 @@ describe('AIClient: 優先度フォールバック', () => {
 
 describe('AIClient.testConnection: 進捗コールバック', () => {
   let aiClient: AIClient;
-  const mockGetSettings = storage.getSettings as ReturnType<typeof vi.fn>;
+  const mockGetSettings = vi.mocked(storage.getSettings);
 
   beforeEach(() => {
     aiClient = new AIClient();
@@ -158,7 +159,6 @@ describe('AIClient.testConnection: 進捗コールバック', () => {
   });
 
   it('優先度リストの各プロバイダー開始時にonProgressが順番に呼ばれる', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [
         { provider: 'gemini' },
@@ -166,8 +166,7 @@ describe('AIClient.testConnection: 進捗コールバック', () => {
       ],
       gemini_api_key: '',
       openai_2_api_key: ''
-    });
-    // @ts-expect-error - vi.fn() type narrowing issue
+    } as Settings);
     fetchWithRetry.mockRejectedValue(new Error('connection failed'));
 
     const onProgress = vi.fn();
@@ -178,12 +177,31 @@ describe('AIClient.testConnection: 進捗コールバック', () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { provider: 'openai2', model: 'gpt-4o-mini', index: 1, total: 2 });
   });
 
+  it('スロットにmodel未指定でも、設定済みデフォルトモデル（gemini_model等）を解決してonProgressに渡す', async () => {
+    mockGetSettings.mockResolvedValue({
+      ai_provider_priority_list: [{ provider: 'gemini' }],
+      gemini_api_key: '',
+      gemini_model: 'gemini-3.1-flash-lite',
+    } as Settings);
+    fetchWithRetry.mockRejectedValue(new Error('connection failed'));
+
+    const onProgress = vi.fn();
+    await aiClient.testConnection(onProgress);
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenNthCalledWith(1, {
+      provider: 'gemini',
+      model: 'gemini-3.1-flash-lite',
+      index: 0,
+      total: 1,
+    });
+  });
+
   it('onProgressを省略しても従来通り動作する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'gemini' }],
       gemini_api_key: ''
-    });
+    } as Settings);
 
     const result = await aiClient.testConnection();
 

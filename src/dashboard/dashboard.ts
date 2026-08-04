@@ -274,11 +274,12 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
   return testResult?.obsidian || { success: false, message: 'No response' };
 }
 
-export async function testAiConnection(): Promise<MultiProviderTestResult> {
+export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
     protocolVersion: CURRENT_PROTOCOL_VERSION,
-    payload: {}
+    payload: {},
+    ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };
 
   return testResult?.ai || { success: false, message: 'No response', providers: [] };
@@ -411,18 +412,46 @@ export async function handleTestObsidian(): Promise<void> {
 }
 
 function isAiTestProgressMessage(message: unknown): message is AiTestProgressMessage {
+  if (
+    typeof message !== 'object' ||
+    message === null ||
+    (message as { type?: unknown }).type !== AI_TEST_PROGRESS_MESSAGE_TYPE
+  ) {
+    return false;
+  }
+  const progress = (message as AiTestProgressMessage).progress;
+  // Validate the payload shape defensively: the broadcast reaches every
+  // extension context, so a malformed/forged message must not corrupt the UI.
   return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === AI_TEST_PROGRESS_MESSAGE_TYPE
+    typeof progress === 'object' &&
+    progress !== null &&
+    typeof progress.provider === 'string' &&
+    Number.isInteger(progress.index) &&
+    progress.index >= 0 &&
+    Number.isInteger(progress.total) &&
+    progress.total >= 0 &&
+    (progress.model === undefined || typeof progress.model === 'string')
   );
 }
 
+/** Look up a provider label without leaking Object.prototype keys. */
+function providerLabelSafe(provider: string): string {
+  return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
+    ? PROVIDER_LABELS[provider]
+    : provider;
+}
+
+interface AiTestProgressView {
+  label: HTMLElement;
+  elapsedEl: HTMLElement;
+}
+
 /**
- * Render the in-progress state: spinner + provider being tested + elapsed time.
- * Called both on each AI_TEST_PROGRESS push and every elapsed-time tick.
+ * Build the in-progress UI (spinner + provider label + elapsed time) once.
+ * Subsequent updates mutate textContent only so the spinner animation is not
+ * restarted and the live region is not re-announced on every tick.
  */
-function renderAiTestProgress(statusDiv: HTMLElement, progress: AiTestProgress | undefined, startTime: number): void {
+function buildAiTestProgressView(statusDiv: HTMLElement): AiTestProgressView {
   statusDiv.innerHTML = '';
   statusDiv.className = 'ai-test-progress';
 
@@ -432,133 +461,171 @@ function renderAiTestProgress(statusDiv: HTMLElement, progress: AiTestProgress |
   statusDiv.appendChild(spinner);
 
   const label = document.createElement('span');
-  if (progress) {
-    const providerLabel = PROVIDER_LABELS[progress.provider] || progress.provider;
-    if (progress.model) {
-      const providerWithModel = `${providerLabel} (${progress.model})`;
-      label.textContent = getMessage('aiTestingProvider', {
-        provider: providerWithModel,
-        current: String(progress.index + 1),
-        total: String(progress.total),
-      }) || `Testing ${providerWithModel}... (${progress.index + 1}/${progress.total})`;
-    } else {
-      label.textContent = getMessage('aiTestingProvider', {
-        provider: providerLabel,
-        current: String(progress.index + 1),
-        total: String(progress.total),
-      }) || `Testing ${providerLabel}... (${progress.index + 1}/${progress.total})`;
-    }
-  } else {
-    label.textContent = getMessage('testingConnection') || '接続テスト中...';
-  }
   statusDiv.appendChild(label);
 
-  const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
   const elapsedEl = document.createElement('div');
   elapsedEl.className = 'ai-test-elapsed';
-  elapsedEl.textContent = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `Elapsed: ${elapsedSeconds}s`;
+  // Elapsed time ticks 5x/sec; keep it out of the live region to avoid
+  // flooding screen readers. The provider label below is the only announced node.
+  elapsedEl.setAttribute('aria-hidden', 'true');
   statusDiv.appendChild(elapsedEl);
+
+  return { label, elapsedEl };
 }
+
+function renderAiTestProgressLabel(view: AiTestProgressView, progress: AiTestProgress | undefined): void {
+  if (progress) {
+    const providerLabel = providerLabelSafe(progress.provider);
+    const providerDisplay = progress.model ? `${providerLabel} (${progress.model})` : providerLabel;
+    view.label.textContent = getMessage('aiTestingProvider', {
+      provider: providerDisplay,
+      current: String(progress.index + 1),
+      total: String(progress.total),
+    }) || `テスト中... (${progress.index + 1}/${progress.total})`;
+  } else {
+    view.label.textContent = getMessage('testingConnection') || '接続テスト中...';
+  }
+}
+
+function renderAiTestProgressElapsed(view: AiTestProgressView, startTime: number): void {
+  const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
+  view.elapsedEl.textContent = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `経過時間: ${elapsedSeconds}秒`;
+}
+
+let aiTestInFlight = false;
 
 export async function handleTestAi(): Promise<void> {
   const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
+  const testAiBtnTop = document.getElementById('testAiBtnTop') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!testAiBtn || !statusDiv) return;
+  // Guard against re-entrancy (the top button is not covered by testAiBtn's
+  // disabled state, so a mid-test click would double-register the listener,
+  // timer and TEST_AI request).
+  if (aiTestInFlight) return;
+  aiTestInFlight = true;
 
   const startTime = performance.now();
+  // Correlation id for this test run so that when multiple Dashboard tabs run a
+  // test concurrently, each tab only renders the progress it initiated.
+  const runId = `ai-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   let latestProgress: AiTestProgress | undefined;
+  let lastProviderKey = '';
 
-  const progressListener = (message: unknown): void => {
-    if (isAiTestProgressMessage(message)) {
-      latestProgress = message.progress;
-      renderAiTestProgress(statusDiv, latestProgress, startTime);
+  const view = buildAiTestProgressView(statusDiv);
+
+  // announceProvider=true re-renders the live-region label (only on provider
+  // switch); the elapsed timer updates textContent only and is aria-hidden.
+  const updateView = (announceProvider: boolean): void => {
+    if (announceProvider) {
+      renderAiTestProgressLabel(view, latestProgress);
       syncStatusToTop();
     }
+    renderAiTestProgressElapsed(view, startTime);
   };
-  chrome.runtime.onMessage.addListener(progressListener);
 
-  renderAiTestProgress(statusDiv, undefined, startTime);
-  syncStatusToTop();
-  const elapsedTimer = setInterval(() => {
-    renderAiTestProgress(statusDiv, latestProgress, startTime);
-    syncStatusToTop();
-  }, 200);
-
-  testAiBtn.disabled = true;
-  try {
-    const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
-    const timing = extractLocalMarkdownExportTiming();
-    if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
-    const currentSettings = await getSettings();
-    const mergedSettings = { ...currentSettings, ...newSettings };
-    await saveSettingsWithAllowedUrls(mergedSettings);
-    refreshLocalMarkdownScheduler();
-
-    const aiResult = await testAiConnection();
-
-    statusDiv.innerHTML = '';
-
-    if (aiResult.providers && aiResult.providers.length > 1) {
-      // Multi-provider: show per-provider results
-      const container = document.createElement('div');
-      container.className = 'diag-indent';
-
-      const header = document.createElement('strong');
-      header.textContent = 'AI: ';
-      container.appendChild(header);
-
-      const statusEl = document.createElement('span');
-      statusEl.textContent = aiResult.success
-        ? (getMessage('connectionSuccess') || '接続成功')
-        : (getMessage('connectionFailed') || '接続失敗');
-      statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
-      container.appendChild(statusEl);
-      statusDiv.appendChild(container);
-
-      const providerLabels: Record<string, string> = PROVIDER_LABELS;
-
-      for (const provider of aiResult.providers) {
-        const row = document.createElement('div');
-        row.className = 'diag-indent';
-        const label = providerLabels[provider.provider] || provider.provider;
-        const modelInfo = provider.model ? ` (${provider.model})` : '';
-        row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
-        row.classList.add(provider.success ? 'diag-success' : 'diag-error');
-        statusDiv.appendChild(row);
-
-        // Show debug details if available
-        if (provider.debug) {
-          const debugRow = document.createElement('div');
-          debugRow.className = 'diag-indent ai-debug-details';
-          debugRow.style.cssText = 'margin-left: 1.5em; font-size: 0.85em; color: #666; border-left: 2px solid #ddd; padding-left: 0.5em; margin-top: 2px;';
-
-          const details: string[] = [];
-          if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);
-          if (provider.debug.response) details.push(`Response: ${provider.debug.response}`);
-          if (provider.debug.error) details.push(`Error: ${provider.debug.error}`);
-          if (provider.debug.availability) details.push(`Availability: ${provider.debug.availability}`);
-          if (provider.debug.hasContent !== undefined) details.push(`Has content: ${provider.debug.hasContent}`);
-          if (provider.debug.statusCode !== undefined) details.push(`Status: ${provider.debug.statusCode}`);
-
-          debugRow.textContent = details.join(' | ');
-          statusDiv.appendChild(debugRow);
-        }
-      }
-    } else {
-      // Single provider: show simple result
-      statusDiv.appendChild(createConnectionStatusElement('AI', aiResult));
+  const progressListener = (message: unknown, sender: chrome.runtime.MessageSender): void => {
+    // AI_TEST_PROGRESS arrives via chrome.runtime.sendMessage broadcast, so any
+    // extension context (content scripts, popup, offscreen) can reach this
+    // listener. Accept only messages originating from this extension AND from
+    // this test run (guards against concurrent Dashboard tabs overwriting state).
+    if (sender?.id !== chrome.runtime.id) return;
+    if (isAiTestProgressMessage(message) && message.progress.runId === runId) {
+      latestProgress = message.progress;
+      const key = `${message.progress.provider}:${message.progress.index}`;
+      const changed = key !== lastProviderKey;
+      lastProviderKey = key;
+      updateView(changed);
     }
+  };
 
-    statusDiv.className = aiResult.success ? 'success' : 'error';
+  let elapsedTimer: ReturnType<typeof setInterval> | undefined;
+  try {
+    chrome.runtime.onMessage.addListener(progressListener);
+    renderAiTestProgressLabel(view, undefined);
+    renderAiTestProgressElapsed(view, startTime);
     syncStatusToTop();
-  } catch (_e) {
-    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
-    statusDiv.className = 'error';
-    syncStatusToTop();
+    elapsedTimer = setInterval(() => updateView(false), 200);
+
+    testAiBtn.disabled = true;
+    if (testAiBtnTop) testAiBtnTop.disabled = true;
+    try {
+      const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
+      const timing = extractLocalMarkdownExportTiming();
+      if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
+      const currentSettings = await getSettings();
+      const mergedSettings = { ...currentSettings, ...newSettings };
+      await saveSettingsWithAllowedUrls(mergedSettings);
+      refreshLocalMarkdownScheduler();
+
+      const aiResult = await testAiConnection(runId);
+
+      statusDiv.innerHTML = '';
+
+      if (aiResult.providers && aiResult.providers.length > 1) {
+        // Multi-provider: show per-provider results
+        const container = document.createElement('div');
+        container.className = 'diag-indent';
+
+        const header = document.createElement('strong');
+        header.textContent = 'AI: ';
+        container.appendChild(header);
+
+        const statusEl = document.createElement('span');
+        statusEl.textContent = aiResult.success
+          ? (getMessage('connectionSuccess') || '接続成功')
+          : (getMessage('connectionFailed') || '接続失敗');
+        statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
+        container.appendChild(statusEl);
+        statusDiv.appendChild(container);
+
+        const providerLabels: Record<string, string> = PROVIDER_LABELS;
+
+        for (const provider of aiResult.providers) {
+          const row = document.createElement('div');
+          row.className = 'diag-indent';
+          const label = providerLabels[provider.provider] || provider.provider;
+          const modelInfo = provider.model ? ` (${provider.model})` : '';
+          row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
+          row.classList.add(provider.success ? 'diag-success' : 'diag-error');
+          statusDiv.appendChild(row);
+
+          // Show debug details if available
+          if (provider.debug) {
+            const debugRow = document.createElement('div');
+            debugRow.className = 'diag-indent ai-debug-details';
+            debugRow.style.cssText = 'margin-left: 1.5em; font-size: 0.85em; color: #666; border-left: 2px solid #ddd; padding-left: 0.5em; margin-top: 2px;';
+
+            const details: string[] = [];
+            if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);
+            if (provider.debug.response) details.push(`Response: ${provider.debug.response}`);
+            if (provider.debug.error) details.push(`Error: ${provider.debug.error}`);
+            if (provider.debug.availability) details.push(`Availability: ${provider.debug.availability}`);
+            if (provider.debug.hasContent !== undefined) details.push(`Has content: ${provider.debug.hasContent}`);
+            if (provider.debug.statusCode !== undefined) details.push(`Status: ${provider.debug.statusCode}`);
+
+            debugRow.textContent = details.join(' | ');
+            statusDiv.appendChild(debugRow);
+          }
+        }
+      } else {
+        // Single provider: show simple result
+        statusDiv.appendChild(createConnectionStatusElement('AI', aiResult));
+      }
+
+      statusDiv.className = aiResult.success ? 'success' : 'error';
+      syncStatusToTop();
+    } catch (_e) {
+      statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+      statusDiv.className = 'error';
+      syncStatusToTop();
+    }
   } finally {
-    clearInterval(elapsedTimer);
+    if (elapsedTimer) clearInterval(elapsedTimer);
     chrome.runtime.onMessage.removeListener(progressListener);
     testAiBtn.disabled = false;
+    if (testAiBtnTop) testAiBtnTop.disabled = false;
+    aiTestInFlight = false;
   }
 }
 

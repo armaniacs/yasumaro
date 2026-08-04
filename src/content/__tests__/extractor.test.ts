@@ -2056,6 +2056,22 @@ describe('message handler - GET_CONTENT sender validation', () => {
 
         expect(sendResponse).toHaveBeenCalled();
     });
+
+    it('returns early (void, no sendResponse) for non-GET_CONTENT broadcasts such as AI_TEST_PROGRESS', () => {
+        const sendResponse = vi.fn();
+
+        // AI_TEST_PROGRESS is a Service Worker → all-tab broadcast that this
+        // listener must ignore. Returning `true` would hold the message port
+        // open without ever calling sendResponse.
+        const result = listener(
+            { type: 'AI_TEST_PROGRESS', progress: { provider: 'gemini', index: 0, total: 2 } },
+            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
+            sendResponse
+        );
+
+        expect(sendResponse).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+    });
 });
 
 describe('checkVisitConditions - scroll tracking', () => {
