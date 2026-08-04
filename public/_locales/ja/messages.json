@@ -605,6 +605,9 @@
   "aiTestElapsedTime": {
     "message": "経過時間: {seconds}秒"
   },
+  "aiProviderTestDuration": {
+    "message": "{seconds}秒"
+  },
   "connectionSuccess": {
     "message": "接続成功"
   },

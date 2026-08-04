@@ -438,7 +438,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
             type: 'TEST_AI',
             protocolVersion: CURRENT_PROTOCOL_VERSION,
             payload: {}
-          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
+          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; elapsedMs: number; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
 
           const ai = testResult?.ai;
           if (ai) {
@@ -459,7 +459,9 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
                 row.className = 'diag-indent';
                 const label = providerLabels[provider.provider] || provider.provider;
                 const modelInfo = provider.model ? ` (${provider.model})` : '';
-                row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
+                const durationSeconds = (provider.elapsedMs / 1000).toFixed(1);
+                const durationInfo = ` (${getMessage('aiProviderTestDuration', { seconds: durationSeconds }) || `${durationSeconds}s`})`;
+                row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}${durationInfo}`;
                 row.classList.add(provider.success ? 'diag-success' : 'diag-error');
                 connectionResult.appendChild(row);
 
@@ -467,7 +469,6 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
                 if (provider.debug) {
                   const debugRow = document.createElement('div');
                   debugRow.className = 'diag-indent ai-debug-details';
-                  debugRow.style.cssText = 'margin-left: 1.5em; font-size: 0.85em; color: #666; border-left: 2px solid #ddd; padding-left: 0.5em; margin-top: 2px;';
 
                   const details: string[] = [];
                   if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);

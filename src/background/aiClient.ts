@@ -18,6 +18,8 @@ interface ProviderTestResult {
     model?: string;
     success: boolean;
     message: string;
+    /** Wall-clock time spent testing this provider, in milliseconds. */
+    elapsedMs: number;
     /** Debug information captured during the test. */
     debug?: {
         /** The prompt text sent to the provider. */
@@ -286,6 +288,7 @@ export class AIClient {
         let anySuccess = false;
 
         for (const [index, slot] of slots.entries()) {
+            const slotStart = performance.now();
             const effectiveModel = this.resolveEffectiveModel(settings, slot);
             onProgress?.({
                 provider: slot.provider,
@@ -309,6 +312,7 @@ export class AIClient {
                         model: effectiveModel,
                         success: false,
                         message: `Unknown provider: ${slot.provider}`,
+                        elapsedMs: performance.now() - slotStart,
                         debug: { error: 'Built-in AI service is not registered' },
                     });
                     continue;
@@ -326,6 +330,7 @@ export class AIClient {
                             model: effectiveModel,
                             success: true,
                             message: 'ok',
+                            elapsedMs: performance.now() - slotStart,
                             debug: {
                                 prompt: testPrompt,
                                 response: result.summary,
@@ -340,6 +345,7 @@ export class AIClient {
                             model: effectiveModel,
                             success: false,
                             message: errorMsg,
+                            elapsedMs: performance.now() - slotStart,
                             debug: {
                                 prompt: testPrompt,
                                 response: result.summary || undefined,
@@ -357,6 +363,7 @@ export class AIClient {
                         model: effectiveModel,
                         success: false,
                         message: msg,
+                        elapsedMs: performance.now() - slotStart,
                         debug: {
                             prompt: testPrompt,
                             error: msg,
@@ -374,6 +381,7 @@ export class AIClient {
                     model: effectiveModel,
                     success: false,
                     message: `Unknown provider: ${slot.provider}`,
+                    elapsedMs: performance.now() - slotStart,
                     debug: { error: `Provider "${slot.provider}" is not registered` },
                 });
                 continue;
@@ -389,6 +397,7 @@ export class AIClient {
                     model: effectiveModel,
                     success: result.success,
                     message: result.message,
+                    elapsedMs: performance.now() - slotStart,
                     debug: result.debug,
                 });
                 if (result.success) {
@@ -402,6 +411,7 @@ export class AIClient {
                     model: effectiveModel,
                     success: false,
                     message: msg,
+                    elapsedMs: performance.now() - slotStart,
                     debug: { error: msg },
                 });
             }

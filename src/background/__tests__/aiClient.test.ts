@@ -426,6 +426,38 @@ describe('AIClient: FEATURE-001 エラーハンドリングの一貫性と情報
       expect(result).toBeDefined();
       expect(typeof result.success).toBe('boolean');
     });
+
+    it('各プロバイダーの結果に非負のelapsedMs(所要時間)を含める', async () => {
+      mockGetSettings.mockResolvedValue({
+        ai_provider_priority_list: [
+          { provider: 'gemini', weight: 1 },
+          { provider: 'openai', weight: 2 }
+        ],
+        gemini_api_key: 'test_key',
+        gemini_model: 'gemini-pro',
+        openai_api_key: 'test_key',
+        openai_model: 'gpt-3.5-turbo'
+      });
+
+      const result = await aiClient.testConnection();
+
+      expect(result.providers.length).toBeGreaterThan(0);
+      for (const provider of result.providers) {
+        expect(typeof provider.elapsedMs).toBe('number');
+        expect(Number.isNaN(provider.elapsedMs)).toBe(false);
+        expect(provider.elapsedMs).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('未知のプロバイダーの結果にもelapsedMsを含める', async () => {
+      mockGetSettings.mockResolvedValue({ ai_provider: 'unknown' });
+
+      const result = await aiClient.testConnection();
+
+      expect(result.providers).toHaveLength(1);
+      expect(typeof result.providers[0].elapsedMs).toBe('number');
+      expect(result.providers[0].elapsedMs).toBeGreaterThanOrEqual(0);
+    });
   });
 
   describe('generateSummary - 正常系', () => {

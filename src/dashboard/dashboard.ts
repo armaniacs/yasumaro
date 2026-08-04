@@ -489,7 +489,12 @@ function renderAiTestProgressLabel(view: AiTestProgressView, progress: AiTestPro
 
 function renderAiTestProgressElapsed(view: AiTestProgressView, startTime: number): void {
   const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
-  view.elapsedEl.textContent = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `経過時間: ${elapsedSeconds}秒`;
+  const text = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `経過時間: ${elapsedSeconds}秒`;
+  view.elapsedEl.textContent = text;
+  // statusTop is a one-shot innerHTML copy of status (see syncStatusToTop), so its
+  // elapsed node needs its own textContent update on every tick to stay in sync.
+  const topElapsedEl = document.querySelector('#statusTop .ai-test-elapsed');
+  if (topElapsedEl) topElapsedEl.textContent = text;
 }
 
 let aiTestInFlight = false;
@@ -586,7 +591,9 @@ export async function handleTestAi(): Promise<void> {
           row.className = 'diag-indent';
           const label = providerLabels[provider.provider] || provider.provider;
           const modelInfo = provider.model ? ` (${provider.model})` : '';
-          row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}`;
+          const durationSeconds = (provider.elapsedMs / 1000).toFixed(1);
+          const durationInfo = ` (${getMessage('aiProviderTestDuration', { seconds: durationSeconds }) || `${durationSeconds}s`})`;
+          row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}${durationInfo}`;
           row.classList.add(provider.success ? 'diag-success' : 'diag-error');
           statusDiv.appendChild(row);
 
@@ -594,7 +601,6 @@ export async function handleTestAi(): Promise<void> {
           if (provider.debug) {
             const debugRow = document.createElement('div');
             debugRow.className = 'diag-indent ai-debug-details';
-            debugRow.style.cssText = 'margin-left: 1.5em; font-size: 0.85em; color: #666; border-left: 2px solid #ddd; padding-left: 0.5em; margin-top: 2px;';
 
             const details: string[] = [];
             if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);
