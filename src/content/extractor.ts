@@ -738,30 +738,28 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
         if (typeof message !== 'object' || message === null || !('type' in message)) return;
         const msg = message as ContentMessage;
-        if (msg.type === 'GET_CONTENT') {
-            if (sender.id !== chrome.runtime.id) return;
-            const content = extractPageContent();
-            sendResponse({
-                content,
-                cleansedReason: pageState.lastCleansedReason,
-                cleanseStats: pageState.lastCleanseStats,
-                byteStats: {
-                    pageBytes: pageState.lastByteStats.pageBytes || undefined,
-                    candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
-                    originalBytes: pageState.lastByteStats.originalBytes || undefined,
-                    cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
-                },
-                aiSummaryCleansedStats: {
-                    aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                    aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                    aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                    aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                    aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons
-                },
-                fallbackTriggered: pageState.lastFallbackTriggered
-            });
-        }
-        return true;
+        if (msg.type !== 'GET_CONTENT') return;
+        if (sender.id !== chrome.runtime.id) return;
+        const content = extractPageContent();
+        sendResponse({
+            content,
+            cleansedReason: pageState.lastCleansedReason,
+            cleanseStats: pageState.lastCleanseStats,
+            byteStats: {
+                pageBytes: pageState.lastByteStats.pageBytes || undefined,
+                candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+                originalBytes: pageState.lastByteStats.originalBytes || undefined,
+                cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
+            },
+            aiSummaryCleansedStats: {
+                aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
+                aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
+                aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
+                aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
+                aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons
+            },
+            fallbackTriggered: pageState.lastFallbackTriggered
+        });
     });
 
     // 【初期化実行】

@@ -178,6 +178,28 @@ describe('AIClient.testConnection: 進捗コールバック', () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { provider: 'openai2', model: 'gpt-4o-mini', index: 1, total: 2 });
   });
 
+  it('スロットにmodel未指定でも、設定済みデフォルトモデル（gemini_model等）を解決してonProgressに渡す', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+    mockGetSettings.mockResolvedValue({
+      ai_provider_priority_list: [{ provider: 'gemini' }],
+      gemini_api_key: '',
+      gemini_model: 'gemini-3.1-flash-lite',
+    });
+    // @ts-expect-error - vi.fn() type narrowing issue
+    fetchWithRetry.mockRejectedValue(new Error('connection failed'));
+
+    const onProgress = vi.fn();
+    await aiClient.testConnection(onProgress);
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenNthCalledWith(1, {
+      provider: 'gemini',
+      model: 'gemini-3.1-flash-lite',
+      index: 0,
+      total: 1,
+    });
+  });
+
   it('onProgressを省略しても従来通り動作する', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
