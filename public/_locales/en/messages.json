@@ -641,6 +641,12 @@
   "testingConnection": {
     "message": "Testing connection..."
   },
+  "aiTestingProvider": {
+    "message": "Testing {provider}... ({current}/{total})"
+  },
+  "aiTestElapsedTime": {
+    "message": "Elapsed: {seconds}s"
+  },
   "connectionSuccess": {
     "message": "Connection successful"
   },
