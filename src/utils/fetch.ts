@@ -231,9 +231,33 @@ export function isPrivateIpAddress(hostname: string): boolean {
     return true;
   }
 
-  // ::ffff:127.x.x.x - IPv4マップアドレス（ループバック）
-  if (ipv6Lower.startsWith('::ffff:127.')) {
-    return true;
+  // IPv4-mapped IPv6 (::ffff:0:0/96)。
+  // この形式は IPv4 アドレスを IPv6 で表現するため、IPv4 部分を抽出して
+  // プライベート判定にフォールバックする。攻撃者が SSRF 対策を迂回する
+  // (例: ::ffff:10.0.0.1 / ::ffff:a00:1 で内部ネットワークへアクセス) のを防ぐ。
+  const ipv4MappedMatch = ipv6Lower.match(
+    /^::ffff:((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{1,4}:[0-9a-f]{1,4}|[0-9a-f]{1,8})$/
+  );
+  if (ipv4MappedMatch) {
+    const embeddedIpv4 = ipv4MappedMatch[1];
+    // ドット区切り IPv4 (::ffff:10.0.0.1)
+    if (embeddedIpv4.includes('.')) {
+      return isPrivateIpAddress(embeddedIpv4);
+    }
+    // 16進の IPv4-mapped。2グループ (::ffff:aaaa:bbbb) または 1グループ (::ffff:aabbccdd) で、
+    // 32bit IPv4 を表現する。→ ドット区切り IPv4 に変換して再帰判定。
+    // 注意: JS の << は 32bit 符号付き整数を返すため、最上位ビットが立つと負数になる。
+    //        >>> 0 で符号なし 32bit に正規化する。
+    const hexParts = embeddedIpv4.split(':');
+    const ipv4Int = Number.parseInt(hexParts[0], 16);
+    const ipv4Hex = (hexParts.length === 2
+      ? (ipv4Int << 16) | Number.parseInt(hexParts[1], 16)
+      : ipv4Int) >>> 0;
+    const a = (ipv4Hex >>> 24) & 0xff;
+    const b = (ipv4Hex >>> 16) & 0xff;
+    const c = (ipv4Hex >>> 8) & 0xff;
+    const d = ipv4Hex & 0xff;
+    return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
   }
 
   // fe80::/10 - リンクローカルアドレス (fe80:: ~ febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
