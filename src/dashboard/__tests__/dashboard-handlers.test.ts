@@ -36,7 +36,10 @@ vi.stubGlobal('chrome', {
         getMessage: vi.fn((key: string) => key),
         getUILanguage: vi.fn(() => 'en'),
     },
-    runtime: { sendMessage: vi.fn().mockResolvedValue({}) },
+    runtime: {
+        sendMessage: vi.fn().mockResolvedValue({}),
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+    },
     storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn().mockResolvedValue(undefined) } },
     downloads: { download: (...args: unknown[]) => mockDownload(...args) },
 });
@@ -382,14 +385,14 @@ describe('handleTestAi', () => {
     });
 
     it('success', async () => {
-        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } }) } });
+        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
         expect(document.getElementById('status')!.className).toBe('success');
     });
 
   it('saves settings before testing AI connection', async () => {
     const sendMessage = vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } });
-    vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage } });
+    vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
 
     const geminiInput = document.getElementById('geminiApiKey') as HTMLInputElement;
     const modelInput = document.getElementById('geminiModel') as HTMLInputElement;
@@ -406,13 +409,13 @@ describe('handleTestAi', () => {
   });
 
     it('error', async () => {
-        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: false, message: 'API key invalid' } }) } });
+        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: false, message: 'API key invalid' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
         expect(document.getElementById('status')!.className).toBe('error');
     });
 
     it('exception', async () => {
-        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('Timeout')) } });
+        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('Timeout')), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
         expect(document.getElementById('status')!.className).toBe('error');
         expect(document.getElementById('status')!.textContent).toBe('testError');
@@ -421,6 +424,62 @@ describe('handleTestAi', () => {
     it('returns early when button missing', async () => {
         document.getElementById('testAiBtn')!.remove();
         await expect(handleTestAi()).resolves.toBeUndefined();
+    });
+
+    it('registers and removes the AI_TEST_PROGRESS listener around the test', async () => {
+        const addListener = vi.fn();
+        const removeListener = vi.fn();
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } }),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        await handleTestAi();
+
+        expect(addListener).toHaveBeenCalledTimes(1);
+        expect(removeListener).toHaveBeenCalledTimes(1);
+        expect(removeListener.mock.calls[0][0]).toBe(addListener.mock.calls[0][0]);
+    });
+
+    it('renders provider name and progress on an AI_TEST_PROGRESS push', async () => {
+        let capturedListener: ((message: unknown) => void) | undefined;
+        const addListener = vi.fn((listener: (message: unknown) => void) => {
+            capturedListener = listener;
+        });
+        const removeListener = vi.fn();
+        let resolveSendMessage: (value: unknown) => void;
+        const sendMessagePromise = new Promise((resolve) => { resolveSendMessage = resolve; });
+
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            runtime: {
+                sendMessage: vi.fn(() => {
+                    // Simulate the progress push arriving while the request is in flight.
+                    capturedListener?.({
+                        type: 'AI_TEST_PROGRESS',
+                        progress: { provider: 'gemini', index: 0, total: 2 },
+                    });
+                    return sendMessagePromise;
+                }),
+                onMessage: { addListener, removeListener },
+            },
+        });
+
+        const handlePromise = handleTestAi();
+        const statusDiv = document.getElementById('status')!;
+        await vi.waitFor(() => {
+            expect(statusDiv.textContent).toContain('aiTestingProvider');
+        });
+
+        expect(statusDiv.className).toBe('ai-test-progress');
+        expect(statusDiv.querySelector('.ai-test-spinner')).not.toBeNull();
+
+        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+        await handlePromise;
+        expect(removeListener).toHaveBeenCalledTimes(1);
     });
 });
 
