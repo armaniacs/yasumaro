@@ -2556,3 +2556,26 @@ label.inline-label {
     font-size: 16px;
   }
 }
+
+/* Mask navigation (CSP-safe: no inline styles) */
+#maskNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+#maskNavPrev,
+#maskNavNext {
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+#maskNavCounter {
+  font-size: 11px;
+  color: #666;
+}

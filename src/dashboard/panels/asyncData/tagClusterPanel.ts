@@ -87,7 +87,6 @@ export function createTagClusterPanel(): AsyncDataPanel {
           circle.setAttribute('cy', String(pos.y));
           circle.setAttribute('r', String(4 + Math.min(node.count, 20)));
           circle.setAttribute('class', 'tag-cluster-node');
-          circle.style.cursor = 'pointer';
           circle.addEventListener('click', () => {
             if (panZoomController?.wasDragSuppressingClick()) return;
             navigateToHistoryWithTag(node.tag);
