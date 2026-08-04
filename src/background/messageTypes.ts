@@ -6,6 +6,7 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { AiTestProgress } from './aiClient.js';
 
 // ============================================================================
 // Protocol version
@@ -85,6 +86,9 @@ export type TestObsidianMessage = {
 
 export type TestAiMessage = {
     type: 'TEST_AI';
+    /** Optional correlation id from the initiating Dashboard tab, used to
+     * filter progress broadcasts so multiple tabs do not interfere. */
+    runId?: string;
 };
 
 export type GetPrivacyCacheMessage = {
@@ -175,6 +179,22 @@ export type ExtensionMessage = (
 // ============================================================================
 // Runtime constants (kept for backward compatibility and runtime checks)
 // ============================================================================
+
+// ----------------------------------------------------------------------------
+// One-way broadcast messages (Service Worker → extension pages)
+// ----------------------------------------------------------------------------
+// These are intentionally NOT part of ExtensionMessage / VALID_MESSAGE_TYPES:
+// VALID_MESSAGE_TYPES is the set of requests the Service Worker RECEIVES and
+// validates. Broadcast messages are pushed FROM the SW and never received by
+// it, so including them in that union would force every request handler to
+// also deal with a type it never expects. Keeping the type here preserves the
+// single source of truth for message contracts; see aiTestProgressNotifier.ts.
+export const AI_TEST_PROGRESS_MESSAGE_TYPE = 'AI_TEST_PROGRESS' as const;
+
+export interface AiTestProgressMessage {
+    type: typeof AI_TEST_PROGRESS_MESSAGE_TYPE;
+    progress: AiTestProgress;
+}
 
 export const VALID_MESSAGE_TYPES = [
     'VALID_VISIT',

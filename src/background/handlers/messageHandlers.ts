@@ -100,7 +100,7 @@ export interface TestObsidianHandlerDeps {
 
 export interface TestAiHandlerDeps {
   clearSettingsCache: () => void;
-  testConnection: (onProgress?: (progress: AiTestProgress) => void) => Promise<unknown>;
+  testConnection: (onProgress?: (progress: AiTestProgress) => void, runId?: string) => Promise<unknown>;
   notifyProgress?: (progress: AiTestProgress) => void;
 }
 
@@ -537,12 +537,12 @@ export function createTestObsidianHandler(deps: TestObsidianHandlerDeps) {
 
 export function createTestAiHandler(deps: TestAiHandlerDeps) {
   return async (
-    _message: TestAiMessage,
+    message: TestAiMessage,
     _sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
     deps.clearSettingsCache();
-    const aiResult = await deps.testConnection(deps.notifyProgress);
+    const aiResult = await deps.testConnection(deps.notifyProgress, message.runId);
     sendResponse({ success: true, ai: aiResult });
   };
 }

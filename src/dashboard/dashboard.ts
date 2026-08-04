@@ -274,11 +274,12 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
   return testResult?.obsidian || { success: false, message: 'No response' };
 }
 
-export async function testAiConnection(): Promise<MultiProviderTestResult> {
+export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_AI',
     protocolVersion: CURRENT_PROTOCOL_VERSION,
-    payload: {}
+    payload: {},
+    ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };
 
   return testResult?.ai || { success: false, message: 'No response', providers: [] };
@@ -411,11 +412,33 @@ export async function handleTestObsidian(): Promise<void> {
 }
 
 function isAiTestProgressMessage(message: unknown): message is AiTestProgressMessage {
+  if (
+    typeof message !== 'object' ||
+    message === null ||
+    (message as { type?: unknown }).type !== AI_TEST_PROGRESS_MESSAGE_TYPE
+  ) {
+    return false;
+  }
+  const progress = (message as AiTestProgressMessage).progress;
+  // Validate the payload shape defensively: the broadcast reaches every
+  // extension context, so a malformed/forged message must not corrupt the UI.
   return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === AI_TEST_PROGRESS_MESSAGE_TYPE
+    typeof progress === 'object' &&
+    progress !== null &&
+    typeof progress.provider === 'string' &&
+    Number.isInteger(progress.index) &&
+    progress.index >= 0 &&
+    Number.isInteger(progress.total) &&
+    progress.total >= 0 &&
+    (progress.model === undefined || typeof progress.model === 'string')
   );
+}
+
+/** Look up a provider label without leaking Object.prototype keys. */
+function providerLabelSafe(provider: string): string {
+  return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
+    ? PROVIDER_LABELS[provider]
+    : provider;
 }
 
 interface AiTestProgressView {
@@ -452,7 +475,7 @@ function buildAiTestProgressView(statusDiv: HTMLElement): AiTestProgressView {
 
 function renderAiTestProgressLabel(view: AiTestProgressView, progress: AiTestProgress | undefined): void {
   if (progress) {
-    const providerLabel = PROVIDER_LABELS[progress.provider] || progress.provider;
+    const providerLabel = providerLabelSafe(progress.provider);
     const providerDisplay = progress.model ? `${providerLabel} (${progress.model})` : providerLabel;
     view.label.textContent = getMessage('aiTestingProvider', {
       provider: providerDisplay,
@@ -483,6 +506,9 @@ export async function handleTestAi(): Promise<void> {
   aiTestInFlight = true;
 
   const startTime = performance.now();
+  // Correlation id for this test run so that when multiple Dashboard tabs run a
+  // test concurrently, each tab only renders the progress it initiated.
+  const runId = `ai-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   let latestProgress: AiTestProgress | undefined;
   let lastProviderKey = '';
 
@@ -501,9 +527,10 @@ export async function handleTestAi(): Promise<void> {
   const progressListener = (message: unknown, sender: chrome.runtime.MessageSender): void => {
     // AI_TEST_PROGRESS arrives via chrome.runtime.sendMessage broadcast, so any
     // extension context (content scripts, popup, offscreen) can reach this
-    // listener. Accept only messages originating from this extension.
+    // listener. Accept only messages originating from this extension AND from
+    // this test run (guards against concurrent Dashboard tabs overwriting state).
     if (sender?.id !== chrome.runtime.id) return;
-    if (isAiTestProgressMessage(message)) {
+    if (isAiTestProgressMessage(message) && message.progress.runId === runId) {
       latestProgress = message.progress;
       const key = `${message.progress.provider}:${message.progress.index}`;
       const changed = key !== lastProviderKey;
@@ -531,7 +558,7 @@ export async function handleTestAi(): Promise<void> {
       await saveSettingsWithAllowedUrls(mergedSettings);
       refreshLocalMarkdownScheduler();
 
-      const aiResult = await testAiConnection();
+      const aiResult = await testAiConnection(runId);
 
       statusDiv.innerHTML = '';
 
