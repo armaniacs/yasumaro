@@ -247,32 +247,39 @@ export class AIClient {
     }
 
     /**
+     * プロバイダーIDからモデル設定キーを解決する。
+     * スロットのmodel上書き(applySlotModel)と進捗表示用の解決(resolveEffectiveModel)で共有し、
+     * キー対応のドリフトを防ぐ。
+     */
+    private resolveModelKey(provider: string): string {
+        if (provider === 'openai-compatible') {
+            return StorageKeys.PROVIDER_MODEL;
+        }
+        const normalizedName = provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
+        return `${normalizedName}_model`;
+    }
+
+    /**
      * スロットにmodel指定がある場合、対応するプロバイダーのモデル設定キーを上書きした設定を返す
      */
     private applySlotModel(settings: Settings, slot: ProviderSlot): Settings {
         if (!slot.model) {
             return settings;
         }
-        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
-        const modelKey = slot.provider === 'openai-compatible'
-            ? StorageKeys.PROVIDER_MODEL
-            : `${normalizedName}_model`;
-        return { ...settings, [modelKey]: slot.model };
+        return { ...settings, [this.resolveModelKey(slot.provider)]: slot.model };
     }
 
     /**
      * 進捗表示・結果表示用に、実際に使用されるモデル名を解決する
      * スロットにmodel指定があればそれを、なければ設定済みのデフォルトモデルを返す
+     * デフォルト値が空文字の場合は undefined に正規化し、呼び出し元の falsy 判定と整合させる
      */
     private resolveEffectiveModel(settings: Settings, slot: ProviderSlot): string | undefined {
         if (slot.model) {
             return slot.model;
         }
-        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
-        const modelKey = slot.provider === 'openai-compatible'
-            ? StorageKeys.PROVIDER_MODEL
-            : `${normalizedName}_model`;
-        return settings[modelKey] as string | undefined;
+        const model = settings[this.resolveModelKey(slot.provider)] as string | undefined;
+        return model ? model : undefined;
     }
 
     /**
@@ -288,9 +295,7 @@ export class AIClient {
         let anySuccess = false;
 
         for (const [index, slot] of slots.entries()) {
-            const effectiveModel = slot.provider === BUILT_IN_AI_PROVIDER_ID
-                ? slot.model
-                : this.resolveEffectiveModel(settings, slot);
+            const effectiveModel = this.resolveEffectiveModel(settings, slot);
             onProgress?.({ provider: slot.provider, model: effectiveModel, index, total: slots.length });
 
             if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {

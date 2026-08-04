@@ -919,12 +919,19 @@ button#changeMasterPassword:hover {
   align-items: center;
   flex-wrap: wrap;
   column-gap: 8px;
+  row-gap: 8px;
   color: var(--color-text-secondary);
   background: var(--color-bg-subtle, transparent);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 13px;
+}
+
+.ai-test-progress span {
+  /* Allow long provider (model) labels to wrap instead of overflowing on narrow widths */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ai-test-elapsed {
@@ -948,11 +955,8 @@ button#changeMasterPassword:hover {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ai-test-spinner {
-    animation-duration: 2.4s;
-  }
-}
+/* Reduced motion: the global tokens.css rule (`* { animation-duration: 0.01ms !important }`)
+   already effectively stops all animations, so no local override is needed here. */
 
 .error-text {
   color: var(--color-danger);
