@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.12` リリース。
+> - 現時点では `v6.7.13` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,38 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.13] - 2026-08-05
+
+Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指摘された残存事項への対応。バージョンポリシー上、新機能フェーズ（奇数バージョン）としてリリース。
+
+### Security / セキュリティ
+
+- **AI 接続テスト進捗 broadcast の受信側をハードニング** — `isAiTestProgressMessage` が payload の形状（`provider` が string、`index`/`total` が非負整数、`model` が string|undefined）を検証し、不正・偽造メッセージによる表示汚染を防止。`PROVIDER_LABELS` へのアクセスを `hasOwnProperty` ベースの `providerLabelSafe()` に変更し、`constructor` 等のプロトタイプ継承キー漏れを防止
+
+### Fixed / 修正
+
+- **進捗 broadcast を全タブの content script に届かないよう修正** — `extractor.ts` の onMessage リスナーを `GET_CONTENT` 以外で早期 return にし、SW→全タブ broadcast によるメッセージポート保持・未解決 Promise の滞留を解消
+- **複数ダッシュボードタブでの進捗干渉を防止** — `AiTestProgress` に `runId` を追加し、TEST_AI メッセージ経由で各タブが自分の実行の進捗のみ描画
+
+### Refactor / リファクタ
+
+- **AI 進捗メッセージ契約を一元化** — `AI_TEST_PROGRESS_MESSAGE_TYPE` / `AiTestProgressMessage` を `messageTypes.ts` に集約し、メッセージ型の単一ソースを維持
+- **モデルキー解決を一元化** — 共通ヘルパー `src/utils/aiModelKey.ts`（`normalizeProviderKeyName` / `resolveModelKey`）を新設し、`AIClient` と `OpenAIProvider` が参照。`OpenAIProvider` のキー正規化で欠落していたハイフン変換を解消し、書き込み・表示・リクエストで同一キーを保証
+- **廃棄ログを観測可能に** — 進捗 broadcast の廃棄（レシーバ不在・SW コンテキスト無効化）を `LogType.WARN` で記録し、本番でも診断可能に
+- **テストの型安全化** — テスト内の `@ts-expect-error` による型抑制を `vi.mocked()` + 明示キャストに置換
+
+### Tests / テスト
+
+- `aiTestProgressNotifier.test.ts`: 廃棄時の WARN ログ記録・正常時のノーログを検証
+- `dashboard-handlers.test.ts`: 不正 payload 無視・プロトタイプキーラベル汚染防止・異なる runId の進捗無視を追加
+- `aiModelKey.test.ts`: 全プロバイダーのモデルキー解決テーブルを検証
+- `aiClient-priority-fallback.test.ts`: `@ts-expect-error` 撤廃とデフォルトモデル解決パスの検証を維持
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.12` → `6.7.13`
+- PBI 2026-08-04-01〜05 を `dev-docs/archived/pbi/` へ移動し `pbi/00-INDEX.md` を更新
 
 ## [6.7.12] - 2026-08-04
 
