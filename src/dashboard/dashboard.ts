@@ -8,7 +8,8 @@ import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } f
 import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from '../popup/settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
-import { type MultiProviderTestResult, PROVIDER_LABELS } from '../background/aiClient.js';
+import { type MultiProviderTestResult, type AiTestProgress, PROVIDER_LABELS } from '../background/aiClient.js';
+import { AI_TEST_PROGRESS_MESSAGE_TYPE, type AiTestProgressMessage } from '../background/aiTestProgressNotifier.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from '../popup/settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
@@ -409,14 +410,79 @@ export async function handleTestObsidian(): Promise<void> {
   }
 }
 
+function isAiTestProgressMessage(message: unknown): message is AiTestProgressMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === AI_TEST_PROGRESS_MESSAGE_TYPE
+  );
+}
+
+/**
+ * Render the in-progress state: spinner + provider being tested + elapsed time.
+ * Called both on each AI_TEST_PROGRESS push and every elapsed-time tick.
+ */
+function renderAiTestProgress(statusDiv: HTMLElement, progress: AiTestProgress | undefined, startTime: number): void {
+  statusDiv.innerHTML = '';
+  statusDiv.className = 'ai-test-progress';
+
+  const spinner = document.createElement('span');
+  spinner.className = 'ai-test-spinner';
+  spinner.setAttribute('aria-hidden', 'true');
+  statusDiv.appendChild(spinner);
+
+  const label = document.createElement('span');
+  if (progress) {
+    const providerLabel = PROVIDER_LABELS[progress.provider] || progress.provider;
+    if (progress.model) {
+      const providerWithModel = `${providerLabel} (${progress.model})`;
+      label.textContent = getMessage('aiTestingProvider', {
+        provider: providerWithModel,
+        current: String(progress.index + 1),
+        total: String(progress.total),
+      }) || `Testing ${providerWithModel}... (${progress.index + 1}/${progress.total})`;
+    } else {
+      label.textContent = getMessage('aiTestingProvider', {
+        provider: providerLabel,
+        current: String(progress.index + 1),
+        total: String(progress.total),
+      }) || `Testing ${providerLabel}... (${progress.index + 1}/${progress.total})`;
+    }
+  } else {
+    label.textContent = getMessage('testingConnection') || '接続テスト中...';
+  }
+  statusDiv.appendChild(label);
+
+  const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
+  const elapsedEl = document.createElement('div');
+  elapsedEl.className = 'ai-test-elapsed';
+  elapsedEl.textContent = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `Elapsed: ${elapsedSeconds}s`;
+  statusDiv.appendChild(elapsedEl);
+}
+
 export async function handleTestAi(): Promise<void> {
   const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!testAiBtn || !statusDiv) return;
 
-  statusDiv.innerHTML = '';
-  statusDiv.className = '';
-  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  const startTime = performance.now();
+  let latestProgress: AiTestProgress | undefined;
+
+  const progressListener = (message: unknown): void => {
+    if (isAiTestProgressMessage(message)) {
+      latestProgress = message.progress;
+      renderAiTestProgress(statusDiv, latestProgress, startTime);
+      syncStatusToTop();
+    }
+  };
+  chrome.runtime.onMessage.addListener(progressListener);
+
+  renderAiTestProgress(statusDiv, undefined, startTime);
+  syncStatusToTop();
+  const elapsedTimer = setInterval(() => {
+    renderAiTestProgress(statusDiv, latestProgress, startTime);
+    syncStatusToTop();
+  }, 200);
 
   testAiBtn.disabled = true;
   try {
@@ -490,6 +556,8 @@ export async function handleTestAi(): Promise<void> {
     statusDiv.className = 'error';
     syncStatusToTop();
   } finally {
+    clearInterval(elapsedTimer);
+    chrome.runtime.onMessage.removeListener(progressListener);
     testAiBtn.disabled = false;
   }
 }

@@ -40,6 +40,16 @@ export interface MultiProviderTestResult {
     providers: ProviderTestResult[];
 }
 
+/** Progress notification emitted when testConnection() starts testing one provider slot. */
+export interface AiTestProgress {
+    provider: string;
+    model?: string;
+    /** 0-based index of the slot currently being tested. */
+    index: number;
+    /** Total number of slots in the priority list. */
+    total: number;
+}
+
 /**
  * Human-readable labels for AI provider identifiers.
  * Note: 'built-in-ai' is display-only here — it is not registered in
@@ -251,23 +261,43 @@ export class AIClient {
     }
 
     /**
+     * 進捗表示・結果表示用に、実際に使用されるモデル名を解決する
+     * スロットにmodel指定があればそれを、なければ設定済みのデフォルトモデルを返す
+     */
+    private resolveEffectiveModel(settings: Settings, slot: ProviderSlot): string | undefined {
+        if (slot.model) {
+            return slot.model;
+        }
+        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
+        const modelKey = slot.provider === 'openai-compatible'
+            ? StorageKeys.PROVIDER_MODEL
+            : `${normalizedName}_model`;
+        return settings[modelKey] as string | undefined;
+    }
+
+    /**
      * 接続テストを実行する
      * 優先度リストの全プロバイダをテストし、各プロバイダの結果を返す
      * 例外の有無だけでなく、実際のレスポンス内容も検証する。
      */
-    async testConnection(): Promise<MultiProviderTestResult> {
+    async testConnection(onProgress?: (progress: AiTestProgress) => void): Promise<MultiProviderTestResult> {
         const settings = await getSettings();
         const slots = this.resolveProviderSlots(settings);
 
         const providerResults: ProviderTestResult[] = [];
         let anySuccess = false;
 
-        for (const slot of slots) {
+        for (const [index, slot] of slots.entries()) {
+            const effectiveModel = slot.provider === BUILT_IN_AI_PROVIDER_ID
+                ? slot.model
+                : this.resolveEffectiveModel(settings, slot);
+            onProgress?.({ provider: slot.provider, model: effectiveModel, index, total: slots.length });
+
             if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
                 if (!this.builtInAiService) {
                     providerResults.push({
                         provider: slot.provider,
-                        model: slot.model,
+                        model: effectiveModel,
                         success: false,
                         message: `Unknown provider: ${slot.provider}`,
                         debug: { error: 'Built-in AI service is not registered' },
@@ -284,7 +314,7 @@ export class AIClient {
                     if (isSuccess) {
                         providerResults.push({
                             provider: slot.provider,
-                            model: slot.model,
+                            model: effectiveModel,
                             success: true,
                             message: 'ok',
                             debug: {
@@ -298,7 +328,7 @@ export class AIClient {
                         const errorMsg = result.error || (hasContent ? 'Summary was empty' : 'Provider reported failure');
                         providerResults.push({
                             provider: slot.provider,
-                            model: slot.model,
+                            model: effectiveModel,
                             success: false,
                             message: errorMsg,
                             debug: {
@@ -315,7 +345,7 @@ export class AIClient {
                     addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
                     providerResults.push({
                         provider: slot.provider,
-                        model: slot.model,
+                        model: effectiveModel,
                         success: false,
                         message: msg,
                         debug: {
@@ -332,7 +362,7 @@ export class AIClient {
             if (!factory) {
                 providerResults.push({
                     provider: slot.provider,
-                    model: slot.model,
+                    model: effectiveModel,
                     success: false,
                     message: `Unknown provider: ${slot.provider}`,
                     debug: { error: `Provider "${slot.provider}" is not registered` },
@@ -347,7 +377,7 @@ export class AIClient {
                 const result = await providerInstance.testConnection();
                 providerResults.push({
                     provider: slot.provider,
-                    model: slot.model,
+                    model: effectiveModel,
                     success: result.success,
                     message: result.message,
                     debug: result.debug,
@@ -360,7 +390,7 @@ export class AIClient {
                 addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
                 providerResults.push({
                     provider: slot.provider,
-                    model: slot.model,
+                    model: effectiveModel,
                     success: false,
                     message: msg,
                     debug: { error: msg },

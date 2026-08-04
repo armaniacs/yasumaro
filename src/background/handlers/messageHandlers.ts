@@ -20,6 +20,7 @@ import { sharedOfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
+import type { AiTestProgress } from '../aiClient.js';
 
 import type {
   ValidVisitMessage,
@@ -99,7 +100,8 @@ export interface TestObsidianHandlerDeps {
 
 export interface TestAiHandlerDeps {
   clearSettingsCache: () => void;
-  testConnection: () => Promise<unknown>;
+  testConnection: (onProgress?: (progress: AiTestProgress) => void) => Promise<unknown>;
+  notifyProgress?: (progress: AiTestProgress) => void;
 }
 
 export interface GetPrivacyCacheHandlerDeps {
@@ -540,7 +542,7 @@ export function createTestAiHandler(deps: TestAiHandlerDeps) {
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
     deps.clearSettingsCache();
-    const aiResult = await deps.testConnection();
+    const aiResult = await deps.testConnection(deps.notifyProgress);
     sendResponse({ success: true, ai: aiResult });
   };
 }

@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.11` リリース。
+> - 現時点では `v6.7.12` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,29 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.12] - 2026-08-04
+
+ダッシュボードの AI 接続テストに進捗表示を追加。
+
+### Features / 新機能
+
+- **AI 接続テストの進捗表示** — 複数プロバイダーを順にテストする際、現在テスト中のプロバイダー名・使用モデル名・経過時間・スピナーをリアルタイム表示するように変更。Built-in AI のように応答が遅いプロバイダーでも、テストが進行中であることが分かるようにした
+  - `AIClient.testConnection()` に進捗コールバックを追加し、Service Worker からダッシュボードへ `AI_TEST_PROGRESS` メッセージで通知
+  - モデル未指定のスロットでも、設定済みのデフォルトモデル名を解決して表示
+
+### Fixes / 修正
+
+- **AI 接続テストの進捗表示がページ上部のステータス欄に反映されない不具合を修正** — 画面上部の「AI テスト」ボタン（`testAiBtnTop`）から実行した場合、進捗表示は下部の非表示領域にのみ描画され、上部の表示領域には最終結果が出るまで反映されなかった
+
+### Tests / テスト
+
+- `AIClient.testConnection()` の進捗コールバックが各プロバイダー開始時に正しい引数で呼ばれることを検証するテストを追加
+- ダッシュボードの進捗表示・タイマークリーンアップ・リスナー登録解除を検証するテストを追加
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.11` → `6.7.12`
 
 ## [6.7.11] - 2026-08-04
 

@@ -1,5 +1,6 @@
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
+import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { FallbackAIService } from './ai/FallbackAIService.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import { LocalAIService } from './ai/LocalAIService.js';
@@ -341,7 +342,8 @@ registry.register('TEST_OBSIDIAN', handleTestObsidian);
 
 export const handleTestAi = createTestAiHandler({
   clearSettingsCache: () => clearSettingsCache(),
-  testConnection: () => aiClient.testConnection(),
+  testConnection: (onProgress) => aiClient.testConnection(onProgress),
+  notifyProgress: notifyAiTestProgress,
 });
 registry.register('TEST_AI', handleTestAi);
 

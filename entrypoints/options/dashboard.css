@@ -914,6 +914,46 @@ button#changeMasterPassword:hover {
   font-size: 13px;
 }
 
+.ai-test-progress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.ai-test-elapsed {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-test-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  color: var(--color-primary);
+  animation: ai-test-spin 0.8s linear infinite;
+}
+
+@keyframes ai-test-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-test-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 .error-text {
   color: var(--color-danger);
   font-size: 12px;
