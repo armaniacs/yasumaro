@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.10` リリース。
+> - 現時点では `v6.7.11` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,24 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.11] - 2026-08-04
+
+VulnHunter セキュリティ監査で検出された2件の脆弱性（VULN-001, VULN-002）への対応。
+
+### Security / セキュリティ
+
+- **VULN-001: ダッシュボード履歴パネルの DOM XSS を修正** — `sqliteHistoryPanel.ts` の `formatDiagnosticMetadataHtml()` で、AI プロバイダー名（`ai_provider`）とモデル名（`ai_model`）が `escapeHtml()` なしで `innerHTML` に挿入されていた。設定インポート等を通じて `ai_model` に `<svg onload=...>` 等のペイロードが入ると、拡張機能のオプションページ（`chrome-extension://` オリジン）でスクリプトが実行可能だった。両フィールドに `escapeHtml()` を適用
+- **VULN-002: IPv4-mapped IPv6 による SSRF バイパスを修正** — `isPrivateIpAddress()` が IPv4-mapped IPv6（`::ffff:0:0/96`）を検出できず、`validateUrlForFilterImport` / `validateUrlForAIRequests` の SSRF 対策を `::ffff:10.0.0.1` や `::ffff:169.254.169.254` の形式で迂回できた。`::ffff:` プレフィックスの IPv4 部分（ドット区切り・16進表記両対応）を抽出して再帰的にプライベート判定へフォールバック
+
+### Tests / テスト
+
+- **VULN-001: `sqliteHistoryPanel-formatDiagnosticMetadata.test.ts` を新設** — `ai_provider`/`ai_model` の XSS エスケープを検証（5テスト）
+- **VULN-002: `fetch-ipv6.test.ts` に IPv4-mapped IPv6 のリグレッションテストを追加** — プライベート範囲（10/8, 172.16/12, 192.168/16, 169.254/16）のドット区切り・16進表記検出、公開アドレスの許可を検証
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.10` → `6.7.11`
 
 ## [6.7.10] - 2026-08-02
 
