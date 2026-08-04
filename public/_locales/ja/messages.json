@@ -599,6 +599,12 @@
   "testingConnection": {
     "message": "接続テスト中..."
   },
+  "aiTestingProvider": {
+    "message": "{provider} をテスト中... ({current}/{total})"
+  },
+  "aiTestElapsedTime": {
+    "message": "経過時間: {seconds}秒"
+  },
   "connectionSuccess": {
     "message": "接続成功"
   },
