@@ -16,6 +16,47 @@ describe('IPv6プライベートアドレス検知', () => {
       expect(isPrivateIpAddress('::ffff:127.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('::ffff:127.255.255.255')).toBe(true);
     });
+
+    test('::ffff:7f00:1 (127.0.0.1 の16進表記) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:7f00:1')).toBe(true);
+    });
+  });
+
+  describe('IPv4-mapped IPv6 (::ffff:0:0/96) — VULN-002 修正検証', () => {
+    test('::ffff:10.x.x.x (プライベート10.0.0.0/8) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:10.0.0.1')).toBe(true);
+      expect(isPrivateIpAddress('::ffff:10.255.255.255')).toBe(true);
+    });
+
+    test('::ffff:a00:1 (10.0.0.1 の16進表記) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:a00:1')).toBe(true);
+    });
+
+    test('::ffff:192.168.x.x (プライベート192.168.0.0/16) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:192.168.1.1')).toBe(true);
+    });
+
+    test('::ffff:c0a8:101 (192.168.1.1 の16進表記) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:c0a8:101')).toBe(true);
+    });
+
+    test('::ffff:169.254.x.x (リンクローカル/クラウドメタデータ) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:169.254.169.254')).toBe(true);
+    });
+
+    test('::ffff:a9fe:a9fe (169.254.169.254 の16進表記) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:a9fe:a9fe')).toBe(true);
+    });
+
+    test('::ffff:172.16-31.x.x (プライベート172.16.0.0/12) はプライベートとして検出される', () => {
+      expect(isPrivateIpAddress('::ffff:172.16.0.1')).toBe(true);
+      expect(isPrivateIpAddress('::ffff:172.31.255.255')).toBe(true);
+    });
+
+    test('公開 IPv4-mapped IPv6 (::ffff:8.8.8.8) はプライベートではない', () => {
+      expect(isPrivateIpAddress('::ffff:8.8.8.8')).toBe(false);
+      expect(isPrivateIpAddress('::ffff:808:808')).toBe(false);
+    });
   });
 
   describe('リンクローカルアドレス (fe80::/10)', () => {
