@@ -408,25 +408,21 @@ function buildMaskNavigation(container: HTMLElement | Element): void {
   if (!nav) {
     nav = document.createElement('div');
     nav.id = 'maskNav';
-    nav.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:6px;';
 
     const prevBtn = document.createElement('button');
     prevBtn.id = 'maskNavPrev';
     prevBtn.textContent = '▲';
     prevBtn.title = getMessage('previousMaskedItem');
-    prevBtn.style.cssText = 'padding:2px 8px;font-size:11px;cursor:pointer;background:#f5f5f5;border:1px solid #ccc;border-radius:3px;';
     prevBtn.addEventListener('click', jumpToPrevMasked);
 
     const nextBtn = document.createElement('button');
     nextBtn.id = 'maskNavNext';
     nextBtn.textContent = '▼';
     nextBtn.title = getMessage('nextMaskedItem');
-    nextBtn.style.cssText = 'padding:2px 8px;font-size:11px;cursor:pointer;background:#f5f5f5;border:1px solid #ccc;border-radius:3px;';
     nextBtn.addEventListener('click', jumpToNextMasked);
 
     const counter = document.createElement('span');
     counter.id = 'maskNavCounter';
-    counter.style.cssText = 'font-size:11px;color:#666;';
 
     nav.appendChild(prevBtn);
     nav.appendChild(nextBtn);

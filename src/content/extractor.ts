@@ -523,7 +523,13 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
         // ホスト要素
         const host = document.createElement('div');
         host.id = 'osh-privacy-confirm-host';
-        host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; top: 0; left: 0; width: 100%; height: 100%;';
+        host.style.all = 'initial';
+        host.style.position = 'fixed';
+        host.style.zIndex = '2147483647';
+        host.style.top = '0';
+        host.style.left = '0';
+        host.style.width = '100%';
+        host.style.height = '100%';
         const shadow = host.attachShadow({ mode: 'closed' });
 
         // Constructable Stylesheets を使用（CSP style-src 'self' に準拠）

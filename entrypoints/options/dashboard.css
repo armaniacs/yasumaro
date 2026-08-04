@@ -1895,6 +1895,15 @@ mark.domain-match-highlight {
   margin-left: 1em;
 }
 
+.ai-debug-details {
+  margin-left: 1.5em;
+  font-size: 0.85em;
+  color: #666;
+  border-left: 2px solid #ddd;
+  padding-left: 0.5em;
+  margin-top: 2px;
+}
+
 .diag-provider-group {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -4292,6 +4301,7 @@ details[open] > .priority-details-summary {
   fill: #3b82f6;
   stroke: #ffffff;
   stroke-width: 2;
+  cursor: pointer;
   transition: fill 150ms cubic-bezier(0.4, 0, 0.2, 1), stroke-width 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
