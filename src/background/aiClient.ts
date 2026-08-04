@@ -1,4 +1,5 @@
 import { getSettings, StorageKeys, Settings, ProviderSlot } from '../utils/storage.js';
+import { resolveModelKey } from '../utils/aiModelKey.js';
 import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -42,6 +43,9 @@ export interface MultiProviderTestResult {
 
 /** Progress notification emitted when testConnection() starts testing one provider slot. */
 export interface AiTestProgress {
+    /** Correlation id so a receiver (e.g. multiple Dashboard tabs) only renders
+     * progress belonging to its own test run. Omitted for single-run callers. */
+    runId?: string;
     provider: string;
     model?: string;
     /** 0-based index of the slot currently being tested. */
@@ -253,26 +257,20 @@ export class AIClient {
         if (!slot.model) {
             return settings;
         }
-        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
-        const modelKey = slot.provider === 'openai-compatible'
-            ? StorageKeys.PROVIDER_MODEL
-            : `${normalizedName}_model`;
-        return { ...settings, [modelKey]: slot.model };
+        return { ...settings, [resolveModelKey(slot.provider)]: slot.model };
     }
 
     /**
      * 進捗表示・結果表示用に、実際に使用されるモデル名を解決する
      * スロットにmodel指定があればそれを、なければ設定済みのデフォルトモデルを返す
+     * デフォルト値が空文字の場合は undefined に正規化し、呼び出し元の falsy 判定と整合させる
      */
     private resolveEffectiveModel(settings: Settings, slot: ProviderSlot): string | undefined {
         if (slot.model) {
             return slot.model;
         }
-        const normalizedName = slot.provider.replace('2', '_2').replace(/-/g, '_').toLowerCase();
-        const modelKey = slot.provider === 'openai-compatible'
-            ? StorageKeys.PROVIDER_MODEL
-            : `${normalizedName}_model`;
-        return settings[modelKey] as string | undefined;
+        const model = settings[resolveModelKey(slot.provider)] as string | undefined;
+        return model ? model : undefined;
     }
 
     /**
@@ -280,7 +278,7 @@ export class AIClient {
      * 優先度リストの全プロバイダをテストし、各プロバイダの結果を返す
      * 例外の有無だけでなく、実際のレスポンス内容も検証する。
      */
-    async testConnection(onProgress?: (progress: AiTestProgress) => void): Promise<MultiProviderTestResult> {
+    async testConnection(onProgress?: (progress: AiTestProgress) => void, runId?: string): Promise<MultiProviderTestResult> {
         const settings = await getSettings();
         const slots = this.resolveProviderSlots(settings);
 
@@ -288,12 +286,23 @@ export class AIClient {
         let anySuccess = false;
 
         for (const [index, slot] of slots.entries()) {
-            const effectiveModel = slot.provider === BUILT_IN_AI_PROVIDER_ID
-                ? slot.model
-                : this.resolveEffectiveModel(settings, slot);
-            onProgress?.({ provider: slot.provider, model: effectiveModel, index, total: slots.length });
+            const effectiveModel = this.resolveEffectiveModel(settings, slot);
+            onProgress?.({
+                provider: slot.provider,
+                model: effectiveModel,
+                index,
+                total: slots.length,
+                // Only attach runId when one was provided, so existing callers
+                // that omit it keep their progress shape unchanged.
+                ...(runId !== undefined ? { runId } : {}),
+            });
 
             if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
+                // Note: for built-in-ai, `effectiveModel` reflects only the
+                // user-specified slot.model (there is no built-in-ai_model key).
+                // The actual model used at request time is resolved internally
+                // by LocalAIService (availability/modelName), so the displayed
+                // model may not equal the executed one. Display is informational.
                 if (!this.builtInAiService) {
                     providerResults.push({
                         provider: slot.provider,

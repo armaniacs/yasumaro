@@ -11,6 +11,7 @@ import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { normalizeProviderKeyName, resolveModelKey } from '../../../utils/aiModelKey.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -48,10 +49,10 @@ export class OpenAIProvider extends AIProviderStrategy {
             this.model = str(StorageKeys.OLLAMA_MODEL);
         } else {
             // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
-            const normalizedName = providerName.replace('2', '_2').toLowerCase();
+            const normalizedName = normalizeProviderKeyName(providerName);
             this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
             this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
-            this.model = str(`${normalizedName}_model`, 'gpt-3.5-turbo');
+            this.model = str(resolveModelKey(providerName), 'gpt-3.5-turbo');
         }
 
         // BaseUrl SSRF対策
