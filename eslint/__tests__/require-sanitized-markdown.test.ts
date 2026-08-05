@@ -49,6 +49,14 @@ ruleTester.run('require-sanitized-markdown', requireSanitizedMarkdown, {
       ].join('\n'),
     },
     {
+      name: 'sanitizeForMarkdownLinkText result used in markdown template',
+      code: [
+        "import { sanitizeForMarkdownLinkText } from '../utils/markdownSanitizer.js';",
+        'const safe = sanitizeForMarkdownLinkText(title);',
+        'const md = `- [${safe}](https://example.com)`;',
+      ].join('\n'),
+    },
+    {
       name: 'test file without import but with internal var name is ok',
       code: 'const md = `- [${timestamp}](https://example.com)`;',
       filename: '/path/to/__tests__/some.test.ts',

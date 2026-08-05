@@ -20,7 +20,7 @@ import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 
 function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -702,7 +702,9 @@ function formatEntryToMarkdown(entry: { title?: string | null; url: string; summ
     hour: '2-digit',
     minute: '2-digit'
   });
-  const title = sanitizeForObsidian(entry.title || entry.url || 'Untitled');
+  // VULN-017: title is placed inside `[title](url)`; escape link-breakout chars
+  // so a `](url)` suffix cannot close the wrapper.
+  const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
   const url = sanitizeUrlForMarkdownTarget(entry.url);
   const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
   return `- ${timestamp} [${title}](${url})\n    - ${summary}`;

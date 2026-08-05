@@ -13,7 +13,7 @@
  */
 
 const MARKDOWN_PATTERNS = /\[.*?\]\(.*?\)/;
-const SANITIZE_FUNCTIONS = new Set(['sanitizeForObsidian', 'sanitizeUrlForMarkdownTarget']);
+const SANITIZE_FUNCTIONS = new Set(['sanitizeForObsidian', 'sanitizeUrlForMarkdownTarget', 'sanitizeForMarkdownLinkText']);
 const INTERNAL_VARS = new Set([
   'timestamp', 'date', 'time', 'tagPrefix', 'finalSanitizedSummary',
   'periodLabel', 'dateStr', 'domain', 'i', 'e',

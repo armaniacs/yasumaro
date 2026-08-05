@@ -5,7 +5,7 @@
  */
 
 import { getUserLocale } from '../../../utils/localeUtils.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../../utils/markdownSanitizer.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -29,8 +29,10 @@ export const formatMarkdownStep: PipelineStepFunction = async (
     summary = sanitizedSummary || privacyResult?.summary || 'Summary not available.';
   }
 
-  // Sanitize for Obsidian (XSS protection)
-  const sanitizedTitle = sanitizeForObsidian(title);
+  // Sanitize for Obsidian (XSS protection).
+  // The title is placed inside `[title](url)`, so escape link-breakout chars
+  // (VULN-001) — sanitizeForObsidian alone does not stop a `](url)` suffix.
+  const sanitizedTitle = sanitizeForMarkdownLinkText(title);
   // Sanitize URL for Markdown link target (VULN-001/004 fix)
   const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
   // Normalize newlines and extra spaces - Obsidian list format breaks with newlines
@@ -43,9 +45,11 @@ export const formatMarkdownStep: PipelineStepFunction = async (
     minute: '2-digit'
   });
 
-  // タグプレフィックス（タグがある場合のみ）
+  // タグプレフィックス（タグがある場合のみ）。
+  // Tags come from the AI summary (prompt-injection surface) — sanitize each one
+  // before interpolating as `#${tag}` (VULN-008) to stop link/wikilink injection.
   const tags = privacyResult?.tags;
-  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${t}`).join(' ') + ' ' : '';
+  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${sanitizeForObsidian(t)}`).join(' ') + ' ' : '';
 
   // Create markdown
   const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;
