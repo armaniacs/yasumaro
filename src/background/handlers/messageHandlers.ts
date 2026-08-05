@@ -45,6 +45,35 @@ import type {
 // Deps interfaces
 // ============================================================================
 
+/**
+ * Reject messages originating from content scripts or external extensions.
+ *
+ * Content scripts run inside a tab on a web page and satisfy the registry's
+ * `sender.id === chrome.runtime.id` check, so they can reach handlers that are
+ * meant for extension pages / offscreen only. Privileged record/fetch/test
+ * handlers must not be triggerable from web-page-controlled content scripts
+ * (VULN-004/009/018/019/020). Mirrors the DASHBOARD_SQLITE guard in
+ * service-worker.ts.
+ *
+ * @returns true if the sender is a content script or external extension and the
+ *   request was rejected (sendResponse already invoked with an error).
+ */
+export function rejectContentScriptSender(
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void,
+  messageType: string,
+): boolean {
+  if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
+    sendResponse({ success: false, error: `${messageType} is not allowed from content scripts` });
+    return true;
+  }
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ success: false, error: `${messageType} is not allowed from external extensions` });
+    return true;
+  }
+  return false;
+}
+
 export interface ValidVisitHandlerDeps {
   isRecordingAllowed: () => Promise<boolean>;
   cacheTab: (tab: chrome.tabs.Tab) => void;
@@ -255,9 +284,11 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
 
   return async (
     message: FetchUrlMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-004: FETCH_URL is an extension-page operation, not a content-script one.
+    if (rejectContentScriptSender(sender, sendResponse, 'FETCH_URL')) return;
     try {
       validateUrlForFilterImport(message.payload.url);
 
@@ -307,6 +338,8 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-004: MANUAL_RECORD/PREVIEW_RECORD are extension-page operations.
+    if (rejectContentScriptSender(sender, sendResponse, message.type)) return;
     if (!(await deps.isRecordingAllowed())) {
       sendResponse({ success: false, reason: 'privacy_consent_required' });
       return;
@@ -403,9 +436,11 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
 export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
   return async (
     message: SaveRecordMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-004: SAVE_RECORD is an extension-page operation.
+    if (rejectContentScriptSender(sender, sendResponse, 'SAVE_RECORD')) return;
     if (!(await deps.isRecordingAllowed())) {
       sendResponse({ success: false, reason: 'privacy_consent_required' });
       return;
@@ -514,9 +549,11 @@ export function createCheckDomainHandler(deps: CheckDomainHandlerDeps) {
 export function createTestConnectionsHandler(deps: TestConnectionsHandlerDeps) {
   return async (
     _message: TestConnectionsMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-009: TEST_* are extension-page operations.
+    if (rejectContentScriptSender(sender, sendResponse, 'TEST_CONNECTIONS')) return;
     const obsidianResult = await deps.testObsidian();
     const aiResult = await deps.testAi();
     sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
@@ -526,9 +563,11 @@ export function createTestConnectionsHandler(deps: TestConnectionsHandlerDeps) {
 export function createTestObsidianHandler(deps: TestObsidianHandlerDeps) {
   return async (
     message: TestObsidianMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-009: reject content-script senders before accepting an apiKey override.
+    if (rejectContentScriptSender(sender, sendResponse, 'TEST_OBSIDIAN')) return;
     const override = message.payload?.apiKey ? { apiKey: message.payload.apiKey } : undefined;
     const obsidianResult = await deps.testConnection(override);
     sendResponse({ success: true, obsidian: obsidianResult });
@@ -538,9 +577,11 @@ export function createTestObsidianHandler(deps: TestObsidianHandlerDeps) {
 export function createTestAiHandler(deps: TestAiHandlerDeps) {
   return async (
     message: TestAiMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-009: reject content-script senders (this handler clears the settings cache).
+    if (rejectContentScriptSender(sender, sendResponse, 'TEST_AI')) return;
     deps.clearSettingsCache();
     const aiResult = await deps.testConnection(deps.notifyProgress, message.runId);
     sendResponse({ success: true, ai: aiResult });
@@ -550,9 +591,11 @@ export function createTestAiHandler(deps: TestAiHandlerDeps) {
 export function createGetPrivacyCacheHandler(deps: GetPrivacyCacheHandlerDeps) {
   return async (
     _message: GetPrivacyCacheMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-018: privacy-cache disclosure must be extension-page only.
+    if (rejectContentScriptSender(sender, sendResponse, 'GET_PRIVACY_CACHE')) return;
     const cache = deps.getPrivacyCache();
     await logDebug('GET_PRIVACY_CACHE requested', { cacheSize: cache?.size || 0 }, 'service-worker');
     if (cache) {
@@ -569,9 +612,11 @@ export function createGetPrivacyCacheHandler(deps: GetPrivacyCacheHandlerDeps) {
 export function createActivityUpdateHandler(deps: ActivityUpdateHandlerDeps) {
   return async (
     _message: ActivityUpdateMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-019: activity refresh (auto-lock suppression) must be extension-page only.
+    if (rejectContentScriptSender(sender, sendResponse, 'ACTIVITY_UPDATE')) return;
     await deps.updateActivity();
     sendResponse({ success: true });
   };
@@ -580,9 +625,11 @@ export function createActivityUpdateHandler(deps: ActivityUpdateHandlerDeps) {
 export function createSessionLockRequestHandler(deps: SessionLockRequestHandlerDeps) {
   return async (
     _message: SessionLockRequestMessage,
-    _sender: chrome.runtime.MessageSender,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
+    // VULN-020: forced session lock (local DoS) must be extension-page only.
+    if (rejectContentScriptSender(sender, sendResponse, 'SESSION_LOCK_REQUEST')) return;
     await deps.lockSession();
     sendResponse({ success: true });
   };
