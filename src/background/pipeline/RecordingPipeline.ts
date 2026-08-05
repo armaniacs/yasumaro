@@ -484,6 +484,7 @@ export class RecordingPipeline {
       originalTokens: privacyResult?.originalTokens,
       cleansedTokens: privacyResult?.cleansedTokens,
       aiDuration,
+      aiProvider: privacyResult?.providerName,
       obsidianDuration: context.obsidianDuration,
       localMarkdownDuration: context.localMarkdownDuration,
       title: data.title,

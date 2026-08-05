@@ -170,7 +170,7 @@ async function forceRecord(
       chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch(() => {});
 
       const totalDuration = performance.now() - startTime;
-      const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined);
+      const message = formatSuccessMessage(totalDuration, result.aiDuration, result.obsidianDuration !== undefined, result.aiProvider);
       statusDiv.textContent = message;
       statusDiv.className = 'success';
       await showCopyMarkdownButton(tab, result);
@@ -362,6 +362,7 @@ interface SaveRecordResult {
   summary?: string;
   tags?: string[];
   aiDuration?: number;
+  aiProvider?: string;
   obsidianDuration?: number;
   error?: string;
 }
@@ -544,7 +545,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch(() => {});
 
     const totalDuration = performance.now() - startTime;
-    const message = formatSuccessMessage(totalDuration, result?.aiDuration, result?.obsidianDuration !== undefined);
+    const message = formatSuccessMessage(totalDuration, result?.aiDuration, result?.obsidianDuration !== undefined, result?.aiProvider);
 
     if (statusDiv) {
       statusDiv.textContent = message;

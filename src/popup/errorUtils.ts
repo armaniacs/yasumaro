@@ -3,6 +3,17 @@
  * エラーハンドリング共通モジュール
  */
 
+// background/aiClient.ts の PROVIDER_LABELS と同期を保つこと（popupバンドル軽量化のためローカル複製）
+const AI_PROVIDER_LABELS: Record<string, string> = {
+  gemini: 'Google Gemini',
+  openai: 'OpenAI Compatible',
+  openai2: 'OpenAI Compatible 2',
+  'lm-studio': 'LM Studio',
+  ollama: 'Ollama',
+  'openai-compatible': 'OpenAI Compatible',
+  'built-in-ai': 'Built-in AI',
+};
+
 // エラータイプの定義
 type ErrorWithDetails = Error & {
   message: string;
@@ -418,12 +429,14 @@ export function formatDuration(ms: number): string {
  * @param totalDuration - 全体処理時間 (ms)
  * @param aiDuration - AI処理時間 (ms, optional)
  * @param obsidianSaved - Obsidianに保存されたか (optional)
+ * @param aiProvider - AI要約に使用したプロバイダー識別子 (optional)
  * @returns フォーマットされたメッセージ
  */
 export function formatSuccessMessage(
   totalDuration: number,
   aiDuration?: number,
-  obsidianSaved?: boolean
+  obsidianSaved?: boolean,
+  aiProvider?: string
 ): string {
   // AI要約の成否に応じてベースメッセージを選択
   const aiSucceeded = aiDuration !== undefined && aiDuration > 0;
@@ -444,7 +457,9 @@ export function formatSuccessMessage(
 
   if (aiDuration !== undefined && aiDuration > 0) {
     const aiTime = formatDuration(aiDuration);
-    return `${baseMessage} (${totalTime} / AI: ${aiTime})`;
+    const providerLabel = aiProvider ? (AI_PROVIDER_LABELS[aiProvider] || aiProvider) : undefined;
+    const aiLabel = providerLabel ? `AI: ${aiTime} (${providerLabel})` : `AI: ${aiTime}`;
+    return `${baseMessage} (${totalTime} / ${aiLabel})`;
   }
 
   return `${baseMessage} (${totalTime})`;
