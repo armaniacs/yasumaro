@@ -120,3 +120,31 @@ export function sanitizeForObsidian(content: string): string {
 
     return sanitized;
 }
+
+/**
+ * Sanitize text for safe embedding inside a `[text](url)` Markdown link's
+ * text position.
+ *
+ * The link text is attacker-controlled (page title, stored record title).
+ * If it contains a suffix like `](https://evil.example)`, and sanitization is
+ * applied BEFORE the caller wraps it in `[${title}](${url})`, the wrapper
+ * closes early and renders a link to the attacker-chosen destination
+ * (VULN-001 / VULN-016 / VULN-017).
+ *
+ * Escaping `[ ] ( )` here prevents any markdown-link or wikilink syntax in the
+ * text from breaking out of the wrapper. Normal text is preserved (brackets and
+ * parens render literally).
+ *
+ * @param text - text to be placed inside a Markdown link's `[...]` text
+ * @returns text safe for interpolation inside `[text](url)`
+ */
+export function sanitizeForMarkdownLinkText(text: string): string {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+    return text
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)');
+}

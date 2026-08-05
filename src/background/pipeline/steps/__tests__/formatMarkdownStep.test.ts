@@ -14,17 +14,25 @@ import { vi } from 'vitest';;
 vi.mock('../../../../utils/localeUtils.js', () => ({
   getUserLocale: vi.fn().mockReturnValue('en-US'),
 }));
-vi.mock('../../../../utils/markdownSanitizer.js', () => ({
-  sanitizeForObsidian: vi.fn((text: string) => text),
-  sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
-}));
+vi.mock('../../../../utils/markdownSanitizer.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../utils/markdownSanitizer.js')>();
+  return {
+    ...actual,
+    sanitizeForObsidian: vi.fn((text: string) => text),
+    sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
+    // Spy that calls through to the real implementation so link-breakout
+    // escaping is exercised by integration tests while call-sites are assertable.
+    sanitizeForMarkdownLinkText: vi.fn((text: string) => actual.sanitizeForMarkdownLinkText(text)),
+  };
+});
 
 import { formatMarkdownStep } from '../formatMarkdownStep.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../../../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget, sanitizeForMarkdownLinkText } from '../../../../utils/markdownSanitizer.js';
 import type { RecordingContext } from '../../types.js';
 
 const mockSanitize = sanitizeForObsidian as vi.MockedFunction<typeof sanitizeForObsidian>;
 const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as vi.MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
+const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as vi.MockedFunction<typeof sanitizeForMarkdownLinkText>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -118,7 +126,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('sanitizeForObsidian 呼び出し', () => {
-    it('title と summary の両方がサニタイズされる', async () => {
+    it('title は sanitizeForMarkdownLinkText、summary は sanitizeForObsidian でサニタイズされる', async () => {
       mockSanitize.mockImplementation((text: string) => `[SANITIZED]${text}`);
 
       const context = makeContext({
@@ -128,8 +136,54 @@ describe('formatMarkdownStep', () => {
 
       await formatMarkdownStep(context);
 
-      expect(mockSanitize).toHaveBeenCalledWith('Page [Title](link)');
+      // Title now goes through the link-text sanitizer (VULN-001).
+      expect(mockSanitizeLinkText).toHaveBeenCalledWith('Page [Title](link)');
+      // Summary still goes through sanitizeForObsidian.
       expect(mockSanitize).toHaveBeenCalledWith('Summary [link](http://evil.com)');
+    });
+  });
+
+  describe('VULN-001 title link-closure regression', () => {
+    it('a title suffix `](url)` must not close the [title](url) wrapper', async () => {
+      const context = makeContext({
+        data: { title: 'foo](https://evil.example)', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: 'Summary text',
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      // The attacker-chosen destination must not appear as a live link target.
+      expect(result.markdown).not.toContain('](https://evil.example)');
+      // The legitimate page URL is still present as the link target.
+      expect(result.markdown).toContain('](https://example.com/page)');
+    });
+
+    it('title is passed through sanitizeForMarkdownLinkText before wrapping', async () => {
+      const context = makeContext({
+        data: { title: 'foo](https://evil.example)', url: 'https://example.com/page', content: '' },
+      });
+      await formatMarkdownStep(context);
+      expect(mockSanitizeLinkText).toHaveBeenCalledWith('foo](https://evil.example)');
+    });
+  });
+
+  describe('VULN-008 AI-tag injection regression', () => {
+    it('tags are sanitized before interpolation (wikilink / link injection blocked)', async () => {
+      const context = makeContext({
+        data: { title: 'My Page', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: 'Summary text',
+        privacyResult: {
+          summary: 'Summary text',
+          maskedCount: 0,
+          tags: ['[[evil]]', 'x](https://evil.example)'],
+        } as any,
+      });
+
+      await formatMarkdownStep(context);
+
+      // Each tag must be passed through sanitizeForObsidian.
+      expect(mockSanitize).toHaveBeenCalledWith('[[evil]]');
+      expect(mockSanitize).toHaveBeenCalledWith('x](https://evil.example)');
     });
   });
 

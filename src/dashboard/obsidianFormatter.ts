@@ -4,7 +4,7 @@
  * Pure function — no side effects, easily testable.
  */
 
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 
 /**
@@ -22,7 +22,9 @@ function formatSingleEntry(entry: BrowsingLogEntry, appendedAt: number): string 
     minute: '2-digit',
   });
 
-  const title = sanitizeForObsidian(entry.title || entry.url || 'Untitled');
+  // VULN-016: title is placed inside `[title](url)`; escape link-breakout chars
+  // so a `](url)` suffix in the stored title cannot close the wrapper.
+  const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
   // VULN-007 fix: sanitize URL for Markdown link target
   const url = sanitizeUrlForMarkdownTarget(entry.url);
 

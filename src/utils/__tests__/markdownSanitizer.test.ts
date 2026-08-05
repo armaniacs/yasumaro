@@ -5,7 +5,7 @@
  * 【Code Review P1】: XSS対策 - Markdownリンクのサニタイズ
  */
 
-import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian, escapeObsidianWikilinks, sanitizeUrlForMarkdownTarget } from '../markdownSanitizer.js';
+import { sanitizeMarkdownLinks, sanitizeAllMarkdownLinks, sanitizeForObsidian, escapeObsidianWikilinks, sanitizeUrlForMarkdownTarget, sanitizeForMarkdownLinkText } from '../markdownSanitizer.js';
 
 describe('markdownSanitizer', () => {
     describe('sanitizeMarkdownLinks', () => {
@@ -227,6 +227,36 @@ describe('markdownSanitizer', () => {
         it('should not modify text without wikilinks', () => {
             const input = 'Normal text without wikilinks';
             expect(escapeObsidianWikilinks(input)).toBe(input);
+        });
+    });
+
+    describe('sanitizeForMarkdownLinkText', () => {
+        // VULN-001 regression: a title suffix like `](url)` must not survive
+        // to close the `[title](url)` wrapper in formatMarkdownStep / obsidianFormatter.
+        it('escapes closing-bracket suffix so it cannot close a link (VULN-001)', () => {
+            const input = 'foo](https://evil.example)';
+            const out = sanitizeForMarkdownLinkText(input);
+            expect(out).not.toContain('](https://evil.example)');
+            expect(out).toContain('\\]');
+        });
+
+        it('escapes brackets and parens that form markdown link syntax', () => {
+            const input = '[x](https://evil.com)';
+            expect(sanitizeForMarkdownLinkText(input)).toBe('\\[x\\]\\(https://evil.com\\)');
+        });
+
+        it('escapes Obsidian wikilink brackets', () => {
+            expect(sanitizeForMarkdownLinkText('[[Private Note]]')).toBe('\\[\\[Private Note\\]\\]');
+        });
+
+        it('preserves normal text without link syntax', () => {
+            expect(sanitizeForMarkdownLinkText('Hello world')).toBe('Hello world');
+        });
+
+        it('handles empty / null / undefined input', () => {
+            expect(sanitizeForMarkdownLinkText('')).toBe('');
+            expect(sanitizeForMarkdownLinkText(null as any)).toBeNull();
+            expect(sanitizeForMarkdownLinkText(undefined as any)).toBeUndefined();
         });
     });
 
