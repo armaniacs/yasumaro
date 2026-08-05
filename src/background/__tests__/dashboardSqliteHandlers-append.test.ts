@@ -291,7 +291,6 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         { subtype: 'append_to_obsidian', ids: [NaN] },
         mockSqliteClient as any
       );
-
       expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
     });
 
@@ -302,6 +301,48 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       );
 
       expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
+    });
+  });
+
+  describe('VULN-006: bulk import row cap', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockSqliteClient = createMockSqliteClient();
+      setupSettings();
+    });
+
+    it('rejects import with more than 5000 rows', async () => {
+      const hugeRows = Array.from({ length: 5001 }, (_, i) => ({
+        url: `https://e${i}.com`,
+        created_at: Date.now(),
+      }));
+
+      const result = await handleDashboardSqlite(
+        { subtype: 'import', rows: hugeRows, confirmToken: 'test-token' },
+        mockSqliteClient as any,
+        undefined,
+        'test-token'
+      );
+
+      expect(result).toEqual({ success: false, error: 'Maximum 5000 rows allowed' });
+    });
+
+    it('accepts import at the row cap', async () => {
+      const rows = Array.from({ length: 5000 }, (_, i) => ({
+        url: `https://e${i}.com`,
+        created_at: Date.now(),
+      }));
+      mockSqliteClient.insert.mockResolvedValue(true);
+
+      const result = await handleDashboardSqlite(
+        { subtype: 'import', rows, confirmToken: 'test-token' },
+        mockSqliteClient as any,
+        undefined,
+        'test-token'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.inserted).toBe(5000);
     });
   });
 });

@@ -193,6 +193,50 @@ describe('handleOffscreenMessage - SQLite routing', () => {
     );
     expect(result).toBe(true);
   });
+
+  // VULN-007 regression: oversized batches must be rejected, not inserted.
+  it('rejects SQLITE_INSERT_BATCH with too many records (VULN-007)', async () => {
+    const sendResponse = vi.fn();
+    const manyRecords = Array.from({ length: 2001 }, (_, i) => ({
+      url: `https://example.com/${i}`,
+      title: 't',
+      created_at: Date.now(),
+    }));
+    const result = handleOffscreenMessage(
+      makeMessage('SQLITE_INSERT_BATCH', { records: manyRecords }),
+      makeSenderNoTab(),
+      sendResponse
+    );
+    expect(result).toBe(true);
+    // Response is sent from within the async handler; flush microtasks.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: expect.stringContaining('maximum 2000 records'),
+    });
+  });
+
+  it('rejects SQLITE_INSERT_BATCH whose cumulative summary exceeds the size cap (VULN-007)', async () => {
+    const sendResponse = vi.fn();
+    const bigSummary = 'x'.repeat(1024 * 1024); // 1MB
+    // 21MB of summary exceeds the 20MB batch total-size cap.
+    const records = Array.from({ length: 21 }, (_, i) => ({
+      url: `https://example.com/${i}`,
+      title: 't',
+      summary: bigSummary,
+      created_at: Date.now(),
+    }));
+    handleOffscreenMessage(
+      makeMessage('SQLITE_INSERT_BATCH', { records }),
+      makeSenderNoTab(),
+      sendResponse
+    );
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: expect.stringContaining('batch summary exceeds size limit'),
+    });
+  });
 });
 
 describe('handleOffscreenMessage - SQLite sender validation', () => {
