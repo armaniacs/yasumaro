@@ -107,6 +107,41 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(9);
         });
 
+        // VULN-010 (CWE-362): concurrent calls must not lose increments on the
+        // read-modify-write of the rate-limit counter. With max=1, exactly one
+        // of two concurrent calls may be allowed.
+        test('VULN-010: 同時呼び出しでレート制限を突破できない', async () => {
+            const origGet = mockChrome.storage.local.get;
+            const origSet = mockChrome.storage.local.set;
+            const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+            // Force both reads to observe the initial count before either write,
+            // reproducing the read-modify-write interleaving.
+            mockChrome.storage.local.get = vi.fn(async (keys: any) => {
+                await delay(5);
+                return origGet(keys);
+            });
+            mockChrome.storage.local.set = vi.fn(async (data: any) => {
+                await delay(5);
+                return origSet(data);
+            });
+
+            const now = Date.now();
+            mockStorage['ai_rate_limit_max'] = 1;
+            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_count'] = 0;
+
+            const [a, b] = await Promise.all([checkRateLimit(), checkRateLimit()]);
+
+            mockChrome.storage.local.get = origGet;
+            mockChrome.storage.local.set = origSet;
+
+            const allowed = [a, b].filter(r => r.allowed).length;
+            expect(allowed).toBe(1);
+            // The counter must reflect both increments (reach the cap of 1),
+            // not a lost update back to 1.
+            expect(mockStorage['ai_rate_limit_count']).toBe(1);
+        });
+
         test('count が undefined の場合は 0 から開始', async () => {
             const now = Date.now();
             mockStorage['ai_rate_limit_window_start'] = now;
