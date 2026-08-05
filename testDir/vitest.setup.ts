@@ -236,7 +236,7 @@ const chromeStorageMock = {
 
 // Chrome Runtime Mock
 const chromeRuntimeMock = {
-  getURL: vi.fn<string, [string]>((path) => path),
+  getURL: vi.fn<string, [string]>((path) => `chrome-extension://test-extension-id/${path}`),
   sendMessage: vi.fn<void | Promise<any>, any[]>((_message, callback) => {
     const lastError = (global as any).chrome.runtime?.lastError;
     if (callback && typeof callback === 'function') {

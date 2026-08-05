@@ -176,11 +176,27 @@ const visitRateLimiter = new Map<string, number>();
 const VISIT_RATE_LIMIT_MS = 5000;
 const VISIT_RATE_LIMIT_MAX_ENTRIES = 1000;
 
+/**
+ * VULN-002: derive the rate-limit key from the URL's origin so a hostile page
+ * cannot bypass the throttle by rotating the path/fragment/query (pushState
+ * only changes same-origin path/fragment). Different registrable hosts still
+ * get distinct keys.
+ */
+function getRateLimitKey(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    // Invalid URL: fall back to the raw string so it is still throttled.
+    return url;
+  }
+}
+
 function isRateLimitedVisit(url: string): boolean {
     const now = Date.now();
-    const last = visitRateLimiter.get(url);
+    const key = getRateLimitKey(url);
+    const last = visitRateLimiter.get(key);
     if (last !== undefined && now - last < VISIT_RATE_LIMIT_MS) return true;
-    visitRateLimiter.set(url, now);
+    visitRateLimiter.set(key, now);
     // Guard against unbounded growth: evict the oldest tracked URL when the
     // cap is exceeded (Map preserves insertion order).
     if (visitRateLimiter.size > VISIT_RATE_LIMIT_MAX_ENTRIES) {

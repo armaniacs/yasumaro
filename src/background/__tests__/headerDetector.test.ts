@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { HeaderDetector } from '../headerDetector.js';
+import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
 import { RecordingLogic } from '../recordingLogic.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
 import { ErrorCode } from '../../utils/logger.js';
@@ -81,6 +81,18 @@ describe('HeaderDetector', () => {
       expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/test0')).toBe(false);
       // 最新のエントリ(test100)は存在する
       expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/test100')).toBe(true);
+    });
+  });
+
+  describe('sessionCacheKeysToEvict (VULN-003)', () => {
+    test('returns 0 when at or under the session-cache cap', () => {
+      expect(sessionCacheKeysToEvict(100, 100)).toBe(0);
+      expect(sessionCacheKeysToEvict(99, 100)).toBe(0);
+    });
+
+    test('returns the excess to evict when over the cap', () => {
+      expect(sessionCacheKeysToEvict(101, 100)).toBe(1);
+      expect(sessionCacheKeysToEvict(120, 100)).toBe(20);
     });
   });
 

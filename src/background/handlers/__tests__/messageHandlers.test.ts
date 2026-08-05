@@ -109,6 +109,25 @@ describe('createValidVisitHandler', () => {
     expect(deps.recordVisit).toHaveBeenCalledTimes(2);
   });
 
+  it('VULN-002: throttles same-origin visits across path/fragment rotation', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+
+    const deps = makeDeps();
+    const handler = createValidVisitHandler(deps);
+    const first = { tab: { id: 1, url: 'https://rotate.example.com/start', title: 'T' } } as chrome.runtime.MessageSender;
+    await handler(makeVisitMessage(), first, vi.fn());
+
+    // Same origin, different path + fragment (pushState rotation) — the
+    // throttle must still apply, otherwise a hostile page bypasses it.
+    const rotated = { tab: { id: 1, url: 'https://rotate.example.com/other#frag?x=1', title: 'T' } } as chrome.runtime.MessageSender;
+    const resp = vi.fn();
+    await handler(makeVisitMessage(), rotated, resp);
+
+    expect(resp).toHaveBeenCalledWith({ success: false, reason: 'rate_limited' });
+    expect(deps.recordVisit).toHaveBeenCalledTimes(1);
+  });
+
   it('does not rate limit different URLs against each other', async () => {
     const deps = makeDeps();
     const handler = createValidVisitHandler(deps);

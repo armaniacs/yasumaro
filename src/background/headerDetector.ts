@@ -6,6 +6,19 @@ import { BADGE_COLORS } from '../constants/appConstants.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 const MAX_CACHE_SIZE = 100;
+// VULN-003: cap the number of `privacyCache_<url>` keys persisted to session
+// storage. They mirror the in-memory cache for SW-restart fallback but, unlike
+// it, were never evicted — a long-lived session visiting many distinct URLs
+// accumulated unbounded keys until a manual invalidation.
+const MAX_SESSION_PRIVACY_KEYS = 2000;
+
+/**
+ * VULN-003: number of session-cache keys to evict when the total exceeds `max`.
+ * Pure helper so the cap logic is unit-testable.
+ */
+export function sessionCacheKeysToEvict(keyCount: number, max: number): number {
+  return Math.max(0, keyCount - max);
+}
 
 export class HeaderDetector {
   /**
@@ -153,7 +166,11 @@ export class HeaderDetector {
     // chrome.storage.session はブラウザセッション中は永続 (SW 再起動をまたいでも保持される)
     if (chrome.storage.session) {
       const sessionKey = 'privacyCache_' + normalizedUrl;
-      chrome.storage.session.set({ [sessionKey]: info }).catch(() => {
+      chrome.storage.session.set({ [sessionKey]: info }).then(() => {
+        // VULN-003: bound the total number of privacyCache_ session keys so a
+        // long-lived session cannot accumulate them without limit.
+        return HeaderDetector.capSessionPrivacyKeys();
+      }).catch(() => {
         // session storage エラーは握りつぶす（インメモリが主、sessionは補助）
       });
     }
@@ -171,6 +188,24 @@ export class HeaderDetector {
           error: errorMessage(error)
         }, ErrorCode.BADGE_UPDATE_FAILED, 'headerDetector.ts');
       }
+    }
+  }
+
+  /**
+   * VULN-003: enforce the cap on `privacyCache_` session-storage keys. If the
+   * total exceeds the limit, evict the excess (arbitrary subset; frequently
+   * visited URLs are re-written on each visit, so they survive).
+   */
+  private static async capSessionPrivacyKeys(): Promise<void> {
+    try {
+      const all = await chrome.storage.session.get(null);
+      const keys = Object.keys(all).filter(key => key.startsWith('privacyCache_'));
+      const excess = sessionCacheKeysToEvict(keys.length, MAX_SESSION_PRIVACY_KEYS);
+      if (excess > 0) {
+        await chrome.storage.session.remove(keys.slice(0, excess));
+      }
+    } catch {
+      // session storage エラーは非致命的（インメモリキャッシュは機能する）
     }
   }
 
