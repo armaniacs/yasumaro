@@ -10,6 +10,21 @@ import { addLog, LogType } from './logger.js';
 const RATE_LIMIT_WINDOW_MS = 60000; // 1分
 const DEFAULT_RATE_LIMIT_MAX = 10; // 1分間に最大10リクエスト（デフォルト）
 
+// VULN-010 (CWE-362): a promise-chain mutex serializes the read-modify-write
+// of the rate-limit / monthly-usage counters. Without it, two concurrent calls
+// can both read the initial count and both write count+1 (lost update),
+// bypassing the rate cap. The Service Worker is single-threaded, so chaining
+// promises makes the critical section run one-at-a-time.
+let counterLock: Promise<void> = Promise.resolve();
+function withCounterLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = counterLock.then(fn, fn);
+  counterLock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /**
  * レート制限チェック
  * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
@@ -23,7 +38,15 @@ async function getRateLimitMax(): Promise<number> {
   return DEFAULT_RATE_LIMIT_MAX;
 }
 
-export async function checkRateLimit(): Promise<{
+export function checkRateLimit(): Promise<{
+  allowed: boolean;
+  remaining: number;
+  resetTime: number;
+}> {
+  return withCounterLock(checkRateLimitUnlocked);
+}
+
+async function checkRateLimitUnlocked(): Promise<{
   allowed: boolean;
   remaining: number;
   resetTime: number;
@@ -150,7 +173,14 @@ async function resetMonthlyUsage(): Promise<void> {
 /**
  * 使用量を記録
  */
-export async function recordUsage(
+export function recordUsage(
+  tokensSent: number,
+  tokensReceived: number
+): Promise<void> {
+  return withCounterLock(() => recordUsageUnlocked(tokensSent, tokensReceived));
+}
+
+async function recordUsageUnlocked(
   tokensSent: number,
   tokensReceived: number
 ): Promise<void> {
@@ -189,7 +219,11 @@ export interface HardLimitResult {
  * 月次トークン使用量のハードリミットをチェック
  * 設定値が 0 の場合は無制限としてブロックしない
  */
-export async function checkHardLimit(expectedTokens: number = 0): Promise<HardLimitResult> {
+export function checkHardLimit(expectedTokens: number = 0): Promise<HardLimitResult> {
+  return withCounterLock(() => checkHardLimitUnlocked(expectedTokens));
+}
+
+async function checkHardLimitUnlocked(expectedTokens: number = 0): Promise<HardLimitResult> {
   const usage = await getMonthlyUsage();
   const maxMonthlyTokens = await getMaxMonthlyTokens();
 
