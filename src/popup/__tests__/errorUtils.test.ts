@@ -476,4 +476,19 @@ describe('formatSuccessMessage', () => {
     const message = formatSuccessMessage(2000, 0, true);
     expect(message).toBe('✓ AI Summary failed — saved (2.0seconds)');
   });
+
+  it('should show provider label when aiProvider is a known key', () => {
+    const message = formatSuccessMessage(2000, 850, true, 'openai');
+    expect(message).toBe('✓ AI Summary saved to Obsidian (2.0seconds / AI: 850ms (OpenAI Compatible))');
+  });
+
+  it('should fall back to raw provider id when unknown', () => {
+    const message = formatSuccessMessage(2000, 850, true, 'some-custom-provider');
+    expect(message).toBe('✓ AI Summary saved to Obsidian (2.0seconds / AI: 850ms (some-custom-provider))');
+  });
+
+  it('should not show provider label when aiProvider is undefined', () => {
+    const message = formatSuccessMessage(2000, 850, true);
+    expect(message).toBe('✓ AI Summary saved to Obsidian (2.0seconds / AI: 850ms)');
+  });
 });
