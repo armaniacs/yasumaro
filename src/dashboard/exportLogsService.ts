@@ -51,7 +51,12 @@ ${sanitizeForObsidian(entry.summary || '')}
 /** @internal exported for testing */
 export function escapeCsv(value: unknown): string {
   if (value == null) return '';
-  const str = String(value);
+  let str = String(value);
+  // VULN-005 (CWE-1236): neutralize leading formula-trigger characters so a
+  // spreadsheet treats the cell as text instead of evaluating it as a formula.
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }

@@ -9,6 +9,9 @@ import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 const MAX_APPEND_IDS = 100;
+// VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
+// (the append path already caps at MAX_APPEND_IDS).
+const MAX_IMPORT_ROWS = 5000;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -159,6 +162,10 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           const rows = payload.rows;
           if (!Array.isArray(rows) || rows.length === 0) {
             return { success: false, error: 'No rows provided' };
+          }
+          // VULN-006: reject oversized collections instead of looping unbounded.
+          if (rows.length > MAX_IMPORT_ROWS) {
+            return { success: false, error: `Maximum ${MAX_IMPORT_ROWS} rows allowed` };
           }
           const BATCH = 50;
           let inserted = 0;

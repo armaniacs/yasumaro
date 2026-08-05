@@ -75,6 +75,27 @@ describe('exportLogsService', () => {
     it('wraps strings containing newlines', () => {
       expect(escapeCsv('line1\nline2')).toBe('"line1\nline2"');
     });
+
+    // VULN-005 (CWE-1236): cells beginning with a formula-trigger character
+    // must be neutralized so a spreadsheet treats them as text.
+    it('neutralizes leading equals sign', () => {
+      expect(escapeCsv('=2+2')).toBe("'=2+2");
+    });
+
+    it('neutralizes leading plus, minus, and at sign', () => {
+      expect(escapeCsv('+cmd|...')).toBe("'+cmd|...");
+      expect(escapeCsv('-1+1')).toBe("'-1+1");
+      expect(escapeCsv('@SUM(A1)')).toBe("'@SUM(A1)");
+    });
+
+    it('neutralizes leading tab and CR', () => {
+      expect(escapeCsv('\t=1')).toBe("'\t=1");
+      expect(escapeCsv('\r=1')).toBe("'\r=1");
+    });
+
+    it('still quotes formula cells that also contain commas', () => {
+      expect(escapeCsv('=HYPERLINK("x","y")')).toBe("\"'=HYPERLINK(\"\"x\"\",\"\"y\"\")\"");
+    });
   });
 
   // =========================================================================

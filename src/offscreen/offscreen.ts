@@ -63,6 +63,10 @@ const sqliteWriteMutex = new SqliteWriteMutex();
 import { StorageKeys } from '../utils/storage/types.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 
+// VULN-007: cap batch insert size to prevent unbounded transaction / memory growth.
+const MAX_BATCH_RECORDS = 2000;
+const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024; // 20MB of summary text across the batch
+
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
     sqliteResetForTesting();
@@ -141,6 +145,21 @@ async function handleSqliteMessage(
         }
         case 'SQLITE_INSERT_BATCH': {
             const rawRecords = msg.payload.records || [];
+            // VULN-007: cap batch size to prevent unbounded transaction / memory growth.
+            if (!Array.isArray(rawRecords) || rawRecords.length > MAX_BATCH_RECORDS) {
+                sendResponse({ success: false, error: `Payload too large: maximum ${MAX_BATCH_RECORDS} records per batch` });
+                break;
+            }
+            let totalSummaryBytes = 0;
+            for (const r of rawRecords) {
+                if (r && typeof r.summary === 'string') {
+                    totalSummaryBytes += r.summary.length;
+                }
+            }
+            if (totalSummaryBytes > MAX_BATCH_TOTAL_BYTES) {
+                sendResponse({ success: false, error: 'Payload too large: batch summary exceeds size limit' });
+                break;
+            }
             const records = rawRecords.map(r => buildRecordFromPayload(r));
             const result = await sqliteInsertBatch(records);
             sendResponse(result);
