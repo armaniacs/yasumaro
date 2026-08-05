@@ -275,35 +275,33 @@ async function _applyMigrationsAndDecrypt(
             const key = await getOrCreateEncryptionKey();
             for (const field of API_KEY_FIELDS) {
                 const value = merged[field];
-                if (typeof value === 'string' && value.length > 0) {
-                    if (isEncrypted(value)) {
-                        try {
-                            const decryptedValue = await decryptApiKey(value, key);
-                            (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
-                        } catch (e) {
-                            await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
-                            (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
-                        }
-                    } else {
-                        // VULN-015: a plaintext API key is stored at rest. Warn
-                        // AND re-encrypt + persist it so the plaintext does not
-                        // remain in storage (one-time migration).
-                        await logWarn(
-                            `Plaintext API key detected: ${field}`,
-                            { field },
-                            undefined,
-                            'settingsStore',
-                        );
-                        try {
-                            const encrypted = await encryptApiKey(value, key);
-                            // Keep the decrypted value in-memory for this session.
-                            (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = value as StorageKeyValues[StorageKey];
-                            const stored = await chrome.storage.local.get('settings');
-                            const updated = { ...(stored.settings as Record<string, unknown> || {}), [field]: encrypted };
-                            await chrome.storage.local.set({ settings: updated });
-                        } catch (e) {
-                            await logError(`Failed to re-encrypt plaintext ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
-                        }
+                if (isEncrypted(value)) {
+                    try {
+                        const decryptedValue = await decryptApiKey(value, key);
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
+                    } catch (e) {
+                        await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
+                    }
+                } else if (typeof value === 'string' && value.length > 0) {
+                    // VULN-015: a plaintext API key is stored at rest. Warn
+                    // AND re-encrypt + persist it so the plaintext does not
+                    // remain in storage (one-time migration).
+                    await logWarn(
+                        `Plaintext API key detected: ${field}`,
+                        { field },
+                        undefined,
+                        'settingsStore',
+                    );
+                    try {
+                        const encrypted = await encryptApiKey(value, key);
+                        // Keep the decrypted value in-memory for this session.
+                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = value as StorageKeyValues[StorageKey];
+                        const stored = await chrome.storage.local.get('settings');
+                        const updated = { ...(stored.settings as Record<string, unknown> || {}), [field]: encrypted };
+                        await chrome.storage.local.set({ settings: updated });
+                    } catch (e) {
+                        await logError(`Failed to re-encrypt plaintext ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
                     }
                 }
             }
