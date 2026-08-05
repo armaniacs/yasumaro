@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.15` リリース。
+> - 現時点では `v6.7.16` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,32 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.16] - 2026-08-06
+
+VulnFix による VulnHunter セキュリティ監査（VULN-001〜020）の修正対応。TDD（RED→GREEN）で進め、17件を修正した。
+
+### Security / セキュリティ
+
+- **マークダウンリンク注入（VULN-001/008/016/017）を修正** — ページタイトルが `[title](url)` ラッパー内で `](https://evil.example)` 形式のサフィックスによりラッパーを閉じて攻撃者指定先へのリンクを生成できた問題を修正。新ヘルパー `sanitizeForMarkdownLinkText` でタイトル内の `[ ] ( )` をエスケープ。AI タグ（VULN-008）は `sanitizeForObsidian` を適用し、wikilink/リンク注入を防止。`formatMarkdownStep` / `obsidianFormatter` / `dashboard.ts` の3 sink に適用。ESLint ルール `require-sanitized-markdown` も新関数を認識するよう更新
+- **CSV 数式注入（VULN-005）を修正** — ログエクスポートの `escapeCsv` が先頭の `= + - @ \t \r` を中和せず、スプレッドシートで式として実行される問題（CWE-1236）を修正
+- **レートリミッターの URL 回転バイパス（VULN-002）を修正** — VALID_VISIT の5秒スロットルがフル URL キーだったため、pushState によるパス/フラグメント回転でバイパスできた問題を origin キーに変更
+- **プライバシーキャッシュのセッションキー無限蓄積（VULN-003）を修正** — `privacyCache_<url>` の session キーに上限（2000件）を追加し、超過分を自動退避
+- **AI 利用カウンタの RMW 競合（VULN-010）を修正** — `checkRateLimit`/`recordUsage` の非アトミック読み書きでレート制限が失われる問題（CWE-362）を、プロミスチェーン式 Mutex で直列化
+- **CSV 以外の無制限配列（VULN-006/007）を修正** — ダッシュボード SQLite import（5000行上限）と offscreen バッチ insert（2000件・20MB上限）に境界を追加
+- **復号済み API キーの session キャッシュ永続化（VULN-014）を修正** — `recordingLogic` が復号済み設定を `chrome.storage.session` に書き込んでいた問題を、保存時に API キーフィールドを redact し復元時に再取得させる方式に変更
+- **平文 API キーの残置（VULN-015）を修正** — 暗号化前のレガシー平文キーが warn のみで残っていた問題を、検出時に自動再暗号化して一方向マイグレーションするよう修正
+- **特権メッセージハンドラの送信元検証（VULN-004/009/018/019/020）を追加** — MANUAL_RECORD / SAVE_RECORD / PREVIEW_RECORD / FETCH_URL / TEST_* / GET_PRIVACY_CACHE / ACTIVITY_UPDATE / SESSION_LOCK_REQUEST に、content script 送信元を拒否する sender ガードを追加（DASHBOARD_SQLITE のガードと同型）
+
+### Tests / テスト
+
+- `markdownSanitizer.test.ts` / `formatMarkdownStep.test.ts` / `exportLogsService.test.ts` / `senderGuard.test.ts` / `offscreen-sqlite.test.ts` / `dashboardSqliteHandlers-append.test.ts` / `aiUsageTracker.test.ts` / `headerDetector.test.ts` / `settingsStore-plaintext-api-key.test.ts` / `recordingLogic-redact.test.ts` に RED→GREEN の回帰テストを追加
+- 全 7493 単体テスト通過、TypeScript 型チェック正常、ビルド成功
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.15` → `6.7.16`
+- テストインフラ: `testDir/vitest.setup.ts` の `chrome.runtime.getURL` モックを chrome-extension URL を返すよう修正（sender ガードの正当な extension 送信元をテストで再現可能に）
 
 ## [6.7.15] - 2026-08-05
 
