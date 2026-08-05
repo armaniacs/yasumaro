@@ -2,6 +2,7 @@
 import { PrivacyPipeline } from './privacyPipeline.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { getSettings, getSavedUrlsWithTimestamps, Settings } from '../utils/storage.js';
+import { API_KEY_FIELDS } from '../utils/storage/settingsStore.js';
 import type { RecordType } from '../utils/commonTypes.js';
 import { isPrivateIpAddress } from '../utils/fetch.js';
 import { ObsidianClient } from './obsidianClient.js';
@@ -24,6 +25,30 @@ import type { RecordingContext } from './pipeline/types.js';
 // 【設定定数】設定キャッシュの有効期限（秒）🟢
 // 【調整可能性】設定変更の頻度に応じて調整可能
 const SETTINGS_CACHE_TTL = 30 * 1000; // 30 seconds
+
+/**
+ * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
+ * field emptied. The in-memory cache keeps the real (decrypted) keys for actual
+ * API calls; the session-storage mirror must not persist them.
+ */
+export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
+  if (!settings) return null;
+  const copy = { ...settings } as Record<string, unknown>;
+  for (const field of API_KEY_FIELDS) {
+    if (field in copy) copy[field] = '';
+  }
+  return copy as Settings;
+}
+
+/**
+ * VULN-014: whether the cached settings carry at least one populated API key.
+ * The persisted session cache is redacted (keys emptied), so this detects a
+ * redacted copy and forces a re-fetch instead of restoring empty keys.
+ */
+function hasApiKeys(settings: Settings): boolean {
+  const rec = settings as Record<string, unknown>;
+  return API_KEY_FIELDS.some(f => typeof rec[f] === 'string' && (rec[f] as string).length > 0);
+}
 
 // 【設定定数】URLキャッシュの有効期限（秒 - Problem #7用）🟢
 // 【調整可能性】重複チェックの許容スパンに応じて調整可能
@@ -196,7 +221,10 @@ export class RecordingLogic {
       }>(SESSION_KEYS.RECORDING_CACHE);
       if (!saved) return;
       const now = Date.now();
-      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < SETTINGS_CACHE_TTL) {
+      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < SETTINGS_CACHE_TTL
+        // VULN-014: skip restoring a redacted (key-less) settings cache so a
+        // fresh read re-fetches/decrypts the API keys from local storage.
+        && hasApiKeys(saved.settingsCache)) {
         RecordingLogic.cacheState.settingsCache = saved.settingsCache;
         RecordingLogic.cacheState.cacheTimestamp = saved.cacheTimestamp;
         RecordingLogic.cacheState.cacheVersion = saved.cacheVersion;
@@ -237,7 +265,9 @@ export class RecordingLogic {
     // flushImmediately: recording state must survive a service-worker
     // termination within the SessionStore debounce window.
     await RecordingLogic.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
-      settingsCache: cs.settingsCache,
+      // VULN-014: persist a redacted copy — never write decrypted API keys to
+      // chrome.storage.session. Real keys stay in the in-memory cache only.
+      settingsCache: redactSettingsApiKeys(cs.settingsCache),
       cacheTimestamp: cs.cacheTimestamp,
       cacheVersion: cs.cacheVersion,
       urlCache: cs.urlCache ? SessionStore.mapToEntries(cs.urlCache) : null,

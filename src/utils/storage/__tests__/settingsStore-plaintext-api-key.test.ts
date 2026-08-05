@@ -76,4 +76,23 @@ describe('settingsStore — plaintext API key detection', () => {
 
     expect(logWarn).not.toHaveBeenCalled();
   });
+
+  it('VULN-015: re-encrypts plaintext API keys at rest during migration', async () => {
+    const { getSettings } = await import('../settingsStore.js');
+    const { clearSettingsCache } = await import('../settingsStore.js');
+    clearSettingsCache();
+
+    const settings = await getSettings();
+
+    // In-memory settings still expose the decrypted value for the session.
+    expect(settings['openai_api_key']).toBe('sk-plaintext-key');
+    // Storage must no longer hold the plaintext.
+    const persisted = (storageData.settings as Record<string, unknown>)['openai_api_key'] as Record<string, unknown>;
+    expect(persisted).not.toBe('sk-plaintext-key');
+    expect(persisted).toMatchObject({
+      ciphertext: expect.any(String),
+      iv: expect.any(String),
+    });
+    expect((persisted.ciphertext as string).length).toBeGreaterThan(0);
+  });
 });
