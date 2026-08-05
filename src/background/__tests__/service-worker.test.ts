@@ -67,6 +67,7 @@ vi.mock('chrome', () => ({
         onStartup: { addListener: mockAddListener },
         lastError: null,
         onMessage: { addListener: mockAddListener },
+        getURL: vi.fn((path: string) => `chrome-extension://test-extension-id/${path}`),
     },
     action: {
         setBadgeText: mockSetBadgeText,
@@ -1766,7 +1767,7 @@ describe('service-worker handlers', () => {
                 type: 'MANUAL_RECORD',
                 payload: { title: 'Test', url: 'https://example.com', content: 'content', skipAi: true }
             } as ManualRecordMessage;
-            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+            const sender = {} as chrome.runtime.MessageSender;
 
             // First call - should succeed
             await serviceWorker.handleManualRecord(message, sender, sendResponse);
@@ -1783,7 +1784,7 @@ describe('service-worker handlers', () => {
                 type: 'MANUAL_RECORD',
                 payload: { title: 'Test', url: 'https://example.com', content: 'content', skipAi: true }
             });
-            const sender = { tab: { id: 999, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+            const sender = {} as chrome.runtime.MessageSender;
 
             const rateLimitMax = 10;
 
@@ -1804,7 +1805,7 @@ describe('service-worker handlers', () => {
                 type: 'MANUAL_RECORD',
                 payload: { title: 'Test', url: 'https://example.com', content: '' }
             } as ManualRecordMessage;
-            const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+            const sender = {} as chrome.runtime.MessageSender;
 
             mockQuery.mockResolvedValueOnce([
                 { id: 123, url: 'https://example.com' } as chrome.tabs.Tab
@@ -1831,7 +1832,7 @@ describe('service-worker handlers', () => {
                 type: 'MANUAL_RECORD',
                 payload: { title: 'Test', url: 'https://example.com', content: '' }
             } as ManualRecordMessage;
-            const sender = { tab: { id: 2, url: 'https://example.com' } } as chrome.runtime.MessageSender;
+            const sender = {} as chrome.runtime.MessageSender;
 
             await serviceWorker.handleManualRecord(message, sender, sendResponse);
 
