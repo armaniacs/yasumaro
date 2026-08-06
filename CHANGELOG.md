@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.16` リリース。
+> - 現時点では `v6.7.17` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,42 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.17] - 2026-08-06
+
+Tag Cluster パネルでタグノードをクリックしたとき、そのタグが付いた履歴が 0件なら自動で全文検索にフォールバックする機能を追加。
+
+### Features / 新機能
+
+- **Tag Cluster クリック時にタグ未マッチなら全文検索へフォールバック** — Tag Cluster パネルでタグノード（`#投資` など）をクリックし、SQLite History でそのタグフィルタが 0件だった場合、自動的に「タグ文字列を含む全文検索 (FTS5/LIKE)」に切り替えて関連する履歴を表示する。フォールバック通知 (`#投資 タグは 0件でした。「投資」を含む全文検索結果を表示しています (146件)。`) でユーザーに状態を伝える
+  - `shouldFallbackToTextSearch()` 純粋関数を `historyFilters.ts` に追加し、ソース (tag/manual)・タグ絞り込み結果・原始フィルタ文字列からフォールバック可否を判定
+  - `pendingTagFallback` state で通知バッジを管理。通知は `updateTagFilterBar` 経由で描画し、`renderState` と `updateDynamicRegions` の両パスから確実に表示
+  - `consumePendingInit()` で `onActivate` → `loadData` 間の init パラメータ (searchTag/searchDomain) を伝達し、初回ロード時にも正しい検索パラメータで fetch
+  - `updateDynamicRegions` で検索ボックスの値を `state.searchQuery` と同期し、フォールバック後に検索ボックスが空のままになる問題を防止
+  - 日付選択 / 範囲選択 / フィルタクリア時に `pendingTagFallback` をリセットし、stale な通知が残る問題を防止
+  - フォールバック先も 0件の場合は通知を出さず、従来の空状態表示を維持
+
+### Refactor / リファクタ
+
+- **NavigationRegistry の呼び出し順を `onActivate` → `loadData` に変更** — `loadData` の `retryInitialLoad` がデフォルトパラメータで fetch し、`onActivate` で設定した検索状態を上書きする問題を解消。`loadData` 内で `consumePendingInit()` を呼び、`retryInitialLoad` に正しい fetch オプションを渡す
+
+### i18n
+
+- **`tagFallbackNotice` キーを日英ロケールに追加** — フォールバック通知テキスト。positional `$1/$2/$3` プレースホルダを使用
+
+### CSS
+
+- **`.sqlite-tag-fallback-note` スタイルを追加** — フォールバック通知用の左ボーダー付きノートスタイル
+
+### Tests / テスト
+
+- **`shouldFallbackToTextSearch` の単体テスト 6 ケース** — ソース判定・null ハンドリング・`#` 剥がし・空白トリム・空文字判定
+- **SQLite History パネルのフォールバック統合テスト 5 ケース** — タグ未マッチ時フォールバック発動 / タグヒット時フォールバック不発 / 両側 0件時通知抑制 / ドメイン起点时不発 / タグクリア後のリセット
+- 全 7504 単体テスト通過、TypeScript 型チェック正常、ビルド成功
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.16` → `6.7.17`
 
 ## [6.7.16] - 2026-08-06
 
