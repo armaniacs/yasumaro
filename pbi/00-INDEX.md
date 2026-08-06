@@ -13,11 +13,11 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| ⬜ [2026-08-06-01-feat-tag-cluster-fallback-to-text-search.md](2026-08-06-01-feat-tag-cluster-fallback-to-text-search.md) | 🟡中 | 🟢なし | ✨ | Tag Cluster クリックでタグ未マッチ (0件) のとき全文検索に自動フォールバック |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
+> 2026-08-06-01 は Tag Cluster タグ未マッチ時全文検索フォールバック機能として v6.7.17 で実装・アーカイブ済み。
 
 ---
 > 2026-08-02-01〜05 はテストカバレッジ拡充（prompt injection マトリクス / optimistic lock ストレス / privacy pipeline PII リーク / Obsidian APIキー漏洩防止 / SQLite unique 制約）として実装・アーカイブ済み。詳細はアーカイブ欄参照。
@@ -238,6 +238,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 2（✨機能追加 1 / 🔧非機能追加 1） |
+| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
 | 🔶 部分実装 | 0 |
-| アーカイブ済み | 198 |
+| アーカイブ済み | 199 |
