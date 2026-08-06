@@ -3191,6 +3191,9 @@
   "historyNoRecords": {
     "message": "No records found."
   },
+  "tagFallbackNotice": {
+    "message": "No records matched the #$1 tag. Showing full-text search results for \"$2\" ($3 items)."
+  },
   "historySearchPlaceholder": {
     "message": "Search (FTS5)..."
   },

@@ -3681,6 +3681,17 @@ details[open] .advanced-details-summary {
   color: var(--color-danger);
 }
 
+.sqlite-tag-fallback-note {
+  margin-top: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  background: var(--color-surface, rgba(127, 127, 127, 0.08));
+  border-left: 3px solid var(--color-primary-border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
 /* ── Tag normalization dictionary UI ── */
 .norm-entries-list {
   display: flex;

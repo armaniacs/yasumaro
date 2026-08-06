@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   getFilteredEntries,
   renderPendingReason,
+  shouldFallbackToTextSearch,
   updateTagFilterIndicator,
 } from '../historyFilters.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
@@ -62,6 +63,32 @@ describe('getFilteredEntries', () => {
 
   it('returns empty for unmatched tag', () => {
     expect(getFilteredEntries(entries, 'all', 'nonexistent', '').length).toBe(0);
+  });
+});
+
+describe('shouldFallbackToTextSearch', () => {
+  it('returns null when source is manual', () => {
+    expect(shouldFallbackToTextSearch('manual', { rows: [], total: 0 }, '教育')).toBeNull();
+  });
+
+  it('returns null when rawTagFilter is null', () => {
+    expect(shouldFallbackToTextSearch('tag', { rows: [], total: 0 }, null)).toBeNull();
+  });
+
+  it('strips leading # from the tag', () => {
+    expect(shouldFallbackToTextSearch('tag', { rows: [], total: 0 }, '#教育')).toBe('教育');
+  });
+
+  it('returns null when tag has hits', () => {
+    expect(shouldFallbackToTextSearch('tag', { rows: [{}], total: 3 }, '教育')).toBeNull();
+  });
+
+  it('trims whitespace and falls back', () => {
+    expect(shouldFallbackToTextSearch('tag', null, '  #AI  ')).toBe('AI');
+  });
+
+  it('returns null when trimmed value is empty', () => {
+    expect(shouldFallbackToTextSearch('tag', { rows: [], total: 0 }, '#')).toBeNull();
   });
 });
 

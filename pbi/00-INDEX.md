@@ -13,6 +13,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
+| ⬜ [2026-08-06-01-feat-tag-cluster-fallback-to-text-search.md](2026-08-06-01-feat-tag-cluster-fallback-to-text-search.md) | 🟡中 | 🟢なし | ✨ | Tag Cluster クリックでタグ未マッチ (0件) のとき全文検索に自動フォールバック |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 
 ---
@@ -237,6 +238,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
+| ⬜ 未着手 | 2（✨機能追加 1 / 🔧非機能追加 1） |
 | 🔶 部分実装 | 0 |
 | アーカイブ済み | 198 |
