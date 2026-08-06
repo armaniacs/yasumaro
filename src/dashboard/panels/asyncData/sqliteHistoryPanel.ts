@@ -19,6 +19,7 @@ import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { type AsyncDataPanel } from '../types.js';
 import { getRegistry } from '../registryContext.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
+import { shouldFallbackToTextSearch } from '../../historyFilters.js';
 
 const PAGE_SIZE = 20;
 
@@ -37,6 +38,12 @@ interface SqliteHistoryState {
   fallbackMode: boolean;
   selectedIds: Set<number>;
   activeTagFilter: string | null;
+  /**
+   * Set when a tag-initiated navigation (Tag Cluster) produced zero tag
+   * matches and we fell back to a full-text search for the term. UI shows a
+   * notice while this is non-null.
+   */
+  pendingTagFallback: { tag: string; fallbackTo: string; matched: number } | null;
 }
 
 function formatDate(date: Date): string {
@@ -176,10 +183,16 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     fallbackMode: false,
     selectedIds: new Set(),
     activeTagFilter: null,
+    pendingTagFallback: null,
   };
 
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isMounted = false;
+  /**
+   * Pending init parameters set by onActivate before loadData runs.
+   * Used to preserve searchTag/searchDomain across the loadData lifecycle.
+   */
+  let pendingInit: Record<string, unknown> | null = null;
   let currentEnrichmentMap: Map<string, SavedUrlEntry> | null = null;
 
   let chromeStorageCache: { map: Map<string, SavedUrlEntry>; builtAt: number } | null = null;
@@ -381,6 +394,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   function handleSearch(query: string): void {
     state.searchQuery = query;
     state.currentPage = 0;
+    state.pendingTagFallback = null;
     if (query.trim()) {
       fetchData({ search: query.trim() });
     } else {
@@ -391,6 +405,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   async function handleDateSelect(dateStr: string): Promise<void> {
     state.selectedDate = dateStr;
     state.searchQuery = '';
+    state.pendingTagFallback = null;
     state.currentPage = 0;
 
     const date = new Date(dateStr + 'T00:00:00');
@@ -449,6 +464,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     search?: string;
     page?: number;
     tagFilter?: string;
+    tagInitiated?: boolean;
   } = {}): Promise<void> {
     state.loading = true;
     state.error = null;
@@ -483,10 +499,34 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
             }
             return false;
           });
-          result = {
-            rows: filteredRows.slice(offset, offset + limit),
-            total: filteredRows.length,
-          };
+
+          // Tag Cluster navigation that matched nothing → fall back to a
+          // full-text search for the same term so the user still lands on
+          // related history instead of an empty panel.
+          const fallbackTerm = shouldFallbackToTextSearch(
+            options.tagInitiated ? 'tag' : 'manual',
+            { rows: filteredRows, total: filteredRows.length },
+            activeTagFilter,
+          );
+          if (fallbackTerm) {
+            const searchResult = await searchLogs(fallbackTerm, limit, offset);
+            if (searchResult && !('error' in searchResult)) {
+              result = { rows: searchResult.rows, total: searchResult.total };
+              state.searchQuery = fallbackTerm;
+              // Only surface the notice when the fallback actually returned
+              // rows; a zero-hit fallback stays a plain empty state.
+              state.pendingTagFallback = searchResult.total > 0
+                ? { tag: activeTagFilter, fallbackTo: fallbackTerm, matched: searchResult.total }
+                : null;
+            } else {
+              state.pendingTagFallback = null;
+            }
+          } else {
+            result = {
+              rows: filteredRows.slice(offset, offset + limit),
+              total: filteredRows.length,
+            };
+          }
         } else if (result && !('error' in result)) {
           result = {
             rows: result.rows.slice(offset, offset + limit),
@@ -519,9 +559,23 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     }
   }
 
+  function clearTagFilterAndReload(): void {
+    const hadFallback = state.pendingTagFallback !== null;
+    state.activeTagFilter = null;
+    state.pendingTagFallback = null;
+    state.currentPage = 0;
+    if (hadFallback && state.searchQuery) {
+      // The search box value came from a tag fallback; clear it and reload
+      // the full list rather than leaving a stale full-text query behind.
+      state.searchQuery = '';
+    }
+    void fetchData({ page: 0, ...dateRangeFromSelected() });
+  }
+
   function updateTagFilterBar(
     containerEl: HTMLElement,
     activeTagFilter: string | null,
+    pendingTagFallback: SqliteHistoryState['pendingTagFallback'],
     onClear: () => void,
   ): void {
     const existingBar = containerEl.querySelector('#sqlite-tag-filter-bar') as HTMLElement | null;
@@ -546,11 +600,41 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         existingBar.remove();
       }
     }
+
+    // Fallback notice: shown when a tag-initiated navigation matched nothing
+    // and we switched to a full-text search for the same term.
+    const existingNote = containerEl.querySelector('.sqlite-tag-fallback-note') as HTMLElement | null;
+    if (pendingTagFallback) {
+      if (!existingNote) {
+        const note = document.createElement('div');
+        note.className = 'sqlite-tag-fallback-note';
+        note.setAttribute('role', 'status');
+        note.textContent = t('tagFallbackNotice', [
+          pendingTagFallback.tag,
+          pendingTagFallback.fallbackTo,
+          String(pendingTagFallback.matched),
+        ]);
+        containerEl.appendChild(note);
+      }
+    } else {
+      if (existingNote) {
+        existingNote.remove();
+      }
+    }
   }
 
   function updateDynamicRegions(): void {
     const countEl = container?.querySelector('.sqlite-history-count');
     if (countEl) countEl.textContent = t(getPluralKey('historyRecordCount', state.total), [String(state.total)]);
+
+    // Keep the search input value in sync with state.searchQuery, which may
+    // have been set by a tag-fallback full-text search or cleared by a filter
+    // action.  Without this, the input stays stale after non-renderState
+    // refresh paths (updateDynamicRegions).
+    const searchInputEl = document.getElementById('sqlite-search-input') as HTMLInputElement | null;
+    if (searchInputEl && searchInputEl.value !== state.searchQuery) {
+      searchInputEl.value = state.searchQuery;
+    }
 
     const errorEl = document.getElementById('sqlite-error');
     if (errorEl) {
@@ -563,11 +647,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       updateTagFilterBar(
         searchArea as HTMLElement,
         state.activeTagFilter,
-        () => {
-          state.activeTagFilter = null;
-          state.currentPage = 0;
-          void fetchData({ page: 0, ...dateRangeFromSelected() });
-        },
+        state.pendingTagFallback,
+        clearTagFilterAndReload,
       );
     }
 
@@ -577,8 +658,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
         {
           onDateSelect: (d) => void handleDateSelect(d),
-          onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.currentPage = 0; void fetchData({ since, until }); },
-          onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.currentPage = 0; void fetchData(); },
+          onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.pendingTagFallback = null; state.currentPage = 0; void fetchData({ since, until }); },
+          onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.pendingTagFallback = null; state.currentPage = 0; void fetchData(); },
         }
       );
     }
@@ -878,12 +959,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         <div id="sqlite-error" class="sqlite-history-error${state.error ? '' : ' hidden'}">
           ${escapeHtml(state.error || '')}
         </div>
-        ${state.activeTagFilter ? `
-        <div id="sqlite-tag-filter-bar" class="sqlite-tag-filter-bar" role="status">
-          <span data-i18n="tagFilterLabel">\u30D5\u30A3\u30EB\u30BF\u30FC:</span>
-          <span class="tag-filter-badge">#${escapeHtml(state.activeTagFilter)}</span>
-          <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">\u2715</button>
-        </div>` : ''}
       </div>
       <div id="sqlite-bulk-bar" class="sqlite-bulk-bar${state.selectedIds.size > 0 ? '' : ' hidden'}">
         <label class="sqlite-bulk-select-all">
@@ -907,8 +982,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
           {
             onDateSelect: (d) => void handleDateSelect(d),
-            onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.currentPage = 0; void fetchData({ since, until }); },
-            onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.currentPage = 0; void fetchData(); },
+            onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.pendingTagFallback = null; state.currentPage = 0; void fetchData({ since, until }); },
+            onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.pendingTagFallback = null; state.currentPage = 0; void fetchData(); },
           }
         );
       }
@@ -962,14 +1037,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if (appendBtn) {
       appendBtn.addEventListener('click', () => void handleAppendToObsidian());
     }
-
-    const tagFilterClear = document.getElementById('sqlite-tag-filter-clear') as HTMLButtonElement | null;
-    if (tagFilterClear) {
-      tagFilterClear.addEventListener('click', () => {
-        state.activeTagFilter = null;
-        refresh();
-      });
-    }
   }
 
   function refresh(): void {
@@ -992,14 +1059,16 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     }
   }
 
-  async function retryInitialLoad(): Promise<void> {
+  async function retryInitialLoad(
+    fetchOpts: Parameters<typeof fetchData>[0] = { limit: PAGE_SIZE },
+  ): Promise<void> {
     state.loading = true;
     state.error = null;
     renderState();
 
     const result = await retryWithExponentialBackoff<boolean>(
       async () => {
-        await fetchData({ limit: PAGE_SIZE });
+        await fetchData(fetchOpts);
         return state.error ? null : true;
       },
       { label: 'sqliteHistory', maxAttempts: 4 }
@@ -1010,6 +1079,25 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       // Error already set by fetchData
     }
     renderState();
+  }
+
+  /**
+   * Consume pending init parameters (set by onActivate before loadData runs)
+   * and return the fetch options to use for the initial load.
+   */
+  function consumePendingInit(): Parameters<typeof fetchData>[0] | null {
+    const init = pendingInit;
+    pendingInit = null;
+    if (!init) return null;
+
+    if (init.searchTag) {
+      return { tagFilter: (init.searchTag as string) || undefined, tagInitiated: true, limit: PAGE_SIZE };
+    }
+    if (init.searchDomain) {
+      const q = (init.searchDomain as string).trim();
+      if (q) return { search: q, limit: PAGE_SIZE };
+    }
+    return null;
   }
 
   return {
@@ -1025,7 +1113,11 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       await checkFallbackStatus();
       currentEnrichmentMap = await getChromeStorageLookup();
       renderState();
-      void retryInitialLoad();
+
+      // Consume any init params set by onActivate (which runs before loadData)
+      // so retryInitialLoad uses the correct search/tag parameters.
+      const fetchOpts = consumePendingInit();
+      void retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
     },
     unmount() {
       if (searchDebounceTimer !== null) {
@@ -1038,10 +1130,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     },
     onActivate(init) {
       if (init?.searchTag) {
+        pendingInit = init;
         state.activeTagFilter = init.searchTag as string;
         state.currentPage = 0;
-        void fetchData({ page: 0, tagFilter: state.activeTagFilter || undefined });
+        state.pendingTagFallback = null;
+        state.searchQuery = init.searchTag as string;
+        void fetchData({ page: 0, tagFilter: state.activeTagFilter || undefined, tagInitiated: true });
       } else if (init?.searchDomain) {
+        pendingInit = init;
         state.searchQuery = init.searchDomain as string;
         state.currentPage = 0;
         if (state.searchQuery.trim()) {
