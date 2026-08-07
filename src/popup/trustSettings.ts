@@ -13,6 +13,7 @@ import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { getTrustChecker } from '../utils/trustChecker.js';
+import { showStatus } from './settingsUiHelper.js';
 
 // ============================================================================
 // DOM Elements
@@ -60,16 +61,6 @@ const TIER_TO_SAFETY_MODE: Record<TrancoTier, SafetyMode> = {
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
-function showStatus(message: string, isError = false): void {
-  if (!trustSettingsStatusDiv) return;
-  trustSettingsStatusDiv.textContent = message;
-  trustSettingsStatusDiv.className = isError ? 'status-message error' : 'status-message success';
-  setTimeout(() => {
-    trustSettingsStatusDiv.textContent = '';
-    trustSettingsStatusDiv.className = 'status-message';
-  }, 3000);
-}
 
 function updateTrancoStatus(status: {
   count?: number;
@@ -147,13 +138,13 @@ async function addJpAnchorTld(tld: string): Promise<void> {
   const result = await db.addJpAnchorTld(tld);
 
   if (!result.success) {
-    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
+    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
     return;
   }
 
   renderJpAnchorList(db.getJpAnchorTlds());
   jpAnchorAddInput.value = '';
-  showStatus((getMessage('jpAnchorAdded') || 'TLD added'));
+  showStatus(trustSettingsStatusDiv, (getMessage('jpAnchorAdded') || 'TLD added'), 'success');
 }
 
 async function removeJpAnchorTld(tld: string): Promise<void> {
@@ -211,7 +202,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
   const result = await db.addSensitiveDomain(domain, category);
 
   if (!result.success) {
-    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
+    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
     return;
   }
 
@@ -219,7 +210,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
     renderSensitiveList(db.getSensitiveDomains(category));
   }
   sensitiveAddInput.value = '';
-  showStatus((getMessage('sensitiveAdded') || 'Domain added'));
+  showStatus(trustSettingsStatusDiv, (getMessage('sensitiveAdded') || 'Domain added'), 'success');
 }
 
 async function removeSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
@@ -241,13 +232,13 @@ async function addWhitelistDomain(domain: string): Promise<void> {
   const result = await db.addToWhitelist(domain);
 
   if (!result.success) {
-    showStatus((getMessage(result.error ?? '') || result.error || 'Error'), true);
+    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
     return;
   }
 
   renderWhitelistList(db.getWhitelist());
   whitelistAddInput.value = '';
-  showStatus((getMessage('whitelistAdded') || 'Domain added'));
+  showStatus(trustSettingsStatusDiv, (getMessage('whitelistAdded') || 'Domain added'), 'success');
 }
 
 function renderWhitelistList(domains: string[]): void {
@@ -273,7 +264,7 @@ async function updateTrancoList(): Promise<void> {
   const updater = getTrancoUpdater();
 
   if (updater.isUpdateInProgress()) {
-    showStatus((getMessage('trancoUpdateInProgress') || 'Update already in progress'), true);
+    showStatus(trustSettingsStatusDiv, (getMessage('trancoUpdateInProgress') || 'Update already in progress'), 'error');
     return;
   }
 
@@ -284,7 +275,7 @@ async function updateTrancoList(): Promise<void> {
 
     if (result.success) {
       await loadTrustSettings(); // Reload settings to reflect changes
-      showStatus(getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully');
+      showStatus(trustSettingsStatusDiv, getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully', 'success');
       logInfo('TrustSettings', { tier, count: result.domainsCount }, `Tranco update completed`);
     } else {
       logError('TrustSettings', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED);
@@ -307,7 +298,7 @@ function onSafetyModeChange(): void {
   const targetTier = SAFETY_MODE_TO_TIER[mode];
 
   trancoTierSelect.value = targetTier;
-  showStatus((getMessage('safetyModeChanged') || 'Safety mode changed'));
+  showStatus(trustSettingsStatusDiv, (getMessage('safetyModeChanged') || 'Safety mode changed'), 'success');
 }
 
 function onTrancoTierChange(): void {
@@ -354,7 +345,7 @@ async function saveTrustSettings(): Promise<void> {
   });
 
   // Note: Trust Database changes are already saved immediately when modified
-  showStatus((getMessage('settingsSaved') || 'Settings saved'));
+  showStatus(trustSettingsStatusDiv, (getMessage('settingsSaved') || 'Settings saved'), 'success');
   const alertConfig = await checker.getAlertConfig();
   logInfo('TrustSettings', { alertConfig }, 'Trust settings saved');
 }

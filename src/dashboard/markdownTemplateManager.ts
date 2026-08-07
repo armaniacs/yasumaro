@@ -12,12 +12,12 @@ import {
   deleteTemplate,
   renderFileTemplate,
   validateTemplate,
-  setActiveTemplate,
 } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from '../popup/errorUtils.js';
+import { showStatus } from '../popup/settingsUiHelper.js';
 
 /** ライブプレビュー用のサンプルエントリ */
 const SAMPLE_ENTRIES: MarkdownTemplateEntryData[] = [
@@ -186,10 +186,10 @@ function createTemplateListItem(template: MarkdownExportTemplate, isActive: bool
 async function handleActivateClick(id: string): Promise<void> {
   if (!currentSettings) return;
 
-  currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = setActiveTemplate(getTemplates(), id);
+  currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = id;
   await saveSettings(currentSettings);
 
-  showStatus(getMessage('markdownTemplateActivated') || 'Template activated', 'success');
+  showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateActivated') || 'Template activated', 'success');
   renderTemplateList();
 }
 
@@ -215,7 +215,7 @@ async function handleDeleteClick(id: string): Promise<void> {
 
   await saveSettings(currentSettings);
 
-  showStatus(getMessage('markdownTemplateDeleted') || 'Template deleted', 'success');
+  showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateDeleted') || 'Template deleted', 'success');
   renderTemplateList();
 }
 
@@ -300,21 +300,30 @@ function handleCancelClick(): void {
 }
 
 /**
+ * Build a draft template from the current editor field values.
+ * @param id Placeholder id (not persisted for previews/drafts)
+ * @param name Template name
+ */
+function createDraftTemplate(id: string, name: string): MarkdownExportTemplate {
+  return {
+    id,
+    name,
+    fileTemplate: fileInput?.value ?? '',
+    entryTemplate: entryInput?.value ?? '',
+    isDefault: false,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
+
+/**
  * Recompute the live preview from the current editor field values.
  * Shows a validation error message instead of a preview when the draft is invalid.
  */
 function updatePreview(): void {
   if (!fileInput || !entryInput || !previewEl) return;
 
-  const draft: MarkdownExportTemplate = {
-    id: 'preview',
-    name: 'preview',
-    fileTemplate: fileInput.value,
-    entryTemplate: entryInput.value,
-    isDefault: false,
-    createdAt: 0,
-    updatedAt: 0,
-  };
+  const draft = createDraftTemplate('preview', 'preview');
 
   const validation = validateTemplate(draft);
   if (!validation.valid) {
@@ -338,15 +347,7 @@ async function handleSaveClick(): Promise<void> {
     return;
   }
 
-  const draft: MarkdownExportTemplate = {
-    id: editingTemplateId ?? 'draft',
-    name,
-    fileTemplate: fileInput.value,
-    entryTemplate: entryInput.value,
-    isDefault: false,
-    createdAt: 0,
-    updatedAt: 0,
-  };
+  const draft = createDraftTemplate(editingTemplateId ?? 'draft', name);
 
   const validation = validateTemplate(draft);
   if (!validation.valid) {
@@ -357,18 +358,28 @@ async function handleSaveClick(): Promise<void> {
 
   const stored = (currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
 
-  const updated = editingTemplateId
-    ? updateTemplate(stored, editingTemplateId, {
+  let updated: MarkdownExportTemplate[];
+  if (editingTemplateId) {
+    updated = updateTemplate(stored, editingTemplateId, {
+      name: draft.name,
+      fileTemplate: draft.fileTemplate,
+      entryTemplate: draft.entryTemplate,
+    });
+  } else {
+    updated = [
+      ...stored,
+      createTemplate({
         name: draft.name,
         fileTemplate: draft.fileTemplate,
         entryTemplate: draft.entryTemplate,
-      })
-    : [...stored, createTemplate({ name: draft.name, fileTemplate: draft.fileTemplate, entryTemplate: draft.entryTemplate })];
+      }),
+    ];
+  }
 
   currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
   await saveSettings(currentSettings);
 
-  showStatus(
+  showStatus(statusEl ?? 'markdownTemplateStatus', 
     getMessage(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated')
       || (editingTemplateId ? 'Template updated' : 'Template created'),
     'success'
@@ -397,21 +408,3 @@ function clearError(): void {
   errorEl.classList.remove('visible');
 }
 
-/**
- * Show a transient status message below the panel (auto-clears after 3 seconds).
- * @param message Message to show
- * @param type Message type used for styling
- */
-function showStatus(message: string, type: 'success' | 'error'): void {
-  if (!statusEl) return;
-
-  statusEl.textContent = message;
-  statusEl.className = type;
-
-  setTimeout(() => {
-    if (statusEl) {
-      statusEl.textContent = '';
-      statusEl.className = '';
-    }
-  }, 3000);
-}

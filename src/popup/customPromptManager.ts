@@ -21,6 +21,7 @@ import {
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from './errorUtils.js';
+import { showStatus } from './settingsUiHelper.js';
 
 // Prompt ID prefix constants
 const PROMPT_ID = {
@@ -274,13 +275,13 @@ async function handleSavePrompt(): Promise<void> {
 
     // Validate
     if (!name) {
-        showStatus(getMessage('promptNameRequired') || 'Prompt name is required', 'error');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptNameRequired') || 'Prompt name is required', 'error');
         return;
     }
 
     const validation = validatePrompt(promptText);
     if (!validation.valid) {
-        showStatus(validation.error || 'Invalid prompt', 'error');
+        showStatus(promptStatusDiv ?? 'promptStatus', validation.error || 'Invalid prompt', 'error');
         return;
     }
 
@@ -295,7 +296,7 @@ async function handleSavePrompt(): Promise<void> {
             systemPrompt,
             prompt: promptText
         });
-        showStatus(getMessage('promptUpdated') || 'Prompt updated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptUpdated') || 'Prompt updated', 'success');
     } else {
         // Create new prompt
         const newPrompt = createPrompt({
@@ -306,7 +307,7 @@ async function handleSavePrompt(): Promise<void> {
             isActive: false
         });
         prompts.push(newPrompt);
-        showStatus(getMessage('promptCreated') || 'Prompt created', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptCreated') || 'Prompt created', 'success');
     }
 
     // Save to settings
@@ -326,7 +327,7 @@ async function handleSavePrompt(): Promise<void> {
 function handleEditPrompt(promptId: string): void {
     // Prevent editing default prompt
     if (promptId === PROMPT_ID.DEFAULT) {
-        showStatus('Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
+        showStatus(promptStatusDiv ?? 'promptStatus', 'Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
         return;
     }
 
@@ -364,7 +365,7 @@ function handleEditPrompt(promptId: string): void {
 async function handleDeletePrompt(promptId: string): Promise<void> {
     // Prevent deleting default prompt
     if (promptId === PROMPT_ID.DEFAULT) {
-        showStatus('Cannot delete default prompt', 'error');
+        showStatus(promptStatusDiv ?? 'promptStatus', 'Cannot delete default prompt', 'error');
         return;
     }
 
@@ -382,7 +383,7 @@ async function handleDeletePrompt(promptId: string): Promise<void> {
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
     await saveSettings(currentSettings);
 
-    showStatus(getMessage('promptDeleted') || 'Prompt deleted', 'success');
+    showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDeleted') || 'Prompt deleted', 'success');
     renderPromptList();
 }
 
@@ -404,7 +405,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
             updatedAt: Date.now()
         }));
 
-        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
     } else if (promptId.startsWith(PROMPT_ID.PRESET_PREFIX)) {
         // Activate preset: upsert it into CUSTOM_PROMPTS with isActive=true
         const presetRawId = promptId.slice(PROMPT_ID.PRESET_PREFIX.length);
@@ -435,11 +436,11 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
             prompts = [...prompts, newEntry];
         }
 
-        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
     } else {
         // Activate custom prompt
         prompts = setActivePrompt(prompts, promptId, provider);
-        showStatus(getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
     }
 
     // Save to settings
@@ -476,7 +477,7 @@ function handleDuplicatePrompt(promptId: string): void {
         const presetId = promptId.replace(PROMPT_ID.PRESET_PREFIX, '');
         const preset = getPresetPrompt(presetId);
         if (!preset) {
-            showStatus('Preset not found', 'error');
+            showStatus(promptStatusDiv ?? 'promptStatus', 'Preset not found', 'error');
             return;
         }
         name = getPromptDisplayName(preset, locale);
@@ -489,7 +490,7 @@ function handleDuplicatePrompt(promptId: string): void {
         const prompt = prompts.find(p => p.id === promptId);
 
         if (!prompt) {
-            showStatus('Prompt not found', 'error');
+            showStatus(promptStatusDiv ?? 'promptStatus', 'Prompt not found', 'error');
             return;
         }
 
@@ -519,7 +520,7 @@ function handleDuplicatePrompt(promptId: string): void {
     }
 
     // Show status message
-    showStatus(getMessage('promptDuplicated') || 'Prompt copied to editor', 'success');
+    showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDuplicated') || 'Prompt copied to editor', 'success');
 
     // Scroll to editor
     promptNameInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -549,26 +550,6 @@ function resetForm(): void {
     if (cancelPromptBtn) {
         cancelPromptBtn.style.display = 'none';
     }
-}
-
-/**
- * Show status message
- * @param {string} message - Message to show
- * @param {'success' | 'error'} type - Message type
- */
-function showStatus(message: string, type: 'success' | 'error'): void {
-    if (!promptStatusDiv) return;
-    
-    promptStatusDiv.textContent = message;
-    promptStatusDiv.className = `status-${type}`;
-    
-    // Clear after 3 seconds
-    setTimeout(() => {
-        if (promptStatusDiv) {
-            promptStatusDiv.textContent = '';
-            promptStatusDiv.className = '';
-        }
-    }, 3000);
 }
 
 /**

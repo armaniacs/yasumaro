@@ -3,8 +3,8 @@ export {
   extractSettingsFromInputs,
 } from '../utils/settingsFormBinding.js';
 
-export function showStatus(elementId: string, message: string, type: 'success' | 'error'): void {
-  const el = document.getElementById(elementId);
+export function showStatus(elementOrId: string | HTMLElement, message: string, type: 'success' | 'error'): void {
+  const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
   if (!el) return;
 
   el.textContent = message;

@@ -843,7 +843,7 @@ describe('trustSettings.ts', () => {
 
       vi.advanceTimersByTime(3000);
       expect(statusDiv.textContent).toBe('');
-      expect(statusDiv.className).toBe('status-message');
+      expect(statusDiv.className).toBe('');
 
       vi.useRealTimers();
     });

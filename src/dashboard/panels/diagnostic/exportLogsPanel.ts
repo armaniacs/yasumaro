@@ -2,6 +2,7 @@ import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, download
 import { type DiagnosticPanel } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../asyncData/auditLogPanel.js';
+import { showStatus } from '../../../popup/settingsUiHelper.js';
 
 export function createExportLogsPanel(): DiagnosticPanel {
   return {
@@ -14,59 +15,53 @@ export function createExportLogsPanel(): DiagnosticPanel {
       const statusEl = container.querySelector('#export-status') as HTMLElement | null;
       const dbBtn = container.querySelector('#export-db-btn') as HTMLButtonElement | null;
 
-      const showStatus = (msg: string, isError = false) => {
-        if (!statusEl) return;
-        statusEl.textContent = msg;
-        statusEl.classList.remove('hidden');
-        statusEl.style.color = isError ? 'var(--color-error)' : 'var(--color-success-text)';
-        setTimeout(() => { statusEl!.classList.add('hidden'); }, 3000);
-      };
+      const statusTarget = statusEl ?? 'export-status';
 
       jsonBtn?.addEventListener('click', async () => {
         try {
-          showStatus('Exporting JSON…');
+          showStatus(statusTarget, 'Exporting JSON…', 'success');
           const blob = await exportJson();
           downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.json`);
-          showStatus('JSON export completed.');
+          showStatus(statusTarget, 'JSON export completed.', 'success');
         } catch (err) {
-          showStatus(`Export failed: ${err}`, true);
+          showStatus(statusTarget, `Export failed: ${err}`, 'error');
         }
       });
 
       mdBtn?.addEventListener('click', async () => {
         try {
-          showStatus('Exporting Markdown…');
+          showStatus(statusTarget, 'Exporting Markdown…', 'success');
           const md = await exportMarkdown();
           downloadText(md, `yasumaro_export_${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
-          showStatus('Markdown export completed.');
+          showStatus(statusTarget, 'Markdown export completed.', 'success');
         } catch (err) {
-          showStatus(`Export failed: ${err}`, true);
+          showStatus(statusTarget, `Export failed: ${err}`, 'error');
         }
       });
 
       csvBtn?.addEventListener('click', async () => {
         try {
-          showStatus('Exporting CSV…');
+          showStatus(statusTarget, 'Exporting CSV…', 'success');
           const blob = await exportCsv();
           downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
-          showStatus('CSV export completed.');
+          showStatus(statusTarget, 'CSV export completed.', 'success');
         } catch (err) {
-          showStatus(`Export failed: ${err}`, true);
+          showStatus(statusTarget, `Export failed: ${err}`, 'error');
         }
       });
 
       dbBtn?.addEventListener('click', async () => {
         try {
-          showStatus('Exporting database…');
+          showStatus(statusTarget, 'Exporting database…', 'success');
           const blob = await exportDb();
           if (blob) {
             downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.db`);
-            showStatus('Database export completed.');
+            showStatus(statusTarget, 'Database export completed.', 'success');
           } else {
-            showStatus('Binary export requires OPFS storage. Use JSON export instead.', true);
+            showStatus(statusTarget, 'Binary export requires OPFS storage. Use JSON export instead.', 'error');
           }
         } catch (err) {
-          showStatus(`Export failed: ${err}`, true);
+          showStatus(statusTarget, `Export failed: ${err}`, 'error');
         }
       });
 

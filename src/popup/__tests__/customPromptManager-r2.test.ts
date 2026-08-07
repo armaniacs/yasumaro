@@ -317,7 +317,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const statusDiv = document.getElementById('promptStatus') as HTMLElement;
       expect(statusDiv.textContent).toBeTruthy();
 
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(5000);
       expect(statusDiv.textContent).toBe('');
       vi.useRealTimers();
     });
