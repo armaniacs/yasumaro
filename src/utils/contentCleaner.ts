@@ -42,12 +42,20 @@ const HARD_STRIP_TAGS = new Set([
     'script',
     'iframe',
     'style',
+    'noscript',
     'canvas',
     'embed',
     'object',
     'audio',
     'video'
 ]);
+
+/**
+ * Hard Strip 用の非表示要素セレクタ
+ * 自治体CMS等で hidden/display:none の要素内にJSコードやテンプレート断片が
+ * 平文テキストとして埋め込まれるケースを除去するため
+ */
+const HIDDEN_ELEMENT_SELECTOR = '[hidden], [aria-hidden="true"], [style*="display:none"], [style*="display: none"]';
 
 /**
  * Hard Strip 用属性セレクタ
@@ -143,6 +151,12 @@ export function stripHardStripElements(element: Element): number {
             });
         }
     }
+
+    // 非表示要素を取得（hidden/display:noneの中にJS/テンプレート断片が
+    // 平文テキストとして埋め込まれるケースを除去）
+    element.querySelectorAll(HIDDEN_ELEMENT_SELECTOR).forEach(elem => {
+        elementsToRemove.add(elem);
+    });
 
     // 削除実行
     for (const elem of elementsToRemove) {
