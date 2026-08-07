@@ -7,10 +7,9 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from 
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
-import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { recordUsage } from '../../../utils/aiUsageTracker.js';
 import { normalizeProviderKeyName, resolveModelKey } from '../../../utils/aiModelKey.js';
 
 interface OpenAIApiResponse {
@@ -107,47 +106,27 @@ export class OpenAIProvider extends AIProviderStrategy {
             return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
         }
 
-        // 月次ハードリミットチェック
-        const hardLimit = await checkHardLimit();
-        if (hardLimit.blocked) {
-            return { success: false, summary: `Error: ${hardLimit.message}` };
-        }
-
-        // 使用量警告チェック
-        const usageWarning = await checkUsageWarning();
-        if (usageWarning.warning) {
-            return { success: false, summary: `Error: ${usageWarning.message}` };
-        }
-
-        // レート制限チェック
-        const rateLimit = await checkRateLimit();
-        if (!rateLimit.allowed) {
-            return { success: false, summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
+        // 共通プリフライトガード
+        const preFlight = await this.checkPreFlight();
+        if (preFlight.blocked) {
+            return { success: false, summary: preFlight.message! };
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
         const url = `${trimmedBaseUrl}/chat/completions`;
-        // ローカルLLMは context size が小さい（4096トークン程度）ため、送信コンテンツを絞る
-        // 日本語 1トークン≈2文字 として 4096トークン×2 = ~8192文字が理論上限
-        // system prompt・プロンプトテンプレートの分を引き、安全マージンを取り4000文字に制限
         const contentLimit = OpenAIProvider.isLocalUrl(this.baseUrl)
             ? 4000
             : this.getMaxContentLength();
         const truncatedContent = content.substring(0, contentLimit);
 
-        // プロンプトインジェクション対策 - コンテンツのサニタイズ
-        const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
-        if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${this.providerName}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
-        }
-        if (dangerLevel === 'high') {
-            const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
-            addLog(LogType.ERROR, `[${this.providerName}] High risk prompt injection blocked: ${cause}`, { traceId });
-            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
+        // 共通サニタイズ
+        const sanitizeResult = this.sanitizeContent(truncatedContent, this.providerName, traceId);
+        if (sanitizeResult.blocked) {
+            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${sanitizeResult.warnings.join('; ')})` };
         }
 
         // カスタムプロンプトを適用（タグ付き要約モード対応）
-        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizedContent, tagSummaryMode);
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizeResult.sanitized, tagSummaryMode);
 
         const payload = {
             model: this.model,
@@ -186,7 +165,6 @@ export class OpenAIProvider extends AIProviderStrategy {
                 maxDelayMs: 60000,
                 shouldRetry: (error: Error, attempt: number, response: Response | null, method?: string) => {
                     if (response?.status === 429) return false;
-                    // 非冪等メソッド（POST/PUT/PATCH）は二重生成・二重課金を防ぐため5xxでリトライしない
                     if (response && response.status >= 500) {
                         return !['POST', 'PUT', 'PATCH'].includes(method?.toUpperCase() ?? 'POST');
                     }
@@ -242,7 +220,7 @@ export class OpenAIProvider extends AIProviderStrategy {
                 allowedUrls,
                 timeoutMs: this.timeoutMs
             }, {
-                maxRetryCount: 1, // テスト接続はリトライ少なめ（早く失敗させる）
+                maxRetryCount: 1,
                 initialDelayMs: 500,
                 backoffMultiplier: 2,
                 maxDelayMs: 3000
@@ -256,80 +234,12 @@ export class OpenAIProvider extends AIProviderStrategy {
                 };
             }
 
-            // より詳細なエラーメッセージ
-            if (response.status === 401 || response.status === 403) {
-                return {
-                    success: false,
-                    message: `Authentication failed (${response.status}). Check your API key.`,
-                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else if (response.status === 404) {
-                return {
-                    success: false,
-                    message: `Endpoint not found (404). Check your Base URL.`,
-                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else if (response.status === 429) {
-                return {
-                    success: false,
-                    message: `Rate limit exceeded (429). Please try again later.`,
-                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else {
-                return {
-                    success: false,
-                    message: `AI API Error: ${response.status} ${response.statusText}`,
-                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            }
+            // 共通HTTPステータスマッピング
+            return this.mapConnectionError(response.status, 'OpenAI');
         } catch (e: unknown) {
             const msg = errorMessage(e);
-            const errorName = e instanceof Error ? e.name : 'Error';
-
-            // タイムアウトは error.name（AbortError）またはメッセージで判定
-            if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
-                return {
-                    success: false,
-                    message: 'Connection timed out. Check your network or increase timeout.',
-                    debug: { prompt: `GET ${url}`, error: msg },
-                };
-            }
-
-            // fetchWithRetry throws HTTP errors as "HTTP {status}: {statusText}"
-            const httpMatch = msg.match(/HTTP\s+(\d+):/);
-            const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
-
-            if (statusCode === 401 || statusCode === 403) {
-                return {
-                    success: false,
-                    message: 'Invalid API key (401). Check your API key settings.',
-                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
-                };
-            } else if (statusCode === 404) {
-                return {
-                    success: false,
-                    message: 'Model or endpoint not found (404). Check your Base URL.',
-                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
-                };
-            } else if (statusCode === 429) {
-                return {
-                    success: false,
-                    message: 'Rate limit exceeded (429). Please try again later.',
-                    debug: { prompt: `GET ${url}`, error: msg, statusCode },
-                };
-            } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
-                return {
-                    success: false,
-                    message: 'Cannot connect. Check your Base URL and network.',
-                    debug: { prompt: `GET ${url}`, error: msg },
-                };
-            } else {
-                return {
-                    success: false,
-                    message: `Connection error: ${msg}`,
-                    debug: { prompt: `GET ${url}`, error: msg },
-                };
-            }
+            // 共通エラーパース
+            return this.parseAndMapFetchError(msg, 'OpenAI');
         }
     }
 
