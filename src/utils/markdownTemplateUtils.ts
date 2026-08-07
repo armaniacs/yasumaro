@@ -10,9 +10,6 @@ export type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.
 /** エントリテンプレートで使用可能なプレースホルダー */
 const ENTRY_PLACEHOLDER_KEYS = ['timestamp', 'title', 'url', 'summary', 'tags', 'domain'] as const;
 
-/** ファイルテンプレートで使用可能なプレースホルダー(entries は別扱い) */
-const FILE_PLACEHOLDER_KEYS = ['date', 'entryCount'] as const;
-
 /**
  * デフォルトの Markdown 書き出しテンプレート
  * 現行のハードコード出力形式(# date 見出し + `- HH:MM [title](url)` 行)を再現する。
