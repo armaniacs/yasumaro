@@ -4,10 +4,14 @@
  * offscreen document was unreachable) so they aren't silently lost. Queued
  * records are retried on the next flush (Service Worker startup) instead
  * of being dropped (M14).
+ *
+ * Queue storage/enqueue mechanics are shared via StorageBackedQueue (PBI-09);
+ * the batch-insert flush logic is specific to SQLite records.
  */
 
 import { addLog, LogType } from '../utils/logger.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { StorageBackedQueue } from './storageBackedQueue.js';
 
 export const PENDING_SQLITE_RECORDS_KEY = 'pending_sqlite_records';
 
@@ -22,15 +26,11 @@ interface SqliteClientLike {
 /** Number of records to insert in a single offscreen round-trip. */
 const BATCH_SIZE = 50;
 
-async function loadQueue(): Promise<BrowsingLogRecord[]> {
-  const result = await chrome.storage.local.get(PENDING_SQLITE_RECORDS_KEY);
-  const stored = result[PENDING_SQLITE_RECORDS_KEY];
-  return Array.isArray(stored) ? (stored as BrowsingLogRecord[]) : [];
-}
-
-async function saveQueue(records: BrowsingLogRecord[]): Promise<void> {
-  await chrome.storage.local.set({ [PENDING_SQLITE_RECORDS_KEY]: records });
-}
+const queue = new StorageBackedQueue<BrowsingLogRecord>(
+  PENDING_SQLITE_RECORDS_KEY,
+  MAX_PENDING_RECORDS,
+  'pendingSqliteQueue',
+);
 
 /**
  * Queue a record that failed to insert into SQLite. Best-effort: a queue
@@ -38,19 +38,7 @@ async function saveQueue(records: BrowsingLogRecord[]): Promise<void> {
  * insert failure.
  */
 export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<void> {
-  try {
-    const queue = await loadQueue();
-    queue.push(record);
-    if (queue.length > MAX_PENDING_RECORDS) {
-      queue.splice(0, queue.length - MAX_PENDING_RECORDS);
-    }
-    await saveQueue(queue);
-  } catch (error) {
-    addLog(LogType.ERROR, 'pendingSqliteQueue: failed to enqueue record', {
-      url: record.url,
-      error: String(error),
-    });
-  }
+  await queue.enqueue(record, { url: record.url });
 }
 
 /**
@@ -71,11 +59,11 @@ export function chunkArray<T>(items: T[], size: number): T[][] {
  * for the next flush.
  */
 export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
-  const queue = await loadQueue();
-  if (queue.length === 0) return;
+  const records = await queue.load();
+  if (records.length === 0) return;
 
   const stillPending: BrowsingLogRecord[] = [];
-  const chunks = chunkArray(queue, BATCH_SIZE);
+  const chunks = chunkArray(records, BATCH_SIZE);
 
   for (const chunk of chunks) {
     try {
@@ -88,11 +76,11 @@ export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promi
     }
   }
 
-  await saveQueue(stillPending);
+  await queue.save(stillPending);
 
-  if (stillPending.length < queue.length) {
+  if (stillPending.length < records.length) {
     addLog(LogType.INFO, 'pendingSqliteQueue: flushed queued records', {
-      recovered: queue.length - stillPending.length,
+      recovered: records.length - stillPending.length,
       remaining: stillPending.length,
     });
   }

@@ -3,11 +3,14 @@
  * Holds chrome.storage.local writes that failed (e.g. quota exceeded,
  * transient storage error) so they aren't silently lost. Queued writes are
  * retried on the next flush (Service Worker startup / offline-network-retry
- * alarm) instead of being dropped. Mirrors pendingSqliteQueue.ts's design
- * for the chrome.storage side of the legacy dual-write path (PBI-13).
+ * alarm) instead of being dropped (PBI-13 legacy dual-write path).
+ *
+ * Queue storage/enqueue mechanics are shared via StorageBackedQueue (PBI-09),
+ * mirroring pendingSqliteQueue.ts's design for the chrome.storage side.
  */
 
 import { addLog, LogType } from '../utils/logger.js';
+import { StorageBackedQueue } from './storageBackedQueue.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 
@@ -20,15 +23,11 @@ export interface PendingChromeStorageWrite {
   id?: number;
 }
 
-async function loadQueue(): Promise<PendingChromeStorageWrite[]> {
-  const result = await chrome.storage.local.get(PENDING_CHROME_STORAGE_KEY);
-  const stored = result[PENDING_CHROME_STORAGE_KEY];
-  return Array.isArray(stored) ? (stored as PendingChromeStorageWrite[]) : [];
-}
-
-async function saveQueue(writes: PendingChromeStorageWrite[]): Promise<void> {
-  await chrome.storage.local.set({ [PENDING_CHROME_STORAGE_KEY]: writes });
-}
+const queue = new StorageBackedQueue<PendingChromeStorageWrite>(
+  PENDING_CHROME_STORAGE_KEY,
+  MAX_PENDING_WRITES,
+  'pendingChromeStorageQueue',
+);
 
 /**
  * Queue a chrome.storage.local write that failed. Best-effort: a queue
@@ -36,19 +35,7 @@ async function saveQueue(writes: PendingChromeStorageWrite[]): Promise<void> {
  * write failure.
  */
 export async function enqueuePendingWrite(write: PendingChromeStorageWrite): Promise<void> {
-  try {
-    const queue = await loadQueue();
-    queue.push(write);
-    if (queue.length > MAX_PENDING_WRITES) {
-      queue.splice(0, queue.length - MAX_PENDING_WRITES);
-    }
-    await saveQueue(queue);
-  } catch (error) {
-    addLog(LogType.ERROR, 'pendingChromeStorageQueue: failed to enqueue write', {
-      key: write.key,
-      error: String(error),
-    });
-  }
+  await queue.enqueue(write, { key: write.key });
 }
 
 /**
@@ -59,27 +46,14 @@ export async function enqueuePendingWrite(write: PendingChromeStorageWrite): Pro
 export async function flushPendingWrites(
   retryFn: (write: PendingChromeStorageWrite) => Promise<boolean>
 ): Promise<void> {
-  const queue = await loadQueue();
-  if (queue.length === 0) return;
+  const writes = await queue.load();
+  if (writes.length === 0) return;
 
-  const stillPending: PendingChromeStorageWrite[] = [];
+  const stillPending = await queue.flush(retryFn);
 
-  for (const write of queue) {
-    try {
-      const success = await retryFn(write);
-      if (!success) {
-        stillPending.push(write);
-      }
-    } catch {
-      stillPending.push(write);
-    }
-  }
-
-  await saveQueue(stillPending);
-
-  if (stillPending.length < queue.length) {
+  if (stillPending.length < writes.length) {
     addLog(LogType.INFO, 'pendingChromeStorageQueue: flushed queued writes', {
-      recovered: queue.length - stillPending.length,
+      recovered: writes.length - stillPending.length,
       remaining: stillPending.length,
     });
   }
