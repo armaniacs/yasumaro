@@ -17,12 +17,16 @@ const {
     checkHardLimitMock,
     checkUsageWarningMock,
     checkRateLimitMock,
-    getRateLimitMessageMock
+    getRateLimitMessageMock,
+    sanitizePromptContentMock,
+    addLogMock
 } = vi.hoisted(() => ({
     checkHardLimitMock: vi.fn(async () => ({ blocked: false })),
     checkUsageWarningMock: vi.fn(async () => ({ warning: false })),
     checkRateLimitMock: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: Date.now() + 60000 })),
-    getRateLimitMessageMock: vi.fn(() => 'Rate limit exceeded')
+    getRateLimitMessageMock: vi.fn(() => 'Rate limit exceeded'),
+    sanitizePromptContentMock: vi.fn(() => ({ sanitized: 'safe content', warnings: [], dangerLevel: 'low' })),
+    addLogMock: vi.fn()
 }));
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
@@ -30,6 +34,15 @@ vi.mock('../../../../utils/aiUsageTracker.js', () => ({
     checkUsageWarning: checkUsageWarningMock,
     checkRateLimit: checkRateLimitMock,
     getRateLimitMessage: getRateLimitMessageMock
+}));
+
+vi.mock('../../../../utils/promptSanitizer.js', () => ({
+    sanitizePromptContent: sanitizePromptContentMock
+}));
+
+vi.mock('../../../../utils/logger.js', () => ({
+    addLog: addLogMock,
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
 }));
 
 class TestProvider extends AIProviderStrategy {
@@ -47,6 +60,10 @@ class TestProvider extends AIProviderStrategy {
 
     async callCheckPreFlight() {
         return this.checkPreFlight();
+    }
+
+    callSanitizeContent(content: string, providerName: string, traceId: string) {
+        return this.sanitizeContent(content, providerName, traceId);
     }
 }
 
@@ -283,5 +300,33 @@ describe('checkPreFlight', () => {
         const provider = new TestProvider(settings);
         const result = await provider.callCheckPreFlight();
         expect(result.blocked).toBe(false);
+    });
+});
+
+describe('sanitizeContent', () => {
+    test('dangerLevel=high時は { blocked: true } を返す', () => {
+        sanitizePromptContentMock.mockReturnValue({
+            sanitized: 'sanitized',
+            warnings: ['injection detected'],
+            dangerLevel: 'high'
+        });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callSanitizeContent('malicious content', 'test-provider', 'trace-1');
+        expect(result.blocked).toBe(true);
+        expect(result.warnings).toContain('injection detected');
+    });
+
+    test('dangerLevel=low時は { blocked: false, sanitized } を返す', () => {
+        sanitizePromptContentMock.mockReturnValue({
+            sanitized: 'safe content',
+            warnings: [],
+            dangerLevel: 'low'
+        });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callSanitizeContent('safe content', 'test-provider', 'trace-1');
+        expect(result.blocked).toBe(false);
+        expect(result.sanitized).toBe('safe content');
     });
 });
