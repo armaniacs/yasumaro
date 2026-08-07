@@ -69,6 +69,10 @@ class TestProvider extends AIProviderStrategy {
     callMapConnectionError(statusCode: number, providerLabel: string) {
         return this.mapConnectionError(statusCode, providerLabel);
     }
+
+    callParseAndMapFetchError(msg: string, providerLabel: string) {
+        return this.parseAndMapFetchError(msg, providerLabel);
+    }
 }
 
 class CustomIdProvider extends AIProviderStrategy {
@@ -367,5 +371,39 @@ describe('mapConnectionError', () => {
         const result = provider.callMapConnectionError(500, 'Gemini');
         expect(result.success).toBe(false);
         expect(result.message).toContain('API Error');
+    });
+});
+
+describe('parseAndMapFetchError', () => {
+    test('タイムアウトエラーの場合はタイムアウトメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callParseAndMapFetchError('Request timed out after 30000ms', 'OpenAI');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('timed out');
+    });
+
+    test('HTTPエラーメッセージの場合は対応するステータスメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callParseAndMapFetchError('HTTP 401: Unauthorized', 'Gemini');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Invalid API key');
+    });
+
+    test('ネットワークエラーの場合は接続エラーメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callParseAndMapFetchError('Failed to fetch', 'OpenAI');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Cannot connect');
+    });
+
+    test('その他エラーの場合は汎用エラーメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callParseAndMapFetchError('Unknown error', 'Gemini');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Connection error');
     });
 });

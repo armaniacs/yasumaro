@@ -130,6 +130,65 @@ export abstract class AIProviderStrategy {
     }
 
     /**
+     * fetchWithRetry がスローするエラーメッセージをパースし、ユーザー向け接続エラーメッセージに変換
+     */
+    protected parseAndMapFetchError(
+        msg: string,
+        providerLabel: string
+    ): AIProviderConnectionResult {
+        // タイムアウト判定
+        if (msg.includes('timed out') || msg.includes('timeout')) {
+            return {
+                success: false,
+                message: 'Connection timed out. Check your network or increase timeout.',
+                debug: { error: msg },
+            };
+        }
+
+        // HTTPステータスコードをパース
+        const httpMatch = msg.match(/HTTP\s+(\d+):/);
+        const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
+
+        if (statusCode === 401 || statusCode === 403) {
+            return {
+                success: false,
+                message: `Invalid API key (${statusCode}). Check your ${providerLabel} API key settings.`,
+                debug: { error: msg, statusCode },
+            };
+        } else if (statusCode === 404) {
+            return {
+                success: false,
+                message: `Model or endpoint not found (404). Check your Base URL.`,
+                debug: { error: msg, statusCode },
+            };
+        } else if (statusCode === 429) {
+            return {
+                success: false,
+                message: `Rate limit exceeded (429). Please try again later.`,
+                debug: { error: msg, statusCode },
+            };
+        } else if (statusCode >= 500) {
+            return {
+                success: false,
+                message: `${providerLabel} API server error (${statusCode}). Please try again later.`,
+                debug: { error: msg, statusCode },
+            };
+        } else if (msg.includes('Failed to fetch')) {
+            return {
+                success: false,
+                message: 'Cannot connect. Check your Base URL and network.',
+                debug: { error: msg },
+            };
+        } else {
+            return {
+                success: false,
+                message: `Connection error: ${msg}`,
+                debug: { error: msg, statusCode: statusCode || undefined },
+            };
+        }
+    }
+
+    /**
      * 要約を生成する
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
