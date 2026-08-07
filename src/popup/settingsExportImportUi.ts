@@ -3,20 +3,13 @@
  * 設定メニュー切替・エクスポート/インポート UI・インポート確認モーダル
  */
 
-import { getSettings, Settings } from '../utils/storage.js';
+import type { Settings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import {
-    exportSettings,
-    importSettings,
-    validateExportData,
-    SettingsExportData,
-    exportEncryptedSettings,
-    importEncryptedSettings,
-    saveEncryptedExportToFile,
-    isEncryptedExport,
-    ExportFileData
-} from '../utils/settingsExportImport.js';
+import { importSettings } from '../utils/settingsExportImport.js';
+import type { SettingsExportData } from '../utils/settingsExportImport.js';
+import { handleExport, handleFileImport, applyImportedSettings } from '../utils/settingsExportImportUiCore.js';
+import type { ExportContext, ImportContext, ShowPasswordAuthModal } from '../utils/settingsExportImportUiCore.js';
 import { showStatus } from './settingsUiHelper.js';
 import { getMessage } from '../utils/i18n.js';
 import { loadDomainSettings } from './domainFilter.js';
@@ -39,7 +32,7 @@ let pendingImportJson: string | null = null;
 
 type ReloadFn = () => Promise<void>;
 
-function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (actionType: 'export' | 'import', action: (password: string) => Promise<void>) => void): void {
+function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: ShowPasswordAuthModal): void {
     const settingsMenuBtn = getSettingsMenuBtnEl();
     const settingsMenu = getSettingsMenuEl();
 
@@ -65,33 +58,23 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
     const importSettingsBtn = getImportSettingsBtnEl();
     const importFileInput = getImportFileInputEl();
 
+    const exportCtx: ExportContext = {
+        showStatus: (message, type) => showStatus('status', message, type),
+        logExportError: (cause) => logError('Export error', { cause }, ErrorCode.SETTINGS_EXPORT_FAILURE),
+    };
+
+    const importCtx: ImportContext = {
+        reloadFn,
+        showStatus: (message, type) => showStatus('status', message, type),
+        logImportError: (cause) => logError('Import error', { cause }, ErrorCode.SETTINGS_IMPORT_FAILURE),
+        loadDomainSettings,
+        loadPrivacySettings,
+    };
+
     exportSettingsBtn?.addEventListener('click', async () => {
         settingsMenu?.classList.add('hidden');
         settingsMenuBtn?.setAttribute('aria-expanded', 'false');
-
-        try {
-            const settings = await getSettings();
-            const isMpEnabled = settings.mp_protection_enabled === true;
-            const isMpEncryptOnExport = settings.mp_encrypt_on_export === true;
-
-            if (isMpEnabled && isMpEncryptOnExport) {
-                showPasswordAuthModal('export', async (password) => {
-                    const result = await exportEncryptedSettings(password);
-                    if (result.success && result.encryptedData) {
-                        await saveEncryptedExportToFile(result.encryptedData);
-                        showStatus('status', getMessage('settingsExported'), 'success');
-                    } else {
-                        showStatus('status', `${getMessage('exportError')}: ${result.error || 'Unknown error'}`, 'error');
-                    }
-                });
-            } else {
-                await exportSettings();
-                showStatus('status', getMessage('settingsExported'), 'success');
-            }
-        } catch (error: unknown) {
-            logError('Export error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_EXPORT_FAILURE);
-            showStatus('status', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
-        }
+        await handleExport(exportCtx, showPasswordAuthModal);
     });
 
     importSettingsBtn?.addEventListener('click', () => {
@@ -105,59 +88,15 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
         const file = input.files?.[0];
         if (!file) return;
 
-        try {
-            const text = await file.text();
-            const parsed = JSON.parse(text) as ExportFileData;
-
-            if (isEncryptedExport(parsed)) {
-                const settings = await getSettings();
-                const isMpRequireOnImport = settings.mp_require_on_import === true;
-
-                const handleEncryptedImport = async (password: string) => {
-                    const imported = await importEncryptedSettings(text, password);
-                    if (imported) {
-                        showStatus('status', getMessage('settingsImported'), 'success');
-                        await reloadFn();
-                        await loadDomainSettings();
-                        await loadPrivacySettings();
-                    } else {
-                        showStatus('status', `${getMessage('importError')}: Failed to decrypt or apply settings`, 'error');
-                    }
-                };
-
-                if (isMpRequireOnImport) {
-                    showPasswordAuthModal('import', handleEncryptedImport);
-                } else {
-                    const warningMsg = getMessage('importPasswordRequired') || 'Master password is required to import encrypted settings.';
-                    if (confirm(warningMsg)) {
-                        showPasswordAuthModal('import', handleEncryptedImport);
-                    }
-                }
-
-                if (importFileInput) {
-                    importFileInput.value = '';
-                }
-                return;
-            }
-
-            if (!validateExportData(parsed)) {
-                showStatus('status', getMessage('invalidSettingsFile'), 'error');
-                if (importFileInput) {
-                    importFileInput.value = '';
-                }
-                return;
-            }
-
-            _pendingImportData = parsed.settings;
-            pendingImportJson = text;
-
-            showImportPreview(parsed);
-
+        await handleFileImport(file, importCtx, showPasswordAuthModal, (data, jsonText) => {
+            _pendingImportData = data.settings;
+            pendingImportJson = jsonText;
+            showImportPreview(data);
             getImportConfirmModalEl()?.showModal();
+        });
 
-        } catch (error: unknown) {
-            logError('Import error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE);
-            showStatus('status', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
+        if (importFileInput) {
+            importFileInput.value = '';
         }
     });
 
@@ -172,14 +111,7 @@ function initSettingsExportImportUi(reloadFn: ReloadFn, showPasswordAuthModal: (
 
         try {
             const imported = await importSettings(pendingImportJson);
-            if (imported) {
-                showStatus('status', getMessage('settingsImported'), 'success');
-                await reloadFn();
-                await loadDomainSettings();
-                await loadPrivacySettings();
-            } else {
-                showStatus('status', `${getMessage('importError')}: Failed to apply settings`, 'error');
-            }
+            await applyImportedSettings(importCtx, imported);
         } catch (error: unknown) {
             logError('Import error', { cause: errorMessage(error) }, ErrorCode.SETTINGS_IMPORT_FAILURE);
             showStatus('status', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
