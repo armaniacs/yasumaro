@@ -20,6 +20,7 @@ import { type AsyncDataPanel } from '../types.js';
 import { getRegistry } from '../registryContext.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { shouldFallbackToTextSearch } from '../../historyFilters.js';
+import { escapeHtml } from '../../../utils/htmlEscape.js';
 
 const PAGE_SIZE = 20;
 
@@ -51,15 +52,6 @@ function formatDate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 function formatTimestamp(ts: number): string {

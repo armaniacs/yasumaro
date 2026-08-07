@@ -1,8 +1,4 @@
-export function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+export { escapeHtml } from '../utils/htmlEscape.js';
 
 function createStatusCircle(svg: SVGSVGElement): SVGElement {
   const ns = 'http://www.w3.org/2000/svg';

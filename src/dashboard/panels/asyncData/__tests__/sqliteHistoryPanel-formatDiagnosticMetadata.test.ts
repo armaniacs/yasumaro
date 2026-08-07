@@ -56,7 +56,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     };
     const html = formatDiagnosticMetadataHtml(entry);
     expect(html).not.toContain('<script>');
-    expect(html).toContain('&lt;script&gt;alert(3)&lt;/script&gt;');
+    expect(html).toContain('&lt;script&gt;alert(3)&lt;&#x2F;script&gt;');
   });
 
   it('エスケープされない正常値はそのまま表示される', () => {

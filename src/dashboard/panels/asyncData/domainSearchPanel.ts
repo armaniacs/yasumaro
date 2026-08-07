@@ -3,10 +3,7 @@ import { getSettings, StorageKeys } from '../../../utils/storage.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
 import type { Settings } from '../../../utils/storage.js';
 import { type AsyncDataPanel } from '../types.js';
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+import { escapeHtml } from '../../../utils/htmlEscape.js';
 
 export function createDomainSearchPanel(): AsyncDataPanel {
   let searchInput: HTMLInputElement | null = null;

@@ -128,32 +128,12 @@ export const ErrorType = {
 export type ErrorTypeValues = typeof ErrorType[keyof typeof ErrorType];
 
 /**
- * HTMLエスケープ用のエンティティマッピング
- * 問題点3: HTMLエンティティエスケープ関数の追加
- */
-const HTML_ESCAPE_MAP: { [key: string]: string } = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#x27;',
-  '/': '&#x2F;'
-};
-
-/**
  * HTMLエンティティエスケープ関数
  * XSS攻撃を防ぐために、HTML文字をエンティティに変換する
  * @param {string} unsafe - エスケープ対象の文字列
  * @returns {string} HTML エンティティにエスケープされた安全な文字列
- * 問題点3: HTMLエンティティエスケープの追加
  */
-export function escapeHtml(unsafe: unknown): string {
-  if (typeof unsafe !== 'string') {
-    return '';
-  }
-
-  return unsafe.replace(/[&<>"'/]/g, (match) => HTML_ESCAPE_MAP[match]);
-}
+export { escapeHtml } from '../utils/htmlEscape.js';
 
 /**
  * 内部キーワード定数（モジュールスコープでキャッシュ）
