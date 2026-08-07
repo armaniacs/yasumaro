@@ -7,10 +7,9 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from 
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
-import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
-import { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { recordUsage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
     candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
@@ -46,22 +45,10 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, summary: "Error: API key is missing. Please check your settings." };
         }
 
-        // 月次ハードリミットチェック
-        const hardLimit = await checkHardLimit();
-        if (hardLimit.blocked) {
-            return { success: false, summary: `Error: ${hardLimit.message}` };
-        }
-
-        // 使用量警告チェック
-        const usageWarning = await checkUsageWarning();
-        if (usageWarning.warning) {
-            return { success: false, summary: `Error: ${usageWarning.message}` };
-        }
-
-        // レート制限チェック
-        const rateLimit = await checkRateLimit();
-        if (!rateLimit.allowed) {
-            return { success: false, summary: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
+        // 共通プリフライトガード
+        const preFlight = await this.checkPreFlight();
+        if (preFlight.blocked) {
+            return { success: false, summary: preFlight.message! };
         }
 
         const cleanModelName = this.model.replace(/^models\//, '');
@@ -70,19 +57,14 @@ export class GeminiProvider extends AIProviderStrategy {
         const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
         const truncatedContent = content.substring(0, maxContentChars);
 
-        // プロンプトインジェクション対策 - コンテンツのサニタイズ
-        const { sanitized: sanitizedContent, warnings, dangerLevel } = sanitizePromptContent(truncatedContent);
-        if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${this.getName()}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
-        }
-        if (dangerLevel === 'high') {
-            const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
-            addLog(LogType.ERROR, `[${this.getName()}] High risk prompt injection blocked: ${cause}`, { traceId });
-            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${cause})` };
+        // 共通サニタイズ
+        const sanitizeResult = this.sanitizeContent(truncatedContent, this.getName(), traceId);
+        if (sanitizeResult.blocked) {
+            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${sanitizeResult.warnings.join('; ')})` };
         }
 
         // カスタムプロンプトを適用（タグ付き要約モード対応）
-        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizedContent, tagSummaryMode);
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizeResult.sanitized, tagSummaryMode);
 
         const payload = {
             systemInstruction: {
@@ -179,7 +161,7 @@ export class GeminiProvider extends AIProviderStrategy {
                     timeoutMs: this.timeoutMs
                 },
                 {
-                    maxRetryCount: 1, // テスト接続はリトライ少なめ（早く失敗させる）
+                    maxRetryCount: 1,
                     initialDelayMs: 500,
                     backoffMultiplier: 2,
                     maxDelayMs: 3000
@@ -194,81 +176,12 @@ export class GeminiProvider extends AIProviderStrategy {
                 };
             }
 
-            // より詳細なエラーメッセージ
-            if (response.status === 401 || response.status === 403) {
-                return {
-                    success: false,
-                    message: `Authentication failed (${response.status}). Check your Gemini API key.`,
-                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else if (response.status === 404) {
-                return {
-                    success: false,
-                    message: `Model or endpoint not found (404). Check your model settings.`,
-                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else if (response.status === 429) {
-                return {
-                    success: false,
-                    message: `Rate limit exceeded (429). Please try again later.`,
-                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            } else {
-                return {
-                    success: false,
-                    message: `Gemini API Error: ${response.status} ${response.statusText}`,
-                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} ${response.statusText}`, statusCode: response.status },
-                };
-            }
+            // 共通HTTPステータスマッピング
+            return this.mapConnectionError(response.status, 'Gemini');
         } catch (e: unknown) {
             const msg = errorMessage(e);
-            const errorName = e instanceof Error ? e.name : 'Error';
-
-            // タイムアウトは error.name（AbortError）またはメッセージで判定
-            if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
-                return {
-                    success: false,
-                    message: 'Connection timed out. Check your network or increase timeout.',
-                    debug: { prompt: `GET ${testUrl}`, error: msg },
-                };
-            }
-
-            // fetchWithRetry throws HTTP errors as "HTTP {status}: {statusText}"
-            // Parse status code to provide specific guidance
-            const httpMatch = msg.match(/HTTP\s+(\d+):/);
-            const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
-
-            if (statusCode === 401 || statusCode === 403) {
-                return {
-                    success: false,
-                    message: 'Invalid API key (401). Check your Gemini API key settings.',
-                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
-                };
-            } else if (statusCode === 404) {
-                return {
-                    success: false,
-                    message: 'Model or endpoint not found (404). Check your model settings.',
-                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
-                };
-            } else if (statusCode === 429) {
-                return {
-                    success: false,
-                    message: 'Rate limit exceeded (429). Please try again later.',
-                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
-                };
-            } else if (statusCode >= 500) {
-                return {
-                    success: false,
-                    message: `Gemini API server error (${statusCode}). Please try again later.`,
-                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode },
-                };
-            } else {
-                return {
-                    success: false,
-                    message: `Connection error: ${msg}`,
-                    debug: { prompt: `GET ${testUrl}`, error: msg, statusCode: statusCode || undefined },
-                };
-            }
+            // 共通エラーパース
+            return this.parseAndMapFetchError(msg, 'Gemini');
         }
     }
 
