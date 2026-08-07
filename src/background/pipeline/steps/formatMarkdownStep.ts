@@ -54,9 +54,25 @@ export const formatMarkdownStep: PipelineStepFunction = async (
   // Create markdown
   const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;
 
+  // Extract domain for template placeholder
+  let domain = '';
+  try {
+    domain = new URL(sanitizedUrl).hostname;
+  } catch {
+    domain = '';
+  }
+
   return {
     ...context,
     sanitizedSummary: finalSanitizedSummary,
-    markdown
+    markdown,
+    markdownEntryData: {
+      timestamp,
+      title: sanitizedTitle,
+      url: sanitizedUrl,
+      summary: finalSanitizedSummary,
+      tags: tagPrefix.trim(),
+      domain,
+    },
   };
 };

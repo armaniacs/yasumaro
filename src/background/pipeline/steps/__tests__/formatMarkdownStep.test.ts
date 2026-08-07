@@ -270,4 +270,47 @@ describe('formatMarkdownStep', () => {
       expect(mockSanitizeUrl).toHaveBeenCalledWith('https://example.com/page');
     });
   });
+
+  describe('markdownEntryData', () => {
+    it('context.markdownEntryData に生データをセットする', async () => {
+      const context = makeContext({
+        data: { title: 'Example Page', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: undefined,
+        privacyResult: { summary: 'A summary.', maskedCount: 0, tags: ['tech', 'news'] } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdownEntryData).toBeDefined();
+      expect(result.markdownEntryData?.title).toBe('Example Page');
+      expect(result.markdownEntryData?.url).toBe('https://example.com/page');
+      expect(result.markdownEntryData?.summary).toBe('A summary.');
+      expect(result.markdownEntryData?.tags).toBe('#tech #news');
+      expect(result.markdownEntryData?.domain).toBe('example.com');
+      expect(typeof result.markdownEntryData?.timestamp).toBe('string');
+    });
+
+    it('既存の context.markdown 出力は変更されない(Obsidian用フォーマットの後方互換性)', async () => {
+      const context = makeContext({
+        data: { title: 'Example Page', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: undefined,
+        privacyResult: { summary: 'A summary.', maskedCount: 0, tags: [] } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdown).toMatch(/^- \d{1,2}:\d{2}\s*(AM|PM)?\s*\[Example Page\]\(https:\/\/example\.com\/page\)\n {4}- A summary\.$/);
+    });
+
+    it('URL が不正な場合 domain は空文字にフォールバックする', async () => {
+      const context = makeContext({
+        data: { title: 'Bad URL', url: 'not-a-valid-url', content: '' },
+        sanitizedSummary: 'Summary text',
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdownEntryData?.domain).toBe('');
+    });
+  });
 });
