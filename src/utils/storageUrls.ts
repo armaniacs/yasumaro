@@ -22,7 +22,7 @@ export {
     removeSavedUrl,
     isUrlSaved,
     getSavedUrlCount
-} from './urlStorage.js';
+} from './storage/savedUrlStore.js';
 
 // URLメタデータ設定機能
 export {

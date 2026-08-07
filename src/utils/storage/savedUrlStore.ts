@@ -2,25 +2,17 @@
  * storage/savedUrlStore.ts
  * Saved-URL set with LRU eviction and per-URL timestamp/metadata tracking.
  * Split out of storage.ts (PBI: storage.ts deepening).
+ * Integrates legacy urlStorage.ts (PBI: legacy urlStorage removal).
  */
 
 import { withOptimisticLock } from '../optimisticLock.js';
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
+import type { RecordType } from '../commonTypes.js';
+import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
+import type { SavedUrlEntry } from '../urlEntry.js';
 
-// URL set size limit constants
-export const MAX_URL_SET_SIZE = 10000;
-export const URL_WARNING_THRESHOLD = 8000;
-export const URL_RETENTION_DAYS = 35;
-
-export interface SavedUrlEntry {
-    url: string;
-    timestamp: number;
-    recordType?: string;
-    maskedCount?: number;
-    tags?: string[];
-    /** Tranco信頼ドメインが使用されたか（Phase 1) */
-    isTrancoDomain?: boolean;
-}
+export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
+export type { SavedUrlEntry } from '../urlEntry.js';
 
 /**
  * Get the list of saved URLs with LRU eviction
@@ -46,30 +38,12 @@ export async function getSavedUrlsWithTimestamps(): Promise<Map<string, number>>
 }
 
 /**
- * Update URL timestamp for LRU tracking
- * @param {string} url - URL to update
+ * 記録方式を含む詳細なURLエントリをすべて取得
+ * @returns {Promise<SavedUrlEntry[]>} 保存されたURLエントリの配列
  */
-async function updateUrlTimestamp(url: string): Promise<void> {
+export async function getSavedUrlEntries(): Promise<SavedUrlEntry[]> {
     const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    let entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
-
-    // 既存のURLがある場合は削除
-    entries = entries.filter(entry => entry.url !== url);
-
-    // 新しいエントリを追加
-    entries.push({ url, timestamp: Date.now() });
-
-    // 7日より古いエントリを削除（日数ベース）
-    const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    entries = entries.filter(entry => entry.timestamp >= cutoff);
-
-    // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
-    if (entries.length > MAX_URL_SET_SIZE) {
-        entries.sort((a, b) => a.timestamp - b.timestamp);
-        entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
-    }
-
-    await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
+    return (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
 }
 
 /**
@@ -115,7 +89,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
     const urlArray = Array.from(urlMap.keys());
 
     // savedUrlsWithTimestampsの楽観的ロックを使用
-    // 既存エントリの recordType / maskedCount / tags を保持しつつ timestamp だけ更新する
+    // 既存エントリの recordType / maskedCount / tags / content / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を保持しつつ timestamp だけ更新する
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
@@ -128,21 +102,134 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
             if (existing?.recordType !== undefined) entry.recordType = existing.recordType;
             if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
             if (existing?.tags !== undefined) entry.tags = existing.tags;
+            if (existing?.content !== undefined) entry.content = existing.content;
+            if (existing?.aiSummary !== undefined) entry.aiSummary = existing.aiSummary;
+            if (existing?.sentTokens !== undefined) entry.sentTokens = existing.sentTokens;
+            if (existing?.receivedTokens !== undefined) entry.receivedTokens = existing.receivedTokens;
+            if (existing?.originalTokens !== undefined) entry.originalTokens = existing.originalTokens;
+            if (existing?.cleansedTokens !== undefined) entry.cleansedTokens = existing.cleansedTokens;
+            if (existing?.originalBytes !== undefined) entry.originalBytes = existing.originalBytes;
+            if (existing?.cleansedBytes !== undefined) entry.cleansedBytes = existing.cleansedBytes;
+            if (existing?.aiSummaryOriginalBytes !== undefined) entry.aiSummaryOriginalBytes = existing.aiSummaryOriginalBytes;
+            if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
+            if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
+            if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+            if (existing?.aiSummaryCleansedReasons !== undefined) entry.aiSummaryCleansedReasons = existing.aiSummaryCleansedReasons;
+            if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
+            if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
+            if (existing?.aiProvider !== undefined) entry.aiProvider = existing.aiProvider;
+            if (existing?.aiModel !== undefined) entry.aiModel = existing.aiModel;
+            if (existing?.aiDuration !== undefined) entry.aiDuration = existing.aiDuration;
+            if (existing?.obsidianDuration !== undefined) entry.obsidianDuration = existing.obsidianDuration;
             entries.push(entry);
         }
+        // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
+        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
         return entries;
     });
 
+    // savedUrlsがsavedUrlsWithTimestampsと同期されていない場合は個別に更新
+    // (互換性維持のため、savedUrlsも保存する)
+    // withOptimisticLockを使用して原子的に更新
+    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
+        const currentSet = new Set(currentUrls || []);
+        const newSet = new Set(urlArray);
+
+        // サイズが異なる場合は即座に更新
+        if (currentSet.size !== newSet.size) {
+            return Array.from(newSet);
+        }
+
+        // for...ofループで比較（O(n)配列アロケーションなし）
+        for (const x of currentSet) {
+            if (!newSet.has(x)) {
+                return Array.from(newSet);
+            }
+        }
+
+        return currentUrls; // 変更なしの場合は元の値を返す
+    });
+}
+
+/**
+ * Update URL timestamp for LRU tracking
+ * 【recordType上書き競合対策】楽観的ロックを使用して安全に更新
+ * @param {string} url - URL to update
+ * @param {RecordType} [recordType] - 記録方式
+ */
+async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise<void> {
+    // 【recordType上書き競合対策】楽観的ロックを使用
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        let entries = currentEntries || [];
+
+        // 既存のURLエントリを取得してから削除
+        const existing = entries.find(entry => entry.url === url);
+        entries = entries.filter(entry => entry.url !== url);
+
+        // 新しいエントリを追加（既存の tags / maskedCount / content / cleansedReason / aiSummary / sentTokens / receivedTokens / originalTokens / cleansedTokens / originalBytes / cleansedBytes / aiSummaryOriginalBytes / aiSummaryCleansedBytes / aiSummaryCleansedElements / aiSummaryCleansedReason を引き継ぐ）
+        const entry: SavedUrlEntry = { url, timestamp: Date.now() };
+        if (recordType) entry.recordType = recordType;
+        if (existing?.maskedCount !== undefined) entry.maskedCount = existing.maskedCount;
+        if (existing?.tags !== undefined) entry.tags = existing.tags;
+        if (existing?.content !== undefined) entry.content = existing.content;
+        if (existing?.cleansedReason !== undefined) entry.cleansedReason = existing.cleansedReason;
+        if (existing?.aiSummary !== undefined) entry.aiSummary = existing.aiSummary;
+        if (existing?.sentTokens !== undefined) entry.sentTokens = existing.sentTokens;
+        if (existing?.receivedTokens !== undefined) entry.receivedTokens = existing.receivedTokens;
+        if (existing?.originalTokens !== undefined) entry.originalTokens = existing.originalTokens;
+        if (existing?.cleansedTokens !== undefined) entry.cleansedTokens = existing.cleansedTokens;
+        if (existing?.originalBytes !== undefined) entry.originalBytes = existing.originalBytes;
+        if (existing?.cleansedBytes !== undefined) entry.cleansedBytes = existing.cleansedBytes;
+        if (existing?.aiSummaryOriginalBytes !== undefined) entry.aiSummaryOriginalBytes = existing.aiSummaryOriginalBytes;
+        if (existing?.aiSummaryCleansedBytes !== undefined) entry.aiSummaryCleansedBytes = existing.aiSummaryCleansedBytes;
+        if (existing?.aiSummaryCleansedElements !== undefined) entry.aiSummaryCleansedElements = existing.aiSummaryCleansedElements;
+        if (existing?.aiSummaryCleansedReason !== undefined) entry.aiSummaryCleansedReason = existing.aiSummaryCleansedReason;
+        if (existing?.aiSummaryCleansedReasons !== undefined) entry.aiSummaryCleansedReasons = existing.aiSummaryCleansedReasons;
+        if (existing?.pageBytes !== undefined) entry.pageBytes = existing.pageBytes;
+        if (existing?.candidateBytes !== undefined) entry.candidateBytes = existing.candidateBytes;
+        if (existing?.aiProvider !== undefined) entry.aiProvider = existing.aiProvider;
+        if (existing?.aiModel !== undefined) entry.aiModel = existing.aiModel;
+        if (existing?.aiDuration !== undefined) entry.aiDuration = existing.aiDuration;
+        if (existing?.obsidianDuration !== undefined) entry.obsidianDuration = existing.obsidianDuration;
+        entries.push(entry);
+
+        // 7日より古いエントリを削除（日数ベース）
+        const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+        entries = entries.filter(entry => entry.timestamp >= cutoff);
+
+        // それでもMAX_URL_SET_SIZEを超える場合は古い順にLRU削除
+        if (entries.length > MAX_URL_SET_SIZE) {
+            entries.sort((a, b) => a.timestamp - b.timestamp);
+            entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+        }
+
+        // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
+        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+
+        return entries;
+    });
+
+    // savedUrlsセットも同期（isUrlSaved, getSavedUrlCountで使用）
+    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
+        const currentSet = new Set(currentUrls || []);
+        currentSet.add(url);
+        return Array.from(currentSet);
+    });
 }
 
 /**
  * Add a URL to the saved list with LRU tracking (日付ベース対応)
  * @param {string} url - URL to add
+ * @param {RecordType} [recordType] - 記録方式
  */
-export async function addSavedUrl(url: string): Promise<void> {
-    const urlMap = await getSavedUrlsWithTimestamps();
-    urlMap.set(url, Date.now());
-    await setSavedUrlsWithTimestamps(urlMap, url);
+export async function addSavedUrl(url: string, recordType?: RecordType): Promise<void> {
+    if (recordType) {
+        await updateUrlTimestamp(url, recordType);
+    } else {
+        await updateUrlTimestamp(url);
+    }
 }
 
 /**
