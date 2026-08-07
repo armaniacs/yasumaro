@@ -45,9 +45,8 @@ describe('escapeHtml', () => {
     });
 
     it('should escape all special characters together', () => {
-        // Note: escapeHtml only escapes &, <, > - not quotes or other chars
         expect(escapeHtml('<script>alert("xss") & "test"')).toBe(
-            '&lt;script&gt;alert("xss") &amp; "test"'
+            '&lt;script&gt;alert(&quot;xss&quot;) &amp; &quot;test&quot;'
         );
     });
 
@@ -68,7 +67,7 @@ describe('renderInline', () => {
     describe('links', () => {
         it('should render https links', () => {
             const result = renderInline('[OpenAI](https://openai.com)');
-            expect(result).toContain('<a href="https://openai.com">OpenAI</a>');
+            expect(result).toContain('<a href="https:&#x2F;&#x2F;openai.com">OpenAI</a>');
         });
 
         it('should render anchor links', () => {
@@ -88,8 +87,8 @@ describe('renderInline', () => {
 
         it('should handle multiple links', () => {
             const result = renderInline('[A](https://a.com) and [B](https://b.com)');
-            expect(result).toContain('<a href="https://a.com">A</a>');
-            expect(result).toContain('<a href="https://b.com">B</a>');
+            expect(result).toContain('<a href="https:&#x2F;&#x2F;a.com">A</a>');
+            expect(result).toContain('<a href="https:&#x2F;&#x2F;b.com">B</a>');
         });
     });
 
@@ -123,7 +122,7 @@ describe('renderInline', () => {
         const result = renderInline('**bold** and `code` and [link](https://example.com)');
         expect(result).toContain('<strong>bold</strong>');
         expect(result).toContain('<code>code</code>');
-        expect(result).toContain('<a href="https://example.com">link</a>');
+        expect(result).toContain('<a href="https:&#x2F;&#x2F;example.com">link</a>');
     });
 
     it('should handle empty string', () => {

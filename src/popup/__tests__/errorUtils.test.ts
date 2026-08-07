@@ -329,7 +329,7 @@ describe('escapeHtml - XSS対策テスト（問題点3）', () => {
 
     it('シングルクォートをエスケープする', () => {
       const result = escapeHtml("'");
-      expect(result).toBe('&#x27;');
+      expect(result).toBe('&#039;');
       expect(result).not.toBe("'");
     });
 

@@ -6,17 +6,9 @@
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-dom.js';
 
-/**
- * HTMLエスケープ処理
- * @param text エスケープするテキスト
- * @returns エスケープ後のテキスト
- */
-export function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
+import { escapeHtml } from '../utils/htmlEscape.js';
+
+export { escapeHtml };
 
 /**
  * MarkdownテキストをHTMLに変換する
