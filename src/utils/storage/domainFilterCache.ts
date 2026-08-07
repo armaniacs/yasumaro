@@ -7,6 +7,7 @@
 
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
+import { wildcardToRegex } from '../wildcardToRegex.js';
 
 /**
  * ドメインフィルタキャッシュの有効期限（ミリ秒）
@@ -79,15 +80,14 @@ export function normalizeDomainUrl(url: string): string | null {
  * @returns {boolean} 一致する場合true
  */
 export function matchesWildcardPattern(domain: string, pattern: string): boolean {
-    if (pattern.includes('*')) {
-        // ワイルドカードパターンを正規表現に変換
-        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regexPattern = escaped.replace(/\\\*/g, '.*');
-        const regex = new RegExp(`^${regexPattern}$`, 'i');
-        return regex.test(domain);
-    }
     // 完全一致（大文字小文字区別なし）
-    return domain.toLowerCase() === pattern.toLowerCase();
+    if (!pattern.includes('*')) {
+        return domain.toLowerCase() === pattern.toLowerCase();
+    }
+    // ワイルドカードパターンを正規表現に変換（共有のReDoSガード付き実装）
+    const regex = wildcardToRegex(pattern);
+    if (!regex) return false;
+    return regex.test(domain);
 }
 
 /**
