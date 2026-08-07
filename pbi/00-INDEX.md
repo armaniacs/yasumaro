@@ -14,6 +14,19 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
+| ⬜ [2026-08-07-01-refactor-ai-provider-common-extraction.md](2026-08-07-01-refactor-ai-provider-common-extraction.md) | 🟡中 | 🟡軽微 | 🔧 | AIプロバイダーの重複ロジックをProviderStrategy基底クラスに抽出する
+| ⬜ [2026-08-07-02-refactor-master-password-ui-unification.md](2026-08-07-02-refactor-master-password-ui-unification.md) | 🟡中 | 🟡軽微 | 🔧 | マスターパスワードUIのpopup/dashboard間重複を統合する
+| ⬜ [2026-08-07-03-refactor-settings-export-import-ui-unification.md](2026-08-07-03-refactor-settings-export-import-ui-unification.md) | 🟡中 | 🟡軽微 | 🔧 | 設定エクスポート/インポートUIのpopup/dashboard間重複を統合する
+| ⬜ [2026-08-07-04-refactor-utility-functions-consolidation.md](2026-08-07-04-refactor-utility-functions-consolidation.md) | 🟢低 | 🟢なし | 🔧 | 重複ユーティリティ関数（escapeHtml, base64, showStatus等）を共通化する
+| ⬜ [2026-08-07-05-refactor-domain-matching-consolidation.md](2026-08-07-05-refactor-domain-matching-consolidation.md) | 🟢低 | 🟢なし | 🔧 | ドメインマッチング関数（extractDomain, matchesPattern, isDomainInList）を統合する
+| ⬜ [2026-08-07-06-refactor-legacy-url-storage-removal.md](2026-08-07-06-refactor-legacy-url-storage-removal.md) | 🟢低 | 🟢なし | 🔧 | レガシーurlStorage.tsをsavedUrlStore.tsに統合して削除する
+| ✅ [2026-08-07-07-refactor-allowed-urls-single-source.md](2026-08-07-07-refactor-allowed-urls-single-source.md) | 🟢低 | 🟡軽微 | 🔧 | 許可URL二重実装の単一ソース化とObsidianポートデフォルト不一致(27123/27124)の修正 |
+| 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合 |
+| ✅ [2026-08-07-09-refactor-pending-queue-unification.md](2026-08-07-09-refactor-pending-queue-unification.md) | 🟡中 | 🟡軽微 | 🔧 | 保留キュー3実装(pendingSqlite/pendingChromeStorage/offlineNetwork)の共通化 |
+| ✅ [2026-08-07-10-refactor-provider-labels-single-source.md](2026-08-07-10-refactor-provider-labels-single-source.md) | 🟢低 | 🟢なし | 🔧 | PROVIDER_LABELSのpopup内複製を単一ソース化する |
+| ✅ [2026-08-07-11-refactor-sqlite-extract-domain-consolidation.md](2026-08-07-11-refactor-sqlite-extract-domain-consolidation.md) | 🟢低 | 🟡軽微 | 🔧 | sqliteEngineContextのextractDomainを正規実装(domainUtils)に統合する |
+| ✅ [2026-08-07-12-refactor-duplicate-test-consolidation.md](2026-08-07-12-refactor-duplicate-test-consolidation.md) | 🟡中 | 🟢なし | 🔧 | 重複テストファイル(Gemini/OpenAI/fieldValidation)と共通モックを整理する |
+| 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補を整理する |
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
@@ -238,6 +251,6 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 0 |
+| ⬜ 未着手 | 7（✨機能追加 0 / 🔧非機能追加 7） |
+| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
 | アーカイブ済み | 199 |
