@@ -9,6 +9,7 @@ import { createSqliteHistoryPanel } from './panels/asyncData/sqliteHistoryPanel.
 import { createGeneralSettingsPanel } from './panels/staticForm/generalSettingsPanel.js';
 import { createDomainFilterPanel } from './panels/staticForm/domainFilterPanel.js';
 import { createPromptSettingsPanel } from './panels/staticForm/promptSettingsPanel.js';
+import { createMarkdownTemplatePanel } from './panels/staticForm/markdownTemplatePanel.js';
 import { createPrivacySettingsPanel } from './panels/staticForm/privacySettingsPanel.js';
 import { createContentSettingsPanel } from './panels/staticForm/contentSettingsPanel.js';
 import { createAiSummaryCleansingPanel } from './panels/staticForm/aiSummaryCleansingPanel.js';
@@ -34,6 +35,7 @@ bootstrapper.registerPanels([
   createGeneralSettingsPanel(),
   createDomainFilterPanel(),
   createPromptSettingsPanel(),
+  createMarkdownTemplatePanel(),
   createPrivacySettingsPanel(),
   createContentSettingsPanel(),
   createAiSummaryCleansingPanel(),

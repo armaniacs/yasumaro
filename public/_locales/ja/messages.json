@@ -831,6 +831,78 @@
   "promptHelp": {
     "message": "{{content}}をページ内容のプレースホルダーとして使用してください。このプロンプトは要約生成時に使用されます。"
   },
+  "markdownTemplateTab": {
+    "message": "Markdownテンプレート"
+  },
+  "markdownTemplatePanelHeading": {
+    "message": "ローカル Markdown 書き出しテンプレート"
+  },
+  "markdownTemplatePanelDescription": {
+    "message": "ローカル Markdown 書き出しファイルの形式をカスタマイズします。"
+  },
+  "markdownTemplateSavedTemplates": {
+    "message": "保存済みテンプレート"
+  },
+  "markdownTemplateCreateBtn": {
+    "message": "新規テンプレート作成"
+  },
+  "markdownTemplateEditorHeading": {
+    "message": "テンプレートエディタ"
+  },
+  "markdownTemplateNameLabel": {
+    "message": "テンプレート名"
+  },
+  "markdownTemplateFileLabel": {
+    "message": "ファイルテンプレート"
+  },
+  "markdownTemplateEntryLabel": {
+    "message": "エントリテンプレート"
+  },
+  "markdownTemplateFilePlaceholders": {
+    "message": "ファイルテンプレートで使用可能: {{date}} {{entryCount}} {{entries}}"
+  },
+  "markdownTemplateEntryPlaceholders": {
+    "message": "エントリテンプレートで使用可能: {{timestamp}} {{title}} {{url}} {{summary}} {{tags}} {{domain}}"
+  },
+  "markdownTemplatePreviewLabel": {
+    "message": "プレビュー"
+  },
+  "markdownTemplateSaveBtn": {
+    "message": "保存"
+  },
+  "markdownTemplateActiveLabel": {
+    "message": "有効"
+  },
+  "markdownTemplateDefaultName": {
+    "message": "デフォルト"
+  },
+  "markdownTemplateConfirmDelete": {
+    "message": "このテンプレートを削除してもよろしいですか？"
+  },
+  "markdownTemplateCreated": {
+    "message": "テンプレートを作成しました"
+  },
+  "markdownTemplateUpdated": {
+    "message": "テンプレートを更新しました"
+  },
+  "markdownTemplateDeleted": {
+    "message": "テンプレートを削除しました"
+  },
+  "markdownTemplateActivated": {
+    "message": "テンプレートを有効化しました"
+  },
+  "markdownTemplateNameRequired": {
+    "message": "テンプレート名を入力してください"
+  },
+  "markdownTemplateCopySuffix": {
+    "message": "コピー"
+  },
+  "markdownTemplateNewName": {
+    "message": "新規テンプレート"
+  },
+  "markdownTemplateInvalidPrefix": {
+    "message": "テンプレートが無効です:"
+  },
   "savedPrompts": {
     "message": "保存済みプロンプト"
   },
