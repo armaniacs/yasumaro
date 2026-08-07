@@ -3,23 +3,20 @@
  * Settings export/import and log import functionality for the dashboard
  */
 
-import { getSettings, Settings } from '../utils/storage.js';
+import type { Settings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../popup/settingsUiHelper.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
+import { importSettings } from '../utils/settingsExportImport.js';
+import type { SettingsExportData } from '../utils/settingsExportImport.js';
 import {
-  exportSettings,
-  importSettings,
-  validateExportData,
-  SettingsExportData,
-  exportEncryptedSettings,
-  importEncryptedSettings,
-  saveEncryptedExportToFile,
-  isEncryptedExport,
-  ExportFileData
-} from '../utils/settingsExportImport.js';
+  handleExport,
+  handleFileImport,
+  applyImportedSettings,
+} from '../utils/settingsExportImportUiCore.js';
+import type { ExportContext, ImportContext } from '../utils/settingsExportImportUiCore.js';
 import { loadDomainSettings } from '../popup/domainFilter.js';
 import { loadPrivacySettings } from '../popup/privacySettings.js';
 import { loadContentSettings } from '../popup/contentSettings.js';
@@ -90,29 +87,24 @@ function showImportPreview(data: SettingsExportData): void {
 }
 
 export function initExportImport(): void {
-  exportSettingsBtn?.addEventListener('click', async () => {
-    try {
-      const settings = await getSettings();
-      const isMpEnabled = settings.mp_protection_enabled === true;
-      const isMpEncryptOnExport = settings.mp_encrypt_on_export === true;
+  const exportCtx: ExportContext = {
+    showStatus: (message, type) => showStatus('exportImportStatus', message, type),
+  };
 
-      if (isMpEnabled && isMpEncryptOnExport) {
-        showPasswordAuthModal('export', async (password) => {
-          const result = await exportEncryptedSettings(password);
-          if (result.success && result.encryptedData) {
-            await saveEncryptedExportToFile(result.encryptedData);
-            showStatus('exportImportStatus', getMessage('settingsExported'), 'success');
-          } else {
-            showStatus('exportImportStatus', `${getMessage('exportError')}: ${result.error || 'Unknown error'}`, 'error');
-          }
-        });
-      } else {
-        await exportSettings();
-        showStatus('exportImportStatus', getMessage('settingsExported'), 'success');
-      }
-    } catch (error: unknown) {
-      showStatus('exportImportStatus', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
-    }
+  const importCtx: ImportContext = {
+    reloadFn: async () => {},
+    showStatus: (message, type) => showStatus('exportImportStatus', message, type),
+    loadDomainSettings,
+    loadPrivacySettings,
+    loadContentSettings,
+    loadTrustSettings,
+    loadGeneralSettings: async () => {
+      document.dispatchEvent(new CustomEvent('reload-general-settings'));
+    },
+  };
+
+  exportSettingsBtn?.addEventListener('click', async () => {
+    await handleExport(exportCtx, showPasswordAuthModal);
   });
 
   importSettingsBtn?.addEventListener('click', () => {
@@ -124,50 +116,10 @@ export function initExportImport(): void {
     const file = input.files?.[0];
     if (!file) return;
 
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text) as ExportFileData;
-
-      if (isEncryptedExport(parsed)) {
-        const settings = await getSettings();
-        const isMpRequireOnImport = settings.mp_require_on_import === true;
-
-        const handleEncryptedImport = async (password: string) => {
-          const imported = await importEncryptedSettings(text, password);
-          if (imported) {
-            showStatus('exportImportStatus', getMessage('settingsImported'), 'success');
-            await loadGeneralSettingsForImport();
-            await loadDomainSettings();
-            await loadPrivacySettings();
-            await loadContentSettings();
-            await loadTrustSettings();
-          } else {
-            showStatus('exportImportStatus', `${getMessage('importError')}: Failed to decrypt or apply settings`, 'error');
-          }
-        };
-
-        if (isMpRequireOnImport) {
-          showPasswordAuthModal('import', handleEncryptedImport);
-        } else {
-          const warningMsg = getMessage('importPasswordRequired') || 'Master password is required to import encrypted settings.';
-          if (confirm(warningMsg)) {
-            showPasswordAuthModal('import', handleEncryptedImport);
-          }
-        }
-
-        if (importFileInput) importFileInput.value = '';
-        return;
-      }
-
-      if (!validateExportData(parsed)) {
-        showStatus('exportImportStatus', getMessage('invalidSettingsFile'), 'error');
-        if (importFileInput) importFileInput.value = '';
-        return;
-      }
-
-      _pendingImportData = parsed.settings;
-      pendingImportJson = text;
-      showImportPreview(parsed);
+    await handleFileImport(file, importCtx, showPasswordAuthModal, (data, jsonText) => {
+      _pendingImportData = data.settings;
+      pendingImportJson = jsonText;
+      showImportPreview(data);
 
       if (importConfirmModal) {
         importConfirmModal.classList.remove('hidden');
@@ -177,9 +129,9 @@ export function initExportImport(): void {
         importConfirmModal.setAttribute('aria-hidden', 'false');
         importTrapId = focusTrapManager.trap(importConfirmModal, closeImportModal);
       }
-    } catch (error: unknown) {
-      showStatus('exportImportStatus', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
-    }
+    });
+
+    if (importFileInput) importFileInput.value = '';
   });
 
   closeImportModalBtn?.addEventListener('click', closeImportModal);
@@ -189,16 +141,7 @@ export function initExportImport(): void {
     if (!pendingImportJson) { closeImportModal(); return; }
     try {
       const imported = await importSettings(pendingImportJson);
-      if (imported) {
-        showStatus('exportImportStatus', getMessage('settingsImported'), 'success');
-        await loadGeneralSettingsForImport();
-        await loadDomainSettings();
-        await loadPrivacySettings();
-        await loadContentSettings();
-        await loadTrustSettings();
-      } else {
-        showStatus('exportImportStatus', `${getMessage('importError')}: Failed to apply settings`, 'error');
-      }
+      await applyImportedSettings(importCtx, imported);
     } catch (error: unknown) {
       showStatus('exportImportStatus', `${getMessage('importError')}: ${errorMessage(error)}`, 'error');
     }
@@ -257,12 +200,4 @@ export function initExportImport(): void {
 
     if (importLogsFileInput) importLogsFileInput.value = '';
   });
-}
-
-// Helper function to reload general settings after import
-async function loadGeneralSettingsForImport(): Promise<void> {
-  // This is a placeholder that will be replaced with the actual implementation
-  // The actual implementation is in dashboard.ts and will be called via event or callback
-  // For now, we dispatch a custom event that dashboard.ts can listen to
-  document.dispatchEvent(new CustomEvent('reload-general-settings'));
 }
