@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.17` リリース。
+> - 現時点では `v6.7.18` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,35 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.18] - 2026-08-07
+
+ローカル Markdown 書き出し（自動エクスポート・ダッシュボード手動エクスポート）の出力フォーマットをユーザーがテンプレートとしてカスタマイズできる機能を追加。
+
+### Features / 新機能
+
+- **ローカル Markdown 書き出しテンプレート機能** — 自動エクスポート（`saveLocalMarkdownStep`）とダッシュボード手動エクスポート（日付範囲指定・全履歴）で共通のテンプレートエンジンを使用し、出力フォーマットをカスタマイズ可能に
+  - ファイルテンプレート（`{{date}}` `{{entryCount}}` `{{entries}}`）とエントリテンプレート（`{{timestamp}}` `{{title}}` `{{url}}` `{{summary}}` `{{tags}}` `{{domain}}`）の2層構造
+  - 新規モジュール `src/utils/markdownTemplateUtils.ts` — レンダリング・バリデーション（未知プレースホルダー検出・`{{entries}}` 必須チェック）・CRUD 関数群
+  - デフォルトテンプレートは既存のハードコード出力形式を再現し、既存ユーザーの出力は変更なし
+  - ダッシュボードに「Markdown テンプレート」管理パネルを追加 — 一覧表示・作成・編集・削除・複製・アクティブ化・プレースホルダーヘルプ・サンプルデータによる即時プレビュー
+  - デフォルトテンプレートは編集・削除不可（複製してカスタム版を作成する運用）
+  - Obsidian 送信経路（デイリーノートへの追記フォーマット）は対象外、現状のまま維持
+
+### Bug Fixes / バグ修正
+
+- **自動ローカル Markdown エクスポートが機能していなかった問題を修正** — `flushBufferedExports()` が `chrome.storage.local.get(Object.keys(StorageKeys))` を呼んでおり、渡していたのが実際のストレージキー値ではなく enum のプロパティ名だったため、動的なバッファキー（`local_export_YYYY-MM-DD`）を一度も取得できていなかった。2026-07-20 のメモリ圧迫対策コミット（キー指定取得への変更）で混入し、以降 timing 設定（immediate/idle/daily）にかかわらずファイルが一切ダウンロードされない状態が続いていた。全件取得（引数なし `get()`）に戻して解消
+  - `unlimitedStorage` 権限が有効なこと、大容量コンテンツは既に SQLite 側と件数上限で抑制されていることを確認済み
+
+### Refactor / リファクタ
+
+- **4箇所に重複していた Markdown 整形ロジックのうち2経路を統合** — 自動エクスポートとダッシュボード手動エクスポートを単一のテンプレートレンダリングロジックに統合し、常に同じフォーマットが適用されるように変更
+- **`MarkdownEntry` を生データベースの構造に変更** — 保存済みバッファは事前レンダリング済みの `markdown: string` ではなく、生データ（`entryData: MarkdownTemplateEntryData`）を保持するように変更。旧形式のバッファエントリは自動的にスキップされ、フラッシュ処理全体には影響しない
+
+### Tests / テスト
+
+- `markdownTemplateUtils.ts` の単体テスト（レンダリング・バリデーション・CRUD）を追加
+- 「UI でテンプレートを作成 → アクティブ化 → 自動エクスポートに反映」までのエンドツーエンド統合テストを追加（`chrome.storage.local` / `chrome.downloads.download` のみモック）
 
 ## [6.7.17] - 2026-08-06
 
