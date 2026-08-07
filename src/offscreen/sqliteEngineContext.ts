@@ -698,11 +698,14 @@ export class SqliteEngineContext {
 
 /**
  * Extract the domain from a URL string.
+ * Matches the canonical utils/domainUtils behavior for the www-prefix (stripped).
+ * Returns the original url on parse failure to preserve the non-null string
+ * contract used by the DB insert path (mirrors storageFallback.extractDomain).
  */
 export function extractDomain(url: string): string {
   try {
     const parsed = new URL(url);
-    return parsed.hostname;
+    return parsed.hostname.replace(/^www\./, '');
   } catch {
     return url;
   }
