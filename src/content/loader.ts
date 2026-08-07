@@ -31,8 +31,11 @@ const StorageKeys = {
     UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled'
 };
 
-// 内部スキームの早期リターン定数（※ loader.ts は Content Script エントリポイントのため静的 import/export 不可）
-// テスト可能な正本は urlSkipper.ts を参照
+// 注意: 以下の関数群（SKIPPED_PROTOCOLS / shouldSkipUrl / extractDomain /
+// matchesPattern / isDomainInList）は loader.ts（Content Script エントリポイント）が
+// 静的 import できない（manifest.json の content_scripts は "type": "module" なしで
+// 登録されるため）ことから、urlSkipper.ts から複製している。
+// 正本は src/content/urlSkipper.ts。ロジック変更時は必ず urlSkipper.ts と同期すること。
 const SKIPPED_PROTOCOLS = [
     'chrome://',
     'chrome-extension://',
