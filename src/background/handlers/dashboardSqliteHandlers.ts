@@ -6,29 +6,13 @@ import { ObsidianClient } from '../obsidianClient.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
+import { bytesToBase64, base64ToBytes } from '../../utils/crypto/index.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 const MAX_APPEND_IDS = 100;
 // VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
 // (the append path already caps at MAX_APPEND_IDS).
 const MAX_IMPORT_ROWS = 5000;
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!);
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
 
 export interface DashboardSqliteHandlerDeps {
   query: (params: Record<string, unknown>) => Promise<{ rows: unknown[]; total: number } | null>;
