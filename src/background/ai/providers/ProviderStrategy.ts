@@ -134,10 +134,11 @@ export abstract class AIProviderStrategy {
      */
     protected parseAndMapFetchError(
         msg: string,
-        providerLabel: string
+        providerLabel: string,
+        errorName?: string
     ): AIProviderConnectionResult {
-        // タイムアウト判定
-        if (msg.includes('timed out') || msg.includes('timeout')) {
+        // タイムアウト判定（AbortErrorはメッセージが環境依存のため name でも判定）
+        if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
             return {
                 success: false,
                 message: 'Connection timed out. Check your network or increase timeout.',

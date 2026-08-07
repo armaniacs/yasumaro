@@ -180,8 +180,9 @@ export class GeminiProvider extends AIProviderStrategy {
             return this.mapConnectionError(response.status, 'Gemini');
         } catch (e: unknown) {
             const msg = errorMessage(e);
+            const errorName = e instanceof Error ? e.name : undefined;
             // 共通エラーパース
-            return this.parseAndMapFetchError(msg, 'Gemini');
+            return this.parseAndMapFetchError(msg, 'Gemini', errorName);
         }
     }
 

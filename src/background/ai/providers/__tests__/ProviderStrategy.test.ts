@@ -70,8 +70,8 @@ class TestProvider extends AIProviderStrategy {
         return this.mapConnectionError(statusCode, providerLabel);
     }
 
-    callParseAndMapFetchError(msg: string, providerLabel: string) {
-        return this.parseAndMapFetchError(msg, providerLabel);
+    callParseAndMapFetchError(msg: string, providerLabel: string, errorName?: string) {
+        return this.parseAndMapFetchError(msg, providerLabel, errorName);
     }
 }
 
@@ -379,6 +379,14 @@ describe('parseAndMapFetchError', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('Request timed out after 30000ms', 'OpenAI');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('timed out');
+    });
+
+    test('AbortError name の場合はタイムアウトメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callParseAndMapFetchError('The operation was aborted', 'OpenAI', 'AbortError');
         expect(result.success).toBe(false);
         expect(result.message).toContain('timed out');
     });
