@@ -26,6 +26,12 @@ export async function flushBufferedExports(
     const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
     const activeTemplate = getActiveTemplate(templates, activeTemplateId);
 
+    // Deliberately no-arg (fetch all of storage): the daily buffer keys this
+    // loop looks for (`local_export_YYYY-MM-DD`, DAILY_BUFFER_PREFIX) are
+    // dynamic and never enumerated in StorageKeys, so a keyed get() cannot
+    // find them — see 195ff96 (keyed get(), broke this feature entirely)
+    // and its revert. Full-storage reads are safe here: unlimitedStorage is
+    // granted, large content is capped elsewhere, and history lives in SQLite.
     const all = await chrome.storage.local.get();
 
     for (const key of Object.keys(all)) {
