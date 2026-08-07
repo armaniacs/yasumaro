@@ -285,7 +285,9 @@ describe('formatMarkdownStep', () => {
       expect(result.markdownEntryData?.title).toBe('Example Page');
       expect(result.markdownEntryData?.url).toBe('https://example.com/page');
       expect(result.markdownEntryData?.summary).toBe('A summary.');
-      expect(result.markdownEntryData?.tags).toBe('#tech #news');
+      // Fix 3: tags keeps its trailing space (tagPrefix is used as-is, not .trim()ed),
+      // so the entryTemplate's `{{tags}}{{summary}}` produces exactly one separating space.
+      expect(result.markdownEntryData?.tags).toBe('#tech #news ');
       expect(result.markdownEntryData?.domain).toBe('example.com');
       expect(typeof result.markdownEntryData?.timestamp).toBe('string');
     });

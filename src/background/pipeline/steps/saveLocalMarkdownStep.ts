@@ -14,20 +14,28 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { MarkdownBufferManager } from '../buffers/MarkdownBufferManager.js';
 import type { MarkdownEntry } from '../buffers/MarkdownBufferManager.js';
 import { renderFileTemplate } from '../../../utils/markdownTemplateUtils.js';
-import type { MarkdownExportTemplate } from '../../../utils/types.js';
+import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../../../utils/types.js';
 
 /** Storage key prefix for daily entry buffers */
 export const DAILY_BUFFER_PREFIX = 'local_export_';
 
 /**
- * Build complete daily markdown from accumulated entries using the given template
+ * Build complete daily markdown from accumulated entries using the given template.
+ *
+ * Entries buffered before this branch shipped have the legacy shape
+ * (`{url, title, visitedAt, markdown: string}`, no `entryData`). Such entries
+ * are filtered out here rather than rendered, so one poisoned/legacy entry
+ * cannot crash rendering for the whole date (see final-review Fix 1).
  */
 export function buildDailyMarkdown(
   date: string,
   entries: MarkdownEntry[],
   template: MarkdownExportTemplate
 ): string {
-  return renderFileTemplate(template, entries.map(e => e.entryData), date);
+  const validEntries = entries
+    .map(e => e.entryData)
+    .filter((d): d is MarkdownTemplateEntryData => d != null);
+  return renderFileTemplate(template, validEntries, date);
 }
 
 /**
@@ -39,13 +47,13 @@ export function buildDailyMarkdown(
 export const saveLocalMarkdownStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, markdown } = context;
+  const { data } = context;
   const { url, title } = data;
 
-  console.log('[LocalMD] Step reached:', { url, hasMarkdown: !!markdown });
+  console.log('[LocalMD] Step reached:', { url, hasMarkdownEntryData: !!context.markdownEntryData });
 
-  if (!markdown) {
-    addLog(LogType.WARN, '[LocalMD] No markdown to save locally', { url, traceId: context.traceId });
+  if (!context.markdownEntryData) {
+    addLog(LogType.WARN, '[LocalMD] No markdownEntryData to save locally', { url, traceId: context.traceId });
     return context;
   }
 
@@ -58,7 +66,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     url,
     enabled: localExportEnabled,
     timing,
-    hasMarkdown: !!markdown,
+    hasMarkdownEntryData: !!context.markdownEntryData,
     traceId: context.traceId
   });
   if (!localExportEnabled || timing === 'manual' || !timing) {
@@ -66,31 +74,26 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     return context;
   }
 
-    try {
-      const markdownBuffer = new MarkdownBufferManager();
+  try {
+    const markdownBuffer = new MarkdownBufferManager();
 
-      if (!context.markdownEntryData) {
-        addLog(LogType.WARN, '[LocalMD] No markdownEntryData to save locally', { url, traceId: context.traceId });
-        return context;
-      }
+    markdownBuffer.add({
+      url,
+      title: title || '',
+      visitedAt: Date.now(),
+      entryData: context.markdownEntryData,
+    });
+    await markdownBuffer.flush();
+    markdownBuffer.scheduleDailyFlush();
 
-      markdownBuffer.add({
-        url,
-        title: title || '',
-        visitedAt: Date.now(),
-        entryData: context.markdownEntryData,
-      });
-      await markdownBuffer.flush();
-      markdownBuffer.scheduleDailyFlush();
+    addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
+      title,
+      url,
+      traceId: context.traceId,
+    });
 
-      addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
-        title,
-        url,
-        traceId: context.traceId,
-      });
-
-      return context;
-    } catch (error: unknown) {
+    return context;
+  } catch (error: unknown) {
     console.error('[LocalMD] FAILED:', errorMessage(error));
     addLog(LogType.ERROR, 'Failed to save to local Markdown', {
       error: errorMessage(error),

@@ -26,7 +26,7 @@ describe('markdownTemplateUtils', () => {
     it('現行のハードコード形式を再現するテンプレート文字列を持つ', () => {
       expect(DEFAULT_MARKDOWN_TEMPLATE.fileTemplate).toBe('# {{date}}\n\n{{entries}}');
       expect(DEFAULT_MARKDOWN_TEMPLATE.entryTemplate).toBe(
-        '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}} {{summary}}'
+        '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}}{{summary}}'
       );
     });
   });
@@ -37,7 +37,7 @@ describe('markdownTemplateUtils', () => {
       title: 'Example Title',
       url: 'https://example.com',
       summary: 'This is a summary.',
-      tags: '#tech',
+      tags: '#tech ',
       domain: 'example.com',
     };
 
@@ -72,7 +72,7 @@ describe('markdownTemplateUtils', () => {
         title: 'Second',
         url: 'https://b.example.com',
         summary: 'Summary B',
-        tags: '#tag',
+        tags: '#tag ',
         domain: 'b.example.com',
       },
     ];
@@ -81,7 +81,7 @@ describe('markdownTemplateUtils', () => {
       const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, entries, '2026-08-07');
       expect(result).toBe(
         '# 2026-08-07\n\n' +
-        '- 09:00 [First](https://a.example.com)\n    -  Summary A\n\n' +
+        '- 09:00 [First](https://a.example.com)\n    - Summary A\n\n' +
         '- 10:00 [Second](https://b.example.com)\n    - #tag Summary B'
       );
     });
@@ -95,6 +95,22 @@ describe('markdownTemplateUtils', () => {
     it('エントリが0件でも空文字列を entries に展開する', () => {
       const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, [], '2026-08-07');
       expect(result).toBe('# 2026-08-07\n\n');
+    });
+
+    it('最終レビュー Fix 3: タグなしエントリでは summary の前にスペースが1つだけになる(旧形式の二重スペース回帰防止)', () => {
+      const entryWithEmptyTags: MarkdownTemplateEntryData = {
+        timestamp: '09:00',
+        title: 'No Tags',
+        url: 'https://example.com',
+        summary: 'summary text',
+        tags: '',
+        domain: 'example.com',
+      };
+      const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, [entryWithEmptyTags], '2026-08-07');
+      expect(result).toBe('# 2026-08-07\n\n- 09:00 [No Tags](https://example.com)\n    - summary text');
+      // Historical pre-branch format: "    - summary" (single space), not "    -  summary" (double space)
+      expect(result).toContain('    - summary text');
+      expect(result).not.toContain('    -  summary text');
     });
   });
 

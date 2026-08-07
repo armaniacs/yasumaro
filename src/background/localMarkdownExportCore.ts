@@ -37,20 +37,26 @@ export async function flushBufferedExports(
       const entries = all[key];
       if (!Array.isArray(entries) || entries.length === 0) continue;
 
-      const content = buildDailyMarkdown(date, entries, activeTemplate);
-      const dataUrl = `data:text/markdown;base64,${btoa(unescape(encodeURIComponent(content)))}`;
+      // Isolate per-date failures (e.g. a legacy/poisoned entry) so one bad
+      // date does not abort the flush for every other buffered date.
+      try {
+        const content = buildDailyMarkdown(date, entries, activeTemplate);
+        const dataUrl = `data:text/markdown;base64,${btoa(unescape(encodeURIComponent(content)))}`;
 
-      await chrome.downloads.download({
-        url: dataUrl,
-        filename: `${exportPath}/${date}.md`,
-        saveAs: false,
-        conflictAction: 'overwrite'
-      });
+        await chrome.downloads.download({
+          url: dataUrl,
+          filename: `${exportPath}/${date}.md`,
+          saveAs: false,
+          conflictAction: 'overwrite'
+        });
 
-      addLog(LogType.INFO, 'Flushed local Markdown export', {
-        date,
-        entryCount: entries.length
-      });
+        addLog(LogType.INFO, 'Flushed local Markdown export', {
+          date,
+          entryCount: entries.length
+        });
+      } catch (error: unknown) {
+        addLog(LogType.ERROR, 'Local Markdown flush failed for date', { date, error: String(error) });
+      }
     }
   } catch (error: unknown) {
     addLog(LogType.ERROR, 'Local Markdown flush failed', { error: String(error) });

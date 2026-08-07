@@ -87,21 +87,23 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('無効な場合', () => {
-    it('markdown が undefined の場合はスキップ', async () => {
-      const context = makeContext({ markdown: undefined });
+    it('markdownEntryData が undefined の場合はスキップ(markdown フィールドの有無には依存しない)', async () => {
+      const context = makeContext({ markdown: undefined, markdownEntryData: undefined });
 
       const result = await saveLocalMarkdownStep(context);
 
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
+      expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
       expect(result).toBe(context);
     });
 
-    it('markdown が空文字の場合はスキップ', async () => {
+    it('markdown フィールドが空文字/未設定でも markdownEntryData があればバッファに蓄積される(Fix 4: markdown への依存を除去)', async () => {
       const context = makeContext({ markdown: '' });
 
       const result = await saveLocalMarkdownStep(context);
 
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
+      expect(mockChrome.storage.local.set).toHaveBeenCalledTimes(1);
       expect(result).toBe(context);
     });
 
@@ -267,15 +269,15 @@ describe('buildDailyMarkdown', () => {
       url: 'https://b.example.com',
       title: 'Second',
       visitedAt: 2000,
-      entryData: { timestamp: '10:00', title: 'Second', url: 'https://b.example.com', summary: 'Summary B', tags: '#tag', domain: 'b.example.com' },
+      entryData: { timestamp: '10:00', title: 'Second', url: 'https://b.example.com', summary: 'Summary B', tags: '#tag ', domain: 'b.example.com' },
     },
   ];
 
-  it('デフォルトテンプレートで現行と同じ出力形式を生成する', () => {
+  it('デフォルトテンプレートで現行と同じ出力形式を生成する(Fix 3: タグなしは1スペース、タグありは末尾スペース込みの tags 値でつながる)', () => {
     const result = buildDailyMarkdown('2026-08-07', entries, DEFAULT_MARKDOWN_TEMPLATE);
     expect(result).toBe(
       '# 2026-08-07\n\n' +
-      '- 09:00 [First](https://a.example.com)\n    -  Summary A\n\n' +
+      '- 09:00 [First](https://a.example.com)\n    - Summary A\n\n' +
       '- 10:00 [Second](https://b.example.com)\n    - #tag Summary B'
     );
   });
@@ -290,5 +292,30 @@ describe('buildDailyMarkdown', () => {
     };
     const result = buildDailyMarkdown('2026-08-07', entries, customTemplate);
     expect(result).toBe('## 2026-08-07 (2)\n* First - a.example.com\n\n* Second - b.example.com');
+  });
+
+  it('最終レビュー Fix 1: entryData を持たない旧形式エントリが混在していても throw せず、有効なエントリのみ描画する', () => {
+    // Legacy pre-branch shape: { url, title, visitedAt, markdown: string }, no entryData.
+    const legacyEntry = {
+      url: 'https://legacy.example.com',
+      title: 'Legacy Entry',
+      visitedAt: 500,
+      markdown: '- 08:00 [Legacy Entry](https://legacy.example.com)\n    - Old format summary',
+    } as unknown as MarkdownEntry;
+
+    const validEntry: MarkdownEntry = {
+      url: 'https://a.example.com',
+      title: 'First',
+      visitedAt: 1000,
+      entryData: { timestamp: '09:00', title: 'First', url: 'https://a.example.com', summary: 'Summary A', tags: '', domain: 'a.example.com' },
+    };
+
+    expect(() => buildDailyMarkdown('2026-08-07', [legacyEntry, validEntry], DEFAULT_MARKDOWN_TEMPLATE)).not.toThrow();
+
+    const result = buildDailyMarkdown('2026-08-07', [legacyEntry, validEntry], DEFAULT_MARKDOWN_TEMPLATE);
+    expect(result).toBe('# 2026-08-07\n\n- 09:00 [First](https://a.example.com)\n    - Summary A');
+    // The legacy entry must not appear in the rendered output.
+    expect(result).not.toContain('Legacy Entry');
+    expect(result).not.toContain('Old format summary');
   });
 });

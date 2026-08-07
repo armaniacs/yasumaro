@@ -211,6 +211,7 @@ import {
     getAiProviderElements,
     handleGenerateWeeklySummary,
     handleGenerateMonthlySummary,
+    toMarkdownTemplateEntryData,
 } from '../dashboard.js';
 
 describe('dashboard.ts exports', () => {
@@ -524,5 +525,46 @@ describe('getAiProviderElements', () => {
 
         // The select element may be null in jsdom, just verify it's either a select or null
         expect(elements.select === null || elements.select instanceof HTMLSelectElement).toBe(true);
+    });
+});
+
+describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () => {
+    it('カンマ区切りの tags を分割し、#プレフィックス+末尾スペース付きの形式に変換する', () => {
+        const result = toMarkdownTemplateEntryData({
+            title: 'Example',
+            url: 'https://example.com',
+            summary: 'A summary',
+            tags: 'tech,news',
+            created_at: Date.now(),
+        });
+
+        // Fix 2: comma-separated tags become "#tech #news" (split/trim/filter/prefix/sanitize/join).
+        // Fix 3: a trailing space is appended when tags are non-empty, so the entryTemplate's
+        // `{{tags}}{{summary}}` produces exactly one separating space.
+        expect(result.tags).toBe('#tech #news ');
+    });
+
+    it('tags が空/未指定の場合は空文字列になる(末尾スペースなし)', () => {
+        const result = toMarkdownTemplateEntryData({
+            title: 'Example',
+            url: 'https://example.com',
+            summary: 'A summary',
+            tags: null,
+            created_at: Date.now(),
+        });
+
+        expect(result.tags).toBe('');
+    });
+
+    it('タグの前後の空白をトリムし、空のタグ要素を除外する', () => {
+        const result = toMarkdownTemplateEntryData({
+            title: 'Example',
+            url: 'https://example.com',
+            summary: 'A summary',
+            tags: ' tech , , news ',
+            created_at: Date.now(),
+        });
+
+        expect(result.tags).toBe('#tech #news ');
     });
 });

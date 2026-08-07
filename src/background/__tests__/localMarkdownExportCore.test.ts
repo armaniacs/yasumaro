@@ -101,4 +101,27 @@ describe('flushBufferedExports', () => {
 
     await expect(flushBufferedExports()).resolves.toBeUndefined();
   });
+
+  it('最終レビュー Fix 1: 1日分の buildDailyMarkdown が throw しても、他の日のフラッシュは継続される', async () => {
+    const { buildDailyMarkdown } = await import('../pipeline/steps/saveLocalMarkdownStep.js');
+    const mockBuildDailyMarkdown = buildDailyMarkdown as unknown as ReturnType<typeof vi.fn>;
+    mockBuildDailyMarkdown.mockImplementation((date: string, entries: string[]) => {
+      if (date === '2026-07-08') {
+        // Simulate a legacy/poisoned entry crashing rendering for this date only.
+        throw new TypeError("Cannot read properties of undefined (reading 'timestamp')");
+      }
+      return `# ${date}\n${entries.join('\n')}`;
+    });
+
+    mockStorageGet.mockResolvedValue({
+      'local_export_2026-07-08': ['# poisoned'],
+      'local_export_2026-07-09': ['# ok'],
+    });
+
+    await expect(flushBufferedExports()).resolves.toBeUndefined();
+
+    // The healthy date must still be downloaded despite the other date's crash.
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockDownload.mock.calls[0][0].filename).toBe('Yasumaro/2026-07-09.md');
+  });
 });

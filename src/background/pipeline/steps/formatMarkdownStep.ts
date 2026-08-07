@@ -71,7 +71,7 @@ export const formatMarkdownStep: PipelineStepFunction = async (
       title: sanitizedTitle,
       url: sanitizedUrl,
       summary: finalSanitizedSummary,
-      tags: tagPrefix.trim(),
+      tags: tagPrefix,
       domain,
     },
   };
