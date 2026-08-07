@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.18` リリース。
+> - 現時点では `v6.7.19` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,43 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.19] - 2026-08-07
+
+コードレビューで発見された ~2,800 行の重複コードの解消。6 PBIs を TDD で実装し、約 30 コミットで収束。
+
+### Refactor / リファクタ
+
+- **AI プロバイダーの共通化** — `GeminiProvider` と `OpenAIProvider` の重複ロジック（プリフライトガード、コンテンツサニタイズ、HTTP エラーハンドリング）を `AIProviderStrategy` 基底クラスに抽出。`testConnection()` が ~130 行 → ~50 行に縮小
+  - `checkPreFlight()` — 月次リミット・使用量警告・レート制限の共通ガードチェーン
+  - `sanitizeContent()` — プロンプトインジェクション検出と dangerLevel 判定
+  - `mapConnectionError()` / `parseAndMapFetchError()` — HTTP ステータスコード → エラーメッセージ変換（401/403/404/429/5xx）
+- **マスターパスワード UI の統合** — `popup/masterPasswordUi.ts` と `dashboard/masterPassword.ts` の重複ロジック（バリデーション、パスワード設定/認証、設定読み込み）を `src/utils/masterPasswordUiCore.ts` に抽出（~78 行削減）。`<dialog>` API（popup）と `focusTrapManager`（dashboard）は各 UI に維持
+- **設定エクスポート/インポート UI の統合** — `popup/settingsExportImportUi.ts` と `dashboard/exportImport.ts` のUIオーケストレーション（エクスポートハンドラ、ファイルインポート、確認モーダル）を `src/utils/settingsExportImportUiCore.ts` に抽出
+- **重複ユーティリティ関数の共通化**
+  - `escapeHtml()` — 5つの実装（`popup/errorUtils.ts`、`domUtils.ts`、`privacy/privacy.ts`、`sqliteHistoryPanel.ts`、`domainSearchPanel.ts`）を `src/utils/htmlEscape.ts` に統合。不完全なバージョン（`&<>` のみのエスケープ）を削除し、全リテラル（`&<>"'/`）をエスケープするXSS対策完全版に統一
+  - `bytesToBase64()` / `base64ToBytes()` — 4つの同一実装（`dashboardSqliteHandlers.ts`、`dashboardSqliteService.ts`、`encryptedBackupService.ts`、`crypto/index.ts`）を `crypto/index.ts` からの export に統合
+  - `showStatus()` — 5つの同一パターン（`settingsUiHelper.ts`、`customPromptManager.ts`、`trustSettings.ts`、`markdownTemplateManager.ts`、`exportLogsPanel.ts`）を `settingsUiHelper.ts` にオーバーロード（`string | HTMLElement`）を追加して統合
+- **ドメインマッチング関数の統合**
+  - `src/utils/wildcardToRegex.ts` を新設し、7 箇所に散在していた `pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')` パターンを ReDoS ガード（`MAX_WILDCARDS_PER_PATTERN = 5`）付きで一元化
+  - `domainUtils.ts`、`domainFilterCache.ts`、`statusChecker.ts` が `wildcardToRegex` を使用
+  - `content/loader.ts` の重複関数群に「`urlSkipper.ts` が正本」の注記を追加（Content Script の ESM 制約のため）
+- **レガシー `urlStorage.ts` の削除** — `savedUrlStore.ts` が既にスーパーセットの機能を提供していたため、`urlStorage.ts`（245行）を削除し、唯一の参照元 `storageUrls.ts` のインポートを切り替え
+
+### Tests / テスト
+
+- `ProviderStrategy.test.ts` に `checkPreFlight`、`sanitizeContent`、`mapConnectionError`、`parseAndMapFetchError` の単体テストを追加
+- `masterPasswordUiCore.test.ts`（11 テスト）を新設
+- `htmlEscape.test.ts` を新設（全エスケープ文字、null/undefined 入力）
+- `wildcardToRegex.test.ts` を新設（通常パターン、ReDoS 防止、エッジケース）
+- `savedUrlStore` を `urlStorage` の機能スーパーセットに拡張（`getSavedUrlEntries` 追加、LRU メタデータ保持、`addSavedUrl(recordType)` 対応）
+- 全 7575 単体テスト通過、TypeScript 型チェック正常、ビルド成功
+- E2E: サイドバータブ数期待値を 16 → 17 に修正（`panel-export-import` 追加の反映漏れ）
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.18` → `6.7.19`
+- PBI 2026-08-07-01〜06 を `pbi/` に作成、実装計画を `docs/superpowers/plans/` に出力
 
 ## [6.7.18] - 2026-08-07
 
