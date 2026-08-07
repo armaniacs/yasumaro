@@ -27,7 +27,8 @@ vi.mock('../../utils/storage.js', () => ({
         CUSTOM_PROMPTS: 'custom_prompts',
         PROVIDER_BASE_URL: 'provider_base_url',
         PROVIDER_API_KEY: 'provider_api_key',
-        PROVIDER_MODEL: 'provider_model'
+        PROVIDER_MODEL: 'provider_model',
+        OPENAI_CONTENT_CHARS: 'openai_content_chars'
     },
     Settings: {}
 }));
@@ -247,6 +248,25 @@ describe('OpenAIProvider', () => {
             const userPrompt = body.messages[1].content as string;
             // 10000文字を超えたコンテンツは送られない
             expect(userPrompt.length).toBeLessThanOrEqual(10200);
+        });
+
+        test('openai_content_chars 設定で切り詰め文字数を上書きする', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] })
+            });
+
+            const p = new OpenAIProvider({
+                ...baseSettings,
+                openai_content_chars: 15000
+            });
+            const longContent = 'b'.repeat(20_000);
+            await p.generateSummary(longContent);
+
+            const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
+            const userPrompt = body.messages[1].content as string;
+            // 15000文字の制限に従い、プロンプトテンプレート分の余裕を含む
+            expect(userPrompt.length).toBeLessThanOrEqual(15200);
         });
 
         test('成功時に使用量を記録する', async () => {

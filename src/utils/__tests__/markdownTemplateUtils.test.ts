@@ -11,7 +11,6 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
-  setActiveTemplate,
   getActiveTemplate,
 } from '../markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../types.js';
@@ -205,7 +204,7 @@ describe('markdownTemplateUtils', () => {
     });
   });
 
-  describe('setActiveTemplate / getActiveTemplate', () => {
+  describe('getActiveTemplate', () => {
     it('アクティブなテンプレートIDが設定されていればそれを返す', () => {
       const templates = [DEFAULT_MARKDOWN_TEMPLATE, { ...DEFAULT_MARKDOWN_TEMPLATE, id: 'custom-1', isDefault: false }];
       const active = getActiveTemplate(templates, 'custom-1');

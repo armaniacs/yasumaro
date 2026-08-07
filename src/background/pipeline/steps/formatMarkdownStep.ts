@@ -6,6 +6,7 @@
 
 import { getUserLocale } from '../../../utils/localeUtils.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../../utils/markdownSanitizer.js';
+import { getHostname } from '../../../utils/markdownTemplateUtils.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -55,12 +56,7 @@ export const formatMarkdownStep: PipelineStepFunction = async (
   const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;
 
   // Extract domain for template placeholder
-  let domain = '';
-  try {
-    domain = new URL(sanitizedUrl).hostname;
-  } catch {
-    domain = '';
-  }
+  const domain = getHostname(sanitizedUrl);
 
   return {
     ...context,

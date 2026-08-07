@@ -26,7 +26,8 @@ vi.mock('../../utils/storage.js', () => ({
         MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
         CUSTOM_PROMPTS: 'custom_prompts',
         AI_TIMEOUT_MS: 'ai_timeout_ms',
-        GEMINI_API_VERSION: 'gemini_api_version'
+        GEMINI_API_VERSION: 'gemini_api_version',
+        GEMINI_CONTENT_CHARS: 'gemini_content_chars'
     },
     Settings: {}
 }));
@@ -420,5 +421,107 @@ describe('GeminiProvider', () => {
             expect(result.success).toBe(false);
             expect(result.message).toContain('not found');
         });
+
+    describe('API version configurability', () => {
+        test('testConnection が設定された API バージョンを使用する', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({ models: [{ name: 'models/gemini-3.1-flash-lite' }] })
+            });
+
+            const provider = new GeminiProvider({
+                ...baseSettings,
+                gemini_api_version: 'v1'
+            });
+
+            await provider.testConnection();
+
+            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            expect(url).toBe('https://generativelanguage.googleapis.com/v1/models');
+        });
+
+        test('gemini_api_version 設定で API URL のバージョンを上書きする', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                    usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+                })
+            });
+
+            const provider = new GeminiProvider({
+                ...baseSettings,
+                gemini_api_version: 'v1'
+            });
+
+            await provider.generateSummary('content');
+
+            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            expect(url).toContain('/v1/models/');
+            expect(url).not.toContain('/v1beta/models/');
+        });
+
+        test('gemini_api_version が未設定の場合はデフォルト v1beta を使用する', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                    usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+
+            await provider.generateSummary('content');
+
+            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            expect(url).toContain('/v1beta/models/');
+        });
+    });
+
+    describe('content length truncation', () => {
+        test('デフォルトで 30,000 文字に切り詰める', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                    usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            const longContent = 'a'.repeat(40_000);
+
+            await provider.generateSummary(longContent);
+
+            const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
+            const userContent = body.contents[0].parts[0].text as string;
+            const actualContent = userContent.replace(/^Summarize: /, '');
+            expect(actualContent.length).toBe(30_000);
+        });
+
+        test('gemini_content_chars 設定で切り詰め文字数を上書きする', async () => {
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [{ text: 'summary' }] } }],
+                    usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 }
+                })
+            });
+
+            const provider = new GeminiProvider({
+                ...baseSettings,
+                gemini_content_chars: 20000
+            });
+            const longContent = 'b'.repeat(40_000);
+
+            await provider.generateSummary(longContent);
+
+            const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
+            const userContent = body.contents[0].parts[0].text as string;
+            const actualContent = userContent.replace(/^Summarize: /, '');
+            expect(actualContent.length).toBe(20_000);
+        });
+    });
     });
 });
