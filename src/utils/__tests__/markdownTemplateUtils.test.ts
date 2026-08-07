@@ -8,8 +8,13 @@ import {
   renderEntryTemplate,
   renderFileTemplate,
   validateTemplate,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  setActiveTemplate,
+  getActiveTemplate,
 } from '../markdownTemplateUtils.js';
-import type { MarkdownTemplateEntryData } from '../types.js';
+import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../types.js';
 
 describe('markdownTemplateUtils', () => {
   describe('DEFAULT_MARKDOWN_TEMPLATE', () => {
@@ -134,6 +139,71 @@ describe('markdownTemplateUtils', () => {
         entryTemplate: '{{bad2}}',
       });
       expect(result.errors).toHaveLength(3); // entries欠如 + fileTemplate未知 + entryTemplate未知
+    });
+  });
+
+  describe('createTemplate', () => {
+    it('id・createdAt・updatedAt を自動採番して isDefault: false で作成する', () => {
+      const result = createTemplate({ name: 'My Template', fileTemplate: '{{entries}}', entryTemplate: '{{title}}' });
+      expect(result.id).toBeTruthy();
+      expect(result.name).toBe('My Template');
+      expect(result.isDefault).toBe(false);
+      expect(typeof result.createdAt).toBe('number');
+      expect(typeof result.updatedAt).toBe('number');
+    });
+  });
+
+  describe('updateTemplate', () => {
+    const custom: MarkdownExportTemplate = {
+      id: 'custom-1',
+      name: 'Custom',
+      fileTemplate: '{{entries}}',
+      entryTemplate: '{{title}}',
+      isDefault: false,
+      createdAt: 1000,
+      updatedAt: 1000,
+    };
+
+    it('指定IDのテンプレートを更新する', () => {
+      const result = updateTemplate([custom], 'custom-1', { name: 'Renamed' });
+      expect(result[0].name).toBe('Renamed');
+      expect(result[0].updatedAt).toBeGreaterThanOrEqual(custom.updatedAt);
+    });
+
+    it('デフォルトテンプレート(isDefault: true)は更新を拒否し変更なしで返す', () => {
+      const result = updateTemplate([DEFAULT_MARKDOWN_TEMPLATE], 'default', { name: 'Hacked' });
+      expect(result[0].name).toBe(DEFAULT_MARKDOWN_TEMPLATE.name);
+    });
+  });
+
+  describe('deleteTemplate', () => {
+    it('指定IDのテンプレートを削除する', () => {
+      const custom: MarkdownExportTemplate = { ...DEFAULT_MARKDOWN_TEMPLATE, id: 'custom-1', isDefault: false };
+      const result = deleteTemplate([custom], 'custom-1');
+      expect(result).toHaveLength(0);
+    });
+
+    it('デフォルトテンプレート(isDefault: true)は削除を拒否する', () => {
+      const result = deleteTemplate([DEFAULT_MARKDOWN_TEMPLATE], 'default');
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('setActiveTemplate / getActiveTemplate', () => {
+    it('アクティブなテンプレートIDが設定されていればそれを返す', () => {
+      const templates = [DEFAULT_MARKDOWN_TEMPLATE, { ...DEFAULT_MARKDOWN_TEMPLATE, id: 'custom-1', isDefault: false }];
+      const active = getActiveTemplate(templates, 'custom-1');
+      expect(active?.id).toBe('custom-1');
+    });
+
+    it('アクティブIDが未指定、または一致するテンプレートがない場合はデフォルトを返す', () => {
+      const templates = [DEFAULT_MARKDOWN_TEMPLATE];
+      expect(getActiveTemplate(templates, undefined).id).toBe('default');
+      expect(getActiveTemplate(templates, 'not-exist').id).toBe('default');
+    });
+
+    it('テンプレート一覧が空でもデフォルトを返す', () => {
+      expect(getActiveTemplate([], undefined).id).toBe('default');
     });
   });
 });

@@ -110,3 +110,85 @@ export function validateTemplate(template: MarkdownExportTemplate): TemplateVali
 
   return { valid: errors.length === 0, errors };
 }
+
+/**
+ * 一意のテンプレートIDを生成する
+ */
+function generateTemplateId(): string {
+  return `mdtpl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * 新しい Markdown 書き出しテンプレートを作成する
+ * @param data id/createdAt/updatedAt/isDefault を除くテンプレートデータ
+ * @returns 作成されたテンプレート(isDefault: false 固定)
+ */
+export function createTemplate(
+  data: Omit<MarkdownExportTemplate, 'id' | 'createdAt' | 'updatedAt' | 'isDefault'>
+): MarkdownExportTemplate {
+  const now = Date.now();
+  return {
+    ...data,
+    id: generateTemplateId(),
+    isDefault: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * テンプレートを更新する。isDefault: true のテンプレートは更新を拒否する。
+ * @param templates テンプレート配列
+ * @param id 更新対象のID
+ * @param updates 更新内容
+ * @returns 更新後のテンプレート配列
+ */
+export function updateTemplate(
+  templates: MarkdownExportTemplate[],
+  id: string,
+  updates: Partial<MarkdownExportTemplate>
+): MarkdownExportTemplate[] {
+  return templates.map(t => {
+    if (t.id === id && !t.isDefault) {
+      return { ...t, ...updates, updatedAt: Date.now() };
+    }
+    return t;
+  });
+}
+
+/**
+ * テンプレートを削除する。isDefault: true のテンプレートは削除を拒否する。
+ * @param templates テンプレート配列
+ * @param id 削除対象のID
+ * @returns 削除後のテンプレート配列
+ */
+export function deleteTemplate(templates: MarkdownExportTemplate[], id: string): MarkdownExportTemplate[] {
+  return templates.filter(t => !(t.id === id && !t.isDefault));
+}
+
+/**
+ * アクティブなテンプレートIDを設定する(切り替えのみ。永続化は呼び出し側の責務)
+ * @param _templates テンプレート配列(将来の拡張のために引数として保持)
+ * @param id アクティブにするテンプレートのID
+ * @returns アクティブにするテンプレートID
+ */
+export function setActiveTemplate(_templates: MarkdownExportTemplate[], id: string): string {
+  return id;
+}
+
+/**
+ * アクティブなテンプレートを取得する。該当がなければデフォルトテンプレートを返す。
+ * @param templates テンプレート配列
+ * @param activeId アクティブなテンプレートID(未設定なら undefined)
+ * @returns アクティブなテンプレート、またはデフォルトテンプレート
+ */
+export function getActiveTemplate(
+  templates: MarkdownExportTemplate[],
+  activeId: string | undefined
+): MarkdownExportTemplate {
+  if (activeId) {
+    const found = templates.find(t => t.id === activeId);
+    if (found) return found;
+  }
+  return DEFAULT_MARKDOWN_TEMPLATE;
+}
