@@ -43,6 +43,16 @@
           </svg>
           <span data-i18n="promptTab">Prompt</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-markdown-template" aria-selected="false" data-panel="panel-markdown-template">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span data-i18n="markdownTemplateTab">Markdown Template</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-privacy" aria-selected="false" data-panel="panel-privacy">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -816,6 +826,64 @@
         </div>
 
         <div id="promptStatus" aria-live="polite"></div>
+      </section>
+
+      <!-- Markdown Export Template Panel -->
+      <section id="panel-markdown-template" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="markdownTemplatePanelHeading">Local Markdown Export Template</h2>
+        <p class="panel-description" data-i18n="markdownTemplatePanelDescription">Customize the format of local Markdown export files.</p>
+
+        <hr class="settings-hr">
+
+        <div id="markdownTemplateListSection">
+          <h4 data-i18n="markdownTemplateSavedTemplates">Saved Templates</h4>
+          <div id="markdownTemplateList" class="prompt-list"></div>
+        </div>
+
+        <div class="form-group">
+          <button id="markdownTemplateCreateBtn" class="secondary-btn" data-i18n="markdownTemplateCreateBtn">New Template</button>
+        </div>
+
+        <hr class="settings-hr">
+
+        <div id="markdownTemplateEditor" class="hidden">
+          <h4 data-i18n="markdownTemplateEditorHeading">Template Editor</h4>
+
+          <div class="form-group">
+            <label for="markdownTemplateName" data-i18n="markdownTemplateNameLabel">Template Name</label>
+            <input type="text" id="markdownTemplateName">
+          </div>
+
+          <div class="form-group">
+            <label for="markdownTemplateFileInput" data-i18n="markdownTemplateFileLabel">File Template</label>
+            <textarea id="markdownTemplateFileInput" rows="6"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="markdownTemplateEntryInput" data-i18n="markdownTemplateEntryLabel">Entry Template</label>
+            <textarea id="markdownTemplateEntryInput" rows="4"></textarea>
+          </div>
+
+          <div id="markdownTemplatePlaceholderHelp">
+            <p class="help-text" data-i18n="markdownTemplateFilePlaceholders">Available in file template: {{date}} {{entryCount}} {{entries}}</p>
+            <p class="help-text" data-i18n="markdownTemplateEntryPlaceholders">Available in entry template: {{timestamp}} {{title}} {{url}} {{summary}} {{tags}} {{domain}}</p>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="markdownTemplatePreviewLabel">Preview</label>
+            <pre id="markdownTemplatePreview" class="markdown-template-preview"></pre>
+          </div>
+
+          <div id="markdownTemplateEditorError" class="field-error" role="alert"></div>
+
+          <div class="form-group">
+            <button id="markdownTemplateSaveBtn" class="secondary-btn" data-i18n="markdownTemplateSaveBtn">Save</button>
+            <button id="markdownTemplateCancelBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+            <input type="hidden" id="editingMarkdownTemplateId" value="">
+          </div>
+        </div>
+
+        <div id="markdownTemplateStatus" aria-live="polite"></div>
       </section>
 
       <!-- Content Cleansing Settings Panel -->

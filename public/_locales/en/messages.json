@@ -885,6 +885,78 @@
   "promptHelp": {
     "message": "Use {{content}} as a placeholder for the page content. The prompt will be used when generating summaries."
   },
+  "markdownTemplateTab": {
+    "message": "Markdown Template"
+  },
+  "markdownTemplatePanelHeading": {
+    "message": "Local Markdown Export Template"
+  },
+  "markdownTemplatePanelDescription": {
+    "message": "Customize the format of local Markdown export files."
+  },
+  "markdownTemplateSavedTemplates": {
+    "message": "Saved Templates"
+  },
+  "markdownTemplateCreateBtn": {
+    "message": "New Template"
+  },
+  "markdownTemplateEditorHeading": {
+    "message": "Template Editor"
+  },
+  "markdownTemplateNameLabel": {
+    "message": "Template Name"
+  },
+  "markdownTemplateFileLabel": {
+    "message": "File Template"
+  },
+  "markdownTemplateEntryLabel": {
+    "message": "Entry Template"
+  },
+  "markdownTemplateFilePlaceholders": {
+    "message": "Available in file template: {{date}} {{entryCount}} {{entries}}"
+  },
+  "markdownTemplateEntryPlaceholders": {
+    "message": "Available in entry template: {{timestamp}} {{title}} {{url}} {{summary}} {{tags}} {{domain}}"
+  },
+  "markdownTemplatePreviewLabel": {
+    "message": "Preview"
+  },
+  "markdownTemplateSaveBtn": {
+    "message": "Save"
+  },
+  "markdownTemplateActiveLabel": {
+    "message": "Active"
+  },
+  "markdownTemplateDefaultName": {
+    "message": "Default"
+  },
+  "markdownTemplateConfirmDelete": {
+    "message": "Are you sure you want to delete this template?"
+  },
+  "markdownTemplateCreated": {
+    "message": "Template created successfully"
+  },
+  "markdownTemplateUpdated": {
+    "message": "Template updated successfully"
+  },
+  "markdownTemplateDeleted": {
+    "message": "Template deleted successfully"
+  },
+  "markdownTemplateActivated": {
+    "message": "Template activated"
+  },
+  "markdownTemplateNameRequired": {
+    "message": "Template name is required"
+  },
+  "markdownTemplateCopySuffix": {
+    "message": "Copy"
+  },
+  "markdownTemplateNewName": {
+    "message": "New Template"
+  },
+  "markdownTemplateInvalidPrefix": {
+    "message": "Invalid template:"
+  },
   "savedPrompts": {
     "message": "Saved Prompts"
   },
