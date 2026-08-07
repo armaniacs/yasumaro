@@ -7,6 +7,7 @@ import {
   DEFAULT_MARKDOWN_TEMPLATE,
   renderEntryTemplate,
   renderFileTemplate,
+  validateTemplate,
 } from '../markdownTemplateUtils.js';
 import type { MarkdownTemplateEntryData } from '../types.js';
 
@@ -89,6 +90,50 @@ describe('markdownTemplateUtils', () => {
     it('エントリが0件でも空文字列を entries に展開する', () => {
       const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, [], '2026-08-07');
       expect(result).toBe('# 2026-08-07\n\n');
+    });
+  });
+
+  describe('validateTemplate', () => {
+    it('デフォルトテンプレートは有効と判定される', () => {
+      const result = validateTemplate(DEFAULT_MARKDOWN_TEMPLATE);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('fileTemplate に {{entries}} が含まれない場合は無効', () => {
+      const result = validateTemplate({
+        ...DEFAULT_MARKDOWN_TEMPLATE,
+        fileTemplate: '# {{date}}',
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('fileTemplate must include {{entries}}');
+    });
+
+    it('fileTemplate に未知のプレースホルダーが含まれる場合は無効', () => {
+      const result = validateTemplate({
+        ...DEFAULT_MARKDOWN_TEMPLATE,
+        fileTemplate: '# {{date}}\n{{unknown}}\n{{entries}}',
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Unknown placeholder in fileTemplate: {{unknown}}');
+    });
+
+    it('entryTemplate に未知のプレースホルダーが含まれる場合は無効', () => {
+      const result = validateTemplate({
+        ...DEFAULT_MARKDOWN_TEMPLATE,
+        entryTemplate: '{{unknown}} {{title}}',
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Unknown placeholder in entryTemplate: {{unknown}}');
+    });
+
+    it('複数のエラーがある場合はすべて返す', () => {
+      const result = validateTemplate({
+        ...DEFAULT_MARKDOWN_TEMPLATE,
+        fileTemplate: '{{bad1}}',
+        entryTemplate: '{{bad2}}',
+      });
+      expect(result.errors).toHaveLength(3); // entries欠如 + fileTemplate未知 + entryTemplate未知
     });
   });
 });

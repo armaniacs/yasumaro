@@ -10,6 +10,9 @@ export type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.
 /** エントリテンプレートで使用可能なプレースホルダー */
 const ENTRY_PLACEHOLDER_KEYS = ['timestamp', 'title', 'url', 'summary', 'tags', 'domain'] as const;
 
+/** ファイルテンプレートで使用可能なプレースホルダー(entries は別扱い) */
+const FILE_PLACEHOLDER_KEYS = ['date', 'entryCount'] as const;
+
 /**
  * デフォルトの Markdown 書き出しテンプレート
  * 現行のハードコード出力形式(# date 見出し + `- HH:MM [title](url)` 行)を再現する。
@@ -60,4 +63,50 @@ export function renderFileTemplate(
     if (key === 'entries') return renderedEntries;
     return '';
   });
+}
+
+/**
+ * テンプレートのバリデーション結果
+ */
+export interface TemplateValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/** テンプレート文字列に含まれる {{xxx}} プレースホルダーのキー一覧を抽出する */
+function extractPlaceholderKeys(template: string): string[] {
+  const matches = template.matchAll(/\{\{(\w+)\}\}/g);
+  return Array.from(matches, m => m[1]);
+}
+
+/**
+ * テンプレートが有効かどうかを検証する
+ * - fileTemplate に {{entries}} が含まれているか(必須)
+ * - fileTemplate / entryTemplate に定義済み以外のプレースホルダーが含まれていないか
+ * @param template 検証対象のテンプレート
+ * @returns 検証結果とエラーメッセージ一覧
+ */
+export function validateTemplate(template: MarkdownExportTemplate): TemplateValidationResult {
+  const errors: string[] = [];
+
+  if (!template.fileTemplate.includes('{{entries}}')) {
+    errors.push('fileTemplate must include {{entries}}');
+  }
+
+  const fileKeys = extractPlaceholderKeys(template.fileTemplate);
+  const allowedFileKeys = [...FILE_PLACEHOLDER_KEYS, 'entries'] as string[];
+  for (const key of fileKeys) {
+    if (!allowedFileKeys.includes(key)) {
+      errors.push(`Unknown placeholder in fileTemplate: {{${key}}}`);
+    }
+  }
+
+  const entryKeys = extractPlaceholderKeys(template.entryTemplate);
+  for (const key of entryKeys) {
+    if (!(ENTRY_PLACEHOLDER_KEYS as readonly string[]).includes(key)) {
+      errors.push(`Unknown placeholder in entryTemplate: {{${key}}}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
