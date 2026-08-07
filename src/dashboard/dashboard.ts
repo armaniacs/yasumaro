@@ -21,7 +21,7 @@ import type { DashboardSqliteResponseFor } from '../background/handlers/dashboar
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
-import { renderFileTemplate, getActiveTemplate } from '../utils/markdownTemplateUtils.js';
+import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 
 function openSettingsPanel(section: string): void {
@@ -713,12 +713,7 @@ export function toMarkdownTemplateEntryData(entry: { title?: string | null; url:
     ? entry.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `#${sanitizeForObsidian(t)}`)
     : [];
   const tags = tagsList.length > 0 ? tagsList.join(' ') + ' ' : '';
-  let domain = '';
-  try {
-    domain = new URL(url).hostname;
-  } catch {
-    domain = '';
-  }
+  const domain = getHostname(url);
   return { timestamp, title, url, summary, tags, domain };
 }
 

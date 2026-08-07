@@ -8,19 +8,19 @@
  *
  * このテストは実際の解決チェーンを、モックなしの本物の関数だけで
  * 最初から最後まで通す:
- *   createTemplate() → setActiveTemplate() で settings 形状に反映
+ *   createTemplate() で作成したテンプレートを settings 形状に反映
  *     → chrome.storage.local (モック) に保存された設定を getSettings() が読む
  *     → getActiveTemplate() がアクティブなテンプレートを解決
  *     → buildDailyMarkdown() / renderFileTemplate() が実際にレンダリング
  *     → flushBufferedExports() が chrome.downloads.download (モック) に渡す
  *
  * モックするのはブラウザ API 境界 (chrome.storage.local / chrome.downloads.download)
- * のみ。createTemplate, setActiveTemplate, getActiveTemplate, renderFileTemplate,
+ * のみ。createTemplate, getActiveTemplate, renderFileTemplate,
  * buildDailyMarkdown, flushBufferedExports, getSettings はすべて本物の実装。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushBufferedExports } from '../localMarkdownExportCore.js';
-import { createTemplate, setActiveTemplate, DEFAULT_MARKDOWN_TEMPLATE } from '../../utils/markdownTemplateUtils.js';
+import { createTemplate, DEFAULT_MARKDOWN_TEMPLATE } from '../../utils/markdownTemplateUtils.js';
 import { StorageKeys, clearSettingsCache } from '../../utils/storage.js';
 import type { MarkdownExportTemplate } from '../../utils/types.js';
 import type { MarkdownEntry } from '../pipeline/buffers/MarkdownBufferManager.js';
@@ -101,8 +101,8 @@ describe('Markdown template full pipeline (create -> activate -> automatic expor
     });
 
     // 2. Persist it the way the dashboard UI does: settings object with the
-    //    template list plus the active id resolved via the real setActiveTemplate().
-    const activeId = setActiveTemplate([customTemplate], customTemplate.id);
+    //    template list plus the active id.
+    const activeId = customTemplate.id;
     storageData.settings = {
       [StorageKeys.MARKDOWN_EXPORT_TEMPLATES]: [customTemplate],
       [StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID]: activeId,

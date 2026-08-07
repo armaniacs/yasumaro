@@ -8,10 +8,17 @@ import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.
 export type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.js';
 
 /** エントリテンプレートで使用可能なプレースホルダー */
-const ENTRY_PLACEHOLDER_KEYS = ['timestamp', 'title', 'url', 'summary', 'tags', 'domain'] as const;
+const ENTRY_PLACEHOLDER_KEYS: ReadonlySet<string> = new Set([
+  'timestamp',
+  'title',
+  'url',
+  'summary',
+  'tags',
+  'domain',
+]);
 
 /** ファイルテンプレートで使用可能なプレースホルダー(entries は別扱い) */
-const FILE_PLACEHOLDER_KEYS = ['date', 'entryCount'] as const;
+const FILE_PLACEHOLDER_KEYS: ReadonlySet<string> = new Set(['date', 'entryCount']);
 
 /**
  * デフォルトの Markdown 書き出しテンプレート
@@ -36,7 +43,7 @@ export const DEFAULT_MARKDOWN_TEMPLATE: MarkdownExportTemplate = {
  */
 export function renderEntryTemplate(template: string, entry: MarkdownTemplateEntryData): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-    if ((ENTRY_PLACEHOLDER_KEYS as readonly string[]).includes(key)) {
+    if (ENTRY_PLACEHOLDER_KEYS.has(key)) {
       return entry[key as keyof MarkdownTemplateEntryData];
     }
     return '';
@@ -94,16 +101,15 @@ export function validateTemplate(template: MarkdownExportTemplate): TemplateVali
   }
 
   const fileKeys = extractPlaceholderKeys(template.fileTemplate);
-  const allowedFileKeys = [...FILE_PLACEHOLDER_KEYS, 'entries'] as string[];
   for (const key of fileKeys) {
-    if (!allowedFileKeys.includes(key)) {
+    if (!FILE_PLACEHOLDER_KEYS.has(key) && key !== 'entries') {
       errors.push(`Unknown placeholder in fileTemplate: {{${key}}}`);
     }
   }
 
   const entryKeys = extractPlaceholderKeys(template.entryTemplate);
   for (const key of entryKeys) {
-    if (!(ENTRY_PLACEHOLDER_KEYS as readonly string[]).includes(key)) {
+    if (!ENTRY_PLACEHOLDER_KEYS.has(key)) {
       errors.push(`Unknown placeholder in entryTemplate: {{${key}}}`);
     }
   }
@@ -167,16 +173,6 @@ export function deleteTemplate(templates: MarkdownExportTemplate[], id: string):
 }
 
 /**
- * アクティブなテンプレートIDを設定する(切り替えのみ。永続化は呼び出し側の責務)
- * @param _templates テンプレート配列(将来の拡張のために引数として保持)
- * @param id アクティブにするテンプレートのID
- * @returns アクティブにするテンプレートID
- */
-export function setActiveTemplate(_templates: MarkdownExportTemplate[], id: string): string {
-  return id;
-}
-
-/**
  * アクティブなテンプレートを取得する。該当がなければデフォルトテンプレートを返す。
  * @param templates テンプレート配列
  * @param activeId アクティブなテンプレートID(未設定なら undefined)
@@ -191,4 +187,17 @@ export function getActiveTemplate(
     if (found) return found;
   }
   return DEFAULT_MARKDOWN_TEMPLATE;
+}
+
+/**
+ * URLからホスト名を抽出する。無効なURLは空文字を返す。
+ * @param url 対象のURL文字列
+ * @returns ホスト名、または空文字
+ */
+export function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 }
