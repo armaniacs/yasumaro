@@ -37,6 +37,31 @@ export interface CustomPrompt {
 }
 
 /**
+ * ローカル Markdown 書き出しテンプレートのデータ構造
+ */
+export interface MarkdownExportTemplate {
+    id: string;
+    name: string;
+    fileTemplate: string;   // {{date}} {{entryCount}} {{entries}} を使用
+    entryTemplate: string;  // {{timestamp}} {{title}} {{url}} {{summary}} {{tags}} {{domain}} を使用
+    isDefault?: boolean;    // true の場合、編集・削除不可(組み込みデフォルト)
+    createdAt: number;
+    updatedAt: number;
+}
+
+/**
+ * Markdown テンプレートのエントリ1件分の生データ
+ */
+export interface MarkdownTemplateEntryData {
+    timestamp: string;
+    title: string;
+    url: string;
+    summary: string;
+    tags: string;
+    domain: string;
+}
+
+/**
  * uBlockルール（ublockMatcher.ts 用）
  */
 export interface UblockRule {
