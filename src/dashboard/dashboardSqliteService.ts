@@ -6,6 +6,7 @@
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
@@ -361,23 +362,6 @@ export async function backfillMetadata(): Promise<{ updated: number; total: numb
 /**
  * バイナリ .db バックアップを取得
  */
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!);
-  }
-  return btoa(binary);
-}
-
 export async function backupDb(): Promise<Uint8Array | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'backup_db' });
