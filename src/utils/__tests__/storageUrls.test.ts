@@ -511,8 +511,8 @@ describe('buildAllowedUrls', () => {
 
     it('includes Obsidian API URLs with default protocol/port', () => {
         const urls = buildAllowedUrls({}, whitelistFn);
-        expect(urls.has('https://127.0.0.1:27124')).toBe(true);
-        expect(urls.has('https://localhost:27124')).toBe(true);
+        expect(urls.has('https://127.0.0.1:27123')).toBe(true);
+        expect(urls.has('https://localhost:27123')).toBe(true);
     });
 
     it('uses custom protocol and port', () => {
@@ -563,6 +563,19 @@ describe('buildAllowedUrls', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_2_base_url: '://bad' }, whitelistFn);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI 2 Base URL'));
+        warnSpy.mockRestore();
+    });
+
+    it('includes provider base URL when whitelisted', () => {
+        const urls = buildAllowedUrls({ provider_base_url: 'https://api.provider.example/v1' }, whitelistFn);
+        expect(urls.has('https://api.provider.example/v1')).toBe(true);
+    });
+
+    it('warns and skips provider base URL when not whitelisted', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const urls = buildAllowedUrls({ provider_base_url: 'https://evil.com/v1' }, rejectFn);
+        expect(urls.has('https://evil.com/v1')).toBe(false);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Provider Base URL not in whitelist'));
         warnSpy.mockRestore();
     });
 
