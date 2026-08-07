@@ -699,7 +699,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
  * Convert a single browsing log entry into template entry data
  * VULN-020 fix: sanitize title and URL to prevent Markdown injection
  */
-function toMarkdownTemplateEntryData(entry: { title?: string | null; url: string; summary?: string | null; tags?: string | null; created_at: number }): MarkdownTemplateEntryData {
+export function toMarkdownTemplateEntryData(entry: { title?: string | null; url: string; summary?: string | null; tags?: string | null; created_at: number }): MarkdownTemplateEntryData {
   const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit'
@@ -709,7 +709,10 @@ function toMarkdownTemplateEntryData(entry: { title?: string | null; url: string
   const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
   const url = sanitizeUrlForMarkdownTarget(entry.url);
   const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
-  const tags = entry.tags ? sanitizeForObsidian(entry.tags) : '';
+  const tagsList = entry.tags
+    ? entry.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `#${sanitizeForObsidian(t)}`)
+    : [];
+  const tags = tagsList.length > 0 ? tagsList.join(' ') + ' ' : '';
   let domain = '';
   try {
     domain = new URL(url).hostname;

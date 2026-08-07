@@ -22,7 +22,7 @@ export const DEFAULT_MARKDOWN_TEMPLATE: MarkdownExportTemplate = {
   id: 'default',
   name: 'Default',
   fileTemplate: '# {{date}}\n\n{{entries}}',
-  entryTemplate: '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}} {{summary}}',
+  entryTemplate: '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}}{{summary}}',
   isDefault: true,
   createdAt: 0,
   updatedAt: 0,

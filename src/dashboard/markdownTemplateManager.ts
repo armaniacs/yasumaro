@@ -12,6 +12,7 @@ import {
   deleteTemplate,
   renderFileTemplate,
   validateTemplate,
+  setActiveTemplate,
 } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { getMessage } from '../utils/i18n.js';
@@ -179,7 +180,7 @@ function createTemplateListItem(template: MarkdownExportTemplate, isActive: bool
 async function handleActivateClick(id: string): Promise<void> {
   if (!currentSettings) return;
 
-  currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = id;
+  currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = setActiveTemplate(getTemplates(), id);
   await saveSettings(currentSettings);
 
   showStatus(getMessage('markdownTemplateActivated') || 'Template activated', 'success');
