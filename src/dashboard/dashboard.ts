@@ -21,6 +21,8 @@ import type { DashboardSqliteResponseFor } from '../background/handlers/dashboar
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import { renderFileTemplate, getActiveTemplate } from '../utils/markdownTemplateUtils.js';
+import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 
 function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -694,10 +696,10 @@ export async function handleTestLocalMarkdown(): Promise<void> {
 }
 
 /**
- * Format a single browsing log entry as markdown
+ * Convert a single browsing log entry into template entry data
  * VULN-020 fix: sanitize title and URL to prevent Markdown injection
  */
-function formatEntryToMarkdown(entry: { title?: string | null; url: string; summary?: string | null; created_at: number }): string {
+function toMarkdownTemplateEntryData(entry: { title?: string | null; url: string; summary?: string | null; tags?: string | null; created_at: number }): MarkdownTemplateEntryData {
   const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit'
@@ -707,7 +709,14 @@ function formatEntryToMarkdown(entry: { title?: string | null; url: string; summ
   const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
   const url = sanitizeUrlForMarkdownTarget(entry.url);
   const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
-  return `- ${timestamp} [${title}](${url})\n    - ${summary}`;
+  const tags = entry.tags ? sanitizeForObsidian(entry.tags) : '';
+  let domain = '';
+  try {
+    domain = new URL(url).hostname;
+  } catch {
+    domain = '';
+  }
+  return { timestamp, title, url, summary, tags, domain };
 }
 
 /**
@@ -753,9 +762,14 @@ function getExportBatchSize(): number {
 /**
  * Downloads one Markdown file for the given date's entries.
  */
-async function downloadDateMarkdown(exportPath: string, date: string, entries: BrowsingLogEntry[]): Promise<void> {
-  const header = `# ${date}`;
-  const content = header + '\n\n' + entries.map(e => formatEntryToMarkdown(e)).join('\n\n');
+async function downloadDateMarkdown(
+  exportPath: string,
+  date: string,
+  entries: BrowsingLogEntry[],
+  template: MarkdownExportTemplate
+): Promise<void> {
+  const entryData = entries.map(toMarkdownTemplateEntryData);
+  const content = renderFileTemplate(template, entryData, date);
 
   const blob = new Blob([content], { type: 'text/markdown' });
   const blobUrl = URL.createObjectURL(blob);
@@ -777,7 +791,10 @@ async function downloadDateMarkdown(exportPath: string, date: string, entries: B
  * rows in memory at a time, instead of materializing the entire history.
  * Returns the total row count and file count exported.
  */
-async function exportFullHistoryInBatches(exportPath: string): Promise<{ totalRows: number; totalFiles: number }> {
+async function exportFullHistoryInBatches(
+  exportPath: string,
+  template: MarkdownExportTemplate
+): Promise<{ totalRows: number; totalFiles: number }> {
   const batchSize = getExportBatchSize();
   let offset = 0;
   let totalRows = 0;
@@ -792,7 +809,7 @@ async function exportFullHistoryInBatches(exportPath: string): Promise<{ totalRo
     for (const row of result.rows) {
       const date = getLocalDateString(row.created_at);
       if (pendingDate !== null && date !== pendingDate) {
-        await downloadDateMarkdown(exportPath, pendingDate, pendingEntries);
+        await downloadDateMarkdown(exportPath, pendingDate, pendingEntries, template);
         totalFiles++;
         pendingEntries = [];
       }
@@ -806,7 +823,7 @@ async function exportFullHistoryInBatches(exportPath: string): Promise<{ totalRo
   }
 
   if (pendingDate !== null && pendingEntries.length > 0) {
-    await downloadDateMarkdown(exportPath, pendingDate, pendingEntries);
+    await downloadDateMarkdown(exportPath, pendingDate, pendingEntries, template);
     totalFiles++;
   }
 
@@ -826,12 +843,15 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
   try {
     const settings = await getSettings();
     const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const templates = (settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
+    const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
+    const activeTemplate = getActiveTemplate(templates, activeTemplateId);
 
     statusEl.textContent = getMessage('searching') || 'Searching...';
 
     if (!options.dateRange) {
       // Full-history export: stream in batches to bound peak memory usage.
-      const { totalRows, totalFiles } = await exportFullHistoryInBatches(exportPath);
+      const { totalRows, totalFiles } = await exportFullHistoryInBatches(exportPath, activeTemplate);
       if (totalRows === 0) {
         statusEl.textContent = options.emptyMessage;
         statusEl.className = 'error';
@@ -876,7 +896,7 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
     // Generate markdown for each date
     let totalFiles = 0;
     for (const [date, entries] of entriesByDate) {
-      await downloadDateMarkdown(exportPath, date, entries);
+      await downloadDateMarkdown(exportPath, date, entries, activeTemplate);
       totalFiles++;
     }
 
