@@ -40,6 +40,13 @@ describe('contentExtractor/classifier', () => {
       expect(EXCLUDED_TAGS.has('header')).toBe(true);
     });
 
+    it('EXCLUDED_TAGS contains script/style/noscript/template tags', () => {
+      expect(EXCLUDED_TAGS.has('script')).toBe(true);
+      expect(EXCLUDED_TAGS.has('style')).toBe(true);
+      expect(EXCLUDED_TAGS.has('noscript')).toBe(true);
+      expect(EXCLUDED_TAGS.has('template')).toBe(true);
+    });
+
     it('EXCLUDED_CLASS_PATTERNS contains expected patterns', () => {
       expect(EXCLUDED_CLASS_PATTERNS).toContain('sidebar');
       expect(EXCLUDED_CLASS_PATTERNS).toContain('nav');
@@ -166,6 +173,24 @@ describe('contentExtractor/classifier', () => {
     it('excludes elements with banner class', () => {
       document.body.innerHTML = '<div class="top-banner">Banner</div>';
       const el = document.querySelector('.top-banner')!;
+      expect(isExcludedElement(el)).toBe(true);
+    });
+
+    it('excludes script element', () => {
+      document.body.innerHTML = '<script>console.log("dropdown menu init");</script>';
+      const el = document.querySelector('script')!;
+      expect(isExcludedElement(el)).toBe(true);
+    });
+
+    it('excludes style element', () => {
+      document.body.innerHTML = '<style>.menu { display: none; }</style>';
+      const el = document.querySelector('style')!;
+      expect(isExcludedElement(el)).toBe(true);
+    });
+
+    it('excludes noscript element', () => {
+      document.body.innerHTML = '<noscript>JavaScript is disabled</noscript>';
+      const el = document.querySelector('noscript')!;
       expect(isExcludedElement(el)).toBe(true);
     });
 

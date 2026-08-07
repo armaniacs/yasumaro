@@ -209,6 +209,68 @@ describe('contentCleaner', () => {
             expect(p).not.toBeNull();
             expect(normalContent).not.toBeNull();
         });
+
+        it('should remove noscript tags', () => {
+            const noscriptDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <p>Visible text</p>
+                        <noscript>JavaScript is disabled fallback text</noscript>
+                    </div>
+                </body></html>
+            `);
+            const container = noscriptDom.window.document.getElementById('container')!;
+            const removed = stripHardStripElements(container);
+
+            expect(removed).toBeGreaterThan(0);
+            expect(container.querySelector('noscript')).toBeNull();
+            expect(container.textContent).toContain('Visible text');
+            noscriptDom.window.close();
+        });
+
+        it('should remove elements hidden via the hidden attribute (e.g. municipal CMS JS snippets)', () => {
+            const hiddenDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <p>Visible text</p>
+                        <div hidden>
+                            jQuery(function ($) { $('.menu').toggleClass('open'); });
+                        </div>
+                    </div>
+                </body></html>
+            `);
+            const container = hiddenDom.window.document.getElementById('container')!;
+            const removed = stripHardStripElements(container);
+
+            expect(removed).toBeGreaterThan(0);
+            expect(container.querySelector('[hidden]')).toBeNull();
+            expect(container.textContent).toContain('Visible text');
+            expect(container.textContent).not.toContain('jQuery');
+            hiddenDom.window.close();
+        });
+
+        it('should remove elements hidden via inline style display:none', () => {
+            const hiddenDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <p>Visible text</p>
+                        <div style="display:none">
+                            // dropdown menu control script
+                            jQuery(function ($) { $('.menu').toggleClass('open'); });
+                        </div>
+                        <div style="display: none;">Another hidden block</div>
+                    </div>
+                </body></html>
+            `);
+            const container = hiddenDom.window.document.getElementById('container')!;
+            const removed = stripHardStripElements(container);
+
+            expect(removed).toBeGreaterThan(0);
+            expect(container.textContent).toContain('Visible text');
+            expect(container.textContent).not.toContain('jQuery');
+            expect(container.textContent).not.toContain('Another hidden block');
+            hiddenDom.window.close();
+        });
     });
 
     describe('stripKeywordElements', () => {

@@ -183,5 +183,48 @@ describe('contentExtractor/textExtraction', () => {
       expect(text).toContain('Visible content');
       expect(text).not.toContain('Sidebar content');
     });
+
+    it('skips script tags mixed into article body (e.g. municipal CMS templates)', () => {
+      document.body.innerHTML = '<article>'
+        + '<p>石見銀山世界遺産センターへようこそ</p>'
+        + '<scr' + 'ipt>'
+        + '// ドロップダウンメニューの制御\n'
+        + "jQuery(function ($) { $('.menu').on('click', function () { $(this).toggleClass('open'); }); });"
+        + '</scr' + 'ipt>'
+        + '<p>大森町の歴史をご紹介します</p>'
+        + '</article>';
+      const el = document.querySelector('article')!;
+      const text = extractTextFromElement(el);
+      expect(text).toContain('石見銀山世界遺産センターへようこそ');
+      expect(text).toContain('大森町の歴史をご紹介します');
+      expect(text).not.toContain('jQuery');
+      expect(text).not.toContain('ドロップダウンメニュー');
+    });
+
+    it('skips noscript tags mixed into article body', () => {
+      document.body.innerHTML = `
+        <article>
+          <p>Main text</p>
+          <noscript>JavaScriptを有効にしてください</noscript>
+        </article>
+      `;
+      const el = document.querySelector('article')!;
+      const text = extractTextFromElement(el);
+      expect(text).toContain('Main text');
+      expect(text).not.toContain('JavaScriptを有効にしてください');
+    });
+
+    it('skips style tags mixed into article body', () => {
+      document.body.innerHTML = `
+        <article>
+          <p>Main text</p>
+          <style>.pagetop { position: fixed; bottom: 0; }</style>
+        </article>
+      `;
+      const el = document.querySelector('article')!;
+      const text = extractTextFromElement(el);
+      expect(text).toContain('Main text');
+      expect(text).not.toContain('position: fixed');
+    });
   });
 });

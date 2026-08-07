@@ -24,7 +24,11 @@ export const EXCLUDED_TAGS = new Set([
     'nav',
     'aside',
     'footer',
-    'header'
+    'header',
+    'script',
+    'style',
+    'noscript',
+    'template'
 ]);
 
 /**
