@@ -13,16 +13,21 @@ import { StorageKeys } from '../../../utils/storage.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { MarkdownBufferManager } from '../buffers/MarkdownBufferManager.js';
 import type { MarkdownEntry } from '../buffers/MarkdownBufferManager.js';
+import { renderFileTemplate } from '../../../utils/markdownTemplateUtils.js';
+import type { MarkdownExportTemplate } from '../../../utils/types.js';
 
 /** Storage key prefix for daily entry buffers */
 export const DAILY_BUFFER_PREFIX = 'local_export_';
 
 /**
- * Build complete daily markdown from accumulated entries
+ * Build complete daily markdown from accumulated entries using the given template
  */
-export function buildDailyMarkdown(date: string, entries: MarkdownEntry[]): string {
-  const header = `# ${date}`;
-  return `${header}\n\n${entries.map(e => e.markdown).join('\n\n')}`;
+export function buildDailyMarkdown(
+  date: string,
+  entries: MarkdownEntry[],
+  template: MarkdownExportTemplate
+): string {
+  return renderFileTemplate(template, entries.map(e => e.entryData), date);
 }
 
 /**
@@ -64,11 +69,16 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     try {
       const markdownBuffer = new MarkdownBufferManager();
 
+      if (!context.markdownEntryData) {
+        addLog(LogType.WARN, '[LocalMD] No markdownEntryData to save locally', { url, traceId: context.traceId });
+        return context;
+      }
+
       markdownBuffer.add({
         url,
         title: title || '',
         visitedAt: Date.now(),
-        markdown,
+        entryData: context.markdownEntryData,
       });
       await markdownBuffer.flush();
       markdownBuffer.scheduleDailyFlush();

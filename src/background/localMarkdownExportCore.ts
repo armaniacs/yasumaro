@@ -8,6 +8,8 @@
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { DAILY_BUFFER_PREFIX, buildDailyMarkdown } from './pipeline/steps/saveLocalMarkdownStep.js';
+import { getActiveTemplate } from '../utils/markdownTemplateUtils.js';
+import type { MarkdownExportTemplate } from '../utils/types.js';
 
 /**
  * Download each buffered day's Markdown exactly once.
@@ -20,6 +22,9 @@ export async function flushBufferedExports(
   try {
     const settings = await getSettings();
     const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const templates = (settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
+    const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
+    const activeTemplate = getActiveTemplate(templates, activeTemplateId);
 
     const all = await chrome.storage.local.get(Object.keys(StorageKeys));
 
@@ -32,7 +37,7 @@ export async function flushBufferedExports(
       const entries = all[key];
       if (!Array.isArray(entries) || entries.length === 0) continue;
 
-      const content = buildDailyMarkdown(date, entries);
+      const content = buildDailyMarkdown(date, entries, activeTemplate);
       const dataUrl = `data:text/markdown;base64,${btoa(unescape(encodeURIComponent(content)))}`;
 
       await chrome.downloads.download({

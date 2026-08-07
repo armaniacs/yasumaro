@@ -25,7 +25,14 @@ function makeEntry(overrides: Partial<MarkdownEntry> = {}): MarkdownEntry {
     url: 'https://example.com',
     title: 'Example Page',
     visitedAt: 1_700_000_000_000,
-    markdown: '- 14:30 [Example Page](https://example.com)\n    - Summary text',
+    entryData: {
+      timestamp: '14:30',
+      title: 'Example Page',
+      url: 'https://example.com',
+      summary: 'Summary text',
+      tags: '',
+      domain: 'example.com',
+    },
     ...overrides,
   };
 }
@@ -65,8 +72,8 @@ describe('MarkdownBufferManager', () => {
 
   describe('flush', () => {
     it('writes all buffered entries to storage and clears buffer', async () => {
-      const entry1 = makeEntry({ url: 'https://a.com', markdown: '- Entry A' });
-      const entry2 = makeEntry({ url: 'https://b.com', markdown: '- Entry B' });
+      const entry1 = makeEntry({ url: 'https://a.com', entryData: { timestamp: '10:00', title: 'A', url: 'https://a.com', summary: 'Entry A', tags: '', domain: 'a.com' } });
+      const entry2 = makeEntry({ url: 'https://b.com', entryData: { timestamp: '11:00', title: 'B', url: 'https://b.com', summary: 'Entry B', tags: '', domain: 'b.com' } });
       manager.add(entry1);
       manager.add(entry2);
 
@@ -81,12 +88,12 @@ describe('MarkdownBufferManager', () => {
     });
 
     it('merges with existing entries in storage (append mode)', async () => {
-      const existingEntry = makeEntry({ url: 'https://existing.com', markdown: '- Existing' });
+      const existingEntry = makeEntry({ url: 'https://existing.com', entryData: { timestamp: '09:00', title: 'Existing', url: 'https://existing.com', summary: 'Existing', tags: '', domain: 'existing.com' } });
       const today = new Date();
       const dateKey = `local_export_${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       mockStorage[dateKey] = [existingEntry];
 
-      const newEntry = makeEntry({ url: 'https://new.com', markdown: '- New' });
+      const newEntry = makeEntry({ url: 'https://new.com', entryData: { timestamp: '12:00', title: 'New', url: 'https://new.com', summary: 'New', tags: '', domain: 'new.com' } });
       manager.add(newEntry);
       await manager.flush();
 

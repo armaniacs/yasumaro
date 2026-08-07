@@ -1,8 +1,10 @@
+import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
+
 export interface MarkdownEntry {
   url: string;
   title: string;
   visitedAt: number;
-  markdown: string;
+  entryData: MarkdownTemplateEntryData;
 }
 
 const DEFAULT_STORAGE_PREFIX = 'local_export_';
