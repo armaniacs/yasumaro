@@ -195,7 +195,7 @@ export class AIClient {
                     // BuiltInAIClient returns success:false without throwing when the model is
                     // 'downloadable' — we must not treat that as a valid summary.
                     if (result.success !== false && result.summary.length >= minLength) {
-                        return { success: true, summary: result.summary, sentTokens: result.sentTokens, receivedTokens: result.receivedTokens, providerName: result.providerName, model: result.modelName };
+                        return { success: true, summary: result.summary, sentTokens: result.sentTokens, receivedTokens: result.receivedTokens, providerName: result.providerName, modelName: result.modelName };
                     }
                     lastResult = { success: false, summary: result.summary || result.error || 'Built-in AI returned no content' };
                 } catch (error: unknown) {
