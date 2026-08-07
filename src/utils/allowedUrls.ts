@@ -22,7 +22,7 @@ export function buildAllowedUrls(
 
     // Obsidian API
     const protocol = (settings.obsidian_protocol as string) || 'https';
-    const port = (settings.obsidian_port as string) || '27124';
+    const port = (settings.obsidian_port as string) || '27123';
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {
@@ -63,6 +63,21 @@ export function buildAllowedUrls(
             }
         } else {
             console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
+        }
+    }
+
+    // OpenAI互換プロバイダー（provider_base_url）- ホワイトリストチェック
+    const providerBaseUrl = settings.provider_base_url as string;
+    if (providerBaseUrl) {
+        if (isDomainInWhitelistFunc(providerBaseUrl)) {
+            try {
+                const normalized = normalizeUrl(providerBaseUrl);
+                allowedUrls.add(normalized);
+            } catch (e) {
+                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${errorMessage(e)}`);
+            }
+        } else {
+            console.warn(`Provider Base URL not in whitelist, skipped: ${providerBaseUrl}`);
         }
     }
 
