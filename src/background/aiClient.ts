@@ -58,20 +58,14 @@ export interface AiTestProgress {
 
 /**
  * Human-readable labels for AI provider identifiers.
+ * Single source of truth is src/utils/aiProviderLabels.ts; re-exported here
+ * for backward compatibility with existing importers.
  * Note: 'built-in-ai' is display-only here — it is not registered in
  * AIClient.providers (Strategy pattern). Built-in AI is dispatched to
  * LocalAIService via FallbackAIService, not through AIClient. See
  * dev-docs/2026-07-28-built-in-ai-provider-integration-design.md.
  */
-export const PROVIDER_LABELS: Record<string, string> = {
-    gemini: 'Google Gemini',
-    openai: 'OpenAI Compatible',
-    openai2: 'OpenAI Compatible 2',
-    'lm-studio': 'LM Studio',
-    ollama: 'Ollama',
-    'openai-compatible': 'OpenAI Compatible',
-    'built-in-ai': 'Built-in AI',
-};
+export { PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
 
 /**
  * AI Client
