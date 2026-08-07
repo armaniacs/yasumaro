@@ -6,6 +6,8 @@
 import { Settings, StorageKeys } from '../../../utils/storage.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
+import { addLog, LogType } from '../../../utils/logger.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -70,6 +72,27 @@ export abstract class AIProviderStrategy {
         }
 
         return { blocked: false };
+    }
+
+    /**
+     * コンテンツのサニタイズとプロンプトインジェクション検出
+     * @returns blocked=true の場合は caller は早期リターンすべき
+     */
+    protected sanitizeContent(
+        content: string,
+        providerName: string,
+        traceId: string
+    ): { blocked: boolean; sanitized: string; warnings: string[] } {
+        const { sanitized, warnings, dangerLevel } = sanitizePromptContent(content);
+        if (warnings.length > 0) {
+            addLog(LogType.WARN, `[${providerName}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
+        }
+        if (dangerLevel === 'high') {
+            const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
+            addLog(LogType.ERROR, `[${providerName}] High risk prompt injection blocked: ${cause}`, { traceId });
+            return { blocked: true, sanitized, warnings };
+        }
+        return { blocked: false, sanitized, warnings };
     }
 
     /**
