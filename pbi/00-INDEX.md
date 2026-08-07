@@ -14,8 +14,8 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
-| 🔶 [2026-08-08-refactor-ai-client-service-unification.md](2026-08-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| 🔶 [2026-08-13-refactor-service-wiring-backend-consolidation.md](2026-08-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
+| 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
+| 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
@@ -47,10 +47,10 @@
 - 2026-08-07-05-refactor-domain-matching-consolidation.md (ドメインマッチング/wildcardToRegex統合)
 - 2026-08-07-06-refactor-legacy-url-storage-removal.md (urlStorageをsavedUrlStoreへ統合・削除)
 - 2026-08-07-07-refactor-allowed-urls-single-source.md (許可URL二重実装の単一ソース化・Obsidianポート27124バグ修正)
-- 2026-08-09-refactor-pending-queue-unification.md (保留キュー3実装をStorageBackedQueueへ共通化)
-- 2026-08-10-refactor-provider-labels-single-source.md (PROVIDER_LABELSをaiProviderLabels.tsへ単一ソース化)
-- 2026-08-11-refactor-sqlite-extract-domain-consolidation.md (sqliteEngineContextのextractDomainをwww除去に統一)
-- 2026-08-12-refactor-duplicate-test-consolidation.md (Gemini/OpenAI/fieldValidationの重複テスト統合)
+- 2026-08-07-09-refactor-pending-queue-unification.md (保留キュー3実装をStorageBackedQueueへ共通化)
+- 2026-08-07-10-refactor-provider-labels-single-source.md (PROVIDER_LABELSをaiProviderLabels.tsへ単一ソース化)
+- 2026-08-07-11-refactor-sqlite-extract-domain-consolidation.md (sqliteEngineContextのextractDomainをwww除去に統一)
+- 2026-08-07-12-refactor-duplicate-test-consolidation.md (Gemini/OpenAI/fieldValidationの重複テスト統合)
 
 **実装計画（dev-docs/archived/plans/）**:
 - 2026-08-07-01〜06 の各実装計画（ai-provider-common-extraction / master-password-ui-unification / settings-export-import-ui-unification / utility-functions-consolidation / domain-matching-consolidation / legacy-url-storage-removal）
@@ -259,5 +259,5 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 2（2026-08-08 AIレイヤー統合 / 2026-08-13 サービス配線・StorageBackend） |
+| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
 | アーカイブ済み | 210 |
