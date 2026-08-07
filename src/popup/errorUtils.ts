@@ -3,16 +3,8 @@
  * エラーハンドリング共通モジュール
  */
 
-// background/aiClient.ts の PROVIDER_LABELS と同期を保つこと（popupバンドル軽量化のためローカル複製）
-const AI_PROVIDER_LABELS: Record<string, string> = {
-  gemini: 'Google Gemini',
-  openai: 'OpenAI Compatible',
-  openai2: 'OpenAI Compatible 2',
-  'lm-studio': 'LM Studio',
-  ollama: 'Ollama',
-  'openai-compatible': 'OpenAI Compatible',
-  'built-in-ai': 'Built-in AI',
-};
+// 単一ソース: src/utils/aiProviderLabels.ts（依存を持たない純粋定数のため popup バンドルに AIClient を巻き込まない）
+import { PROVIDER_LABELS as AI_PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
 
 // エラータイプの定義
 type ErrorWithDetails = Error & {
