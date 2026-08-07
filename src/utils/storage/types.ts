@@ -5,7 +5,7 @@
  */
 
 import type { EncryptedData } from '../crypto/types.js';
-import type { UblockRules, Source, CustomPrompt, TagCategory, TagNormalizationEntry } from '../types.js';
+import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 
 /**
@@ -98,6 +98,9 @@ export const StorageKeys = {
     MP_REQUIRE_ON_IMPORT: 'mp_require_on_import',       // インポート時パスワード要求フラグ
     // Custom prompts
     CUSTOM_PROMPTS: 'custom_prompts', // カスタムプロンプト設定
+    // Markdown export templates
+    MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates', // ローカルMarkdown書き出しテンプレート一覧
+    ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id', // 選択中テンプレートID
     // Domain filter cache for content scripts (Task #19)
     DOMAIN_FILTER_CACHE: 'domain_filter_cache', // 許可ドメインキャッシュ（content script用）
     DOMAIN_FILTER_CACHE_TIMESTAMP: 'domain_filter_cache_timestamp', // キャッシュタイムスタンプ
@@ -316,6 +319,8 @@ export interface StorageKeyValues {
     [StorageKeys.MP_ENCRYPT_ON_EXPORT]: boolean;
     [StorageKeys.MP_REQUIRE_ON_IMPORT]: boolean;
     [StorageKeys.CUSTOM_PROMPTS]: CustomPrompt[];
+    [StorageKeys.MARKDOWN_EXPORT_TEMPLATES]: MarkdownExportTemplate[];
+    [StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID]: string;
     [StorageKeys.DOMAIN_FILTER_CACHE]: string[];
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: number;
     [StorageKeys.TAG_CATEGORIES]: TagCategory[];
