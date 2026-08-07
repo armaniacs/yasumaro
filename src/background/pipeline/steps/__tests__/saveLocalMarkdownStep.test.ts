@@ -21,8 +21,10 @@ vi.mock('../../../../utils/storage.js', () => ({
   },
 }));
 
-import { saveLocalMarkdownStep } from '../saveLocalMarkdownStep.js';
+import { saveLocalMarkdownStep, buildDailyMarkdown } from '../saveLocalMarkdownStep.js';
+import { DEFAULT_MARKDOWN_TEMPLATE } from '../../../../utils/markdownTemplateUtils.js';
 import type { RecordingContext } from '../../types.js';
+import type { MarkdownEntry } from '../../buffers/MarkdownBufferManager.js';
 
 // chrome.storage.local のモック
 const mockStorage: Record<string, unknown> = {};
@@ -63,6 +65,14 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
     force: false,
     errors: [],
     markdown: '- 14:30 [Test Page](https://example.com)\n    - This is a test summary',
+    markdownEntryData: {
+      timestamp: '14:30',
+      title: 'Test Page',
+      url: 'https://example.com',
+      summary: 'This is a test summary',
+      tags: '',
+      domain: 'example.com',
+    },
     ...overrides,
   };
 }
@@ -128,10 +138,19 @@ describe('saveLocalMarkdownStep', () => {
       const key = Object.keys(setCall)[0];
       expect(key).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[key]).toHaveLength(1);
-      expect(setCall[key][0].markdown).toBe(context.markdown);
+      expect(setCall[key][0].entryData).toEqual(context.markdownEntryData);
 
       // PBI 2026-07-09-03: ステップはダウンロードしない
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
+    });
+
+    it('markdownEntryData がない場合はバッファに追記せずスキップ', async () => {
+      const context = makeContext({ markdownEntryData: undefined });
+
+      const result = await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+      expect(result).toBe(context);
     });
 
     it('2回目の実行で既存エントリに追加される', async () => {
@@ -233,5 +252,43 @@ describe('saveLocalMarkdownStep', () => {
       expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
       expect(mockChrome.alarms.create).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('buildDailyMarkdown', () => {
+  const entries: MarkdownEntry[] = [
+    {
+      url: 'https://a.example.com',
+      title: 'First',
+      visitedAt: 1000,
+      entryData: { timestamp: '09:00', title: 'First', url: 'https://a.example.com', summary: 'Summary A', tags: '', domain: 'a.example.com' },
+    },
+    {
+      url: 'https://b.example.com',
+      title: 'Second',
+      visitedAt: 2000,
+      entryData: { timestamp: '10:00', title: 'Second', url: 'https://b.example.com', summary: 'Summary B', tags: '#tag', domain: 'b.example.com' },
+    },
+  ];
+
+  it('デフォルトテンプレートで現行と同じ出力形式を生成する', () => {
+    const result = buildDailyMarkdown('2026-08-07', entries, DEFAULT_MARKDOWN_TEMPLATE);
+    expect(result).toBe(
+      '# 2026-08-07\n\n' +
+      '- 09:00 [First](https://a.example.com)\n    -  Summary A\n\n' +
+      '- 10:00 [Second](https://b.example.com)\n    - #tag Summary B'
+    );
+  });
+
+  it('カスタムテンプレートで異なる出力形式を生成する', () => {
+    const customTemplate = {
+      ...DEFAULT_MARKDOWN_TEMPLATE,
+      id: 'custom',
+      isDefault: false,
+      fileTemplate: '## {{date}} ({{entryCount}})\n{{entries}}',
+      entryTemplate: '* {{title}} - {{domain}}',
+    };
+    const result = buildDailyMarkdown('2026-08-07', entries, customTemplate);
+    expect(result).toBe('## 2026-08-07 (2)\n* First - a.example.com\n\n* Second - b.example.com');
   });
 });

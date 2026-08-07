@@ -11,6 +11,8 @@ const mockDownload = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
+    ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
   },
   getSettings: mockGetSettings,
 }));
@@ -23,6 +25,18 @@ vi.mock('../../utils/logger.js', () => ({
 vi.mock('../pipeline/steps/saveLocalMarkdownStep.js', () => ({
   DAILY_BUFFER_PREFIX: 'local_export_',
   buildDailyMarkdown: vi.fn((date: string, entries: string[]) => `# ${date}\n${entries.join('\n')}`),
+}));
+
+vi.mock('../../utils/markdownTemplateUtils.js', () => ({
+  getActiveTemplate: vi.fn(() => ({
+    id: 'default',
+    name: 'Default',
+    fileTemplate: '# {{date}}\n\n{{entries}}',
+    entryTemplate: '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}} {{summary}}',
+    isDefault: true,
+    createdAt: 0,
+    updatedAt: 0,
+  })),
 }));
 
 vi.stubGlobal('chrome', {
