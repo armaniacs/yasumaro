@@ -96,6 +96,40 @@ export abstract class AIProviderStrategy {
     }
 
     /**
+     * HTTPステータスコードをユーザー向け接続エラーメッセージに変換
+     */
+    protected mapConnectionError(
+        statusCode: number,
+        providerLabel: string
+    ): AIProviderConnectionResult {
+        if (statusCode === 401 || statusCode === 403) {
+            return {
+                success: false,
+                message: `Authentication failed (${statusCode}). Check your ${providerLabel} API key.`,
+                debug: { statusCode },
+            };
+        } else if (statusCode === 404) {
+            return {
+                success: false,
+                message: `Endpoint not found (404). Check your Base URL.`,
+                debug: { statusCode },
+            };
+        } else if (statusCode === 429) {
+            return {
+                success: false,
+                message: `Rate limit exceeded (429). Please try again later.`,
+                debug: { statusCode },
+            };
+        } else {
+            return {
+                success: false,
+                message: `${providerLabel} API Error: ${statusCode}`,
+                debug: { statusCode },
+            };
+        }
+    }
+
+    /**
      * 要約を生成する
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
