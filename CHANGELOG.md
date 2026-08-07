@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.19` リリース。
+> - 現時点では `v6.7.20` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,6 +33,23 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.20] - 2026-08-08
+
+自治体サイト等で `<script>` タグ以外の形（`hidden`/`display:none` 要素内への平文埋め込み）で本文に混入するJS/jQueryコードを、コンテンツ抽出・Content Cleansingの両段階で除去できるようにするバグ修正。
+
+### Fixed / 修正
+
+- **本文抽出時にJSコードが混入する不具合を修正** — `https://ginzan.city.oda.lg.jp/`（石見銀山世界遺産センター）等の自治体CMSサイトで、`hidden` 属性や `display:none` の要素内に平文で埋め込まれたjQueryコード（ドロップダウンメニュー制御、iOS拡大防止等の実装コード）がAIへの送信データに混入し、無関係な要約が生成される問題を修正
+  - `src/utils/contentExtractor/classifier.ts` — テキスト抽出の除外対象タグ（`EXCLUDED_TAGS`）に `script` / `style` / `noscript` / `template` を追加
+  - `src/utils/contentCleaner.ts` — Content Cleansing の Hard Strip 対象タグに `noscript` を追加。さらに `[hidden]` / `[aria-hidden="true"]` / `display:none` の非表示要素を削除するロジックを新設し、正規の `<script>` タグ以外の形で埋め込まれたコード片も除去可能に
+
+### Tests / テスト
+
+- `classifier.test.ts` — script/style/noscript タグの除外テストを追加
+- `textExtraction.test.ts` — 自治体CMSサイトを模した再現ケース（本文中へのscriptタグ混入、noscript混入、style混入）の回帰テストを追加
+- `contentCleaner.test.ts` — noscriptタグ、`hidden`属性、`display:none`要素の除去テストを追加
+- 全テスト通過、TypeScript 型チェック正常、ビルド成功
+
 ## [6.7.19] - 2026-08-07
 
 コードレビューで発見された ~2,800 行の重複コードの解消。6 PBIs を TDD で実装し、約 30 コミットで収束。
@@ -54,6 +71,13 @@ All notable changes to this project will be documented in this file.
   - `domainUtils.ts`、`domainFilterCache.ts`、`statusChecker.ts` が `wildcardToRegex` を使用
   - `content/loader.ts` の重複関数群に「`urlSkipper.ts` が正本」の注記を追加（Content Script の ESM 制約のため）
 - **レガシー `urlStorage.ts` の削除** — `savedUrlStore.ts` が既にスーパーセットの機能を提供していたため、`urlStorage.ts`（245行）を削除し、唯一の参照元 `storageUrls.ts` のインポートを切り替え
+- **許可URLの二重実装を単一ソース化** — `allowedUrls.ts` と `settingsStore.ts` の `buildAllowedUrls` を統一。Obsidian ポートのデフォルト値が不一致（`27124` vs `27123`）だった実バグを修正。`provider_base_url` のホワイトリスト処理も `settingsStore.ts` と揃えて解消
+- **`AISummaryResult` の型ドリフトを解消** — `AIService` 側の `modelName` と `ProviderStrategy` 側の `model` を `modelName` に統一。`RemoteAIService` / `AIClient` / `GeminiProvider` / `OpenAIProvider` の変換コード・返却値を更新し、フィールド名の食い違いによるバグを防止
+- **保留キューの3実装を `StorageBackedQueue<T>` で共通化** — `pendingSqliteQueue` / `pendingChromeStorageQueue` の load/save/enqueue/flush 骨格を汎用キューに抽出。`offlineNetworkQueue` も含め3ファイルで共有
+- **`PROVIDER_LABELS` を単一ソースに** — `src/utils/aiProviderLabels.ts` を新設し popup の手動同期複製を削除。popup バンドルに AIClient の重い依存を巻き込まない純粋定数モジュール
+- **`sqliteEngineContext.extractDomain` を正規仕様に統一** — www. 除去の有無で乖離していた挙動を canonical（`domainUtils.ts`）に合わせて統一
+- **エラー処理イディオムを統一** — `error instanceof Error ? error.message : String(error)` のインラインパターンを `errorMessage()` に置換（`offlineNetworkQueue` / `sessionStore` / `dashboardSqliteService`）
+- **重複テストファイルを統合** — `GeminiProvider` / `OpenAIProvider` の provider/__tests__ 重複を canonical の background/__tests__ にマージして削除。`fieldValidation` の 188 行サブセットを 889 行 canonical に統合して削除
 
 ### Tests / テスト
 
@@ -64,11 +88,19 @@ All notable changes to this project will be documented in this file.
 - `savedUrlStore` を `urlStorage` の機能スーパーセットに拡張（`getSavedUrlEntries` 追加、LRU メタデータ保持、`addSavedUrl(recordType)` 対応）
 - 全 7575 単体テスト通過、TypeScript 型チェック正常、ビルド成功
 - E2E: サイドバータブ数期待値を 16 → 17 に修正（`panel-export-import` 追加の反映漏れ）
+- `storageBackedQueue.test.ts` を新設（汎用キューの enqueue/cap/flush/失敗保持を検証）
+- `aiProviderLabels.test.ts` を新設（全プロバイダIDにラベルが存在することを検証）
+- `GeminiProvider.test.ts` に文字数切り詰め・API バージョン上書きのテストを追加
+- `OpenAIProvider.test.ts` に `openai_content_chars` 上書きテストを追加
+- 全 7557 単体テスト通過、TypeScript 型チェック正常、ビルド成功、E2E 185 テスト通過
 
 ### Chores / その他
 
 - **バージョン更新** — `6.7.18` → `6.7.19`
 - PBI 2026-08-07-01〜06 を `pbi/` に作成、実装計画を `docs/superpowers/plans/` に出力
+- **バージョン更新** — `6.7.18` → `6.7.19`（package.json / package-lock.json / wxt.config.ts / docs/version.json）
+- PBI 2026-08-07-07〜13 を `pbi/` に作成、実装計画を `docs/superpowers/plans/` に出力
+- 完了済み PBI-01〜12 を `dev-docs/archived/pbi/` へ移動、実装計画を `dev-docs/archived/plans/` へ移動し `pbi/00-INDEX.md` を更新
 
 ## [6.7.18] - 2026-08-07
 
