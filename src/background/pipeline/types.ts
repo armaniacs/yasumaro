@@ -7,6 +7,7 @@ import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { AIService } from '../ai/AIService.js';
+import type { MarkdownTemplateEntryData } from '../../utils/types.js';
 
 // Constants
 export const MAX_RECORD_SIZE = 64 * 1024; // 64KB
@@ -80,6 +81,7 @@ export interface RecordingContext {
   privacyResult?: PrivacyPipelineResult;
   sanitizedSummary?: string;
   markdown?: string;
+  markdownEntryData?: MarkdownTemplateEntryData;
 
   // L0 Extractive Compression (Phase 1)
   extractedSentences?: string[];  // Extracted important sentences (L0)
