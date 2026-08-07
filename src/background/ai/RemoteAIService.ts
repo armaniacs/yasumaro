@@ -12,7 +12,7 @@ interface RemoteAIServiceConfig {
       sentTokens?: number;
       receivedTokens?: number;
       providerName?: string;
-      model?: string;
+      modelName?: string;
     }>;
   };
 }
@@ -32,7 +32,7 @@ export class RemoteAIService implements AIService {
       sentTokens: result.sentTokens,
       receivedTokens: result.receivedTokens,
       providerName: result.providerName,
-      modelName: result.model,
+      modelName: result.modelName,
     };
   }
 

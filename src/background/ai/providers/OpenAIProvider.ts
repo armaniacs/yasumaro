@@ -273,6 +273,6 @@ export class OpenAIProvider extends AIProviderStrategy {
             await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
         }
 
-        return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, model: this.model };
+        return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, modelName: this.model };
     }
 }

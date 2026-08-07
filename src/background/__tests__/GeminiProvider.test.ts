@@ -175,7 +175,7 @@ describe('GeminiProvider', () => {
             const result = await provider.generateSummary('content');
 
             expect(result.providerName).toBe('gemini');
-            expect(result.model).toBe('gemini-3.1-flash-lite');
+            expect(result.modelName).toBe('gemini-3.1-flash-lite');
         });
 
         test('APIエラーレスポンスでエラーメッセージ', async () => {

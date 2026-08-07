@@ -8,7 +8,7 @@ describe('RemoteAIService', () => {
       sentTokens: 100,
       receivedTokens: 50,
       providerName: 'TestProvider',
-      model: 'test-model',
+      modelName: 'test-model',
     });
     const service = new RemoteAIService({ aiClient: { generateSummary } });
 
