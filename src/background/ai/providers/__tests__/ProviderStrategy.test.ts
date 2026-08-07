@@ -65,6 +65,10 @@ class TestProvider extends AIProviderStrategy {
     callSanitizeContent(content: string, providerName: string, traceId: string) {
         return this.sanitizeContent(content, providerName, traceId);
     }
+
+    callMapConnectionError(statusCode: number, providerLabel: string) {
+        return this.mapConnectionError(statusCode, providerLabel);
+    }
 }
 
 class CustomIdProvider extends AIProviderStrategy {
@@ -328,5 +332,40 @@ describe('sanitizeContent', () => {
         const result = provider.callSanitizeContent('safe content', 'test-provider', 'trace-1');
         expect(result.blocked).toBe(false);
         expect(result.sanitized).toBe('safe content');
+    });
+});
+
+describe('mapConnectionError', () => {
+    test('401の場合は認証失敗メッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callMapConnectionError(401, 'OpenAI');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Authentication failed');
+        expect(result.debug?.statusCode).toBe(401);
+    });
+
+    test('404の場合はエンドポイント未発見メッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callMapConnectionError(404, 'Gemini');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('not found');
+    });
+
+    test('429の場合はレート制限メッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callMapConnectionError(429, 'OpenAI');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Rate limit');
+    });
+
+    test('500の場合はサーバーエラーメッセージを返す', () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = provider.callMapConnectionError(500, 'Gemini');
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('API Error');
     });
 });
