@@ -58,6 +58,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.ALLOWED_URLS]: [],
     [StorageKeys.ALLOWED_URLS_HASH]: '',
     [StorageKeys.CUSTOM_PROMPTS]: [],
+    [StorageKeys.MARKDOWN_EXPORT_TEMPLATES]: [],
     [StorageKeys.DOMAIN_FILTER_CACHE]: [],
     [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: 0,
     [StorageKeys.MP_PROTECTION_ENABLED]: false,

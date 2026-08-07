@@ -38,6 +38,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
       StorageKeys.OPFS_FALLBACK_MODE,
       StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE,
+      StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {
