@@ -9,10 +9,15 @@ import {
   setMasterPassword,
   verifyMasterPassword,
   isMasterPasswordSet,
-  calculatePasswordStrength,
-  validatePasswordRequirements,
-  validatePasswordMatch
+  calculatePasswordStrength
 } from '../utils/masterPassword.js';
+import {
+  validateAndSetPasswordErrors,
+  validateAndSetMatchErrors,
+  buildSetStorageFn,
+  buildGetStorageFn,
+  updatePasswordStrengthDisplay
+} from '../utils/masterPasswordUiCore.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 
@@ -59,17 +64,7 @@ function updateMasterPasswordWarningVisibility(isSet: boolean): void {
 }
 
 function updatePasswordStrength(password: string): void {
-  if (!passwordStrengthBar || !passwordStrengthText) return;
-  if (!password) {
-    passwordStrengthBar.style.width = '0%';
-    passwordStrengthBar.className = 'strength-fill';
-    passwordStrengthText.textContent = getMessage('passwordStrengthWeak') || 'Weak';
-    return;
-  }
-  const result = calculatePasswordStrength(password);
-  passwordStrengthBar.style.width = `${result.score}%`;
-  passwordStrengthBar.className = `strength-fill ${result.level}`;
-  passwordStrengthText.textContent = getMessage(`passwordStrength${result.level.charAt(0).toUpperCase() + result.level.slice(1)}`) || result.text;
+  updatePasswordStrengthDisplay(password, passwordStrengthBar, passwordStrengthText, calculatePasswordStrength);
 }
 
 function showPasswordModal(mode: 'set' | 'change' = 'set'): void {
@@ -113,30 +108,13 @@ async function savePassword(): Promise<void> {
   const password = masterPasswordInput.value;
   const confirmPasswordValue = masterPasswordConfirm?.value ?? '';
 
-  const requirementError = validatePasswordRequirements(password);
-  if (requirementError) {
-    if (passwordStrengthError) {
-      passwordStrengthError.textContent = getMessage('passwordTooShort') || requirementError;
-      passwordStrengthError.classList.add('visible');
-    }
-    return;
-  }
+  if (validateAndSetPasswordErrors(password, passwordStrengthError)) return;
 
   if (passwordModalMode === 'set') {
-    const matchError = validatePasswordMatch(password, confirmPasswordValue);
-    if (matchError) {
-      if (passwordMatchError) {
-        passwordMatchError.textContent = getMessage('passwordMismatch') || matchError;
-        passwordMatchError.classList.add('visible');
-      }
-      return;
-    }
+    if (validateAndSetMatchErrors(password, confirmPasswordValue, passwordMatchError)) return;
   }
 
-  const setStorageFn = async (key: string, value: unknown) => {
-    await chrome.storage.local.set({ [key]: value });
-  };
-  const result = await setMasterPassword(password, setStorageFn);
+  const result = await setMasterPassword(password, buildSetStorageFn());
 
   if (result.success) {
     showStatus('status', getMessage('passwordSaved') || 'Master password saved successfully.', 'success');
@@ -194,8 +172,7 @@ async function authenticatePassword(): Promise<void> {
     return;
   }
 
-  const getStorageFn = async (keys: string[]) => chrome.storage.local.get(keys);
-  const result = await verifyMasterPassword(password, getStorageFn);
+  const result = await verifyMasterPassword(password, buildGetStorageFn());
   if (result.success) {
     // VULN-021 fix: reset failed attempts on successful authentication
     await resetFailedAttempts();
