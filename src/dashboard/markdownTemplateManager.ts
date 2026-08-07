@@ -61,12 +61,17 @@ let currentSettings: Settings | null = null;
 // Editing state: null = creating a new template, otherwise the id of the template being edited
 let editingTemplateId: string | null = null;
 
-// Guards initMarkdownTemplateManager() against double-registration of listeners
-// if the panel's mount() is ever invoked more than once.
-let initialized = false;
-
 /**
  * Initialize the Markdown template manager panel.
+ *
+ * Re-queries all DOM element refs and (re-)attaches listeners on every call,
+ * so this is correct whether mount() happens once (current reality) or the
+ * panel's DOM is ever torn down and rebuilt (hypothetical future re-mount).
+ * Listeners are removed before being re-attached so that calling this twice
+ * without the DOM actually changing (same element nodes) cannot result in
+ * duplicate registrations; removeEventListener is a harmless no-op when the
+ * nodes are freshly created.
+ *
  * @param settings Current settings snapshot
  */
 export function initMarkdownTemplateManager(settings: Settings): void {
@@ -84,15 +89,16 @@ export function initMarkdownTemplateManager(settings: Settings): void {
   saveBtn = document.getElementById('markdownTemplateSaveBtn') as HTMLButtonElement | null;
   cancelBtn = document.getElementById('markdownTemplateCancelBtn') as HTMLButtonElement | null;
 
-  if (!initialized) {
-    initialized = true;
-
-    createBtn?.addEventListener('click', handleCreateClick);
-    saveBtn?.addEventListener('click', handleSaveClick);
-    cancelBtn?.addEventListener('click', handleCancelClick);
-    fileInput?.addEventListener('input', updatePreview);
-    entryInput?.addEventListener('input', updatePreview);
-  }
+  createBtn?.removeEventListener('click', handleCreateClick);
+  createBtn?.addEventListener('click', handleCreateClick);
+  saveBtn?.removeEventListener('click', handleSaveClick);
+  saveBtn?.addEventListener('click', handleSaveClick);
+  cancelBtn?.removeEventListener('click', handleCancelClick);
+  cancelBtn?.addEventListener('click', handleCancelClick);
+  fileInput?.removeEventListener('input', updatePreview);
+  fileInput?.addEventListener('input', updatePreview);
+  entryInput?.removeEventListener('input', updatePreview);
+  entryInput?.addEventListener('input', updatePreview);
 
   renderTemplateList();
 }

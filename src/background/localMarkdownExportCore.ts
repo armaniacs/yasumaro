@@ -26,7 +26,7 @@ export async function flushBufferedExports(
     const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
     const activeTemplate = getActiveTemplate(templates, activeTemplateId);
 
-    const all = await chrome.storage.local.get(Object.keys(StorageKeys));
+    const all = await chrome.storage.local.get();
 
     for (const key of Object.keys(all)) {
       if (!key.startsWith(DAILY_BUFFER_PREFIX)) continue;
