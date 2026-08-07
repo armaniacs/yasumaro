@@ -238,8 +238,9 @@ export class OpenAIProvider extends AIProviderStrategy {
             return this.mapConnectionError(response.status, 'OpenAI');
         } catch (e: unknown) {
             const msg = errorMessage(e);
+            const errorName = e instanceof Error ? e.name : undefined;
             // 共通エラーパース
-            return this.parseAndMapFetchError(msg, 'OpenAI');
+            return this.parseAndMapFetchError(msg, 'OpenAI', errorName);
         }
     }
 
