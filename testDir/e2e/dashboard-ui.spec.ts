@@ -17,7 +17,7 @@ const OPTIONS_PATH = path.join(__dirname, '../../dist/chromium-mv3/options.html'
  * 動作しない。このテストは DOM 構造の存在確認のみを検証する。
  *
  * HTML 構造:
- * - サイドバー: div.sidebar-section-label (Settings/Data/Tools) + button.sidebar-nav-btn[role="tab"] (16個)
+ * - サイドバー: div.sidebar-section-label (Settings/Data/Tools) + button.sidebar-nav-btn[role="tab"] (17個)
  * - パネル: section.panel[role="tabpanel"] (ID: panel-general, panel-domain, ...)
  */
 
@@ -41,11 +41,11 @@ test.describe('Dashboard - Initial Load @ui', () => {
     await expect(sectionLabels.nth(2)).toHaveText('Tools');
   });
 
-  test('has 16 sidebar navigation tabs', async ({ page }) => {
+  test('has 17 sidebar navigation tabs', async ({ page }) => {
     await page.goto(`file://${OPTIONS_PATH}`);
 
     const sidebarTabs = page.locator('.sidebar-nav-btn');
-    await expect(sidebarTabs).toHaveCount(16);
+    await expect(sidebarTabs).toHaveCount(17);
   });
 
   test('initial tab (panel-general) is selected', async ({ page }) => {
