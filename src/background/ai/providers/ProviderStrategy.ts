@@ -5,6 +5,7 @@
 
 import { Settings, StorageKeys } from '../../../utils/storage.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -46,6 +47,29 @@ export abstract class AIProviderStrategy {
 
     constructor(settings: Settings) {
         this.settings = settings;
+    }
+
+    /**
+     * プリフライトガード: 月次リミット、使用量警告、レート制限を順にチェック
+     * @returns blocked=true の場合は caller は早期リターンすべき
+     */
+    protected async checkPreFlight(): Promise<{ blocked: boolean; message?: string }> {
+        const hardLimit = await checkHardLimit();
+        if (hardLimit.blocked) {
+            return { blocked: true, message: `Error: ${hardLimit.message}` };
+        }
+
+        const usageWarning = await checkUsageWarning();
+        if (usageWarning.warning) {
+            return { blocked: true, message: `Error: ${usageWarning.message}` };
+        }
+
+        const rateLimit = await checkRateLimit();
+        if (!rateLimit.allowed) {
+            return { blocked: true, message: `Error: ${getRateLimitMessage(rateLimit.resetTime)}` };
+        }
+
+        return { blocked: false };
     }
 
     /**
