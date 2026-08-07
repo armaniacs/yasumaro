@@ -11,6 +11,7 @@ import type { EncryptionEnvelope } from '../utils/crypto/index.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';
+import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 
 export const BACKUP_PAYLOAD_VERSION = 1;
 
@@ -19,23 +20,6 @@ interface BackupPayload {
   exportedAt: string;
   settings: Settings;
   historyDbBase64: string;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!);
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
 
 async function buildBackupPayload(): Promise<BackupPayload> {
