@@ -4,6 +4,7 @@
  */
 
 
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 import type { Settings } from '../../../../utils/storage.js';
 import { StorageKeys } from '../../../../utils/storage.js';
 import {
@@ -11,6 +12,25 @@ import {
     AIProviderConnectionResult,
     AISummaryResult
 } from '../ProviderStrategy.js';
+
+const {
+    checkHardLimitMock,
+    checkUsageWarningMock,
+    checkRateLimitMock,
+    getRateLimitMessageMock
+} = vi.hoisted(() => ({
+    checkHardLimitMock: vi.fn(async () => ({ blocked: false })),
+    checkUsageWarningMock: vi.fn(async () => ({ warning: false })),
+    checkRateLimitMock: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: Date.now() + 60000 })),
+    getRateLimitMessageMock: vi.fn(() => 'Rate limit exceeded')
+}));
+
+vi.mock('../../../../utils/aiUsageTracker.js', () => ({
+    checkHardLimit: checkHardLimitMock,
+    checkUsageWarning: checkUsageWarningMock,
+    checkRateLimit: checkRateLimitMock,
+    getRateLimitMessage: getRateLimitMessageMock
+}));
 
 class TestProvider extends AIProviderStrategy {
     async generateSummary(content: string): Promise<AISummaryResult> {
@@ -23,6 +43,10 @@ class TestProvider extends AIProviderStrategy {
 
     getName(): string {
         return 'test-provider';
+    }
+
+    async callCheckPreFlight() {
+        return this.checkPreFlight();
     }
 }
 
@@ -216,5 +240,48 @@ describe('AIProviderStrategy', () => {
             const provider = new TestProvider(settings);
             expect(provider.getName()).toBe('test-provider');
         });
+    });
+});
+
+describe('checkPreFlight', () => {
+    beforeEach(() => {
+        checkHardLimitMock.mockResolvedValue({ blocked: false });
+        checkUsageWarningMock.mockResolvedValue({ warning: false });
+        checkRateLimitMock.mockResolvedValue({ allowed: true, remaining: 9, resetTime: Date.now() + 60000 });
+        getRateLimitMessageMock.mockReturnValue('Rate limit exceeded');
+    });
+
+    test('hardLimitブロック時は { blocked: true, message } を返す', async () => {
+        checkHardLimitMock.mockResolvedValue({ blocked: true, message: 'Monthly limit reached' });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = await provider.callCheckPreFlight();
+        expect(result.blocked).toBe(true);
+        expect(result.message).toBe('Error: Monthly limit reached');
+    });
+
+    test('usageWarning時は { blocked: true, message } を返す', async () => {
+        checkUsageWarningMock.mockResolvedValue({ warning: true, message: 'Usage warning' });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = await provider.callCheckPreFlight();
+        expect(result.blocked).toBe(true);
+        expect(result.message).toBe('Error: Usage warning');
+    });
+
+    test('rateLimitブロック時は { blocked: true, message } を返す', async () => {
+        checkRateLimitMock.mockResolvedValue({ allowed: false, remaining: 0, resetTime: Date.now() + 60000 });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = await provider.callCheckPreFlight();
+        expect(result.blocked).toBe(true);
+        expect(result.message).toBe('Error: Rate limit exceeded');
+    });
+
+    test('全チェック通過時は { blocked: false } を返す', async () => {
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        const result = await provider.callCheckPreFlight();
+        expect(result.blocked).toBe(false);
     });
 });
