@@ -1,4 +1,5 @@
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export const SESSION_KEYS = {
   SKIP_AI_RATE_LIMITER: 'sw:rateLimiter',
@@ -374,6 +375,6 @@ export class SessionStore {
 }
 
 function isQuotaError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessage(error);
   return /quota|QUOTA_BYTES/i.test(message);
 }

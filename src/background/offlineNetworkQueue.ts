@@ -6,6 +6,7 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface OfflineJob {
   id: string;
@@ -138,7 +139,7 @@ export class OfflineNetworkQueue {
         job.retryCount++;
       } catch (error) {
         job.retryCount++;
-        job.lastError = error instanceof Error ? error.message : String(error);
+        job.lastError = errorMessage(error);
       }
 
       if (job.retryCount >= MAX_RETRY_COUNT) {

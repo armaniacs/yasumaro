@@ -66,6 +66,7 @@ async function sendDashboardMessage<T extends DashboardSqliteRequest>(
 // ============================================================================
 
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 export type { BrowsingLogEntry };
 
 export interface DateCount {
@@ -106,7 +107,7 @@ export async function queryLogs(options: {
         await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
-      console.error('queryLogs failed:', error instanceof Error ? error.message : String(error));
+      console.error('queryLogs failed:', errorMessage(error));
       return null;
     }
   }
@@ -139,7 +140,7 @@ export async function searchLogs(
         await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
-      console.error('searchLogs failed:', error instanceof Error ? error.message : String(error));
+      console.error('searchLogs failed:', errorMessage(error));
       return null;
     }
   }
@@ -307,7 +308,7 @@ export async function getSqliteStatus(): Promise<{
       path: '',
       fallback: false,
       fts5: false,
-      initError: error instanceof Error ? error.message : String(error),
+      initError: errorMessage(error),
     };
   }
 }
