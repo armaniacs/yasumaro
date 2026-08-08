@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.20` リリース。
+> - 現時点では `v6.7.21` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [6.7.20] - 2026-08-08
+## [6.7.21] - 2026-08-08
 
 自治体サイト等で `<script>` タグ以外の形（`hidden`/`display:none` 要素内への平文埋め込み）で本文に混入するJS/jQueryコードを、コンテンツ抽出・Content Cleansingの両段階で除去できるようにするバグ修正。
 
