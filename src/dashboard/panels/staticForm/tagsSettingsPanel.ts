@@ -8,6 +8,5 @@ export function createTagsSettingsPanel(): StaticFormPanel {
     async mount(_container) {
       await initTagsPanel();
     },
-    async refresh() {},
   };
 }

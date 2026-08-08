@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
-import { type AsyncDataPanel, type StaticFormPanel } from '../types.js';
+import { type AsyncDataPanel, type StaticFormPanel, type DiagnosticPanel } from '../types.js';
 
 function mockAsyncPanel(overrides?: Partial<AsyncDataPanel>): AsyncDataPanel {
   return {
@@ -85,6 +85,67 @@ describe('NavigationRegistry', () => {
     registry.register(panel);
     registry.navigate('panel-form');
     expect(registry.activeId).toBe('panel-form');
+  });
+
+  describe('per-category activation', () => {
+    it('passes init only to async-data panels, since only they accept it', () => {
+      const asyncPanel = mockAsyncPanel({ id: 'panel-async' });
+      const formPanel: StaticFormPanel = {
+        id: 'panel-form',
+        category: 'static-form',
+        mount: vi.fn().mockResolvedValue(undefined),
+        onActivate: vi.fn(),
+      };
+      registry.register(asyncPanel);
+      registry.register(formPanel);
+
+      registry.navigate('panel-async', { searchTag: 'AI' });
+      registry.navigate('panel-form', { searchTag: 'AI' });
+
+      expect(asyncPanel.onActivate).toHaveBeenCalledWith({ searchTag: 'AI' });
+      // StaticFormPanel.onActivate takes no argument.
+      expect(formPanel.onActivate).toHaveBeenCalledWith();
+    });
+
+    it('activates a diagnostic panel, which has no activation hook', () => {
+      const panel: DiagnosticPanel = {
+        id: 'panel-diag',
+        category: 'diagnostic',
+        mount: vi.fn().mockResolvedValue(undefined),
+      };
+      registry.register(panel);
+
+      expect(() => registry.navigate('panel-diag')).not.toThrow();
+      expect(registry.activeId).toBe('panel-diag');
+    });
+
+    it('does not require refresh(): panels with nothing to re-read may omit it', () => {
+      // refresh is optional on the contract; NavigationRegistry never calls it.
+      const panel: StaticFormPanel = {
+        id: 'panel-no-refresh',
+        category: 'static-form',
+        mount: vi.fn().mockResolvedValue(undefined),
+      };
+      registry.register(panel);
+
+      expect(() => registry.navigate('panel-no-refresh')).not.toThrow();
+      expect(registry.activeId).toBe('panel-no-refresh');
+    });
+
+    it('only deactivates async-data panels, the sole category with onDeactivate', () => {
+      const formPanel: StaticFormPanel = {
+        id: 'panel-form',
+        category: 'static-form',
+        mount: vi.fn().mockResolvedValue(undefined),
+      };
+      const asyncPanel = mockAsyncPanel({ id: 'panel-async' });
+      registry.register(formPanel);
+      registry.register(asyncPanel);
+
+      registry.navigate('panel-form');
+      expect(() => registry.navigate('panel-async')).not.toThrow();
+      expect(registry.activeId).toBe('panel-async');
+    });
   });
 
   describe('mount behavior', () => {

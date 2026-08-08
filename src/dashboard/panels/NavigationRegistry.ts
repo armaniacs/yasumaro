@@ -1,5 +1,25 @@
 import { type Panel, type PanelInitMap } from './types.js';
 
+/**
+ * Invoke a panel's onActivate, respecting the per-category signature:
+ * only AsyncDataPanel accepts the init payload. Discriminating on `category`
+ * keeps this type-safe, so adding a panel category surfaces here as a
+ * compile error rather than being silently cast away.
+ */
+function activate(panel: Panel, init?: Record<string, unknown>): void {
+  switch (panel.category) {
+    case 'async-data':
+      panel.onActivate?.(init);
+      return;
+    case 'static-form':
+      panel.onActivate?.();
+      return;
+    case 'diagnostic':
+      // DiagnosticPanel has no activation hook.
+      return;
+  }
+}
+
 export class NavigationRegistry {
   private panels = new Map<string, Panel>();
   private activePanelId: string | null = null;
@@ -27,13 +47,13 @@ export class NavigationRegistry {
     }
 
     if (this.activePanelId === panelId) {
-      (panel as { onActivate?(init?: Record<string, unknown>): void }).onActivate?.(init);
+      activate(panel, init);
       return;
     }
 
     if (this.activePanelId) {
       const current = this.panels.get(this.activePanelId);
-      (current as { onDeactivate?(): void } | undefined)?.onDeactivate?.();
+      if (current?.category === 'async-data') current.onDeactivate?.();
       // Hide previous panel
       const prevEl = document.getElementById(this.activePanelId);
       prevEl?.classList.remove('active');
@@ -53,10 +73,10 @@ export class NavigationRegistry {
       this.mountedPanels.add(panelId);
     }
 
-    (panel as { onActivate?(init?: Record<string, unknown>): void }).onActivate?.(init);
+    activate(panel, init);
 
     if (panel.category === 'async-data') {
-      (panel as { loadData(): Promise<void> }).loadData().catch((err: unknown) => {
+      panel.loadData().catch((err: unknown) => {
         console.error(`[NavigationRegistry] loadData failed for panel "${panelId}":`, err);
       });
     }

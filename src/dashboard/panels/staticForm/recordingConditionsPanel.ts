@@ -8,6 +8,5 @@ export function createRecordingConditionsPanel(): StaticFormPanel {
     async mount(_container) {
       await initRecordingConditionsSettings();
     },
-    async refresh() {},
   };
 }

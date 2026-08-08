@@ -10,6 +10,5 @@ export function createMarkdownTemplatePanel(): StaticFormPanel {
       const settings = await getSettings();
       initMarkdownTemplateManager(settings);
     },
-    async refresh() {},
   };
 }
