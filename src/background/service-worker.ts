@@ -291,68 +291,74 @@ export const handleValidVisit = createValidVisitHandler({
   addBadgeTab: (tabId) => { autoSavedBadgeTabs.add(tabId); },
   hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
 });
-registry.register('VALID_VISIT', handleValidVisit);
+// A content script reporting a completed visit is the whole point of this
+// message; the handler additionally requires sender.tab.
+registry.register('VALID_VISIT', handleValidVisit, 'content-script-allowed');
 
 export const handleFetchUrl = createFetchUrlHandler({
   getSettings: () => getSettings(),
   buildAllowedUrls: (settings) => buildAllowedUrls(settings),
 });
-registry.register('FETCH_URL', handleFetchUrl);
+registry.register('FETCH_URL', handleFetchUrl, 'extension-only');
 
 export const handleManualRecord = createManualRecordHandler(_manualRecordDeps);
-registry.register('MANUAL_RECORD', handleManualRecord);
+registry.register('MANUAL_RECORD', handleManualRecord, 'extension-only');
 
 export const handlePreviewRecord = createManualRecordHandler(_manualRecordDeps);
-registry.register('PREVIEW_RECORD', handlePreviewRecord);
+registry.register('PREVIEW_RECORD', handlePreviewRecord, 'extension-only');
 
 export const handleSaveRecord = createSaveRecordHandler(_saveRecordDeps);
-registry.register('SAVE_RECORD', handleSaveRecord);
+registry.register('SAVE_RECORD', handleSaveRecord, 'extension-only');
 
 export const handleContentCleansingExecuted = createContentCleansingExecutedHandler({
   hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
 });
-registry.register('CONTENT_CLEANSING_EXECUTED', handleContentCleansingExecuted);
+// Sent by the content extractor running in the page.
+registry.register('CONTENT_CLEANSING_EXECUTED', handleContentCleansingExecuted, 'content-script-allowed');
 
 export const handleCheckDomain = createCheckDomainHandler({
   isDomainAllowed: (url) => isDomainAllowed(url),
 });
-registry.register('CHECK_DOMAIN', handleCheckDomain);
+// The content script loader asks whether it should activate on this page.
+registry.register('CHECK_DOMAIN', handleCheckDomain, 'content-script-allowed');
 
 export const handleTestConnections = createTestConnectionsHandler({
   testObsidian: () => obsidian.testConnection(),
   testAi: () => aiService.testConnection(),
 });
-registry.register('TEST_CONNECTIONS', handleTestConnections);
+registry.register('TEST_CONNECTIONS', handleTestConnections, 'extension-only');
 
 export const handleTestObsidian = createTestObsidianHandler({
   testConnection: (override?: { apiKey?: string }) => obsidian.testConnection(override),
 });
-registry.register('TEST_OBSIDIAN', handleTestObsidian);
+registry.register('TEST_OBSIDIAN', handleTestObsidian, 'extension-only');
 
 export const handleTestAi = createTestAiHandler({
   clearSettingsCache: () => clearSettingsCache(),
   testConnection: (onProgress, runId) => aiService.testConnection(onProgress, runId),
   notifyProgress: notifyAiTestProgress,
 });
-registry.register('TEST_AI', handleTestAi);
+registry.register('TEST_AI', handleTestAi, 'extension-only');
 
 export const handleGetPrivacyCache = createGetPrivacyCacheHandler({
   getPrivacyCache: () => RecordingCache.getPrivacyCache(),
 });
-registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache);
+registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache, 'extension-only');
 
 export const handleActivityUpdate = createActivityUpdateHandler({
   updateActivity: () => updateActivity(),
 });
-registry.register('ACTIVITY_UPDATE', handleActivityUpdate);
+registry.register('ACTIVITY_UPDATE', handleActivityUpdate, 'extension-only');
 
 export const handleSessionLockRequest = createSessionLockRequestHandler({
   lockSession: () => lockSession(),
 });
-registry.register('SESSION_LOCK_REQUEST', handleSessionLockRequest);
+registry.register('SESSION_LOCK_REQUEST', handleSessionLockRequest, 'extension-only');
 
 export const handlePing = createPingHandler({});
-registry.register('PING', handlePing);
+// Liveness probe with no payload and no side effects; the content script
+// loader uses it to tell a sleeping Service Worker from a broken one.
+registry.register('PING', handlePing, 'content-script-allowed');
 
 export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSchedulerHandler({
   initExportScheduler: async () => {
@@ -360,7 +366,9 @@ export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSch
     await initExportScheduler();
   },
 });
-registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handleRefreshLocalMarkdownScheduler);
+// Only the dashboard changes the export schedule. Previously unguarded, so a
+// content script could restart the scheduler.
+registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handleRefreshLocalMarkdownScheduler, 'extension-only');
 
 export const handleConsentStateChanged = createConsentStateChangedHandler({
   updateConsentBadge: async () => {
@@ -368,7 +376,8 @@ export const handleConsentStateChanged = createConsentStateChangedHandler({
     await updateConsentBadge();
   },
 });
-registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged);
+// Sent by the popup after the consent dialog closes.
+registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged, 'extension-only');
 
 export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
   generateWeeklySummary: async () => {
@@ -380,10 +389,12 @@ export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
     return generateMonthlySummary();
   },
 });
-registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary);
+// Sent by the dashboard; triggers paid AI calls, so keep it off web pages.
+registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary, 'extension-only');
 
 export const handleLogForward = createLogForwardHandler();
-registry.register('LOG_FORWARD', handleLogForward);
+// Sent by the offscreen document (chrome-extension:// URL, no tab).
+registry.register('LOG_FORWARD', handleLogForward, 'extension-only');
 
 // The SqliteClient-backed half of these dependencies is shared with the tests
 // via createSqliteClientDeps, so both go through one wiring. Only the four
@@ -431,7 +442,7 @@ export const handleDashboardSqlite = ((message: Record<string, unknown>, sender:
     }
   })();
 });
-registry.register('DASHBOARD_SQLITE', handleDashboardSqlite);
+registry.register('DASHBOARD_SQLITE', handleDashboardSqlite, 'extension-only');
 
 // ============================================================================
 // Message Handler (wraps registry with validation)
