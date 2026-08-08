@@ -5,7 +5,7 @@
  */
 
 import { logInfo, logDebug } from '../logger.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { calculatePasswordStrength } from '../masterPassword.js';
 import {
     generateSalt,

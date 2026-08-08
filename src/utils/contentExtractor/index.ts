@@ -14,7 +14,7 @@
 
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
 import { logSanitize, logDebug } from '../logger.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner/index.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';

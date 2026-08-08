@@ -46,7 +46,7 @@ const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
     maxDelay: MAX_RETRY_DELAY_MS
 };
 
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
 
 /**
  * メッセージ構造（Service Worker通信用）

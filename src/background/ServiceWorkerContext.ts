@@ -14,7 +14,7 @@
  */
 
 import { TabCache } from './tabCache.js';
-import { Mutex } from './Mutex.js';
+import { Mutex } from '../utils/Mutex.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { SqliteClient } from './sqliteClient.js';

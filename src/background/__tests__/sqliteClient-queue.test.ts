@@ -25,7 +25,7 @@ vi.mock('../sqliteAlert.js', () => ({
 }));
 
 import { SqliteClient } from '../sqliteClient.js';
-import { Mutex } from '../Mutex.js';
+import { Mutex } from '../../utils/Mutex.js';
 import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
 function setUserAgent(value: string): void {

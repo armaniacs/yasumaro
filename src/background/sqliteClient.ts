@@ -9,7 +9,7 @@
 import { addLog, LogType, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
-import { Mutex } from './Mutex.js';
+import { Mutex } from '../utils/Mutex.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 

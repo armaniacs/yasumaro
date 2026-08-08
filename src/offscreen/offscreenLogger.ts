@@ -7,7 +7,7 @@
  * Fire-and-forget: forwarding failures are swallowed (falling back to
  * console) so a broken message channel never blocks offscreen operations.
  */
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
 
 type LogLevel = 'warn' | 'error' | 'info';
 
