@@ -10,54 +10,107 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { MessageHandlerRegistry } from '../background/handlers/MessageHandlerRegistry.js';
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
-    // After PBI-104 refactor and task-11: handleDashboardSqlite is a factory-created
-    // handler registered in MessageHandlerRegistry. The sender.tab guard is enforced
-    // inside the handleDashboardSqlite function in service-worker.ts.
-    let serviceWorkerSource: string;
-    let handlerSource: string;
+    // The invariant is that a content script cannot reach any SQLite operation
+    // through DASHBOARD_SQLITE. This used to be checked by string-matching a
+    // `sender.tab` guard inside service-worker.ts; the guard now lives in
+    // MessageHandlerRegistry, which enforces it for every registered type. The
+    // checks below exercise that behaviour instead of the guard's old location,
+    // so they keep holding wherever the enforcement lives.
+    const RUNTIME_ID = 'test-extension-id';
 
-    beforeEach(() => {
-      serviceWorkerSource = readFileSync(join(process.cwd(), 'src/background/service-worker.ts'), 'utf8');
-      handlerSource = readFileSync(join(process.cwd(), 'src/background/handlers/dashboardSqliteHandlers.ts'), 'utf8');
+    const CONTENT_SCRIPT_SENDER = {
+      id: RUNTIME_ID,
+      tab: { id: 1 },
+      url: 'https://evil.example/page',
+    } as chrome.runtime.MessageSender;
+
+    const DASHBOARD_SENDER = {
+      id: RUNTIME_ID,
+      url: `chrome-extension://${RUNTIME_ID}/dashboard.html`,
+    } as chrome.runtime.MessageSender;
+
+    /** Every subtype the dashboard SQLite protocol accepts. */
+    const ALL_SUBTYPES = [
+      'query', 'search', 'toggle_star', 'delete', 'update', 'get_count', 'clear_all',
+      'import', 'restore_db', 'status', 'opfs_spike', 'append_to_obsidian', 'purge_now',
+      'audit_log_query', 'content_purge_now', 'backup_db', 'backfill_metadata',
+      'cleanup_legacy', 'migrate', 'confirm_token',
+    ];
+
+    it('registers DASHBOARD_SQLITE as extension-only', () => {
+      const source = readFileSync(join(process.cwd(), 'src/background/service-worker.ts'), 'utf8');
+      expect(source).toMatch(/registry\.register\(\s*'DASHBOARD_SQLITE'\s*,[^,]+,\s*'extension-only'\s*\)/);
     });
 
-    it('should reject DASHBOARD_SQLITE calls from content scripts (sender.tab present) for ALL subtypes', () => {
-      // The guard lives inside the handleDashboardSqlite function in service-worker.ts
-      // Match from function start to the first sender.tab check
-      const dashboardSqliteStart = serviceWorkerSource.indexOf('export const handleDashboardSqlite');
-      expect(dashboardSqliteStart).toBeGreaterThan(-1);
-      const dashboardSqliteBlock = serviceWorkerSource.substring(dashboardSqliteStart, dashboardSqliteStart + 1000);
+    it('should reject DASHBOARD_SQLITE calls from content scripts for ALL subtypes', () => {
+      const registry = new MessageHandlerRegistry(RUNTIME_ID);
+      const handler = vi.fn();
+      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
 
-      const hasEarlySenderGuard = /if\s*\(\s*sender\.tab\b/.test(dashboardSqliteBlock);
-      expect(hasEarlySenderGuard).toBe(true);
+      for (const subtype of ALL_SUBTYPES) {
+        const sendResponse = vi.fn();
+        registry.dispatch(
+          'DASHBOARD_SQLITE',
+          { type: 'DASHBOARD_SQLITE', payload: { subtype } },
+          CONTENT_SCRIPT_SENDER,
+          sendResponse,
+        );
 
-      // The guard must check sender.url for chrome-extension:// origin
-      const hasUrlCheck = /sender\.url/.test(dashboardSqliteBlock);
-      expect(hasUrlCheck).toBe(true);
+        expect(sendResponse).toHaveBeenCalledWith({
+          success: false,
+          error: 'DASHBOARD_SQLITE is not allowed from content scripts',
+        });
+      }
+
+      // No subtype reached the handler.
+      expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should NOT have subtype-specific sender.tab checks (unified guard)', () => {
-      // dashboardSqliteHandlers.ts should NOT contain sender.tab checks
-      // because the guard is unified in the service-worker handler wrapper
-      const hasSenderTabInHandler = handlerSource.includes('sender.tab');
-      expect(hasSenderTabInHandler).toBe(false);
+    it('should reject the guard BEFORE any SQLite operation runs', () => {
+      const registry = new MessageHandlerRegistry(RUNTIME_ID);
+      const handler = vi.fn();
+      const sendResponse = vi.fn();
+      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
+
+      const handled = registry.dispatch(
+        'DASHBOARD_SQLITE',
+        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all' } },
+        CONTENT_SCRIPT_SENDER,
+        sendResponse,
+      );
+
+      // dispatch returns false and never invokes the handler, so the SQLite
+      // operation cannot have started.
+      expect(handled).toBe(false);
+      expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should have sender.tab guard BEFORE any SQLite operation', () => {
-      // In service-worker.ts, the sender.tab check must come before _dashboardSqliteHandler call
-      const dashboardSqliteStart = serviceWorkerSource.indexOf('export const handleDashboardSqlite');
-      expect(dashboardSqliteStart).toBeGreaterThan(-1);
-      const section = serviceWorkerSource.substring(dashboardSqliteStart, dashboardSqliteStart + 1500);
+    it('still allows the dashboard itself', () => {
+      const registry = new MessageHandlerRegistry(RUNTIME_ID);
+      const handler = vi.fn();
+      const sendResponse = vi.fn();
+      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
 
-      const guardPos = section.indexOf('sender.tab');
-      const callPos = section.indexOf('dashboardSqliteHandler');
+      registry.dispatch(
+        'DASHBOARD_SQLITE',
+        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'query' } },
+        DASHBOARD_SENDER,
+        sendResponse,
+      );
 
-      expect(guardPos).toBeGreaterThan(-1);
-      expect(callPos).toBeGreaterThan(-1);
-      expect(guardPos).toBeLessThan(callPos);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT have subtype-specific sender checks (unified guard)', () => {
+      const handlerSource = readFileSync(
+        join(process.cwd(), 'src/background/handlers/dashboardSqliteHandlers.ts'),
+        'utf8',
+      );
+      expect(handlerSource.includes('sender.tab')).toBe(false);
     });
   });
 
