@@ -12,8 +12,18 @@ import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/custom
 import { recordUsage } from '../../../utils/aiUsageTracker.js';
 
 interface GeminiApiResponse {
-    candidates?: Array<{ content?: { parts: Array<{ text: string }> } }>;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        /** STOP / MAX_TOKENS / SAFETY 等。空応答の原因切り分けに使う。 */
+        finishReason?: string;
+    }>;
+    usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        /** thinking(推論)で消費したトークン。maxOutputTokens に加算される。 */
+        thoughtsTokenCount?: number;
+    };
+    promptFeedback?: { blockReason?: string };
 }
 
 export class GeminiProvider extends AIProviderStrategy {
@@ -79,7 +89,13 @@ export class GeminiProvider extends AIProviderStrategy {
             }],
             generationConfig: {
                 temperature: 0.1,
-                maxOutputTokens: this.getMaxTokens()
+                maxOutputTokens: this.getMaxTokens(),
+                // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
+                // maxOutputTokens に加算される。要約は思考を必要としないため
+                // 明示的に切り、枠をすべて本文に使う。これを入れないと
+                // maxOutputTokens が小さい設定(既定1000)では思考だけで枠を
+                // 使い切り、要約が空文字で返る。
+                thinkingConfig: { thinkingBudget: 0 }
             }
         };
 
@@ -152,9 +168,19 @@ export class GeminiProvider extends AIProviderStrategy {
             };
         }
 
+        // Gemini 2.5系以降は thinking(推論)がデフォルト有効で、思考トークンが
+        // maxOutputTokens に加算される。枠が小さいと思考だけで使い切り、本文が
+        // 空のまま finishReason=MAX_TOKENS で返る。そのため
+        //   - thinkingBudget: 0 で思考を明示的に切る（対応モデルのみ有効）
+        //   - maxOutputTokens は思考が入っても本文が残る余裕を持たせる
+        // の二段構えにする。
         const payload = {
             contents: [{ parts: [{ text: CONNECTION_TEST_PROMPT }] }],
-            generationConfig: { maxOutputTokens: 16, temperature: 0 },
+            generationConfig: {
+                maxOutputTokens: 256,
+                temperature: 0,
+                thinkingConfig: { thinkingBudget: 0 },
+            },
         };
 
         try {
@@ -194,12 +220,20 @@ export class GeminiProvider extends AIProviderStrategy {
             }
 
             const data = await response.json() as GeminiApiResponse;
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-            const hasContent = text.trim().length > 0;
+            const candidate = data.candidates?.[0];
+            // 応答が複数 parts に分かれる場合があるため全て結合する
+            const text = (candidate?.content?.parts ?? [])
+                .map(part => part.text ?? '')
+                .join('')
+                .trim();
+            const hasContent = text.length > 0;
+            const usage = data.usageMetadata;
 
             return {
                 success: hasContent,
-                message: hasContent ? 'Connected to Gemini API.' : 'Response contained no content.',
+                message: hasContent
+                    ? 'Connected to Gemini API.'
+                    : GeminiProvider.describeEmptyResponse(candidate?.finishReason, data.promptFeedback?.blockReason),
                 debug: {
                     prompt: CONNECTION_TEST_PROMPT,
                     response: hasContent ? text : undefined,
@@ -207,9 +241,15 @@ export class GeminiProvider extends AIProviderStrategy {
                     modelName: cleanModelName,
                     statusCode: response.status,
                     hasContent,
-                    ...(data.usageMetadata?.promptTokenCount !== undefined ? { sentTokens: data.usageMetadata.promptTokenCount } : {}),
-                    ...(data.usageMetadata?.candidatesTokenCount !== undefined ? { receivedTokens: data.usageMetadata.candidatesTokenCount } : {}),
-                    ...(hasContent ? {} : { error: 'candidates[0].content.parts[0].text was empty' }),
+                    ...(usage?.promptTokenCount !== undefined ? { sentTokens: usage.promptTokenCount } : {}),
+                    ...(usage?.candidatesTokenCount !== undefined ? { receivedTokens: usage.candidatesTokenCount } : {}),
+                    ...(hasContent ? {} : {
+                        error: GeminiProvider.describeEmptyResponseDetail(
+                            candidate?.finishReason,
+                            data.promptFeedback?.blockReason,
+                            usage?.thoughtsTokenCount,
+                        ),
+                    }),
                 },
             };
         } catch (e: unknown) {
@@ -222,6 +262,44 @@ export class GeminiProvider extends AIProviderStrategy {
                 debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${testUrl}` },
             };
         }
+    }
+
+    /**
+     * 空応答をユーザー向けの一文にする。
+     * finishReason ごとに原因が異なるため、一括りに「応答が空」とは言わない。
+     */
+    private static describeEmptyResponse(finishReason?: string, blockReason?: string): string {
+        if (blockReason) return `Request blocked by safety filter (${blockReason}).`;
+        switch (finishReason) {
+            case 'MAX_TOKENS':
+                return 'Response was truncated before any text was produced (MAX_TOKENS).';
+            case 'SAFETY':
+                return 'Response blocked by safety filter (SAFETY).';
+            case 'RECITATION':
+                return 'Response blocked as recitation (RECITATION).';
+            default:
+                return 'Response contained no content.';
+        }
+    }
+
+    /**
+     * 空応答の技術的な内訳。thinking がトークンを食い切ったケースを明示する。
+     */
+    private static describeEmptyResponseDetail(
+        finishReason?: string,
+        blockReason?: string,
+        thoughtsTokenCount?: number,
+    ): string {
+        const parts: string[] = ['candidates[0].content.parts had no text'];
+        if (finishReason) parts.push(`finishReason=${finishReason}`);
+        if (blockReason) parts.push(`blockReason=${blockReason}`);
+        if (thoughtsTokenCount !== undefined) {
+            parts.push(`thoughtsTokens=${thoughtsTokenCount}`);
+            if (finishReason === 'MAX_TOKENS') {
+                parts.push('thinking consumed the output budget — raise maxOutputTokens or disable thinking');
+            }
+        }
+        return parts.join(' | ');
     }
 
     private async _getAllowedUrls(): Promise<Set<string>> {
@@ -248,12 +326,27 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
         const parts = data.candidates[0].content.parts;
-        if (!parts || parts.length === 0 || typeof parts[0].text !== 'string') {
-            const error = 'Gemini schema validation failed: candidates[0].content.parts[0].text is not a string';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+        // 応答が複数 parts に分かれる場合があるため全て結合する
+        const summary = (parts ?? []).map(part => part.text ?? '').join('');
+        if (summary.trim().length === 0) {
+            const finishReason = data.candidates[0].finishReason;
+            const thoughts = data.usageMetadata?.thoughtsTokenCount;
+            const error = GeminiProvider.describeEmptyResponseDetail(
+                finishReason,
+                data.promptFeedback?.blockReason,
+                thoughts,
+            );
+            addLog(LogType.ERROR, `Gemini returned an empty summary: ${error}`, { traceId });
+            // MAX_TOKENS は設定で解決できるため、対処法が分かる文言にする
+            if (finishReason === 'MAX_TOKENS') {
+                return {
+                    success: false,
+                    summary: "Error: AI response was truncated before producing text. Increase the max tokens setting.",
+                    error,
+                };
+            }
+            return { success: false, summary: "Error: AI returned an empty response.", error };
         }
-        const summary = parts[0].text;
         const sentTokens = data.usageMetadata?.promptTokenCount || 0;
         const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
 
